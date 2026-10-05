@@ -18,6 +18,12 @@ func panelStaticHandler(root string) http.Handler {
 		clean := path.Clean("/" + r.URL.Path)
 		ext := path.Ext(clean)
 		if !strings.HasPrefix(clean, "/assets/") || (ext != ".js" && ext != ".css") {
+			// Never let heuristic browser caching pin index.html (and therefore an
+			// obsolete manager/router) after the signed release is upgraded. Only
+			// content-hashed build assets get the long immutable cache policy.
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Pragma", "no-cache")
+			w.Header().Set("Expires", "0")
 			plain.ServeHTTP(w, r)
 			return
 		}

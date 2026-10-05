@@ -7,5 +7,5 @@ import "./style.css";
 import App from "./App.vue";
 createApp(App).use(ElementPlus, { locale: zhCn }).mount("#app");
 if ("serviceWorker" in navigator && window.isSecureContext) {
-  void navigator.serviceWorker.register("/sw.js").catch(() => { /* Normal web mode remains usable. */ });
+  void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { /* Normal web mode remains usable. */ });
 }

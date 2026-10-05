@@ -60,3 +60,23 @@ func TestPanelStaticHandlerCompressedAsset(t *testing.T) {
 		t.Fatal("client that rejects gzip did not receive the ordinary asset")
 	}
 }
+
+func TestPanelEntryAndWorkerCannotPinAnObsoleteInterface(t *testing.T) {
+	root := t.TempDir()
+	for name, body := range map[string]string{"index.html": "<!doctype html>new release", "sw.js": "self.skipWaiting()", "manifest.webmanifest": "{}"} {
+		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	handler := panelStaticHandler(root)
+	for _, url := range []string{"/", "/?release=new", "/index.html", "/sw.js", "/manifest.webmanifest"} {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, url, nil))
+		if response.Code != 200 && response.Code != 301 {
+			t.Fatal(url, response.Code)
+		}
+		if response.Header().Get("Cache-Control") != "no-store" || response.Header().Get("Pragma") != "no-cache" {
+			t.Fatal("bootstrap can retain stale routes", url, response.Header())
+		}
+	}
+}

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps1-linux-amd64.tar.gz",
-    "archive_sha256": "c8ea8516217a1ac6c71f777a8b7a589a314ccd1e9097ece91388062c767def4b",
-    "frozen_inputs_sha256": "f0a6812a8f54421e86317bd2c648d8b14572ff5c6cbb05e3bd7cbe65f2bf0882"
+    "archive": "panel-0.1.0-dev.proapps2-linux-amd64.tar.gz",
+    "archive_sha256": "3547025a76642f9243f197361379bf2af07a7d58ae3af8ac6818bb58114efc88",
+    "frozen_inputs_sha256": "79ae869845d3f096726d22426701becdc78f001c1fc045aa8954e9364aa3daaf"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -147,8 +147,8 @@
     "internal/core/site_traffic.go": "5cdde8ca811029a5ba8a143565369cadee0794a4f82a11c1519037bed46dbf87",
     "internal/core/software_apps.go": "22f1327ee666d7c770b033011414466ce377f41e0429086e3800344e7f1a67a6",
     "internal/core/software_apps_test.go": "d82501b9c41c7ba5132e70f8502fab684c8edb5eb3ff50ef366d9a84ca74bc16",
-    "internal/core/static_assets.go": "4cb4e885c6403943bb5d4546100351029b06fa8c5b4cdfb36ab613258d7283fc",
-    "internal/core/static_assets_test.go": "34b72fcfcabe4cd2abc996fbc9742e2748c99a2882860cf62546477a8d41d534",
+    "internal/core/static_assets.go": "616bd83935e372fe32ed8ab459827d8990d6c64d533e1b274ed6f2d3203a2359",
+    "internal/core/static_assets_test.go": "c3b89c2a3952e7f9faa5a43e69559ec80b15f8a939734b033edc6e7cc0a8d971",
     "internal/core/store.go": "ba2536ada36887efd2f2554ba00b9417285f55aa98f3dd624c80bfa156779b36",
     "internal/core/store_jobs_test.go": "79e920475c1be5e2ba00bbaebf13bb6720fda3e0666232e521f92ee8b24b63f9",
     "internal/core/system_backups.go": "5572fafd1f0de6a2ff3ddc021ddeef34bbf5077c47cf6c0c03489a4fdd4763fa",
@@ -419,7 +419,7 @@
     "web/src/SoftwareLogo.vue": "0dbf960fc94998b369ff61fc82ecf3ec14b98e054248dda36fed692c690d01c0",
     "web/src/SystemToolsManager.vue": "1b18158a6b212710d6b6baa9ec660a7f61cba12cf7e106ed131f53aa9b0789bf",
     "web/src/TerminalManager.vue": "91bcce293b1b0675956acd577d749047780512a1b9333f1f896ec9257a80cc27",
-    "web/src/main.ts": "584b17cbd02808f975b5aaaaae69e6f8d02987dbb56fd6f6f125ac71ad882e1d",
+    "web/src/main.ts": "1b448a869c644174dbfcdd3aa7012dc337a0d6b3656e6634f093635b824403b3",
     "web/src/panelBase.ts": "dab7b8e35b289bb51d46d157f60d65d53d99c4a83e14b1c726de390cd559f826",
     "web/src/panelTime.ts": "faf257b63ce95ea5b662a4866e0dae0d6c47c9af735a5607367ef7d2af9a6fc7",
     "web/src/randomId.ts": "8d7acfcc2a1004577188fd41281f0f27c1a473be1e6b1407836d2478d4dbd151",
