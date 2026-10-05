@@ -9,14 +9,16 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 )
 
 type AppRegistryStatus struct {
-	ID        string `json:"id"`
-	Installed bool   `json:"installed"`
-	Healthy   bool   `json:"healthy"`
-	Detail    string `json:"detail"`
+	ID         string `json:"id"`
+	StateKnown bool   `json:"state_known"`
+	Installed  bool   `json:"installed"`
+	Healthy    bool   `json:"healthy"`
+	Detail     string `json:"detail"`
 }
 
 type AppRegistryPage struct {
@@ -49,23 +51,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			Status string `json:"status"`
 		} `json:"installed"`
 	}
-	if a.Executor.Call(ctx, http.MethodGet, "/v1/runtimes", nil, &runtimes) == nil {
-		for _, item := range runtimes.Installed {
-			if item.Status == "installed" {
-				installedRuntime[item.ID] = true
-				if item.Family != "" {
-					installedRuntime["family:"+item.Family] = true
-				}
-			}
-		}
-	}
 	software := map[string]SoftwareAppStatus{}
 	var softwareRows []SoftwareAppStatus
-	if a.Executor.Call(ctx, http.MethodGet, "/v1/software", nil, &softwareRows) == nil {
-		for _, item := range softwareRows {
-			software[item.ID] = item
-		}
-	}
 	compose := map[string]bool{}
 	composeHealthy := map[string]bool{}
 	var projects struct {
@@ -77,7 +64,39 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			Healthy    int    `json:"healthy"`
 		} `json:"projects"`
 	}
-	if a.Executor.Call(ctx, http.MethodGet, "/v1/docker/projects", nil, &projects) == nil {
+	// Independent probes must not inherit time already spent by a slow earlier probe.
+	var runtimeErr, softwareErr, composeErr error
+	var probes sync.WaitGroup
+	probes.Add(3)
+	go func() {
+		defer probes.Done()
+		runtimeErr = a.Executor.Call(ctx, http.MethodGet, "/v1/runtimes", nil, &runtimes)
+	}()
+	go func() {
+		defer probes.Done()
+		softwareErr = a.Executor.Call(ctx, http.MethodGet, "/v1/software", nil, &softwareRows)
+	}()
+	go func() {
+		defer probes.Done()
+		composeErr = a.Executor.Call(ctx, http.MethodGet, "/v1/docker/projects", nil, &projects)
+	}()
+	probes.Wait()
+	if runtimeErr == nil {
+		for _, item := range runtimes.Installed {
+			if item.Status == "installed" {
+				installedRuntime[item.ID] = true
+				if item.Family != "" {
+					installedRuntime["family:"+item.Family] = true
+				}
+			}
+		}
+	}
+	if softwareErr == nil {
+		for _, item := range softwareRows {
+			software[item.ID] = item
+		}
+	}
+	if composeErr == nil {
 		for _, project := range projects.Projects {
 			if project.TemplateID != "" {
 				compose[project.TemplateID] = true
@@ -89,7 +108,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	}
 	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
 	for _, app := range catalog.Apps {
-		status := AppRegistryStatus{ID: app.ID, Detail: "未安装"}
+		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装"}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
 			out = append(out, status)
@@ -97,6 +116,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		}
 		switch app.Provider {
 		case "runtime":
+			status.StateKnown = runtimeErr == nil
 			if app.Target == "docker-auto" {
 				status.Installed = installedRuntime["family:docker"]
 			} else {
@@ -104,14 +124,19 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			}
 			status.Healthy = status.Installed
 		case "panel-module":
+			status.StateKnown = softwareErr == nil
 			row := software[app.Target]
 			status.Installed, status.Healthy = row.Installed, row.Healthy
 			if row.Detail != "" {
 				status.Detail = row.Detail
 			}
 		case "compose":
+			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
+		}
+		if !status.StateKnown {
+			status.Detail = "状态暂未确认，请刷新；不会据此重复安装"
 		}
 		if status.Installed && status.Detail == "未安装" {
 			if status.Healthy {
@@ -232,7 +257,7 @@ func (a *Server) appRegistryRoutes(m *http.ServeMux) {
 			fail(w, 503, "加载已签名应用目录失败: "+err.Error())
 			return
 		}
-		ctx, cancel := contextWithTimeout(r.Context(), 8*time.Second)
+		ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
 		defer cancel()
 		send(w, 200, AppRegistryPage{Catalog: catalog, Status: a.appRegistryStatuses(ctx, catalog), Source: source})
 	}))

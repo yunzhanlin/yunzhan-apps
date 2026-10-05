@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "php-56",
+  "name": "PHP 5.6",
+  "category": "deployment",
+  "version": "5.6",
+  "summary": "为旧站迁移提供隔离的 PHP 5.6 FPM，仅允许回环与受管站点访问。",
+  "stage": "integration",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-56",
+    "image": "ghcr.io/yunzhanlin/php-fpm:5.6",
+    "manage_route": "runtimes"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64"
+    ]
+  },
+  "capabilities": [
+    "FPM",
+    "迁移兼容",
+    "网络隔离",
+    "EOL 警告"
+  ],
+  "health": {
+    "probe": "tcp",
+    "target": "php-fpm:9000"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

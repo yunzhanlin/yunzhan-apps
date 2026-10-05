@@ -187,7 +187,7 @@ interface RegistryApp {
   package_url: string;
   sha256: string;
 }
-interface RegistryStatus { id: string; installed: boolean; healthy: boolean; detail: string }
+interface RegistryStatus { id: string; state_known?: boolean; installed: boolean; healthy: boolean; detail: string }
 interface AppRegistry {
   catalog: { schema_version: number; generated_at: string; repository: string; apps: RegistryApp[] };
   status: RegistryStatus[];
@@ -415,6 +415,7 @@ function openRegistryApp(app: RegistryApp) {
 }
 async function installRegistryApp(app: RegistryApp) {
   const status = registryStatus(app.id);
+  if (status?.state_known === false) { ElMessage.warning("当前安装状态尚未确认，请刷新后再试"); return; }
   if (status?.installed) {
     openRegistryApp(app);
     return;
@@ -2068,16 +2069,16 @@ onUnmounted(() => {
                       disable-transitions
                       :type="registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? 'success' : 'warning') : app.stage === 'ready' ? 'info' : app.stage === 'integration' ? 'warning' : 'info'"
                       size="small"
-                    >{{ registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? '已安装' : '待核对') : app.stage === 'ready' ? '可安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-tag>
+                    >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? '已安装' : '待核对') : app.stage === 'ready' ? '可安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-tag>
                   </div>
                   <p>{{ app.summary }}</p>
                   <div class="runtime-card-tags"><span v-for="tag in app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
                   <el-button
                     class="runtime-install-button"
                     :type="app.stage === 'ready' ? 'primary' : 'default'"
-                    :disabled="app.stage !== 'ready' || registryInstalling.includes(app.id)"
+                    :disabled="app.stage !== 'ready' || registryStatus(app.id)?.state_known === false || registryInstalling.includes(app.id)"
                     @click="installRegistryApp(app)"
-                  >{{ registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
+                  >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
                   <div class="runtime-note">
                     {{ app.provider === 'runtime' ? '受审核运行时' : app.provider === 'compose' ? '受限 Compose 应用' : '面板功能模块' }} · {{ app.risk === 'eol' ? '已停止维护，仅限隔离兼容迁移' : app.risk === 'privileged' ? '涉及系统权限' : 'SHA-256 固定包' }}<br />
                     {{ registryStatus(app.id)?.detail || '等待状态检查' }}

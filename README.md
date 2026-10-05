@@ -23,6 +23,7 @@
 - `tools/build.mjs`：以确定性 JSON 生成发布目录。
 - `tools/verify.mjs`：校验清单、包哈希、ID 唯一性和安全约束。
 - `panel-integration/`：实际 Go API、Linux 执行器、Vue 管理界面、systemd 单元、安装与验收脚本，附源文件 SHA-256 索引。
+- `panel-integration/release-source-inputs.json`：本次签名安装包的冻结生产源码摘要；后续验收脚本可以更新，未经验证的并行生产源码改动不会混入当前发布。
 - `docs/functional-boundaries.md`：操作方法与功能边界。
 - `docs/acceptance-50.json`：逐项基础功能验收证据摘要，不含凭据或客户数据。
 

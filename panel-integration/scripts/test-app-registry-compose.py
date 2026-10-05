@@ -50,6 +50,18 @@ def shell(client, command):
     return result.stdout.strip()
 
 
+def wait_elastic_document(client):
+    deadline = time.monotonic() + 180
+    while time.monotonic() < deadline:
+        response = client.vm('curl', '-fsS', '--max-time', '5', 'http://127.0.0.1:19200/yunzhan_acceptance/_doc/1', check=False)
+        if response.returncode == 0:
+            value = json.loads(response.stdout)
+            if value.get('_source', {}).get('marker') == 'registry-ok':
+                return
+        time.sleep(2)
+    raise RuntimeError('Elasticsearch document lost or unavailable after restart')
+
+
 def container_id(client, project):
     engine = project["engine_name"]
     return shell(client, "sudo docker ps --filter label=com.docker.compose.project=" + engine + " --format '{{.ID}}' | head -1")
@@ -96,7 +108,19 @@ def main():
         wait_docker(client, elastic_job)
         elastic = project_for(client, "elasticsearch")
         created.append(elastic)
+        if os.environ.get('APP_ES_QA_SINGLE_CPU') == '1':
+            # QEMU cross-ISA SMP can crash HotSpot C1. Constrain only this owned
+            # QA container; never change the published image or JVM settings.
+            elastic_id = container_id(client, elastic)
+            assert elastic_id and all(ch in '0123456789abcdef' for ch in elastic_id)
+            client.vm('sudo', 'docker', 'update', '--cpuset-cpus', '0', elastic_id)
+            wait_docker(client, client.api(f"/docker/projects/{elastic['id']}/stop", {}, idempotency_key=uuid.uuid4().hex))
+            wait_docker(client, client.api(f"/docker/projects/{elastic['id']}/start", {}, idempotency_key=uuid.uuid4().hex))
+            assert shell(client, 'sudo docker inspect --format "{{.HostConfig.CpusetCpus}}" ' + container_id(client, elastic)) == '0'
+            report['elasticsearch_qa_cpu_affinity'] = '0'
         wait_registry_health(client, "elasticsearch", timeout=1200)
+        if report.get('elasticsearch_qa_cpu_affinity'):
+            assert int(shell(client, 'sudo docker inspect --format "{{.RestartCount}}" ' + container_id(client, elastic))) == 0, 'JVM crashed before initial health under single-CPU QA affinity'
         shell(client, "curl -fsS -X PUT -H 'Content-Type: application/json' --data '{\"marker\":\"registry-ok\"}' http://127.0.0.1:19200/yunzhan_acceptance/_doc/1 >/dev/null")
         search = shell(client, "curl -fsS http://127.0.0.1:19200/yunzhan_acceptance/_doc/1")
         if json.loads(search).get("_source", {}).get("marker") != "registry-ok":
@@ -109,7 +133,18 @@ def main():
             wait_docker(client, client.api(f"/docker/projects/{project['id']}/start", {}, idempotency_key=uuid.uuid4().hex))
         wait_registry_health(client, "mongodb")
         wait_registry_health(client, "elasticsearch", timeout=1200)
-        report["checks"].append("stopped and restarted both Compose projects and recovered healthy state")
+        mongo_marker = shell(client, "sudo docker exec " + container_id(client, mongo) + " sh -lc 'mongosh --quiet --username \"$MONGO_INITDB_ROOT_USERNAME\" --password \"$MONGO_INITDB_ROOT_PASSWORD\" --authenticationDatabase admin --eval '\"'\"'print(db.getSiblingDB(\"yunzhan_acceptance\").checks.findOne({}).marker)'\"'\"''")
+        assert mongo_marker.splitlines()[-1] == "registry-ok", "MongoDB document lost after restart"
+        wait_elastic_document(client)
+        for _ in range(6):
+            time.sleep(5)
+            wait_elastic_document(client)
+        report['mongodb_document_after_restart'] = True
+        report['elasticsearch_document_after_restart'] = True
+        report['elasticsearch_final_restart_count'] = int(shell(client, 'sudo docker inspect --format "{{.RestartCount}}" ' + container_id(client, elastic)))
+        if report.get('elasticsearch_qa_cpu_affinity'):
+            assert report['elasticsearch_final_restart_count'] == 0, 'JVM still crashed under single-CPU QA affinity'
+        report["checks"].append("stopped and restarted both Compose projects, recovered healthy state and retained both actual documents")
     finally:
         for project in reversed(created):
             try:

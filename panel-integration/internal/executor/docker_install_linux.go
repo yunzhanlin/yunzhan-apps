@@ -166,11 +166,18 @@ func installDocker(ctx context.Context, r runtimecatalog.Release, id string, add
 	if _, e := dockerInstallCommand(ctx, "/usr/bin/apt-get", args...); e != nil {
 		return e
 	}
+	for _, item := range spec.Packages {
+		name, expected, _ := strings.Cut(item, "=")
+		actual, err := installedDebianPackageVersion(ctx, name)
+		if err != nil || actual != expected {
+			return fmt.Errorf("Docker 软件包 %s 精确版本核对失败: %s: %v", name, actual, err)
+		}
+	}
 	if _, e := RunCommand(ctx, "/usr/bin/systemctl", "enable", "--now", "docker.service"); e != nil {
 		return e
 	}
 	engine, e := RunCommand(ctx, "/usr/bin/docker", "version", "--format", "{{.Server.Version}}")
-	if e != nil || strings.TrimSpace(engine) != r.Version {
+	if e != nil || strings.TrimSpace(engine) != spec.EngineVersion {
 		return fmt.Errorf("Docker Engine 版本核对失败: %s: %v", strings.TrimSpace(engine), e)
 	}
 	compose, e := RunCommand(ctx, "/usr/bin/docker", "compose", "version", "--short")

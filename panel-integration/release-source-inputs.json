@@ -1,10 +1,8 @@
 {
   "schema_version": 1,
-  "release": {
-    "archive": "panel-0.1.0-dev.apps11-linux-amd64.tar.gz",
-    "archive_sha256": "a6bb9d49177313580f9904c4cb13fe5f25821c81150c879982da3fb223d12247",
-    "frozen_inputs_sha256": "7a8670e40d1b57dcdbe47a23e6933a9db9827fd506b840148400a7802e8ab2e3"
-  },
+  "archive": "panel-0.1.0-dev.apps11-linux-amd64.tar.gz",
+  "archive_sha256": "a6bb9d49177313580f9904c4cb13fe5f25821c81150c879982da3fb223d12247",
+  "frozen_inputs_sha256": "7a8670e40d1b57dcdbe47a23e6933a9db9827fd506b840148400a7802e8ab2e3",
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
     "go.sum": "8219530c14d0a4f9cd937204a625760ce6199f313444e4a12006640dba195ed3",
@@ -403,23 +401,6 @@
     "web/package-lock.json": "f8499b40437f256a8613a4f14fcc46cc56960e364c5f0d4a8afe75e232942ed2",
     "web/tsconfig.json": "f2ef5ed89b17e176fd738c1123effcbfe5cd045eedd8a6f41adb3d9a63603adc",
     "web/vite.config.ts": "7a2bddad1c9202eeb2f1e3761000ba903f37a3ab6672a62e80c738497acbcb83",
-    "scripts/env.sh": "3d86f49cbc9e2d3b34a131c3aea74704568f30a1f1cadb7b0a8fd0820218767e",
-    "scripts/test-app-modules.py": "12d41c8ac26f669fc4d0cd1cf61923e0dce7db75c0970bbcd15aa1ddbc2195d3",
-    "scripts/test-app-native.py": "fb97475b74c3b61ddf493fd169f4c505ca79b2029826f62a21e027ffb0f905fb",
-    "scripts/test-app-compose-matrix.py": "6d23b5b06a3f680885f85d048a3937427f695e204e75dee98b840741ecedcde8",
-    "scripts/test-app-modules-extended.py": "8b7cfad8281a4c772ed9b8027f1f826db499737f90d781154fc68a8e5a57cb5e",
-    "scripts/test-app-module-lifecycle.py": "cbda5b54413ff8dc4d67c1db2d87a55d6c37d97e15890d9eaa4bf2fd7c8b1b69",
-    "scripts/test-app-base-refresh.py": "5c92469d5ac16d9e796fc2d91b8f2e3e879fe25b0c9be110f3ec901dc1e39d46",
-    "scripts/test-app-security-refresh.py": "fe1275da24d3a2794fa67ad2fd46cf0bd7bcdbc9d26266ff6d821e3ee5caa002",
-    "scripts/test-app-memcached-refresh.py": "a4bec8489ea6639472dfdbe62559162feb633f732020343c0b9c44f38b3b0af6",
-    "scripts/test-app-registry-compose.py": "2a9dcfd073edda7b638dcacb767e5a18d1db2e0f92f2b6f0c3c7d00e916bf592",
-    "scripts/test-app-registry-phpmyadmin.py": "80caf4baf40dbf38c4252d9a1b3d5cea71c9caa528c440b4048544eb1bc6b764",
-    "scripts/test-app-store-50-browser.mjs": "1ea0c67c545c873974268641731f95239384cbbffa2c893eb5f9ac981376f6b8",
-    "scripts/test-app-reboot.py": "d48d7502e1541c164c927e4ed3844a889af8c8b96441c0d6588ac0a71b796733",
-    "scripts/test-app-registry-fifty.py": "111934d9c26a3dbf8179ac636406fa0167420c319ce04ba81217770e474fcacc",
-    "scripts/cache-app-qa-images.mjs": "e321a23d579523db363a197ab9711baa8ac1736d86d90bc7e4f8549a7ef7fd38",
-    "scripts/test_app_registry_common.py": "86f25f9472af28321033c498f1806db93179e0f5d016029c2332429252c43312",
-    "scripts/panel_client.py": "cd771ada9b30de93f55ab4b601053b2ba3bb41573ff61cdeb2d2b5cf54b3a172",
-    "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c"
+    "scripts/env.sh": "3d86f49cbc9e2d3b34a131c3aea74704568f30a1f1cadb7b0a8fd0820218767e"
   }
 }

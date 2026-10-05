@@ -32,3 +32,16 @@ func TestDebianHostReleaseAndDockerAvailability(t *testing.T) {
 		t.Fatal("Debian 12 Nginx inventory source must use bookworm")
 	}
 }
+
+func TestDockerInstallSpecsUseExactDistributionDaemonVersions(t *testing.T) {
+	for major, expected := range map[string]string{"12": "29.8.2", "13": "26.1.5+dfsg1"} {
+		spec, ok := DockerSpecOn(major)
+		if !ok || spec.EngineVersion != expected || spec.ComposeVersion == "" || len(spec.Packages) < 3 {
+			t.Fatalf("incorrect exact Docker install spec on Debian %s: %+v", major, spec)
+		}
+	}
+	spec, _ := DockerSpecOn("13")
+	if spec.ComposeVersion != DockerComposePackageVersion {
+		t.Fatal("Debian Compose daemon must report the reviewed package revision")
+	}
+}

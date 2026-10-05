@@ -52,6 +52,7 @@ const DockerComposePackageVersion = "2.26.1-4"
 type DockerInstallSpec struct {
 	ReleaseID      string
 	Packages       []string
+	EngineVersion  string
 	ComposeVersion string
 	ExternalRepo   bool
 }
@@ -60,7 +61,7 @@ func DockerSpecOn(major string) (DockerInstallSpec, bool) {
 	switch major {
 	case "12":
 		return DockerInstallSpec{
-			ReleaseID: "docker-ce-29.8.2-bookworm", ComposeVersion: "5.6.0", ExternalRepo: true,
+			ReleaseID: "docker-ce-29.8.2-bookworm", EngineVersion: "29.8.2", ComposeVersion: "5.6.0", ExternalRepo: true,
 			Packages: []string{
 				"docker-ce=5:29.8.2-1~debian.12~bookworm",
 				"docker-ce-cli=5:29.8.2-1~debian.12~bookworm",
@@ -71,7 +72,7 @@ func DockerSpecOn(major string) (DockerInstallSpec, bool) {
 		}, true
 	case "13":
 		return DockerInstallSpec{
-			ReleaseID: "docker-debian-26.1.5", ComposeVersion: "2.26.1",
+			ReleaseID: "docker-debian-26.1.5", EngineVersion: "26.1.5+dfsg1", ComposeVersion: "2.26.1-4",
 			Packages: []string{
 				DockerEnginePackage + "=" + DockerEnginePackageVersion,
 				DockerCLIPackage + "=" + DockerCLIPackageVersion,

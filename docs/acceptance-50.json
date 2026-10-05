@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "checked_at": "2026-10-05T08:11:04.088Z",
+  "checked_at": "2026-10-05T09:18:54.272Z",
   "passed": 50,
   "total": 50,
   "scope": "Independent documented foundational capabilities; Linux isolation QA, not commercial feature parity or production certification",
@@ -8,6 +8,25 @@
     "Debian 13 amd64 isolated VM",
     "Existing amd64 native runtime QA VM"
   ],
+  "limitations": [
+    "Elasticsearch final QA uses CPU 0 affinity under cross-ISA x86 emulation; multicore production stability is not certified",
+    "Legacy PHP remains EOL and requires isolated compatibility deployment"
+  ],
+  "delivery": {
+    "real_github_package_hashes": 50,
+    "signed_native_installs": 9,
+    "signed_module_installs": 23,
+    "signed_isolated_installs": 18,
+    "browser_checks": 25,
+    "mobile_overflow": 0,
+    "whole_vm_reboot": true,
+    "managed_sigterm": true,
+    "elasticsearch_qa_cpu_affinity": "0",
+    "elasticsearch_final_restart_count": 0,
+    "release": "0.1.0-dev.apps11",
+    "release_sha256": "a6bb9d49177313580f9904c4cb13fe5f25821c81150c879982da3fb223d12247",
+    "frozen_inputs_sha256": "7a8670e40d1b57dcdbe47a23e6933a9db9827fd506b840148400a7802e8ab2e3"
+  },
   "apps": [
     {
       "id": "nginx",
@@ -47,7 +66,7 @@
       "version": "1.0.50",
       "risk": "privileged",
       "passed": true,
-      "evidence": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过；卸载/重装通过"
+      "evidence": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过；卸载/重装通过；整机重启后实际服务恢复通过"
     },
     {
       "id": "phpmyadmin",
@@ -55,7 +74,7 @@
       "version": "5.2.2",
       "risk": "maintained",
       "passed": true,
-      "evidence": "实际固定摘要镜像、phpMyAdmin HTTP 登录界面、健康、重启和清理通过"
+      "evidence": "固定摘要签名安装、实际 Cookie 登录、SQL 建库/建表/写入/读取及独立数据库核对、健康、重启和清理通过"
     },
     {
       "id": "php-85",
@@ -95,7 +114,7 @@
       "version": "8.1.15",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-80",
@@ -103,7 +122,7 @@
       "version": "8.0.27",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-74",
@@ -111,7 +130,7 @@
       "version": "7.4.33",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-73",
@@ -119,7 +138,7 @@
       "version": "7.3.33",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-72",
@@ -127,7 +146,7 @@
       "version": "7.2.34",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-71",
@@ -135,7 +154,7 @@
       "version": "7.1.33",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-70",
@@ -143,7 +162,7 @@
       "version": "7.0.33",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-56",
@@ -151,7 +170,7 @@
       "version": "5.6.40",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-55",
@@ -159,7 +178,7 @@
       "version": "5.5.38",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-54",
@@ -167,7 +186,7 @@
       "version": "5.4.45",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-53",
@@ -175,7 +194,7 @@
       "version": "5.3.29",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "php-52",
@@ -183,7 +202,7 @@
       "version": "5.2.17",
       "risk": "eol",
       "passed": true,
-      "evidence": "真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启、项目清理通过"
+      "evidence": "签名拉取安装、真实 FastCGI/MySQL 扩展、网站同步、域名绑定、重启后文件保留、项目清理通过"
     },
     {
       "id": "mongodb",
@@ -191,7 +210,7 @@
       "version": "8.0",
       "risk": "maintained",
       "passed": true,
-      "evidence": "实际认证写入/读取、健康、重启与清理通过"
+      "evidence": "实际认证写入/读取、健康、重启后实际文档保留与清理通过"
     },
     {
       "id": "memcached",
@@ -207,7 +226,7 @@
       "version": "9",
       "risk": "maintained",
       "passed": true,
-      "evidence": "实际索引写入/读取、集群健康、重启与清理通过"
+      "evidence": "固定镜像签名安装、单 CPU 亲和性模拟环境实际索引写入/读取、集群健康、重启后文档保留、零自动崩溃重启与清理通过"
     },
     {
       "id": "openlitespeed",
@@ -215,7 +234,7 @@
       "version": "1.8",
       "risk": "maintained",
       "passed": true,
-      "evidence": "真实服务请求、认证或管理入口、重启、项目清理通过"
+      "evidence": "签名安装、实际 PHP LSAPI、后台会话登录、域名绑定、重启后网站文件保留、项目清理通过"
     },
     {
       "id": "rabbitmq",
@@ -223,7 +242,7 @@
       "version": "4.1",
       "risk": "maintained",
       "passed": true,
-      "evidence": "真实服务请求、认证或管理入口、重启、项目清理通过"
+      "evidence": "签名安装、认证消息发布、重启后消费、AMQP 监听、项目清理通过"
     },
     {
       "id": "pm2-manager",
@@ -231,7 +250,7 @@
       "version": "7.0.4",
       "risk": "maintained",
       "passed": true,
-      "evidence": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过；卸载/重装通过"
+      "evidence": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过；卸载/重装通过；整机重启后实际服务恢复通过"
     },
     {
       "id": "docker-manager",
@@ -319,7 +338,7 @@
       "version": "1.0",
       "risk": "maintained",
       "passed": true,
-      "evidence": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据；卸载/重装通过"
+      "evidence": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据；卸载/重装通过；实际浏览器移动布局、Service Worker 和断网提示通过"
     },
     {
       "id": "apache-waf",
@@ -343,7 +362,7 @@
       "version": "1.0",
       "risk": "privileged",
       "passed": true,
-      "evidence": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程；卸载/重装通过"
+      "evidence": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程；卸载/重装通过；受管非 root 进程实际 SIGTERM 与错误启动身份拒绝通过"
     },
     {
       "id": "website-tamper-proof",
@@ -407,7 +426,7 @@
       "version": "1.0",
       "risk": "privileged",
       "passed": true,
-      "evidence": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过；卸载/重装通过"
+      "evidence": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过；卸载/重装通过；整机重启后实际服务恢复通过"
     }
   ]
 }
