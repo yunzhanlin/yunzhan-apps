@@ -75,13 +75,16 @@ func siteHTTPSClient(site core.Site, domain string) (*http.Client, error) {
 func verifySiteHTTPS(ctx context.Context, site core.Site) error {
 	for _, domain := range append([]string{site.Domain}, site.Settings.Domains...) {
 		if site.Status == "stopped" || site.Settings.TLS == nil {
-			// Negative probe: any successful handshake is a failure. No peer is accepted
-			// for application traffic; this deliberately detects even an untrusted leftover server.
+			// Modern Nginx must reject the handshake; the old Ubuntu default must
+			// prove its exact invalid certificate and close without HTTP traffic.
 			dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: 3 * time.Second}, Config: &tls.Config{ServerName: domain, InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}}
 			conn, e := dialer.DialContext(ctx, "tcp", "127.0.0.1:19102")
 			if e == nil {
+				rejected := legacyDefaultTLSRejected(conn, domain)
 				conn.Close()
-				return fmt.Errorf("未启用 HTTPS 的站点 %s 仍接受 TLS 握手", domain)
+				if !rejected {
+					return fmt.Errorf("未启用 HTTPS 的站点 %s 仍接受 TLS 握手", domain)
+				}
 			}
 			continue
 		}

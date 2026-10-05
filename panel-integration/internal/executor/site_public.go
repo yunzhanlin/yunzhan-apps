@@ -66,8 +66,11 @@ func verifySitePublicIngress(ctx context.Context, site core.Site) error {
 				dialer := tls.Dialer{NetDialer: &net.Dialer{Timeout: 3 * time.Second}, Config: &tls.Config{ServerName: domain, InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}}
 				conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(address, "443"))
 				if err == nil {
+					rejected := legacyDefaultTLSRejected(conn, domain)
 					conn.Close()
-					return fmt.Errorf("未启用标准 HTTPS 的网站 %s 仍接受 TLS 握手", domain)
+					if !rejected {
+						return fmt.Errorf("未启用标准 HTTPS 的网站 %s 仍接受 TLS 握手", domain)
+					}
 				}
 				continue
 			}
