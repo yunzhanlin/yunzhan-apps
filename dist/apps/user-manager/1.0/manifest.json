@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "user-manager",
+  "name": "aaPanel user Manager",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "管理多用户、角色、资源范围、TOTP、会话和不可篡改操作审计。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "user-manager",
+    "manage_route": "account"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多用户",
+    "角色权限",
+    "资源范围",
+    "TOTP",
+    "会话撤销"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/accounts"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

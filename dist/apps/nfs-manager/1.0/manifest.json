@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "nfs-manager",
+  "name": "NFS Manager",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "管理 NFS 客户端挂载、开机恢复、超时、健康检查与引用保护。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nfs-manager",
+    "manage_route": "files"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "NFSv4",
+    "挂载策略",
+    "开机恢复",
+    "引用保护"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/nfs/mounts"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

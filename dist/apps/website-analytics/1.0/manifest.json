@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "Website Analytics",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "根据受管访问日志汇总请求、流量、状态码、来源与热门路径。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "sites"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "请求趋势",
+    "流量",
+    "状态码",
+    "热门路径"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/sites/traffic"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

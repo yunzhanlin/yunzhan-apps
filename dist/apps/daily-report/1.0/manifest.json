@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "daily-report",
+  "name": "aaPanel Daily Report",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "每日汇总资源、站点、备份、证书、安全事件和失败任务。",
+  "stage": "design",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "daily-report",
+    "manage_route": "schedules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "资源摘要",
+    "安全摘要",
+    "备份摘要",
+    "定时推送"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/reports/daily"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

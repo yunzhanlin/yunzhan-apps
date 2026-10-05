@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "site-diagnosis",
+  "name": "Site Diagnosis",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "聚合 DNS、HTTP、TLS、站点配置、日志与浅层风险检查的诊断报告。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "site-diagnosis",
+    "manage_route": "sites"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "DNS",
+    "HTTP",
+    "TLS",
+    "配置检查",
+    "可导出报告"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/security/site-scan"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

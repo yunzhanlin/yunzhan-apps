@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.0",
+  "summary": "提供站点多时段访问、独立 IP、爬虫、错误、流量与路径统计。",
+  "stage": "design",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-statistics-v2",
+    "manage_route": "sites"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多时段",
+    "独立 IP",
+    "爬虫识别",
+    "错误率",
+    "路径排行"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/sites/statistics-v2"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

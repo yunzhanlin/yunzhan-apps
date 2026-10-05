@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "task-manager",
+  "name": "Task manager",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "查看真实进程、资源、打开文件和网络连接，并对受管进程执行终止。",
+  "stage": "integration",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "task-manager",
+    "manage_route": "monitor"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "进程列表",
+    "CPU/内存",
+    "网络连接",
+    "受管终止"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/monitor/processes"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

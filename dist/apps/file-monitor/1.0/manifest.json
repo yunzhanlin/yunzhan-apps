@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "file-monitor",
+  "name": "File monitor",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "使用有界扫描和哈希检查点记录新增、修改、删除与权限变化。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "file-monitor",
+    "manage_route": "files"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "哈希检查点",
+    "变更事件",
+    "权限变化",
+    "排除规则"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/file-monitor"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

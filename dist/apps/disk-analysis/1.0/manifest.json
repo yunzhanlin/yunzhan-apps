@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "disk-analysis",
+  "name": "Disk analysis",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "在不跟随符号链接的前提下分析目录体积、大文件、增长与可清理项。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "disk-analysis",
+    "manage_route": "files"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "目录体积",
+    "大文件",
+    "增长趋势",
+    "安全清理建议"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/system/storage"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yunzhanlin/yunzhan-apps/schema/app.schema.json",
+  "title": "YunZhan application package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "category",
+    "version",
+    "summary",
+    "stage",
+    "delivery",
+    "compatibility",
+    "capabilities",
+    "health",
+    "uninstall"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,62}$" },
+    "name": { "type": "string", "minLength": 2, "maxLength": 80 },
+    "category": { "enum": ["deployment", "professional"] },
+    "version": { "type": "string", "pattern": "^[0-9][0-9A-Za-z.+_-]*$" },
+    "summary": { "type": "string", "minLength": 8, "maxLength": 240 },
+    "stage": { "enum": ["ready", "integration", "design"] },
+    "risk": { "enum": ["maintained", "maintenance", "eol", "privileged"] },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "target"],
+      "properties": {
+        "provider": { "enum": ["runtime", "compose", "panel-module"] },
+        "target": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$" },
+        "image": { "type": "string", "maxLength": 240 },
+        "manage_route": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,63}$" }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "architectures"],
+      "properties": {
+        "os": { "type": "array", "minItems": 1, "items": { "enum": ["debian-12", "debian-13"] } },
+        "architectures": { "type": "array", "minItems": 1, "items": { "enum": ["amd64", "arm64"] } }
+      }
+    },
+    "capabilities": { "type": "array", "minItems": 1, "maxItems": 12, "items": { "type": "string", "minLength": 2, "maxLength": 64 } },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["probe"],
+      "properties": {
+        "probe": { "enum": ["binary", "systemd", "tcp", "http", "panel-api"] },
+        "target": { "type": "string", "maxLength": 160 }
+      }
+    },
+    "uninstall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["preserve_data", "reference_check"],
+      "properties": {
+        "preserve_data": { "type": "boolean" },
+        "reference_check": { "type": "boolean" }
+      }
+    }
+  }
+}
+

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "openlitespeed",
+  "name": "OpenLiteSpeed",
+  "category": "deployment",
+  "version": "1.8",
+  "summary": "部署仅回环端口访问的 OpenLiteSpeed，管理入口须经面板代理。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "openlitespeed",
+    "image": "litespeedtech/openlitespeed:1.8.4-lsphp83",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64"
+    ]
+  },
+  "capabilities": [
+    "HTTP/3",
+    "LSAPI",
+    "回环管理入口",
+    "持久配置"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "apache-waf",
+  "name": "Apache WAF",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "为受管 Apache 站点提供请求规则、限速、事件日志和失败回滚。",
+  "stage": "design",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "apache-waf",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "请求过滤",
+    "限速",
+    "防护事件",
+    "配置回滚"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "httpd -t"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

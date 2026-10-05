@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "mongodb",
+  "name": "MongoDB",
+  "category": "deployment",
+  "version": "8.0",
+  "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "mongodb",
+    "image": "mongo:8.0",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "认证",
+    "持久卷",
+    "回环端口",
+    "备份导出"
+  ],
+  "health": {
+    "probe": "tcp",
+    "target": "127.0.0.1:27017"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

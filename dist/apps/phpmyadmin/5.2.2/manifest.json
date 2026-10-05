@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "phpmyadmin",
+  "name": "phpMyAdmin",
+  "category": "deployment",
+  "version": "5.2.2",
+  "summary": "以回环端口部署 phpMyAdmin，通过面板代理和二次身份校验访问。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "phpmyadmin",
+    "image": "phpmyadmin:5.2.2-apache",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "MySQL 管理",
+    "面板代理",
+    "回环绑定",
+    "访问审计"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/"
+  },
+  "uninstall": {
+    "preserve_data": false,
+    "reference_check": false
+  }
+}

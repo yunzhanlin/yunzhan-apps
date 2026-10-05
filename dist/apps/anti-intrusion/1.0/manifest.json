@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "anti-intrusion",
+  "name": "Anti-intrusion",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "使用 Fail2ban systemd 日志后端保护 SSH，并提供封禁查询与审计解封。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "intrusion-prevention",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "SSHD Jail",
+    "封禁策略",
+    "服务状态",
+    "审计解封"
+  ],
+  "health": {
+    "probe": "systemd",
+    "target": "fail2ban.service"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

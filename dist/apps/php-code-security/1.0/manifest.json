@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "php-code-security",
+  "name": "PHP code security",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "对受管站点执行有界的 PHP 静态检查，识别高风险函数、混淆与可疑写入。",
+  "stage": "design",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "php-code-security",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "静态扫描",
+    "高风险函数",
+    "混淆检测",
+    "证据摘要"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/security/php-code"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "nginx-waf",
+  "name": "Nginx WAF",
+  "category": "professional",
+  "version": "1.1",
+  "summary": "基于受管 Nginx 规则拦截恶意 URI、查询、扫描器请求头并限速。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nginx-waf",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "恶意请求拦截",
+    "扫描器拦截",
+    "单 IP 限速",
+    "防护事件"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/nginx-waf/events"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

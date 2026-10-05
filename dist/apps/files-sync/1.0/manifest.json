@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "使用检查点、哈希和冲突保护在本地目录与远端目标之间同步文件。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "backups"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "增量同步",
+    "哈希校验",
+    "冲突保护",
+    "断点续传"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/files-sync/jobs"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

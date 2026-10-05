@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "platform-ops",
+  "name": "Platform Ops",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "以最小权限代理统一查看多台云栈主机的健康、告警、备份与版本。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "platform-ops",
+    "manage_route": "overview"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多主机盘点",
+    "健康聚合",
+    "告警聚合",
+    "版本盘点"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/platform/hosts"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

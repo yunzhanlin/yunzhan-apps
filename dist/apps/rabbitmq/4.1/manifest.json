@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "id": "rabbitmq",
+  "name": "RabbitMQ",
+  "category": "deployment",
+  "version": "4.1",
+  "summary": "部署带管理界面、随机凭据和持久卷的 RabbitMQ 单节点。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "rabbitmq",
+    "image": "rabbitmq:4.1.4-management-alpine",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "AMQP",
+    "管理界面",
+    "随机凭据",
+    "持久卷"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/api/health/checks/alarms"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

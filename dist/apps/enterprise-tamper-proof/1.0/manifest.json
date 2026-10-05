@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "enterprise-tamper-proof",
+  "name": "Tamper-proof for Enterprise",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "为多站点建立签名基线，检测篡改后隔离变更并按审批恢复。",
+  "stage": "design",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "enterprise-tamper-proof",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "签名基线",
+    "多站点策略",
+    "变更隔离",
+    "审批恢复"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/tamper-proof/enterprise"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
