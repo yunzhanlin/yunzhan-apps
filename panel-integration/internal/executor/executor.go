@@ -35,6 +35,7 @@ type Service struct {
 	phpWorkerQueueMu      sync.Mutex
 	phpWorkerQueueStarted bool
 	phpWorkerQueueWake    chan struct{}
+	moduleAutoBlocked     map[string]bool // Guarded by mu; stop automatic writes after persistence failure.
 }
 
 func New(c Config) *Service {

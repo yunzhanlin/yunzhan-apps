@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"golang.org/x/sys/unix"
 	"io"
 	"io/fs"
@@ -63,13 +64,21 @@ func moduleWrite(path string, value any) error {
 	if e != nil {
 		return e
 	}
+	if len(b)+1 > 4<<20 {
+		return errors.New("模块记录超过 4 MiB，未覆盖旧记录")
+	}
 	return atomicWrite(path, append(b, '\n'), 0600)
 }
 func moduleRead(path string, value any) error {
 	if e := ordinary(path, false); e != nil {
 		return e
 	}
-	b, e := os.ReadFile(path)
+	f, e := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+	b, e := io.ReadAll(io.LimitReader(f, (4<<20)+1))
 	if e != nil {
 		return e
 	}
@@ -217,6 +226,11 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		out, e := s.runAppModule(r.Context(), id, action, in)
+		if action != "history" && action != "run" && action != "policies" && action != "run-plan" {
+			if historyErr := s.appendModuleEvent(id, action, "manual", in, out, e); historyErr != nil && e == nil {
+				e = fmt.Errorf("业务可能已执行，但历史保存失败，请核对结果：%w", historyErr)
+			}
+		}
 		if e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
@@ -229,10 +243,19 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	})
 }
 func (s *Service) runAppModule(ctx context.Context, id, action string, in core.AppModuleInput) (any, error) {
+	if action == "history" {
+		return s.moduleHistory(id, in)
+	}
 	switch id {
 	case "website-tamper-proof", "enterprise-tamper-proof", "file-monitor":
+		if action == "policies" || action == "pause" || action == "resume" {
+			return s.moduleIntegrityControl(id, action, in)
+		}
 		return s.moduleIntegrity(ctx, id, action, in)
 	case "files-sync":
+		if action != "preview" && action != "sync" {
+			return s.moduleSyncPlans(ctx, action, in)
+		}
 		return s.moduleSync(ctx, in, action == "preview" || in.DryRun)
 	case "php-code-security":
 		return s.modulePHPScan(ctx, in.SiteID)
@@ -267,6 +290,7 @@ func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snap
 	files := map[string]moduleFile{}
 	var total int64
 	partial := false
+	entries, metadataBytes := 0, 0
 	for _, p := range excludes {
 		if !core.ValidFilePath(p, false) {
 			return nil, false, errors.New("排除路径无效")
@@ -281,6 +305,11 @@ func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snap
 		}
 		if path == "." {
 			return nil
+		}
+		entries++
+		if entries > 100000 {
+			partial = true
+			return fs.SkipAll
 		}
 		for _, p := range excludes {
 			if path == p || strings.HasPrefix(path, p+"/") {
@@ -303,6 +332,14 @@ func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snap
 		if !info.Mode().IsRegular() {
 			return errors.New("扫描目录包含特殊文件")
 		}
+		if !core.ValidFilePath(path, false) {
+			return errors.New("扫描发现不支持的文件路径，请配置排除规则")
+		}
+		encoded, _ := json.Marshal(path)
+		if metadataBytes+len(encoded)+160 > 3<<20 {
+			partial = true
+			return nil
+		}
 		if len(files) >= 10000 || info.Size() > 8<<20 || total+info.Size() > moduleMaxBytes {
 			partial = true
 			return nil
@@ -311,18 +348,26 @@ func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snap
 		if e != nil {
 			return e
 		}
+		before, e := f.Stat()
+		if e != nil {
+			f.Close()
+			return e
+		}
 		b, e := io.ReadAll(io.LimitReader(f, 8<<20+1))
+		after, statErr := f.Stat()
 		f.Close()
 		if e != nil {
 			return e
 		}
-		if int64(len(b)) != info.Size() {
+		current, pathErr := root.Lstat(path)
+		if statErr != nil || pathErr != nil || !os.SameFile(info, before) || !os.SameFile(before, current) || !current.Mode().IsRegular() || int64(len(b)) != info.Size() || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) || before.Mode() != after.Mode() || after.Size() != current.Size() || !after.ModTime().Equal(current.ModTime()) || after.Mode() != current.Mode() {
 			return errors.New("扫描时文件发生变化")
 		}
 		total += int64(len(b))
 		sha := sha256.Sum256(b)
 		hash := hex.EncodeToString(sha[:])
 		files[path] = moduleFile{hash, info.Size(), uint32(info.Mode().Perm())}
+		metadataBytes += len(encoded) + 160
 		if snapshot != nil {
 			return snapshot(hash, b)
 		}
@@ -332,11 +377,10 @@ func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snap
 }
 func (s *Service) moduleBaselineKey() ([]byte, error) {
 	path := filepath.Join(s.Config.SecurityDir, "modules", "integrity-key")
-	if b, e := os.ReadFile(path); e == nil {
-		if len(b) != 32 {
-			return nil, errors.New("基线密钥格式无效")
-		}
+	if b, e := s.existingBaselineKey(); e == nil {
 		return b, nil
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return nil, e
 	}
 	b := make([]byte, 32)
 	if _, e := rand.Read(b); e != nil {
@@ -345,7 +389,41 @@ func (s *Service) moduleBaselineKey() ([]byte, error) {
 	if e := os.MkdirAll(filepath.Dir(path), 0700); e != nil {
 		return nil, e
 	}
-	return b, atomicWrite(path, b, 0600)
+	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0600)
+	if e != nil {
+		return nil, e
+	}
+	_, e = f.Write(b)
+	if e == nil {
+		e = f.Sync()
+	}
+	closeErr := f.Close()
+	if e != nil {
+		return nil, e
+	}
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	return b, nil
+}
+func (s *Service) existingBaselineKey() ([]byte, error) {
+	path := filepath.Join(s.Config.SecurityDir, "modules", "integrity-key")
+	if err := ordinary(path, false); err != nil {
+		return nil, err
+	}
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 33))
+	if err != nil {
+		return nil, err
+	}
+	if len(b) != 32 {
+		return nil, errors.New("基线密钥格式无效")
+	}
+	return b, nil
 }
 func baselineSignature(b moduleBaseline, key []byte) string {
 	b.Signature = ""
@@ -379,6 +457,13 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 			return nil, e
 		}
 		if action == "baseline" {
+			if in.Interval != 0 && (in.Interval < 60 || in.Interval > 86400) {
+				return nil, errors.New("监控间隔应为 60–86400 秒")
+			}
+			paths, _ := filepath.Glob(filepath.Join(s.moduleDir(id), "baselines", "*", "baseline.json"))
+			if !exists(path) && len(paths) >= 100 {
+				return nil, errors.New("单个模块最多 100 个监控策略")
+			}
 			if e = os.MkdirAll(filepath.Join(dir, "blobs"), 0700); e != nil {
 				return nil, e
 			}
@@ -391,9 +476,20 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 			}
 			base := moduleBaseline{SiteID: site, CreatedAt: core.Now(), Files: files, Excludes: in.Excludes, AutoRestore: in.AutoRestore && id == "enterprise-tamper-proof"}
 			base.Signature = baselineSignature(base, key)
-			if e = moduleWrite(path, base); e != nil {
+			oldControl, e := backupFile(s.integrityControlPath(id, site))
+			if e != nil {
 				return nil, e
 			}
+			if e = s.resetIntegrityControl(id, site, in.Interval); e != nil {
+				return nil, e
+			}
+			if e = moduleWrite(path, base); e != nil {
+				if rollbackErr := restoreFiles([]fileBackup{oldControl}); rollbackErr != nil {
+					s.blockModuleAutomation(id + "/" + site)
+				}
+				return nil, e
+			}
+			delete(s.moduleAutoBlocked, id+"/"+site)
 			results = append(results, map[string]any{"site_id": site, "files": len(files), "signature": base.Signature, "auto_restore": base.AutoRestore})
 			continue
 		}
@@ -443,9 +539,17 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 				if in.ExpectedSHA != "" && change.After != in.ExpectedSHA {
 					return nil, errors.New("文件已再次修改")
 				}
-				data, e := os.ReadFile(filepath.Join(dir, "blobs", old.SHA))
+				if decoded, err := hex.DecodeString(old.SHA); err != nil || len(decoded) != 32 || old.Size < 0 || old.Size > 8<<20 {
+					return nil, errors.New("备份元数据无效")
+				}
+				blob, e := os.OpenFile(filepath.Join(dir, "blobs", old.SHA), os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 				if e != nil {
 					return nil, e
+				}
+				data, e := io.ReadAll(io.LimitReader(blob, (8<<20)+1))
+				blob.Close()
+				if e != nil || int64(len(data)) != old.Size {
+					return nil, errors.New("备份长度不匹配，拒绝恢复")
 				}
 				digest := sha256.Sum256(data)
 				if hex.EncodeToString(digest[:]) != old.SHA {
@@ -463,7 +567,11 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 						return nil, e
 					}
 				}
-				if e = moduleWriteSiteFile(f, change.Path, data, os.FileMode(old.Mode)); e != nil {
+				var expected *moduleFile
+				if value, exists := current[change.Path]; exists {
+					expected = &value
+				}
+				if e = moduleWriteSiteFileGuarded(f, change.Path, data, os.FileMode(old.Mode), expected, true); e != nil {
 					return nil, e
 				}
 				restored = append(restored, change.Path)
@@ -472,7 +580,18 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 		if action == "restore" && !core.ValidFilePath(in.Path, false) {
 			return nil, errors.New("请选择基线中的一个文件")
 		}
-		result := map[string]any{"site_id": site, "changes": changes, "restored": restored, "checked_at": core.Now(), "signature_verified": true}
+		visible := []moduleChange{}
+		budget := 256 << 10
+		for _, change := range changes {
+			raw, _ := json.Marshal(change)
+			if len(visible) >= 200 || len(raw) > budget {
+				break
+			}
+			budget -= len(raw)
+			visible = append(visible, change)
+		}
+		restoredRows := boundedModulePaths(restored)
+		result := map[string]any{"site_id": site, "changes": visible, "restored": restoredRows, "changes_count": len(changes), "restored_count": len(restored), "report_limited": len(visible) != len(changes) || len(restoredRows) != len(restored), "checked_at": core.Now(), "signature_verified": true}
 		if e = moduleWrite(filepath.Join(dir, "last-check.json"), result); e != nil {
 			return nil, e
 		}
@@ -493,6 +612,9 @@ func readModuleFile(root *os.Root, path string) ([]byte, error) {
 	return b, e
 }
 func moduleWriteSiteFile(f *siteFiles, path string, data []byte, mode os.FileMode) error {
+	return moduleWriteSiteFileGuarded(f, path, data, mode, nil, false)
+}
+func moduleWriteSiteFileGuarded(f *siteFiles, path string, data []byte, mode os.FileMode, expected *moduleFile, enforce bool) error {
 	if !core.ValidFilePath(path, false) {
 		return errors.New("文件路径无效")
 	}
@@ -553,6 +675,22 @@ func moduleWriteSiteFile(f *siteFiles, path string, data []byte, mode os.FileMod
 	if closeErr != nil {
 		return closeErr
 	}
+	if enforce && expected == nil {
+		return renameBetween(f.public, temporary, f.public, path, false)
+	}
+	if enforce {
+		current, err := readModuleFile(f.public, path)
+		if err != nil {
+			return err
+		}
+		info, err := f.public.Lstat(path)
+		if err != nil {
+			return err
+		}
+		if !info.Mode().IsRegular() || core.Hash(string(current)) != expected.SHA || int64(len(current)) != expected.Size || uint32(info.Mode().Perm()) != expected.Mode {
+			return errors.New("写入前目标文件已改变，未覆盖")
+		}
+	}
 	return f.public.Rename(temporary, path)
 }
 func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, preview bool) (any, error) {
@@ -585,16 +723,18 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 	}
 	checkpointPath := filepath.Join(s.moduleDir("files-sync"), in.SiteID+"-"+in.TargetSiteID+".json")
 	old := map[string]moduleFile{}
-	_ = moduleRead(checkpointPath, &old)
+	if err := moduleRead(checkpointPath, &old); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, errors.New("同步检查点损坏，拒绝覆盖目标")
+	}
 	copyPaths := []string{}
 	conflicts := []string{}
 	for path, v := range a {
 		cur, exists := b[path]
-		if exists && cur.SHA == v.SHA {
+		if exists && cur == v {
 			continue
 		}
 		prev, tracked := old[path]
-		if exists && (!tracked || cur.SHA != prev.SHA) {
+		if exists && (!tracked || cur != prev) {
 			conflicts = append(conflicts, path)
 			continue
 		}
@@ -614,7 +754,11 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 			if core.Hash(string(data)) != a[p].SHA {
 				return nil, errors.New("同步时来源文件改变")
 			}
-			if e = moduleWriteSiteFile(target, p, data, os.FileMode(a[p].Mode)); e != nil {
+			var expected *moduleFile
+			if value, exists := b[p]; exists {
+				expected = &value
+			}
+			if e = moduleWriteSiteFileGuarded(target, p, data, os.FileMode(a[p].Mode), expected, true); e != nil {
 				return nil, e
 			}
 			old[p] = a[p]
@@ -623,7 +767,7 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 			}
 		}
 	}
-	return map[string]any{"preview": preview, "copied": copyPaths, "conflicts": conflicts, "deletes": []string{}, "checkpoint": filepath.Base(checkpointPath)}, nil
+	return syncReport(preview, copyPaths, conflicts, filepath.Base(checkpointPath)), nil
 }
 func (s *Service) moduleDisk(ctx context.Context, id string) (any, error) {
 	return s.moduleDiskAt(ctx, id, "")
@@ -982,30 +1126,14 @@ func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppMod
 // The worker resumes from private persisted policies after executor restarts.
 func (s *Service) StartAppModuleWorker() {
 	go func() {
-		ticker := time.NewTicker(time.Minute)
+		s.mu.Lock()
+		s.recoverSyncPlans()
+		s.mu.Unlock()
+		ticker := time.NewTicker(5 * time.Second)
 		defer ticker.Stop()
-		for range ticker.C {
-			ctx, cancel := context.WithTimeout(context.Background(), 40*time.Second)
-			s.mu.Lock()
-			for _, id := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof"} {
-				if !s.moduleInstalled(id) {
-					continue
-				}
-				paths, _ := filepath.Glob(filepath.Join(s.moduleDir(id), "baselines", "*", "baseline.json"))
-				for _, p := range paths {
-					var b moduleBaseline
-					if moduleRead(p, &b) == nil {
-						result, err := s.moduleIntegrity(ctx, id, "check", core.AppModuleInput{SiteID: b.SiteID})
-						report := map[string]any{"time": core.Now(), "action": "scheduled-check", "result": result}
-						if err != nil {
-							report["error"] = err.Error()
-						}
-						_ = moduleWrite(filepath.Join(s.moduleDir(id), "last-report.json"), report)
-					}
-				}
-			}
-			s.mu.Unlock()
-			cancel()
+		for now := range ticker.C {
+			s.runDueSyncPlans(now.UTC())
+			s.runDueIntegrity(now.UTC())
 		}
 	}()
 }

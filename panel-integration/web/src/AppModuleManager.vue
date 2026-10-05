@@ -35,6 +35,7 @@ const definition = ref<Definition>(),
   report = ref<Record<string, any>>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
+const selectedPlanID = ref("");
 const labels: Record<string, string> = {
   run: "刷新报告",
   baseline: "建立基线",
@@ -59,6 +60,15 @@ const labels: Record<string, string> = {
   stop: "停止",
   restart: "重启",
   logs: "读取日志",
+  schedule: "保存同步计划",
+  "run-plan": "执行所选计划",
+  "pause-plan": "暂停所选计划",
+  "resume-plan": "恢复所选计划",
+  "remove-plan": "移除所选计划",
+  history: "查看执行历史",
+  policies: "查看监控策略",
+  pause: "暂停所选监控",
+  resume: "恢复所选监控",
 };
 function setReport(value: any) {
   report.value =
@@ -76,6 +86,7 @@ async function show(id: string) {
   report.value = undefined;
   definition.value = undefined;
   guidance.value = undefined;
+  selectedPlanID.value = "";
   try {
     const page = await props.api<{
       definition: Definition;
@@ -100,23 +111,38 @@ async function show(id: string) {
       status_code: 0,
       min_seconds: 1,
       only_bots: false,
+      enabled: true,
+      interval: 300,
+      expected_revision: 0,
     };
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
     busy.value = false;
   }
-  if (
+  if (installed.value && definition.value?.actions.includes("policies")) {
+    await execute("policies");
+  } else if (
     installed.value &&
     definition.value?.actions.includes("run") &&
-    !(definition.value.fields || []).some((f) => f.kind === "site") &&
+    (!(definition.value.fields || []).some((f) => f.kind === "site") ||
+      id === "files-sync") &&
     id !== "platform-ops"
   )
     await execute("run");
 }
 function selected(row: Record<string, any>) {
+  if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
+    form.value.path = "";
+    form.value.expected_sha = "";
+  }
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = row[f.key];
+  if (row.revision !== undefined) {
+    selectedPlanID.value = row.id;
+    form.value.expected_revision = row.revision;
+  }
+  if (row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || "")) form.value.expected_sha = row.after || "";
   if (row.drill && definition.value?.id === "disk-analysis")
     void execute("run");
   else ElMessage.info("已填入所选记录，可执行对应操作");
@@ -124,7 +150,7 @@ function selected(row: Record<string, any>) {
 function inputBody() {
   const body: Record<string, unknown> = {};
   for (const f of definition.value?.fields || []) {
-    const v = form.value[f.key];
+    const v = f.key === "expected_revision" && form.value.resource_id !== selectedPlanID.value ? 0 : form.value[f.key];
     if (v !== undefined && v !== null && v !== "")
       body[f.key] =
         f.kind === "datetime"
@@ -146,6 +172,14 @@ async function execute(action: string) {
       inputBody(),
     );
     setReport(result);
+    if ((result as any)?.plan?.revision !== undefined) {
+      selectedPlanID.value = (result as any).plan.id;
+      form.value.expected_revision = (result as any).plan.revision;
+    }
+    if (action === "remove-plan") {
+      selectedPlanID.value = "";
+      form.value.expected_revision = 0;
+    }
     if (!["run", "logs", "probe", "check", "preview"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
@@ -163,11 +197,27 @@ async function execute(action: string) {
         "add",
         "remove",
         "revoke",
+        "schedule",
+        "run-plan",
+        "pause-plan",
+        "resume-plan",
+        "remove-plan",
       ].includes(action) &&
       definition.value.actions.includes("run")
     )
       setReport(
         await props.api(`/app-modules/${definition.value.id}/run`, "POST", {}),
+      );
+    if (
+      ["pause", "resume", "baseline"].includes(action) &&
+      definition.value.actions.includes("policies")
+    )
+      setReport(
+        await props.api(
+          `/app-modules/${definition.value.id}/policies`,
+          "POST",
+          {},
+        ),
       );
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
@@ -245,8 +295,13 @@ defineExpose({ show });
             :key="field.key"
             :label="field.label"
           >
+            <el-input
+              v-if="field.kind === 'identity'"
+              :model-value="field.key === 'expected_revision' && form.resource_id !== selectedPlanID ? 0 : form[field.key]"
+              readonly
+            />
             <el-select
-              v-if="field.kind === 'site'"
+              v-else-if="field.kind === 'site'"
               v-model="form[field.key]"
               placeholder="选择网站"
               clearable
@@ -335,7 +390,9 @@ defineExpose({ show });
                       ? 599
                       : field.key === 'min_seconds'
                         ? 3600
-                        : 65535
+                        : field.key === 'interval'
+                          ? 86400
+                          : 65535
               "
               :precision="field.kind === 'decimal' ? 2 : 0"
             />
@@ -370,7 +427,13 @@ defineExpose({ show });
               !installed || busy || (action === 'terminate' && !form.pid)
             "
             :type="
-              ['delete', 'terminate', 'remove', 'unmount'].includes(action)
+              [
+                'delete',
+                'terminate',
+                'remove',
+                'remove-plan',
+                'unmount',
+              ].includes(action)
                 ? 'danger'
                 : 'primary'
             "

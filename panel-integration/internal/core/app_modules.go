@@ -22,38 +22,40 @@ type AppModuleField struct {
 	Kind  string `json:"kind"`
 }
 type AppModuleInput struct {
-	SiteID          string        `json:"site_id,omitempty"`
-	TargetSiteID    string        `json:"target_site_id,omitempty"`
-	TargetProjectID string        `json:"target_project_id,omitempty"`
-	SiteIDs         []string      `json:"site_ids,omitempty"`
-	Path            string        `json:"path,omitempty"`
-	Excludes        []string      `json:"excludes,omitempty"`
-	ExpectedSHA     string        `json:"expected_sha,omitempty"`
-	Username        string        `json:"username,omitempty"`
-	Password        string        `json:"password,omitempty"`
-	Role            string        `json:"role,omitempty"`
-	ResourceID      string        `json:"resource_id,omitempty"`
-	Entry           string        `json:"entry,omitempty"`
-	PID             int           `json:"pid,omitempty"`
-	StartTime       uint64        `json:"start_time,omitempty"`
-	Port            int           `json:"port,omitempty"`
-	Domain          string        `json:"domain,omitempty"`
-	Nodes           []AppUpstream `json:"nodes,omitempty"`
-	Sticky          bool          `json:"sticky,omitempty"`
-	URL             string        `json:"url,omitempty"`
-	Token           string        `json:"token,omitempty"`
-	Source          string        `json:"source,omitempty"`
-	ReadOnly        bool          `json:"read_only,omitempty"`
-	Interval        int           `json:"interval,omitempty"`
-	AutoRestore     bool          `json:"auto_restore,omitempty"`
-	Confirm         string        `json:"confirm,omitempty"`
-	DryRun          bool          `json:"dry_run,omitempty"`
-	FromTime        string        `json:"from_time,omitempty"`
-	ToTime          string        `json:"to_time,omitempty"`
-	Search          string        `json:"search,omitempty"`
-	StatusCode      int           `json:"status_code,omitempty"`
-	MinSeconds      float64       `json:"min_seconds,omitempty"`
-	OnlyBots        bool          `json:"only_bots,omitempty"`
+	SiteID           string        `json:"site_id,omitempty"`
+	TargetSiteID     string        `json:"target_site_id,omitempty"`
+	TargetProjectID  string        `json:"target_project_id,omitempty"`
+	SiteIDs          []string      `json:"site_ids,omitempty"`
+	Path             string        `json:"path,omitempty"`
+	Excludes         []string      `json:"excludes,omitempty"`
+	ExpectedSHA      string        `json:"expected_sha,omitempty"`
+	Username         string        `json:"username,omitempty"`
+	Password         string        `json:"password,omitempty"`
+	Role             string        `json:"role,omitempty"`
+	ResourceID       string        `json:"resource_id,omitempty"`
+	Entry            string        `json:"entry,omitempty"`
+	PID              int           `json:"pid,omitempty"`
+	StartTime        uint64        `json:"start_time,omitempty"`
+	Port             int           `json:"port,omitempty"`
+	Domain           string        `json:"domain,omitempty"`
+	Nodes            []AppUpstream `json:"nodes,omitempty"`
+	Sticky           bool          `json:"sticky,omitempty"`
+	URL              string        `json:"url,omitempty"`
+	Token            string        `json:"token,omitempty"`
+	Source           string        `json:"source,omitempty"`
+	ReadOnly         bool          `json:"read_only,omitempty"`
+	Interval         int           `json:"interval,omitempty"`
+	AutoRestore      bool          `json:"auto_restore,omitempty"`
+	Confirm          string        `json:"confirm,omitempty"`
+	DryRun           bool          `json:"dry_run,omitempty"`
+	FromTime         string        `json:"from_time,omitempty"`
+	ToTime           string        `json:"to_time,omitempty"`
+	Search           string        `json:"search,omitempty"`
+	StatusCode       int           `json:"status_code,omitempty"`
+	MinSeconds       float64       `json:"min_seconds,omitempty"`
+	OnlyBots         bool          `json:"only_bots,omitempty"`
+	Enabled          bool          `json:"enabled"`
+	ExpectedRevision int64         `json:"expected_revision,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -88,6 +90,15 @@ func AppModules() []AppModuleDefinition {
 	}
 	for i := range definitions {
 		switch definitions[i].ID {
+		case "files-sync":
+			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"resource_id", "同步计划标识（小写字母数字）", "text"}, AppModuleField{"interval", "同步间隔（秒，60–86400）", "number"}, AppModuleField{"enabled", "启用同步计划", "boolean"}, AppModuleField{"expected_revision", "计划配置版本（选中计划自动填写）", "identity"})
+		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof":
+			definitions[i].Actions = append(definitions[i].Actions, "policies", "pause", "resume", "history")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"interval", "后台检查间隔（秒，60–86400）", "number"})
+			if definitions[i].ID != "file-monitor" {
+				definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"expected_sha", "所选变更的当前摘要（自动填写）", "identity"})
+			}
 		case "website-analytics", "website-statistics-v2":
 			definitions[i].Fields = append(definitions[i].Fields,
 				AppModuleField{"from_time", "开始时间（可选）", "datetime"}, AppModuleField{"to_time", "结束时间（可选）", "datetime"},
@@ -173,6 +184,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, in, &out)
 		}
 		if err != nil {
+			_ = a.Store.Audit(u.Username, "app-module."+action, id, "failed")
 			fail(w, 409, err.Error())
 			return
 		}

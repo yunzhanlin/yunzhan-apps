@@ -104,6 +104,28 @@ const names: Record<string, string> = {
   signal: "信号",
   sites: "网站数",
   running_sites: "运行网站",
+  plans: "同步计划",
+  policies: "监控策略",
+  history: "执行历史",
+  plan_errors: "计划记录错误",
+  revision: "配置版本",
+  interval: "间隔（秒）",
+  last_state: "最近执行状态",
+  last_error: "最近错误",
+  next_run_at: "下次执行（UTC）",
+  last_started_at: "最近开始（UTC）",
+  last_finished_at: "最近完成（UTC）",
+  action: "操作",
+  outcome: "结果",
+  copied_count: "复制数",
+  conflicts_count: "冲突数",
+  changes_count: "变更数",
+  restored_count: "恢复数",
+  history_limited: "有界历史记录",
+  signature_verified: "签名通过",
+  failure_count: "连续失败次数",
+  target_site_id: "目标网站 ID",
+  report_limited: "展示记录有上限",
   certificates_due_14_days: "14 天内到期证书",
   failed_site_jobs: "失败网站任务",
   failed_runtime_jobs: "失败运行时任务",
@@ -246,6 +268,12 @@ function directory(name: string) {
       title="这是有界扫描的部分结果，不能据此认定全量数据已统计或网站没有风险。"
       :closable="false"
     />
+    <el-alert
+      v-if="report.report_limited"
+      type="info"
+      title="明细展示有上限；完整复制、冲突、变更或恢复数量见计数，不代表扫描失败。"
+      :closable="false"
+    />
     <p v-if="report.scope" class="report-scope">{{ report.scope }}</p>
     <div v-if="metrics.length" class="report-metrics">
       <div v-for="[key, value] in metrics" :key="key">
@@ -326,7 +354,13 @@ function directory(name: string) {
           <p>网站 {{ site.site_id }}</p>
           <AppModuleReport
             :id="id"
-            :report="{ changes: site.changes, restored: site.restored || [] }"
+            :report="{
+              changes: site.changes,
+              restored: site.restored || [],
+              changes_count: site.changes_count,
+              restored_count: site.restored_count,
+              report_limited: site.report_limited,
+            }"
             @select="(row) => emit('select', { ...row, site_id: site.site_id })"
           /></section
       ></template>
@@ -372,6 +406,8 @@ function directory(name: string) {
               'changes',
               'largest_files',
               'nodes',
+              'plans',
+              'policies',
             ].includes(key)
           "
           label="选择操作"
