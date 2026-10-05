@@ -29,7 +29,7 @@ interface Versions {
   status: { id: string; installed_version?: string; version_known?: boolean; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
   source: { stale: boolean; fetched_at?: string; error?: string };
 }
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; registry?: Versions }>();
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string) => Promise<string>; registry?: Versions }>();
 const activeTab = ref("manage"), localVersions = ref<Versions>();
 const versions = computed(() => localVersions.value || props.registry);
 const versionApp = computed(() => versions.value?.catalog.apps.find(app => app.target === definition.value?.id));
@@ -112,6 +112,10 @@ async function show(id: string) {
   report.value = undefined;
   definition.value = undefined;
   guidance.value = undefined;
+  installed.value = false;
+  healthy.value = false;
+  form.value = {};
+  sites.value = [];
   selectedPlanID.value = "";
   activeTab.value = "manage"; localVersions.value = undefined;
   try {
@@ -284,6 +288,18 @@ async function uninstall() {
     busy.value = false;
   }
 }
+async function install() {
+  if (!definition.value || installed.value || busy.value) return;
+  busy.value = true;
+  error.value = "";
+  try {
+    const jobID = await props.onInstall(definition.value.id);
+    visible.value = false;
+    await props.onJob(jobID);
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : String(e);
+  } finally { busy.value = false; }
+}
 defineExpose({ show });
 </script>
 <template>
@@ -307,6 +323,7 @@ defineExpose({ show });
           }}</el-tag>
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
+        <el-alert v-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
         <el-tabs v-model="activeTab" class="module-manager-tabs">
         <el-tab-pane label="概览" name="overview">
         <p v-if="guidance">{{ guidance.description }}</p>
@@ -519,6 +536,7 @@ defineExpose({ show });
         :disabled="busy"
         @click="uninstall"
         >卸载模块 · 保留报告和备份</el-button
+      ><el-button v-if="definition && !installed" type="primary" :disabled="busy" @click="install">安装并验证</el-button
       ><el-button @click="visible = false">关闭</el-button></template
     >
   </el-dialog>

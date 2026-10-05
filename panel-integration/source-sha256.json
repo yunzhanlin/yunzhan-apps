@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.storeupdate3-linux-amd64.tar.gz",
-    "archive_sha256": "624012977326e6ccf18b0b49d8de414568cabd76e01808a7e9a24ce4f6f8a04e",
-    "frozen_inputs_sha256": "e04fb0aff871f31b43eece27fc50b19c828ed1df38e57b8288c8ea9f671bb87d"
+    "archive": "panel-0.1.0-dev.storeupdate5-linux-amd64.tar.gz",
+    "archive_sha256": "7747e3e70ed1f583002042fec480bec6b9f77aa92c85cfc1b7a59a0b142ba4a2",
+    "frozen_inputs_sha256": "0012f15df22f26eb2c99e56cae26366180ae172813d32b045ebd93498bdc7946"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -375,7 +375,7 @@
     "dev/provision-acme-test.sh": "af15ffa3275415cb8f192f1fd6023da30cafcb478e2af3a0e18804742b7d8c94",
     "dev/provision-app.sh": "a2737c189782c247e63d771c614c3ed773b57b3f26362fb703cd7d6e7a107fd0",
     "dev/provision-build-deps.sh": "6192f7f8e310b1c6fb076dfce47d3647dd8eb4224b2328819a194b9d10b8f66b",
-    "packaging/build-release.sh": "94045700cb9589beb6294162347e955beba84ec056e407895031ef56deae929f",
+    "packaging/build-release.sh": "1563b3229ba41eb0353c0e9db1b6ee2c40c1935d601974d20eacc1036aad8d20",
     "packaging/first-install.py": "88cc028bc716d4ad676c976776a4c4f78eb5d6884939faa0e84efd023c2ea33d",
     "packaging/freeze-source.py": "b143753dcdf098b60cce8451ced277240ccc7a74effb7815aa6684bf2a2680c8",
     "packaging/install.sh": "2f7485ee4347c669865c84a8be89dd18cd98bf7d684b3b662f7153e57a14f92e",
@@ -386,8 +386,8 @@
     "packaging/verify-release.sh": "5d4dcf149e86779041c42a40ad0863243cfb0a65af440b74056c8b15789247fe",
     "web/src/ACMEManager.vue": "8aeb2a5ba7af4c305b5f1325b388f9adf3379fac71bbd06850e1b2ce1ca047cb",
     "web/src/AccountManager.vue": "623dcd728b57b55644aed3d988a0199ecc1f4eac5a74ebd77fa3b49169380f76",
-    "web/src/App.vue": "cfea29f109f0282f49428975ca4ec058562bf3c8c0747a29c76a4cc968a290ca",
-    "web/src/AppModuleManager.vue": "9e79aa3364f6c8c890b5ada7332cadf84c017c17601eee6a6c23ed0063e2f974",
+    "web/src/App.vue": "53709837be5972d509de40c34c54721a3fcca52877787f24ce03f8ac183de7b2",
+    "web/src/AppModuleManager.vue": "48773380a0c978f76591c5791a4be919e2b7c7d6a0ae2d868b945f3c3cc498d2",
     "web/src/AppModuleReport.vue": "7b60b910dcb3ccdb5571486a230410aaeb0da2de8bcbe5495858b11c1c09fa59",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
     "web/src/BatchSSLManager.vue": "3fad57eb329e6a91636164fe508c5f3c953d18972c70ab7d9d45443a32baf208",
@@ -409,7 +409,7 @@
     "web/src/RedisManager.vue": "0bb420902baf2093b888cf80ca059f21a7c518ee43cf1580585de034b7ad637a",
     "web/src/RuntimeLifecycleManager.vue": "d7bd898cfe21f2b90de4b647e40e1e75c062e18e2b9528d4f0ba40196bcac947",
     "web/src/ScheduleManager.vue": "ac83d7ddaa66baff46e7cbf2184a63c69f4e4da1d9a81df0e00f71940bed89ba",
-    "web/src/SecurityAppManager.vue": "01076aa54f0e4f39280f2011e67ffbed82d0deca5d5e9d89b0144bf88b5ff0b5",
+    "web/src/SecurityAppManager.vue": "a1420c73e0c8e2ec0606e01736c5b28c0e97ff0a3e8c6d4f57575a30bf7f45f0",
     "web/src/SecurityManager.vue": "cf9a81ebce120da2c1b2bc52cc155e1bf0bc9fba3e52400ac2ff960abd690200",
     "web/src/SiteSettingsManager.vue": "13a2e8e5a6cbaee6d9c6256bd099db775475bd65c7808d6fb107f7742024db9d",
     "web/src/SoftwareLogo.vue": "0dbf960fc94998b369ff61fc82ecf3ec14b98e054248dda36fed692c690d01c0",
@@ -419,6 +419,7 @@
     "web/src/panelBase.ts": "dab7b8e35b289bb51d46d157f60d65d53d99c4a83e14b1c726de390cd559f826",
     "web/src/panelTime.ts": "faf257b63ce95ea5b662a4866e0dae0d6c47c9af735a5607367ef7d2af9a6fc7",
     "web/src/randomId.ts": "8d7acfcc2a1004577188fd41281f0f27c1a473be1e6b1407836d2478d4dbd151",
+    "web/src/softwareRouting.ts": "177d5d3ecbba3095dfe84bba5979d9d25b4e85593e0621c2d305c8d766c0da1b",
     "web/src/style.css": "68830371c781488e6cf5ad6af7e99d3c5a0e83fee125e702ca918b316dd457d1",
     "web/public/cloudstack-icon.svg": "63a30b78f24198d8e6b6a1c6770617ac5053ddef9b356fbb24ec3c88de6e6ff7",
     "web/public/manifest.webmanifest": "b4cbe1ddf5ee31e3b7cecdc71de5288dd3139ccf90b052a4260c85450c4ec901",
@@ -454,6 +455,9 @@
     "scripts/test-app-reliability-browser.mjs": "f8558dd62179ebafd4d5c9ba83165f766302c58073596ca67938cee0c75420fd",
     "scripts/test-app-legacy-write.py": "007da6a22050839ff687b7d05b7f1581ea929d0a95adfcd8031b415c0f2b9d5f",
     "scripts/test-app-store-updates.py": "ab80be327673ef7f629236efdf0427ff1611694f735f98f9dcf19fe01ec451db",
-    "scripts/test-app-store-updates-browser.mjs": "ebe41f2e17b54c82eb062ff7f2f9838fa4d59688a20fd6386f9ada586490da16"
+    "scripts/test-app-store-updates-browser.mjs": "ebe41f2e17b54c82eb062ff7f2f9838fa4d59688a20fd6386f9ada586490da16",
+    "scripts/test-software-routing.mjs": "9527d1aee844513410fb411265f72808041e8a999478586f9e4ebd6553c0c20a",
+    "scripts/test-software-routing-browser.mjs": "df714e278c70144f62ebae04d99cbc707cebfb6b12a18b8927e5b6631bfdc8b7",
+    "scripts/test-software-routing-install-browser.mjs": "daeb14268bc90770551d6c9c31996e246367335743d120ea96474bc248430acc"
   }
 }

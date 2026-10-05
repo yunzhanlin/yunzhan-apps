@@ -46,6 +46,7 @@ BUILD_ROOT="$STAGE/.source"
 python3 "$ROOT/packaging/freeze-source.py" "$ROOT" "$BUILD_ROOT"
 mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$NAME/config"
 (cd "$BUILD_ROOT" && go version && /opt/homebrew/bin/node --version && go test ./... && go vet ./...) 2>&1 | tee "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-software-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/executor-tests" ./internal/executor)
 printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build >/dev/null)

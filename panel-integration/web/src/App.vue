@@ -4,6 +4,7 @@ import { randomId } from "./randomId";
 import { apiURL } from "./panelBase";
 import SoftwareLogo from "./SoftwareLogo.vue";
 import AppModuleManager from "./AppModuleManager.vue";
+import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
 import type { SecurityAppCatalogItem, SecurityAppStatus } from "./SecurityAppManager.vue";
 import PanelIcon from "./PanelIcon.vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref } from "vue";
@@ -365,12 +366,41 @@ const filteredCatalog = computed(() => {
 const softwareStatus = (id: string) => softwareApps.value.status.find((item) => item.id === id);
 const softwareManager = ref<InstanceType<typeof SecurityAppManager> | null>(null);
 const appModuleManager = ref<InstanceType<typeof AppModuleManager> | null>(null);
-const filteredSecurityApps = computed(() => {
+function openSoftwareApp(app: SecurityAppCatalogItem) {
+  const manager = softwareManagerKind(app);
+  if (manager === "security") softwareManager.value?.show(app, softwareStatus(app.id));
+  else if (manager === "module") void appModuleManager.value?.show(app.id);
+  else ElMessage.error("当前面板没有该应用的管理界面，请升级面板后重试");
+}
+function installSoftwareApp(app: SecurityAppCatalogItem) {
+  if (softwareManagerKind(app) === "security") void softwareManager.value?.install(app, softwareStatus(app.id));
+  else openSoftwareApp(app);
+}
+async function queueSoftwareInstall(id: string, settings: Record<string, string | number> = {}): Promise<string> {
+  const software = softwareApps.value.catalog.find(item => item.id === id);
+  if (!software || !softwareManagerKind(software)) throw new Error("当前面板没有该应用的已审核处理器");
+  const app = appRegistry.value.catalog.apps.find(item => item.provider === "panel-module" && item.target === id);
+  let result: { job_id: string };
+  if (app) {
+    const status = registryStatus(app.id);
+    if (appRegistry.value.source.stale) throw new Error("仓库目录尚未核对，请检查更新后重试");
+    if (app.stage !== "ready" || status?.supported === false || status?.state_known === false) throw new Error(status?.compatibility_detail || "当前应用尚不满足安装条件，请刷新状态");
+    result = await api<{ job_id: string }>(`/app-registry/${app.id}/install`, "POST", { settings, expected_version: app.version, expected_sha256: app.sha256 });
+  } else {
+    // Offline fallback may use only handlers already compiled into this panel.
+    result = await api<{ job_id: string }>(`/software/${id}/install`, "POST", { settings });
+  }
+  return result.job_id;
+}
+const filteredSoftwareApps = computed(() => {
   if (appRegistry.value.catalog.apps.length) return [];
   const term = storeSearch.value.trim().toLowerCase();
   if (storeCategory.value === "recommended" && !term) return [];
-  if (!["recommended", "security", "all"].includes(storeCategory.value)) return [];
+  if (["updates", "unavailable"].includes(storeStatus.value)) return [];
   const items = softwareApps.value.catalog.filter((app) => {
+    const catalogID = app.id === "intrusion-prevention" ? "anti-intrusion" : app.id === "mobile-pwa" ? "mobile" : app.id;
+    if (["deployment", "professional"].includes(storeCategory.value) && app.category !== storeCategory.value) return false;
+    if (!["recommended", "all", "deployment", "professional"].includes(storeCategory.value) && !registryCategoryMap[storeCategory.value]?.includes(catalogID)) return false;
     const status = softwareStatus(app.id);
     if (term && !`${app.name} ${app.family} ${app.description} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
     if (storeStatus.value === "installed" && !status?.installed) return false;
@@ -437,7 +467,12 @@ const filteredRegistryApps = computed(() => {
   return items;
 });
 function openRegistryApp(app: RegistryApp) {
-  if (app.provider === "panel-module" && !["nginx-waf","system-hardening","intrusion-prevention"].includes(app.target)) void appModuleManager.value?.show(app.target);
+  if (app.provider === "panel-module") {
+    const software = softwareApps.value.catalog.find(item => item.id === app.target);
+    if (software) openSoftwareApp(software);
+    else if (!isSecuritySoftware(app.target)) void appModuleManager.value?.show(app.target);
+    else ElMessage.warning("安全软件目录尚未加载，请刷新后重试");
+  }
   else if (app.manage_route === "docker") void dockerManager.value?.open();
   else go(app.manage_route || "runtimes");
 }
@@ -451,6 +486,10 @@ async function installRegistryApp(app: RegistryApp) {
   if (status?.supported === false) { ElMessage.warning(status.compatibility_detail || "该应用不支持当前系统或 CPU 架构"); return; }
   if (app.stage !== "ready") {
     ElMessage.warning(app.stage === "integration" ? "该应用正在接入安装器" : "该功能正在实现中");
+    return;
+  }
+  if (app.provider === "panel-module") {
+    openRegistryApp(app);
     return;
   }
   const body: Record<string, unknown> = { expected_version: app.version, expected_sha256: app.sha256 };
@@ -998,9 +1037,10 @@ async function chooseSearchResult(result: GlobalSearchResult) {
     storeSearch.value = runtimes.value.catalog.find((item) => item.family === result.value)?.name || result.value || "";
     go("runtimes");
   } else if (result.target === "software") {
-    storeCategory.value = "security";
+    storeCategory.value = "all";
     storeStatus.value = "all";
-    storeSearch.value = softwareApps.value.catalog.find((item) => item.id === result.value)?.name || result.value || "";
+    const registryApp = appRegistry.value.catalog.apps.find(item => item.provider === "panel-module" && item.target === result.value);
+    storeSearch.value = registryApp?.name || softwareApps.value.catalog.find((item) => item.id === result.value)?.name || result.value || "";
     go("runtimes");
   }
   else if (result.target === "job" && result.value) {
@@ -2094,7 +2134,11 @@ onUnmounted(() => {
                 <small v-if="appRegistry.source.fetched_at">目录检查：{{ formatPanelDateTime(appRegistry.source.fetched_at) }}</small>
                 <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">检查更新</el-button>
               </div>
-              <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" title="未能确认仓库最新版本，当前显示已验签缓存" :description="appRegistry.source.error" />
+              <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" :title="appRegistry.catalog.apps.length ? '未能确认仓库最新版本，当前显示已验签缓存' : '无法连接应用仓库，尚未加载签名目录'" :description="appRegistry.source.error" />
+              <div v-if="!appRegistry.catalog.apps.length && softwareApps.catalog.length" class="software-fallback-notice">
+                <el-alert type="warning" :closable="false" title="仓库目录尚未加载：当前仅提供本机已审核的应用管理与安装，尚未确认在线版本。" />
+                <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">重新加载仓库</el-button>
+              </div>
               <div class="runtime-grid">
                 <article v-for="app in filteredRegistryApps" :key="'registry-' + app.id" class="panel-card runtime-card registry-runtime-card">
                   <div class="runtime-card-head">
@@ -2262,7 +2306,7 @@ onUnmounted(() => {
                     执行服务
                   </div>
                 </article>
-                <article v-for="app in filteredSecurityApps" :key="app.id" class="panel-card runtime-card security-runtime-card">
+                <article v-for="app in filteredSoftwareApps" :key="app.id" class="panel-card runtime-card security-runtime-card">
                   <div class="runtime-card-head">
                     <SoftwareLogo :family="app.family" />
                     <div class="runtime-product"><h2>{{ app.name }}</h2><span>v{{ app.version }} · {{ app.source }}</span></div>
@@ -2271,8 +2315,8 @@ onUnmounted(() => {
                   <p>{{ app.description }}</p>
                   <div class="runtime-card-tags"><span v-for="tag in runtimeCardTags[app.family] || app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
                   <div class="runtime-card-actions">
-                    <el-button v-if="softwareStatus(app.id)?.installed" @click="softwareManager?.show(app, softwareStatus(app.id))">设置</el-button>
-                    <el-button type="primary" :disabled="runtimeBusy(app.id)" @click="softwareStatus(app.id)?.installed ? softwareManager?.show(app, softwareStatus(app.id)) : softwareManager?.install(app, softwareStatus(app.id))">{{ runtimeBusy(app.id) ? '执行中' : softwareStatus(app.id)?.installed ? '打开管理' : '安装' }}</el-button>
+                    <el-button v-if="softwareStatus(app.id)?.installed" @click="openSoftwareApp(app)">设置</el-button>
+                    <el-button type="primary" :disabled="runtimeBusy(app.id)" @click="softwareStatus(app.id)?.installed ? openSoftwareApp(app) : installSoftwareApp(app)">{{ runtimeBusy(app.id) ? '执行中' : softwareStatus(app.id)?.installed ? '打开管理' : '安装' }}</el-button>
                   </div>
                 </article>
                 <article v-for="app in filteredBuiltInApps" :key="app.id" class="panel-card runtime-card built-in-runtime-card">
@@ -2286,7 +2330,7 @@ onUnmounted(() => {
                   <el-button class="runtime-install-button" type="primary" @click="openBuiltInStoreApp(app)">{{ app.templateId ? '创建 Docker 实例' : '打开管理' }}</el-button>
                   <div class="runtime-note">{{ app.templateId ? '固定镜像版本 · 回环端口 · 受管 Compose 生命周期' : '不重复安装同类 Web 工具；直接使用面板已验证的原生功能' }}</div>
                 </article>
-                <el-empty v-if="!filteredRegistryApps.length && !filteredCatalog.length && !filteredBuiltInApps.length && !filteredSecurityApps.length && !showPanelRuntime" class="store-filter-empty" description="当前筛选条件下没有软件" :image-size="56" />
+                <el-empty v-if="!filteredRegistryApps.length && !filteredCatalog.length && !filteredBuiltInApps.length && !filteredSoftwareApps.length && !showPanelRuntime" class="store-filter-empty" description="当前筛选条件下没有软件" :image-size="56" />
               </div>
             </div>
             <aside class="store-side">
@@ -2420,8 +2464,8 @@ onUnmounted(() => {
             </aside>
           </div>
           <DockerManager ref="dockerManager" :api="api" />
-          <SecurityAppManager ref="softwareManager" :api="api" :on-job="lifecycleJob" />
-          <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :registry="appRegistry" />
+          <SecurityAppManager ref="softwareManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" />
+          <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" :registry="appRegistry" />
           <el-dialog v-model="versionManagerOpen" :title="`${versionManagerRuntime?.name || '软件'} · 版本管理`" width="500px">
             <p class="runtime-version-help">精确版本独立安装并存；安装后可在对应网站或数据库设置中切换，现有绑定保持不变。</p>
             <el-select v-model="versionManagerSelection" style="width: 100%" aria-label="选择另一软件版本" placeholder="当前目录中没有待安装版本">

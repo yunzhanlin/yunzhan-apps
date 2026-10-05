@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
+import { isSecuritySoftware } from "./softwareRouting";
 
 type API = <T>(path: string, method?: string, body?: unknown, idempotencyKey?: string) => Promise<T>;
 export interface SecurityAppCatalogItem {
@@ -26,7 +27,7 @@ export interface SecurityAppStatus {
 }
 interface WAFEvent { time: string; site: string; ip: string; status: number; method: string; bad_method: string; bad_args: string; bad_uri: string; bad_agent: string; rate: string }
 
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void> }>();
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings: Record<string, string | number>) => Promise<string> }>();
 const open = ref(false), busy = ref(false);
 const selected = ref<SecurityAppCatalogItem | null>(null);
 const status = ref<SecurityAppStatus | null>(null);
@@ -49,6 +50,13 @@ async function loadEvents() {
 }
 
 function show(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
+  if (!isSecuritySoftware(app.id)) {
+    open.value = false;
+    selected.value = null;
+    status.value = null;
+    ElMessage.error("该应用不是安全插件，请从对应的应用管理页打开");
+    return;
+  }
   selected.value = app;
   status.value = current || null;
   form.value = { ...app.defaults, ...(current?.settings || {}) };
@@ -59,7 +67,7 @@ function show(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
   if (app.id === "nginx-waf" && current?.installed) void loadEvents();
 }
 async function queue(action: "install" | "configure" | "uninstall") {
-  if (!selected.value || busy.value) return;
+  if (!selected.value || !isSecuritySoftware(selected.value.id) || busy.value) return;
   const app = selected.value;
   try {
     if (action === "uninstall") {
@@ -74,14 +82,17 @@ async function queue(action: "install" | "configure" | "uninstall") {
       );
     }
     busy.value = true;
-    const result = await props.api<{ job_id: string }>(`/software/${app.id}/${action}`, "POST", { settings: action === "uninstall" ? {} : form.value });
+    const jobID = action === "install"
+      ? await props.onInstall(app.id, form.value)
+      : (await props.api<{ job_id: string }>(`/software/${app.id}/${action}`, "POST", { settings: action === "uninstall" ? {} : form.value })).job_id;
     open.value = false;
-    await props.onJob(result.job_id);
+    await props.onJob(jobID);
   } catch (error) {
     if (error instanceof Error && error.message !== "cancel") ElMessage.error(error.message);
   } finally { busy.value = false; }
 }
 async function install(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
+  if (!isSecuritySoftware(app.id)) { show(app, current); return; }
   show(app, current);
   try {
     await ElMessageBox.confirm(
@@ -114,7 +125,7 @@ defineExpose({ show, install });
           <el-form-item label="基线"><el-select v-model="form.profile"><el-option value="baseline" label="基线 · 低兼容性风险"/><el-option value="strict" label="严格 · 同时限制非特权 BPF 并记录异常包"/></el-select></el-form-item>
           <el-alert :closable="false" type="warning" title="安装时记录每个受管 sysctl 的实际原值；卸载会逐项恢复，而不是套用猜测的系统默认值。"/>
         </template>
-        <template v-else>
+        <template v-else-if="selected.id === 'intrusion-prevention'">
           <div class="security-app-triple"><el-form-item label="失败次数"><el-input-number v-model="form.max_retry" :min="2" :max="20"/></el-form-item><el-form-item label="统计窗口（分钟）"><el-input-number v-model="form.find_time_minutes" :min="1" :max="1440"/></el-form-item><el-form-item label="封禁时长（分钟）"><el-input-number v-model="form.ban_time_minutes" :min="10" :max="10080"/></el-form-item></div>
           <el-alert :closable="false" type="info" title="使用 Debian Fail2ban 与 systemd SSH 日志后端；封禁列表和解封继续在安全中心读取实际 Jail。"/>
         </template>
