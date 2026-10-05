@@ -117,7 +117,7 @@ func TestPHPWorkerInterruptedWithoutResourcesReleasesReferenceOnlyAfterProof(t *
 	}
 }
 func TestPHPWorkerOperationMetadataFailsClosed(t *testing.T) {
-	for _, corrupt := range []string{"site", "runtime", "action", "state", "symlink"} {
+	for _, corrupt := range []string{"site", "runtime", "action", "state", "timestamp", "symlink"} {
 		t.Run(corrupt, func(t *testing.T) {
 			s := New(Config{StateDir: t.TempDir()})
 			v := operationWorker()
@@ -132,6 +132,8 @@ func TestPHPWorkerOperationMetadataFailsClosed(t *testing.T) {
 				r.Action = "shell"
 			case "state":
 				r.State = "done"
+			case "timestamp":
+				r.CreatedAt = "invalid"
 			}
 			if e := s.savePHPWorkerOperation(r); e != nil {
 				t.Fatal(e)
@@ -149,6 +151,25 @@ func TestPHPWorkerOperationMetadataFailsClosed(t *testing.T) {
 				t.Fatal("corrupt record accepted")
 			}
 		})
+	}
+}
+
+func TestPHPWorkerOperationOrderingUsesPreciseTimeAndAcceptsLegacySeconds(t *testing.T) {
+	s := New(Config{StateDir: t.TempDir()})
+	stamps := []string{"2026-10-05T00:00:00.2Z", "2026-10-05T00:00:00Z", "2026-10-05T00:00:00.1Z"}
+	for _, stamp := range stamps {
+		v := operationWorker()
+		op := core.PHPWorkerOperation{ID: core.ID(), SiteID: v.SiteID, WorkerID: v.ID, State: "succeeded", Action: "stop", CreatedAt: stamp}
+		if e := s.savePHPWorkerOperation(phpWorkerOperationRecord{PHPWorkerOperation: op, Input: v}); e != nil {
+			t.Fatal(e)
+		}
+	}
+	items, e := readPHPWorkerOperations(s.phpWorkerOperationsDir())
+	if e != nil {
+		t.Fatal(e)
+	}
+	if len(items) != 3 || items[0].CreatedAt != stamps[1] || items[1].CreatedAt != stamps[2] || items[2].CreatedAt != stamps[0] {
+		t.Fatal(items)
 	}
 }
 func TestPHPWorkerStopUsesConfiguredGraceInsteadOfGenericCommandDeadline(t *testing.T) {

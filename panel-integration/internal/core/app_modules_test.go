@@ -14,6 +14,10 @@ func TestAppModuleDefinitions(t *testing.T) {
 			t.Fatal(d)
 		}
 		seen[d.ID] = true
+		guide := ModuleGuidance(d.ID)
+		if guide.Description == "" || len(guide.Workflow) == 0 || len(guide.Limitations) == 0 {
+			t.Fatal("missing actual behavior and limitations", d.ID)
+		}
 		for _, a := range d.Actions {
 			if !ValidAppModuleAction(d.ID, a) {
 				t.Fatal(d.ID, a)

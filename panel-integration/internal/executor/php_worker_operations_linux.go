@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 type phpWorkerOperationRecord struct {
@@ -69,6 +70,12 @@ func readPHPWorkerOperations(dir string) ([]phpWorkerOperationRecord, error) {
 		if e = json.Unmarshal(b, &v); e != nil {
 			return nil, e
 		}
+		if _, e = time.Parse(time.RFC3339Nano, v.CreatedAt); e != nil {
+			return nil, errors.New("PHP 进程操作创建时间损坏")
+		}
+		if _, e = time.Parse(time.RFC3339Nano, v.UpdatedAt); e != nil {
+			return nil, errors.New("PHP 进程操作更新时间损坏")
+		}
 		r, found := runtimecatalog.Find(v.Input.ObservedReleaseID)
 		if v.ID != id || !core.ValidID(v.SiteID) || !core.ValidID(v.WorkerID) || v.Input.ID != v.WorkerID || v.Input.SiteID != v.SiteID || core.ValidatePHPWorkerSpec(v.Input.PHPWorkerSpec) != nil || !found || r.Family != "php" {
 			return nil, errors.New("PHP 进程操作元数据损坏")
@@ -86,10 +93,12 @@ func readPHPWorkerOperations(dir string) ([]phpWorkerOperationRecord, error) {
 		out = append(out, v)
 	}
 	sort.Slice(out, func(i, j int) bool {
-		if out[i].CreatedAt == out[j].CreatedAt {
+		a, _ := time.Parse(time.RFC3339Nano, out[i].CreatedAt)
+		b, _ := time.Parse(time.RFC3339Nano, out[j].CreatedAt)
+		if a.Equal(b) {
 			return out[i].ID < out[j].ID
 		}
-		return out[i].CreatedAt < out[j].CreatedAt
+		return a.Before(b)
 	})
 	return out, nil
 }
@@ -102,7 +111,7 @@ func (s *Service) savePHPWorkerOperation(v phpWorkerOperationRecord) error {
 	if e := ordinary(dir, true); e != nil {
 		return e
 	}
-	v.UpdatedAt = core.Now()
+	v.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	b, e := json.Marshal(v)
 	if e != nil {
 		return e
@@ -232,7 +241,8 @@ func (s *Service) enqueuePHPWorkerOperation(v core.PHPWorker, action, confirm st
 	if len(items)-removed >= 1024 {
 		return out, errors.New("PHP 进程操作记录需要清理，请先处理未决操作")
 	}
-	out = core.PHPWorkerOperation{ID: core.ID(), SiteID: v.SiteID, WorkerID: v.ID, Action: action, State: "queued", CreatedAt: core.Now(), UpdatedAt: core.Now()}
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	out = core.PHPWorkerOperation{ID: core.ID(), SiteID: v.SiteID, WorkerID: v.ID, Action: action, State: "queued", CreatedAt: now, UpdatedAt: now}
 	if e = s.savePHPWorkerOperation(phpWorkerOperationRecord{PHPWorkerOperation: out, Input: v, ConfirmName: confirm}); e != nil {
 		return out, e
 	}

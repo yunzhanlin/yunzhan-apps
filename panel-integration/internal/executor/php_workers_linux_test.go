@@ -76,3 +76,13 @@ func TestPHPWorkerRepeatedStopDoesNotHideUnknownOrLiveState(t *testing.T) {
 		})
 	}
 }
+
+func TestPHPWorkerMissingOrMalformedPropertiesCannotProveStopped(t *testing.T) {
+	for _, output := range []string{"", "MainPID=0", "ActiveState=inactive", "ActiveState=inactive\nMainPID=garbage", "ActiveState=inactive\nMainPID=-1", "ActiveState=unexpected\nMainPID=0"} {
+		s := New(Config{Run: func(context.Context, string, ...string) (string, error) { return output, nil }})
+		got := s.inspectPHPWorker(context.Background(), core.PHPWorker{ID: core.ID()})
+		if got.Status != "unknown" || got.LastError == "" {
+			t.Fatal("unproven process state accepted", output, got)
+		}
+	}
+}

@@ -48,6 +48,12 @@ type AppModuleInput struct {
 	AutoRestore     bool          `json:"auto_restore,omitempty"`
 	Confirm         string        `json:"confirm,omitempty"`
 	DryRun          bool          `json:"dry_run,omitempty"`
+	FromTime        string        `json:"from_time,omitempty"`
+	ToTime          string        `json:"to_time,omitempty"`
+	Search          string        `json:"search,omitempty"`
+	StatusCode      int           `json:"status_code,omitempty"`
+	MinSeconds      float64       `json:"min_seconds,omitempty"`
+	OnlyBots        bool          `json:"only_bots,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -58,7 +64,7 @@ type AppUpstream struct {
 func AppModules() []AppModuleDefinition {
 	site := AppModuleField{"site_id", "网站", "site"}
 	path := AppModuleField{"path", "相对文件路径", "text"}
-	return []AppModuleDefinition{
+	definitions := []AppModuleDefinition{
 		{"site-diagnosis", "网站诊断", []string{"run"}, []AppModuleField{site}},
 		{"network-threat-detection", "网络威胁检测", []string{"run", "baseline"}, nil},
 		{"website-analytics", "网站分析", []string{"run"}, []AppModuleField{site}},
@@ -66,20 +72,32 @@ func AppModules() []AppModuleDefinition {
 		{"daily-report", "每日运维报告", []string{"run"}, nil},
 		{"website-statistics-v2", "网站统计 v2", []string{"run"}, []AppModuleField{site}},
 		{"enterprise-tamper-proof", "企业网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path, {"auto_restore", "自动恢复已备份文件", "boolean"}}},
-		{"load-balance", "负载均衡", []string{"save", "probe", "remove"}, []AppModuleField{{"domain", "域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点 JSON", "json"}, {"sticky", "IP 会话粘滞", "boolean"}}},
+		{"load-balance", "负载均衡", []string{"save", "probe", "remove"}, []AppModuleField{{"domain", "域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}}},
 		{"mobile-pwa", "云栈移动端", []string{"run"}, nil},
 		{"apache-waf", "Apache 请求防火墙", []string{"run"}, nil},
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
 		{"task-manager", "任务管理器", []string{"run", "terminate"}, []AppModuleField{{"pid", "进程 PID", "number"}, {"start_time", "进程启动序号", "number"}}},
 		{"website-tamper-proof", "网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path}},
-		{"user-manager", "面板用户管理", []string{"run", "create", "update", "revoke", "delete"}, []AppModuleField{{"username", "用户名", "text"}, {"password", "新密码", "password"}, {"role", "角色 admin/operator/viewer", "text"}, {"site_ids", "网站权限范围 JSON", "json"}}},
-		{"file-monitor", "文件监控", []string{"baseline", "check"}, []AppModuleField{site, {"excludes", "排除路径前缀 JSON", "json"}}},
+		{"user-manager", "面板用户管理", []string{"run", "create", "update", "revoke", "delete"}, []AppModuleField{{"username", "用户名", "text"}, {"password", "新密码", "password"}, {"role", "角色", "text"}, {"site_ids", "网站权限范围", "json"}}},
+		{"file-monitor", "文件监控", []string{"baseline", "check"}, []AppModuleField{site, {"excludes", "排除路径前缀", "json"}}},
 		{"disk-analysis", "磁盘分析", []string{"run"}, []AppModuleField{site}},
 		{"platform-ops", "多主机运维", []string{"run", "add", "remove", "issue-token", "revoke-token"}, []AppModuleField{{"resource_id", "主机标识", "text"}, {"url", "主机 HTTPS API 地址", "text"}, {"token", "只读访问令牌", "password"}}},
 		{"nfs-manager", "NFS 管理", []string{"run", "mount", "unmount"}, []AppModuleField{{"resource_id", "挂载名称", "text"}, {"source", "服务端:/绝对导出路径", "text"}, {"read_only", "只读挂载", "boolean"}}},
 		{"pm2-manager", "PM2 进程管理", []string{"run", "create", "start", "stop", "restart", "logs", "delete"}, []AppModuleField{site, {"resource_id", "应用标识", "text"}, {"entry", "网站内 JS 入口", "text"}, {"port", "应用回环端口", "number"}}},
 		{"pure-ftpd", "Pure-FTPd", []string{"run", "create", "delete"}, []AppModuleField{site, {"username", "FTP 用户名", "text"}, {"password", "FTP 密码", "password"}}},
 	}
+	for i := range definitions {
+		switch definitions[i].ID {
+		case "website-analytics", "website-statistics-v2":
+			definitions[i].Fields = append(definitions[i].Fields,
+				AppModuleField{"from_time", "开始时间（可选）", "datetime"}, AppModuleField{"to_time", "结束时间（可选）", "datetime"},
+				AppModuleField{"search", "路径或 IP 筛选", "text"}, AppModuleField{"status_code", "HTTP 状态码（0 为全部）", "number"},
+				AppModuleField{"min_seconds", "慢请求阈值（秒，0 默认 1 秒）", "decimal"}, AppModuleField{"only_bots", "仅查看爬虫请求", "boolean"})
+		case "disk-analysis":
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"path", "网站内子目录（留空扫描全部）", "text"})
+		}
+	}
+	return definitions
 }
 func FindAppModule(id string) (AppModuleDefinition, bool) {
 	for _, d := range AppModules() {

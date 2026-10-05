@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.compat6-linux-amd64.tar.gz",
-    "archive_sha256": "cce8d45fc2664c599b815fa9a583e2ca60358b4790618022c1e71d77eb68daf2",
-    "frozen_inputs_sha256": "12b5d2b30205ea05219d8320c8f46acd43d80298a19283d235c3b9095a1ed360"
+    "archive": "panel-0.1.0-dev.functions3-linux-amd64.tar.gz",
+    "archive_sha256": "228ab1f7c31a95b704ec1dc449848ed933a2006062b4cfc7d567fdaa33fe456b",
+    "frozen_inputs_sha256": "72bb0bb44c0106121b388c41c810df3ff95d304d8cba1559701ee69de87befb7"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -29,8 +29,9 @@
     "internal/core/app_compose_templates.go": "94e93bdc423adb1c1a6f21cf8d38410d014f1ce4184f239416ee41172ef0502c",
     "internal/core/app_compose_templates_test.go": "43e627ec90708b750a7539b9a31a744f722e1be803af28f8a8b7e832bfa5ba08",
     "internal/core/app_module_accounts.go": "4ec1b6a56c467cfe60e32c4cc52fd3e11b682bba8058420098239870f60ff318",
-    "internal/core/app_modules.go": "b6771cb6b9244c6b275c268824946c2d309ae7a109815f2981d18c7c8aeb977e",
-    "internal/core/app_modules_test.go": "73c0acbf63b99c27a6f8f47483b3c1740d882e3cdd177578f96bd0458ea1e6df",
+    "internal/core/app_module_guidance.go": "f94189091b5fd362c3d5d231f80821f90d52b1a604106c87ceefada1becc68c1",
+    "internal/core/app_modules.go": "652c217fdba430935e54546c6c55680fa5e284273ae8a7384c611ab834bf25ba",
+    "internal/core/app_modules_test.go": "d5b5dc97d712f7ed3141de244205acb37685d8de28fa2e826eab80ca4f063baf",
     "internal/core/app_registry.go": "dc9331e158ad6ad60e2955d1573f25c9ae57acb8787ad2344fb18b04ace18625",
     "internal/core/app_registry_compatibility_test.go": "e1e330a7d9a7d64fc4e75d4938a195a709118a7f555c08e84837a61872a788fb",
     "internal/core/app_registry_statuses_test.go": "0bc05e8fa9f0d276c3be324f199cec9fd2ceec53c65b92fd5a600895e172b0bb",
@@ -152,9 +153,11 @@
     "internal/executor/admin_scripts_linux_test.go": "ae5a43cc514d3915ffe9dd4a8f2d57210c93750336093deaabad989459b1419e",
     "internal/executor/apache_sites_linux.go": "c859d21df6848bdb5969ffed4653a365b5bed255e3567a475d73b5fc428d5a3a",
     "internal/executor/apache_sites_other.go": "d286c3452f19030dda3cb57a7bcc93adb12315002f7e8b6e81b88bb7166e6da4",
+    "internal/executor/app_analytics_report.go": "6467eb7ffc5d72edf99250cb6a321be0eee31ecb47dd57044bf0ab15db3261aa",
+    "internal/executor/app_analytics_report_test.go": "6250078a4391b80d839feac899aa5eaca8d6152a1aa352e244033eb2e8a995b8",
     "internal/executor/app_legacy_sync_linux.go": "c8eb7370c19518a294d7f044bf440cf4bb527a56296d8a96810f57d31f3f2e5f",
-    "internal/executor/app_modules_linux.go": "a3ac151b0b01ff4e342150a02c3491b072c8b837f152a06cc505c7d066eab8f0",
-    "internal/executor/app_modules_linux_test.go": "e06d516b33d9a5eeee32da38133c08fa9282e1668979764bab00f7ab1ff210af",
+    "internal/executor/app_modules_linux.go": "7531c23c276ba8cdcb0951dc19b6a3eaa0b680d3e0fc2bcdc275488c66601088",
+    "internal/executor/app_modules_linux_test.go": "cc5767df15190ba91dc2ea18c7109b22e64bb9d178ec70fdbf1fc5ba644940ad",
     "internal/executor/app_modules_other.go": "45f4889a136cef0b08b144661931bcc60a85a5709bb03b2cb1c6552f0b8b807f",
     "internal/executor/app_native_linux.go": "adb8f7385a8cbac041aaa7b0d6443940af1606abd7418d3ac1bbecc16f867b47",
     "internal/executor/app_pm2_assets.go": "6975b3bf47345934cb6caea86da6268a3274b9b61b378c0817b908ceddda1252",
@@ -243,10 +246,10 @@
     "internal/executor/php_other.go": "1eba6931d6455588744b955dea76153855402b4d5e17054e78ddad79617251ae",
     "internal/executor/php_settings.go": "0197c7c444bac6023be31bf9cf23c8a66fb001c4c719f61671e9e58de3b3a287",
     "internal/executor/php_settings_test.go": "b914dcc727d455596b60fab07a869588e427dadeba28b784b9190588a61338f7",
-    "internal/executor/php_worker_operations_linux.go": "fae12a121d0359277be9cb6a5dac8b5e227c2126b81146c05250b9a190001cb0",
-    "internal/executor/php_worker_operations_linux_test.go": "a6be6fa8b3ef88dd9d5e17b16eab7514f4c07defb27fae57628306b868a29110",
-    "internal/executor/php_workers_linux.go": "a63edf2df708ac001ea5c0f42398e7b119482630a65e8f93a326cbc4f951cf2e",
-    "internal/executor/php_workers_linux_test.go": "28aae12607a485d7014bad128fa52abc1cf37b241cbdce551568fe038bc2ebde",
+    "internal/executor/php_worker_operations_linux.go": "ad6331d0248ab94dd38db963d482956c87870a92de3a8f0ae686975c5aac55ef",
+    "internal/executor/php_worker_operations_linux_test.go": "9d84cea9b4cc1e80144cd95de6da98ff15c86058b2fb3383ff1cc6c479f85a0a",
+    "internal/executor/php_workers_linux.go": "56bbd5ab88d58b390a46538d36ee75343cd9a1da60ab674fe855199ec00ce109",
+    "internal/executor/php_workers_linux_test.go": "1a68cbfba8a3de20fdd31dcf239f469be00c0b960e90b663bbf45f848033adcb",
     "internal/executor/php_workers_other.go": "f748c5e0aa4d1f7e346e6d5b0ccb6011bc462a42790b5614c829a38aeb7287ff",
     "internal/executor/pm2-assets/package-lock.json": "ff42cfd0cf5c6f293c70090ed8ba70882b96545b4490a656b1ff74825b1e9cef",
     "internal/executor/pm2-assets/package.json": "1338eb699c8b1aa4fdb8b60426a57ff1b4319d9cdd4ca543515e68592417b111",
@@ -375,7 +378,8 @@
     "web/src/ACMEManager.vue": "8aeb2a5ba7af4c305b5f1325b388f9adf3379fac71bbd06850e1b2ce1ca047cb",
     "web/src/AccountManager.vue": "623dcd728b57b55644aed3d988a0199ecc1f4eac5a74ebd77fa3b49169380f76",
     "web/src/App.vue": "0b28fb9d637b7d136e0c68cf74076adbd318c6cf6e6cb14e7a0558d11e27a988",
-    "web/src/AppModuleManager.vue": "7ebdf5bbea03a037ff8ce2ce400536c5558b5cdee7bdbf5fa3cfb5da5a84a028",
+    "web/src/AppModuleManager.vue": "a52fb94ebc469adbb2cb1adfff656ef43956664a2d307e66406878298c3e4a5f",
+    "web/src/AppModuleReport.vue": "4267d674cb1aa065057b7d2801275e8b879a094e65ae44daf89c853ec00d80ac",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
     "web/src/BatchSSLManager.vue": "3fad57eb329e6a91636164fe508c5f3c953d18972c70ab7d9d45443a32baf208",
     "web/src/CertificateManager.vue": "46aabbba8cedf671570cda40c1518a9f4a47d1e07c811cf039579c56df7f2b0c",
@@ -434,6 +438,8 @@
     "scripts/panel_client.py": "cd771ada9b30de93f55ab4b601053b2ba3bb41573ff61cdeb2d2b5cf54b3a172",
     "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c",
     "scripts/upgrade-running-development.sh": "4d5e618ca05f435bc64d7c10f3ef5ed555211b1588dec6eebec15d77defba1c7",
-    "scripts/check-app-registry-compat-browser.mjs": "695fc28e7a53ba3ce4ae2ea8a482070f708fe406e680ae3bdc76034d3dfd62c7"
+    "scripts/check-app-registry-compat-browser.mjs": "695fc28e7a53ba3ce4ae2ea8a482070f708fe406e680ae3bdc76034d3dfd62c7",
+    "scripts/test-app-functions.py": "bb1dca6acefe52c9023ade5a9920958833672e0baa5bd78cd54de20c759d863d",
+    "scripts/test-app-functions-browser.mjs": "b29f6462770600694a03ae89fde4a9d61e52a3d070b0cbf6ff358c2677178a73"
   }
 }

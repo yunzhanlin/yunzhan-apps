@@ -211,7 +211,12 @@ func (s *Service) inspectPHPWorker(ctx context.Context, v core.PHPWorker) core.P
 			properties[key] = value
 		}
 	}
-	v.PID, _ = strconv.Atoi(properties["MainPID"])
+	pid, parseErr := strconv.Atoi(properties["MainPID"])
+	if parseErr != nil || pid < 0 {
+		v.Status, v.LastError = "unknown", "无法核对 PHP 进程的主进程标识"
+		return v
+	}
+	v.PID = pid
 	v.InvocationID = properties["InvocationID"]
 	switch properties["ActiveState"] {
 	case "active":
@@ -220,6 +225,11 @@ func (s *Service) inspectPHPWorker(ctx context.Context, v core.PHPWorker) core.P
 		v.Status = properties["ActiveState"]
 	case "failed":
 		v.Status = "failed"
+	case "inactive":
+		v.Status = "stopped"
+	default:
+		v.Status, v.LastError = "unknown", "无法核对 PHP 进程的运行状态"
+		return v
 	}
 	if result := properties["Result"]; result != "" && result != "success" {
 		v.LastError = result

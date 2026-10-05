@@ -44,7 +44,7 @@
       "additionalProperties": false,
       "required": ["os", "architectures"],
       "properties": {
-        "os": { "type": "array", "minItems": 1, "items": { "enum": ["debian-12", "debian-13"] } },
+        "os": { "type": "array", "minItems": 1, "items": { "enum": ["debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"] } },
         "architectures": { "type": "array", "minItems": 1, "items": { "enum": ["amd64", "arm64"] } }
       }
     },

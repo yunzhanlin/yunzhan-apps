@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"bufio"
 	"context"
 	"crypto/hmac"
 	"crypto/rand"
@@ -199,7 +198,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		}
 		var report any
 		_ = moduleRead(filepath.Join(s.moduleDir(id), "last-report.json"), &report)
-		respond(w, 200, map[string]any{"definition": d, "status": s.appModuleStatus(r.Context(), id), "report": report})
+		respond(w, 200, map[string]any{"definition": d, "guidance": core.ModuleGuidance(id), "status": s.appModuleStatus(r.Context(), id), "report": report})
 	})
 	m.HandleFunc("POST /v1/app-modules/{id}/{action}", func(w http.ResponseWriter, r *http.Request) {
 		id, action := r.PathValue("id"), r.PathValue("action")
@@ -238,11 +237,11 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "php-code-security":
 		return s.modulePHPScan(ctx, in.SiteID)
 	case "disk-analysis":
-		return s.moduleDisk(ctx, in.SiteID)
+		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
 		return s.moduleDiagnosis(ctx, in.SiteID)
 	case "website-analytics", "website-statistics-v2":
-		return s.moduleAnalytics(ctx, in.SiteID)
+		return s.moduleAnalyticsFiltered(ctx, in)
 	case "network-threat-detection":
 		return s.moduleThreat(ctx, action)
 	case "task-manager":
@@ -627,23 +626,65 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 	return map[string]any{"preview": preview, "copied": copyPaths, "conflicts": conflicts, "deletes": []string{}, "checkpoint": filepath.Base(checkpointPath)}, nil
 }
 func (s *Service) moduleDisk(ctx context.Context, id string) (any, error) {
+	return s.moduleDiskAt(ctx, id, "")
+}
+func (s *Service) moduleDiskAt(ctx context.Context, id, selectedPath string) (any, error) {
+	if !core.ValidFilePath(selectedPath, true) {
+		return nil, errors.New("请选择网站内的普通目录")
+	}
 	f, e := s.openFiles(id)
 	if e != nil {
 		return nil, e
 	}
 	defer f.Close()
+	root := f.public
+	if selectedPath != "" && selectedPath != "." {
+		parent := ""
+		for _, part := range strings.Split(selectedPath, "/") {
+			parent = filepath.Join(parent, part)
+			info, err := f.public.Lstat(parent)
+			if err != nil || !info.IsDir() {
+				return nil, errors.New("子目录包含链接或不是普通目录")
+			}
+		}
+		root, e = f.public.OpenRoot(selectedPath)
+		if e != nil {
+			return nil, e
+		}
+		defer root.Close()
+	}
 	var total int64
 	count := 0
+	entries := 0
 	partial := false
 	rows := []map[string]any{}
 	dirs := map[string]int64{}
-	e = fs.WalkDir(f.public.FS(), ".", func(p string, d fs.DirEntry, err error) error {
+	extensions := map[string]int64{}
+	rootChildren := map[string]int64{}
+	keyBudget := 200 << 10
+	addSize := func(group map[string]int64, key string, size int64) {
+		if _, present := group[key]; !present {
+			cost := 6*len(key) + 32
+			if len(key) > 512 || len(group) >= 1000 || cost > keyBudget {
+				partial = true
+				return
+			}
+			keyBudget -= cost
+		}
+		group[key] += size
+	}
+	e = fs.WalkDir(root.FS(), ".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		if entries >= 100000 {
+			partial = true
+			return fs.SkipAll
+		}
+		entries++
 		if d.IsDir() || d.Type()&os.ModeSymlink != 0 {
 			return nil
 		}
@@ -660,8 +701,31 @@ func (s *Service) moduleDisk(ctx context.Context, id string) (any, error) {
 		}
 		count++
 		total += st.Size()
-		dirs[filepath.Dir(p)] += st.Size()
-		rows = append(rows, map[string]any{"path": p, "bytes": st.Size()})
+		addSize(dirs, filepath.Dir(p), st.Size())
+		ext := strings.ToLower(filepath.Ext(p))
+		if ext == "" {
+			ext = "无扩展名"
+		}
+		addSize(extensions, ext, st.Size())
+		child, _, _ := strings.Cut(p, "/")
+		addSize(rootChildren, child, st.Size())
+		fullPath := filepath.Join(selectedPath, p)
+		row := map[string]any{"path": fullPath, "bytes": st.Size(), "can_drill": core.ValidFilePath(fullPath, false)}
+		if len(fullPath) > 512 {
+			row["path"] = fullPath[:512] + "…"
+			row["can_drill"] = false
+			partial = true
+		} else {
+			row["directory"] = filepath.Dir(fullPath)
+		}
+		if len(rows) < 100 {
+			rows = append(rows, row)
+		} else if st.Size() > rows[len(rows)-1]["bytes"].(int64) {
+			rows[len(rows)-1] = row
+		} else {
+			return nil
+		}
+		sort.Slice(rows, func(i, j int) bool { return rows[i]["bytes"].(int64) > rows[j]["bytes"].(int64) })
 		return nil
 	})
 	if e != nil {
@@ -671,7 +735,7 @@ func (s *Service) moduleDisk(ctx context.Context, id string) (any, error) {
 	if len(rows) > 100 {
 		rows = rows[:100]
 	}
-	return map[string]any{"site_id": id, "total_bytes": total, "files": count, "directories": dirs, "largest_files": rows, "partial": partial}, nil
+	return map[string]any{"site_id": id, "path": selectedPath, "total_bytes": total, "files": count, "directories": dirs, "children": rootChildren, "extensions": extensions, "largest_files": rows, "partial": partial, "scope": "仅选定网站 public 目录；跳过符号链接，不删除任何文件"}, nil
 }
 
 var phpModuleRules = []struct{ name, pattern, severity string }{
@@ -774,6 +838,13 @@ func (s *Service) moduleDiagnosis(ctx context.Context, id string) (any, error) {
 }
 
 func (s *Service) moduleAnalytics(ctx context.Context, id string) (any, error) {
+	return s.moduleAnalyticsFiltered(ctx, core.AppModuleInput{SiteID: id})
+}
+func (s *Service) moduleAnalyticsFiltered(ctx context.Context, in core.AppModuleInput) (any, error) {
+	id := in.SiteID
+	if _, _, err := analyticsWindow(in); err != nil {
+		return nil, err
+	}
 	if !core.ValidID(id) {
 		return nil, errors.New("请选择网站")
 	}
@@ -785,7 +856,7 @@ func (s *Service) moduleAnalytics(ctx context.Context, id string) (any, error) {
 	path := s.systemPath("/var/log/nginx/panel-" + id + ".access.log")
 	f, e := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if errors.Is(e, os.ErrNotExist) {
-		return map[string]any{"requests": 0, "site_id": id, "paths": map[string]int{}, "status_codes": map[string]int{}}, nil
+		return buildAnalyticsReport(ctx, strings.NewReader(""), id, in, false, time.Now())
 	}
 	if e != nil {
 		return nil, e
@@ -797,57 +868,17 @@ func (s *Service) moduleAnalytics(ctx context.Context, id string) (any, error) {
 	}
 	offset := max(int64(0), st.Size()-16<<20)
 	_, _ = f.Seek(offset, io.SeekStart)
-	scanner := bufio.NewScanner(io.LimitReader(f, 16<<20))
-	scanner.Buffer(make([]byte, 4096), 65536)
 	if offset > 0 {
-		scanner.Scan()
-	}
-	requests, errorsCount, bots := 0, 0, 0
-	var bytes int64
-	ips := map[string]bool{}
-	paths := map[string]int{}
-	codes := map[string]int{}
-	hours := map[string]int{}
-	referers := map[string]int{}
-	var seconds float64
-	for scanner.Scan() {
-		if ctx.Err() != nil {
-			return nil, ctx.Err()
-		}
-		var row struct {
-			Time, Remote, Path, Agent, Referer string
-			Status                             int
-			Bytes                              int64
-			Seconds                            float64
-		}
-		if json.Unmarshal(scanner.Bytes(), &row) != nil {
-			continue
-		}
-		requests++
-		bytes += row.Bytes
-		seconds += row.Seconds
-		codes[strconv.Itoa(row.Status)]++
-		paths[row.Path]++
-		if row.Remote != "" {
-			ips[row.Remote] = true
-		}
-		if row.Status >= 400 {
-			errorsCount++
-		}
-		if len(row.Time) >= 13 {
-			hours[row.Time[:13]]++
-		}
-		if regexp.MustCompile(`(?i)bot|crawler|spider|bingpreview`).MatchString(row.Agent) {
-			bots++
-		}
-		if row.Referer != "" {
-			referers[row.Referer]++
+		// Discard only the cut first line without reading ahead past its newline.
+		one := make([]byte, 1)
+		for {
+			n, err := f.Read(one)
+			if n == 0 || err != nil || one[0] == '\n' {
+				break
+			}
 		}
 	}
-	if scanner.Err() != nil {
-		return nil, scanner.Err()
-	}
-	return map[string]any{"site_id": id, "requests": requests, "bytes": bytes, "unique_ips": len(ips), "errors": errorsCount, "bots": bots, "paths": paths, "status_codes": codes, "hours": hours, "referers": referers, "total_seconds": seconds, "partial": offset > 0, "updated_at": core.Now()}, nil
+	return buildAnalyticsReport(ctx, f, id, in, offset > 0, time.Now())
 }
 func (s *Service) moduleThreat(ctx context.Context, action string) (any, error) {
 	listeners, e := s.Config.Run(ctx, "/usr/bin/ss", "-H", "-lntup")
@@ -933,7 +964,16 @@ func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppMod
 	processes := computeProcesses(first, second, total, totalSecond, 250*time.Millisecond)
 	rows := []map[string]any{}
 	for _, p := range processes {
-		rows = append(rows, map[string]any{"pid": p.PID, "name": p.Name, "cpu_percent": p.CPUPercent, "memory": p.Memory, "state": p.State, "start_time": second[p.PID].StartTime})
+		uidInfo, statErr := os.Stat(filepath.Join("/proc", strconv.Itoa(p.PID)))
+		cgroup, _ := os.ReadFile(filepath.Join("/proc", strconv.Itoa(p.PID), "cgroup"))
+		managed := strings.Contains(string(cgroup), "panel-node@") || strings.Contains(string(cgroup), "panel-pm2@") || strings.Contains(string(cgroup), "panel-php@")
+		canTerminate := false
+		if statErr == nil {
+			if stat, ok := uidInfo.Sys().(*syscall.Stat_t); ok {
+				canTerminate = p.PID > 1 && stat.Uid != 0 && managed
+			}
+		}
+		rows = append(rows, map[string]any{"pid": p.PID, "name": p.Name, "cpu_percent": p.CPUPercent, "memory": p.Memory, "read_rate": p.ReadRate, "write_rate": p.WriteRate, "state": p.State, "start_time": second[p.PID].StartTime, "managed": managed, "can_terminate": canTerminate})
 	}
 	connections, _ := s.Config.Run(ctx, "/usr/bin/ss", "-H", "-ntp")
 	return map[string]any{"processes": rows, "connections": connections}, nil
