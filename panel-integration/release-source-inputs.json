@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.storeupdate2-linux-amd64.tar.gz",
-  "archive_sha256": "4919f12f23612a0dbe8f66d2d85535c7e3c29a9d8351c410de83567830c02b73",
-  "frozen_inputs_sha256": "79867f2c9a9f6d032209f06b3105bd1e75592cb1c819ed700a77e44b7522f162",
+  "archive": "panel-0.1.0-dev.storeupdate3-linux-amd64.tar.gz",
+  "archive_sha256": "624012977326e6ccf18b0b49d8de414568cabd76e01808a7e9a24ce4f6f8a04e",
+  "frozen_inputs_sha256": "e04fb0aff871f31b43eece27fc50b19c828ed1df38e57b8288c8ea9f671bb87d",
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
     "go.sum": "8219530c14d0a4f9cd937204a625760ce6199f313444e4a12006640dba195ed3",
@@ -384,7 +384,7 @@
     "packaging/verify-release.sh": "5d4dcf149e86779041c42a40ad0863243cfb0a65af440b74056c8b15789247fe",
     "web/src/ACMEManager.vue": "8aeb2a5ba7af4c305b5f1325b388f9adf3379fac71bbd06850e1b2ce1ca047cb",
     "web/src/AccountManager.vue": "623dcd728b57b55644aed3d988a0199ecc1f4eac5a74ebd77fa3b49169380f76",
-    "web/src/App.vue": "e02fd56ac2517fcb626f9f8d5880f95d15e78a4ee11bda03a4853a404d714548",
+    "web/src/App.vue": "cfea29f109f0282f49428975ca4ec058562bf3c8c0747a29c76a4cc968a290ca",
     "web/src/AppModuleManager.vue": "9e79aa3364f6c8c890b5ada7332cadf84c017c17601eee6a6c23ed0063e2f974",
     "web/src/AppModuleReport.vue": "7b60b910dcb3ccdb5571486a230410aaeb0da2de8bcbe5495858b11c1c09fa59",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",

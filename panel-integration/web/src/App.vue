@@ -336,7 +336,7 @@ function openBuiltInStoreApp(app: BuiltInStoreApp) {
 const filteredBuiltInApps = computed(() => {
   const term = storeSearch.value.trim().toLowerCase();
   if (storeCategory.value === "recommended" && !term) return [];
-  if (storeStatus.value === "unavailable") return [];
+  if (["unavailable", "updates"].includes(storeStatus.value)) return [];
   const items = builtInStoreApps.filter((app) => {
     if (appRegistry.value.catalog.apps.length && app.id === "memcached-template") return false;
     if (!["recommended", "all", app.category].includes(storeCategory.value)) return false;
@@ -2099,16 +2099,17 @@ onUnmounted(() => {
                 <article v-for="app in filteredRegistryApps" :key="'registry-' + app.id" class="panel-card runtime-card registry-runtime-card">
                   <div class="runtime-card-head">
                     <SoftwareLogo :family="app.id.startsWith('php-') ? 'php' : app.id" />
-                    <div class="runtime-product"><h2>{{ app.name }}</h2><span>{{ registryStatus(app.id)?.installed ? `已安装 ${registryStatus(app.id)?.installed_version || '版本待核对'} → 仓库 ${app.version}` : `v${app.version}` }} · {{ app.category === 'deployment' ? '部署软件' : '专业功能' }}</span></div>
-                    <el-tag v-if="registryStatus(app.id)?.update_available" size="small" type="warning">有新版</el-tag>
+                    <div class="runtime-product"><h2>{{ app.name }}</h2><span>v{{ app.version }} · {{ app.category === 'deployment' ? '部署软件' : '专业功能' }}</span></div>
                     <el-tag
                       disable-transitions
                       :type="registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? 'success' : 'warning') : app.stage === 'ready' ? 'info' : app.stage === 'integration' ? 'warning' : 'info'"
                       size="small"
                     >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? '已安装' : '待核对') : registryStatus(app.id)?.supported === false && app.stage === 'ready' ? '当前机器不支持' : app.stage === 'ready' ? '可安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-tag>
                   </div>
+                  <div v-if="registryStatus(app.id)?.installed" class="registry-version-line"><span>已安装 {{ registryStatus(app.id)?.installed_version || '版本待核对' }} → 仓库 {{ app.version }}</span><el-tag v-if="registryStatus(app.id)?.update_available" size="small" type="warning">有新版</el-tag></div>
                   <p>{{ app.summary }}</p>
                   <div class="runtime-card-tags"><span v-for="tag in app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
+                  <div class="registry-card-actions">
                   <el-button
                     class="runtime-install-button"
                     :type="app.stage === 'ready' ? 'primary' : 'default'"
@@ -2116,6 +2117,7 @@ onUnmounted(() => {
                     @click="installRegistryApp(app)"
                   >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : registryStatus(app.id)?.supported === false && app.stage === 'ready' ? '当前机器不支持' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
                   <el-button v-if="registryStatus(app.id)?.update_available" class="registry-update-button" type="warning" :disabled="registryInstalling.includes(app.id) || appRegistry.source.stale" @click="registryStatus(app.id)?.update_supported ? updateRegistryApp(app) : (registryStatus(app.id)?.update_kind === 'compose-review' ? openRegistryApp(app) : ElMessage.warning(registryStatus(app.id)?.update_detail || '请先升级面板'))">{{ registryStatus(app.id)?.update_supported ? '更新应用' : registryStatus(app.id)?.update_kind === 'compose-review' ? '核对容器更新' : '需升级面板' }}</el-button>
+                  </div>
                   <div class="runtime-note">
                     {{ app.provider === 'runtime' ? '受审核运行时' : app.provider === 'compose' ? '受限 Compose 应用' : '面板功能模块' }} · {{ app.risk === 'eol' ? '已停止维护，仅限隔离兼容迁移' : app.risk === 'privileged' ? '涉及系统权限' : 'SHA-256 固定包' }}<br />
                     {{ registryStatus(app.id)?.detail || '等待状态检查' }}
@@ -3067,6 +3069,18 @@ onUnmounted(() => {
 </template>
 
 <style>
+.store-main .runtime-grid .runtime-card.registry-runtime-card {
+  height: auto;
+  min-height: 260px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+}
+.registry-runtime-card .runtime-product { flex: 1; overflow-wrap: anywhere; }
+.registry-version-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 8px; font-size: 12px; color: var(--muted, #64799a); }
+.registry-card-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.store-main .registry-runtime-card .registry-card-actions .el-button { margin: 0; float: none; }
+.store-main .runtime-grid .registry-runtime-card .runtime-note { display: block; margin-top: 10px; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .lifecycle-actions {
   display: flex;
   gap: 6px;

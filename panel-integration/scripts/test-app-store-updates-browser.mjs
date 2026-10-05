@@ -9,18 +9,30 @@ try{
  const context=await browser.newContext({viewport:{width:1560,height:960}});
  const login=await context.request.post(base+'/api/login',{headers:{Origin:origin},data:{username:access.username,password:access.password}});check(login.ok(),'account login');
  const page=await context.newPage();page.setDefaultTimeout(60000);page.on('pageerror',e=>report.errors.push(e.message));
+ if(process.env.STORE_UPDATE_LAYOUT_ONLY==='1') await page.route('**/api/app-registry*',async route=>{
+  const response=await route.fetch(),data=await response.json();
+  if(data.status){const status=data.status.find(s=>s.id==='files-sync');status.installed_version='1.0';status.update_available=true;status.update_supported=true;}
+  await route.fulfill({response,json:data});
+ });
  await page.goto(base,{waitUntil:'domcontentloaded'});await page.getByRole('heading',{name:'服务器总览',exact:true}).waitFor();
  await page.locator('nav').getByRole('button',{name:'软件商店',exact:true}).click();
  await page.locator('.app-registry-source').getByRole('button',{name:'检查更新',exact:true}).click();
  await page.getByText(/已检查 GitHub 应用目录/).waitFor();
  const category=page.getByRole('combobox',{name:'软件分类筛选'}),filter=page.getByRole('combobox',{name:'软件状态筛选'});await category.selectOption('all');
  let registry=await (await context.request.get(base+'/api/app-registry')).json();check(registry.catalog.apps.length===50,'50 verified apps remain present');check(!registry.source.stale,'real GitHub check passed');
+ if(process.env.STORE_UPDATE_LAYOUT_ONLY==='1'){const status=registry.status.find(s=>s.id==='files-sync');status.installed_version='1.0';status.update_available=true;status.update_supported=true;}
  const expected=registry.status.filter(s=>s.update_available).length;await filter.selectOption('updates');check(await page.locator('.registry-runtime-card').count()===expected,'update filter matches installed/server versions');
  await page.screenshot({path:path.join(out,'updates.png'),animations:'disabled'});
+ if(process.env.STORE_UPDATE_LAYOUT_ONLY==='1'){
+  const card=page.locator('.registry-runtime-card').filter({has:page.getByRole('heading',{name:registry.catalog.apps.find(a=>a.id==='files-sync').name,exact:true})});
+  const cb=await card.boundingBox();for(const label of ['打开管理','更新应用']){const bb=await card.getByRole('button',{name:label,exact:true}).boundingBox();check(bb&&cb&&bb.y+bb.height<=cb.y+cb.height+1,'synthetic layout fixture: '+label+' remains within card');}
+  check(await page.locator('.runtime-grid article').count()===1,'update filter excludes unrelated built-in tools');
+ }
  const target=process.env.STORE_UPDATE_APP||'files-sync',app=registry.catalog.apps.find(a=>a.id===target),status=registry.status.find(s=>s.id===target);
  if(process.env.STORE_UPDATE_CLICK==='1'){
   check(status.update_available&&status.update_supported,'real old installation advertises new version');
   const card=page.locator('.registry-runtime-card').filter({has:page.getByRole('heading',{name:app.name,exact:true})});check((await card.innerText()).includes('→ 仓库'),'old and new versions shown');
+  const cb=await card.boundingBox(),bb=await card.getByRole('button',{name:'更新应用',exact:true}).boundingBox();check(bb&&cb&&bb.y+bb.height<=cb.y+cb.height+1,'update button remains inside visible card bounds');
   const response=page.waitForResponse(r=>r.url().endsWith('/api/app-registry/'+target+'/update')&&r.request().method()==='POST');await card.getByRole('button',{name:'更新应用',exact:true}).click();const result=await (await response).json();check(Boolean(result.job_id),'real update job submitted');
   const deadline=Date.now()+90000;let finished=false;
   while(Date.now()<deadline){const job=await(await context.request.get(base+'/api/jobs/'+result.job_id)).json();if(job.state==='succeeded'){finished=true;break}if(['failed','needs_attention'].includes(job.state))throw Error(JSON.stringify(job));await new Promise(r=>setTimeout(r,1000));}
