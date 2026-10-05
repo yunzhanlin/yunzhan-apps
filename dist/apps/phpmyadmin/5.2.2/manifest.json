@@ -5,7 +5,7 @@
   "category": "deployment",
   "version": "5.2.2",
   "summary": "以回环端口部署 phpMyAdmin，通过面板代理和二次身份校验访问。",
-  "stage": "integration",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "compose",
