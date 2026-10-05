@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "mongodb",
+  "name": "MongoDB",
+  "category": "deployment",
+  "version": "8.0-compat1",
+  "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "mongodb",
+    "image": "mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "认证",
+    "持久卷",
+    "回环端口",
+    "备份导出"
+  ],
+  "health": {
+    "probe": "tcp",
+    "target": "127.0.0.1:27017"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

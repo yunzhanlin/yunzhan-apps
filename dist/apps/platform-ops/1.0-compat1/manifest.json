@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "platform-ops",
+  "name": "Platform Ops",
+  "category": "professional",
+  "version": "1.0-compat1",
+  "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "platform-ops",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多主机 HTTPS 健康聚合",
+    "只读令牌",
+    "加密凭据",
+    "令牌撤销"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/platform-ops"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

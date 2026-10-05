@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "mysql",
+  "name": "MySQL",
+  "category": "deployment",
+  "version": "8.4.11-compat1",
+  "summary": "安装官方 MySQL LTS 二进制并创建回环监听的受管数据库实例。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "mysql-8.4.11",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多实例",
+    "独立账号",
+    "备份恢复",
+    "导入导出"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "mysql --version"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

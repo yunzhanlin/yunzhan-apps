@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "website-tamper-proof",
+  "name": "Website Tamper-proof",
+  "category": "professional",
+  "version": "1.0-compat1",
+  "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-tamper-proof",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "签名文件基线",
+    "变更事件",
+    "备份恢复",
+    "网站级策略"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-tamper-proof"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

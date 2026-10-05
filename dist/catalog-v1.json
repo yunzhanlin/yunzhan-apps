@@ -1,13 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-05T08:11:02.418Z",
+  "generated_at": "2026-10-05T10:07:33Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
       "id": "anti-intrusion",
       "name": "Anti-intrusion",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "使用 Fail2ban systemd 日志后端保护 SSH，并提供封禁查询与审计解封。",
       "stage": "ready",
       "risk": "privileged",
@@ -20,14 +20,14 @@
         "服务状态",
         "审计解封"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/anti-intrusion/1.0/manifest.json",
-      "sha256": "11c7faaecbf6de31dfee1ac03c34cfb20f476da3b623393cf9c2674980790cde"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/anti-intrusion/1.0-compat1/manifest.json",
+      "sha256": "f8205016fa0177e956f46704c4b28831abe5f684468c763e4b8f72e348371524"
     },
     {
       "id": "apache",
       "name": "Apache HTTP Server",
       "category": "deployment",
-      "version": "2.4.68",
+      "version": "2.4.68-compat1",
       "summary": "独立安装 Apache HTTP Server，支持模块检测、站点绑定和配置校验。",
       "stage": "ready",
       "risk": "maintained",
@@ -40,14 +40,14 @@
         "站点绑定",
         "引用保护"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache/2.4.68/manifest.json",
-      "sha256": "6ad744530f9d91f3a29ac5e3d67b54fe08e88473fd24e2ebc28c511b50da848f"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache/2.4.68-compat1/manifest.json",
+      "sha256": "abb627840489dee4ac93f8e3c925d5b6af50454caeb6655d73458aac03f60446"
     },
     {
       "id": "apache-waf",
       "name": "Apache WAF",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "实际 Apache 虚拟主机正常请求 200、扫描器和 SQL 特征请求 403，通过语法校验",
       "stage": "ready",
       "risk": "maintained",
@@ -60,14 +60,14 @@
         "Apache 语法校验",
         "失败回滚"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/1.0/manifest.json",
-      "sha256": "2cdb40434f6039a13fe9d3984efb3944f2e5814de46d35d4184a0be4ac2cf978"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/1.0-compat1/manifest.json",
+      "sha256": "7d4d0e235d88905ddf15cf84616b971d9b62d6b3a3d7f70e2f840c4acc28ea8e"
     },
     {
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "从实际资源、站点、任务、流量、证书数据生成持久化日报",
       "stage": "ready",
       "risk": "maintained",
@@ -81,14 +81,14 @@
         "证书到期检查",
         "每日持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.0/manifest.json",
-      "sha256": "6af18a73395fd7c8d7809b167c57d059ef8c2770c944c3a9686014b18b09e4d1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.0-compat1/manifest.json",
+      "sha256": "cdd791dc24e2ecac8da178ddacab4cb6bdd0c1e1d405c93e6876658a7818de48"
     },
     {
       "id": "disk-analysis",
       "name": "Disk analysis",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
       "stage": "ready",
       "risk": "maintained",
@@ -101,14 +101,14 @@
         "文件数量",
         "有界扫描"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.0/manifest.json",
-      "sha256": "c6e4ec75e3beaa3b14750751ec8a6edc7c833a6e3cd4280099aa34f3ae8e9456"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.0-compat1/manifest.json",
+      "sha256": "565606a98fade17037ccbf6477b547a20b513c22bc03f2f607258aa249a1766d"
     },
     {
       "id": "docker-manager",
       "name": "Docker Manager",
       "category": "deployment",
-      "version": "1",
+      "version": "1-compat1",
       "summary": "安装固定 Docker Engine/CLI/Compose 并管理受限容器、镜像、网络、卷与 Compose。",
       "stage": "ready",
       "risk": "privileged",
@@ -121,14 +121,14 @@
         "Compose",
         "非特权约束"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/docker-manager/1/manifest.json",
-      "sha256": "62893cdae98e5695fdb3895a4cfb4ae57f165f129e8183346acc0ba2b77011f1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/docker-manager/1-compat1/manifest.json",
+      "sha256": "9b745cfc51a3b443c1684ac8dc74933efe0cce1e785911f5db1004bbbcc5ce69"
     },
     {
       "id": "elasticsearch",
       "name": "Elasticsearch",
       "category": "deployment",
-      "version": "9",
+      "version": "9-compat1",
       "summary": "部署单节点 Elasticsearch，限制内存并仅通过回环端口提供服务。",
       "stage": "ready",
       "risk": "maintained",
@@ -141,14 +141,14 @@
         "持久卷",
         "HTTP 健康检查"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/elasticsearch/9/manifest.json",
-      "sha256": "879b9ee3e8504f79bbfc0246b4dcf361fa26ded387a22b3d9848933e3eb45739"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/elasticsearch/9-compat1/manifest.json",
+      "sha256": "0eae4e6cd77a1452a3bb48c952d2e3b31fe47814f631771c469d286ad0ec3827"
     },
     {
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "签名基线、真实篡改检测、备份恢复与无人触发的定时自动恢复通过",
       "stage": "ready",
       "risk": "privileged",
@@ -162,14 +162,14 @@
         "分钟级自动恢复",
         "恢复前留存"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.0/manifest.json",
-      "sha256": "27e83926508508e69c11ecf054a84846bbc3a8b26b0d0380c59f56f9ee43bae2"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.0-compat1/manifest.json",
+      "sha256": "79e9bdb977d5579f1e76292b60ae9f9e006825fab3d056801f796a06c2eaac5a"
     },
     {
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -182,14 +182,14 @@
         "权限变化",
         "排除规则"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.0/manifest.json",
-      "sha256": "bf5cea7c459feb420ed6d43cf3cab4ecb8f6f39cc01e9a5c01bd5bd81a21a484"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.0-compat1/manifest.json",
+      "sha256": "0f8758af855e7bdc2e1a87df0456a003fe77184a6046031330557e1ff944d6ca"
     },
     {
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "增量同步、逐文件检查点和目标冲突保护通过",
       "stage": "ready",
       "risk": "privileged",
@@ -203,14 +203,14 @@
         "逐文件检查点",
         "隔离 PHP 网站部署"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.0/manifest.json",
-      "sha256": "e417038ec2ea3569be7c998f8ac31bea1ddc5f5b7e9162434dea2fd45d6e3776"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.0-compat1/manifest.json",
+      "sha256": "fa4f2a21f08ed326cee86af84429a34550356b49ca4d4cf2ef91ea2142cfc0a0"
     },
     {
       "id": "load-balance",
       "name": "Load Balance",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "真实轮询分流、节点故障切换、健康探测和入口移除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -224,14 +224,14 @@
         "节点探测",
         "失败转移"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.0/manifest.json",
-      "sha256": "2d6dd165681e275faf8a0233c3a69e357bd044410ed6d2e1eb89b8eebc94a206"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.0-compat1/manifest.json",
+      "sha256": "f1b9411a58a5cb04bb078f98456fc06dc74f06e1bd7d29e75ad449ab3a692352"
     },
     {
       "id": "memcached",
       "name": "Memcached",
       "category": "deployment",
-      "version": "1.6.45",
+      "version": "1.6.45-compat1",
       "summary": "创建 128 MB 上限、仅回环访问的 Memcached 受管实例。",
       "stage": "ready",
       "risk": "maintained",
@@ -244,14 +244,14 @@
         "启停重启",
         "状态探针"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45/manifest.json",
-      "sha256": "36b5961385744e76afbe83ea5a77e010cf8a8f1682bef522add20f7bfea8a03a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45-compat1/manifest.json",
+      "sha256": "02125cb1b5ce301c33683f6e4b2d088e399c72aeb5445e1b709c9cbe472c19b8"
     },
     {
       "id": "mobile",
       "name": "aaPanel Mobile",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据",
       "stage": "ready",
       "risk": "maintained",
@@ -264,14 +264,14 @@
         "现有 TOTP 登录",
         "不缓存 API 或凭据"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.0/manifest.json",
-      "sha256": "c68e5f899f9e00a28f1f67d67c334fb367d476c20f78dc9c3f591757a30b6dd4"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.0-compat1/manifest.json",
+      "sha256": "99d20ea2e6227a12ffb253d66f6680b37768f165e6123bbc2c7192b8bb3b48f5"
     },
     {
       "id": "mongodb",
       "name": "MongoDB",
       "category": "deployment",
-      "version": "8.0",
+      "version": "8.0-compat1",
       "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
       "stage": "ready",
       "risk": "maintained",
@@ -284,14 +284,14 @@
         "回环端口",
         "备份导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mongodb/8.0/manifest.json",
-      "sha256": "4dde5f1813147ae8632bcb9f7ab70bfea8b9768ac03e65bd0a987fb5282c06b6"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mongodb/8.0-compat1/manifest.json",
+      "sha256": "bede7c7c188d6a6f70f907dbe0574f627287d4346837a7dbe682b2f90a772c1a"
     },
     {
       "id": "mysql",
       "name": "MySQL",
       "category": "deployment",
-      "version": "8.4.11",
+      "version": "8.4.11-compat1",
       "summary": "安装官方 MySQL LTS 二进制并创建回环监听的受管数据库实例。",
       "stage": "ready",
       "risk": "maintained",
@@ -304,14 +304,14 @@
         "备份恢复",
         "导入导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mysql/8.4.11/manifest.json",
-      "sha256": "dc46b285416c60842416e61e4a11ae889a5bfdc6ec0c7190cf9b0b85cee8ff17"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mysql/8.4.11-compat1/manifest.json",
+      "sha256": "5deba1b6e9da8312e52198089dfaccdaac50dfa7a2c9b67c5934d921a6a428b4"
     },
     {
       "id": "network-threat-detection",
       "name": "Network Threat Detection",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "真实 ss 监听端口/连接基线和 Fail2ban 状态读取通过",
       "stage": "ready",
       "risk": "privileged",
@@ -324,14 +324,14 @@
         "实时连接",
         "Fail2ban 状态"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.0/manifest.json",
-      "sha256": "68e15a94a3a02eb0de971b5b44ab70b24fb428084ffc6cade9920e38b645bda9"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.0-compat1/manifest.json",
+      "sha256": "3b6c5ee1b47e2900c50878d590127b55ac5b7bbc18685ab81e18697bdd856a22"
     },
     {
       "id": "nfs-manager",
       "name": "NFS Manager",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过",
       "stage": "ready",
       "risk": "privileged",
@@ -344,14 +344,14 @@
         "开机恢复",
         "活跃挂载卸载保护"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.0/manifest.json",
-      "sha256": "7d5713cad731f96fa52fc8d0b8a093488d5ee96fa942a7bba8553e1fe2672fab"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.0-compat1/manifest.json",
+      "sha256": "6f859a3aacc3aeb91a284041432b88657f21f555676afd2883ca41b22e4951ff"
     },
     {
       "id": "nginx",
       "name": "Nginx",
       "category": "deployment",
-      "version": "1.30.4",
+      "version": "1.30.4-compat1",
       "summary": "安装可并存的 Nginx 运行时，支持站点绑定、配置校验和安全回滚。",
       "stage": "ready",
       "risk": "maintained",
@@ -364,14 +364,14 @@
         "热重载",
         "失败回滚"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx/1.30.4/manifest.json",
-      "sha256": "033f626de64fa1f5b27baea20135fe43632fce6fba7729dcec7936e832a72b8b"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx/1.30.4-compat1/manifest.json",
+      "sha256": "7c0a4e018dd7f22ff063c56a5260e8cccd45b2b67d2b3dea953dd6f2b7d2bbea"
     },
     {
       "id": "nginx-waf",
       "name": "Nginx WAF",
       "category": "professional",
-      "version": "1.1",
+      "version": "1.1-compat1",
       "summary": "基于受管 Nginx 规则拦截恶意 URI、查询、扫描器请求头并限速。",
       "stage": "ready",
       "risk": "maintained",
@@ -384,14 +384,14 @@
         "单 IP 限速",
         "防护事件"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/1.1/manifest.json",
-      "sha256": "75733204e6e5db8714d9d5b852967457425082164003fcbc0f6a7f3eab749e14"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/1.1-compat1/manifest.json",
+      "sha256": "38a0a2e281d0115a068abd38f9f377debdb3d29b3f227a5ab9ebc43db400ca0b"
     },
     {
       "id": "openlitespeed",
       "name": "OpenLiteSpeed",
       "category": "deployment",
-      "version": "1.8",
+      "version": "1.8-compat1",
       "summary": "部署仅回环端口访问的 OpenLiteSpeed，管理入口须经面板代理。",
       "stage": "ready",
       "risk": "maintained",
@@ -405,14 +405,14 @@
         "回环 HTTPS 管理",
         "持久配置"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/openlitespeed/1.8/manifest.json",
-      "sha256": "83a5331b31b889b81c294903f93bd84ae58a7c9277e4b31a972a47b13d10dd35"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/openlitespeed/1.8-compat1/manifest.json",
+      "sha256": "5451572c3cf3adf053f8dcdcdc023fdbe5e3a133a2e0b45235bb980d43ff20fa"
     },
     {
       "id": "php-52",
       "name": "PHP 5.2",
       "category": "deployment",
-      "version": "5.2.17",
+      "version": "5.2.17-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -427,14 +427,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-52/5.2.17/manifest.json",
-      "sha256": "0b7692f40bd3846bffb417397e8b7755a4bbeabe56b1992a1a9b8c2f9e2e0bd1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-52/5.2.17-compat1/manifest.json",
+      "sha256": "4ccdcb94dea61021d19e73225e6be082cc0512ce3fd8f0443cafb0c1fbf13b8c"
     },
     {
       "id": "php-53",
       "name": "PHP 5.3",
       "category": "deployment",
-      "version": "5.3.29",
+      "version": "5.3.29-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -449,14 +449,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-53/5.3.29/manifest.json",
-      "sha256": "1404a3339597af3fcc76c7c88d781efb5a9d3a3266c42532be93841f1f109b69"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-53/5.3.29-compat1/manifest.json",
+      "sha256": "cc42e20aa1b03998eedb47fb12313c59d1c70c3518d91087439e5a8fc5d4e338"
     },
     {
       "id": "php-54",
       "name": "PHP 5.4",
       "category": "deployment",
-      "version": "5.4.45",
+      "version": "5.4.45-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -471,14 +471,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-54/5.4.45/manifest.json",
-      "sha256": "688ff126b51976ab853c23752da5f26ee90a1c64eaae517a6df020df07e81fab"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-54/5.4.45-compat1/manifest.json",
+      "sha256": "4fc04cdfbf7bb722c6d9dfd88ea1fc1c58a3e228955f81fd53fd397055b9b606"
     },
     {
       "id": "php-55",
       "name": "PHP 5.5",
       "category": "deployment",
-      "version": "5.5.38",
+      "version": "5.5.38-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -493,14 +493,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-55/5.5.38/manifest.json",
-      "sha256": "87ff8f870e9338cf69021146f28857b765c4f17fb4b5622548b3b0ca09bcd203"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-55/5.5.38-compat1/manifest.json",
+      "sha256": "0f9470c99cdaa842286ffbc321c0b5087f04d0c8e6fc2c9f01cf5256a20c466e"
     },
     {
       "id": "php-56",
       "name": "PHP 5.6",
       "category": "deployment",
-      "version": "5.6.40",
+      "version": "5.6.40-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -515,14 +515,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-56/5.6.40/manifest.json",
-      "sha256": "5a7eab05bcf025783a5f0920f4bf1f43d8c20a00e8d3399708aa5eed02708bc0"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-56/5.6.40-compat1/manifest.json",
+      "sha256": "368ea2d79c646dc32b2c7e205fc496ccebbfd44a80f8f7ce4e67b37dd26ffc57"
     },
     {
       "id": "php-70",
       "name": "PHP 7.0",
       "category": "deployment",
-      "version": "7.0.33",
+      "version": "7.0.33-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -537,14 +537,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-70/7.0.33/manifest.json",
-      "sha256": "ef8a8772ceed172e55cca66eccbcd4a3e43575dbaa0b4234f53fa6ee6abea073"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-70/7.0.33-compat1/manifest.json",
+      "sha256": "111ce04a7b3b2378d89109710784303dec9709b2165d0b9c28c9c9d10be3d259"
     },
     {
       "id": "php-71",
       "name": "PHP 7.1",
       "category": "deployment",
-      "version": "7.1.33",
+      "version": "7.1.33-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -559,14 +559,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-71/7.1.33/manifest.json",
-      "sha256": "9c26175777a1a58d764c8171daf979f5d9385aefa5ffd186327915d72372012d"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-71/7.1.33-compat1/manifest.json",
+      "sha256": "d2e2b74fd95e343da9585e3c184479056ef76e02a63d5663d7a1afb39f3f1f5a"
     },
     {
       "id": "php-72",
       "name": "PHP 7.2",
       "category": "deployment",
-      "version": "7.2.34",
+      "version": "7.2.34-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -581,14 +581,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-72/7.2.34/manifest.json",
-      "sha256": "8d5e9225ad36845bf2454c6ffddcedc7cc3c889a7c899266c23f3f704c10a814"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-72/7.2.34-compat1/manifest.json",
+      "sha256": "0a56f60d4b83fea9e8853c9f3ab63f22597ad54dcafef8164fe33ba5e400d882"
     },
     {
       "id": "php-73",
       "name": "PHP 7.3",
       "category": "deployment",
-      "version": "7.3.33",
+      "version": "7.3.33-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -603,14 +603,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-73/7.3.33/manifest.json",
-      "sha256": "70d12b323af3f1271fea903a651e76c1388f4069b454b9a05e02bbbe3ef4e3f8"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-73/7.3.33-compat1/manifest.json",
+      "sha256": "04a63f6bd636647783713cc09e1cd4ce4a76acfa86cd3b5fb8ad7f97f149d9a6"
     },
     {
       "id": "php-74",
       "name": "PHP 7.4",
       "category": "deployment",
-      "version": "7.4.33",
+      "version": "7.4.33-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -625,14 +625,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-74/7.4.33/manifest.json",
-      "sha256": "226e8c737cff7d600ec65c131f5c47a09af09d4f4b6c05d5378afddcd2363e2c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-74/7.4.33-compat1/manifest.json",
+      "sha256": "cf85610cd2f6bb82e649d1a1baa8c1547c4b3f58fd8ebe97f740e08199cb3614"
     },
     {
       "id": "php-80",
       "name": "PHP 8.0",
       "category": "deployment",
-      "version": "8.0.27",
+      "version": "8.0.27-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -647,14 +647,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-80/8.0.27/manifest.json",
-      "sha256": "fc276f16ffd8f9e12d0f33ce6a8b1bea855c0f853e1f5586c8616ff84bddd750"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-80/8.0.27-compat1/manifest.json",
+      "sha256": "ff0517e92878b5e62f785643b77b748764d7f78c772d6f477270e717bbee832c"
     },
     {
       "id": "php-81",
       "name": "PHP 8.1",
       "category": "deployment",
-      "version": "8.1.15",
+      "version": "8.1.15-compat1",
       "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
       "stage": "ready",
       "risk": "eol",
@@ -669,14 +669,14 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-81/8.1.15/manifest.json",
-      "sha256": "b43a074506f77288698a01de30c51d047975ddd0aed4413adee432e1ae56480e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-81/8.1.15-compat1/manifest.json",
+      "sha256": "0cdf492d186d9abbc70d3444d39b56d94e497762c9a0df0f76f068ebcd1cc3e8"
     },
     {
       "id": "php-82",
       "name": "PHP 8.2",
       "category": "deployment",
-      "version": "8.2.33",
+      "version": "8.2.33-compat1",
       "summary": "编译安装 PHP 8.2 CLI/FPM 与常用扩展，可与其他版本并存。",
       "stage": "ready",
       "risk": "maintenance",
@@ -689,14 +689,14 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-82/8.2.33/manifest.json",
-      "sha256": "ed508c233303271f7fbaf3fab137ce346602ce84c3fdc615d0ec7d9f9273418c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-82/8.2.33-compat1/manifest.json",
+      "sha256": "35c61b7f89766e9330e3e1cd7888932ef74c43e75a656685bb6b22a4307132bd"
     },
     {
       "id": "php-83",
       "name": "PHP 8.3",
       "category": "deployment",
-      "version": "8.3.33",
+      "version": "8.3.33-compat1",
       "summary": "编译安装 PHP 8.3 CLI/FPM 与常用扩展，可与其他版本并存。",
       "stage": "ready",
       "risk": "maintenance",
@@ -709,14 +709,14 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-83/8.3.33/manifest.json",
-      "sha256": "0650fc2cac7165cf5b2a69c5a703f3c9894d525ebe9b717ec4c7683e48328f6e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-83/8.3.33-compat1/manifest.json",
+      "sha256": "841777fe50b5aedf9f200301cbc590249c2d3e25c5f82534304c041ec59a1dbd"
     },
     {
       "id": "php-84",
       "name": "PHP 8.4",
       "category": "deployment",
-      "version": "8.4.25",
+      "version": "8.4.25-compat1",
       "summary": "编译安装 PHP 8.4 CLI/FPM 与常用扩展，可与其他版本并存。",
       "stage": "ready",
       "risk": "maintained",
@@ -729,14 +729,14 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-84/8.4.25/manifest.json",
-      "sha256": "f9427ee959f3329d613d1c89e2297dace44acf48126a52b3d1c05069e5c3954a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-84/8.4.25-compat1/manifest.json",
+      "sha256": "c7939b1808e37d695a288c40281fa8b60a29d0262f98db2fb08c4611d30c670c"
     },
     {
       "id": "php-85",
       "name": "PHP 8.5",
       "category": "deployment",
-      "version": "8.5.10",
+      "version": "8.5.10-compat1",
       "summary": "编译安装 PHP 8.5 CLI/FPM 与常用扩展，可与其他版本并存。",
       "stage": "ready",
       "risk": "maintained",
@@ -749,14 +749,14 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-85/8.5.10/manifest.json",
-      "sha256": "10a0d55e1d925896bc63743d74751924717b0a294ca431bd596eb86b5aeaf66a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-85/8.5.10-compat1/manifest.json",
+      "sha256": "3d0577e35ffccd52e7ddf048ab1636db8f648609bdb404ddde8880fb044f843a"
     },
     {
       "id": "php-code-security",
       "name": "PHP code security",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
       "stage": "ready",
       "risk": "maintained",
@@ -769,14 +769,14 @@
         "编码混淆特征",
         "证据行号"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-code-security/1.0/manifest.json",
-      "sha256": "b6d28d51ffe26d45e56b6403f70c93435a308e47d620970895e6c56e38e8c62b"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-code-security/1.0-compat1/manifest.json",
+      "sha256": "24311fe2c4b0dc182ed7e05031bc8bab2ba34511df4d773cd2e0729b4b711877"
     },
     {
       "id": "phpmyadmin",
       "name": "phpMyAdmin",
       "category": "deployment",
-      "version": "5.2.2",
+      "version": "5.2.2-compat1",
       "summary": "固定摘要部署原版 phpMyAdmin，回环端口访问，并管理网络可达的已授权 MySQL 数据库。",
       "stage": "ready",
       "risk": "maintained",
@@ -789,14 +789,14 @@
         "回环绑定",
         "访问审计"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/phpmyadmin/5.2.2/manifest.json",
-      "sha256": "3e177142afcfdb61407e75800ab6efee7496d197b345b6f931ebcdd4cadece1d"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/phpmyadmin/5.2.2-compat1/manifest.json",
+      "sha256": "08e14ede3faa30065f08395da75310bab9ee00bc05e35ab8ea26ec1aaac27392"
     },
     {
       "id": "platform-ops",
       "name": "Platform Ops",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
       "stage": "ready",
       "risk": "privileged",
@@ -809,14 +809,14 @@
         "加密凭据",
         "令牌撤销"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.0/manifest.json",
-      "sha256": "7aaf1f97a055ba50ff80afae95ddd696cd2bf95e94a6618bb4d57ef5b751bbc4"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.0-compat1/manifest.json",
+      "sha256": "7e240e03932f57e17911688e6a8bd861d49d514711b87c8aaf0cdfcac6e6be45"
     },
     {
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4",
+      "version": "7.0.4-compat1",
       "summary": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过",
       "stage": "ready",
       "risk": "maintained",
@@ -830,14 +830,14 @@
         "启停重启",
         "开机恢复"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4/manifest.json",
-      "sha256": "b129d5ca440dd6fad478dd653b9f904bba68832ebfeb3a18f73a1f4b28ad102e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4-compat1/manifest.json",
+      "sha256": "7ef4190c8775154fe6feb1932f2b5a3e0751fb39873fe809887471dced013032"
     },
     {
       "id": "pure-ftpd",
       "name": "Pure-FTPd",
       "category": "deployment",
-      "version": "1.0.50",
+      "version": "1.0.50-compat1",
       "summary": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -851,14 +851,14 @@
         "上传下载",
         "回环监听"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pure-ftpd/1.0.50/manifest.json",
-      "sha256": "9527940095ad3b27992e8a48a0b40197ece39f7c317d8cec8c800ae881da8c23"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pure-ftpd/1.0.50-compat1/manifest.json",
+      "sha256": "9bcba0ad756671b6e7ba40ffc2f336a8a9d482c6755407bde91aff8b6ee261ea"
     },
     {
       "id": "rabbitmq",
       "name": "RabbitMQ",
       "category": "deployment",
-      "version": "4.1",
+      "version": "4.1-compat1",
       "summary": "部署带管理界面、随机凭据和持久卷的 RabbitMQ 单节点。",
       "stage": "ready",
       "risk": "maintained",
@@ -871,14 +871,14 @@
         "随机凭据",
         "持久卷"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/rabbitmq/4.1/manifest.json",
-      "sha256": "0ed6f6577118c0313aa8a71b3b6d1cd4221d4ce99d713480d557a6afd5b61593"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/rabbitmq/4.1-compat1/manifest.json",
+      "sha256": "c889d9e755fbf317985fcca02367f0a12c500d1343446dcc4451f8828d3d8ad9"
     },
     {
       "id": "redis",
       "name": "Redis",
       "category": "deployment",
-      "version": "8.2.10",
+      "version": "8.2.10-compat1",
       "summary": "安装固定版本 Redis，管理独立实例、AOF、内存上限与键浏览。",
       "stage": "ready",
       "risk": "maintained",
@@ -891,14 +891,14 @@
         "内存限额",
         "键浏览"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/redis/8.2.10/manifest.json",
-      "sha256": "2974aa879bd6376099da06363818ea401b8ee6d9a94fed69275e990a855adcb1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/redis/8.2.10-compat1/manifest.json",
+      "sha256": "b773e66264a45dd55395faeab5b8a627c53d541bc6ae9edebbb79d5f9fa79096"
     },
     {
       "id": "site-diagnosis",
       "name": "Site Diagnosis",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
       "stage": "ready",
       "risk": "maintained",
@@ -911,14 +911,14 @@
         "TLS 检查",
         "Nginx 配置检查"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/site-diagnosis/1.0/manifest.json",
-      "sha256": "229ed02e46f7bf01f89b81ceb17a7affa40fef8c6704f93e80a5bd40124389d6"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/site-diagnosis/1.0-compat1/manifest.json",
+      "sha256": "b5d4479ed7eedbc271a07dda4347a3ff24729683b04c07ddd5a3afb6410b2143"
     },
     {
       "id": "system-hardening",
       "name": "System hardening",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "固化链接、ptrace、内核日志与网络重定向等安全基线，支持偏差检测和恢复。",
       "stage": "ready",
       "risk": "privileged",
@@ -931,14 +931,14 @@
         "安全回滚",
         "审计"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/system-hardening/1.0/manifest.json",
-      "sha256": "576313da76cf9a0a075c1ba7b16900843d4a8b40d0ac738e1a764510446123bf"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/system-hardening/1.0-compat1/manifest.json",
+      "sha256": "6104277bd6812ca9aafe679ebc8bea3da7077a2fd76bd00d5442d2393274004e"
     },
     {
       "id": "task-manager",
       "name": "Task manager",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程",
       "stage": "ready",
       "risk": "privileged",
@@ -951,14 +951,14 @@
         "网络连接",
         "受管非 root 进程终止"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.0/manifest.json",
-      "sha256": "837bca7de4ea822a56fa6658f3c3eb9f1eea9c289089ea37d012777e21550c10"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.0-compat1/manifest.json",
+      "sha256": "537fe6d2249d216a5e1aee4632f48c3ce85a895874e702447f82a86f9b192c91"
     },
     {
       "id": "user-manager",
       "name": "aaPanel user Manager",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "实际登录、网站范围隔离、越权拒绝、会话撤销和账户删除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -972,14 +972,14 @@
         "会话撤销",
         "保留最后管理员"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.0/manifest.json",
-      "sha256": "8356ee5b7f36ba94a717c373bf942e3f830e1741033453f16334547c75d7d477"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.0-compat1/manifest.json",
+      "sha256": "a77a7cbcfe5d925a0dc31b7c66f9a1e723a6a39952a23180f1e01eac1e0c0964"
     },
     {
       "id": "website-analytics",
       "name": "Website Analytics",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
       "stage": "ready",
       "risk": "maintained",
@@ -994,14 +994,14 @@
         "爬虫识别",
         "来源统计"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/1.0/manifest.json",
-      "sha256": "2a15b4f3600d9c32f1f08491acaa75a6de4e8c40916df6ceb890fa84f16a0d1f"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/1.0-compat1/manifest.json",
+      "sha256": "150acdd4c4fc7929e9963e015b5fe3953060b1b6cade26c675301279bf26fe87"
     },
     {
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.0",
+      "version": "2.0-compat1",
       "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
       "stage": "ready",
       "risk": "maintained",
@@ -1016,14 +1016,14 @@
         "路径排行",
         "来源统计"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.0/manifest.json",
-      "sha256": "acd4487fa146a91754c489aa3e1ea15dd014f5ceec96dd73617a50c5218b4ff3"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.0-compat1/manifest.json",
+      "sha256": "2a62661b736d8961e3cb12c1b76172d1625baa982d8e92750f0e514168859196"
     },
     {
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.0",
+      "version": "1.0-compat1",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1036,8 +1036,8 @@
         "备份恢复",
         "网站级策略"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.0/manifest.json",
-      "sha256": "95bf6ebbbbce393f3f3ed3525d9d06ff0785e62a605181838e5b24c276478991"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.0-compat1/manifest.json",
+      "sha256": "d922db881ad36ea62541ff77dc1fcd4e3dfadda60eec301bf86c1fe28af3b89b"
     }
   ]
 }

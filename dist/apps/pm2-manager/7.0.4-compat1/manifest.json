@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "pm2-manager",
+  "name": "PM2 Manager",
+  "category": "deployment",
+  "version": "7.0.4-compat1",
+  "summary": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pm2-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "实际 PM2",
+    "非 root 进程",
+    "日志",
+    "启停重启",
+    "开机恢复"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pm2-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

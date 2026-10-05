@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "memcached",
+  "name": "Memcached",
+  "category": "deployment",
+  "version": "1.6.45-compat1",
+  "summary": "创建 128 MB 上限、仅回环访问的 Memcached 受管实例。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "memcached-cache",
+    "image": "memcached:1.6.45-alpine",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "回环端口",
+    "内存限额",
+    "启停重启",
+    "状态探针"
+  ],
+  "health": {
+    "probe": "tcp",
+    "target": "version"
+  },
+  "uninstall": {
+    "preserve_data": false,
+    "reference_check": true
+  }
+}

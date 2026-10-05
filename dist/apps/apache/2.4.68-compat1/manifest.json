@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "apache",
+  "name": "Apache HTTP Server",
+  "category": "deployment",
+  "version": "2.4.68-compat1",
+  "summary": "独立安装 Apache HTTP Server，支持模块检测、站点绑定和配置校验。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "apache-2.4.68",
+    "manage_route": "sites"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "官方源码",
+    "模块检测",
+    "站点绑定",
+    "引用保护"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "httpd -t"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
