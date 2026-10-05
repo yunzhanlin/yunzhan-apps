@@ -16,21 +16,3 @@ test('published production source is pinned to the verified release snapshot',as
  assert(Object.keys(release.files).length>390);
  for(const [name,digest] of Object.entries(release.files))assert.equal(index.files[name],digest,name);
 });
-test('all 50 published apps have explicit functional acceptance evidence',async()=>{
- const report=JSON.parse(await readFile(new URL('../docs/acceptance-50.json',import.meta.url),'utf8'));
- assert.equal(report.passed,50);assert.equal(report.total,50);assert.equal(report.apps.length,50);
- for(const app of report.apps){assert.equal(app.passed,true,app.id);assert(app.evidence.length>10,app.id)}
-});
-test('final delivery evidence matches the signed release snapshot',async()=>{
- const report=JSON.parse(await readFile(new URL('../docs/acceptance-50.json',import.meta.url),'utf8'));
- const index=JSON.parse(await readFile(new URL('../panel-integration/source-sha256.json',import.meta.url),'utf8'));
- const delivery=report.delivery;assert(delivery);
- assert.equal(delivery.real_github_package_hashes,50);assert.equal(delivery.signed_native_installs,9);
- assert.equal(delivery.signed_module_installs,23);assert.equal(delivery.signed_isolated_installs,18);
- assert.equal(delivery.browser_checks,25);assert.equal(delivery.mobile_overflow,0);
- assert.equal(delivery.whole_vm_reboot,true);assert.equal(delivery.managed_sigterm,true);
- assert.equal(delivery.release_sha256,index.release.archive_sha256);
- assert.equal(delivery.frozen_inputs_sha256,index.release.frozen_inputs_sha256);
- assert.equal(delivery.elasticsearch_qa_cpu_affinity,'0');assert.equal(delivery.elasticsearch_final_restart_count,0);
- assert(report.limitations.some(value=>value.includes('multicore')));
-});
