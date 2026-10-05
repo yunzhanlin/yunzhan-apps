@@ -542,7 +542,7 @@ func (s *Store) RecordNginxInventory(version, architecture string) error {
 		return err
 	}
 	defer tx.Rollback()
-	_, err = tx.Exec(`INSERT INTO runtime_versions(id,family,version,channel,source_url,verification) VALUES(?,'nginx',?,'distribution',?,'verified_base') ON CONFLICT(family,version) DO UPDATE SET source_url=excluded.source_url,verification='verified_base'`, versionID, version, runtimecatalog.DebianNginxPackageURL(runtimecatalog.HostDebianMajor()))
+	_, err = tx.Exec(`INSERT INTO runtime_versions(id,family,version,channel,source_url,verification) VALUES(?,'nginx',?,'distribution',?,'verified_base') ON CONFLICT(family,version) DO UPDATE SET source_url=excluded.source_url,verification='verified_base'`, versionID, version, runtimecatalog.NginxPackageURL(runtimecatalog.HostPlatform()))
 	if err != nil {
 		return err
 	}

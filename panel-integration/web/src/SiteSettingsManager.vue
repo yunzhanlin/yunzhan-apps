@@ -812,7 +812,7 @@ const rewriteOptions = [
     </div>
     <template #footer
       ><div class="settings-footer">
-        <span v-if="site?.status === 'stopped'"
+        <span v-if="tab === 'workers'">进程操作单独保存，关闭窗口后继续执行。</span><span v-else-if="site?.status === 'stopped'"
           >网站当前停用，保存后仍保持停用。</span
         ><span v-else-if="dirty">有尚未提交的修改</span
         ><span v-else>先预览，再应用</span>
@@ -820,11 +820,13 @@ const rewriteOptions = [
           <el-button :disabled="busy" @click="close(() => (visible = false))"
             >关闭</el-button
           ><el-button
+            v-if="tab !== 'workers'"
             :loading="busy && !preview"
             :disabled="loading || !form"
             @click="makePreview"
             >生成配置预览</el-button
           ><el-button
+            v-if="tab !== 'workers'"
             type="primary"
             :disabled="!preview || loading"
             :loading="busy && !!preview"

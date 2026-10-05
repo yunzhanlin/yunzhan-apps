@@ -53,7 +53,7 @@ func TestPHPWorkerRepeatedStopDoesNotHideUnknownOrLiveState(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s := New(Config{Run: func(ctx context.Context, binary string, args ...string) (string, error) {
 				switch args[0] {
-				case "disable":
+				case "disable", "stop":
 					return "", errors.New("disable failed")
 				case "show":
 					if test.queryFails {

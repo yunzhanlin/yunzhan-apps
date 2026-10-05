@@ -17,8 +17,11 @@ source "$HERE/RELEASE"
 if [[ "$TARGET_ROOT" == / ]]; then
   [[ -f /etc/os-release ]] || { echo 'os-release missing' >&2; exit 1; }
   source /etc/os-release
-  [[ "${ID:-}" == debian && ( "${VERSION_ID:-}" == 12 || "${VERSION_ID:-}" == 13 ) ]] || { echo 'this release supports Debian 12 and 13 only' >&2; exit 1; }
-  DEBIAN_MAJOR="$VERSION_ID"
+  case "${ID:-}-${VERSION_ID:-}" in
+    debian-12|debian-13|ubuntu-22.04|ubuntu-24.04|ubuntu-26.04) ;;
+    *) echo 'this release supports Debian 12/13 and Ubuntu 22.04/24.04/26.04 only' >&2; exit 1;;
+  esac
+  PANEL_PLATFORM="$ID-$VERSION_ID"
   MACHINE="$(dpkg --print-architecture)"
   [[ "$MACHINE" == "$PANEL_ARCH" ]] || { echo "release architecture $PANEL_ARCH does not match $MACHINE" >&2; exit 1; }
 fi
@@ -47,8 +50,10 @@ if ((NO_SERVICES==0)); then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update
   AIO_PACKAGE=libaio1t64
-  [[ "$DEBIAN_MAJOR" == 12 ]] && AIO_PACKAGE=libaio1
-  apt-get install -y --no-install-recommends ca-certificates curl nginx sqlite3 nftables openssh-server fail2ban python3-systemd acl unzip xz-utils build-essential autoconf pkg-config libxml2-dev libsqlite3-dev libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev zlib1g-dev libpng-dev libjpeg62-turbo-dev libfreetype6-dev libicu-dev libpcre2-dev libapr1-dev libaprutil1-dev libnghttp2-dev bison flex re2c gpg gpg-agent "$AIO_PACKAGE" libnuma1 libncurses6 libtinfo6
+  JPEG_PACKAGE=libjpeg62-turbo-dev
+  [[ "$PANEL_PLATFORM" == debian-12 || "$PANEL_PLATFORM" == ubuntu-22.04 ]] && AIO_PACKAGE=libaio1
+  [[ "$ID" == ubuntu ]] && JPEG_PACKAGE=libjpeg-turbo8-dev
+  apt-get install -y --no-install-recommends ca-certificates curl nginx sqlite3 nftables openssh-server fail2ban python3-systemd acl unzip xz-utils build-essential autoconf pkg-config libxml2-dev libsqlite3-dev libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev zlib1g-dev libpng-dev "$JPEG_PACKAGE" libfreetype6-dev libicu-dev libpcre2-dev libapr1-dev libaprutil1-dev libnghttp2-dev bison flex re2c gpg gpg-agent "$AIO_PACKAGE" libnuma1 libncurses6 libtinfo6
   getent group panel >/dev/null || groupadd --system panel
   id panel >/dev/null 2>&1 || useradd --system --gid panel --home-dir /var/lib/panel --shell /usr/sbin/nologin panel
   id panel-build >/dev/null 2>&1 || useradd --system --home-dir /var/cache/panel-build --shell /usr/sbin/nologin panel-build
@@ -124,6 +129,15 @@ for unit in "$HERE/systemd/"*.service "$HERE/systemd/"*.timer;do
 done
 if ((FRESH));then
   install -m 0644 "$HERE/config/nginx.conf" /etc/nginx/nginx.conf
+  if [[ "$PANEL_PLATFORM" == ubuntu-22.04 ]]; then
+    # Jammy's supported distribution Nginx is 1.18, predating
+    # ssl_reject_handshake. Unknown SNI must never receive a site's certificate
+    # or content: use a dedicated invalid self-signed certificate and close HTTP.
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=default.invalid -addext subjectAltName=DNS:default.invalid -keyout /etc/panel/default-ssl.key -out /etc/panel/default-ssl.crt >/dev/null 2>&1
+    chmod 0600 /etc/panel/default-ssl.key
+    chmod 0644 /etc/panel/default-ssl.crt
+    sed 's#ssl_reject_handshake on;#ssl_certificate /etc/panel/default-ssl.crt; ssl_certificate_key /etc/panel/default-ssl.key; return 444;#g' "$HERE/config/nginx.conf" > /etc/nginx/nginx.conf
+  fi
   install -d -m 0755 /etc/systemd/system/nginx.service.d
   sed 's#/opt/panel/bin/#/opt/panel/current/bin/#g' "$HERE/config/nginx-panel.conf" > /etc/systemd/system/nginx.service.d/panel.conf
   chmod 0644 /etc/systemd/system/nginx.service.d/panel.conf

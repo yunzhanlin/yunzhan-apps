@@ -19,10 +19,10 @@ func TestDebianHostReleaseAndDockerAvailability(t *testing.T) {
 			t.Fatalf("got Debian release %q, want %q", got, item.major)
 		}
 	}
-	if DockerAvailableOn("12") != (runtime.GOARCH == "amd64") || !DockerAvailableOn("13") || DockerAvailableOn("14") {
+	if !DockerAvailableOn("12") || !DockerAvailableOn("13") || DockerAvailableOn("14") {
 		t.Fatal("Docker must only be advertised where a reviewed package set exists")
 	}
-	if got := DockerReleaseOn("12"); runtime.GOARCH == "amd64" && (len(got) != 1 || got[0].ID != "docker-ce-29.8.2-bookworm") || runtime.GOARCH != "amd64" && len(got) != 0 {
+	if got := DockerReleaseOn("12"); len(got) != 1 || got[0].ID != "docker-ce-29.8.2-bookworm" {
 		t.Fatalf("Debian 12 Docker release mismatch on %s: %+v", runtime.GOARCH, got)
 	}
 	if got := DockerReleaseOn("13"); len(got) != 1 || got[0].ID != "docker-debian-26.1.5" {

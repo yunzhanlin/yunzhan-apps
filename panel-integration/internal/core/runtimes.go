@@ -65,8 +65,8 @@ func (s *Store) recordInstallation(r runtimecatalog.Release, arch string, commit
 	defer tx.Rollback()
 	verification := "sha256:" + r.SHA256
 	if r.Family == "docker" {
-		spec, ok := runtimecatalog.DockerSpecOn(runtimecatalog.HostDebianMajor())
-		if !ok || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostDebianMajor()) || spec.ReleaseID != r.ID {
+		spec, ok := runtimecatalog.DockerSpecOn(runtimecatalog.HostPlatform())
+		if !ok || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostPlatform()) || spec.ReleaseID != r.ID {
 			return errors.New("当前 Debian 版本尚未适配此 Docker 固定包")
 		}
 		verification = "debian-package:" + strings.Join(spec.Packages, ";")
@@ -87,8 +87,8 @@ func (s *Store) QueueInstall(release, key, actor string) (string, error) {
 		return "", errors.New("该版本尚未支持安装")
 	}
 	if runtimeRelease.Family == "docker" {
-		spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostDebianMajor())
-		if !available || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostDebianMajor()) || spec.ReleaseID != runtimeRelease.ID {
+		spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostPlatform())
+		if !available || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostPlatform()) || spec.ReleaseID != runtimeRelease.ID {
 			return "", errors.New("当前 Debian 版本尚未适配此 Docker 固定包")
 		}
 	}

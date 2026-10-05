@@ -33,6 +33,18 @@ type PHPWorker struct {
 	UpdatedAt         string `json:"updated_at"`
 }
 
+type PHPWorkerOperation struct {
+	ID        string     `json:"id"`
+	SiteID    string     `json:"site_id"`
+	WorkerID  string     `json:"worker_id"`
+	Action    string     `json:"action"`
+	State     string     `json:"state"`
+	Error     string     `json:"error,omitempty"`
+	Worker    *PHPWorker `json:"worker,omitempty"`
+	CreatedAt string     `json:"created_at"`
+	UpdatedAt string     `json:"updated_at"`
+}
+
 func DefaultPHPWorkerSpec(siteID string) PHPWorkerSpec {
 	return PHPWorkerSpec{SiteID: siteID, RestartPolicy: "always", MemoryMB: 256, TasksMax: 64, StopSeconds: 30}
 }

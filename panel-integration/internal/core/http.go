@@ -576,11 +576,11 @@ func (a *Server) runtimes(w http.ResponseWriter, r *http.Request, u identity) {
 	catalog = append(catalog,
 		map[string]any{"family": "redis", "name": "Redis", "versions": []string{"7.4", "8.2"}, "description": "多版本缓存服务 · 独立目录安装并启用 TLS 构建", "state": "available", "releases": runtimecatalog.Redis},
 		map[string]any{"family": "docker", "name": "Docker", "versions": []string{"26", "29"}, "description": "容器、镜像与 Compose 项目 · 使用当前 Debian 的固定签名软件包", "state": func() string {
-			if runtimecatalog.DockerAvailableOn(runtimecatalog.HostDebianMajor()) {
+			if runtimecatalog.DockerAvailableOn(runtimecatalog.HostPlatform()) {
 				return "available"
 			}
 			return "unavailable"
-		}(), "releases": runtimecatalog.DockerReleaseOn(runtimecatalog.HostDebianMajor())},
+		}(), "releases": runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())},
 		map[string]any{"family": "php", "name": "PHP", "versions": []string{"8.2", "8.3", "8.4", "8.5"}, "description": "多个 PHP-FPM 版本共存 · 每站独立绑定版本与扩展", "state": "available", "releases": runtimecatalog.PHP},
 		map[string]any{"family": "node", "name": "Node.js", "versions": []string{"22 LTS", "24 LTS"}, "description": "官方 LTS 二进制 · node 与 npm 随版本共存", "state": "available", "releases": runtimecatalog.Node()},
 	)

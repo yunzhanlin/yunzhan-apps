@@ -12,6 +12,7 @@ mkdir -p "$OUT"
 for suffix in '' .sha256 .manifest .sig; do
   [[ ! -e "$OUT/$NAME.tar.gz$suffix" ]] || { echo 'release already exists; choose a new version' >&2; exit 1; }
 done
+[[ ! -e "$OUT/$NAME.executor-tests" && ! -e "$OUT/$NAME.executor-tests.sha256" ]] || { echo 'release test artifact already exists; choose a new version' >&2; exit 1; }
 LOCK="$OUT/.build-$NAME.lock"
 mkdir "$LOCK" 2>/dev/null || { echo 'this release is already building; do not replace its stage' >&2; exit 1; }
 STAGE=''
@@ -45,6 +46,8 @@ BUILD_ROOT="$STAGE/.source"
 python3 "$ROOT/packaging/freeze-source.py" "$ROOT" "$BUILD_ROOT"
 mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$NAME/config"
 (cd "$BUILD_ROOT" && go version && /opt/homebrew/bin/node --version && go test ./... && go vet ./...) 2>&1 | tee "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/executor-tests" ./internal/executor)
+printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build >/dev/null)
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="-s -w" -o "$STAGE/$NAME/bin/panel" ./cmd/panel)
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="-s -w" -o "$STAGE/$NAME/bin/panel-executor" ./cmd/executor)
@@ -75,4 +78,7 @@ COPYFILE_DISABLE=1 tar --no-xattrs -C "$STAGE" -czf "$STAGE/$NAME.tar.gz" "$NAME
 printf '%s  %s\n' "$(shasum -a 256 "$STAGE/$NAME.tar.gz" | cut -d ' ' -f 1)" "$OUT/$NAME.tar.gz" > "$STAGE/archive.sha256"
 ln "$STAGE/$NAME.tar.gz" "$OUT/$NAME.tar.gz"
 ln "$STAGE/archive.sha256" "$OUT/$NAME.tar.gz.sha256"
+ln "$STAGE/executor-tests" "$OUT/$NAME.executor-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/executor-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.executor-tests" > "$STAGE/executor-tests.sha256"
+ln "$STAGE/executor-tests.sha256" "$OUT/$NAME.executor-tests.sha256"
 echo "$OUT/$NAME.tar.gz"

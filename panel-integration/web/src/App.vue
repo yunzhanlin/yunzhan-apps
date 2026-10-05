@@ -187,11 +187,12 @@ interface RegistryApp {
   package_url: string;
   sha256: string;
 }
-interface RegistryStatus { id: string; state_known?: boolean; installed: boolean; healthy: boolean; detail: string }
+interface RegistryStatus { id: string; state_known?: boolean; installed: boolean; healthy: boolean; detail: string; supported?: boolean; compatibility_detail?: string }
 interface AppRegistry {
   catalog: { schema_version: number; generated_at: string; repository: string; apps: RegistryApp[] };
   status: RegistryStatus[];
   source: { source: string; stale: boolean; fetched_at?: string };
+  host?: { platform: string; architecture: string };
 }
 const user = ref(""),
   csrf = ref(""),
@@ -400,8 +401,8 @@ const filteredRegistryApps = computed(() => {
     if (term && !`${app.name} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
     const status = registryStatus(app.id);
     if (storeStatus.value === "installed" && !status?.installed) return false;
-    if (storeStatus.value === "installable" && (status?.installed || app.stage !== "ready")) return false;
-    if (storeStatus.value === "unavailable" && app.stage === "ready") return false;
+    if (storeStatus.value === "installable" && (status?.installed || app.stage !== "ready" || status?.supported === false)) return false;
+    if (storeStatus.value === "unavailable" && app.stage === "ready" && status?.supported !== false) return false;
     return true;
   });
   if (storeSort.value === "name") items.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
@@ -420,6 +421,7 @@ async function installRegistryApp(app: RegistryApp) {
     openRegistryApp(app);
     return;
   }
+  if (status?.supported === false) { ElMessage.warning(status.compatibility_detail || "该应用不支持当前系统或 CPU 架构"); return; }
   if (app.stage !== "ready") {
     ElMessage.warning(app.stage === "integration" ? "该应用正在接入安装器" : "该功能正在实现中");
     return;
@@ -2055,10 +2057,11 @@ onUnmounted(() => {
                 <select v-model="storeStatus" aria-label="软件状态筛选"><option value="all">所有状态</option><option value="installed">已安装</option><option value="installable">可安装</option><option value="unavailable">待适配</option></select>
                 <select v-model="storeSort" aria-label="软件排序"><option value="recommended">综合排序</option><option value="name">名称排序</option><option value="installed">已安装优先</option></select>
               </div>
-              <div v-if="appRegistry.catalog.apps.length && !showReferenceRuntimeCards" class="app-registry-source">
+              <div v-if="appRegistry.catalog.apps.length" class="app-registry-source">
                 <span>云栈官方 GitHub 应用仓库</span>
                 <el-tag size="small" :type="appRegistry.source.stale ? 'warning' : 'success'">{{ appRegistry.source.stale ? '已验签缓存' : 'Ed25519 已验签' }}</el-tag>
                 <small>{{ appRegistry.catalog.apps.length }} 个应用 · 只在安装时拉取应用包</small>
+                <small v-if="appRegistry.host">{{ appRegistry.host.platform || '未支持的系统' }} / {{ appRegistry.host.architecture }}</small>
               </div>
               <div class="runtime-grid">
                 <article v-for="app in filteredRegistryApps" :key="'registry-' + app.id" class="panel-card runtime-card registry-runtime-card">
@@ -2069,19 +2072,20 @@ onUnmounted(() => {
                       disable-transitions
                       :type="registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? 'success' : 'warning') : app.stage === 'ready' ? 'info' : app.stage === 'integration' ? 'warning' : 'info'"
                       size="small"
-                    >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? '已安装' : '待核对') : app.stage === 'ready' ? '可安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-tag>
+                    >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? '已安装' : '待核对') : registryStatus(app.id)?.supported === false && app.stage === 'ready' ? '当前机器不支持' : app.stage === 'ready' ? '可安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-tag>
                   </div>
                   <p>{{ app.summary }}</p>
                   <div class="runtime-card-tags"><span v-for="tag in app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
                   <el-button
                     class="runtime-install-button"
                     :type="app.stage === 'ready' ? 'primary' : 'default'"
-                    :disabled="app.stage !== 'ready' || registryStatus(app.id)?.state_known === false || registryInstalling.includes(app.id)"
+                    :disabled="app.stage !== 'ready' || registryStatus(app.id)?.state_known === false || (!registryStatus(app.id)?.installed && registryStatus(app.id)?.supported === false) || registryInstalling.includes(app.id)"
                     @click="installRegistryApp(app)"
-                  >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
+                  >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : registryStatus(app.id)?.supported === false && app.stage === 'ready' ? '当前机器不支持' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
                   <div class="runtime-note">
                     {{ app.provider === 'runtime' ? '受审核运行时' : app.provider === 'compose' ? '受限 Compose 应用' : '面板功能模块' }} · {{ app.risk === 'eol' ? '已停止维护，仅限隔离兼容迁移' : app.risk === 'privileged' ? '涉及系统权限' : 'SHA-256 固定包' }}<br />
                     {{ registryStatus(app.id)?.detail || '等待状态检查' }}
+                    <template v-if="registryStatus(app.id)?.compatibility_detail"><br />{{ registryStatus(app.id)?.compatibility_detail }}</template>
                   </div>
                 </article>
                 <article

@@ -31,13 +31,13 @@ func dockerInstallCommand(ctx context.Context, name string, args ...string) (str
 
 const dockerBookwormKeyFingerprint = "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
 
-func setupDockerBookwormRepository(ctx context.Context) error {
+func setupDockerRepository(ctx context.Context, spec runtimecatalog.DockerInstallSpec) error {
 	const keyPath = "/etc/apt/keyrings/panel-docker.asc"
 	const sourcePath = "/etc/apt/sources.list.d/panel-docker.sources"
-	const source = "Types: deb\nURIs: https://download.docker.com/linux/debian\nSuites: bookworm\nComponents: stable\nArchitectures: amd64\nSigned-By: " + keyPath + "\n"
-	if runtime.GOARCH != "amd64" {
-		return errors.New("Debian 12 Docker 固定清单目前仅验收 amd64")
+	if (spec.Distribution != "debian" && spec.Distribution != "ubuntu") || spec.Codename == "" || (runtime.GOARCH != "amd64" && runtime.GOARCH != "arm64") {
+		return errors.New("Docker 软件源系统或架构不受支持")
 	}
+	source := "Types: deb\nURIs: https://download.docker.com/linux/" + spec.Distribution + "\nSuites: " + spec.Codename + "\nComponents: stable\nArchitectures: " + runtime.GOARCH + "\nSigned-By: " + keyPath + "\n"
 	if e := os.MkdirAll(filepath.Dir(keyPath), 0755); e != nil {
 		return e
 	}
@@ -52,7 +52,7 @@ func setupDockerBookwormRepository(ctx context.Context) error {
 		return e
 	}
 	defer os.RemoveAll(gpgHome)
-	if _, e = dockerInstallCommand(ctx, "/usr/bin/curl", "--fail", "--silent", "--show-error", "--location", "--max-time", "30", "--output", key.Name(), "https://download.docker.com/linux/debian/gpg"); e != nil {
+	if _, e = dockerInstallCommand(ctx, "/usr/bin/curl", "--fail", "--silent", "--show-error", "--location", "--max-time", "30", "--output", key.Name(), "https://download.docker.com/linux/"+spec.Distribution+"/gpg"); e != nil {
 		return e
 	}
 	info, e := dockerInstallCommand(ctx, "/usr/bin/gpg", "--homedir", gpgHome, "--batch", "--with-colons", "--show-keys", key.Name())
@@ -115,7 +115,7 @@ func installedDebianPackageVersion(ctx context.Context, name string) (string, er
 }
 
 func checkDockerBookwormPackages(ctx context.Context, spec runtimecatalog.DockerInstallSpec) error {
-	for _, name := range []string{"docker.io", "docker-compose", "docker-doc", "docker-buildx", "podman-docker", "containerd", "runc"} {
+	for _, name := range []string{"docker.io", "docker-compose", "docker-compose-v2", "docker-doc", "docker-buildx", "podman-docker", "containerd", "runc"} {
 		installed, e := installedDebianPackageVersion(ctx, name)
 		if e != nil {
 			return e
@@ -138,7 +138,7 @@ func checkDockerBookwormPackages(ctx context.Context, spec runtimecatalog.Docker
 }
 
 func installDocker(ctx context.Context, r runtimecatalog.Release, id string, add func(string) error) error {
-	spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostDebianMajor())
+	spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostPlatform())
 	if !available || r.ID != spec.ReleaseID {
 		return errors.New("Docker 固定软件包清单无效")
 	}
@@ -146,10 +146,10 @@ func installDocker(ctx context.Context, r runtimecatalog.Release, id string, add
 		if e := checkDockerBookwormPackages(ctx, spec); e != nil {
 			return e
 		}
-		if e := add("校验 Docker 官方签名密钥并配置 Debian 12 软件源"); e != nil {
+		if e := add("校验 Docker 官方签名密钥并配置当前系统与架构的软件源"); e != nil {
 			return e
 		}
-		if e := setupDockerBookwormRepository(ctx); e != nil {
+		if e := setupDockerRepository(ctx, spec); e != nil {
 			return e
 		}
 	}

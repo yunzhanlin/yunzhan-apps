@@ -9,3 +9,6 @@ import (
 
 func (s *Service) phpWorkerRoutes(m *http.ServeMux)                    {}
 func (s *Service) checkPHPWorkerSiteChange(in core.ApplyRequest) error { return nil }
+
+func (s *Service) StartPHPWorkerOperations() error { return nil }
+func (s *Service) phpWorkerMutationBusy() error    { return nil }

@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"local/panel/internal/core"
+	"local/panel/internal/runtimecatalog"
 )
 
 var moduleResourceID = regexp.MustCompile(`^[a-z][a-z0-9-]{2,31}$`)
@@ -95,6 +96,10 @@ func InstallAppDependencies(id string) (err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 	defer cancel()
 	packages := map[string][]string{"pure-ftpd": {"pure-ftpd"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	privateNode := id == "pm2-manager" && runtimecatalog.HostPlatform() == "ubuntu-22.04"
+	if privateNode {
+		packages = nil
+	}
 	if id == "pure-ftpd" {
 		if _, e := os.Stat("/usr/sbin/pure-ftpd"); e != nil {
 			if _, e = s.moduleCommand(ctx, time.Minute, "/usr/bin/systemctl", "mask", "pure-ftpd.service"); e != nil {
@@ -102,11 +107,13 @@ func InstallAppDependencies(id string) (err error) {
 			}
 		}
 	}
-	if _, err = s.moduleCommand(ctx, 2*time.Minute, "/usr/bin/apt-get", "update"); err != nil {
-		return err
-	}
-	if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends"}, packages...)...); err != nil {
-		return err
+	if len(packages) > 0 {
+		if _, err = s.moduleCommand(ctx, 2*time.Minute, "/usr/bin/apt-get", "update"); err != nil {
+			return err
+		}
+		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends"}, packages...)...); err != nil {
+			return err
+		}
 	}
 	if id == "pm2-manager" {
 		dir := filepath.Join(appNativeRoot, "pm2")
@@ -119,12 +126,58 @@ func InstallAppDependencies(id string) (err error) {
 		if err = atomicWrite(filepath.Join(dir, "package-lock.json"), pm2Lock, 0644); err != nil {
 			return err
 		}
-		_, err = s.moduleCommand(ctx, 3*time.Minute, "/usr/bin/npm", "ci", "--prefix", dir, "--cache", filepath.Join(dir, ".cache"), "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund")
+		npmBinary := "/usr/bin/npm"
+		npmArgs := []string{"ci", "--prefix", dir, "--cache", filepath.Join(dir, ".cache"), "--omit=dev", "--ignore-scripts", "--no-audit", "--no-fund"}
+		if privateNode {
+			if err = ensurePM2PrivateNode(ctx, dir); err != nil {
+				return err
+			}
+			npmBinary = pm2NodeBinaryOn(runtimecatalog.HostPlatform())
+			npmArgs = append([]string{filepath.Join(dir, "node/lib/node_modules/npm/bin/npm-cli.js")}, npmArgs...)
+		}
+		_, err = s.moduleCommand(ctx, 3*time.Minute, npmBinary, npmArgs...)
 		if err == nil {
 			err = makePM2Readable(dir)
 		}
 	}
 	return err
+}
+
+func ensurePM2PrivateNode(ctx context.Context, dir string) error {
+	r, ok := runtimecatalog.Find("node-24.21.0")
+	if !ok {
+		return errors.New("当前架构没有 PM2 的已审核 Node.js 安装源")
+	}
+	prefix := filepath.Join(dir, "node")
+	if _, err := os.Stat(prefix); err == nil {
+		version, err := RunCommand(ctx, filepath.Join(prefix, "bin/node"), "--version")
+		if err != nil || strings.TrimSpace(version) != "v"+r.Version {
+			return errors.New("现有 PM2 专用 Node.js 版本不匹配，拒绝覆盖")
+		}
+		return nil
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	id := core.ID()
+	_, work, err := prepareRuntimeSource(ctx, r, id, func(string) error { return nil })
+	if err != nil {
+		return err
+	}
+	arch := "arm64"
+	if strings.Contains(r.URL, "linux-x64") {
+		arch = "x64"
+	}
+	source := filepath.Join(work, "node-v"+r.Version+"-linux-"+arch)
+	version, err := RunCommand(ctx, filepath.Join(source, "bin/node"), "--version")
+	if err != nil || strings.TrimSpace(version) != "v"+r.Version {
+		return errors.New("PM2 专用 Node.js 精确版本核对失败")
+	}
+	stage := prefix + ".pending-" + id
+	defer os.RemoveAll(stage)
+	if err = copyBuildTree(source, stage); err != nil {
+		return err
+	}
+	return os.Rename(stage, prefix)
 }
 func (s *Service) installPureFTP(ctx context.Context) error {
 	if !exists(s.systemPath("/usr/sbin/pure-ftpd")) {
@@ -430,8 +483,8 @@ func ServePM2(id string) error {
 	if e = os.Chdir(project); e != nil {
 		return e
 	}
-	binary := "/usr/bin/node"
-	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", "1", "--max-memory-restart", "256M"}, []string{"PATH=/usr/bin:/bin", "LANG=C", "HOME=" + home, "PM2_HOME=" + home, "NODE_ENV=production", "HOST=127.0.0.1", "PORT=" + strconv.Itoa(app.Port)})
+	binary := pm2NodeBinaryOn(runtimecatalog.HostPlatform())
+	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", "1", "--max-memory-restart", "256M"}, []string{"PATH=" + filepath.Dir(binary) + ":/usr/bin:/bin", "LANG=C", "HOME=" + home, "PM2_HOME=" + home, "NODE_ENV=production", "HOST=127.0.0.1", "PORT=" + strconv.Itoa(app.Port)})
 }
 
 type nfsMount struct {
@@ -732,6 +785,9 @@ func (s *Service) appDependencyReady(id string) bool {
 	case "pure-ftpd":
 		return exists(s.systemPath("/usr/sbin/pure-ftpd"))
 	case "pm2-manager":
+		if runtimecatalog.HostPlatform() == "ubuntu-22.04" && !exists(s.systemPath(pm2NodeBinaryOn("ubuntu-22.04"))) {
+			return false
+		}
 		var result struct {
 			OK      bool   `json:"ok"`
 			LockSHA string `json:"lock_sha256"`

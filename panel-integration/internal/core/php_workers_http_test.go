@@ -77,10 +77,16 @@ func TestPHPWorkerHTTPUsesSiteScopeCSRFAndServerIdentity(t *testing.T) {
 		if w := request("GET", base, "", auth["csrf"], cookie); w.Code != 200 {
 			t.Fatal(role, w.Code, w.Body.String())
 		}
+		if w := request("GET", base+"/operations/"+ID()+"/status", "", auth["csrf"], cookie); w.Code != 200 {
+			t.Fatal("operation read", role, w.Code, w.Body.String())
+		}
 		before := calls
 		if role != "admin" {
 			if w := request("GET", "/api/sites/"+ID()+"/php-workers", "", auth["csrf"], cookie); w.Code != 403 || calls != before {
 				t.Fatal("cross-site read", role, w.Code)
+			}
+			if w := request("GET", "/api/sites/"+ID()+"/php-workers/operations/"+ID()+"/status", "", auth["csrf"], cookie); w.Code != 403 || calls != before {
+				t.Fatal("cross-site operation read", role, w.Code)
 			}
 		}
 		body := `{"name":"queue","entry":"artisan","arguments":["queue:work"],"restart_policy":"always","memory_mb":256,"tasks_max":64,"stop_seconds":30}`
@@ -88,7 +94,7 @@ func TestPHPWorkerHTTPUsesSiteScopeCSRFAndServerIdentity(t *testing.T) {
 			t.Fatal("missing CSRF", role, w.Code)
 		}
 		w := request("POST", base, body, auth["csrf"], cookie)
-		want := 201
+		want := 202
 		if role == "viewer" {
 			want = 403
 		}

@@ -34,8 +34,8 @@ func (s *Store) QueueInstallBundle(releases []string, key, actor string) (Runtim
 			return out, errors.New("组合安装包含无效版本或同一家族的重复版本")
 		}
 		if release.Family == "docker" {
-			spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostDebianMajor())
-			if !available || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostDebianMajor()) || spec.ReleaseID != release.ID {
+			spec, available := runtimecatalog.DockerSpecOn(runtimecatalog.HostPlatform())
+			if !available || !runtimecatalog.DockerAvailableOn(runtimecatalog.HostPlatform()) || spec.ReleaseID != release.ID {
 				return out, errors.New("当前 Debian 版本尚未适配此 Docker 固定包")
 			}
 		}

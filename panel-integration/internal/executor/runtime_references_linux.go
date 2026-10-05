@@ -50,6 +50,15 @@ func runtimeReferences(release string) ([]core.RuntimeReference, error) {
 		}
 	}
 	if r.Family == "php" {
+		operations, err := readPHPWorkerOperations("/var/lib/panel-executor/php-worker-operations")
+		if err != nil {
+			return nil, err
+		}
+		for _, operation := range operations {
+			if operation.Input.ObservedReleaseID == release && phpWorkerOperationReference(operation.State) {
+				out = append(out, core.RuntimeReference{Kind: "php_worker_operation", ID: operation.ID, Name: operation.Input.Name + " · " + operation.Action, State: operation.State})
+			}
+		}
 		workers, err := phpWorkerRecords()
 		if err != nil {
 			return nil, err

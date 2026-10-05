@@ -25,7 +25,7 @@ func prepareRuntimeSource(ctx context.Context, r runtimecatalog.Release, id stri
 		return "", "", e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
-	if e := downloadVerified(ctx, r.URL, r.SHA256, archive); e != nil {
+	if e := downloadRuntimeSource(ctx, r, archive); e != nil {
 		return "", "", e
 	}
 	if e := add("已从官方站点下载固定版本，并通过官方 SHA-256 清单校验"); e != nil {
@@ -79,13 +79,7 @@ func installRedis(ctx context.Context, r runtimecatalog.Release, id string, add 
 	}
 	source := filepath.Join(work, "redis-"+r.Version)
 	logPath := filepath.Join(base, "build.log")
-	jobs := runtime.NumCPU()
-	if jobs < 1 {
-		jobs = 1
-	}
-	if jobs > 4 {
-		jobs = 4
-	}
+	jobs := runtimeBuildJobs()
 	if e = add(fmt.Sprintf("以独立构建用户编译 Redis（%d 个并行任务，启用 TLS）", jobs)); e != nil {
 		return e
 	}

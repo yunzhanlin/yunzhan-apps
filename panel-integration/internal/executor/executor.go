@@ -21,20 +21,37 @@ import (
 )
 
 type Command func(context.Context, string, ...string) (string, error)
+type TimedCommand func(context.Context, time.Duration, string, ...string) (string, error)
 type Config struct {
 	SitesDir, ConfDir, StateDir, NginxBin, TerminalSocket, RootTerminalSocket, ApacheSiteConfig string
 	SecurityDir, NginxConf, SystemRoot                                                          string
 	Run                                                                                         Command
+	RunWait                                                                                     TimedCommand
 }
 type Service struct {
-	Config   Config
-	mu       sync.Mutex
-	terminal *terminalManager
+	Config                Config
+	mu                    sync.Mutex
+	terminal              *terminalManager
+	phpWorkerQueueMu      sync.Mutex
+	phpWorkerQueueStarted bool
+	phpWorkerQueueWake    chan struct{}
 }
 
 func New(c Config) *Service {
 	if c.ApacheSiteConfig == "" {
 		c.ApacheSiteConfig = "/etc/panel/apache/httpd.conf"
+	}
+	if c.RunWait == nil {
+		if c.Run == nil {
+			c.RunWait = RunCommandWithTimeout
+		} else {
+			command := c.Run
+			c.RunWait = func(ctx context.Context, wait time.Duration, name string, args ...string) (string, error) {
+				bounded, cancel := context.WithTimeout(ctx, wait)
+				defer cancel()
+				return command(bounded, name, args...)
+			}
+		}
 	}
 	if c.Run == nil {
 		c.Run = RunCommand
@@ -72,7 +89,10 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 	return n, nil
 }
 func RunCommand(ctx context.Context, name string, args ...string) (string, error) {
-	c, cancel := context.WithTimeout(ctx, 20*time.Second)
+	return RunCommandWithTimeout(ctx, 20*time.Second, name, args...)
+}
+func RunCommandWithTimeout(ctx context.Context, wait time.Duration, name string, args ...string) (string, error) {
+	c, cancel := context.WithTimeout(ctx, wait)
 	defer cancel()
 	cmd := exec.CommandContext(c, name, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C"}
@@ -145,8 +165,22 @@ func ordinary(path string, dir bool) error {
 	return nil
 }
 func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyResult, error) {
-	s.mu.Lock()
+	// A long PHP stop holds the lifecycle lock. Reject a new site mutation
+	// before HTTP deadlines expire, and never start writing after cancellation.
+	if e := s.phpWorkerMutationBusy(); e != nil {
+		return core.ApplyResult{Restored: true}, e
+	}
+	for !s.mu.TryLock() {
+		select {
+		case <-ctx.Done():
+			return core.ApplyResult{Restored: true}, ctx.Err()
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
 	defer s.mu.Unlock()
+	if e := ctx.Err(); e != nil {
+		return core.ApplyResult{Restored: true}, e
+	}
 	unlock, lockErr := s.lockRuntimeUse()
 	if lockErr != nil {
 		return core.ApplyResult{}, lockErr
@@ -603,10 +637,10 @@ func (s *Service) Handler() http.Handler {
 			respond(w, 503, map[string]string{"error": "无法核对 Nginx 软件包版本"})
 			return
 		}
-		major := runtimecatalog.HostDebianMajor()
-		debianSource := "Debian 系统软件包"
+		major := runtimecatalog.HostPlatform()
+		debianSource := "系统软件包"
 		if major != "" {
-			debianSource = "Debian " + major + " 系统软件包"
+			debianSource = major + " 系统软件包"
 		}
 		installed := []map[string]any{{"id": "nginx-system", "family": "nginx", "version": strings.TrimSpace(version), "source": debianSource, "binary": s.Config.NginxBin, "status": "verified_base", "package_version": strings.TrimSpace(pkg), "architecture": runtime.GOARCH}}
 		installed = append(installed, phpInventory(r.Context())...)

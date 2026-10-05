@@ -14,17 +14,61 @@ import (
 )
 
 type AppRegistryStatus struct {
-	ID         string `json:"id"`
-	StateKnown bool   `json:"state_known"`
-	Installed  bool   `json:"installed"`
-	Healthy    bool   `json:"healthy"`
-	Detail     string `json:"detail"`
+	ID                  string `json:"id"`
+	StateKnown          bool   `json:"state_known"`
+	Installed           bool   `json:"installed"`
+	Healthy             bool   `json:"healthy"`
+	Detail              string `json:"detail"`
+	Supported           bool   `json:"supported"`
+	CompatibilityDetail string `json:"compatibility_detail,omitempty"`
 }
 
 type AppRegistryPage struct {
 	Catalog appcatalog.Catalog  `json:"catalog"`
 	Status  []AppRegistryStatus `json:"status"`
 	Source  appcatalog.LoadInfo `json:"source"`
+	Host    AppRegistryHost     `json:"host"`
+}
+
+type AppRegistryHost struct {
+	Platform     string `json:"platform"`
+	Architecture string `json:"architecture"`
+}
+
+func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool, string) {
+	supportedOS := platform == "debian-12" || platform == "debian-13" || platform == "ubuntu-22.04" || platform == "ubuntu-24.04" || platform == "ubuntu-26.04"
+	if !supportedOS || (arch != "amd64" && arch != "arm64") {
+		return false, "当前系统不在 Debian 12/13、Ubuntu 22.04/24.04/26.04 的 64 位支持范围内"
+	}
+	if app.Stage != "ready" {
+		return false, "该应用尚未完成安装器接入"
+	}
+	switch app.Provider {
+	case "compose":
+		if !IsDockerTemplate(app.Target) {
+			return false, "当前面板没有该应用的受限安装器"
+		}
+		if arch == "arm64" {
+			if _, legacy := LegacyPHPImages[app.Target]; legacy {
+				return false, "固定应用镜像仅支持 x86_64；ARM64 不启用模拟运行"
+			}
+		}
+	case "runtime":
+		if app.Target == "docker-auto" {
+			_, ok := runtimecatalog.DockerSpecOn(platform)
+			return ok, ""
+		}
+		if _, ok := runtimecatalog.Find(app.Target); !ok {
+			return false, "当前系统或架构没有该运行时的已审核安装源"
+		}
+	case "panel-module":
+		if _, ok := FindAppModule(app.Target); !ok && app.Target != "nginx-waf" && app.Target != "system-hardening" && app.Target != "intrusion-prevention" {
+			return false, "当前面板没有该功能处理器"
+		}
+	default:
+		return false, "不支持该应用处理器"
+	}
+	return true, ""
 }
 
 func (a *Server) appRegistryCacheDir() string {
@@ -108,7 +152,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	}
 	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
 	for _, app := range catalog.Apps {
-		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装"}
+		supported, compatibilityDetail := registrySupportOn(app, runtimecatalog.HostPlatform(), runtime.GOARCH)
+		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
 			out = append(out, status)
@@ -185,7 +230,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 	case "runtime":
 		releaseID := manifest.Delivery.Target
 		if releaseID == "docker-auto" {
-			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostDebianMajor())
+			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
 			if len(releases) != 1 {
 				fail(w, 409, "当前系统没有已审核的 Docker 安装包")
 				return
@@ -259,20 +304,22 @@ func (a *Server) appRegistryRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
 		defer cancel()
-		send(w, 200, AppRegistryPage{Catalog: catalog, Status: a.appRegistryStatuses(ctx, catalog), Source: source})
+		send(w, 200, AppRegistryPage{Catalog: catalog, Status: a.appRegistryStatuses(ctx, catalog), Source: source, Host: AppRegistryHost{Platform: runtimecatalog.HostPlatform(), Architecture: runtime.GOARCH}})
 	}))
 	m.HandleFunc("POST /api/app-registry/{id}/install", a.authorize(a.installRegistryApp))
 }
 
 func appCompatible(manifest appcatalog.Manifest) error {
+	return appCompatibleOn(manifest, runtimecatalog.HostPlatform(), runtime.GOARCH)
+}
+
+func appCompatibleOn(manifest appcatalog.Manifest, osID, architecture string) error {
 	if manifest.Risk == "eol" {
 		image, ok := LegacyPHPImages[manifest.Delivery.Target]
 		if !ok || manifest.ID != strings.Replace(manifest.Delivery.Target, "php-legacy-", "php-", 1) || manifest.Delivery.Provider != "compose" || manifest.Delivery.Isolation != "legacy-container" || manifest.Delivery.Image != image {
 			return errors.New("旧版 PHP 必须使用本机允许列表中的固定摘要隔离环境")
 		}
 	}
-	osID := "debian-" + runtimecatalog.HostDebianMajor()
-	architecture := runtime.GOARCH
 	foundOS, foundArch := false, false
 	for _, item := range manifest.Compatibility.OS {
 		foundOS = foundOS || item == osID

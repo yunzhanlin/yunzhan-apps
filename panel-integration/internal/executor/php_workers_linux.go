@@ -246,7 +246,17 @@ func (s *Service) phpWorkerReady(ctx context.Context, v core.PHPWorker) error {
 }
 
 func (s *Service) stopPHPWorker(ctx context.Context, v core.PHPWorker) error {
-	_, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", phpWorkerUnit(v.ID))
+	// Keep the external registry link until the stop has finished. disable --now
+	// reloads after unlinking and systemd can then lose TimeoutStopSec, reverting
+	// to its default while the running process is still exiting.
+	_, e := s.Config.RunWait(ctx, time.Duration(v.StopSeconds+10)*time.Second, "/usr/bin/systemctl", "stop", phpWorkerUnit(v.ID))
+	if e != nil {
+		current := s.inspectPHPWorker(ctx, v)
+		if current.PID != 0 || (current.Status != "stopped" && current.Status != "failed") {
+			return e
+		}
+	}
+	_, e = s.Config.Run(ctx, "/usr/bin/systemctl", "disable", phpWorkerUnit(v.ID))
 	if e == nil {
 		return nil
 	}
@@ -426,7 +436,7 @@ func (s *Service) changePHPWorker(ctx context.Context, siteID, id, action, confi
 		}
 		_, _ = s.Config.Run(ctx, "/usr/bin/systemctl", "reset-failed", phpWorkerUnit(id))
 		if action == "restart" {
-			if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "stop", phpWorkerUnit(id)); e != nil {
+			if _, e = s.Config.RunWait(ctx, time.Duration(v.StopSeconds+10)*time.Second, "/usr/bin/systemctl", "stop", phpWorkerUnit(id)); e != nil {
 				return v, e
 			}
 		}
@@ -448,6 +458,15 @@ func (s *Service) changePHPWorker(ctx context.Context, siteID, id, action, confi
 func (s *Service) checkPHPWorkerSiteChange(in core.ApplyRequest) error {
 	if s.Config.SitesDir != "/srv/panel/sites" {
 		return nil
+	}
+	operations, e := s.phpWorkerPublicOperations(in.Site.ID)
+	if e != nil {
+		return e
+	}
+	for _, operation := range operations {
+		if phpWorkerOperationPending(operation.State) {
+			return errors.New("该网站 PHP 进程操作尚未完成，请等待后再变更网站")
+		}
 	}
 	items, e := phpWorkerRecords()
 	if e != nil {
@@ -486,7 +505,20 @@ func (s *Service) phpWorkerRoutes(m *http.ServeMux) {
 				out = append(out, s.inspectPHPWorker(r.Context(), item))
 			}
 		}
-		respond(w, 200, map[string]any{"workers": out, "automatic_rebind": false})
+		operations, e := s.phpWorkerPublicOperations(r.PathValue("id"))
+		if e != nil {
+			respond(w, 409, map[string]string{"error": e.Error()})
+			return
+		}
+		respond(w, 200, map[string]any{"workers": out, "operations": operations, "automatic_rebind": false})
+	})
+	m.HandleFunc("GET "+base+"/operations/{operation}/status", func(w http.ResponseWriter, r *http.Request) {
+		v, e := s.phpWorkerOperation(r.PathValue("id"), r.PathValue("operation"))
+		if e != nil {
+			respond(w, 404, map[string]string{"error": e.Error()})
+			return
+		}
+		respond(w, 200, v)
 	})
 	m.HandleFunc("POST "+base, func(w http.ResponseWriter, r *http.Request) {
 		var in core.PHPWorker
@@ -497,24 +529,25 @@ func (s *Service) phpWorkerRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "网站身份不匹配"})
 			return
 		}
-		if e := s.createPHPWorker(r.Context(), in); e != nil {
+		v, e := s.enqueuePHPWorkerOperation(in, "create", "")
+		if e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		v, e := readPHPWorker(in.ID)
-		if e != nil {
-			respond(w, 500, map[string]string{"error": e.Error()})
-			return
-		}
-		respond(w, 201, s.inspectPHPWorker(r.Context(), v))
+		respond(w, 202, v)
 	})
 	m.HandleFunc("POST "+base+"/{worker}/{action}", func(w http.ResponseWriter, r *http.Request) {
-		v, e := s.changePHPWorker(r.Context(), r.PathValue("id"), r.PathValue("worker"), r.PathValue("action"), "")
+		worker, e := readPHPWorker(r.PathValue("worker"))
+		if e != nil || worker.SiteID != r.PathValue("id") {
+			respond(w, 404, map[string]string{"error": "网站中不存在该 PHP 进程"})
+			return
+		}
+		v, e := s.enqueuePHPWorkerOperation(worker, r.PathValue("action"), "")
 		if e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		respond(w, 200, v)
+		respond(w, 202, v)
 	})
 	m.HandleFunc("DELETE "+base+"/{worker}", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
@@ -523,12 +556,17 @@ func (s *Service) phpWorkerRoutes(m *http.ServeMux) {
 		if !readJSON(w, r, &in) {
 			return
 		}
-		_, e := s.changePHPWorker(r.Context(), r.PathValue("id"), r.PathValue("worker"), "delete", in.ConfirmName)
+		worker, e := readPHPWorker(r.PathValue("worker"))
+		if e != nil || worker.SiteID != r.PathValue("id") {
+			respond(w, 404, map[string]string{"error": "网站中不存在该 PHP 进程"})
+			return
+		}
+		v, e := s.enqueuePHPWorkerOperation(worker, "delete", in.ConfirmName)
 		if e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		respond(w, 200, map[string]bool{"ok": true})
+		respond(w, 202, v)
 	})
 	m.HandleFunc("GET "+base+"/{worker}/logs", func(w http.ResponseWriter, r *http.Request) {
 		v, e := readPHPWorker(r.PathValue("worker"))

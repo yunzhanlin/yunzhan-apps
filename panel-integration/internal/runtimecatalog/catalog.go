@@ -2,7 +2,10 @@
 // Updating it is a code release; clients cannot supply URLs, commands or digests.
 package runtimecatalog
 
-import "path/filepath"
+import (
+	"path/filepath"
+	"strings"
+)
 
 type Release struct {
 	ID      string `json:"id"`
@@ -40,6 +43,9 @@ var Apache = []Release{
 var Docker = []Release{
 	{"docker-debian-26.1.5", "docker", "26.1.5", "26", "debian", "https://packages.debian.org/trixie/docker.io", "", "Debian 13 官方仓库软件包 · 固定包版本"},
 	{"docker-ce-29.8.2-bookworm", "docker", "29.8.2", "29", "official", "https://docs.docker.com/engine/install/debian/", "", "Docker 官方签名仓库 · Debian 12 固定包版本"},
+	{"docker-ce-29.8.2-jammy", "docker", "29.8.2", "29", "official", "https://docs.docker.com/engine/install/ubuntu/", "", "Docker 官方签名仓库 · Ubuntu 22.04 固定包版本"},
+	{"docker-ce-29.8.2-noble", "docker", "29.8.2", "29", "official", "https://docs.docker.com/engine/install/ubuntu/", "", "Docker 官方签名仓库 · Ubuntu 24.04 固定包版本"},
+	{"docker-ce-29.8.2-resolute", "docker", "29.8.2", "29", "official", "https://docs.docker.com/engine/install/ubuntu/", "", "Docker 官方签名仓库 · Ubuntu 26.04 固定包版本"},
 }
 
 const DockerEnginePackage = "docker.io"
@@ -55,13 +61,16 @@ type DockerInstallSpec struct {
 	EngineVersion  string
 	ComposeVersion string
 	ExternalRepo   bool
+	Distribution   string
+	Codename       string
 }
 
 func DockerSpecOn(major string) (DockerInstallSpec, bool) {
+	major = strings.TrimPrefix(major, "debian-")
 	switch major {
 	case "12":
 		return DockerInstallSpec{
-			ReleaseID: "docker-ce-29.8.2-bookworm", EngineVersion: "29.8.2", ComposeVersion: "5.6.0", ExternalRepo: true,
+			ReleaseID: "docker-ce-29.8.2-bookworm", EngineVersion: "29.8.2", ComposeVersion: "5.6.0", ExternalRepo: true, Distribution: "debian", Codename: "bookworm",
 			Packages: []string{
 				"docker-ce=5:29.8.2-1~debian.12~bookworm",
 				"docker-ce-cli=5:29.8.2-1~debian.12~bookworm",
@@ -77,6 +86,20 @@ func DockerSpecOn(major string) (DockerInstallSpec, bool) {
 				DockerEnginePackage + "=" + DockerEnginePackageVersion,
 				DockerCLIPackage + "=" + DockerCLIPackageVersion,
 				DockerComposePackage + "=" + DockerComposePackageVersion,
+			},
+		}, true
+	case "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04":
+		version := strings.TrimPrefix(major, "ubuntu-")
+		codename := map[string]string{"22.04": "jammy", "24.04": "noble", "26.04": "resolute"}[version]
+		suffix := "~ubuntu." + version + "~" + codename
+		return DockerInstallSpec{
+			ReleaseID: "docker-ce-29.8.2-" + codename, EngineVersion: "29.8.2", ComposeVersion: "5.6.0", ExternalRepo: true, Distribution: "ubuntu", Codename: codename,
+			Packages: []string{
+				"docker-ce=5:29.8.2-1" + suffix,
+				"docker-ce-cli=5:29.8.2-1" + suffix,
+				"containerd.io=2.3.6-1" + suffix,
+				"docker-buildx-plugin=0.37.1-1" + suffix,
+				"docker-compose-plugin=5.6.0-1" + suffix,
 			},
 		}, true
 	default:

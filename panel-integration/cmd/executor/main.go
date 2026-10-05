@@ -240,6 +240,9 @@ func main() {
 	}
 	svc := executor.New(executor.Config{SitesDir: "/srv/panel/sites", ConfDir: "/etc/panel/sites-enabled", StateDir: "/var/lib/panel-executor", NginxBin: "/usr/sbin/nginx", TerminalSocket: "/run/panel-terminal/control.sock", RootTerminalSocket: "/run/panel-terminal-root/control.sock"})
 	handler := svc.Handler()
+	if err = svc.StartPHPWorkerOperations(); err != nil {
+		log.Fatal(err)
+	}
 	svc.StartAppModuleWorker()
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 30 * time.Second,
 		ConnContext: func(ctx context.Context, c net.Conn) context.Context {

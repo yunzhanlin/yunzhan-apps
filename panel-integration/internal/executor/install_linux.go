@@ -244,7 +244,7 @@ func InstallJob(id string) (ret error) {
 		return e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
-	if e = downloadVerified(ctx, r.URL, r.SHA256, archive); e != nil {
+	if e = downloadRuntimeSource(ctx, r, archive); e != nil {
 		return e
 	}
 	if e = add("已从官方站点下载源码，并通过目录中固定的 SHA-256 校验"); e != nil {
@@ -284,13 +284,7 @@ func InstallJob(id string) (ret error) {
 	if e = buildCommand(ctx, source, logPath, source+"/configure", flags...); e != nil {
 		return e
 	}
-	jobs := runtime.NumCPU()
-	if jobs < 1 {
-		jobs = 1
-	}
-	if jobs > 4 {
-		jobs = 4
-	}
+	jobs := runtimeBuildJobs()
 	if e = add(fmt.Sprintf("开始源码编译（%d 个并行任务）；完整构建日志保存在专用缓存目录", jobs)); e != nil {
 		return e
 	}
@@ -388,9 +382,25 @@ func InstallJob(id string) (ret error) {
 	}
 	return add("独立目录安装完成；精确版本与固定构建模块核对通过")
 }
+
+type sourceHTTPError struct{ Status int }
+
+func (e sourceHTTPError) Error() string { return fmt.Sprintf("源码服务器 HTTP %d", e.Status) }
+
+func downloadRuntimeSource(ctx context.Context, r runtimecatalog.Release, dst string) error {
+	err := downloadVerified(ctx, r.URL, r.SHA256, dst)
+	var status sourceHTTPError
+	if errors.As(err, &status) && (status.Status == 404 || status.Status == 410) {
+		if archive := runtimecatalog.SourceArchiveURL(r); archive != "" {
+			return downloadVerified(ctx, archive, r.SHA256, dst)
+		}
+	}
+	return err
+}
+
 func downloadVerified(ctx context.Context, url, digest, dst string) error {
 	client := &http.Client{Timeout: 8 * time.Minute, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if len(via) > 3 || req.URL.Scheme != "https" || (req.URL.Host != "www.php.net" && req.URL.Host != "nginx.org" && req.URL.Host != "downloads.apache.org" && req.URL.Host != "pecl.php.net" && req.URL.Host != "download.redis.io" && req.URL.Host != "nodejs.org") {
+		if len(via) > 3 || req.URL.Scheme != "https" || (req.URL.Host != "www.php.net" && req.URL.Host != "nginx.org" && req.URL.Host != "downloads.apache.org" && req.URL.Host != "archive.apache.org" && req.URL.Host != "pecl.php.net" && req.URL.Host != "download.redis.io" && req.URL.Host != "nodejs.org") {
 			return errors.New("源码下载重定向超出允许来源")
 		}
 		return nil
@@ -405,7 +415,7 @@ func downloadVerified(ctx context.Context, url, digest, dst string) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("源码服务器 HTTP %d", resp.StatusCode)
+		return sourceHTTPError{Status: resp.StatusCode}
 	}
 	f, e := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if e != nil {
