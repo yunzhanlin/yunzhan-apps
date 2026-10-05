@@ -26,7 +26,7 @@ interface Guidance {
 }
 interface Versions {
   catalog: { apps: { id: string; target: string; version: string; sha256: string }[] };
-  status: { id: string; installed_version?: string; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
+  status: { id: string; installed_version?: string; version_known?: boolean; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
   source: { stale: boolean; fetched_at?: string; error?: string };
 }
 const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; registry?: Versions }>();
@@ -496,7 +496,7 @@ defineExpose({ show });
           <el-descriptions :column="1" border>
             <el-descriptions-item label="已安装应用版本">{{ versionStatus?.installed_version || '版本待核对' }}</el-descriptions-item>
             <el-descriptions-item label="签名仓库版本">{{ versionApp?.version || '未加载' }}</el-descriptions-item>
-            <el-descriptions-item label="更新状态">{{ versions?.source.stale ? '未能确认最新版本' : versionStatus?.update_available ? '仓库有新版' : versionStatus?.installed_version ? '当前目录未发现新版' : '版本记录待核对' }}</el-descriptions-item>
+            <el-descriptions-item label="更新状态">{{ versions?.source.stale ? '未能确认最新版本' : versionStatus?.update_available ? '仓库有新版' : versionStatus?.version_known ? '当前目录未发现新版' : '版本记录待核对' }}</el-descriptions-item>
           </el-descriptions>
           <p>{{ versionStatus?.update_detail || '更新成功后才记录新版本，不重置现有配置与报告。' }}</p>
           <el-alert v-if="versions?.source.stale" type="warning" :closable="false" :title="versions.source.error || '仓库连接失败，当前使用已验签缓存'" />

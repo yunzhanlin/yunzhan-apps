@@ -268,7 +268,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			case "runtime":
 				status.UpdateKind = "runtime"
 				status.UpdateSupported = supported
-				status.UpdateDetail = "并行安装已审核的新运行时；不自动切换网站或迁移数据库"
+				status.UpdateDetail = "安装或核对已审核的运行时版本；不自动切换网站或迁移数据库"
 			case "compose":
 				status.UpdateKind = "compose-review"
 				status.UpdateDetail = "请在 Docker 管理中逐项目核对镜像和数据迁移；不批量替换容器或重建数据卷"
@@ -308,7 +308,7 @@ func versionBranch(version string) string {
 }
 
 func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
-	prefix := map[string]string{"memcached": "memcached:", "phpmyadmin": "phpmyadmin:", "mongodb": "mongo:", "elasticsearch": "elasticsearch:", "rabbitmq": "rabbitmq:", "openlitespeed": "litespeedtech/openlitespeed:"}[app.ID]
+	prefix := map[string]string{"memcached": "memcached:", "phpmyadmin": "phpmyadmin:", "mongodb": "mongo:", "elasticsearch": "docker.elastic.co/elasticsearch/elasticsearch:", "rabbitmq": "rabbitmq:", "openlitespeed": "litespeedtech/openlitespeed:"}[app.ID]
 	if strings.HasPrefix(app.ID, "php-") {
 		prefix = "devilbox/php-fpm:"
 	}

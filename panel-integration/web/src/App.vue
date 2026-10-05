@@ -236,7 +236,7 @@ async function manualRefresh() {
     await certificateManager.value?.refresh();
   else {
     if (view.value === "sites") await loadSiteTraffic(true);
-    await refresh();
+    await refresh(view.value === "runtimes");
   }
 }
 const otpCode = ref(""),
@@ -799,6 +799,7 @@ const jobNames: Record<string, string> = {
   software_install: "安装安全软件",
   software_configure: "更新安全软件配置",
   software_uninstall: "卸载安全软件",
+  software_update: "更新应用版本 · 保留配置",
   install_php_extension: "安装 PHP 独立扩展",
   switch_php: "切换 PHP 版本",
   switch_nginx: "切换 Nginx 入口",

@@ -17,16 +17,16 @@ try{
  let registry=await (await context.request.get(base+'/api/app-registry')).json();check(registry.catalog.apps.length===50,'50 verified apps remain present');check(!registry.source.stale,'real GitHub check passed');
  const expected=registry.status.filter(s=>s.update_available).length;await filter.selectOption('updates');check(await page.locator('.registry-runtime-card').count()===expected,'update filter matches installed/server versions');
  await page.screenshot({path:path.join(out,'updates.png'),animations:'disabled'});
- const app=registry.catalog.apps.find(a=>a.id==='files-sync'),status=registry.status.find(s=>s.id==='files-sync');
+ const target=process.env.STORE_UPDATE_APP||'files-sync',app=registry.catalog.apps.find(a=>a.id===target),status=registry.status.find(s=>s.id===target);
  if(process.env.STORE_UPDATE_CLICK==='1'){
   check(status.update_available&&status.update_supported,'real old installation advertises new version');
   const card=page.locator('.registry-runtime-card').filter({has:page.getByRole('heading',{name:app.name,exact:true})});check((await card.innerText()).includes('→ 仓库'),'old and new versions shown');
-  const response=page.waitForResponse(r=>r.url().endsWith('/api/app-registry/files-sync/update')&&r.request().method()==='POST');await card.getByRole('button',{name:'更新应用',exact:true}).click();const result=await (await response).json();check(Boolean(result.job_id),'real update job submitted');
+  const response=page.waitForResponse(r=>r.url().endsWith('/api/app-registry/'+target+'/update')&&r.request().method()==='POST');await card.getByRole('button',{name:'更新应用',exact:true}).click();const result=await (await response).json();check(Boolean(result.job_id),'real update job submitted');
   const deadline=Date.now()+90000;let finished=false;
   while(Date.now()<deadline){const job=await(await context.request.get(base+'/api/jobs/'+result.job_id)).json();if(job.state==='succeeded'){finished=true;break}if(['failed','needs_attention'].includes(job.state))throw Error(JSON.stringify(job));await new Promise(r=>setTimeout(r,1000));}
-  check(finished,'real update completed');await page.getByRole('button',{name:'关闭',exact:true}).last().click();
+  check(finished,'real update completed');await page.locator('.el-drawer:visible .el-drawer__close-btn').click();
   await page.locator('.app-registry-source').getByRole('button',{name:'检查更新',exact:true}).click();await page.getByText(/已检查 GitHub 应用目录/).last().waitFor();
-  registry=await (await context.request.get(base+'/api/app-registry')).json();check(!registry.status.find(s=>s.id==='files-sync').update_available,'badge cleared after successful update');
+  registry=await (await context.request.get(base+'/api/app-registry')).json();check(!registry.status.find(s=>s.id===target).update_available,'badge cleared after successful update');
  }
  await filter.selectOption('all');
  for(const item of registry.catalog.apps.filter(a=>a.provider==='panel-module'&&!['nginx-waf','system-hardening','intrusion-prevention'].includes(a.target))){
