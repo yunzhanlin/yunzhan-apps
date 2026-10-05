@@ -129,7 +129,7 @@
       "category": "deployment",
       "version": "9",
       "summary": "部署单节点 Elasticsearch，限制内存并仅通过回环端口提供服务。",
-      "stage": "integration",
+      "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
       "target": "elasticsearch",
@@ -141,7 +141,7 @@
         "HTTP 健康检查"
       ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/elasticsearch/9/manifest.json",
-      "sha256": "bcad4b44c5c9e222161deccb667e2b5aa70a0272cf22c0ebbfc9aa12672223a7"
+      "sha256": "879b9ee3e8504f79bbfc0246b4dcf361fa26ded387a22b3d9848933e3eb45739"
     },
     {
       "id": "enterprise-tamper-proof",
@@ -269,11 +269,11 @@
       "category": "deployment",
       "version": "8.0",
       "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
-      "stage": "integration",
+      "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
       "target": "mongodb",
-      "manage_route": "databases",
+      "manage_route": "docker",
       "capabilities": [
         "认证",
         "持久卷",
@@ -281,7 +281,7 @@
         "备份导出"
       ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mongodb/8.0/manifest.json",
-      "sha256": "281c251c41729dd98138e0c0940ea5c20e1a51cd9d638fc5927f2e8e96a2d636"
+      "sha256": "4dde5f1813147ae8632bcb9f7ab70bfea8b9768ac03e65bd0a987fb5282c06b6"
     },
     {
       "id": "mysql",
@@ -401,7 +401,7 @@
         "持久配置"
       ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/openlitespeed/1.8/manifest.json",
-      "sha256": "beb338ba6dd8e4588d23914182ab6e78ab96566c711fc4d7d9048f001552256b"
+      "sha256": "70f50a0b96f01152f50f5482a2243cd223ac003bb1a7a7226ae75ca46f036ee7"
     },
     {
       "id": "php-52",
@@ -761,7 +761,7 @@
         "访问审计"
       ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/phpmyadmin/5.2.2/manifest.json",
-      "sha256": "eadf62ec4ac0fe6e7915cfb01ee3d46ddd24105ada7b4e1a3083abaceb0cbb74"
+      "sha256": "aa69c248bc34b1e73c91587c4cd0c16033e1d92ef7318ee7f0e1d2ac652e6877"
     },
     {
       "id": "platform-ops",
@@ -841,7 +841,7 @@
         "持久卷"
       ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/rabbitmq/4.1/manifest.json",
-      "sha256": "b3578cfb0a1d5e85f37a316549f51adf45ad4d66599e45c05a6f56d46f02bbc6"
+      "sha256": "acbe53daffc4a91dcfedee042084373975205f7e71a2464176520f067f094146"
     },
     {
       "id": "redis",

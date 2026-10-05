@@ -5,13 +5,13 @@
   "category": "deployment",
   "version": "8.0",
   "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
-  "stage": "integration",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "compose",
     "target": "mongodb",
-    "image": "mongo:8.0",
-    "manage_route": "databases"
+    "image": "mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c",
+    "manage_route": "docker"
   },
   "compatibility": {
     "os": [

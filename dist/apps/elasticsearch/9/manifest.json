@@ -5,12 +5,12 @@
   "category": "deployment",
   "version": "9",
   "summary": "部署单节点 Elasticsearch，限制内存并仅通过回环端口提供服务。",
-  "stage": "integration",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "compose",
     "target": "elasticsearch",
-    "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4",
+    "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
     "manage_route": "docker"
   },
   "compatibility": {

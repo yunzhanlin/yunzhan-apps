@@ -10,7 +10,7 @@
   "delivery": {
     "provider": "compose",
     "target": "phpmyadmin",
-    "image": "phpmyadmin:5.2.2-apache",
+    "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
     "manage_route": "databases"
   },
   "compatibility": {

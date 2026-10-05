@@ -10,7 +10,7 @@
   "delivery": {
     "provider": "compose",
     "target": "rabbitmq",
-    "image": "rabbitmq:4.1.4-management-alpine",
+    "image": "rabbitmq:4.1.4-management-alpine@sha256:5cbd7145b0306399ad68422c3350b6cbd1bb95704b39f5896480e5b6d4238a04",
     "manage_route": "docker"
   },
   "compatibility": {

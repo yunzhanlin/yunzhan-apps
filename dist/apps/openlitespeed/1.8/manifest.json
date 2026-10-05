@@ -10,7 +10,7 @@
   "delivery": {
     "provider": "compose",
     "target": "openlitespeed",
-    "image": "litespeedtech/openlitespeed:1.8.4-lsphp83",
+    "image": "litespeedtech/openlitespeed:1.8.4-lsphp83@sha256:6f50ba204e66f1c746dd183f3022340ca912124c414669755db7f4701167f268",
     "manage_route": "docker"
   },
   "compatibility": {
