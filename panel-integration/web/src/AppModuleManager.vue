@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
+import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
 type API = <T>(
   path: string,
   method?: string,
@@ -324,7 +325,19 @@ defineExpose({ show });
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
         <el-alert v-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
-        <el-tabs v-model="activeTab" class="module-manager-tabs">
+        <AnalyticsWorkspace v-if="definition.id === 'website-analytics'" :api="api" :installed="installed" :sites="sites">
+          <template #version>
+            <el-descriptions :column="1" border>
+              <el-descriptions-item label="已安装版本">{{versionStatus?.installed_version || '版本待核对'}}</el-descriptions-item>
+              <el-descriptions-item label="仓库版本">{{versionApp?.version || '未加载'}}</el-descriptions-item>
+              <el-descriptions-item label="状态">{{versions?.source.stale ? '未能确认最新版本' : versionStatus?.update_available ? '仓库有新版' : '当前目录未发现新版'}}</el-descriptions-item>
+            </el-descriptions>
+            <p>{{versionStatus?.update_detail || '应用更新保留采集配置、事件和报告。'}}</p>
+            <el-button :disabled="busy" @click="checkVersions">检查更新</el-button>
+            <el-button v-if="versionStatus?.update_available" :disabled="busy || !versionStatus.update_supported || versions?.source.stale" @click="updateVersion">{{versionStatus.update_supported ? '更新应用' : '需升级面板'}}</el-button>
+          </template>
+        </AnalyticsWorkspace>
+        <el-tabs v-else v-model="activeTab" class="module-manager-tabs">
         <el-tab-pane label="概览" name="overview">
         <p v-if="guidance">{{ guidance.description }}</p>
         <ol v-if="guidance" class="module-workflow">
@@ -525,7 +538,7 @@ defineExpose({ show });
     </div>
     <template #footer
       ><el-button
-        v-if="report && !report.token"
+        v-if="report && !report.token && definition?.id !== 'website-analytics'"
         :disabled="busy"
         @click="exportReport"
         >导出真实报告</el-button

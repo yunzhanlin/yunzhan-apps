@@ -195,6 +195,11 @@ func (s *Store) finishRuntime(j Job, detail string, steps []Step, uncertain bool
 		return e
 	}
 	if detail == "" {
+		if j.Kind == "software_uninstall" && j.TargetID == "website-analytics" {
+			if _, e = tx.Exec(`UPDATE analytics_config SET enabled=0,revision=revision+1 WHERE enabled=1`); e != nil {
+				return e
+			}
+		}
 		if e = finishRuntimeLifecycle(tx, j); e != nil {
 			return e
 		}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-05T20:43:36Z",
+  "generated_at": "2026-10-05T23:01:41Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1355,8 +1355,8 @@
       "id": "website-analytics",
       "name": "Website Analytics",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
+      "version": "2.0.0",
+      "summary": "独立浏览器采集：PV/UV、会话旅程、页面来源、点击坐标和性能；默认关闭，手动同源接入，需支持 2.0 的面板",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1378,12 +1378,15 @@
         ]
       },
       "capabilities": [
-        "PV 与独立 IP",
-        "状态码",
-        "小时趋势",
-        "热门路径",
-        "爬虫识别",
-        "来源统计"
+        "浏览器 JS 采集",
+        "PV 与浏览器 UV",
+        "会话与访问旅程",
+        "入口和离开页面",
+        "页面与来源分布",
+        "点击坐标热图",
+        "页面性能 p75",
+        "保留期和容量上限",
+        "站点隔离与报告导出"
       ],
       "health": {
         "probe": "panel-api",

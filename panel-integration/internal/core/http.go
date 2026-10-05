@@ -34,6 +34,9 @@ type Server struct {
 	terminalSessions map[string]terminalSessionOwner
 	accountSecretKey []byte
 	bootstrap        string
+	analyticsRateMu  sync.Mutex
+	analyticsRates   map[string]analyticsRate
+	analyticsGlobal  analyticsRate
 }
 type identity struct{ ID, Username, CSRF string }
 
@@ -105,6 +108,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 	a.softwareAppRoutes(m)
 	a.appRegistryRoutes(m)
 	a.appModuleRoutes(m)
+	a.analyticsRoutes(m)
 	m.HandleFunc("GET /api/platform/agent", a.platformAgent)
 	m.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
 		send(w, 200, map[string]any{"status": "ok", "version": "0.1.0-dev", "environment": "debian-vm-development"})
@@ -236,6 +240,12 @@ func (a *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Frame-Options", "DENY")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+	// Only the two explicit public telemetry endpoints have their own origin and
+	// payload policy. This does not relax the admin API or its CSRF checks.
+	if r.URL.Path == "/collect/analytics/tracker.js" || r.URL.Path == "/collect/analytics/event" {
+		a.mux.ServeHTTP(w, r)
+		return
+	}
 	if strings.HasPrefix(r.URL.Path, "/api/") {
 		w.Header().Set("Cache-Control", "no-store")
 	}

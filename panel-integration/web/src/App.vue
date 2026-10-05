@@ -454,7 +454,8 @@ const filteredRegistryApps = computed(() => {
     if (storeCategory.value === "recommended" && (app.stage !== "ready" || app.risk === "eol") && !term) return false;
     if (["deployment", "professional"].includes(storeCategory.value) && app.category !== storeCategory.value) return false;
     if (!["recommended", "all", "deployment", "professional"].includes(storeCategory.value) && !registryCategoryMap[storeCategory.value]?.includes(app.id)) return false;
-    if (term && !`${app.name} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
+    const localName = softwareApps.value.catalog.find(item => item.id === app.target)?.name || "";
+    if (term && !`${app.name} ${localName} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
     const status = registryStatus(app.id);
     if (storeStatus.value === "installed" && !status?.installed) return false;
     if (storeStatus.value === "updates" && !status?.update_available) return false;

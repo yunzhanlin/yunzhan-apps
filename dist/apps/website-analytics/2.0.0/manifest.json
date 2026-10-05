@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "Website Analytics",
+  "category": "professional",
+  "version": "2.0.0",
+  "summary": "独立浏览器采集：PV/UV、会话旅程、页面来源、点击坐标和性能；默认关闭，手动同源接入，需支持 2.0 的面板",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集",
+    "PV 与浏览器 UV",
+    "会话与访问旅程",
+    "入口和离开页面",
+    "页面与来源分布",
+    "点击坐标热图",
+    "页面性能 p75",
+    "保留期和容量上限",
+    "站点隔离与报告导出"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}
