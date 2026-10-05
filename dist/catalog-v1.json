@@ -12,8 +12,16 @@
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "intrusion-prevention",
+      "manage_route": "security",
+      "capabilities": [
+        "SSHD Jail",
+        "封禁策略",
+        "服务状态",
+        "审计解封"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/anti-intrusion/1.0/manifest.json",
-      "sha256": "fa6cfefa99cb825d2b7292332251ca315b9e2528ff5ba208f7c6893e10fa0dc6"
+      "sha256": "11c7faaecbf6de31dfee1ac03c34cfb20f476da3b623393cf9c2674980790cde"
     },
     {
       "id": "apache",
@@ -24,8 +32,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "apache-2.4.68",
+      "manage_route": "sites",
+      "capabilities": [
+        "官方源码",
+        "模块检测",
+        "站点绑定",
+        "引用保护"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache/2.4.68/manifest.json",
-      "sha256": "4f152982e1049080e048e7a9801c8194fb0cbf502b8622670ba1bef2c9ee42a0"
+      "sha256": "6ad744530f9d91f3a29ac5e3d67b54fe08e88473fd24e2ebc28c511b50da848f"
     },
     {
       "id": "apache-waf",
@@ -36,8 +52,16 @@
       "stage": "design",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "apache-waf",
+      "manage_route": "security",
+      "capabilities": [
+        "请求过滤",
+        "限速",
+        "防护事件",
+        "配置回滚"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/1.0/manifest.json",
-      "sha256": "9264fcff23502ca35ecea30b435ba585bf478ccfef2bc7c0ae0ae7344cfc5152"
+      "sha256": "033910e12cebeacc31849f655ba4966b6d61306c8b0c456874f76ea0c5229580"
     },
     {
       "id": "daily-report",
@@ -48,8 +72,16 @@
       "stage": "design",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "daily-report",
+      "manage_route": "schedules",
+      "capabilities": [
+        "资源摘要",
+        "安全摘要",
+        "备份摘要",
+        "定时推送"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.0/manifest.json",
-      "sha256": "13d146053af28d074e467ac0556f959a68944f9f50deb7e560d96ff12029ce78"
+      "sha256": "9e3e0b1ebb902b7dc7aed2bc02a84a270fd1fc8228817725db4483fdb81b3e07"
     },
     {
       "id": "disk-analysis",
@@ -60,8 +92,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "disk-analysis",
+      "manage_route": "files",
+      "capabilities": [
+        "目录体积",
+        "大文件",
+        "增长趋势",
+        "安全清理建议"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.0/manifest.json",
-      "sha256": "d10abdfd69e7f69870a64c13cbb69890f9a44ab1516a2706ae555ca6a8090d22"
+      "sha256": "0be120381a323ae2e0fdf1d0fbfd0858249c9dc4b6d66dea33ba9267be938762"
     },
     {
       "id": "docker-manager",
@@ -72,8 +112,16 @@
       "stage": "ready",
       "risk": "privileged",
       "provider": "runtime",
+      "target": "docker-auto",
+      "manage_route": "docker",
+      "capabilities": [
+        "容器",
+        "镜像",
+        "Compose",
+        "非特权约束"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/docker-manager/1/manifest.json",
-      "sha256": "811530e83f3449d2f930b23cdd813d05afb6b3b49726c5d334fec09a1e87f781"
+      "sha256": "62893cdae98e5695fdb3895a4cfb4ae57f165f129e8183346acc0ba2b77011f1"
     },
     {
       "id": "elasticsearch",
@@ -84,8 +132,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "compose",
+      "target": "elasticsearch",
+      "manage_route": "docker",
+      "capabilities": [
+        "单节点",
+        "内存限额",
+        "持久卷",
+        "HTTP 健康检查"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/elasticsearch/9/manifest.json",
-      "sha256": "2384d85ce4ba3807fb7eceda389df31b07b0278379226fc6d97d4dfc0e85eca3"
+      "sha256": "bcad4b44c5c9e222161deccb667e2b5aa70a0272cf22c0ebbfc9aa12672223a7"
     },
     {
       "id": "enterprise-tamper-proof",
@@ -96,8 +152,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "enterprise-tamper-proof",
+      "manage_route": "security",
+      "capabilities": [
+        "签名基线",
+        "多站点策略",
+        "变更隔离",
+        "审批恢复"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.0/manifest.json",
-      "sha256": "c56d0e64b0d0e198eecae5dd8d39a2584a9b8ec1edaa54acfce571a468c68fbe"
+      "sha256": "b0b616701d41d78182e5082b237880a29266864f34aa648401827f9a2c175e74"
     },
     {
       "id": "file-monitor",
@@ -108,8 +172,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "file-monitor",
+      "manage_route": "files",
+      "capabilities": [
+        "哈希检查点",
+        "变更事件",
+        "权限变化",
+        "排除规则"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.0/manifest.json",
-      "sha256": "84d35f9804196eb92859189b173cc239e0acff5eff7aad5f9ca5d226f29e8362"
+      "sha256": "3c370c61c9fb014ec8a908a7174fa716cf61409ead044ec1c2c014c8ead57537"
     },
     {
       "id": "files-sync",
@@ -120,8 +192,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "files-sync",
+      "manage_route": "backups",
+      "capabilities": [
+        "增量同步",
+        "哈希校验",
+        "冲突保护",
+        "断点续传"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.0/manifest.json",
-      "sha256": "056f8bb9313db989850f179d7d2bc0f371ffb95c33e9b96630487acf290ab2a3"
+      "sha256": "ec59f6c3b48ee9f70880031212441233d4b4990f855a4d12fc9814773bf98542"
     },
     {
       "id": "load-balance",
@@ -132,8 +212,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "load-balance",
+      "manage_route": "sites",
+      "capabilities": [
+        "上游节点",
+        "权重",
+        "健康检查",
+        "失败转移"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.0/manifest.json",
-      "sha256": "518715e7af9015e44b063a8063a16a385e80595bb433672e4bb7e4cf122ccd49"
+      "sha256": "6504d9f1cff8cd56b7ef24618058b444c7af270b4df49d567f518bb182b88e1c"
     },
     {
       "id": "memcached",
@@ -144,8 +232,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
+      "target": "memcached-cache",
+      "manage_route": "docker",
+      "capabilities": [
+        "回环端口",
+        "内存限额",
+        "启停重启",
+        "状态探针"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45/manifest.json",
-      "sha256": "2aca1d53e9be01a66e34961841f958501e69a173d34038d59cadc5e55bcd173c"
+      "sha256": "36b5961385744e76afbe83ea5a77e010cf8a8f1682bef522add20f7bfea8a03a"
     },
     {
       "id": "mobile",
@@ -156,8 +252,16 @@
       "stage": "design",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "mobile-pwa",
+      "manage_route": "overview",
+      "capabilities": [
+        "PWA",
+        "响应式界面",
+        "TOTP",
+        "通知摘要"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.0/manifest.json",
-      "sha256": "aef7b1d7e04378b36b4dc40326a4b21a178bf5bb988d3b80fdeb353c13eb6a81"
+      "sha256": "66393c60061403dad32d535465e38149c295a6c625a77b57c25291ae6b16832d"
     },
     {
       "id": "mongodb",
@@ -168,8 +272,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "compose",
+      "target": "mongodb",
+      "manage_route": "databases",
+      "capabilities": [
+        "认证",
+        "持久卷",
+        "回环端口",
+        "备份导出"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mongodb/8.0/manifest.json",
-      "sha256": "09f7b2bfa548d1018749904af097b5109fd55fcf0b974d2173a66ce3e58230be"
+      "sha256": "281c251c41729dd98138e0c0940ea5c20e1a51cd9d638fc5927f2e8e96a2d636"
     },
     {
       "id": "mysql",
@@ -180,8 +292,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "mysql-8.4.11",
+      "manage_route": "databases",
+      "capabilities": [
+        "多实例",
+        "独立账号",
+        "备份恢复",
+        "导入导出"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mysql/8.4.11/manifest.json",
-      "sha256": "b22db84d33c381309dbfd5d92d0a28e1e678a332256257c81dedd2582aa62df1"
+      "sha256": "dc46b285416c60842416e61e4a11ae889a5bfdc6ec0c7190cf9b0b85cee8ff17"
     },
     {
       "id": "network-threat-detection",
@@ -192,8 +312,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "network-threat-detection",
+      "manage_route": "security",
+      "capabilities": [
+        "端口基线",
+        "连接异常",
+        "扫描告警",
+        "事件追踪"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.0/manifest.json",
-      "sha256": "586f4c12e971bc222d1e74520938bae3afb7b156c44a3f8fd4b2976d3ff79462"
+      "sha256": "3baae55118c78b947b1db52b01afba7705574c8e81acc8a671f9b3c9283987c6"
     },
     {
       "id": "nfs-manager",
@@ -204,8 +332,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "nfs-manager",
+      "manage_route": "files",
+      "capabilities": [
+        "NFSv4",
+        "挂载策略",
+        "开机恢复",
+        "引用保护"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.0/manifest.json",
-      "sha256": "23580c493596f5a51039fc65c7e6bf1a0a330b03f6f6310b85a298c731c1959e"
+      "sha256": "7303467701c7e013ccc47f44183308c8c8eeffd355bfe93118efe7195a022c5e"
     },
     {
       "id": "nginx",
@@ -216,8 +352,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "nginx-1.30.4",
+      "manage_route": "sites",
+      "capabilities": [
+        "源码校验",
+        "站点配置",
+        "热重载",
+        "失败回滚"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx/1.30.4/manifest.json",
-      "sha256": "a9676a802e8f69cc8c3ecd80c4e57a8f3e3995422d8c931224ddccfcbfaf1d4c"
+      "sha256": "033f626de64fa1f5b27baea20135fe43632fce6fba7729dcec7936e832a72b8b"
     },
     {
       "id": "nginx-waf",
@@ -228,8 +372,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "nginx-waf",
+      "manage_route": "security",
+      "capabilities": [
+        "恶意请求拦截",
+        "扫描器拦截",
+        "单 IP 限速",
+        "防护事件"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/1.1/manifest.json",
-      "sha256": "3a748a2e37edadf9fddcef30fcd08f9356d4817654a2d4b62c249f19895159d6"
+      "sha256": "75733204e6e5db8714d9d5b852967457425082164003fcbc0f6a7f3eab749e14"
     },
     {
       "id": "openlitespeed",
@@ -240,8 +392,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "compose",
+      "target": "openlitespeed",
+      "manage_route": "docker",
+      "capabilities": [
+        "HTTP/3",
+        "LSAPI",
+        "回环管理入口",
+        "持久配置"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/openlitespeed/1.8/manifest.json",
-      "sha256": "df643cd660d12f3db9ea38ea1a8978dd53dce559a65943ba0e1dd20cf2f4ef0b"
+      "sha256": "beb338ba6dd8e4588d23914182ab6e78ab96566c711fc4d7d9048f001552256b"
     },
     {
       "id": "php-52",
@@ -252,8 +412,16 @@
       "stage": "design",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-52",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "数据导出",
+        "迁移兼容",
+        "网络隔离",
+        "短时启动"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-52/5.2/manifest.json",
-      "sha256": "68525caac624b4a566e7ad53de05d10e39833d7eaadff639548a2923edb5d91a"
+      "sha256": "1744df05d4b2ed74d1b2b496cd17e8fb5538da2aa6f16ccd4fc58b8f6ba3ded3"
     },
     {
       "id": "php-53",
@@ -264,8 +432,16 @@
       "stage": "design",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-53",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "数据导出",
+        "迁移兼容",
+        "网络隔离",
+        "短时启动"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-53/5.3/manifest.json",
-      "sha256": "af004499e9ef4155dcf859c00ba79e6c911397ea3578e9f8d5dc274f2a01bb00"
+      "sha256": "5ea96aaca65d50d96454191fd1f8e46e44b7485a8cbfaaafd9a40a096c4e41a3"
     },
     {
       "id": "php-54",
@@ -276,8 +452,16 @@
       "stage": "design",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-54",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "数据导出",
+        "迁移兼容",
+        "网络隔离",
+        "短时启动"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-54/5.4/manifest.json",
-      "sha256": "a2a84412d66b41d5537f2904c4981bade70558b1efdb448ae16086251b538fc4"
+      "sha256": "564a4258ecd466e4e95c3b0a34515b87b528bed0e2ee1cf5e85bd48f39550f83"
     },
     {
       "id": "php-55",
@@ -288,8 +472,16 @@
       "stage": "design",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-55",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "数据导出",
+        "迁移兼容",
+        "网络隔离",
+        "短时启动"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-55/5.5/manifest.json",
-      "sha256": "d678feb12b52dc514f57be15423afe4cfb0bb889b614f9f315eb3ccc977f58b4"
+      "sha256": "65c3ae73e4bc8d82040460b3050a9dce35921fa41ca9bad771b00684c359fb5c"
     },
     {
       "id": "php-56",
@@ -300,8 +492,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-56",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "网络隔离",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-56/5.6/manifest.json",
-      "sha256": "51a4c7f529bc78a16ff882bedb2b17f7823a3aa84a63a7e35f3bcf7bf513d904"
+      "sha256": "b65e76ee5087b056322365966857fd335959712be891c96dc700e31d6766b673"
     },
     {
       "id": "php-70",
@@ -312,8 +512,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-70",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-70/7.0/manifest.json",
-      "sha256": "7eabd71b2cbad93043d786b984e57bde5042d9a96904edc15510f9587302ce9a"
+      "sha256": "eae373df8c3662e479576a203b375eef93f396133eb57e0d1db499700e79d5ab"
     },
     {
       "id": "php-71",
@@ -324,8 +532,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-71",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-71/7.1/manifest.json",
-      "sha256": "a677eff2cefb6a774464c83aa56fc74553240012c1f56081ab1af2781bd7092d"
+      "sha256": "ae309e41a0b83fc66950282b9578f4da9bbe4a8b2212c3e91c7747aaa2e14702"
     },
     {
       "id": "php-72",
@@ -336,8 +552,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-72",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-72/7.2/manifest.json",
-      "sha256": "f0134d6eaad2ce471c00db9103a856e6384ddb6612cd96c20c1e5974b19d9204"
+      "sha256": "838131656cc4772170d1b1cb029cc5b5516e9d3e6309b10bfd1b758c67a514c9"
     },
     {
       "id": "php-73",
@@ -348,8 +572,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-73",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-73/7.3/manifest.json",
-      "sha256": "d05896a4b20e4daa3c4d418c4c2699fa8292e85416bfbe0a0af907a15d2d1d99"
+      "sha256": "f70ad5a61eb8b1006aaf924c01a8ec16df9d23087720ffe1c917ee6d0efc3594"
     },
     {
       "id": "php-74",
@@ -360,8 +592,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-74",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-74/7.4/manifest.json",
-      "sha256": "cea3e184da0146222913592d222643302a8a5ff57ff925825f0ff41029360cb6"
+      "sha256": "b99dc5d78e2da01faff244d6f7c61e6161bdbe3939fe30d206dc18dfcfee98c5"
     },
     {
       "id": "php-80",
@@ -372,8 +612,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-80",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-80/8.0/manifest.json",
-      "sha256": "97bf698f61768b2985d27ef00693f137b98ebce8ea290db9f8f73f24e1f3eed3"
+      "sha256": "d111ea955062722780ff84f6bc96750fa36fa8577e330f18fcae887b5620675f"
     },
     {
       "id": "php-81",
@@ -384,8 +632,16 @@
       "stage": "integration",
       "risk": "eol",
       "provider": "compose",
+      "target": "php-81",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "FPM",
+        "迁移兼容",
+        "回环网络",
+        "EOL 警告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-81/8.1/manifest.json",
-      "sha256": "847d85b54853ab2a504d49f08ac8a0fb77910ef35d3f4c85346aae5772840741"
+      "sha256": "a4dc6ef8dcaa3dcbff86990530c9490430418bc160364855d498b38564a3c01b"
     },
     {
       "id": "php-82",
@@ -396,8 +652,16 @@
       "stage": "ready",
       "risk": "maintenance",
       "provider": "runtime",
+      "target": "php-8.2.33",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-82/8.2.33/manifest.json",
-      "sha256": "cc08483ddb5634c7d0b227faa05a04e0a2a60c24e05d6df3c439f1db18672eb5"
+      "sha256": "ed508c233303271f7fbaf3fab137ce346602ce84c3fdc615d0ec7d9f9273418c"
     },
     {
       "id": "php-83",
@@ -408,8 +672,16 @@
       "stage": "ready",
       "risk": "maintenance",
       "provider": "runtime",
+      "target": "php-8.3.33",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-83/8.3.33/manifest.json",
-      "sha256": "ba59f798e7375aac9c63c6edaf73d9cb6f63788b1bfbde3af8fa4b8975237fcd"
+      "sha256": "0650fc2cac7165cf5b2a69c5a703f3c9894d525ebe9b717ec4c7683e48328f6e"
     },
     {
       "id": "php-84",
@@ -420,8 +692,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "php-8.4.25",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-84/8.4.25/manifest.json",
-      "sha256": "88582cc5fd8ead735ed9ac65233da86251b02e22ad5afbb9889ad4506979d4dc"
+      "sha256": "f9427ee959f3329d613d1c89e2297dace44acf48126a52b3d1c05069e5c3954a"
     },
     {
       "id": "php-85",
@@ -432,8 +712,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "php-8.5.10",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-85/8.5.10/manifest.json",
-      "sha256": "1a6454c96186ec345826723a09796f201f62cd997823c4a562224ea2268075d7"
+      "sha256": "10a0d55e1d925896bc63743d74751924717b0a294ca431bd596eb86b5aeaf66a"
     },
     {
       "id": "php-code-security",
@@ -444,8 +732,16 @@
       "stage": "design",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "php-code-security",
+      "manage_route": "security",
+      "capabilities": [
+        "静态扫描",
+        "高风险函数",
+        "混淆检测",
+        "证据摘要"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-code-security/1.0/manifest.json",
-      "sha256": "6ae601fa3b0f5385837203c35a921b6c9dfb373635e7cfecff4013b6a078d495"
+      "sha256": "6e283ff02cc9002e4383629b11cc087d4b86569e0e7e8fd9fd7976a2610bfb0f"
     },
     {
       "id": "phpmyadmin",
@@ -456,8 +752,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "compose",
+      "target": "phpmyadmin",
+      "manage_route": "databases",
+      "capabilities": [
+        "MySQL 管理",
+        "面板代理",
+        "回环绑定",
+        "访问审计"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/phpmyadmin/5.2.2/manifest.json",
-      "sha256": "1b310340d3e1695cc76f614f850ef85f133f72366e5d3911c4b165fadf657346"
+      "sha256": "eadf62ec4ac0fe6e7915cfb01ee3d46ddd24105ada7b4e1a3083abaceb0cbb74"
     },
     {
       "id": "platform-ops",
@@ -468,8 +772,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "platform-ops",
+      "manage_route": "overview",
+      "capabilities": [
+        "多主机盘点",
+        "健康聚合",
+        "告警聚合",
+        "版本盘点"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.0/manifest.json",
-      "sha256": "84b7d8c5577d2fb24a187ab2e5e460d71fae3ff9670190347c012e171dcd9c77"
+      "sha256": "6f7e8b2b6f0e53fa841a17673047fdb61d190fff77c40e65fa706db694e42cff"
     },
     {
       "id": "pm2-manager",
@@ -480,8 +792,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "pm2-manager",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "进程生命周期",
+        "日志",
+        "开机恢复",
+        "站点绑定"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/6/manifest.json",
-      "sha256": "5e34893ecb74420e03dc0029d7c480c756a4590354ccaa4de65db91c263788d2"
+      "sha256": "b7310143814388306608f61e7c502c871bd95d956495388506dc1d2c3bb36cbf"
     },
     {
       "id": "pure-ftpd",
@@ -492,8 +812,16 @@
       "stage": "integration",
       "risk": "privileged",
       "provider": "compose",
+      "target": "pure-ftpd",
+      "manage_route": "files",
+      "capabilities": [
+        "FTP/FTPS",
+        "虚拟账号",
+        "目录隔离",
+        "配额"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pure-ftpd/1.0.52/manifest.json",
-      "sha256": "9699a0e121ae02b5caeac4f5184da0ba1bd694db990e944a4ed5112f268ebe08"
+      "sha256": "abfca924a0cb3c45c274e333aee3aa55970ab6b7a7e3841a14b72bc7059bf98d"
     },
     {
       "id": "rabbitmq",
@@ -504,8 +832,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "compose",
+      "target": "rabbitmq",
+      "manage_route": "docker",
+      "capabilities": [
+        "AMQP",
+        "管理界面",
+        "随机凭据",
+        "持久卷"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/rabbitmq/4.1/manifest.json",
-      "sha256": "3d64b29a0fe59d90888576e862c6e6c114d2c1190046d5b8eb62e5e4ca3bdaec"
+      "sha256": "b3578cfb0a1d5e85f37a316549f51adf45ad4d66599e45c05a6f56d46f02bbc6"
     },
     {
       "id": "redis",
@@ -516,8 +852,16 @@
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
+      "target": "redis-8.2.10",
+      "manage_route": "databases",
+      "capabilities": [
+        "多实例",
+        "AOF",
+        "内存限额",
+        "键浏览"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/redis/8.2.10/manifest.json",
-      "sha256": "01221a6ea1caa7038fa841a04e02a4379284b9b563dc9b91dbc06e2d9b1dbadc"
+      "sha256": "2974aa879bd6376099da06363818ea401b8ee6d9a94fed69275e990a855adcb1"
     },
     {
       "id": "site-diagnosis",
@@ -528,8 +872,17 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "site-diagnosis",
+      "manage_route": "sites",
+      "capabilities": [
+        "DNS",
+        "HTTP",
+        "TLS",
+        "配置检查",
+        "可导出报告"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/site-diagnosis/1.0/manifest.json",
-      "sha256": "e988c5e47abadd5943e79db2e1bd2bc74f74f60b499a762a3bf8be18824c2e44"
+      "sha256": "1afafdd38a0e02a9bd50a3307de917bcac3cc1144d79c15557af9cc89c432a25"
     },
     {
       "id": "system-hardening",
@@ -540,8 +893,16 @@
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "system-hardening",
+      "manage_route": "security",
+      "capabilities": [
+        "内核参数基线",
+        "偏差检测",
+        "安全回滚",
+        "审计"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/system-hardening/1.0/manifest.json",
-      "sha256": "5cd782f7f133b72e19d4cb0ba0b4fcd5b89077c143d20888de0f851c1714e92d"
+      "sha256": "576313da76cf9a0a075c1ba7b16900843d4a8b40d0ac738e1a764510446123bf"
     },
     {
       "id": "task-manager",
@@ -552,8 +913,16 @@
       "stage": "integration",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "task-manager",
+      "manage_route": "monitor",
+      "capabilities": [
+        "进程列表",
+        "CPU/内存",
+        "网络连接",
+        "受管终止"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.0/manifest.json",
-      "sha256": "9be8f8c08b656e2f5bf8085aef4c04bc95aac2f96c88eda14a2b1e445bb0aa89"
+      "sha256": "75a3d1103a18b6f3e0b2b2b6eba3c890eb0d129aee288d0906db351d6dd4095f"
     },
     {
       "id": "user-manager",
@@ -564,8 +933,17 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "user-manager",
+      "manage_route": "account",
+      "capabilities": [
+        "多用户",
+        "角色权限",
+        "资源范围",
+        "TOTP",
+        "会话撤销"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.0/manifest.json",
-      "sha256": "b203562b54d7b9c0248c22f3dc82ec1cdd55770edd4e099e80d38fa63ae9927c"
+      "sha256": "42fcffb9af9b37b541b460fa53cdee525c4987d96adec01728c05fff128b4355"
     },
     {
       "id": "website-analytics",
@@ -576,8 +954,16 @@
       "stage": "integration",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "website-analytics",
+      "manage_route": "sites",
+      "capabilities": [
+        "请求趋势",
+        "流量",
+        "状态码",
+        "热门路径"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/1.0/manifest.json",
-      "sha256": "efa5e03e78039828741840c81f7203c761049ae2c360957f701a811555e545f2"
+      "sha256": "84c9b3a655fe19be76c75bf5d498559403a6b979357cafe8edddf6f988dded34"
     },
     {
       "id": "website-statistics-v2",
@@ -588,8 +974,17 @@
       "stage": "design",
       "risk": "maintained",
       "provider": "panel-module",
+      "target": "website-statistics-v2",
+      "manage_route": "sites",
+      "capabilities": [
+        "多时段",
+        "独立 IP",
+        "爬虫识别",
+        "错误率",
+        "路径排行"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.0/manifest.json",
-      "sha256": "8695ad0277202eb98075b7d231697b3136f6c24d605d2c6cf04a3018f9cb9efc"
+      "sha256": "f36cdc579f9e3f15f4e3ddc8be706566b98f739618c6fc6512ab7cd680e6ff39"
     },
     {
       "id": "website-tamper-proof",
@@ -600,8 +995,16 @@
       "stage": "design",
       "risk": "privileged",
       "provider": "panel-module",
+      "target": "website-tamper-proof",
+      "manage_route": "security",
+      "capabilities": [
+        "文件基线",
+        "变更事件",
+        "可选恢复",
+        "站点级策略"
+      ],
       "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.0/manifest.json",
-      "sha256": "5b7167ba759cf339f1ff8f35e124f42dbeda1528188d26d63a9ab0f08fb418c6"
+      "sha256": "68d81010e32ebebf2d4d14aa670b51dbd950475f69e997bc3f3e3eba951f6fa6"
     }
   ]
 }

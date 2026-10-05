@@ -6,10 +6,11 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "verify": "node tools/verify.mjs",
-    "test": "npm run build && npm run verify && node --test tests/*.test.mjs"
+    "verify:signature": "node tools/verify-signature.mjs",
+    "sign": "node tools/sign.mjs",
+    "test": "npm run build && npm run verify && npm run verify:signature && node --test tests/*.test.mjs"
   },
   "engines": {
     "node": ">=22"
   }
 }
-
