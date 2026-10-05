@@ -27,6 +27,7 @@ export function validateManifest(app) {
   const errors = [];
   if (app.schema_version !== 1) errors.push("schema_version must be 1");
   if (!idPattern.test(app.id || "")) errors.push("invalid id");
+  if (typeof app.version !== "string" || app.version.length > 80 || !/^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(app.version)) errors.push("invalid version");
   if (typeof app.name !== "string" || app.name.length < 2 || app.name.length > 80) errors.push("invalid name");
   if (!allowedCategories.has(app.category)) errors.push("invalid category");
   if (!allowedStages.has(app.stage)) errors.push("invalid stage");

@@ -10,5 +10,5 @@ const body = await readFile(path.join(root, "dist/catalog-v1.json"));
 const key = createPrivateKey(await readFile(keyPath));
 const signature = sign(null, body, key).toString("base64");
 await writeFile(path.join(root, "signatures/catalog-v1.sig"), `${signature}\n`);
+await writeFile(path.join(root, "signatures/catalog-v1.bundle.json"), JSON.stringify({ catalog: body.toString("utf8"), signature }) + "\n");
 console.log("signed dist/catalog-v1.json with the offline Ed25519 key");
-

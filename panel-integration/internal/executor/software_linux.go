@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"net/http"
 	"os"
@@ -91,7 +92,11 @@ func (s *Service) readSoftwareManifest(id string) (softwareManifest, error) {
 	if e != nil {
 		return v, e
 	}
-	if e = json.Unmarshal(b, &v); e != nil || v.ID != id || (v.Version != "1.0" && !(id == "nginx-waf" && v.Version == "1.1")) {
+	cmp, valid := 0, false
+	if e = json.Unmarshal(b, &v); e == nil {
+		cmp, valid = appcatalog.CompareVersions(v.Version, core.SoftwareImplementationVersion(id))
+	}
+	if e != nil || v.ID != id || !valid || cmp > 0 {
 		return v, errors.New("软件安装清单无效")
 	}
 	return v, nil
@@ -518,7 +523,9 @@ func (s *Service) uninstallIntrusion(ctx context.Context, add func(string)) erro
 }
 
 func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAppStatus {
-	if _,ok:=core.FindAppModule(id);ok{return s.appModuleStatus(ctx,id)}
+	if _, ok := core.FindAppModule(id); ok {
+		return s.appModuleStatus(ctx, id)
+	}
 	out := core.SoftwareAppStatus{ID: id, Detail: "未安装"}
 	manifest, e := s.readSoftwareManifest(id)
 	if e != nil {
@@ -585,7 +592,9 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 	})
 	m.HandleFunc("GET /v1/software", func(w http.ResponseWriter, r *http.Request) {
 		ids := []string{"nginx-waf", "system-hardening", "intrusion-prevention"}
-		for _,d:=range core.AppModules(){ids=append(ids,d.ID)}
+		for _, d := range core.AppModules() {
+			ids = append(ids, d.ID)
+		}
 		out := make([]core.SoftwareAppStatus, 0, len(ids))
 		for _, id := range ids {
 			out = append(out, s.softwareStatus(r.Context(), id))
@@ -595,17 +604,18 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /v1/software/{id}/{action}", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			Settings map[string]any `json:"settings"`
+			Version  string         `json:"version"`
 		}
 		if !readJSON(w, r, &in) {
 			return
 		}
 		id, action := r.PathValue("id"), r.PathValue("action")
-		_,moduleOK:=core.FindAppModule(id)
+		_, moduleOK := core.FindAppModule(id)
 		if !moduleOK && id != "nginx-waf" && id != "system-hardening" && id != "intrusion-prevention" {
 			respond(w, 404, map[string]string{"error": "软件不在受管目录中"})
 			return
 		}
-		if action != "install" && action != "configure" && action != "uninstall" {
+		if action != "install" && action != "configure" && action != "uninstall" && action != "update" {
 			respond(w, 400, map[string]string{"error": "软件操作无效"})
 			return
 		}
@@ -617,7 +627,11 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 		defer s.mu.Unlock()
 		var e error
 		install := action == "install"
-		if moduleOK {e=s.appModuleLifecycle(r.Context(),id,action,in.Settings,add)} else if action == "uninstall" {
+		if action == "update" {
+			e = s.updateSoftware(r.Context(), id, in.Version, add)
+		} else if moduleOK {
+			e = s.appModuleLifecycle(r.Context(), id, action, in.Settings, add)
+		} else if action == "uninstall" {
 			switch id {
 			case "nginx-waf":
 				e = s.uninstallWAF(r.Context(), add)
@@ -643,6 +657,9 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 		result.Status = map[bool]string{true: "installed", false: "configured"}[install]
 		if action == "uninstall" {
 			result.Status = "uninstalled"
+		}
+		if action == "update" {
+			result.Status = "updated"
 		}
 		respond(w, 200, result)
 	})

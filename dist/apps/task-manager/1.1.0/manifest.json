@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "task-manager",
+  "name": "Task manager",
+  "category": "professional",
+  "version": "1.1.0",
+  "summary": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "task-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "实时进程",
+    "CPU 与内存",
+    "网络连接",
+    "受管非 root 进程终止"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/task-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

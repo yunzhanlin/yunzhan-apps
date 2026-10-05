@@ -14,13 +14,27 @@ import (
 )
 
 type AppRegistryStatus struct {
-	ID                  string `json:"id"`
-	StateKnown          bool   `json:"state_known"`
-	Installed           bool   `json:"installed"`
-	Healthy             bool   `json:"healthy"`
-	Detail              string `json:"detail"`
-	Supported           bool   `json:"supported"`
-	CompatibilityDetail string `json:"compatibility_detail,omitempty"`
+	ID                  string                `json:"id"`
+	StateKnown          bool                  `json:"state_known"`
+	Installed           bool                  `json:"installed"`
+	Healthy             bool                  `json:"healthy"`
+	Detail              string                `json:"detail"`
+	Supported           bool                  `json:"supported"`
+	CompatibilityDetail string                `json:"compatibility_detail,omitempty"`
+	InstalledVersion    string                `json:"installed_version,omitempty"`
+	LatestVersion       string                `json:"latest_version"`
+	VersionKnown        bool                  `json:"version_known"`
+	UpdateAvailable     bool                  `json:"update_available"`
+	UpdateSupported     bool                  `json:"update_supported"`
+	UpdateKind          string                `json:"update_kind,omitempty"`
+	UpdateDetail        string                `json:"update_detail,omitempty"`
+	Instances           []AppRegistryInstance `json:"instances,omitempty"`
+}
+
+type AppRegistryInstance struct {
+	ID              string `json:"id"`
+	Version         string `json:"version,omitempty"`
+	UpdateAvailable bool   `json:"update_available"`
 }
 
 type AppRegistryPage struct {
@@ -65,6 +79,9 @@ func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool,
 		if _, ok := FindAppModule(app.Target); !ok && app.Target != "nginx-waf" && app.Target != "system-hardening" && app.Target != "intrusion-prevention" {
 			return false, "当前面板没有该功能处理器"
 		}
+		if app.Version != "" && ValidateSoftwareUpdate(app.Target, app.Version) != nil {
+			return false, "新版应用需要先升级面板的受限功能处理器"
+		}
 	default:
 		return false, "不支持该应用处理器"
 	}
@@ -78,7 +95,11 @@ func (a *Server) appRegistryCacheDir() string {
 func (a *Server) loadAppCatalog(ctxTimeout time.Duration, r *http.Request) (appcatalog.Catalog, appcatalog.LoadInfo, error) {
 	ctx, cancel := contextWithTimeout(r.Context(), ctxTimeout)
 	defer cancel()
-	return a.AppCatalog.LoadCatalog(ctx, filepath.Join(a.appRegistryCacheDir(), "catalog"), 15*time.Minute)
+	maxAge := 5 * time.Minute
+	if r.URL.Query().Get("refresh") == "1" {
+		maxAge = 0
+	}
+	return a.AppCatalog.LoadCatalog(ctx, filepath.Join(a.appRegistryCacheDir(), "catalog"), maxAge)
 }
 
 // contextWithTimeout is a small seam for tests and keeps every GitHub request bounded.
@@ -87,12 +108,24 @@ var contextWithTimeout = func(parent context.Context, timeout time.Duration) (co
 }
 
 func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Catalog) []AppRegistryStatus {
+	var receiptErr error
+	receipts := map[string]registryReceipt{}
+	if a.Store != nil {
+		receiptErr = a.reconcileRegistryReceipts(ctx)
+		var readErr error
+		receipts, readErr = a.Store.registryReceipts()
+		if readErr != nil {
+			receiptErr = readErr
+		}
+	}
 	installedRuntime := map[string]bool{}
+	runtimeVersions := map[string]string{}
 	var runtimes struct {
 		Installed []struct {
-			ID     string `json:"id"`
-			Family string `json:"family"`
-			Status string `json:"status"`
+			ID      string `json:"id"`
+			Family  string `json:"family"`
+			Status  string `json:"status"`
+			Version string `json:"version"`
 		} `json:"installed"`
 	}
 	software := map[string]SoftwareAppStatus{}
@@ -101,11 +134,13 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	composeHealthy := map[string]bool{}
 	var projects struct {
 		Projects []struct {
-			TemplateID string `json:"template_id"`
-			State      string `json:"state"`
-			Services   int    `json:"services"`
-			Running    int    `json:"running"`
-			Healthy    int    `json:"healthy"`
+			ID         string   `json:"id"`
+			TemplateID string   `json:"template_id"`
+			State      string   `json:"state"`
+			Services   int      `json:"services"`
+			Running    int      `json:"running"`
+			Healthy    int      `json:"healthy"`
+			Images     []string `json:"images"`
 		} `json:"projects"`
 	}
 	// Independent probes must not inherit time already spent by a slow earlier probe.
@@ -129,6 +164,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		for _, item := range runtimes.Installed {
 			if item.Status == "installed" {
 				installedRuntime[item.ID] = true
+				runtimeVersions[item.ID] = item.Version
 				if item.Family != "" {
 					installedRuntime["family:"+item.Family] = true
 				}
@@ -153,7 +189,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
 	for _, app := range catalog.Apps {
 		supported, compatibilityDetail := registrySupportOn(app, runtimecatalog.HostPlatform(), runtime.GOARCH)
-		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail}
+		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail, LatestVersion: app.Version}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
 			out = append(out, status)
@@ -162,16 +198,34 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		switch app.Provider {
 		case "runtime":
 			status.StateKnown = runtimeErr == nil
-			if app.Target == "docker-auto" {
-				status.Installed = installedRuntime["family:docker"]
-			} else {
-				status.Installed = installedRuntime[app.Target]
+			family := map[string]string{"nginx": "nginx", "apache": "apache", "mysql": "mysql", "redis": "redis", "docker-manager": "docker"}[app.ID]
+			if strings.HasPrefix(app.ID, "php-") {
+				family = "php"
 			}
+			for _, row := range runtimes.Installed {
+				if row.Status != "installed" || (row.ID != app.Target && (family == "" || row.Family != family)) {
+					continue
+				}
+				if family == "php" && !strings.HasPrefix(row.Version, versionBranch(app.Version)+".") {
+					continue
+				}
+				status.Installed = true
+				version := runtimeVersions[row.ID]
+				if receipt, ok := receipts[app.ID+":"+row.ID]; ok && (receipt.Target == row.ID || app.Target == "docker-auto") {
+					version = receipt.Version
+				}
+				if cmp, ok := appcatalog.CompareVersions(version, status.InstalledVersion); status.InstalledVersion == "" || (ok && cmp > 0) {
+					status.InstalledVersion = version
+				}
+			}
+			status.VersionKnown = appcatalog.ValidVersion(status.InstalledVersion)
 			status.Healthy = status.Installed
 		case "panel-module":
 			status.StateKnown = softwareErr == nil
 			row := software[app.Target]
 			status.Installed, status.Healthy = row.Installed, row.Healthy
+			status.InstalledVersion = row.Version
+			status.VersionKnown = status.Installed && appcatalog.ValidVersion(row.Version)
 			if row.Detail != "" {
 				status.Detail = row.Detail
 			}
@@ -179,6 +233,56 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
+			for _, project := range projects.Projects {
+				if project.TemplateID != app.Target {
+					continue
+				}
+				instance := AppRegistryInstance{ID: project.ID}
+				instance.Version = registryImageVersion(app, project.Images)
+				if receipt, ok := receipts[app.ID+":"+project.ID]; ok && receipt.Target == app.Target {
+					instance.Version = receipt.Version
+				}
+				cmp, valid := appcatalog.CompareVersions(instance.Version, app.Version)
+				instance.UpdateAvailable = valid && cmp < 0
+				status.Instances = append(status.Instances, instance)
+				status.UpdateAvailable = status.UpdateAvailable || instance.UpdateAvailable
+			}
+			if len(status.Instances) == 1 {
+				status.InstalledVersion = status.Instances[0].Version
+				status.VersionKnown = appcatalog.ValidVersion(status.InstalledVersion)
+			}
+		}
+		if status.Installed && status.VersionKnown {
+			cmp, valid := appcatalog.CompareVersions(status.InstalledVersion, app.Version)
+			status.UpdateAvailable = status.UpdateAvailable || (valid && cmp < 0)
+		}
+		if !status.StateKnown {
+			status.UpdateAvailable = false
+		}
+		if status.UpdateAvailable {
+			switch app.Provider {
+			case "panel-module":
+				status.UpdateKind = "module"
+				status.UpdateSupported = supported && ValidateSoftwareUpdate(app.Target, app.Version) == nil
+				status.UpdateDetail = "新版功能由签名面板提供；更新保留配置、数据、基线和历史报告"
+			case "runtime":
+				status.UpdateKind = "runtime"
+				status.UpdateSupported = supported
+				status.UpdateDetail = "并行安装已审核的新运行时；不自动切换网站或迁移数据库"
+			case "compose":
+				status.UpdateKind = "compose-review"
+				status.UpdateDetail = "请在 Docker 管理中逐项目核对镜像和数据迁移；不批量替换容器或重建数据卷"
+			}
+			if !status.UpdateSupported && app.Provider != "compose" {
+				status.UpdateKind = "panel-upgrade"
+				status.UpdateDetail = "仓库已有新版，但当前面板缺少已审核处理器，请先升级面板"
+			}
+		} else if status.Installed && !status.VersionKnown {
+			status.UpdateDetail = "旧安装未记录应用包版本，不能据此判定已是最新版；请核对管理页"
+		}
+		if receiptErr != nil {
+			status.UpdateSupported = false
+			status.UpdateDetail = "应用版本记录读取失败，请稍后重试"
 		}
 		if !status.StateKnown {
 			status.Detail = "状态暂未确认，请刷新；不会据此重复安装"
@@ -195,11 +299,46 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	return out
 }
 
+func versionBranch(version string) string {
+	parts := strings.Split(strings.SplitN(version, "-", 2)[0], ".")
+	if len(parts) >= 2 {
+		return strings.Join(parts[:2], ".")
+	}
+	return version
+}
+
+func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
+	prefix := map[string]string{"memcached": "memcached:", "phpmyadmin": "phpmyadmin:", "mongodb": "mongo:", "elasticsearch": "elasticsearch:", "rabbitmq": "rabbitmq:", "openlitespeed": "litespeedtech/openlitespeed:"}[app.ID]
+	if strings.HasPrefix(app.ID, "php-") {
+		prefix = "devilbox/php-fpm:"
+	}
+	if prefix == "" {
+		return ""
+	}
+	for _, image := range images {
+		if !strings.HasPrefix(image, prefix) {
+			continue
+		}
+		version := strings.SplitN(strings.TrimPrefix(image, prefix), "@", 2)[0]
+		version = strings.SplitN(version, "-", 2)[0]
+		// Floating major/minor tags cannot prove an exact installed version.
+		if len(strings.Split(version, ".")) < 3 {
+			return ""
+		}
+		if appcatalog.ValidVersion(version) {
+			return version
+		}
+	}
+	return ""
+}
+
 func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
 	var in struct {
-		Settings map[string]any `json:"settings"`
-		Name     string         `json:"name"`
-		HostPort int            `json:"host_port"`
+		Settings        map[string]any `json:"settings"`
+		Name            string         `json:"name"`
+		HostPort        int            `json:"host_port"`
+		ExpectedVersion string         `json:"expected_version"`
+		ExpectedSHA256  string         `json:"expected_sha256"`
 	}
 	if !decode(w, r, &in) {
 		return
@@ -212,6 +351,10 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 	item, ok := appcatalog.Find(catalog, strings.TrimSpace(r.PathValue("id")))
 	if !ok {
 		fail(w, 404, "应用不在已签名目录中")
+		return
+	}
+	if (in.ExpectedVersion != "" && in.ExpectedVersion != item.Version) || (in.ExpectedSHA256 != "" && in.ExpectedSHA256 != item.SHA256) {
+		fail(w, 409, "应用目录已变化，请刷新后重试")
 		return
 	}
 	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
@@ -246,6 +389,10 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, err.Error())
 			return
 		}
+		if err = a.Store.trackRegistryJob(item, releaseID, job); err != nil {
+			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对任务")
+			return
+		}
 		send(w, 202, map[string]any{"job_id": job, "provider": "runtime", "target": releaseID})
 	case "panel-module":
 		_, moduleOK := FindAppModule(manifest.Delivery.Target)
@@ -253,9 +400,17 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, "当前面板版本尚未提供该功能处理器")
 			return
 		}
+		if err = ValidateSoftwareUpdate(manifest.Delivery.Target, manifest.Version); err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
 		job, err := a.Store.QueueSoftwareAction(manifest.Delivery.Target, "install", in.Settings, r.Header.Get("Idempotency-Key"), u.Username)
 		if err != nil {
 			fail(w, 409, err.Error())
+			return
+		}
+		if err = a.Store.trackRegistryJob(item, manifest.Delivery.Target, job); err != nil {
+			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对任务")
 			return
 		}
 		send(w, 202, map[string]any{"job_id": job, "provider": "panel-module", "target": manifest.Delivery.Target})
@@ -289,10 +444,90 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			return
 		}
 		_ = a.Store.Audit(u.Username, "app-registry.install", manifest.ID, "queued")
+		if err = a.Store.trackRegistryJob(item, op.ProjectID, result.JobID); err != nil {
+			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对 Docker 任务")
+			return
+		}
 		send(w, 202, result)
 	default:
 		fail(w, 409, "应用包处理器不受支持")
 	}
+}
+
+func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
+	var in struct {
+		ExpectedVersion string `json:"expected_version"`
+		ExpectedSHA256  string `json:"expected_sha256"`
+	}
+	if !decode(w, r, &in) {
+		return
+	}
+	q := r.URL.Query()
+	q.Set("refresh", "1")
+	r.URL.RawQuery = q.Encode()
+	catalog, source, err := a.loadAppCatalog(15*time.Second, r)
+	if err != nil || source.Stale {
+		fail(w, 503, "无法确认仓库最新版本，未执行更新")
+		return
+	}
+	item, ok := appcatalog.Find(catalog, r.PathValue("id"))
+	if !ok {
+		fail(w, 404, "应用不在签名目录中")
+		return
+	}
+	if in.ExpectedVersion != item.Version || in.ExpectedSHA256 != item.SHA256 {
+		fail(w, 409, "应用目录已变化，请刷新后重试")
+		return
+	}
+	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	var status AppRegistryStatus
+	for _, row := range a.appRegistryStatuses(ctx, catalog) {
+		if row.ID == item.ID {
+			status = row
+		}
+	}
+	if !status.StateKnown || !status.Installed || !status.UpdateAvailable || !status.UpdateSupported {
+		fail(w, 409, "当前应用不能自动更新: "+status.UpdateDetail)
+		return
+	}
+	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
+	if err != nil {
+		fail(w, 409, err.Error())
+		return
+	}
+	if err = appCompatible(manifest); err != nil {
+		fail(w, 409, err.Error())
+		return
+	}
+	job, scope := "", manifest.Delivery.Target
+	switch manifest.Delivery.Provider {
+	case "panel-module":
+		job, err = a.Store.queueSoftwareAction(scope, "update", nil, manifest.Version, r.Header.Get("Idempotency-Key"), u.Username)
+	case "runtime":
+		if scope == "docker-auto" {
+			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
+			if len(releases) != 1 {
+				fail(w, 409, "没有已审核的 Docker 版本")
+				return
+			}
+			scope = releases[0].ID
+		}
+		job, err = a.Store.QueueInstall(scope, r.Header.Get("Idempotency-Key"), u.Username)
+	default:
+		fail(w, 409, "该类型暂不允许自动替换，请核对项目与迁移方案")
+		return
+	}
+	if err != nil {
+		fail(w, 409, err.Error())
+		return
+	}
+	if err = a.Store.trackRegistryJob(item, scope, job); err != nil {
+		fail(w, 503, "更新任务已提交，但版本记录未保存，请核对任务")
+		return
+	}
+	_ = a.Store.Audit(u.Username, "app-registry.update", item.ID+"@"+item.Version, "verified-and-queued")
+	send(w, 202, map[string]string{"job_id": job, "provider": item.Provider})
 }
 
 func (a *Server) appRegistryRoutes(m *http.ServeMux) {
@@ -307,6 +542,7 @@ func (a *Server) appRegistryRoutes(m *http.ServeMux) {
 		send(w, 200, AppRegistryPage{Catalog: catalog, Status: a.appRegistryStatuses(ctx, catalog), Source: source, Host: AppRegistryHost{Platform: runtimecatalog.HostPlatform(), Architecture: runtime.GOARCH}})
 	}))
 	m.HandleFunc("POST /api/app-registry/{id}/install", a.authorize(a.installRegistryApp))
+	m.HandleFunc("POST /api/app-registry/{id}/update", a.authorize(a.updateRegistryApp))
 }
 
 func appCompatible(manifest appcatalog.Manifest) error {

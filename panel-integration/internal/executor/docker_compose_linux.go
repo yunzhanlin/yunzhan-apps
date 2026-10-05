@@ -542,13 +542,18 @@ func listComposeProjects(ctx context.Context) ([]map[string]any, error) {
 			ID     string `json:"Id"`
 			State  string `json:"State"`
 			Status string `json:"Status"`
+			Image  string `json:"Image"`
 		}
 		_, requestErr := dockerRequest(ctx, http.MethodGet, "/containers/json?all=1&filters="+url.QueryEscape(string(filters)), nil, &containers, 4*1024*1024)
 		if requestErr != nil {
 			return nil, requestErr
 		}
 		running, healthy := 0, 0
+		images := []string{}
 		for _, container := range containers {
+			if container.Image != "" {
+				images = append(images, container.Image)
+			}
 			if container.State == "running" {
 				running++
 				if strings.Contains(container.Status, "(healthy)") {
@@ -563,7 +568,7 @@ func listComposeProjects(ctx context.Context) ([]map[string]any, error) {
 		if running > 0 {
 			state = "running"
 		}
-		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt})
+		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt, "images": images})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i]["created_at"].(string) > out[j]["created_at"].(string) })
 	return out, nil

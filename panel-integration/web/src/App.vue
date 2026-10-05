@@ -187,11 +187,11 @@ interface RegistryApp {
   package_url: string;
   sha256: string;
 }
-interface RegistryStatus { id: string; state_known?: boolean; installed: boolean; healthy: boolean; detail: string; supported?: boolean; compatibility_detail?: string }
+interface RegistryStatus { id: string; state_known?: boolean; installed: boolean; healthy: boolean; detail: string; supported?: boolean; compatibility_detail?: string; installed_version?: string; latest_version?: string; version_known?: boolean; update_available?: boolean; update_supported?: boolean; update_kind?: string; update_detail?: string }
 interface AppRegistry {
   catalog: { schema_version: number; generated_at: string; repository: string; apps: RegistryApp[] };
   status: RegistryStatus[];
-  source: { source: string; stale: boolean; fetched_at?: string };
+  source: { source: string; stale: boolean; fetched_at?: string; checked_at?: string; error?: string };
   host?: { platform: string; architecture: string };
 }
 const user = ref(""),
@@ -383,6 +383,32 @@ const filteredSecurityApps = computed(() => {
   return items;
 });
 const registryStatus = (id: string) => appRegistry.value.status.find((item) => item.id === id);
+const registryChecking = ref(false);
+const registryUpdates = computed(() => appRegistry.value.status.filter(item => item.update_available).length);
+async function checkRegistryUpdates() {
+  if (registryChecking.value) return;
+  registryChecking.value = true;
+  try {
+    appRegistry.value = await api<AppRegistry>("/app-registry?refresh=1");
+    if (appRegistry.value.source.stale) ElMessage.warning("仓库检查失败，当前显示已验签缓存；尚未确认最新版本");
+    else ElMessage.success(`已检查 GitHub 应用目录，${registryUpdates.value} 个应用有新版`);
+  } catch (e) {
+    appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: (e as Error).message };
+    ElMessage.error((e as Error).message);
+  } finally { registryChecking.value = false; }
+}
+async function updateRegistryApp(app: RegistryApp) {
+  const status = registryStatus(app.id);
+  if (!status?.update_supported) { ElMessage.warning(status?.update_detail || "请先核对应用版本"); return; }
+  registryInstalling.value = [...registryInstalling.value, app.id];
+  try {
+    const result = await api<{ job_id: string }>(`/app-registry/${app.id}/update`, "POST", { expected_version: app.version, expected_sha256: app.sha256 });
+    await refresh();
+    await revealJob(result.job_id);
+    ElMessage.success(`${app.name} 更新任务已提交；成功完成后才记录新版本`);
+  } catch (e) { ElMessage.error((e as Error).message); }
+  finally { registryInstalling.value = registryInstalling.value.filter(id => id !== app.id); }
+}
 const registryCategoryMap: Record<string, string[]> = {
   web: ["nginx", "apache", "openlitespeed", "php-85", "php-84", "php-83", "php-82", "php-81", "php-80", "php-74", "php-73", "php-72", "php-71", "php-70", "php-56", "php-55", "php-54", "php-53", "php-52"],
   database: ["mysql", "mongodb", "phpmyadmin"],
@@ -401,6 +427,7 @@ const filteredRegistryApps = computed(() => {
     if (term && !`${app.name} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
     const status = registryStatus(app.id);
     if (storeStatus.value === "installed" && !status?.installed) return false;
+    if (storeStatus.value === "updates" && !status?.update_available) return false;
     if (storeStatus.value === "installable" && (status?.installed || app.stage !== "ready" || status?.supported === false)) return false;
     if (storeStatus.value === "unavailable" && app.stage === "ready" && status?.supported !== false) return false;
     return true;
@@ -426,7 +453,7 @@ async function installRegistryApp(app: RegistryApp) {
     ElMessage.warning(app.stage === "integration" ? "该应用正在接入安装器" : "该功能正在实现中");
     return;
   }
-  const body: Record<string, unknown> = {};
+  const body: Record<string, unknown> = { expected_version: app.version, expected_sha256: app.sha256 };
   try {
 	if (app.provider === "compose") {
 	  const defaultPort = ({ "memcached-cache": 21211, mongodb: 27017, elasticsearch: 19200 } as Record<string, number>)[app.target] || 18080;
@@ -1047,7 +1074,7 @@ async function api<T>(
   return data;
 }
 let refreshing = false;
-async function refresh() {
+async function refresh(forceRegistry = false) {
   if (
     !user.value ||
     refreshing ||
@@ -1112,9 +1139,10 @@ async function refresh() {
     api<SoftwareApps>("/software")
       .then((d) => (softwareApps.value = d))
       .catch((e) => errors.push(e.message)),
-    api<AppRegistry>("/app-registry")
+    api<AppRegistry>(forceRegistry === true ? "/app-registry?refresh=1" : "/app-registry")
       .then((d) => (appRegistry.value = d))
       .catch((e) => {
+        appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: e.message };
         if (!appRegistry.value.catalog.apps.length) errors.push(e.message);
       }),
   ]);
@@ -2054,20 +2082,24 @@ onUnmounted(() => {
                   ><input v-model="storeSearch" aria-label="搜索软件" placeholder="搜索软件名称、描述或关键字..." />
                 </div>
                 <select v-model="storeCategory" aria-label="软件分类筛选"><option v-for="category in storeCategories" :key="category.id" :value="category.id">{{ category.label }}</option></select>
-                <select v-model="storeStatus" aria-label="软件状态筛选"><option value="all">所有状态</option><option value="installed">已安装</option><option value="installable">可安装</option><option value="unavailable">待适配</option></select>
+                <select v-model="storeStatus" aria-label="软件状态筛选"><option value="all">所有状态</option><option value="installed">已安装</option><option value="updates">可更新 ({{ registryUpdates }})</option><option value="installable">可安装</option><option value="unavailable">待适配</option></select>
                 <select v-model="storeSort" aria-label="软件排序"><option value="recommended">综合排序</option><option value="name">名称排序</option><option value="installed">已安装优先</option></select>
               </div>
               <div v-if="appRegistry.catalog.apps.length" class="app-registry-source">
                 <span>云栈官方 GitHub 应用仓库</span>
                 <el-tag size="small" :type="appRegistry.source.stale ? 'warning' : 'success'">{{ appRegistry.source.stale ? '已验签缓存' : 'Ed25519 已验签' }}</el-tag>
-                <small>{{ appRegistry.catalog.apps.length }} 个应用 · 只在安装时拉取应用包</small>
+                <small>{{ appRegistry.catalog.apps.length }} 个应用 · {{ registryUpdates }} 个有新版 · 仅安装或更新时拉取应用包</small>
                 <small v-if="appRegistry.host">{{ appRegistry.host.platform || '未支持的系统' }} / {{ appRegistry.host.architecture }}</small>
+                <small v-if="appRegistry.source.fetched_at">目录检查：{{ formatPanelDateTime(appRegistry.source.fetched_at) }}</small>
+                <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">检查更新</el-button>
               </div>
+              <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" title="未能确认仓库最新版本，当前显示已验签缓存" :description="appRegistry.source.error" />
               <div class="runtime-grid">
                 <article v-for="app in filteredRegistryApps" :key="'registry-' + app.id" class="panel-card runtime-card registry-runtime-card">
                   <div class="runtime-card-head">
                     <SoftwareLogo :family="app.id.startsWith('php-') ? 'php' : app.id" />
-                    <div class="runtime-product"><h2>{{ app.name }}</h2><span>v{{ app.version }} · {{ app.category === 'deployment' ? '部署软件' : '专业功能' }}</span></div>
+                    <div class="runtime-product"><h2>{{ app.name }}</h2><span>{{ registryStatus(app.id)?.installed ? `已安装 ${registryStatus(app.id)?.installed_version || '版本待核对'} → 仓库 ${app.version}` : `v${app.version}` }} · {{ app.category === 'deployment' ? '部署软件' : '专业功能' }}</span></div>
+                    <el-tag v-if="registryStatus(app.id)?.update_available" size="small" type="warning">有新版</el-tag>
                     <el-tag
                       disable-transitions
                       :type="registryStatus(app.id)?.installed ? (registryStatus(app.id)?.healthy ? 'success' : 'warning') : app.stage === 'ready' ? 'info' : app.stage === 'integration' ? 'warning' : 'info'"
@@ -2082,9 +2114,11 @@ onUnmounted(() => {
                     :disabled="app.stage !== 'ready' || registryStatus(app.id)?.state_known === false || (!registryStatus(app.id)?.installed && registryStatus(app.id)?.supported === false) || registryInstalling.includes(app.id)"
                     @click="installRegistryApp(app)"
                   >{{ registryStatus(app.id)?.state_known === false ? '状态待核对' : registryInstalling.includes(app.id) ? '验签与提交中' : registryStatus(app.id)?.installed ? '打开管理' : registryStatus(app.id)?.supported === false && app.stage === 'ready' ? '当前机器不支持' : app.stage === 'ready' ? '安装' : app.stage === 'integration' ? '接入中' : '实现中' }}</el-button>
+                  <el-button v-if="registryStatus(app.id)?.update_available" class="registry-update-button" type="warning" :disabled="registryInstalling.includes(app.id) || appRegistry.source.stale" @click="registryStatus(app.id)?.update_supported ? updateRegistryApp(app) : (registryStatus(app.id)?.update_kind === 'compose-review' ? openRegistryApp(app) : ElMessage.warning(registryStatus(app.id)?.update_detail || '请先升级面板'))">{{ registryStatus(app.id)?.update_supported ? '更新应用' : registryStatus(app.id)?.update_kind === 'compose-review' ? '核对容器更新' : '需升级面板' }}</el-button>
                   <div class="runtime-note">
                     {{ app.provider === 'runtime' ? '受审核运行时' : app.provider === 'compose' ? '受限 Compose 应用' : '面板功能模块' }} · {{ app.risk === 'eol' ? '已停止维护，仅限隔离兼容迁移' : app.risk === 'privileged' ? '涉及系统权限' : 'SHA-256 固定包' }}<br />
                     {{ registryStatus(app.id)?.detail || '等待状态检查' }}
+                    <template v-if="registryStatus(app.id)?.update_detail"><br />{{ registryStatus(app.id)?.update_detail }}</template>
                     <template v-if="registryStatus(app.id)?.compatibility_detail"><br />{{ registryStatus(app.id)?.compatibility_detail }}</template>
                   </div>
                 </article>
@@ -2384,7 +2418,7 @@ onUnmounted(() => {
           </div>
           <DockerManager ref="dockerManager" :api="api" />
           <SecurityAppManager ref="softwareManager" :api="api" :on-job="lifecycleJob" />
-          <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" />
+          <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :registry="appRegistry" />
           <el-dialog v-model="versionManagerOpen" :title="`${versionManagerRuntime?.name || '软件'} · 版本管理`" width="500px">
             <p class="runtime-version-help">精确版本独立安装并存；安装后可在对应网站或数据库设置中切换，现有绑定保持不变。</p>
             <el-select v-model="versionManagerSelection" style="width: 100%" aria-label="选择另一软件版本" placeholder="当前目录中没有待安装版本">

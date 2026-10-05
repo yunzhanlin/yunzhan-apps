@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 type API = <T>(
@@ -24,7 +24,33 @@ interface Guidance {
   workflow: string[];
   limitations: string[];
 }
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void> }>();
+interface Versions {
+  catalog: { apps: { id: string; target: string; version: string; sha256: string }[] };
+  status: { id: string; installed_version?: string; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
+  source: { stale: boolean; fetched_at?: string; error?: string };
+}
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; registry?: Versions }>();
+const activeTab = ref("manage"), localVersions = ref<Versions>();
+const versions = computed(() => localVersions.value || props.registry);
+const versionApp = computed(() => versions.value?.catalog.apps.find(app => app.target === definition.value?.id));
+const versionStatus = computed(() => versions.value?.status.find(status => status.id === versionApp.value?.id));
+async function checkVersions() {
+  busy.value = true; error.value = "";
+  try { localVersions.value = await props.api<Versions>("/app-registry?refresh=1"); }
+  catch (e) { error.value = (e as Error).message; }
+  finally { busy.value = false; }
+}
+async function updateVersion() {
+  if (!versionApp.value || !versionStatus.value?.update_supported || busy.value) return;
+  busy.value = true;
+  try {
+    const app = versionApp.value;
+    const result = await props.api<{job_id:string}>(`/app-registry/${app.id}/update`, "POST", { expected_version: app.version, expected_sha256: app.sha256 });
+    visible.value = false;
+    await props.onJob(result.job_id);
+  } catch (e) { error.value = (e as Error).message; }
+  finally { busy.value = false; }
+}
 const visible = ref(false),
   busy = ref(false),
   error = ref("");
@@ -87,6 +113,7 @@ async function show(id: string) {
   definition.value = undefined;
   guidance.value = undefined;
   selectedPlanID.value = "";
+  activeTab.value = "manage"; localVersions.value = undefined;
   try {
     const page = await props.api<{
       definition: Definition;
@@ -132,6 +159,7 @@ async function show(id: string) {
     await execute("run");
 }
 function selected(row: Record<string, any>) {
+  activeTab.value = "manage";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
     form.value.expected_sha = "";
@@ -172,6 +200,7 @@ async function execute(action: string) {
       inputBody(),
     );
     setReport(result);
+    // Reports are a distinct management section; parameters remain intact.
     if ((result as any)?.plan?.revision !== undefined) {
       selectedPlanID.value = (result as any).plan.id;
       form.value.expected_revision = (result as any).plan.revision;
@@ -278,6 +307,8 @@ defineExpose({ show });
           }}</el-tag>
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
+        <el-tabs v-model="activeTab" class="module-manager-tabs">
+        <el-tab-pane label="概览" name="overview">
         <p v-if="guidance">{{ guidance.description }}</p>
         <ol v-if="guidance" class="module-workflow">
           <li v-for="step in guidance.workflow" :key="step">{{ step }}</li>
@@ -289,6 +320,9 @@ defineExpose({ show });
           :closable="false"
           class="module-limits"
         />
+        <p>版本、依赖状态来自服务器；功能处理器由签名面板提供。配置、执行报告和升级状态分开管理。</p>
+        </el-tab-pane>
+        <el-tab-pane label="配置与操作" name="manage">
         <el-form label-position="top" class="module-fields">
           <el-form-item
             v-for="field in definition.fields || []"
@@ -441,6 +475,9 @@ defineExpose({ show });
             >{{ labels[action] || action }}</el-button
           >
         </div>
+        <el-button v-if="report !== undefined" plain @click="activeTab = 'reports'">查看报告与日志</el-button>
+        </el-tab-pane>
+        <el-tab-pane label="报告与日志" name="reports">
         <section aria-label="执行报告">
           <h3>实际执行结果</h3>
           <p v-if="report === undefined">
@@ -453,6 +490,20 @@ defineExpose({ show });
             @select="selected"
           />
         </section>
+        <el-button v-if="definition.actions.includes('history')" :disabled="busy || !installed" @click="execute('history')">刷新执行历史</el-button>
+        </el-tab-pane>
+        <el-tab-pane label="版本与更新" name="version">
+          <el-descriptions :column="1" border>
+            <el-descriptions-item label="已安装应用版本">{{ versionStatus?.installed_version || '版本待核对' }}</el-descriptions-item>
+            <el-descriptions-item label="签名仓库版本">{{ versionApp?.version || '未加载' }}</el-descriptions-item>
+            <el-descriptions-item label="更新状态">{{ versions?.source.stale ? '未能确认最新版本' : versionStatus?.update_available ? '仓库有新版' : versionStatus?.installed_version ? '当前目录未发现新版' : '版本记录待核对' }}</el-descriptions-item>
+          </el-descriptions>
+          <p>{{ versionStatus?.update_detail || '更新成功后才记录新版本，不重置现有配置与报告。' }}</p>
+          <el-alert v-if="versions?.source.stale" type="warning" :closable="false" :title="versions.source.error || '仓库连接失败，当前使用已验签缓存'" />
+          <el-button :disabled="busy" @click="checkVersions">检查更新</el-button>
+          <el-button v-if="versionStatus?.update_available" type="warning" :disabled="busy || !versionStatus.update_supported || versions?.source.stale" @click="updateVersion">{{ versionStatus.update_supported ? '更新应用' : '需升级面板' }}</el-button>
+        </el-tab-pane>
+        </el-tabs>
       </template>
     </div>
     <template #footer

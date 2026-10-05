@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -34,6 +35,7 @@ const maxManifestBytes = 128 << 10
 
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,62}$`)
 var targetPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{1,127}$`)
+var versionPattern = regexp.MustCompile(`^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$`)
 
 type Catalog struct {
 	SchemaVersion int           `json:"schema_version"`
@@ -101,12 +103,22 @@ type LoadInfo struct {
 	Source    string `json:"source"`
 	Stale     bool   `json:"stale"`
 	FetchedAt string `json:"fetched_at,omitempty"`
+	CheckedAt string `json:"checked_at,omitempty"`
+	Error     string `json:"error,omitempty"`
+}
+
+// Both signature and payload travel and are cached as one atomic unit. The
+// signed bytes remain identical to the backwards-compatible v1 catalog.
+type catalogBundle struct {
+	Catalog   string `json:"catalog"`
+	Signature string `json:"signature"`
 }
 
 type Client struct {
 	BaseURL   string
 	PublicKey ed25519.PublicKey
 	HTTP      *http.Client
+	cacheMu   sync.Mutex
 }
 
 func parsePublicKey(contents []byte) (ed25519.PublicKey, error) {
@@ -155,7 +167,7 @@ func Default() *Client {
 }
 
 func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, error) {
-	if rawURL != c.BaseURL+"/dist/catalog-v1.json" && rawURL != c.BaseURL+"/signatures/catalog-v1.sig" && !strings.HasPrefix(rawURL, c.BaseURL+"/dist/apps/") {
+	if rawURL != c.BaseURL+"/dist/catalog-v1.json" && rawURL != c.BaseURL+"/signatures/catalog-v1.sig" && rawURL != c.BaseURL+"/signatures/catalog-v1.bundle.json" && !strings.HasPrefix(rawURL, c.BaseURL+"/dist/apps/") {
 		return nil, errors.New("拒绝访问未授权的应用仓库地址")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
@@ -163,11 +175,21 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/json, text/plain;q=0.8")
+	req.Header.Set("Cache-Control", "no-cache")
+	// GitHub raw is CDN-backed. A manual check must not reuse its old response.
+	if !strings.Contains(rawURL, "/dist/apps/") {
+		q := req.URL.Query()
+		q.Set("check", fmt.Sprint(time.Now().UnixNano()))
+		req.URL.RawQuery = q.Encode()
+	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, os.ErrNotExist
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("应用仓库 HTTP %d", resp.StatusCode)
 	}
@@ -202,7 +224,7 @@ func (c *Client) validateCatalog(catalog Catalog) error {
 	}
 	seen := map[string]bool{}
 	for _, app := range catalog.Apps {
-		if seen[app.ID] || !idPattern.MatchString(app.ID) || app.Name == "" || app.Version == "" || len(app.Summary) < 8 {
+		if seen[app.ID] || !idPattern.MatchString(app.ID) || app.Name == "" || !ValidVersion(app.Version) || len(app.Summary) < 8 {
 			return errors.New("应用目录包含重复或无效项")
 		}
 		seen[app.ID] = true
@@ -246,6 +268,24 @@ func (c *Client) verifyCatalog(raw, signature []byte) (Catalog, error) {
 
 func (c *Client) FetchCatalog(ctx context.Context) (Catalog, []byte, []byte, error) {
 	var empty Catalog
+	bundleRaw, bundleErr := c.get(ctx, c.BaseURL+"/signatures/catalog-v1.bundle.json", 3*maxCatalogBytes)
+	if bundleErr == nil {
+		var bundle catalogBundle
+		if err := strictJSON(bundleRaw, &bundle); err != nil {
+			return empty, nil, nil, err
+		}
+		if len(bundle.Catalog) > maxCatalogBytes || len(bundle.Signature) > 4096 {
+			return empty, nil, nil, errors.New("应用目录超过上限")
+		}
+		raw, signature := []byte(bundle.Catalog), []byte(bundle.Signature)
+		catalog, err := c.verifyCatalog(raw, signature)
+		return catalog, raw, signature, err
+	}
+	// Only a missing bundle permits the legacy two-file protocol. An invalid
+	// bundle or a network failure must not silently downgrade verification.
+	if !errors.Is(bundleErr, os.ErrNotExist) {
+		return empty, nil, nil, bundleErr
+	}
 	raw, err := c.get(ctx, c.BaseURL+"/dist/catalog-v1.json", maxCatalogBytes)
 	if err != nil {
 		return empty, nil, nil, err
@@ -282,13 +322,31 @@ func atomicWrite(path string, body []byte, mode os.FileMode) error {
 
 func (c *Client) cachedCatalog(cacheDir string) (Catalog, time.Time, error) {
 	var empty Catalog
+	bundlePath := filepath.Join(cacheDir, "catalog-v1.bundle.json")
+	if raw, err := boundedRead(bundlePath, 3*maxCatalogBytes); err == nil {
+		var bundle catalogBundle
+		if err = strictJSON(raw, &bundle); err != nil {
+			return empty, time.Time{}, err
+		}
+		catalog, err := c.verifyCatalog([]byte(bundle.Catalog), []byte(bundle.Signature))
+		if err != nil {
+			return empty, time.Time{}, err
+		}
+		info, err := os.Stat(bundlePath)
+		if err != nil {
+			return empty, time.Time{}, err
+		}
+		return catalog, info.ModTime(), nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return empty, time.Time{}, err
+	}
 	rawPath := filepath.Join(cacheDir, "catalog-v1.json")
 	sigPath := filepath.Join(cacheDir, "catalog-v1.sig")
-	raw, err := os.ReadFile(rawPath)
+	raw, err := boundedRead(rawPath, maxCatalogBytes)
 	if err != nil {
 		return empty, time.Time{}, err
 	}
-	signature, err := os.ReadFile(sigPath)
+	signature, err := boundedRead(sigPath, 4096)
 	if err != nil {
 		return empty, time.Time{}, err
 	}
@@ -304,21 +362,27 @@ func (c *Client) cachedCatalog(cacheDir string) (Catalog, time.Time, error) {
 }
 
 func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.Duration) (Catalog, LoadInfo, error) {
-	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && time.Since(modified) <= maxAge {
+	c.cacheMu.Lock()
+	defer c.cacheMu.Unlock()
+	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
 		return cached, LoadInfo{Source: "verified-cache", FetchedAt: modified.UTC().Format(time.RFC3339)}, nil
 	}
 	catalog, raw, signature, fetchErr := c.FetchCatalog(ctx)
 	if fetchErr == nil {
-		if err := atomicWrite(filepath.Join(cacheDir, "catalog-v1.json"), raw, 0600); err != nil {
+		if previous, _, err := c.cachedCatalog(cacheDir); err == nil {
+			fetchErr = catalogProgress(previous, catalog)
+		}
+	}
+	if fetchErr == nil {
+		bundle, _ := json.Marshal(catalogBundle{Catalog: string(raw), Signature: string(signature)})
+		if err := atomicWrite(filepath.Join(cacheDir, "catalog-v1.bundle.json"), bundle, 0600); err != nil {
 			return Catalog{}, LoadInfo{}, err
 		}
-		if err := atomicWrite(filepath.Join(cacheDir, "catalog-v1.sig"), signature, 0600); err != nil {
-			return Catalog{}, LoadInfo{}, err
-		}
-		return catalog, LoadInfo{Source: "github", FetchedAt: time.Now().UTC().Format(time.RFC3339)}, nil
+		now := time.Now().UTC().Format(time.RFC3339)
+		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now}, nil
 	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil {
-		return cached, LoadInfo{Source: "verified-cache", Stale: true, FetchedAt: modified.UTC().Format(time.RFC3339)}, nil
+		return cached, LoadInfo{Source: "verified-cache", Stale: true, FetchedAt: modified.UTC().Format(time.RFC3339), CheckedAt: time.Now().UTC().Format(time.RFC3339), Error: "仓库检查失败: " + fetchErr.Error()}, nil
 	}
 	return Catalog{}, LoadInfo{}, fetchErr
 }

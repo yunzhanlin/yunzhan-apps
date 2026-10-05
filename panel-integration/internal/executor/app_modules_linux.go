@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sys/unix"
 	"io"
 	"io/fs"
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"net"
 	"net/http"
@@ -99,7 +100,17 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	}
 	out.Installed = true
 	out.Enabled = true
-	out.Version = "1.0"
+	var manifest map[string]any
+	if moduleRead(filepath.Join(s.moduleDir(id), "installed.json"), &manifest) != nil {
+		out.Healthy = false
+		out.Detail = "安装记录读取失败"
+		return out
+	}
+	out.Version, _ = manifest["version"].(string)
+	if out.Version == "" {
+		out.Version = "1.0"
+	} // pre-versioned modules
+	out.Settings, _ = manifest["settings"].(map[string]any)
 	out.Healthy = true
 	out.Detail = "模块已安装，可配置并执行"
 	switch id {
@@ -194,7 +205,53 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 		}
 	}
 	add("固定功能处理器与依赖检查通过")
-	return moduleWrite(filepath.Join(s.moduleDir(id), "installed.json"), map[string]any{"id": id, "version": "1.0", "settings": settings, "installed_at": core.Now()})
+	installedAt := core.Now()
+	if action == "configure" {
+		var previous map[string]any
+		if e := moduleRead(filepath.Join(s.moduleDir(id), "installed.json"), &previous); e != nil {
+			return e
+		}
+		if at, ok := previous["installed_at"].(string); ok {
+			installedAt = at
+		}
+	}
+	return moduleWrite(filepath.Join(s.moduleDir(id), "installed.json"), map[string]any{"id": id, "version": core.SoftwareImplementationVersion(id), "settings": settings, "installed_at": installedAt})
+}
+
+func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {
+	if err := core.ValidateSoftwareUpdate(id, version); err != nil {
+		return err
+	}
+	status := s.softwareStatus(ctx, id)
+	if !status.Installed || !status.Healthy {
+		return errors.New("应用未安装或健康检查未通过，未修改版本记录")
+	}
+	cmp, valid := appcatalog.CompareVersions(version, status.Version)
+	if !valid || cmp < 0 {
+		return errors.New("拒绝应用版本降级或未知版本更新")
+	}
+	if _, ok := core.FindAppModule(id); ok {
+		var manifest map[string]any
+		path := filepath.Join(s.moduleDir(id), "installed.json")
+		if err := moduleRead(path, &manifest); err != nil {
+			return err
+		}
+		manifest["version"], manifest["updated_at"] = version, core.Now()
+		if err := moduleWrite(path, manifest); err != nil {
+			return err
+		}
+	} else {
+		manifest, err := s.readSoftwareManifest(id)
+		if err != nil {
+			return err
+		}
+		manifest.Version = version
+		if err = s.writeSoftwareManifest(manifest); err != nil {
+			return err
+		}
+	}
+	add("当前签名面板已包含新版功能处理器；健康检查通过，保留配置、数据、基线与历史")
+	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.appDependencyRoutes(m)

@@ -257,13 +257,14 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		}
 		var payload struct {
 			Settings map[string]any `json:"settings"`
+			Version  string         `json:"version"`
 		}
 		if json.Unmarshal([]byte(j.Payload), &payload) != nil {
 			_ = s.FinishRuntime(j, "软件任务参数无效", nil)
 			return
 		}
 		var result ApplyResult
-		err := e.Call(ctx, "POST", "/v1/software/"+j.TargetID+"/"+action, map[string]any{"settings": payload.Settings}, &result)
+		err := e.Call(ctx, "POST", "/v1/software/"+j.TargetID+"/"+action, map[string]any{"settings": payload.Settings, "version": payload.Version}, &result)
 		if ctx.Err() != nil {
 			return
 		}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "apache-waf",
+  "name": "Apache WAF",
+  "category": "professional",
+  "version": "1.1.0",
+  "summary": "实际 Apache 虚拟主机正常请求 200、扫描器和 SQL 特征请求 403，通过语法校验",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "apache-waf",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "请求 URI 特征过滤",
+    "扫描器拦截",
+    "Apache 语法校验",
+    "失败回滚"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/apache-waf"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

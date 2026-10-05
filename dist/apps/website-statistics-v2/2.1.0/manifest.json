@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.1.0",
+  "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-statistics-v2",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "小时趋势",
+    "独立 IP",
+    "爬虫识别",
+    "错误数",
+    "路径排行",
+    "来源统计"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-statistics-v2"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

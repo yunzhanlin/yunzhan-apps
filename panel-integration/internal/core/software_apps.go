@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"local/panel/internal/appcatalog"
 	"net/http"
 	"strings"
 )
@@ -72,6 +73,21 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 		}
 	}
 	return SoftwareAppCatalogItem{}, false
+}
+
+// Module implementations ship in the signed panel executor, not arbitrary
+// GitHub scripts. A newer catalog cannot claim code this executor lacks.
+func SoftwareImplementationVersion(id string) string {
+	app, _ := findSoftwareApp(id)
+	return app.Version
+}
+
+func ValidateSoftwareUpdate(id, version string) error {
+	cmp, valid := appcatalog.CompareVersions(version, SoftwareImplementationVersion(id))
+	if !valid || cmp > 0 {
+		return errors.New("新版应用需要先升级面板，当前受限处理器尚未提供该版本")
+	}
+	return nil
 }
 
 func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, error) {
@@ -154,13 +170,22 @@ func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, e
 }
 
 func (s *Store) QueueSoftwareAction(id, action string, settings map[string]any, key, actor string) (string, error) {
+	return s.queueSoftwareAction(id, action, settings, "", key, actor)
+}
+
+func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, version, key, actor string) (string, error) {
 	if _, ok := findSoftwareApp(id); !ok {
 		return "", errors.New("软件不在受管目录中")
 	}
-	if action != "install" && action != "configure" && action != "uninstall" {
+	if action != "install" && action != "configure" && action != "uninstall" && action != "update" {
 		return "", errors.New("软件生命周期操作无效")
 	}
-	if action != "uninstall" {
+	if action == "update" {
+		if err := ValidateSoftwareUpdate(id, version); err != nil {
+			return "", err
+		}
+		settings = nil // never replace live configuration during an update
+	} else if action != "uninstall" {
 		var e error
 		settings, e = normalizeSoftwareSettings(id, settings)
 		if e != nil {
@@ -173,7 +198,7 @@ func (s *Store) QueueSoftwareAction(id, action string, settings map[string]any, 
 		return "", errors.New("请提供有效的幂等键")
 	}
 	kind := "software_" + action
-	payload, _ := json.Marshal(map[string]any{"settings": settings})
+	payload, _ := json.Marshal(map[string]any{"settings": settings, "version": version})
 	tx, e := s.DB.Begin()
 	if e != nil {
 		return "", e

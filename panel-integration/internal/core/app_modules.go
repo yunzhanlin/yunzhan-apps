@@ -196,7 +196,16 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	out := []SoftwareAppCatalogItem{}
 	for _, d := range AppModules() {
-		out = append(out, SoftwareAppCatalogItem{ID: d.ID, Family: "module", Name: d.Name, Category: "professional", Version: "1.0", Description: d.Name, Source: "云栈应用仓库", Capabilities: d.Actions, Defaults: map[string]any{}})
+		version := "1.1.0"
+		switch d.ID {
+		case "pure-ftpd":
+			version = "1.0.50-compat2"
+		case "pm2-manager":
+			version = "7.0.4-compat2"
+		case "website-statistics-v2":
+			version = "2.1.0"
+		}
+		out = append(out, SoftwareAppCatalogItem{ID: d.ID, Family: "module", Name: d.Name, Category: "professional", Version: version, Description: d.Name, Source: "云栈应用仓库", Capabilities: d.Actions, Defaults: map[string]any{}})
 	}
 	return out
 }

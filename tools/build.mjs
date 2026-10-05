@@ -16,6 +16,12 @@ for (const app of [...source.apps].sort((a, b) => a.id.localeCompare(b.id))) {
   const relative = `apps/${app.id}/${app.version}/manifest.json`;
   const body = pretty(app);
   const digest = sha256(body);
+  // An existing version is immutable, including for signed manifests. This
+  // prevents silently changing an application without an update notification.
+  try {
+    const previous = await readFile(path.join(root, "dist", relative), "utf8");
+    if (previous !== body) throw new Error(`${app.id}@${app.version} already exists with different content; publish a new version`);
+  } catch (error) { if (error.code !== "ENOENT") throw error; }
   await mkdir(path.join(root, "dist", "apps", app.id, app.version), { recursive: true });
   await writeFile(path.join(root, "dist", relative), body);
   await writeFile(path.join(root, "dist", `${relative}.sha256`), `${digest}  manifest.json\n`);

@@ -99,6 +99,8 @@ func OpenStore(path string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS jobs(id TEXT PRIMARY KEY, site_id TEXT NOT NULL REFERENCES sites(id), kind TEXT NOT NULL, state TEXT NOT NULL, error TEXT NOT NULL DEFAULT '', steps TEXT NOT NULL DEFAULT '[]', idempotency_key TEXT UNIQUE, created_at TEXT NOT NULL, updated_at TEXT NOT NULL);
  CREATE UNIQUE INDEX IF NOT EXISTS one_active_site_job ON jobs(site_id) WHERE state IN ('queued','running');
  CREATE TABLE IF NOT EXISTS audit_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS app_registry_receipts(app_id TEXT NOT NULL,scope TEXT NOT NULL,version TEXT NOT NULL,sha256 TEXT NOT NULL,target TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(app_id,scope));
+ CREATE TABLE IF NOT EXISTS app_registry_pending(job_id TEXT PRIMARY KEY,app_id TEXT NOT NULL,scope TEXT NOT NULL,version TEXT NOT NULL,sha256 TEXT NOT NULL,target TEXT NOT NULL,provider TEXT NOT NULL,created_at TEXT NOT NULL);
  INSERT OR IGNORE INTO schema_migrations VALUES(1, strftime('%Y-%m-%dT%H:%M:%SZ','now'));
  `)
 	if err != nil {
@@ -222,7 +224,10 @@ func OpenStore(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
-	if err=s.migrateAppModules();err!=nil{db.Close();return nil,err}
+	if err = s.migrateAppModules(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	return s, nil
 }
 func (s *Store) Audit(actor, action, target, result string) error {
