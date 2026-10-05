@@ -1,0 +1,23 @@
+[Unit]
+Description=Panel restricted terminal session service
+After=local-fs.target
+
+[Service]
+Type=simple
+User=panel-task
+Group=panel-task
+RuntimeDirectory=panel-terminal
+RuntimeDirectoryMode=0700
+ExecStart=/opt/panel/bin/panel-executor --terminal-server /run/panel-terminal/control.sock
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-tasks/work /run/panel-terminal
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

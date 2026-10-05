@@ -1,0 +1,21 @@
+[Unit]
+Description=Panel managed Node.js application %i
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/panel/bin/panel-executor --serve-node %i
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=30
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/panel/sites
+ReadOnlyPaths=/etc/panel/node /opt/panel/runtimes/node
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -4,33 +4,32 @@
   "name": "aaPanel Daily Report",
   "category": "professional",
   "version": "1.0",
-  "summary": "每日汇总资源、站点、备份、证书、安全事件和失败任务。",
-  "stage": "design",
+  "summary": "从实际资源、站点、任务、流量、证书数据生成持久化日报",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "panel-module",
     "target": "daily-report",
-    "manage_route": "schedules"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
     "资源摘要",
-    "安全摘要",
-    "备份摘要",
-    "定时推送"
+    "任务故障摘要",
+    "流量与安全摘要",
+    "证书到期检查",
+    "每日持久化"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/reports/daily"
+    "target": "/api/app-modules/daily-report"
   },
   "uninstall": {
     "preserve_data": true,

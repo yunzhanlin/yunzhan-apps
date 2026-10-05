@@ -16,9 +16,12 @@ test("only integrated packages can be advertised as ready", () => {
   }
 });
 
-test("legacy PHP packages remain gated", () => {
-  const legacy = catalog.apps.filter((item) => item.id.startsWith("php-") && Number(item.id.split("-")[1]) < 80);
-  assert.ok(legacy.length >= 9);
-  assert.ok(legacy.every((item) => item.stage !== "ready"));
+test("legacy PHP packages cannot use host runtimes", async () => {
+  const legacy = catalog.apps.filter((item) => item.id.startsWith("php-") && Number(item.id.split("-")[1]) <= 81);
+  assert.equal(legacy.length,12);
+  for(const item of legacy){
+    const manifest=JSON.parse(await readFile(new URL('../dist/apps/'+item.id+'/'+item.version+'/manifest.json',import.meta.url),'utf8'));
+    assert.equal(manifest.risk,'eol');assert.equal(manifest.delivery.provider,'compose');assert.equal(manifest.delivery.isolation,'legacy-container');
+    assert.match(manifest.delivery.image,/@sha256:[a-f0-9]{64}$/);
+  }
 });
-

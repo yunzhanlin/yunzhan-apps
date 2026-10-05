@@ -1,0 +1,13 @@
+[Unit]
+Description=Panel SFTP account operation %i
+After=network.target ssh.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --sftp-job %i
+TimeoutStartSec=3min
+KillMode=control-group
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_NETLINK

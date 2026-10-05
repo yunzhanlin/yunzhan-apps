@@ -4,34 +4,32 @@
   "name": "aaPanel user Manager",
   "category": "professional",
   "version": "1.0",
-  "summary": "管理多用户、角色、资源范围、TOTP、会话和不可篡改操作审计。",
-  "stage": "design",
+  "summary": "实际登录、网站范围隔离、越权拒绝、会话撤销和账户删除通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "user-manager",
-    "manage_route": "account"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
     "多用户",
-    "角色权限",
-    "资源范围",
-    "TOTP",
-    "会话撤销"
+    "三种角色",
+    "网站权限范围",
+    "会话撤销",
+    "保留最后管理员"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/accounts"
+    "target": "/api/app-modules/user-manager"
   },
   "uninstall": {
     "preserve_data": true,

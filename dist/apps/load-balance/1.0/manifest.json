@@ -4,33 +4,32 @@
   "name": "Load Balance",
   "category": "professional",
   "version": "1.0",
-  "summary": "管理 Nginx 上游节点、健康检查、权重、会话粘滞和失败转移。",
-  "stage": "design",
+  "summary": "真实轮询分流、节点故障切换、健康探测和入口移除通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "load-balance",
-    "manage_route": "sites"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
-    "上游节点",
-    "权重",
-    "健康检查",
+    "加权轮询",
+    "备用节点",
+    "IP 粘滞",
+    "节点探测",
     "失败转移"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/load-balancers"
+    "target": "/api/app-modules/load-balance"
   },
   "uninstall": {
     "preserve_data": true,

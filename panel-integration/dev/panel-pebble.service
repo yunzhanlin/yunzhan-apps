@@ -1,0 +1,22 @@
+[Unit]
+Description=Panel local ACME acceptance CA (development only)
+ConditionPathExists=/etc/panel-development-vm
+After=network.target panel-pebble-dns.service
+Requires=panel-pebble-dns.service
+[Service]
+Type=simple
+User=panel-pebble
+Group=panel-pebble
+ExecStart=/opt/panel/test-tools/pebble -config /etc/panel/acme-test/pebble.json -strict=false -dnsserver=127.0.0.1:18053
+Environment=PEBBLE_VA_NOSLEEP=1
+Environment=PEBBLE_AUTHZREUSE=0
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+[Install]
+WantedBy=multi-user.target

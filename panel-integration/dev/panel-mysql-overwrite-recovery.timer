@@ -1,0 +1,9 @@
+[Unit]
+Description=Check for interrupted panel database replacements
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=60s
+AccuracySec=5s
+Unit=panel-mysql-overwrite-recovery.service
+[Install]
+WantedBy=timers.target

@@ -4,33 +4,31 @@
   "name": "Platform Ops",
   "category": "professional",
   "version": "1.0",
-  "summary": "以最小权限代理统一查看多台云栈主机的健康、告警、备份与版本。",
-  "stage": "design",
+  "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "platform-ops",
-    "manage_route": "overview"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
-    "多主机盘点",
-    "健康聚合",
-    "告警聚合",
-    "版本盘点"
+    "多主机 HTTPS 健康聚合",
+    "只读令牌",
+    "加密凭据",
+    "令牌撤销"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/platform/hosts"
+    "target": "/api/app-modules/platform-ops"
   },
   "uninstall": {
     "preserve_data": true,

@@ -1,0 +1,6 @@
+[Unit]
+Description=Restore uncommitted Nginx selection %i
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --nginx-rollback %i
+TimeoutStartSec=60

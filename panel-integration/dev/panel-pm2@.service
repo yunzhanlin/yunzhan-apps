@@ -1,0 +1,18 @@
+[Unit]
+Description=CloudStack PM2 application %i
+After=network.target
+[Service]
+Type=simple
+ExecStart=/opt/panel/bin/panel-executor --serve-pm2 %i
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+ReadWritePaths=/srv/panel/sites
+MemoryMax=512M
+TasksMax=128
+[Install]
+WantedBy=multi-user.target

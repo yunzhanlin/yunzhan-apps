@@ -4,33 +4,31 @@
   "name": "Apache WAF",
   "category": "professional",
   "version": "1.0",
-  "summary": "为受管 Apache 站点提供请求规则、限速、事件日志和失败回滚。",
-  "stage": "design",
+  "summary": "实际 Apache 虚拟主机正常请求 200、扫描器和 SQL 特征请求 403，通过语法校验",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "panel-module",
     "target": "apache-waf",
-    "manage_route": "security"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
-    "请求过滤",
-    "限速",
-    "防护事件",
-    "配置回滚"
+    "请求 URI 特征过滤",
+    "扫描器拦截",
+    "Apache 语法校验",
+    "失败回滚"
   ],
   "health": {
-    "probe": "binary",
-    "target": "httpd -t"
+    "probe": "panel-api",
+    "target": "/api/app-modules/apache-waf"
   },
   "uninstall": {
     "preserve_data": true,

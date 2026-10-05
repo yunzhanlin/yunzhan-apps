@@ -5,7 +5,7 @@
   "category": "deployment",
   "version": "1.8",
   "summary": "部署仅回环端口访问的 OpenLiteSpeed，管理入口须经面板代理。",
-  "stage": "integration",
+  "stage": "ready",
   "risk": "maintained",
   "delivery": {
     "provider": "compose",
@@ -15,7 +15,6 @@
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
@@ -23,9 +22,10 @@
     ]
   },
   "capabilities": [
-    "HTTP/3",
+    "HTTP 网站",
     "LSAPI",
-    "回环管理入口",
+    "随机管理密码",
+    "回环 HTTPS 管理",
     "持久配置"
   ],
   "health": {

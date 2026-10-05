@@ -1,0 +1,22 @@
+[Unit]
+Description=Panel development Web API
+After=network.target panel-executor.service
+Wants=panel-executor.service
+[Service]
+Type=simple
+User=panel
+Group=panel
+WorkingDirectory=/var/lib/panel
+ExecStartPre=/usr/bin/curl --fail --silent --show-error --retry 20 --retry-delay 1 --retry-connrefused --retry-max-time 25 --max-time 2 --unix-socket /run/panel-executor/control.sock --output /dev/null http://executor/v1/overview
+ExecStart=/opt/panel/bin/panel -listen 127.0.0.1:19100 -data /var/lib/panel -web /opt/panel/web -origin http://127.0.0.1:19100
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+[Install]
+WantedBy=multi-user.target

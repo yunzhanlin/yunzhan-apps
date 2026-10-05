@@ -1,0 +1,14 @@
+[Unit]
+Description=CloudStack isolated TLS FTP service
+After=network.target
+[Service]
+Type=simple
+ExecStart=/usr/sbin/pure-ftpd -S 127.0.0.1,2121 -p 30000:30049 -P 127.0.0.1 -A -E -H -j -c 20 -C 4 -l puredb:/etc/panel/security-apps/modules/pure-ftpd/users.pdb -Y 2 -2 /etc/panel/security-apps/modules/pure-ftpd/server.pem
+Restart=on-failure
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/panel/sites
+[Install]
+WantedBy=multi-user.target

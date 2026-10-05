@@ -1,0 +1,14 @@
+[Unit]
+Description=CloudStack NFS mount %i
+Wants=network-online.target
+After=network-online.target nfs-server.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/panel/bin/panel-executor --mount-nfs %i
+ExecStop=/opt/panel/bin/panel-executor --unmount-nfs %i
+TimeoutStartSec=35
+TimeoutStopSec=35
+UMask=0077
+[Install]
+WantedBy=multi-user.target

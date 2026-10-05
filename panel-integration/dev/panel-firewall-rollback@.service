@@ -1,0 +1,6 @@
+[Unit]
+Description=Restore unconfirmed panel firewall change %i
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --firewall-rollback %i
+TimeoutStartSec=60

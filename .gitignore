@@ -2,3 +2,6 @@
 node_modules/
 *.tmp
 .local/
+panel-integration/.build/
+panel-integration/.local/
+panel-integration/web/dist/

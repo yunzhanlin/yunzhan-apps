@@ -4,7 +4,7 @@
   "name": "phpMyAdmin",
   "category": "deployment",
   "version": "5.2.2",
-  "summary": "以回环端口部署 phpMyAdmin，通过面板代理和二次身份校验访问。",
+  "summary": "固定摘要部署原版 phpMyAdmin，回环端口访问，并管理网络可达的已授权 MySQL 数据库。",
   "stage": "ready",
   "risk": "maintained",
   "delivery": {
@@ -25,7 +25,7 @@
   },
   "capabilities": [
     "MySQL 管理",
-    "面板代理",
+    "数据库管理界面",
     "回环绑定",
     "访问审计"
   ],

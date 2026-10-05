@@ -4,33 +4,31 @@
   "name": "Network Threat Detection",
   "category": "professional",
   "version": "1.0",
-  "summary": "基于实际连接、端口、防火墙与封禁事件生成网络威胁告警。",
-  "stage": "design",
+  "summary": "真实 ss 监听端口/连接基线和 Fail2ban 状态读取通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "network-threat-detection",
-    "manage_route": "security"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
-    "端口基线",
-    "连接异常",
-    "扫描告警",
-    "事件追踪"
+    "监听端口基线",
+    "新增监听告警",
+    "实时连接",
+    "Fail2ban 状态"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/security/network-threats"
+    "target": "/api/app-modules/network-threat-detection"
   },
   "uninstall": {
     "preserve_data": true,

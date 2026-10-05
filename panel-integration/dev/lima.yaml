@@ -1,0 +1,55 @@
+minimumLimaVersion: 2.2.0
+vmType: vz
+arch: aarch64
+cpus: 2
+memory: 3GiB
+disk: 32GiB
+images:
+  - location: https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-arm64-20260712-2537.qcow2
+    arch: aarch64
+    digest: sha512:8543d795f2fde630eb66c492f245a8c1da19dedc636e0a8e7b3d0f95920e1a05aa911ef2d82d177d41cc53ced5fccbd2a3945d07fa5e15018914c4d864bb07ed
+mountType: virtiofs
+mounts:
+  - location: /Volumes/MacSSD/MacData/Projects/ChatGPT/服务器安全/panel
+    mountPoint: /workspace
+    writable: false
+containerd:
+  system: false
+  user: false
+ssh:
+  loadDotSSHPubKeys: false
+  forwardAgent: false
+portForwards:
+  - guestPort: 19100
+    hostPort: 19100
+    hostIP: 127.0.0.1
+  - guestPort: 19101
+    hostPort: 19101
+    hostIP: 127.0.0.1
+  - guestPort: 19102
+    hostPort: 19102
+    hostIP: 127.0.0.1
+  - guestPort: 19443
+    hostPort: 19443
+    hostIP: 127.0.0.1
+  - guestIP: 0.0.0.0
+    guestIPMustBeZero: false
+    proto: any
+    guestPortRange: [1, 65535]
+    ignore: true
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      if ! command -v nginx >/dev/null 2>&1; then
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y nginx ca-certificates curl sqlite3
+      fi
+      id panel >/dev/null 2>&1 || useradd --system --home /var/lib/panel --shell /usr/sbin/nologin panel
+      id panel-task >/dev/null 2>&1 || useradd --system --user-group --home-dir /var/lib/panel-tasks --shell /usr/sbin/nologin --comment panel-scheduled-task panel-task
+      install -d -m 0750 -o panel -g panel /var/lib/panel
+      install -d -m 0755 /opt/panel/bin /opt/panel/web /etc/panel/sites-enabled /srv/panel/sites
+      install -d -m 0750 -o root -g panel /var/lib/panel-executor
+      install -d -m 0750 -o root -g panel-task /var/lib/panel-tasks /var/lib/panel-tasks/jobs
+      install -d -m 0750 -o panel-task -g panel-task /var/lib/panel-tasks/work

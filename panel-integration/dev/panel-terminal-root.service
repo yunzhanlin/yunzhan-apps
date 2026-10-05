@@ -1,0 +1,22 @@
+[Unit]
+Description=Panel explicitly authorized root terminal service
+After=local-fs.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+RuntimeDirectory=panel-terminal-root
+RuntimeDirectoryMode=0700
+ExecStart=/opt/panel/bin/panel-executor --terminal-server /run/panel-terminal-root/control.sock --terminal-user root
+Restart=on-failure
+RestartSec=2
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=false
+ProtectSystem=false
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

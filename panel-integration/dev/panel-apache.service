@@ -1,0 +1,19 @@
+[Unit]
+Description=Panel managed Apache website service
+After=network.target panel-executor.service
+ConditionPathExists=/etc/panel/apache/httpd.conf
+
+[Service]
+Type=simple
+ExecStart=/opt/panel/runtimes/apache/2.4.68/bin/httpd -DFOREGROUND -f /etc/panel/apache/httpd.conf
+ExecReload=/bin/kill -USR1 $MAINPID
+Restart=on-failure
+RestartSec=2
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/run /var/log/apache2 /srv/panel/sites
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

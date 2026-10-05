@@ -4,33 +4,31 @@
   "name": "File monitor",
   "category": "professional",
   "version": "1.0",
-  "summary": "使用有界扫描和哈希检查点记录新增、修改、删除与权限变化。",
-  "stage": "design",
+  "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "file-monitor",
-    "manage_route": "files"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
     "哈希检查点",
-    "变更事件",
+    "变更检测",
     "权限变化",
     "排除规则"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/file-monitor"
+    "target": "/api/app-modules/file-monitor"
   },
   "uninstall": {
     "preserve_data": true,

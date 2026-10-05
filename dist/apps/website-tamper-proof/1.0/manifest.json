@@ -4,33 +4,31 @@
   "name": "Website Tamper-proof",
   "category": "professional",
   "version": "1.0",
-  "summary": "为单个站点建立文件哈希基线，检测未授权变更并恢复指定文件。",
-  "stage": "design",
+  "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+  "stage": "ready",
   "risk": "privileged",
   "delivery": {
     "provider": "panel-module",
     "target": "website-tamper-proof",
-    "manage_route": "security"
+    "manage_route": "app-modules"
   },
   "compatibility": {
     "os": [
-      "debian-12",
       "debian-13"
     ],
     "architectures": [
-      "amd64",
-      "arm64"
+      "amd64"
     ]
   },
   "capabilities": [
-    "文件基线",
+    "签名文件基线",
     "变更事件",
-    "可选恢复",
-    "站点级策略"
+    "备份恢复",
+    "网站级策略"
   ],
   "health": {
     "probe": "panel-api",
-    "target": "/api/tamper-proof/sites"
+    "target": "/api/app-modules/website-tamper-proof"
   },
   "uninstall": {
     "preserve_data": true,

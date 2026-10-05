@@ -1,0 +1,11 @@
+[Unit]
+Description=CloudStack fixed application dependency installer %i
+After=network-online.target
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/panel/bin/panel-executor --install-app-dependencies %i
+TimeoutStartSec=10min
+UMask=0027
+NoNewPrivileges=true
+ProtectHome=true

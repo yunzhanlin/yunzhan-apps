@@ -1,0 +1,18 @@
+[Unit]
+Description=Panel ACME acceptance DNS (development only)
+ConditionPathExists=/etc/panel-development-vm
+After=network.target
+[Service]
+Type=simple
+User=panel-pebble
+Group=panel-pebble
+ExecStart=/opt/panel/test-tools/pebble-challtestsrv -http01= -https01= -tlsalpn01= -doh= -dnsserver=127.0.0.1:18053 -management=127.0.0.1:18055 -defaultIPv4=127.0.0.1 -defaultIPv6=
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+[Install]
+WantedBy=multi-user.target
