@@ -1355,7 +1355,7 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "summary": "浏览器 PV/UV、会话旅程、来源、热图与性能；启停自动应用对应网站采集代理，备份、校验及失败回滚；需支持 2.1 的面板，HTML 标签仍需模板接入",
       "stage": "ready",
       "risk": "maintained",

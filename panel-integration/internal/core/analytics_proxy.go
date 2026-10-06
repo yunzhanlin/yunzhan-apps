@@ -59,6 +59,36 @@ func sameAnalyticsRequest(a, b AnalyticsConfig) bool {
 	return a == b
 }
 
+// Older managed sites can have different generated proof hashes after a
+// renderer upgrade. Ignore only those exact metadata values, never arbitrary
+// directives, health responses, or edits elsewhere in the server block.
+func sameManagedAnalyticsBaseline(current, candidate, siteID string) bool {
+	maskHash := func(line, prefix, suffix string) string {
+		if !strings.HasPrefix(line, prefix) || !strings.HasSuffix(line, suffix) {
+			return line
+		}
+		hash := strings.TrimSuffix(strings.TrimPrefix(line, prefix), suffix)
+		if len(hash) != 64 {
+			return line
+		}
+		for _, c := range hash {
+			if !strings.ContainsRune("0123456789abcdef", c) {
+				return line
+			}
+		}
+		return prefix + "<generated-proof>" + suffix
+	}
+	normalize := func(config string) string {
+		lines := strings.Split(strings.TrimSpace(config), "\n")
+		for i, line := range lines {
+			line = maskHash(line, "  location = /__panel_health_"+siteID+` { default_type text/plain; access_log off; return 200 "panel:`+siteID+":", `"; }`)
+			lines[i] = maskHash(line, `  add_header X-Panel-Config "`, `" always;`)
+		}
+		return strings.Join(lines, "\n")
+	}
+	return normalize(current) == normalize(candidate)
+}
+
 func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request, u identity) {
 	var in AnalyticsConfig
 	if !decode(w, r, &in) {
@@ -125,7 +155,7 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 	}
 	// Do not silently regenerate and discard edits made outside the managed
 	// website settings model. The normal preview flow must reconcile them first.
-	if strings.TrimSpace(baseline.Current) != strings.TrimSpace(baseline.Candidate) {
+	if !sameManagedAnalyticsBaseline(baseline.Current, baseline.Candidate, site.ID) {
 		fail(w, 409, "网站配置含有手工修改，已保留原文件；请先在网站设置中核对配置预览后再启停采集")
 		return
 	}

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps4-linux-amd64.tar.gz",
-    "archive_sha256": "364607e46b6485ad45e5fbe55fae1d0a9450a0a78641f1180fec17cce334db19",
-    "frozen_inputs_sha256": "9eb8fdd55aeea6579964d17518054bbef39ed79f8778ac3ddf69f4d9eca46d1e"
+    "archive": "panel-0.1.0-dev.proapps5-linux-amd64.tar.gz",
+    "archive_sha256": "63912f6eb86e9f1509f48447f0c577a1ba60974051343949d77b3fcd582bbc75",
+    "frozen_inputs_sha256": "e058fa69022832ddefe1d9b3ad60ee4f4e060b763792e35781e389be5cb7b1f3"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -29,15 +29,15 @@
     "internal/core/acme_worker.go": "9dd9c54e7f468d1c3b2121755dd535adaa39d69400b8fdd2ce08651e0f889ee9",
     "internal/core/admin_scripts.go": "414c6d7371c35fce10fe5b543a8b2ddfd7e548420934b1d6ff3b24c1a6b60530",
     "internal/core/analytics.go": "30b4a3c3ef3e4641f6d5471f52df91fefc4eda3dd03dad10b8ec363b65196347",
-    "internal/core/analytics_proxy.go": "0ebe9d7226697579a6407a5c6913f59e9b2b2c63e1fea685b66a856d951e18d0",
-    "internal/core/analytics_proxy_test.go": "ba01731facb1629991680c4c38a63776ade17fda1b7b38b11066de713fbb339a",
+    "internal/core/analytics_proxy.go": "88bb9274ddc168597bb032788e26c4276d2fd49c22a8b3bec65ee784a8c659eb",
+    "internal/core/analytics_proxy_test.go": "4e9443c3b97c5436722dfc17393ce49ded2671cdb43b61b11f1df7139945fb5f",
     "internal/core/analytics_test.go": "9ed51abf6b496cf54e58e5fe1cb4029266a95b290610f4a3aa8ae2c4dda90a74",
     "internal/core/analytics_tracker.js": "23d09173b8123204ed35187f8d5b57b3bae890b8a6dcc13f1d71d9ef6ae65371",
     "internal/core/app_compose_templates.go": "94e93bdc423adb1c1a6f21cf8d38410d014f1ce4184f239416ee41172ef0502c",
     "internal/core/app_compose_templates_test.go": "43e627ec90708b750a7539b9a31a744f722e1be803af28f8a8b7e832bfa5ba08",
     "internal/core/app_module_accounts.go": "4ec1b6a56c467cfe60e32c4cc52fd3e11b682bba8058420098239870f60ff318",
     "internal/core/app_module_guidance.go": "6921e3213e059dba4a68ea56447e4e9618be087984c8836daf52a65eeb4028b9",
-    "internal/core/app_modules.go": "c1d67b007c9357092892824a77365b6fc99bdd954febfba8392c64b86409d6d6",
+    "internal/core/app_modules.go": "1c140ea831e86a771faf63cea90f7e103b96a5f716fc7fea4e6a63a723bddf10",
     "internal/core/app_modules_test.go": "d5b5dc97d712f7ed3141de244205acb37685d8de28fa2e826eab80ca4f063baf",
     "internal/core/app_registry.go": "20e3007e7d62c73551e2f4c7ecdd679fef7027eb2af6b7abef167a56244ab604",
     "internal/core/app_registry_compatibility_test.go": "e1e330a7d9a7d64fc4e75d4938a195a709118a7f555c08e84837a61872a788fb",

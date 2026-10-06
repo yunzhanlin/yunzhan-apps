@@ -979,7 +979,7 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.1.0",
+      "version": "2.1.1",
       "summary": "浏览器 PV/UV、会话旅程、来源、热图与性能；启停自动应用对应网站采集代理，备份、校验及失败回滚；需支持 2.1 的面板，HTML 标签仍需模板接入",
       "stage": "ready",
       "risk": "maintained",
@@ -998,8 +998,8 @@
         "保留期和容量上限",
         "站点隔离与报告导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.1.0/manifest.json",
-      "sha256": "d8aedd0160dffb9cf53e87ab86680de0a8a9c3b3b6d2b84bbf9f9b1472916246"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.1.1/manifest.json",
+      "sha256": "35c095521b6824710b80aa393df28e2634a21da384ae46b5d01a525d14f71323"
     },
     {
       "id": "website-statistics-v2",

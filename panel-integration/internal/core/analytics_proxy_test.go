@@ -3,8 +3,32 @@ package core
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 )
+
+func TestAnalyticsProxyBaselineAllowsOnlyGeneratedProofHashDrift(t *testing.T) {
+	id := strings.Repeat("a", 32)
+	oldHash, newHash := strings.Repeat("1", 64), strings.Repeat("2", 64)
+	current := "server {\n  location = /__panel_health_" + id + ` { default_type text/plain; access_log off; return 200 "panel:` + id + ":" + oldHash + `"; }` + "\n" + `  add_header X-Panel-Config "` + oldHash + `" always;` + "\n  location / { try_files $uri $uri/ =404; }\n}\n"
+	candidate := strings.ReplaceAll(current, oldHash, newHash)
+	if !sameManagedAnalyticsBaseline(current, candidate, id) {
+		t.Fatal("legacy managed proof hashes prevented automatic proxy installation")
+	}
+	for _, edited := range []string{
+		strings.Replace(current, "=404", "=403", 1),
+		strings.Replace(current, "return 200", "return 302", 1),
+		strings.Replace(current, "always;", ";", 1),
+		strings.Replace(current, "panel:"+id, "panel:"+strings.Repeat("b", 32), 1),
+		strings.Replace(current, oldHash, "not-a-generated-proof", 1),
+		strings.Replace(current, oldHash, strings.Repeat("z", 64), 1),
+		strings.Replace(current, "server {", "server {\n  add_header X-Custom preserved;", 1),
+	} {
+		if sameManagedAnalyticsBaseline(edited, candidate, id) {
+			t.Fatal("manual configuration edit ignored", edited)
+		}
+	}
+}
 
 func TestAnalyticsProxyLoopbackOnly(t *testing.T) {
 	for _, address := range []string{"127.0.0.1:19100", "127.0.0.1:19220", "[::1]:8888"} {
