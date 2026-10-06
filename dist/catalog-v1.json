@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-06T06:22:07Z",
+  "generated_at": "2026-10-06T07:52:39Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -158,8 +158,8 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "签名基线、真实篡改检测、备份恢复与无人触发的定时自动恢复通过",
+      "version": "1.3.0",
+      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -170,19 +170,23 @@
         "内容备份",
         "变更检测",
         "分钟级自动恢复",
+        "实时事件后恢复",
+        "策略修订保护",
+        "监控降级状态",
+        "365 天有界历史分页",
         "恢复前留存",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.2.0/manifest.json",
-      "sha256": "ba5f56246df47d57b04bb17f03394f6e580448ba08a350668a172f749511caec"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.3.0/manifest.json",
+      "sha256": "b38c93ff0414ce37c772455508a2688fc2e338b670250e2c648cd00c269b8d79"
     },
     {
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+      "version": "1.3.0",
+      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -193,18 +197,22 @@
         "变更检测",
         "权限变化",
         "排除规则",
+        "Linux inotify 实时监控",
+        "动态目录与溢出补查",
+        "监听状态与资源降级",
+        "365 天有界历史分页",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.2.0/manifest.json",
-      "sha256": "9867f04e77626883726d5153bc68c4df729e42bdcd536a193382f15b7e13df7d"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.3.0/manifest.json",
+      "sha256": "3c88a3d098fd9ff33199ecb2924d802226be36bfb491a06f3ce20bb1c43597da"
     },
     {
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "手动及持久化定时增量同步；支持暂停恢复、修订冲突检查、目标冲突保护和后台执行历史。",
+      "version": "1.3.0",
+      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -217,13 +225,15 @@
         "逐文件检查点",
         "隔离 PHP 网站部署",
         "定时同步计划",
+        "Linux 实时增量同步",
+        "动态目录与溢出补查",
+        "实时同步环拒绝",
+        "365 天有界历史分页",
         "暂停恢复",
-        "计划修订检查",
-        "专用操作流程",
-        "执行历史"
+        "计划修订检查"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.2.0/manifest.json",
-      "sha256": "442f5d9d53fe3ec43fcd8ed192b50a605e4fc3ff708be2391b96f1dfc375f4e4"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.3.0/manifest.json",
+      "sha256": "75447510e4cc32ee3b19b87cb9c0568b00584490397f77701204fbe563211460"
     },
     {
       "id": "load-balance",
@@ -270,10 +280,10 @@
     },
     {
       "id": "mobile",
-      "name": "aaPanel Mobile",
+      "name": "云栈移动端",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据",
+      "version": "1.3.0",
+      "summary": "Android 签名 APK、iOS SwiftUI 源码和未签名 arm64 设备构建；原生 TLS、精确来源验证与后台锁屏，复用真实面板业务页。iOS 安装仍需自己的开发者签名。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -281,14 +291,20 @@
       "manage_route": "app-modules",
       "capabilities": [
         "PWA",
+        "Android APK",
+        "iOS 源码与未签名设备构建",
+        "可信 HTTPS 与精确来源验证",
+        "后台锁屏与设备认证",
+        "本地会话清除",
+        "SHA-256 交付校验",
         "响应式界面",
         "现有 TOTP 登录",
         "不缓存 API 或凭据",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.2.0/manifest.json",
-      "sha256": "4b8739ded0767e70b04578c712067c8eee1c31d4e4e84303e482497b1039c893"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.3.0/manifest.json",
+      "sha256": "d99c73e9118c0f80294d3c5140ae51d7243a5d7e8fc8d55d2e5a722a571e5657"
     },
     {
       "id": "mongodb",
@@ -1092,8 +1108,8 @@
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+      "version": "1.3.0",
+      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -1104,11 +1120,15 @@
         "变更事件",
         "备份恢复",
         "网站级策略",
+        "Linux 实时文件事件",
+        "动态目录与溢出补查",
+        "策略修订保护",
+        "365 天有界历史分页",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.2.0/manifest.json",
-      "sha256": "7c8f7524f25dd1222249cbbecf5c8849f01bfbbe99c503d5f1867d0f6614398f"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.3.0/manifest.json",
+      "sha256": "ee67883221253161cce3add3d04525a07f0472142a3ca521df46f114019e0419"
     }
   ]
 }

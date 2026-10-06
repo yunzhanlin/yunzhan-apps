@@ -65,16 +65,31 @@ const definition = ref<Definition>(),
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
 const selectedPlanID = ref("");
+const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
+const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : form.value.resource_id);
+const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+const historyFilter = ref({search: "", from_time: "", to_time: "", site_id: "", resource_id: ""});
+const historyOffset = ref(0), historyLimit = ref(50);
+const scopedHistory = computed(() => !["daily-report", "user-manager", "platform-ops"].includes(definition.value?.id || ""));
 function sectionFields(section: Section) { return (definition.value?.fields || []).filter(field => section.fields?.includes(field.key)); }
-async function refreshHistory() {
+async function refreshHistory(reset = false) {
   if (!definition.value || busy.value) return;
+  if (reset) historyOffset.value = 0;
   busy.value = true; error.value = "";
-  try { history.value = await props.api<Record<string, any>>(`/app-modules/${definition.value.id}/history`); }
+  try {
+    const query = new URLSearchParams({limit: String(historyLimit.value), offset: String(historyOffset.value)});
+    for (const [key, value] of Object.entries(historyFilter.value)) {
+      if (!value || !scopedHistory.value && ["site_id", "resource_id"].includes(key)) continue;
+      query.set(key, key.endsWith("_time") ? new Date(value).toISOString() : value);
+    }
+    history.value = await props.api<Record<string, any>>(`/app-modules/${definition.value.id}/history?${query}`);
+  }
   catch (e) { error.value = (e as Error).message; }
   finally { busy.value = false; }
 }
-function tabChanged(name: string | number) { if (name === "history") void refreshHistory(); }
+function tabChanged(name: string | number) { if (name === "history") void refreshHistory(true); }
+function historyPage(delta: number) { historyOffset.value = Math.max(0, historyOffset.value + delta * historyLimit.value); void refreshHistory(); }
 const labels: Record<string, string> = {
   run: "刷新报告",
   baseline: "建立基线",
@@ -108,6 +123,7 @@ const labels: Record<string, string> = {
   policies: "查看监控策略",
   pause: "暂停所选监控",
   resume: "恢复所选监控",
+  "watch-mode": "保存实时监控设置",
   password: "修改 FTP 密码",
   archive: "读取历史日报目录",
   report: "读取所选日期报告",
@@ -134,6 +150,7 @@ async function show(id: string) {
   sites.value = [];
   selectedPlanID.value = "";
   workspace.value = []; history.value = undefined;
+  historyFilter.value = {search: "", from_time: "", to_time: "", site_id: "", resource_id: ""}; historyOffset.value = 0;
   activeTab.value = "manage"; localVersions.value = undefined;
   try {
     const page = await props.api<{
@@ -156,6 +173,7 @@ async function show(id: string) {
       role: "viewer",
       read_only: true,
       auto_restore: false,
+      realtime: false,
       nodes: [{ address: "127.0.0.1:21001", weight: 1, backup: false }],
       site_ids: [],
       excludes: [],
@@ -187,7 +205,7 @@ async function show(id: string) {
 }
 function selected(row: Record<string, any>) {
   const id = definition.value?.id;
-  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : "";
+  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -196,7 +214,7 @@ function selected(row: Record<string, any>) {
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = row[f.key];
   if (row.revision !== undefined) {
-    selectedPlanID.value = row.id;
+    selectedPlanID.value = integrityModule.value ? row.site_id : row.resource_id || row.id;
     form.value.expected_revision = row.revision;
   }
   if (row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || "")) form.value.expected_sha = row.after || "";
@@ -209,7 +227,7 @@ function inputBody(action: string) {
   const section = workspace.value.find(section => section.id === activeTab.value && section.actions.includes(action)) || workspace.value.find(section => section.actions.includes(action));
   for (const f of definition.value?.fields || []) {
     if (section && !section.fields?.includes(f.key)) continue;
-    const v = f.key === "expected_revision" && form.value.resource_id !== selectedPlanID.value ? 0 : form.value[f.key];
+    const v = f.key === "expected_revision" ? expectedRevision.value : form.value[f.key];
     if (v !== undefined && v !== null && v !== "")
       body[f.key] =
         f.kind === "datetime"
@@ -235,6 +253,10 @@ async function execute(action: string) {
     if ((result as any)?.plan?.revision !== undefined) {
       selectedPlanID.value = (result as any).plan.id;
       form.value.expected_revision = (result as any).plan.revision;
+    }
+    if (integrityModule.value && (result as any)?.revision !== undefined) {
+      selectedPlanID.value = (result as any).site_id;
+      form.value.expected_revision = (result as any).revision;
     }
     if (action === "remove-plan") {
       selectedPlanID.value = "";
@@ -269,7 +291,7 @@ async function execute(action: string) {
         await props.api(`/app-modules/${definition.value.id}/run`, "POST", {}),
       );
     if (
-      ["pause", "resume", "baseline"].includes(action) &&
+      ["pause", "resume", "baseline", "watch-mode"].includes(action) &&
       definition.value.actions.includes("policies")
     )
       setReport(
@@ -389,7 +411,7 @@ defineExpose({ show });
           >
             <el-input
               v-if="field.kind === 'identity'"
-              :model-value="field.key === 'expected_revision' && form.resource_id !== selectedPlanID ? 0 : form[field.key]"
+              :model-value="field.key === 'expected_revision' ? expectedRevision : form[field.key]"
               readonly
             />
             <el-select
@@ -552,7 +574,17 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane label="执行历史" name="history">
           <p>查看真实执行摘要；不保存输入密码、访问令牌或完整请求正文。</p>
-          <el-button :disabled="busy" @click="refreshHistory">刷新历史</el-button>
+          <el-form inline label-position="top">
+            <el-form-item label="关键词"><el-input v-model="historyFilter.search" maxlength="128" clearable /></el-form-item>
+            <el-form-item label="开始时间"><el-date-picker v-model="historyFilter.from_time" type="datetime" clearable /></el-form-item>
+            <el-form-item label="结束时间"><el-date-picker v-model="historyFilter.to_time" type="datetime" clearable /></el-form-item>
+            <el-form-item v-if="scopedHistory" label="网站"><el-select v-model="historyFilter.site_id" clearable filterable placeholder="所有网站"><el-option v-for="site in sites" :key="site.id" :value="site.id" :label="`${site.name} · ${site.domain}`" /></el-select></el-form-item>
+            <el-form-item v-if="scopedHistory" label="计划／资源标识"><el-input v-model="historyFilter.resource_id" maxlength="64" clearable /></el-form-item>
+          </el-form>
+          <el-button :disabled="busy" @click="refreshHistory(true)">查询历史</el-button>
+          <el-button :disabled="busy || historyOffset === 0" @click="historyPage(-1)">上一页</el-button>
+          <el-button :disabled="busy || !history || historyOffset + historyLimit >= Number(history.total || 0)" @click="historyPage(1)">下一页</el-button>
+          <span v-if="history">{{history.total}} 条匹配记录 · 第 {{Math.floor(historyOffset / historyLimit) + 1}} 页</span>
           <AppModuleReport v-if="history" :id="definition.id" :report="history" />
           <el-empty v-else description="暂无已加载的执行历史" />
         </el-tab-pane>

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "增量同步",
+    "SHA-256 校验",
+    "目标冲突保护",
+    "逐文件检查点",
+    "隔离 PHP 网站部署",
+    "定时同步计划",
+    "Linux 实时增量同步",
+    "动态目录与溢出补查",
+    "实时同步环拒绝",
+    "365 天有界历史分页",
+    "暂停恢复",
+    "计划修订检查"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/files-sync"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

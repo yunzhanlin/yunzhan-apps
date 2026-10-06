@@ -81,6 +81,9 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 	if err := moduleRead(path, &events); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.New("历史记录损坏，未覆盖旧记录")
 	}
+	if err := s.saveModuleLedger(id, events, &event); err != nil {
+		return err
+	}
 	events = append(events, event)
 	if len(events) > 100 {
 		events = events[len(events)-100:]
@@ -103,15 +106,7 @@ func (s *Service) moduleHistory(id string, in core.AppModuleInput) (any, error) 
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}
-	selected := []moduleEvent{}
-	for i := len(events) - 1; i >= 0; i-- {
-		event := events[i]
-		if in.SiteID != "" && event.SiteID != in.SiteID || in.ResourceID != "" && event.ResourceID != in.ResourceID {
-			continue
-		}
-		selected = append(selected, event)
-	}
-	return map[string]any{"history": selected, "history_limited": true, "scope": "保留最近 100 条 / 384 KiB 执行摘要；不保存密码、令牌或完整请求正文"}, nil
+	return s.readModuleLedger(id, in, events)
 }
 
 func boundedModulePaths(paths []string) []string {

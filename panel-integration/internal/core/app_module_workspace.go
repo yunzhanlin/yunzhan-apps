@@ -15,7 +15,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 		return AppModuleSection{id, label, help, fields, actions}
 	}
 	site := []string{"site_id"}
-	integrity := []string{"site_id", "excludes", "interval"}
+	integrity := []string{"site_id", "excludes", "interval", "realtime"}
 	switch id {
 	case "site-diagnosis":
 		return []AppModuleSection{section("diagnose", "网站健康诊断", "检查真实 DNS、站点 HTTP、TLS、Nginx 配置和文件状态；失败项会提供处置建议。", site, []string{"run"})}
@@ -24,7 +24,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "website-analytics", "website-statistics-v2":
 		return []AppModuleSection{section("statistics", "访问统计", "按网站、时间、路径、状态码和慢请求筛选实际访问日志。", []string{"site_id", "from_time", "to_time", "search", "status_code", "min_seconds", "only_bots"}, []string{"run"})}
 	case "files-sync":
-		return []AppModuleSection{section("sync", "手动同步", "先预览差异，再执行增量复制。不会删除目标文件；冲突保留并报告。", []string{"site_id", "target_site_id", "target_project_id", "excludes"}, []string{"preview", "sync"}), section("plans", "定时同步计划", "保存后由服务器后台执行，关闭浏览器不影响计划。选中计划后再暂停、恢复或移除。", []string{"resource_id", "site_id", "target_site_id", "excludes", "interval", "enabled", "expected_revision"}, []string{"run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan"})}
+		return []AppModuleSection{section("sync", "手动同步", "先预览差异，再执行增量复制。不会删除目标文件；冲突保留并报告。", []string{"site_id", "target_site_id", "target_project_id", "excludes"}, []string{"preview", "sync"}), section("plans", "实时与定时同步", "可开启 Linux 文件事件驱动增量复制，保留定时补查；初次启用会立即补同步。关闭浏览器不影响计划；暂停后不再自动写入，排除缓存与动态目录，不能形成同步环。", []string{"resource_id", "site_id", "target_site_id", "excludes", "interval", "realtime", "enabled", "expected_revision"}, []string{"run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan"})}
 	case "daily-report":
 		return []AppModuleSection{section("daily", "生成今日报告", "汇总资源、网站、任务、安全与证书到期情况；每日报告保存在面板数据库。", nil, []string{"run"}), section("archive", "历史日报", "选择历史日期读取已保存的报告，不会重新执行检查或覆盖旧日报。", []string{"resource_id"}, []string{"archive", "report"})}
 	case "enterprise-tamper-proof", "website-tamper-proof", "file-monitor":
@@ -32,7 +32,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 		if id == "enterprise-tamper-proof" {
 			fields = append(fields, "auto_restore")
 		}
-		sections := []AppModuleSection{section("policies", "监控策略", "查看后台策略；暂停保留基线、备份和历史，恢复后按原间隔继续检查。", site, []string{"policies", "pause", "resume"}), section("baseline", "基线与检查", "建立基线前确认目录可信。排除缓存和动态目录；扫描超限会明确标记不完整。", fields, []string{"baseline", "check"})}
+		sections := []AppModuleSection{section("policies", "监控策略", "查看实际监听状态；暂停立即停止后续自动检查与恢复，保留基线、备份和历史。", []string{"site_id", "expected_revision"}, []string{"policies", "pause", "resume"}), section("watch", "实时监控", "先选择策略，再切换实时模式和补查间隔。不重新建立基线；监听超限、失败或队列溢出会显示降级，定时补查仍保留。", []string{"site_id", "realtime", "interval", "expected_revision"}, []string{"watch-mode"}), section("baseline", "基线与检查", "建立基线前确认目录可信。排除缓存和动态目录；扫描超限会明确标记不完整。", fields, []string{"baseline", "check"})}
 		if id != "file-monitor" {
 			sections = append(sections, section("restore", "受控文件恢复", "从变更报告选择文件，校验当前摘要后恢复已备份内容。不会自动删除新增文件。", []string{"site_id", "path", "expected_sha"}, []string{"restore"}))
 		}
@@ -40,7 +40,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "load-balance":
 		return []AppModuleSection{section("entry", "入口与节点", "管理独立回环 HTTP 入口、权重、备用节点和 IP 粘滞；保存先校验 Nginx，失败恢复原配置。", []string{"domain", "port", "nodes", "sticky"}, []string{"save"}), section("health", "健康与移除", "健康检测读取实际节点响应；移除仅删除指定受管入口。", []string{"domain", "port", "nodes"}, []string{"probe", "remove"})}
 	case "mobile-pwa":
-		return []AppModuleSection{section("mobile", "移动访问与安装", "使用当前面板的响应式页面和 PWA。正式部署需要 HTTPS，不缓存管理接口或登录凭据。", nil, []string{"run"})}
+		return []AppModuleSection{section("mobile", "Android / iOS 客户端", "下载 Android APK、iOS 源码与未签名设备构建。原生地址校验、TLS 和后台锁屏保护会话；业务操作继续使用真实面板与原权限。正式包要求 HTTPS。", nil, []string{"run"})}
 	case "apache-waf":
 		return []AppModuleSection{section("apache", "防护与原生校验", "读取 Apache 防护规则和真实配置检查结果；规则覆盖恶意方法、扫描器、路径穿越和常见查询攻击。", nil, []string{"run"})}
 	case "php-code-security":

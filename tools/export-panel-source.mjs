@@ -19,7 +19,11 @@ const qaOnly=relative=>relative.startsWith('scripts/test')||['scripts/panel_clie
 // Explicit source allowlist: no release binaries, QA state, credentials or signing keys.
 const entries=['go.mod','go.sum','cmd','internal','dev','packaging','web/src','web/public','web/index.html','web/package.json','web/package-lock.json','web/tsconfig.json','web/tsconfig.node.json','web/vite.config.ts','scripts/env.sh','scripts/test-app-modules.py','scripts/test-app-native.py','scripts/test-app-compose-matrix.py','scripts/test-app-modules-extended.py','scripts/test-app-module-lifecycle.py','scripts/test-app-base-refresh.py','scripts/test-app-security-refresh.py','scripts/test-app-memcached-refresh.py','scripts/test-app-registry-compose.py','scripts/test-app-registry-phpmyadmin.py','scripts/test-app-store-50-browser.mjs','scripts/test-app-reboot.py','scripts/test-app-registry-fifty.py','scripts/cache-app-qa-images.mjs','scripts/test_app_registry_common.py','scripts/panel_client.py'];
 const hashes={};
+entries.push('mobile');
+entries.push('scripts/test-app-commercial-foundation.py');
+entries.push('scripts/test-app-commercial-updates.py');
 async function copy(relative){
+ if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);
  if(st.isSymbolicLink())throw Error('source symlink rejected: '+relative);
  if(st.isDirectory()){for(const name of (await readdir(input)).sort())await copy(path.join(relative,name));return;}

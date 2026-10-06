@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -21,14 +22,53 @@ func (s *Store) recordAppModuleEvent(id, action, actor string, operationError er
 	if _, err = tx.Exec(`INSERT INTO app_module_events(id,module_id,action,actor,outcome,created_at) VALUES(?,?,?,?,?,?)`, ID(), id, action, actor, outcome, Now()); err != nil {
 		return err
 	}
-	if _, err = tx.Exec(`DELETE FROM app_module_events WHERE module_id=? AND rowid NOT IN (SELECT rowid FROM app_module_events WHERE module_id=? ORDER BY rowid DESC LIMIT 100)`, id, id); err != nil {
+	if _, err = tx.Exec(`DELETE FROM app_module_events WHERE module_id=? AND created_at<?`, id, time.Now().AddDate(0, 0, -365).UTC().Format(time.RFC3339)); err != nil {
+		return err
+	}
+	if _, err = tx.Exec(`DELETE FROM app_module_events WHERE module_id=? AND rowid <= COALESCE((SELECT rowid FROM app_module_events WHERE module_id=? ORDER BY rowid DESC LIMIT 1 OFFSET 100000),-1)`, id, id); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
-func (s *Store) appModuleHistory(id string) (any, error) {
-	rows, err := s.DB.Query(`SELECT id,action,actor,outcome,created_at FROM app_module_events WHERE module_id=? ORDER BY rowid DESC LIMIT 100`, id)
+func (s *Store) appModuleHistory(id string, filters ...AppModuleInput) (any, error) {
+	in := AppModuleInput{}
+	if len(filters) > 0 {
+		in = filters[0]
+	}
+	if err := ValidateModuleHistoryInput(in); err != nil {
+		return nil, err
+	}
+	if in.SiteID != "" || in.ResourceID != "" {
+		return nil, errors.New("该模块的操作历史不包含网站或计划标识，请按时间与关键词筛选")
+	}
+	where, args := []string{"module_id=?"}, []any{id}
+	for _, filter := range []struct{ operator, value string }{{">=", in.FromTime}, {"<=", in.ToTime}} {
+		if filter.value != "" {
+			at, _ := time.Parse(time.RFC3339, filter.value)
+			where = append(where, "created_at"+filter.operator+"?")
+			args = append(args, at.UTC().Format(time.RFC3339))
+		}
+	}
+	if in.Search != "" {
+		where = append(where, `(action LIKE ? ESCAPE '\' OR actor LIKE ? ESCAPE '\')`)
+		literal := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(in.Search)
+		args = append(args, "%"+literal+"%", "%"+literal+"%")
+	}
+	clause := strings.Join(where, " AND ")
+	var total, retained int
+	if err := s.DB.QueryRow(`SELECT count(*) FROM app_module_events WHERE `+clause, args...).Scan(&total); err != nil {
+		return nil, err
+	}
+	if err := s.DB.QueryRow(`SELECT count(*) FROM app_module_events WHERE module_id=?`, id).Scan(&retained); err != nil {
+		return nil, err
+	}
+	limit := in.Limit
+	if limit == 0 {
+		limit = 100
+	}
+	queryArgs := append(append([]any{}, args...), limit, in.Offset)
+	rows, err := s.DB.Query(`SELECT id,action,actor,outcome,created_at FROM app_module_events WHERE `+clause+` ORDER BY rowid DESC LIMIT ? OFFSET ?`, queryArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +81,7 @@ func (s *Store) appModuleHistory(id string) (any, error) {
 		}
 		events = append(events, map[string]any{"id": eventID, "action": action, "actor": actor, "outcome": outcome, "time": at, "trigger": "manual"})
 	}
-	return map[string]any{"history": events, "history_limited": true, "scope": "最近 100 条执行摘要，不保存密码、令牌、正文或命令错误内容"}, rows.Err()
+	return map[string]any{"history": events, "total": total, "retained_count": retained, "limit": limit, "offset": in.Offset, "retention_days": 365, "record_limit": 100000, "history_limited": total > len(events), "scope": "保留最近 365 天、最多 100000 条操作摘要，支持时间与关键词筛选分页；不保存密码、令牌、正文或命令错误内容"}, rows.Err()
 }
 
 func (a *Server) dailyReportOperation(ctx context.Context, action string, in AppModuleInput) (any, error) {

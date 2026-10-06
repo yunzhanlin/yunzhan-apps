@@ -109,6 +109,13 @@ const names: Record<string, string> = {
   history: "执行历史",
   plan_errors: "计划记录错误",
   revision: "配置版本",
+  realtime: "实时模式",
+  watcher_state: "内核监听状态",
+  watch_directories: "监听目录数",
+  watch_overflows: "事件溢出次数",
+  watch_error: "监听降级原因",
+  last_trigger: "最近触发方式",
+  last_check_at: "最近检查（UTC）",
   interval: "间隔（秒）",
   last_state: "最近执行状态",
   last_error: "最近错误",
@@ -122,6 +129,12 @@ const names: Record<string, string> = {
   changes_count: "变更数",
   restored_count: "恢复数",
   history_limited: "有界历史记录",
+  total: "匹配记录数",
+  retained_count: "已保留记录数",
+  retention_days: "保留天数",
+  record_limit: "记录安全上限",
+  limit: "每页条数",
+  offset: "分页起点",
   signature_verified: "签名通过",
   failure_count: "连续失败次数",
   target_site_id: "目标网站 ID",
@@ -193,7 +206,7 @@ const metrics = computed(() =>
 );
 const groups = computed(() =>
   Object.entries(props.report).filter(
-    ([key, value]) => Array.isArray(value) && key !== "site_ids",
+    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads"].includes(key),
   ),
 );
 const distributions = computed(() =>
@@ -218,6 +231,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
+  if (key === "watcher_state") return ({ active: "运行中", pending: "准备中", disabled: "未启用", stopped: "已停止", degraded: "已降级（保留补查）", unavailable: "不可用（保留补查）" } as Record<string, string>)[String(value)] || String(value || "—");
   if (typeof value === "boolean") return value ? "是" : "否";
   if (typeof value === "number") {
     if (/bytes|memory|rate/.test(key)) {
@@ -250,6 +264,10 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+  if (props.id === "files-sync" && values.some(value => value && typeof value === "object" && "watcher_state" in value))
+    return ["id", "site_id", "target_site_id", "enabled", "realtime", "watcher_state", "watch_directories", "watch_overflows", "watch_error", "revision", "interval", "last_trigger", "last_state", "copied_count", "conflicts_count", "last_error", "excludes"];
+  if (values.some(value => value && typeof value === "object" && "watcher_state" in value))
+    return ["site_id", "enabled", "realtime", "watcher_state", "watch_directories", "watch_overflows", "watch_error", "revision", "interval", "last_check_at", "last_trigger", "last_state", "last_error", "auto_restore", "signature_verified", "files", "excludes"];
   return [...new Set(rows(values).flatMap((v) => Object.keys(v)))]
     .filter(
       (k) =>
@@ -291,6 +309,12 @@ function directory(name: string) {
   const base = props.report.path;
   emit("select", { path: [base, name].filter(Boolean).join("/"), drill: true });
 }
+function mobileDownloadURL(value: unknown): string | undefined {
+  if (typeof value !== "string") return;
+  const prefix = "https://github.com/yunzhanlin/yunzhan-apps/releases/download/v0.1.0-dev.proapps11/";
+  const allowed = ["yunzhan-mobile-1.3.0-android.apk", "yunzhan-mobile-1.3.0-ios-unsigned.tar.gz", "yunzhan-mobile-1.3.0-source.tar.gz"];
+  return allowed.some(name => value === prefix + name) ? value : undefined;
+}
 </script>
 <template>
   <div class="functional-report">
@@ -307,6 +331,14 @@ function directory(name: string) {
       :closable="false"
     />
     <p v-if="report.scope" class="report-scope">{{ report.scope }}</p>
+    <section v-if="id === 'mobile-pwa' && Array.isArray(report.mobile_downloads)" class="mobile-downloads">
+      <article v-for="item in report.mobile_downloads" :key="item.filename" class="diagnosis-check">
+        <h4>{{ item.name }} <el-tag>{{ item.platform }}</el-tag></h4>
+        <p>{{ item.state }}</p>
+        <p><code>SHA-256: {{ item.sha256 }}</code></p>
+        <a v-if="mobileDownloadURL(item.url)" :href="mobileDownloadURL(item.url)" target="_blank" rel="noopener noreferrer" class="el-button el-button--primary">下载交付包</a>
+      </article>
+    </section>
     <div v-if="metrics.length" class="report-metrics">
       <div v-for="[key, value] in metrics" :key="key">
         <span>{{ names[key] || key }}</span

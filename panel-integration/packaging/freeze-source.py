@@ -10,8 +10,9 @@ import shutil
 import stat
 
 
-DIRECTORIES = ("cmd", "internal", "dev", "packaging", "scripts", "web/src", "web/public", "web/node_modules")
+DIRECTORIES = ("cmd", "internal", "dev", "packaging", "scripts", "web/src", "web/public", "web/node_modules", "mobile")
 GENERATED_DIRECTORIES = {"__pycache__", ".vite", ".vite-temp", ".cache"}
+MOBILE_GENERATED = {"build", ".gradle", ".build", ".swiftpm", "xcuserdata"}
 
 
 def input_paths(root):
@@ -21,7 +22,7 @@ def input_paths(root):
         base = root / name
         if not base.is_dir() or base.is_symlink():
             raise ValueError(f"missing or linked input directory: {name}")
-        paths.extend(p for p in base.rglob("*") if (p.is_file() or p.is_symlink()) and not GENERATED_DIRECTORIES.intersection(p.parts) and p.name != ".DS_Store")
+        paths.extend(p for p in base.rglob("*") if (p.is_file() or p.is_symlink()) and not GENERATED_DIRECTORIES.intersection(p.parts) and p.name != ".DS_Store" and not (name == "mobile" and (MOBILE_GENERATED.intersection(p.relative_to(base).parts) or p.name == "local.properties")))
     return sorted(set(paths))
 
 

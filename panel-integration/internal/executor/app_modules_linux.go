@@ -279,7 +279,12 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		out, err := s.moduleHistory(id, core.AppModuleInput{})
+		filter, err := core.ParseModuleHistoryQuery(r.URL.Query())
+		if err != nil {
+			respond(w, 400, map[string]string{"error": err.Error()})
+			return
+		}
+		out, err := s.moduleHistory(id, filter)
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
@@ -336,7 +341,7 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	}
 	switch id {
 	case "website-tamper-proof", "enterprise-tamper-proof", "file-monitor":
-		if action == "policies" || action == "pause" || action == "resume" {
+		if action == "policies" || action == "pause" || action == "resume" || action == "watch-mode" {
 			return s.moduleIntegrityControl(id, action, in)
 		}
 		return s.moduleIntegrity(ctx, id, action, in)
@@ -368,7 +373,7 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "apache-waf":
 		return s.apacheWAFReport(ctx)
 	case "mobile-pwa":
-		return map[string]any{"manifest": "/manifest.webmanifest", "installable": true, "session_model": "HTTPS + HttpOnly + SameSite + CSRF + TOTP"}, nil
+		return core.NativeMobileDelivery(), nil
 	case "user-manager", "platform-ops", "daily-report":
 		return map[string]any{"handler": "panel-api", "ready": true}, nil
 	}
@@ -568,7 +573,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 			if e != nil {
 				return nil, e
 			}
-			if e = s.resetIntegrityControl(id, site, in.Interval); e != nil {
+			if e = s.resetIntegrityControl(id, site, in.Interval, in.Realtime); e != nil {
 				return nil, e
 			}
 			if e = moduleWrite(path, base); e != nil {
@@ -578,7 +583,9 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 				return nil, e
 			}
 			delete(s.moduleAutoBlocked, id+"/"+site)
-			results = append(results, map[string]any{"site_id": site, "files": len(files), "signature": base.Signature, "auto_restore": base.AutoRestore})
+			s.wakeIntegrityWatcher()
+			policy, _ := s.readIntegrityPolicy(id, site)
+			results = append(results, map[string]any{"site_id": site, "files": len(files), "signature": base.Signature, "auto_restore": base.AutoRestore, "realtime": policy.Realtime, "revision": policy.Revision})
 			continue
 		}
 		var base moduleBaseline
@@ -1258,6 +1265,15 @@ func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppMod
 
 // The worker resumes from private persisted policies after executor restarts.
 func (s *Service) StartAppModuleWorker() {
+	s.mu.Lock()
+	if s.moduleWorkerStarted {
+		s.mu.Unlock()
+		return
+	}
+	s.moduleWorkerStarted = true
+	s.moduleWatchWake = make(chan struct{}, 1)
+	s.mu.Unlock()
+	go s.runIntegrityWatcher(context.Background())
 	go func() {
 		s.mu.Lock()
 		s.recoverSyncPlans()

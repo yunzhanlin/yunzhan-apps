@@ -36,6 +36,17 @@ type Service struct {
 	phpWorkerQueueStarted bool
 	phpWorkerQueueWake    chan struct{}
 	moduleAutoBlocked     map[string]bool // Guarded by mu; stop automatic writes after persistence failure.
+	moduleWorkerStarted   bool
+	moduleWatchWake       chan struct{}
+	moduleWatchStatus     map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
+}
+
+type moduleRealtimeStatus struct {
+	State       string `json:"state"`
+	Directories int    `json:"directories"`
+	Overflows   uint64 `json:"overflows"`
+	Error       string `json:"error,omitempty"`
+	UpdatedAt   string `json:"updated_at"`
 }
 
 func New(c Config) *Service {

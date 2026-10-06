@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,8 @@ type moduleSyncPlan struct {
 	Excludes       []string `json:"excludes"`
 	Interval       int      `json:"interval"`
 	Enabled        bool     `json:"enabled"`
+	Realtime       bool     `json:"realtime"`
+	LastTrigger    string   `json:"last_trigger,omitempty"`
 	Revision       int64    `json:"revision"`
 	NextRunAt      string   `json:"next_run_at,omitempty"`
 	LastState      string   `json:"last_state"`
@@ -32,6 +35,10 @@ type moduleSyncPlan struct {
 	FailureCount   int      `json:"failure_count"`
 	Copied         int      `json:"copied_count"`
 	Conflicts      int      `json:"conflicts_count"`
+	WatcherState   string   `json:"watcher_state,omitempty"`
+	WatchDirs      int      `json:"watch_directories,omitempty"`
+	WatchOverflows uint64   `json:"watch_overflows,omitempty"`
+	WatchError     string   `json:"watch_error,omitempty"`
 }
 
 func (s *Service) syncPlanPath(id string) string {
@@ -83,6 +90,13 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 	if action == "run" {
 		plans, failures := s.readSyncPlans()
 		for i := range plans {
+			status := s.moduleWatchStatus["files-sync/"+plans[i].ID]
+			if !plans[i].Enabled || !plans[i].Realtime {
+				status.State = "disabled"
+			} else if status.State == "" {
+				status.State = "pending"
+			}
+			plans[i].WatcherState, plans[i].WatchDirs, plans[i].WatchOverflows, plans[i].WatchError = status.State, status.Directories, status.Overflows, status.Error
 			if s.moduleAutoBlocked["files-sync/"+plans[i].ID] {
 				plans[i].Enabled = false
 				plans[i].LastState = "paused-error"
@@ -124,7 +138,7 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 		if in.TargetProjectID != "" {
 			return nil, errors.New("自动计划当前仅支持本机受管网站；隔离项目使用手动同步")
 		}
-		candidate := moduleSyncPlan{ID: in.ResourceID, SiteID: in.SiteID, TargetSiteID: in.TargetSiteID, Excludes: in.Excludes, Interval: in.Interval, Enabled: in.Enabled, Revision: plan.Revision + 1, LastState: "pending"}
+		candidate := moduleSyncPlan{ID: in.ResourceID, SiteID: in.SiteID, TargetSiteID: in.TargetSiteID, Excludes: in.Excludes, Interval: in.Interval, Enabled: in.Enabled, Realtime: in.Realtime, Revision: plan.Revision + 1, LastState: "pending"}
 		if !candidate.Enabled {
 			candidate.LastState = "paused"
 		}
@@ -132,6 +146,9 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 			candidate.NextRunAt = now.Add(time.Duration(candidate.Interval) * time.Second).Format(time.RFC3339)
 		}
 		if err = validateSyncPlan(candidate); err != nil {
+			return nil, err
+		}
+		if err = s.rejectRealtimeSyncCycle(candidate); err != nil {
 			return nil, err
 		}
 		paths, _ := filepath.Glob(filepath.Join(s.moduleDir("files-sync"), "plans", "*.json"))
@@ -156,6 +173,9 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 		plan.LastState = "paused"
 		plan.NextRunAt = ""
 		if plan.Enabled {
+			if err = s.rejectRealtimeSyncCycle(plan); err != nil {
+				return nil, err
+			}
 			plan.LastState = "pending"
 			plan.FailureCount = 0
 			plan.LastError = ""
@@ -168,6 +188,7 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 		if err = os.Remove(path); err != nil {
 			return nil, err
 		}
+		s.wakeIntegrityWatcher()
 		return map[string]any{"removed": in.ResourceID, "scope": "仅移除计划；网站文件和增量检查点保留"}, nil
 	default:
 		return nil, errors.New("同步计划动作无效")
@@ -176,13 +197,51 @@ func (s *Service) moduleSyncPlans(ctx context.Context, action string, in core.Ap
 		return nil, err
 	}
 	delete(s.moduleAutoBlocked, "files-sync/"+plan.ID)
+	s.wakeIntegrityWatcher()
 	return map[string]any{"plan": plan}, nil
 }
+
+func (s *Service) rejectRealtimeSyncCycle(candidate moduleSyncPlan) error {
+	if !candidate.Enabled {
+		return nil
+	}
+	plans, _ := s.readSyncPlans()
+	graph := map[string][]moduleSyncPlan{}
+	for _, plan := range plans {
+		if plan.Enabled && plan.ID != candidate.ID {
+			graph[plan.SiteID] = append(graph[plan.SiteID], plan)
+		}
+	}
+	type node struct {
+		site     string
+		realtime bool
+	}
+	queue := []node{{candidate.TargetSiteID, candidate.Realtime}}
+	visited := map[node]bool{}
+	for len(queue) > 0 {
+		value := queue[0]
+		queue = queue[1:]
+		if visited[value] {
+			continue
+		}
+		visited[value] = true
+		if value.site == candidate.SiteID && value.realtime {
+			return errors.New("实时同步计划不能形成同步环；请改用单向来源，避免事件反馈循环")
+		}
+		for _, edge := range graph[value.site] {
+			queue = append(queue, node{edge.TargetSiteID, value.realtime || edge.Realtime})
+		}
+	}
+	return nil
+}
+
 func (s *Service) executeSyncPlan(ctx context.Context, plan *moduleSyncPlan, trigger string, now time.Time) (any, error) {
 	if plan.LastState == "running" {
 		return nil, errors.New("同步计划仍在执行，不能重叠运行")
 	}
 	plan.LastState = "running"
+	plan.LastTrigger = trigger
+	oldNext := plan.NextRunAt
 	plan.LastStartedAt = now.Format(time.RFC3339)
 	plan.LastError = ""
 	if err := moduleWrite(s.syncPlanPath(plan.ID), plan); err != nil {
@@ -224,8 +283,14 @@ func (s *Service) executeSyncPlan(ctx context.Context, plan *moduleSyncPlan, tri
 	plan.NextRunAt = ""
 	if plan.Enabled {
 		plan.NextRunAt = time.Now().UTC().Add(time.Duration(delay) * time.Second).Format(time.RFC3339)
+		if strings.HasPrefix(trigger, "inotify") && runErr == nil {
+			plan.NextRunAt = oldNext
+		}
 	}
-	historyErr := s.appendModuleEvent("files-sync", "run-plan", trigger, input, result, runErr)
+	var historyErr error
+	if !strings.HasPrefix(trigger, "inotify") || trigger == "inotify-overflow" || plan.Copied != 0 || plan.Conflicts != 0 || runErr != nil {
+		historyErr = s.appendModuleEvent("files-sync", "run-plan", trigger, input, result, runErr)
+	}
 	if historyErr != nil {
 		plan.LastError = "业务可能已执行，但执行历史保存失败：" + historyErr.Error()
 		plan.LastState = "paused-error"

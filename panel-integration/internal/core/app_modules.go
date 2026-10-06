@@ -46,6 +46,7 @@ type AppModuleInput struct {
 	ReadOnly         bool          `json:"read_only,omitempty"`
 	Interval         int           `json:"interval,omitempty"`
 	AutoRestore      bool          `json:"auto_restore,omitempty"`
+	Realtime         bool          `json:"realtime"`
 	Confirm          string        `json:"confirm,omitempty"`
 	DryRun           bool          `json:"dry_run,omitempty"`
 	FromTime         string        `json:"from_time,omitempty"`
@@ -59,6 +60,8 @@ type AppModuleInput struct {
 	MemoryMB         int           `json:"memory_mb,omitempty"`
 	Enabled          bool          `json:"enabled"`
 	ExpectedRevision int64         `json:"expected_revision,omitempty"`
+	Limit            int           `json:"limit,omitempty"`
+	Offset           int           `json:"offset,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -95,10 +98,10 @@ func AppModules() []AppModuleDefinition {
 		switch definitions[i].ID {
 		case "files-sync":
 			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
-			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"resource_id", "同步计划标识（小写字母数字）", "text"}, AppModuleField{"interval", "同步间隔（秒，60–86400）", "number"}, AppModuleField{"enabled", "启用同步计划", "boolean"}, AppModuleField{"expected_revision", "计划配置版本（选中计划自动填写）", "identity"})
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"resource_id", "同步计划标识（小写字母数字）", "text"}, AppModuleField{"interval", "同步补查间隔（秒，60–86400）", "number"}, AppModuleField{"realtime", "启用 Linux 实时增量同步", "boolean"}, AppModuleField{"enabled", "启用同步计划", "boolean"}, AppModuleField{"expected_revision", "计划配置版本（选中计划自动填写）", "identity"})
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof":
-			definitions[i].Actions = append(definitions[i].Actions, "policies", "pause", "resume", "history")
-			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"interval", "后台检查间隔（秒，60–86400）", "number"})
+			definitions[i].Actions = append(definitions[i].Actions, "policies", "pause", "resume", "watch-mode", "history")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"interval", "后台补查间隔（秒，60–86400）", "number"}, AppModuleField{"realtime", "启用 Linux 实时文件事件", "boolean"}, AppModuleField{"expected_revision", "策略修订号（选择策略自动填写）", "identity"})
 			if definitions[i].ID != "file-monitor" {
 				definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"expected_sha", "所选变更的当前摘要（自动填写）", "identity"})
 			}
@@ -175,10 +178,15 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		}
 		var out any
 		var err error
+		filter, err := ParseModuleHistoryQuery(r.URL.Query())
+		if err != nil {
+			fail(w, 400, err.Error())
+			return
+		}
 		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
-			out, err = a.Store.appModuleHistory(id)
+			out, err = a.Store.appModuleHistory(id, filter)
 		} else {
-			err = a.Executor.Call(r.Context(), "GET", "/v1/app-modules/"+id+"/history", nil, &out)
+			err = a.Executor.Call(r.Context(), "GET", "/v1/app-modules/"+id+"/history?"+r.URL.Query().Encode(), nil, &out)
 		}
 		if err != nil {
 			fail(w, 409, err.Error())
@@ -236,6 +244,8 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	for _, d := range AppModules() {
 		version := "1.2.0"
 		switch d.ID {
+		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "mobile-pwa":
+			version = "1.3.0"
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":
