@@ -245,8 +245,10 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	for _, d := range AppModules() {
 		version := "1.2.0"
 		switch d.ID {
-		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "mobile-pwa", "user-manager":
+		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "mobile-pwa":
 			version = "1.3.0"
+		case "user-manager":
+			version = "1.3.1"
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":

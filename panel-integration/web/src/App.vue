@@ -2681,6 +2681,7 @@ onUnmounted(() => {
           :sites="sites"
           :csrf="csrf"
           :initialSiteID="fileSiteID"
+          :access="accessPlan"
         />
         <DatabaseManager
           v-if="view === 'databases'"

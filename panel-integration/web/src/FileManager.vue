@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
 import { apiURL } from "./panelBase";
+import { canReadPath, type AccessPlan } from "./menuPermissions";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -59,7 +60,11 @@ const props = defineProps<{
   sites: Site[];
   csrf: string;
   initialSiteID: string;
+  access?: AccessPlan | null;
 }>();
+const canReadSystem = computed(() => props.access === undefined || props.access?.role === "admin" && props.access.menu_ids.includes("files"));
+const canWriteSite = computed(() => props.access === undefined || !!props.access && props.access.role !== "viewer" && props.access.menu_ids.includes("files"));
+const canReadDisk = computed(() => props.access === undefined || canReadPath(props.access, "/overview"));
 const available = computed(() =>
   props.sites.filter(
     (s) => !["provisioning", "needs_attention"].includes(s.status),
@@ -76,7 +81,7 @@ const initialSite = available.value.find((site) => site.id === props.initialSite
   || available.value.find((site) => site.id === recentSiteID())
   || available.value[0];
 const siteID = ref(initialSite?.id || "");
-const systemMode = ref(!initialSite);
+const systemMode = ref<boolean>(canReadSystem.value && !initialSite);
 const systemDirectory = ref("/");
 const treeRoot = ref<Entry[]>([]);
 const treeChildren = ref<Record<string, Entry[]>>({});
@@ -274,6 +279,7 @@ function diskSize(n: number) {
   return n >= 1073741824 ? (n / 1073741824).toFixed(1) + " GB" : (n / 1048576).toFixed(1) + " MB";
 }
 async function loadDisk() {
+  if (!canReadDisk.value) { diskReady.value = false; diskError.value = "当前账户未授权磁盘概览"; return; }
   diskLoading.value = true;
   try {
     const data = await props.api<{ disk_used: number; disk_total: number; disk_available?: number }>("/overview");
@@ -333,6 +339,7 @@ async function load() {
 }
 void load();
 async function loadTree(path: string) {
+  if (!canReadSystem.value) return;
   try {
     const result = await props.api<Listing>("/filesystem?" + new URLSearchParams({ path, limit: "100" }));
     if (path === "/") treeRoot.value = result.entries;
@@ -364,6 +371,7 @@ function navigateSystem(path: string) {
       return;
     }
   }
+  if (!canReadSystem.value) { ElMessage.info("当前账户仅可浏览已授权网站的 public 目录"); return; }
   systemMode.value = true;
   systemDirectory.value = path;
   search.value = "";
@@ -408,6 +416,7 @@ function searchFor(term: string) {
 }
 defineExpose({ searchFor });
 async function open(kind: string, entry?: Entry) {
+  if (!canWriteSite.value && kind !== "save") { ElMessage.info("当前账户仅可查看文件"); return; }
   operation.value = kind;
   source.value = entry?.path || "";
   content.value = "";
@@ -455,6 +464,7 @@ async function closeDialog(done: () => void) {
   done();
 }
 async function submit() {
+  if (!canWriteSite.value) { formError.value = "当前账户仅可查看文件"; return; }
   if (busy.value) return;
   formError.value = "";
   if (editing.value && textBytes.value > 32768) {
@@ -801,7 +811,7 @@ onBeforeUnmount(() => {
   <div class="file-management-layout">
     <aside class="panel-card file-tree-panel">
       <div class="file-side-title">目录结构</div>
-      <button class="file-tree-root" :class="{ active: systemMode && systemDirectory === '/' }" @click="navigateSystem('/')">
+      <button v-if="canReadSystem" class="file-tree-root" :class="{ active: systemMode && systemDirectory === '/' }" @click="navigateSystem('/')">
         <el-icon><Folder /></el-icon><strong>/</strong>
       </button>
       <div class="file-system-tree">
@@ -836,13 +846,13 @@ onBeforeUnmount(() => {
       </button>
     </aside>
     <section class="panel-card file-manager">
-      <el-empty v-if="!selected && !systemMode" description="先创建网站，再管理它的文件。" />
+      <el-empty v-if="!selected && !systemMode" description="当前账户暂无已授权的可管理网站。" />
       <template v-else>
         <div class="file-path">
           <div class="file-path-controls">
             <button type="button" aria-label="后退目录" title="后退" :disabled="busy || historyIndex === 0" @click="moveHistory(-1)">‹</button>
             <button type="button" aria-label="前进目录" title="前进" :disabled="busy || historyIndex >= history.length - 1" @click="moveHistory(1)">›</button>
-            <button type="button" aria-label="上级目录" title="上级目录" :disabled="busy || (systemMode && systemDirectory === '/')" @click="goParent">↑</button>
+            <button type="button" aria-label="上级目录" title="上级目录" :disabled="busy || (systemMode && systemDirectory === '/') || (!canReadSystem && !directory)" @click="goParent">↑</button>
             <form @submit.prevent="jumpPath"><input v-model="pathDraft" aria-label="文件路径" title="输入服务器绝对路径后回车" spellcheck="false" :disabled="busy" /></form>
             <button type="button" aria-label="复制文件路径" title="复制文件路径" @click="copyPath">⧉</button>
           </div>
@@ -858,17 +868,17 @@ onBeforeUnmount(() => {
             <el-button
               type="primary"
               :icon="Upload"
-              :disabled="busy || systemMode"
+              :disabled="busy || systemMode || !canWriteSite"
               title="服务器目录只读；选择托管网站后可上传"
               @click="uploadInput?.click()"
               >上传文件</el-button
-            ><el-button :icon="Plus" :disabled="busy || systemMode" @click="open('create')">新建文件</el-button>
-            <el-button :icon="Folder" :disabled="busy || systemMode" @click="open('mkdir')">新建文件夹</el-button>
-            <el-button :disabled="busy || systemMode || !singleSelected || !['file', 'directory'].includes(singleSelected.kind)" @click="operateSelected('compress')">压缩</el-button>
-            <el-button :disabled="busy || systemMode || !singleSelected || singleSelected.kind !== 'file' || !singleSelected.name.toLowerCase().endsWith('.zip')" @click="operateSelected('extract')">解压</el-button>
-            <el-button :disabled="busy || systemMode || !singleSelected || !['file', 'directory'].includes(singleSelected.kind)" @click="operateSelected('chmod')">权限</el-button>
-            <el-button :icon="Delete" :disabled="busy || systemMode || !singleSelected" @click="operateSelected('trash')">删除</el-button>
-            <span v-if="systemMode" class="file-readonly-label">只读</span>
+            ><el-button :icon="Plus" :disabled="busy || systemMode || !canWriteSite" @click="open('create')">新建文件</el-button>
+            <el-button :icon="Folder" :disabled="busy || systemMode || !canWriteSite" @click="open('mkdir')">新建文件夹</el-button>
+            <el-button :disabled="busy || systemMode || !canWriteSite || !singleSelected || !['file', 'directory'].includes(singleSelected.kind)" @click="operateSelected('compress')">压缩</el-button>
+            <el-button :disabled="busy || systemMode || !canWriteSite || !singleSelected || singleSelected.kind !== 'file' || !singleSelected.name.toLowerCase().endsWith('.zip')" @click="operateSelected('extract')">解压</el-button>
+            <el-button :disabled="busy || systemMode || !canWriteSite || !singleSelected || !['file', 'directory'].includes(singleSelected.kind)" @click="operateSelected('chmod')">权限</el-button>
+            <el-button :icon="Delete" :disabled="busy || systemMode || !canWriteSite || !singleSelected" @click="operateSelected('trash')">删除</el-button>
+            <span v-if="systemMode || !canWriteSite" class="file-readonly-label">只读</span>
           </div>
           <form class="file-search" @submit.prevent="find">
             <el-input
@@ -976,7 +986,7 @@ onBeforeUnmount(() => {
                 type="primary"
                 :disabled="busy"
                 @click="canPreviewImage(entry) ? previewImage(entry) : open('save', entry)"
-                >{{ canPreviewImage(entry) ? '预览' : '编辑' }}</el-button
+                >{{ canPreviewImage(entry) ? '预览' : canWriteSite ? '编辑' : '查看' }}</el-button
               ><a
                 v-if="entry.kind === 'file' && !systemMode"
                 :href="
@@ -988,7 +998,7 @@ onBeforeUnmount(() => {
                 download
                 >下载</a
               ><el-dropdown
-                v-if="!systemMode"
+                v-if="!systemMode && canWriteSite"
                 :disabled="busy"
                 trigger="click"
                 @command="(kind: string) => command(kind, entry)"
@@ -1074,11 +1084,11 @@ onBeforeUnmount(() => {
           </dd>
         </dl>
       </section>
-      <section class="panel-card file-info-card file-storage-card">
+      <section v-if="canReadDisk" class="panel-card file-info-card file-storage-card">
         <div class="file-side-title">存储使用<button type="button" @click="showDiskDetails">查看详情 ›</button></div>
         <div class="file-storage-summary"><div class="file-storage-donut" :style="{ background: diskReady ? `conic-gradient(#08ad5b ${diskPercent}%, #e4eaf0 0)` : '#e4eaf0' }"><div><strong>{{ diskReady ? `${diskPercent}%` : '—' }}</strong><small>已使用</small></div></div><div><strong>{{ diskReady ? diskSize(diskUsed) : '—' }}</strong><span>/ {{ diskReady ? diskSize(diskTotal) : '—' }}</span><small>{{ diskReady ? '面板数据分区' : '读数暂不可用' }}</small></div></div>
       </section>
-      <section class="panel-card file-quick-actions">
+      <section v-if="canWriteSite" class="panel-card file-quick-actions">
         <div class="file-side-title">快捷操作</div>
         <button :disabled="systemMode" @click="open('create')">
           <el-icon><Document /></el-icon>新建文件
@@ -1089,7 +1099,7 @@ onBeforeUnmount(() => {
         <button :disabled="systemMode" @click="uploadInput?.click()">
           <el-icon><Upload /></el-icon>上传文件
         </button>
-        <button :disabled="systemMode" @click="showSFTP">
+        <button v-if="canReadSystem" :disabled="systemMode" @click="showSFTP">
           <el-icon><Connection /></el-icon>SFTP 账户
         </button>
       </section>
@@ -1108,7 +1118,7 @@ onBeforeUnmount(() => {
   </el-dialog>
   <el-dialog
     v-model="dialog"
-    :title="dialogTitles[operation]"
+    :title="operation === 'save' && !canWriteSite ? '查看文本（只读）' : dialogTitles[operation]"
     :width="editing ? 'min(920px, 94vw)' : 'min(540px, 94vw)'"
     :close-on-click-modal="false"
     :before-close="closeDialog"
@@ -1155,6 +1165,7 @@ onBeforeUnmount(() => {
           :rows="18"
           resize="vertical"
           aria-label="文件文本内容"
+          :readonly="!canWriteSite"
           :disabled="busy"
           spellcheck="false"
           class="file-editor"
@@ -1197,6 +1208,7 @@ onBeforeUnmount(() => {
       ><el-button
         type="primary"
         :loading="busy"
+        v-if="canWriteSite"
         :disabled="editing && textBytes > 32768"
         @click="submit"
         >{{ operation === "save" ? "保存文件" : "确认操作" }}</el-button
@@ -1238,9 +1250,9 @@ onBeforeUnmount(() => {
           </p>
         </div>
         <div>
-          <el-button link type="primary" :disabled="busy" @click="restore(item)"
+          <el-button v-if="canWriteSite" link type="primary" :disabled="busy" @click="restore(item)"
             >恢复</el-button
-          ><el-button link type="danger" :disabled="busy" @click="purge(item)"
+          ><el-button v-if="canWriteSite" link type="danger" :disabled="busy" @click="purge(item)"
             >永久删除</el-button
           >
         </div>

@@ -78,7 +78,7 @@ EOF
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"
 COPYFILE_DISABLE=1 tar --no-xattrs -C "$STAGE" -czf "$STAGE/$NAME.tar.gz" "$NAME"
 # Exclusive hard links publish on this filesystem without ever overwriting a release.
-printf '%s  %s\n' "$(shasum -a 256 "$STAGE/$NAME.tar.gz" | cut -d ' ' -f 1)" "$OUT/$NAME.tar.gz" > "$STAGE/archive.sha256"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/$NAME.tar.gz" | cut -d ' ' -f 1)" "$NAME.tar.gz" > "$STAGE/archive.sha256"
 ln "$STAGE/$NAME.tar.gz" "$OUT/$NAME.tar.gz"
 ln "$STAGE/archive.sha256" "$OUT/$NAME.tar.gz.sha256"
 ln "$STAGE/executor-tests" "$OUT/$NAME.executor-tests"

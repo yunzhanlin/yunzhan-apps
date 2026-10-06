@@ -31,4 +31,9 @@ test('async refresh discards old account payloads and menu grants are not only h
   assert(app.includes('nav.value.map'));
   assert(app.includes(':access="accessPlan"'));
   assert(app.includes('面板用户与菜单授权'));
+  const files=fs.readFileSync(new URL('../web/src/FileManager.vue',import.meta.url),'utf8');
+  assert(files.includes('if (!canReadSystem.value) return'));
+  assert(files.includes('if (!canReadDisk.value)'));
+  assert(files.includes(':readonly="!canWriteSite"'));
+  assert(files.includes('当前账户暂无已授权的可管理网站'));
 });
