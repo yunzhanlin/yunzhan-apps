@@ -9,15 +9,16 @@ import (
 )
 
 type JobPayload struct {
-	ArchiveDomain     string        `json:"archive_domain,omitempty"`
-	SiteBackup        *SiteBackup   `json:"site_backup,omitempty"`
-	Settings          *SiteSettings `json:"settings,omitempty"`
-	ExpectedRevision  int64         `json:"expected_revision,omitempty"`
-	ExpectedConfigSHA string        `json:"expected_config_sha,omitempty"`
-	ReleaseID         string        `json:"release_id"`
-	PreviousStatus    string        `json:"previous_status,omitempty"`
-	AppProjectID      string        `json:"app_project_id,omitempty"`
-	AppHostPort       int           `json:"app_host_port,omitempty"`
+	Analytics         *AnalyticsConfig `json:"analytics,omitempty"`
+	ArchiveDomain     string           `json:"archive_domain,omitempty"`
+	SiteBackup        *SiteBackup      `json:"site_backup,omitempty"`
+	Settings          *SiteSettings    `json:"settings,omitempty"`
+	ExpectedRevision  int64            `json:"expected_revision,omitempty"`
+	ExpectedConfigSHA string           `json:"expected_config_sha,omitempty"`
+	ReleaseID         string           `json:"release_id"`
+	PreviousStatus    string           `json:"previous_status,omitempty"`
+	AppProjectID      string           `json:"app_project_id,omitempty"`
+	AppHostPort       int              `json:"app_host_port,omitempty"`
 }
 
 // This migration is additive: original sites and jobs remain in place.

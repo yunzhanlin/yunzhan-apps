@@ -75,6 +75,7 @@ func renderSiteConfig(site core.Site, public string) (string, error) {
 	fmt.Fprintf(&out, "# managed by panel; site=%s%s\nserver {\n%s  listen 127.0.0.1:19101;\n  server_name %s;\n  root %s;\n  index %s;\n  disable_symlinks on;\n  access_log /var/log/nginx/panel-%s.access.log panel_site;\n  error_log /var/log/nginx/panel-%s.error.log warn;\n", site.ID, wafMarker, siteWAFInclude(site), strings.Join(domains, " "), strconv.Quote(root), strings.Join(indexFiles, " "), site.ID, site.ID)
 	fmt.Fprintf(&out, "  location = %s { default_type text/plain; access_log off; return 200 %s; }\n", siteHealthPath(site), strconv.Quote(siteHealthBody(site)))
 	fmt.Fprintf(&out, "  add_header X-Panel-Config %s always;\n", strconv.Quote(core.Hash(siteHealthBody(site))))
+	out.WriteString(siteAnalyticsProxy(site))
 	out.WriteString(siteACMEConfig(site))
 	if settings.WebServer == "apache" {
 		out.WriteString("  location / {\n    proxy_pass http://127.0.0.1:19080;\n    proxy_http_version 1.1;\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n  }\n}\n")

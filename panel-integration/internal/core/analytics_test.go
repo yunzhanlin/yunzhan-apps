@@ -23,7 +23,7 @@ func analyticsFixture(t *testing.T, enabled bool) (*Server, Site, AnalyticsConfi
 	if err != nil || len(sites) != 1 {
 		t.Fatal(sites, err)
 	}
-	a, err := NewServer(s, Config{DataDir: t.TempDir(), WebDir: t.TempDir(), Origin: "http://127.0.0.1:19100", Socket: "/missing.sock"})
+	a, err := NewServer(s, Config{DataDir: t.TempDir(), WebDir: t.TempDir(), Origin: "http://127.0.0.1:19100", Listen: "127.0.0.1:19100", Socket: "/missing.sock"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,13 +271,24 @@ func TestAnalyticsRateLimitsAreBoundedAndReset(t *testing.T) {
 
 func TestAnalyticsAdminEndpointsStillRequireAuthCSRFAndInstalledModule(t *testing.T) {
 	a, _, c := analyticsFixture(t, false)
+	creation, err := a.Store.NextJob()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = a.Store.Finish(creation, "running", "", nil); err != nil {
+		t.Fatal(err)
+	}
 	h, _ := bcrypt.GenerateFromPassword([]byte("analytics-test-password"), bcrypt.MinCost)
-	_, err := a.Store.DB.Exec(`INSERT INTO users VALUES(?,?,?,?)`, ID(), "admin", h, Now())
+	_, err = a.Store.DB.Exec(`INSERT INTO users VALUES(?,?,?,?)`, ID(), "admin", h, Now())
 	if err != nil {
 		t.Fatal(err)
 	}
 	installed := false
 	executor := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/sites/preview" {
+			_ = json.NewEncoder(w).Encode(map[string]string{"config_sha": Hash("current")})
+			return
+		}
 		if r.URL.Path != "/v1/app-modules/website-analytics" {
 			t.Errorf("unexpected executor request %s", r.URL.Path)
 		}
@@ -293,6 +304,7 @@ func TestAnalyticsAdminEndpointsStillRequireAuthCSRFAndInstalledModule(t *testin
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-CSRF-Token", token)
 		r.Header.Set("Origin", origin)
+		r.Header.Set("Idempotency-Key", ID())
 		if cookie != nil {
 			r.AddCookie(cookie)
 		}
@@ -321,7 +333,7 @@ func TestAnalyticsAdminEndpointsStillRequireAuthCSRFAndInstalledModule(t *testin
 		}
 	}
 	installed = true
-	if w := request("POST", path, string(body), login["csrf"], a.Config.Origin, cookie); w.Code != 200 {
+	if w := request("POST", path, string(body), login["csrf"], a.Config.Origin, cookie); w.Code != 202 {
 		t.Fatal(w.Code, w.Body.String())
 	}
 	viewerID := ID()

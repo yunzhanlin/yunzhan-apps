@@ -41,7 +41,7 @@ func main() {
 	if err = store.Recover(); err != nil {
 		log.Fatal(err)
 	}
-	app, err := core.NewServer(store, core.Config{DataDir: *data, WebDir: *web, Socket: *socket, Origin: *origin})
+	app, err := core.NewServer(store, core.Config{DataDir: *data, WebDir: *web, Socket: *socket, Origin: *origin, Listen: *listen})
 	if err != nil {
 		log.Fatal(err)
 	}

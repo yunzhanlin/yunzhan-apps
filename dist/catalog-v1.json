@@ -977,10 +977,10 @@
     },
     {
       "id": "website-analytics",
-      "name": "Website Analytics",
+      "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.0.0",
-      "summary": "独立浏览器采集：PV/UV、会话旅程、页面来源、点击坐标和性能；默认关闭，手动同源接入，需支持 2.0 的面板",
+      "version": "2.1.0",
+      "summary": "浏览器 PV/UV、会话旅程、来源、热图与性能；启停自动应用对应网站采集代理，备份、校验及失败回滚；需支持 2.1 的面板，HTML 标签仍需模板接入",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -988,6 +988,7 @@
       "manage_route": "app-modules",
       "capabilities": [
         "浏览器 JS 采集",
+        "启停自动配置同源代理",
         "PV 与浏览器 UV",
         "会话与访问旅程",
         "入口和离开页面",
@@ -997,8 +998,8 @@
         "保留期和容量上限",
         "站点隔离与报告导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.0.0/manifest.json",
-      "sha256": "8b62f635f347cd59288472e40082a5ecb577a6fc780601ff0c08ac69cc2e1acf"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.1.0/manifest.json",
+      "sha256": "d8aedd0160dffb9cf53e87ab86680de0a8a9c3b3b6d2b84bbf9f9b1472916246"
     },
     {
       "id": "website-statistics-v2",

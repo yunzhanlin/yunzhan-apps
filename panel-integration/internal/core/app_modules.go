@@ -199,7 +199,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		version := "1.1.0"
 		switch d.ID {
 		case "website-analytics":
-			version = "2.0.0"
+			version = "2.1.0"
 		case "pure-ftpd":
 			version = "1.0.50-compat2"
 		case "pm2-manager":

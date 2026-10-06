@@ -30,12 +30,13 @@ const analyticsReportBytes = 8 << 20
 var analyticsTracker string
 
 type AnalyticsConfig struct {
-	SiteID    string `json:"site_id"`
-	Key       string `json:"key"`
-	Enabled   bool   `json:"enabled"`
-	Clicks    bool   `json:"clicks"`
-	Retention int    `json:"retention_days"`
-	Revision  int64  `json:"revision"`
+	SiteID        string `json:"site_id"`
+	Key           string `json:"key"`
+	Enabled       bool   `json:"enabled"`
+	Clicks        bool   `json:"clicks"`
+	Retention     int    `json:"retention_days"`
+	Revision      int64  `json:"revision"`
+	ProxyEndpoint string `json:"proxy_endpoint,omitempty"`
 }
 
 type analyticsRate struct {
@@ -101,21 +102,7 @@ func (s *Store) saveAnalyticsConfig(ctx context.Context, in AnalyticsConfig) (An
 		return in, e
 	}
 	defer tx.Rollback()
-	var rev int64
-	var key string
-	e = tx.QueryRowContext(ctx, `SELECT revision,public_key FROM analytics_config WHERE site_id=?`, in.SiteID).Scan(&rev, &key)
-	if e != nil && !errors.Is(e, sql.ErrNoRows) {
-		return in, e
-	}
-	if rev != in.Revision {
-		return in, errors.New("配置已改变，请刷新后重试")
-	}
-	if key == "" {
-		key = ID()
-	}
-	in.Key = key
-	in.Revision = rev + 1
-	_, e = tx.ExecContext(ctx, `INSERT INTO analytics_config VALUES(?,?,?,?,?,?) ON CONFLICT(site_id) DO UPDATE SET enabled=excluded.enabled,clicks=excluded.clicks,retention=excluded.retention,revision=excluded.revision`, in.SiteID, key, in.Enabled, in.Clicks, in.Retention, in.Revision)
+	in, e = saveAnalyticsConfigTx(tx, in)
 	if e != nil {
 		return in, e
 	}
@@ -243,7 +230,8 @@ func (a *Server) analyticsSite(r *http.Request) (Site, AnalyticsConfig, error) {
 
 func (a *Server) analyticsRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /api/analytics/sites/{id}/config", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
-		if _, e := a.Store.Site(r.PathValue("id")); e != nil {
+		site, e := a.Store.Site(r.PathValue("id"))
+		if e != nil {
 			fail(w, 404, "网站不存在")
 			return
 		}
@@ -252,30 +240,10 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 			fail(w, 500, "读取统计配置失败")
 			return
 		}
+		v.ProxyEndpoint = site.Settings.AnalyticsEndpoint
 		send(w, 200, v)
 	}))
-	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
-		var v AnalyticsConfig
-		if !decode(w, r, &v) {
-			return
-		}
-		v.SiteID = r.PathValue("id")
-		v.Key = ""
-		var module struct {
-			Status SoftwareAppStatus `json:"status"`
-		}
-		if e := a.Executor.Call(r.Context(), "GET", "/v1/app-modules/website-analytics", nil, &module); e != nil || !module.Status.Installed {
-			fail(w, 409, "请先安装网站分析应用")
-			return
-		}
-		out, e := a.Store.saveAnalyticsConfig(r.Context(), v)
-		if e != nil {
-			fail(w, 409, e.Error())
-			return
-		}
-		_ = a.Store.Audit(u.Username, "analytics.configure", v.SiteID, "succeeded")
-		send(w, 200, out)
-	}))
+	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(a.configureAnalyticsProxy))
 	m.HandleFunc("GET /api/analytics/sites/{id}/report", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		if _, e := a.Store.Site(r.PathValue("id")); e != nil {
 			fail(w, 404, "网站不存在")

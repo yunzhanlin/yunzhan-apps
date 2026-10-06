@@ -21,6 +21,7 @@ type RewriteRule struct {
 }
 type SiteSettings struct {
 	PublicIngress     bool          `json:"public_ingress,omitempty"`
+	AnalyticsEndpoint string        `json:"analytics_endpoint,omitempty"`
 	WAFEnabled        *bool         `json:"waf_enabled,omitempty"`
 	ACME              bool          `json:"acme,omitempty"`
 	TLS               *SiteTLS      `json:"tls,omitempty"`
@@ -90,6 +91,11 @@ func ValidDomain(value string) bool {
 }
 func ValidateSiteSettings(in SiteSettings, primary, php string) error {
 	in = DefaultSiteSettings(in)
+	if in.AnalyticsEndpoint != "" {
+		if e := ValidateAnalyticsEndpoint(in.AnalyticsEndpoint); e != nil {
+			return e
+		}
+	}
 	if in.WebServer != "nginx" && in.WebServer != "apache" {
 		return errors.New("网站服务只支持 Nginx 或 Apache")
 	}
@@ -251,9 +257,17 @@ func (s *Store) migrateSiteSettings() error {
 	return tx.Commit()
 }
 func (s *Store) QueueSiteSettings(id string, in SiteSettings, revision int64, configSHA, key, actor string) (string, error) {
+	return s.queueSiteSettings(id, in, revision, configSHA, key, actor, nil)
+}
+func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, configSHA, key, actor string, analytics *AnalyticsConfig) (string, error) {
 	site, e := s.Site(id)
 	if e != nil {
 		return "", errors.New("站点不存在")
+	}
+	// Ordinary site editors (including older clients) cannot change this
+	// internal upstream; preserve it through PHP, TLS and website changes.
+	if analytics == nil {
+		in.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 	}
 	in = DefaultSiteSettings(in)
 	sort.Strings(in.Domains)
@@ -287,13 +301,27 @@ func (s *Store) QueueSiteSettings(id string, in SiteSettings, revision int64, co
 		_ = json.Unmarshal([]byte(oldPayload), &p)
 		b, _ := json.Marshal(in)
 		other, _ := json.Marshal(p.Settings)
-		if oldSite != id || oldKind != "configure_site" || p.ExpectedRevision != revision || p.ExpectedConfigSHA != configSHA || string(b) != string(other) {
+		analyticsSame := analytics == nil && p.Analytics == nil || analytics != nil && p.Analytics != nil && sameAnalyticsRequest(*analytics, *p.Analytics)
+		if oldSite != id || oldKind != "configure_site" || p.ExpectedRevision != revision || p.ExpectedConfigSHA != configSHA || string(b) != string(other) || !analyticsSame {
 			return "", errors.New("幂等键已被不同请求使用")
 		}
 		return oldID, nil
 	}
 	if !errors.Is(e, sql.ErrNoRows) {
 		return "", e
+	}
+	if analytics != nil {
+		currentAnalytics, err := analyticsConfigInTx(tx, id)
+		if err != nil {
+			return "", err
+		}
+		if analytics.SiteID != id || analytics.Revision != currentAnalytics.Revision || analytics.Retention < 1 || analytics.Retention > 90 {
+			return "", errors.New("统计配置已变化，请刷新后重试")
+		}
+		analytics.Key = currentAnalytics.Key
+		if analytics.Key == "" {
+			analytics.Key = ID()
+		}
 	}
 	var current int64
 	var status string
@@ -314,7 +342,7 @@ func (s *Store) QueueSiteSettings(id string, in SiteSettings, revision int64, co
 		}
 	}
 	job := ID()
-	p := JobPayload{Settings: &in, ExpectedRevision: revision, ExpectedConfigSHA: configSHA, PreviousStatus: status}
+	p := JobPayload{Settings: &in, ExpectedRevision: revision, ExpectedConfigSHA: configSHA, PreviousStatus: status, Analytics: analytics}
 	payload, _ := json.Marshal(p)
 	if _, e = tx.Exec(`INSERT INTO jobs(id,site_id,payload,kind,state,idempotency_key,created_at,updated_at) VALUES(?,?,?,'configure_site','queued',?,?,?)`, job, id, string(payload), key, Now(), Now()); e != nil {
 		return "", errors.New("站点已有执行中的任务")
@@ -356,6 +384,14 @@ func finishSiteSettings(tx *sql.Tx, j Job) error {
 	n, _ := result.RowsAffected()
 	if n != 1 {
 		return errors.New("网站设置版本冲突，需要核对已应用配置")
+	}
+	if p.Analytics != nil {
+		if p.Analytics.SiteID != j.SiteID || (p.Settings.AnalyticsEndpoint != "") != p.Analytics.Enabled {
+			return errors.New("采集配置任务身份不匹配")
+		}
+		if _, e = saveAnalyticsConfigTx(tx, *p.Analytics); e != nil {
+			return e
+		}
 	}
 	var release string
 	if e = tx.QueryRow(`SELECT php_version_id FROM sites WHERE id=?`, j.SiteID).Scan(&release); e != nil {
@@ -401,6 +437,7 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 			return
 		}
 		in.Settings = DefaultSiteSettings(in.Settings)
+		in.Settings.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 		if site.SettingsRevision != in.ExpectedRevision {
 			fail(w, 409, "网站设置已变化，请重新读取")
 			return

@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-type Config struct{ DataDir, WebDir, Origin, Socket string }
+type Config struct{ DataDir, WebDir, Origin, Socket, Listen string }
 type Server struct {
 	Store            *Store
 	Executor         *ExecutorClient
