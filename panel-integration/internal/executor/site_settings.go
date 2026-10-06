@@ -19,7 +19,7 @@ import (
 func siteHealthPath(site core.Site) string { return "/__panel_health_" + site.ID }
 func siteWAFInclude(site core.Site) string {
 	if core.SiteWAFEnabled(site.Settings) {
-		return "  include /etc/panel/waf/server.d/*.conf;\n"
+		return "  set $panel_waf_site " + site.ID + ";\n  include /etc/panel/waf/server.d/*.conf;\n"
 	}
 	return ""
 }

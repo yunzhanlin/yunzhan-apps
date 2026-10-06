@@ -37,6 +37,10 @@ type SoftwareAppsPage struct {
 }
 
 type WAFEvent struct {
+	SiteID    string `json:"site_id,omitempty"`
+	Path      string `json:"path,omitempty"`
+	Reason    string `json:"reason,omitempty"`
+	Action    string `json:"action,omitempty"`
 	Time      string `json:"time"`
 	Site      string `json:"site"`
 	IP        string `json:"ip"`
@@ -55,7 +59,7 @@ type WAFEventsPage struct {
 }
 
 var softwareAppCatalog = []SoftwareAppCatalogItem{
-	{ID: "nginx-waf", Family: "waf", Name: "Nginx 请求防火墙", Category: "security", Version: "1.1", Description: "基于受管 Nginx 规则的 URI、查询参数、请求头过滤与单 IP 限速", Source: "面板内置开源规则", Capabilities: []string{"恶意查询阻断", "扫描器请求头阻断", "单 IP 限速", "防护事件", "Nginx 校验与回滚"}, Defaults: map[string]any{"profile": "balanced", "rate_per_second": 20}},
+	{ID: "nginx-waf", Family: "waf", Name: "Nginx 请求防火墙", Category: "security", Version: WAFVersion, Description: "独立防护工作台：站点策略、分类规则、IP/URL/UA 名单、CC、自定义字面规则与攻击日志", Source: "云栈独立开源规则", Capabilities: []string{"分类防护规则", "IPv4/IPv6 名单", "站点独立策略", "单 URL CC", "攻击报表", "Nginx 校验与回滚"}, Defaults: map[string]any{"profile": "balanced", "rate_per_second": 20}},
 	{ID: "system-hardening", Family: "hardening", Name: "系统基线加固", Category: "security", Version: "1.0", Description: "固化链接、ptrace、内核日志与网络重定向等内核参数，支持偏差检测与恢复", Source: "面板内置 Debian sysctl 基线", Capabilities: []string{"内核参数预设", "实际值核对", "卸载恢复原值", "配置偏差告警"}, Defaults: map[string]any{"profile": "baseline"}},
 	{ID: "intrusion-prevention", Family: "intrusion", Name: "SSH 防入侵", Category: "security", Version: "1.0", Description: "使用 Debian Fail2ban 的 systemd 日志后端保护 SSH，并保留面板现有解封与封禁查询", Source: "Debian 签名仓库 Fail2ban", Capabilities: []string{"SSHD Jail", "尝试窗口与封禁时长", "服务状态", "封禁 IP 查询与解封"}, Defaults: map[string]any{"max_retry": 5, "find_time_minutes": 10, "ban_time_minutes": 60}},
 }
@@ -127,18 +131,14 @@ func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, e
 	}
 	switch id {
 	case "nginx-waf":
-		if e := only("profile", "rate_per_second"); e != nil {
-			return nil, e
-		}
-		profile, _ := v["profile"].(string)
-		if profile != "balanced" && profile != "strict" {
-			return nil, errors.New("WAF 防护等级只能是 balanced 或 strict")
-		}
-		rate, e := number("rate_per_second", 5, 200)
+		cfg, e := DecodeWAFConfig(v)
 		if e != nil {
 			return nil, e
 		}
-		return map[string]any{"profile": profile, "rate_per_second": rate}, nil
+		if _, advanced := v["policy"]; !advanced {
+			return map[string]any{"profile": cfg.Profile, "rate_per_second": cfg.Rate}, nil
+		}
+		return WAFSettings(cfg), nil
 	case "system-hardening":
 		if e := only("profile"); e != nil {
 			return nil, e
@@ -194,6 +194,15 @@ func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, 
 	} else {
 		settings = map[string]any{}
 	}
+	if id == "nginx-waf" && action != "uninstall" && action != "update" {
+		cfg, e := DecodeWAFConfig(settings)
+		if e != nil {
+			return "", e
+		}
+		if e = s.validateWAFSites(cfg); e != nil {
+			return "", e
+		}
+	}
 	if key == "" || len(key) > 128 {
 		return "", errors.New("请提供有效的幂等键")
 	}
@@ -226,6 +235,7 @@ func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, 
 }
 
 func (a *Server) softwareAppRoutes(m *http.ServeMux) {
+	a.wafWorkspaceRoutes(m)
 	m.HandleFunc("GET /api/software/nginx-waf/events", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var page WAFEventsPage
 		if e := a.Executor.Call(r.Context(), http.MethodGet, "/v1/software/nginx-waf/events", nil, &page); e != nil {

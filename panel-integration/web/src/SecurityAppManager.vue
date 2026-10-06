@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
 import { isSecuritySoftware } from "./softwareRouting";
+import WafWorkspace from "./WafWorkspace.vue";
 
 type API = <T>(path: string, method?: string, body?: unknown, idempotencyKey?: string) => Promise<T>;
 export interface SecurityAppCatalogItem {
@@ -27,7 +28,7 @@ export interface SecurityAppStatus {
 }
 interface WAFEvent { time: string; site: string; ip: string; status: number; method: string; bad_method: string; bad_args: string; bad_uri: string; bad_agent: string; rate: string }
 
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings: Record<string, string | number>) => Promise<string> }>();
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
 const open = ref(false), busy = ref(false);
 const selected = ref<SecurityAppCatalogItem | null>(null);
 const status = ref<SecurityAppStatus | null>(null);
@@ -64,7 +65,6 @@ function show(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
   events.value = [];
   eventsMore.value = false;
   eventsError.value = "";
-  if (app.id === "nginx-waf" && current?.installed) void loadEvents();
 }
 async function queue(action: "install" | "configure" | "uninstall") {
   if (!selected.value || !isSecuritySoftware(selected.value.id) || busy.value) return;
@@ -94,6 +94,7 @@ async function queue(action: "install" | "configure" | "uninstall") {
 async function install(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
   if (!isSecuritySoftware(app.id)) { show(app, current); return; }
   show(app, current);
+  if (app.id === "nginx-waf") return;
   try {
     await ElMessageBox.confirm(
       `${app.name} 将通过受限 root 执行器安装固定配置，完成实际状态核对并写入审计。来源：${app.source}。`,
@@ -107,7 +108,9 @@ defineExpose({ show, install });
 </script>
 
 <template>
-  <el-dialog v-model="open" :title="`${selected?.name || '安全软件'} · 设置`" :width="selected?.id === 'nginx-waf' && installed ? '760px' : '560px'" class="security-app-dialog">
+  <el-dialog v-model="open" :title="selected?.id === 'nginx-waf' ? 'Nginx 防火墙管理工作台' : `${selected?.name || '安全软件'} · 设置`" :width="selected?.id === 'nginx-waf' ? 'min(1160px, 96vw)' : '560px'" class="security-app-dialog" destroy-on-close>
+    <WafWorkspace v-if="selected?.id === 'nginx-waf'" :api="api" :on-install="onInstall"/>
+    <template v-else>
     <template v-if="selected">
       <div class="security-app-summary">
         <span :class="['software-icon', 'software-logo', selected.family]">{{ selected.family.slice(0, 2).toUpperCase() }}</span>
@@ -139,6 +142,7 @@ defineExpose({ show, install });
         <small v-if="eventsMore" class="security-app-events-note">仅显示最近 100 条；更早事件仍保留在服务器日志中。</small>
       </section>
     </template>
-    <template #footer><el-button v-if="installed" type="danger" plain :loading="busy" @click="queue('uninstall')">卸载</el-button><span class="dialog-spacer"></span><el-button @click="open = false">关闭</el-button><el-button type="primary" :loading="busy" @click="queue(installed ? 'configure' : 'install')">{{ installed ? '保存并应用' : '安装并验证' }}</el-button></template>
+    </template>
+    <template #footer><template v-if="selected?.id !== 'nginx-waf'"><el-button v-if="installed" type="danger" plain :loading="busy" @click="queue('uninstall')">卸载</el-button><span class="dialog-spacer"></span></template><el-button @click="open = false">关闭</el-button><el-button v-if="selected?.id !== 'nginx-waf'" type="primary" :loading="busy" @click="queue(installed ? 'configure' : 'install')">{{ installed ? '保存并应用' : '安装并验证' }}</el-button></template>
   </el-dialog>
 </template>

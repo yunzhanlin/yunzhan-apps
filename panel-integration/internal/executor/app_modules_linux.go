@@ -230,6 +230,13 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	if !valid || cmp < 0 {
 		return errors.New("拒绝应用版本降级或未知版本更新")
 	}
+	if id == "nginx-waf" && cmp > 0 && version == core.WAFVersion {
+		manifest, err := s.readSoftwareManifest(id)
+		if err != nil {
+			return err
+		}
+		return s.applyWAF(ctx, manifest.Settings, false, add)
+	}
 	if _, ok := core.FindAppModule(id); ok {
 		var manifest map[string]any
 		path := filepath.Join(s.moduleDir(id), "installed.json")

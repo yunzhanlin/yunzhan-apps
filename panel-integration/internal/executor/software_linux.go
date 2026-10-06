@@ -24,6 +24,9 @@ const wafEventReadBytes int64 = 1024 * 1024
 const wafEventLimit = 100
 
 func (s *Service) wafEvents() (core.WAFEventsPage, error) {
+	return s.readWAFEvents(wafEventReadBytes, wafEventLimit)
+}
+func (s *Service) readWAFEvents(maxBytes int64, limit int) (core.WAFEventsPage, error) {
 	page := core.WAFEventsPage{Events: []core.WAFEvent{}}
 	path := s.systemPath("/var/log/nginx/panel-waf.log")
 	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
@@ -38,11 +41,11 @@ func (s *Service) wafEvents() (core.WAFEventsPage, error) {
 	if err != nil || !stat.Mode().IsRegular() {
 		return page, errors.New("WAF 事件日志不是普通文件")
 	}
-	start := max(0, stat.Size()-wafEventReadBytes)
+	start := max(0, stat.Size()-maxBytes)
 	if _, err = f.Seek(start, io.SeekStart); err != nil {
 		return page, err
 	}
-	data, err := io.ReadAll(io.LimitReader(f, wafEventReadBytes))
+	data, err := io.ReadAll(io.LimitReader(f, maxBytes))
 	if err != nil {
 		return page, err
 	}
@@ -60,7 +63,7 @@ func (s *Service) wafEvents() (core.WAFEventsPage, error) {
 		if json.Unmarshal(line, &event) != nil || event.Time == "" || event.Site == "" || event.IP == "" {
 			continue
 		}
-		if len(page.Events) == wafEventLimit {
+		if len(page.Events) == limit {
 			page.HasMore = true
 			break
 		}
@@ -130,6 +133,15 @@ func wafFiles(s *Service) (string, string) {
 	return filepath.Join(base, "http.d/10-panel-waf.conf"), filepath.Join(base, "server.d/10-panel-waf.conf")
 }
 func renderWAF(settings map[string]any) (string, string) {
+	if _, advanced := settings["policy"]; advanced {
+		cfg, err := core.DecodeWAFConfig(settings)
+		if err == nil {
+			return renderWAFPolicy(cfg)
+		}
+	}
+	return renderLegacyWAF(settings)
+}
+func renderLegacyWAF(settings map[string]any) (string, string) {
 	profile, _ := settings["profile"].(string)
 	rate := softwareInt(settings, "rate_per_second")
 	patterns := `(?:<|%3c)(?:script|iframe)|(?:union(?:%20|\\s)+select)|(?:/etc/passwd|\\.\\./)|(?:base64_decode|eval\\s*\\()`
@@ -211,7 +223,17 @@ func (s *Service) ensureWAFIncludes() ([]fileBackup, error) {
 		if path == s.Config.NginxConf {
 			content, e = ensureLineAfter(content, "http {\n", "  include /etc/panel/waf/http.d/*.conf;\n", false)
 		} else if strings.HasPrefix(content, "# managed by panel;") && strings.Contains(content, "server {\n") && !strings.Contains(strings.SplitN(content, "\n", 2)[0], "panel-waf-disabled") {
-			content, e = ensureLineAfter(content, "server {\n", "  include /etc/panel/waf/server.d/*.conf;\n", true)
+			id := strings.TrimSuffix(filepath.Base(path), ".conf")
+			if !core.ValidID(id) || !strings.HasPrefix(content, "# managed by panel; site="+id) {
+				continue
+			}
+			include := "  include /etc/panel/waf/server.d/*.conf;\n"
+			line := "  set $panel_waf_site " + id + ";\n" + include
+			if strings.Contains(content, include) && !strings.Contains(content, line) {
+				content = strings.ReplaceAll(content, include, line)
+			} else {
+				content, e = ensureLineAfter(content, "server {\n", line, true)
+			}
 		} else {
 			continue
 		}
@@ -228,11 +250,32 @@ func (s *Service) ensureWAFIncludes() ([]fileBackup, error) {
 	return backups, nil
 }
 func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install bool, add func(string)) error {
+	nginx, err := s.nginxBinary()
+	if err != nil {
+		return err
+	}
 	if _, e := s.readSoftwareManifest("nginx-waf"); install && e == nil {
 		return errors.New("Nginx WAF 已安装，请使用配置操作")
 	} else if !install && e != nil {
 		return errors.New("请先安装 Nginx WAF")
 	}
+	if !install && s.wafReplayMatches(settings) {
+		if _, err := s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf); err != nil {
+			return err
+		}
+		add("恢复已提交的同一修订配置任务：实际规则文件一致且 Nginx 校验通过")
+		return nil
+	}
+	cfg, e := s.prepareWAFSettings(settings, install)
+	if e != nil {
+		return e
+	}
+	backupPath, e := s.backupWAFConfiguration()
+	if e != nil {
+		return e
+	}
+	cfg.Policy.Revision++
+	settings = core.WAFSettings(cfg)
 	httpPath, serverPath := wafFiles(s)
 	for _, dir := range []string{filepath.Dir(httpPath), filepath.Dir(serverPath)} {
 		if e := os.MkdirAll(dir, 0750); e != nil {
@@ -258,16 +301,25 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 		e = atomicWrite(serverPath, []byte(serverConfig), 0640)
 	}
 	if e == nil {
-		_, e = s.Config.Run(ctx, s.Config.NginxBin, "-t", "-c", s.Config.NginxConf)
+		_, e = s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf)
 	}
 	if e == nil {
 		_, e = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx")
 	}
+	if e == nil {
+		e = s.verifyWAFReload(ctx, cfg, nginx)
+	}
 	if e != nil {
 		restoreErr := restoreFiles(backups)
+		if restoreErr == nil {
+			rollbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			_, reloadErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "reload", "nginx")
+			cancel()
+			restoreErr = errors.Join(restoreErr, reloadErr)
+		}
 		return fmt.Errorf("WAF 配置未生效，已恢复=%v: %w", restoreErr == nil, e)
 	}
-	manifest := softwareManifest{ID: "nginx-waf", Version: "1.1", Settings: settings, InstalledAt: core.Now()}
+	manifest := softwareManifest{ID: "nginx-waf", Version: core.WAFVersion, Settings: settings, InstalledAt: core.Now()}
 	if old, er := s.readSoftwareManifest("nginx-waf"); er == nil {
 		manifest.InstalledAt = old.InstalledAt
 	}
@@ -276,7 +328,8 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 		_, _ = s.Config.Run(context.Background(), "/usr/bin/systemctl", "reload", "nginx")
 		return e
 	}
-	add("生成固定 WAF 规则并接入受管 Nginx 站点")
+	add("变更前配置已备份：" + backupPath)
+	add("生成独立 WAF 规则、站点策略与 CC 限速并接入受管 Nginx 站点")
 	add("通过 nginx -t 并重载服务")
 	return nil
 }
@@ -540,12 +593,22 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 		_, h := os.Stat(httpPath)
 		_, v := os.Stat(serverPath)
 		out.Enabled = h == nil && v == nil
-		_, e = s.Config.Run(ctx, s.Config.NginxBin, "-t", "-c", s.Config.NginxConf)
+		nginx, err := s.nginxBinary()
+		if err == nil {
+			_, err = s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf)
+		}
+		if err == nil {
+			err = s.wafNginxRunning(ctx, nginx)
+		}
+		e = err
 		out.Healthy = out.Enabled && e == nil
+		if cfg, err := core.DecodeWAFConfig(manifest.Settings); err == nil && cfg.Policy.Mode == "off" {
+			out.Enabled = false
+		}
 		if out.Healthy {
-			out.Detail = "Nginx 规则已加载"
+			out.Detail = "Nginx 规则已加载；防护模式以生效配置为准"
 		} else {
-			out.Detail = "WAF 配置缺失或 Nginx 校验失败"
+			out.Detail = "请核对：WAF 配置缺失、Nginx 校验失败或服务未运行"
 		}
 	case "system-hardening":
 		out.Enabled = true
@@ -578,6 +641,7 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 }
 
 func (s *Service) softwareRoutes(m *http.ServeMux) {
+	s.wafWorkspaceRoutes(m)
 	m.HandleFunc("GET /v1/software/nginx-waf/events", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := s.readSoftwareManifest("nginx-waf"); err != nil {
 			respond(w, 409, map[string]string{"error": "Nginx WAF 未安装"})

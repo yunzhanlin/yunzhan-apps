@@ -376,7 +376,7 @@ function installSoftwareApp(app: SecurityAppCatalogItem) {
   if (softwareManagerKind(app) === "security") void softwareManager.value?.install(app, softwareStatus(app.id));
   else openSoftwareApp(app);
 }
-async function queueSoftwareInstall(id: string, settings: Record<string, string | number> = {}): Promise<string> {
+async function queueSoftwareInstall(id: string, settings: Record<string, unknown> = {}): Promise<string> {
   const software = softwareApps.value.catalog.find(item => item.id === id);
   if (!software || !softwareManagerKind(software)) throw new Error("当前面板没有该应用的已审核处理器");
   const app = appRegistry.value.catalog.apps.find(item => item.provider === "panel-module" && item.target === id);
