@@ -1533,7 +1533,7 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "summary": "独立请求元数据防护工作台：分类规则、站点策略、IPv4/IPv6 名单、URL CC、自定义字面规则、真实防护报表与备份回滚；不含完整请求体检测。",
       "stage": "ready",
       "risk": "maintained",

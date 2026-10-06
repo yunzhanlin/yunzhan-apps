@@ -264,6 +264,17 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 			return err
 		}
 		add("恢复已提交的同一修订配置任务：实际规则文件一致且 Nginx 校验通过")
+		manifest, err := s.readSoftwareManifest("nginx-waf")
+		if err != nil {
+			return err
+		}
+		current, err := core.DecodeWAFConfig(manifest.Settings)
+		if err != nil {
+			return err
+		}
+		if err = s.verifyWAFReload(ctx, current, nginx); err != nil {
+			return err
+		}
 		return nil
 	}
 	cfg, e := s.prepareWAFSettings(settings, install)

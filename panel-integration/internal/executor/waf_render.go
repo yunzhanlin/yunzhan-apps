@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"encoding/json"
 	"fmt"
 	"local/panel/internal/core"
 	"regexp"
@@ -10,6 +11,11 @@ import (
 )
 
 type wafMapEntry struct{ key, value string }
+
+func wafProbeValue(cfg core.WAFConfig) string {
+	b, _ := json.Marshal(cfg)
+	return core.WAFVersion + ":" + strconv.FormatInt(cfg.Policy.Revision, 10) + ":" + core.Hash(string(b))
+}
 
 func wafQuote(value string) string { return strconv.Quote(value) }
 func wafBool(value bool) string {
@@ -226,5 +232,8 @@ func renderWAFPolicy(cfg core.WAFConfig) (string, string) {
 		fmt.Fprintf(&server, "limit_req zone=%s burst=%d nodelay;\n", name, r.Burst)
 	}
 	http.WriteString("log_format panel_waf escape=json '{\"time\":\"$time_iso8601\",\"site\":\"$server_name\",\"site_id\":\"$panel_waf_site\",\"ip\":\"$remote_addr\",\"status\":$status,\"method\":\"$request_method\",\"path\":\"$uri\",\"reason\":\"$pw_log_reason\",\"action\":\"$pw_log_action\",\"bad_method\":\"$panel_waf_bad_method\",\"bad_args\":\"$panel_waf_bad_args\",\"bad_uri\":\"$panel_waf_bad_uri\",\"bad_agent\":\"$panel_waf_bad_agent\",\"rate\":\"$limit_req_status\"}';\n")
+	// A dedicated loopback virtual host proves the exact configuration loaded,
+	// including installations whose legacy websites have no health route.
+	fmt.Fprintf(&http, "server { listen 127.0.0.1:19101; server_name panel-waf-check.invalid; access_log off; location = /__panel_waf_check { default_type text/plain; return 200 %s; } location / { return 404; } }\n", wafQuote(wafProbeValue(cfg)))
 	return http.String(), "# managed by panel nginx-waf " + core.WAFVersion + "\nif ($pw_method_block) { return 405; }\nif ($pw_block) { return 403; }\n" + server.String() + "limit_req_status 429;\naccess_log /var/log/nginx/panel-waf.log panel_waf if=$pw_event;\nadd_header X-Panel-WAF $pw_mode always;\nadd_header X-Panel-WAF-Revision " + strconv.FormatInt(cfg.Policy.Revision, 10) + " always;\n"
 }

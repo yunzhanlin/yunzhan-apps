@@ -38,6 +38,7 @@ func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string,
 	port := l.Addr().(*net.TCPAddr).Port
 	l.Close()
 	h, s := renderWAFPolicy(cfg)
+	h = strings.ReplaceAll(h, "listen 127.0.0.1:19101;", fmt.Sprintf("listen 127.0.0.1:%d;", port))
 	s = strings.ReplaceAll(s, "/var/log/nginx/panel-waf.log", filepath.Join(root, "waf.log"))
 	servers := ""
 	for i, host := range []string{"a.localhost", "b.localhost"} {
@@ -104,6 +105,7 @@ func TestWAFRealNginxMetadataAndScope(t *testing.T) {
 		want                      int
 	}{
 		{"a.localhost", "/", "Browser", "", 200},
+		{"panel-waf-check.invalid", "/__panel_waf_check", "Browser", "", 200},
 		{"a.localhost", "/?q=union%20select", "Browser", "", 403},
 		{"a.localhost", "/?q=%3Cscript%3E", "Browser", "", 403},
 		{"a.localhost", "/", "sqlmap", "", 403},

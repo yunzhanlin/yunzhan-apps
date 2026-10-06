@@ -371,7 +371,7 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.0.0",
+      "version": "2.0.1",
       "summary": "独立请求元数据防护工作台：分类规则、站点策略、IPv4/IPv6 名单、URL CC、自定义字面规则、真实防护报表与备份回滚；不含完整请求体检测。",
       "stage": "ready",
       "risk": "maintained",
@@ -388,8 +388,8 @@
         "安全配置导入与预览",
         "配置备份、修订冲突检查与重载探针"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.0.0/manifest.json",
-      "sha256": "c62b92b7cca298e55bdb93d0d9e97701110665ba7d5473ea2e4cfa6467ec139a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.0.1/manifest.json",
+      "sha256": "4683ac123d82134f81fb70940062ce1ab72402f242a97b705f46a9b2f4cb2b41"
     },
     {
       "id": "openlitespeed",
