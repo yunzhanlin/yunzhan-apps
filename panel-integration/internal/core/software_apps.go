@@ -95,6 +95,10 @@ func ValidateSoftwareUpdate(id, version string) error {
 }
 
 func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, error) {
+	if id == "apache-waf" {
+		cfg, err := DecodeApacheWAFConfig(raw)
+		return WAFSettings(cfg), err
+	}
 	if _, ok := FindAppModule(id); ok {
 		return validateModuleSettings(raw)
 	}
@@ -201,6 +205,15 @@ func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, 
 		}
 		if e = s.validateWAFSites(cfg); e != nil {
 			return "", e
+		}
+	}
+	if id == "apache-waf" && action != "uninstall" && action != "update" {
+		cfg, err := DecodeApacheWAFConfig(settings)
+		if err != nil {
+			return "", err
+		}
+		if err = s.validateApacheWAFSites(cfg); err != nil {
+			return "", err
 		}
 	}
 	if key == "" || len(key) > 128 {

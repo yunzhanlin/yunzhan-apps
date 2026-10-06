@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """TLS fleet aggregation, unattended integrity worker, and enriched access logs."""
-import json,pathlib,uuid,time,urllib.request,urllib.error
+import json,pathlib,uuid,time,urllib.request,urllib.error,os
 from panel_client import PanelClient
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 rp=ROOT/'.local/app-modules-acceptance.json'
 c=PanelClient();report=json.loads(rp.read_text())

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "id": "apache-waf",
+  "name": "Apache WAF",
+  "category": "professional",
+  "version": "2.0.0",
+  "summary": "独立 Apache 防护工作台：分类规则、站点策略、IP/URL/UA 名单、字面自定义规则、观察模式、隐私日志与备份回滚；不提供 CC 或完整请求体检测。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "apache-waf",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "分类规则与观察模式",
+    "站点独立策略",
+    "IP/URL/UA 名单",
+    "字面自定义规则",
+    "真实事件筛选与排行",
+    "安全配置导入与预览",
+    "备份、修订检查与重载探针"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/apache-waf/config"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

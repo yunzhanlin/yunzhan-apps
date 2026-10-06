@@ -11,6 +11,7 @@ from panel_client import PanelClient
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+assert os.environ.get('PANEL_VM') in ('panel-store-apps-debian13', 'panel-compat-ubuntu24'), 'Explicit isolated application QA VM required'
 
 
 def wait_job(client, job, timeout=600):

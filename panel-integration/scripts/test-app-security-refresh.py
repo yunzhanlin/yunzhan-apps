@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import pathlib,json,time,urllib.request,urllib.error
+import pathlib,json,time,urllib.request,urllib.error,os
 from panel_client import PanelClient
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 ROOT=pathlib.Path(__file__).resolve().parents[1];c=PanelClient();report={'apps':{}}
 def passed(id,msg):report['apps'][id]={'passed':True,'evidence':msg};(ROOT/'.local/app-security-acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');print('PASS',id,msg,flush=True)
 try:

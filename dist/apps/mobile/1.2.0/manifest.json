@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "mobile",
+  "name": "aaPanel Mobile",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "mobile-pwa",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "PWA",
+    "响应式界面",
+    "现有 TOTP 登录",
+    "不缓存 API 或凭据",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/mobile-pwa"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Refresh real evidence for the already-integrated foundational runtimes."""
-import pathlib,json,time,uuid
+import pathlib,json,time,uuid,os
 from panel_client import PanelClient
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 ROOT=pathlib.Path(__file__).resolve().parents[1];rp=ROOT/'.local/app-base-acceptance.json'
 c=PanelClient();report={'checked_at':time.strftime('%Y-%m-%dT%H:%M:%S%z'),'apps':{}};sites=[]
 def guest(*a,**kw):return c.vm(*a,**kw).stdout.strip()

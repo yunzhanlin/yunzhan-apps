@@ -9,12 +9,16 @@ interface SitePolicy { site_id: string; mode: string; rate_per_second: number; b
 interface CCRule { id: string; site_id?: string; path: string; prefix: boolean; rate_per_second: number; burst: number; enabled: boolean }
 interface Config { profile: string; rate_per_second: number; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
 interface Status { installed: boolean; healthy: boolean; enabled: boolean; version?: string; detail: string }
-interface Site { id: string; name: string; domain: string; settings?: { waf_enabled?: boolean } }
+interface Site { id: string; name: string; domain: string; settings?: { waf_enabled?: boolean; web_server?: string } }
 interface Dimension { name: string; count: number }
 interface Event { time: string; site: string; site_id?: string; ip: string; path?: string; method: string; status: number; reason: string; action: string }
 interface Report { events: Event[]; total: number; blocked: number; observed: number; sources: number; partial: boolean; scanned: number; rules: Dimension[]; ips: Dimension[]; sites: Dimension[]; hours: Dimension[]; from: string; to: string }
 interface History { id: string; kind: string; state: string; error: string; created_at: string }
-const props = defineProps<{ api: API; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
+const props = defineProps<{ api: API; engine?: "nginx-waf" | "apache-waf"; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
+const engine = props.engine || "nginx-waf";
+const apache = engine === "apache-waf";
+const engineName = apache ? "Apache" : "Nginx";
+const endpoint = (operation: string) => `/software/${engine}/${operation}`;
 const groups = [ { id: "method", name: "危险请求方法", hint: "阻断 TRACE / TRACK" }, { id: "sql", name: "SQL 注入特征", hint: "URI / 查询参数中的常见注入特征" }, { id: "xss", name: "XSS 特征", hint: "脚本标签与危险协议特征" }, { id: "command", name: "命令执行特征", hint: "常见脚本执行与下载命令特征" }, { id: "traversal", name: "敏感路径访问", hint: "路径穿越、.git / .env 等暴露" }, { id: "scanner", name: "扫描器识别", hint: "已知扫描器 User-Agent 特征" }, { id: "cookie", name: "Cookie 特征检查", hint: "可选；匹配特征但不记录 Cookie 内容" } ];
 const listKinds = [ { id: "ip_allow", name: "IP 白名单" }, { id: "ip_deny", name: "IP 黑名单" }, { id: "url_allow", name: "URL 白名单" }, { id: "url_deny", name: "URL 黑名单" }, { id: "ua_allow", name: "UA 白名单" }, { id: "ua_deny", name: "UA 黑名单" } ];
 const fields = [{ id: "uri", name: "请求路径" }, { id: "args", name: "查询参数" }, { id: "user_agent", name: "User-Agent" }, { id: "method", name: "请求方法" }, { id: "cookie", name: "Cookie" }];
@@ -35,7 +39,7 @@ const scopedSites = computed(() => sites.value.filter(s => !siteSearch.value || 
 const siteName = (id?: string) => !id ? "全部受管站点" : sites.value.find(s => s.id === id)?.domain || `失效站点 ${id}`;
 const reasonName = (id: string) => groups.find(g => g.id === id)?.name || ({ cc: "CC 请求限速", "ip-deny": "IP 黑名单", "url-deny": "URL 黑名单", "ua-deny": "UA 黑名单", "legacy-args": "旧版参数规则", "legacy-uri": "旧版地址规则" }[id]) || cfg.value?.policy.rules.find(r => `custom-${r.id}` === id)?.name || id;
 async function loadConfig() {
-  const out = await props.api<{ settings: Config; defaults: Config; status: Status; implementation_version: string }>("/software/nginx-waf/config");
+  const out = await props.api<{ settings: Config; defaults: Config; status: Status; implementation_version: string }>(endpoint("config"));
   defaults.value = clone(out.defaults);
   cfg.value = clone(out.settings); applied.value = clone(out.settings); status.value = out.status; implementation.value = out.implementation_version;
 }
@@ -43,7 +47,7 @@ function reportURL(exportAll = false) {
   const q = new URLSearchParams({ page: String(exportAll ? 1 : page.value), limit: String(exportAll ? 5000 : limit) });
   for (const [k, v] of Object.entries(filter.value)) if (v) q.set(k, v);
   if (range.value) { q.set("from", range.value[0].toISOString()); q.set("to", range.value[1].toISOString()); }
-  return `/software/nginx-waf/report?${q}`;
+  return `${endpoint("report")}?${q}`;
 }
 async function refreshReport(reset = false) {
   if (!status.value?.installed || reportBusy.value) return;
@@ -53,20 +57,20 @@ async function refreshReport(reset = false) {
   catch (e) { error.value = (e as Error).message; }
   finally { reportBusy.value = false; }
 }
-async function refreshHistory() { try { history.value = (await props.api<{ entries: History[] }>("/software/nginx-waf/history")).entries; } catch (e) { error.value = (e as Error).message; } }
+async function refreshHistory() { try { history.value = (await props.api<{ entries: History[] }>(endpoint("history"))).entries; } catch (e) { error.value = (e as Error).message; } }
 async function refresh() {
   if (busy.value) return;
   if (dirty.value) { error.value = "存在未保存的草稿。请先保存，或使用“放弃草稿”再刷新。"; return; }
   busy.value = true; error.value = "";
   try {
     await loadConfig();
-    const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = Array.isArray(out) ? out : out.sites;
+    const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = (Array.isArray(out) ? out : out.sites).filter(s => !apache || s.settings?.web_server === "apache");
     await Promise.all([refreshReport(), refreshHistory()]);
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
 async function validate() {
   if (!cfg.value) return;
-  const out = await props.api<{ http_config: string; server_config: string; settings: Config }>("/software/nginx-waf/preview", "POST", { settings: cfg.value });
+  const out = await props.api<{ http_config: string; server_config: string; settings: Config }>(endpoint("preview"), "POST", { settings: cfg.value });
   cfg.value = clone(out.settings); preview.value = out.http_config + "\n# 每个受管站点的 server 规则\n" + out.server_config;
 }
 async function showPreview() { if (busy.value) return; busy.value = true; error.value = ""; try { await validate(); tab.value = "config"; } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; } }
@@ -76,7 +80,7 @@ async function apply() {
   try {
     await validate();
     const settings = clone(cfg.value) as unknown as Record<string, unknown>;
-    const id = status.value?.installed ? (await props.api<{ job_id: string }>("/software/nginx-waf/configure", "POST", { settings }, newID())).job_id : await props.onInstall("nginx-waf", settings);
+    const id = status.value?.installed ? (await props.api<{ job_id: string }>(endpoint("configure"), "POST", { settings }, newID())).job_id : await props.onInstall(engine, settings);
     let completed = false;
     for (let n = 0; n < 120; n++) {
       const job = await props.api<{ state: string; error: string }>(`/jobs/${id}`);
@@ -85,7 +89,7 @@ async function apply() {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     if (!completed) throw new Error("任务仍在执行，未宣称已生效。请在操作记录中核对后再刷新。");
-    await loadConfig(); saved.value = "配置已备份、通过 nginx -t 并重载成功；现显示实际生效配置。";
+    await loadConfig(); saved.value = `配置已备份、通过 ${engineName} 原生检查和重载核对；现显示实际生效配置。`;
     await Promise.all([refreshHistory(), refreshReport()]);
   } catch (e) { error.value = (e as Error).message; await refreshHistory(); }
   finally { busy.value = false; }
@@ -116,7 +120,7 @@ async function importConfig() {
     const imported = JSON.parse(jsonInput.value) as Config;
     if (!imported || typeof imported !== "object" || !imported.policy || typeof imported.policy !== "object") throw new Error("请输入包含 policy 的配置对象");
     imported.policy.revision = applied.value?.policy.revision || 0;
-    const out = await props.api<{ settings: Config; http_config: string; server_config: string }>("/software/nginx-waf/preview", "POST", { settings: imported });
+    const out = await props.api<{ settings: Config; http_config: string; server_config: string }>(endpoint("preview"), "POST", { settings: imported });
     cfg.value = clone(out.settings); preview.value = out.http_config + "\n" + out.server_config; saved.value = "导入配置已通过字段校验，仅载入草稿；点击保存才会修改防护。";
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
@@ -127,7 +131,7 @@ onMounted(refresh);
 
 <template>
   <section class="waf-workspace" v-loading="busy">
-    <div class="waf-heading"><div><h3>Nginx 请求防火墙</h3><p>请求防护 · 站点策略 · CC 限速 · 审计与报表</p></div><div class="waf-actions"><el-tag :type="status?.healthy ? 'success' : 'warning'">{{ !status?.installed ? '未安装' : status.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
+    <div class="waf-heading"><div><h3>{{ engineName }} 请求防火墙</h3><p>请求防护 · 站点策略 · {{ apache ? "独立名单" : "CC 限速" }} · 审计与报表</p></div><div class="waf-actions"><el-tag :type="status?.healthy ? 'success' : 'warning'">{{ !status?.installed ? '未安装' : status.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-alert v-if="saved" :title="saved" type="success" :closable="false" />
     <el-alert v-if="status?.installed && !status.healthy" :title="status.detail" type="warning" :closable="false" />
@@ -140,20 +144,20 @@ onMounted(refresh);
           <el-alert v-if="report?.partial" title="日志读取达到最近 4 MiB / 5000 条上限；统计不是全历史总数，更早记录仍在服务器日志中。" type="warning" :closable="false" />
           <div class="waf-two"><section><h4>命中规则排行</h4><el-table :data="report?.rules || []" max-height="220" empty-text="暂无命中"><el-table-column label="规则"><template #default="{row}">{{reasonName(row.name)}}</template></el-table-column><el-table-column prop="count" label="次数" width="80"/></el-table></section><section><h4>来源 IP 排行</h4><el-table :data="report?.ips || []" max-height="220" empty-text="暂无来源"><el-table-column prop="name" label="网络对端 IP"/><el-table-column prop="count" label="次数" width="80"/></el-table></section></div>
           <h4>每小时防护事件（UTC）</h4><div class="waf-trend" v-if="report?.hours.length"><div v-for="h in report.hours.slice(-48)" :key="h.name" :title="`${h.name} UTC · ${h.count} 次`"><span :style="{height: `${Math.max(3, h.count / Math.max(...report.hours.map(x=>x.count)) * 90)}px`}"></span><small>{{h.name.slice(-5)}}</small></div></div><el-empty v-else description="暂无防护事件；没有事件不代表已完成安全审计" :image-size="64"/>
-          <el-alert title="当前为独立请求元数据防护：不包含完整 POST/JSON/上传内容解析、商业规则订阅、地区数据库或木马隔离。观察模式不阻断，也不执行 CC 限速。" type="info" :closable="false" />
+          <el-alert title="当前为独立请求元数据防护：不包含完整 POST/JSON/上传内容解析、商业规则订阅、地区数据库或木马隔离。观察模式不阻断 WAF 命中，但服务器原生拒绝仍有效。" type="info" :closable="false" />
         </el-tab-pane>
         <el-tab-pane label="全局防护" name="global">
           <el-form label-position="top" class="waf-two"><el-form-item label="运行模式"><el-select v-model="cfg.policy.mode"><el-option label="阻断：规则命中立即拒绝" value="block"/><el-option label="观察：只记录，不阻断或限速" value="observe"/><el-option label="停用：所有站点不阻断或限速" value="off"/></el-select></el-form-item><el-form-item label="特征策略"><el-select v-model="cfg.profile"><el-option label="平衡：常见攻击特征" value="balanced"/><el-option label="严格：扩展特征，可能增加误报" value="strict"/></el-select></el-form-item></el-form>
           <el-alert v-if="cfg.policy.mode !== 'block'" :title="cfg.policy.mode === 'off' ? '全局停用优先于所有站点策略；保存后停止防护。' : '观察模式会放行检测到的攻击请求；适用于上线前误报评估。'" type="warning" :closable="false"/>
           <div class="waf-group-grid"><article v-for="g in groups" :key="g.id"><div><strong>{{g.name}}</strong><small>{{g.hint}}</small></div><el-switch v-model="cfg.policy.groups[g.id]" :aria-label="g.name"/></article></div>
-          <h4>规则优先级与安全边界</h4><p>IP 白名单 → IP 黑名单 → UA 白名单 → UA 黑名单 → URL 白名单 → URL 黑名单 → 分类规则与自定义规则。白名单同时跳过 CC 限速，务必谨慎添加。</p><p>URL 匹配 Nginx 规范化路径，查询参数按原始参数特征检测；不承诺覆盖任意编码或未知攻击。健康探针自动豁免，不会阻断面板核验。</p>
+          <h4>规则优先级与安全边界</h4><p>IP 白名单 → IP 黑名单 → UA 白名单 → UA 黑名单 → URL 白名单 → URL 黑名单 → 分类规则与自定义规则。{{ apache ? "白名单跳过后续元数据检查" : "白名单同时跳过 CC 限速" }}，务必谨慎添加。</p><p>URL 匹配服务器规范化路径，查询参数按原始参数特征检测；不承诺覆盖任意编码或未知攻击。{{ apache ? "Apache 原生请求校验、静态文件访问限制仍然有效，观察模式不能绕过它们；IP 为实际网络对端，经过 Nginx 代理时为回环地址，不盲目信任 X-Forwarded-For。" : "健康探针自动豁免，不会阻断面板核验。" }}</p>
         </el-tab-pane>
         <el-tab-pane label="站点策略" name="sites">
           <div class="waf-filter"><el-input v-model="siteSearch" placeholder="搜索站点名称 / 域名" aria-label="搜索防护站点"/><el-select v-model="selectedSite" filterable placeholder="选择独立配置站点"><el-option v-for="s in scopedSites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-button @click="addSite">添加站点策略</el-button></div>
-          <p>未列出的受管 Nginx 站点继承全局策略。网站设置里的 WAF 关闭状态仍然有效，本页不会自动打开它。</p>
-          <el-table :data="cfg.policy.sites" empty-text="所有站点继承全局策略" max-height="450"><el-table-column type="expand"><template #default="{row}"><div class="waf-site-groups"><el-form-item v-for="g in groups" :key="g.id" :label="g.name"><el-select :model-value="row.groups?.[g.id] === undefined ? 'inherit' : row.groups[g.id] ? 'on' : 'off'" @change="(value: string)=>siteGroup(row,g.id,value)"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></el-form-item></div></template></el-table-column><el-table-column label="站点" min-width="210"><template #default="{row}"><strong>{{siteName(row.site_id)}}</strong><small class="waf-site-warning" v-if="sites.find(s=>s.id===row.site_id)?.settings?.waf_enabled === false">网站设置已关闭 WAF，本策略不会生效</small></template></el-table-column><el-table-column label="模式" width="125"><template #default="{row}"><el-select v-model="row.mode"><el-option v-for="m in ['inherit','block','observe','off']" :key="m" :label="modeLabel(m)" :value="m"/></el-select></template></el-table-column><el-table-column label="CC 防护" width="125"><template #default="{row}"><el-select :model-value="row.cc_enabled === undefined ? 'inherit' : row.cc_enabled ? 'on' : 'off'" @change="(v: string)=>{if(v==='inherit')delete row.cc_enabled;else row.cc_enabled=v==='on'}"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></template></el-table-column><el-table-column label="速率 / 秒" width="150"><template #default="{row}"><el-input-number v-model="row.rate_per_second" :min="0" :max="200" controls-position="right"/></template></el-table-column><el-table-column label="突发容量" width="150"><template #default="{row}"><el-input-number v-model="row.burst" :min="0" :max="1000" controls-position="right"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.sites=cfg.policy.sites.filter(p=>p!==row)">移除</el-button></template></el-table-column></el-table><p class="waf-muted">展开每行可覆盖规则分类；速率 / 突发值为 0 表示继承，独立速率须为 5–200。移除策略只恢复继承，不删除网站。</p>
+          <p>未列出的受管 {{ engineName }} 站点继承全局策略。{{ apache ? "本页只管理 Apache 防护，不修改 Nginx 入口策略。" : "网站设置里的 WAF 关闭状态仍然有效，本页不会自动打开它。" }}</p>
+          <el-table :data="cfg.policy.sites" empty-text="所有站点继承全局策略" max-height="450"><el-table-column type="expand"><template #default="{row}"><div class="waf-site-groups"><el-form-item v-for="g in groups" :key="g.id" :label="g.name"><el-select :model-value="row.groups?.[g.id] === undefined ? 'inherit' : row.groups[g.id] ? 'on' : 'off'" @change="(value: string)=>siteGroup(row,g.id,value)"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></el-form-item></div></template></el-table-column><el-table-column label="站点" min-width="210"><template #default="{row}"><strong>{{siteName(row.site_id)}}</strong><small class="waf-site-warning" v-if="!apache && sites.find(s=>s.id===row.site_id)?.settings?.waf_enabled === false">网站设置已关闭 WAF，本策略不会生效</small></template></el-table-column><el-table-column label="模式" width="125"><template #default="{row}"><el-select v-model="row.mode"><el-option v-for="m in ['inherit','block','observe','off']" :key="m" :label="modeLabel(m)" :value="m"/></el-select></template></el-table-column><el-table-column v-if="!apache" label="CC 防护" width="125"><template #default="{row}"><el-select :model-value="row.cc_enabled === undefined ? 'inherit' : row.cc_enabled ? 'on' : 'off'" @change="(v: string)=>{if(v==='inherit')delete row.cc_enabled;else row.cc_enabled=v==='on'}"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></template></el-table-column><el-table-column v-if="!apache" label="速率 / 秒" width="150"><template #default="{row}"><el-input-number v-model="row.rate_per_second" :min="0" :max="200" controls-position="right"/></template></el-table-column><el-table-column v-if="!apache" label="突发容量" width="150"><template #default="{row}"><el-input-number v-model="row.burst" :min="0" :max="1000" controls-position="right"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.sites=cfg.policy.sites.filter(p=>p!==row)">移除</el-button></template></el-table-column></el-table><p class="waf-muted">展开每行可覆盖规则分类；{{ apache ? "Apache 不提供独立 CC 速率。" : "速率 / 突发值为 0 表示继承，独立速率须为 5–200。" }}移除策略只恢复继承，不删除网站。</p>
         </el-tab-pane>
-        <el-tab-pane label="CC 防护" name="cc">
+        <el-tab-pane v-if="!apache" label="CC 防护" name="cc">
           <el-form label-position="top" class="waf-three"><el-form-item label="启用 CC 限速"><el-switch v-model="cfg.policy.cc_enabled" aria-label="启用 CC 限速"/></el-form-item><el-form-item label="每站点 / 每 IP 速率（次 / 秒）"><el-input-number v-model="cfg.rate_per_second" :min="5" :max="200"/></el-form-item><el-form-item label="突发容量（超额立即返回 429）"><el-input-number v-model="cfg.policy.burst" :min="1" :max="1000"/></el-form-item></el-form>
           <p>使用 Nginx 原生漏桶限速，站点之间不共享同一 IP 的额度；URL 规则与站点限速同时生效。观察 / 停用模式与白名单不限速。</p>
           <h4>URL 独立限速（最多 20 条）</h4><div class="waf-editor"><el-select v-model="newCC.site_id" filterable aria-label="URL 限速范围"><el-option value="" label="全部受管站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="newCC.path" placeholder="/api/login" aria-label="URL 限速路径"/><el-checkbox v-model="newCC.prefix">路径前缀</el-checkbox><el-input-number v-model="newCC.rate_per_second" :min="1" :max="200" aria-label="URL 速率"/><el-input-number v-model="newCC.burst" :min="1" :max="1000" aria-label="URL 突发容量"/><el-button @click="addCC">添加规则</el-button></div>
@@ -171,15 +175,15 @@ onMounted(refresh);
           <el-table :data="cfg.policy.rules" max-height="320" empty-text="暂无自定义规则"><el-table-column prop="name" label="名称"/><el-table-column label="范围"><template #default="{row}">{{siteName(row.site_id)}}</template></el-table-column><el-table-column label="匹配" min-width="190" show-overflow-tooltip><template #default="{row}">{{fields.find(f=>f.id===row.field)?.name}} · {{row.operator}} · {{row.value}}</template></el-table-column><el-table-column label="动作" width="85"><template #default="{row}">{{row.action==='observe'?'仅记录':'阻断'}}</template></el-table-column><el-table-column label="启用" width="80"><template #default="{row}"><el-switch v-model="row.enabled"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.rules=cfg.policy.rules.filter(r=>r!==row)">删除</el-button></template></el-table-column></el-table>
         </el-tab-pane>
         <el-tab-pane label="防护日志" name="logs">
-          <div class="waf-filter"><el-select v-model="filter.site_id" filterable aria-label="日志站点"><el-option value="" label="全部站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="filter.ip" placeholder="精确来源 IP" aria-label="来源 IP"/><el-select v-model="filter.action" aria-label="日志动作"><el-option label="全部动作" value=""/><el-option label="已阻断" value="block"/><el-option label="仅观察" value="observe"/></el-select><el-select v-model="filter.rule" filterable aria-label="命中规则"><el-option label="全部规则" value=""/><el-option v-for="r in [...groups.map(g=>({id:g.id,name:g.name})),...cfg.policy.rules.map(r=>({id:`custom-${r.id}`,name:r.name})),{id:'cc',name:'CC 限速'},{id:'ip-deny',name:'IP 黑名单'},{id:'url-deny',name:'URL 黑名单'},{id:'ua-deny',name:'UA 黑名单'}]" :key="r.id" :label="r.name" :value="r.id"/></el-select></div>
+          <div class="waf-filter"><el-select v-model="filter.site_id" filterable aria-label="日志站点"><el-option value="" label="全部站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="filter.ip" placeholder="精确来源 IP" aria-label="来源 IP"/><el-select v-model="filter.action" aria-label="日志动作"><el-option label="全部动作" value=""/><el-option label="已阻断" value="block"/><el-option label="仅观察" value="observe"/></el-select><el-select v-model="filter.rule" filterable aria-label="命中规则"><el-option label="全部规则" value=""/><el-option v-for="r in [...groups.map(g=>({id:g.id,name:g.name})),...cfg.policy.rules.map(r=>({id:`custom-${r.id}`,name:r.name})),...(!apache ? [{id:'cc',name:'CC 限速'}] : []),{id:'ip-deny',name:'IP 黑名单'},{id:'url-deny',name:'URL 黑名单'},{id:'ua-deny',name:'UA 黑名单'}]" :key="r.id" :label="r.name" :value="r.id"/></el-select></div>
           <div class="waf-filter"><el-date-picker v-model="range" type="datetimerange" start-placeholder="开始时间" end-placeholder="结束时间"/><el-button :loading="reportBusy" @click="refreshReport(true)">查询</el-button><el-button :disabled="reportBusy || !status?.installed" @click="exportLogs">导出筛选结果</el-button></div>
           <el-alert v-if="report?.partial" title="此结果来自最近 4 MiB / 5000 条，已截断。导出同样受此上限约束，不等于完整历史备份。" type="warning" :closable="false"/>
           <el-table :data="report?.events || []" v-loading="reportBusy" max-height="350" empty-text="没有符合筛选条件的真实事件"><el-table-column label="时间" width="160"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column prop="site" label="站点" min-width="130" show-overflow-tooltip/><el-table-column prop="ip" label="来源 IP" min-width="130"/><el-table-column label="规则" min-width="120"><template #default="{row}">{{reasonName(row.reason)}}</template></el-table-column><el-table-column prop="path" label="路径" min-width="150" show-overflow-tooltip/><el-table-column prop="method" label="方法" width="75"/><el-table-column prop="status" label="状态" width="65"/><el-table-column label="动作" width="80"><template #default="{row}"><el-tag :type="row.action==='observe'?'info':'danger'">{{row.action==='observe'?'观察':'阻断'}}</el-tag></template></el-table-column></el-table><el-pagination v-model:current-page="page" :page-size="limit" :total="report?.total || 0" layout="total, prev, pager, next" @current-change="refreshReport()"/><p class="waf-muted">默认最近 24 小时，最多查询 90 天。仅记录时间、站点、网络对端、规范化路径和命中原因，不保存查询参数、Cookie、UA 或请求体；IPv4 / IPv6 属于敏感运维数据，日志仅管理员可读。</p>
         </el-tab-pane>
         <el-tab-pane label="配置与版本" name="config">
           <el-descriptions :column="3" border><el-descriptions-item label="已安装版本">{{status?.version || '未安装'}}</el-descriptions-item><el-descriptions-item label="处理器版本">{{implementation}}</el-descriptions-item><el-descriptions-item label="配置修订">{{applied?.policy.revision}}</el-descriptions-item></el-descriptions><p>应用商店检查 GitHub 签名目录后提示更新；新版处理器由签名面板提供。WAF 升级会实际迁移并校验规则，不只改版本号。</p>
-          <h4>安全配置导入 / 导出</h4><el-button type="warning" plain @click="restoreDraft">恢复默认草稿（不立即生效）</el-button><el-button @click="download('yunzhan-waf-applied.json',applied)">导出生效配置</el-button><el-button @click="download('yunzhan-waf-draft.json',cfg)">导出草稿</el-button><p>仅接受本应用的 JSON 配置，128 KiB 上限；拒绝未知字段、任意 Nginx 配置及不存在的网站。导入不会立即改变服务器。</p><el-input v-model="jsonInput" type="textarea" :rows="4" aria-label="导入 JSON 配置" placeholder="粘贴配置 JSON"/><el-button class="waf-add" @click="importConfig">校验并载入草稿</el-button>
-          <h4>生成的 Nginx 配置（只读预览）</h4><el-button @click="showPreview">生成预览</el-button><pre v-if="preview" class="waf-code">{{preview}}</pre><p>保存前自动留下受限权限的完整配置备份，执行 nginx -t 后才重载；失败恢复旧文件。保存使用修订号检查，防止旧页面覆盖新配置。备份最多 100 份 / 每份 8 MiB，达到上限会拒绝修改，需管理员先归档。</p>
+          <h4>安全配置导入 / 导出</h4><el-button type="warning" plain @click="restoreDraft">恢复默认草稿（不立即生效）</el-button><el-button @click="download('yunzhan-waf-applied.json',applied)">导出生效配置</el-button><el-button @click="download('yunzhan-waf-draft.json',cfg)">导出草稿</el-button><p>仅接受本应用的 JSON 配置，128 KiB 上限；拒绝未知字段、任意服务器配置及不支持的网站。导入不会立即改变服务器。</p><el-input v-model="jsonInput" type="textarea" :rows="4" aria-label="导入 JSON 配置" placeholder="粘贴配置 JSON"/><el-button class="waf-add" @click="importConfig">校验并载入草稿</el-button>
+          <h4>生成的 {{ engineName }} 配置（只读预览）</h4><el-button @click="showPreview">生成预览</el-button><pre v-if="preview" class="waf-code">{{preview}}</pre><p>保存前自动留下受限权限的完整配置备份，通过 {{ engineName }} 原生校验后才重载，并核对生效指纹；失败恢复旧文件。保存使用修订号检查，防止旧页面覆盖新配置。备份最多 100 份，达到上限拒绝修改，需管理员先归档。</p>
         </el-tab-pane>
         <el-tab-pane label="操作记录" name="history"><div class="waf-actions"><p>最近 50 次持久化任务，包括安装、升级、配置与失败原因。</p><el-button @click="refreshHistory">刷新记录</el-button></div><el-table :data="history" max-height="420" empty-text="尚无操作记录"><el-table-column label="时间" width="170"><template #default="{row}">{{formatPanelDateTime(row.created_at)}}</template></el-table-column><el-table-column prop="kind" label="操作"/><el-table-column prop="state" label="状态"/><el-table-column prop="error" label="错误 / 结果" min-width="240" show-overflow-tooltip/><el-table-column prop="id" label="任务标识" min-width="220" show-overflow-tooltip/></el-table></el-tab-pane>
       </el-tabs>

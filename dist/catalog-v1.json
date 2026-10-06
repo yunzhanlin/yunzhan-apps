@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-05T23:01:41Z",
+  "generated_at": "2026-10-06T06:22:07Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -47,28 +47,31 @@
       "id": "apache-waf",
       "name": "Apache WAF",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际 Apache 虚拟主机正常请求 200、扫描器和 SQL 特征请求 403，通过语法校验",
+      "version": "2.0.0",
+      "summary": "独立 Apache 防护工作台：分类规则、站点策略、IP/URL/UA 名单、字面自定义规则、观察模式、隐私日志与备份回滚；不提供 CC 或完整请求体检测。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "apache-waf",
       "manage_route": "app-modules",
       "capabilities": [
-        "请求 URI 特征过滤",
-        "扫描器拦截",
-        "Apache 语法校验",
-        "失败回滚"
+        "分类规则与观察模式",
+        "站点独立策略",
+        "IP/URL/UA 名单",
+        "字面自定义规则",
+        "真实事件筛选与排行",
+        "安全配置导入与预览",
+        "备份、修订检查与重载探针"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/1.1.0/manifest.json",
-      "sha256": "6e42043a1a01737b33a73ebb139695ec7b9a3bd4783e5172c3c62e268b9cf89b"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/2.0.0/manifest.json",
+      "sha256": "997122bddb1ad0c226a3f441ad55bf1a19cdea788930d9223be8c658e03b2c02"
     },
     {
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "从实际资源、站点、任务、流量、证书数据生成持久化日报",
+      "version": "1.2.0",
+      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -79,17 +82,20 @@
         "任务故障摘要",
         "流量与安全摘要",
         "证书到期检查",
-        "每日持久化"
+        "每日持久化",
+        "按日期历史日报",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.1.0/manifest.json",
-      "sha256": "769b653c7c2bb3e489c5878090c685130e35a5a5fdc24e5351128fb5bca28b0b"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.2.0/manifest.json",
+      "sha256": "828aaaba47d161c900bfea428271223cec826d819522e48bcbee88788b373ab9"
     },
     {
       "id": "disk-analysis",
       "name": "Disk analysis",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "真实目录、扩展名和大文件空间分析，可选目录下钻；有界只读扫描，拒绝越界和链接。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -99,10 +105,14 @@
         "目录体积",
         "大文件排行",
         "文件数量",
-        "有界扫描"
+        "有界扫描",
+        "目录下钻",
+        "扩展名分布",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.1.0/manifest.json",
-      "sha256": "e7cd5f8877f46d6a0d075a7386dc1581fee229ef097645d1795c7cd66b36adcb"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.2.0/manifest.json",
+      "sha256": "5aa327690e407b489c6e23b6366232bdb24fd0abb15a25528338142e9495bb09"
     },
     {
       "id": "docker-manager",
@@ -148,7 +158,7 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实篡改检测、备份恢复与无人触发的定时自动恢复通过",
       "stage": "ready",
       "risk": "privileged",
@@ -160,16 +170,18 @@
         "内容备份",
         "变更检测",
         "分钟级自动恢复",
-        "恢复前留存"
+        "恢复前留存",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.1.0/manifest.json",
-      "sha256": "085814698df1783861c72315c31a3e3f301eccfc6e63658fcfb0a80d0deab504"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.2.0/manifest.json",
+      "sha256": "ba5f56246df47d57b04bb17f03394f6e580448ba08a350668a172f749511caec"
     },
     {
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -180,17 +192,19 @@
         "哈希检查点",
         "变更检测",
         "权限变化",
-        "排除规则"
+        "排除规则",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.1.0/manifest.json",
-      "sha256": "71cf41038cd2e36ea2e47012e661e897d61b03c8c37532aa2b920ebc7a5d74c8"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.2.0/manifest.json",
+      "sha256": "9867f04e77626883726d5153bc68c4df729e42bdcd536a193382f15b7e13df7d"
     },
     {
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "增量同步、逐文件检查点和目标冲突保护通过",
+      "version": "1.2.0",
+      "summary": "手动及持久化定时增量同步；支持暂停恢复、修订冲突检查、目标冲突保护和后台执行历史。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -201,16 +215,21 @@
         "SHA-256 校验",
         "目标冲突保护",
         "逐文件检查点",
-        "隔离 PHP 网站部署"
+        "隔离 PHP 网站部署",
+        "定时同步计划",
+        "暂停恢复",
+        "计划修订检查",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.1.0/manifest.json",
-      "sha256": "fba9182eb160988f0cc1dd895ce404d5956ae9f618eda53f5877e2fa41f316fa"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.2.0/manifest.json",
+      "sha256": "442f5d9d53fe3ec43fcd8ed192b50a605e4fc3ff708be2391b96f1dfc375f4e4"
     },
     {
       "id": "load-balance",
       "name": "Load Balance",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实轮询分流、节点故障切换、健康探测和入口移除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -222,10 +241,12 @@
         "备用节点",
         "IP 粘滞",
         "节点探测",
-        "失败转移"
+        "失败转移",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.1.0/manifest.json",
-      "sha256": "43bbaf59ca99a82a7b6dcb77c02557fb41951a750c5b3e6edd373430c2ebba77"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.2.0/manifest.json",
+      "sha256": "f9bd5c961720c1901a676f1130b55bd989f398a3930eb769fc78382ce58360d7"
     },
     {
       "id": "memcached",
@@ -251,7 +272,7 @@
       "id": "mobile",
       "name": "aaPanel Mobile",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据",
       "stage": "ready",
       "risk": "maintained",
@@ -262,10 +283,12 @@
         "PWA",
         "响应式界面",
         "现有 TOTP 登录",
-        "不缓存 API 或凭据"
+        "不缓存 API 或凭据",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.1.0/manifest.json",
-      "sha256": "a57aeedfd0d444abfc25d44d32e1f084373a5051414790b63e2593d3ea6ece25"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/mobile/1.2.0/manifest.json",
+      "sha256": "4b8739ded0767e70b04578c712067c8eee1c31d4e4e84303e482497b1039c893"
     },
     {
       "id": "mongodb",
@@ -311,8 +334,8 @@
       "id": "network-threat-detection",
       "name": "Network Threat Detection",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "真实 ss 监听端口/连接基线和 Fail2ban 状态读取通过",
+      "version": "1.2.0",
+      "summary": "结构化 TCP/UDP 监听与连接，区分公网和回环；可信基线对比新增与关闭端口，无基线不误报入侵。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -322,16 +345,21 @@
         "监听端口基线",
         "新增监听告警",
         "实时连接",
-        "Fail2ban 状态"
+        "Fail2ban 状态",
+        "公网暴露分类",
+        "端口增减对比",
+        "不完整结果标记",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.1.0/manifest.json",
-      "sha256": "1f37aa73f2dfda75e890f1ad80aec429a331edf3e72a47967a2c31e00f09547b"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.2.0/manifest.json",
+      "sha256": "f885cd18a3649dcea870282753ba9cd05bb97830ac9400114e5ae3dd3a3c9e73"
     },
     {
       "id": "nfs-manager",
       "name": "NFS Manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过",
       "stage": "ready",
       "risk": "privileged",
@@ -342,10 +370,12 @@
         "NFSv4",
         "安全挂载选项",
         "开机恢复",
-        "活跃挂载卸载保护"
+        "活跃挂载卸载保护",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.1.0/manifest.json",
-      "sha256": "128b7c84c5da6cf7c87c57da3dc1db9bf734b8075843ee5440f6d510ccc894f5"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.2.0/manifest.json",
+      "sha256": "955b46c94ced8ac916b5e21d67bf6c31f00d97dced7cfa85402a029d49c240fa"
     },
     {
       "id": "nginx",
@@ -760,8 +790,8 @@
       "id": "php-code-security",
       "name": "PHP code security",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "只读 PHP/PHTML/INC 风险扫描；按路径、规则、级别和排除项筛选，提供证据、摘要及部分结果标记。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -771,10 +801,15 @@
         "静态扫描",
         "高风险函数",
         "编码混淆特征",
-        "证据行号"
+        "证据行号",
+        "规则和风险级别筛选",
+        "排除路径",
+        "SHA-256 内容证据",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-code-security/1.1.0/manifest.json",
-      "sha256": "f1150b18c127dd215e259cf69b888855cff95b118c2f4ad6299d36aaa52d4b83"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-code-security/1.2.0/manifest.json",
+      "sha256": "82cef9ffa82a7def3e8f615bbd3b8ddb17dfc20dce225d4bff87065bcfad98c3"
     },
     {
       "id": "phpmyadmin",
@@ -800,7 +835,7 @@
       "id": "platform-ops",
       "name": "Platform Ops",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
       "stage": "ready",
       "risk": "privileged",
@@ -811,17 +846,19 @@
         "多主机 HTTPS 健康聚合",
         "只读令牌",
         "加密凭据",
-        "令牌撤销"
+        "令牌撤销",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.1.0/manifest.json",
-      "sha256": "794409abb8f9ebf4a0f72a632dde860f35aab1eb05c7d371cf0eadb5863232df"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.2.0/manifest.json",
+      "sha256": "2962907ca319b6266c369df203f46886609073651b2aa7f6baa316a95b885de9"
     },
     {
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4-compat2",
-      "summary": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过",
+      "version": "7.0.4-compat3",
+      "summary": "非 root PM2 应用、1–8 进程、内存阈值和修订号更新；实际端口就绪后才报告成功，失败恢复旧配置。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -832,17 +869,24 @@
         "非 root 进程",
         "日志",
         "启停重启",
-        "开机恢复"
+        "开机恢复",
+        "多进程集群",
+        "内存重启阈值",
+        "配置修订检查",
+        "实际端口就绪",
+        "启动失败回滚",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4-compat2/manifest.json",
-      "sha256": "090b230499d101c47e972222dac026b587bd68dbb33022fdc4de130fdc444916"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4-compat3/manifest.json",
+      "sha256": "d7ad7c48c75df44a671598d3133a7c7d360f753136e0631bdb1395bda8e614b9"
     },
     {
       "id": "pure-ftpd",
       "name": "Pure-FTPd",
       "category": "deployment",
-      "version": "1.0.50-compat2",
-      "summary": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过",
+      "version": "1.0.50-compat3",
+      "summary": "强制 TLS 的网站虚拟账户；支持密码轮换，失败恢复账户文本和认证数据库。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -853,10 +897,14 @@
         "虚拟账号",
         "网站 chroot",
         "上传下载",
-        "回环监听"
+        "回环监听",
+        "密码轮换",
+        "双文件失败恢复",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pure-ftpd/1.0.50-compat2/manifest.json",
-      "sha256": "deb1e1ecb7d097b233e838ced3706bff4c27c13c1c5878786eda5c21ef23d3e7"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pure-ftpd/1.0.50-compat3/manifest.json",
+      "sha256": "558a26d089c5b49c53edeaadfcc8be7eb3edc15eef41b69aca99443cb336d7fa"
     },
     {
       "id": "rabbitmq",
@@ -902,8 +950,8 @@
       "id": "site-diagnosis",
       "name": "Site Diagnosis",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "真实 DNS、HTTP、TLS 和 Nginx 检查，提供健康评分、失败原因和处置建议；评分不是安全认证。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -913,10 +961,14 @@
         "DNS 检查",
         "HTTP 检查",
         "TLS 检查",
-        "Nginx 配置检查"
+        "Nginx 配置检查",
+        "健康评分",
+        "失败处置建议",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/site-diagnosis/1.1.0/manifest.json",
-      "sha256": "2a89e2993df65571be9b30f8bef4d332b197032b1f1d130b286c582f9fc81f2a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/site-diagnosis/1.2.0/manifest.json",
+      "sha256": "22dfee52998c907ccef5f7f97032a5dd9e7726b2c6267aa35b4e130117ffb354"
     },
     {
       "id": "system-hardening",
@@ -942,7 +994,7 @@
       "id": "task-manager",
       "name": "Task manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程",
       "stage": "ready",
       "risk": "privileged",
@@ -953,16 +1005,18 @@
         "实时进程",
         "CPU 与内存",
         "网络连接",
-        "受管非 root 进程终止"
+        "受管非 root 进程终止",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.1.0/manifest.json",
-      "sha256": "c9c231a72ba38f70b3e4a424baf80b8c1b570f5def71fd3e5521daf27b34dc96"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.2.0/manifest.json",
+      "sha256": "210dc302db5f1c87915a3f20dc96d5c94232cfbd66da229e50ae30e9c7be0600"
     },
     {
       "id": "user-manager",
       "name": "aaPanel user Manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "实际登录、网站范围隔离、越权拒绝、会话撤销和账户删除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -974,10 +1028,12 @@
         "三种角色",
         "网站权限范围",
         "会话撤销",
-        "保留最后管理员"
+        "保留最后管理员",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.1.0/manifest.json",
-      "sha256": "04fb0851b5814934945f21fbd610814bd6f0dd662bf5c00db90e88f7338115ec"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.2.0/manifest.json",
+      "sha256": "e14680164d672e46af8346e1ea16a3ca79f489feb99c49a84bbf22570f818176"
     },
     {
       "id": "website-analytics",
@@ -1009,8 +1065,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.1.0",
-      "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
+      "version": "2.2.0",
+      "summary": "真实访问日志的时间、状态、路径/IP、爬虫与慢请求筛选，趋势、排行和隐私来源统计。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1022,16 +1078,21 @@
         "爬虫识别",
         "错误数",
         "路径排行",
-        "来源统计"
+        "来源统计",
+        "时间与状态筛选",
+        "路径/IP 筛选",
+        "慢请求明细",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.1.0/manifest.json",
-      "sha256": "6933ea8cf5a8763f22f288a88b02743ef447c31330ef8ff0231b4c357bffc174"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.2.0/manifest.json",
+      "sha256": "d43af9e96371d41817a162b66a60dd1caa606dbe4d24083ac9d77d21e5b3b1c3"
     },
     {
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1042,10 +1103,12 @@
         "签名文件基线",
         "变更事件",
         "备份恢复",
-        "网站级策略"
+        "网站级策略",
+        "专用操作流程",
+        "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.1.0/manifest.json",
-      "sha256": "6f6d8d9179fe958b4e92aed05096448f130d61c8894cbac5af9b650b602bd8c5"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.2.0/manifest.json",
+      "sha256": "7c8f7524f25dd1222249cbbecf5c8849f01bfbbe99c503d5f1867d0f6614398f"
     }
   ]
 }

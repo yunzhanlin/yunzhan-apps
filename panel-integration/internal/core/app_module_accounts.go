@@ -19,6 +19,8 @@ func (s *Store) migrateAppModules() error {
  CREATE TABLE IF NOT EXISTS app_platform_hosts(id TEXT PRIMARY KEY,url TEXT NOT NULL,token BLOB NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_platform_tokens(token_hash TEXT PRIMARY KEY,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_daily_reports(day TEXT PRIMARY KEY,report TEXT NOT NULL,created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS app_module_events(id TEXT PRIMARY KEY,module_id TEXT NOT NULL,action TEXT NOT NULL,actor TEXT NOT NULL,outcome TEXT NOT NULL,created_at TEXT NOT NULL);
+ CREATE INDEX IF NOT EXISTS app_module_events_module ON app_module_events(module_id);
  INSERT OR IGNORE INTO schema_migrations VALUES(38,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
 	return e
 }

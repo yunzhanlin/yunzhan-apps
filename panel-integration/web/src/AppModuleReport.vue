@@ -130,6 +130,30 @@ const names: Record<string, string> = {
   failed_site_jobs: "失败网站任务",
   failed_runtime_jobs: "失败运行时任务",
   audit_events_24h: "24 小时审计事件",
+  score: "健康检查得分",
+  passed_checks: "通过检查",
+  total_checks: "检查总数",
+  recommendations: "处置建议",
+  advice: "建议",
+  check: "检查项",
+  findings_count: "风险命中数",
+  severity_counts: "风险级别分布",
+  rule_counts: "扫描规则分布",
+  reports: "历史日报目录",
+  day: "报告日期",
+  actor: "操作人",
+  trigger: "触发方式",
+  listener_details: "监听服务明细",
+  listener_count: "监听服务数",
+  public_listener_count: "公网监听数",
+  new_public_listeners: "新增公网监听",
+  connection_count: "TCP 连接数",
+  protocol: "协议",
+  endpoint: "监听地址",
+  public: "非回环监听",
+  process: "进程",
+  baseline_present: "可信基线已保存",
+  baseline_at: "基线时间",
 };
 const analytics = computed(() =>
   ["website-analytics", "website-statistics-v2"].includes(props.id),
@@ -150,6 +174,14 @@ const metrics = computed(() =>
         "total_bytes",
         "files",
         "scanned_php",
+        "findings_count",
+        "score",
+        "passed_checks",
+        "total_checks",
+        "listener_count",
+        "public_listener_count",
+        "new_public_listeners",
+        "connection_count",
         "sites",
         "running_sites",
         "certificates_due_14_days",
@@ -242,7 +274,7 @@ function choose(row: Record<string, any>) {
     emit("select", { path, drill: true });
     return;
   }
-  emit("select", { ...row, resource_id: row.id, site_ids: row.site_ids });
+  emit("select", { ...row, resource_id: row.resource_id || row.id, site_ids: row.site_ids });
 }
 function chartRows(values: any, key: string) {
   return Object.entries(values)

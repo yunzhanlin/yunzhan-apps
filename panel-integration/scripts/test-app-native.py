@@ -2,6 +2,7 @@
 """Verify the native modules using real system services, network requests and data transfer."""
 import json,pathlib,uuid,time,os
 from panel_client import PanelClient
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 report_path=ROOT/'.local/app-modules-acceptance.json'
 report=json.loads(report_path.read_text())
@@ -61,8 +62,6 @@ ftp=ftplib.FTP_TLS(context=ctx);ftp.connect('localhost',2121,timeout=10);ftp.log
  assert c.api('/sites/'+target['id']+'/files/text?path=ftp-roundtrip.txt')['content']=='ftp-verified'
  module('pure-ftpd','delete',username=username);pass_app('pure-ftpd','真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过')
  install('pm2-manager');app='pm2-'+uuid.uuid4().hex[:8]
- for old in module('pm2-manager')['apps']:
-  if old['app']['id'].startswith('pm2-'):module('pm2-manager','delete',resource_id=old['app']['id'])
  ensure_file(target,'pm2-test.js',"require('http').createServer((req,res)=>res.end('pm2-verified')).listen(Number(process.env.PORT),process.env.HOST);console.log('pm2-ready');")
  module('pm2-manager','create',resource_id=app,site_id=target['id'],entry='pm2-test.js',port=22001)
  assert get(22001)=='pm2-verified';module('pm2-manager','restart',resource_id=app);assert get(22001)=='pm2-verified'

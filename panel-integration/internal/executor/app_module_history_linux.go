@@ -8,6 +8,7 @@ import (
 	"local/panel/internal/core"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Never retain request bodies: module inputs can contain passwords and tokens.
@@ -51,6 +52,11 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 	if operationError != nil {
 		event.Outcome = "failed"
 		event.Error = operationError.Error()
+		for _, secret := range []string{in.Password, in.Token} {
+			if secret != "" {
+				event.Error = strings.ReplaceAll(event.Error, secret, "[已隐藏]")
+			}
+		}
 		if len(event.Error) > 512 {
 			event.Error = event.Error[:512] + "…"
 		}

@@ -54,6 +54,9 @@ type AppModuleInput struct {
 	StatusCode       int           `json:"status_code,omitempty"`
 	MinSeconds       float64       `json:"min_seconds,omitempty"`
 	OnlyBots         bool          `json:"only_bots,omitempty"`
+	Severity         string        `json:"severity,omitempty"`
+	Instances        int           `json:"instances,omitempty"`
+	MemoryMB         int           `json:"memory_mb,omitempty"`
 	Enabled          bool          `json:"enabled"`
 	ExpectedRevision int64         `json:"expected_revision,omitempty"`
 }
@@ -106,6 +109,16 @@ func AppModules() []AppModuleDefinition {
 				AppModuleField{"min_seconds", "慢请求阈值（秒，0 默认 1 秒）", "decimal"}, AppModuleField{"only_bots", "仅查看爬虫请求", "boolean"})
 		case "disk-analysis":
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"path", "网站内子目录（留空扫描全部）", "text"})
+		case "php-code-security":
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"search", "路径或规则筛选", "text"}, AppModuleField{"severity", "风险级别", "severity"})
+		case "daily-report":
+			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"})
+		case "pure-ftpd":
+			definitions[i].Actions = append(definitions[i].Actions, "password")
+		case "pm2-manager":
+			definitions[i].Actions = append(definitions[i].Actions, "update")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
 		}
 	}
 	return definitions
@@ -151,6 +164,26 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 				}
 			}
 		}
+		out["workspace"] = ModuleWorkspace(r.PathValue("id"))
+		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/app-modules/{id}/history", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		id := r.PathValue("id")
+		if _, ok := FindAppModule(id); !ok {
+			fail(w, 404, "应用模块不存在")
+			return
+		}
+		var out any
+		var err error
+		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
+			out, err = a.Store.appModuleHistory(id)
+		} else {
+			err = a.Executor.Call(r.Context(), "GET", "/v1/app-modules/"+id+"/history", nil, &out)
+		}
+		if err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
 		send(w, 200, out)
 	}))
 	m.HandleFunc("POST /api/app-modules/{id}/{action}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
@@ -179,9 +212,14 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		} else if id == "platform-ops" {
 			out, err = a.platformOperation(ctx, action, in)
 		} else if id == "daily-report" {
-			out, err = a.appDailyReport(ctx)
+			out, err = a.dailyReportOperation(ctx, action, in)
 		} else {
 			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, in, &out)
+		}
+		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
+			if e := a.Store.recordAppModuleEvent(id, action, u.Username, err); e != nil && err == nil {
+				err = errors.New("业务可能已执行，但执行摘要保存失败，请刷新核对")
+			}
 		}
 		if err != nil {
 			_ = a.Store.Audit(u.Username, "app-module."+action, id, "failed")
@@ -196,16 +234,18 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	out := []SoftwareAppCatalogItem{}
 	for _, d := range AppModules() {
-		version := "1.1.0"
+		version := "1.2.0"
 		switch d.ID {
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":
-			version = "1.0.50-compat2"
+			version = "1.0.50-compat3"
 		case "pm2-manager":
-			version = "7.0.4-compat2"
+			version = "7.0.4-compat3"
 		case "website-statistics-v2":
-			version = "2.1.0"
+			version = "2.2.0"
+		case "apache-waf":
+			version = ApacheWAFVersion
 		}
 		out = append(out, SoftwareAppCatalogItem{ID: d.ID, Family: "module", Name: d.Name, Category: "professional", Version: version, Description: d.Name, Source: "云栈应用仓库", Capabilities: d.Actions, Defaults: map[string]any{}})
 	}

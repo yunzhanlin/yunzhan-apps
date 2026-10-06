@@ -190,6 +190,7 @@ func BuildWAFReport(snapshot WAFEventsPage, q url.Values, now time.Time) (WAFRep
 }
 
 func (a *Server) wafWorkspaceRoutes(m *http.ServeMux) {
+	a.apacheWAFWorkspaceRoutes(m)
 	admin := func(u identity, w http.ResponseWriter) bool {
 		role, _, e := a.Store.appUserRole(u.ID)
 		if e != nil || role != "admin" {

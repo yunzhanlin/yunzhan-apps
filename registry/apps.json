@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-05T23:01:41Z",
+  "generated_at": "2026-10-06T06:22:07Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -176,8 +176,8 @@
       "id": "pure-ftpd",
       "name": "Pure-FTPd",
       "category": "deployment",
-      "version": "1.0.50-compat2",
-      "summary": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过",
+      "version": "1.0.50-compat3",
+      "summary": "强制 TLS 的网站虚拟账户；支持密码轮换，失败恢复账户文本和认证数据库。",
       "stage": "ready",
       "risk": "privileged",
       "delivery": {
@@ -203,7 +203,11 @@
         "虚拟账号",
         "网站 chroot",
         "上传下载",
-        "回环监听"
+        "回环监听",
+        "密码轮换",
+        "双文件失败恢复",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1186,8 +1190,8 @@
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4-compat2",
-      "summary": "实际 PM2 7.0.4 非 root Node 服务启动、HTTP、重启、停止/启动、日志、删除通过",
+      "version": "7.0.4-compat3",
+      "summary": "非 root PM2 应用、1–8 进程、内存阈值和修订号更新；实际端口就绪后才报告成功，失败恢复旧配置。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1213,7 +1217,14 @@
         "非 root 进程",
         "日志",
         "启停重启",
-        "开机恢复"
+        "开机恢复",
+        "多进程集群",
+        "内存重启阈值",
+        "配置修订检查",
+        "实际端口就绪",
+        "启动失败回滚",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1271,8 +1282,8 @@
       "id": "site-diagnosis",
       "name": "Site Diagnosis",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "真实 DNS、HTTP、TLS 和 Nginx 检查，提供健康评分、失败原因和处置建议；评分不是安全认证。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1297,7 +1308,11 @@
         "DNS 检查",
         "HTTP 检查",
         "TLS 检查",
-        "Nginx 配置检查"
+        "Nginx 配置检查",
+        "健康评分",
+        "失败处置建议",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1313,8 +1328,8 @@
       "id": "network-threat-detection",
       "name": "Network Threat Detection",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "真实 ss 监听端口/连接基线和 Fail2ban 状态读取通过",
+      "version": "1.2.0",
+      "summary": "结构化 TCP/UDP 监听与连接，区分公网和回环；可信基线对比新增与关闭端口，无基线不误报入侵。",
       "stage": "ready",
       "risk": "privileged",
       "delivery": {
@@ -1339,7 +1354,12 @@
         "监听端口基线",
         "新增监听告警",
         "实时连接",
-        "Fail2ban 状态"
+        "Fail2ban 状态",
+        "公网暴露分类",
+        "端口增减对比",
+        "不完整结果标记",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1403,8 +1423,8 @@
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "增量同步、逐文件检查点和目标冲突保护通过",
+      "version": "1.2.0",
+      "summary": "手动及持久化定时增量同步；支持暂停恢复、修订冲突检查、目标冲突保护和后台执行历史。",
       "stage": "ready",
       "risk": "privileged",
       "delivery": {
@@ -1430,7 +1450,12 @@
         "SHA-256 校验",
         "目标冲突保护",
         "逐文件检查点",
-        "隔离 PHP 网站部署"
+        "隔离 PHP 网站部署",
+        "定时同步计划",
+        "暂停恢复",
+        "计划修订检查",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1446,8 +1471,8 @@
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "从实际资源、站点、任务、流量、证书数据生成持久化日报",
+      "version": "1.2.0",
+      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1473,7 +1498,10 @@
         "任务故障摘要",
         "流量与安全摘要",
         "证书到期检查",
-        "每日持久化"
+        "每日持久化",
+        "按日期历史日报",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1489,8 +1517,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.1.0",
-      "summary": "真实 JSON 访问日志中的 PV/IP/路径/状态/小时趋势、爬虫与去查询参数来源统计通过",
+      "version": "2.2.0",
+      "summary": "真实访问日志的时间、状态、路径/IP、爬虫与慢请求筛选，趋势、排行和隐私来源统计。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1517,7 +1545,12 @@
         "爬虫识别",
         "错误数",
         "路径排行",
-        "来源统计"
+        "来源统计",
+        "时间与状态筛选",
+        "路径/IP 筛选",
+        "慢请求明细",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1579,7 +1612,7 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实篡改检测、备份恢复与无人触发的定时自动恢复通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1606,7 +1639,9 @@
         "内容备份",
         "变更检测",
         "分钟级自动恢复",
-        "恢复前留存"
+        "恢复前留存",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1622,7 +1657,7 @@
       "id": "load-balance",
       "name": "Load Balance",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实轮询分流、节点故障切换、健康探测和入口移除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1649,7 +1684,9 @@
         "备用节点",
         "IP 粘滞",
         "节点探测",
-        "失败转移"
+        "失败转移",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1665,7 +1702,7 @@
       "id": "mobile",
       "name": "aaPanel Mobile",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实 manifest/图标/Service Worker 入口可访问，不缓存账号或 API 数据",
       "stage": "ready",
       "risk": "maintained",
@@ -1691,7 +1728,9 @@
         "PWA",
         "响应式界面",
         "现有 TOTP 登录",
-        "不缓存 API 或凭据"
+        "不缓存 API 或凭据",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1707,8 +1746,8 @@
       "id": "apache-waf",
       "name": "Apache WAF",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际 Apache 虚拟主机正常请求 200、扫描器和 SQL 特征请求 403，通过语法校验",
+      "version": "2.0.0",
+      "summary": "独立 Apache 防护工作台：分类规则、站点策略、IP/URL/UA 名单、字面自定义规则、观察模式、隐私日志与备份回滚；不提供 CC 或完整请求体检测。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1730,14 +1769,17 @@
         ]
       },
       "capabilities": [
-        "请求 URI 特征过滤",
-        "扫描器拦截",
-        "Apache 语法校验",
-        "失败回滚"
+        "分类规则与观察模式",
+        "站点独立策略",
+        "IP/URL/UA 名单",
+        "字面自定义规则",
+        "真实事件筛选与排行",
+        "安全配置导入与预览",
+        "备份、修订检查与重载探针"
       ],
       "health": {
         "probe": "panel-api",
-        "target": "/api/app-modules/apache-waf"
+        "target": "/api/software/apache-waf/config"
       },
       "uninstall": {
         "preserve_data": true,
@@ -1749,8 +1791,8 @@
       "id": "php-code-security",
       "name": "PHP code security",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "只读 PHP/PHTML/INC 风险扫描；按路径、规则、级别和排除项筛选，提供证据、摘要及部分结果标记。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1775,7 +1817,12 @@
         "静态扫描",
         "高风险函数",
         "编码混淆特征",
-        "证据行号"
+        "证据行号",
+        "规则和风险级别筛选",
+        "排除路径",
+        "SHA-256 内容证据",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1791,7 +1838,7 @@
       "id": "task-manager",
       "name": "Task manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程",
       "stage": "ready",
       "risk": "privileged",
@@ -1817,7 +1864,9 @@
         "实时进程",
         "CPU 与内存",
         "网络连接",
-        "受管非 root 进程终止"
+        "受管非 root 进程终止",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1833,7 +1882,7 @@
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1859,7 +1908,9 @@
         "签名文件基线",
         "变更事件",
         "备份恢复",
-        "网站级策略"
+        "网站级策略",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1875,7 +1926,7 @@
       "id": "user-manager",
       "name": "aaPanel user Manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "实际登录、网站范围隔离、越权拒绝、会话撤销和账户删除通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1902,7 +1953,9 @@
         "三种角色",
         "网站权限范围",
         "会话撤销",
-        "保留最后管理员"
+        "保留最后管理员",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -1960,7 +2013,7 @@
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
       "stage": "ready",
       "risk": "privileged",
@@ -1986,7 +2039,9 @@
         "哈希检查点",
         "变更检测",
         "权限变化",
-        "排除规则"
+        "排除规则",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -2002,8 +2057,8 @@
       "id": "disk-analysis",
       "name": "Disk analysis",
       "category": "professional",
-      "version": "1.1.0",
-      "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+      "version": "1.2.0",
+      "summary": "真实目录、扩展名和大文件空间分析，可选目录下钻；有界只读扫描，拒绝越界和链接。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -2028,7 +2083,11 @@
         "目录体积",
         "大文件排行",
         "文件数量",
-        "有界扫描"
+        "有界扫描",
+        "目录下钻",
+        "扩展名分布",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -2086,7 +2145,7 @@
       "id": "platform-ops",
       "name": "Platform Ops",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
       "stage": "ready",
       "risk": "privileged",
@@ -2112,7 +2171,9 @@
         "多主机 HTTPS 健康聚合",
         "只读令牌",
         "加密凭据",
-        "令牌撤销"
+        "令牌撤销",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",
@@ -2128,7 +2189,7 @@
       "id": "nfs-manager",
       "name": "NFS Manager",
       "category": "professional",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "summary": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过",
       "stage": "ready",
       "risk": "privileged",
@@ -2154,7 +2215,9 @@
         "NFSv4",
         "安全挂载选项",
         "开机恢复",
-        "活跃挂载卸载保护"
+        "活跃挂载卸载保护",
+        "专用操作流程",
+        "执行历史"
       ],
       "health": {
         "probe": "panel-api",

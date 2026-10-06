@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import json,pathlib,uuid,time
+import json,pathlib,uuid,time,os
 from panel_client import PanelClient
 from test_app_registry_common import wait_job
+assert os.environ.get('PANEL_VM') in ('panel-store-apps-debian13', 'panel-compat-ubuntu24'), 'Explicit isolated application QA VM required'
 c=PanelClient();p=None
 try:
  job=c.api('/app-registry/memcached/install',{'name':'memcached-refresh-'+uuid.uuid4().hex[:8],'host_port':21211});wait_job(c,job)

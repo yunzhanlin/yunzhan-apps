@@ -5,6 +5,7 @@ from panel_client import PanelClient
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 REPORT=ROOT/'.local/app-modules-acceptance.json'
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 c=PanelClient()
 report={'started_at':time.strftime('%Y-%m-%dT%H:%M:%S%z'),'checks':{},'failures':{}}
 sites=[]

@@ -5,6 +5,7 @@ from panel_client import PanelClient
 from test_app_registry_common import wait_job
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+assert os.environ.get('PANEL_VM') == 'panel-store-apps-debian13', 'Explicit isolated amd64 application QA VM required; never run on the user panel'
 path=ROOT/'.local/app-compose-matrix-acceptance.json'
 report=json.loads(path.read_text()) if path.exists() else {'apps':{}}
 c=PanelClient()
@@ -14,6 +15,7 @@ if not source_id or not any(s['id']==source_id for s in c.api('/sites')):
  c.wait(c.api('/sites',{'name':'隔离 PHP 部署验收源','slug':slug,'domain':slug+'.example.test','php_version_id':''})['job_id'])
  source_id=next(s['id'] for s in c.api('/sites') if s['slug']==slug);report['source_site_id']=source_id
  c.api('/sites/'+source_id+'/files/action',{'action':'create','path':'index.php','content':'<?php header("Content-Type: application/json"); echo json_encode(array("deployed"=>true,"version"=>PHP_VERSION)); ?>'})
+assert next(s for s in c.api('/sites') if s['id']==source_id)['slug'].startswith('legacy-source-'), 'Only a marked QA source may be used'
 selected=os.environ.get('APP_MATRIX_IDS','php-legacy-52,php-legacy-53,php-legacy-54,php-legacy-55,php-legacy-56,php-legacy-70,php-legacy-71,php-legacy-72,php-legacy-73,php-legacy-74,php-legacy-80,php-legacy-81,rabbitmq,openlitespeed').split(',')
 def record():path.write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
 def guest(*args,**kw):

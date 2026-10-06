@@ -123,6 +123,13 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		out.Healthy = exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs"))
 	case "apache-waf":
 		out.Healthy = exists(filepath.Join(s.moduleDir(id), "rules.conf"))
+		if out.Healthy {
+			state, err := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-apache")
+			out.Healthy = err == nil && strings.TrimSpace(state) == "active"
+		}
+		if cfg, err := core.DecodeApacheWAFConfig(out.Settings); err == nil {
+			out.Enabled = cfg.Policy.Mode != "off"
+		}
 	}
 	if !out.Healthy {
 		out.Detail = "模块已安装，但依赖或服务未就绪"
@@ -200,9 +207,7 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			}
 		}
 	case "apache-waf":
-		if e := s.apacheModuleWAF(ctx, true); e != nil {
-			return e
-		}
+		return s.applyApacheWAF(ctx, settings, action == "install", add)
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedAt := core.Now()
@@ -238,6 +243,9 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return s.applyWAF(ctx, manifest.Settings, false, add)
 	}
 	if _, ok := core.FindAppModule(id); ok {
+		if id == "apache-waf" && cmp > 0 {
+			return s.applyApacheWAF(ctx, status.Settings, false, add)
+		}
 		var manifest map[string]any
 		path := filepath.Join(s.moduleDir(id), "installed.json")
 		if err := moduleRead(path, &manifest); err != nil {
@@ -262,6 +270,22 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.appDependencyRoutes(m)
+	s.apacheWAFWorkspaceRoutes(m)
+	m.HandleFunc("GET /v1/app-modules/{id}/history", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if _, ok := core.FindAppModule(id); !ok {
+			respond(w, 404, map[string]string{"error": "未知模块"})
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		out, err := s.moduleHistory(id, core.AppModuleInput{})
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		respond(w, 200, out)
+	})
 	m.HandleFunc("GET /v1/app-modules/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		d, ok := core.FindAppModule(id)
@@ -290,7 +314,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		out, e := s.runAppModule(r.Context(), id, action, in)
-		if action != "history" && action != "run" && action != "policies" && action != "run-plan" {
+		if action != "history" && action != "policies" && action != "run-plan" {
 			if historyErr := s.appendModuleEvent(id, action, "manual", in, out, e); historyErr != nil && e == nil {
 				e = fmt.Errorf("业务可能已执行，但历史保存失败，请核对结果：%w", historyErr)
 			}
@@ -322,7 +346,7 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 		}
 		return s.moduleSync(ctx, in, action == "preview" || in.DryRun)
 	case "php-code-security":
-		return s.modulePHPScan(ctx, in.SiteID)
+		return s.modulePHPScanFiltered(ctx, in)
 	case "disk-analysis":
 		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
@@ -951,21 +975,39 @@ var phpModuleRules = []struct{ name, pattern, severity string }{
 }
 
 func (s *Service) modulePHPScan(ctx context.Context, id string) (any, error) {
+	return s.modulePHPScanFiltered(ctx, core.AppModuleInput{SiteID: id})
+}
+func (s *Service) modulePHPScanFiltered(ctx context.Context, in core.AppModuleInput) (any, error) {
+	id := in.SiteID
+	if len(in.Search) > 128 || len(in.Excludes) > 64 || in.Severity != "" && in.Severity != "high" && in.Severity != "warning" {
+		return nil, errors.New("扫描筛选无效：风险级别为 high / warning，关键词不超过 128 字节，排除路径最多 64 项")
+	}
 	f, e := s.openFiles(id)
 	if e != nil {
 		return nil, e
 	}
 	defer f.Close()
-	files, partial, e := scanModuleFiles(ctx, f.public, nil, nil)
+	files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, nil)
 	if e != nil {
 		return nil, e
 	}
 	findings := []map[string]any{}
 	scanned := 0
+	paths := make([]string, 0, len(files))
+	for path := range files {
+		paths = append(paths, path)
+	}
+	sort.Strings(paths)
+	severityCounts, ruleCounts := map[string]int{}, map[string]int{}
+	search := strings.ToLower(in.Search)
 scan:
-	for p := range files {
-		if strings.ToLower(filepath.Ext(p)) != ".php" {
+	for _, p := range paths {
+		ext := strings.ToLower(filepath.Ext(p))
+		if ext != ".php" && ext != ".phtml" && ext != ".inc" {
 			continue
+		}
+		if ctx.Err() != nil {
+			return nil, ctx.Err()
 		}
 		scanned++
 		b, err := readModuleFile(f.public, p)
@@ -973,10 +1015,24 @@ scan:
 			return nil, err
 		}
 		for _, rule := range phpModuleRules {
+			if in.Severity != "" && in.Severity != rule.severity {
+				continue
+			}
+			if search != "" && !strings.Contains(strings.ToLower(p), search) && !strings.Contains(rule.name, search) {
+				continue
+			}
 			re := regexp.MustCompile(rule.pattern)
-			for _, index := range re.FindAllIndex(b, 20) {
+			matches := re.FindAllIndex(b, 21)
+			if len(matches) > 20 {
+				partial = true
+				matches = matches[:20]
+			}
+			for _, index := range matches {
 				line := strings.Count(string(b[:index[0]]), "\n") + 1
-				findings = append(findings, map[string]any{"path": p, "line": line, "rule": rule.name, "severity": rule.severity, "evidence": string(b[index[0]:index[1]])})
+				evidence := string(b[index[0]:min(index[1], index[0]+512)])
+				findings = append(findings, map[string]any{"path": p, "line": line, "rule": rule.name, "severity": rule.severity, "evidence": evidence, "sha256": files[p].SHA})
+				severityCounts[rule.severity]++
+				ruleCounts[rule.name]++
 				if len(findings) >= 500 {
 					partial = true
 					break scan
@@ -984,7 +1040,7 @@ scan:
 			}
 		}
 	}
-	return map[string]any{"site_id": id, "scanned_php": scanned, "findings": findings, "partial": partial, "interpretation": "静态风险命中需要结合代码上下文判断"}, nil
+	return map[string]any{"site_id": id, "scanned_php": scanned, "findings": findings, "findings_count": len(findings), "severity_counts": severityCounts, "rule_counts": ruleCounts, "excludes": in.Excludes, "checked_at": core.Now(), "partial": partial, "interpretation": "只读静态扫描 PHP / PHTML / INC；注释和合法函数也可能命中，需要结合上下文人工判断；未修改或隔离文件"}, nil
 }
 func (s *Service) moduleDiagnosis(ctx context.Context, id string) (any, error) {
 	f, e := s.openFiles(id)
@@ -1009,10 +1065,10 @@ func (s *Service) moduleDiagnosis(ctx context.Context, id string) (any, error) {
 	checks["dns"] = map[string]any{"addresses": addresses, "ok": dnserr == nil}
 	req, _ := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:19101/", nil)
 	req.Host = domain
-	client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	resp, err := client.Do(req)
 	if err == nil {
-		checks["http"] = map[string]any{"status": resp.StatusCode, "ok": resp.StatusCode < 500}
+		checks["http"] = map[string]any{"status": resp.StatusCode, "ok": resp.StatusCode >= 200 && resp.StatusCode < 400}
 		resp.Body.Close()
 	} else {
 		checks["http"] = map[string]any{"ok": false, "error": err.Error()}
@@ -1042,7 +1098,21 @@ func (s *Service) moduleDiagnosis(ctx context.Context, id string) (any, error) {
 		conn.Close()
 	}
 	checks["tls_certificate"] = tlsReport
-	return map[string]any{"site_id": id, "domain": domain, "checked_at": core.Now(), "checks": checks}, nil
+	passed := 0
+	recommendations := []map[string]any{}
+	for _, item := range []struct{ key, advice string }{{"dns", "检查域名 A / AAAA、DNS 生效及是否指向预期服务器；本地测试域名可能不具备公网 DNS。"}, {"http", "检查首页、站点绑定、访问权限和应用错误日志；403 / 404 不属于健康首页响应。"}, {"nginx", "运行 Nginx 配置检查，修复语法错误后再重载，不要在校验失败时覆盖线上配置。"}, {"tls_certificate", "检查域名 443、可信证书链、证书有效期和 HTTPS 配置。"}} {
+		check, _ := checks[item.key].(map[string]any)
+		ok, _ := check["ok"].(bool)
+		if item.key == "tls_certificate" {
+			ok, _ = check["valid"].(bool)
+		}
+		if ok {
+			passed++
+		} else {
+			recommendations = append(recommendations, map[string]any{"check": item.key, "advice": item.advice})
+		}
+	}
+	return map[string]any{"site_id": id, "domain": domain, "checked_at": core.Now(), "checks": checks, "passed_checks": passed, "total_checks": 4, "score": passed * 25, "recommendations": recommendations, "scope": "评分仅反映本次四项连通性与配置检查，不代表安全认证或公网可用性承诺"}, nil
 }
 
 func (s *Service) moduleAnalytics(ctx context.Context, id string) (any, error) {
@@ -1097,32 +1167,31 @@ func (s *Service) moduleThreat(ctx context.Context, action string) (any, error) 
 	if e != nil {
 		return nil, e
 	}
-	current := strings.Split(strings.TrimSpace(listeners), "\n")
+	current, listenerLimit := networkLines(listeners)
+	connectionRows, connectionLimit := networkLines(connections)
 	path := filepath.Join(s.moduleDir("network-threat-detection"), "network-baseline.json")
 	old := []string{}
-	_ = moduleRead(path, &old)
-	alerts := []map[string]any{}
-	seen := map[string]bool{}
-	for _, line := range old {
-		fields := strings.Fields(line)
-		if len(fields) >= 5 {
-			seen[fields[0]+":"+fields[4]] = true
-		}
-	}
-	for _, line := range current {
-		fields := strings.Fields(line)
-		if len(fields) >= 5 && !seen[fields[0]+":"+fields[4]] {
-			alerts = append(alerts, map[string]any{"kind": "new-listener", "endpoint": fields[4], "public": !strings.Contains(fields[4], "127.0.0.1") && !strings.Contains(fields[4], "[::1]")})
-		}
+	baselineErr := moduleRead(path, &old)
+	if baselineErr != nil && !errors.Is(baselineErr, os.ErrNotExist) && action != "baseline" {
+		return nil, errors.New("网络基线读取失败，未把损坏记录当作可信空基线")
 	}
 	if action == "baseline" {
+		if listenerLimit {
+			return nil, errors.New("监听快照超限，未保存不完整基线")
+		}
 		if e = moduleWrite(path, current); e != nil {
 			return nil, e
 		}
-		alerts = []map[string]any{}
+		old, baselineErr = current, nil
 	}
-	fail2ban, _ := s.Config.Run(ctx, "/usr/bin/fail2ban-client", "status", "sshd")
-	return map[string]any{"listeners": current, "connections": strings.Split(strings.TrimSpace(connections), "\n"), "alerts": alerts, "fail2ban": fail2ban, "checked_at": core.Now()}, nil
+	out := buildNetworkThreatReport(current, connectionRows, old, baselineErr == nil)
+	fail2ban, fail2banErr := s.Config.Run(ctx, "/usr/bin/fail2ban-client", "status", "sshd")
+	out["fail2ban"] = map[string]any{"available": fail2banErr == nil, "status": fail2ban}
+	out["checked_at"], out["partial"] = core.Now(), listenerLimit || connectionLimit
+	if stat, err := os.Stat(path); err == nil {
+		out["baseline_at"] = stat.ModTime().UTC().Format(time.RFC3339)
+	}
+	return out, nil
 }
 func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
 	first, total, e := readProcessSample("/proc")

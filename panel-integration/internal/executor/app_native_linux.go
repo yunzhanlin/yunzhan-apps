@@ -4,6 +4,7 @@ package executor
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -226,6 +227,16 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 	if e != nil {
 		return nil, e
 	}
+	dbBackup, e := backupFile(db)
+	if e != nil {
+		return nil, e
+	}
+	rollback := func(err error) (any, error) {
+		if restoreErr := restoreFiles([]fileBackup{backup, dbBackup}); restoreErr != nil {
+			return nil, errors.New("FTP 账户操作失败，账户文件回滚失败，请检查服务端备份")
+		}
+		return nil, err
+	}
 	if action == "create" {
 		if len(in.Password) < 16 || len(in.Password) > 72 || strings.ContainsAny(in.Password, "\r\n\x00") {
 			return nil, errors.New("密码需为 16–72 字节，不能含换行")
@@ -244,18 +255,24 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		home := filepath.Join(s.Config.SitesDir, in.SiteID, "public")
 		_, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), "/usr/bin/pure-pw", "useradd", in.Username, "-f", text, "-u", strconv.Itoa(f.uid), "-g", strconv.Itoa(f.gid), "-d", home)
 		if e != nil {
-			return nil, errors.New("FTP 用户创建失败，用户名可能已存在")
+			return rollback(errors.New("FTP 用户创建失败，用户名可能已存在"))
+		}
+	} else if action == "password" {
+		if len(in.Password) < 16 || len(in.Password) > 72 || strings.ContainsAny(in.Password, "\r\n\x00") {
+			return nil, errors.New("密码需为 16–72 字节，不能含换行")
+		}
+		if _, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), "/usr/bin/pure-pw", "passwd", in.Username, "-f", text); e != nil {
+			return rollback(errors.New("FTP 密码更新失败，请确认账户存在"))
 		}
 	} else if action == "delete" {
 		if _, e = s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "userdel", in.Username, "-f", text); e != nil {
-			return nil, e
+			return rollback(e)
 		}
 	} else {
 		return nil, errors.New("FTP 操作无效")
 	}
 	if _, e = s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "mkdb", db, "-f", text); e != nil {
-		_ = restoreFiles([]fileBackup{backup})
-		return nil, e
+		return rollback(e)
 	}
 	return map[string]any{"ok": true, "username": in.Username, "action": action}, nil
 }
@@ -272,6 +289,47 @@ type pm2App struct {
 	Entry     string `json:"entry"`
 	Port      int    `json:"port"`
 	CreatedAt string `json:"created_at"`
+	Instances int    `json:"instances"`
+	MemoryMB  int    `json:"memory_mb"`
+	Revision  int64  `json:"revision"`
+}
+
+func pm2Limits(instances, memoryMB int) (int, int, error) {
+	if instances == 0 {
+		instances = 1
+	}
+	if memoryMB == 0 {
+		memoryMB = 256
+	}
+	if instances < 1 || instances > 8 || memoryMB < 64 || memoryMB > 1024 || instances*memoryMB > 1024 {
+		return 0, 0, errors.New("进程数 1–8，单进程阈值 64–1024 MiB，总重启阈值不超过 1 GiB；阈值不是内核硬内存限额")
+	}
+	return instances, memoryMB, nil
+}
+
+// A successful systemd start only proves the supervisor was spawned. Confirm
+// that the selected local application port actually becomes ready before
+// committing deployment success. No application request bodies are sent.
+func (s *Service) pm2Ready(ctx context.Context, unit string, port int) error {
+	probeCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	defer cancel()
+	tick := time.NewTicker(200 * time.Millisecond)
+	defer tick.Stop()
+	for {
+		state, err := s.Config.Run(probeCtx, "/usr/bin/systemctl", "is-active", unit)
+		if err == nil && strings.TrimSpace(state) == "active" {
+			conn, err := (&net.Dialer{Timeout: 500 * time.Millisecond}).DialContext(probeCtx, "tcp", fmt.Sprintf("127.0.0.1:%d", port))
+			if err == nil {
+				conn.Close()
+				return nil
+			}
+		}
+		select {
+		case <-probeCtx.Done():
+			return errors.New("PM2 应用未在指定回环端口就绪，请检查应用日志和 HOST / PORT 配置")
+		case <-tick.C:
+		}
+	}
 }
 
 func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
@@ -296,6 +354,10 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 	unit := "panel-pm2@" + in.ResourceID + ".service"
 	var app pm2App
 	if action == "create" {
+		instances, memoryMB, limitErr := pm2Limits(in.Instances, in.MemoryMB)
+		if limitErr != nil {
+			return nil, limitErr
+		}
 		if exists(path) {
 			return nil, errors.New("项目已存在")
 		}
@@ -334,11 +396,19 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 				return nil, errors.New("端口已分配")
 			}
 		}
-		app = pm2App{in.ResourceID, in.SiteID, in.Entry, in.Port, core.Now()}
+		app = pm2App{ID: in.ResourceID, SiteID: in.SiteID, Entry: in.Entry, Port: in.Port, CreatedAt: core.Now(), Instances: instances, MemoryMB: memoryMB, Revision: 1}
 		if e = moduleWrite(path, app); e != nil {
 			return nil, e
 		}
-		if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", unit); e != nil {
+		if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", unit); e == nil {
+			e = s.pm2Ready(ctx, unit, app.Port)
+		}
+		if e != nil {
+			rollbackCtx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+			defer cancel()
+			if _, rollbackErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "disable", "--now", unit); rollbackErr != nil {
+				return nil, errors.New("PM2 启动失败且服务清理失败，保留项目清单供核对")
+			}
 			_ = os.Remove(path)
 			return nil, e
 		}
@@ -348,8 +418,90 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		return nil, errors.New("PM2 项目不存在")
 	}
 	switch action {
+	case "update":
+		if in.ExpectedRevision != app.Revision {
+			return nil, errors.New("PM2 配置已变化，请重新选择项目后保存")
+		}
+		previous, e := backupFile(path)
+		if e != nil {
+			return nil, e
+		}
+		if in.Entry != "" {
+			app.Entry = in.Entry
+		}
+		if in.Port != 0 {
+			app.Port = in.Port
+		}
+		if !core.ValidFilePath(app.Entry, false) || !strings.HasSuffix(app.Entry, ".js") || app.Port < 1024 || app.Port > 65535 {
+			return nil, errors.New("PM2 入口或端口无效")
+		}
+		if in.Instances != 0 {
+			app.Instances = in.Instances
+		}
+		if in.MemoryMB != 0 {
+			app.MemoryMB = in.MemoryMB
+		}
+		app.Instances, app.MemoryMB, e = pm2Limits(app.Instances, app.MemoryMB)
+		if e != nil {
+			return nil, e
+		}
+		f, e := s.openFiles(app.SiteID)
+		if e != nil {
+			return nil, e
+		}
+		defer f.Close()
+		entry, e := regularFile(f.public, app.Entry)
+		if e != nil {
+			return nil, e
+		}
+		entry.Close()
+		var old pm2App
+		if e = json.Unmarshal(previous.data, &old); e != nil {
+			return nil, e
+		}
+		if app.Port != old.Port {
+			listener, e := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", app.Port))
+			if e != nil {
+				return nil, errors.New("新端口已占用")
+			}
+			listener.Close()
+			paths, _ := filepath.Glob(filepath.Join(dir, "*.json"))
+			for _, p := range paths {
+				var other pm2App
+				if e = moduleRead(p, &other); e != nil {
+					return nil, e
+				}
+				if other.ID != app.ID && other.Port == app.Port {
+					return nil, errors.New("新端口已被其他受管项目分配")
+				}
+			}
+		}
+		app.Revision++
+		if e = moduleWrite(path, app); e != nil {
+			return nil, e
+		}
+		if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "restart", unit); e == nil {
+			e = s.pm2Ready(ctx, unit, app.Port)
+		}
+		if e != nil {
+			rollbackCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			restoreErr := restoreFiles([]fileBackup{previous})
+			_, restartErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "restart", unit)
+			if restartErr == nil {
+				restartErr = s.pm2Ready(rollbackCtx, unit, old.Port)
+			}
+			if restoreErr != nil || restartErr != nil {
+				return nil, errors.New("PM2 更新失败且恢复旧配置或重启失败，请核对项目")
+			}
+			return nil, e
+		}
+		return map[string]any{"app": app, "ok": true}, nil
 	case "start", "stop", "restart":
 		_, e := s.Config.Run(ctx, "/usr/bin/systemctl", action, unit)
+		if e == nil && action != "stop" {
+			e = s.pm2Ready(ctx, unit, app.Port)
+		}
 		return map[string]any{"id": app.ID, "action": action, "ok": e == nil}, e
 	case "logs":
 		out, e := s.Config.Run(ctx, "/usr/bin/journalctl", "-u", unit, "-n", "100", "--no-pager", "-o", "cat")
@@ -444,6 +596,11 @@ func ServePM2(id string) error {
 	if app.ID != id || !core.ValidID(app.SiteID) || !core.ValidFilePath(app.Entry, false) || app.Port < 1024 || app.Port > 65535 {
 		return errors.New("PM2 清单无效")
 	}
+	instances, memoryMB, limitErr := pm2Limits(app.Instances, app.MemoryMB)
+	if limitErr != nil {
+		return limitErr
+	}
+	app.Instances, app.MemoryMB = instances, memoryMB
 	f, e := s.openFiles(app.SiteID)
 	if e != nil {
 		return e
@@ -484,7 +641,7 @@ func ServePM2(id string) error {
 		return e
 	}
 	binary := pm2NodeBinaryOn(runtimecatalog.HostPlatform())
-	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", "1", "--max-memory-restart", "256M"}, []string{"PATH=" + filepath.Dir(binary) + ":/usr/bin:/bin", "LANG=C", "HOME=" + home, "PM2_HOME=" + home, "NODE_ENV=production", "HOST=127.0.0.1", "PORT=" + strconv.Itoa(app.Port)})
+	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", strconv.Itoa(app.Instances), "--max-memory-restart", strconv.Itoa(app.MemoryMB) + "M"}, []string{"PATH=" + filepath.Dir(binary) + ":/usr/bin:/bin", "LANG=C", "HOME=" + home, "PM2_HOME=" + home, "NODE_ENV=production", "HOST=127.0.0.1", "PORT=" + strconv.Itoa(app.Port)})
 }
 
 type nfsMount struct {

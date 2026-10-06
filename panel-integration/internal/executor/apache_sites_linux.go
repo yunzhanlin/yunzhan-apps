@@ -62,6 +62,7 @@ func renderApacheSites(sites []core.Site, sitesDir string) (string, int, error) 
 		}
 		domains := append([]string{site.Domain}, settings.Domains...)
 		fmt.Fprintf(&out, "<VirtualHost 127.0.0.1:19080>\n  ServerName %s\n", site.Domain)
+		fmt.Fprintf(&out, "  SetEnvIfExpr \"true\" PANEL_AW_SITE=%s\n", site.ID)
 		out.WriteString("  " + apacheWAFInclude)
 		if len(domains) > 1 {
 			fmt.Fprintf(&out, "  ServerAlias %s\n", strings.Join(domains[1:], " "))

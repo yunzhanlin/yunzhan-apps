@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.2.0",
+  "summary": "真实访问日志的时间、状态、路径/IP、爬虫与慢请求筛选，趋势、排行和隐私来源统计。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-statistics-v2",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "小时趋势",
+    "独立 IP",
+    "爬虫识别",
+    "错误数",
+    "路径排行",
+    "来源统计",
+    "时间与状态筛选",
+    "路径/IP 筛选",
+    "慢请求明细",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-statistics-v2"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

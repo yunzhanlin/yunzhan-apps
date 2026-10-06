@@ -2,6 +2,7 @@
 """Two-phase whole-VM reboot proof. Uses only this task's retained QA sites."""
 import json,pathlib,time,uuid,sys,os
 from panel_client import PanelClient
+assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA required'
 root=pathlib.Path(__file__).resolve().parents[1];state=root/'.local/app-reboot-private.json';result=root/'.local/app-reboot-acceptance.json'
 c=PanelClient()
 def module(id,action='run',**values):return c.api('/app-modules/'+id+'/'+action,values)

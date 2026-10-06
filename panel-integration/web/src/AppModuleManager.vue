@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
+import WafWorkspace from "./WafWorkspace.vue";
 type API = <T>(
   path: string,
   method?: string,
@@ -20,6 +21,7 @@ interface Definition {
   actions: string[];
   fields: Field[] | null;
 }
+interface Section { id: string; label: string; help: string; fields: string[] | null; actions: string[]; }
 interface Guidance {
   description: string;
   workflow: string[];
@@ -30,7 +32,7 @@ interface Versions {
   status: { id: string; installed_version?: string; version_known?: boolean; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
   source: { stale: boolean; fetched_at?: string; error?: string };
 }
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string) => Promise<string>; registry?: Versions }>();
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings?: Record<string, unknown>) => Promise<string>; registry?: Versions }>();
 const activeTab = ref("manage"), localVersions = ref<Versions>();
 const versions = computed(() => localVersions.value || props.registry);
 const versionApp = computed(() => versions.value?.catalog.apps.find(app => app.target === definition.value?.id));
@@ -63,6 +65,16 @@ const definition = ref<Definition>(),
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
 const selectedPlanID = ref("");
+const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+function sectionFields(section: Section) { return (definition.value?.fields || []).filter(field => section.fields?.includes(field.key)); }
+async function refreshHistory() {
+  if (!definition.value || busy.value) return;
+  busy.value = true; error.value = "";
+  try { history.value = await props.api<Record<string, any>>(`/app-modules/${definition.value.id}/history`); }
+  catch (e) { error.value = (e as Error).message; }
+  finally { busy.value = false; }
+}
+function tabChanged(name: string | number) { if (name === "history") void refreshHistory(); }
 const labels: Record<string, string> = {
   run: "刷新报告",
   baseline: "建立基线",
@@ -96,6 +108,9 @@ const labels: Record<string, string> = {
   policies: "查看监控策略",
   pause: "暂停所选监控",
   resume: "恢复所选监控",
+  password: "修改 FTP 密码",
+  archive: "读取历史日报目录",
+  report: "读取所选日期报告",
 };
 function setReport(value: any) {
   report.value =
@@ -118,6 +133,7 @@ async function show(id: string) {
   form.value = {};
   sites.value = [];
   selectedPlanID.value = "";
+  workspace.value = []; history.value = undefined;
   activeTab.value = "manage"; localVersions.value = undefined;
   try {
     const page = await props.api<{
@@ -125,8 +141,11 @@ async function show(id: string) {
       guidance: Guidance;
       status: { installed: boolean; healthy: boolean };
       report: unknown;
+      workspace: Section[];
     }>(`/app-modules/${id}`);
     definition.value = page.definition;
+    workspace.value = page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }];
+    activeTab.value = workspace.value[0]?.id || "overview";
     guidance.value = page.guidance;
     installed.value = page.status.installed;
     healthy.value = page.status.healthy;
@@ -146,6 +165,9 @@ async function show(id: string) {
       enabled: true,
       interval: 300,
       expected_revision: 0,
+      severity: "",
+      instances: 1,
+      memory_mb: 256,
     };
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
@@ -164,7 +186,9 @@ async function show(id: string) {
     await execute("run");
 }
 function selected(row: Record<string, any>) {
-  activeTab.value = "manage";
+  const id = definition.value?.id;
+  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : "";
+  activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
     form.value.expected_sha = "";
@@ -180,9 +204,11 @@ function selected(row: Record<string, any>) {
     void execute("run");
   else ElMessage.info("已填入所选记录，可执行对应操作");
 }
-function inputBody() {
+function inputBody(action: string) {
   const body: Record<string, unknown> = {};
+  const section = workspace.value.find(section => section.id === activeTab.value && section.actions.includes(action)) || workspace.value.find(section => section.actions.includes(action));
   for (const f of definition.value?.fields || []) {
+    if (section && !section.fields?.includes(f.key)) continue;
     const v = f.key === "expected_revision" && form.value.resource_id !== selectedPlanID.value ? 0 : form.value[f.key];
     if (v !== undefined && v !== null && v !== "")
       body[f.key] =
@@ -202,7 +228,7 @@ async function execute(action: string) {
     const result = await props.api(
       `/app-modules/${definition.value.id}/${action}`,
       "POST",
-      inputBody(),
+      inputBody(action),
     );
     setReport(result);
     // Reports are a distinct management section; parameters remain intact.
@@ -337,7 +363,8 @@ defineExpose({ show });
             <el-button v-if="versionStatus?.update_available" :disabled="busy || !versionStatus.update_supported || versions?.source.stale" @click="updateVersion">{{versionStatus.update_supported ? '更新应用' : '需升级面板'}}</el-button>
           </template>
         </AnalyticsWorkspace>
-        <el-tabs v-else v-model="activeTab" class="module-manager-tabs">
+        <WafWorkspace v-else-if="definition.id === 'apache-waf'" :api="api" engine="apache-waf" :on-install="onInstall" />
+        <el-tabs v-else v-model="activeTab" class="module-manager-tabs" @tab-change="tabChanged">
         <el-tab-pane label="概览" name="overview">
         <p v-if="guidance">{{ guidance.description }}</p>
         <ol v-if="guidance" class="module-workflow">
@@ -352,10 +379,11 @@ defineExpose({ show });
         />
         <p>版本、依赖状态来自服务器；功能处理器由签名面板提供。配置、执行报告和升级状态分开管理。</p>
         </el-tab-pane>
-        <el-tab-pane label="配置与操作" name="manage">
+        <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
+        <el-alert :title="section.help" type="info" :closable="false" />
         <el-form label-position="top" class="module-fields">
           <el-form-item
-            v-for="field in definition.fields || []"
+            v-for="field in sectionFields(section)"
             :key="field.key"
             :label="field.label"
           >
@@ -467,6 +495,7 @@ defineExpose({ show });
                 value="admin"
                 label="admin · 管理员"
             /></el-select>
+            <el-select v-else-if="field.kind === 'severity'" v-model="form.severity"><el-option value="" label="全部风险" /><el-option value="high" label="高风险" /><el-option value="warning" label="警告" /></el-select>
             <el-input
               v-else
               v-model="form[field.key]"
@@ -485,7 +514,7 @@ defineExpose({ show });
         </el-form>
         <div class="module-actions">
           <el-button
-            v-for="action in definition.actions"
+            v-for="action in section.actions"
             :key="action"
             :disabled="
               !installed || busy || (action === 'terminate' && !form.pid)
@@ -505,7 +534,7 @@ defineExpose({ show });
             >{{ labels[action] || action }}</el-button
           >
         </div>
-        <el-button v-if="report !== undefined" plain @click="activeTab = 'reports'">查看报告与日志</el-button>
+        <section v-if="report !== undefined" class="workflow-result" aria-label="实际执行结果"><h3>服务器返回的实际结果</h3><AppModuleReport :id="definition.id" :report="report" @select="selected" /></section>
         </el-tab-pane>
         <el-tab-pane label="报告与日志" name="reports">
         <section aria-label="执行报告">
@@ -520,7 +549,12 @@ defineExpose({ show });
             @select="selected"
           />
         </section>
-        <el-button v-if="definition.actions.includes('history')" :disabled="busy || !installed" @click="execute('history')">刷新执行历史</el-button>
+        </el-tab-pane>
+        <el-tab-pane label="执行历史" name="history">
+          <p>查看真实执行摘要；不保存输入密码、访问令牌或完整请求正文。</p>
+          <el-button :disabled="busy" @click="refreshHistory">刷新历史</el-button>
+          <AppModuleReport v-if="history" :id="definition.id" :report="history" />
+          <el-empty v-else description="暂无已加载的执行历史" />
         </el-tab-pane>
         <el-tab-pane label="版本与更新" name="version">
           <el-descriptions :column="1" border>
@@ -538,7 +572,7 @@ defineExpose({ show });
     </div>
     <template #footer
       ><el-button
-        v-if="report && !report.token && definition?.id !== 'website-analytics'"
+        v-if="report && !report.token && !['website-analytics', 'apache-waf'].includes(definition?.id || '')"
         :disabled="busy"
         @click="exportReport"
         >导出真实报告</el-button
@@ -561,6 +595,7 @@ defineExpose({ show });
   gap: 0 20px;
   margin-top: 16px;
 }
+.workflow-result { margin-top: 22px; border-top: 1px solid #e7edf1; padding-top: 12px; }
 .module-fields .el-select,
 .module-fields .el-date-editor {
   width: 100%;

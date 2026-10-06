@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "file-monitor",
+  "name": "File monitor",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "签名基线、真实文件修改检测、恢复或持续监控策略通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "file-monitor",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "哈希检查点",
+    "变更检测",
+    "权限变化",
+    "排除规则",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/file-monitor"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

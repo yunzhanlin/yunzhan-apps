@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "disk-analysis",
+  "name": "Disk analysis",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "真实目录、扩展名和大文件空间分析，可选目录下钻；有界只读扫描，拒绝越界和链接。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "disk-analysis",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "目录体积",
+    "大文件排行",
+    "文件数量",
+    "有界扫描",
+    "目录下钻",
+    "扩展名分布",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/disk-analysis"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}
