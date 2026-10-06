@@ -2,7 +2,6 @@ package core
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
@@ -16,35 +15,30 @@ import (
 
 func (s *Store) migrateAppModules() error {
 	_, e := s.DB.Exec(`CREATE TABLE IF NOT EXISTS app_user_roles(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,role TEXT NOT NULL,site_ids TEXT NOT NULL DEFAULT '[]');
+ CREATE TABLE IF NOT EXISTS app_user_menus(user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,menu_ids TEXT NOT NULL,revision INTEGER NOT NULL CHECK(revision>0));
  CREATE TABLE IF NOT EXISTS app_platform_hosts(id TEXT PRIMARY KEY,url TEXT NOT NULL,token BLOB NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_platform_tokens(token_hash TEXT PRIMARY KEY,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_daily_reports(day TEXT PRIMARY KEY,report TEXT NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_module_events(id TEXT PRIMARY KEY,module_id TEXT NOT NULL,action TEXT NOT NULL,actor TEXT NOT NULL,outcome TEXT NOT NULL,created_at TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS app_module_events_module ON app_module_events(module_id);
- INSERT OR IGNORE INTO schema_migrations VALUES(38,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
+ INSERT OR IGNORE INTO schema_migrations VALUES(38,strftime('%Y-%m-%dT%H:%M:%SZ','now'));
+ INSERT OR IGNORE INTO schema_migrations VALUES(40,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
 	return e
 }
 func (s *Store) appUserRole(id string) (string, []string, error) {
-	var role, raw string
-	e := s.DB.QueryRow(`SELECT role,site_ids FROM app_user_roles WHERE user_id=?`, id).Scan(&role, &raw)
-	if errors.Is(e, sql.ErrNoRows) {
-		return "admin", nil, nil
-	}
-	var ids []string
-	if e == nil {
-		e = json.Unmarshal([]byte(raw), &ids)
-	}
-	return role, ids, e
+	access, e := s.UserAccess(id)
+	return access.Role, access.SiteIDs, e
 }
 func (a *Server) appRoleAllowed(u identity, r *http.Request) bool {
-	role, sites, e := a.Store.appUserRole(u.ID)
-	if e != nil {
+	access, e := a.Store.UserAccess(u.ID)
+	if e != nil || !accessAllowsMenus(access, r) {
 		return false
 	}
+	role, sites := access.Role, access.SiteIDs
 	if role == "admin" {
 		return true
 	}
-	if r.URL.Path == "/api/me" || r.URL.Path == "/api/logout" || r.URL.Path == "/api/account" || strings.HasPrefix(r.URL.Path, "/api/account/") {
+	if r.URL.Path == "/api/me" || r.URL.Path == "/api/logout" || r.URL.Path == "/api/account" || strings.HasPrefix(r.URL.Path, "/api/account/") || r.URL.Path == "/api/session/activity" {
 		return true
 	}
 	read := r.Method == "GET" || r.Method == "HEAD"
@@ -83,28 +77,33 @@ func (a *Server) scopeSites(u identity, sites []Site) []Site {
 }
 
 func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput) (any, error) {
-	role, _, e := a.Store.appUserRole(actor.ID)
-	if e != nil || role != "admin" {
+	actorAccess, e := a.Store.UserAccess(actor.ID)
+	if e != nil || actorAccess.Role != "admin" || !containsMenu(actorAccess.MenuIDs, "panel-access") {
 		return nil, errors.New("需要管理员角色")
 	}
 	if action == "run" {
-		rows, e := a.Store.DB.Query(`SELECT u.id,u.username,COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),EXISTS(SELECT 1 FROM account_security s WHERE s.user_id=u.id AND length(s.totp_secret)>0),(SELECT count(*) FROM sessions s WHERE s.user_id=u.id AND expires_at>?) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id ORDER BY u.created_at`, time.Now().Unix())
+		rows, e := a.Store.DB.Query(`SELECT u.id,u.username,COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),COALESCE(m.menu_ids,'null'),COALESCE(m.revision,1),EXISTS(SELECT 1 FROM account_security s WHERE s.user_id=u.id AND length(s.totp_secret)>0),(SELECT count(*) FROM sessions s WHERE s.user_id=u.id AND expires_at>?) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id ORDER BY u.created_at`, time.Now().Unix())
 		if e != nil {
 			return nil, e
 		}
 		defer rows.Close()
 		users := []map[string]any{}
 		for rows.Next() {
-			var id, name, role, scopes string
+			var id, name, role, scopes, menus string
+			var revision int64
 			var totp, sessions int
-			if e = rows.Scan(&id, &name, &role, &scopes, &totp, &sessions); e != nil {
+			if e = rows.Scan(&id, &name, &role, &scopes, &menus, &revision, &totp, &sessions); e != nil {
 				return nil, e
 			}
 			var ids []string
 			_ = json.Unmarshal([]byte(scopes), &ids)
-			users = append(users, map[string]any{"id": id, "username": name, "role": role, "site_ids": ids, "totp_enabled": totp == 1, "sessions": sessions})
+			menuIDs, err := parseMenuIDs(role, menus)
+			if err != nil {
+				return nil, err
+			}
+			users = append(users, map[string]any{"id": id, "username": name, "role": role, "site_ids": ids, "menu_ids": menuIDs, "revision": revision, "full_admin": fullAdministrator(UserAccess{Role: role, MenuIDs: menuIDs}), "totp_enabled": totp == 1, "sessions": sessions})
 		}
-		return map[string]any{"users": users}, rows.Err()
+		return map[string]any{"users": users, "menu_catalog": MenuPermissionCatalog()}, rows.Err()
 	}
 	if !regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.-]{2,31}$`).MatchString(in.Username) {
 		return nil, errors.New("用户名应为 3–32 位字母数字")
@@ -129,10 +128,29 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		return nil, e
 	}
 	defer tx.Rollback()
+	// Re-read inside the same write transaction that changes the target.
+	actorAccess, e = readUserAccess(tx, actor.ID)
+	if e != nil || actorAccess.Role != "admin" || !containsMenu(actorAccess.MenuIDs, "panel-access") {
+		return nil, errors.New("账户授权已变化")
+	}
 	var id, oldrole string
+	var previous UserAccess
 	if action != "create" {
 		if e = tx.QueryRow(`SELECT u.id,COALESCE(r.role,'admin') FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id WHERE u.username=?`, in.Username).Scan(&id, &oldrole); e != nil {
 			return nil, errors.New("用户不存在")
+		}
+		previous, e = readUserAccess(tx, id)
+		if e != nil {
+			return nil, e
+		}
+		if !menuSubset(previous.MenuIDs, actorAccess.MenuIDs) {
+			return nil, errors.New("不能管理菜单权限高于自身的账户")
+		}
+		if in.ExpectedRevision != 0 && in.ExpectedRevision != previous.Revision {
+			return nil, errors.New("账户授权已被修改，请刷新后重试")
+		}
+		if action == "update" && in.MenuIDs != nil && in.ExpectedRevision != previous.Revision {
+			return nil, errors.New("修改菜单授权需要当前修订号")
 		}
 		if (action == "delete" || action == "update" && in.Role != "admin") && oldrole == "admin" {
 			var admins int
@@ -143,6 +161,36 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		}
 		if action == "delete" && id == actor.ID {
 			return nil, errors.New("不能删除当前账户")
+		}
+	}
+	var menuIDs []string
+	if action == "create" || action == "update" {
+		requested := in.MenuIDs
+		if action == "update" && requested == nil {
+			// An old client omitting the new field may not reset existing grants.
+			requested = []string{}
+			defaults, _ := normalizeMenuIDs(in.Role, nil)
+			for _, menu := range previous.MenuIDs {
+				if containsMenu(defaults, menu) {
+					requested = append(requested, menu)
+				}
+			}
+		}
+		menuIDs, e = normalizeMenuIDs(in.Role, requested)
+		if e != nil {
+			return nil, e
+		}
+		if !menuSubset(menuIDs, actorAccess.MenuIDs) {
+			return nil, errors.New("不能授予高于自身的菜单权限")
+		}
+	}
+	if (action == "delete" || action == "update" && !fullAdministrator(UserAccess{Role: in.Role, MenuIDs: menuIDs})) && fullAdministrator(previous) {
+		count, err := completeAdminCount(tx)
+		if err != nil {
+			return nil, err
+		}
+		if count <= 1 {
+			return nil, errors.New("不能删除、降级或限制最后一个完整权限管理员")
 		}
 	}
 	raw, _ := json.Marshal(in.SiteIDs)
@@ -172,7 +220,7 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 	case "revoke":
 		_, e = tx.Exec(`DELETE FROM sessions WHERE user_id=?`, id)
 	case "delete":
-		for _, table := range []string{"sessions", "account_recovery", "account_security", "account_profiles", "app_user_roles"} {
+		for _, table := range []string{"sessions", "account_recovery", "account_security", "account_profiles", "app_user_roles", "app_user_menus"} {
 			if _, e = tx.Exec(`DELETE FROM `+table+` WHERE user_id=?`, id); e != nil {
 				return nil, e
 			}
@@ -183,6 +231,16 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 	}
 	if e != nil {
 		return nil, e
+	}
+	if action == "create" || action == "update" {
+		menus, _ := json.Marshal(menuIDs)
+		revision := int64(1)
+		if action == "update" {
+			revision = previous.Revision + 1
+		}
+		if _, e = tx.Exec(`INSERT INTO app_user_menus(user_id,menu_ids,revision) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET menu_ids=excluded.menu_ids,revision=excluded.revision`, id, string(menus), revision); e != nil {
+			return nil, e
+		}
 	}
 	return map[string]any{"username": in.Username, "action": action, "ok": true}, tx.Commit()
 }

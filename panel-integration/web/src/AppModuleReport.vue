@@ -45,6 +45,8 @@ const names: Record<string, string> = {
   username: "用户名",
   role: "角色",
   site_ids: "网站范围",
+  menu_ids: "菜单授权",
+  full_admin: "完整权限管理员",
   sessions: "有效会话",
   totp_enabled: "两步验证",
   source: "源 / 导出路径",
@@ -206,7 +208,7 @@ const metrics = computed(() =>
 );
 const groups = computed(() =>
   Object.entries(props.report).filter(
-    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads"].includes(key),
+    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );
 const distributions = computed(() =>

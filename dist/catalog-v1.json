@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-06T07:52:39Z",
+  "generated_at": "2026-10-06T09:04:49Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1032,8 +1032,8 @@
       "id": "user-manager",
       "name": "aaPanel user Manager",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "实际登录、网站范围隔离、越权拒绝、会话撤销和账户删除通过",
+      "version": "1.3.0",
+      "summary": "真实角色、网站与菜单隔离；权限变更撤销旧会话、修订冲突和完整管理员保护",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -1044,12 +1044,15 @@
         "三种角色",
         "网站权限范围",
         "会话撤销",
-        "保留最后管理员",
+        "保留完整权限管理员",
+        "独立菜单授权",
+        "后端权限校验",
+        "授权修订保护",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.2.0/manifest.json",
-      "sha256": "e14680164d672e46af8346e1ea16a3ca79f489feb99c49a84bbf22570f818176"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/user-manager/1.3.0/manifest.json",
+      "sha256": "7ca3872c7b0d9df3266cec7499a9c0fa138603cd076a3f6df64794150cef2356"
     },
     {
       "id": "website-analytics",

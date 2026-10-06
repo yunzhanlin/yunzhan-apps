@@ -2,6 +2,7 @@
 import { formatPanelDate, formatPanelDateTime } from "./panelTime";
 import { randomId } from "./randomId";
 import { apiURL } from "./panelBase";
+import { canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./menuPermissions";
 import SoftwareLogo from "./SoftwareLogo.vue";
 import AppModuleManager from "./AppModuleManager.vue";
 import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
@@ -202,6 +203,31 @@ const user = ref(""),
   busy = ref(false),
   error = ref(""),
   authError = ref("");
+const accessPlan = ref<AccessPlan | null>(null);
+let accessEpoch = 0;
+const canManageSites = computed(() => accessPlan.value?.role === "admin" && canOpenView(accessPlan.value, "sites"));
+const accountRoleLabel = computed(() => accessPlan.value?.role === "admin" ? "管理员" : accessPlan.value?.role === "operator" ? "指定网站操作员" : "只读账户");
+function clearAccessData() {
+  accessEpoch++;
+  sites.value = []; jobs.value = []; audits.value = []; siteCertificates.value = [];
+  siteTraffic.value = null; overview.value = null; samples.value = [];
+  notifications.value = []; notificationUnread.value = 0;
+  runtimes.value = { installed: [], catalog: [] }; softwareApps.value = { catalog: [], status: [] };
+  appRegistry.value = { catalog: { schema_version: 1, generated_at: "", repository: "", apps: [] }, status: [], source: { source: "", stale: false } };
+  selectedJob.value = null; jobOpen.value = false; createOpen.value = false;
+  siteTrafficLoadedAt = 0;
+}
+function applyAccess(value: unknown) {
+  if (!validAccessPlan(value)) throw new Error("账户授权未正确加载，请重新登录");
+  accessPlan.value = value; clearAccessData();
+  if (!canOpenView(value, view.value)) view.value = value.menu_ids[0] || "account";
+}
+async function permittedRead<T>(path: string): Promise<T | undefined> {
+  if (!canReadPath(accessPlan.value, path)) return undefined;
+  const epoch = accessEpoch, session = csrf.value;
+  const result = await api<T>(path);
+  return epoch === accessEpoch && session === csrf.value ? result : undefined;
+}
 const accountManager = ref<InstanceType<typeof AccountManager> | null>(null);
 const databaseManager = ref<InstanceType<typeof DatabaseManager> | null>(null);
 const certificateManager = ref<InstanceType<typeof CertificateManager> | null>(
@@ -708,7 +734,7 @@ async function switchPHP() {
     submittingPHP.value = false;
   }
 }
-const nav = [
+const allNav = [
   { key: "overview", label: "概览", icon: Odometer },
   { key: "sites", label: "网站", icon: Monitor },
   { key: "databases", label: "数据库", icon: Connection },
@@ -722,6 +748,7 @@ const nav = [
   { key: "audit", label: "日志", icon: Tickets },
   { key: "system-tools", label: "系统工具", icon: Tools },
 ];
+const nav = computed(() => allNav.filter(item => canOpenView(accessPlan.value, item.key)));
 const panelVersion = import.meta.env.VITE_PANEL_VERSION || "0.1.0-dev";
 const runtimeCardTags: Record<string, string[]> = {
   nginx: ["Web 服务", "反向代理", "高性能"],
@@ -888,18 +915,18 @@ type GlobalSearchResult = {
 const searchResults = computed<GlobalSearchResult[]>(() => {
   const term = searchText.value.trim().toLowerCase();
   const pages = [
-    ...nav.map((item) => ({ key: item.key, label: item.label })),
+    ...nav.value.map((item) => ({ key: item.key, label: item.label })),
     ...["backups", "jobs", "certificates", "account"].map((key) => ({ key, label: pageTitles[key] })),
-  ];
+  ].filter(item => canOpenView(accessPlan.value, item.key));
   if (!term) {
-    return ["sites", "databases", "files", "runtimes", "schedules", "monitor"].map((key) => ({
+    return ["sites", "databases", "files", "runtimes", "schedules", "monitor"].filter(key => canOpenView(accessPlan.value, key)).map((key) => ({
       key: `page:${key}`, category: "常用功能", label: pageTitles[key], detail: "打开管理页面", target: "page", value: key,
     }));
   }
   const results: GlobalSearchResult[] = pages
     .filter((item) => `${item.label} ${item.key}`.toLowerCase().includes(term))
     .map((item) => ({ key: `page:${item.key}`, category: "功能", label: item.label, detail: "打开管理页面", target: "page", value: item.key }));
-  for (const site of sites.value) {
+  for (const site of canOpenView(accessPlan.value, "sites") ? sites.value : []) {
     if (`${site.name} ${site.domain} ${(site.settings?.domains || []).join(" ")}`.toLowerCase().includes(term)) {
       results.push({ key: `site:${site.id}`, category: "网站", label: site.name, detail: site.domain, target: "site", value: site.id });
     }
@@ -920,10 +947,10 @@ const searchResults = computed<GlobalSearchResult[]>(() => {
   if ("刷新当前页面".includes(term) || "refresh".includes(term)) {
     results.push({ key: "command:refresh", category: "命令", label: "刷新当前页面", detail: pageTitles[view.value] || "当前页面", target: "refresh" });
   }
-  if ("创建网站".includes(term) || "新建站点".includes(term)) {
+  if (canManageSites.value && ("创建网站".includes(term) || "新建站点".includes(term))) {
     results.push({ key: "command:create-site", category: "命令", label: "创建网站", detail: "打开新建网站表单", target: "create-site" });
   }
-  results.push({ key: "file:search", category: "文件", label: `在网站文件中搜索“${searchText.value.trim()}”`, detail: "搜索所选站点的根目录", target: "file", value: searchText.value.trim() });
+  if (canOpenView(accessPlan.value, "files")) results.push({ key: "file:search", category: "文件", label: `在网站文件中搜索“${searchText.value.trim()}”`, detail: "搜索所选站点的根目录", target: "file", value: searchText.value.trim() });
   return results.slice(0, 14);
 });
 const states: Record<string, string> = {
@@ -984,6 +1011,7 @@ const series = (field: "cpu" | "memory") =>
     )
     .join(" ");
 const go = (key: string) => {
+  if (!canOpenView(accessPlan.value, key)) { ElMessage.warning("当前账户未获该菜单授权"); return; }
   view.value = key;
   query.value = "";
   sidebar.value = false;
@@ -996,9 +1024,10 @@ async function openSiteBackup(siteID = "") {
 }
 let siteTrafficLoadedAt = 0;
 async function loadSiteTraffic(force = false) {
+  if (!canReadPath(accessPlan.value, "/sites/traffic")) { siteTraffic.value = null; return; }
   if (!force && Date.now() - siteTrafficLoadedAt < 60000) return;
   siteTrafficLoadedAt = Date.now();
-  try { siteTraffic.value = await api<SiteTraffic>("/sites/traffic"); }
+  try { const result = await permittedRead<SiteTraffic>("/sites/traffic"); if (result) siteTraffic.value = result; }
   catch { siteTraffic.value = null; }
 }
 function openSearch() {
@@ -1109,8 +1138,9 @@ async function api<T>(
       path !== "/login" &&
       requestCSRF === csrf.value &&
       !accountChanging.value
-    )
-      user.value = "";
+    ) {
+      user.value = ""; accessPlan.value = null; clearAccessData();
+    }
     throw new Error(data.error || "请求失败");
   }
   return data;
@@ -1125,10 +1155,12 @@ async function refresh(forceRegistry = false) {
   )
     return;
   refreshing = true;
+  const epoch = accessEpoch;
   const errors: string[] = [];
   await Promise.allSettled([
-    api<Overview>("/overview")
+    permittedRead<Overview>("/overview")
       .then((d) => {
+        if (!d) return;
         overview.value = d;
         samples.value = [
           ...samples.value,
@@ -1136,40 +1168,43 @@ async function refresh(forceRegistry = false) {
         ].slice(-36);
       })
       .catch((e) => errors.push(e.message)),
-    api<Site[]>("/sites")
-      .then((d) => (sites.value = d))
+    permittedRead<Site[]>("/sites")
+      .then((d) => { if (d) sites.value = d; })
       .catch((e) => errors.push(e.message)),
-    api<SiteCertificate[]>("/certificates")
-      .then((d) => (siteCertificates.value = d))
+    permittedRead<SiteCertificate[]>("/certificates")
+      .then((d) => { if (d) siteCertificates.value = d; })
       .catch((e) => errors.push(e.message)),
     ...(view.value === "sites" ? [loadSiteTraffic()] : []),
-    api<Job[]>("/jobs")
+    permittedRead<Job[]>("/jobs")
       .then(async (d) => {
+        if (!d) return;
         jobs.value = d;
         if (selectedJob.value) {
           const id = selectedJob.value.id;
           const found = d.find((x) => x.id === id);
           if (found) selectedJob.value = found;
           else if (jobOpen.value) {
-            const latest = await api<Job>("/jobs/" + id);
-            if (selectedJob.value?.id === id) selectedJob.value = latest;
+            const latest = await permittedRead<Job>("/jobs/" + id);
+            if (latest && selectedJob.value?.id === id) selectedJob.value = latest;
           }
         }
       })
       .catch((e) => errors.push(e.message)),
-    api<Audit[]>("/audit")
-      .then((d) => (audits.value = d))
+    permittedRead<Audit[]>("/audit")
+      .then((d) => { if (d) audits.value = d; })
       .catch((e) => errors.push(e.message)),
-    api<{ notifications: PanelNotification[]; unread: number }>(
+    permittedRead<{ notifications: PanelNotification[]; unread: number }>(
       "/notifications?limit=30",
     )
       .then((d) => {
+        if (!d) return;
         notifications.value = d.notifications;
         notificationUnread.value = d.unread;
       })
       .catch((e) => errors.push(e.message)),
-    api<Runtimes>("/runtimes")
+    permittedRead<Runtimes>("/runtimes")
       .then((d) => {
+        if (!d) return;
         runtimes.value = d;
         for (const item of d.catalog) {
           if (item.releases?.length && !item.releases.some(release => release.id === versions.value[item.family])) {
@@ -1178,17 +1213,18 @@ async function refresh(forceRegistry = false) {
         }
       })
       .catch((e) => errors.push(e.message)),
-    api<SoftwareApps>("/software")
-      .then((d) => (softwareApps.value = d))
+    permittedRead<SoftwareApps>("/software")
+      .then((d) => { if (d) softwareApps.value = d; })
       .catch((e) => errors.push(e.message)),
-    api<AppRegistry>(forceRegistry === true ? "/app-registry?refresh=1" : "/app-registry")
-      .then((d) => (appRegistry.value = d))
+    permittedRead<AppRegistry>(forceRegistry === true ? "/app-registry?refresh=1" : "/app-registry")
+      .then((d) => { if (d) appRegistry.value = d; })
       .catch((e) => {
+        if (epoch !== accessEpoch) return;
         appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: e.message };
         if (!appRegistry.value.catalog.apps.length) errors.push(e.message);
       }),
   ]);
-  error.value = errors[0] || "";
+  if (epoch === accessEpoch) error.value = errors[0] || "";
   refreshing = false;
 }
 async function login() {
@@ -1208,8 +1244,10 @@ async function login() {
       password: password.value,
       code: otpCode.value,
     });
-    user.value = me.username;
     csrf.value = me.csrf;
+    const access = await api<AccessPlan>("/me");
+    applyAccess(access);
+    user.value = me.username;
     lastSessionActivitySentAt = Date.now();
     password.value = "";
     otpCode.value = "";
@@ -1226,6 +1264,7 @@ async function logout() {
     await api("/logout", "POST", {});
     user.value = "";
     csrf.value = "";
+    accessPlan.value = null; clearAccessData();
     lastSessionActivitySentAt = 0;
     sites.value = [];
     jobs.value = [];
@@ -1380,7 +1419,8 @@ onMounted(async () => {
     initialized.value = b.initialized;
     if (b.initialized) {
       try {
-        const me = await api<{ username: string; csrf: string }>("/me");
+        const me = await api<AccessPlan & { username: string; csrf: string }>("/me");
+        applyAccess(me);
         user.value = me.username;
         csrf.value = me.csrf;
         await refresh();
@@ -1551,7 +1591,7 @@ onUnmounted(() => {
           <span class="avatar"><el-icon><UserFilled /></el-icon></span
           ><span
             ><strong>{{ user }}</strong
-            ><small>本地管理员</small></span
+            ><small>{{ accountRoleLabel }}</small></span
           ><el-icon><SwitchButton /></el-icon>
         </button>
       </div>
@@ -1707,21 +1747,21 @@ onUnmounted(() => {
             <el-button @click="go('backups')">备份</el-button>
             <el-button @click="databaseManager?.openPermissions()">权限管理</el-button>
           </div>
-          <div v-else-if="view === 'sites'" class="site-heading-actions">
+          <div v-else-if="view === 'sites' && canManageSites" class="site-heading-actions">
             <el-button type="primary" :icon="Plus" @click="createOpen = true">添加站点</el-button>
             <el-button @click="batchSSLOpen = true">批量部署 SSL</el-button>
-            <el-button @click="openSiteBackup()">备份站点</el-button>
+            <el-button v-if="canOpenView(accessPlan, 'backups')" @click="openSiteBackup()">备份站点</el-button>
             <el-dropdown trigger="click" @command="(command: string) => go(command)">
               <el-button>更多操作⌄</el-button>
               <template #dropdown><el-dropdown-menu>
-                <el-dropdown-item command="jobs">站点任务</el-dropdown-item>
-                <el-dropdown-item command="audit">操作日志</el-dropdown-item>
+                <el-dropdown-item v-if="canOpenView(accessPlan, 'jobs')" command="jobs">站点任务</el-dropdown-item>
+                <el-dropdown-item v-if="canOpenView(accessPlan, 'audit')" command="audit">操作日志</el-dropdown-item>
               </el-dropdown-menu></template>
             </el-dropdown>
           </div>
           <el-button v-else-if="view === 'security'" type="primary" @click="securityManager?.scanNow()">立即扫描</el-button>
           <el-button
-            v-else-if="view === 'overview'"
+            v-else-if="view === 'overview' && canManageSites"
             type="primary"
             :icon="Plus"
             @click="createOpen = true"
@@ -2466,7 +2506,6 @@ onUnmounted(() => {
           </div>
           <DockerManager ref="dockerManager" :api="api" />
           <SecurityAppManager ref="softwareManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" />
-          <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" :registry="appRegistry" />
           <el-dialog v-model="versionManagerOpen" :title="`${versionManagerRuntime?.name || '软件'} · 版本管理`" width="500px">
             <p class="runtime-version-help">精确版本独立安装并存；安装后可在对应网站或数据库设置中切换，现有绑定保持不变。</p>
             <el-select v-model="versionManagerSelection" style="width: 100%" aria-label="选择另一软件版本" placeholder="当前目录中没有待安装版本">
@@ -2697,7 +2736,7 @@ onUnmounted(() => {
             >
               <el-icon><User /></el-icon>管理员账户
             </button>
-            <button
+            <button v-if="canOpenView(accessPlan, 'security')"
               :class="{ active: settingsTab === 'security' }"
               @click="settingsTab = 'security'"
             >
@@ -2785,8 +2824,9 @@ onUnmounted(() => {
               </aside>
             </div>
           </template>
+          <div v-else-if="settingsTab === 'account'">
+            <section class="panel-card"><el-button type="primary" @click="appModuleManager?.show('user-manager')">面板用户与菜单授权</el-button><p class="muted">管理角色、独立菜单、网站范围与会话撤销。账户授权变更后需要重新登录。</p></section>
           <AccountManager
-            v-else-if="settingsTab === 'account'"
             ref="accountManager"
             :api="api"
             :on-session="
@@ -2797,6 +2837,7 @@ onUnmounted(() => {
             "
             :on-busy="(value) => (accountChanging = value)"
           />
+          </div>
           <SecurityManager
             v-else-if="settingsTab === 'security'"
             ref="securityManager"
@@ -2938,6 +2979,7 @@ onUnmounted(() => {
             ></el-table
           >
         </section>
+        <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" :registry="appRegistry" :access="accessPlan" />
         <footer class="page-footer">
           <span>自有面板 · 本地开发版</span
           ><span>数据来自实际 Linux 服务 <span class="live-dot"></span></span>

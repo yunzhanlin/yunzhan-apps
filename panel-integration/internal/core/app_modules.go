@@ -26,6 +26,7 @@ type AppModuleInput struct {
 	TargetSiteID     string        `json:"target_site_id,omitempty"`
 	TargetProjectID  string        `json:"target_project_id,omitempty"`
 	SiteIDs          []string      `json:"site_ids,omitempty"`
+	MenuIDs          []string      `json:"menu_ids"`
 	Path             string        `json:"path,omitempty"`
 	Excludes         []string      `json:"excludes,omitempty"`
 	ExpectedSHA      string        `json:"expected_sha,omitempty"`
@@ -86,7 +87,7 @@ func AppModules() []AppModuleDefinition {
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
 		{"task-manager", "任务管理器", []string{"run", "terminate"}, []AppModuleField{{"pid", "进程 PID", "number"}, {"start_time", "进程启动序号", "number"}}},
 		{"website-tamper-proof", "网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path}},
-		{"user-manager", "面板用户管理", []string{"run", "create", "update", "revoke", "delete"}, []AppModuleField{{"username", "用户名", "text"}, {"password", "新密码", "password"}, {"role", "角色", "text"}, {"site_ids", "网站权限范围", "json"}}},
+		{"user-manager", "面板用户管理", []string{"run", "create", "update", "revoke", "delete"}, []AppModuleField{{"username", "用户名", "text"}, {"password", "新密码", "password"}, {"role", "角色", "text"}, {"site_ids", "网站权限范围", "json"}, {"menu_ids", "菜单授权", "menus"}, {"expected_revision", "账户授权修订号", "identity"}}},
 		{"file-monitor", "文件监控", []string{"baseline", "check"}, []AppModuleField{site, {"excludes", "排除路径前缀", "json"}}},
 		{"disk-analysis", "磁盘分析", []string{"run"}, []AppModuleField{site}},
 		{"platform-ops", "多主机运维", []string{"run", "add", "remove", "issue-token", "revoke-token"}, []AppModuleField{{"resource_id", "主机标识", "text"}, {"url", "主机 HTTPS API 地址", "text"}, {"token", "只读访问令牌", "password"}}},
@@ -244,7 +245,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	for _, d := range AppModules() {
 		version := "1.2.0"
 		switch d.ID {
-		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "mobile-pwa":
+		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "mobile-pwa", "user-manager":
 			version = "1.3.0"
 		case "website-analytics":
 			version = "2.1.1"

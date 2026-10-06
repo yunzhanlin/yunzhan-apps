@@ -48,7 +48,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "task-manager":
 		return []AppModuleSection{section("processes", "实时进程", "读取 CPU、内存、IO 和进程启动身份。单击受管进程进入终止操作。", nil, []string{"run"}), section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"})}
 	case "user-manager":
-		return []AppModuleSection{section("users", "账户列表", "查看角色、网站范围、双重验证和有效会话数。", nil, []string{"run"}), section("account", "账户与授权", "管理员拥有完整权限；操作员和只读用户受指定网站范围限制。更新权限立即撤销旧会话。", []string{"username", "password", "role", "site_ids"}, []string{"create", "update"}), section("sessions", "会话与删除", "撤销会话会要求重新登录；不允许删除当前用户或最后一个管理员。", []string{"username"}, []string{"revoke", "delete"})}
+		return []AppModuleSection{section("users", "账户列表", "查看角色、网站范围、菜单授权、双重验证和有效会话数。", nil, []string{"run"}), section("account", "账户与授权", "独立菜单限制与后端校验同时生效，不扩大原角色与网站范围。更新权限立即撤销旧会话，使用当前修订号防止覆盖。", []string{"username", "password", "role", "site_ids","menu_ids","expected_revision"}, []string{"create", "update"}), section("sessions", "会话与删除", "不允许删除当前用户、最后一个完整权限管理员或管理权限高于自身的账户。", []string{"username","expected_revision"}, []string{"revoke", "delete"})}
 	case "disk-analysis":
 		return []AppModuleSection{section("disk", "目录空间分析", "查看目录、扩展名和大文件分布；单击目录下钻。只读，不删除文件，不跟随符号链接。", []string{"site_id", "path"}, []string{"run"})}
 	case "platform-ops":

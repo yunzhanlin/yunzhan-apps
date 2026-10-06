@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
 import WafWorkspace from "./WafWorkspace.vue";
+import { canReadPath, type AccessPlan } from "./menuPermissions";
 type API = <T>(
   path: string,
   method?: string,
@@ -32,7 +33,7 @@ interface Versions {
   status: { id: string; installed_version?: string; version_known?: boolean; update_available?: boolean; update_supported?: boolean; update_detail?: string }[];
   source: { stale: boolean; fetched_at?: string; error?: string };
 }
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings?: Record<string, unknown>) => Promise<string>; registry?: Versions }>();
+const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings?: Record<string, unknown>) => Promise<string>; registry?: Versions; access?: AccessPlan | null }>();
 const activeTab = ref("manage"), localVersions = ref<Versions>();
 const versions = computed(() => localVersions.value || props.registry);
 const versionApp = computed(() => versions.value?.catalog.apps.find(app => app.target === definition.value?.id));
@@ -66,9 +67,15 @@ const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
 const selectedPlanID = ref("");
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : form.value.resource_id);
+const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
+function roleDefaultMenus() { form.value.menu_ids = menuCatalog.value.filter(menu => (form.value.role === "admin" || !menu.admin_only) && (props.access === undefined || props.access?.menu_ids.includes(menu.id))).map(menu => menu.id); }
+watch(() => form.value.role, () => {
+  if (definition.value?.id === "user-manager" && Array.isArray(form.value.menu_ids) && menuCatalog.value.length)
+    form.value.menu_ids = form.value.menu_ids.filter((id: string) => menuCatalog.value.some(menu => menu.id === id && (form.value.role === "admin" || !menu.admin_only)));
+});
 const historyFilter = ref({search: "", from_time: "", to_time: "", site_id: "", resource_id: ""});
 const historyOffset = ref(0), historyLimit = ref(50);
 const scopedHistory = computed(() => !["daily-report", "user-manager", "platform-ops"].includes(definition.value?.id || ""));
@@ -168,7 +175,7 @@ async function show(id: string) {
     healthy.value = page.status.healthy;
     if (page.report !== null && page.report !== undefined)
       setReport(page.report);
-    sites.value = await props.api<typeof sites.value>("/sites");
+    if (props.access === undefined || canReadPath(props.access, "/sites")) sites.value = await props.api<typeof sites.value>("/sites");
     form.value = {
       role: "viewer",
       read_only: true,
@@ -214,7 +221,7 @@ function selected(row: Record<string, any>) {
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = row[f.key];
   if (row.revision !== undefined) {
-    selectedPlanID.value = integrityModule.value ? row.site_id : row.resource_id || row.id;
+    selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : row.resource_id || row.id;
     form.value.expected_revision = row.revision;
   }
   if (row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || "")) form.value.expected_sha = row.after || "";
@@ -249,6 +256,7 @@ async function execute(action: string) {
       inputBody(action),
     );
     setReport(result);
+    if (definition.value.id === "user-manager" && form.value.menu_ids === undefined && menuCatalog.value.length) roleDefaultMenus();
     // Reports are a distinct management section; parameters remain intact.
     if ((result as any)?.plan?.revision !== undefined) {
       selectedPlanID.value = (result as any).plan.id;
@@ -290,6 +298,11 @@ async function execute(action: string) {
       setReport(
         await props.api(`/app-modules/${definition.value.id}/run`, "POST", {}),
       );
+    if (definition.value.id === "user-manager" && ["create", "update", "delete"].includes(action)) {
+      const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);
+      form.value.expected_revision = selected?.revision || 0;
+      if (!selected) selectedPlanID.value = "";
+    }
     if (
       ["pause", "resume", "baseline", "watch-mode"].includes(action) &&
       definition.value.actions.includes("policies")
@@ -447,6 +460,13 @@ defineExpose({ show });
               default-first-option
               placeholder="输入排除目录并回车"
             />
+            <div v-else-if="field.kind === 'menus'">
+              <el-select v-model="form.menu_ids" multiple placeholder="空列表表示仅保留自身账户安全">
+                <el-option v-for="menu in menuCatalog" :key="menu.id" :label="menu.label" :value="menu.id" :disabled="menu.admin_only && form.role !== 'admin' || access !== undefined && !access?.menu_ids.includes(menu.id)" />
+              </el-select>
+              <el-button link type="primary" @click="roleDefaultMenus">使用角色默认菜单</el-button>
+              <small>菜单是原角色权限的上限，不会扩大网站范围。修改后撤销旧会话；至少保留一个完整权限管理员。</small>
+            </div>
             <div v-else-if="field.key === 'nodes'" class="node-editor">
               <div
                 v-for="(node, index) in form.nodes"
