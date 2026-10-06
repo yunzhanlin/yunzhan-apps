@@ -5,7 +5,7 @@ from panel_client import PanelClient
 assert os.environ.get('PANEL_VM') in ('panel-compat-ubuntu24','panel-store-apps-debian13'), 'Explicit isolated application QA VM required'
 c=PanelClient();root=pathlib.Path(__file__).resolve().parents[1]
 try:
- page=c.api('/app-registry');apps=page['catalog']['apps'];assert len(apps)==50 and all(a['stage']=='ready' for a in apps)
+ page=c.api('/app-registry?refresh=1');apps=page['catalog']['apps'];assert len(apps)==50 and all(a['stage']=='ready' for a in apps)
  assert page['source']['source'] in ['github','verified-cache'] and not page['source']['stale']
  def fetch(app):
   assert app['package_url'].startswith('https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/')
@@ -17,9 +17,13 @@ try:
   manifest=json.loads(raw);assert manifest['stage']=='ready' and manifest['id']==app['id'];return app['id']
  with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:downloaded=list(pool.map(fetch,apps))
  group=os.environ.get('APP_REGISTRY_GROUP','panel-module');installed=[]
- for app in apps:
-  if app['provider']!=group:continue
-  status=next(s for s in c.api('/app-registry')['status'] if s['id']==app['id'])
+ for listed_app in apps:
+  if listed_app['provider']!=group:continue
+  # Keep the expected release and installed status from one catalog response.
+  # A concurrent catalog change must still be rejected by the update endpoint.
+  current=c.api('/app-registry')
+  app=next(a for a in current['catalog']['apps'] if a['id']==listed_app['id'])
+  status=next(s for s in current['status'] if s['id']==app['id'])
   if status['installed'] and not status.get('update_available'):
    assert status['healthy'], 'Existing unhealthy application must be inspected, not reinstalled: '+app['id']
    print('KEPT EXISTING',app['id'],flush=True);continue

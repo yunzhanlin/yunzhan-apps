@@ -16,6 +16,9 @@ def cleanup(v):
   site=next((s for s in p.api('/sites') if s['id']==id),None)
   if not site:continue
   assert site['slug'].startswith('functions-') and site['domain']==site['slug']+'.example.test'
+  for module_id in ('enterprise-tamper-proof','website-tamper-proof','file-monitor'):
+   policies=module(module_id,'policies')['policies']
+   if any(row['site_id']==id for row in policies):module(module_id,'pause',site_id=id)
   if site.get('php_version_id'):p.wait(p.api('/sites/'+id+'/php',{'release_id':''})['job_id'],timeout=180)
   p.wait(p.api('/sites/'+id,{'confirm_domain':site['domain']},method='DELETE')['job_id'],timeout=180)
  print('PASS only marked functional QA apps removed and websites archived recoverably',flush=True)
