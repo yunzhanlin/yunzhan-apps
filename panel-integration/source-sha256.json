@@ -505,7 +505,7 @@
     "mobile/ios/YunzhanMobile.xcodeproj/project.pbxproj": "6575e138dc649546b78fe3cf2c095d15c264c18596429ad5e9c5b23f78aa5555",
     "mobile/ios/YunzhanMobile.xcodeproj/xcshareddata/xcschemes/YunzhanMobile.xcscheme": "a4f1382451cc6c5f8dcb261037330d72afef7f42abdbac727ab4b8129ac2422a",
     "scripts/test-app-commercial-foundation.py": "8f8c8230e742c49f3f475c112ba90621e28edf7809e9c0a7adc4aeff2fc1e0ec",
-    "scripts/test-app-commercial-updates.py": "49d51e9d41ed2c78c07a962a229ff2322871159a0731c668d85929d096764899",
+    "scripts/test-app-commercial-updates.py": "f1b571fbf7deae02cb86dcee491c88903d71a087fed1a4effed5eb14be9f8dbd",
     "scripts/test-app-completion.py": "a674026f37f69ba264a7a32fc5b1baa3368975b8a1133bc80ac2acfc9c26a391",
     "scripts/test-app-nfs-completion.py": "7b1b0bf215f73f7e1f9da0a59cccb3192ecf37a6754fa4bb970ef5454d9859e0",
     "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c",
