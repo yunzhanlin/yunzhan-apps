@@ -68,7 +68,7 @@ const form = ref<Record<string, any>>({}),
 const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean;status:string}[]>([]);
 const selectedPlanID = ref("");
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "pure-ftpd" ? "ftp-service" : form.value.resource_id);
+const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function clearWriteOnlyFields() {
@@ -124,6 +124,14 @@ const labels: Record<string, string> = {
   "revoke-token": "撤销只读令牌",
   mount: "挂载",
   unmount: "卸载挂载",
+  "server-report": "刷新共享服务",
+  "server-start": "启动共享服务",
+  "server-stop": "停止共享服务",
+  "server-probe": "检查真实 NFSv4 RPC",
+  "server-recover": "恢复中断共享配置",
+  "server-config": "保存共享监听配置",
+  "export-save": "保存网站目录导出",
+  "export-remove": "移除所选共享导出",
   start: "启动",
   stop: "停止",
   restart: "重启",
@@ -215,12 +223,15 @@ async function show(id: string) {
     };
     if (id === "pure-ftpd") Object.assign(form.value, {bind_address: "127.0.0.1", port: 2121, passive_start: 30000, passive_end: 30049, passive_address: "127.0.0.1", max_clients: 20, max_per_ip: 4, idle_minutes: 15});
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
+    if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
     busy.value = false;
   }
-  if (installed.value && definition.value?.actions.includes("policies")) {
+  if (installed.value && id === "nfs-manager") {
+    await execute("server-report");
+  } else if (installed.value && definition.value?.actions.includes("policies")) {
     await execute("policies");
   } else if (
     installed.value &&
@@ -234,7 +245,7 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
-  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -242,6 +253,10 @@ function selected(row: Record<string, any>) {
   }
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
+  if (id === "nfs-manager") {
+    if (row.clients) form.value.client_allow=JSON.stringify(row.clients,null,2);
+    form.value.confirm="";
+  }
   if (row.revision !== undefined) {
     selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : row.resource_id || row.id;
     form.value.expected_revision = row.revision;
@@ -278,6 +293,10 @@ async function execute(action: string) {
       inputBody(action),
     );
     setReport(result);
+    if (definition.value.id === "nfs-manager" && report.value?.config) {
+      form.value.bind_address=report.value.config.bind_address;form.value.port=report.value.config.port;
+      form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";form.value.confirm="";
+    }
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
       for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
       form.value.expected_revision = report.value.config.revision;
@@ -324,17 +343,21 @@ async function execute(action: string) {
         "recover-service",
 		"account-limits",
 		"recount-quota",
+        "server-config","server-start","server-stop","server-recover","export-save","export-remove",
       ].includes(action) &&
       definition.value.actions.includes("run")
     )
       setReport(
-        await props.api(`/app-modules/${definition.value.id}/run`, "POST", {}),
+        await props.api(`/app-modules/${definition.value.id}/${definition.value.id==='nfs-manager' && action!=='mount' && action!=='unmount' ? 'server-report' : 'run'}`, "POST", {}),
       );
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
       for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
       form.value.expected_revision = report.value.config.revision; selectedPlanID.value = "ftp-service";
 	  const selected = report.value.users?.find((row: Record<string, any>) => row.username === form.value.username);
 	  form.value.expected_sha = selected?.expected_sha || "";
+    }
+    if (definition.value.id === "nfs-manager" && report.value?.config) {
+      form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";
     }
     if (definition.value.id === "user-manager" && ["create", "update", "delete"].includes(action)) {
       const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);

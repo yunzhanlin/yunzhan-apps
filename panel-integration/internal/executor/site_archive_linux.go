@@ -44,6 +44,20 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 		return result, lockErr
 	}
 	defer unlock()
+	if s.moduleInstalled("nfs-manager") {
+		v, e := s.nfsServerConfig()
+		if e != nil {
+			return result, e
+		}
+		if s.nfsPending() {
+			return result, errors.New("NFS 有待恢复导出清单，请先恢复再归档网站")
+		}
+		for _, export := range v.Exports {
+			if export.SiteID == in.Site.ID {
+				return result, errors.New("网站仍被 NFS 导出引用，先移除共享导出再归档；网站文件不会删除")
+			}
+		}
+	}
 	if !core.ValidID(in.Site.ID) || !core.ValidID(in.JobID) || !core.ValidDomain(in.Site.Domain) || in.Site.Settings.WebServer != "nginx" || in.Site.PHPVersionID != "" {
 		return result, errors.New("归档站点身份或类型无效")
 	}

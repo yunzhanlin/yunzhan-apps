@@ -1,0 +1,49 @@
+[Unit]
+Description=CloudStack isolated NFSv4 website exports
+After=network.target
+Requires=panel-nfs-server-recover.service
+After=panel-nfs-server-recover.service
+[Service]
+Type=simple
+User=root
+ExecStart=/opt/panel/bin/panel-executor --serve-nfs-server
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=20
+TimeoutStopSec=20
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=256
+CPUQuota=200%
+LimitNOFILE=8192
+UMask=0077
+NoNewPrivileges=true
+# Explicit User=root with mount sandboxing can discard CAP_SETUID during
+# systemd's credential setup. Preserve only that required identity-switch
+# capability through exec; the startup guard still verifies all FSAL needs.
+AmbientCapabilities=CAP_SETUID
+# NFSv4 VFS handles and private bind aliases require SYS_ADMIN and
+# DAC_READ_SEARCH; serving squashed users requires SETUID/SETGID. Exclude
+# unrelated network administration, module and reboot powers. SYS_PTRACE
+# is used only to prove separation from PID 1's mount namespace. The launcher
+# irreversibly drops SYS_ADMIN, SYS_PTRACE and SETPCAP before executing the
+# native daemon, after preparing and verifying its aliases. Ganesha retains
+# SYS_RESOURCE only until it enables IO_FLUSHER, then drops it itself.
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_DAC_READ_SEARCH CAP_FOWNER CAP_FSETID CAP_SETGID CAP_SETUID CAP_SETPCAP CAP_NET_BIND_SERVICE CAP_SYS_ADMIN CAP_SYS_PTRACE CAP_SYS_RESOURCE CAP_LEASE
+# The launcher removes inherited NFS clients before covering tmp/home. Doing
+# so in systemd would hide their mountpoints and retain a self-NFS shutdown
+# reference. Equivalent private tmpfs protection is applied before native exec.
+PrivateTmp=false
+PrivateMounts=true
+# VFS uses an open_by_handle_at descriptor for the filesystem root. Making
+# that mount read-only makes every RW export read-only, even with writable
+# directory bind aliases. This trusted root daemon is not a process sandbox;
+# clients are independently constrained by all_squash and explicit export ACLs.
+ProtectSystem=full
+ProtectHome=read-only
+RuntimeDirectory=panel-nfs-server
+RuntimeDirectoryMode=0700
+ReadWritePaths=/srv/panel/sites /var/lib/panel-executor/nfs-server-recovery
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+[Install]
+WantedBy=multi-user.target

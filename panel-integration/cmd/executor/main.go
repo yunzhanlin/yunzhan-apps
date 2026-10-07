@@ -55,6 +55,8 @@ func main() {
 	ftpRecover := flag.Bool("recover-ftp", false, "recover interrupted FTPS configuration before boot")
 	nfsMount := flag.String("mount-nfs", "", "mount a managed NFS share")
 	nfsUnmount := flag.String("unmount-nfs", "", "unmount a managed NFS share")
+	nfsServe := flag.Bool("serve-nfs-server", false, "serve private NFSv4 website exports")
+	nfsRecover := flag.Bool("recover-nfs-server", false, "recover unfinished NFSv4 export configuration")
 	flag.Parse()
 	if *mariadbInit != "" {
 		if e := executor.InitMariaDB(*mariadbInit); e != nil {
@@ -73,6 +75,18 @@ func main() {
 	}
 	if *ftpRecover {
 		if e := executor.RecoverPureFTP(); e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
+	if *nfsRecover {
+		if e := executor.RecoverNFSServer(); e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
+	if *nfsServe {
+		if e := executor.ServeNFSServer(); e != nil {
 			log.Fatal(e)
 		}
 		return

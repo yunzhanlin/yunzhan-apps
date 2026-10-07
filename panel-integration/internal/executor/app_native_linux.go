@@ -96,6 +96,9 @@ func InstallAppDependencies(id string) (err error) {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 	defer cancel()
+	if id == "nfs-manager" {
+		return installPrivateNFSRuntime(ctx)
+	}
 	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
 	privateNode := id == "pm2-manager" && runtimecatalog.HostPlatform() == "ubuntu-22.04"
 	if privateNode {
@@ -789,13 +792,47 @@ type nfsMount struct {
 	ID       string `json:"id"`
 	Source   string `json:"source"`
 	ReadOnly bool   `json:"read_only"`
+	Port     int    `json:"port,omitempty"`
 }
 
 func validNFSSource(source string) bool {
 	host, path, ok := strings.Cut(source, ":")
-	return ok && (core.ValidDomain(host) || net.ParseIP(host) != nil) && strings.HasPrefix(path, "/") && !strings.Contains(path, "..") && !strings.ContainsAny(path, " \t\r\n\x00;") && len(source) < 512
+	if strings.HasPrefix(source, "[") {
+		end := strings.Index(source, "]:")
+		if end < 2 {
+			return false
+		}
+		host, path, ok = source[1:end], source[end+2:], true
+		ip := net.ParseIP(host)
+		if ip == nil || ip.To4() != nil || ip.IsUnspecified() || ip.IsMulticast() {
+			return false
+		}
+	} else {
+		if ip := net.ParseIP(host); ip != nil {
+			if ip.To4() == nil || ip.IsUnspecified() || ip.IsMulticast() {
+				return false
+			}
+		} else if !core.ValidDomain(host) {
+			return false
+		}
+	}
+	return ok && strings.HasPrefix(path, "/") && !strings.Contains(path, "..") && !strings.ContainsAny(path, " \\\t\r\n\x00;:") && len(source) < 512
+}
+func nfsClientTransport(source string) string {
+	if strings.HasPrefix(source, "[") {
+		return "tcp6"
+	}
+	return "tcp"
 }
 func (s *Service) moduleNFS(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
+	if strings.HasPrefix(action, "server-") || strings.HasPrefix(action, "export-") {
+		return s.moduleNFSServer(ctx, action, in)
+	}
+	lock, err := s.lockNFSFile("clients.lock")
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Close()
 	dir := filepath.Join(s.moduleDir("nfs-manager"), "mounts")
 	if action == "run" {
 		paths, _ := filepath.Glob(filepath.Join(dir, "*.json"))
@@ -806,7 +843,12 @@ func (s *Service) moduleNFS(ctx context.Context, action string, in core.AppModul
 				return nil, e
 			}
 			mounted, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-nfs@"+m.ID)
-			out = append(out, map[string]any{"mount": m, "state": strings.TrimSpace(mounted), "path": "/srv/panel/nfs/" + m.ID})
+			present, mountErr := s.nfsMountStatus(m)
+			entry := map[string]any{"mount": m, "state": strings.TrimSpace(mounted), "path": "/srv/panel/nfs/" + m.ID, "actual_mounted": present && mountErr == nil}
+			if mountErr != nil {
+				entry["mount_error"] = mountErr.Error()
+			}
+			out = append(out, entry)
 		}
 		return map[string]any{"mounts": out}, nil
 	}
@@ -816,18 +858,41 @@ func (s *Service) moduleNFS(ctx context.Context, action string, in core.AppModul
 	path := filepath.Join(dir, in.ResourceID+".json")
 	unit := "panel-nfs@" + in.ResourceID + ".service"
 	if action == "mount" {
-		if !validNFSSource(in.Source) {
+		if !validNFSSource(in.Source) || in.Port < 0 || in.Port > 65535 {
 			return nil, errors.New("NFS 来源地址无效")
 		}
 		if exists(path) {
 			return nil, errors.New("挂载已存在")
 		}
-		if e := moduleWrite(path, nfsMount{in.ResourceID, in.Source, in.ReadOnly}); e != nil {
+		paths, err := filepath.Glob(filepath.Join(dir, "*.json"))
+		if err != nil || len(paths) >= 64 {
+			return nil, errors.New("NFS 客户端最多登记 64 个挂载")
+		}
+		candidate := nfsMount{ID: in.ResourceID, Source: in.Source, ReadOnly: in.ReadOnly, Port: in.Port}
+		if present, err := s.nfsMountStatus(candidate); err != nil || present {
+			return nil, errors.New("挂载目录已有外部或未登记挂载；不接管、不删除原挂载")
+		}
+		if e := moduleWrite(path, nfsMount{ID: in.ResourceID, Source: in.Source, ReadOnly: in.ReadOnly, Port: in.Port}); e != nil {
 			return nil, e
 		}
 		if _, e := s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", unit); e != nil {
-			_ = os.Remove(path)
+			// Keep the manifest if cleanup failed; never leave an enabled unit
+			// with a deleted record after an incomplete mount.
+			_, stopErr := s.Config.Run(context.WithoutCancel(ctx), "/usr/bin/systemctl", "disable", "--now", unit)
+			var saved nfsMount
+			readErr := moduleRead(path, &saved)
+			present, mountErr := s.nfsMountStatus(saved)
+			if stopErr == nil && readErr == nil && mountErr == nil && !present {
+				_ = os.Remove(path)
+			}
 			return nil, e
+		}
+		var saved nfsMount
+		if e := moduleRead(path, &saved); e != nil {
+			return nil, e
+		}
+		if present, e := s.nfsMountStatus(saved); e != nil || !present {
+			return nil, errors.New("NFS 单元已启动但真实受管挂载未验证；记录已保留")
 		}
 		return map[string]any{"mounted": in.ResourceID, "path": "/srv/panel/nfs/" + in.ResourceID}, nil
 	}
@@ -836,8 +901,23 @@ func (s *Service) moduleNFS(ctx context.Context, action string, in core.AppModul
 		if e := moduleRead(path, &m); e != nil {
 			return nil, errors.New("挂载不存在")
 		}
+		present, e := s.nfsMountStatus(m)
+		if e != nil {
+			return nil, e
+		}
+		if present {
+			// Re-arm ExecStop after a prior busy-unmount failure. The fixed
+			// mount helper accepts only the already matching kernel mount;
+			// it does not stack or replace an existing mount.
+			if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "start", unit); e != nil {
+				return nil, e
+			}
+		}
 		if _, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", unit); e != nil {
 			return nil, e
+		}
+		if present, e := s.nfsMountStatus(m); e != nil || present {
+			return nil, errors.New("NFS 挂载仍存在或身份不可验证；未删除配置，不使用强制卸载")
 		}
 		return map[string]any{"unmounted": m.ID}, os.Remove(path)
 	}
@@ -848,11 +928,16 @@ func NFSMountOperation(id string, unmount bool) error {
 		return errors.New("挂载标识无效")
 	}
 	s := New(Config{})
+	lock, err := s.lockNFSFile("client-helper.lock")
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	var m nfsMount
 	if e := moduleRead(filepath.Join(s.moduleDir("nfs-manager"), "mounts", id+".json"), &m); e != nil {
 		return e
 	}
-	if m.ID != id || !validNFSSource(m.Source) {
+	if m.ID != id || !validNFSSource(m.Source) || m.Port < 0 || m.Port > 65535 {
 		return errors.New("挂载清单无效")
 	}
 	target := filepath.Join("/srv/panel/nfs", id)
@@ -865,15 +950,31 @@ func NFSMountOperation(id string, unmount bool) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if unmount {
-		_, e := s.moduleCommand(ctx, 25*time.Second, "/usr/bin/umount", target)
+		present, e := s.nfsMountStatus(m)
+		if e != nil || !present {
+			return e
+		}
+		_, e = s.moduleCommand(ctx, 25*time.Second, "/usr/bin/umount", target)
+		return e
+	}
+	if present, e := s.nfsMountStatus(m); e != nil || present {
 		return e
 	}
 	option := "rw"
 	if m.ReadOnly {
 		option = "ro"
 	}
-	_, e := s.moduleCommand(ctx, 25*time.Second, "/usr/bin/mount", "-t", "nfs", "-o", option+",nosuid,nodev,noexec,vers=4.2,timeo=50,retrans=2", m.Source, target)
-	return e
+	if m.Port == 0 {
+		m.Port = 2049
+	}
+	_, e := s.moduleCommand(ctx, 25*time.Second, "/usr/bin/mount", "-t", "nfs", "-o", option+",nosuid,nodev,noexec,vers=4.2,proto="+nfsClientTransport(m.Source)+",port="+strconv.Itoa(m.Port)+",timeo=50,retrans=2", m.Source, target)
+	if e != nil {
+		return e
+	}
+	if present, e := s.nfsMountStatus(m); e != nil || !present {
+		return errors.New("NFS mount 命令完成，但实际受管挂载未通过验证")
+	}
+	return nil
 }
 
 func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
@@ -1094,7 +1195,8 @@ func (s *Service) appDependencyReady(id string) bool {
 		lock, lockErr := os.ReadFile(s.systemPath(appNativeRoot + "/pm2/package-lock.json"))
 		return e == nil && lockErr == nil && core.Hash(string(lock)) == core.Hash(string(pm2Lock)) && st.Mode().Perm()&0005 == 0005 && moduleRead(filepath.Join(s.moduleDir(id), "dependency-result.json"), &result) == nil && result.OK && result.LockSHA == core.Hash(string(pm2Lock)) && exists(s.systemPath(appNativeRoot+"/pm2/node_modules/pm2/bin/pm2"))
 	case "nfs-manager":
-		return exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs"))
+		_, err := s.nfsRuntime()
+		return err == nil && (exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs")))
 	}
 	return false
 }

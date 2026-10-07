@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T04:29:33Z",
+  "generated_at": "2026-10-07T11:35:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -381,8 +381,8 @@
       "id": "nfs-manager",
       "name": "NFS Manager",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过",
+      "version": "1.3.0",
+      "summary": "独立 NFSv4 服务端与持久客户端、网站用户映射、CIDR 权限、双栈自定义端口和事务恢复",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -390,14 +390,20 @@
       "manage_route": "app-modules",
       "capabilities": [
         "NFSv4",
+        "独立服务端与网站导出",
+        "只读与确认后的读写共享",
+        "客户端 CIDR 与网站身份映射",
+        "IPv4/IPv6 自定义端口",
         "安全挂载选项",
         "开机恢复",
+        "修订保护与失败回滚",
+        "系统 NFS 与 RPC 映射隔离",
         "活跃挂载卸载保护",
         "专用操作流程",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.2.0/manifest.json",
-      "sha256": "955b46c94ced8ac916b5e21d67bf6c31f00d97dced7cfa85402a029d49c240fa"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nfs-manager/1.3.0/manifest.json",
+      "sha256": "c37a0d23ddb10a3e14e13c5304bbec0df0a3acf6954ab869ce40c9d253ad59ec"
     },
     {
       "id": "nginx",

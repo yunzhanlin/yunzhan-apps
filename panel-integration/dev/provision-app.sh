@@ -28,7 +28,7 @@ install -d -m 0700 /var/backups/panel/sites
 install -d -m 0700 /var/backups/panel/system
 install -d -m 0750 -o root -g panel-task /var/lib/panel-tasks /var/lib/panel-tasks/jobs
 install -d -m 0750 -o panel-task -g panel-task /var/lib/panel-tasks/work
-for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@; do
+for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@ panel-nfs-server panel-nfs-server-recover; do
  install -m 0644 /workspace/dev/$unit.service /etc/systemd/system/$unit.service
 done
 systemctl stop panel.service panel-executor.service 2>/dev/null || true

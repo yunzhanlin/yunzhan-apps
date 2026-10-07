@@ -41,7 +41,7 @@ const names: Record<string, string> = {
   port: "端口",
   entry: "程序入口",
   environment_keys: "已设置变量名称",
-  bind_address: "监听 IPv4",
+  bind_address: "监听 IP",
   passive_address: "NAT / 被动通告地址",
   passive_start: "被动起始端口",
   passive_end: "被动结束端口",
@@ -64,6 +64,7 @@ const names: Record<string, string> = {
   firewall_changed: "自动修改防火墙",
   credentials_sent: "健康探测发送凭据",
   config: "实际服务配置",
+  exposure_approved: "已确认非回环暴露",
   fingerprint: "证书摘要",
   trusted: "系统信任链有效",
   backup_id: "私有恢复备份标识",
@@ -124,6 +125,18 @@ const names: Record<string, string> = {
   users: "账户",
   apps: "PM2 项目",
   mounts: "NFS 挂载",
+  actual_mounted: "真实挂载已验证",
+  mount_error: "挂载状态告警",
+  exports: "NFS 网站目录导出",
+  clients: "允许客户端 IP/CIDR",
+  export_id: "NFS 原生导出编号",
+  uid: "网站用户 UID",
+  gid: "网站用户组 GID",
+  encrypted: "传输加密",
+  client_identity: "客户端文件身份",
+  runtime_ready: "独立运行时就绪",
+  actual_nfs_v4_rpc: "真实 NFSv4 RPC 检查通过",
+  export_error: "导出目录告警",
   hosts: "主机",
   nodes: "上游节点",
   changes: "文件变化",
@@ -255,7 +268,7 @@ const metrics = computed(() =>
   ),
 );
 const groups = computed(() =>
-  Object.entries({...props.report, ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
+  Object.entries({...props.report, ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
     ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );
@@ -271,7 +284,7 @@ const distributions = computed(() =>
   ),
 );
 const info = computed(() =>
-  Object.entries(props.report).filter(
+  Object.entries({...props.report, ...(props.id === 'nfs-manager' && props.report.config ? {bind_address:props.report.config.bind_address, port:props.report.config.port, revision:props.report.config.revision, exposure_approved:props.report.config.exposure_approved} : {})}).filter(
     ([key, value]) =>
       value !== null &&
       value !== undefined &&
@@ -314,6 +327,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+	if (props.id === "nfs-manager" && values.some(value=>value && typeof value==='object' && 'clients' in value)) return ["id","site_id","path","clients","read_only","export_id","uid","gid"];
 	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];
   if (props.id === "files-sync" && values.some(value => value && typeof value === "object" && "watcher_state" in value))
     return ["id", "site_id", "target_site_id", "enabled", "realtime", "watcher_state", "watch_directories", "watch_overflows", "watch_error", "revision", "interval", "last_trigger", "last_state", "copied_count", "conflicts_count", "last_error", "excludes"];
@@ -517,6 +531,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
               'users',
               'apps',
               'mounts',
+              'exports',
               'hosts',
               'changes',
               'largest_files',

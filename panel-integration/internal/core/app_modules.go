@@ -139,6 +139,9 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe", "account-limits", "recount-quota")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"quota_mb", "FTP 容量限制（MiB，0 不限制）", "number"}, AppModuleField{"quota_files", "FTP 文件与目录数量（0 不限制）", "number"}, AppModuleField{"upload_kb", "上传限速（KiB/s，0 不限制）", "number"}, AppModuleField{"download_kb", "下载限速（KiB/s，0 不限制）", "number"}, AppModuleField{"max_sessions", "账户并发会话（0 不限制）", "number"}, AppModuleField{"client_allow", "允许客户端 IPv4/CIDR（JSON 数组，空为全部）", "json"}, AppModuleField{"client_deny", "拒绝客户端 IPv4/CIDR（JSON 数组）", "json"}, AppModuleField{"expected_sha", "所选账户当前摘要（自动填写）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"bind_address", "本机监听 IPv4（0.0.0.0 为全部接口）", "text"}, AppModuleField{"port", "FTPS 控制端口", "number"}, AppModuleField{"passive_start", "被动端口起始", "number"}, AppModuleField{"passive_end", "被动端口结束", "number"}, AppModuleField{"passive_address", "被动模式通告 IPv4（NAT 使用公网 IP）", "text"}, AppModuleField{"certificate_id", "域名 TLS 证书", "certificate"}, AppModuleField{"domain", "FTPS 证书域名", "text"}, AppModuleField{"max_clients", "最大并发连接数", "number"}, AppModuleField{"max_per_ip", "单 IP 最大连接数", "number"}, AppModuleField{"idle_minutes", "空闲超时（分钟）", "number"}, AppModuleField{"expected_revision", "服务配置修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "非回环监听确认（EXPOSE FTPS IP:端口）", "text"})
+		case "nfs-manager":
+			definitions[i].Actions = append(definitions[i].Actions, "server-report", "server-start", "server-stop", "server-probe", "server-recover", "server-config", "export-save", "export-remove")
+			definitions[i].Fields = append(definitions[i].Fields, site, path, AppModuleField{"bind_address", "NFS 本机监听 IPv4/IPv6", "text"}, AppModuleField{"port", "NFSv4 监听端口", "number"}, AppModuleField{"client_allow", "允许客户端 IP/CIDR（JSON 数组，必须明确指定）", "json"}, AppModuleField{"expected_revision", "共享服务修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "网络暴露 / 可写导出确认", "text"})
 		case "pm2-manager":
 			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
@@ -290,6 +293,8 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "2.1.1"
 		case "pure-ftpd":
 			version = "1.0.54-compat6"
+		case "nfs-manager":
+			version = "1.3.0"
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":

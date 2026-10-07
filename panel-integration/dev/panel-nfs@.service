@@ -1,7 +1,7 @@
 [Unit]
 Description=CloudStack NFS mount %i
 Wants=network-online.target
-After=network-online.target nfs-server.service
+After=network-online.target nfs-server.service panel-nfs-server.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes

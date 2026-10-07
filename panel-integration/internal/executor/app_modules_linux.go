@@ -135,7 +135,7 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	case "pm2-manager":
 		out.Healthy = s.appDependencyReady(id)
 	case "nfs-manager":
-		out.Healthy = exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs"))
+		out.Healthy = s.appDependencyReady(id) && !s.nfsPending()
 	case "apache-waf":
 		out.Healthy = exists(filepath.Join(s.moduleDir(id), "rules.conf"))
 		if out.Healthy {
@@ -165,9 +165,19 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			}
 		}
 		if id == "nfs-manager" {
+			v, err := s.nfsServerConfig()
+			if err != nil {
+				return err
+			}
+			if len(v.Exports) > 0 || s.nfsActive(ctx) || s.nfsPending() {
+				return errors.New("NFS 仍有服务端导出、运行服务或待恢复事务；先停止并移除导出，文件不会删除")
+			}
 			rows, _ := filepath.Glob(filepath.Join(s.moduleDir(id), "mounts", "*.json"))
 			if len(rows) > 0 {
 				return errors.New("仍有 NFS 挂载，请先卸载挂载点")
+			}
+			if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", nfsServerUnit); err != nil {
+				return err
 			}
 		}
 		if id == "load-balance" {
@@ -216,10 +226,13 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			return e
 		}
 	case "nfs-manager":
-		if !exists(s.systemPath("/sbin/mount.nfs")) && !exists(s.systemPath("/usr/sbin/mount.nfs")) {
+		if !s.appDependencyReady(id) {
 			if e := s.appDependencies(ctx, id); e != nil {
 				return e
 			}
+		}
+		if e := os.MkdirAll(s.systemPath("/var/lib/panel-executor/nfs-server-recovery"), 0700); e != nil {
+			return e
 		}
 	case "apache-waf":
 		return s.applyApacheWAF(ctx, settings, action == "install", add)
@@ -412,6 +425,13 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		// A lifecycle job can uninstall this module while the request waits
+		// for the executor mutex. Recheck inside the same critical section as
+		// the operation so a queued request cannot recreate orphan resources.
+		if !s.moduleInstalled(id) {
+			respond(w, 409, map[string]string{"error": "应用已卸载，未执行排队操作"})
+			return
+		}
 		out, e := s.runAppModule(r.Context(), id, action, in)
 		if action != "history" && action != "policies" && action != "run-plan" {
 			if historyErr := s.appendModuleEvent(id, action, "manual", in, out, e); historyErr != nil && e == nil {
