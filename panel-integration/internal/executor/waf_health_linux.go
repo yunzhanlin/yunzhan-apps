@@ -17,9 +17,14 @@ import (
 
 // Configuration syntax alone is not proof that the selected Nginx is running.
 func (s *Service) wafNginxRunning(ctx context.Context, binary string) error {
+	_, err := s.wafNginxPID(ctx, binary)
+	return err
+}
+
+func (s *Service) wafNginxPID(ctx context.Context, binary string) (int, error) {
 	out, e := s.Config.Run(ctx, "/usr/bin/systemctl", "show", "nginx", "--property=ActiveState,MainPID")
 	if e != nil {
-		return e
+		return 0, e
 	}
 	state, pid := "", ""
 	for _, line := range strings.Split(out, "\n") {
@@ -33,13 +38,13 @@ func (s *Service) wafNginxRunning(ctx context.Context, binary string) error {
 	}
 	n, e := strconv.Atoi(pid)
 	if e != nil || n < 2 || state != "active" {
-		return errors.New("Nginx 服务未运行或状态无法核实")
+		return 0, errors.New("Nginx 服务未运行或状态无法核实")
 	}
 	running, e := os.Readlink(s.systemPath(fmt.Sprintf("/proc/%d/exe", n)))
 	if e != nil || running != binary {
-		return errors.New("Nginx 主进程与选择的版本不一致，请核对")
+		return 0, errors.New("Nginx 主进程与选择的版本不一致，请核对")
 	}
-	return ctx.Err()
+	return n, ctx.Err()
 }
 
 func (s *Service) verifyWAFReload(ctx context.Context, cfg core.WAFConfig, nginx string) error {
@@ -47,6 +52,10 @@ func (s *Service) verifyWAFReload(ctx context.Context, cfg core.WAFConfig, nginx
 }
 
 func (s *Service) verifyWAFReloadVersion(ctx context.Context, cfg core.WAFConfig, nginx, version string) error {
+	return s.verifyWAFReloadGeneration(ctx, cfg, nginx, version, nil)
+}
+
+func (s *Service) verifyWAFReloadGeneration(ctx context.Context, cfg core.WAFConfig, nginx, version string, generation *wafReloadGeneration) error {
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
 		return nil
 	}
@@ -57,7 +66,21 @@ func (s *Service) verifyWAFReloadVersion(ctx context.Context, cfg core.WAFConfig
 	defer cancel()
 	client := &http.Client{Timeout: time.Second, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	defer client.CloseIdleConnections()
-	for attempt := 0; attempt < 20; attempt++ {
+	for attempt := 0; attempt < 50; attempt++ {
+		if generation != nil {
+			drained, err := generation.drained(ctx)
+			if err != nil {
+				return err
+			}
+			if !drained {
+				select {
+				case <-ctx.Done():
+					return errors.New("Nginx 旧工作进程未确认停止接收新连接，未提交配置")
+				case <-time.After(100 * time.Millisecond):
+					continue
+				}
+			}
+		}
 		r, e := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:19101/__panel_waf_check", nil)
 		if e != nil {
 			return e

@@ -19,11 +19,17 @@ import (
 // never create a website, silently delete the record or activate its rule.
 // All other references must still resolve to a regular managed site config.
 // Normal policy edits continue to use the stricter prepareWAFSettings path.
+func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
+	return version == core.WAFVersion || version == "2.0.1" && cfg.Body == nil || version == "2.1.0"
+}
+
 func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
-	if cfg.Body != nil {
-		return errors.New("旧版元数据防护清单不能包含请求体引擎")
-	}
 	required, disabledCC := map[string]bool{}, map[string]bool{}
+	if cfg.Body != nil {
+		for _, site := range cfg.Body.Sites {
+			required[site.SiteID] = true
+		}
+	}
 	for _, site := range cfg.Policy.Sites {
 		required[site.SiteID] = true
 	}
@@ -61,7 +67,7 @@ func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
 	return nil
 }
 
-func (s *Service) upgradeWAF201(ctx context.Context, add func(string)) error {
+func (s *Service) upgradeWAFLegacy(ctx context.Context, add func(string)) error {
 	nginx, err := s.nginxBinary()
 	if err != nil {
 		return err
@@ -79,16 +85,19 @@ func (s *Service) upgradeWAF201(ctx context.Context, add func(string)) error {
 	// Re-check under the same lock used by website and WAF mutations. A
 	// queued task must not rely on the health snapshot from job submission.
 	manifest, err := s.readSoftwareManifest("nginx-waf")
-	if err != nil || manifest.Version != "2.0.1" {
+	if err != nil || (manifest.Version != "2.0.1" && manifest.Version != "2.1.0") {
 		return errors.New("WAF 历史迁移版本已变化，请刷新核对")
 	}
-	status := s.softwareStatus(ctx, "nginx-waf")
+	status := s.softwareStatusWithWAFLock(ctx, "nginx-waf", lock)
 	if !status.Installed || !status.Healthy {
 		return errors.New("WAF 旧版实际配置或生效指纹核对失败，未开始迁移")
 	}
 	cfg, err := core.DecodeWAFConfig(manifest.Settings)
 	if err != nil {
 		return err
+	}
+	if !wafHistoricalVersionValid(manifest.Version, cfg) {
+		return errors.New("WAF 历史版本或请求体来源不可验证")
 	}
 	if err := s.wafLegacyMigrationReferences(cfg); err != nil {
 		return err
@@ -102,9 +111,9 @@ func (s *Service) upgradeWAF201(ctx context.Context, add func(string)) error {
 // Only the two metadata includes and their manifest may change in this
 // migration. A concurrent external edit is rejected before creating backups
 // or replacing any active file.
-func (s *Service) verifyWAF201UpgradePlan(manifest softwareManifest, cfg core.WAFConfig, changes []wafConfigChange) error {
+func (s *Service) verifyWAFLegacyUpgradePlan(manifest softwareManifest, cfg core.WAFConfig, changes []wafConfigChange) error {
 	old, err := core.DecodeWAFConfig(manifest.Settings)
-	if err != nil || manifest.Version != "2.0.1" || old.Body != nil || cfg.Body != nil || cfg.Policy.Revision != old.Policy.Revision+1 {
+	if err != nil || (manifest.Version != "2.0.1" && manifest.Version != "2.1.0") || !wafHistoricalVersionValid(manifest.Version, old) || cfg.Policy.Revision != old.Policy.Revision+1 {
 		return errors.New("WAF 历史迁移身份或修订号异常")
 	}
 	expected := old
@@ -118,7 +127,7 @@ func (s *Service) verifyWAF201UpgradePlan(manifest softwareManifest, cfg core.WA
 		return err
 	}
 	h, v := wafFiles(s)
-	http, server := renderWAFPolicyVersion(old, "2.0.1")
+	http, server := renderWAFPolicyVersion(old, manifest.Version)
 	data, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
 		return err

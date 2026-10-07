@@ -539,6 +539,10 @@ func (s *Service) uninstallIntrusion(ctx context.Context, add func(string)) erro
 }
 
 func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAppStatus {
+	return s.softwareStatusWithWAFLock(ctx, id, nil)
+}
+
+func (s *Service) softwareStatusWithWAFLock(ctx context.Context, id string, wafLock *os.File) core.SoftwareAppStatus {
 	if _, ok := core.FindAppModule(id); ok {
 		return s.appModuleStatus(ctx, id)
 	}
@@ -566,12 +570,12 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 			return out
 		}
 		// A panel program upgrade does not rewrite installed application state.
-		// Accept only the byte-identical, no-body 2.0.1 metadata implementation
-		// as a migratable old install; all site files, manifest, syntax and the
+		// Accept only byte-identical 2.0.1 (no-body) and 2.1.0 implementations
+		// as migratable old installs; all site files, manifest, syntax and the
 		// real live old fingerprint must still pass. Never bypass health merely
 		// because a newer catalog version exists.
 		checkedVersion := core.WAFVersion
-		legacy := manifest.Version == "2.0.1" && cfg.Body == nil
+		legacy := manifest.Version != core.WAFVersion && wafHistoricalVersionValid(manifest.Version, cfg)
 		if legacy {
 			checkedVersion = manifest.Version
 			if configErr := s.wafLegacyMigrationReferences(cfg); configErr != nil {
@@ -603,14 +607,20 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 		if out.Healthy {
 			out.Detail = "实际配置与清单一致、Nginx 校验及生效指纹通过；请求体防护仅作用于明确选中且未停用的网站"
 			if legacy {
-				out.Detail = "旧版 2.0.1 元数据规则、网站配置及实际生效指纹通过；可安全更新，未构建或启用请求体引擎"
+				out.Detail = "旧版 " + manifest.Version + " 规则、网站配置及实际生效指纹通过；可安全更新并保留原策略与请求体引擎选择"
 			}
 			if cfg.Body != nil {
 				for _, site := range cfg.Body.Sites {
 					if _, active := core.WAFEffectiveBodyPolicy(cfg, site.SiteID); !active {
 						continue
 					}
-					if err := s.wafBodyLogHealth(ctx); err != nil {
+					var err error
+					if wafLock == nil {
+						err = s.wafBodyLogHealth(ctx)
+					} else {
+						err = s.wafBodyLogHealthUnderLock(ctx, wafLock)
+					}
+					if err != nil {
 						out.Healthy = false
 						out.Detail = "规则生效指纹已核实，但请求体日志需要核对：" + err.Error() + "；防护继续执行，原证据保留"
 					}

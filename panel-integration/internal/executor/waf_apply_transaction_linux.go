@@ -94,8 +94,14 @@ func (s *Service) recoverWAFBeforeMutation(ctx context.Context, nginx string) er
 	if _, err := s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf); err != nil {
 		return err
 	}
-	_, err = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx")
-	return err
+	generation, err := s.captureWAFReloadGeneration(ctx, nginx)
+	if err != nil {
+		return err
+	}
+	if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx"); err != nil {
+		return err
+	}
+	return waitWAFReloadGeneration(ctx, generation)
 }
 
 func (s *Service) applyWAFTransaction(ctx context.Context, cfg core.WAFConfig, uninstall bool, nginx string, add func(string)) error {
@@ -113,7 +119,7 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 		return err
 	}
 	if legacy != nil {
-		if err := s.verifyWAF201UpgradePlan(*legacy, cfg, changes); err != nil {
+		if err := s.verifyWAFLegacyUpgradePlan(*legacy, cfg, changes); err != nil {
 			return err
 		}
 	}
@@ -136,7 +142,14 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 			bounded, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			_, restoreErr = s.Config.Run(bounded, nginx, "-t", "-c", s.Config.NginxConf)
 			if restoreErr == nil {
-				_, restoreErr = s.Config.Run(bounded, "/usr/bin/systemctl", "reload", "nginx")
+				var generation *wafReloadGeneration
+				generation, restoreErr = s.captureWAFReloadGeneration(bounded, nginx)
+				if restoreErr == nil {
+					_, restoreErr = s.Config.Run(bounded, "/usr/bin/systemctl", "reload", "nginx")
+				}
+				if restoreErr == nil {
+					restoreErr = waitWAFReloadGeneration(bounded, generation)
+				}
 			}
 			cancel()
 		}
@@ -161,15 +174,22 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 	if _, err := s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf); err != nil {
 		return rollback(err)
 	}
+	generation, err := s.captureWAFReloadGeneration(ctx, nginx)
+	if err != nil {
+		return rollback(err)
+	}
 	if _, err := s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx"); err != nil {
 		return rollback(err)
 	}
 	if !uninstall {
-		if err := s.verifyWAFReload(ctx, cfg, nginx); err != nil {
+		if err := s.verifyWAFReloadGeneration(ctx, cfg, nginx, core.WAFVersion, generation); err != nil {
 			return rollback(err)
 		}
 	} else if s.Config.SystemRoot == "/" && s.Config.SitesDir == "/srv/panel/sites" {
 		if err := s.wafNginxRunning(ctx, nginx); err != nil {
+			return rollback(err)
+		}
+		if err := waitWAFReloadGeneration(ctx, generation); err != nil {
 			return rollback(err)
 		}
 	}
@@ -200,5 +220,6 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 		add("按每网站策略生成独立规则；请求体防护仅启用明确选中的网站")
 	}
 	add("通过实际 nginx -t、服务重载与规则指纹验证")
+	add("旧工作进程已停止接收新连接；重载前已接收的长连接和请求继续使用原配置，未强制断开")
 	return nil
 }

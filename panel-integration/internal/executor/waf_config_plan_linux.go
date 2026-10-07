@@ -33,7 +33,7 @@ func (s *Service) planWAFConfiguration(cfg core.WAFConfig, uninstall bool) ([]wa
 }
 
 func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool, version string) ([]wafConfigChange, error) {
-	if version != core.WAFVersion && (version != "2.0.1" || cfg.Body != nil) {
+	if !wafHistoricalVersionValid(version, cfg) {
 		return nil, errors.New("WAF 历史版本不支持严格迁移核对")
 	}
 	var err error

@@ -350,8 +350,8 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		if err != nil {
 			return err
 		}
-		if manifest.Version == "2.0.1" {
-			return s.upgradeWAF201(ctx, add)
+		if manifest.Version == "2.0.1" || manifest.Version == "2.1.0" {
+			return s.upgradeWAFLegacy(ctx, add)
 		}
 		return s.applyWAF(ctx, manifest.Settings, false, add)
 	}

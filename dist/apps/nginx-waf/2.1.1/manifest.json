@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "nginx-waf",
+  "name": "Nginx 请求防火墙 · Nginx WAF",
+  "category": "professional",
+  "version": "2.1.1",
+  "summary": "站点规则、名单与 CC；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，表单与 JSON/上传检测、隐私规则命中报表、有界日志及中断恢复；重载核实旧进程关闭监听，升级保留策略与引擎；引擎需显式构建与启用。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nginx-waf",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "分类规则、按站点启停与观察模式",
+    "站点独立策略",
+    "IPv4/IPv6 与 URL/UA 名单",
+    "每站点 IP 与 URL CC 限速",
+    "自定义字面匹配规则",
+    "真实日志筛选、排行与导出",
+    "安全配置导入与预览",
+    "配置备份、修订冲突、重载探针及旧工作进程监听关闭核对",
+    "独立请求体引擎与固定开源 CRS；版本迁移保留原策略",
+    "表单、嵌套 JSON 与上传体检测",
+    "数值规则命中日志与同 inode 轮转",
+    "未提交索引与缺失快照显式恢复"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/nginx-waf/config"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

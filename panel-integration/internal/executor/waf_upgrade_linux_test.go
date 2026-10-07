@@ -3,16 +3,55 @@
 package executor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 
 	"local/panel/internal/core"
 )
 
 func wafLegacy201Fixture(t *testing.T, edits ...func(*core.WAFConfig)) (*Service, core.WAFConfig) {
+	return wafLegacyVersionFixture(t, "2.0.1", edits...)
+}
+
+func TestWAFUpgradeLogHealthRequiresActualOwnedLock(t *testing.T) {
+	for _, fault := range []string{"held", "unlocked", "closed", "foreign"} {
+		t.Run(fault, func(t *testing.T) {
+			s := wafPolicyFixture(t)
+			lock, err := s.lockWAFConfiguration()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer lock.Close()
+			switch fault {
+			case "unlocked":
+				if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN); err != nil {
+					t.Fatal(err)
+				}
+			case "closed":
+				lock.Close()
+			case "foreign":
+				other := wafPolicyFixture(t)
+				f, err := other.lockWAFConfiguration()
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+				lock = f
+			}
+			if err := s.verifyWAFHealthLock(lock); (err == nil) != (fault == "held") {
+				t.Fatal("lock verification mismatch", fault, err)
+			}
+		})
+	}
+}
+
+func wafLegacyVersionFixture(t *testing.T, version string, edits ...func(*core.WAFConfig)) (*Service, core.WAFConfig) {
 	t.Helper()
 	s := wafPolicyFixture(t)
 	cfg := core.DefaultWAFConfig()
@@ -23,7 +62,15 @@ func wafLegacy201Fixture(t *testing.T, edits ...func(*core.WAFConfig)) (*Service
 	for _, edit := range edits {
 		edit(&cfg)
 	}
-	plan, err := s.planWAFConfigurationVersion(cfg, false, "2.0.1")
+	if cfg.Body != nil {
+		for _, site := range cfg.Body.Sites {
+			path := filepath.Join(s.Config.ConfDir, site.SiteID+".conf")
+			if err := os.WriteFile(path, []byte("# managed by panel; site="+site.SiteID+"\nserver {\n}\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	plan, err := s.planWAFConfigurationVersion(cfg, false, version)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,6 +83,65 @@ func wafLegacy201Fixture(t *testing.T, edits ...func(*core.WAFConfig)) (*Service
 		}
 	}
 	return s, cfg
+}
+
+func TestWAFVerified210UpdatePreservesPausedEngineAndRejectsDrift(t *testing.T) {
+	for _, fault := range []string{"none", "http-drift", "missing-paused-body-site"} {
+		t.Run(fault, func(t *testing.T) {
+			id := core.ID()
+			policy := core.DefaultWAFBodyPolicy()
+			policy.Mode = "off"
+			s, cfg := wafLegacyVersionFixture(t, "2.1.0", func(cfg *core.WAFConfig) {
+				cfg.Body = &core.WAFBodyConfig{EngineJobID: core.ID(), Sites: []core.WAFBodySitePolicy{{SiteID: id, Policy: policy}}}
+			})
+			before, err := s.readSoftwareManifest("nginx-waf")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if fault == "http-drift" {
+				h, _ := wafFiles(s)
+				data, _ := os.ReadFile(h)
+				os.WriteFile(h, append(data, []byte("# external drift\n")...), 0640)
+			}
+			if fault == "missing-paused-body-site" {
+				os.Remove(filepath.Join(s.Config.ConfDir, id+".conf"))
+			}
+			old, _ := os.ReadFile(s.softwareManifestPath("nginx-waf"))
+			status := s.softwareStatus(context.Background(), "nginx-waf")
+			err = s.updateSoftware(context.Background(), "nginx-waf", core.WAFVersion, func(string) {})
+			if fault != "none" {
+				if status.Healthy || err == nil {
+					t.Fatal("unverified 2.1.0 update accepted", fault, err)
+				}
+				current, _ := os.ReadFile(s.softwareManifestPath("nginx-waf"))
+				if !bytes.Equal(old, current) {
+					t.Fatal("rejected old body-policy migration wrote manifest")
+				}
+				return
+			}
+			if !status.Healthy || err != nil {
+				t.Fatal("verified 2.1.0 migration blocked", status, err)
+			}
+			after, err := s.readSoftwareManifest("nginx-waf")
+			if err != nil || after.Version != core.WAFVersion || after.InstalledAt != before.InstalledAt {
+				t.Fatal("migration manifest identity lost", after, err)
+			}
+			got, err := core.DecodeWAFConfig(after.Settings)
+			if err != nil {
+				t.Fatal(err)
+			}
+			cfg.Policy.Revision++
+			want, _ := json.Marshal(cfg)
+			actual, _ := json.Marshal(got)
+			if !bytes.Equal(want, actual) || got.Body == nil || got.Body.EngineJobID != cfg.Body.EngineJobID {
+				t.Fatal("version-only migration changed or enabled paused body policy")
+			}
+			main, _ := os.ReadFile(s.Config.NginxConf)
+			if strings.Contains(string(main), wafBodyLoaderBegin) {
+				t.Fatal("migration silently activated paused engine")
+			}
+		})
+	}
 }
 
 func TestWAFVerified201UpdatePreservesSettingsAndRequiresActualRules(t *testing.T) {
