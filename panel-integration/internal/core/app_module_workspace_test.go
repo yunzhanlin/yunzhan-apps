@@ -44,6 +44,17 @@ func TestModuleWorkspacesCoverActualOperations(t *testing.T) {
 	}
 }
 
+func TestModuleInstallationNeverPersistsBusinessCredentials(t *testing.T) {
+	for _, value := range []map[string]any{{"password": "secret"}, {"token": "secret"}, {"environment_patch": map[string]any{"API_KEY": "secret"}}} {
+		if _, err := validateModuleSettings(value); err == nil {
+			t.Fatal("business credential accepted as plaintext installation settings")
+		}
+	}
+	if _, err := validateModuleSettings(map[string]any{"site_id": "owned"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestModuleHistoryBoundedAndContainsNoSecrets(t *testing.T) {
 	s := testStore(t)
 	for i := 0; i < 130; i++ {

@@ -25,6 +25,7 @@ entries.push('scripts/test-app-commercial-updates.py');
 entries.push('scripts/test-menu-permissions.mjs');
 entries.push('scripts/test-user-menu-access.py');
 entries.push('scripts/test-app-outbound-notifications.py');
+entries.push('scripts/test-app-pm2-deployment.py');
 async function copy(relative){
  if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);

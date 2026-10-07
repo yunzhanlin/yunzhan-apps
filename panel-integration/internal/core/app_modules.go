@@ -22,47 +22,49 @@ type AppModuleField struct {
 	Kind  string `json:"kind"`
 }
 type AppModuleInput struct {
-	SiteID           string        `json:"site_id,omitempty"`
-	TargetSiteID     string        `json:"target_site_id,omitempty"`
-	TargetProjectID  string        `json:"target_project_id,omitempty"`
-	SiteIDs          []string      `json:"site_ids,omitempty"`
-	MenuIDs          []string      `json:"menu_ids"`
-	Path             string        `json:"path,omitempty"`
-	Excludes         []string      `json:"excludes,omitempty"`
-	ExpectedSHA      string        `json:"expected_sha,omitempty"`
-	Username         string        `json:"username,omitempty"`
-	Password         string        `json:"password,omitempty"`
-	Role             string        `json:"role,omitempty"`
-	ResourceID       string        `json:"resource_id,omitempty"`
-	Entry            string        `json:"entry,omitempty"`
-	PID              int           `json:"pid,omitempty"`
-	StartTime        uint64        `json:"start_time,omitempty"`
-	Port             int           `json:"port,omitempty"`
-	Domain           string        `json:"domain,omitempty"`
-	Nodes            []AppUpstream `json:"nodes,omitempty"`
-	Sticky           bool          `json:"sticky,omitempty"`
-	URL              string        `json:"url,omitempty"`
-	Token            string        `json:"token,omitempty"`
-	Source           string        `json:"source,omitempty"`
-	ReadOnly         bool          `json:"read_only,omitempty"`
-	Interval         int           `json:"interval,omitempty"`
-	AutoRestore      bool          `json:"auto_restore,omitempty"`
-	Realtime         bool          `json:"realtime"`
-	Confirm          string        `json:"confirm,omitempty"`
-	DryRun           bool          `json:"dry_run,omitempty"`
-	FromTime         string        `json:"from_time,omitempty"`
-	ToTime           string        `json:"to_time,omitempty"`
-	Search           string        `json:"search,omitempty"`
-	StatusCode       int           `json:"status_code,omitempty"`
-	MinSeconds       float64       `json:"min_seconds,omitempty"`
-	OnlyBots         bool          `json:"only_bots,omitempty"`
-	Severity         string        `json:"severity,omitempty"`
-	Instances        int           `json:"instances,omitempty"`
-	MemoryMB         int           `json:"memory_mb,omitempty"`
-	Enabled          bool          `json:"enabled"`
-	ExpectedRevision int64         `json:"expected_revision,omitempty"`
-	Limit            int           `json:"limit,omitempty"`
-	Offset           int           `json:"offset,omitempty"`
+	SiteID              string             `json:"site_id,omitempty"`
+	TargetSiteID        string             `json:"target_site_id,omitempty"`
+	TargetProjectID     string             `json:"target_project_id,omitempty"`
+	SiteIDs             []string           `json:"site_ids,omitempty"`
+	MenuIDs             []string           `json:"menu_ids"`
+	Path                string             `json:"path,omitempty"`
+	Excludes            []string           `json:"excludes,omitempty"`
+	ExpectedSHA         string             `json:"expected_sha,omitempty"`
+	Username            string             `json:"username,omitempty"`
+	Password            string             `json:"password,omitempty"`
+	Role                string             `json:"role,omitempty"`
+	ResourceID          string             `json:"resource_id,omitempty"`
+	Entry               string             `json:"entry,omitempty"`
+	PID                 int                `json:"pid,omitempty"`
+	StartTime           uint64             `json:"start_time,omitempty"`
+	Port                int                `json:"port,omitempty"`
+	Domain              string             `json:"domain,omitempty"`
+	Nodes               []AppUpstream      `json:"nodes,omitempty"`
+	Sticky              bool               `json:"sticky,omitempty"`
+	URL                 string             `json:"url,omitempty"`
+	Token               string             `json:"token,omitempty"`
+	Source              string             `json:"source,omitempty"`
+	ReadOnly            bool               `json:"read_only,omitempty"`
+	Interval            int                `json:"interval,omitempty"`
+	AutoRestore         bool               `json:"auto_restore,omitempty"`
+	Realtime            bool               `json:"realtime"`
+	Confirm             string             `json:"confirm,omitempty"`
+	DryRun              bool               `json:"dry_run,omitempty"`
+	FromTime            string             `json:"from_time,omitempty"`
+	ToTime              string             `json:"to_time,omitempty"`
+	Search              string             `json:"search,omitempty"`
+	StatusCode          int                `json:"status_code,omitempty"`
+	MinSeconds          float64            `json:"min_seconds,omitempty"`
+	OnlyBots            bool               `json:"only_bots,omitempty"`
+	Severity            string             `json:"severity,omitempty"`
+	Instances           int                `json:"instances,omitempty"`
+	MemoryMB            int                `json:"memory_mb,omitempty"`
+	EnvironmentPatch    map[string]*string `json:"environment_patch,omitempty"`
+	AllowInstallScripts bool               `json:"allow_install_scripts,omitempty"`
+	Enabled             bool               `json:"enabled"`
+	ExpectedRevision    int64              `json:"expected_revision,omitempty"`
+	Limit               int                `json:"limit,omitempty"`
+	Offset              int                `json:"offset,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -121,8 +123,10 @@ func AppModules() []AppModuleDefinition {
 		case "pure-ftpd":
 			definitions[i].Actions = append(definitions[i].Actions, "password")
 		case "pm2-manager":
-			definitions[i].Actions = append(definitions[i].Actions, "update")
+			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"environment_patch", "环境变量增量（JSON，仅写入）", "secret-json"})
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"allow_install_scripts", "允许安装脚本（网站用户，不是 root）", "boolean"})
 		}
 	}
 	return definitions
@@ -258,7 +262,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "pure-ftpd":
 			version = "1.0.50-compat3"
 		case "pm2-manager":
-			version = "7.0.4-compat3"
+			version = "7.0.4-compat4"
 		case "website-statistics-v2":
 			version = "2.2.0"
 		case "apache-waf":
@@ -281,6 +285,9 @@ func validateModuleSettings(raw map[string]any) (map[string]any, error) {
 	d.DisallowUnknownFields()
 	if d.Decode(&in) != nil {
 		return nil, errors.New("模块配置字段无效")
+	}
+	if in.Password != "" || in.Token != "" || in.EnvironmentPatch != nil {
+		return nil, errors.New("凭据和环境秘密只能通过对应业务操作写入，不能保存为安装配置")
 	}
 	return raw, nil
 }

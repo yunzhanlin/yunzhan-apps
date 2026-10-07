@@ -284,14 +284,16 @@ func (s *Service) installPM2(ctx context.Context) error {
 }
 
 type pm2App struct {
-	ID        string `json:"id"`
-	SiteID    string `json:"site_id"`
-	Entry     string `json:"entry"`
-	Port      int    `json:"port"`
-	CreatedAt string `json:"created_at"`
-	Instances int    `json:"instances"`
-	MemoryMB  int    `json:"memory_mb"`
-	Revision  int64  `json:"revision"`
+	ID                string   `json:"id"`
+	SiteID            string   `json:"site_id"`
+	Entry             string   `json:"entry"`
+	Port              int      `json:"port"`
+	CreatedAt         string   `json:"created_at"`
+	Instances         int      `json:"instances"`
+	MemoryMB          int      `json:"memory_mb"`
+	Revision          int64    `json:"revision"`
+	EnvironmentCipher string   `json:"environment_cipher,omitempty"`
+	EnvironmentKeys   []string `json:"environment_keys,omitempty"`
 }
 
 func pm2Limits(instances, memoryMB int) (int, int, error) {
@@ -343,7 +345,7 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 				return nil, e
 			}
 			state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pm2@"+app.ID)
-			out = append(out, map[string]any{"app": app, "state": strings.TrimSpace(state)})
+			out = append(out, map[string]any{"app": publicPM2App(app), "state": strings.TrimSpace(state)})
 		}
 		return map[string]any{"apps": out, "pm2_version": "7.0.4"}, nil
 	}
@@ -397,6 +399,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			}
 		}
 		app = pm2App{ID: in.ResourceID, SiteID: in.SiteID, Entry: in.Entry, Port: in.Port, CreatedAt: core.Now(), Instances: instances, MemoryMB: memoryMB, Revision: 1}
+		if e = s.patchPM2Environment(&app, in.EnvironmentPatch); e != nil {
+			return nil, e
+		}
 		if e = moduleWrite(path, app); e != nil {
 			return nil, e
 		}
@@ -412,12 +417,44 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			_ = os.Remove(path)
 			return nil, e
 		}
-		return map[string]any{"app": app, "ok": true}, nil
+		return map[string]any{"app": publicPM2App(app), "ok": true}, nil
 	}
 	if e := moduleRead(path, &app); e != nil {
 		return nil, errors.New("PM2 项目不存在")
 	}
+	if action == "deployment" {
+		return s.pm2DeploymentStatus(ctx, app.ID)
+	}
+	if action == "cancel-deployment" {
+		job, err := s.pm2LastDeployment(app.ID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "stop", "panel-pm2-deploy@"+job.ID); err != nil {
+			return nil, err
+		}
+	}
+	projectLock, err := s.lockPM2Project(app.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer projectLock.Close()
+	if action != "dependencies" && action != "logs" && action != "recover-deployment" && action != "cancel-deployment" && action != "archive-deployments" {
+		if job, err := s.pm2LastDeployment(app.ID); err == nil {
+			if job.State == "queued" || job.State == "running" || job.State == "switching" || job.State == "needs_attention" {
+				return nil, errors.New("依赖部署尚未完成或需要恢复，请先查看部署记录")
+			}
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
 	switch action {
+	case "archive-deployments":
+		return s.archivePM2Deployments(app.ID)
+	case "recover-deployment", "cancel-deployment":
+		return s.recoverPM2Deployment(ctx, app)
+	case "dependencies":
+		return s.queuePM2Dependencies(ctx, app, in.ExpectedRevision, in.AllowInstallScripts)
 	case "update":
 		if in.ExpectedRevision != app.Revision {
 			return nil, errors.New("PM2 配置已变化，请重新选择项目后保存")
@@ -477,6 +514,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			}
 		}
 		app.Revision++
+		if e = s.patchPM2Environment(&app, in.EnvironmentPatch); e != nil {
+			return nil, e
+		}
 		if e = moduleWrite(path, app); e != nil {
 			return nil, e
 		}
@@ -496,7 +536,7 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			}
 			return nil, e
 		}
-		return map[string]any{"app": app, "ok": true}, nil
+		return map[string]any{"app": publicPM2App(app), "ok": true}, nil
 	case "start", "stop", "restart":
 		_, e := s.Config.Run(ctx, "/usr/bin/systemctl", action, unit)
 		if e == nil && action != "stop" {
@@ -601,6 +641,10 @@ func ServePM2(id string) error {
 		return limitErr
 	}
 	app.Instances, app.MemoryMB = instances, memoryMB
+	environment, e := s.readPM2Environment(app)
+	if e != nil {
+		return e
+	}
 	f, e := s.openFiles(app.SiteID)
 	if e != nil {
 		return e
@@ -641,7 +685,7 @@ func ServePM2(id string) error {
 		return e
 	}
 	binary := pm2NodeBinaryOn(runtimecatalog.HostPlatform())
-	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", strconv.Itoa(app.Instances), "--max-memory-restart", strconv.Itoa(app.MemoryMB) + "M"}, []string{"PATH=" + filepath.Dir(binary) + ":/usr/bin:/bin", "LANG=C", "HOME=" + home, "PM2_HOME=" + home, "NODE_ENV=production", "HOST=127.0.0.1", "PORT=" + strconv.Itoa(app.Port)})
+	return syscall.Exec(binary, []string{binary, appNativeRoot + "/pm2/node_modules/pm2/bin/pm2-runtime", "start", app.Entry, "--name", id, "--instances", strconv.Itoa(app.Instances), "--max-memory-restart", strconv.Itoa(app.MemoryMB) + "M"}, pm2Environment(binary, home, app.Port, environment))
 }
 
 type nfsMount struct {

@@ -40,6 +40,15 @@ const names: Record<string, string> = {
   domain: "域名",
   port: "端口",
   entry: "程序入口",
+  environment_keys: "已设置变量名称",
+  package_sha256: "清单摘要",
+  lock_sha256: "锁定文件摘要",
+  service_state: "部署进程状态",
+  backup_path: "原依赖保留位置",
+  allow_install_scripts: "网站用户安装脚本",
+  archived: "已归档记录数",
+  records_retained: "记录可恢复",
+  dependency_directories_retained: "依赖备份未删除",
   id: "标识",
   site_id: "网站 ID",
   username: "用户名",
@@ -207,7 +216,7 @@ const metrics = computed(() =>
   ),
 );
 const groups = computed(() =>
-  Object.entries(props.report).filter(
+  Object.entries({...props.report, ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
     ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );

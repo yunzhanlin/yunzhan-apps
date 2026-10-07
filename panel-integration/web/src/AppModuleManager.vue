@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
@@ -70,6 +70,12 @@ const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", 
 const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+function clearWriteOnlyFields() {
+  for (const field of definition.value?.fields || [])
+    if (["password", "secret-json"].includes(field.kind)) form.value[field.key] = "";
+}
+watch(visible, value => { if (!value) clearWriteOnlyFields(); });
+onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
 function roleDefaultMenus() { form.value.menu_ids = menuCatalog.value.filter(menu => (form.value.role === "admin" || !menu.admin_only) && (props.access === undefined || props.access?.menu_ids.includes(menu.id))).map(menu => menu.id); }
 watch(() => form.value.role, () => {
@@ -121,6 +127,11 @@ const labels: Record<string, string> = {
   stop: "停止",
   restart: "重启",
   logs: "读取日志",
+  dependencies: "部署锁定依赖",
+  deployment: "刷新部署状态",
+  "cancel-deployment": "取消部署并恢复",
+  "recover-deployment": "恢复中断部署",
+  "archive-deployments": "归档旧部署记录",
   schedule: "保存同步计划",
   "run-plan": "执行所选计划",
   "pause-plan": "暂停所选计划",
@@ -193,6 +204,7 @@ async function show(id: string) {
       severity: "",
       instances: 1,
       memory_mb: 256,
+      allow_install_scripts: false,
     };
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
@@ -211,6 +223,7 @@ async function show(id: string) {
     await execute("run");
 }
 function selected(row: Record<string, any>) {
+  clearWriteOnlyFields();
   const id = definition.value?.id;
   const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
@@ -239,7 +252,7 @@ function inputBody(action: string) {
       body[f.key] =
         f.kind === "datetime"
           ? new Date(v).toISOString()
-          : f.kind === "json" && typeof v === "string"
+          : ["json", "secret-json"].includes(f.kind) && typeof v === "string"
             ? JSON.parse(v)
             : v;
   }
@@ -273,7 +286,7 @@ async function execute(action: string) {
     if (!["run", "logs", "probe", "check", "preview"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
-      if (f.kind === "password") form.value[f.key] = "";
+      if (["password", "secret-json"].includes(f.kind)) form.value[f.key] = "";
     if (
       [
         "create",
@@ -302,6 +315,11 @@ async function execute(action: string) {
       const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);
       form.value.expected_revision = selected?.revision || 0;
       if (!selected) selectedPlanID.value = "";
+    }
+    if (definition.value.id === "pm2-manager" && ["create", "update", "delete"].includes(action)) {
+      const selected = report.value?.apps?.find((row: Record<string, any>) => row.app.id === form.value.resource_id)?.app;
+      form.value.expected_revision = selected?.revision || 0;
+      selectedPlanID.value = selected?.id || "";
     }
     if (
       ["pause", "resume", "baseline", "watch-mode"].includes(action) &&
@@ -500,6 +518,10 @@ defineExpose({ show });
                 >添加上游节点</el-button
               >
             </div>
+            <div v-else-if="field.kind === 'secret-json'">
+              <el-input v-model="form[field.key]" type="textarea" :rows="4" autocomplete="off" spellcheck="false" placeholder='{"API_KEY":"新值","OLD_KEY":null}' />
+              <small>仅写入，不回显。留空保留；null 删除；空字符串设为空值。密文保存，运行器保留 HOST/PORT/PATH/加载器配置。程序自身的日志可能包含敏感信息。</small>
+            </div>
             <el-date-picker
               v-else-if="field.kind === 'datetime'"
               v-model="form[field.key]"
@@ -507,6 +529,10 @@ defineExpose({ show });
               clearable
               placeholder="不限制时间"
             />
+            <div v-else-if="field.key === 'allow_install_scripts'">
+              <el-switch v-model="form.allow_install_scripts" />
+              <el-alert v-if="form.allow_install_scripts" type="warning" :closable="false" title="将执行此应用及其依赖的第三方安装/构建脚本，权限限于网站用户；只有信任源码时才开启。不会传入应用环境变量或使用 root。" />
+            </div>
             <el-switch
               v-else-if="field.kind === 'boolean'"
               v-model="form[field.key]"
