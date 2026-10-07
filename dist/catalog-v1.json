@@ -70,8 +70,8 @@
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
+      "version": "1.3.1",
+      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -90,8 +90,8 @@
         "持久队列与退避重试",
         "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.3.0/manifest.json",
-      "sha256": "a523b4c29d7512d13a3bd23828f45fd3899f833b97e0e87ae2cab57670d2b167"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.3.1/manifest.json",
+      "sha256": "bb9e1d17e23999b205868ca06011c935001a5b36a3cc16689b13d130f6bc5bce"
     },
     {
       "id": "disk-analysis",
@@ -161,8 +161,8 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.4.0",
-      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
+      "version": "1.4.1",
+      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -182,15 +182,15 @@
         "持久队列与退避重试",
         "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.4.0/manifest.json",
-      "sha256": "1d2ea0822b32982887f900cdc1daf7c2946e9720b7254134356a86c7aaed8c50"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.4.1/manifest.json",
+      "sha256": "fd55df7b5e18d6dce9d094a2de63e5344b0ac458067917c911516b7af442793e"
     },
     {
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.4.0",
-      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
+      "version": "1.4.1",
+      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -210,15 +210,15 @@
         "持久队列与退避重试",
         "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.4.0/manifest.json",
-      "sha256": "f43f184f376d0694017a495960eaa27218765e58e9a5f37ed91566e2069b6e6a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.4.1/manifest.json",
+      "sha256": "caf787d24c7e76287e75994fad8ea0cd0e6abafa742864cae4d91f1c0ad8d201"
     },
     {
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.4.0",
-      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
+      "version": "1.4.1",
+      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -238,8 +238,8 @@
         "持久队列与退避重试",
         "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.4.0/manifest.json",
-      "sha256": "75e0fc96263167a2bb488da10c99f3fc88e9d0d10ac106224a17f0026ba38430"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.4.1/manifest.json",
+      "sha256": "97121999b27f0638e3c9983a6db4fb594c3254137d2d6eabbf59f304f8ace99d"
     },
     {
       "id": "load-balance",
@@ -1118,8 +1118,8 @@
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.4.0",
-      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
+      "version": "1.4.1",
+      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -1139,8 +1139,8 @@
         "持久队列与退避重试",
         "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.4.0/manifest.json",
-      "sha256": "d630c99e661b49163c68ce23fdbd41921cd164a914377d0bbf9cc8f8d59ea059"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.4.1/manifest.json",
+      "sha256": "d0cb88beca90c5bde4d72aad6797510a3a231b703a9289a21eeccedde551f803"
     }
   ]
 }

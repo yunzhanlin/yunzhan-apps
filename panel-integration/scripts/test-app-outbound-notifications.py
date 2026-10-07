@@ -35,11 +35,21 @@ if args.receiver:
             status = 204
             tests = [r for r in records if r['payload']['kind'] == 'test']
             if value['kind'] == 'test' and (not tests or self.path == '/always-retry'): status = 429
+            if self.path == '/slow': status = 0
             if not valid: status = 401
             records.append({'id':delivery, 'valid':valid, 'status':status, 'payload':value})
             temporary = args.receiver.with_suffix('.next')
             temporary.write_text(json.dumps(records))
             temporary.chmod(0o600); temporary.replace(args.receiver)
+            if self.path == '/slow':
+                # Actual client cancellation closes the TCP connection. Do not
+                # return a response or wait for the sender's 8-second timeout.
+                self.connection.settimeout(20)
+                cancelled = self.connection.recv(1) == b''
+                records[-1]['connection_cancelled'] = cancelled
+                temporary.write_text(json.dumps(records))
+                temporary.chmod(0o600); temporary.replace(args.receiver)
+                return
             self.send_response(status)
             if status == 429: self.send_header('Retry-After', '15')
             self.end_headers()
@@ -148,6 +158,19 @@ try:
     while time.monotonic()<deadline: time.sleep(.5)
     assert len(received())==before
     passed('stale writes rejected; disable cancels pending retry and produces no later request')
+    c=channel()
+    c=write('/notification-channels/'+c['id'],{'name':c['name'],'url':'http://127.0.0.1:'+str(port)+'/slow','enabled':True,'kinds':c['kinds'],'revision':c['revision']},'PUT')
+    event=queue_test()
+    poll(lambda:any(r['payload']['event_id']==event for r in received()))
+    started=time.monotonic()
+    # No helper retries here: pause must succeed on the first authenticated API
+    # call while the real receiver is still waiting and has sent no headers.
+    p.api('/notification-channels/'+c['id'],{'name':c['name'],'enabled':False,'kinds':c['kinds'],'revision':c['revision']},'PUT')
+    elapsed=time.monotonic()-started
+    assert elapsed<2, 'pause waited for the slow receiver: '+str(elapsed)
+    poll(lambda:any(r['payload']['event_id']==event and r.get('connection_cancelled') for r in received()),timeout=3)
+    assert any(d['event_id']==event and d['state']=='cancelled' for d in history())
+    passed('first-call pause remains responsive during an actual stalled HTTP request; connection interrupted and cancelled state retained')
     v['passed']=True;checkpoint()
 finally:
     try: cleanup()

@@ -49,6 +49,13 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 				fail(w, 409, e.Error())
 				return
 			}
+			// The database has already cancelled the old revision. Interrupt its
+			// active HTTP request as well, without waiting for the receiver timeout.
+			// A receiver may have processed bytes already sent, so dedup remains
+			// necessary; cancellation cannot revoke external side effects.
+			if cancel := a.outboundCancels[channel.ID]; cancel != nil {
+				cancel()
+			}
 			_ = a.Store.Audit(u.Username, "notification.channel.save", channel.ID, "success")
 			send(w, 200, channel)
 		}))

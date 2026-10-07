@@ -21,23 +21,26 @@ import (
 
 type Config struct{ DataDir, WebDir, Origin, Socket, Listen string }
 type Server struct {
-	Store            *Store
-	Executor         *ExecutorClient
-	AppCatalog       *appcatalog.Client
-	Config           Config
-	mux              *http.ServeMux
-	mu               sync.Mutex
-	attempts         map[string][]time.Time
-	terminalMu       sync.Mutex
-	securityScanMu   sync.Mutex
-	terminalGrants   map[string]terminalGrant
-	terminalSessions map[string]terminalSessionOwner
-	accountSecretKey []byte
-	bootstrap        string
-	analyticsRateMu  sync.Mutex
-	analyticsRates   map[string]analyticsRate
-	analyticsGlobal  analyticsRate
-	outboundMu       sync.Mutex
+	Store              *Store
+	Executor           *ExecutorClient
+	AppCatalog         *appcatalog.Client
+	Config             Config
+	mux                *http.ServeMux
+	mu                 sync.Mutex
+	attempts           map[string][]time.Time
+	terminalMu         sync.Mutex
+	securityScanMu     sync.Mutex
+	terminalGrants     map[string]terminalGrant
+	terminalSessions   map[string]terminalSessionOwner
+	accountSecretKey   []byte
+	bootstrap          string
+	analyticsRateMu    sync.Mutex
+	analyticsRates     map[string]analyticsRate
+	analyticsGlobal    analyticsRate
+	outboundMu         sync.Mutex
+	outboundCollectMu  sync.Mutex
+	outboundDispatchMu sync.Mutex
+	outboundCancels    map[string]context.CancelFunc
 }
 type identity struct{ ID, Username, CSRF string }
 

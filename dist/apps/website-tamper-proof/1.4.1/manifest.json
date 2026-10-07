@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "website-tamper-proof",
+  "name": "Website Tamper-proof",
+  "category": "professional",
+  "version": "1.4.1",
+  "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-tamper-proof",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "签名文件基线",
+    "变更事件",
+    "备份恢复",
+    "网站级策略",
+    "Linux 实时文件事件",
+    "动态目录与溢出补查",
+    "策略修订保护",
+    "365 天有界历史分页",
+    "专用流程与执行历史",
+    "签名 Webhook 脱敏推送",
+    "持久队列与退避重试",
+    "实际送达记录"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-tamper-proof"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

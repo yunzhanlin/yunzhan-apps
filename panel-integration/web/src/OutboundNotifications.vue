@@ -105,7 +105,7 @@ defineExpose({ refresh });
       <el-form-item label="签名密钥（16–512 字符）"><el-input v-model="draft.secret" type="password" show-password maxlength="512" autocomplete="new-password" :placeholder="draft.id ? '留空保留现有密钥' : '与接收端约定的随机密钥'" aria-label="Webhook 签名密钥" /></el-form-item>
       <el-form-item label="发送事件"><el-checkbox-group v-model="draft.kinds"><el-checkbox v-for="kind in kinds" :key="kind.id" :value="kind.id">{{ kind.label }}</el-checkbox></el-checkbox-group></el-form-item>
       <el-form-item label="启用通道"><el-switch v-model="draft.enabled" aria-label="启用当前推送通道" /></el-form-item>
-      <el-alert title="保存或停用会取消尚未完成的旧配置推送；重新启用不补发历史事件。已送出的请求无法撤回。" type="info" :closable="false" />
+      <el-alert title="保存或停用会取消旧队列，并中止仍在等待响应的旧连接；重新启用不补发历史事件。接收端已处理的数据无法撤回。" type="info" :closable="false" />
     </el-form>
     <template #footer><el-button :disabled="saving" @click="editor = false">取消</el-button><el-button type="primary" :loading="saving" @click="save">保存通道</el-button></template>
   </el-dialog>

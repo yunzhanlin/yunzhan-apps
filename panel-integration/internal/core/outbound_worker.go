@@ -29,6 +29,12 @@ type ModuleAlertPage struct {
 }
 
 func (a *Server) collectModuleNotifications(ctx context.Context) error {
+	// Source cursors have one owner; collecting must not hold the configuration
+	// lock across executor I/O or delay a pause behind a slow remote receiver.
+	if !a.outboundCollectMu.TryLock() {
+		return errors.New("应用事件正在收集，请稍后重试")
+	}
+	defer a.outboundCollectMu.Unlock()
 	var firstError error
 	for _, module := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync"} {
 		if err := a.collectOneModuleNotification(ctx, module); err != nil && firstError == nil {
@@ -237,19 +243,38 @@ func (s *Store) completeOutbound(d outboundDelivery, status int, message string,
 	return e
 }
 func (a *Server) dispatchOutbound(ctx context.Context, client *http.Client) error {
+	if !a.outboundDispatchMu.TryLock() {
+		return nil
+	}
+	defer a.outboundDispatchMu.Unlock()
 	for n := 0; n < 8; n++ {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
+		a.outboundMu.Lock()
 		d, e := a.Store.claimOutbound(time.Now().Unix())
+		if e != nil {
+			a.outboundMu.Unlock()
+		}
 		if errors.Is(e, sql.ErrNoRows) {
 			return nil
 		}
 		if e != nil {
 			return e
 		}
-		status, message, retry := a.sendOutbound(ctx, client, d)
-		if e = a.Store.completeOutbound(d, status, message, retry, time.Now().Unix()); e != nil {
+		requestContext, cancel := context.WithTimeout(ctx, 8*time.Second)
+		if a.outboundCancels == nil {
+			a.outboundCancels = make(map[string]context.CancelFunc)
+		}
+		a.outboundCancels[d.ChannelID] = cancel
+		a.outboundMu.Unlock()
+		status, message, retry := a.sendOutbound(requestContext, client, d)
+		cancel()
+		a.outboundMu.Lock()
+		delete(a.outboundCancels, d.ChannelID)
+		e = a.Store.completeOutbound(d, status, message, retry, time.Now().Unix())
+		a.outboundMu.Unlock()
+		if e != nil {
 			return e
 		}
 	}
@@ -266,9 +291,6 @@ func (a *Server) StartOutboundNotifications(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if !a.outboundMu.TryLock() {
-					continue
-				}
 				bounded, cancel := context.WithTimeout(ctx, 40*time.Second)
 				channels, e := a.Store.NotificationChannels()
 				enabled := false
@@ -277,9 +299,13 @@ func (a *Server) StartOutboundNotifications(ctx context.Context) {
 				}
 				// Initialize cursors even before external channels are enabled so a
 				// first event immediately after configuration cannot be lost.
-				collectErr := a.collectModuleNotifications(bounded)
+				collectContext, collectCancel := context.WithTimeout(bounded, 8*time.Second)
+				collectErr := a.collectModuleNotifications(collectContext)
+				collectCancel()
 				if e == nil && enabled {
+					a.outboundMu.Lock()
 					e = a.Store.QueueOutboundNotifications()
+					a.outboundMu.Unlock()
 					// A damaged app ledger or a full queue must not prevent previously
 					// queued notifications from being delivered and releasing capacity.
 					deliveryErr := a.dispatchOutbound(bounded, client)
@@ -304,7 +330,6 @@ func (a *Server) StartOutboundNotifications(ctx context.Context) {
 				}
 				_, _ = a.Store.DB.Exec(`UPDATE notification_dispatch_status SET last_error=?,last_check_at=? WHERE id=1`, message, Now())
 				cancel()
-				a.outboundMu.Unlock()
 			}
 		}
 	}()
