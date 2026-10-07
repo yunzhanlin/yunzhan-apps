@@ -3,7 +3,6 @@
 package executor
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"local/panel/internal/core"
@@ -53,29 +52,57 @@ func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string,
 	if out, e := exec.Command(bin, "-t", "-p", root, "-c", path).CombinedOutput(); e != nil {
 		t.Fatalf("real nginx -t: %s %v", out, e)
 	}
-	var output bytes.Buffer
-	cmd := exec.Command(bin, "-p", root, "-c", path)
-	cmd.Stdout = &output
-	cmd.Stderr = &output
-	if e = cmd.Start(); e != nil {
+	outputPath := filepath.Join(root, "startup.log")
+	output, e := os.OpenFile(outputPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
 		t.Fatal(e)
 	}
-	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
+	cmd := exec.Command(bin, "-p", root, "-c", path)
+	cmd.Stdout = output
+	cmd.Stderr = output
+	if e = cmd.Start(); e != nil {
+		output.Close()
+		t.Fatal(e)
+	}
+	// The same suite runs on low-resource and emulated servers while a source
+	// build is active. A fixed one-second loop confuses scheduler delay with
+	// configuration failure. Keep a bounded real deadline and detect early exit;
+	// file-backed diagnostics avoid a concurrent bytes.Buffer read/write race.
+	done := make(chan struct{})
+	var waitErr error
+	go func() { waitErr = cmd.Wait(); close(done) }()
+	t.Cleanup(func() {
+		_ = cmd.Process.Kill()
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+			t.Error("private test Nginx did not terminate")
+		}
+		_ = output.Close()
+	})
 	address := fmt.Sprintf("127.0.0.1:%d", port)
 	ready := false
-	for i := 0; i < 100; i++ {
-		c, e := net.DialTimeout("tcp", address, 20*time.Millisecond)
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		select {
+		case <-done:
+			log, _ := os.ReadFile(outputPath)
+			t.Fatalf("private Nginx exited before listening: %v %s", waitErr, log)
+		default:
+		}
+		c, e := net.DialTimeout("tcp", address, 100*time.Millisecond)
 		if e == nil {
 			c.Close()
 			ready = true
 			break
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(25 * time.Millisecond)
 	}
 	if !ready {
-		t.Fatalf("nginx did not listen: %s", output.String())
+		log, _ := os.ReadFile(outputPath)
+		t.Fatalf("private Nginx did not listen within 15 seconds: %s", log)
 	}
-	client := &http.Client{Timeout: time.Second}
+	client := &http.Client{Timeout: 5 * time.Second}
 	return func(host, path, agent, cookie string) int {
 		t.Helper()
 		r, e := http.NewRequest("GET", "http://"+address+path, nil)

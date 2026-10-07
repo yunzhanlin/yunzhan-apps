@@ -131,7 +131,9 @@ func AppModules() []AppModuleDefinition {
 		case "disk-analysis":
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"path", "网站内子目录（留空扫描全部）", "text"})
 		case "php-code-security":
+			definitions[i].Actions = append(definitions[i].Actions, "quarantine-list", "quarantine", "restore-quarantine", "recover-quarantine")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"search", "路径或规则筛选", "text"}, AppModuleField{"severity", "风险级别", "severity"})
+			definitions[i].Fields = append(definitions[i].Fields, path, AppModuleField{"resource_id", "隔离记录标识（选择记录自动填写）", "identity"}, AppModuleField{"expected_sha", "已审查文件摘要（自动填写）", "identity"}, AppModuleField{"expected_revision", "隔离记录修订号（自动填写）", "identity"}, AppModuleField{"confirm", "隔离 / 恢复的精确确认", "text"}, AppModuleField{"limit", "隔离清单每页条数（最多 200）", "number"}, AppModuleField{"offset", "隔离清单分页起点", "number"})
 		case "daily-report":
 			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"})
@@ -285,7 +287,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.4.1"
 		case "daily-report":
 			version = "1.3.1"
-		case "mobile-pwa":
+		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "user-manager":
 			version = "1.3.1"

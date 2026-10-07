@@ -29,6 +29,7 @@ entries.push('scripts/test-app-pm2-deployment.py');
 entries.push('scripts/test-app-ftp-service.py');
 entries.push('scripts/test-app-ftp-limits.py');
 entries.push('scripts/test-app-ftp-boot.py');
+entries.push('scripts/test-app-php-quarantine.py');
 async function copy(relative){
  if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);

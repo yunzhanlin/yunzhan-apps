@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily"}
+var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security"}
 
 type NotificationChannel struct {
 	ID           string   `json:"id"`
@@ -248,6 +248,8 @@ func safeOutboundMessage(n Notification) OutboundMessage {
 		title, message = "网站文件变化", "文件监控或防篡改发现变化或检查失败，请查看应用记录。"
 	case "sync":
 		title, message = "文件同步需要处理", "文件同步发生冲突或失败，请查看同步记录。"
+	case "php-security":
+		title, message = "PHP 代码安全事件", "PHP 扫描有待审查结果或隔离、恢复操作，请查看应用记录；静态命中不等于已确认后门。"
 	case "daily":
 		title, message = "每日运维报告", "今日运维报告已生成，请登录面板查看资源、网站、任务与证书情况。"
 	case "test":

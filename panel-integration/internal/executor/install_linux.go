@@ -29,6 +29,38 @@ import (
 
 const installState = "/var/lib/panel-executor/installs"
 
+// Native PHP builds include all reviewed extensions and may run on small
+// servers or slower architecture-compatibility hosts. Keep a finite budget
+// without silently publishing partial binaries; no client-supplied timeout.
+func runtimeInstallTimeout(release runtimecatalog.Release) time.Duration {
+	if release.Family == "php" {
+		return 4 * time.Hour
+	}
+	return 110 * time.Minute
+}
+
+func acquireRuntimeBuildLock(ctx context.Context, file *os.File) error {
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) && !errors.Is(err, syscall.EAGAIN) {
+			return err
+		}
+		timer := time.NewTimer(100 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
 type InstallStatus struct {
 	ExtensionID string      `json:"extension_id,omitempty"`
 	JobID       string      `json:"job_id"`
@@ -201,8 +233,11 @@ func InstallJob(id string) (ret error) {
 		return e
 	}
 	defer lock.Close()
-	if e = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX); e != nil {
-		return e
+	lockContext, lockCancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	e = acquireRuntimeBuildLock(lockContext, lock)
+	lockCancel()
+	if e != nil {
+		return fmt.Errorf("等待源码构建锁失败（最多 30 分钟）；未开始安装: %w", e)
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	if st.ExtensionID != "" {
@@ -222,8 +257,17 @@ func InstallJob(id string) (ret error) {
 	if _, e = LoadRuntime(r.ID); e == nil {
 		return add("该精确版本已安装，核对清单与程序文件通过")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 110*time.Minute)
+	budget := runtimeInstallTimeout(r)
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
+	defer func() {
+		if ret != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			ret = fmt.Errorf("安装超过固定 %d 分钟时限；未发布不完整运行时，构建日志保留: %w", int(budget/time.Minute), ctx.Err())
+		}
+	}()
+	if e = add(fmt.Sprintf("本次安装总时限 %d 分钟；超时即失败，不发布未校验程序", int(budget/time.Minute))); e != nil {
+		return e
+	}
 	if r.Family == "mysql" {
 		return installMySQL(ctx, r, id, add)
 	}

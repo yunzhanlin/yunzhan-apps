@@ -13,7 +13,7 @@ func (s *Service) moduleAlertRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /v1/module-alert-events", func(w http.ResponseWriter, r *http.Request) {
 		module := r.URL.Query().Get("module")
 		allowed := false
-		for _, id := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync"} {
+		for _, id := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "php-code-security"} {
 			allowed = allowed || module == id
 		}
 		cursor, e := strconv.ParseInt(r.URL.Query().Get("cursor"), 10, 64)
@@ -67,7 +67,7 @@ func (s *Service) moduleAlertRoutes(m *http.ServeMux) {
 			if e = json.Unmarshal([]byte(raw), &event); e != nil {
 				break
 			}
-			page.Events = append(page.Events, core.ModuleAlertEvent{Sequence: seq, ID: event.ID, Time: event.Time, Outcome: event.Outcome, Changes: event.Changes, Conflicts: event.Conflicts})
+			page.Events = append(page.Events, core.ModuleAlertEvent{Sequence: seq, ID: event.ID, Time: event.Time, Outcome: event.Outcome, Changes: event.Changes, Conflicts: event.Conflicts, Findings: event.Findings, Quarantined: event.Quarantined, Restored: event.Restored})
 			page.Cursor = seq
 		}
 		if e == nil {

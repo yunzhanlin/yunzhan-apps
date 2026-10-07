@@ -136,6 +136,20 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		out.Healthy = s.appDependencyReady(id)
 	case "nfs-manager":
 		out.Healthy = s.appDependencyReady(id) && !s.nfsPending()
+	case "php-code-security":
+		rows, err := s.phpQuarantineRecords()
+		if err != nil {
+			out.Healthy = false
+			out.Detail = "隔离记录身份或完整性异常，请核对隔离箱"
+		} else {
+			for _, row := range rows {
+				if row.State == "prepared" || row.State == "conflict" || row.State == "restoring" {
+					out.Healthy = false
+					out.Detail = "存在待核对的隔离或恢复事务，请查看隔离箱"
+					break
+				}
+			}
+		}
 	case "apache-waf":
 		out.Healthy = exists(filepath.Join(s.moduleDir(id), "rules.conf"))
 		if out.Healthy {
@@ -146,7 +160,7 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 			out.Enabled = cfg.Policy.Mode != "off"
 		}
 	}
-	if !out.Healthy {
+	if !out.Healthy && out.Detail == "模块已安装，可配置并执行" {
 		out.Detail = "模块已安装，但依赖或服务未就绪"
 	}
 	return out
@@ -162,6 +176,11 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 		if id == "pure-ftpd" {
 			if _, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", "panel-pure-ftpd"); e != nil {
 				return e
+			}
+		}
+		if id == "php-code-security" {
+			if err := s.phpQuarantineReference(""); err != nil {
+				return err
 			}
 		}
 		if id == "nfs-manager" {
@@ -465,7 +484,7 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 		}
 		return s.moduleSync(ctx, in, action == "preview" || in.DryRun)
 	case "php-code-security":
-		return s.modulePHPScanFiltered(ctx, in)
+		return s.modulePHPQuarantine(ctx, action, in)
 	case "disk-analysis":
 		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
@@ -1151,7 +1170,7 @@ scan:
 			for _, index := range matches {
 				line := strings.Count(string(b[:index[0]]), "\n") + 1
 				evidence := string(b[index[0]:min(index[1], index[0]+512)])
-				findings = append(findings, map[string]any{"path": p, "line": line, "rule": rule.name, "severity": rule.severity, "evidence": evidence, "sha256": files[p].SHA})
+				findings = append(findings, map[string]any{"site_id": id, "path": p, "line": line, "rule": rule.name, "severity": rule.severity, "evidence": evidence, "sha256": phpSHA(b)})
 				severityCounts[rule.severity]++
 				ruleCounts[rule.name]++
 				if len(findings) >= 500 {

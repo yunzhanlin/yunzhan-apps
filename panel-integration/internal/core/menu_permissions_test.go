@@ -102,6 +102,11 @@ func TestMenuRouteCeilingAndWebsiteScope(t *testing.T) {
 		{admin, "GET", "/api/system/files", true}, {admin, "GET", "/api/system/inventory", false},
 		{admin, "GET", "/api/software", true}, {admin, "POST", "/api/app-registry/nginx-waf/install", false},
 		{admin, "GET", "/api/software/nginx-waf", false}, {admin, "GET", "/api/app-modules/user-manager", false},
+		{admin, "POST", "/api/app-modules/php-code-security/quarantine", false},
+		{admin, "POST", "/api/app-modules/php-code-security/restore-quarantine", false},
+		{admin, "POST", "/api/app-modules/php-code-security/recover-quarantine", false},
+		{viewer, "POST", "/api/app-modules/php-code-security/quarantine-list", false},
+		{operator, "POST", "/api/app-modules/php-code-security/quarantine", false},
 		{admin, "GET", "/api/terminal", false}, {admin, "GET", "/api/account", true},
 		{admin, "GET", "/api/future-route", false}, {admin, "GET", "/api/sites//" + site + "/files", false},
 		{admin, "GET", "/api/notification-channels", false}, {admin, "POST", "/api/notification-channels", false},
@@ -216,6 +221,12 @@ func TestMenuHTTPChecksEveryRequestAndRevokesLogin(t *testing.T) {
 		before := calls
 		if w := request("GET", path, "", "", cookie); w.Code != 403 || calls != before {
 			t.Fatal("unauthorized executor call", path, w.Code, calls-before)
+		}
+	}
+	for _, action := range []string{"quarantine", "restore-quarantine", "recover-quarantine", "quarantine-list"} {
+		before := calls
+		if w := request("POST", "/api/app-modules/php-code-security/"+action, "{}", token, cookie); w.Code != 403 || calls != before {
+			t.Fatal("PHP executor privilege bypass", action, w.Code, calls-before)
 		}
 	}
 	if w := request("POST", "/api/session/activity", "{}", token, cookie); w.Code != 200 {

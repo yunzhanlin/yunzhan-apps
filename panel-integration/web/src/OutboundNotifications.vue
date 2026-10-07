@@ -5,7 +5,7 @@ import { formatPanelDateTime } from "./panelTime";
 interface Channel { id: string; name: string; endpoint_host: string; enabled: boolean; kinds: string[]; revision: number; secret_set: boolean; updated_at: string }
 interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number }
 const props = defineProps<{ api: <T>(path: string, method?: string, body?: unknown) => Promise<T> }>();
-const kinds = [{ id: "integrity", label: "文件监控与防篡改" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
+const kinds = [{ id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
 const states: Record<string, string> = { pending: "等待发送 / 重试", running: "发送中", succeeded: "已送达", failed: "失败，需处理", cancelled: "配置变更，已取消" };
 const channels = ref<Channel[]>([]), deliveries = ref<Delivery[]>([]);
 const loading = ref(false), saving = ref(false), historyLoading = ref(false), busyID = ref("");

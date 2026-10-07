@@ -44,6 +44,9 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 		return result, lockErr
 	}
 	defer unlock()
+	if err := s.phpQuarantineReference(in.Site.ID); err != nil {
+		return result, err
+	}
 	if s.moduleInstalled("nfs-manager") {
 		v, e := s.nfsServerConfig()
 		if e != nil {

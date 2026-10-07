@@ -15,12 +15,15 @@ import (
 )
 
 type ModuleAlertEvent struct {
-	Sequence  int64  `json:"sequence"`
-	ID        string `json:"id"`
-	Time      string `json:"time"`
-	Outcome   string `json:"outcome"`
-	Changes   int    `json:"changes_count"`
-	Conflicts int    `json:"conflicts_count"`
+	Sequence    int64  `json:"sequence"`
+	ID          string `json:"id"`
+	Time        string `json:"time"`
+	Outcome     string `json:"outcome"`
+	Changes     int    `json:"changes_count"`
+	Conflicts   int    `json:"conflicts_count"`
+	Findings    int    `json:"findings_count,omitempty"`
+	Quarantined int    `json:"quarantined_count,omitempty"`
+	Restored    int    `json:"restored_count,omitempty"`
 }
 type ModuleAlertPage struct {
 	Cursor int64              `json:"cursor"`
@@ -36,7 +39,7 @@ func (a *Server) collectModuleNotifications(ctx context.Context) error {
 	}
 	defer a.outboundCollectMu.Unlock()
 	var firstError error
-	for _, module := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync"} {
+	for _, module := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "php-code-security"} {
 		if err := a.collectOneModuleNotification(ctx, module); err != nil && firstError == nil {
 			firstError = err
 		}
@@ -70,7 +73,12 @@ func (a *Server) collectOneModuleNotification(ctx context.Context, module string
 			return errors.New("应用事件摘要无效")
 		}
 		lastSequence = event.Sequence
-		if event.Outcome == "failed" || event.Conflicts > 0 || (module != "files-sync" && event.Changes > 0) {
+		if module == "php-code-security" && (event.Findings < 0 || event.Findings > 500 || event.Quarantined < 0 || event.Quarantined > 1 || event.Restored < 0 || event.Restored > 1) {
+			tx.Rollback()
+			return errors.New("PHP 安全事件计数无效")
+		}
+		phpEvent := module == "php-code-security" && (event.Findings > 0 || event.Quarantined > 0 || event.Restored > 0)
+		if event.Outcome == "failed" || event.Conflicts > 0 || (module != "files-sync" && event.Changes > 0) || phpEvent {
 			at, e := time.Parse(time.RFC3339, event.Time)
 			if e != nil {
 				tx.Rollback()
@@ -79,6 +87,12 @@ func (a *Server) collectOneModuleNotification(ctx context.Context, module string
 			kind, severity := "integrity", "warning"
 			if module == "files-sync" {
 				kind = "sync"
+			}
+			if module == "php-code-security" {
+				kind = "php-security"
+				if event.Findings == 0 {
+					severity = "info"
+				}
 			}
 			if event.Outcome == "failed" {
 				severity = "critical"
@@ -91,7 +105,11 @@ func (a *Server) collectOneModuleNotification(ctx context.Context, module string
 		}
 	}
 	if page.Gap {
-		_, e = tx.Exec(`INSERT OR IGNORE INTO notifications(id,kind,title,message,severity,source,source_id,created_at) VALUES(?,'integrity','应用事件缺口','历史保留期或容量已跨过游标，请检查应用历史','critical','app:event-gap',?,?)`, ID(), module+":"+strconv.FormatInt(cursor, 10), time.Now().Unix())
+		kind := "integrity"
+		if module == "php-code-security" {
+			kind = "php-security"
+		}
+		_, e = tx.Exec(`INSERT OR IGNORE INTO notifications(id,kind,title,message,severity,source,source_id,created_at) VALUES(?,?,'应用事件缺口','历史保留期或容量已跨过游标，请检查应用历史','critical','app:event-gap',?,?)`, ID(), kind, module+":"+strconv.FormatInt(cursor, 10), time.Now().Unix())
 		if e != nil {
 			tx.Rollback()
 			return e

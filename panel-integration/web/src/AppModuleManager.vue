@@ -67,6 +67,14 @@ const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
 const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean;status:string}[]>([]);
 const selectedPlanID = ref("");
+const selectedQuarantineState = ref("");
+function canExecutePHP(action: string) {
+  if (definition.value?.id !== "php-code-security") return true;
+  if (action === "restore-quarantine") return selectedQuarantineState.value === "quarantined" && form.value.confirm === `RESTORE PHP ${form.value.resource_id}`;
+  if (action === "recover-quarantine") return ["prepared", "conflict", "restoring"].includes(selectedQuarantineState.value) && form.value.confirm === `RECOVER PHP ${form.value.resource_id}`;
+  if (action === "quarantine") return Boolean(form.value.site_id && form.value.path && form.value.expected_sha && form.value.confirm === `QUARANTINE ${form.value.path}`);
+  return true;
+}
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
 const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
@@ -109,6 +117,10 @@ const labels: Record<string, string> = {
   baseline: "建立基线",
   check: "检查变更",
   restore: "恢复所选文件",
+  "quarantine-list": "刷新隔离箱并验证备份",
+  quarantine: "隔离已审查文件",
+  "restore-quarantine": "无覆盖恢复所选文件",
+  "recover-quarantine": "恢复中断的隔离事务",
   preview: "同步预览",
   sync: "开始同步",
   save: "保存入口",
@@ -181,6 +193,7 @@ async function show(id: string) {
   sites.value = [];
   certificates.value = [];
   selectedPlanID.value = "";
+  selectedQuarantineState.value = "";
   workspace.value = []; history.value = undefined;
   historyFilter.value = {search: "", from_time: "", to_time: "", site_id: "", resource_id: ""}; historyOffset.value = 0;
   activeTab.value = "manage"; localVersions.value = undefined;
@@ -224,6 +237,7 @@ async function show(id: string) {
     if (id === "pure-ftpd") Object.assign(form.value, {bind_address: "127.0.0.1", port: 2121, passive_start: 30000, passive_end: 30049, passive_address: "127.0.0.1", max_clients: 20, max_per_ip: 4, idle_minutes: 15});
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
     if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
+    if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -245,7 +259,7 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
-  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -256,6 +270,12 @@ function selected(row: Record<string, any>) {
   if (id === "nfs-manager") {
     if (row.clients) form.value.client_allow=JSON.stringify(row.clients,null,2);
     form.value.confirm="";
+  }
+  if (id === "php-code-security") {
+    selectedQuarantineState.value = row.state || "";
+    form.value.expected_sha = row.sha256 || "";
+    form.value.confirm = "";
+    if (!row.state) { form.value.resource_id = ""; form.value.expected_revision = 0; selectedPlanID.value = ""; }
   }
   if (row.revision !== undefined) {
     selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : row.resource_id || row.id;
@@ -283,7 +303,7 @@ function inputBody(action: string) {
   return body;
 }
 async function execute(action: string) {
-  if (!definition.value || busy.value) return;
+  if (!definition.value || busy.value || !canExecutePHP(action)) return;
   busy.value = true;
   error.value = "";
   try {
@@ -314,6 +334,14 @@ async function execute(action: string) {
       form.value.expected_revision = (result as any).revision;
     }
     if (action === "remove-plan") {
+      selectedPlanID.value = "";
+      form.value.expected_revision = 0;
+    }
+    if (definition.value.id === "php-code-security" && ["quarantine", "restore-quarantine", "recover-quarantine"].includes(action)) {
+      selectedQuarantineState.value = "";
+      form.value.confirm = "";
+      activeTab.value = "quarantine-list";
+      setReport(await props.api(`/app-modules/${definition.value.id}/quarantine-list`, "POST", {site_id:form.value.site_id, limit:50, offset:0}));
       selectedPlanID.value = "";
       form.value.expected_revision = 0;
     }
@@ -640,7 +668,7 @@ defineExpose({ show });
             v-for="action in section.actions"
             :key="action"
             :disabled="
-              !installed || busy || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
+              !installed || busy || !canExecutePHP(action) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
             "
             :type="
               [

@@ -13,18 +13,20 @@ import (
 
 // Never retain request bodies: module inputs can contain passwords and tokens.
 type moduleEvent struct {
-	ID         string `json:"id"`
-	Time       string `json:"time"`
-	Action     string `json:"action"`
-	Trigger    string `json:"trigger"`
-	Outcome    string `json:"outcome"`
-	SiteID     string `json:"site_id,omitempty"`
-	ResourceID string `json:"resource_id,omitempty"`
-	Error      string `json:"error,omitempty"`
-	Copied     int    `json:"copied_count,omitempty"`
-	Conflicts  int    `json:"conflicts_count,omitempty"`
-	Changes    int    `json:"changes_count,omitempty"`
-	Restored   int    `json:"restored_count,omitempty"`
+	ID          string `json:"id"`
+	Time        string `json:"time"`
+	Action      string `json:"action"`
+	Trigger     string `json:"trigger"`
+	Outcome     string `json:"outcome"`
+	SiteID      string `json:"site_id,omitempty"`
+	ResourceID  string `json:"resource_id,omitempty"`
+	Error       string `json:"error,omitempty"`
+	Copied      int    `json:"copied_count,omitempty"`
+	Conflicts   int    `json:"conflicts_count,omitempty"`
+	Changes     int    `json:"changes_count,omitempty"`
+	Restored    int    `json:"restored_count,omitempty"`
+	Findings    int    `json:"findings_count,omitempty"`
+	Quarantined int    `json:"quarantined_count,omitempty"`
 }
 
 func moduleCount(result map[string]any, field string) int {
@@ -62,6 +64,22 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 		}
 	}
 	if value, ok := result.(map[string]any); ok {
+		if id == "php-code-security" {
+			if action == "run" {
+				event.Findings = moduleCount(value, "findings")
+			}
+			if action == "quarantine" {
+				event.Quarantined = moduleCount(value, "quarantined")
+			}
+			if action == "restore-quarantine" || action == "recover-quarantine" {
+				event.Restored = moduleCount(value, "restored")
+			}
+			if row, ok := value["record"].(map[string]any); ok {
+				if resource, ok := row["id"].(string); ok && core.ValidID(resource) {
+					event.ResourceID = resource
+				}
+			}
+		}
 		event.Copied = moduleCount(value, "copied")
 		event.Conflicts = moduleCount(value, "conflicts")
 		if sites, ok := value["sites"].([]any); ok {

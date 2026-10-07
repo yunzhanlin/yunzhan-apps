@@ -44,7 +44,12 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "apache-waf":
 		return []AppModuleSection{section("apache", "防护与原生校验", "读取 Apache 防护规则和真实配置检查结果；规则覆盖恶意方法、扫描器、路径穿越和常见查询攻击。", nil, []string{"run"})}
 	case "php-code-security":
-		return []AppModuleSection{section("scan", "PHP 风险扫描", "静态扫描不会执行或修改 PHP。支持排除路径、规则和风险级别筛选；命中不等于已确认后门。", []string{"site_id", "excludes", "search", "severity"}, []string{"run"})}
+		return []AppModuleSection{
+			section("scan", "PHP 风险扫描", "静态扫描不会执行或修改 PHP。支持排除路径、规则和风险级别筛选；命中不等于已确认后门。选择命中项进入受控隔离。", []string{"site_id", "excludes", "search", "severity"}, []string{"run"}),
+			section("quarantine", "受控代码隔离", "人工审查后填写 QUARANTINE 相对文件路径。再次核对摘要，普通单链接 PHP/PHTML/INC 文件原子移出公开目录，独立私有备份保留。拒绝链接、特殊权限、跨文件系统和超过 8 MiB 文件；不自动终止已有请求或清除 OPcache，其他程序仍能重新创建路径。", []string{"site_id", "path", "expected_sha", "confirm"}, []string{"quarantine"}),
+			section("quarantine-list", "隔离箱与备份验证", "分页查看实际事务、备份摘要与原位置存在状态。最多 512 条记录、256 MiB 原始备份预算；不自动删除隔离内容。选择记录进入无覆盖恢复。", []string{"site_id", "search", "limit", "offset"}, []string{"quarantine-list"}),
+			section("quarantine-restore", "无覆盖恢复与事务修复", "恢复填写 RESTORE PHP 记录标识；中断事务填写 RECOVER PHP 记录标识。核对网站、父目录、原摘要和修订号，恢复原内容、权限、所有者及扩展属性。原位置已有新文件或备份损坏时拒绝覆盖；备份和执行历史保留。仍有隔离或中断事务时不允许卸载应用或归档网站。", []string{"site_id", "resource_id", "path", "expected_sha", "expected_revision", "confirm"}, []string{"restore-quarantine", "recover-quarantine"}),
+		}
 	case "task-manager":
 		return []AppModuleSection{section("processes", "实时进程", "读取 CPU、内存、IO 和进程启动身份。单击受管进程进入终止操作。", nil, []string{"run"}), section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"})}
 	case "user-manager":

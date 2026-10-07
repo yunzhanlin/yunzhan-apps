@@ -121,6 +121,20 @@ const names: Record<string, string> = {
   conflicts: "目标冲突",
   restored: "已恢复",
   findings: "风险命中",
+  quarantine: "PHP 隔离记录",
+  sha256: "文件 SHA-256",
+  backup_verified: "独立备份摘要验证",
+  backup_error: "备份或目录告警",
+  source_present: "原位置存在文件",
+  quarantined_count: "已隔离记录",
+  pending_transactions: "待修复事务",
+  backup_bytes: "原始备份容量",
+  backup_budget_bytes: "备份容量预算",
+  interpretation: "结果说明",
+  updated_at: "最近状态变化",
+  mode: "原文件权限",
+  independent_backup_retained: "独立备份保留",
+  runtime_processes_changed: "自动改变运行进程",
   processes: "真实进程",
   users: "账户",
   apps: "PM2 项目",
@@ -294,6 +308,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
+  if (props.id === "php-code-security" && key === "state") return ({prepared:"隔离准备中（待核对）",quarantined:"已隔离",conflict:"并发冲突（未覆盖）",restoring:"恢复中断（待核对）",restored:"已恢复",cancelled:"已取消（备份保留）"} as Record<string,string>)[String(value)] || String(value || "—");
   if (key === "watcher_state") return ({ active: "运行中", pending: "准备中", disabled: "未启用", stopped: "已停止", degraded: "已降级（保留补查）", unavailable: "不可用（保留补查）" } as Record<string, string>)[String(value)] || String(value || "—");
   if (typeof value === "boolean") return value ? "是" : "否";
   if (typeof value === "number") {
@@ -327,6 +342,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];
 	if (props.id === "nfs-manager" && values.some(value=>value && typeof value==='object' && 'clients' in value)) return ["id","site_id","path","clients","read_only","export_id","uid","gid"];
 	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];
   if (props.id === "files-sync" && values.some(value => value && typeof value === "object" && "watcher_state" in value))

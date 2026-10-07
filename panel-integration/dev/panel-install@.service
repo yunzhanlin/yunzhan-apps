@@ -5,7 +5,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/opt/panel/bin/panel-executor --install-job %i
-TimeoutStartSec=120min
+TimeoutStartSec=300min
 KillMode=control-group
 UMask=0022
 PrivateTmp=true
