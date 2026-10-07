@@ -36,6 +36,11 @@ func (s *Service) moduleCommand(ctx context.Context, timeout time.Duration, name
 	defer cancel()
 	cmd := exec.CommandContext(c, name, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive"}
+	if name == "/usr/bin/apt-get" {
+		// Report pending restarts; dependency setup must not restart websites
+		// or unrelated services behind the administrator's back.
+		cmd.Env = append(cmd.Env, "NEEDRESTART_MODE=l")
+	}
 	out := &boundedBuffer{max: 128 << 10}
 	cmd.Stdout = out
 	cmd.Stderr = out
@@ -84,7 +89,7 @@ func (s *Service) appDependencies(ctx context.Context, id string) error {
 
 // Runs only in a dedicated root unit with a fixed package list, never a shell command from the API.
 func InstallAppDependencies(id string) (err error) {
-	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" {
+	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" {
 		return errors.New("依赖模块无效")
 	}
 	s := New(Config{})
@@ -100,6 +105,12 @@ func InstallAppDependencies(id string) (err error) {
 		return installPrivateNFSRuntime(ctx)
 	}
 	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	if id == "nginx-waf" {
+		if s.wafBuildDependenciesReady() {
+			return nil
+		}
+		packages = wafBuildDependencies
+	}
 	privateNode := id == "pm2-manager" && runtimecatalog.HostPlatform() == "ubuntu-22.04"
 	if privateNode {
 		packages = nil
@@ -108,9 +119,16 @@ func InstallAppDependencies(id string) (err error) {
 		if _, err = s.moduleCommand(ctx, 2*time.Minute, "/usr/bin/apt-get", "update"); err != nil {
 			return err
 		}
-		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends"}, packages...)...); err != nil {
+		args := []string{"install", "-y", "--no-install-recommends"}
+		if id == "nginx-waf" {
+			args = append(args, "--no-upgrade")
+		}
+		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append(args, packages...)...); err != nil {
 			return err
 		}
+	}
+	if id == "nginx-waf" && !s.wafBuildDependenciesReady() {
+		return errors.New("WAF 固定构建依赖未通过实际包状态核对")
 	}
 	if id == "pure-ftpd" {
 		return installPrivateFTPRuntime(ctx)
@@ -1181,6 +1199,8 @@ func (s *Service) enableAnalyticsLogs(ctx context.Context) error {
 
 func (s *Service) appDependencyReady(id string) bool {
 	switch id {
+	case "nginx-waf":
+		return s.wafBuildDependenciesReady()
 	case "pure-ftpd":
 		return s.validateFTPRuntime() == nil
 	case "pm2-manager":
@@ -1230,7 +1250,7 @@ func (s *Service) appDependencyRoutes(m *http.ServeMux) {
 	for _, method := range []string{"GET", "POST"} {
 		m.HandleFunc(method+" /v1/app-dependencies/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
-			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" {
+			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" {
 				respond(w, 400, map[string]string{"error": "依赖标识无效"})
 				return
 			}

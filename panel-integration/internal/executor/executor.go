@@ -193,6 +193,11 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 	if e := ctx.Err(); e != nil {
 		return core.ApplyResult{Restored: true}, e
 	}
+	finishWAF, wafErr := s.lockWAFSiteMutation()
+	if wafErr != nil {
+		return core.ApplyResult{Restored: true}, wafErr
+	}
+	defer finishWAF()
 	unlock, lockErr := s.lockRuntimeUse()
 	if lockErr != nil {
 		return core.ApplyResult{}, lockErr
@@ -388,6 +393,11 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 	}
 	if !in.Enabled {
 		content = fmt.Sprintf("# managed by panel; site=%s; disabled\n", in.Site.ID)
+	} else {
+		content, renderErr = s.preserveWAFBodySiteConfig(content, in.Site.ID)
+		if renderErr != nil {
+			return result, renderErr
+		}
 	}
 	backupDir := filepath.Join(s.Config.StateDir, "backups")
 	if err := os.MkdirAll(backupDir, 0700); err != nil {

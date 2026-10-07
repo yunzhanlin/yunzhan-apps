@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const WAFVersion = "2.0.1"
+const WAFVersion = "2.1.0"
 
 var WAFGroupNames = []string{"method", "sql", "xss", "command", "traversal", "scanner", "cookie"}
 
@@ -60,9 +60,10 @@ type WAFPolicy struct {
 	CCRules   []WAFCCRule           `json:"cc_rules"`
 }
 type WAFConfig struct {
-	Profile string    `json:"profile"`
-	Rate    int       `json:"rate_per_second"`
-	Policy  WAFPolicy `json:"policy"`
+	Profile string         `json:"profile"`
+	Rate    int            `json:"rate_per_second"`
+	Policy  WAFPolicy      `json:"policy"`
+	Body    *WAFBodyConfig `json:"body,omitempty"`
 }
 
 func DefaultWAFConfig() WAFConfig {
@@ -104,6 +105,9 @@ func DecodeWAFConfig(raw map[string]any) (WAFConfig, error) {
 	}
 	if v.Policy.Schema != 2 || v.Policy.Revision < 0 || !wafMode(v.Policy.Mode, false) || v.Policy.Burst < 1 || v.Policy.Burst > 1000 {
 		return v, errors.New("WAF 版本、修订号、模式或突发容量无效")
+	}
+	if err := validateWAFBodyConfig(v.Body); err != nil {
+		return v, err
 	}
 	groupOK := func(groups map[string]bool) bool {
 		for k := range groups {
@@ -242,6 +246,11 @@ func containsString(list []string, s string) bool {
 }
 func WAFScopedSites(v WAFConfig) []string {
 	ids := map[string]bool{}
+	if v.Body != nil {
+		for _, site := range v.Body.Sites {
+			ids[site.SiteID] = true
+		}
+	}
 	for _, p := range v.Policy.Sites {
 		ids[p.SiteID] = true
 	}

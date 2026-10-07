@@ -28,11 +28,11 @@ let path=location.pathname, title=(document.title || "").slice(0,128),pageID=ide
 const navigation={path,title,page_id:pageID};
 let foregroundLoad=document.visibilityState==="visible",restoredAt=0,windowStart=0,lastShift=0,windowValue=0;
 let stopped=false, clicks=0, sent=0;
-const metrics={ttfb:0,fcp:0,lcp:0,cls:0,cls_available:false};
+const metrics={ttfb:0,fcp:0,lcp:0,cls:0,cls_available:false,inp:0,inp_available:false};
 const send = (kind, fields={}) => {
   if (stopped || sent>=240) return;
   sent++;
-  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields});
+  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields,...(kind==="performance"?{performance_seq:sent}:{})});
   // Same-origin reverse proxy is required. Do not send panel cookies or retry
   // failed beacons. The host's CSP and privacy policy remain authoritative.
   try { fetch(endpoint.href,{method:"POST",body,headers:{"Content-Type":"application/json"},credentials:"omit",cache:"no-store",keepalive:true,redirect:"error",mode:"same-origin"}).then(r=>{if(r.status===429||r.status===503)stopped=true;}).catch(()=>{}); } catch {}
@@ -65,7 +65,7 @@ window.addEventListener("pagehide",()=>{engagement();visibleSince=null;sendPerfo
 window.addEventListener("pageshow",event=>{if(event.persisted){
   foregroundLoad=document.visibilityState==="visible";restoredAt=performance.now();visibleSince=foregroundLoad?restoredAt:null;
   pageID=identifier();pageview();Object.assign(navigation,{path,title,page_id:pageID});
-  metrics.ttfb=metrics.fcp=metrics.lcp=metrics.cls=0;windowStart=lastShift=windowValue=0;
+  metrics.ttfb=metrics.fcp=metrics.lcp=metrics.cls=metrics.inp=0;metrics.inp_available=false;windowStart=lastShift=windowValue=0;
   try{metrics.cls_available=foregroundLoad&&PerformanceObserver.supportedEntryTypes.includes("layout-shift");}catch{metrics.cls_available=false;}
   if(timer===null)timer=setInterval(engagement,30000);
 }});
@@ -94,4 +94,19 @@ try {
   // sum. No element identity or visual contents are sent with these values.
   metrics.cls_available=foregroundLoad&&PerformanceObserver.supportedEntryTypes.includes("layout-shift");
   observe("layout-shift",entries=>{if(!foregroundLoad)return;for(const entry of entries){if(entry.hadRecentInput||entry.startTime<restoredAt)continue;if(entry.startTime-lastShift<1000&&entry.startTime-windowStart<5000)windowValue+=entry.value;else{windowStart=entry.startTime;windowValue=entry.value;}lastShift=entry.startTime;metrics.cls=Math.min(100,Math.max(metrics.cls,windowValue));}});
+} catch {}
+// Only the standard numeric INP value is retained. The library's attribution,
+// event entries, navigation URL, DOM target and metric ID are never sent. It
+// accounts for interaction grouping, long-visit outliers and BFCache resets.
+// Unsupported browsers and visits with no measured interaction stay unknown,
+// rather than being assigned a fabricated zero. This is document INP, not an
+// invented per-SPA-route metric; navigation below remains the document visit.
+try {
+  webVitals.onINP(metric=>{
+    if(!foregroundLoad||!Number.isFinite(metric.value)||metric.value<0)return;
+    metrics.inp=Math.min(300000,metric.value);metrics.inp_available=true;
+    // Visibility listeners may run before the library flushes pending entries.
+    // A value-change callback emits the final update with a monotonic sequence.
+    sendPerformance();
+  },{reportAllChanges:true,durationThreshold:40});
 } catch {}

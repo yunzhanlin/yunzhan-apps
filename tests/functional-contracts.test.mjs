@@ -15,3 +15,17 @@ test('published manifest OS values are permitted by the schema',async()=>{
  const systems=schema.properties.compatibility.properties.os.items.enum;
  for(const app of registry.apps)for(const os of app.compatibility.os)assert.ok(systems.includes(os),app.id+' '+os);
 });
+test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
+ const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
+ const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
+ assert.equal(waf.version,'2.1.0');assert.equal(analytics.version,'2.2.0');
+ assert.match(waf.summary,/显式构建与启用/);assert(!waf.summary.includes('不含完整请求体检测'));
+ assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
+ const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
+ assert(w.scenarios.some(s=>s.includes('SIGKILL')));
+ assert(w.boundaries.some(s=>s.includes('不是 HTTP 请求数')));
+ assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('调度')));
+ assert(a.boundaries.some(s=>s.includes('20000'))&&a.gaps.some(s=>s.includes('SPA 独立路由性能')));
+ assert(!a.gaps.some(s=>s.includes('INP')));
+ assert.equal(contracts.commercial_feature_parity_complete,false);
+});

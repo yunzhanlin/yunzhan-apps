@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "网站分析 · Website Analytics",
+  "category": "professional",
+  "version": "2.2.0",
+  "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；启停自动配置网站同源代理并校验回滚，HTML 标签仍需模板接入；需支持 2.2 的面板",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集",
+    "启停自动配置同源代理",
+    "PV 与浏览器 UV",
+    "会话与访问旅程",
+    "入口和离开页面",
+    "页面与来源分布",
+    "点击坐标热图",
+    "页面性能 p75 与官方标准 INP",
+    "SPA 路由页面访问",
+    "2–8 步有界顺序转化漏斗",
+    "保留期和容量上限",
+    "站点隔离与报告导出"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

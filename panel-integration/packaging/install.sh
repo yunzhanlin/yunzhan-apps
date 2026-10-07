@@ -26,6 +26,10 @@ if [[ "$TARGET_ROOT" == / ]]; then
   [[ "$MACHINE" == "$PANEL_ARCH" ]] || { echo "release architecture $PANEL_ARCH does not match $MACHINE" >&2; exit 1; }
 fi
 prefix(){ printf '%s%s' "${TARGET_ROOT%/}" "$1"; }
+if ((NO_SERVICES==0)); then
+  command -v python3 >/dev/null || { echo 'python3 is required for read-only install preflight; no host changes made' >&2; exit 1; }
+  python3 "$HERE/waf-state-directory.py" check --root "$TARGET_ROOT"
+fi
 RELEASE_DIR="$(prefix "/opt/panel/releases/$PANEL_VERSION")"
 CURRENT="$(prefix /opt/panel/current)"
 MARKER="$(prefix /etc/panel-release)"
@@ -66,6 +70,9 @@ mkdir -p "$(dirname "$RELEASE_DIR")" "$(prefix /opt/panel/runtimes)" "$(prefix /
 chmod 0700 "$(prefix /var/lib/panel-executor/admin-scripts)"
 install -d -m 0750 "$(prefix /etc/panel/security-apps)" "$(prefix /etc/panel/waf)" "$(prefix /etc/panel/waf/http.d)" "$(prefix /etc/panel/waf/server.d)"
 command -v flock >/dev/null || { echo 'flock is required for release updates' >&2; exit 1; }
+if ((NO_SERVICES==0)); then
+  python3 "$HERE/waf-state-directory.py" create --root "$TARGET_ROOT"
+fi
 exec 9>"$(prefix /opt/panel/releases/.release.lock)"
 flock -x 9
 install -d -m 0700 "$(prefix /etc/panel/sites-archive)" "$(prefix /srv/panel/sites/.archives)"
@@ -102,7 +109,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done
@@ -122,6 +129,11 @@ printf 'version=%s\narch=%s\n' "$PANEL_VERSION" "$PANEL_ARCH" > "$MARKER"
 if ((NO_SERVICES));then echo "isolated install ready: $CURRENT";exit 0;fi
 chown -R panel:panel "$(prefix /var/lib/panel)"
 chmod 0750 "$(prefix /var/lib/panel)"
+# The WAF compiler has an independent root-managed cache. Do not grant its
+# parent to panel-build or reuse the older runtime compiler cache as trust.
+mkdir -p "$(prefix /opt/panel/app-modules)" "$(prefix /var/cache/panel-waf-build)" "$(prefix /var/cache/panel-waf-body)"
+# Already checked/provisioned before the release symlink changed; never chmod
+# or chown an existing foreign state directory during an update.
 # Production units use the atomic current release symlink.
 for unit in "$HERE/systemd/"*.service "$HERE/systemd/"*.timer;do
   name="$(basename "$unit")"

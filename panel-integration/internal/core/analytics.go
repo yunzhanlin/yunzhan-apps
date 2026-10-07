@@ -29,6 +29,15 @@ const analyticsReportBytes = 8 << 20
 //go:embed analytics_tracker.js
 var analyticsTracker string
 
+// Locally bundled standard build, never a third-party network script. Keep the
+// complete upstream Apache-2.0 license in every delivered tracker response.
+//
+//go:embed analytics_vendor/web-vitals-6.2.3.iife.js
+var analyticsWebVitals string
+
+//go:embed analytics_vendor/LICENSE.web-vitals
+var analyticsWebVitalsLicense string
+
 type AnalyticsConfig struct {
 	SiteID        string `json:"site_id"`
 	Key           string `json:"key"`
@@ -45,27 +54,30 @@ type analyticsRate struct {
 }
 
 type AnalyticsEvent struct {
-	ID           string  `json:"id"`
-	PageID       string  `json:"page_id"`
-	Visitor      string  `json:"visitor"`
-	Session      string  `json:"session"`
-	Kind         string  `json:"kind"`
-	Path         string  `json:"path"`
-	Title        string  `json:"title"`
-	Referer      string  `json:"referer"`
-	Campaign     string  `json:"campaign"`
-	Duration     float64 `json:"duration"`
-	X            float64 `json:"x"`
-	Y            float64 `json:"y"`
-	TTFB         float64 `json:"ttfb"`
-	FCP          float64 `json:"fcp"`
-	LCP          float64 `json:"lcp"`
-	CLS          float64 `json:"cls"`
-	CLSAvailable bool    `json:"cls_available"`
-	Received     int64   `json:"received_at"`
-	IPHash       string  `json:"-"`
-	Browser      string  `json:"browser"`
-	Device       string  `json:"device"`
+	ID             string  `json:"id"`
+	PageID         string  `json:"page_id"`
+	Visitor        string  `json:"visitor"`
+	Session        string  `json:"session"`
+	Kind           string  `json:"kind"`
+	Path           string  `json:"path"`
+	Title          string  `json:"title"`
+	Referer        string  `json:"referer"`
+	Campaign       string  `json:"campaign"`
+	Duration       float64 `json:"duration"`
+	X              float64 `json:"x"`
+	Y              float64 `json:"y"`
+	TTFB           float64 `json:"ttfb"`
+	FCP            float64 `json:"fcp"`
+	LCP            float64 `json:"lcp"`
+	CLS            float64 `json:"cls"`
+	CLSAvailable   bool    `json:"cls_available"`
+	INP            float64 `json:"inp"`
+	INPAvailable   bool    `json:"inp_available"`
+	PerformanceSeq int     `json:"performance_seq"`
+	Received       int64   `json:"received_at"`
+	IPHash         string  `json:"-"`
+	Browser        string  `json:"browser"`
+	Device         string  `json:"device"`
 }
 
 func (s *Store) migrateAnalytics() error {
@@ -135,12 +147,12 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 	if len(v.Title) > 256 || len(v.Campaign) > 128 || strings.ContainsAny(v.Title+v.Campaign, "\r\n\x00") {
 		return errors.New("事件文本过长或无效")
 	}
-	for _, n := range []float64{v.Duration, v.X, v.Y, v.TTFB, v.FCP, v.LCP, v.CLS} {
+	for _, n := range []float64{v.Duration, v.X, v.Y, v.TTFB, v.FCP, v.LCP, v.CLS, v.INP} {
 		if math.IsNaN(n) || math.IsInf(n, 0) || n < 0 {
 			return errors.New("事件数值无效")
 		}
 	}
-	if v.Duration > 30 || v.X > 100 || v.Y > 100 || v.TTFB > 300000 || v.FCP > 300000 || v.LCP > 300000 || v.CLS > 100 {
+	if v.Duration > 30 || v.X > 100 || v.Y > 100 || v.TTFB > 300000 || v.FCP > 300000 || v.LCP > 300000 || v.CLS > 100 || v.INP > 300000 || v.PerformanceSeq < 0 || v.PerformanceSeq > 240 {
 		return errors.New("事件数值超出范围")
 	}
 	if v.Kind != "click" {
@@ -153,6 +165,11 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 		v.LCP = 0
 		v.CLS = 0
 		v.CLSAvailable = false
+		v.INP = 0
+		v.INPAvailable = false
+		v.PerformanceSeq = 0
+	} else if !v.INPAvailable {
+		v.INP = 0
 	}
 	if v.Kind != "engagement" {
 		v.Duration = 0
@@ -244,6 +261,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 		send(w, 200, v)
 	}))
 	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(a.configureAnalyticsProxy))
+	m.HandleFunc("GET /api/analytics/sites/{id}/funnel", a.authorize(a.analyticsFunnel))
 	m.HandleFunc("GET /api/analytics/sites/{id}/report", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		if _, e := a.Store.Site(r.PathValue("id")); e != nil {
 			fail(w, 404, "网站不存在")
@@ -267,7 +285,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Cache-Control", "no-store")
 		cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks})
-		_, _ = io.WriteString(w, "(()=>{const config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
+		_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
 	})
 	m.HandleFunc("POST /collect/analytics/event", a.collectAnalytics)
 }
@@ -465,22 +483,9 @@ type analyticsHeatPoint struct {
 }
 
 func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, now time.Time) (map[string]any, error) {
-	from, to := now.UTC().Truncate(24*time.Hour), now.Add(time.Second)
-	var e error
-	if rawFrom != "" {
-		from, e = time.Parse(time.RFC3339, rawFrom)
-		if e != nil {
-			return nil, errors.New("开始时间无效")
-		}
-	}
-	if rawTo != "" {
-		to, e = time.Parse(time.RFC3339, rawTo)
-		if e != nil {
-			return nil, errors.New("结束时间无效")
-		}
-	}
-	if !to.After(from) || to.Sub(from) > 31*24*time.Hour {
-		return nil, errors.New("统计窗口须大于零且不超过 31 天")
+	from, to, e := analyticsWindow(rawFrom, rawTo, now)
+	if e != nil {
+		return nil, e
 	}
 	rows, e := s.DB.QueryContext(ctx, `SELECT data,ip_hash FROM analytics_events WHERE site_id=? AND received>=? AND received<? ORDER BY received DESC,rowid DESC LIMIT ?`, id, from.Unix(), to.Unix(), analyticsReportLimit+1)
 	if e != nil {
@@ -525,11 +530,21 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	// Multiple lifecycle beacons for one navigation are updates, not independent
 	// performance samples. Keep the newest sample per visitor/page navigation.
 	performance := []AnalyticsEvent{}
-	performanceSeen := map[string]bool{}
+	performanceIndex := map[string]int{}
 	for _, v := range events {
 		key := v.Visitor + ":" + v.PageID
-		if v.Kind == "performance" && !performanceSeen[key] && len(performance) < 5000 {
-			performanceSeen[key] = true
+		if v.Kind != "performance" {
+			continue
+		}
+		if index, exists := performanceIndex[key]; exists {
+			// An earlier request may reach the server after the final beacon.
+			// INP may decrease when long visits exclude outliers, so neither
+			// max(value) nor arrival time identifies the final measurement.
+			if v.PerformanceSeq > performance[index].PerformanceSeq {
+				performance[index] = v
+			}
+		} else if len(performance) < 5000 {
+			performanceIndex[key] = len(performance)
 			performance = append(performance, v)
 		}
 	}
@@ -646,5 +661,5 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		bounceRate = float64(bounces) / float64(sessionCount) * 100
 		avgDuration = duration / float64(sessionCount)
 	}
-	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数，不冒充访客 IP 数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像、地理位置库或转化漏斗。", "性能按导航去重，最多采样最近 5000 次导航；不包含 SPA 路由加载性能或 INP，不能替代实验室性能测试。"}}, nil
+	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数，不冒充访客 IP 数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本，不包含 SPA 路由加载性能，也不能替代实验室性能测试。"}}, nil
 }

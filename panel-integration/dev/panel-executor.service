@@ -17,7 +17,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-ReadWritePaths=/opt/panel/runtimes /etc/panel /etc/nginx /etc/sysctl.d /etc/fail2ban /srv/panel/sites /srv/panel/redis /srv/panel/mariadb /var/lib/panel-executor /var/lib/panel-tasks /var/backups/panel/mysql /var/backups/panel/mariadb /var/backups/panel/sites /var/backups/panel/system /run/panel-executor /var/log/nginx /var/log/apache2 /run/panel-nginx /var/cache/panel-nginx
+ReadWritePaths=/opt/panel/runtimes /etc/panel /etc/nginx /etc/sysctl.d /etc/fail2ban /srv/panel/sites /srv/panel/redis /srv/panel/mariadb /var/lib/panel-executor /var/lib/panel-tasks /var/backups/panel/mysql /var/backups/panel/mariadb /var/backups/panel/sites /var/backups/panel/system /run/panel-executor /var/log/nginx /var/log/apache2 /var/lib/panel-waf /run/panel-nginx /var/cache/panel-nginx /var/cache/panel-waf-body
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK
 [Install]
 WantedBy=multi-user.target

@@ -1,0 +1,149 @@
+--- a/src/ngx_http_modsecurity_module.c
++++ b/src/ngx_http_modsecurity_module.c
+@@ -139,7 +139,6 @@
+ int
+ ngx_http_modsecurity_process_intervention (Transaction *transaction, ngx_http_request_t *r, ngx_int_t early_log)
+ {
+-    char *log = NULL;
+     ModSecurityIntervention intervention;
+     intervention.status = 200;
+     intervention.url = NULL;
+@@ -160,12 +159,8 @@
+         return 0;
+     }
+ 
+-    log = intervention.log;
+-    if (intervention.log == NULL) {
+-        log = "(no log message was specified)";
+-    }
+-
+-    ngx_log_error(NGX_LOG_ERR, (ngx_log_t *)r->connection->log, 0, "%s", log);
++    /* CloudStack privacy patch: intervention.log contains raw matched data.
++     * The library callback separately emits only numerical rule metadata. */
+ 
+     if (intervention.log != NULL) {
+         free(intervention.log);
+@@ -284,10 +279,10 @@
+         if (ngx_http_complex_value(r, mcf->transaction_id, &s) != NGX_OK) {
+             return NGX_CONF_ERROR;
+         }
+-        ctx->modsec_transaction = msc_new_transaction_with_id(mmcf->modsec, mcf->rules_set, (char *) s.data, r->connection->log);
++        ctx->modsec_transaction = msc_new_transaction_with_id(mmcf->modsec, mcf->rules_set, (char *) s.data, r);
+ 
+     } else {
+-        ctx->modsec_transaction = msc_new_transaction(mmcf->modsec, mcf->rules_set, r->connection->log);
++        ctx->modsec_transaction = msc_new_transaction(mmcf->modsec, mcf->rules_set, r);
+     }
+ 
+     dd("transaction created");
+@@ -471,8 +466,41 @@
+     return NGX_CONF_OK;
+ }
+ 
++
++/* CloudStack: dedicated numerical-event log. This avoids mixing private
++ * Nginx request/body-buffer warnings into the managed WAF event stream. */
++static char *
++ngx_conf_set_metadata_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
++{
++    ngx_http_modsecurity_main_conf_t *main = conf;
++    ngx_str_t *value = cf->args->elts;
++    if (main->metadata_log != NULL) {
++        return "is duplicate";
++    }
++    if (value[1].len == 0 || value[1].len > 512 || value[1].data[0] != '/') {
++        return "requires a bounded absolute metadata log path";
++    }
++    main->metadata_log = ngx_pcalloc(cf->pool, sizeof(ngx_log_t));
++    if (main->metadata_log == NULL) {
++        return NGX_CONF_ERROR;
++    }
++    main->metadata_log->file = ngx_conf_open_file(cf->cycle, &value[1]);
++    if (main->metadata_log->file == NULL) {
++        return NGX_CONF_ERROR;
++    }
++    main->metadata_log->log_level = NGX_LOG_WARN;
++    return NGX_CONF_OK;
++}
+ 
+ static ngx_command_t ngx_http_modsecurity_commands[] =  {
++  {
++    ngx_string("modsecurity_metadata_log"),
++    NGX_HTTP_MAIN_CONF|NGX_CONF_TAKE1,
++    ngx_conf_set_metadata_log,
++    NGX_HTTP_MAIN_CONF_OFFSET,
++    0,
++    NULL
++  },
+   {
+     ngx_string("modsecurity"),
+     NGX_HTTP_LOC_CONF|NGX_HTTP_SRV_CONF|NGX_HTTP_MAIN_CONF|NGX_CONF_FLAG,
+--- a/src/ngx_http_modsecurity_log.c
++++ b/src/ngx_http_modsecurity_log.c
+@@ -27,12 +27,53 @@
+ ngx_http_modsecurity_log(void *log, const void* data)
+ {
+     const char *msg;
+-    if (log == NULL) {
++    ngx_http_request_t *r;
++    ngx_http_modsecurity_main_conf_t *main;
++    ngx_str_t site;
++    ngx_str_t variable = ngx_string("panel_waf_site");
++    ngx_http_variable_value_t *value;
++    size_t i;
++    if (log == NULL || data == NULL) {
+         return;
+     }
++    r = (ngx_http_request_t *) log;
++    main = ngx_http_get_module_main_conf(r, ngx_http_modsecurity_module);
++    if (main == NULL || main->metadata_log == NULL) {
++        return;
++    }
+     msg = (const char *) data;
+-
+-    ngx_log_error(NGX_LOG_INFO, (ngx_log_t *)log, 0, "%s", msg);
++    /* Only the pinned privacy-patched library's fixed metadata is accepted.
++     * Do not parse rule IDs from attacker-controllable formatted messages. */
++    if (strncmp(msg, "yunzhan_waf_body rule=", 22) != 0) {
++        return;
++    }
++    for (i = 0; i < 256 && msg[i] != '\0'; i++) {
++        if (!((msg[i] >= 'a' && msg[i] <= 'z') ||
++              (msg[i] >= '0' && msg[i] <= '9') ||
++              msg[i] == '_' || msg[i] == '=' || msg[i] == ' ' || msg[i] == '-')) {
++            return;
++        }
++    }
++    if (i == 256) {
++        return;
++    }
++    ngx_str_set(&site, "unmanaged");
++    value = ngx_http_get_variable(r, &variable, ngx_hash_key(variable.data, variable.len));
++    if (value != NULL && !value->not_found && value->len == 32) {
++        for (i = 0; i < 32; i++) {
++            if (!((value->data[i] >= '0' && value->data[i] <= '9') ||
++                  (value->data[i] >= 'a' && value->data[i] <= 'f'))) {
++                break;
++            }
++        }
++        if (i == 32) {
++            site.len = value->len;
++            site.data = value->data;
++        }
++    }
++    /* A dedicated main-context log has no request/URI/IP handler, connection
++     * data or shared error-log chain. Nginx owns and reopens this descriptor. */
++    ngx_log_error(NGX_LOG_WARN, main->metadata_log, 0, "%s site=%V", msg, &site);
+ }
+ 
+ 
+--- a/src/ngx_http_modsecurity_common.h
++++ b/src/ngx_http_modsecurity_common.h
+@@ -109,6 +109,7 @@
+     ngx_uint_t                 rules_inline;
+     ngx_uint_t                 rules_file;
+     ngx_uint_t                 rules_remote;
++    ngx_log_t                 *metadata_log;
+ } ngx_http_modsecurity_main_conf_t;
+ 
+ 

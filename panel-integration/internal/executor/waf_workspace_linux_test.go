@@ -118,3 +118,29 @@ func TestWAFIncludesMigrateWithoutChangingOptOut(t *testing.T) {
 		t.Fatal("TLS and HTTP server scopes not migrated")
 	}
 }
+
+func TestWAFBodyPolicySurvivesOlderClientWithoutSilentErase(t *testing.T) {
+	s := wafPolicyFixture(t)
+	id := core.ID()
+	path := filepath.Join(s.Config.ConfDir, id+".conf")
+	if err := os.WriteFile(path, []byte("# managed by panel; site="+id+"\nserver {\n}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	old := core.DefaultWAFConfig()
+	old.Policy.Revision = 7
+	body := core.DefaultWAFBodyPolicy()
+	body.Mode = "off"
+	old.Body = &core.WAFBodyConfig{Sites: []core.WAFBodySitePolicy{{SiteID: id, Policy: body}}}
+	if err := s.writeSoftwareManifest(softwareManifest{ID: "nginx-waf", Version: core.WAFVersion, Settings: core.WAFSettings(old), InstalledAt: core.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	for _, raw := range []map[string]any{{"profile": "strict", "rate_per_second": 30}, core.WAFSettings(core.WAFConfig{Profile: old.Profile, Rate: old.Rate, Policy: old.Policy})} {
+		got, err := s.prepareWAFSettings(raw, false)
+		if err != nil || got.Body == nil || len(got.Body.Sites) != 1 || got.Body.Sites[0].SiteID != id {
+			t.Fatal("older client erased independent body policy", err)
+		}
+	}
+	if _, err := s.prepareWAFSettings(map[string]any{"body": map[string]any{"sites": []any{}, "engine_job_id": ""}}, false); err == nil {
+		t.Fatal("body-only legacy request silently dropped")
+	}
+}

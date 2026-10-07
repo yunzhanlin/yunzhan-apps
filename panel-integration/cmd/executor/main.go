@@ -49,6 +49,9 @@ func main() {
 	mariadbInit := flag.String("init-mariadb", "", "initialize one managed MariaDB data directory")
 	nodeServe := flag.String("serve-node", "", "serve one managed Node.js application")
 	appDependencies := flag.String("install-app-dependencies", "", "install fixed module dependencies")
+	wafEngineBuild := flag.String("build-waf-engine", "", "build a pinned independent WAF engine without activating sites")
+	wafEngineVerify := flag.String("verify-waf-engine", "", "verify a built WAF program without activating or changing sites")
+	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
 	pm2Deploy := flag.String("pm2-deploy", "", "deploy locked dependencies for one managed PM2 application")
 	ftpServe := flag.Bool("serve-ftp", false, "serve the fixed managed FTPS configuration")
@@ -72,6 +75,12 @@ func main() {
 	}
 	if os.Geteuid() != 0 {
 		log.Fatal("executor must run under its root systemd unit")
+	}
+	if *wafRecover {
+		if err := executor.RecoverWAFConfiguration(); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *ftpRecover {
 		if e := executor.RecoverPureFTP(); e != nil {
@@ -100,7 +109,7 @@ func main() {
 	for _, operation := range []struct {
 		id  string
 		run func(string) error
-	}{{*appDependencies, executor.InstallAppDependencies}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
+	}{{*appDependencies, executor.InstallAppDependencies}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
 		if operation.id != "" {
 			if e := operation.run(operation.id); e != nil {
 				log.Fatal(e)

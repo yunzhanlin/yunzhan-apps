@@ -1,0 +1,43 @@
+CloudStack / Yunzhan Nginx request-body engine third-party notices
+
+ModSecurity 3.0.17 and ModSecurity-nginx 1.0.4: Apache-2.0.
+OWASP Core Rule Set 4.30.0: Apache-2.0.
+Bundled libinjection: BSD-3-Clause.
+Bundled Mbed TLS and TF-PSA-Crypto: Apache-2.0 option selected from the
+upstream Apache-2.0 OR GPL-2.0-or-later dual license. Original full dual
+license texts are retained; this distribution does not remove that option.
+Nginx matching-version module build headers: upstream BSD-2-Clause license.
+All original full license texts accompany the engine and its source record.
+
+Upstream source archives, their reviewed digests, and verification boundaries
+are defined in waf_engine_sources.go. Distribution Nginx 1.24.0 source was
+verified against its official detached PGP signature with fingerprint
+13C82A63B603576156E30A4EA0EA981B66B0D967 (nginx.org/keys/thresh.key).
+Other source digests were checked against upstream release asset metadata or
+the official SHA-256 file. No upstream PGP verification is claimed for them.
+
+CloudStack modifications, 2026-10-07:
+- src/modsecurity.cc: emit numerical rule metadata instead of matched data,
+  using the original SecRule phase number.
+- src/transaction.cc: return 413 for a rejected request-body size overflow;
+  response-body limit behavior is unchanged.
+- src/ngx_http_modsecurity_module.c: omit raw intervention log text and pass
+  the request as callback context.
+- src/ngx_http_modsecurity_common.h and module.c: add a dedicated
+  modsecurity_metadata_log descriptor managed/reopened by the Nginx cycle.
+- src/ngx_http_modsecurity_log.c: accept only bounded fixed metadata, attach
+  a validated immutable panel site identifier, and write to the dedicated log
+  without Nginx's raw request/URI/client context or shared error-log chain.
+Complete patches are retained unchanged with their fixed SHA-256 digests.
+
+CloudStack modifications, 2026-10-08:
+- src/ngx_http_modsecurity_module.c: use a dedicated bounded log writer with
+  a fixed 32 MiB file limit and non-blocking POSIX record locks shared by the
+  privileged metadata rotation. Enforcement continues when logging is full,
+  contended or unavailable. Numerical metadata is explicitly best-effort.
+
+Audit/body/debug logging is disabled by the managed engine configuration.
+Request bodies, matched values, headers, authentication cookies, form values
+and client addresses are not included in these managed WAF events. Ordinary
+website/server logs are independently configured and are not covered by that
+claim. An enabled native engine is not a guarantee against every attack.

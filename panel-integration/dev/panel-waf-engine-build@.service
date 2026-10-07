@@ -1,0 +1,26 @@
+[Unit]
+Description=Panel pinned request-body WAF engine build %i (not site activation)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --build-waf-engine %i
+TimeoutStartSec=300min
+KillMode=control-group
+UMask=0077
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /var/cache/panel-waf-build /opt/panel/app-modules
+ReadOnlyPaths=/etc/nginx /etc/panel
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# Leave room for the two bounded C++ parser compilations. A 768 MiB high
+# watermark forced continuous reclaim before the 1 GiB hard cap was reached.
+MemoryHigh=900M
+MemoryMax=1G
+TasksMax=256
+CPUQuota=200%

@@ -335,6 +335,7 @@ onBeforeUnmount(() => { accountPassword.value = ""; accountNewPassword.value = "
               maxlength="253"
               placeholder="panel.example.com"
             />
+            <div class="form-help">生产管理入口请使用独立域名和 HTTPS。实例独立的会话名称只避免登录覆盖；不同端口不是 Cookie 保密边界，不要与不可信网站共用管理主机名。</div>
           </el-form-item>
           <el-form-item label="默认语言"><el-input model-value="简体中文" readonly aria-label="默认语言" /></el-form-item>
           <el-form-item label="时区设置"><el-select :model-value="panelTimeZone" aria-label="界面时区" @change="setPanelTimeZone"><el-option v-for="item in timeZoneOptions" :key="item.value" :value="item.value" :label="item.label" /></el-select><div class="form-help">只改变当前浏览器的时间显示，不改变服务器或计划任务时区</div></el-form-item>

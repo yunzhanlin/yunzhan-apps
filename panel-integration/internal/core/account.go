@@ -351,7 +351,7 @@ func (a *Server) accountRoutes(m *http.ServeMux) {
 		if !decode(w, r, &in) {
 			return
 		}
-		cookie, _ := r.Cookie("panel_session")
+		cookie, _, _ := a.sessionCookie(r)
 		out, e := a.Store.changeAccount(r.PathValue("action"), Hash(cookie.Value), u.CSRF, in, a.accountSecretKey, time.Now())
 		if e != nil {
 			_ = a.Store.Audit(u.Username, "account.change", "account", "denied")

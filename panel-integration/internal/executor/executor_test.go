@@ -12,13 +12,26 @@ import (
 func testService(t *testing.T, run Command) *Service {
 	t.Helper()
 	base := t.TempDir()
-	c := Config{SitesDir: filepath.Join(base, "sites"), ConfDir: filepath.Join(base, "config"), StateDir: filepath.Join(base, "state"), ApacheSiteConfig: filepath.Join(base, "apache.conf"), NginxBin: "/usr/sbin/nginx", Run: run}
-	for _, p := range []string{c.SitesDir, c.ConfDir, c.StateDir} {
+	c := Config{SystemRoot: base, SecurityDir: filepath.Join(base, "security"), SitesDir: filepath.Join(base, "sites"), ConfDir: filepath.Join(base, "config"), StateDir: filepath.Join(base, "state"), ApacheSiteConfig: filepath.Join(base, "apache.conf"), NginxConf: filepath.Join(base, "nginx.conf"), NginxBin: "/usr/sbin/nginx", Run: run}
+	for _, p := range []string{c.SitesDir, c.ConfDir, c.StateDir, c.SecurityDir} {
 		if e := os.Mkdir(p, 0755); e != nil {
 			t.Fatal(e)
 		}
 	}
 	return New(c)
+}
+
+func TestServiceFixtureNeverInheritsLiveSystemPaths(t *testing.T) {
+	s := testService(t, func(context.Context, string, ...string) (string, error) { return "", nil })
+	for _, path := range []string{s.Config.SecurityDir, s.Config.SitesDir, s.Config.ConfDir, s.Config.StateDir, s.Config.NginxConf, s.Config.ApacheSiteConfig} {
+		relative, err := filepath.Rel(s.Config.SystemRoot, path)
+		if err != nil || relative == ".." || filepath.IsAbs(relative) {
+			t.Fatal("fixture inherited a live system path", path)
+		}
+	}
+	if s.Config.SystemRoot == "/" || s.Config.SecurityDir == "/etc/panel/security-apps" {
+		t.Fatal("fixture inherited production defaults")
+	}
 }
 func TestConfigurationFailureRestoresPreviousFile(t *testing.T) {
 	nginxChecks := 0

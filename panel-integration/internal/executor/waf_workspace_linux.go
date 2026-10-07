@@ -47,7 +47,11 @@ func (s *Service) wafReplayMatches(raw map[string]any) bool {
 		return false
 	}
 	actualV, e := os.ReadFile(v)
-	return e == nil && string(actualV) == expectedV
+	if e != nil || string(actualV) != expectedV {
+		return false
+	}
+	plan, e := s.planWAFConfiguration(current, false)
+	return e == nil && len(plan) == 0
 }
 
 func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAFConfig, error) {
@@ -55,11 +59,19 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 	if e != nil {
 		return cfg, e
 	}
+	if _, body := raw["body"]; body {
+		if _, advanced := raw["policy"]; !advanced {
+			return cfg, errors.New("请求体策略必须包含完整 policy 和当前修订号")
+		}
+	}
 	old, oldErr := s.readSoftwareManifest("nginx-waf")
 	if !install && oldErr == nil {
 		previous, e := core.DecodeWAFConfig(old.Settings)
 		if e != nil {
 			return cfg, e
+		}
+		if _, present := raw["body"]; !present {
+			cfg.Body = previous.Body
 		}
 		if _, advanced := raw["policy"]; !advanced {
 			// Older API clients can still adjust their two supported fields, but
@@ -105,6 +117,20 @@ func (s *Service) backupWAFConfiguration() (string, error) {
 	paths := []string{s.Config.NginxConf, s.softwareManifestPath("nginx-waf")}
 	h, v := wafFiles(s)
 	paths = append(paths, h, v)
+	paths = append(paths, s.systemPath("/etc/panel/waf/http.d/20-panel-native-waf.conf"))
+	if xs, e := os.ReadDir(s.systemPath("/etc/panel/waf/body.d")); e == nil {
+		if len(xs) > 64 {
+			return "", errors.New("请求体规则超过 64 条，拒绝不完整备份")
+		}
+		for _, x := range xs {
+			if !core.ValidID(strings.TrimSuffix(x.Name(), ".conf")) || !strings.HasSuffix(x.Name(), ".conf") {
+				return "", errors.New("请求体目录存在未知条目，未开始修改")
+			}
+			paths = append(paths, s.systemPath("/etc/panel/waf/body.d/"+x.Name()))
+		}
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return "", e
+	}
 	if xs, e := os.ReadDir(s.Config.ConfDir); e == nil {
 		for _, x := range xs {
 			if !x.IsDir() && strings.HasSuffix(x.Name(), ".conf") {
@@ -141,7 +167,7 @@ func (s *Service) backupWAFConfiguration() (string, error) {
 				return "", e
 			}
 		}
-		index = append(index, map[string]any{"source": b.path, "file": file, "existed": b.existed, "mode": b.mode})
+		index = append(index, map[string]any{"source": b.path, "file": file, "existed": b.existed, "mode": b.mode, "sha256": core.Hash(string(b.data))})
 	}
 	if e = moduleWrite(filepath.Join(dir, "index.json"), map[string]any{"created_at": core.Now(), "files": index}); e != nil {
 		return "", e
@@ -150,6 +176,8 @@ func (s *Service) backupWAFConfiguration() (string, error) {
 }
 
 func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
+	s.wafEngineRoutes(m)
+	s.wafBodyReportRoutes(m)
 	m.HandleFunc("GET /v1/software/nginx-waf/config", func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
@@ -178,7 +206,28 @@ func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
 			return
 		}
 		h, b := renderWAFPolicy(v)
-		respond(w, 200, map[string]any{"http_config": h, "server_config": b, "settings": v})
+		if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+			respond(w, 409, map[string]string{"error": "存在未完成防火墙事务，请先恢复再预览新配置"})
+			return
+		}
+		if err := s.verifyWAFBodyEngine(v); err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		plan, err := s.planWAFConfiguration(v, false)
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		changes := []map[string]any{}
+		bodyRules := []map[string]string{}
+		for _, change := range plan {
+			changes = append(changes, map[string]any{"path": change.Path, "action": map[bool]string{true: "write", false: "remove"}[change.NextExists], "previous_sha256": core.Hash(string(change.OldData)), "next_sha256": core.Hash(string(change.NextData))})
+			if filepath.Dir(change.Path) == s.systemPath("/etc/panel/waf/body.d") && change.NextExists {
+				bodyRules = append(bodyRules, map[string]string{"site_id": strings.TrimSuffix(filepath.Base(change.Path), ".conf"), "configuration": string(change.NextData)})
+			}
+		}
+		respond(w, 200, map[string]any{"http_config": h, "server_config": b, "settings": v, "changes": changes, "body_rules": bodyRules, "read_only": true, "body_activation_explicit": true})
 	})
 	m.HandleFunc("GET /v1/software/nginx-waf/report", func(w http.ResponseWriter, r *http.Request) {
 		if _, e := s.readSoftwareManifest("nginx-waf"); e != nil {

@@ -1,0 +1,13 @@
+{
+  "name": "web-vitals",
+  "version": "6.2.3",
+  "license": "Apache-2.0",
+  "upstream": "https://github.com/GoogleChrome/web-vitals",
+  "archive": "https://registry.npmjs.org/web-vitals/-/web-vitals-6.2.3.tgz",
+  "archive_integrity": "sha512-Dmy+vdO1UPMqXiAtZSNayhl4f794Bxfd94W4HIj2HlYtczEQfEOon969memlcpcHrTuOKLa5baFjX7WbgmOq+A==",
+  "files": {
+    "web-vitals-6.2.3.iife.js": "1e5e9b9af6b8d71cfef508e5a869c53b4cf2bbccad8c9b5ac664c34e93f6151a",
+    "LICENSE.web-vitals": "bfdeded4040e05da31ca9b6239dc83bd23fa26ac8db87342a7ca4363f68916ff"
+  },
+  "delivery": "Unmodified standard build and complete license embedded in the first-party tracker; only numeric INP is sent, never attribution or a third-party request."
+}

@@ -132,7 +132,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 		send(w, 200, map[string]any{"username": u.Username, "csrf": u.CSRF, "version": "0.1.0-dev", "role": access.Role, "menu_ids": access.MenuIDs, "menu_catalog": MenuPermissionCatalog(), "permission_revision": access.Revision})
 	}))
 	m.HandleFunc("POST /api/logout", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
-		c, _ := r.Cookie("panel_session")
+		c, _, _ := a.sessionCookie(r)
 		_, _ = s.DB.Exec(`DELETE FROM sessions WHERE token_hash=?`, Hash(c.Value))
 		_ = s.Audit(u.Username, "auth.logout", "session", "success")
 		a.cookie(w, r, "", -1)
@@ -155,7 +155,31 @@ func NewServer(s *Store, c Config) (*Server, error) {
 		if !decode(w, r, &in) {
 			return
 		}
-		job, e := a.Store.QueueSiteArchive(r.PathValue("id"), in.ConfirmDomain, r.Header.Get("Idempotency-Key"), u.Username)
+		id := r.PathValue("id")
+		// Archived-key replay remains resolved by the store: archived sites are
+		// no longer visible to Site(), and do not need another native preflight.
+		if site, err := a.Store.Site(id); err == nil {
+			if site.Domain != in.ConfirmDomain {
+				fail(w, 409, "请填写完整主域名")
+				return
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+			defer cancel()
+			var check struct {
+				SiteID    string `json:"site_id"`
+				Clear     bool   `json:"waf_reference_clear"`
+				Unchanged bool   `json:"no_site_files_changed"`
+			}
+			if err := a.Executor.Call(ctx, "GET", "/v1/sites/"+id+"/archive-check", nil, &check); err != nil {
+				fail(w, 409, err.Error())
+				return
+			}
+			if check.SiteID != id || !check.Clear || !check.Unchanged {
+				fail(w, 409, "网站归档预检未确认，未排队或修改网站")
+				return
+			}
+		}
+		job, e := a.Store.QueueSiteArchive(id, in.ConfirmDomain, r.Header.Get("Idempotency-Key"), u.Username)
 		if e != nil {
 			fail(w, 409, e.Error())
 			return
@@ -312,7 +336,7 @@ func (a *Server) originAllowed(r *http.Request, origin string) bool {
 }
 func (a *Server) cookie(w http.ResponseWriter, r *http.Request, value string, maxAge int) {
 	secure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
-	http.SetCookie(w, &http.Cookie{Name: "panel_session", Value: value, Path: "/", HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode, MaxAge: maxAge})
+	http.SetCookie(w, &http.Cookie{Name: a.sessionCookieName(), Value: value, Path: "/", HttpOnly: true, Secure: secure, SameSite: http.SameSiteStrictMode, MaxAge: maxAge})
 }
 func (a *Server) allowed(r *http.Request) bool {
 	return a.allowedScope(r, "login")
@@ -429,7 +453,7 @@ func (a *Server) login(w http.ResponseWriter, r *http.Request) {
 }
 func (a *Server) authorize(next func(http.ResponseWriter, *http.Request, identity)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie("panel_session")
+		c, legacy, err := a.sessionCookie(r)
 		if err != nil {
 			fail(w, 401, "请先登录")
 			return
@@ -455,6 +479,9 @@ func (a *Server) authorize(next func(http.ResponseWriter, *http.Request, identit
 		if !a.appRoleAllowed(u, r) {
 			fail(w, 403, "当前角色不允许访问该资源")
 			return
+		}
+		if legacy {
+			a.migrateSessionCookie(w, r, c)
 		}
 		next(w, r, u)
 	}

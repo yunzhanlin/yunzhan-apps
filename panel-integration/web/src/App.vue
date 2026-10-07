@@ -6,6 +6,7 @@ import { canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./me
 import SoftwareLogo from "./SoftwareLogo.vue";
 import AppModuleManager from "./AppModuleManager.vue";
 import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
+import { normalizeStoreSearch } from "./storeSearch";
 import type { SecurityAppCatalogItem, SecurityAppStatus } from "./SecurityAppManager.vue";
 import PanelIcon from "./PanelIcon.vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref } from "vue";
@@ -361,7 +362,7 @@ function openBuiltInStoreApp(app: BuiltInStoreApp) {
   else go(app.page);
 }
 const filteredBuiltInApps = computed(() => {
-  const term = storeSearch.value.trim().toLowerCase();
+  const term = normalizeStoreSearch(storeSearch.value);
   if (storeCategory.value === "recommended" && !term) return [];
   if (["unavailable", "updates"].includes(storeStatus.value)) return [];
   const items = builtInStoreApps.filter((app) => {
@@ -369,16 +370,16 @@ const filteredBuiltInApps = computed(() => {
     if (!["recommended", "all", app.category].includes(storeCategory.value)) return false;
     if (storeStatus.value === "installed" && app.templateId) return false;
     if (storeStatus.value === "installable" && !app.templateId) return false;
-    return !term || `${app.name} ${app.description} ${app.tags.join(" ")}`.toLowerCase().includes(term);
+    return !term || normalizeStoreSearch(`${app.name} ${app.description} ${app.tags.join(" ")}`).includes(term);
   });
   return storeSort.value === "name" ? [...items].sort((a, b) => a.name.localeCompare(b.name, "zh-CN")) : items;
 });
 const filteredCatalog = computed(() => {
   if (appRegistry.value.catalog.apps.length && !showReferenceRuntimeCards.value) return [];
-  const term = storeSearch.value.trim().toLowerCase();
+  const term = normalizeStoreSearch(storeSearch.value);
   const items = runtimes.value.catalog.filter((rt) => {
     if (storeCategory.value !== "recommended" && storeCategory.value !== "all" && !storeFamilies[storeCategory.value]?.includes(rt.family)) return false;
-    if (term && !`${rt.name} ${rt.family} ${rt.description} ${(rt.versions || []).join(" ")}`.toLowerCase().includes(term)) return false;
+    if (term && !normalizeStoreSearch(`${rt.name} ${rt.family} ${rt.description} ${(rt.versions || []).join(" ")}`).includes(term)) return false;
     const installed = runtimeInstalled(versions.value[rt.family] || "");
     if (storeStatus.value === "installed" && !installed) return false;
     if (storeStatus.value === "installable" && (installed || rt.state !== "available")) return false;
@@ -420,7 +421,7 @@ async function queueSoftwareInstall(id: string, settings: Record<string, unknown
 }
 const filteredSoftwareApps = computed(() => {
   if (appRegistry.value.catalog.apps.length) return [];
-  const term = storeSearch.value.trim().toLowerCase();
+  const term = normalizeStoreSearch(storeSearch.value);
   if (storeCategory.value === "recommended" && !term) return [];
   if (["updates", "unavailable"].includes(storeStatus.value)) return [];
   const items = softwareApps.value.catalog.filter((app) => {
@@ -428,7 +429,7 @@ const filteredSoftwareApps = computed(() => {
     if (["deployment", "professional"].includes(storeCategory.value) && app.category !== storeCategory.value) return false;
     if (!["recommended", "all", "deployment", "professional"].includes(storeCategory.value) && !registryCategoryMap[storeCategory.value]?.includes(catalogID)) return false;
     const status = softwareStatus(app.id);
-    if (term && !`${app.name} ${app.family} ${app.description} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
+    if (term && !normalizeStoreSearch(`${app.name} ${app.family} ${app.description} ${app.capabilities.join(" ")}`).includes(term)) return false;
     if (storeStatus.value === "installed" && !status?.installed) return false;
     if (storeStatus.value === "installable" && status?.installed) return false;
     if (storeStatus.value === "unavailable") return false;
@@ -475,13 +476,13 @@ const registryCategoryMap: Record<string, string[]> = {
 };
 const filteredRegistryApps = computed(() => {
   if (showReferenceRuntimeCards.value) return [];
-  const term = storeSearch.value.trim().toLowerCase();
+  const term = normalizeStoreSearch(storeSearch.value);
   const items = appRegistry.value.catalog.apps.filter((app) => {
     if (storeCategory.value === "recommended" && (app.stage !== "ready" || app.risk === "eol") && !term) return false;
     if (["deployment", "professional"].includes(storeCategory.value) && app.category !== storeCategory.value) return false;
     if (!["recommended", "all", "deployment", "professional"].includes(storeCategory.value) && !registryCategoryMap[storeCategory.value]?.includes(app.id)) return false;
     const localName = softwareApps.value.catalog.find(item => item.id === app.target)?.name || "";
-    if (term && !`${app.name} ${localName} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`.toLowerCase().includes(term)) return false;
+    if (term && !normalizeStoreSearch(`${app.name} ${localName} ${app.id} ${app.summary} ${app.capabilities.join(" ")}`).includes(term)) return false;
     const status = registryStatus(app.id);
     if (storeStatus.value === "installed" && !status?.installed) return false;
     if (storeStatus.value === "updates" && !status?.update_available) return false;
@@ -552,7 +553,7 @@ async function installRegistryApp(app: RegistryApp) {
 const showPanelRuntime = computed(() =>
   ["recommended", "all", "tools"].includes(storeCategory.value) &&
   ["all", "installed"].includes(storeStatus.value) &&
-  (!storeSearch.value.trim() || "云栈面板 panel 运维".includes(storeSearch.value.trim().toLowerCase())),
+  (!normalizeStoreSearch(storeSearch.value) || normalizeStoreSearch("云栈面板 panel 运维").includes(normalizeStoreSearch(storeSearch.value))),
 );
 const fileSiteID = ref("");
 const settingsOpen = ref(false),

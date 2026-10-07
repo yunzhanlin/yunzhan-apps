@@ -254,6 +254,19 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 	if err != nil {
 		return err
 	}
+	lock, err := s.lockWAFConfiguration()
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	unlock, err := s.lockRuntimeUse()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := s.recoverWAFBeforeMutation(ctx, nginx); err != nil {
+		return err
+	}
 	if _, e := s.readSoftwareManifest("nginx-waf"); install && e == nil {
 		return errors.New("Nginx WAF 已安装，请使用配置操作")
 	} else if !install && e != nil {
@@ -272,6 +285,9 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 		if err != nil {
 			return err
 		}
+		if err := s.verifyWAFBodyEngine(current); err != nil {
+			return err
+		}
 		if err = s.verifyWAFReload(ctx, current, nginx); err != nil {
 			return err
 		}
@@ -281,100 +297,36 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 	if e != nil {
 		return e
 	}
-	backupPath, e := s.backupWAFConfiguration()
-	if e != nil {
-		return e
-	}
 	cfg.Policy.Revision++
-	settings = core.WAFSettings(cfg)
-	httpPath, serverPath := wafFiles(s)
-	for _, dir := range []string{filepath.Dir(httpPath), filepath.Dir(serverPath)} {
-		if e := os.MkdirAll(dir, 0750); e != nil {
-			return e
-		}
-	}
-	httpConfig, serverConfig := renderWAF(settings)
-	backups := []fileBackup{}
-	for _, path := range []string{httpPath, serverPath} {
-		b, e := backupFile(path)
-		if e != nil {
-			return e
-		}
-		backups = append(backups, b)
-	}
-	includeBackups, e := s.ensureWAFIncludes()
-	backups = append(backups, includeBackups...)
-	if e != nil {
-		_ = restoreFiles(backups)
-		return e
-	}
-	if e = atomicWrite(httpPath, []byte(httpConfig), 0640); e == nil {
-		e = atomicWrite(serverPath, []byte(serverConfig), 0640)
-	}
-	if e == nil {
-		_, e = s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf)
-	}
-	if e == nil {
-		_, e = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx")
-	}
-	if e == nil {
-		e = s.verifyWAFReload(ctx, cfg, nginx)
-	}
-	if e != nil {
-		restoreErr := restoreFiles(backups)
-		if restoreErr == nil {
-			rollbackCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			_, reloadErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "reload", "nginx")
-			cancel()
-			restoreErr = errors.Join(restoreErr, reloadErr)
-		}
-		return fmt.Errorf("WAF 配置未生效，已恢复=%v: %w", restoreErr == nil, e)
-	}
-	manifest := softwareManifest{ID: "nginx-waf", Version: core.WAFVersion, Settings: settings, InstalledAt: core.Now()}
-	if old, er := s.readSoftwareManifest("nginx-waf"); er == nil {
-		manifest.InstalledAt = old.InstalledAt
-	}
-	if e = s.writeSoftwareManifest(manifest); e != nil {
-		_ = restoreFiles(backups)
-		_, _ = s.Config.Run(context.Background(), "/usr/bin/systemctl", "reload", "nginx")
-		return e
-	}
-	add("变更前配置已备份：" + backupPath)
-	add("生成独立 WAF 规则、站点策略与 CC 限速并接入受管 Nginx 站点")
-	add("通过 nginx -t 并重载服务")
-	return nil
+	return s.applyWAFTransaction(ctx, cfg, false, nginx, add)
 }
 func (s *Service) uninstallWAF(ctx context.Context, add func(string)) error {
-	if _, e := s.readSoftwareManifest("nginx-waf"); e != nil {
+	nginx, err := s.nginxBinary()
+	if err != nil {
+		return err
+	}
+	lock, err := s.lockWAFConfiguration()
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	unlock, err := s.lockRuntimeUse()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := s.recoverWAFBeforeMutation(ctx, nginx); err != nil {
+		return err
+	}
+	manifest, e := s.readSoftwareManifest("nginx-waf")
+	if e != nil {
 		return errors.New("Nginx WAF 未安装")
 	}
-	httpPath, serverPath := wafFiles(s)
-	backups := []fileBackup{}
-	for _, path := range []string{httpPath, serverPath} {
-		b, e := backupFile(path)
-		if e != nil {
-			return e
-		}
-		backups = append(backups, b)
-		if e = os.Remove(path); e != nil && !errors.Is(e, os.ErrNotExist) {
-			_ = restoreFiles(backups)
-			return e
-		}
-	}
-	if _, e := s.Config.Run(ctx, s.Config.NginxBin, "-t", "-c", s.Config.NginxConf); e != nil {
-		_ = restoreFiles(backups)
+	cfg, e := core.DecodeWAFConfig(manifest.Settings)
+	if e != nil {
 		return e
 	}
-	if _, e := s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx"); e != nil {
-		_ = restoreFiles(backups)
-		return e
-	}
-	if e := os.Remove(s.softwareManifestPath("nginx-waf")); e != nil {
-		_ = restoreFiles(backups)
-		return e
-	}
-	add("移除 WAF 规则并通过 Nginx 校验；保留空的安全 include 插入点")
-	return nil
+	return s.applyWAFTransaction(ctx, cfg, true, nginx, add)
 }
 
 func hardeningValues(profile string) map[string]string {
@@ -604,20 +556,50 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 		_, h := os.Stat(httpPath)
 		_, v := os.Stat(serverPath)
 		out.Enabled = h == nil && v == nil
+		cfg, configErr := core.DecodeWAFConfig(manifest.Settings)
+		if configErr != nil {
+			out.Detail = "防火墙清单不可解析，请核对；未确认规则生效"
+			return out
+		}
+		if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+			out.Detail = "存在未完成防火墙配置事务，需恢复后重新核对；未确认新规则生效"
+			return out
+		}
+		plan, configErr := s.planWAFConfiguration(cfg, false)
+		if configErr != nil || len(plan) != 0 {
+			out.Detail = "实际规则、网站配置或清单存在偏差；未确认已加载，请预览核对后安全应用"
+			return out
+		}
+		if err := s.verifyWAFBodyEngine(cfg); err != nil {
+			out.Detail = "原生请求体引擎核对失败：" + err.Error()
+			return out
+		}
 		nginx, err := s.nginxBinary()
 		if err == nil {
 			_, err = s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf)
 		}
 		if err == nil {
-			err = s.wafNginxRunning(ctx, nginx)
+			err = s.verifyWAFReload(ctx, cfg, nginx)
 		}
 		e = err
 		out.Healthy = out.Enabled && e == nil
-		if cfg, err := core.DecodeWAFConfig(manifest.Settings); err == nil && cfg.Policy.Mode == "off" {
+		if cfg.Policy.Mode == "off" {
 			out.Enabled = false
 		}
 		if out.Healthy {
-			out.Detail = "Nginx 规则已加载；防护模式以生效配置为准"
+			out.Detail = "实际配置与清单一致、Nginx 校验及生效指纹通过；请求体防护仅作用于明确选中且未停用的网站"
+			if cfg.Body != nil {
+				for _, site := range cfg.Body.Sites {
+					if _, active := core.WAFEffectiveBodyPolicy(cfg, site.SiteID); !active {
+						continue
+					}
+					if err := s.wafBodyLogHealth(ctx); err != nil {
+						out.Healthy = false
+						out.Detail = "规则生效指纹已核实，但请求体日志需要核对：" + err.Error() + "；防护继续执行，原证据保留"
+					}
+					break
+				}
+			}
 		} else {
 			out.Detail = "请核对：WAF 配置缺失、Nginx 校验失败或服务未运行"
 		}

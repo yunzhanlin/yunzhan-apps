@@ -11,14 +11,14 @@ p = PanelClient()
 initial = p.api('/software/nginx-waf/config')
 assert initial['status']['installed'], 'existing WAF required; do not reinstall'
 original = copy.deepcopy(initial['settings'])
-if initial['status']['version'] != '2.0.1':
+if initial['status']['version'] != '2.1.0':
     registry = p.api('/app-registry?refresh=1')
     app = next(a for a in registry['catalog']['apps'] if a['id'] == 'nginx-waf')
-    assert app['version'] == '2.0.1' and not registry['source']['stale'], 'signed WAF 2.0.1 catalog required'
+    assert app['version'] == '2.1.0' and not registry['source']['stale'], 'signed WAF 2.1.0 catalog required'
     job = p.api('/app-registry/nginx-waf/update', {'expected_version': app['version'], 'expected_sha256': app['sha256']})['job_id']
     p.wait(job, timeout=120)
     migrated = p.api('/software/nginx-waf/config')
-    assert migrated['status']['version'] == '2.0.1' and migrated['status']['healthy']
+    assert migrated['status']['version'] == '2.1.0' and migrated['status']['healthy']
     assert migrated['settings']['profile'] == original['profile']
     assert migrated['settings']['rate_per_second'] == original['rate_per_second']
 slug = 'waf-workspace-' + str(int(time.time()))
@@ -94,4 +94,4 @@ finally:
     assert p.api('/software/nginx-waf/config')['status']['healthy']
 p.vm('sudo', '/usr/sbin/nginx', '-t')
 assert len(p.api('/software/nginx-waf/history')['entries']) >= len(jobs)
-print(json.dumps({'passed': True, 'site_id': ident, 'site_domain': site['domain'], 'jobs': jobs, 'real_rules': True, 'real_cc': True, 'real_observe': True, 'privacy': True, 'existing_policy_restored': True, 'installed_version': '2.0.1'}, ensure_ascii=False))
+print(json.dumps({'passed': True, 'site_id': ident, 'site_domain': site['domain'], 'jobs': jobs, 'real_rules': True, 'real_cc': True, 'real_observe': True, 'privacy': True, 'existing_policy_restored': True, 'installed_version': '2.1.0'}, ensure_ascii=False))

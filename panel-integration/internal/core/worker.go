@@ -242,6 +242,10 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 }
 
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+	if j.Kind == "waf_engine_build" {
+		runWAFEngineJob(ctx, s, e, j)
+		return
+	}
 	if strings.HasPrefix(j.Kind, "software_") {
 		action := strings.TrimPrefix(j.Kind, "software_")
 		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager")) {

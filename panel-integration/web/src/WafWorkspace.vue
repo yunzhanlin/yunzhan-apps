@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
@@ -7,12 +7,20 @@ interface Entry { id: string; value: string; site_id?: string }
 interface Rule { id: string; name: string; site_id?: string; field: string; operator: string; value: string; action: string; enabled: boolean }
 interface SitePolicy { site_id: string; mode: string; rate_per_second: number; burst: number; cc_enabled?: boolean; groups?: Record<string, boolean> }
 interface CCRule { id: string; site_id?: string; path: string; prefix: boolean; rate_per_second: number; burst: number; enabled: boolean }
-interface Config { profile: string; rate_per_second: number; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
+interface BodyPolicy { mode: string; paranoia_level: number; inbound_threshold: number; body_limit_kib: number; non_file_limit_kib: number; json_depth: number; argument_limit: number }
+interface BodySite { site_id: string; policy: BodyPolicy }
+interface EngineStatus { job_id: string; state: string; error?: string; architecture?: string; engine_version?: string; crs_version?: string; nginx_version?: string; integrity_verified: boolean; module_abi_validated: boolean; build_only: boolean; steps: { time: string; message: string }[] }
+interface Preview { http_config: string; server_config: string; settings: Config; changes?: {path: string; action: string}[]; body_rules?: {site_id: string; configuration: string}[] }
+interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
 interface Status { installed: boolean; healthy: boolean; enabled: boolean; version?: string; detail: string }
-interface Site { id: string; name: string; domain: string; settings?: { waf_enabled?: boolean; web_server?: string } }
+interface Site { id: string; name: string; domain: string; status?: string; settings?: { waf_enabled?: boolean; web_server?: string } }
 interface Dimension { name: string; count: number }
 interface Event { time: string; site: string; site_id?: string; ip: string; path?: string; method: string; status: number; reason: string; action: string }
 interface Report { events: Event[]; total: number; blocked: number; observed: number; sources: number; partial: boolean; scanned: number; rules: Dimension[]; ips: Dimension[]; sites: Dimension[]; hours: Dimension[]; from: string; to: string }
+interface BodyEvent { time: string; site_id: string; rule_id: number; phase: number; severity: number; disruptive_mark: boolean }
+interface BodyReport { events: BodyEvent[]; rule_matches: number; available: boolean; partial: boolean; rejected_lines: number; scanned: number; counting_contract: string; log_bytes: number; max_bytes: number; capacity_exhausted: boolean; legacy_log: boolean; metadata_best_effort: boolean }
+interface BodyArchive {id:string;captured_at:string;bytes:number;sha256:string;state:string}
+interface BodyRecovery {archive:BodyArchive;index_sha256:string;snapshot_sha256:string;snapshot_bytes:number;snapshot_missing:boolean}
 interface History { id: string; kind: string; state: string; error: string; created_at: string }
 const props = defineProps<{ api: API; engine?: "nginx-waf" | "apache-waf"; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
 const engine = props.engine || "nginx-waf";
@@ -29,6 +37,20 @@ const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), site
 const defaults = ref<Config>();
 const tab = ref("overview"), busy = ref(false), reportBusy = ref(false), error = ref(""), saved = ref(""), preview = ref("");
 const report = ref<Report>(), history = ref<History[]>([]), jsonInput = ref("");
+const engines = ref<EngineStatus[]>([]), engineJob = ref<EngineStatus>(), engineBusy = ref(false), bodySite = ref("");
+const bodyReport = ref<BodyReport>(), bodyReportBusy = ref(false), bodyPage = ref(1), bodyFilter = ref({site_id:"",rule:"",phase:""});
+const bodyArchives = ref<BodyArchive[]>([]), bodyLogBusy = ref(false);
+type BodyIndexStage = {id:string;bytes:number;sha256:string};
+const bodyRecovery = ref<BodyRecovery[]>([]), bodyInventoryWarning = ref(""), bodyIndexStages = ref<BodyIndexStage[]>([]);
+const bodyArchiveState = (state:string) => ({completed:"备份与轮转完成",prepared:"轮转未确认完成",copying:"复制未完成",removing:"删除未完成，可按原摘要重试",retained:"证据已保留，轮转结果未知","retained-incomplete":"不完整快照已保留","retained-missing":"快照缺失，仅保留原意图"}[state] || state);
+const bodyBytes = (bytes:number) => bytes < 1024 ? `${bytes} 字节` : bytes < 1048576 ? `${(bytes/1024).toFixed(2)} KiB` : `${(bytes/1048576).toFixed(2)} MiB`;
+const exportedBodyArchives = ref<string[]>([]);
+const bodyRange = ref<[Date, Date]>();
+let engineTimer: ReturnType<typeof setTimeout> | undefined;
+let disposed = false;
+const verifiedEngines = computed(() => engines.value.filter(x => x.state === "ready" && x.integrity_verified && x.module_abi_validated && x.build_only));
+const bodyDefault = (): BodyPolicy => ({ mode: "observe", paranoia_level: 1, inbound_threshold: 5, body_limit_kib: 1024, non_file_limit_kib: 256, json_depth: 64, argument_limit: 256 });
+const buildState = (s: string) => ({ queued:"排队", running:"构建中", ready:"程序已验证", succeeded:"构建任务完成", failed:"构建失败", needs_attention:"需要核对" }[s] || s);
 const filter = ref({ site_id: "", ip: "", rule: "", action: "" }), range = ref<[Date, Date]>(), page = ref(1), limit = 50;
 const listKind = ref("ip_deny"), listScope = ref(""), listValue = ref(""), siteSearch = ref(""), selectedSite = ref("");
 const newRule = ref<Omit<Rule, "id">>({ name: "", site_id: "", field: "uri", operator: "contains", value: "", action: "block", enabled: true });
@@ -58,6 +80,55 @@ async function refreshReport(reset = false) {
   finally { reportBusy.value = false; }
 }
 async function refreshHistory() { try { history.value = (await props.api<{ entries: History[] }>(endpoint("history"))).entries; } catch (e) { error.value = (e as Error).message; } }
+async function refreshEngines() { if (apache) return; engines.value = (await props.api<{entries: EngineStatus[]}>(endpoint("engines"))).entries; }
+function bodyReportURL(exportAll = false) {
+  const query = new URLSearchParams({page:String(exportAll ? 1 : bodyPage.value),limit:String(exportAll ? 5000 : 50)});
+  for(const [key,value] of Object.entries(bodyFilter.value)) if(value) query.set(key,value);
+  if(bodyRange.value) {query.set("from",bodyRange.value[0].toISOString());query.set("to",bodyRange.value[1].toISOString());}
+  return `${endpoint("body-report")}?${query}`;
+}
+async function refreshBodyReport(reset = false) { if(apache || !status.value?.installed || bodyReportBusy.value) return; if(reset) bodyPage.value=1; bodyReportBusy.value=true; try { bodyReport.value=await props.api<BodyReport>(bodyReportURL()); } catch(e) { error.value=(e as Error).message; } finally {bodyReportBusy.value=false;} }
+async function exportBodyReport() { if(bodyReportBusy.value) return;bodyReportBusy.value=true;try {download("yunzhan-waf-body-rule-matches.json",await props.api<BodyReport>(bodyReportURL(true)));}catch(e){error.value=(e as Error).message;}finally{bodyReportBusy.value=false;} }
+async function refreshBodyArchives(){if(apache||!status.value?.installed)return;const out=await props.api<{entries:BodyArchive[];recovery_entries:BodyRecovery[];index_stages:BodyIndexStage[];inventory_warning:string}>(endpoint("body-log/archives"));bodyArchives.value=out.entries;bodyRecovery.value=out.recovery_entries||[];bodyIndexStages.value=out.index_stages||[];bodyInventoryWarning.value=out.inventory_warning||"";}
+async function retainBodyIndexStage(item:BodyIndexStage){if(bodyLogBusy.value)return;bodyLogBusy.value=true;error.value="";try{await props.api(endpoint(`body-log/index-stages/${item.id}/retain`),"POST",{sha256:item.sha256,acknowledge_uncommitted_index_not_applied:true},newID());await refreshBodyArchives();saved.value="已按摘要保留未提交索引的原始文件；没有将它接管为有效索引，也未修改当前日志。";}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
+async function retainBodySnapshot(item:BodyRecovery){if(bodyLogBusy.value)return;bodyLogBusy.value=true;error.value="";try{await props.api(endpoint(`body-log/archives/${item.archive.id}/retain`),"POST",{index_sha256:item.index_sha256,snapshot_sha256:item.snapshot_sha256,snapshot_missing:item.snapshot_missing,acknowledge_unknown_rotation_and_incomplete_snapshot:true},newID());await refreshBodyArchives();saved.value="已保留未完成快照及恢复证据；没有再次截断当前日志，也未把未知结果标成成功。";}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
+function exportBodyRecovery(item:BodyRecovery){download(`yunzhan-waf-log-recovery-${item.archive.id}.json`,{observed:item,contract:"intent_and_digest_only_not_a_rule_event_export"});exportedBodyArchives.value.push(item.archive.id);}
+async function rotateBodyLog(){if(bodyLogBusy.value)return;bodyLogBusy.value=true;error.value="";try{await props.api(endpoint("body-log/rotate"),"POST",{},newID());await Promise.all([refreshBodyReport(true),refreshBodyArchives()]);saved.value="已持久化私有备份并轮转当前元数据日志；Nginx 未重载，历史未删除。";}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
+async function exportBodyArchive(id:string){if(bodyLogBusy.value)return;bodyLogBusy.value=true;try{download(`yunzhan-waf-body-snapshot-${id}.json`,await props.api(endpoint(`body-log/archives/${id}`)));exportedBodyArchives.value.push(id);}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
+async function removeBodyArchive(archive:BodyArchive){if(bodyLogBusy.value||!exportedBodyArchives.value.includes(archive.id))return;bodyLogBusy.value=true;error.value="";try{await props.api(endpoint(`body-log/archives/${archive.id}/remove`),"POST",{sha256:archive.sha256,acknowledge_bounded_export_and_permanent_removal:true},newID());await refreshBodyArchives();saved.value="已永久删除明确选中的日志快照；当前日志和其它备份未修改。";}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
+async function pollEngine(id: string) {
+  if (disposed) return;
+  engineTimer=undefined;
+  try {
+    engineJob.value = await props.api<EngineStatus>(endpoint(`engine/jobs/${id}`));
+    await refreshEngines();
+    if (["queued", "running"].includes(engineJob.value.state)) engineTimer = setTimeout(() => pollEngine(id), 5000);
+    else { await refreshHistory(); if (engineJob.value.state === "ready") saved.value = "原生程序已完成 ABI 与完整性验证，尚未启用任何网站。选择引擎和网站策略后预览、保存才会应用。"; }
+  } catch(e) { error.value = `暂时无法核实构建状态，未宣称成功：${(e as Error).message}`; engineTimer = setTimeout(() => pollEngine(id), 15000); }
+}
+async function buildEngine() {
+  if (apache || engineBusy.value || busy.value || engineJob.value && ["queued", "running"].includes(engineJob.value.state)) return;
+  engineBusy.value = true; error.value = "";
+  try { const out = await props.api<{job_id:string}>(endpoint("engine/build"), "POST", {}, newID()); await pollEngine(out.job_id); }
+  catch(e) { error.value = (e as Error).message; }
+  finally { engineBusy.value = false; }
+}
+async function stopEngine() {
+  const id=engineJob.value?.job_id;
+  if(!id || engineBusy.value || !["queued","running"].includes(engineJob.value?.state || "")) return;
+  engineBusy.value=true;error.value="";
+  try { await props.api(endpoint(`engine/jobs/${id}/cancel`),"POST",{},newID()); await pollEngine(id);saved.value="已请求停止专用构建；原有网站不受影响。失败/中断记录和目录保留，新建任务才能重新构建。"; }
+  catch(e){error.value=(e as Error).message;}
+  finally{engineBusy.value=false;}
+}
+function selectBodyEngine(id: string) { if (!cfg.value) return; cfg.value.body ||= {engine_job_id:"",sites:[]}; cfg.value.body.engine_job_id=id; }
+function addBodySite() {
+  if (!cfg.value || !bodySite.value) return;
+  if (!cfg.value.body?.engine_job_id) { error.value = "请先选择已核实的本机原生引擎"; return; }
+  if (cfg.value.body.sites.length>=64 || cfg.value.body.sites.some(x=>x.site_id===bodySite.value)) { error.value="请求体网站重复或已达到 64 个上限"; return; }
+  cfg.value.body.sites.push({site_id:bodySite.value,policy:bodyDefault()}); bodySite.value="";
+}
+function previewText(out: Preview) { return out.http_config + "\n# 每个受管站点的 server 规则\n" + out.server_config + (out.changes?.length ? "\n# 实际文件变更计划\n"+out.changes.map(x=>`# ${x.action}: ${x.path}`).join("\n") : "") + (out.body_rules || []).map(x=>`\n# ${siteName(x.site_id)} 请求体规则\n${x.configuration}`).join(""); }
 async function refresh() {
   if (busy.value) return;
   if (dirty.value) { error.value = "存在未保存的草稿。请先保存，或使用“放弃草稿”再刷新。"; return; }
@@ -65,13 +136,15 @@ async function refresh() {
   try {
     await loadConfig();
     const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = (Array.isArray(out) ? out : out.sites).filter(s => !apache || s.settings?.web_server === "apache");
-    await Promise.all([refreshReport(), refreshHistory()]);
+    await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives()]);
+    const running = engines.value.find(x=>["queued", "running"].includes(x.state))?.job_id || history.value.find(x=>x.kind==="waf_engine_build" && ["queued","running"].includes(x.state))?.id;
+    if (running && !engineTimer) await pollEngine(running);
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
 async function validate() {
   if (!cfg.value) return;
-  const out = await props.api<{ http_config: string; server_config: string; settings: Config }>(endpoint("preview"), "POST", { settings: cfg.value });
-  cfg.value = clone(out.settings); preview.value = out.http_config + "\n# 每个受管站点的 server 规则\n" + out.server_config;
+  const out = await props.api<Preview>(endpoint("preview"), "POST", { settings: cfg.value });
+  cfg.value = clone(out.settings); preview.value = previewText(out);
 }
 async function showPreview() { if (busy.value) return; busy.value = true; error.value = ""; try { await validate(); tab.value = "config"; } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; } }
 async function apply() {
@@ -90,7 +163,7 @@ async function apply() {
     }
     if (!completed) throw new Error("任务仍在执行，未宣称已生效。请在操作记录中核对后再刷新。");
     await loadConfig(); saved.value = `配置已备份、通过 ${engineName} 原生检查和重载核对；现显示实际生效配置。`;
-    await Promise.all([refreshHistory(), refreshReport()]);
+    await Promise.all([refreshHistory(), refreshReport(), refreshBodyReport()]);
   } catch (e) { error.value = (e as Error).message; await refreshHistory(); }
   finally { busy.value = false; }
 }
@@ -120,13 +193,14 @@ async function importConfig() {
     const imported = JSON.parse(jsonInput.value) as Config;
     if (!imported || typeof imported !== "object" || !imported.policy || typeof imported.policy !== "object") throw new Error("请输入包含 policy 的配置对象");
     imported.policy.revision = applied.value?.policy.revision || 0;
-    const out = await props.api<{ settings: Config; http_config: string; server_config: string }>(endpoint("preview"), "POST", { settings: imported });
-    cfg.value = clone(out.settings); preview.value = out.http_config + "\n" + out.server_config; saved.value = "导入配置已通过字段校验，仅载入草稿；点击保存才会修改防护。";
+    const out = await props.api<Preview>(endpoint("preview"), "POST", { settings: imported });
+    cfg.value = clone(out.settings); preview.value = previewText(out); saved.value = "导入配置已通过字段校验，仅载入草稿；点击保存才会修改防护。";
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
 function download(name: string, value: unknown) { const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
 async function exportLogs() { if (reportBusy.value) return; reportBusy.value = true; try { download("yunzhan-waf-events.json", await props.api<Report>(reportURL(true))); } catch (e) { error.value = (e as Error).message; } finally { reportBusy.value = false; } }
 onMounted(refresh);
+onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); });
 </script>
 
 <template>
@@ -144,7 +218,7 @@ onMounted(refresh);
           <el-alert v-if="report?.partial" title="日志读取达到最近 4 MiB / 5000 条上限；统计不是全历史总数，更早记录仍在服务器日志中。" type="warning" :closable="false" />
           <div class="waf-two"><section><h4>命中规则排行</h4><el-table :data="report?.rules || []" max-height="220" empty-text="暂无命中"><el-table-column label="规则"><template #default="{row}">{{reasonName(row.name)}}</template></el-table-column><el-table-column prop="count" label="次数" width="80"/></el-table></section><section><h4>来源 IP 排行</h4><el-table :data="report?.ips || []" max-height="220" empty-text="暂无来源"><el-table-column prop="name" label="网络对端 IP"/><el-table-column prop="count" label="次数" width="80"/></el-table></section></div>
           <h4>每小时防护事件（UTC）</h4><div class="waf-trend" v-if="report?.hours.length"><div v-for="h in report.hours.slice(-48)" :key="h.name" :title="`${h.name} UTC · ${h.count} 次`"><span :style="{height: `${Math.max(3, h.count / Math.max(...report.hours.map(x=>x.count)) * 90)}px`}"></span><small>{{h.name.slice(-5)}}</small></div></div><el-empty v-else description="暂无防护事件；没有事件不代表已完成安全审计" :image-size="64"/>
-          <el-alert title="当前为独立请求元数据防护：不包含完整 POST/JSON/上传内容解析、商业规则订阅、地区数据库或木马隔离。观察模式不阻断 WAF 命中，但服务器原生拒绝仍有效。" type="info" :closable="false" />
+          <el-alert :title="apache ? 'Apache 当前为独立请求元数据防护，不包含原生请求体引擎。观察模式不阻断 WAF 命中，但服务器原生拒绝仍有效。' : '元数据防护与原生请求体防护独立配置。请求体防护使用固定版本 ModSecurity / OWASP CRS，须先构建兼容引擎，再逐网站明确启用；概览和防护日志当前统计元数据事件，不将 CRS 规则命中数伪装成 HTTP 阻断次数。'" type="info" :closable="false" />
         </el-tab-pane>
         <el-tab-pane label="全局防护" name="global">
           <el-form label-position="top" class="waf-two"><el-form-item label="运行模式"><el-select v-model="cfg.policy.mode"><el-option label="阻断：规则命中立即拒绝" value="block"/><el-option label="观察：只记录，不阻断或限速" value="observe"/><el-option label="停用：所有站点不阻断或限速" value="off"/></el-select></el-form-item><el-form-item label="特征策略"><el-select v-model="cfg.profile"><el-option label="平衡：常见攻击特征" value="balanced"/><el-option label="严格：扩展特征，可能增加误报" value="strict"/></el-select></el-form-item></el-form>
@@ -163,6 +237,36 @@ onMounted(refresh);
           <h4>URL 独立限速（最多 20 条）</h4><div class="waf-editor"><el-select v-model="newCC.site_id" filterable aria-label="URL 限速范围"><el-option value="" label="全部受管站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="newCC.path" placeholder="/api/login" aria-label="URL 限速路径"/><el-checkbox v-model="newCC.prefix">路径前缀</el-checkbox><el-input-number v-model="newCC.rate_per_second" :min="1" :max="200" aria-label="URL 速率"/><el-input-number v-model="newCC.burst" :min="1" :max="1000" aria-label="URL 突发容量"/><el-button @click="addCC">添加规则</el-button></div>
           <el-table :data="cfg.policy.cc_rules" empty-text="暂无 URL 独立限速"><el-table-column label="范围"><template #default="{row}">{{siteName(row.site_id)}}</template></el-table-column><el-table-column prop="path" label="路径"/><el-table-column label="匹配"><template #default="{row}">{{row.prefix?'前缀':'精确'}}</template></el-table-column><el-table-column prop="rate_per_second" label="次 / 秒" width="85"/><el-table-column prop="burst" label="突发" width="70"/><el-table-column label="启用" width="80"><template #default="{row}"><el-switch v-model="row.enabled"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.cc_rules=cfg.policy.cc_rules.filter(r=>r!==row)">删除</el-button></template></el-table-column></el-table>
           <el-alert title="IP 取自 Nginx 可信网络对端，不直接信任浏览器提交的 X-Forwarded-For。使用 CDN / 反向代理时，应由管理员先配置可信 real_ip 来源，避免把 CDN 节点当作单个访客。" type="warning" :closable="false"/>
+        </el-tab-pane>
+        <el-tab-pane v-if="!apache" label="请求体防护" name="body">
+          <el-alert title="原生引擎构建不会自动修改网站或加载模块。仅使用固定摘要的开源程序及规则；编译使用 2 CPU / 1 GiB 内存预算，最长 4 小时，可能排队等待其他源码构建。保留失败证据，重试需新建任务。" type="info" :closable="false"/>
+          <div class="waf-actions"><h4>本机兼容引擎</h4><div><el-button :loading="engineBusy" :disabled="engineJob && ['queued','running'].includes(engineJob.state)" @click="buildEngine">构建兼容引擎</el-button><el-button v-if="engineJob && ['queued','running'].includes(engineJob.state)" :loading="engineBusy" type="warning" @click="stopEngine">停止构建并保留证据</el-button><el-button @click="refreshEngines().catch(e=>error=e.message)">核对引擎状态</el-button></div></div>
+          <el-alert v-if="engineJob" :title="`${buildState(engineJob.state)} · ${engineJob.job_id}${engineJob.error ? ' · '+engineJob.error : ''}`" :type="engineJob.state==='ready' ? 'success' : 'info'" :closable="false"/>
+          <ol v-if="engineJob?.steps.length"><li v-for="step in engineJob.steps" :key="step.time+step.message">{{formatPanelDateTime(step.time)}} · {{step.message}}</li></ol>
+          <el-table :data="engines" max-height="250" empty-text="未构建原生引擎；元数据防护不受影响"><el-table-column prop="job_id" label="构建任务" min-width="220" show-overflow-tooltip/><el-table-column label="程序"><template #default="{row}">ModSecurity {{row.engine_version || '—'}} / CRS {{row.crs_version || '—'}}<small class="waf-muted"> Nginx {{row.nginx_version || '待核对'}} · {{row.architecture}}</small></template></el-table-column><el-table-column label="状态" min-width="170"><template #default="{row}">{{buildState(row.state)}}<small class="waf-site-warning" v-if="row.error">{{row.error}}</small></template></el-table-column></el-table>
+          <el-form label-position="top"><el-form-item label="选择已核对的兼容引擎"><el-select :model-value="cfg.body?.engine_job_id || ''" @change="selectBodyEngine" placeholder="不会默认选择或自动激活"><el-option v-for="item in verifiedEngines" :key="item.job_id" :label="`Nginx ${item.nginx_version} · ${item.architecture} · ${item.job_id.slice(0,12)}`" :value="item.job_id"/></el-select></el-form-item></el-form>
+          <el-alert v-if="cfg.body?.engine_job_id && !verifiedEngines.some(x=>x.job_id===cfg?.body?.engine_job_id)" title="已保存引擎当前未通过核对，不能启用新策略；请检查完整性或构建新引擎。" type="warning" :closable="false"/>
+          <div class="waf-filter"><el-select v-model="bodySite" filterable placeholder="选择明确启用的网站"><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-button @click="addBodySite">添加请求体策略</el-button></div>
+          <p>默认新增策略为观察模式。全局/站点停用与观察模式优先；网站停用或网站设置关闭 WAF 时，策略暂停。元数据白名单不会跳过请求体检查。删除本页策略并保存将移除对应网站的请求体配置，不删除网站。</p>
+          <el-table :data="cfg.body?.sites || []" empty-text="没有网站启用请求体防护" max-height="470"><el-table-column type="expand"><template #default="{row}"><el-form label-position="top" class="waf-three"><el-form-item label="CRS 检测级别（1–4，越高误报可能越多）"><el-input-number v-model="row.policy.paranoia_level" :min="1" :max="4"/></el-form-item><el-form-item label="入站异常分数阈值"><el-input-number v-model="row.policy.inbound_threshold" :min="5" :max="100"/></el-form-item><el-form-item label="请求体上限（KiB）"><el-input-number v-model="row.policy.body_limit_kib" :min="64" :max="8192"/></el-form-item><el-form-item label="非文件部分上限（KiB）"><el-input-number v-model="row.policy.non_file_limit_kib" :min="64" :max="Math.min(2048,row.policy.body_limit_kib)"/></el-form-item><el-form-item label="JSON 最大深度"><el-input-number v-model="row.policy.json_depth" :min="4" :max="128"/></el-form-item><el-form-item label="请求参数上限"><el-input-number v-model="row.policy.argument_limit" :min="16" :max="1000"/></el-form-item></el-form></template></el-table-column><el-table-column label="网站" min-width="220"><template #default="{row}">{{siteName(row.site_id)}}<small v-if="sites.find(s=>s.id===row.site_id)?.status==='stopped' || sites.find(s=>s.id===row.site_id)?.settings?.waf_enabled===false" class="waf-site-warning">网站已停用或退出 WAF，当前策略暂停</small></template></el-table-column><el-table-column label="模式" width="140"><template #default="{row}"><el-select v-model="row.policy.mode"><el-option v-for="m in ['observe','block','off']" :key="m" :value="m" :label="modeLabel(m)"/></el-select></template></el-table-column><el-table-column label="请求体预算" width="140"><template #default="{row}">{{row.policy.body_limit_kib}} KiB</template></el-table-column><el-table-column width="85"><template #default="{row}"><el-button text type="danger" @click="cfg.body!.sites=cfg.body!.sites.filter(p=>p!==row)">移除</el-button></template></el-table-column></el-table>
+          <p class="waf-muted">固定请求体解析覆盖表单、JSON、XML 与 multipart 的规则检测；禁用 XML 外部实体和请求体审计日志，不保存 Cookie、POST 内容或响应体。不是防病毒扫描，也不保证覆盖未知攻击。普通 Nginx 错误日志仍可能包含请求 URI，应单独管理其隐私与保留策略。</p>
+          <h4>请求体规则命中日志</h4><el-alert title="每行是一条规则命中，不是一次 HTTP 请求或一次实际阻断；一个请求可能命中多条规则，中断标记也不是 HTTP 结果。为保护隐私，此日志不保存 IP、URI、请求标识、Cookie 或请求体。" type="info" :closable="false"/>
+          <div class="waf-filter"><el-select v-model="bodyFilter.site_id" filterable aria-label="请求体日志网站"><el-option label="全部网站标识" value=""/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="bodyFilter.rule" placeholder="数字规则号，如 941100" aria-label="请求体规则号"/><el-select v-model="bodyFilter.phase" aria-label="规则处理阶段"><el-option label="全部阶段" value=""/><el-option v-for="n in 5" :key="n" :label="`阶段 ${n}`" :value="String(n)"/></el-select></div>
+          <div class="waf-filter"><el-date-picker v-model="bodyRange" type="datetimerange" start-placeholder="开始时间" end-placeholder="结束时间"/><el-button :loading="bodyReportBusy" @click="refreshBodyReport(true)">查询规则日志</el-button><el-button :disabled="bodyReportBusy || !status?.installed" @click="exportBodyReport">导出规则命中</el-button></div>
+          <p v-if="bodyReport?.available">筛选范围 {{bodyReport.rule_matches}} 条规则命中 · 最近读取 {{bodyReport.scanned}} 条 · 拒绝解析 {{bodyReport.rejected_lines}} 行格式异常内容</p><el-alert v-else title="请求体元数据日志尚未生成或未读取，不能据此判断攻击为零或防护已启用。" type="info" :closable="false"/>
+          <el-alert v-if="bodyReport?.partial" title="仅查询最近 4 MiB / 5000 条；导出同样有上限，不是完整历史备份。" type="warning" :closable="false"/>
+          <el-alert v-if="bodyReport?.metadata_best_effort" title="规则元数据为尽力记录；并发争用、容量或磁盘故障可能漏记，不能作为完整请求取证或准确攻击总数。" type="info" :closable="false"/>
+          <el-alert v-if="bodyReport?.legacy_log" title="正在读取保留的旧日志；它不具备本版写入硬上限。安全应用新引擎后使用独立受保护日志，不会删除旧文件。" type="warning" :closable="false"/>
+          <el-alert v-if="bodyReport?.capacity_exhausted" title="当前元数据日志已达到 32 MiB 写入上限，后续可能漏记；防护继续执行。请备份并轮转后核对新记录。" type="error" :closable="false"/>
+          <div class="waf-actions"><span v-if="bodyReport?.available">当前文件 {{bodyBytes(bodyReport.log_bytes)}}<span v-if="bodyReport.max_bytes"> / {{bodyBytes(bodyReport.max_bytes)}}</span> · 保留 {{bodyArchives.length}} / 8 份备份</span><el-button :loading="bodyLogBusy" :disabled="!bodyReport?.available || bodyReport.legacy_log || !bodyReport.log_bytes || bodyRecovery.length>0 || bodyIndexStages.length>0 || bodyArchives.length>=8" @click="rotateBodyLog">备份并轮转元数据日志</el-button></div>
+          <el-alert v-if="bodyIndexStages.length" title="发现未提交索引残件，请先保留其原始文件。残件不会当成有效备份或成功轮转，也不会自动应用或丢弃。" type="warning" :closable="false"/>
+          <el-table v-if="bodyIndexStages.length" :data="bodyIndexStages" max-height="180"><el-table-column prop="id" label="索引残件标识" min-width="220"/><el-table-column prop="bytes" label="实际字节" width="100"/><el-table-column prop="sha256" label="摘要" min-width="220"/><el-table-column width="190"><template #default="{row}"><el-popconfirm title="按摘要保留此残件的原始文件？不接管为有效索引，不修改当前日志。" confirm-button-text="保留原始证据" @confirm="retainBodyIndexStage(row)"><template #reference><el-button text :disabled="bodyLogBusy">保留索引写入残件</el-button></template></el-popconfirm></template></el-table-column></el-table>
+          <el-alert v-if="bodyInventoryWarning" :title="bodyInventoryWarning+'；完整备份列表暂不展示，请先核对下方恢复记录。'" type="warning" :closable="false"/>
+          <el-alert v-if="bodyRecovery.length" title="发现未完成日志事务。快照可能不完整，轮转结果不能确认；恢复只保留证据，不会再次截断当前日志。缺失快照不会显示成零攻击。" type="warning" :closable="false"/>
+          <el-table v-if="bodyRecovery.length" :data="bodyRecovery" max-height="230"><el-table-column label="待恢复快照" min-width="220"><template #default="{row}">{{row.archive.id}}<small class="waf-muted">{{bodyArchiveState(row.archive.state)}}</small></template></el-table-column><el-table-column label="实际快照" min-width="150"><template #default="{row}">{{row.snapshot_missing?'文件缺失':bodyBytes(row.snapshot_bytes)}}</template></el-table-column><el-table-column min-width="260"><template #default="{row}"><el-button text :disabled="bodyLogBusy" @click="exportBodyRecovery(row)">导出恢复记录</el-button><el-popconfirm v-if="row.archive.state!=='removing'" title="保留可能不完整的快照并记录未知轮转结果？不会修改当前日志。" confirm-button-text="保留并记录" @confirm="retainBodySnapshot(row)"><template #reference><el-button text :disabled="bodyLogBusy||bodyIndexStages.length>0">保留失败快照</el-button></template></el-popconfirm><el-popconfirm v-else title="按原摘要继续永久删除此快照？当前日志和其它备份不会删除。" confirm-button-text="重试永久删除" @confirm="removeBodyArchive(row.archive)"><template #reference><el-button text type="danger" :disabled="bodyLogBusy||bodyIndexStages.length>0||!exportedBodyArchives.includes(row.archive.id)">重试明确删除</el-button></template></el-popconfirm></template></el-table-column></el-table>
+          <p class="waf-muted">轮转不重载 Nginx，不修改普通访问/错误日志。每份备份是截断前的独立快照；失败时可能重叠，不合并成流量总数。最多保留 8 份，满额不会自动丢弃历史。导出仅含最近 4 MiB / 5000 条数字元数据。</p>
+          <el-table :data="bodyArchives" empty-text="没有元数据日志备份" max-height="200"><el-table-column label="备份时间" min-width="170"><template #default="{row}">{{formatPanelDateTime(row.captured_at)}}</template></el-table-column><el-table-column label="实际快照 / 原意图" min-width="185"><template #default="{row}">{{row.state==='retained-missing'?`缺失；原意图 ${bodyBytes(row.bytes)}`:bodyBytes(row.bytes)}}</template></el-table-column><el-table-column label="状态" min-width="160"><template #default="{row}">{{bodyArchiveState(row.state)}}</template></el-table-column><el-table-column width="235"><template #default="{row}"><el-button :disabled="bodyLogBusy" text @click="exportBodyArchive(row.id)">{{row.state==='retained-missing'?'导出原意图':'导出元数据'}}</el-button><el-popconfirm title="导出仅含最近 4 MiB / 5000 条。永久删除整份服务器快照且不可恢复？" confirm-button-text="永久删除" cancel-button-text="保留" @confirm="removeBodyArchive(row)"><template #reference><el-button :disabled="bodyLogBusy || bodyIndexStages.length>0 || !exportedBodyArchives.includes(row.id)" text type="danger">删除快照</el-button></template></el-popconfirm></template></el-table-column></el-table>
+          <el-table :data="bodyReport?.events || []" v-loading="bodyReportBusy" max-height="350" empty-text="没有符合筛选条件的规则元数据"><el-table-column label="时间" width="170"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column label="网站标识" min-width="210"><template #default="{row}">{{row.site_id==='unmanaged'?'非受管标识':siteName(row.site_id)}}</template></el-table-column><el-table-column prop="rule_id" label="规则号" width="110"/><el-table-column prop="phase" label="阶段" width="70"/><el-table-column prop="severity" label="级别值" width="80"/><el-table-column label="规则中断标记" width="130"><template #default="{row}">{{row.disruptive_mark?'1':'0'}}</template></el-table-column></el-table><el-pagination v-model:current-page="bodyPage" :page-size="50" :total="bodyReport?.rule_matches || 0" layout="total, prev, pager, next" @current-change="refreshBodyReport()"/>
         </el-tab-pane>
         <el-tab-pane label="名单管理" name="lists">
           <div class="waf-filter"><el-select v-model="listKind" aria-label="名单类型"><el-option v-for="k in listKinds" :key="k.id" :value="k.id" :label="k.name"/></el-select><el-select v-model="listScope" filterable aria-label="名单范围"><el-option label="全部受管站点" value=""/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select></div>

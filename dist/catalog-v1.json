@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-07T11:35:00Z",
+  "generated_at": "2026-10-07T21:10:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -429,25 +429,29 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.0.1",
-      "summary": "独立请求元数据防护工作台：分类规则、站点策略、IPv4/IPv6 名单、URL CC、自定义字面规则、真实防护报表与备份回滚；不含完整请求体检测。",
+      "version": "2.1.0",
+      "summary": "站点规则、名单与 CC；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，表单与 JSON/上传检测、隐私规则命中报表、有界日志及中断恢复；引擎需显式构建与启用。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "nginx-waf",
       "manage_route": "security",
       "capabilities": [
-        "分类规则与观察模式",
+        "分类规则、按站点启停与观察模式",
         "站点独立策略",
         "IPv4/IPv6 与 URL/UA 名单",
         "每站点 IP 与 URL CC 限速",
         "自定义字面匹配规则",
         "真实日志筛选、排行与导出",
         "安全配置导入与预览",
-        "配置备份、修订冲突检查与重载探针"
+        "配置备份、修订冲突检查与重载探针",
+        "独立请求体引擎与固定开源 CRS",
+        "表单、嵌套 JSON 与上传体检测",
+        "数值规则命中日志与同 inode 轮转",
+        "未提交索引与缺失快照显式恢复"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.0.1/manifest.json",
-      "sha256": "4683ac123d82134f81fb70940062ce1ab72402f242a97b705f46a9b2f4cb2b41"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.1.0/manifest.json",
+      "sha256": "32d70c4385115079f8045023a0676953da4b6ce9e69c791d40fc4c02e5205827"
     },
     {
       "id": "openlitespeed",
@@ -1077,8 +1081,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.1.1",
-      "summary": "浏览器 PV/UV、会话旅程、来源、热图与性能；启停自动应用对应网站采集代理，备份、校验及失败回滚；需支持 2.1 的面板，HTML 标签仍需模板接入",
+      "version": "2.2.0",
+      "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；启停自动配置网站同源代理并校验回滚，HTML 标签仍需模板接入；需支持 2.2 的面板",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1092,12 +1096,14 @@
         "入口和离开页面",
         "页面与来源分布",
         "点击坐标热图",
-        "页面性能 p75",
+        "页面性能 p75 与官方标准 INP",
+        "SPA 路由页面访问",
+        "2–8 步有界顺序转化漏斗",
         "保留期和容量上限",
         "站点隔离与报告导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.1.1/manifest.json",
-      "sha256": "35c095521b6824710b80aa393df28e2634a21da384ae46b5d01a525d14f71323"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.2.0/manifest.json",
+      "sha256": "31a2c21ea430ce7aa6cfc4f3bbcb867ef3be0ab2e35d18bd1b6523cfec1c7b8a"
     },
     {
       "id": "website-statistics-v2",

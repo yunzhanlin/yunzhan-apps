@@ -14,6 +14,27 @@ import (
 )
 
 func (s *Service) siteArchiveRoutes(m *http.ServeMux) {
+	// Advisory preflight avoids queuing a known no-mutation rejection as a
+	// failed lifecycle job. ArchiveSite repeats its guard under the same lock.
+	m.HandleFunc("GET /v1/sites/{id}/archive-check", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if !core.ValidID(id) || len(r.URL.Query()) != 0 {
+			respond(w, 400, map[string]string{"error": "网站归档预检标识或参数无效"})
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		finish, err := s.lockWAFSiteMutation()
+		if err == nil {
+			defer finish()
+			err = s.wafSiteArchiveReference(id)
+		}
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		respond(w, 200, map[string]any{"site_id": id, "waf_reference_clear": true, "no_site_files_changed": true})
+	})
 	m.HandleFunc("POST /v1/sites/{id}/archive", func(w http.ResponseWriter, r *http.Request) {
 		var in core.SiteArchiveRequest
 		if !readJSON(w, r, &in) {
@@ -38,6 +59,14 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 	result := core.ApplyResult{Status: "archived", Restored: true, Steps: []core.Step{}}
 	add := func(message string) {
 		result.Steps = append(result.Steps, core.Step{Time: core.Now(), Message: message})
+	}
+	finishWAF, wafErr := s.lockWAFSiteMutation()
+	if wafErr != nil {
+		return result, wafErr
+	}
+	defer finishWAF()
+	if err := s.wafSiteArchiveReference(in.Site.ID); err != nil {
+		return result, err
 	}
 	unlock, lockErr := s.lockRuntimeUse()
 	if lockErr != nil {

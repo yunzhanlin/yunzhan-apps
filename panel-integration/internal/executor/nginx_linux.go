@@ -167,6 +167,14 @@ func RecoverNginx() error {
 	return nil
 }
 func NginxCommand(mode string) error {
+	if mode == "test" || mode == "start" {
+		// Existing packaged Nginx ExecStartPre already goes through this CLI.
+		// Cold recovery therefore also covers upgrades whose old drop-in was
+		// preserved, without depending on a newly enabled optional unit.
+		if err := RecoverWAFConfiguration(); err != nil {
+			return err
+		}
+	}
 	lock, lockErr := runtimeUseLock()
 	if lockErr != nil {
 		return lockErr

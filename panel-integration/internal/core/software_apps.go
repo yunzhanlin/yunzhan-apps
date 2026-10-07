@@ -59,7 +59,7 @@ type WAFEventsPage struct {
 }
 
 var softwareAppCatalog = []SoftwareAppCatalogItem{
-	{ID: "nginx-waf", Family: "waf", Name: "Nginx 请求防火墙", Category: "security", Version: WAFVersion, Description: "独立防护工作台：站点策略、分类规则、IP/URL/UA 名单、CC、自定义字面规则与攻击日志", Source: "云栈独立开源规则", Capabilities: []string{"分类防护规则", "IPv4/IPv6 名单", "站点独立策略", "单 URL CC", "攻击报表", "Nginx 校验与回滚"}, Defaults: map[string]any{"profile": "balanced", "rate_per_second": 20}},
+	{ID: "nginx-waf", Family: "waf", Name: "Nginx 请求防火墙", Category: "security", Version: WAFVersion, Description: "独立防护工作台：站点策略、名单与 CC；可核验的独立请求体引擎、开源 CRS、隐私日志及中断恢复", Source: "云栈独立规则与可分发开源 ModSecurity / OWASP CRS", Capabilities: []string{"分类防护规则", "IPv4/IPv6 名单", "站点独立策略", "单 URL CC", "独立请求体引擎", "开源 CRS", "规则命中报表", "有界日志及恢复", "Nginx 校验与回滚"}, Defaults: map[string]any{"profile": "balanced", "rate_per_second": 20}},
 	{ID: "system-hardening", Family: "hardening", Name: "系统基线加固", Category: "security", Version: "1.0", Description: "固化链接、ptrace、内核日志与网络重定向等内核参数，支持偏差检测与恢复", Source: "面板内置 Debian sysctl 基线", Capabilities: []string{"内核参数预设", "实际值核对", "卸载恢复原值", "配置偏差告警"}, Defaults: map[string]any{"profile": "baseline"}},
 	{ID: "intrusion-prevention", Family: "intrusion", Name: "SSH 防入侵", Category: "security", Version: "1.0", Description: "使用 Debian Fail2ban 的 systemd 日志后端保护 SSH，并保留面板现有解封与封禁查询", Source: "Debian 签名仓库 Fail2ban", Capabilities: []string{"SSHD Jail", "尝试窗口与封禁时长", "服务状态", "封禁 IP 查询与解封"}, Defaults: map[string]any{"max_retry": 5, "find_time_minutes": 10, "ban_time_minutes": 60}},
 }
@@ -140,6 +140,9 @@ func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, e
 			return nil, e
 		}
 		if _, advanced := v["policy"]; !advanced {
+			if _, body := v["body"]; body {
+				return nil, errors.New("请求体策略必须同时提交完整 policy 配置和当前修订号")
+			}
 			return map[string]any{"profile": cfg.Profile, "rate_per_second": cfg.Rate}, nil
 		}
 		return WAFSettings(cfg), nil
