@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps15-linux-amd64.tar.gz",
-    "archive_sha256": "55bdf1f2b4b60c50170575726a5671c975818be621330d9d38a66b33e05390ad",
-    "frozen_inputs_sha256": "3807eb5f903d93a0f326b6c9e65ff2e23558cdd2d2fc11d02dcbafa9f6cf17a1"
+    "archive": "panel-0.1.0-dev.proapps16-linux-amd64.tar.gz",
+    "archive_sha256": "7f672fb9c41e0d268a487061e8c443c2c241afb61f084f2f4cf5453f6b06509f",
+    "frozen_inputs_sha256": "981eada9602297fa39a049bcc052e386854439913499edc3ba77273db3b340a2"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -447,7 +447,7 @@
     "web/src/MonitoringManager.vue": "450f0a3a1599818baa6d00207c7deecd8b484d78c2887bb06b950412f43a4971",
     "web/src/NodeManager.vue": "67d92769114cc65c9a27b424a3e58f0bab1ac9fe3a3f41a744aef9c861de95dd",
     "web/src/NotificationManager.vue": "5c3b5c84ab84c390009c6a5baaf7bf60fcc36f48e948d30c57ab231e493471e2",
-    "web/src/OutboundNotifications.vue": "aa969442116567214dcae0869940558f589b650a01ba90a17e154851ef72abc6",
+    "web/src/OutboundNotifications.vue": "794bfb2a6e940af93fd4079e3aa0fb20671328e62014eef445b4e87817fed8d2",
     "web/src/PHPExtensionManager.vue": "c18910703385298fc759f2189820001879dd3b83bd6aeb13a64ff0ba795d4de4",
     "web/src/PHPWorkerManager.vue": "377ca08d95755c19ddeb259b5199a945458c673268dc3f3f1139e7890c276a71",
     "web/src/PanelAccessManager.vue": "4951fc8eed6c360655dfb71ad6823753127c9c54182fd8625f5604406ad306e0",

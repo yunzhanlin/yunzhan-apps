@@ -98,7 +98,7 @@ defineExpose({ refresh });
     <div class="outbound-footer"><span>最多 8 个通道 · 最多 6 次自动尝试 · 配置变更会取消旧队列</span><span v-if="workerCheckedAt">后台检查：{{ time(workerCheckedAt) }}</span></div>
     <details class="protocol"><summary>接收端接入与可靠性说明</summary><p>外部地址使用 HTTPS；HTTP 仅允许显式回环地址用于本机集成。请求为 JSON，最大 4 KiB，不转发任务输出、文件名、凭据或文件内容。</p><p>请求头包含 X-Yunzhan-Delivery-ID、X-Yunzhan-Timestamp、X-Yunzhan-Signature。签名为 sha256= + HMAC-SHA256(密钥, 时间戳 + "." + 推送标识 + "." + 原始请求体) 的十六进制值。接收端需校验签名、限制时间戳偏差，并以推送标识去重。</p><p>2xx 才记为送达；网络错误、408、429、5xx 自动退避重试，遵守最长 1 小时的 Retry-After。重启可恢复未完成任务，采用至少一次投递；接收端收到后应立即返回 2xx。每通道待发送上限 1000 条，总历史上限 10000 条；满额时显示错误，不跳过事件。成功与已取消记录保留 90 天，失败记录不静默删除。</p><p>文件同步的普通成功不推送；仅冲突或失败推送。修改或重新启用通道只发送新事件，不补发停用期间的通知。站内通知策略仍决定资源、任务及远端备份事件是否生成。</p></details>
   </section>
-  <el-dialog v-model="editor" :title="draft.id ? '修改推送通道' : '新建推送通道'" width="min(600px, 94vw)" :close-on-click-modal="!saving" :close-on-press-escape="!saving" @closed="clearCredentials">
+  <el-dialog v-model="editor" class="outbound-dialog" align-center :title="draft.id ? '修改推送通道' : '新建推送通道'" width="min(600px, 94vw)" :close-on-click-modal="!saving" :close-on-press-escape="!saving" @closed="clearCredentials">
     <el-form label-position="top" @submit.prevent="save">
       <el-form-item label="通道名称"><el-input v-model="draft.name" maxlength="60" aria-label="推送通道名称" /></el-form-item>
       <el-form-item label="Webhook 地址"><el-input v-model="draft.url" :placeholder="draft.id ? '留空保留现有地址；完整地址不会回显' : 'https://receiver.example/webhook'" autocomplete="off" aria-label="Webhook 地址" /></el-form-item>
@@ -109,7 +109,7 @@ defineExpose({ refresh });
     </el-form>
     <template #footer><el-button :disabled="saving" @click="editor = false">取消</el-button><el-button type="primary" :loading="saving" @click="save">保存通道</el-button></template>
   </el-dialog>
-  <el-dialog v-model="history" :title="(selected?.name || '') + ' · 发送记录'" width="min(1080px, 96vw)">
+  <el-dialog v-model="history" class="outbound-dialog" align-center :title="(selected?.name || '') + ' · 发送记录'" width="min(1080px, 96vw)">
     <div class="history-heading"><p>最近 100 条。自动重试沿用同一推送标识，避免接收端重复处理。</p><el-button :loading="historyLoading" @click="refreshHistory">刷新记录</el-button></div>
     <el-table :data="deliveries" empty-text="暂无发送记录" v-loading="historyLoading">
       <el-table-column label="时间 / 推送标识" min-width="215"><template #default="{ row }">{{ time(row.created_at) }}<small class="host delivery-id">{{ row.id }}</small></template></el-table-column>
@@ -123,6 +123,9 @@ defineExpose({ refresh });
 </template>
 
 <style scoped>
+:global(.outbound-dialog) { max-height: calc(100dvh - 32px); display: flex; flex-direction: column; }
+:global(.outbound-dialog .el-dialog__body) { min-height: 0; overflow-y: auto; }
+:global(.outbound-dialog .el-dialog__header),:global(.outbound-dialog .el-dialog__footer) { flex-shrink: 0; }
 .outbound-card { padding: 18px; }
 .outbound-heading,.outbound-footer,.history-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .outbound-heading { margin-bottom: 16px; flex-wrap: wrap; }
