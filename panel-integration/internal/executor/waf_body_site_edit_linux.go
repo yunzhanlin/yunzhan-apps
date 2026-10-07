@@ -6,6 +6,7 @@ import (
 	"errors"
 	"local/panel/internal/core"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,7 +15,9 @@ import (
 func (s *Service) lockWAFSiteMutation() (func(), error) {
 	_, pendingErr := os.Lstat(s.wafPendingPath())
 	_, manifestErr := os.Lstat(s.softwareManifestPath("nginx-waf"))
-	if errors.Is(pendingErr, os.ErrNotExist) && errors.Is(manifestErr, os.ErrNotExist) {
+	_, lbPendingErr := os.Lstat(s.loadBalancePendingPath())
+	_, lbManifestErr := os.Lstat(filepath.Join(s.moduleDir("load-balance"), "installed.json"))
+	if errors.Is(pendingErr, os.ErrNotExist) && errors.Is(manifestErr, os.ErrNotExist) && errors.Is(lbPendingErr, os.ErrNotExist) && errors.Is(lbManifestErr, os.ErrNotExist) {
 		return func() {}, nil
 	}
 	lock, err := s.lockWAFConfiguration()
@@ -24,6 +27,10 @@ func (s *Service) lockWAFSiteMutation() (func(), error) {
 	if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
 		lock.Close()
 		return nil, errors.New("防火墙存在未完成恢复事务，请先安全恢复，再修改或停用网站")
+	}
+	if _, err := os.Lstat(s.loadBalancePendingPath()); !errors.Is(err, os.ErrNotExist) {
+		lock.Close()
+		return nil, errors.New("负载均衡存在未完成恢复事务，请先安全恢复，再修改网站")
 	}
 	return func() { _ = lock.Close() }, nil
 }

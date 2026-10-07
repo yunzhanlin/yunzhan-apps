@@ -76,7 +76,7 @@ function canExecutePHP(action: string) {
   return true;
 }
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : form.value.resource_id);
+const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "load-balance" ? form.value.domain : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function clearWriteOnlyFields() {
@@ -126,6 +126,7 @@ const labels: Record<string, string> = {
   save: "保存入口",
   probe: "健康检测",
   remove: "移除入口",
+  recover: "恢复中断入口事务",
   terminate: "终止所选受管进程",
   create: "创建",
   update: "更新",
@@ -220,7 +221,7 @@ async function show(id: string) {
       read_only: true,
       auto_restore: false,
       realtime: false,
-      nodes: [{ address: "127.0.0.1:21001", weight: 1, backup: false }],
+      nodes: [{ address: "127.0.0.1:21001", weight: 1, backup: false }, { address: "127.0.0.1:21002", weight: 1, backup: false }],
       site_ids: [],
       excludes: [],
       status_code: 0,
@@ -259,7 +260,7 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
-  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? "entry" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -278,7 +279,7 @@ function selected(row: Record<string, any>) {
     if (!row.state) { form.value.resource_id = ""; form.value.expected_revision = 0; selectedPlanID.value = ""; }
   }
   if (row.revision !== undefined) {
-    selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : row.resource_id || row.id;
+    selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : definition.value?.id === "load-balance" ? row.domain : row.resource_id || row.id;
     form.value.expected_revision = row.revision;
   }
   if (row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || "")) form.value.expected_sha = row.after || "";
@@ -313,6 +314,12 @@ async function execute(action: string) {
       inputBody(action),
     );
     setReport(result);
+    if (definition.value.id === "load-balance" && action === "save") {
+      form.value.expected_revision = (result as any).revision;selectedPlanID.value = form.value.domain;
+    }
+    if (definition.value.id === "load-balance" && action === "remove") {
+      form.value.expected_revision = 0;selectedPlanID.value = "";
+    }
     if (definition.value.id === "nfs-manager" && report.value?.config) {
       form.value.bind_address=report.value.config.bind_address;form.value.port=report.value.config.port;
       form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";form.value.confirm="";
@@ -352,6 +359,7 @@ async function execute(action: string) {
     if (
       [
         "create",
+        "save",
         "update",
         "delete",
         "start",
@@ -361,6 +369,7 @@ async function execute(action: string) {
         "unmount",
         "add",
         "remove",
+        "recover",
         "revoke",
         "schedule",
         "run-plan",
@@ -386,6 +395,11 @@ async function execute(action: string) {
     }
     if (definition.value.id === "nfs-manager" && report.value?.config) {
       form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";
+    }
+    if (definition.value.id === "load-balance" && Array.isArray(report.value?.entries)) {
+      const entry = report.value.entries.find((row: Record<string, any>) => row.domain === selectedPlanID.value);
+      form.value.expected_revision=entry?.revision || 0;
+      if (!entry) selectedPlanID.value="";
     }
     if (definition.value.id === "user-manager" && ["create", "update", "delete"].includes(action)) {
       const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);

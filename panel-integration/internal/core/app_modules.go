@@ -98,7 +98,7 @@ func AppModules() []AppModuleDefinition {
 		{"daily-report", "每日运维报告", []string{"run"}, nil},
 		{"website-statistics-v2", "网站统计 v2", []string{"run"}, []AppModuleField{site}},
 		{"enterprise-tamper-proof", "企业网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path, {"auto_restore", "自动恢复已备份文件", "boolean"}}},
-		{"load-balance", "负载均衡", []string{"save", "probe", "remove"}, []AppModuleField{{"domain", "域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}}},
+		{"load-balance", "负载均衡", []string{"run", "save", "probe", "remove", "recover"}, []AppModuleField{{"domain", "小写域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}, {"expected_revision", "入口修订号（选择记录自动填写）", "identity"}}},
 		{"mobile-pwa", "云栈移动端", []string{"run"}, nil},
 		{"apache-waf", "Apache 请求防火墙", []string{"run"}, nil},
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
@@ -287,7 +287,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.4.1"
 		case "daily-report":
 			version = "1.3.1"
-		case "mobile-pwa", "php-code-security":
+		case "mobile-pwa", "php-code-security", "load-balance":
 			version = "1.3.0"
 		case "user-manager":
 			version = "1.3.1"

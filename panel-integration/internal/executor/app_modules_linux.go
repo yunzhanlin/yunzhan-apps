@@ -113,6 +113,20 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	out.Settings, _ = manifest["settings"].(map[string]any)
 	out.Healthy = true
 	out.Detail = "模块已安装，可配置并执行"
+	if id == "load-balance" {
+		if _, err := os.Lstat(s.loadBalancePendingPath()); !errors.Is(err, os.ErrNotExist) {
+			out.Healthy = false
+			out.Detail = "存在待恢复入口事务；未宣称配置已生效"
+			return out
+		}
+		entries, err := s.loadBalanceEntries()
+		if err != nil {
+			out.Healthy = false
+			out.Detail = err.Error()
+			return out
+		}
+		out.Detail = fmt.Sprintf("%d 个回环 HTTP 入口；配置与可信清单一致，节点 TCP 探测不等于应用健康检查", len(entries))
+	}
 	switch id {
 	case "pure-ftpd":
 		v, e := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd")
@@ -200,7 +214,18 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			}
 		}
 		if id == "load-balance" {
-			rows, _ := filepath.Glob(filepath.Join(s.moduleDir(id), "balancers", "*.json"))
+			lock, err := s.lockWAFConfiguration()
+			if err != nil {
+				return err
+			}
+			defer lock.Close()
+			if _, err := os.Lstat(s.loadBalancePendingPath()); !errors.Is(err, os.ErrNotExist) {
+				return errors.New("仍有负载均衡待恢复事务，拒绝卸载")
+			}
+			rows, err := s.loadBalanceEntries()
+			if err != nil {
+				return err
+			}
 			if len(rows) > 0 {
 				return errors.New("仍有负载均衡入口，请先移除")
 			}

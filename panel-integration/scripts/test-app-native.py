@@ -37,7 +37,8 @@ try:
  guest('sudo','systemctl','stop','cloudstack-lb-qa-0')
  assert {get(22000,'/lb.txt') for _ in range(4)}=={'backend-1'}
  assert not module('load-balance','probe',domain='lb-modules.example.test')['nodes'][0]['healthy']
- module('load-balance','remove',domain='lb-modules.example.test');guest('sudo','systemctl','stop','cloudstack-lb-qa-1');pass_app('load-balance','真实轮询分流、节点故障切换、健康探测和入口移除通过')
+ lb=module('load-balance','probe',domain='lb-modules.example.test')
+ module('load-balance','remove',domain='lb-modules.example.test',expected_revision=lb['revision']);guest('sudo','systemctl','stop','cloudstack-lb-qa-1');pass_app('load-balance','真实轮询分流、节点故障切换、TCP 建连探测和修订受控入口移除通过')
  settings=c.api('/sites/'+source['id']+'/settings');body=settings['settings'];body['web_server']='apache'
  preview=c.api('/sites/'+source['id']+'/settings/preview',{'settings':body,'expected_revision':settings['settings_revision']})
  c.wait(c.api('/sites/'+source['id']+'/settings',{'settings':body,'expected_revision':settings['settings_revision'],'expected_config_sha':preview['config_sha']})['job_id'])

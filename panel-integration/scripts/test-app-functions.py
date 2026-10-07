@@ -110,7 +110,9 @@ ftp=ftplib.FTP_TLS(context=ctx);ftp.connect('localhost',2121,timeout=10);ftp.log
   assert not module('load-balance','probe',domain=domain)['nodes'][0]['healthy']
   passed('actual load balancing to both backends, failed-node failover and health probe')
  finally:
-  if saved:module('load-balance','remove',domain=domain)
+  if saved:
+   current=module('load-balance','probe',domain=domain)
+   module('load-balance','remove',domain=domain,expected_revision=current['revision'])
   for unit in units:p.vm('sudo','systemctl','stop',unit,check=False)
 try:
  assert os.environ.get('PANEL_VM','') in ('panel-compat-ubuntu24','panel-store-apps-debian13'),'Never run functional mutations on the user panel'

@@ -30,3 +30,18 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(!a.gaps.some(s=>s.includes('INP')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
+test('load balancing publishes real recovery and permanent revisions without claiming L4 or application health',async()=>{
+ const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
+ const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
+ assert.equal(manifest.version,'1.3.0');
+ assert(manifest.capabilities.some(s=>s.includes('修订')));
+ assert(contract.scenarios.some(s=>s.includes('ABA')));
+ assert(contract.scenarios.some(s=>s.includes('冷启动')));
+ assert(contract.scenarios.some(s=>s.includes('两文件')));
+ assert(contract.boundaries.some(s=>s.includes('127.0.0.1')));
+ assert(contract.boundaries.some(s=>s.includes('512')));
+ assert(contract.boundaries.some(s=>s.includes('不代表 HTTP')));
+ assert(contract.gaps.some(s=>s.includes('TCP/UDP')));
+ assert(contract.gaps.some(s=>s.includes('主动周期')));
+ assert.equal(contracts.commercial_feature_parity_complete,false);
+});

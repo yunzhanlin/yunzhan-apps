@@ -168,6 +168,9 @@ func RecoverNginx() error {
 }
 func NginxCommand(mode string) error {
 	if mode == "test" || mode == "start" {
+		if err := RecoverLoadBalanceConfiguration(); err != nil {
+			return err
+		}
 		// Existing packaged Nginx ExecStartPre already goes through this CLI.
 		// Cold recovery therefore also covers upgrades whose old drop-in was
 		// preserved, without depending on a newly enabled optional unit.
