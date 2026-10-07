@@ -83,7 +83,13 @@ func insertModuleLedgerEvent(ctx context.Context, tx *sql.Tx, event moduleEvent)
 	if err != nil || len(raw) > 4096 {
 		return errors.New("历史摘要超过安全上限")
 	}
-	_, err = tx.ExecContext(ctx, `INSERT OR IGNORE INTO module_events(event_id,created_at,site_id,resource_id,payload) VALUES(?,?,?,?,?)`, event.ID, at.Unix(), event.SiteID, event.ResourceID, string(raw))
+	// Keep sequence numbers monotonic even if retention removes every row.
+	// Consumers use this cursor across process restarts and idle periods.
+	_, err = tx.ExecContext(ctx, `INSERT OR IGNORE INTO module_events(seq,event_id,created_at,site_id,resource_id,payload)
+SELECT MAX(COALESCE((SELECT MAX(seq) FROM module_events),0),COALESCE((SELECT CAST(value AS INTEGER) FROM metadata WHERE key='last-event-sequence'),0))+1,?,?,?,?,?`, event.ID, at.Unix(), event.SiteID, event.ResourceID, string(raw))
+	if err == nil {
+		_, err = tx.ExecContext(ctx, `INSERT INTO metadata(key,value) SELECT 'last-event-sequence',CAST(COALESCE(MAX(seq),0) AS TEXT) FROM module_events WHERE 1 ON CONFLICT(key) DO UPDATE SET value=CAST(MAX(CAST(value AS INTEGER),CAST(excluded.value AS INTEGER)) AS TEXT)`)
+	}
 	return err
 }
 

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-06T09:32:45Z",
+  "generated_at": "2026-10-07T04:29:33Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -70,8 +70,8 @@
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。",
+      "version": "1.3.0",
+      "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -85,10 +85,13 @@
         "每日持久化",
         "按日期历史日报",
         "专用操作流程",
-        "执行历史"
+        "执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.2.0/manifest.json",
-      "sha256": "828aaaba47d161c900bfea428271223cec826d819522e48bcbee88788b373ab9"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/daily-report/1.3.0/manifest.json",
+      "sha256": "a523b4c29d7512d13a3bd23828f45fd3899f833b97e0e87ae2cab57670d2b167"
     },
     {
       "id": "disk-analysis",
@@ -158,8 +161,8 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。",
+      "version": "1.4.0",
+      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -168,25 +171,26 @@
       "capabilities": [
         "HMAC 签名基线",
         "内容备份",
-        "变更检测",
+        "变更检测与监控降级",
         "分钟级自动恢复",
         "实时事件后恢复",
         "策略修订保护",
-        "监控降级状态",
         "365 天有界历史分页",
         "恢复前留存",
-        "专用操作流程",
-        "执行历史"
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.3.0/manifest.json",
-      "sha256": "b38c93ff0414ce37c772455508a2688fc2e338b670250e2c648cd00c269b8d79"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/enterprise-tamper-proof/1.4.0/manifest.json",
+      "sha256": "1d2ea0822b32982887f900cdc1daf7c2946e9720b7254134356a86c7aaed8c50"
     },
     {
       "id": "file-monitor",
       "name": "File monitor",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。",
+      "version": "1.4.0",
+      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -201,18 +205,20 @@
         "动态目录与溢出补查",
         "监听状态与资源降级",
         "365 天有界历史分页",
-        "专用操作流程",
-        "执行历史"
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.3.0/manifest.json",
-      "sha256": "3c88a3d098fd9ff33199ecb2924d802226be36bfb491a06f3ce20bb1c43597da"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/file-monitor/1.4.0/manifest.json",
+      "sha256": "f43f184f376d0694017a495960eaa27218765e58e9a5f37ed91566e2069b6e6a"
     },
     {
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。",
+      "version": "1.4.0",
+      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -220,20 +226,20 @@
       "manage_route": "app-modules",
       "capabilities": [
         "增量同步",
-        "SHA-256 校验",
+        "SHA-256 与逐文件检查点",
         "目标冲突保护",
-        "逐文件检查点",
         "隔离 PHP 网站部署",
         "定时同步计划",
-        "Linux 实时增量同步",
-        "动态目录与溢出补查",
+        "Linux 实时同步与溢出补查",
         "实时同步环拒绝",
         "365 天有界历史分页",
-        "暂停恢复",
-        "计划修订检查"
+        "计划修订与暂停恢复",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.3.0/manifest.json",
-      "sha256": "75447510e4cc32ee3b19b87cb9c0568b00584490397f77701204fbe563211460"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.4.0/manifest.json",
+      "sha256": "75e0fc96263167a2bb488da10c99f3fc88e9d0d10ac106224a17f0026ba38430"
     },
     {
       "id": "load-balance",
@@ -1112,8 +1118,8 @@
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。",
+      "version": "1.4.0",
+      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -1128,11 +1134,13 @@
         "动态目录与溢出补查",
         "策略修订保护",
         "365 天有界历史分页",
-        "专用操作流程",
-        "执行历史"
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.3.0/manifest.json",
-      "sha256": "ee67883221253161cce3add3d04525a07f0472142a3ca521df46f114019e0419"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-tamper-proof/1.4.0/manifest.json",
+      "sha256": "d630c99e661b49163c68ce23fdbd41921cd164a914377d0bbf9cc8f8d59ea059"
     }
   ]
 }

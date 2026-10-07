@@ -2,6 +2,7 @@
 import { formatPanelDateTime } from "./panelTime";
 import { onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
+import OutboundNotifications from "./OutboundNotifications.vue";
 
 interface Settings {
   schedule_failures: boolean;
@@ -84,6 +85,7 @@ onMounted(refresh);
 
 <template>
   <div class="notification-settings-page" v-loading="loading">
+    <OutboundNotifications :api="api" />
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <section class="panel-card notification-settings-card">
       <div class="notification-settings-heading"><div><h2>站内通知</h2><p>选择要记录的运维事件；设置会在当前服务器上保存。</p></div><el-tag type="success">{{ unread }} 条未读</el-tag></div>

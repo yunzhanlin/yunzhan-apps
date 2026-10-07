@@ -204,6 +204,10 @@ func OpenStore(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = s.migrateOutboundNotifications(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = s.migrateRuntimeBundles(); err != nil {
 		db.Close()
 		return nil, err

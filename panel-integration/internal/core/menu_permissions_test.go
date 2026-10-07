@@ -104,6 +104,8 @@ func TestMenuRouteCeilingAndWebsiteScope(t *testing.T) {
 		{admin, "GET", "/api/software/nginx-waf", false}, {admin, "GET", "/api/app-modules/user-manager", false},
 		{admin, "GET", "/api/terminal", false}, {admin, "GET", "/api/account", true},
 		{admin, "GET", "/api/future-route", false}, {admin, "GET", "/api/sites//" + site + "/files", false},
+		{admin, "GET", "/api/notification-channels", false}, {admin, "POST", "/api/notification-channels", false},
+		{viewer, "GET", "/api/notification-channels", false}, {viewer, "POST", "/api/notification-channels/" + site + "/test", false},
 		{viewer, "GET", "/api/sites", true}, {viewer, "GET", "/api/sites/" + site + "/files", true},
 		{viewer, "POST", "/api/sites/" + site + "/files/action", false},
 		{viewer, "GET", "/api/sites/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/files", false},

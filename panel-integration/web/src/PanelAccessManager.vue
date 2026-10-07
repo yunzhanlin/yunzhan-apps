@@ -470,6 +470,7 @@ onBeforeUnmount(() => { accountPassword.value = ""; accountNewPassword.value = "
         <button class="card-action" @click="openNotificationSettings">
           配置通知策略
         </button>
+        <button class="card-action" @click="emit('tab', 'notice')">外部推送与发送记录</button>
       </article>
       <article class="panel-card access-mini-card">
         <div class="reference-card-title">

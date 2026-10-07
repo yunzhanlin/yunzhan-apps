@@ -18,3 +18,10 @@ jobs:
           node-version: 22
       - run: npm test
       - run: git diff --exit-code -- dist
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration/go.mod
+          cache-dependency-path: panel-integration/go.sum
+      - name: Native Linux implementation regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test ./...

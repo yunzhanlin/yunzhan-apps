@@ -295,6 +295,9 @@ func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 	raw, _ := json.Marshal(out)
 	day := time.Now().In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
 	_, e := a.Store.DB.Exec(`INSERT INTO app_daily_reports(day,report,created_at) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET report=excluded.report,created_at=excluded.created_at`, day, string(raw), Now())
+	if e == nil {
+		e = a.Store.QueueDailyNotification(day)
+	}
 	return out, e
 }
 func (a *Server) platformOperation(ctx context.Context, action string, in AppModuleInput) (any, error) {

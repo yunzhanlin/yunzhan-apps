@@ -271,6 +271,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.appDependencyRoutes(m)
 	s.apacheWAFWorkspaceRoutes(m)
+	s.moduleAlertRoutes(m)
 	m.HandleFunc("GET /v1/app-modules/{id}/history", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if _, ok := core.FindAppModule(id); !ok {

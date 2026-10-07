@@ -192,7 +192,7 @@ func requestMenus(r *http.Request) ([]string, bool) {
 		return []string{"schedules"}, false
 	case "terminal":
 		return []string{"terminal"}, false
-	case "panel-access", "notification-settings", "session-policy":
+	case "panel-access", "notification-settings", "notification-channels", "session-policy":
 		return []string{"panel-access"}, false
 	case "audit", "jobs", "notifications":
 		return []string{"audit"}, false

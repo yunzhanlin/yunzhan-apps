@@ -50,6 +50,7 @@ func main() {
 	go core.RunWorker(ctx, store, app.Executor)
 	app.StartAppDailyWorker(ctx)
 	app.StartAnalyticsMaintenance(ctx)
+	app.StartOutboundNotifications(ctx)
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 100 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		<-ctx.Done()

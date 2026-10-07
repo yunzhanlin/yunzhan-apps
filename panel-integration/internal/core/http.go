@@ -37,6 +37,7 @@ type Server struct {
 	analyticsRateMu  sync.Mutex
 	analyticsRates   map[string]analyticsRate
 	analyticsGlobal  analyticsRate
+	outboundMu       sync.Mutex
 }
 type identity struct{ ID, Username, CSRF string }
 
@@ -104,6 +105,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 	a.nodeRoutes(m)
 	a.phpWorkerRoutes(m)
 	a.notificationRoutes(m)
+	a.outboundNotificationRoutes(m)
 	a.sessionPolicyRoutes(m)
 	a.softwareAppRoutes(m)
 	a.appRegistryRoutes(m)
