@@ -289,7 +289,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":
-			version = "1.0.54-compat5"
+			version = "1.0.54-compat6"
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":

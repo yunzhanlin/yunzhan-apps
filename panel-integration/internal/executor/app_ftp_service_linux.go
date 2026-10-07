@@ -44,15 +44,16 @@ type ftpServiceConfig struct {
 	IdleMinutes    int    `json:"idle_minutes"`
 }
 type ftpServiceTransaction struct {
-	ID              string `json:"id"`
-	State           string `json:"state"`
-	OldConfig       []byte `json:"old_config"`
-	OldConfigExists bool   `json:"old_config_exists"`
-	OldPEM          []byte `json:"old_pem"`
-	NextConfigSHA   string `json:"next_config_sha"`
-	NextPEMSHA      string `json:"next_pem_sha"`
-	WasActive       bool   `json:"was_active"`
-	Time            string `json:"time"`
+	ID              string            `json:"id"`
+	State           string            `json:"state"`
+	OldConfig       []byte            `json:"old_config"`
+	OldConfigExists bool              `json:"old_config_exists"`
+	OldPEM          []byte            `json:"old_pem"`
+	NextConfigSHA   string            `json:"next_config_sha"`
+	NextPEMSHA      string            `json:"next_pem_sha"`
+	WasActive       bool              `json:"was_active"`
+	Time            string            `json:"time"`
+	ApplyOwner      *moduleApplyOwner `json:"apply_owner,omitempty"`
 }
 
 func defaultFTPConfig() ftpServiceConfig {
@@ -419,13 +420,41 @@ func RecoverPureFTP() error {
 	_, e = s.recoverFTPRuntime()
 	return e
 }
+func (s *Service) authorizeFTPStart(ctx context.Context) error {
+	dir := s.moduleDir("pure-ftpd")
+	if exists(filepath.Join(dir, "pending-accounts.json")) {
+		return errors.New("FTP 有未完成事务，必须先恢复再启动")
+	}
+	b, e := ftpPrivateRead(filepath.Join(dir, "pending-service.json"), 128<<10)
+	if errors.Is(e, os.ErrNotExist) {
+		return nil
+	}
+	if e != nil {
+		return e
+	}
+	var t ftpServiceTransaction
+	if e = decodeFTPPrivateJSON(b, &t); e != nil || !core.ValidID(t.ID) || t.State != "applying" || !t.WasActive || len(t.NextConfigSHA) != 64 || len(t.NextPEMSHA) != 64 {
+		return errors.New("FTP 未完成事务不能用于启动候选服务，必须先恢复")
+	}
+	for _, item := range []struct {
+		name  string
+		limit int64
+		hash  string
+	}{{"service.json", 16 << 10, t.NextConfigSHA}, {"server.pem", 49152, t.NextPEMSHA}} {
+		data, e := ftpPrivateRead(filepath.Join(dir, item.name), item.limit)
+		if e != nil || core.Hash(string(data)) != item.hash {
+			return errors.New("FTP 候选配置尚未完整保存或被外部修改，拒绝启动")
+		}
+	}
+	return s.authorizeModuleCandidate(ctx, filepath.Join(dir, "service.lock"), t.ApplyOwner)
+}
 func ServePureFTP() error {
 	s := New(Config{})
 	if !s.moduleInstalled("pure-ftpd") {
 		return errors.New("FTP 模块未安装")
 	}
-	if exists(filepath.Join(s.moduleDir("pure-ftpd"), "pending-accounts.json")) || exists(filepath.Join(s.moduleDir("pure-ftpd"), "pending-service.json")) {
-		return errors.New("FTP 有未完成事务，必须先恢复再启动")
+	if e := s.authorizeFTPStart(context.Background()); e != nil {
+		return e
 	}
 	c, e := s.ftpConfig()
 	if e != nil {
@@ -537,7 +566,16 @@ func (s *Service) configureFTP(ctx context.Context, in core.AppModuleInput) (any
 	nextBytes = append(nextBytes, '\n')
 	state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
 	active := strings.TrimSpace(state) == "active"
-	t := ftpServiceTransaction{ID: core.ID(), State: "applying", OldConfig: oldBytes, OldConfigExists: oldExists, OldPEM: oldPEM, NextConfigSHA: core.Hash(string(nextBytes)), NextPEMSHA: core.Hash(string(pemBytes)), WasActive: active, Time: core.Now()}
+	owner, e := currentModuleApplyOwner()
+	if e != nil {
+		return nil, e
+	}
+	if s.Config.SystemRoot == "/" {
+		if e = s.authorizeModuleCandidate(ctx, filepath.Join(s.moduleDir("pure-ftpd"), "service.lock"), owner); e != nil {
+			return nil, e
+		}
+	}
+	t := ftpServiceTransaction{ID: core.ID(), State: "applying", OldConfig: oldBytes, OldConfigExists: oldExists, OldPEM: oldPEM, NextConfigSHA: core.Hash(string(nextBytes)), NextPEMSHA: core.Hash(string(pemBytes)), WasActive: active, Time: core.Now(), ApplyOwner: owner}
 	rows, _ := filepath.Glob(filepath.Join(s.moduleDir("pure-ftpd"), "service-transactions", "*.json"))
 	if len(rows) >= 512 {
 		return nil, errors.New("FTP 配置恢复记录达到 512 条，先安全归档旧备份")

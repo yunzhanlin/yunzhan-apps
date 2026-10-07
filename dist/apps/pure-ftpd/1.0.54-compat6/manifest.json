@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "pure-ftpd",
+  "name": "Pure-FTPd",
+  "category": "deployment",
+  "version": "1.0.54-compat6",
+  "summary": "独立 Pure-FTPd 1.0.54，网站 chroot 与双通道 FTPS；实际账户限速、FTP 软配额、客户端 IPv4/CIDR 和会话限制，支持原子计数、账户事务、配置及运行时失败恢复；不替换系统 FTP 或自动开放防火墙。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pure-ftpd",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "双通道 FTPS 与 chroot",
+    "虚拟账户与密码轮换",
+    "账户上传下载限速",
+    "上传下载",
+    "FTP 容量与数量软配额",
+    "客户端 IPv4/CIDR 访问控制",
+    "双文件失败恢复",
+    "被动端口与 NAT 通告",
+    "系统信任的域名证书",
+    "账户会话与服务连接限额",
+    "真实 TLS、在线事务验证与配置回滚",
+    "独立运行时校验与重启恢复"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pure-ftpd"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

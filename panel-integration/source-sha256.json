@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps20r5-linux-amd64.tar.gz",
-    "archive_sha256": "1daa71a6a0d6631af60510dbdb1961b82e37481ebc5557d4bc1d6004fd39bbae",
-    "frozen_inputs_sha256": "630d90a82965fb8eb308190e9e20ca6842f52c7f14e673d3ecec5d69cb80a922"
+    "archive": "panel-0.1.0-dev.proapps20r6-linux-amd64.tar.gz",
+    "archive_sha256": "042b430a5babd2bf67ea31e7fd11ee69c7d0a3ccf88cce54b7d63c443ac13d5c",
+    "frozen_inputs_sha256": "2d3fe926f8b935d927ac3c7716b3abd63532de2ca75d4daef4c5a745d8bbd769"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -46,7 +46,7 @@
     "internal/core/app_module_history.go": "ca0518634b1b35a7ee609711f089e70731c7062f6f93a282ad077df29566d84e",
     "internal/core/app_module_workspace.go": "a1a42bb17a553e204da5afd930a861c067832e38a657bb81f98cf0b5c6bf29cd",
     "internal/core/app_module_workspace_test.go": "e0a9e07980fc2d832d2b96182ec7c8d0e7216fb2ed9e4a582033036b5f3b114c",
-    "internal/core/app_modules.go": "4572cad5b841173d45bf9fe68bfa93bf53bc9ec5c53678e85f91399de5726bd6",
+    "internal/core/app_modules.go": "3f5ecdd81004129763e6227e6248bd408a03ebe899a2e054e5613387ed8c09a7",
     "internal/core/app_modules_test.go": "d5b5dc97d712f7ed3141de244205acb37685d8de28fa2e826eab80ca4f063baf",
     "internal/core/app_registry.go": "20e3007e7d62c73551e2f4c7ecdd679fef7027eb2af6b7abef167a56244ab604",
     "internal/core/app_registry_compatibility_test.go": "e1e330a7d9a7d64fc4e75d4938a195a709118a7f555c08e84837a61872a788fb",
@@ -190,7 +190,7 @@
     "internal/executor/app_ftp_accounts_linux_test.go": "ac3f8b74de097d92b42fa94e674c1764edca4c143bef04ab220b56c95b291794",
     "internal/executor/app_ftp_runtime_linux.go": "d3303d293ef37c39f6d21cbbdaeed02acc39dac189bc09c77d1ff796747dbe83",
     "internal/executor/app_ftp_runtime_linux_test.go": "4233b818a02554d8d8a91c55ff9b77bba85661a6fd18ef92366295cf996a78df",
-    "internal/executor/app_ftp_service_linux.go": "f656e802da06c6778fc76d440e60cc642fe661adc4e13aaa2f0b0d3339f2db7d",
+    "internal/executor/app_ftp_service_linux.go": "cec889720cac9d0637ea9bbd1ebb544db98e8930d3b33d5a53cc89bf8e9ca9ed",
     "internal/executor/app_ftp_service_linux_test.go": "a51f144bbb64e3d039d722d6f9fb427f4043814edf5c5335cf7d851eeb006371",
     "internal/executor/app_integrity_policies_linux.go": "2e3aa62b4027093307a717713c468cf50e0f786831212ee157463e6949ac8fd7",
     "internal/executor/app_integrity_realtime_linux.go": "341d0af26fa81bdd37026682cb2e0bd7e0e9d5c6f126b03e6699330f420765cc",
@@ -266,6 +266,8 @@
     "internal/executor/metrics_linux.go": "b42af1b6a94c30569148d70ec6759f17262f8d145fbd7d08f33ce36647be9cf8",
     "internal/executor/metrics_linux_test.go": "786010810104f79e97872f79b2b517dc3407835f7466ce6ee519e25667a96cec",
     "internal/executor/metrics_other.go": "31a4e4073c7e3d4df922ff9a07d510bed6a383da56ccd1a8fa4af2e155f5947a",
+    "internal/executor/module_apply_owner_linux.go": "32d50eebdb7a78bee490d93a6722ab4131c2c0fe1ac18829cfc9cba8f8b7a1cc",
+    "internal/executor/module_apply_owner_linux_test.go": "c253b267ff258c9711bc15eef9ff9026daed084c120238535ac2d01b888a6d80",
     "internal/executor/monitor_processes_linux.go": "c6066302aa141145aabe8425db9b1aacacf21b6e9919c2b6cf2fa593e3bf54b7",
     "internal/executor/monitor_processes_linux_test.go": "01500f1c84b45083e9e7ad6fe09a8c588f7728cf45aac1665f8b667f565e24d7",
     "internal/executor/monitor_processes_other.go": "6c349eff17a6ef7b415c4118a616faee4b2431c00e56d8d55897b043ddbe2070",
