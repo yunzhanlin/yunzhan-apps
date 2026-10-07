@@ -117,6 +117,14 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	case "pure-ftpd":
 		v, e := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd")
 		out.Healthy = e == nil && strings.TrimSpace(v) == "active"
+		if config, configErr := s.ftpConfig(); configErr != nil {
+			out.Healthy = false
+		} else if data, _, certificateErr := s.ftpCertificate(config); certificateErr != nil {
+			out.Healthy = false
+		} else if current, readErr := ftpPrivateRead(filepath.Join(s.moduleDir(id), "server.pem"), 49152); readErr != nil || core.Hash(string(current)) != core.Hash(string(data)) {
+			out.Healthy = false
+		}
+		out.Enabled = out.Healthy
 	case "pm2-manager":
 		out.Healthy = s.appDependencyReady(id)
 	case "nfs-manager":
@@ -220,7 +228,38 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			installedAt = at
 		}
 	}
-	return moduleWrite(filepath.Join(s.moduleDir(id), "installed.json"), map[string]any{"id": id, "version": core.SoftwareImplementationVersion(id), "settings": settings, "installed_at": installedAt})
+	manifestPath := filepath.Join(s.moduleDir(id), "installed.json")
+	previous, e := backupFile(manifestPath)
+	if e != nil {
+		return e
+	}
+	if e = moduleWrite(manifestPath, map[string]any{"id": id, "version": core.SoftwareImplementationVersion(id), "settings": settings, "installed_at": installedAt}); e != nil {
+		return e
+	}
+	if id == "pure-ftpd" && action == "install" && !previous.existed {
+		_, e = s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", "panel-pure-ftpd.service")
+		if e == nil {
+			config, configErr := s.ftpConfig()
+			if configErr == nil {
+				data, _, certErr := s.ftpCertificate(config)
+				if certErr == nil {
+					e = s.ftpReady(ctx, config, data)
+				} else {
+					e = certErr
+				}
+			} else {
+				e = configErr
+			}
+		}
+		if e != nil {
+			_, _ = s.Config.Run(context.WithoutCancel(ctx), "/usr/bin/systemctl", "disable", "--now", "panel-pure-ftpd.service")
+			if restoreErr := restoreFiles([]fileBackup{previous}); restoreErr != nil {
+				return errors.New("FTP 首次启动失败，安装记录恢复失败")
+			}
+			return e
+		}
+	}
+	return nil
 }
 
 func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {

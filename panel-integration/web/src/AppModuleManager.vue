@@ -65,9 +65,10 @@ const definition = ref<Definition>(),
   report = ref<Record<string, any>>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
+const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean;status:string}[]>([]);
 const selectedPlanID = ref("");
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : form.value.resource_id);
+const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "pure-ftpd" ? "ftp-service" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function clearWriteOnlyFields() {
@@ -143,6 +144,8 @@ const labels: Record<string, string> = {
   resume: "恢复所选监控",
   "watch-mode": "保存实时监控设置",
   password: "修改 FTP 密码",
+  "service-config": "保存 FTPS 服务配置",
+  "recover-service": "恢复中断的 FTPS 配置",
   archive: "读取历史日报目录",
   report: "读取所选日期报告",
 };
@@ -166,6 +169,7 @@ async function show(id: string) {
   healthy.value = false;
   form.value = {};
   sites.value = [];
+  certificates.value = [];
   selectedPlanID.value = "";
   workspace.value = []; history.value = undefined;
   historyFilter.value = {search: "", from_time: "", to_time: "", site_id: "", resource_id: ""}; historyOffset.value = 0;
@@ -187,6 +191,7 @@ async function show(id: string) {
     if (page.report !== null && page.report !== undefined)
       setReport(page.report);
     if (props.access === undefined || canReadPath(props.access, "/sites")) sites.value = await props.api<typeof sites.value>("/sites");
+    if (id === "pure-ftpd" && (props.access === undefined || canReadPath(props.access, "/certificates"))) certificates.value = await props.api<typeof certificates.value>("/certificates");
     form.value = {
       role: "viewer",
       read_only: true,
@@ -206,6 +211,7 @@ async function show(id: string) {
       memory_mb: 256,
       allow_install_scripts: false,
     };
+    if (id === "pure-ftpd") Object.assign(form.value, {bind_address: "127.0.0.1", port: 2121, passive_start: 30000, passive_end: 30049, passive_address: "127.0.0.1", max_clients: 20, max_per_ip: 4, idle_minutes: 15});
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -217,7 +223,7 @@ async function show(id: string) {
     installed.value &&
     definition.value?.actions.includes("run") &&
     (!(definition.value.fields || []).some((f) => f.kind === "site") ||
-      id === "files-sync") &&
+      id === "files-sync" || id === "pure-ftpd") &&
     id !== "platform-ops"
   )
     await execute("run");
@@ -225,7 +231,7 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
-  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "pm2-manager" ? "control" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -269,6 +275,12 @@ async function execute(action: string) {
       inputBody(action),
     );
     setReport(result);
+    if (definition.value.id === "pure-ftpd" && report.value?.config) {
+      for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
+      form.value.expected_revision = report.value.config.revision;
+      selectedPlanID.value = "ftp-service";
+      form.value.confirm = "";
+    }
     if (definition.value.id === "user-manager" && form.value.menu_ids === undefined && menuCatalog.value.length) roleDefaultMenus();
     // Reports are a distinct management section; parameters remain intact.
     if ((result as any)?.plan?.revision !== undefined) {
@@ -305,12 +317,18 @@ async function execute(action: string) {
         "pause-plan",
         "resume-plan",
         "remove-plan",
+        "service-config",
+        "recover-service",
       ].includes(action) &&
       definition.value.actions.includes("run")
     )
       setReport(
         await props.api(`/app-modules/${definition.value.id}/run`, "POST", {}),
       );
+    if (definition.value.id === "pure-ftpd" && report.value?.config) {
+      for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
+      form.value.expected_revision = report.value.config.revision; selectedPlanID.value = "ftp-service";
+    }
     if (definition.value.id === "user-manager" && ["create", "update", "delete"].includes(action)) {
       const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);
       form.value.expected_revision = selected?.revision || 0;
@@ -522,6 +540,9 @@ defineExpose({ show });
               <el-input v-model="form[field.key]" type="textarea" :rows="4" autocomplete="off" spellcheck="false" placeholder='{"API_KEY":"新值","OLD_KEY":null}' />
               <small>仅写入，不回显。留空保留；null 删除；空字符串设为空值。密文保存，运行器保留 HOST/PORT/PATH/加载器配置。程序自身的日志可能包含敏感信息。</small>
             </div>
+            <el-select v-else-if="field.kind === 'certificate'" v-model="form[field.key]" clearable filterable placeholder="本地默认证书仅供回环连接">
+              <el-option v-for="certificate in certificates" :key="certificate.id" :value="certificate.id" :label="`${certificate.name} · ${certificate.domains.join(', ')} · ${certificate.trusted ? '系统已信任' : '未信任'} · ${certificate.status}`" />
+            </el-select>
             <el-date-picker
               v-else-if="field.kind === 'datetime'"
               v-model="form[field.key]"

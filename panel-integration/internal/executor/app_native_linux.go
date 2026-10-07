@@ -193,7 +193,11 @@ func (s *Service) installPureFTP(ctx context.Context) error {
 	db := filepath.Join(dir, "users.pdb")
 	if !exists(db) {
 		text := filepath.Join(dir, "users.passwd")
-		if e := atomicWrite(text, nil, 0600); e != nil {
+		if !exists(text) {
+			if e := atomicWrite(text, nil, 0600); e != nil {
+				return e
+			}
+		} else if _, e := ftpPrivateRead(text, 1<<20); e != nil {
 			return e
 		}
 		if _, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "mkdb", db, "-f", text); e != nil {
@@ -202,23 +206,81 @@ func (s *Service) installPureFTP(ctx context.Context) error {
 	}
 	cert := filepath.Join(dir, "server.pem")
 	if !exists(cert) {
-		if _, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/openssl", "req", "-x509", "-newkey", "rsa:3072", "-nodes", "-days", "365", "-subj", "/CN=localhost", "-keyout", cert, "-out", cert); e != nil {
+		data, e := generateLocalFTPCertificate()
+		if e != nil {
 			return e
 		}
-		if e := os.Chmod(cert, 0600); e != nil {
+		if e = atomicWrite(cert, data, 0600); e != nil {
 			return e
 		}
 	}
-	returnErr := error(nil)
-	_, returnErr = s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", "panel-pure-ftpd.service")
-	return returnErr
+	return nil
 }
 func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
 	dir := s.moduleDir("pure-ftpd")
 	text, db := filepath.Join(dir, "users.passwd"), filepath.Join(dir, "users.pdb")
 	if action == "run" {
-		out, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "list", "-f", text)
-		return map[string]any{"users": out, "bind": "127.0.0.1:2121", "passive_ports": "30000-30049", "tls_required": true, "certificate": filepath.Join(dir, "server.pem")}, e
+		passwd, e := ftpPrivateRead(text, 1<<20)
+		if e != nil {
+			return nil, e
+		}
+		users, e := ftpPublicUsers(passwd, s.Config.SitesDir)
+		if e != nil {
+			return nil, e
+		}
+		config, e := s.ftpConfig()
+		if e != nil {
+			return nil, e
+		}
+		_, cert, certErr := s.ftpCertificate(config)
+		state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
+		enabled, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-enabled", "panel-pure-ftpd.service")
+		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "recovery_pending": exists(filepath.Join(dir, "pending-service.json"))}
+		if certErr != nil {
+			report["certificate_error"] = certErr.Error()
+		}
+		return report, nil
+	}
+	if action == "service-config" {
+		return s.configureFTP(ctx, in)
+	}
+	if action == "recover-service" {
+		lock, e := s.lockFTP()
+		if e != nil {
+			return nil, e
+		}
+		defer lock.Close()
+		active, e := s.recoverFTPTransaction()
+		if e != nil {
+			return nil, e
+		}
+		if active {
+			if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "restart", "panel-pure-ftpd.service"); e != nil {
+				return nil, e
+			}
+		}
+		return map[string]any{"ok": true, "recovered": true, "was_active": active}, nil
+	}
+	if action == "start" || action == "stop" || action == "probe" {
+		if action == "stop" {
+			_, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", "panel-pure-ftpd.service")
+			return map[string]any{"ok": e == nil, "service_active": false, "accounts_retained": true}, e
+		}
+		config, e := s.ftpConfig()
+		if e != nil {
+			return nil, e
+		}
+		data, _, e := s.ftpCertificate(config)
+		if e != nil {
+			return nil, e
+		}
+		if action == "start" {
+			if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "enable", "--now", "panel-pure-ftpd.service"); e != nil {
+				return nil, e
+			}
+		}
+		e = s.ftpReady(ctx, config, data)
+		return map[string]any{"ok": e == nil, "tls_verified": e == nil, "credentials_sent": false}, e
 	}
 	if !moduleResourceID.MatchString(in.Username) {
 		return nil, errors.New("FTP 用户名需为 3–32 位小写标识")

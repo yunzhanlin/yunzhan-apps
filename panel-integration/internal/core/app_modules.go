@@ -61,6 +61,14 @@ type AppModuleInput struct {
 	MemoryMB            int                `json:"memory_mb,omitempty"`
 	EnvironmentPatch    map[string]*string `json:"environment_patch,omitempty"`
 	AllowInstallScripts bool               `json:"allow_install_scripts,omitempty"`
+	BindAddress         string             `json:"bind_address,omitempty"`
+	PassiveAddress      string             `json:"passive_address,omitempty"`
+	PassiveStart        int                `json:"passive_start,omitempty"`
+	PassiveEnd          int                `json:"passive_end,omitempty"`
+	CertificateID       string             `json:"certificate_id,omitempty"`
+	MaxClients          int                `json:"max_clients,omitempty"`
+	MaxPerIP            int                `json:"max_per_ip,omitempty"`
+	IdleMinutes         int                `json:"idle_minutes,omitempty"`
 	Enabled             bool               `json:"enabled"`
 	ExpectedRevision    int64              `json:"expected_revision,omitempty"`
 	Limit               int                `json:"limit,omitempty"`
@@ -121,7 +129,8 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"})
 		case "pure-ftpd":
-			definitions[i].Actions = append(definitions[i].Actions, "password")
+			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"bind_address", "本机监听 IPv4（0.0.0.0 为全部接口）", "text"}, AppModuleField{"port", "FTPS 控制端口", "number"}, AppModuleField{"passive_start", "被动端口起始", "number"}, AppModuleField{"passive_end", "被动端口结束", "number"}, AppModuleField{"passive_address", "被动模式通告 IPv4（NAT 使用公网 IP）", "text"}, AppModuleField{"certificate_id", "域名 TLS 证书", "certificate"}, AppModuleField{"domain", "FTPS 证书域名", "text"}, AppModuleField{"max_clients", "最大并发连接数", "number"}, AppModuleField{"max_per_ip", "单 IP 最大连接数", "number"}, AppModuleField{"idle_minutes", "空闲超时（分钟）", "number"}, AppModuleField{"expected_revision", "服务配置修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "非回环监听确认（EXPOSE FTPS IP:端口）", "text"})
 		case "pm2-manager":
 			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
@@ -227,6 +236,18 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		} else if id == "daily-report" {
 			out, err = a.dailyReportOperation(ctx, action, in)
 		} else {
+			if id == "pure-ftpd" && action == "service-config" && in.CertificateID != "" {
+				material, certificateErr := a.Store.CertificateMaterial(in.CertificateID)
+				if certificateErr != nil {
+					fail(w, 409, "FTP 证书不可读取，请先在证书管理中添加有效证书")
+					return
+				}
+				var installed Certificate
+				if certificateErr = a.Executor.Call(ctx, "POST", "/v1/certificates/install", material, &installed); certificateErr != nil {
+					fail(w, 409, certificateErr.Error())
+					return
+				}
+			}
 			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, in, &out)
 		}
 		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
@@ -260,7 +281,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":
-			version = "1.0.50-compat3"
+			version = "1.0.50-compat4"
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":

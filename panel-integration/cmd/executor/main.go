@@ -51,6 +51,8 @@ func main() {
 	appDependencies := flag.String("install-app-dependencies", "", "install fixed module dependencies")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
 	pm2Deploy := flag.String("pm2-deploy", "", "deploy locked dependencies for one managed PM2 application")
+	ftpServe := flag.Bool("serve-ftp", false, "serve the fixed managed FTPS configuration")
+	ftpRecover := flag.Bool("recover-ftp", false, "recover interrupted FTPS configuration before boot")
 	nfsMount := flag.String("mount-nfs", "", "mount a managed NFS share")
 	nfsUnmount := flag.String("unmount-nfs", "", "unmount a managed NFS share")
 	flag.Parse()
@@ -68,6 +70,18 @@ func main() {
 	}
 	if os.Geteuid() != 0 {
 		log.Fatal("executor must run under its root systemd unit")
+	}
+	if *ftpRecover {
+		if e := executor.RecoverPureFTP(); e != nil {
+			log.Fatal(e)
+		}
+		return
+	}
+	if *ftpServe {
+		if e := executor.ServePureFTP(); e != nil {
+			log.Fatal(e)
+		}
+		return
 	}
 	for _, operation := range []struct {
 		id  string
