@@ -287,8 +287,10 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.4.1"
 		case "daily-report":
 			version = "1.3.1"
-		case "mobile-pwa", "php-code-security", "load-balance":
+		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
+		case "load-balance":
+			version = "1.3.1"
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":

@@ -455,11 +455,24 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 }
 
 func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
-	var in struct {
-		ExpectedVersion string `json:"expected_version"`
-		ExpectedSHA256  string `json:"expected_sha256"`
-	}
+	var in registryUpdateInput
 	if !decode(w, r, &in) {
+		return
+	}
+	key := r.Header.Get("Idempotency-Key")
+	replay := func() bool {
+		prior, found, err := a.Store.registryUpdateReplay(r.PathValue("id"), u.ID, key, in)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return true
+		}
+		if found {
+			send(w, 202, map[string]string{"job_id": prior.JobID, "provider": prior.Provider})
+			return true
+		}
+		return false
+	}
+	if replay() {
 		return
 	}
 	q := r.URL.Query()
@@ -467,15 +480,24 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 	r.URL.RawQuery = q.Encode()
 	catalog, source, err := a.loadAppCatalog(15*time.Second, r)
 	if err != nil || source.Stale {
+		if replay() {
+			return
+		}
 		fail(w, 503, "无法确认仓库最新版本，未执行更新")
 		return
 	}
 	item, ok := appcatalog.Find(catalog, r.PathValue("id"))
 	if !ok {
+		if replay() {
+			return
+		}
 		fail(w, 404, "应用不在签名目录中")
 		return
 	}
 	if in.ExpectedVersion != item.Version || in.ExpectedSHA256 != item.SHA256 {
+		if replay() {
+			return
+		}
 		fail(w, 409, "应用目录已变化，请刷新后重试")
 		return
 	}
@@ -488,22 +510,32 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 		}
 	}
 	if !status.StateKnown || !status.Installed || !status.UpdateAvailable || !status.UpdateSupported {
+		// The first request may commit and finish after our initial lookup.
+		if replay() {
+			return
+		}
 		fail(w, 409, "当前应用不能自动更新: "+status.UpdateDetail)
 		return
 	}
 	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
 	if err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 409, err.Error())
 		return
 	}
 	if err = appCompatible(manifest); err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 409, err.Error())
 		return
 	}
 	job, scope := "", manifest.Delivery.Target
 	switch manifest.Delivery.Provider {
 	case "panel-module":
-		job, err = a.Store.queueSoftwareAction(scope, "update", nil, manifest.Version, r.Header.Get("Idempotency-Key"), u.Username)
+		job, err = a.Store.queueSoftwareActionBound(scope, "update", nil, manifest.Version, key, u.Username, a.Store.bindRegistryUpdate(item, scope, key, u.ID))
 	case "runtime":
 		if scope == "docker-auto" {
 			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
@@ -513,17 +545,13 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 			}
 			scope = releases[0].ID
 		}
-		job, err = a.Store.QueueInstall(scope, r.Header.Get("Idempotency-Key"), u.Username)
+		job, err = a.Store.queueInstallBound(scope, key, u.Username, a.Store.bindRegistryUpdate(item, scope, key, u.ID))
 	default:
 		fail(w, 409, "该类型暂不允许自动替换，请核对项目与迁移方案")
 		return
 	}
 	if err != nil {
 		fail(w, 409, err.Error())
-		return
-	}
-	if err = a.Store.trackRegistryJob(item, scope, job); err != nil {
-		fail(w, 503, "更新任务已提交，但版本记录未保存，请核对任务")
 		return
 	}
 	_ = a.Store.Audit(u.Username, "app-registry.update", item.ID+"@"+item.Version, "verified-and-queued")

@@ -181,6 +181,12 @@ func (s *Store) QueueSoftwareAction(id, action string, settings map[string]any, 
 }
 
 func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, version, key, actor string) (string, error) {
+	return s.queueSoftwareActionBound(id, action, settings, version, key, actor, nil)
+}
+
+// The registry binding is committed with the job, never after an executor can
+// finish it. Other lifecycle callers retain their existing queue contract.
+func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]any, version, key, actor string, bind func(*sql.Tx, string, bool) error) (string, error) {
 	if _, ok := findSoftwareApp(id); !ok {
 		return "", errors.New("软件不在受管目录中")
 	}
@@ -235,7 +241,12 @@ func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, 
 		if oldTarget != id || oldKind != kind || oldPayload != string(payload) {
 			return "", errors.New("幂等键已被不同请求使用")
 		}
-		return oldID, nil
+		if bind != nil {
+			if e = bind(tx, oldID, true); e != nil {
+				return "", e
+			}
+		}
+		return oldID, tx.Commit()
 	}
 	if !errors.Is(e, sql.ErrNoRows) {
 		return "", e
@@ -246,6 +257,11 @@ func (s *Store) queueSoftwareAction(id, action string, settings map[string]any, 
 	}
 	if _, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,?,?,'queued',?)`, actor, "software."+action, id, Now()); e != nil {
 		return "", e
+	}
+	if bind != nil {
+		if e = bind(tx, job, false); e != nil {
+			return "", e
+		}
 	}
 	return job, tx.Commit()
 }

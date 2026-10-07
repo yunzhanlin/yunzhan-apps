@@ -101,6 +101,7 @@ func OpenStore(path string) (*Store, error) {
  CREATE TABLE IF NOT EXISTS audit_logs(id INTEGER PRIMARY KEY AUTOINCREMENT, actor TEXT NOT NULL, action TEXT NOT NULL, target TEXT NOT NULL, result TEXT NOT NULL, created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_registry_receipts(app_id TEXT NOT NULL,scope TEXT NOT NULL,version TEXT NOT NULL,sha256 TEXT NOT NULL,target TEXT NOT NULL,updated_at TEXT NOT NULL,PRIMARY KEY(app_id,scope));
  CREATE TABLE IF NOT EXISTS app_registry_pending(job_id TEXT PRIMARY KEY,app_id TEXT NOT NULL,scope TEXT NOT NULL,version TEXT NOT NULL,sha256 TEXT NOT NULL,target TEXT NOT NULL,provider TEXT NOT NULL,created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS app_registry_update_requests(idempotency_key TEXT PRIMARY KEY,actor_id TEXT NOT NULL,app_id TEXT NOT NULL,version TEXT NOT NULL,sha256 TEXT NOT NULL,provider TEXT NOT NULL,scope TEXT NOT NULL,job_id TEXT NOT NULL UNIQUE REFERENCES runtime_jobs(id),created_at TEXT NOT NULL);
  INSERT OR IGNORE INTO schema_migrations VALUES(1, strftime('%Y-%m-%dT%H:%M:%SZ','now'));
  `)
 	if err != nil {

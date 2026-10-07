@@ -83,6 +83,9 @@ func (s *Store) recordInstallation(r runtimecatalog.Release, arch string, commit
 	return tx.Commit()
 }
 func (s *Store) QueueInstall(release, key, actor string) (string, error) {
+	return s.queueInstallBound(release, key, actor, nil)
+}
+func (s *Store) queueInstallBound(release, key, actor string, bind func(*sql.Tx, string, bool) error) (string, error) {
 	runtimeRelease, ok := runtimecatalog.Find(release)
 	if !ok {
 		return "", errors.New("该版本尚未支持安装")
@@ -107,7 +110,12 @@ func (s *Store) QueueInstall(release, key, actor string) (string, error) {
 		if target != release || kind != "install_runtime" {
 			return "", errors.New("幂等键已被不同请求使用")
 		}
-		return id, nil
+		if bind != nil {
+			if e = bind(tx, id, true); e != nil {
+				return "", e
+			}
+		}
+		return id, tx.Commit()
 	}
 	if !errors.Is(e, sql.ErrNoRows) {
 		return "", e
@@ -120,6 +128,11 @@ func (s *Store) QueueInstall(release, key, actor string) (string, error) {
 	_, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'runtime.install',?,'queued',?)`, actor, release, Now())
 	if e != nil {
 		return "", e
+	}
+	if bind != nil {
+		if e = bind(tx, id, false); e != nil {
+			return "", e
+		}
 	}
 	return id, tx.Commit()
 }

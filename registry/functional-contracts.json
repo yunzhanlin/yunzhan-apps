@@ -3,7 +3,7 @@
   "policy": "每项必须通过真实业务操作验证；安装成功、页面可打开、处理器存在均不能单独算功能完成。此文件是验收要求，不是验收通过报告。",
   "commercial_feature_parity_complete": false,
   "references": ["https://www.aapanel.com/docs/Function/Professional.html","https://www.aapanel.com/docs/Function/WAF.html","https://www.aapanel.com/docs/Function/Tutorial/files_sync.html"],
-  "common_checks": ["实际安装与来源校验","真实业务输入和结果核对","状态与失败显示","启停或配置变更实际生效","权限与危险输入拒绝","重启后的策略或数据核对","卸载时保护用户数据"],
+  "common_checks": ["实际安装与来源校验","真实业务输入和结果核对","状态与失败显示","启停或配置变更实际生效","权限与危险输入拒绝","重启后的策略或数据核对","卸载时保护用户数据","签名仓库更新请求身份与任务及版本跟踪在同一事务提交，完成后重试返回原任务，不自动重新执行失败或需核对任务","原请求重放先验证现有权限、CSRF、原用户身份、应用、版本、包摘要和任务内容；完成记录不因目录换版或版本回执整理而丢失"],
   "apps": [
     {"id":"nginx","scenarios":["网站 HTTP/PHP 请求","配置校验与热重载","失败配置恢复"]},
     {"id":"apache","scenarios":["真实虚拟主机请求","PHP 代理","模块和配置检查"]},

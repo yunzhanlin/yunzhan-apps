@@ -33,7 +33,7 @@ test('body WAF and analytics additions keep truthful limits and independent vers
 test('load balancing publishes real recovery and permanent revisions without claiming L4 or application health',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'1.3.0');
+ assert.equal(manifest.version,'1.3.1');
  assert(manifest.capabilities.some(s=>s.includes('修订')));
  assert(contract.scenarios.some(s=>s.includes('ABA')));
  assert(contract.scenarios.some(s=>s.includes('冷启动')));
