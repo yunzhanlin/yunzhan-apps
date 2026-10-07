@@ -565,7 +565,21 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 			out.Detail = "存在未完成防火墙配置事务，需恢复后重新核对；未确认新规则生效"
 			return out
 		}
-		plan, configErr := s.planWAFConfiguration(cfg, false)
+		// A panel program upgrade does not rewrite installed application state.
+		// Accept only the byte-identical, no-body 2.0.1 metadata implementation
+		// as a migratable old install; all site files, manifest, syntax and the
+		// real live old fingerprint must still pass. Never bypass health merely
+		// because a newer catalog version exists.
+		checkedVersion := core.WAFVersion
+		legacy := manifest.Version == "2.0.1" && cfg.Body == nil
+		if legacy {
+			checkedVersion = manifest.Version
+			if configErr := s.wafLegacyMigrationReferences(cfg); configErr != nil {
+				out.Detail = configErr.Error()
+				return out
+			}
+		}
+		plan, configErr := s.planWAFConfigurationVersion(cfg, false, checkedVersion)
 		if configErr != nil || len(plan) != 0 {
 			out.Detail = "实际规则、网站配置或清单存在偏差；未确认已加载，请预览核对后安全应用"
 			return out
@@ -579,7 +593,7 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 			_, err = s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf)
 		}
 		if err == nil {
-			err = s.verifyWAFReload(ctx, cfg, nginx)
+			err = s.verifyWAFReloadVersion(ctx, cfg, nginx, checkedVersion)
 		}
 		e = err
 		out.Healthy = out.Enabled && e == nil
@@ -588,6 +602,9 @@ func (s *Service) softwareStatus(ctx context.Context, id string) core.SoftwareAp
 		}
 		if out.Healthy {
 			out.Detail = "实际配置与清单一致、Nginx 校验及生效指纹通过；请求体防护仅作用于明确选中且未停用的网站"
+			if legacy {
+				out.Detail = "旧版 2.0.1 元数据规则、网站配置及实际生效指纹通过；可安全更新，未构建或启用请求体引擎"
+			}
 			if cfg.Body != nil {
 				for _, site := range cfg.Body.Sites {
 					if _, active := core.WAFEffectiveBodyPolicy(cfg, site.SiteID); !active {

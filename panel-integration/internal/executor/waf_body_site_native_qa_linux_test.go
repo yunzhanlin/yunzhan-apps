@@ -176,12 +176,12 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// This historical disposable ARM QA fixture was archived before the new
+	// These historical disposable QA fixtures were archived before the new
 	// WAF archive-reference guard existed. Do not weaken the production guard
 	// or mutate its original settings: omit only this exact absent QA reference
 	// from the temporary request-body test draft, then restore original bytes.
 	omittedLegacyQAReference := false
-	legacyQAReference := map[string]string{"arm64": "2aa9219de6c8bc649a671d573a335b76", "amd64": "a89b337822548fe2f237609687fc3b44"}[runtime.GOARCH]
+	legacyQAReference := map[string]string{"arm64": "2aa9219de6c8bc649a671d573a335b76", "amd64": "a5872e670e539eaf43d2edcae99a1013"}[runtime.GOARCH]
 	for i, rule := range cfg.Policy.CCRules {
 		if rule.SiteID == legacyQAReference && !rule.Enabled {
 			if _, err := os.Lstat(filepath.Join(s.Config.ConfDir, rule.SiteID+".conf")); !os.IsNotExist(err) {

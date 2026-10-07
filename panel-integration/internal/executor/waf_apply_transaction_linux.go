@@ -99,6 +99,10 @@ func (s *Service) recoverWAFBeforeMutation(ctx context.Context, nginx string) er
 }
 
 func (s *Service) applyWAFTransaction(ctx context.Context, cfg core.WAFConfig, uninstall bool, nginx string, add func(string)) error {
+	return s.applyWAFTransactionChecked(ctx, cfg, uninstall, nginx, add, nil)
+}
+
+func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFConfig, uninstall bool, nginx string, add func(string), legacy *softwareManifest) error {
 	if !uninstall {
 		if err := s.verifyWAFBodyEngine(cfg); err != nil {
 			return err
@@ -107,6 +111,11 @@ func (s *Service) applyWAFTransaction(ctx context.Context, cfg core.WAFConfig, u
 	changes, err := s.planWAFConfiguration(cfg, uninstall)
 	if err != nil {
 		return err
+	}
+	if legacy != nil {
+		if err := s.verifyWAF201UpgradePlan(*legacy, cfg, changes); err != nil {
+			return err
+		}
 	}
 	backupPath, err := s.backupWAFConfiguration()
 	if err != nil {

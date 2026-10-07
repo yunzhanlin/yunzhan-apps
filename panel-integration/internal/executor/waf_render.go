@@ -13,8 +13,12 @@ import (
 type wafMapEntry struct{ key, value string }
 
 func wafProbeValue(cfg core.WAFConfig) string {
+	return wafProbeValueVersion(cfg, core.WAFVersion)
+}
+
+func wafProbeValueVersion(cfg core.WAFConfig, version string) string {
 	b, _ := json.Marshal(cfg)
-	return core.WAFVersion + ":" + strconv.FormatInt(cfg.Policy.Revision, 10) + ":" + core.Hash(string(b))
+	return version + ":" + strconv.FormatInt(cfg.Policy.Revision, 10) + ":" + core.Hash(string(b))
 }
 
 func wafQuote(value string) string { return strconv.Quote(value) }
@@ -33,8 +37,15 @@ func wafMap(out *strings.Builder, source, name, def string, entries []wafMapEntr
 }
 
 func renderWAFPolicy(cfg core.WAFConfig) (string, string) {
+	return renderWAFPolicyVersion(cfg, core.WAFVersion)
+}
+
+// Version is supplied only by a closed executor migration allowlist, never by
+// a request. Historical rules must be verified with their historical version;
+// arbitrary text replacement could also alter an administrator's rule values.
+func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string) {
 	var http, server strings.Builder
-	http.WriteString("# managed by panel nginx-waf " + core.WAFVersion + "; independently authored metadata rules\n")
+	http.WriteString("# managed by panel nginx-waf " + version + "; independently authored metadata rules\n")
 	// map declares the variable even on a host without managed sites. Site
 	// server blocks assign their immutable ID in rewrite phase before use.
 	wafMap(&http, "$server_name", "panel_waf_site", wafQuote("unmanaged"), nil)
@@ -234,6 +245,6 @@ func renderWAFPolicy(cfg core.WAFConfig) (string, string) {
 	http.WriteString("log_format panel_waf escape=json '{\"time\":\"$time_iso8601\",\"site\":\"$server_name\",\"site_id\":\"$panel_waf_site\",\"ip\":\"$remote_addr\",\"status\":$status,\"method\":\"$request_method\",\"path\":\"$uri\",\"reason\":\"$pw_log_reason\",\"action\":\"$pw_log_action\",\"bad_method\":\"$panel_waf_bad_method\",\"bad_args\":\"$panel_waf_bad_args\",\"bad_uri\":\"$panel_waf_bad_uri\",\"bad_agent\":\"$panel_waf_bad_agent\",\"rate\":\"$limit_req_status\"}';\n")
 	// A dedicated loopback virtual host proves the exact configuration loaded,
 	// including installations whose legacy websites have no health route.
-	fmt.Fprintf(&http, "server { listen 127.0.0.1:19101; server_name panel-waf-check.invalid; access_log off; location = /__panel_waf_check { default_type text/plain; return 200 %s; } location / { return 404; } }\n", wafQuote(wafProbeValue(cfg)))
-	return http.String(), "# managed by panel nginx-waf " + core.WAFVersion + "\nif ($pw_method_block) { return 405; }\nif ($pw_block) { return 403; }\n" + server.String() + "limit_req_status 429;\naccess_log /var/log/nginx/panel-waf.log panel_waf if=$pw_event;\nadd_header X-Panel-WAF $pw_mode always;\nadd_header X-Panel-WAF-Revision " + strconv.FormatInt(cfg.Policy.Revision, 10) + " always;\n"
+	fmt.Fprintf(&http, "server { listen 127.0.0.1:19101; server_name panel-waf-check.invalid; access_log off; location = /__panel_waf_check { default_type text/plain; return 200 %s; } location / { return 404; } }\n", wafQuote(wafProbeValueVersion(cfg, version)))
+	return http.String(), "# managed by panel nginx-waf " + version + "\nif ($pw_method_block) { return 405; }\nif ($pw_block) { return 403; }\n" + server.String() + "limit_req_status 429;\naccess_log /var/log/nginx/panel-waf.log panel_waf if=$pw_event;\nadd_header X-Panel-WAF $pw_mode always;\nadd_header X-Panel-WAF-Revision " + strconv.FormatInt(cfg.Policy.Revision, 10) + " always;\n"
 }

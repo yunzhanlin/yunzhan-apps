@@ -43,6 +43,10 @@ func (s *Service) wafNginxRunning(ctx context.Context, binary string) error {
 }
 
 func (s *Service) verifyWAFReload(ctx context.Context, cfg core.WAFConfig, nginx string) error {
+	return s.verifyWAFReloadVersion(ctx, cfg, nginx, core.WAFVersion)
+}
+
+func (s *Service) verifyWAFReloadVersion(ctx context.Context, cfg core.WAFConfig, nginx, version string) error {
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
 		return nil
 	}
@@ -63,7 +67,7 @@ func (s *Service) verifyWAFReload(ctx context.Context, cfg core.WAFConfig, nginx
 		if e == nil {
 			body, readErr := io.ReadAll(io.LimitReader(res.Body, 1024))
 			res.Body.Close()
-			if readErr == nil && res.StatusCode == 200 && string(body) == wafProbeValue(cfg) {
+			if readErr == nil && res.StatusCode == 200 && string(body) == wafProbeValueVersion(cfg, version) {
 				return nil
 			}
 		}

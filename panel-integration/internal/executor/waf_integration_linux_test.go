@@ -44,7 +44,16 @@ func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string,
 		id := strings.Repeat(string(rune('a'+i)), 32)
 		servers += fmt.Sprintf("server { listen 127.0.0.1:%d; server_name %s; set $panel_waf_site %s; %s root %s; location / { try_files $uri /index.html; } location = /__panel_health_%s { return 200 healthy; } }\n", port, host, id, s, wafQuote(pub), id)
 	}
-	conf := fmt.Sprintf("master_process off; daemon off; pid %s; error_log %s notice; events {worker_connections 64;} http { access_log off; %s %s }", filepath.Join(root, "nginx.pid"), filepath.Join(root, "error.log"), h, servers)
+	// Debian/Ubuntu binaries have absolute compiled-in temporary directories.
+	// Even `-t -p <private>` may chown them during configuration validation.
+	// Pin all five temp roots, not just client bodies; the fixture must never
+	// modify a live server's /var/lib/nginx paths. The immutable-root QA runner
+	// independently fails with EROFS if another host write sneaks in.
+	temps := ""
+	for _, kind := range []string{"client_body", "proxy", "fastcgi", "uwsgi", "scgi"} {
+		temps += fmt.Sprintf("%s_temp_path %s;\n", kind, wafQuote(filepath.Join(root, kind+"-temp")))
+	}
+	conf := fmt.Sprintf("master_process off; daemon off; pid %s; error_log %s notice; events {worker_connections 64;} http { access_log off; %s %s %s }", filepath.Join(root, "nginx.pid"), filepath.Join(root, "error.log"), temps, h, servers)
 	path := filepath.Join(root, "nginx.conf")
 	if e = os.WriteFile(path, []byte(conf), 0600); e != nil {
 		t.Fatal(e)

@@ -29,6 +29,13 @@ type wafConfigChange struct {
 // persistent transaction includes every before/after byte and permission,
 // including the manifest, before the first replacement can take place.
 func (s *Service) planWAFConfiguration(cfg core.WAFConfig, uninstall bool) ([]wafConfigChange, error) {
+	return s.planWAFConfigurationVersion(cfg, uninstall, core.WAFVersion)
+}
+
+func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool, version string) ([]wafConfigChange, error) {
+	if version != core.WAFVersion && (version != "2.0.1" || cfg.Body != nil) {
+		return nil, errors.New("WAF 历史版本不支持严格迁移核对")
+	}
 	var err error
 	cfg, err = core.DecodeWAFConfig(core.WAFSettings(cfg))
 	if err != nil {
@@ -163,7 +170,7 @@ func (s *Service) planWAFConfiguration(cfg core.WAFConfig, uninstall bool) ([]wa
 		}
 	}
 	httpPath, serverPath := wafFiles(s)
-	httpConfig, serverConfig := renderWAFPolicy(cfg)
+	httpConfig, serverConfig := renderWAFPolicyVersion(cfg, version)
 	const metadataConfig = "# managed by panel; native-waf-metadata-only\nmodsecurity_metadata_log /var/lib/panel-waf/body-events.log;\n"
 	const legacyMetadataConfig = "# managed by panel; native-waf-metadata-only\nmodsecurity_metadata_log /var/log/nginx/panel-waf-body-events.log;\n"
 	for _, item := range []struct{ path, text string }{{httpPath, httpConfig}, {serverPath, serverConfig}, {s.systemPath("/etc/panel/waf/http.d/20-panel-native-waf.conf"), metadataConfig}} {
@@ -237,7 +244,7 @@ func (s *Service) planWAFConfiguration(cfg core.WAFConfig, uninstall bool) ([]wa
 	}
 	var data []byte
 	if !uninstall {
-		manifest := softwareManifest{ID: "nginx-waf", Version: core.WAFVersion, Settings: core.WAFSettings(cfg), InstalledAt: core.Now()}
+		manifest := softwareManifest{ID: "nginx-waf", Version: version, Settings: core.WAFSettings(cfg), InstalledAt: core.Now()}
 		if old, err := s.readSoftwareManifest("nginx-waf"); err == nil {
 			manifest.InstalledAt = old.InstalledAt
 		}

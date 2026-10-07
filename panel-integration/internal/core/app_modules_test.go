@@ -31,6 +31,21 @@ func TestAppModuleDefinitions(t *testing.T) {
 		t.Fatal(len(seen))
 	}
 }
+func TestAnalyticsGuidanceMatchesImplementedBoundaries(t *testing.T) {
+	guide := ModuleGuidance("website-analytics")
+	if !strings.Contains(guide.Description, "INP") || !strings.Contains(guide.Description, "转化漏斗") {
+		t.Fatal("implemented analytics capabilities missing from guidance")
+	}
+	limits := strings.Join(guide.Limitations, " ")
+	for _, boundary := range []string{"会话录像", "地理数据库", "SPA 路由性能", "20000", "8 MiB", "业务审计"} {
+		if !strings.Contains(limits, boundary) {
+			t.Fatal("missing truthful analytics boundary", boundary)
+		}
+	}
+	if strings.Contains(limits, "INP 或完整转化漏斗") {
+		t.Fatal("stale guidance denies implemented features")
+	}
+}
 func TestAppModuleRoles(t *testing.T) {
 	s := testStore(t)
 	a := &Server{Store: s}
