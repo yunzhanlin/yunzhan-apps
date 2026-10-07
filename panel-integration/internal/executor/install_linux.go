@@ -7,6 +7,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -400,11 +401,23 @@ func downloadRuntimeSource(ctx context.Context, r runtimecatalog.Release, dst st
 
 func downloadVerified(ctx context.Context, url, digest, dst string) error {
 	client := &http.Client{Timeout: 8 * time.Minute, CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		if len(via) > 3 || req.URL.Scheme != "https" || (req.URL.Host != "www.php.net" && req.URL.Host != "nginx.org" && req.URL.Host != "downloads.apache.org" && req.URL.Host != "archive.apache.org" && req.URL.Host != "pecl.php.net" && req.URL.Host != "download.redis.io" && req.URL.Host != "nodejs.org") {
+		if len(via) > 3 || req.URL.Scheme != "https" || (req.URL.Host != "www.php.net" && req.URL.Host != "nginx.org" && req.URL.Host != "downloads.apache.org" && req.URL.Host != "archive.apache.org" && req.URL.Host != "pecl.php.net" && req.URL.Host != "download.redis.io" && req.URL.Host != "nodejs.org" && req.URL.Host != "download.pureftpd.org") {
 			return errors.New("源码下载重定向超出允许来源")
 		}
 		return nil
 	}}
+	if strings.HasPrefix(url, "https://download.pureftpd.org/") {
+		// The upstream mirror can reset HTTP/2 streams during source transfers.
+		// HTTPS/1.1 keeps normal certificate and complete digest verification.
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.ForceAttemptHTTP2 = false
+		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}}
+		transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+		transport.Protocols = new(http.Protocols)
+		transport.Protocols.SetHTTP1(true)
+		client.Transport = transport
+		defer transport.CloseIdleConnections()
+	}
 	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if e != nil {
 		return e

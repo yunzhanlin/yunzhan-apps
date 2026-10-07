@@ -79,7 +79,7 @@ func TestFTPServiceStrictConfigBoundsAndNoShell(t *testing.T) {
 		}
 	}
 	args := ftpArguments(c, "/safe/ftp")
-	if !strings.Contains(strings.Join(args, " "), "-Y 3") || !strings.Contains(strings.Join(args, " "), "-4 -S 127.0.0.1,2121") {
+	if !strings.Contains(strings.Join(args, " "), "-Y 3") || !strings.Contains(strings.Join(args, " "), "-4 -u 1 -S 127.0.0.1,2121") {
 		t.Fatal(args)
 	}
 	s, _ := ftpServiceFixture(t)

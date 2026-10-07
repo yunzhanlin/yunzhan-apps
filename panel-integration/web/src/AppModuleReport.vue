@@ -57,6 +57,9 @@ const names: Record<string, string> = {
   certificate: "域名证书",
   certificate_error: "证书告警",
   recovery_pending: "存在待恢复配置",
+  runtime_binary: "实际独立运行时",
+  runtime_error: "运行时完整性告警",
+  account_limits_ready: "受管账户限制已就绪",
   restart_verified: "切换后 TLS 已验证",
   firewall_changed: "自动修改防火墙",
   credentials_sent: "健康探测发送凭据",
@@ -75,6 +78,19 @@ const names: Record<string, string> = {
   id: "标识",
   site_id: "网站 ID",
   username: "用户名",
+	quota_mb: "容量限制 MiB（0 不限）",
+	quota_files: "数量限制（0 不限）",
+	upload_kb: "上传 KiB/s（0 不限）",
+	download_kb: "下载 KiB/s（0 不限）",
+	max_sessions: "会话数（0 不限）",
+	client_allow: "允许客户端 IP",
+	client_deny: "拒绝客户端 IP",
+	quota_usage_files: "已统计文件与目录",
+	quota_usage_bytes: "已统计容量（字节）",
+	quota_usage_known: "容量计数已知",
+	soft_quota: "FTP 软配额（非磁盘硬配额）",
+	shared_home_counter: "同目录账户共享容量计数",
+	new_connections_only: "变更用于后续新连接",
   role: "角色",
   site_ids: "网站范围",
   menu_ids: "菜单授权",
@@ -298,6 +314,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];
   if (props.id === "files-sync" && values.some(value => value && typeof value === "object" && "watcher_state" in value))
     return ["id", "site_id", "target_site_id", "enabled", "realtime", "watcher_state", "watch_directories", "watch_overflows", "watch_error", "revision", "interval", "last_trigger", "last_state", "copied_count", "conflicts_count", "last_error", "excludes"];
   if (values.some(value => value && typeof value === "object" && "watcher_state" in value))

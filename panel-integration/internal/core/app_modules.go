@@ -69,6 +69,13 @@ type AppModuleInput struct {
 	MaxClients          int                `json:"max_clients,omitempty"`
 	MaxPerIP            int                `json:"max_per_ip,omitempty"`
 	IdleMinutes         int                `json:"idle_minutes,omitempty"`
+	QuotaMB             int                `json:"quota_mb"`
+	QuotaFiles          int                `json:"quota_files"`
+	UploadKB            int                `json:"upload_kb"`
+	DownloadKB          int                `json:"download_kb"`
+	MaxSessions         int                `json:"max_sessions"`
+	ClientAllow         []string           `json:"client_allow"`
+	ClientDeny          []string           `json:"client_deny"`
 	Enabled             bool               `json:"enabled"`
 	ExpectedRevision    int64              `json:"expected_revision,omitempty"`
 	Limit               int                `json:"limit,omitempty"`
@@ -129,7 +136,8 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"})
 		case "pure-ftpd":
-			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe")
+			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe", "account-limits", "recount-quota")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"quota_mb", "FTP 容量限制（MiB，0 不限制）", "number"}, AppModuleField{"quota_files", "FTP 文件与目录数量（0 不限制）", "number"}, AppModuleField{"upload_kb", "上传限速（KiB/s，0 不限制）", "number"}, AppModuleField{"download_kb", "下载限速（KiB/s，0 不限制）", "number"}, AppModuleField{"max_sessions", "账户并发会话（0 不限制）", "number"}, AppModuleField{"client_allow", "允许客户端 IPv4/CIDR（JSON 数组，空为全部）", "json"}, AppModuleField{"client_deny", "拒绝客户端 IPv4/CIDR（JSON 数组）", "json"}, AppModuleField{"expected_sha", "所选账户当前摘要（自动填写）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"bind_address", "本机监听 IPv4（0.0.0.0 为全部接口）", "text"}, AppModuleField{"port", "FTPS 控制端口", "number"}, AppModuleField{"passive_start", "被动端口起始", "number"}, AppModuleField{"passive_end", "被动端口结束", "number"}, AppModuleField{"passive_address", "被动模式通告 IPv4（NAT 使用公网 IP）", "text"}, AppModuleField{"certificate_id", "域名 TLS 证书", "certificate"}, AppModuleField{"domain", "FTPS 证书域名", "text"}, AppModuleField{"max_clients", "最大并发连接数", "number"}, AppModuleField{"max_per_ip", "单 IP 最大连接数", "number"}, AppModuleField{"idle_minutes", "空闲超时（分钟）", "number"}, AppModuleField{"expected_revision", "服务配置修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "非回环监听确认（EXPOSE FTPS IP:端口）", "text"})
 		case "pm2-manager":
 			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments")
@@ -281,7 +289,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "website-analytics":
 			version = "2.1.1"
 		case "pure-ftpd":
-			version = "1.0.50-compat4"
+			version = "1.0.54-compat5"
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":

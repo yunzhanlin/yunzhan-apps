@@ -244,7 +244,7 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 	if strings.HasPrefix(j.Kind, "software_") {
 		action := strings.TrimPrefix(j.Kind, "software_")
-		if action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager") {
+		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && j.TargetID == "pure-ftpd") {
 			dependencyCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			err := waitAppDependencies(dependencyCtx, e, j.TargetID)
 			cancel()

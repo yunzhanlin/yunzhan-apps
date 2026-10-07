@@ -132,6 +132,8 @@ const labels: Record<string, string> = {
   deployment: "刷新部署状态",
   "cancel-deployment": "取消部署并恢复",
   "recover-deployment": "恢复中断部署",
+	"account-limits": "保存账户限制",
+	"recount-quota": "重统计当前网站容量",
   "archive-deployments": "归档旧部署记录",
   schedule: "保存同步计划",
   "run-plan": "执行所选计划",
@@ -212,6 +214,7 @@ async function show(id: string) {
       allow_install_scripts: false,
     };
     if (id === "pure-ftpd") Object.assign(form.value, {bind_address: "127.0.0.1", port: 2121, passive_start: 30000, passive_end: 30049, passive_address: "127.0.0.1", max_clients: 20, max_per_ip: 4, idle_minutes: 15});
+	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -238,7 +241,7 @@ function selected(row: Record<string, any>) {
     form.value.expected_sha = "";
   }
   for (const f of definition.value?.fields || [])
-    if (row[f.key] !== undefined) form.value[f.key] = row[f.key];
+    if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
   if (row.revision !== undefined) {
     selectedPlanID.value = integrityModule.value ? row.site_id : definition.value?.id === "user-manager" ? row.username : row.resource_id || row.id;
     form.value.expected_revision = row.revision;
@@ -319,6 +322,8 @@ async function execute(action: string) {
         "remove-plan",
         "service-config",
         "recover-service",
+		"account-limits",
+		"recount-quota",
       ].includes(action) &&
       definition.value.actions.includes("run")
     )
@@ -328,6 +333,8 @@ async function execute(action: string) {
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
       for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
       form.value.expected_revision = report.value.config.revision; selectedPlanID.value = "ftp-service";
+	  const selected = report.value.users?.find((row: Record<string, any>) => row.username === form.value.username);
+	  form.value.expected_sha = selected?.expected_sha || "";
     }
     if (definition.value.id === "user-manager" && ["create", "update", "delete"].includes(action)) {
       const selected = report.value?.users?.find((row: Record<string, any>) => row.username === selectedPlanID.value);
@@ -452,6 +459,7 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />
+        <el-alert v-if="definition.id === 'pure-ftpd' && ['account-limits','quota'].includes(section.id) && report?.account_limits_ready === false" type="warning" :closable="false" title="当前 FTP 尚未更新到受管独立运行时。请先在版本与更新中更新应用；不会静默替换系统 FTP。" />
         <el-form label-position="top" class="module-fields">
           <el-form-item
             v-for="field in sectionFields(section)"
@@ -565,8 +573,11 @@ defineExpose({ show });
               :max="
                 field.key === 'start_time'
                   ? Number.MAX_SAFE_INTEGER
-                  : field.key === 'pid'
-                    ? 4194304
+                    : field.key === 'pid'
+                      ? 4194304
+					: ['quota_mb','upload_kb','download_kb'].includes(field.key) ? 1048576
+					: field.key === 'quota_files' ? 1000000
+					: field.key === 'max_sessions' ? 20
                     : field.key === 'status_code'
                       ? 599
                       : field.key === 'min_seconds'
@@ -606,7 +617,7 @@ defineExpose({ show });
             v-for="action in section.actions"
             :key="action"
             :disabled="
-              !installed || busy || (action === 'terminate' && !form.pid)
+              !installed || busy || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
             "
             :type="
               [

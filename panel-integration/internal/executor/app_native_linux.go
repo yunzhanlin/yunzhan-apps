@@ -96,17 +96,10 @@ func InstallAppDependencies(id string) (err error) {
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
 	defer cancel()
-	packages := map[string][]string{"pure-ftpd": {"pure-ftpd"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
 	privateNode := id == "pm2-manager" && runtimecatalog.HostPlatform() == "ubuntu-22.04"
 	if privateNode {
 		packages = nil
-	}
-	if id == "pure-ftpd" {
-		if _, e := os.Stat("/usr/sbin/pure-ftpd"); e != nil {
-			if _, e = s.moduleCommand(ctx, time.Minute, "/usr/bin/systemctl", "mask", "pure-ftpd.service"); e != nil {
-				return e
-			}
-		}
 	}
 	if len(packages) > 0 {
 		if _, err = s.moduleCommand(ctx, 2*time.Minute, "/usr/bin/apt-get", "update"); err != nil {
@@ -115,6 +108,9 @@ func InstallAppDependencies(id string) (err error) {
 		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends"}, packages...)...); err != nil {
 			return err
 		}
+	}
+	if id == "pure-ftpd" {
+		return installPrivateFTPRuntime(ctx)
 	}
 	if id == "pm2-manager" {
 		dir := filepath.Join(appNativeRoot, "pm2")
@@ -181,7 +177,7 @@ func ensurePM2PrivateNode(ctx context.Context, dir string) error {
 	return os.Rename(stage, prefix)
 }
 func (s *Service) installPureFTP(ctx context.Context) error {
-	if !exists(s.systemPath("/usr/sbin/pure-ftpd")) {
+	if s.validateFTPRuntime() != nil {
 		if e := s.appDependencies(ctx, "pure-ftpd"); e != nil {
 			return e
 		}
@@ -189,6 +185,11 @@ func (s *Service) installPureFTP(ctx context.Context) error {
 	dir := s.moduleDir("pure-ftpd")
 	if e := os.MkdirAll(dir, 0700); e != nil {
 		return e
+	}
+	if !s.moduleInstalled("pure-ftpd") {
+		if e := s.activateFTPRuntime(ctx); e != nil {
+			return e
+		}
 	}
 	db := filepath.Join(dir, "users.pdb")
 	if !exists(db) {
@@ -200,7 +201,11 @@ func (s *Service) installPureFTP(ctx context.Context) error {
 		} else if _, e := ftpPrivateRead(text, 1<<20); e != nil {
 			return e
 		}
-		if _, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "mkdb", db, "-f", text); e != nil {
+		binary, e := s.ftpBinary("pure-pw")
+		if e != nil {
+			return e
+		}
+		if _, e := s.moduleCommand(ctx, 20*time.Second, binary, "mkdb", db, "-f", text); e != nil {
 			return e
 		}
 	}
@@ -218,7 +223,7 @@ func (s *Service) installPureFTP(ctx context.Context) error {
 }
 func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
 	dir := s.moduleDir("pure-ftpd")
-	text, db := filepath.Join(dir, "users.passwd"), filepath.Join(dir, "users.pdb")
+	text := filepath.Join(dir, "users.passwd")
 	if action == "run" {
 		passwd, e := ftpPrivateRead(text, 1<<20)
 		if e != nil {
@@ -228,6 +233,19 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		if e != nil {
 			return nil, e
 		}
+		for _, row := range users {
+			if siteID, ok := row["site_id"].(string); ok {
+				if f, err := s.openFiles(siteID); err == nil {
+					count, size, err := readFTPQuota(f)
+					f.Close()
+					if err == nil {
+						row["quota_usage_files"], row["quota_usage_bytes"] = count, size
+					} else {
+						row["quota_usage_known"] = false
+					}
+				}
+			}
+		}
 		config, e := s.ftpConfig()
 		if e != nil {
 			return nil, e
@@ -235,7 +253,11 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		_, cert, certErr := s.ftpCertificate(config)
 		state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
 		enabled, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-enabled", "panel-pure-ftpd.service")
-		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "recovery_pending": exists(filepath.Join(dir, "pending-service.json"))}
+		runtimeBinary, runtimeErr := s.ftpBinary("pure-ftpd")
+		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "soft_quota": true, "shared_home_counter": true, "recovery_pending": s.ftpRecoveryPending(), "runtime_binary": runtimeBinary, "account_limits_ready": runtimeErr == nil && strings.Contains(runtimeBinary, ftpRuntimeVersion)}
+		if runtimeErr != nil {
+			report["runtime_error"] = runtimeErr.Error()
+		}
 		if certErr != nil {
 			report["certificate_error"] = certErr.Error()
 		}
@@ -254,6 +276,14 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		if e != nil {
 			return nil, e
 		}
+		if e = s.recoverFTPAccounts(); e != nil {
+			return nil, e
+		}
+		runtimeActive, e := s.recoverFTPRuntime()
+		if e != nil {
+			return nil, e
+		}
+		active = active || runtimeActive
 		if active {
 			if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "restart", "panel-pure-ftpd.service"); e != nil {
 				return nil, e
@@ -265,6 +295,9 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		if action == "stop" {
 			_, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", "panel-pure-ftpd.service")
 			return map[string]any{"ok": e == nil, "service_active": false, "accounts_retained": true}, e
+		}
+		if s.ftpRecoveryPending() {
+			return nil, errors.New("FTP 有待恢复事务，请先恢复并刷新")
 		}
 		config, e := s.ftpConfig()
 		if e != nil {
@@ -285,58 +318,60 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 	if !moduleResourceID.MatchString(in.Username) {
 		return nil, errors.New("FTP 用户名需为 3–32 位小写标识")
 	}
-	backup, e := backupFile(text)
+	return s.mutateFTPAccount(ctx, action, in)
+}
+
+// All account mutations are staged and committed by mutateFTPAccount. Kept as
+// a focused fixed-argument operation; it never receives live database paths.
+func (s *Service) ftpAccountCommand(ctx context.Context, action string, in core.AppModuleInput, text string) error {
+	binary, e := s.ftpBinary("pure-pw")
 	if e != nil {
-		return nil, e
-	}
-	dbBackup, e := backupFile(db)
-	if e != nil {
-		return nil, e
-	}
-	rollback := func(err error) (any, error) {
-		if restoreErr := restoreFiles([]fileBackup{backup, dbBackup}); restoreErr != nil {
-			return nil, errors.New("FTP 账户操作失败，账户文件回滚失败，请检查服务端备份")
-		}
-		return nil, err
+		return e
 	}
 	if action == "create" {
 		if len(in.Password) < 16 || len(in.Password) > 72 || strings.ContainsAny(in.Password, "\r\n\x00") {
-			return nil, errors.New("密码需为 16–72 字节，不能含换行")
+			return errors.New("密码需为 16–72 字节，不能含换行")
 		}
 		if e := s.ensureModuleSiteIdentity(ctx, in.SiteID); e != nil {
-			return nil, e
+			return e
 		}
 		f, e := s.openFiles(in.SiteID)
 		if e != nil {
-			return nil, e
+			return e
 		}
 		defer f.Close()
 		if f.uid == 0 {
-			return nil, errors.New("拒绝 root 所有的网站")
+			return errors.New("拒绝 root 所有的网站")
 		}
 		home := filepath.Join(s.Config.SitesDir, in.SiteID, "public")
-		_, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), "/usr/bin/pure-pw", "useradd", in.Username, "-f", text, "-u", strconv.Itoa(f.uid), "-g", strconv.Itoa(f.gid), "-d", home)
+		_, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), binary, "useradd", in.Username, "-f", text, "-u", strconv.Itoa(f.uid), "-g", strconv.Itoa(f.gid), "-d", home)
 		if e != nil {
-			return rollback(errors.New("FTP 用户创建失败，用户名可能已存在"))
+			return errors.New("FTP 用户创建失败，用户名可能已存在")
 		}
 	} else if action == "password" {
 		if len(in.Password) < 16 || len(in.Password) > 72 || strings.ContainsAny(in.Password, "\r\n\x00") {
-			return nil, errors.New("密码需为 16–72 字节，不能含换行")
+			return errors.New("密码需为 16–72 字节，不能含换行")
 		}
-		if _, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), "/usr/bin/pure-pw", "passwd", in.Username, "-f", text); e != nil {
-			return rollback(errors.New("FTP 密码更新失败，请确认账户存在"))
+		if _, e = runCommandInput(ctx, []byte(in.Password+"\n"+in.Password+"\n"), binary, "passwd", in.Username, "-f", text); e != nil {
+			return errors.New("FTP 密码更新失败，请确认账户存在")
 		}
 	} else if action == "delete" {
-		if _, e = s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "userdel", in.Username, "-f", text); e != nil {
-			return rollback(e)
+		if _, e = s.moduleCommand(ctx, 20*time.Second, binary, "userdel", in.Username, "-f", text); e != nil {
+			return errors.New("FTP 账户删除失败")
+		}
+	} else if action == "account-limits" {
+		limits, err := validatedFTPLimits(in)
+		if err != nil {
+			return err
+		}
+		_, e = s.moduleCommand(ctx, 20*time.Second, binary, append([]string{"usermod", in.Username, "-f", text}, limits.arguments()...)...)
+		if e != nil {
+			return errors.New("FTP 账户限制更新失败")
 		}
 	} else {
-		return nil, errors.New("FTP 操作无效")
+		return errors.New("FTP 操作无效")
 	}
-	if _, e = s.moduleCommand(ctx, 20*time.Second, "/usr/bin/pure-pw", "mkdb", db, "-f", text); e != nil {
-		return rollback(e)
-	}
-	return map[string]any{"ok": true, "username": in.Username, "action": action}, nil
+	return nil
 }
 func (s *Service) installPM2(ctx context.Context) error {
 	if !s.appDependencyReady("pm2-manager") {
@@ -1046,7 +1081,7 @@ func (s *Service) enableAnalyticsLogs(ctx context.Context) error {
 func (s *Service) appDependencyReady(id string) bool {
 	switch id {
 	case "pure-ftpd":
-		return exists(s.systemPath("/usr/sbin/pure-ftpd"))
+		return s.validateFTPRuntime() == nil
 	case "pm2-manager":
 		if runtimecatalog.HostPlatform() == "ubuntu-22.04" && !exists(s.systemPath(pm2NodeBinaryOn("ubuntu-22.04"))) {
 			return false

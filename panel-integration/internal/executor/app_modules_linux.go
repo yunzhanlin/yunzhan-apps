@@ -124,6 +124,13 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		} else if current, readErr := ftpPrivateRead(filepath.Join(s.moduleDir(id), "server.pem"), 49152); readErr != nil || core.Hash(string(current)) != core.Hash(string(data)) {
 			out.Healthy = false
 		}
+		if _, runtimeErr := s.ftpBinary("pure-ftpd"); runtimeErr != nil {
+			out.Healthy = false
+		}
+		if s.ftpRecoveryPending() {
+			out.Healthy = false
+			out.Detail = "FTP 有待恢复事务，请先恢复并刷新"
+		}
 		out.Enabled = out.Healthy
 	case "pm2-manager":
 		out.Healthy = s.appDependencyReady(id)
@@ -267,7 +274,39 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return err
 	}
 	status := s.softwareStatus(ctx, id)
-	if !status.Installed || !status.Healthy {
+	stoppedFTP := false
+	if id == "pure-ftpd" && status.Installed && !status.Healthy && !s.ftpRecoveryPending() {
+		state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
+		if strings.TrimSpace(state) == "inactive" {
+			config, e := s.ftpConfig()
+			if e != nil {
+				return e
+			}
+			pem, _, e := s.ftpCertificate(config)
+			if e != nil {
+				return e
+			}
+			current, e := ftpPrivateRead(filepath.Join(s.moduleDir(id), "server.pem"), 49152)
+			if e != nil || core.Hash(string(current)) != core.Hash(string(pem)) {
+				return errors.New("停止的 FTP 证书或配置不完整，未更新")
+			}
+			text, e := ftpPrivateRead(filepath.Join(s.moduleDir(id), "users.passwd"), 1<<20)
+			if e != nil {
+				return e
+			}
+			if _, e = ftpPublicUsers(text, s.Config.SitesDir); e != nil {
+				return e
+			}
+			if _, e = ftpPrivateRead(filepath.Join(s.moduleDir(id), "users.pdb"), 4<<20); e != nil {
+				return e
+			}
+			if _, e = s.ftpBinary("pure-ftpd"); e != nil {
+				return e
+			}
+			stoppedFTP = true
+		}
+	}
+	if !status.Installed || (!status.Healthy && !stoppedFTP) {
 		return errors.New("应用未安装或健康检查未通过，未修改版本记录")
 	}
 	cmp, valid := appcatalog.CompareVersions(version, status.Version)
@@ -282,6 +321,17 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return s.applyWAF(ctx, manifest.Settings, false, add)
 	}
 	if _, ok := core.FindAppModule(id); ok {
+		if id == "pure-ftpd" && cmp > 0 {
+			if s.validateFTPRuntime() != nil {
+				if err := s.appDependencies(ctx, id); err != nil {
+					return err
+				}
+			}
+			if err := s.activateFTPRuntime(ctx); err != nil {
+				return err
+			}
+			add("FTP 固定源码、构建补丁、独立程序和许可证校验通过；切换失败将恢复原服务")
+		}
 		if id == "apache-waf" && cmp > 0 {
 			return s.applyApacheWAF(ctx, status.Settings, false, add)
 		}
@@ -304,7 +354,11 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			return err
 		}
 	}
-	add("当前签名面板已包含新版功能处理器；健康检查通过，保留配置、数据、基线与历史")
+	if stoppedFTP {
+		add("FTP 受管运行时已核对；保持服务停止及原开机启动设置，未声明正在运行或已完成 TLS 连接验证")
+	} else {
+		add("当前签名面板已包含新版功能处理器；健康检查通过，保留配置、数据、基线与历史")
+	}
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {

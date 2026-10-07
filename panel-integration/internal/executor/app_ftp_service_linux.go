@@ -77,6 +77,14 @@ func ftpPublicUsers(data []byte, sitesDir string) ([]map[string]any, error) {
 			return nil, errors.New("FTP 账户组身份格式损坏")
 		}
 		row := map[string]any{"username": fields[0], "uid": uid, "gid": gid, "home": fields[5]}
+		limits, e := ftpLimitsFromFields(fields)
+		if e != nil {
+			return nil, e
+		}
+		row["expected_sha"] = core.Hash(line)
+		row["quota_mb"], row["quota_files"] = limits.QuotaMB, limits.QuotaFiles
+		row["upload_kb"], row["download_kb"], row["max_sessions"] = limits.UploadKB, limits.DownloadKB, limits.MaxSessions
+		row["client_allow"], row["client_deny"] = limits.ClientAllow, limits.ClientDeny
 		prefix := strings.TrimSuffix(sitesDir, "/") + "/"
 		if sitesDir != "" && strings.HasPrefix(fields[5], prefix) {
 			parts := strings.Split(strings.TrimPrefix(fields[5], prefix), "/")
@@ -256,7 +264,7 @@ func (s *Service) ftpCertificate(c ftpServiceConfig) ([]byte, map[string]any, er
 	return data, meta, nil
 }
 func ftpArguments(c ftpServiceConfig, dir string) []string {
-	return []string{"-4", "-S", c.BindAddress + "," + strconv.Itoa(c.Port), "-p", fmt.Sprintf("%d:%d", c.PassiveStart, c.PassiveEnd), "-P", c.PassiveAddress, "-A", "-E", "-H", "-j", "-c", strconv.Itoa(c.MaxClients), "-C", strconv.Itoa(c.MaxPerIP), "-I", strconv.Itoa(c.IdleMinutes), "-l", "puredb:" + filepath.Join(dir, "users.pdb"), "-Y", "3", "-2", filepath.Join(dir, "server.pem")}
+	return []string{"-4", "-u", "1", "-S", c.BindAddress + "," + strconv.Itoa(c.Port), "-p", fmt.Sprintf("%d:%d", c.PassiveStart, c.PassiveEnd), "-P", c.PassiveAddress, "-A", "-E", "-H", "-j", "-c", strconv.Itoa(c.MaxClients), "-C", strconv.Itoa(c.MaxPerIP), "-I", strconv.Itoa(c.IdleMinutes), "-l", "puredb:" + filepath.Join(dir, "users.pdb"), "-Y", "3", "-2", filepath.Join(dir, "server.pem")}
 }
 func readFTPReply(r *bufio.Reader, code string) error {
 	for n := 0; n < 32; n++ {
@@ -402,12 +410,22 @@ func RecoverPureFTP() error {
 	}
 	defer lock.Close()
 	_, e = s.recoverFTPTransaction()
+	if e != nil {
+		return e
+	}
+	if e = s.recoverFTPAccounts(); e != nil {
+		return e
+	}
+	_, e = s.recoverFTPRuntime()
 	return e
 }
 func ServePureFTP() error {
 	s := New(Config{})
 	if !s.moduleInstalled("pure-ftpd") {
 		return errors.New("FTP 模块未安装")
+	}
+	if exists(filepath.Join(s.moduleDir("pure-ftpd"), "pending-accounts.json")) || exists(filepath.Join(s.moduleDir("pure-ftpd"), "pending-service.json")) {
+		return errors.New("FTP 有未完成事务，必须先恢复再启动")
 	}
 	c, e := s.ftpConfig()
 	if e != nil {
@@ -424,7 +442,11 @@ func ServePureFTP() error {
 	if !bytes.Equal(data, current) {
 		return errors.New("FTP 服务证书与受管配置不符")
 	}
-	args := append([]string{"/usr/sbin/pure-ftpd"}, ftpArguments(c, s.moduleDir("pure-ftpd"))...)
+	binary, e := s.ftpBinary("pure-ftpd")
+	if e != nil {
+		return e
+	}
+	args := append([]string{binary}, ftpArguments(c, s.moduleDir("pure-ftpd"))...)
 	return syscall.Exec(args[0], args, []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C"})
 }
 func (s *Service) configureFTP(ctx context.Context, in core.AppModuleInput) (any, error) {
@@ -438,7 +460,7 @@ func (s *Service) configureFTP(ctx context.Context, in core.AppModuleInput) (any
 		return nil, e
 	}
 	defer lock.Close()
-	if exists(filepath.Join(s.moduleDir("pure-ftpd"), "pending-service.json")) {
+	if s.ftpRecoveryPending() {
 		return nil, errors.New("FTP 有未完成的配置，请先执行恢复")
 	}
 	old, e := s.ftpConfig()
