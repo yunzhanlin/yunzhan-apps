@@ -1,0 +1,3 @@
+# Unified diffs retain a single-space marker for context-only blank lines.
+# These vendored patch assets are data; stripping that marker breaks patching.
+panel-integration/internal/executor/assets/*.patch -whitespace
