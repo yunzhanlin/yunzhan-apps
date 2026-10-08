@@ -4,6 +4,7 @@ import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
 import WafWorkspace from "./WafWorkspace.vue";
+import { loadBalanceEntryFields } from "./loadBalanceReport";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
 type API = <T>(
   path: string,
@@ -274,7 +275,7 @@ function selected(row: Record<string, any>) {
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
   if (id==="load-balance" && Array.isArray(row.nodes))
-    form.value.health_check=row.health_check ? {...row.health_check} : null;
+    Object.assign(form.value,loadBalanceEntryFields(row));
   if (id === "nfs-manager") {
     if (row.clients) form.value.client_allow=JSON.stringify(row.clients,null,2);
     form.value.confirm="";

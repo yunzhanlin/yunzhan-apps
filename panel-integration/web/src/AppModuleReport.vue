@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
@@ -155,6 +156,8 @@ const names: Record<string, string> = {
   nodes: "上游节点",
   entries: "负载均衡入口",
   http_health: "持续 HTTP 检查",
+  http_health_enabled: "持续 HTTP 检查已启用",
+  http_transitions: "最近 HTTP 状态转换（界面最多 200 条）",
   health_check: "HTTP 检查策略",
   automatic_traffic_changes: "自动修改流量",
   last_success: "最近一次检查通过",
@@ -164,6 +167,10 @@ const names: Record<string, string> = {
   successes: "连续成功次数",
   worker_error: "后台检查错误",
   transitions: "最近状态转换",
+  sequence: "转换序号",
+  from: "原状态",
+  to: "当前状态",
+  at: "发生时间（UTC）",
   transport: "转发范围",
   active_health_checks: "主动应用健康检查",
   active_application_health_checks: "主动应用健康检查",
@@ -299,7 +306,7 @@ const metrics = computed(() =>
   ),
 );
 const groups = computed(() =>
-  Object.entries({...props.report, ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
+  Object.entries({...props.report, ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
     ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );
@@ -325,7 +332,8 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
-  if (props.id==="load-balance" && key==="state") return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
+  if (props.id==="load-balance" && ["state","from","to"].includes(key)) return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
+  if (props.id==="load-balance" && key==="nodes" && Array.isArray(value)) return loadBalanceNodeSummary(value);
   if (props.id==="load-balance" && key==="reason") return ({ok:"状态与内容匹配",request_failed:"请求失败",timeout:"请求超时",status_mismatch:"状态码不匹配（不跟随跳转）",body_incomplete:"响应不完整",body_too_large:"响应超过 16 KiB",content_missing:"响应缺少指定内容"} as Record<string,string>)[String(value)] || String(value ?? "—");
   if (props.id === "php-code-security" && key === "state") return ({prepared:"隔离准备中（待核对）",quarantined:"已隔离",conflict:"并发冲突（未覆盖）",restoring:"恢复中断（待核对）",restored:"已恢复",cancelled:"已取消（备份保留）"} as Record<string,string>)[String(value)] || String(value || "—");
   if (key === "watcher_state") return ({ active: "运行中", pending: "准备中", disabled: "未启用", stopped: "已停止", degraded: "已降级（保留补查）", unavailable: "不可用（保留补查）" } as Record<string, string>)[String(value)] || String(value || "—");
@@ -357,10 +365,13 @@ function rows(values: any[]): Record<string, any>[] {
             !value || typeof value !== "object" || Array.isArray(value),
         ),
       ),
+      ...(props.id==="load-balance" && Array.isArray(v.nodes) ? loadBalanceEntryRow(v) : {}),
     };
   });
 }
 function columns(values: any[]) {
+  if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
+    return ["domain","port","revision","nodes","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
     return ["domain","revision","address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","worker_error"];
 	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];

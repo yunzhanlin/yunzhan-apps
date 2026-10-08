@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08T00:07:45Z",
+  "generated_at": "2026-10-08T00:33:08Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -245,7 +245,7 @@
       "id": "load-balance",
       "name": "负载均衡 · Load Balance",
       "category": "professional",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "summary": "回环 HTTP 加权分流、IP 粘滞与备用节点；持久事务、修订冲突和安全恢复；持续 HTTP 状态与内容检查、失败恢复阈值和过期标记，只观测、不自动改动流量，TCP 探测仍单独标明。",
       "stage": "ready",
       "risk": "privileged",
@@ -266,8 +266,8 @@
         "连续失败/恢复阈值、持久快照与结果过期标记",
         "固定 IP、禁止跳转和环境代理、有界并发与响应"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.4.0/manifest.json",
-      "sha256": "dcfd949e0e381392bec64478e30da513435f90485f558b88780cf0fe4e64f50d"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.4.1/manifest.json",
+      "sha256": "316d4c6b7b54c30a3676d6e6d5403b52d5cab1812d9e0e7b23bb729a588cb1e9"
     },
     {
       "id": "memcached",

@@ -88,9 +88,21 @@ func (s *Service) loadBalanceHealthInstalled() bool {
 		ID          string         `json:"id"`
 		Version     string         `json:"version"`
 		InstalledAt string         `json:"installed_at"`
+		UpdatedAt   string         `json:"updated_at,omitempty"`
 		Settings    map[string]any `json:"settings"`
 	}
-	return decodeFTPPrivateJSON(b, &v) == nil && v.ID == "load-balance" && v.Version == "1.4.0"
+	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1") {
+		return false
+	}
+	if _, e := time.Parse(time.RFC3339, v.InstalledAt); e != nil {
+		return false
+	}
+	if v.UpdatedAt != "" {
+		if _, e := time.Parse(time.RFC3339, v.UpdatedAt); e != nil {
+			return false
+		}
+	}
+	return true
 }
 func (s *Service) loadBalanceHealthPath(domain string) string {
 	return filepath.Join(s.moduleDir("load-balance"), "http-health", loadBalanceID(domain)+".json")

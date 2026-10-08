@@ -30,7 +30,7 @@ func lbHTTPFixture(t *testing.T, handler http.HandlerFunc) (*Service, core.AppMo
 	t.Cleanup(first.Close)
 	t.Cleanup(second.Close)
 	s := wafPolicyFixture(t)
-	if e := moduleWrite(filepath.Join(s.moduleDir("load-balance"), "installed.json"), map[string]any{"id": "load-balance", "version": "1.4.0", "installed_at": core.Now(), "settings": map[string]any{}}); e != nil {
+	if e := moduleWrite(filepath.Join(s.moduleDir("load-balance"), "installed.json"), map[string]any{"id": "load-balance", "version": "1.4.1", "installed_at": core.Now(), "updated_at": core.Now(), "settings": map[string]any{}}); e != nil {
 		t.Fatal(e)
 	}
 	in := lbFixtureInput()
@@ -214,6 +214,34 @@ func TestLoadBalanceHTTPConcurrentPolicyChangeDropsAllResults(t *testing.T) {
 		t.Fatal("disabled policy still checked")
 	}
 }
+func TestLoadBalanceHTTPReplacedLeaseDoesNotPublish(t *testing.T) {
+	started := make(chan struct{}, 2)
+	release := make(chan struct{})
+	s, in := lbHTTPFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		started <- struct{}{}
+		<-release
+		w.Write([]byte("READY"))
+	})
+	finished := make(chan error, 1)
+	go func() { _, e := s.checkLoadBalanceHTTP(context.Background(), in); finished <- e }()
+	select {
+	case <-started:
+	case <-time.After(time.Second):
+		t.Fatal("probe did not start")
+	}
+	lock := filepath.Join(filepath.Dir(s.loadBalanceHealthPath(in.Domain)), "worker.lock")
+	if e := atomicWrite(lock, nil, 0600); e != nil {
+		close(release)
+		t.Fatal(e)
+	}
+	close(release)
+	if e := <-finished; e == nil || !strings.Contains(e.Error(), "锁身份") {
+		t.Fatal("replaced lease committed", e)
+	}
+	if _, e := os.Lstat(s.loadBalanceHealthPath(in.Domain)); !errors.Is(e, os.ErrNotExist) {
+		t.Fatal("unowned lease published state", e)
+	}
+}
 func TestLoadBalanceHTTPLeaseAndUninstalledModuleNoSideEffects(t *testing.T) {
 	var requests atomic.Int32
 	s, in := lbHTTPFixture(t, func(w http.ResponseWriter, r *http.Request) { requests.Add(1); w.Write([]byte("READY")) })
@@ -279,6 +307,48 @@ func TestLoadBalanceHTTPBudgetAndLegacyFingerprint(t *testing.T) {
 	}
 	if _, _, e := loadBalanceNodeAddress("[fd00:ec2::254]:80"); e == nil {
 		t.Fatal("IPv6 metadata target accepted")
+	}
+	if _, _, e := loadBalanceNodeAddress("100.100.100.200:80"); e == nil {
+		t.Fatal("Alibaba metadata target accepted")
+	}
+}
+func TestLoadBalanceHTTPActualModuleUpgradeManifestIsAccepted(t *testing.T) {
+	s := wafPolicyFixture(t)
+	path := filepath.Join(s.moduleDir("load-balance"), "installed.json")
+	original := map[string]any{"id": "load-balance", "version": "1.3.1", "installed_at": core.Now(), "settings": map[string]any{}}
+	if e := moduleWrite(path, original); e != nil {
+		t.Fatal(e)
+	}
+	if s.loadBalanceHealthInstalled() {
+		t.Fatal("old package enabled new automation")
+	}
+	if e := s.updateSoftware(context.Background(), "load-balance", core.SoftwareImplementationVersion("load-balance"), func(string) {}); e != nil {
+		t.Fatal(e)
+	}
+	if !s.loadBalanceHealthInstalled() {
+		t.Fatal("actual upgrade's updated_at rejected")
+	}
+	var upgraded map[string]any
+	if e := moduleRead(path, &upgraded); e != nil {
+		t.Fatal(e)
+	}
+	if upgraded["installed_at"] != original["installed_at"] || upgraded["updated_at"] == nil || upgraded["version"] != "1.4.1" {
+		t.Fatal(upgraded)
+	}
+	upgraded["unexpected_field"] = true
+	if e := moduleWrite(path, upgraded); e != nil {
+		t.Fatal(e)
+	}
+	if s.loadBalanceHealthInstalled() {
+		t.Fatal("unknown manifest field adopted")
+	}
+	delete(upgraded, "unexpected_field")
+	upgraded["updated_at"] = "not-a-time"
+	if e := moduleWrite(path, upgraded); e != nil {
+		t.Fatal(e)
+	}
+	if s.loadBalanceHealthInstalled() {
+		t.Fatal("malformed update time accepted")
 	}
 }
 func TestLoadBalanceHTTPBackgroundWorkerRunsWithoutBrowserAndCancels(t *testing.T) {

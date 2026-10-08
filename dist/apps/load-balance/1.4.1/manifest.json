@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "load-balance",
+  "name": "负载均衡 · Load Balance",
+  "category": "professional",
+  "version": "1.4.1",
+  "summary": "回环 HTTP 加权分流、IP 粘滞与备用节点；持久事务、修订冲突和安全恢复；持续 HTTP 状态与内容检查、失败恢复阈值和过期标记，只观测、不自动改动流量，TCP 探测仍单独标明。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "load-balance",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "加权轮询",
+    "备用节点",
+    "IP 粘滞",
+    "TCP 建连探测与入口配置指纹",
+    "持久两文件事务、中断恢复与执行历史",
+    "手工配置漂移与损坏备份拒绝覆盖",
+    "删除重建保留递增修订身份",
+    "旧工作进程关闭监听后提交",
+    "签名仓库更新请求与任务原子绑定、完成后不重复提交",
+    "持续 HTTP 状态码与内容检查（只观测）",
+    "连续失败/恢复阈值、持久快照与结果过期标记",
+    "固定 IP、禁止跳转和环境代理、有界并发与响应"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/load-balance"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

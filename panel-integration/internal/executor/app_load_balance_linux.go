@@ -105,7 +105,7 @@ func loadBalanceNodeAddress(address string) (netip.Addr, int, error) {
 	ip, ipErr := netip.ParseAddr(host)
 	p, portErr := strconv.Atoi(port)
 	if e != nil || ipErr != nil || portErr != nil || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() ||
-		ip.Is4In6() || ip.Zone() != "" || ip == netip.MustParseAddr("255.255.255.255") || ip == netip.MustParseAddr("fd00:ec2::254") ||
+		ip.Is4In6() || ip.Zone() != "" || ip == netip.MustParseAddr("255.255.255.255") || ip == netip.MustParseAddr("fd00:ec2::254") || ip == netip.MustParseAddr("100.100.100.200") ||
 		p < 1 || p > 65535 || port != strconv.Itoa(p) || address != net.JoinHostPort(ip.String(), port) {
 		return netip.Addr{}, 0, errors.New("上游不是允许的规范固定 IP:端口")
 	}

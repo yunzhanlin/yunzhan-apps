@@ -33,7 +33,7 @@ test('body WAF and analytics additions keep truthful limits and independent vers
 test('load balancing publishes bounded HTTP observations and recovery without claiming L4 or active traffic mutation',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'1.4.0');
+ assert.equal(manifest.version,'1.4.1');
  assert(manifest.capabilities.some(s=>s.includes('修订')));
  assert(contract.scenarios.some(s=>s.includes('ABA')));
  assert(contract.scenarios.some(s=>s.includes('冷启动')));
@@ -44,6 +44,8 @@ test('load balancing publishes bounded HTTP observations and recovery without cl
  assert(contract.gaps.some(s=>s.includes('TCP/UDP')));
  assert(manifest.capabilities.some(s=>s.includes('持续 HTTP')));
  assert(contract.scenarios.some(s=>s.includes('后台持续 HTTP')));
+ assert(contract.scenarios.some(s=>s.includes('实际更新清单')));
+ assert(contract.scenarios.some(s=>s.includes('节点数组')));
  assert(contract.boundaries.some(s=>s.includes('32 个节点')));
  assert(contract.boundaries.some(s=>s.includes('只观测')));
  assert(contract.gaps.some(s=>s.includes('摘除')));

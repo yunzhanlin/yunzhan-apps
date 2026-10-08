@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08T00:07:45Z",
+  "generated_at": "2026-10-08T00:33:08Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1676,7 +1676,7 @@
       "id": "load-balance",
       "name": "负载均衡 · Load Balance",
       "category": "professional",
-      "version": "1.4.0",
+      "version": "1.4.1",
       "summary": "回环 HTTP 加权分流、IP 粘滞与备用节点；持久事务、修订冲突和安全恢复；持续 HTTP 状态与内容检查、失败恢复阈值和过期标记，只观测、不自动改动流量，TCP 探测仍单独标明。",
       "stage": "ready",
       "risk": "privileged",
