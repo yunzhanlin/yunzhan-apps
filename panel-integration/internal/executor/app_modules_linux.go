@@ -386,7 +386,14 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			stoppedFTP = true
 		}
 	}
-	if !status.Installed || (!status.Healthy && !stoppedFTP) {
+	legacyApache := false
+	if id == "apache-waf" && version == core.ApacheWAFVersion && status.Installed && (status.Version == "2.0.0" || status.Version == "1.0") && !status.Healthy {
+		if err := s.verifyApacheWAFLegacyUpgrade(ctx, status); err != nil {
+			return fmt.Errorf("旧版 Apache 防护完整性未通过，未开始签名迁移：%w", err)
+		}
+		legacyApache = true
+	}
+	if !status.Installed || (!status.Healthy && !stoppedFTP && !legacyApache) {
 		return errors.New("应用未安装或健康检查未通过，未修改版本记录")
 	}
 	cmp, valid := appcatalog.CompareVersions(version, status.Version)

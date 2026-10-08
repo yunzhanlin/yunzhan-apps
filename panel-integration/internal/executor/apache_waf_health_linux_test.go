@@ -9,11 +9,47 @@ import (
 	"local/panel/internal/core"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 )
+
+func TestApacheWAFLegacyInstalledRulesAndLoadedFingerprintReadOnly(t *testing.T) {
+	if os.Getenv("PANEL_QA_APACHE_LEGACY_INSTALLED") != "1" {
+		t.Skip("explicit isolated read-only old Apache installation required")
+	}
+	s := New(Config{Run: func(ctx context.Context, name string, args ...string) (string, error) {
+		if name != "/usr/bin/systemctl" || strings.Join(args, " ") != "is-active panel-apache" {
+			t.Fatal("legacy integrity preflight attempted a mutation command", name, args)
+		}
+		out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
+		return string(out), err
+	}})
+	var installed struct {
+		Version  string         `json:"version"`
+		Settings map[string]any `json:"settings"`
+	}
+	path := filepath.Join(s.moduleDir("apache-waf"), "installed.json")
+	if err := moduleRead(path, &installed); err != nil {
+		t.Fatal(err)
+	}
+	if installed.Version != "2.0.0" && installed.Version != "1.0" {
+		t.Fatal("fixture not a preserved old Apache app", installed.Version)
+	}
+	status := core.SoftwareAppStatus{Installed: true, Version: installed.Version, Settings: installed.Settings}
+	if err := s.verifyApacheWAFLegacyUpgrade(context.Background(), status); err != nil {
+		t.Fatal("actual preserved old rules/fingerprint failed migration preflight", err)
+	}
+	for _, version := range []string{"0.9.0", "2.1.0", "9.0.0"} {
+		changed := status
+		changed.Version = version
+		if err := s.verifyApacheWAFLegacyUpgrade(context.Background(), changed); err == nil {
+			t.Fatal("non-legacy version accepted", version)
+		}
+	}
+}
 
 func TestApacheWAFHealthRejectsRunningButUnloadedOrWrongFingerprint(t *testing.T) {
 	cfg := core.DefaultApacheWAFConfig()
@@ -49,6 +85,33 @@ func TestApacheWAFHealthRejectsRunningButUnloadedOrWrongFingerprint(t *testing.T
 	}
 }
 
+func TestApacheWAFInitialLoadedProbeRequiresFixedScannerBlocking(t *testing.T) {
+	for _, tc := range []struct {
+		code   int
+		header string
+		fails  bool
+	}{{403, "active", false}, {200, "active", true}, {503, "active", true}, {403, "", true}} {
+		calls := 0
+		client := &http.Client{Transport: siteTestTransport(func(r *http.Request) (*http.Response, error) {
+			calls++
+			if r.Method != "HEAD" || r.Host != "owned.localhost" || r.URL.String() != "http://127.0.0.1:19080/__yunzhan_waf_probe" || r.Header.Get("Cookie") != "" {
+				t.Fatal("legacy probe forwarded secrets or changed fixed target")
+			}
+			code, header := 404, "active"
+			if calls == 2 {
+				code, header = tc.code, tc.header
+				if r.Header.Get("User-Agent") != "sqlmap" {
+					t.Fatal("fixed scanner probe missing")
+				}
+			}
+			return &http.Response{StatusCode: code, Header: http.Header{"X-Panel-Apache-Waf": []string{header}}, Body: io.NopCloser(strings.NewReader("")), Request: r}, nil
+		})}
+		if err := apacheWAFProbeLoadedVersion(context.Background(), core.DefaultApacheWAFConfig(), "owned.localhost", client, "1.0"); (err != nil) != tc.fails || calls != 2 {
+			t.Fatal("initial fixed marker misrepresented loaded rules", err, calls, tc)
+		}
+	}
+}
+
 func TestApacheWAFHealthExactFilesAndAllHostMounts(t *testing.T) {
 	cfg := core.DefaultApacheWAFConfig()
 	id, second := strings.Repeat("a", 32), strings.Repeat("b", 32)
@@ -71,11 +134,34 @@ func TestApacheWAFHealthExactFilesAndAllHostMounts(t *testing.T) {
 	if domain, err := apacheWAFConfigurationFilesMatch(source, cfg, "/missing/module.so", path); err != nil || domain != "first.localhost" {
 		t.Fatal("valid default-off exact files rejected", domain, err)
 	}
+	old, err := renderApacheWAFVersion(cfg, bindings, "2.0.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(old), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := apacheWAFConfigurationFilesMatchVersion(source, cfg, "/missing/module.so", path, "2.0.0"); err != nil {
+		t.Fatal("exact legacy migration source rejected", err)
+	}
+	if _, err := apacheWAFConfigurationFilesMatch(source, cfg, "/missing/module.so", path); err == nil {
+		t.Fatal("legacy rules claimed current-version health")
+	}
+	if err := os.WriteFile(path, []byte(old+"# changed\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := apacheWAFConfigurationFilesMatchVersion(source, cfg, "/missing/module.so", path, "2.0.0"); err == nil {
+		t.Fatal("damaged legacy rules became migratable")
+	}
+	if err := os.WriteFile(path, []byte(rules), 0600); err != nil {
+		t.Fatal(err)
+	}
 	for _, changed := range []string{
 		strings.Replace(source, " "+apacheWAFInclude, "", 1),
 		strings.Replace(source, host(second, "second.localhost"), strings.Replace(host(second, "second.localhost"), " "+apacheWAFInclude, "", 1), 1),
 		strings.Replace(source, " "+apacheWAFInclude, " "+apacheWAFInclude+" "+apacheWAFInclude, 1),
 		strings.Replace(source, `SetEnvIfExpr "true" PANEL_AW_SITE=`+id, `SetEnvIfExpr "true" PANEL_AW_SITE=`+second, 1),
+		strings.Replace(source, `SetEnvIfExpr "true" PANEL_AW_SITE=`+id, `# SetEnvIfExpr "true" PANEL_AW_SITE=`+id, 1),
 		source + "RemoteIPHeader X-Forwarded-For\n",
 		source + "IncludeOptional /tmp/foreign.conf\n",
 	} {

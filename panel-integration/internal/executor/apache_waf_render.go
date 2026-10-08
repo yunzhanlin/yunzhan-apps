@@ -12,6 +12,18 @@ import (
 
 const apacheWAFInclude = "IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules.conf\n"
 
+// Exact original 1.0 rules: a migration oracle, never a configurable engine.
+const apacheWAFInitialRules = `# CloudStack Apache request firewall: fixed auditable request rules, not a full CRS engine.
+RewriteEngine On
+RewriteOptions InheritDownBefore
+RewriteCond %{REQUEST_METHOD} ^(?:TRACE|TRACK)$ [NC,OR]
+RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|masscan|acunetix|nessus|wpscan) [NC,OR]
+RewriteCond %{QUERY_STRING} (union(?:%20|\+)+select|(?:%3c|<)script|/etc/passwd|%2e%2e%2f) [NC,OR]
+RewriteCond %{REQUEST_URI} (/etc/passwd|\.\./|%2e%2e%2f) [NC]
+RewriteRule ^ - [F,L]
+Header always set X-Panel-Apache-WAF active
+`
+
 func apacheWAFBindings(source string) (map[string][]string, error) {
 	if !strings.HasPrefix(source, "# managed by panel\n") {
 		return nil, errors.New("Apache 配置不是云栈受管文件")
@@ -58,11 +70,35 @@ func apacheWAFDomainPattern(domains []string) string {
 	return "^(?:" + strings.Join(items, "|") + ")$"
 }
 func apacheWAFProbe(cfg core.WAFConfig) string {
+	return apacheWAFProbeVersion(cfg, core.ApacheWAFVersion)
+}
+
+func apacheWAFProbeVersion(cfg core.WAFConfig, version string) string {
+	if version == "1.0" {
+		return "active"
+	}
 	b, _ := json.Marshal(cfg)
-	return core.ApacheWAFVersion + ":" + core.Hash(string(b))
+	return version + ":" + core.Hash(string(b))
 }
 
 func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, error) {
+	return renderApacheWAFVersion(cfg, bindings, core.ApacheWAFVersion)
+}
+
+// The old renderer is only a read-only migration integrity oracle. It never
+// installs a downgraded app or accepts new proxy policy on the older version.
+func renderApacheWAFVersion(cfg core.WAFConfig, bindings map[string][]string, version string) (string, error) {
+	if version == "1.0" {
+		actual, _ := json.Marshal(cfg)
+		defaults, _ := json.Marshal(core.DefaultApacheWAFConfig())
+		if string(actual) != string(defaults) {
+			return "", errors.New("Apache 1.0 只支持原始空设置的固定规则迁移")
+		}
+		return apacheWAFInitialRules, nil
+	}
+	if version != core.ApacheWAFVersion && version != "2.0.0" || version == "2.0.0" && cfg.TrustedProxy != nil {
+		return "", errors.New("Apache 防护完整性版本或旧版代理策略不支持")
+	}
 	if err := core.ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {
 		return "", err
 	}
@@ -72,7 +108,7 @@ func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, 
 		}
 	}
 	var out strings.Builder
-	out.WriteString("# managed by panel apache-waf " + core.ApacheWAFVersion + "; independently authored metadata rules\nRewriteEngine On\nRewriteOptions InheritDownBefore\n")
+	out.WriteString("# managed by panel apache-waf " + version + "; independently authored metadata rules\nRewriteEngine On\nRewriteOptions InheritDownBefore\n")
 	// These directives are included only in managed Apache VirtualHosts. Never
 	// emit RemoteIPHeader without an explicit list: Apache would trust all peers.
 	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
@@ -82,7 +118,7 @@ func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, 
 		}
 		out.WriteString("RemoteIPHeader X-Forwarded-For\n")
 	}
-	fmt.Fprintf(&out, "Header always set X-Panel-Apache-WAF \"%s\"\nRewriteRule ^ - [E=PANEL_AW_MODE:%s]\n", apacheWAFProbe(cfg), cfg.Policy.Mode)
+	fmt.Fprintf(&out, "Header always set X-Panel-Apache-WAF \"%s\"\nRewriteRule ^ - [E=PANEL_AW_MODE:%s]\n", apacheWAFProbeVersion(cfg, version), cfg.Policy.Mode)
 	for _, site := range cfg.Policy.Sites {
 		if cfg.Policy.Mode != "off" && site.Mode != "inherit" {
 			fmt.Fprintf(&out, "RewriteCond %%{ENV:PANEL_AW_SITE} ^%s$\nRewriteRule ^ - [E=PANEL_AW_MODE:%s]\n", site.SiteID, site.Mode)
@@ -163,7 +199,11 @@ func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, 
 	}
 	out.WriteString("RewriteCond %{ENV:PANEL_AW_MODE} ^observe$\nRewriteCond %{ENV:PANEL_AW_REASON} !^$\nRewriteRule ^ - [E=PANEL_AW_ACTION:observe]\nRewriteCond %{ENV:PANEL_AW_MODE} ^block$\nRewriteCond %{ENV:PANEL_AW_ACTION} ^block$\nRewriteRule ^ - [F,L]\n")
 	// No query string, cookie, user-agent or body is retained in the event log.
-	out.WriteString("CustomLog /var/log/apache2/panel-waf.events.log \"{\\\"epoch\\\":%{sec}t,\\\"ip\\\":\\\"%a\\\",\\\"peer\\\":\\\"%{c}a\\\",\\\"site\\\":\\\"%v\\\",\\\"site_id\\\":\\\"%{PANEL_AW_SITE}e\\\",\\\"method\\\":\\\"%m\\\",\\\"path\\\":\\\"%U\\\",\\\"status\\\":%>s,\\\"reason\\\":\\\"%{PANEL_AW_REASON}e\\\",\\\"action\\\":\\\"%{PANEL_AW_ACTION}e\\\"}\" env=PANEL_AW_REASON\n")
+	logLine := "CustomLog /var/log/apache2/panel-waf.events.log \"{\\\"epoch\\\":%{sec}t,\\\"ip\\\":\\\"%a\\\",\\\"peer\\\":\\\"%{c}a\\\",\\\"site\\\":\\\"%v\\\",\\\"site_id\\\":\\\"%{PANEL_AW_SITE}e\\\",\\\"method\\\":\\\"%m\\\",\\\"path\\\":\\\"%U\\\",\\\"status\\\":%>s,\\\"reason\\\":\\\"%{PANEL_AW_REASON}e\\\",\\\"action\\\":\\\"%{PANEL_AW_ACTION}e\\\"}\" env=PANEL_AW_REASON\n"
+	if version == "2.0.0" {
+		logLine = strings.Replace(logLine, ",\\\"peer\\\":\\\"%{c}a\\\"", "", 1)
+	}
+	out.WriteString(logLine)
 	if out.Len() > 1<<20 {
 		return "", errors.New("Apache 防护生成配置超过 1 MiB，未开始修改")
 	}

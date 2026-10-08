@@ -61,6 +61,10 @@ func (s *Service) apacheWAFConfigurationMatches(version string, cfg core.WAFConf
 }
 
 func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module, rulesPath string) (string, error) {
+	return apacheWAFConfigurationFilesMatchVersion(source, cfg, module, rulesPath, core.ApacheWAFVersion)
+}
+
+func apacheWAFConfigurationFilesMatchVersion(source string, cfg core.WAFConfig, module, rulesPath, version string) (string, error) {
 	bindings, err := apacheWAFBindings(source)
 	if err != nil || len(bindings) == 0 {
 		return "", errors.New("Apache 受管站点无法核实")
@@ -69,7 +73,7 @@ func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module,
 	// include or site identity. Check every owned host, not only the probe host.
 	for _, block := range regexp.MustCompile(`(?ms)^<VirtualHost[^>]+>.*?</VirtualHost>`).FindAllString(source, -1) {
 		id := regexp.MustCompile(`(?m)^\s*CustomLog /var/log/apache2/panel-([a-f0-9]{32})\.access\.log combined\s*$`).FindStringSubmatch(block)
-		if len(id) != 2 || len(regexp.MustCompile(`(?m)^\s*IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules\.conf\s*$`).FindAllString(block, -1)) != 1 || strings.Count(block, `SetEnvIfExpr "true" PANEL_AW_SITE=`+id[1]) != 1 {
+		if len(id) != 2 || len(regexp.MustCompile(`(?m)^\s*IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules\.conf\s*$`).FindAllString(block, -1)) != 1 || len(regexp.MustCompile(`(?m)^\s*SetEnvIfExpr "true" PANEL_AW_SITE=`+id[1]+`\s*$`).FindAllString(block, -1)) != 1 {
 			return "", errors.New("Apache 站点缺少或重复防护挂载、站点身份")
 		}
 	}
@@ -86,7 +90,7 @@ func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module,
 			return "", err
 		}
 	}
-	expected, err := renderApacheWAF(cfg, bindings)
+	expected, err := renderApacheWAFVersion(cfg, bindings, version)
 	if err != nil {
 		return "", err
 	}
@@ -103,6 +107,13 @@ func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module,
 }
 
 func apacheWAFProbeLoaded(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client) error {
+	return apacheWAFProbeLoadedVersion(ctx, cfg, domain, client, core.ApacheWAFVersion)
+}
+
+func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client, version string) error {
+	if version != core.ApacheWAFVersion && version != "2.0.0" && version != "1.0" {
+		return errors.New("Apache 配置指纹版本不支持")
+	}
 	if !core.ValidDomain(domain) {
 		return errors.New("Apache 配置指纹探针域名无效")
 	}
@@ -111,15 +122,64 @@ func apacheWAFProbeLoaded(ctx context.Context, cfg core.WAFConfig, domain string
 		return err
 	}
 	req.Host = domain
+	req.Header.Set("User-Agent", "Yunzhan Apache read-only integrity probe")
 	res, err := client.Do(req)
 	if err != nil {
 		return errors.New("Apache 实际配置指纹探针不可达")
 	}
 	defer res.Body.Close()
-	if res.StatusCode >= 300 && res.StatusCode < 400 || res.StatusCode < 200 || res.StatusCode >= 500 || res.Header.Get("X-Panel-Apache-WAF") != apacheWAFProbe(cfg) {
+	if res.StatusCode >= 300 && res.StatusCode < 400 || res.StatusCode < 200 || res.StatusCode >= 500 || res.Header.Get("X-Panel-Apache-WAF") != apacheWAFProbeVersion(cfg, version) {
 		return errors.New("Apache 实际加载指纹与配置不一致，未宣称保护正常")
 	}
+	if version == "1.0" {
+		// Its old 'active' marker is not unique. Also verify the known fixed
+		// scanner rule with a private HEAD request before allowing migration.
+		probe := req.Clone(ctx)
+		probe.Header.Set("User-Agent", "sqlmap")
+		blocked, err := client.Do(probe)
+		if err != nil {
+			return errors.New("Apache 1.0 固定规则只读阻断探针不可达")
+		}
+		defer blocked.Body.Close()
+		if blocked.StatusCode != http.StatusForbidden || blocked.Header.Get("X-Panel-Apache-WAF") != "active" {
+			return errors.New("Apache 1.0 固定规则未确认实际加载，未迁移")
+		}
+	}
 	return nil
+}
+
+func (s *Service) verifyApacheWAFLegacyUpgrade(ctx context.Context, status core.SoftwareAppStatus) error {
+	if !status.Installed || status.Version != "2.0.0" && status.Version != "1.0" {
+		return errors.New("仅允许已知完整旧版 Apache 1.0/2.0 防护经签名迁移")
+	}
+	if status.Version == "1.0" && len(status.Settings) != 0 {
+		return errors.New("Apache 1.0 安装记录含非原始空设置，拒绝猜测迁移")
+	}
+	cfg, err := core.DecodeApacheWAFConfig(status.Settings)
+	if err != nil || cfg.TrustedProxy != nil {
+		return errors.New("旧版 Apache 防护记录含未知策略，未迁移")
+	}
+	source, _, err := s.apacheWAFSource()
+	if err != nil {
+		return err
+	}
+	release, err := apacheRelease()
+	if err != nil {
+		return err
+	}
+	domain, err := apacheWAFConfigurationFilesMatchVersion(source, cfg, filepath.Join(release.Prefix(), "modules/mod_remoteip.so"), filepath.Join(s.moduleDir("apache-waf"), "rules.conf"), status.Version)
+	if err != nil {
+		return err
+	}
+	state, err := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-apache")
+	if err != nil || strings.TrimSpace(state) != "active" {
+		return errors.New("旧版 Apache 实际服务未运行，未迁移")
+	}
+	bounded, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	client := &http.Client{Timeout: 1500 * time.Millisecond, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	defer client.CloseIdleConnections()
+	return apacheWAFProbeLoadedVersion(bounded, cfg, domain, client, status.Version)
 }
 
 func (s *Service) verifyApacheWAFHealth(ctx context.Context, version string, settings map[string]any) error {

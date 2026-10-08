@@ -1027,16 +1027,7 @@ func (s *Service) apacheModuleWAF(ctx context.Context, install bool) error {
 		return errors.New("请先创建一个 Apache 网站")
 	}
 	if install {
-		rules := `# CloudStack Apache request firewall: fixed auditable request rules, not a full CRS engine.
-RewriteEngine On
-RewriteOptions InheritDownBefore
-RewriteCond %{REQUEST_METHOD} ^(?:TRACE|TRACK)$ [NC,OR]
-RewriteCond %{HTTP_USER_AGENT} (sqlmap|nikto|masscan|acunetix|nessus|wpscan) [NC,OR]
-RewriteCond %{QUERY_STRING} (union(?:%20|\+)+select|(?:%3c|<)script|/etc/passwd|%2e%2e%2f) [NC,OR]
-RewriteCond %{REQUEST_URI} (/etc/passwd|\.\./|%2e%2e%2f) [NC]
-RewriteRule ^ - [F,L]
-Header always set X-Panel-Apache-WAF active
-`
+		rules := apacheWAFInitialRules
 		if e = atomicWrite(path, []byte(rules), 0644); e != nil {
 			return e
 		}

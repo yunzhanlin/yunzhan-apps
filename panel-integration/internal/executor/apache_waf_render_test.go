@@ -6,6 +6,34 @@ import (
 	"testing"
 )
 
+func TestApacheWAFLegacyIntegrityOracleKeepsVersionAndOldLogShape(t *testing.T) {
+	cfg := core.DefaultApacheWAFConfig()
+	initial, err := renderApacheWAFVersion(cfg, map[string][]string{}, "1.0")
+	if err != nil || core.Hash(initial) != "daabad5cc79ad1c307ed824fafd42f28f5d21aa176384ef5c3e48867130e613f" || apacheWAFProbeVersion(cfg, "1.0") != "active" {
+		t.Fatal("initial fixed rule oracle changed", err)
+	}
+	changed := cfg
+	changed.Profile = "strict"
+	if _, err := renderApacheWAFVersion(changed, map[string][]string{}, "1.0"); err == nil {
+		t.Fatal("non-default policy claimed initial version")
+	}
+	old, err := renderApacheWAFVersion(cfg, map[string][]string{}, "2.0.0")
+	if err != nil || !strings.HasPrefix(old, "# managed by panel apache-waf 2.0.0;") || !strings.Contains(old, apacheWAFProbeVersion(cfg, "2.0.0")) || strings.Contains(old, `%{c}a`) || strings.Contains(old, `peer`) {
+		t.Fatal("old integrity oracle drifted", old, err)
+	}
+	current, err := renderApacheWAF(cfg, map[string][]string{})
+	if err != nil || !strings.Contains(current, `%{c}a`) || !strings.Contains(current, apacheWAFProbe(cfg)) {
+		t.Fatal(current, err)
+	}
+	if _, err := renderApacheWAFVersion(cfg, map[string][]string{}, "1.9.0"); err == nil {
+		t.Fatal("unknown old version accepted")
+	}
+	cfg.TrustedProxy = apacheTrustedProxyFixture()
+	if _, err := renderApacheWAFVersion(cfg, map[string][]string{}, "2.0.0"); err == nil {
+		t.Fatal("new identity policy claimed legacy integrity")
+	}
+}
+
 func TestApacheWAFRendererScopesPrivacyAndLiteralSafety(t *testing.T) {
 	id := strings.Repeat("a", 32)
 	bindings, err := apacheWAFBindings("# managed by panel\n<VirtualHost 127.0.0.1:19080>\n ServerName test.example.test\n ServerAlias alias.example.test\n CustomLog /var/log/apache2/panel-" + id + ".access.log combined\n</VirtualHost>\n")

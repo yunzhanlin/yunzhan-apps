@@ -13,6 +13,8 @@ test('Apache identity policies require explicit trust and do not claim unverifie
  assert(contract.scenarios.some(s=>s.includes('缺失指纹')&&s.includes('FIFO')));
  assert(contract.boundaries.some(s=>s.includes('未签名冻结测试')&&s.includes('签名面板')));
  assert(contract.boundaries.some(s=>s.includes('RemoteIPHeader')&&s.includes('可信对端名单')));
+ assert(contract.boundaries.some(s=>s.includes('原版 1.0')&&s.includes('固定规则摘要')&&s.includes('HEAD')));
+ assert(contract.boundaries.some(s=>s.includes('23r25c')&&s.includes('失败任务')));
  assert(contract.gaps.some(s=>s.includes('完整请求体')&&s.includes('CC')));
  assert(contract.gaps.some(s=>s.includes('完整五种系统')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
