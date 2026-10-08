@@ -41,9 +41,9 @@ const modeLabel = (mode: string) => ({ block: "阻断", observe: "观察", off: 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const newID = () => crypto.randomUUID().replaceAll("-", "");
 const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), sites = ref<Site[]>([]), implementation = ref("");
-const ccObservationSupported = computed(() => !apache && status.value?.installed && ["2.3.0","2.4.0","2.5.0"].includes(status.value.version || ""));
-const bodyRotationSupported = computed(() => !apache && status.value?.installed && ["2.4.0","2.5.0"].includes(status.value.version || ""));
-const bodyRetentionSupported = computed(() => !apache && status.value?.installed && status.value.version === "2.5.0");
+const ccObservationSupported = computed(() => !apache && status.value?.installed && ["2.3.0","2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));
+const bodyRotationSupported = computed(() => !apache && status.value?.installed && ["2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));
+const bodyRetentionSupported = computed(() => !apache && status.value?.installed && ["2.5.0","2.5.1"].includes(status.value.version || ""));
 const rateOutcome = (value?: string) => ({REJECTED:"已拒绝",REJECTED_DRY_RUN:"模拟拒绝（放行）",DELAYED_DRY_RUN:"模拟延迟（放行）",DELAYED:"已延迟",PASSED:"通过"}[value || ""] || "—");
 const defaults = ref<Config>();
 const tab = ref("overview"), busy = ref(false), reportBusy = ref(false), error = ref(""), saved = ref(""), preview = ref("");

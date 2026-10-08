@@ -38,7 +38,7 @@ func TestWAFVerified240UpgradePreservesRotationDraftAndNeverEnablesDeletion(t *t
 				t.Fatal(err)
 			}
 			after, err := s.readSoftwareManifest("nginx-waf")
-			if err != nil || after.Version != "2.5.0" || after.InstalledAt != before.InstalledAt {
+			if err != nil || after.Version != core.WAFVersion || after.InstalledAt != before.InstalledAt {
 				t.Fatal("upgrade identity lost", err)
 			}
 			actual, err := core.DecodeWAFConfig(after.Settings)

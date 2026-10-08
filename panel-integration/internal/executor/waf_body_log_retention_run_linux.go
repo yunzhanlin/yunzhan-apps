@@ -47,6 +47,13 @@ func (s *Service) runWAFBodyRetentionLocked(ctx context.Context, now time.Time, 
 	if checked.After(now.Add(time.Minute)) {
 		return out, errors.New("自动清理时钟回退或记录异常；未覆盖")
 	}
+	preserved, err := s.wafRetainedUnknownArchiveIDs(ctx, out)
+	if err != nil {
+		return out, err
+	}
+	if len(preserved) > 0 {
+		return out, errors.New("已核对保留的未知计划仍有原快照或索引；后续自动清理暂停，不用新计划重复删除，请逐份导出并按摘要处理")
+	}
 	inventory, err := s.wafBodyRetentionInventory(ctx)
 	if err != nil {
 		return out, err

@@ -35,7 +35,7 @@ func (s *Service) wafBodyRetentionRoutes(m *http.ServeMux) {
 				respond(w, 503, map[string]string{"error": "实际清理策略不可核验，未当成未启用或成功"})
 				return
 			}
-			if manifest.Version == "2.5.0" {
+			if wafRetentionVersion(manifest.Version) {
 				enabled, revision = cfg.BodyLogRetention != nil && cfg.BodyLogRetention.Enabled, cfg.Policy.Revision
 			}
 		} else if !errors.Is(e, os.ErrNotExist) {
@@ -48,7 +48,12 @@ func (s *Service) wafBodyRetentionRoutes(m *http.ServeMux) {
 		}
 		checked, _ := time.Parse(time.RFC3339, record.CheckedAt)
 		blocked := record.Operation != nil && (record.Operation.State == "deleting" || record.Operation.State == "unknown")
-		respond(w, 200, map[string]any{"available": true, "enabled": enabled, "record": record, "sha256": sha, "read_only": true, "blocked_unknown": blocked, "stale": enabled && (time.Since(checked) > 200*time.Second || checked.After(time.Now().Add(time.Minute)) || record.Revision != revision), "history_limit": wafBodyRetentionHistoryLimit, "no_automatic_retry": true})
+		preserved, err := s.wafRetainedUnknownArchiveIDs(r.Context(), record)
+		if err != nil {
+			respond(w, 503, map[string]string{"error": "原未知计划残留快照不可核验；状态未当成成功，自动清理不得重新授权"})
+			return
+		}
+		respond(w, 200, map[string]any{"available": true, "enabled": enabled, "record": record, "sha256": sha, "read_only": true, "blocked_unknown": blocked, "blocked_retained_unknown": len(preserved) > 0, "retained_unknown_archive_ids": preserved, "stale": enabled && (time.Since(checked) > 200*time.Second || checked.After(time.Now().Add(time.Minute)) || record.Revision != revision), "history_limit": wafBodyRetentionHistoryLimit, "no_automatic_retry": true})
 	})
 	m.HandleFunc("POST /v1/software/nginx-waf/body-log/retention/retain", func(w http.ResponseWriter, r *http.Request) {
 		var in core.WAFBodyLogRetentionRetainRequest

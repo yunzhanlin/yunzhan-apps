@@ -146,7 +146,7 @@ func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
 				respond(w, 503, map[string]string{"error": "实际轮转策略不可核验，不当成未启用或成功"})
 				return
 			}
-			if manifest.Version == "2.4.0" || manifest.Version == "2.5.0" {
+			if wafBodyRotationVersion(manifest.Version) {
 				enabled = cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled
 				revision = cfg.Policy.Revision
 			}

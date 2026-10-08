@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08T09:46:30Z",
+  "generated_at": "2026-10-08T17:19:23Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -435,8 +435,8 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.5.0",
-      "summary": "站点规则、名单与 CC；显式可信反代与原始网络对端审计；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，隐私数值日志、大小/时间自动轮转及中断恢复；显式启用已完成快照保留期、保留最新份数与删除确认，未知结果停止清理并可按摘要核对；升级保留原策略、引擎与文件 UID/GID。引擎与自动清理默认不启用，需要面板提供 2.5 执行能力。",
+      "version": "2.5.1",
+      "summary": "站点规则、名单与 CC；显式可信反代与原始网络对端审计；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，隐私数值日志、大小/时间自动轮转及中断恢复；显式启用已完成快照保留期、保留最新份数与删除确认。修正已保留未知计划被新计划重复选中的风险，原快照或索引尚存时继续暂停清理；升级保留策略、引擎和 UID/GID。引擎与自动清理默认不启用，需要面板提供 2.5.1 执行能力。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -453,11 +453,11 @@
         "未提交索引与缺失快照显式恢复；可信来源模块与安装版本核对，旧客户端保留配置",
         "受管站点的显式可信代理 CIDR、限定来源头与风险确认；名单与 CC 使用核验 IP，审计另记原始对端",
         "显式确认的已完成快照保留期与最新份数保护，持久删除计划及进度，不处理当前日志",
-        "中断或未知删除结果阻止后续清理，管理员按完整摘要核对保留证据，不重试原删除计划",
+        "中断或未知删除结果阻止后续清理，按完整摘要保留后原快照或索引仍存在时继续暂停，当前与历史计划均不重试",
         "配置迁移、事务回滚与原文件 UID/GID 保全；旧事务缺少所有权证据时拒绝猜测恢复"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.5.0/manifest.json",
-      "sha256": "ad6b09a03ee56bf1d4fbb819246dd927356e4be33753f8ba14af8439297f67fe"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx-waf/2.5.1/manifest.json",
+      "sha256": "eed95299d56d674277e6d489318ff5d43b4fa6e215cd3e65f7be3819fd047403"
     },
     {
       "id": "openlitespeed",

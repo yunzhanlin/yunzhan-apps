@@ -23,7 +23,7 @@ func (s *Service) runWAFBodyLogRetentionOnce(ctx context.Context, now time.Time)
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.5.0" || cfg.BodyLogRetention == nil || !cfg.BodyLogRetention.Enabled {
+	if !wafRetentionVersion(manifest.Version) || cfg.BodyLogRetention == nil || !cfg.BodyLogRetention.Enabled {
 		return nil
 	}
 	lock, err := s.lockWAFConfiguration()
@@ -39,7 +39,7 @@ func (s *Service) runWAFBodyLogRetentionOnce(ctx context.Context, now time.Time)
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.5.0" || cfg.BodyLogRetention == nil || !cfg.BodyLogRetention.Enabled {
+	if !wafRetentionVersion(manifest.Version) || cfg.BodyLogRetention == nil || !cfg.BodyLogRetention.Enabled {
 		return nil
 	}
 	if err := s.verifyWAFBodyEngine(cfg); err != nil {

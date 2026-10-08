@@ -77,7 +77,7 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		if _, advanced := raw["policy"]; !advanced {
 			return cfg, errors.New("自动快照清理需要完整 policy 和当前修订号")
 		}
-		if core.WAFVersion != "2.5.0" {
+		if !wafRetentionVersion(core.WAFVersion) {
 			return cfg, errors.New("自动快照清理尚未在此应用版本发布，不能用面板升级代替应用更新")
 		}
 	}
@@ -114,7 +114,7 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		if _, present := raw["body_log_retention"]; !present {
 			cfg.BodyLogRetention = previous.BodyLogRetention
 		}
-		if cfg.BodyLogRetention != nil && old.Version != "2.5.0" {
+		if cfg.BodyLogRetention != nil && old.Version != core.WAFVersion {
 			return cfg, errors.New("自动快照清理需要先通过应用商店升级 Nginx WAF")
 		}
 		if cfg.BodyLogRotation != nil && old.Version != core.WAFVersion {

@@ -159,11 +159,27 @@ func TestWAFBodyRetentionColdQA(t *testing.T) {
 	if err != nil || retained.Operation.State != "retained_unknown" || retained.Operation.PlanSHA256 != record.Operation.PlanSHA256 || len(retained.Operation.Deleted) != len(record.Operation.Deleted) {
 		t.Fatal("review fabricated successful deletion", retained, err)
 	}
+	preserved, err := s.wafRetainedUnknownArchiveIDs(ctx, retained)
+	if err != nil || len(preserved) == 0 {
+		t.Fatal("cold review did not protect surviving original artifacts", preserved, err)
+	}
+	reviewedBytes, _ := os.ReadFile(s.wafBodyRetentionPath())
+	fresh := New(s.Config)
+	lock, err = fresh.lockWAFConfiguration()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, runErr = fresh.runWAFBodyRetentionLocked(ctx, time.Now().UTC(), lock, cfg, func(string) error { t.Fatal("reviewed cold plan reentered automatic deletion"); return nil })
+	lock.Close()
+	after, _ = os.ReadFile(s.wafBodyRetentionPath())
+	if runErr == nil || !bytes.Equal(after, reviewedBytes) {
+		t.Fatal("reviewed cold plan was changed or authorized a new deletion")
+	}
 	current, _ := os.ReadFile(path)
 	if !bytes.Equal(current, live) {
 		t.Fatal("cold review changed live log")
 	}
-	if err := moduleWrite(verified, map[string]any{"id": id, "cut": cut, "passed": true, "boot_before": proof.Boot, "boot_after": strings.TrimSpace(string(boot)), "actual_SIGKILL_checked_by_coordinator": true, "current_log_untouched": true, "current_inode_preserved": true, "unknown_plan_not_retried": true, "retained": retained, "metadata_fixture_only": true, "source_candidate_only": true, "signed_release_acceptance": false}); err != nil {
+	if err := moduleWrite(verified, map[string]any{"id": id, "cut": cut, "passed": true, "boot_before": proof.Boot, "boot_after": strings.TrimSpace(string(boot)), "actual_SIGKILL_checked_by_coordinator": true, "current_log_untouched": true, "current_inode_preserved": true, "unknown_plan_not_retried": true, "reviewed_surviving_artifacts_pause_subsequent_deletion": true, "retained_unknown_archive_ids": preserved, "retained": retained, "metadata_fixture_only": true, "source_candidate_only": true, "signed_release_acceptance": false}); err != nil {
 		t.Fatal(err)
 	}
 }

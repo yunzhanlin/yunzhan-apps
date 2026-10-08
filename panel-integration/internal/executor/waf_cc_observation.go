@@ -13,7 +13,7 @@ const wafCCSiteEnd = "  # END PANEL WAF CC MODE\n"
 // Nginx accepts a literal dry-run setting, not a map variable. Keep this
 // server-scoped and in the same recoverable website transaction as its policy.
 func wafCCObservationVersion(version string) bool {
-	return version == "2.3.0" || version == "2.4.0" || version == "2.5.0"
+	return version == "2.3.0" || wafBodyRotationVersion(version)
 }
 
 func wafEffectiveMetadataMode(cfg core.WAFConfig, id string) string {

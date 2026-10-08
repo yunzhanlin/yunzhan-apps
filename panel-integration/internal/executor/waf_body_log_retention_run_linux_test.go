@@ -115,6 +115,20 @@ func TestWAFBodyRetentionFiveInterruptionsRetainUnknownAndNeverAutomaticallyRetr
 			if _, err := s.retainWAFBodyRetentionOutcome(context.Background(), sha, now.Add(time.Minute)); err == nil {
 				t.Fatal("stale review digest reused")
 			}
+			preserved, err := s.wafRetainedUnknownArchiveIDs(context.Background(), retained)
+			if err != nil || len(preserved) == 0 {
+				t.Fatal("remaining original evidence not protected", preserved, err)
+			}
+			reviewedBytes, _ := os.ReadFile(s.wafBodyRetentionPath())
+			_, err = runRetentionFixture(t, New(s.Config), cfg, now.Add(2*time.Minute), func(string) error { t.Fatal("reviewed interrupted plan reentered deletion"); return nil })
+			if err == nil {
+				t.Fatal("review lifted residual-evidence pause")
+			}
+			afterReview, _ := os.ReadFile(s.wafBodyRetentionPath())
+			live, _ = os.ReadFile(path)
+			if !bytes.Equal(afterReview, reviewedBytes) || !bytes.Equal(live, row) {
+				t.Fatal("reviewed unknown plan changed")
+			}
 		})
 	}
 }

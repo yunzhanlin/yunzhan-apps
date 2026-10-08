@@ -5,24 +5,19 @@ package executor
 import (
 	"bytes"
 	"context"
-	"errors"
 	"local/panel/internal/core"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
 
 func TestWAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion(t *testing.T) {
 	s, path, row, cfg, now := retentionFixture(t)
-	out, err := runRetentionFixture(t, s, cfg, now, func(stage string) error {
-		if stage == "retention-intent-durable" {
-			return errors.New("owned interruption")
-		}
-		return nil
-	})
-	if err == nil || out.Operation == nil {
-		t.Fatal("missing original unknown plan", err)
+	out, err := runRetentionFixture(t, s, cfg, now, nil)
+	if err != nil || out.Operation == nil {
+		t.Fatal("missing original completed plan", err)
 	}
 	out.Operation.State = "retained_unknown"
 	for i := 0; i < wafBodyRetentionHistoryLimit; i++ {
@@ -34,13 +29,31 @@ func TestWAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion(t *test
 	if err := s.writeWAFBodyRetentionRecord(out); err != nil {
 		t.Fatal(err)
 	}
+	// Historical uncertain plans here refer only to absent snapshots. This
+	// isolates the bounded-history guard from the surviving-artifact guard.
+	for i := 0; i < 2; i++ {
+		if err := os.WriteFile(path, row, 0640); err != nil {
+			t.Fatal(err)
+		}
+		entry, err := s.snapshotAndTruncateWAFBodyLog(context.Background())
+		if err != nil {
+			t.Fatal(err)
+		}
+		entry.CapturedAt = now.Add(-time.Duration(42-i) * 24 * time.Hour).Format(time.RFC3339)
+		if err := s.writeWAFBodyLogIndex(context.Background(), entry); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(path, row, 0640); err != nil {
+		t.Fatal(err)
+	}
 	before, _ := os.ReadFile(s.wafBodyRetentionPath())
 	inventory, err := s.wafBodyRetentionInventory(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	_, err = runRetentionFixture(t, s, cfg, now.Add(time.Minute), func(string) error { t.Fatal("full unknown history started deletion"); return nil })
-	if err == nil {
+	if err == nil || !strings.Contains(err.Error(), "上限") {
 		t.Fatal("unknown evidence discarded to make room")
 	}
 	after, _ := os.ReadFile(s.wafBodyRetentionPath())

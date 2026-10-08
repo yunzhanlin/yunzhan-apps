@@ -29,7 +29,7 @@ func wafRetentionManagedNativeQA(t *testing.T, s *Service, site, domain, backup 
 		t.Fatal(err)
 	}
 	cfg, err := core.DecodeWAFConfig(manifest.Settings)
-	if err != nil || manifest.Version != "2.5.0" || cfg.Body == nil || len(cfg.Body.Sites) != 1 || cfg.Body.Sites[0].SiteID != site || cfg.Body.Sites[0].Policy.Mode != "block" || cfg.BodyLogRetention != nil {
+	if err != nil || manifest.Version != core.WAFVersion || cfg.Body == nil || len(cfg.Body.Sites) != 1 || cfg.Body.Sites[0].SiteID != site || cfg.Body.Sites[0].Policy.Mode != "block" || cfg.BodyLogRetention != nil {
 		t.Fatal("unbound native retention scope", err)
 	}
 	client := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}}

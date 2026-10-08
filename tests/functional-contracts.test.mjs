@@ -51,7 +51,7 @@ test('daily SMTP publishes independent version and truthful transport/security b
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
- assert.equal(waf.version,'2.5.0');assert.equal(analytics.version,'2.2.0');
+ assert.equal(waf.version,'2.5.1');assert.equal(analytics.version,'2.2.0');
  assert.match(waf.summary,/默认不启用/);assert(!waf.summary.includes('不含完整请求体检测'));
  assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
  const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
@@ -78,7 +78,10 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.boundaries.some(s=>s.includes('2.5 保留期')&&s.includes('默认关闭')));
  assert(w.boundaries.some(s=>s.includes('未知结果改成成功')&&s.includes('不将')));
  assert(w.boundaries.some(s=>s.includes('实际经过三十天')));
- assert(w.gaps.some(s=>s.includes('2.5 的签名应用迁移')&&s.includes('仍待验收')));
+ assert(w.gaps.some(s=>s.includes('2.5.1 的签名应用迁移')&&s.includes('仍待验收')));
+ assert(w.boundaries.some(s=>s.includes('2.5.0')&&s.includes('复现失败')));
+ assert(w.boundaries.some(s=>s.includes('原快照或索引')&&s.includes('继续暂停')));
+ assert(waf.capabilities.some(s=>s.includes('当前与历史计划')&&s.includes('不重试')));
  assert(w.scenarios.some(s=>s.includes('独立新 PID')));
  assert(w.scenarios.some(s=>s.includes('同长度快照篡改')));
  assert(w.scenarios.some(s=>s.includes('专用固定依赖进程')));

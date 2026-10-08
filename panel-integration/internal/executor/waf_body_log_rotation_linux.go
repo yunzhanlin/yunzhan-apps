@@ -358,7 +358,7 @@ func (s *Service) runWAFBodyLogRotationOnce(ctx context.Context, now time.Time) 
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.4.0" && manifest.Version != "2.5.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
+	if !wafBodyRotationVersion(manifest.Version) || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
 		return nil
 	}
 	lock, err := s.lockWAFConfiguration()
@@ -375,7 +375,7 @@ func (s *Service) runWAFBodyLogRotationOnce(ctx context.Context, now time.Time) 
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.4.0" && manifest.Version != "2.5.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
+	if !wafBodyRotationVersion(manifest.Version) || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
 		return nil
 	}
 	_, err = s.runWAFBodyRotationLocked(ctx, now, lock, cfg, func(intent string) (wafBodyLogArchive, error) { return s.rotateWAFBodyLogWithIntent(ctx, lock, intent) })

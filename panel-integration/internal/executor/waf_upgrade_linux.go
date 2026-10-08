@@ -20,17 +20,17 @@ import (
 // All other references must still resolve to a regular managed site config.
 // Normal policy edits continue to use the stricter prepareWAFSettings path.
 func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
-	if cfg.BodyLogRetention != nil && version != "2.5.0" {
+	if cfg.BodyLogRetention != nil && !wafRetentionVersion(version) {
 		return false
 	}
-	if cfg.BodyLogRotation != nil && version != "2.4.0" && version != "2.5.0" {
+	if cfg.BodyLogRotation != nil && !wafBodyRotationVersion(version) {
 		return false
 	}
-	return version == core.WAFVersion || version == "2.4.0" || version == "2.3.0" || version == "2.2.0" || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
+	return wafBodyRotationVersion(version) || version == "2.3.0" || version == "2.2.0" || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
 }
 
 func wafLegacyVersion(version string) bool {
-	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0" || version == "2.4.0"
+	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0" || version == "2.4.0" || version == "2.5.0"
 }
 
 func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
