@@ -288,7 +288,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 		case "daily-report":
-			version = "1.3.1"
+			version = "1.4.0"
 		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "load-balance":

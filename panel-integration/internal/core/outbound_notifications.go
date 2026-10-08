@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
@@ -18,25 +19,42 @@ import (
 var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security"}
 
 type NotificationChannel struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	EndpointHost string   `json:"endpoint_host"`
-	Enabled      bool     `json:"enabled"`
-	Kinds        []string `json:"kinds"`
-	Revision     int64    `json:"revision"`
-	SecretSet    bool     `json:"secret_set"`
-	UpdatedAt    string   `json:"updated_at"`
-	StartedAt    int64    `json:"-"`
+	ID              string                  `json:"id"`
+	Name            string                  `json:"name"`
+	EndpointHost    string                  `json:"endpoint_host"`
+	Enabled         bool                    `json:"enabled"`
+	Kinds           []string                `json:"kinds"`
+	Revision        int64                   `json:"revision"`
+	SecretSet       bool                    `json:"secret_set"`
+	UpdatedAt       string                  `json:"updated_at"`
+	StartedAt       int64                   `json:"-"`
+	Type            string                  `json:"type"`
+	SMTP            *SMTPNotificationPublic `json:"smtp,omitempty"`
+	CredentialError string                  `json:"credential_error,omitempty"`
 }
 type NotificationChannelInput struct {
-	Name     string   `json:"name"`
-	URL      string   `json:"url"`
-	Secret   string   `json:"secret"`
-	Enabled  bool     `json:"enabled"`
-	Kinds    []string `json:"kinds"`
-	Revision int64    `json:"revision"`
+	Name     string                 `json:"name"`
+	URL      string                 `json:"url"`
+	Secret   string                 `json:"secret"`
+	Enabled  bool                   `json:"enabled"`
+	Kinds    []string               `json:"kinds"`
+	Revision int64                  `json:"revision"`
+	Type     string                 `json:"type,omitempty"`
+	SMTP     *SMTPNotificationInput `json:"smtp,omitempty"`
 }
-type webhookCredential struct{ URL, Secret string }
+type notificationCredential struct {
+	URL, Secret string
+	Type        string                 `json:"type,omitempty"`
+	SMTP        *SMTPNotificationInput `json:"smtp,omitempty"`
+}
+
+func (v notificationCredential) channelType() string {
+	if v.Type == "" {
+		return "webhook" // Original encrypted URL/Secret envelopes are unchanged.
+	}
+	return v.Type
+}
+
 type OutboundMessage struct {
 	SchemaVersion int                   `json:"schema_version"`
 	EventID       string                `json:"event_id"`
@@ -46,6 +64,7 @@ type OutboundMessage struct {
 	Severity      string                `json:"severity"`
 	CreatedAt     int64                 `json:"created_at"`
 	Report        *OutboundDailySummary `json:"report,omitempty"`
+	Test          bool                  `json:"test,omitempty"`
 }
 type OutboundDailySummary struct {
 	Day               string `json:"day"`
@@ -114,7 +133,7 @@ func validateWebhookURL(raw string) (*url.URL, error) {
 	return u, nil
 }
 func (s *Store) NotificationChannels() ([]NotificationChannel, error) {
-	rows, e := s.DB.Query(`SELECT id,name,endpoint_host,enabled,kinds,revision,updated_at,started_at FROM notification_channels ORDER BY rowid`)
+	rows, e := s.DB.Query(`SELECT id,name,endpoint_host,enabled,kinds,revision,updated_at,started_at,credential FROM notification_channels ORDER BY rowid`)
 	if e != nil {
 		return nil, e
 	}
@@ -123,13 +142,39 @@ func (s *Store) NotificationChannels() ([]NotificationChannel, error) {
 	for rows.Next() {
 		var c NotificationChannel
 		var raw string
-		if e = rows.Scan(&c.ID, &c.Name, &c.EndpointHost, &c.Enabled, &raw, &c.Revision, &c.UpdatedAt, &c.StartedAt); e != nil {
+		var cipher []byte
+		if e = rows.Scan(&c.ID, &c.Name, &c.EndpointHost, &c.Enabled, &raw, &c.Revision, &c.UpdatedAt, &c.StartedAt, &cipher); e != nil {
 			return nil, e
 		}
 		if e = json.Unmarshal([]byte(raw), &c.Kinds); e != nil {
 			return nil, e
 		}
-		c.SecretSet = true
+		plain, err := decryptCredential(s.encryptionKey, "notification-channel:"+c.ID, cipher)
+		var secret notificationCredential
+		if err != nil || json.Unmarshal(plain, &secret) != nil {
+			c.Type, c.CredentialError = "invalid", "通道凭据无法读取；不发送明文或猜测协议"
+			out = append(out, c)
+			continue // One damaged envelope must not block unrelated channels.
+		}
+		c.Type = secret.channelType()
+		if (c.Type == "webhook" && secret.SMTP != nil) || (c.Type == "smtp" && (secret.URL != "" || secret.Secret != "")) {
+			c.Type, c.CredentialError = "invalid", "推送凭据混合了不同协议，只允许停用保留证据"
+			out = append(out, c)
+			continue
+		}
+		if c.Type == "smtp" {
+			if validateSMTPNotification(secret.SMTP) != nil {
+				c.Type, c.CredentialError = "invalid", "SMTP 通道凭据不可读取"
+				out = append(out, c)
+				continue
+			}
+			c.SMTP = smtpPublic(secret.SMTP)
+			c.SecretSet = secret.SMTP.Password != ""
+		} else if c.Type == "webhook" {
+			c.SecretSet = true
+		} else {
+			c.Type, c.CredentialError = "invalid", "推送通道类型无效"
+		}
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -155,7 +200,7 @@ func (s *Store) SaveNotificationChannel(id string, in NotificationChannelInput) 
 	} else if !ValidID(id) || in.Revision < 1 {
 		return empty, errors.New("请读取当前通道版本")
 	}
-	var secret webhookCredential
+	var secret notificationCredential
 	var previous []byte
 	if !create {
 		if e := s.DB.QueryRow(`SELECT credential FROM notification_channels WHERE id=?`, id).Scan(&previous); e != nil {
@@ -163,24 +208,75 @@ func (s *Store) SaveNotificationChannel(id string, in NotificationChannelInput) 
 		}
 		b, e := decryptCredential(s.encryptionKey, "notification-channel:"+id, previous)
 		if e != nil {
+			if !in.Enabled && in.Type == "" && in.URL == "" && in.Secret == "" && in.SMTP == nil {
+				return s.pauseUnreadableNotificationChannel(id, in, previous)
+			}
 			return empty, errors.New("通道凭据无法读取")
 		}
 		if e = json.Unmarshal(b, &secret); e != nil {
-			return empty, e
+			if !in.Enabled && in.Type == "" && in.URL == "" && in.Secret == "" && in.SMTP == nil {
+				return s.pauseUnreadableNotificationChannel(id, in, previous)
+			}
+			return empty, errors.New("通道凭据无法读取")
+		}
+		if (secret.channelType() != "webhook" && secret.channelType() != "smtp") || (secret.channelType() == "smtp" && (validateSMTPNotification(secret.SMTP) != nil || secret.URL != "" || secret.Secret != "")) || (secret.channelType() == "webhook" && secret.SMTP != nil) {
+			if !in.Enabled && in.Type == "" && in.URL == "" && in.Secret == "" && in.SMTP == nil {
+				return s.pauseUnreadableNotificationChannel(id, in, previous)
+			}
+			return empty, errors.New("通道凭据格式无效，只允许停用保留证据")
 		}
 	}
-	if in.URL != "" {
-		secret.URL = strings.TrimSpace(in.URL)
+	typeName := in.Type
+	if typeName == "" {
+		typeName = secret.channelType()
 	}
-	if in.Secret != "" {
-		secret.Secret = in.Secret
+	if typeName != "webhook" && typeName != "smtp" {
+		return empty, errors.New("推送通道只支持 Webhook 或 SMTP")
 	}
-	u, e := validateWebhookURL(secret.URL)
-	if e != nil {
-		return empty, e
+	if !create && typeName != secret.channelType() {
+		return empty, errors.New("现有通道不能更换协议，请新建通道")
 	}
-	if len(secret.Secret) < 16 || len(secret.Secret) > 512 {
-		return empty, errors.New("签名密钥需要 16–512 字符")
+	secret.Type = typeName
+	var endpointHost string
+	if typeName == "smtp" {
+		if in.URL != "" || in.Secret != "" {
+			return empty, errors.New("SMTP 通道不使用 Webhook 地址或签名密钥")
+		}
+		if in.SMTP != nil {
+			candidate := *in.SMTP
+			candidate.To = append([]string(nil), in.SMTP.To...)
+			if secret.SMTP != nil && candidate.AuthMode != "none" {
+				if candidate.Username == "" {
+					candidate.Username = secret.SMTP.Username
+				}
+				if candidate.Password == "" {
+					candidate.Password = secret.SMTP.Password
+				}
+			}
+			secret.SMTP = &candidate
+		}
+		if e := validateSMTPNotification(secret.SMTP); e != nil {
+			return empty, e
+		}
+		endpointHost = net.JoinHostPort(secret.SMTP.Host, strconv.Itoa(secret.SMTP.Port))
+	} else {
+		if in.SMTP != nil {
+			return empty, errors.New("Webhook 通道不能附带邮件凭据")
+		}
+		if in.URL != "" {
+			secret.URL = strings.TrimSpace(in.URL)
+		}
+		if in.Secret != "" {
+			secret.Secret = in.Secret
+		}
+		u, e := validateWebhookURL(secret.URL)
+		if e != nil {
+			return empty, e
+		}
+		if len(secret.Secret) < 16 || len(secret.Secret) > 512 {
+			return empty, errors.New("签名密钥需要 16–512 字符")
+		}
+		endpointHost = u.Host
 	}
 	raw, _ := json.Marshal(secret)
 	cipher, e := encryptCredential(s.encryptionKey, "notification-channel:"+id, raw)
@@ -206,10 +302,10 @@ func (s *Store) SaveNotificationChannel(id string, in NotificationChannelInput) 
 		if count >= 8 {
 			return empty, errors.New("最多配置 8 个推送通道")
 		}
-		_, e = tx.Exec(`INSERT INTO notification_channels VALUES(?,?,?,?,?,?,1,?,?,?)`, id, strings.TrimSpace(in.Name), u.Host, cipher, in.Enabled, string(kinds), watermark, now, Now())
+		_, e = tx.Exec(`INSERT INTO notification_channels VALUES(?,?,?,?,?,?,1,?,?,?)`, id, strings.TrimSpace(in.Name), endpointHost, cipher, in.Enabled, string(kinds), watermark, now, Now())
 	} else {
 		var result sql.Result
-		result, e = tx.Exec(`UPDATE notification_channels SET name=?,endpoint_host=?,credential=?,enabled=?,kinds=?,revision=revision+1,watermark=?,started_at=?,updated_at=? WHERE id=? AND revision=?`, strings.TrimSpace(in.Name), u.Host, cipher, in.Enabled, string(kinds), watermark, now, Now(), id, in.Revision)
+		result, e = tx.Exec(`UPDATE notification_channels SET name=?,endpoint_host=?,credential=?,enabled=?,kinds=?,revision=revision+1,watermark=?,started_at=?,updated_at=? WHERE id=? AND revision=?`, strings.TrimSpace(in.Name), endpointHost, cipher, in.Enabled, string(kinds), watermark, now, Now(), id, in.Revision)
 		if e == nil {
 			n, _ := result.RowsAffected()
 			if n != 1 {
@@ -230,6 +326,56 @@ func (s *Store) SaveNotificationChannel(id string, in NotificationChannelInput) 
 	for _, c := range channels {
 		if c.ID == id {
 			return c, e
+		}
+	}
+	return empty, sql.ErrNoRows
+}
+
+// A damaged envelope cannot be decrypted or replaced by guessing its protocol,
+// but an administrator must still be able to pause it and retain all evidence.
+func (s *Store) pauseUnreadableNotificationChannel(id string, in NotificationChannelInput, expectedCipher []byte) (NotificationChannel, error) {
+	var empty NotificationChannel
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return empty, err
+	}
+	defer tx.Rollback()
+	var name, raw string
+	var revision int64
+	var currentCipher []byte
+	if err = tx.QueryRow(`SELECT name,kinds,revision,credential FROM notification_channels WHERE id=?`, id).Scan(&name, &raw, &revision, &currentCipher); err != nil {
+		return empty, err
+	}
+	var kinds []string
+	if json.Unmarshal([]byte(raw), &kinds) != nil || name != in.Name || revision != in.Revision || len(kinds) != len(in.Kinds) || !bytes.Equal(currentCipher, expectedCipher) {
+		return empty, errors.New("损坏通道只允许按当前修订停用，不改写配置或凭据")
+	}
+	for i, kind := range kinds {
+		if kind != in.Kinds[i] {
+			return empty, errors.New("损坏通道只允许停用，不改写事件范围")
+		}
+	}
+	result, err := tx.Exec(`UPDATE notification_channels SET enabled=0,revision=revision+1,updated_at=? WHERE id=? AND revision=? AND credential=?`, Now(), id, in.Revision, expectedCipher)
+	if err != nil {
+		return empty, err
+	}
+	count, err := result.RowsAffected()
+	if err != nil || count != 1 {
+		return empty, errors.New("通道配置已变化，请重新读取")
+	}
+	if _, err = tx.Exec(`UPDATE notification_deliveries SET state='cancelled',completed_at=?,lease_until=0 WHERE channel_id=? AND state IN ('pending','running')`, time.Now().Unix(), id); err != nil {
+		return empty, err
+	}
+	if err = tx.Commit(); err != nil {
+		return empty, err
+	}
+	channels, err := s.NotificationChannels()
+	if err != nil {
+		return empty, err
+	}
+	for _, channel := range channels {
+		if channel.ID == id {
+			return channel, nil
 		}
 	}
 	return empty, sql.ErrNoRows

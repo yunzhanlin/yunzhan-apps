@@ -15,6 +15,22 @@ test('published manifest OS values are permitted by the schema',async()=>{
  const systems=schema.properties.compatibility.properties.os.items.enum;
  for(const app of registry.apps)for(const os of app.compatibility.os)assert.ok(systems.includes(os),app.id+' '+os);
 });
+test('daily SMTP publishes independent version and truthful transport/security boundaries',async()=>{
+ const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
+ const manifest=registry.apps.find(a=>a.id==='daily-report'),contract=contracts.apps.find(a=>a.id===manifest.id);
+ assert.equal(manifest.version,'1.4.0');
+ assert(manifest.capabilities.some(s=>s.includes('TLS/STARTTLS SMTP')));
+ assert.match(manifest.summary,/250.*中继接收/);
+ assert(contract.scenarios.some(s=>s.includes('AUTH/DATA')));
+ assert(contract.scenarios.some(s=>s.includes('Message-ID')&&s.includes('新 PID')));
+ assert(contract.scenarios.some(s=>s.includes('旧 URL/Secret')));
+ assert(contract.boundaries.some(s=>s.includes('不保证最终收件箱')&&s.includes('恰好一次')));
+ assert(contract.boundaries.some(s=>s.includes('默认关闭')));
+ assert(contract.boundaries.some(s=>s.includes('1–5')&&s.includes('SMTPUTF8')));
+ assert(contract.boundaries.some(s=>s.includes('旧核心拒绝未来应用版本')));
+ assert(contract.gaps.some(s=>s.includes('邮件账号')));
+ assert.equal(contracts.commercial_feature_parity_complete,false);
+});
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');

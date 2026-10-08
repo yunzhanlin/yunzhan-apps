@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -50,7 +51,7 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 				return
 			}
 			// The database has already cancelled the old revision. Interrupt its
-			// active HTTP request as well, without waiting for the receiver timeout.
+			// active HTTP or SMTP request, without waiting for the receiver timeout.
 			// A receiver may have processed bytes already sent, so dedup remains
 			// necessary; cancellation cannot revoke external side effects.
 			if cancel := a.outboundCancels[channel.ID]; cancel != nil {
@@ -76,6 +77,7 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 	m.HandleFunc("POST /api/notification-channels/{id}/test", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var in struct {
 			Revision int64 `json:"revision"`
+			Daily    bool  `json:"daily,omitempty"`
 		}
 		if !decode(w, r, &in) {
 			return
@@ -98,7 +100,8 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 		defer tx.Rollback()
 		var revision int64
 		var enabled bool
-		if tx.QueryRow(`SELECT revision,enabled FROM notification_channels WHERE id=?`, id).Scan(&revision, &enabled) != nil || !enabled || revision != in.Revision {
+		var kindsRaw string
+		if tx.QueryRow(`SELECT revision,enabled,kinds FROM notification_channels WHERE id=?`, id).Scan(&revision, &enabled, &kindsRaw) != nil || !enabled || revision != in.Revision {
 			fail(w, 409, "请启用通道并读取当前配置版本")
 			return
 		}
@@ -109,6 +112,27 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 			return
 		}
 		message := safeOutboundMessage(Notification{ID: ID(), Kind: "test", Severity: "info", CreatedAt: time.Now().Unix()})
+		message.Test = true
+		if in.Daily {
+			var kinds []string
+			if json.Unmarshal([]byte(kindsRaw), &kinds) != nil || !containsMenu(kinds, "daily") {
+				fail(w, 409, "该通道未选择每日运维报告，未发送测试日报")
+				return
+			}
+			var day, raw string
+			if tx.QueryRow(`SELECT day,report FROM app_daily_reports ORDER BY day DESC LIMIT 1`).Scan(&day, &raw) != nil {
+				fail(w, 409, "尚无保存的日报，请先在每日运维报告应用生成报告")
+				return
+			}
+			var summary OutboundDailySummary
+			if _, err := time.Parse("2006-01-02", day); err != nil || json.Unmarshal([]byte(raw), &summary) != nil {
+				fail(w, 409, "保存的日报无法读取，未发送测试日报")
+				return
+			}
+			summary.Day = day
+			message = safeOutboundMessage(Notification{ID: message.EventID, Kind: "daily", Severity: "info", CreatedAt: message.CreatedAt})
+			message.Report, message.Test = &summary, true
+		}
 		if e = insertOutbound(tx, id, revision, message); e != nil {
 			fail(w, 409, e.Error())
 			return

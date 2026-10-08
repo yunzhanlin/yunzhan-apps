@@ -160,6 +160,7 @@ func webhookHTTPClient() *http.Client {
 
 type outboundDelivery struct {
 	ID, ChannelID, Payload string
+	Type                   string
 	Revision               int64
 	Attempts               int
 	Cipher                 []byte
@@ -195,6 +196,11 @@ func (s *Store) claimOutbound(now int64) (outboundDelivery, error) {
 		return d, e
 	}
 	d.Attempts++
+	plain, decryptError := decryptCredential(s.encryptionKey, "notification-channel:"+d.ChannelID, d.Cipher)
+	var credential notificationCredential
+	if decryptError == nil && json.Unmarshal(plain, &credential) == nil {
+		d.Type = credential.channelType()
+	}
 	return d, tx.Commit()
 }
 func (a *Server) sendOutbound(ctx context.Context, client *http.Client, d outboundDelivery) (int, string, int64) {
@@ -202,9 +208,18 @@ func (a *Server) sendOutbound(ctx context.Context, client *http.Client, d outbou
 	if e != nil {
 		return 0, "推送凭据无法解密", 0
 	}
-	var credential webhookCredential
+	var credential notificationCredential
 	if json.Unmarshal(raw, &credential) != nil {
 		return 0, "推送凭据损坏", 0
+	}
+	if credential.channelType() == "smtp" {
+		if credential.URL != "" || credential.Secret != "" {
+			return 550, "SMTP 凭据混合不同协议，未发送", 0
+		}
+		return sendSMTPNotification(ctx, d, credential.SMTP)
+	}
+	if credential.channelType() != "webhook" || credential.SMTP != nil {
+		return 0, "推送协议或凭据无效", 0
 	}
 	if _, e = validateWebhookURL(credential.URL); e != nil {
 		return 0, "推送地址无效", 0
@@ -247,7 +262,11 @@ func (s *Store) completeOutbound(d outboundDelivery, status int, message string,
 	state, completed, next := "succeeded", now, int64(0)
 	if message != "" {
 		state = "failed"
-		if d.Attempts < 6 && (status == 0 || status == 408 || status == 429 || status >= 500) {
+		retryable := status == 0 || status == 408 || status == 429 || status >= 500
+		if d.Type == "smtp" {
+			retryable = status == 0 || (status >= 400 && status < 500)
+		}
+		if d.Attempts < 6 && retryable {
 			state = "pending"
 			completed = 0
 			delay := int64(15) << uint(d.Attempts-1)
