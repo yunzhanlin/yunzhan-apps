@@ -26,6 +26,10 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(waf.capabilities.some(s=>s.includes('旧工作进程')));
  assert(waf.capabilities.some(s=>s.includes('可信代理 CIDR')));
  assert(w.scenarios.some(s=>s.includes('未可信对端')));
+ assert(w.scenarios.some(s=>s.includes('96 个单次 GET')));
+ assert(w.scenarios.some(s=>s.includes('不运行 APT')));
+ assert(!w.gaps.some(s=>s.includes('可信反代来源的签名实装')));
+ assert(w.gaps.some(s=>s.includes('请求体引擎同时启用')));
  assert(w.boundaries.some(s=>s.includes('不自动导入 CDN')));
  assert(w.boundaries.some(s=>s.includes('不是 HTTP 请求数')));
  assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('调度')));
