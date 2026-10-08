@@ -29,6 +29,11 @@ test('daily SMTP publishes independent version and truthful transport/security b
  assert(contract.boundaries.some(s=>s.includes('1–5')&&s.includes('SMTPUTF8')));
  assert(contract.boundaries.some(s=>s.includes('旧核心拒绝未来应用版本')));
  assert(contract.gaps.some(s=>s.includes('邮件账号')));
+ assert(contract.scenarios.some(s=>s.includes('Debian 13 amd64')&&s.includes('Ubuntu 24.04 arm64')&&s.includes('CUA')));
+ assert(contract.scenarios.some(s=>s.includes('1.3.1 到 1.4.0')&&s.includes('幂等键')&&s.includes('标记清除')));
+ assert(!contract.gaps.some(s=>s.includes('界面验收尚待完成')));
+ assert(contract.boundaries.some(s=>s.includes('首次 x86_64 QA')&&s.includes('失败证据保留')));
+ assert(contract.boundaries.some(s=>s.includes('临时数据库')&&s.includes('公网收件箱')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
