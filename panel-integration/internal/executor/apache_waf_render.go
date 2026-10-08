@@ -10,6 +10,8 @@ import (
 	"strings"
 )
 
+const apacheWAFInclude = "IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules.conf\n"
+
 func apacheWAFBindings(source string) (map[string][]string, error) {
 	if !strings.HasPrefix(source, "# managed by panel\n") {
 		return nil, errors.New("Apache 配置不是云栈受管文件")
@@ -61,6 +63,9 @@ func apacheWAFProbe(cfg core.WAFConfig) string {
 }
 
 func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, error) {
+	if err := core.ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {
+		return "", err
+	}
 	for _, id := range core.WAFScopedSites(cfg) {
 		if len(bindings[id]) == 0 {
 			return "", errors.New("Apache 防护策略引用未运行或非 Apache 网站")
@@ -68,6 +73,15 @@ func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, 
 	}
 	var out strings.Builder
 	out.WriteString("# managed by panel apache-waf " + core.ApacheWAFVersion + "; independently authored metadata rules\nRewriteEngine On\nRewriteOptions InheritDownBefore\n")
+	// These directives are included only in managed Apache VirtualHosts. Never
+	// emit RemoteIPHeader without an explicit list: Apache would trust all peers.
+	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
+		out.WriteString("# explicit trusted proxy peers; identity is independent of metadata blocking mode\n")
+		for _, cidr := range cfg.TrustedProxy.TrustedCIDRs {
+			fmt.Fprintf(&out, "RemoteIPInternalProxy %s\n", cidr)
+		}
+		out.WriteString("RemoteIPHeader X-Forwarded-For\n")
+	}
 	fmt.Fprintf(&out, "Header always set X-Panel-Apache-WAF \"%s\"\nRewriteRule ^ - [E=PANEL_AW_MODE:%s]\n", apacheWAFProbe(cfg), cfg.Policy.Mode)
 	for _, site := range cfg.Policy.Sites {
 		if cfg.Policy.Mode != "off" && site.Mode != "inherit" {
@@ -149,7 +163,7 @@ func renderApacheWAF(cfg core.WAFConfig, bindings map[string][]string) (string, 
 	}
 	out.WriteString("RewriteCond %{ENV:PANEL_AW_MODE} ^observe$\nRewriteCond %{ENV:PANEL_AW_REASON} !^$\nRewriteRule ^ - [E=PANEL_AW_ACTION:observe]\nRewriteCond %{ENV:PANEL_AW_MODE} ^block$\nRewriteCond %{ENV:PANEL_AW_ACTION} ^block$\nRewriteRule ^ - [F,L]\n")
 	// No query string, cookie, user-agent or body is retained in the event log.
-	out.WriteString("CustomLog /var/log/apache2/panel-waf.events.log \"{\\\"epoch\\\":%{sec}t,\\\"ip\\\":\\\"%a\\\",\\\"site\\\":\\\"%v\\\",\\\"site_id\\\":\\\"%{PANEL_AW_SITE}e\\\",\\\"method\\\":\\\"%m\\\",\\\"path\\\":\\\"%U\\\",\\\"status\\\":%>s,\\\"reason\\\":\\\"%{PANEL_AW_REASON}e\\\",\\\"action\\\":\\\"%{PANEL_AW_ACTION}e\\\"}\" env=PANEL_AW_REASON\n")
+	out.WriteString("CustomLog /var/log/apache2/panel-waf.events.log \"{\\\"epoch\\\":%{sec}t,\\\"ip\\\":\\\"%a\\\",\\\"peer\\\":\\\"%{c}a\\\",\\\"site\\\":\\\"%v\\\",\\\"site_id\\\":\\\"%{PANEL_AW_SITE}e\\\",\\\"method\\\":\\\"%m\\\",\\\"path\\\":\\\"%U\\\",\\\"status\\\":%>s,\\\"reason\\\":\\\"%{PANEL_AW_REASON}e\\\",\\\"action\\\":\\\"%{PANEL_AW_ACTION}e\\\"}\" env=PANEL_AW_REASON\n")
 	if out.Len() > 1<<20 {
 		return "", errors.New("Apache 防护生成配置超过 1 MiB，未开始修改")
 	}

@@ -320,7 +320,7 @@ func InstallJob(id string) (ret error) {
 		flags = []string{"--prefix=" + r.Prefix(), "--sbin-path=" + r.CLI(), "--conf-path=/etc/nginx/nginx.conf", "--pid-path=/run/nginx.pid", "--error-log-path=/var/log/nginx/error.log", "--http-log-path=/var/log/nginx/access.log", "--user=www-data", "--group=www-data", "--with-compat", "--with-http_ssl_module", "--with-http_v2_module", "--with-http_stub_status_module", "--with-http_realip_module", "--with-http_gzip_static_module", "--with-threads", "--with-stream", "--with-stream_ssl_module"}
 	}
 	if r.Family == "apache" {
-		flags = []string{"--prefix=" + r.Prefix(), "--enable-so", "--enable-ssl=shared", "--with-ssl", "--enable-http2=shared", "--enable-rewrite=shared", "--enable-proxy=shared", "--enable-proxy-http=shared", "--enable-proxy-fcgi=shared", "--enable-headers=shared", "--enable-expires=shared", "--enable-deflate=shared", "--enable-status=shared", "--enable-mime=shared", "--enable-dir=shared", "--enable-log-config=shared", "--enable-unixd=shared", "--enable-mpms-shared=all", "--with-mpm=event"}
+		flags = []string{"--prefix=" + r.Prefix(), "--enable-so", "--enable-ssl=shared", "--with-ssl", "--enable-http2=shared", "--enable-rewrite=shared", "--enable-remoteip=shared", "--enable-proxy=shared", "--enable-proxy-http=shared", "--enable-proxy-fcgi=shared", "--enable-headers=shared", "--enable-expires=shared", "--enable-deflate=shared", "--enable-status=shared", "--enable-mime=shared", "--enable-dir=shared", "--enable-log-config=shared", "--enable-unixd=shared", "--enable-mpms-shared=all", "--with-mpm=event"}
 	}
 	logPath := filepath.Join(base, "build.log")
 	if e = add("以独立构建用户配置精确版本及固定模块"); e != nil {

@@ -2,6 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const load=async name=>JSON.parse(await readFile(new URL(name,import.meta.url),'utf8'));
+test('Apache identity policies require explicit trust and do not claim unverified commercial parity',async()=>{
+ const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
+ const manifest=registry.apps.find(a=>a.id==='apache-waf'),contract=contracts.apps.find(a=>a.id===manifest.id);
+ assert.equal(manifest.version,'2.1.0');
+ assert(manifest.capabilities.some(s=>s.includes('默认关闭')&&s.includes('CIDR')));
+ assert(manifest.capabilities.some(s=>s.includes('原始连接 IP')));
+ assert(manifest.capabilities.some(s=>s.includes('普通保存不隐式升级')));
+ assert(contract.scenarios.some(s=>s.includes('未可信对端')&&s.includes('IPv6')));
+ assert(contract.scenarios.some(s=>s.includes('缺失指纹')&&s.includes('FIFO')));
+ assert(contract.boundaries.some(s=>s.includes('未签名冻结测试')&&s.includes('签名面板')));
+ assert(contract.boundaries.some(s=>s.includes('RemoteIPHeader')&&s.includes('可信对端名单')));
+ assert(contract.gaps.some(s=>s.includes('完整请求体')&&s.includes('CC')));
+ assert(contract.gaps.some(s=>s.includes('完整五种系统')));
+ assert.equal(contracts.commercial_feature_parity_complete,false);
+});
 test('ordinary Nginx log recovery keeps unknown outcomes and remaining compatibility gaps explicit',async()=>{
  const contracts=await load('../registry/functional-contracts.json');
  const app=contracts.apps.find(a=>a.id==='nginx');

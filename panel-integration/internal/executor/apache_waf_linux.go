@@ -21,11 +21,8 @@ import (
 )
 
 func (s *Service) apacheWAFSource() (string, map[string][]string, error) {
-	if err := ordinary(s.Config.ApacheSiteConfig, false); err != nil {
-		return "", nil, err
-	}
-	data, err := os.ReadFile(s.Config.ApacheSiteConfig)
-	if err != nil || len(data) > 2<<20 {
+	data, err := apacheWAFReadStableFile(s.Config.ApacheSiteConfig, 2<<20)
+	if err != nil {
 		return "", nil, errors.New("Apache 配置不可读取或超过 2 MiB")
 	}
 	bindings, err := apacheWAFBindings(string(data))
@@ -37,6 +34,7 @@ func (s *Service) apacheWAFSettings(raw map[string]any, install bool) (core.WAFC
 		return cfg, err
 	}
 	var current struct {
+		Version  string         `json:"version"`
 		Settings map[string]any `json:"settings"`
 	}
 	err = moduleRead(filepath.Join(s.moduleDir("apache-waf"), "installed.json"), &current)
@@ -50,9 +48,27 @@ func (s *Service) apacheWAFSettings(raw map[string]any, install bool) (core.WAFC
 		}
 		if len(raw) == 0 {
 			cfg = previous
-		} else if !install && cfg.Policy.Revision != previous.Policy.Revision {
-			return cfg, errors.New("Apache WAF 配置已变化，请刷新后重新保存")
+		} else {
+			if _, present := raw["trusted_proxy"]; !present {
+				cfg.TrustedProxy = previous.TrustedProxy
+			}
+			if _, advanced := raw["policy"]; !advanced {
+				if _, explicit := raw["trusted_proxy"]; explicit {
+					return cfg, errors.New("Apache 可信代理策略需要完整 policy 和当前修订号")
+				}
+				profile, rate := cfg.Profile, cfg.Rate
+				cfg = previous
+				cfg.Profile, cfg.Rate = profile, rate
+			} else if !install && cfg.Policy.Revision != previous.Policy.Revision {
+				return cfg, errors.New("Apache WAF 配置已变化，请刷新后重新保存")
+			}
 		}
+		if cfg.TrustedProxy != nil && current.Version != core.ApacheWAFVersion {
+			return cfg, errors.New("可信代理策略需要先通过应用商店升级 Apache WAF，不以面板版本冒充应用已升级")
+		}
+	}
+	if _, explicit := raw["trusted_proxy"]; explicit && raw["policy"] == nil {
+		return cfg, errors.New("Apache 可信代理策略需要完整 policy 和当前修订号")
 	}
 	return cfg, nil
 }
@@ -73,25 +89,39 @@ func (s *Service) apacheWAFReplay(raw map[string]any) bool {
 	if err != nil || wanted.Policy.Revision != cfg.Policy.Revision+1 {
 		return false
 	}
+	if _, present := raw["trusted_proxy"]; !present {
+		cfg.TrustedProxy = wanted.TrustedProxy
+	}
 	cfg.Policy.Revision = wanted.Policy.Revision
 	a, _ := json.Marshal(cfg)
 	b, _ := json.Marshal(wanted)
 	if !bytes.Equal(a, b) {
 		return false
 	}
-	_, bindings, err := s.apacheWAFSource()
+	source, bindings, err := s.apacheWAFSource()
 	if err != nil {
+		return false
+	}
+	release, err := apacheRelease()
+	if err != nil {
+		return false
+	}
+	prepared, err := prepareApacheWAFTrustedProxySource(source, wanted.TrustedProxy, filepath.Join(release.Prefix(), "modules/mod_remoteip.so"))
+	if err != nil || prepared != source {
+		return false
+	}
+	if wanted.TrustedProxy != nil && wanted.TrustedProxy.Enabled && verifyApacheWAFRemoteIPModule(filepath.Join(release.Prefix(), "modules/mod_remoteip.so")) != nil {
 		return false
 	}
 	rules, err := renderApacheWAF(wanted, bindings)
 	if err != nil {
 		return false
 	}
-	actual, err := os.ReadFile(filepath.Join(s.moduleDir("apache-waf"), "rules.conf"))
+	actual, err := apacheWAFReadStableFile(filepath.Join(s.moduleDir("apache-waf"), "rules.conf"), 1<<20)
 	return err == nil && string(actual) == rules
 }
 
-func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, install bool, add func(string)) error {
+func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, install, upgrading bool, add func(string)) error {
 	if s.apacheWAFReplay(raw) {
 		add("Apache WAF 配置和修订号已提交，核对文件后确认幂等重放")
 		return nil
@@ -99,6 +129,14 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 	cfg, err := s.apacheWAFSettings(raw, install)
 	if err != nil {
 		return err
+	}
+	if !install && !upgrading {
+		var installed struct {
+			Version string `json:"version"`
+		}
+		if err := moduleRead(filepath.Join(s.moduleDir("apache-waf"), "installed.json"), &installed); err != nil || installed.Version != core.ApacheWAFVersion {
+			return errors.New("先通过应用商店执行 Apache WAF 签名升级；保存配置不能隐式切换应用版本")
+		}
 	}
 	source, bindings, err := s.apacheWAFSource()
 	if err != nil {
@@ -115,6 +153,16 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 	release, err := apacheRelease()
 	if err != nil {
 		return err
+	}
+	modulePath := filepath.Join(release.Prefix(), "modules/mod_remoteip.so")
+	source, err = prepareApacheWAFTrustedProxySource(source, cfg.TrustedProxy, modulePath)
+	if err != nil {
+		return err
+	}
+	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
+		if err = verifyApacheWAFRemoteIPModule(modulePath); err != nil {
+			return err
+		}
 	}
 	dir := s.moduleDir("apache-waf")
 	paths := []string{s.Config.ApacheSiteConfig, filepath.Join(dir, "rules.conf"), filepath.Join(dir, "installed.json")}
@@ -203,13 +251,7 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 	defer client.CloseIdleConnections()
 	verified := false
 	for i := 0; i < 8; i++ {
-		req, _ := http.NewRequestWithContext(ctx, "HEAD", "http://127.0.0.1:19080/__yunzhan_waf_probe", nil)
-		req.Host = bindings[keys[0]][0]
-		response, err := client.Do(req)
-		if err == nil {
-			verified = response.Header.Get("X-Panel-Apache-WAF") == apacheWAFProbe(cfg)
-			response.Body.Close()
-		}
+		verified = apacheWAFProbeLoaded(ctx, cfg, bindings[keys[0]][0], client) == nil
 		if verified {
 			break
 		}
@@ -318,8 +360,24 @@ func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 				var rules string
 				rules, err = renderApacheWAF(cfg, bindings)
 				if err == nil {
-					respond(w, 200, map[string]any{"settings": cfg, "http_config": "# Apache 元数据防护；不包含 CC / POST 正文解析", "server_config": rules})
-					return
+					if release, releaseErr := apacheRelease(); releaseErr == nil {
+						modulePath := filepath.Join(release.Prefix(), "modules/mod_remoteip.so")
+						source, _, sourceErr := s.apacheWAFSource()
+						prepared, prepareErr := prepareApacheWAFTrustedProxySource(source, cfg.TrustedProxy, modulePath)
+						if sourceErr == nil && prepareErr == nil && cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
+							prepareErr = verifyApacheWAFRemoteIPModule(modulePath)
+						}
+						if sourceErr != nil {
+							err = sourceErr
+						} else if prepareErr != nil {
+							err = prepareErr
+						} else {
+							respond(w, 200, map[string]any{"settings": cfg, "http_config": prepared, "server_config": rules})
+							return
+						}
+					} else {
+						err = releaseErr
+					}
 				}
 			}
 		}
@@ -337,4 +395,26 @@ func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 		}
 		respond(w, 409, map[string]string{"error": err.Error()})
 	})
+}
+
+// The library and each containing directory must be root-owned, non-symlinked
+// and not writable by another user. Native -t still checks ABI compatibility;
+// a file merely existing must not be reported as an available safe module.
+func verifyApacheWAFRemoteIPModule(path string) error {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return errors.New("Apache 模块路径须为固定规范绝对路径")
+	}
+	for current := path; ; current = filepath.Dir(current) {
+		st, err := os.Lstat(current)
+		if err != nil || st.Mode()&os.ModeSymlink != 0 || st.Mode().Perm()&0022 != 0 || st.Mode()&(os.ModeSetuid|os.ModeSetgid) != 0 {
+			return errors.New("Apache remoteip 模块缺失或路径权限异常；不会自动重编译或启用代理信任")
+		}
+		owner, ok := st.Sys().(*syscall.Stat_t)
+		if !ok || owner.Uid != 0 || current == path && (!st.Mode().IsRegular() || owner.Nlink != 1) || current != path && !st.IsDir() {
+			return errors.New("Apache remoteip 模块和目录须由 root 独占管理，拒绝异常类型和硬链接")
+		}
+		if current == "/" {
+			return nil
+		}
+	}
 }

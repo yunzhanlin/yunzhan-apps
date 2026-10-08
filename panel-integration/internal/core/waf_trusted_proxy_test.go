@@ -43,7 +43,7 @@ func TestWAFTrustedProxyStrictExplicitRanges(t *testing.T) {
 		t.Fatal("explicit disabled policy rejected")
 	}
 }
-func TestWAFProxyOmissionPreservesHistoricalShapeAndApacheRefuses(t *testing.T) {
+func TestWAFProxyOmissionPreservesHistoricalShapeAndApacheSemantics(t *testing.T) {
 	legacy := DefaultWAFConfig()
 	raw, err := json.Marshal(legacy)
 	if err != nil || strings.Contains(string(raw), "trusted_proxy") {
@@ -59,8 +59,12 @@ func TestWAFProxyOmissionPreservesHistoricalShapeAndApacheRefuses(t *testing.T) 
 		t.Fatal("explicit trust rejected", err)
 	}
 	legacy.Policy.CCEnabled = false
+	if _, err := DecodeApacheWAFConfig(WAFSettings(legacy)); err != nil {
+		t.Fatal("Apache rejected explicitly acknowledged recursive XFF trust", err)
+	}
+	legacy.TrustedProxy.Recursive = false
 	if _, err := DecodeApacheWAFConfig(WAFSettings(legacy)); err == nil {
-		t.Fatal("Apache accepted Nginx-only trust")
+		t.Fatal("Apache accepted Nginx-only nonrecursive semantics")
 	}
 	rawSettings := WAFSettings(legacy)
 	rawSettings["trusted_proxy"].(map[string]any)["bypass_verification"] = true

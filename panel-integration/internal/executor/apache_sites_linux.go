@@ -36,6 +36,9 @@ func renderApacheSites(sites []core.Site, sitesDir string) (string, int, error) 
 		return "", 0, nil
 	}
 	modules := []string{"mpm_event", "authz_core", "authz_host", "unixd", "log_config", "mime", "dir", "env", "setenvif", "headers", "rewrite", "proxy", "proxy_fcgi"}
+	if ordinary(filepath.Join(r.Prefix(), "modules/mod_remoteip.so"), false) == nil {
+		modules = append(modules, "remoteip")
+	}
 	var out strings.Builder
 	fmt.Fprintf(&out, "# managed by panel\nServerRoot %s\nPidFile /run/panel-apache.pid\nListen 127.0.0.1:19080\nServerName 127.0.0.1\nUser www-data\nGroup www-data\nErrorLog /var/log/apache2/panel-error.log\nLogLevel warn\nLogFormat \"%%h %%l %%u %%t \\\"%%r\\\" %%>s %%b\" combined\n", strconv.Quote(r.Prefix()))
 	for _, module := range modules {

@@ -187,6 +187,12 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 			state, err := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-apache")
 			out.Healthy = err == nil && strings.TrimSpace(state) == "active"
 		}
+		if out.Healthy {
+			if err := s.verifyApacheWAFHealth(ctx, out.Version, out.Settings); err != nil {
+				out.Healthy = false
+				out.Detail = err.Error()
+			}
+		}
 		if cfg, err := core.DecodeApacheWAFConfig(out.Settings); err == nil {
 			out.Enabled = cfg.Policy.Mode != "off"
 		}
@@ -296,7 +302,7 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 			return e
 		}
 	case "apache-waf":
-		return s.applyApacheWAF(ctx, settings, action == "install", add)
+		return s.applyApacheWAF(ctx, settings, action == "install", false, add)
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedAt := core.Now()
@@ -410,7 +416,10 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			add("FTP 固定源码、构建补丁、独立程序和许可证校验通过；切换失败将恢复原服务")
 		}
 		if id == "apache-waf" && cmp > 0 {
-			return s.applyApacheWAF(ctx, status.Settings, false, add)
+			if version != core.ApacheWAFVersion {
+				return errors.New("Apache WAF 更新目标与当前受限处理器版本不符，拒绝隐式版本切换")
+			}
+			return s.applyApacheWAF(ctx, status.Settings, false, true, add)
 		}
 		var manifest map[string]any
 		path := filepath.Join(s.moduleDir(id), "installed.json")

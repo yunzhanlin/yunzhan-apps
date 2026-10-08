@@ -1009,8 +1009,6 @@ func NFSMountOperation(id string, unmount bool) error {
 	return nil
 }
 
-const apacheWAFInclude = "IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules.conf\n"
-
 func (s *Service) apacheModuleWAF(ctx context.Context, install bool) error {
 	release, e := apacheRelease()
 	if e != nil {

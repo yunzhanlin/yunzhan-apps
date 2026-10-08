@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const ApacheWAFVersion = "2.0.0"
+const ApacheWAFVersion = "2.1.0"
 
 func DefaultApacheWAFConfig() WAFConfig {
 	cfg := DefaultWAFConfig()
@@ -18,6 +18,17 @@ func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
 	if len(raw) == 0 {
 		return DefaultApacheWAFConfig(), nil
 	}
+	if _, present := raw["policy"]; !present {
+		if _, explicit := raw["trusted_proxy"]; explicit {
+			return WAFConfig{}, errors.New("Apache 可信代理策略需要完整 policy 和当前修订号")
+		}
+		copy := make(map[string]any, len(raw)+1)
+		for k, v := range raw {
+			copy[k] = v
+		}
+		copy["policy"] = WAFSettings(DefaultApacheWAFConfig())["policy"]
+		raw = copy
+	}
 	cfg, err := DecodeWAFConfig(raw)
 	if err != nil {
 		return cfg, err
@@ -25,8 +36,11 @@ func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
 	if cfg.Body != nil {
 		return cfg, errors.New("Apache 尚未实现原生请求体引擎；不能保存 Nginx 请求体策略冒充生效")
 	}
-	if cfg.TrustedProxy != nil {
-		return cfg, errors.New("Apache 尚未实现可信代理来源管理；不能保存 Nginx real_ip 策略冒充生效")
+	if err := ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {
+		return cfg, err
+	}
+	if cfg.BodyLogRotation != nil || cfg.BodyLogRetention != nil {
+		return cfg, errors.New("Apache 不接受 Nginx 请求体日志轮转或保留期策略")
 	}
 	if cfg.Policy.CCEnabled || len(cfg.Policy.CCRules) != 0 {
 		return cfg, errors.New("Apache 元数据防护不提供 CC 限速；请关闭 CC 并通过 Nginx 入口配置限速")
@@ -37,6 +51,18 @@ func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
 		}
 	}
 	return cfg, nil
+}
+
+// mod_remoteip walks the address chain right-to-left. Do not offer Nginx's
+// non-recursive or single-address modes while actually applying other semantics.
+func ValidateApacheWAFTrustedProxy(v *WAFTrustedProxyConfig) error {
+	if err := ValidateWAFTrustedProxy(v); err != nil {
+		return err
+	}
+	if v != nil && v.Enabled && (v.Header != "X-Forwarded-For" || !v.Recursive) {
+		return errors.New("Apache 可信代理仅支持 X-Forwarded-For 从右向左核对地址链；必须启用递归，不冒充 Nginx 的末尾地址或 X-Real-IP 模式")
+	}
+	return nil
 }
 
 func (s *Store) validateApacheWAFSites(cfg WAFConfig) error {

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "apache-waf",
+  "name": "Apache WAF",
+  "category": "professional",
+  "version": "2.1.0",
+  "summary": "独立 Apache 防护工作台：分类与站点规则、名单、观察模式、默认关闭的显式可信代理、双 IP 隐私日志、规则一致性和加载指纹核验；不提供 CC 或完整请求体检测。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "apache-waf",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "分类规则与观察模式",
+    "站点独立策略",
+    "IP/URL/UA 名单",
+    "字面自定义规则",
+    "真实事件筛选与排行",
+    "安全配置导入与预览",
+    "备份、修订检查与重载探针",
+    "默认关闭的可信代理 CIDR 与 X-Forwarded-For 右向左地址链",
+    "有效客户端 IP 与原始连接 IP 双身份日志",
+    "外部 RemoteIP/include 冲突拒绝与固定模块路径核验",
+    "所有受管站点挂载、精确规则文件与实际加载指纹核验",
+    "独立签名升级门禁，普通保存不隐式升级应用版本"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/apache-waf/config"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

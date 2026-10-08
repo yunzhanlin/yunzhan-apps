@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08T17:19:23Z",
+  "generated_at": "2026-10-08T19:48:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -47,8 +47,8 @@
       "id": "apache-waf",
       "name": "Apache WAF",
       "category": "professional",
-      "version": "2.0.0",
-      "summary": "独立 Apache 防护工作台：分类规则、站点策略、IP/URL/UA 名单、字面自定义规则、观察模式、隐私日志与备份回滚；不提供 CC 或完整请求体检测。",
+      "version": "2.1.0",
+      "summary": "独立 Apache 防护工作台：分类与站点规则、名单、观察模式、默认关闭的显式可信代理、双 IP 隐私日志、规则一致性和加载指纹核验；不提供 CC 或完整请求体检测。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -61,10 +61,15 @@
         "字面自定义规则",
         "真实事件筛选与排行",
         "安全配置导入与预览",
-        "备份、修订检查与重载探针"
+        "备份、修订检查与重载探针",
+        "默认关闭的可信代理 CIDR 与 X-Forwarded-For 右向左地址链",
+        "有效客户端 IP 与原始连接 IP 双身份日志",
+        "外部 RemoteIP/include 冲突拒绝与固定模块路径核验",
+        "所有受管站点挂载、精确规则文件与实际加载指纹核验",
+        "独立签名升级门禁，普通保存不隐式升级应用版本"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/2.0.0/manifest.json",
-      "sha256": "997122bddb1ad0c226a3f441ad55bf1a19cdea788930d9223be8c658e03b2c02"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/apache-waf/2.1.0/manifest.json",
+      "sha256": "ad715981dea500c0c2cd62319600d8f95168ee77592e0c22ae6399ca38447d19"
     },
     {
       "id": "daily-report",

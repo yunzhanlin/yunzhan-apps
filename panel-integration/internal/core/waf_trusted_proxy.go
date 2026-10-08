@@ -6,7 +6,7 @@ import (
 )
 
 // Trust applies only to the explicitly listed network peers on WAF-managed
-// Nginx servers. It never discovers proxy ranges or trusts arbitrary headers.
+// servers. It never discovers proxy ranges or trusts arbitrary headers.
 type WAFTrustedProxyConfig struct {
 	Enabled                  bool     `json:"enabled"`
 	Header                   string   `json:"header"`
