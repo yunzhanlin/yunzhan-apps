@@ -35,6 +35,7 @@ type loadBalanceEntry struct {
 	Sticky      bool                        `json:"sticky"`
 	Removed     bool                        `json:"removed"`
 	HealthCheck *core.LoadBalanceHTTPHealth `json:"health_check,omitempty"`
+	BackendTLS  *core.LoadBalanceBackendTLS `json:"backend_tls,omitempty"`
 }
 type loadBalanceTransaction struct {
 	Format    int               `json:"format"`
@@ -70,6 +71,15 @@ func loadBalancePrivateRead(path string, limit int64) ([]byte, error) {
 }
 
 func validateLoadBalanceEntry(v loadBalanceEntry) error {
+	if e := core.ValidateLoadBalanceBackendTLS(v.BackendTLS); e != nil {
+		return e
+	}
+	if (v.Format == 2) != (v.BackendTLS != nil) {
+		return errors.New("TLS 入口须使用格式 2；历史 HTTP 清单不得自动启用 TLS")
+	}
+	if b, e := json.Marshal(v); e != nil || len(b) > 32<<10 {
+		return errors.New("入口清单、检查策略与 CA 总计最多 32 KiB")
+	}
 	if e := core.ValidateLoadBalanceHTTPHealth(v.HealthCheck); e != nil {
 		return e
 	}
@@ -77,8 +87,8 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 		return errors.New("历史入口不能冒充已登记 HTTP 检查策略")
 	}
 	if !core.ValidDomain(v.Domain) || strings.ToLower(v.Domain) != v.Domain || v.Port < 20000 || v.Port > 60000 ||
-		len(v.Nodes) < 2 || len(v.Nodes) > 16 || (v.Format != 0 && v.Format != 1) || v.Revision < 0 || v.Revision >= 1<<60 ||
-		(v.Format == 0 && (v.Revision != 0 || v.Removed)) || (v.Format == 1 && v.Revision == 0) {
+		len(v.Nodes) < 2 || len(v.Nodes) > 16 || (v.Format != 0 && v.Format != 1 && v.Format != 2) || v.Revision < 0 || v.Revision >= 1<<60 ||
+		(v.Format == 0 && (v.Revision != 0 || v.Removed)) || (v.Format > 0 && v.Revision == 0) {
 		return errors.New("负载均衡入口身份、修订号、端口或节点数量无效")
 	}
 	seen := map[string]bool{}
@@ -94,7 +104,8 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 		seen[n.Address] = true
 		if v.HealthCheck != nil {
 			target, err := loadBalanceHealthAddress(v, n.Address)
-			if err != nil || healthTargets[target] || (v.HealthCheck.Scheme == "https" && v.HealthCheck.CheckPort == p) {
+			if err != nil || healthTargets[target] || (v.BackendTLS == nil && v.HealthCheck.Scheme == "https" && v.HealthCheck.CheckPort == p) ||
+				(v.BackendTLS != nil && v.HealthCheck.CheckPort == 0 && v.HealthCheck.Scheme != "https") {
 				return errors.New("检查须使用唯一固定节点 IP 和安全端口；HTTPS 就绪端口必须独立于 HTTP 转发端口")
 			}
 			healthTargets[target] = true
@@ -152,12 +163,18 @@ func loadBalanceProbePath(domain string) string {
 	return "/__yunzhan_lb_health/" + loadBalanceID(domain)
 }
 func renderLoadBalanceEntry(v loadBalanceEntry) (string, error) {
+	return renderLoadBalanceEntryTrust(v, "")
+}
+func renderLoadBalanceEntryTrust(v loadBalanceEntry, trustPath string) (string, error) {
 	if e := validateLoadBalanceEntry(v); e != nil {
 		return "", e
 	}
+	if v.BackendTLS != nil && (trustPath == "" || !filepath.IsAbs(trustPath) || filepath.Clean(trustPath) != trustPath || strings.ContainsAny(trustPath, "\r\n\x00\"'\\$;{}")) {
+		return "", errors.New("TLS 入口缺少固定受管 CA 路径")
+	}
 	var b strings.Builder
 	id := loadBalanceID(v.Domain)
-	if v.Format == 1 {
+	if v.Format > 0 {
 		fmt.Fprintf(&b, "# managed by panel; load-balance=%s; revision=%d\n", id, v.Revision)
 	}
 	fmt.Fprintf(&b, "upstream panel_lb_%s {\n", id)
@@ -177,7 +194,46 @@ func renderLoadBalanceEntry(v loadBalanceEntry) (string, error) {
 	} else {
 		fmt.Fprintf(&b, "}\nserver {\n  listen 127.0.0.1:%d;\n  server_name %s;\n  location = %s { default_type text/plain; access_log off; return 200 '%s'; }\n  location / {\n    proxy_pass http://panel_lb_%s;\n    proxy_set_header Host $host;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_connect_timeout 2s;\n    proxy_read_timeout 30s;\n    proxy_next_upstream error timeout http_502 http_503 http_504;\n  }\n}\n", v.Port, v.Domain, loadBalanceProbePath(v.Domain), loadBalanceFingerprint(v), id)
 	}
+	if v.BackendTLS != nil {
+		value := b.String()
+		value = strings.Replace(value, "proxy_pass http://panel_lb_", "proxy_pass https://panel_lb_", 1)
+		value = strings.Replace(value, "proxy_set_header Host $host;", "proxy_set_header Host "+v.BackendTLS.ServerName+";", 1)
+		tls := fmt.Sprintf("    proxy_ssl_server_name on;\n    proxy_ssl_name %s;\n    proxy_ssl_verify on;\n    proxy_ssl_verify_depth 4;\n    proxy_ssl_protocols TLSv1.2 TLSv1.3;\n    proxy_ssl_trusted_certificate \"%s\";\n", v.BackendTLS.ServerName, trustPath)
+		value = strings.Replace(value, "    proxy_connect_timeout 2s;", tls+"    proxy_connect_timeout 2s;", 1)
+		return value, nil
+	}
 	return b.String(), nil
+}
+func (s *Service) loadBalanceCAPath(domain string) string {
+	return filepath.Join(s.moduleDir("load-balance"), "backend-ca", loadBalanceID(domain)+".pem")
+}
+func (s *Service) renderLoadBalanceEntry(v loadBalanceEntry) (string, error) {
+	return renderLoadBalanceEntryTrust(v, s.loadBalanceCAPath(v.Domain))
+}
+func loadBalanceCAState(v loadBalanceEntry) (bool, []byte) {
+	if v.BackendTLS == nil || v.Removed {
+		return false, nil
+	}
+	return true, []byte(v.BackendTLS.CAPEM)
+}
+func (s *Service) verifyLoadBalanceCA(v loadBalanceEntry) error {
+	path := s.loadBalanceCAPath(v.Domain)
+	want, data := loadBalanceCAState(v)
+	if e := s.wafOwnedDirectory(filepath.Dir(path), false); e != nil {
+		if errors.Is(e, os.ErrNotExist) && !want {
+			return nil // An absent owned parent is absence, not an invented CA.
+		}
+		return e
+	}
+	mode := os.FileMode(0)
+	if want {
+		mode = 0600
+	}
+	match, e := s.wafCurrentMatches(wafConfigChange{Path: path, OldExists: want, OldMode: mode, OldData: data}, false)
+	if e != nil || !match {
+		return errors.New("入口专用 CA 与可信清单不一致；保留外部修改，拒绝覆盖")
+	}
+	return nil
 }
 func (s *Service) loadBalancePaths(domain string) (string, string) {
 	id := loadBalanceID(domain)
@@ -207,7 +263,10 @@ func (s *Service) readLoadBalanceEntry(domain string) (loadBalanceEntry, bool, e
 	if e != nil || v.Domain != domain {
 		return v, false, errors.New("入口清单身份或内容无效")
 	}
-	expected, e := renderLoadBalanceEntry(v)
+	if e := s.verifyLoadBalanceCA(v); e != nil {
+		return v, false, e
+	}
+	expected, e := s.renderLoadBalanceEntry(v)
 	if e != nil {
 		return v, false, e
 	}
@@ -263,7 +322,11 @@ func (s *Service) loadBalanceEntries() ([]loadBalanceEntry, error) {
 	return out, nil
 }
 func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) error {
-	if tx.Format != 1 || !core.ValidID(tx.ID) || !core.ValidDomain(tx.Domain) || len(tx.Changes) != 2 || len(tx.Digests) != 4 ||
+	count := 2
+	if tx.Format == 2 {
+		count = 3
+	}
+	if (tx.Format != 1 && tx.Format != 2) || !core.ValidID(tx.ID) || !core.ValidDomain(tx.Domain) || len(tx.Changes) != count || len(tx.Digests) != count*2 ||
 		(tx.State != "applying" && tx.State != "restored" && tx.State != "recovered" && tx.State != "committed") {
 		return errors.New("负载均衡事务身份、状态或条目无效")
 	}
@@ -273,6 +336,9 @@ func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) erro
 	conf, meta := s.loadBalancePaths(tx.Domain)
 	if tx.Changes[0].Path != conf || tx.Changes[1].Path != meta {
 		return errors.New("恢复事务目标不属于指定入口")
+	}
+	if tx.Format == 2 && tx.Changes[2].Path != s.loadBalanceCAPath(tx.Domain) {
+		return errors.New("恢复事务 CA 目标不属于指定入口")
 	}
 	for _, c := range tx.Changes {
 		if len(c.OldData) > 32<<10 || len(c.NextData) > 32<<10 || tx.Digests[c.Path+":old"] != core.Hash(string(c.OldData)) || tx.Digests[c.Path+":next"] != core.Hash(string(c.NextData)) ||
@@ -286,7 +352,7 @@ func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) erro
 		return errors.New("恢复事务文件权限不符合固定契约")
 	}
 	next, e := decodeLoadBalanceEntry(mm.NextData)
-	if e != nil || next.Format != 1 || next.Domain != tx.Domain {
+	if e != nil || next.Format == 0 || next.Domain != tx.Domain {
 		return errors.New("恢复事务下一清单无效")
 	}
 	old := loadBalanceEntry{}
@@ -295,21 +361,36 @@ func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) erro
 		if e != nil || old.Domain != tx.Domain {
 			return errors.New("恢复事务原清单无效")
 		}
-		rendered, e := renderLoadBalanceEntry(old)
+		rendered, e := s.renderLoadBalanceEntry(old)
 		if e != nil || cm.OldExists == old.Removed || (cm.OldExists && string(cm.OldData) != rendered) {
 			return errors.New("恢复事务原配置不匹配可信原清单")
 		}
 	} else if cm.OldExists {
 		return errors.New("无原清单的配置不能接管")
 	}
-	rendered, e := renderLoadBalanceEntry(next)
+	if (tx.Format == 2) != (old.BackendTLS != nil || next.BackendTLS != nil) {
+		return errors.New("TLS 变更必须完整绑定 CA、配置和清单；历史 HTTP 事务保持两文件契约")
+	}
+	if tx.Format == 2 {
+		c := tx.Changes[2]
+		oldExists, oldData := loadBalanceCAState(old)
+		nextExists, nextData := loadBalanceCAState(next)
+		if c.OldExists != oldExists || c.NextExists != nextExists ||
+			!bytes.Equal(c.OldData, oldData) || !bytes.Equal(c.NextData, nextData) ||
+			(oldExists && c.OldMode != 0600) || (nextExists && c.NextMode != 0600) {
+			return errors.New("TLS 恢复事务 CA 内容、存在状态或权限不符合清单")
+		}
+	}
+	rendered, e := s.renderLoadBalanceEntry(next)
 	if e != nil || cm.NextExists == next.Removed || (cm.NextExists && string(cm.NextData) != rendered) || next.Revision != old.Revision+1 ||
 		(next.Removed && (!mm.OldExists || old.Removed)) {
 		return errors.New("恢复事务新配置、修订号或移除契约异常")
 	}
 	if next.Removed {
 		expected := old
-		expected.Format = 1
+		if expected.Format == 0 {
+			expected.Format = 1
+		}
 		expected.Revision++
 		expected.Removed = true
 		a, _ := json.Marshal(expected)
@@ -482,7 +563,7 @@ func (s *Service) recoverLoadBalanceBeforeMutation(ctx context.Context, nginx st
 		if e != nil {
 			return e
 		}
-		if old.Format == 1 {
+		if old.Format > 0 {
 			if e = s.verifyLoadBalanceLive(ctx, old); e != nil {
 				return e
 			}
@@ -570,7 +651,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		if !present || old.Removed {
 			return nil, errors.New("入口不存在")
 		}
-		if old.Format == 1 {
+		if old.Format > 0 {
 			if e = s.verifyLoadBalanceLive(ctx, old); e != nil {
 				return nil, e
 			}
@@ -587,7 +668,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 			}
 			nodes = append(nodes, map[string]any{"address": n.Address, "healthy": e == nil, "probe": "TCP connection only", "weight": n.Weight, "backup": n.Backup})
 		}
-		return map[string]any{"domain": old.Domain, "port": old.Port, "revision": old.Revision, "nodes": nodes, "entry_fingerprint_verified": old.Format == 1, "active_application_health_checks": old.HealthCheck != nil}, nil
+		return map[string]any{"domain": old.Domain, "port": old.Port, "revision": old.Revision, "nodes": nodes, "entry_fingerprint_verified": old.Format > 0, "active_application_health_checks": old.HealthCheck != nil}, nil
 	}
 	wanted := int64(0)
 	if present && !old.Removed {
@@ -596,20 +677,28 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 	if in.ExpectedRevision != wanted {
 		return nil, errors.New("入口修订号已改变，请刷新并选择当前记录，未覆盖")
 	}
-	next := loadBalanceEntry{Format: 1, Revision: old.Revision + 1, Domain: in.Domain, Port: in.Port, Nodes: in.Nodes, Sticky: in.Sticky, HealthCheck: in.HealthCheck}
+	next := loadBalanceEntry{Format: 1, Revision: old.Revision + 1, Domain: in.Domain, Port: in.Port, Nodes: in.Nodes, Sticky: in.Sticky, HealthCheck: in.HealthCheck, BackendTLS: in.BackendTLS}
+	if next.BackendTLS != nil {
+		next.Format = 2
+	}
 	if action == "remove" {
 		if !present || old.Removed {
 			return nil, errors.New("入口不存在")
 		}
 		next = old
-		next.Format = 1
+		if next.Format == 0 {
+			next.Format = 1
+		}
 		next.Revision++
 		next.Removed = true
 	} else {
+		if next.BackendTLS != nil && s.loadBalanceHealthVersion() != "1.6.0" {
+			return nil, errors.New("先更新已安装负载均衡到 v1.6.0，再显式启用 HTTPS 后端转发")
+		}
 		if next.HealthCheck != nil && !s.loadBalanceHealthInstalled() {
 			return nil, errors.New("先更新已安装负载均衡到 v1.4.0，再启用持续 HTTP 检查")
 		}
-		if next.HealthCheck != nil && (next.HealthCheck.Scheme == "https" || next.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+		if next.HealthCheck != nil && (next.HealthCheck.Scheme == "https" || next.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			return nil, errors.New("先更新已安装负载均衡到 v1.5.0，再启用 HTTPS 检查")
 		}
 		if e := validateLoadBalanceEntry(next); e != nil {
@@ -637,13 +726,24 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 	if e = ctx.Err(); e != nil {
 		return nil, e
 	}
-	rendered, e := renderLoadBalanceEntry(next)
+	rendered, e := s.renderLoadBalanceEntry(next)
 	if e != nil {
 		return nil, e
 	}
 	conf, meta := s.loadBalancePaths(in.Domain)
 	for _, dir := range []string{filepath.Dir(conf), filepath.Dir(meta), filepath.Dir(s.loadBalancePendingPath())} {
 		if e = s.wafOwnedDirectory(dir, true); e != nil {
+			return nil, e
+		}
+	}
+	tlsChange := old.BackendTLS != nil || next.BackendTLS != nil
+	if tlsChange {
+		if e = s.wafOwnedDirectory(filepath.Dir(s.loadBalanceCAPath(next.Domain)), true); e != nil {
+			return nil, e
+		}
+	}
+	if !present {
+		if e = s.verifyLoadBalanceCA(loadBalanceEntry{Domain: next.Domain}); e != nil {
 			return nil, e
 		}
 	}
@@ -679,6 +779,20 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		changes[0].NextMode = 0644
 	}
 	tx := loadBalanceTransaction{Format: 1, ID: core.ID(), Domain: next.Domain, State: "applying", CreatedAt: core.Now(), Changes: changes, Digests: map[string]string{}}
+	if tlsChange {
+		oldExists, oldData := loadBalanceCAState(old)
+		nextExists, nextData := loadBalanceCAState(next)
+		change := wafConfigChange{Path: s.loadBalanceCAPath(next.Domain), OldExists: oldExists, OldData: oldData, NextExists: nextExists, NextData: nextData}
+		if oldExists {
+			change.OldMode = 0600
+		}
+		if nextExists {
+			change.NextMode = 0600
+		}
+		tx.Format = 2
+		tx.Changes = append(tx.Changes, change)
+		changes = tx.Changes
+	}
 	for _, c := range changes {
 		tx.Digests[c.Path+":old"] = core.Hash(string(c.OldData))
 		tx.Digests[c.Path+":next"] = core.Hash(string(c.NextData))

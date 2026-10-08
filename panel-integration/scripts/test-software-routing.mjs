@@ -50,6 +50,16 @@ test('load balance selection preserves editable node arrays and policy without m
  assert(manager.includes('Object.assign(form.value,loadBalanceEntryFields(row))'));
  assert(report.includes('loadBalanceEntryRow(v)'));
 });
+test('TLS forwarding selection clones its distinct trust policy and never enables legacy HTTP entries',()=>{
+ const row={nodes:[{address:'127.0.0.1:443',weight:1},{address:'127.0.0.2:443',weight:1}],backend_tls:{server_name:'backend.example.test',ca_pem:'public CA'},health_check:{scheme:'https',ca_pem:'different checking CA'}};
+ const fields=loadBalanceEntryFields({...row,...loadBalanceEntryRow(row)});
+ assert.deepEqual(fields.backend_tls,row.backend_tls);assert.equal(loadBalanceEntryRow(row).backend_protocol,'HTTPS · 验证证书');
+ fields.backend_tls.ca_pem='draft';fields.health_check.ca_pem='checking draft';
+ assert.equal(row.backend_tls.ca_pem,'public CA');assert.equal(row.health_check.ca_pem,'different checking CA');
+ assert.equal(loadBalanceEntryFields({nodes:row.nodes}).backend_tls,null);assert.equal(loadBalanceEntryRow({nodes:row.nodes}).backend_protocol,'HTTP');
+ const manager=fs.readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
+ assert(manager.includes('aria-label="启用 HTTPS 后端转发"'));assert(manager.includes('backend_tls: null'));
+});
 test('HTTP transition rows are deduplicated, bounded and keep the entry identity',()=>{
  const transitions=Array.from({length:240},(_,i)=>({sequence:i+1,revision:1,address:'127.0.0.1:41006',from:'unknown',to:'healthy',at:new Date(1700000000000+i*1000).toISOString()}));
  const rows=loadBalanceTransitions([{domain:'lb.example.test',transitions},{domain:'lb.example.test',transitions}]);

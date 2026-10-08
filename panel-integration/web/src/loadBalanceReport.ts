@@ -4,10 +4,11 @@ export function loadBalanceEntryFields(row: Row) {
   return {
     nodes: (row.nodes as Row[]).map(node=>({...node})),
     health_check: row.health_check ? {...row.health_check} : null,
+    backend_tls: row.backend_tls ? {...row.backend_tls} : null,
   };
 }
 export function loadBalanceEntryRow(row: Row) {
-  return {health_check:row.health_check || null, http_health_enabled:Boolean(row.health_check)};
+  return {health_check:row.health_check || null, http_health_enabled:Boolean(row.health_check), backend_tls:row.backend_tls || null, backend_protocol:row.backend_tls ? "HTTPS · 验证证书" : "HTTP"};
 }
 export function loadBalanceNodeSummary(nodes: unknown[]) {
   return nodes.map(node=>{

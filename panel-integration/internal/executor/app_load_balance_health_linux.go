@@ -92,7 +92,7 @@ func (s *Service) loadBalanceHealthVersion() string {
 		UpdatedAt   string         `json:"updated_at,omitempty"`
 		Settings    map[string]any `json:"settings"`
 	}
-	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1" && v.Version != "1.5.0") {
+	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1" && v.Version != "1.5.0" && v.Version != "1.6.0") {
 		return ""
 	}
 	if _, e := time.Parse(time.RFC3339, v.InstalledAt); e != nil {
@@ -104,6 +104,10 @@ func (s *Service) loadBalanceHealthVersion() string {
 		}
 	}
 	return v.Version
+}
+func (s *Service) loadBalanceHTTPSInstalled() bool {
+	version := s.loadBalanceHealthVersion()
+	return version == "1.5.0" || version == "1.6.0"
 }
 func (s *Service) loadBalanceHealthInstalled() bool { return s.loadBalanceHealthVersion() != "" }
 func (s *Service) loadBalanceHealthPath(domain string) string {
@@ -423,7 +427,7 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		if v.HealthCheck == nil {
 			continue
 		}
-		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			lock.Close()
 			return errors.New("HTTPS 检查需要可信的负载均衡 v1.5.0 安装记录")
 		}
@@ -475,7 +479,7 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		return e
 	}
 	for i, v := range due {
-		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			lock.Close()
 			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
 		}
@@ -542,7 +546,7 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 	completed := time.Now().UTC()
 	// Validate ALL entries and previous records before publishing any result.
 	for i, v := range due {
-		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
 		}
 		current, present, err := s.readLoadBalanceEntry(v.Domain)
@@ -605,12 +609,12 @@ func (s *Service) loadBalanceHealthReports(entries []loadBalanceEntry, now time.
 				if v.HealthCheck.CAPEM != "" {
 					row["tls_verification"] = "入口专用 CA 与入口域名"
 				}
-				if s.loadBalanceHealthVersion() != "1.5.0" {
+				if !s.loadBalanceHTTPSInstalled() {
 					rowInstalled = false
 					row["worker_error"] = "HTTPS 检查需要负载均衡 v1.5.0"
 				}
 			}
-			if v.HealthCheck.CheckPort != 0 && s.loadBalanceHealthVersion() != "1.5.0" {
+			if v.HealthCheck.CheckPort != 0 && !s.loadBalanceHTTPSInstalled() {
 				rowInstalled = false
 				row["worker_error"] = "独立检查端口需要负载均衡 v1.5.0"
 			}

@@ -57,7 +57,7 @@ test('body WAF and analytics additions keep truthful limits and independent vers
 test('load balancing publishes bounded HTTP observations and recovery without claiming L4 or active traffic mutation',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'1.5.0');
+ assert.equal(manifest.version,'1.6.0');
  assert(manifest.capabilities.some(s=>s.includes('修订')));
  assert(contract.scenarios.some(s=>s.includes('ABA')));
  assert(contract.scenarios.some(s=>s.includes('冷启动')));
@@ -76,6 +76,9 @@ test('load balancing publishes bounded HTTP observations and recovery without cl
  assert(manifest.capabilities.some(s=>s.includes('入口专用 CA')));
  assert(contract.scenarios.some(s=>s.includes('错误域名')&&s.includes('过期证书')));
  assert(contract.boundaries.some(s=>s.includes('独立固定 IP 端口')&&s.includes('禁止私钥')));
- assert(contract.gaps.some(s=>s.includes('后端业务转发')));
+ assert(manifest.capabilities.some(s=>s.includes('HTTPS 后端转发')));
+ assert(contract.scenarios.some(s=>s.includes('三文件')&&s.includes('六个摘要')));
+ assert(contract.boundaries.some(s=>s.includes('不使用系统根')&&s.includes('HTTP 降级')));
+ assert(contract.gaps.some(s=>s.includes('三文件整机冷启动验收仍待完成')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });

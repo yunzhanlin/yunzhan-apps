@@ -165,6 +165,7 @@ const names: Record<string, string> = {
   entries: "负载均衡入口",
   http_health: "持续 HTTP 检查",
   http_health_enabled: "持续 HTTP 检查已启用",
+  backend_protocol: "后端转发协议",
   http_transitions: "最近 HTTP 状态转换（界面最多 200 条）",
   health_check: "HTTP 检查策略",
   automatic_traffic_changes: "自动修改流量",
@@ -379,7 +380,7 @@ function rows(values: any[]): Record<string, any>[] {
 }
 function columns(values: any[]) {
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
-    return ["domain","port","revision","nodes","sticky","http_health_enabled"];
+    return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
     return ["domain","revision","address","scheme","check_address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","tls_verification","worker_error"];
 	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];

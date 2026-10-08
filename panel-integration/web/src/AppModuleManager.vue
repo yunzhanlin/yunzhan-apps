@@ -69,6 +69,9 @@ const form = ref<Record<string, any>>({}),
 function toggleHTTPHealth(enabled: boolean | string | number) {
   form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2} : null;
 }
+function toggleBackendTLS(enabled: boolean | string | number) {
+  form.value.backend_tls=enabled ? {server_name:form.value.domain || "",ca_pem:""} : null;
+}
 function setHTTPHealthScheme(value: string) {
   form.value.health_check.scheme=value;
   if(value==='http')form.value.health_check.ca_pem='';
@@ -236,6 +239,7 @@ async function show(id: string) {
       realtime: false,
       nodes: [{ address: "127.0.0.1:21001", weight: 1, backup: false }, { address: "127.0.0.1:21002", weight: 1, backup: false }],
       health_check: null,
+      backend_tls: null,
       site_ids: [],
       excludes: [],
       status_code: 0,
@@ -592,6 +596,14 @@ defineExpose({ show });
               <el-button link type="primary" @click="roleDefaultMenus">使用角色默认菜单</el-button>
               <small>菜单是原角色权限的上限，不会扩大网站范围。修改后撤销旧会话；至少保留一个完整权限管理员。</small>
             </div>
+            <div v-else-if="field.kind === 'backend-tls'" class="http-health-editor">
+              <el-switch :model-value="Boolean(form.backend_tls)" aria-label="启用 HTTPS 后端转发" @update:model-value="toggleBackendTLS" />
+              <template v-if="form.backend_tls">
+                <label>后端证书名称 / SNI / Host<el-input v-model="form.backend_tls.server_name" aria-label="HTTPS 后端证书名称" maxlength="253" placeholder="backend.example.com" /></label>
+                <label>入口专用公共 CA PEM（必填）<el-input v-model="form.backend_tls.ca_pem" type="textarea" :rows="5" maxlength="16384" aria-label="HTTPS 后端公共 CA PEM" placeholder="最多 4 个公共 CA 证书；不接受私钥或路径" /></label>
+                <small>真实业务请求使用节点的固定 IP 与转发端口，通过 TLS 1.2/1.3 并验证证书名称、链和有效期。CA 仅作用于本入口，不修改系统信任；失败不会退回明文 HTTP。默认关闭，保存后生效。配置、清单与 CA 三文件事务可恢复；健康检查为独立策略，不自动摘除节点。</small>
+              </template>
+            </div>
             <div v-else-if="field.kind === 'http-health'" class="http-health-editor">
               <el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" />
               <template v-if="form.health_check">
@@ -607,7 +619,7 @@ defineExpose({ show });
                 <label>响应包含的内容<el-input v-model="form.health_check.body_contains" aria-label="HTTP 检查内容包含" maxlength="256" placeholder="可留空，最多 256 字节" /></label>
                 <label>连续失败次数<el-input-number v-model="form.health_check.failures" aria-label="连续失败阈值" :min="1" :max="10" :precision="0" /></label>
                 <label>连续恢复次数<el-input-number v-model="form.health_check.successes" aria-label="连续恢复阈值" :min="1" :max="10" :precision="0" /></label>
-                <small>当前转发为 HTTP；HTTPS 用节点同一固定 IP 上的独立就绪端口，不把 HTTPS 检查冒充 TLS 流量转发。核对入口域名、证书链和有效期，最低 TLS 1.2；专用 CA 只作用于本入口。保存策略后生效，只观测、不自动改动流量。</small>
+                <small>检查与业务转发分别配置。HTTP 转发的 HTTPS 检查须用独立就绪端口；HTTPS 后端可在同一端口检查。检查仍验证入口域名（可与后端名称不同）、证书链和有效期，最低 TLS 1.2；检查 CA 独立于后端 CA。保存后只观测、不自动改动流量。</small>
               </template>
             </div>
             <div v-else-if="field.key === 'nodes'" class="node-editor">
