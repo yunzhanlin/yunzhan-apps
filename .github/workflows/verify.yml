@@ -17,6 +17,8 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Read-only WAF rotation UI refresh regression
+        run: node --experimental-strip-types --test panel-integration/scripts/test-waf-rotation-refresh.mjs
       - run: git diff --exit-code -- dist
       - uses: actions/setup-go@v5
         with:

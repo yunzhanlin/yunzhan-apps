@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
+import { createRotationRefresh } from "./wafRotationRefresh";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
 interface Entry { id: string; value: string; site_id?: string }
 interface Rule { id: string; name: string; site_id?: string; field: string; operator: string; value: string; action: string; enabled: boolean }
@@ -55,11 +56,26 @@ function toggleBodyRotation(value: string | number | boolean) {
   cfg.value.body_log_rotation ||= {enabled:false,rotate_mib:16,max_age_minutes:60};
   cfg.value.body_log_rotation.enabled = value === true;
 }
-async function refreshBodyRotation() {
-  if (!bodyRotationSupported.value) {bodyRotation.value=undefined;bodyRotationError.value="";return;}
-  try {bodyRotation.value=await props.api<BodyRotationStatus>(endpoint("body-log/rotation"));bodyRotationError.value="";}
-  catch(e){bodyRotationError.value=(e as Error).message;}
-}
+const refreshBodyRotation = createRotationRefresh<BodyRotationStatus>({
+  supported: () => !disposed && !!bodyRotationSupported.value,
+  readStatus: () => props.api<BodyRotationStatus>(endpoint("body-log/rotation")),
+  applyStatus: value => { bodyRotation.value = value; },
+  // The per-minute check time changes even when no rotation occurred. Do not
+  // rescan up to 4 MiB merely because that clock advanced.
+  fingerprint: value => JSON.stringify([value.available, value.record?.state,
+    value.record?.archive_count, value.record?.last_rotation_at, value.record?.history]),
+  refreshEvidence: async () => {
+    if (disposed || bodyReportBusy.value || bodyLogBusy.value) {
+      bodyRotationError.value = "库存与报表尚待刷新，将在下一次状态检查重试";
+      return false;
+    }
+    const [reportRead] = await Promise.all([refreshBodyReport(true), refreshBodyArchives()]);
+    if (!reportRead) throw new Error("规则报表尚未核验，库存与报表不能当成最新状态");
+    return true;
+  },
+  clearError: () => { bodyRotationError.value = ""; },
+  onError: e => { bodyRotationError.value = (e as Error).message; },
+});
 function scheduleBodyRotationStatus() {
   if(bodyRotationTimer)clearTimeout(bodyRotationTimer);
   if(disposed || tab.value!=="body" || !bodyRotationSupported.value)return;
@@ -142,7 +158,7 @@ function bodyReportURL(exportAll = false) {
   if(bodyRange.value) {query.set("from",bodyRange.value[0].toISOString());query.set("to",bodyRange.value[1].toISOString());}
   return `${endpoint("body-report")}?${query}`;
 }
-async function refreshBodyReport(reset = false) { if(apache || !status.value?.installed || bodyReportBusy.value) return; if(reset) bodyPage.value=1; bodyReportBusy.value=true; try { bodyReport.value=await props.api<BodyReport>(bodyReportURL()); } catch(e) { error.value=(e as Error).message; } finally {bodyReportBusy.value=false;} }
+async function refreshBodyReport(reset = false) { if(apache || !status.value?.installed || bodyReportBusy.value) return false; if(reset) bodyPage.value=1; bodyReportBusy.value=true; try { bodyReport.value=await props.api<BodyReport>(bodyReportURL()); return true; } catch(e) { error.value=(e as Error).message; return false; } finally {bodyReportBusy.value=false;} }
 async function exportBodyReport() { if(bodyReportBusy.value) return;bodyReportBusy.value=true;try {download("yunzhan-waf-body-rule-matches.json",await props.api<BodyReport>(bodyReportURL(true)));}catch(e){error.value=(e as Error).message;}finally{bodyReportBusy.value=false;} }
 async function refreshBodyArchives(){if(apache||!status.value?.installed)return;const out=await props.api<{entries:BodyArchive[];recovery_entries:BodyRecovery[];index_stages:BodyIndexStage[];inventory_warning:string}>(endpoint("body-log/archives"));bodyArchives.value=out.entries;bodyRecovery.value=out.recovery_entries||[];bodyIndexStages.value=out.index_stages||[];bodyInventoryWarning.value=out.inventory_warning||"";}
 async function retainBodyIndexStage(item:BodyIndexStage){if(bodyLogBusy.value)return;bodyLogBusy.value=true;error.value="";try{await props.api(endpoint(`body-log/index-stages/${item.id}/retain`),"POST",{sha256:item.sha256,acknowledge_uncommitted_index_not_applied:true},newID());await refreshBodyArchives();saved.value="已按摘要保留未提交索引的原始文件；没有将它接管为有效索引，也未修改当前日志。";}catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}}
@@ -191,7 +207,8 @@ async function refresh() {
   try {
     await loadConfig();
     const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = (Array.isArray(out) ? out : out.sites).filter(s => !apache || s.settings?.web_server === "apache");
-    await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives(),refreshBodyRotation()]);
+    await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives()]);
+    await refreshBodyRotation();
     const running = engines.value.find(x=>["queued", "running"].includes(x.state))?.job_id || history.value.find(x=>x.kind==="waf_engine_build" && ["queued","running"].includes(x.state))?.id;
     if (running && !engineTimer) await pollEngine(running);
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
@@ -218,7 +235,8 @@ async function apply() {
     }
     if (!completed) throw new Error("任务仍在执行，未宣称已生效。请在操作记录中核对后再刷新。");
     await loadConfig(); saved.value = `配置已备份、通过 ${engineName} 原生检查和重载核对；现显示实际生效配置。`;
-    await Promise.all([refreshHistory(), refreshReport(), refreshBodyReport()]);
+    await Promise.all([refreshHistory(), refreshReport(), refreshBodyReport(),refreshBodyArchives()]);
+    await refreshBodyRotation();
   } catch (e) { error.value = (e as Error).message; await refreshHistory(); }
   finally { busy.value = false; }
 }
@@ -260,7 +278,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
 
 <template>
   <section class="waf-workspace" v-loading="busy">
-    <div class="waf-heading"><div><h3>{{ engineName }} 请求防火墙</h3><p>请求防护 · 站点策略 · {{ apache ? "独立名单" : "CC 限速" }} · 审计与报表</p></div><div class="waf-actions"><el-tag :type="status?.healthy ? 'success' : 'warning'">{{ !status?.installed ? '未安装' : status.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
+    <div class="waf-heading"><div><h3>{{ engineName }} 请求防火墙</h3><p>请求防护 · 站点策略 · {{ apache ? "独立名单" : "CC 限速" }} · 审计与报表</p></div><div class="waf-actions"><el-tag :type="status?.healthy ? 'success' : 'warning'">{{ !status ? (busy ? '正在读取真实状态' : '状态尚未核实') : !status.installed ? '未安装' : status.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-alert v-if="saved" :title="saved" type="success" :closable="false" />
     <el-alert v-if="status?.installed && !status.healthy" :title="status.detail" type="warning" :closable="false" />
@@ -313,7 +331,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
           <p class="waf-muted">停用并保存会删除本应用生成的 real_ip 指令，保留草稿中的 CIDR 便于核对；不会删除管理员在其它配置中手写的 real_ip 设置，外部继承设置仍可能影响客户端地址。日志分别展示生效客户端 IP 与原始网络对端；旧日志没有原始对端时明确显示“未记录”。</p>
         </el-tab-pane>
         <el-tab-pane v-if="!apache" label="请求体防护" name="body">
-          <el-alert title="原生引擎构建不会自动修改网站或加载模块。仅使用固定摘要的开源程序及规则；编译使用 2 CPU / 1 GiB 内存预算，最长 4 小时，可能排队等待其他源码构建。保留失败证据，重试需新建任务。" type="info" :closable="false"/>
+          <el-alert title="原生引擎构建不会自动修改网站或加载模块。仅使用固定摘要的开源程序及规则；固定单路编译，最多 1 CPU / 640 MiB 内存，576 MiB 回收水位，最长 4 小时，可能排队等待其他源码构建。不会自动添加交换分区或增大预算；保留失败证据，重试需新建任务。" type="info" :closable="false"/>
           <div class="waf-actions"><h4>本机兼容引擎</h4><div><el-button :loading="engineBusy" :disabled="engineJob && ['queued','running'].includes(engineJob.state)" @click="buildEngine">构建兼容引擎</el-button><el-button v-if="engineJob && ['queued','running'].includes(engineJob.state)" :loading="engineBusy" type="warning" @click="stopEngine">停止构建并保留证据</el-button><el-button @click="refreshEngines().catch(e=>error=e.message)">核对引擎状态</el-button></div></div>
           <el-alert v-if="engineJob" :title="`${buildState(engineJob.state)} · ${engineJob.job_id}${engineJob.error ? ' · '+engineJob.error : ''}`" :type="engineJob.state==='ready' ? 'success' : 'info'" :closable="false"/>
           <ol v-if="engineJob?.steps.length"><li v-for="step in engineJob.steps" :key="step.time+step.message">{{formatPanelDateTime(step.time)}} · {{step.message}}</li></ol>

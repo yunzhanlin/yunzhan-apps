@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps23r18-linux-amd64.tar.gz",
-    "archive_sha256": "51fe33b5a7b52361469f779f26b84981690ae022aaa5609050063f579dde9a82",
-    "frozen_inputs_sha256": "6fe8365cd184a23a08057f5aa66814ba08415735e6771232cff639e007cde885"
+    "archive": "panel-0.1.0-dev.proapps23r20-linux-amd64.tar.gz",
+    "archive_sha256": "ab5e22929178f3188278ba3321de38dfb0f3bdbeeae8697b49370bf9fde4d6c2",
+    "frozen_inputs_sha256": "68a50568ee2b8c8a8766d6a3eed16eac60ac620268af2e5d4f381cd7d03bd638"
   },
   "files": {
     "go.mod": "5052dff7bad65f11cac8c49a523b968fbb41643d22b323bf51b76b87cc1cf378",
@@ -555,7 +555,7 @@
     "dev/provision-app.sh": "c636b2b8a11320a154bd28e228d8b0a49ef34a956d49b707b0698bcfa591fd1d",
     "dev/provision-build-deps.sh": "6192f7f8e310b1c6fb076dfce47d3647dd8eb4224b2328819a194b9d10b8f66b",
     "dev/qa-pm2-deployment-delay.conf": "b25b18947977eccc222a6e71ed7e3afe4567f23421ee60013b09c80168832d50",
-    "packaging/build-release.sh": "f7ba780a27c066f3b6804548bc02aae6b439dd5758feb2680cd9b8f7aaca225d",
+    "packaging/build-release.sh": "4466d15d1f612f3acf56142186a09604d81f2a0e8fe9bf66eb268892f6602518",
     "packaging/first-install.py": "88cc028bc716d4ad676c976776a4c4f78eb5d6884939faa0e84efd023c2ea33d",
     "packaging/freeze-source.py": "5aba3c7886c8b9196b56101b8c544b9c240d5f9fd1719d90e0bb6ee12a9bb3a2",
     "packaging/install.sh": "146a626b8cd02ad93fa40780ca8c7bf3811449d3b3b0c62dd292f68b75ef4ad9",
@@ -565,7 +565,7 @@
     "packaging/test_install_dependency_policy.py": "6e6dbc3696d8497c63be44e00aa6ba90a12d6ee2fb5446dec823e846d5159048",
     "packaging/test_runtime_install_budget.py": "ecde4ec114cd987a35c953fda50889c43f3ed89248ed829909d5d9acb4998a15",
     "packaging/test_signed_release.py": "3361c71f6c9dde0d23ffbfaf9144617e41594c228f019b4f0738a2d18e207b2e",
-    "packaging/test_waf_engine_budget.py": "9fb35d64ed8be72f4b88a9d47d1a205bfe0253170a45116ad4edc2f826266459",
+    "packaging/test_waf_engine_budget.py": "e58503d1313bb927a5ca1fe08ec6b27e8d28f2e5a8900fb9022e7c84f2a6d582",
     "packaging/test_waf_state_directory.py": "c3743c5f05c0d5fcc6cae62ebad44a6f644a76a056045d1f064f0f4c49e2393f",
     "packaging/verify-release.sh": "5d4dcf149e86779041c42a40ad0863243cfb0a65af440b74056c8b15789247fe",
     "packaging/waf-state-directory.py": "f61224801ac45ab54620bed95daba39201f4ae2f1914d7e27566cc166ed21432",
@@ -602,7 +602,7 @@
     "web/src/SoftwareLogo.vue": "0dbf960fc94998b369ff61fc82ecf3ec14b98e054248dda36fed692c690d01c0",
     "web/src/SystemToolsManager.vue": "1b18158a6b212710d6b6baa9ec660a7f61cba12cf7e106ed131f53aa9b0789bf",
     "web/src/TerminalManager.vue": "91bcce293b1b0675956acd577d749047780512a1b9333f1f896ec9257a80cc27",
-    "web/src/WafWorkspace.vue": "5f2d34bb03bc242a137ac1fb059e960e3ef8bdb7c1104c24741a1839c3215bc0",
+    "web/src/WafWorkspace.vue": "217f329c09c19808913f2ac623e61ca632b1e83614923daa2677e2c8c3140498",
     "web/src/loadBalanceReport.ts": "aa8ae9222159035c6fe29fb8b6432ba7fe8d31a41be79497a91d434fc66b7598",
     "web/src/main.ts": "1b448a869c644174dbfcdd3aa7012dc337a0d6b3656e6634f093635b824403b3",
     "web/src/menuPermissions.ts": "95cc8f8baf0caf87c9f1c47d894ee9056857e0db708557b0ee3b568143043699",
@@ -612,6 +612,7 @@
     "web/src/softwareRouting.ts": "177d5d3ecbba3095dfe84bba5979d9d25b4e85593e0621c2d305c8d766c0da1b",
     "web/src/storeSearch.ts": "7647a6ea3cc47bbb30acede2ec03c4eeedd86e67dfb9de951960ede49ed511b2",
     "web/src/style.css": "68830371c781488e6cf5ad6af7e99d3c5a0e83fee125e702ca918b316dd457d1",
+    "web/src/wafRotationRefresh.ts": "d260c3dd3bf9704a2c61f25d0e549fb7475cb388d1122acc6817d016edbf9fdd",
     "web/public/cloudstack-icon.svg": "63a30b78f24198d8e6b6a1c6770617ac5053ddef9b356fbb24ec3c88de6e6ff7",
     "web/public/manifest.webmanifest": "b4cbe1ddf5ee31e3b7cecdc71de5288dd3139ccf90b052a4260c85450c4ec901",
     "web/public/sw.js": "d17621b8433696f58662fc26846c24480f76cdce2be1865457faf4b788c1cd66",
@@ -669,6 +670,7 @@
     "scripts/test-app-php-quarantine.py": "95be160c1aa342ec6c293463b9593772dd6af009c9881b7549bc244617770e30",
     "scripts/test-store-search.mjs": "218387564736b2b51d189b9497df17d61fe51df9e554c3a3a117e94f3bc8d788",
     "scripts/test-analytics-business-live.py": "ff54648280f88241f5da14c41e0bf7bcdd6de30f5a439327f947bbba4f2d90d3",
+    "scripts/test-waf-rotation-refresh.mjs": "fc10d333700311ecf22d4975fdf2c04d40354d542b46e7dfac474f21ec8cf095",
     "scripts/test-app-completion.py": "a674026f37f69ba264a7a32fc5b1baa3368975b8a1133bc80ac2acfc9c26a391",
     "scripts/test-app-nfs-completion.py": "7b1b0bf215f73f7e1f9da0a59cccb3192ecf37a6754fa4bb970ef5454d9859e0",
     "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c",

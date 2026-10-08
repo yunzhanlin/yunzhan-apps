@@ -35,7 +35,7 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.scenarios.some(s=>s.includes('58 个受管网站')));
  assert(!w.gaps.some(s=>s.includes('观察模式不执行')));
  assert(!w.gaps.some(s=>s.includes('可信反代来源的签名实装')));
- assert(w.gaps.some(s=>s.includes('请求体引擎同时启用')));
+ assert(!w.gaps.some(s=>s.includes('请求体引擎同时启用')));
  assert(w.boundaries.some(s=>s.includes('不自动导入 CDN')));
  assert(w.boundaries.some(s=>s.includes('不是 HTTP 请求数')));
  assert(waf.capabilities.some(s=>s.includes('自动轮转')));
@@ -46,7 +46,10 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.boundaries.some(s=>s.includes('640 MiB')&&s.includes('不是连续峰值')));
  assert(w.boundaries.some(s=>s.includes('不自动增大内存上限')));
  assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('普通访问/错误日志')));
- assert(w.gaps.some(s=>s.includes('签名实装 API')));
+ assert(!w.gaps.some(s=>s.includes('签名实装 API')));
+ assert(w.scenarios.some(s=>s.includes('整机冷启动')&&s.includes('可信 IPv6')));
+ assert(w.scenarios.some(s=>s.includes('从三份变为四份')&&s.includes('草稿')));
+ assert(w.boundaries.some(s=>s.includes('不覆盖未保存')));
  assert(a.boundaries.some(s=>s.includes('20000'))&&a.gaps.some(s=>s.includes('SPA 独立路由性能')));
  assert(!a.gaps.some(s=>s.includes('INP')));
  assert.equal(contracts.commercial_feature_parity_complete,false);

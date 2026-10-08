@@ -35,5 +35,25 @@ class WAFBuildSupervisor(unittest.TestCase):
         self.assertIn('"MAKEFLAGS="', runner)
         self.assertNotIn('os.Environ()', runner)
 
+    def test_ui_budget_matches_worker_and_missing_status_is_not_uninstalled(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        view = (root / 'web/src/WafWorkspace.vue').read_text()
+        self.assertIn('固定单路编译，最多 1 CPU / 640 MiB 内存，576 MiB 回收水位', view)
+        self.assertNotIn('编译使用 2 CPU / 1 GiB', view)
+        self.assertIn("!status ? (busy ? '正在读取真实状态' : '状态尚未核实')", view)
+        self.assertNotIn("!status?.installed ? '未安装'", view)
+
+    def test_rotation_refresh_reconciles_inventory_without_replacing_drafts(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        view = (root / 'web/src/WafWorkspace.vue').read_text()
+        refresh = view.split('const refreshBodyRotation = ', 1)[1].split('function scheduleBodyRotationStatus', 1)[0]
+        self.assertIn('createRotationRefresh<BodyRotationStatus>', refresh)
+        self.assertIn('refreshBodyReport(true), refreshBodyArchives()', refresh)
+        self.assertNotIn('loadConfig', refresh)
+        self.assertNotIn('cfg.value =', refresh)
+        self.assertIn('value.record?.history', refresh)
+        self.assertNotIn('value.record?.checked_at', refresh)
+        self.assertIn('node --test scripts/test-waf-rotation-refresh.mjs', (root / 'packaging/build-release.sh').read_text())
+
 if __name__ == '__main__':
     unittest.main()
