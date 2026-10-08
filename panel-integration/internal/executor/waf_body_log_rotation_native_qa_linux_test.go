@@ -109,6 +109,29 @@ func wafPrepareAutomaticRotationQALogs(s *Service, backup string) (func() error,
 	}, nil
 }
 
+// Only the explicitly gated native QA calls this. Retry solely the typed
+// pre-mutation lock-busy error, never a reload/recovery/commit failure.
+func wafNativeRetryLockBusy(ctx context.Context, operation func() error) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		err := operation()
+		if !errors.Is(err, errWAFConfigurationBusy) {
+			return err
+		}
+		timer := time.NewTimer(150 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+}
+
 func wafAutomaticRotationManagedNativeQA(t *testing.T, s *Service, cfg core.WAFConfig, site, domain, backup string) {
 	t.Helper()
 	cfg.Body.Sites[0].Policy.Mode = "block"
@@ -117,7 +140,9 @@ func wafAutomaticRotationManagedNativeQA(t *testing.T, s *Service, cfg core.WAFC
 	for _, ip := range []string{"203.0.113.40", "2001:db8::40"} {
 		cfg.Policy.Lists["ip_deny"] = append(cfg.Policy.Lists["ip_deny"], core.WAFEntry{ID: core.ID(), Value: ip, SiteID: site})
 	}
-	if err := s.applyWAF(context.Background(), core.WAFSettings(cfg), false, func(string) {}); err != nil {
+	if err := wafNativeRetryLockBusy(context.Background(), func() error {
+		return s.applyWAF(context.Background(), core.WAFSettings(cfg), false, func(string) {})
+	}); err != nil {
 		t.Fatal("verified native automatic-rotation apply", err)
 	}
 	m, err := s.readSoftwareManifest("nginx-waf")

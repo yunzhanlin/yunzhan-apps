@@ -33,6 +33,7 @@ entries.push('scripts/test-app-php-quarantine.py');
 entries.push('scripts/test-store-search.mjs');
 entries.push('scripts/test-analytics-business-live.py');
 entries.push('scripts/test-waf-rotation-refresh.mjs');
+entries.push('scripts/test-waf-body-inventory.mjs');
 async function copy(relative){
  if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);

@@ -80,7 +80,9 @@ func wafRetentionManagedNativeQA(t *testing.T, s *Service, site, domain, backup 
 	rotationDisabled := core.DefaultWAFBodyLogRotation()
 	cfg.BodyLogRotation = &rotationDisabled
 	cfg.BodyLogRetention = &core.WAFBodyLogRetentionConfig{Enabled: true, ConfirmDelete: true, Days: 30, KeepLatest: 1}
-	if err := s.applyWAF(ctx, core.WAFSettings(cfg), false, func(string) {}); err != nil {
+	if err := wafNativeRetryLockBusy(ctx, func() error {
+		return s.applyWAF(ctx, core.WAFSettings(cfg), false, func(string) {})
+	}); err != nil {
 		t.Fatal("actual native engine retention policy apply", err)
 	}
 	visit()

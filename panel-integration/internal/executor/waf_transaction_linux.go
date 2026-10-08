@@ -26,6 +26,9 @@ type wafTransaction struct {
 	Digests   map[string]string `json:"backup_sha256"`
 }
 
+// Returned only before a configuration lock is acquired; no mutation occurred.
+var errWAFConfigurationBusy = errors.New("WAF 正在变更或恢复，请稍后重试")
+
 func (s *Service) wafPendingPath() string {
 	return filepath.Join(s.Config.SecurityDir, "waf-transactions", "pending.json")
 }
@@ -106,7 +109,10 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 	}
 	if err := syscall.Flock(int(f.Fd()), operation|syscall.LOCK_NB); err != nil {
 		f.Close()
-		return nil, errors.New("WAF 正在变更或恢复，请稍后重试")
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return nil, errWAFConfigurationBusy
+		}
+		return nil, fmt.Errorf("无法取得 WAF 配置锁: %w", err)
 	}
 	return f, nil
 }

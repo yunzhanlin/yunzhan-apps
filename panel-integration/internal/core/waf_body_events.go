@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -171,7 +172,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		var out any
+		var out json.RawMessage
 		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/rotation/retain", in, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
@@ -196,7 +197,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		var out any
+		var out json.RawMessage
 		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/index-stages/"+id+"/retain", in, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
@@ -221,7 +222,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		var out any
+		var out json.RawMessage
 		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/archives/"+id+"/retain", in, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
@@ -249,7 +250,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		var out any
+		var out json.RawMessage
 		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/archives/"+id+"/remove", in, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
@@ -295,7 +296,9 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 			}
 			ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 			defer cancel()
-			var out any
+			// Preserve exact integer evidence (inode/device/nanosecond values).
+			// Decoding into any rounds integers through float64 before forwarding.
+			var out json.RawMessage
 			if err := a.Executor.Call(ctx, operation.method, target, body, &out); err != nil {
 				fail(w, 409, err.Error())
 				return

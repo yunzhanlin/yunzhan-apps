@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 )
@@ -27,7 +28,7 @@ func (a *Server) wafBodyRetentionRoutes(m *http.ServeMux) {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		var out any
+		var out json.RawMessage
 		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/retention/retain", in, &out); err != nil {
 			fail(w, 409, err.Error())
 			return

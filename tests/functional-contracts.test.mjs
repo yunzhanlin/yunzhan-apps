@@ -78,7 +78,13 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.boundaries.some(s=>s.includes('2.5 保留期')&&s.includes('默认关闭')));
  assert(w.boundaries.some(s=>s.includes('未知结果改成成功')&&s.includes('不将')));
  assert(w.boundaries.some(s=>s.includes('实际经过三十天')));
- assert(w.gaps.some(s=>s.includes('2.5.1 的签名应用迁移')&&s.includes('仍待验收')));
+ assert(w.gaps.some(s=>s.includes('2.5.1 完整五种系统')&&s.includes('仍待完成')));
+ assert(w.scenarios.some(s=>s.includes('纳秒整数')&&s.includes('失败证据保留')));
+ assert(w.scenarios.some(s=>s.includes('真实签名分钟执行器')&&s.includes('下一分钟不得重选')));
+ assert(w.scenarios.some(s=>s.includes('23r24d 与 23r24e')&&s.includes('整机不同 boot ID')));
+ assert(w.scenarios.some(s=>s.includes('库存待核对而不是零份')&&s.includes('下载文件落盘尚未验收')));
+ assert(w.scenarios.some(s=>s.includes('第一份移除后')&&s.includes('新计划')));
+ assert(w.boundaries.some(s=>s.includes('64 位整数')&&s.includes('全库存')));
  assert(w.boundaries.some(s=>s.includes('2.5.0')&&s.includes('复现失败')));
  assert(w.boundaries.some(s=>s.includes('原快照或索引')&&s.includes('继续暂停')));
  assert(waf.capabilities.some(s=>s.includes('当前与历史计划')&&s.includes('不重试')));

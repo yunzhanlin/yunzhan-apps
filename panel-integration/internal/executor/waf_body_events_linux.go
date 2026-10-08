@@ -10,7 +10,6 @@ import (
 	"local/panel/internal/core"
 	"net/http"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"time"
@@ -287,40 +286,23 @@ func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
 			return
 		}
 		defer lock.Close()
-		entries, err := s.wafBodyLogArchives()
+		entry, indexSHA, err := s.readWAFBodyLogIndex(r.PathValue("id"))
+		if errors.Is(err, os.ErrNotExist) {
+			respond(w, 404, map[string]string{"error": "元数据备份不存在"})
+			return
+		}
 		if err != nil {
 			respond(w, 503, map[string]string{"error": err.Error()})
 			return
 		}
-		for _, entry := range entries {
-			if entry.ID == r.PathValue("id") {
-				if entry.State == "retained-missing" {
-					respond(w, 200, map[string]any{"archive": entry, "metadata": core.WAFBodyEventsPage{Events: []core.WAFBodyEvent{}, BestEffort: true}, "export_contract": "missing_snapshot_intent_only_no_rule_events_available"})
-					return
-				}
-				ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
-				defer cancel()
-				sha, err := wafNativeFileSHA(ctx, filepath.Join(s.wafBodyLogArchiveDirectory(), entry.ID+".log"), wafBodyLogLimit)
-				if err != nil || sha != entry.SHA256 {
-					respond(w, 503, map[string]string{"error": "元数据备份摘要核对失败，未导出"})
-					return
-				}
-				f, err := s.openWAFBodyLogArchive(entry.ID)
-				if err != nil {
-					respond(w, 503, map[string]string{"error": err.Error()})
-					return
-				}
-				defer f.Close()
-				page, err := readWAFBodyEventsFile(f, false)
-				if err != nil {
-					respond(w, 503, map[string]string{"error": err.Error()})
-					return
-				}
-				respond(w, 200, map[string]any{"archive": entry, "metadata": page, "export_contract": "numeric_only_recent_4MiB_5000_rules_not_full_raw_archive"})
-				return
-			}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		out, err := s.exportWAFBodyLogArchive(ctx, entry, indexSHA)
+		if err != nil {
+			respond(w, 503, map[string]string{"error": err.Error()})
+			return
 		}
-		respond(w, 404, map[string]string{"error": "元数据备份不存在"})
+		respond(w, 200, out)
 	})
 	m.HandleFunc("POST /v1/software/nginx-waf/body-log/rotate", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{}

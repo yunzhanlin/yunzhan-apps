@@ -267,7 +267,9 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 		for _, mode := range []string{"block", "observe", "off"} {
 			cfg.Body.Sites[0].Policy.Mode = mode
 			steps := []string{}
-			if err := s.applyWAF(context.Background(), core.WAFSettings(cfg), false, func(m string) { steps = append(steps, m) }); err != nil {
+			if err := wafNativeRetryLockBusy(context.Background(), func() error {
+				return s.applyWAF(context.Background(), core.WAFSettings(cfg), false, func(m string) { steps = append(steps, m) })
+			}); err != nil {
 				t.Fatal("real site policy apply failed", mode, err)
 			}
 			m, err := s.readSoftwareManifest("nginx-waf")
