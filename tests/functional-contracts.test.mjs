@@ -79,6 +79,9 @@ test('load balancing publishes bounded HTTP observations and recovery without cl
  assert(manifest.capabilities.some(s=>s.includes('HTTPS 后端转发')));
  assert(contract.scenarios.some(s=>s.includes('三文件')&&s.includes('六个摘要')));
  assert(contract.boundaries.some(s=>s.includes('不使用系统根')&&s.includes('HTTP 降级')));
- assert(contract.gaps.some(s=>s.includes('三文件整机冷启动验收仍待完成')));
+ assert(!contract.gaps.some(s=>s.includes('三文件整机冷启动验收仍待完成')));
+ assert(contract.scenarios.some(s=>s.includes('真实签名执行器各 44 次')));
+ assert(contract.scenarios.some(s=>s.includes('正式签名 Nginx')&&s.includes('三文件事务')));
+ assert(contract.scenarios.some(s=>s.includes('修订 6 到 7')&&s.includes('冷启动')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
