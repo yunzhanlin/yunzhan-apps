@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -75,14 +76,14 @@ func validateLoadBalanceHealthBudget(entries []loadBalanceEntry, next loadBalanc
 	return nil
 }
 
-func (s *Service) loadBalanceHealthInstalled() bool {
+func (s *Service) loadBalanceHealthVersion() string {
 	path := filepath.Join(s.moduleDir("load-balance"), "installed.json")
 	if s.wafOwnedDirectory(filepath.Dir(path), false) != nil {
-		return false
+		return ""
 	}
 	b, e := loadBalancePrivateRead(path, 32<<10)
 	if e != nil {
-		return false
+		return ""
 	}
 	var v struct {
 		ID          string         `json:"id"`
@@ -91,19 +92,20 @@ func (s *Service) loadBalanceHealthInstalled() bool {
 		UpdatedAt   string         `json:"updated_at,omitempty"`
 		Settings    map[string]any `json:"settings"`
 	}
-	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1") {
-		return false
+	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1" && v.Version != "1.5.0") {
+		return ""
 	}
 	if _, e := time.Parse(time.RFC3339, v.InstalledAt); e != nil {
-		return false
+		return ""
 	}
 	if v.UpdatedAt != "" {
 		if _, e := time.Parse(time.RFC3339, v.UpdatedAt); e != nil {
-			return false
+			return ""
 		}
 	}
-	return true
+	return v.Version
 }
+func (s *Service) loadBalanceHealthInstalled() bool { return s.loadBalanceHealthVersion() != "" }
 func (s *Service) loadBalanceHealthPath(domain string) string {
 	return filepath.Join(s.moduleDir("load-balance"), "http-health", loadBalanceID(domain)+".json")
 }
@@ -112,10 +114,23 @@ func lbHealthStateName(v string) bool {
 }
 func lbHealthReason(v string) bool {
 	switch v {
-	case "ok", "request_failed", "timeout", "status_mismatch", "body_incomplete", "body_too_large", "content_missing":
+	case "ok", "request_failed", "timeout", "status_mismatch", "body_incomplete", "body_too_large", "content_missing", "tls_validation_failed":
 		return true
 	}
 	return false
+}
+func loadBalanceHealthAddress(v loadBalanceEntry, address string) (string, error) {
+	ip, port, err := loadBalanceNodeAddress(address)
+	if err != nil || v.HealthCheck == nil {
+		return "", errors.New("检查节点或策略无效")
+	}
+	if v.HealthCheck.CheckPort != 0 {
+		port = v.HealthCheck.CheckPort
+	}
+	if port < 1 || port > 65535 || (ip.IsLoopback() && (port == v.Port || port == 19100 || port == 19102 || port == 19080)) {
+		return "", errors.New("检查端口不得指向入口或面板控制端口")
+	}
+	return net.JoinHostPort(ip.String(), strconv.Itoa(port)), nil
 }
 func (s *Service) readLoadBalanceHTTPState(v loadBalanceEntry, now time.Time) (*loadBalanceHTTPState, error) {
 	path := s.loadBalanceHealthPath(v.Domain)
@@ -202,15 +217,31 @@ func probeLoadBalanceHTTP(ctx context.Context, v loadBalanceEntry, address strin
 	start := time.Now()
 	out := loadBalanceHTTPNode{Address: address, State: "unknown", Reason: "request_failed"}
 	policy := v.HealthCheck
+	target, targetErr := loadBalanceHealthAddress(v, address)
+	if targetErr != nil {
+		out.CheckedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		return out
+	}
+	scheme := policy.Scheme
+	if scheme == "" {
+		scheme = "http"
+	}
+	roots, rootErr := core.LoadBalanceHealthRoots(policy.CAPEM)
+	if rootErr != nil {
+		out.Reason = "tls_validation_failed"
+		out.CheckedAt = time.Now().UTC().Format(time.RFC3339Nano)
+		return out
+	}
 	bounded, cancel := context.WithTimeout(ctx, time.Duration(policy.TimeoutMS)*time.Millisecond)
 	defer cancel()
 	transport := &http.Transport{
 		Proxy: nil, DisableKeepAlives: true, DisableCompression: true,
 		MaxResponseHeaderBytes: 8192, DialContext: (&net.Dialer{Timeout: time.Second}).DialContext,
+		TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12, ServerName: v.Domain, RootCAs: roots},
 	}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	request, e := http.NewRequestWithContext(bounded, http.MethodGet, "http://"+address+policy.Path, nil)
+	request, e := http.NewRequestWithContext(bounded, http.MethodGet, scheme+"://"+target+policy.Path, nil)
 	if e == nil {
 		request.Host = v.Domain
 		request.Header.Set("User-Agent", "Yunzhan-HTTP-Health/1")
@@ -236,6 +267,10 @@ func probeLoadBalanceHTTP(ctx context.Context, v loadBalanceEntry, address strin
 				out.LastSuccess, out.Reason = true, "ok"
 			}
 		}
+	}
+	var certificateError *tls.CertificateVerificationError
+	if errors.As(e, &certificateError) {
+		out.Reason = "tls_validation_failed"
 	}
 	if errors.Is(bounded.Err(), context.DeadlineExceeded) {
 		out.LastSuccess, out.Reason = false, "timeout"
@@ -388,6 +423,10 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		if v.HealthCheck == nil {
 			continue
 		}
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+			lock.Close()
+			return errors.New("HTTPS 检查需要可信的负载均衡 v1.5.0 安装记录")
+		}
 		enabled++
 		nodes += len(v.Nodes)
 		if selected != nil && v.Domain != selected.Domain {
@@ -436,6 +475,10 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		return e
 	}
 	for i, v := range due {
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+			lock.Close()
+			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
+		}
 		current, present, err := s.readLoadBalanceEntry(v.Domain)
 		if err != nil || !present || current.Removed || loadBalanceFingerprint(current) != loadBalanceFingerprint(v) {
 			lock.Close()
@@ -499,6 +542,9 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 	completed := time.Now().UTC()
 	// Validate ALL entries and previous records before publishing any result.
 	for i, v := range due {
+		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
+		}
 		current, present, err := s.readLoadBalanceEntry(v.Domain)
 		if err != nil || !present || current.Removed || loadBalanceFingerprint(current) != loadBalanceFingerprint(v) {
 			return errors.New("检查期间入口已改变，旧结果已丢弃")
@@ -547,9 +593,27 @@ func (s *Service) loadBalanceHealthReports(entries []loadBalanceEntry, now time.
 			return nil, e
 		}
 		for i, node := range v.Nodes {
+			rowInstalled := installed
 			row := map[string]any{"domain": v.Domain, "revision": v.Revision, "address": node.Address,
 				"state": "unknown", "stale": true, "path": v.HealthCheck.Path, "interval": v.HealthCheck.Interval,
 				"automatic_traffic_changes": false, "worker_error": workerError}
+			row["scheme"] = "http"
+			row["check_address"], _ = loadBalanceHealthAddress(v, node.Address)
+			if v.HealthCheck.Scheme == "https" {
+				row["scheme"] = "https"
+				row["tls_verification"] = "系统信任库与入口域名"
+				if v.HealthCheck.CAPEM != "" {
+					row["tls_verification"] = "入口专用 CA 与入口域名"
+				}
+				if s.loadBalanceHealthVersion() != "1.5.0" {
+					rowInstalled = false
+					row["worker_error"] = "HTTPS 检查需要负载均衡 v1.5.0"
+				}
+			}
+			if v.HealthCheck.CheckPort != 0 && s.loadBalanceHealthVersion() != "1.5.0" {
+				rowInstalled = false
+				row["worker_error"] = "独立检查端口需要负载均衡 v1.5.0"
+			}
 			if state != nil {
 				n := state.Nodes[i]
 				at, _ := time.Parse(time.RFC3339Nano, n.CheckedAt)
@@ -562,7 +626,7 @@ func (s *Service) loadBalanceHealthReports(entries []loadBalanceEntry, now time.
 				row["reason"], row["latency_ms"], row["failures"], row["successes"] = n.Reason, n.LatencyMS, n.Failures, n.Successes
 				row["transitions"] = state.Transitions
 			}
-			if !installed {
+			if !rowInstalled {
 				row["state"] = "inactive"
 				row["stale"] = true
 			}

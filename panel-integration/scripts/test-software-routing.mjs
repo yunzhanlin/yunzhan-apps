@@ -38,7 +38,7 @@ const lbSource=fs.readFileSync(new URL('../web/src/loadBalanceReport.ts',import.
 const lbJS=ts.transpileModule(lbSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const {loadBalanceEntryFields,loadBalanceEntryRow,loadBalanceNodeSummary,loadBalanceTransitions}=await import('data:text/javascript;base64,'+Buffer.from(lbJS).toString('base64'));
 test('load balance selection preserves editable node arrays and policy without mutating report records',()=>{
- const row={domain:'lb.example.test',nodes:[{address:'127.0.0.1:41006',weight:1,backup:false},{address:'127.0.0.1:41007',weight:3,backup:true}],health_check:{path:'/ready',interval:30,failures:2,successes:2}};
+ const row={domain:'lb.example.test',nodes:[{address:'127.0.0.1:41006',weight:1,backup:false},{address:'127.0.0.1:41007',weight:3,backup:true}],health_check:{path:'/ready',interval:30,failures:2,successes:2,scheme:'https',check_port:443,ca_pem:'public CA fixture'}};
  const carrier=loadBalanceEntryRow(row),fields=loadBalanceEntryFields({...row,...carrier});
  assert.equal(carrier.http_health_enabled,true);assert.deepEqual(fields.nodes,row.nodes);assert.deepEqual(fields.health_check,row.health_check);
  fields.nodes[0].weight=9;fields.health_check.path='/changed';

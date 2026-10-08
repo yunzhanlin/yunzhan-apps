@@ -102,6 +102,14 @@ const names: Record<string, string> = {
   source: "源 / 导出路径",
   read_only: "只读",
   address: "节点地址",
+  sticky: "IP 会话粘滞",
+  stale: "结果已过期或未产生",
+  reason: "检查原因",
+  scheme: "检查协议",
+  tls_verification: "TLS 验证方式",
+  check_address: "实际检查地址",
+  pending: "存在待恢复事务",
+  count: "实际记录数",
   healthy: "健康",
   weight: "权重",
   backup: "备用节点",
@@ -334,7 +342,7 @@ const info = computed(() =>
 function format(key: string, value: unknown) {
   if (props.id==="load-balance" && ["state","from","to"].includes(key)) return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
   if (props.id==="load-balance" && key==="nodes" && Array.isArray(value)) return loadBalanceNodeSummary(value);
-  if (props.id==="load-balance" && key==="reason") return ({ok:"状态与内容匹配",request_failed:"请求失败",timeout:"请求超时",status_mismatch:"状态码不匹配（不跟随跳转）",body_incomplete:"响应不完整",body_too_large:"响应超过 16 KiB",content_missing:"响应缺少指定内容"} as Record<string,string>)[String(value)] || String(value ?? "—");
+  if (props.id==="load-balance" && key==="reason") return ({ok:"状态与内容匹配",request_failed:"请求失败",timeout:"请求超时",status_mismatch:"状态码不匹配（不跟随跳转）",body_incomplete:"响应不完整",body_too_large:"响应超过 16 KiB",content_missing:"响应缺少指定内容",tls_validation_failed:"TLS 证书链、域名或有效期验证失败"} as Record<string,string>)[String(value)] || String(value ?? "—");
   if (props.id === "php-code-security" && key === "state") return ({prepared:"隔离准备中（待核对）",quarantined:"已隔离",conflict:"并发冲突（未覆盖）",restoring:"恢复中断（待核对）",restored:"已恢复",cancelled:"已取消（备份保留）"} as Record<string,string>)[String(value)] || String(value || "—");
   if (key === "watcher_state") return ({ active: "运行中", pending: "准备中", disabled: "未启用", stopped: "已停止", degraded: "已降级（保留补查）", unavailable: "不可用（保留补查）" } as Record<string, string>)[String(value)] || String(value || "—");
   if (typeof value === "boolean") return value ? "是" : "否";
@@ -373,7 +381,7 @@ function columns(values: any[]) {
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
     return ["domain","port","revision","nodes","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
-    return ["domain","revision","address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","worker_error"];
+    return ["domain","revision","address","scheme","check_address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","tls_verification","worker_error"];
 	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];
 	if (props.id === "nfs-manager" && values.some(value=>value && typeof value==='object' && 'clients' in value)) return ["id","site_id","path","clients","read_only","export_id","uid","gid"];
 	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];

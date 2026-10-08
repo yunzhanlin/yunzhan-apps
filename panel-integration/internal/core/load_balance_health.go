@@ -1,6 +1,8 @@
 package core
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net/url"
 	"strings"
@@ -17,11 +19,64 @@ type LoadBalanceHTTPHealth struct {
 	BodyContains   string `json:"body_contains"`
 	Failures       int    `json:"failures"`
 	Successes      int    `json:"successes"`
+	Scheme         string `json:"scheme,omitempty"`
+	CAPEM          string `json:"ca_pem,omitempty"`
+	CheckPort      int    `json:"check_port,omitempty"`
+}
+
+// LoadBalanceHealthRoots accepts public CA certificates only, never private
+// keys, filesystem paths or a request to bypass verification. A private pool
+// applies to this entry alone; an empty value uses the host trust store.
+func LoadBalanceHealthRoots(value string) (*x509.CertPool, error) {
+	if value == "" {
+		return nil, nil
+	}
+	if len(value) > 16<<10 {
+		return nil, errors.New("入口 CA 证书最多 16 KiB")
+	}
+	pool := x509.NewCertPool()
+	remaining := []byte(strings.TrimSpace(value))
+	count := 0
+	for len(remaining) > 0 {
+		if !strings.HasPrefix(string(remaining), "-----BEGIN CERTIFICATE-----") {
+			return nil, errors.New("入口 CA 只接受 PEM 公共证书，不接受密钥或其他内容")
+		}
+		block, rest := pem.Decode(remaining)
+		if block == nil || block.Type != "CERTIFICATE" || len(block.Headers) != 0 {
+			return nil, errors.New("入口 CA PEM 无效")
+		}
+		certificate, err := x509.ParseCertificate(block.Bytes)
+		if err != nil || !certificate.IsCA || !certificate.BasicConstraintsValid || certificate.KeyUsage&x509.KeyUsageCertSign == 0 {
+			return nil, errors.New("入口 CA 必须是具有证书签名用途的有效 CA 公共证书")
+		}
+		count++
+		if count > 4 {
+			return nil, errors.New("每入口最多 4 个 CA 证书")
+		}
+		pool.AddCert(certificate)
+		remaining = []byte(strings.TrimSpace(string(rest)))
+	}
+	if count == 0 {
+		return nil, errors.New("入口 CA 证书为空")
+	}
+	return pool, nil
 }
 
 func ValidateLoadBalanceHTTPHealth(v *LoadBalanceHTTPHealth) error {
 	if v == nil {
 		return nil
+	}
+	if v.Scheme != "" && v.Scheme != "http" && v.Scheme != "https" {
+		return errors.New("应用检查协议只允许 http 或 https")
+	}
+	if v.CheckPort < 0 || v.CheckPort > 65535 || (v.Scheme == "https" && v.CheckPort == 0) {
+		return errors.New("HTTPS 检查须指定独立就绪端口（1–65535）；HTTP 检查可用 0 沿用转发端口")
+	}
+	if v.CAPEM != "" && v.Scheme != "https" {
+		return errors.New("入口专用 CA 仅用于 HTTPS 检查")
+	}
+	if _, err := LoadBalanceHealthRoots(v.CAPEM); err != nil {
+		return err
 	}
 	if len(v.Path) < 1 || len(v.Path) > 512 || !strings.HasPrefix(v.Path, "/") ||
 		strings.HasPrefix(v.Path, "//") || strings.ContainsAny(v.Path, "#\\") ||

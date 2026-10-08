@@ -82,6 +82,7 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 		return errors.New("负载均衡入口身份、修订号、端口或节点数量无效")
 	}
 	seen := map[string]bool{}
+	healthTargets := map[string]bool{}
 	primary := 0
 	for _, n := range v.Nodes {
 		ip, p, e := loadBalanceNodeAddress(n.Address)
@@ -91,6 +92,13 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 			return errors.New("上游须为唯一规范固定 IP:端口；拒绝自循环、面板控制端口、链路本地/组播/映射地址与非法权重，粘滞不能使用备用节点")
 		}
 		seen[n.Address] = true
+		if v.HealthCheck != nil {
+			target, err := loadBalanceHealthAddress(v, n.Address)
+			if err != nil || healthTargets[target] || (v.HealthCheck.Scheme == "https" && v.HealthCheck.CheckPort == p) {
+				return errors.New("检查须使用唯一固定节点 IP 和安全端口；HTTPS 就绪端口必须独立于 HTTP 转发端口")
+			}
+			healthTargets[target] = true
+		}
 		if !n.Backup {
 			primary++
 		}
@@ -600,6 +608,9 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 	} else {
 		if next.HealthCheck != nil && !s.loadBalanceHealthInstalled() {
 			return nil, errors.New("先更新已安装负载均衡到 v1.4.0，再启用持续 HTTP 检查")
+		}
+		if next.HealthCheck != nil && (next.HealthCheck.Scheme == "https" || next.HealthCheck.CheckPort != 0) && s.loadBalanceHealthVersion() != "1.5.0" {
+			return nil, errors.New("先更新已安装负载均衡到 v1.5.0，再启用 HTTPS 检查")
 		}
 		if e := validateLoadBalanceEntry(next); e != nil {
 			return nil, e

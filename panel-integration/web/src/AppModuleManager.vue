@@ -69,6 +69,14 @@ const form = ref<Record<string, any>>({}),
 function toggleHTTPHealth(enabled: boolean | string | number) {
   form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2} : null;
 }
+function setHTTPHealthScheme(value: string) {
+  form.value.health_check.scheme=value;
+  if(value==='http')form.value.health_check.ca_pem='';
+  else if(!form.value.health_check.check_port)form.value.health_check.check_port=443;
+}
+function setHTTPHealthPort(value: number | undefined) {
+  form.value.health_check.check_port=value ?? 0;
+}
 const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean;status:string}[]>([]);
 const selectedPlanID = ref("");
 const selectedQuarantineState = ref("");
@@ -587,6 +595,11 @@ defineExpose({ show });
             <div v-else-if="field.kind === 'http-health'" class="http-health-editor">
               <el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" />
               <template v-if="form.health_check">
+                <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
+                  <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
+                </el-select></label>
+                <label>独立就绪端口（HTTP 的 0 沿用转发端口）<el-input-number :model-value="form.health_check.check_port || 0" @update:model-value="setHTTPHealthPort" aria-label="应用检查独立端口" :min="form.health_check.scheme==='https' ? 1 : 0" :max="65535" :precision="0" /></label>
+                <label v-if="form.health_check.scheme==='https'">入口专用 CA（可选）<el-input v-model="form.health_check.ca_pem" type="textarea" :rows="4" maxlength="16384" aria-label="HTTPS 检查公共 CA PEM" placeholder="仅公共 CA PEM，留空使用系统信任库；不接受私钥" /></label>
                 <label>相对请求路径<el-input v-model="form.health_check.path" aria-label="HTTP 检查相对路径" maxlength="512" placeholder="/health" /></label>
                 <label>检查间隔（秒）<el-input-number v-model="form.health_check.interval" aria-label="HTTP 检查间隔秒" :min="30" :max="3600" :precision="0" /></label>
                 <label>请求超时（毫秒）<el-input-number v-model="form.health_check.timeout_ms" aria-label="HTTP 检查超时毫秒" :min="500" :max="5000" :precision="0" /></label>
@@ -594,7 +607,7 @@ defineExpose({ show });
                 <label>响应包含的内容<el-input v-model="form.health_check.body_contains" aria-label="HTTP 检查内容包含" maxlength="256" placeholder="可留空，最多 256 字节" /></label>
                 <label>连续失败次数<el-input-number v-model="form.health_check.failures" aria-label="连续失败阈值" :min="1" :max="10" :precision="0" /></label>
                 <label>连续恢复次数<el-input-number v-model="form.health_check.successes" aria-label="连续恢复阈值" :min="1" :max="10" :precision="0" /></label>
-                <small>只观测，不自动改动流量；保存入口后检查策略才会生效。</small>
+                <small>当前转发为 HTTP；HTTPS 用节点同一固定 IP 上的独立就绪端口，不把 HTTPS 检查冒充 TLS 流量转发。核对入口域名、证书链和有效期，最低 TLS 1.2；专用 CA 只作用于本入口。保存策略后生效，只观测、不自动改动流量。</small>
               </template>
             </div>
             <div v-else-if="field.key === 'nodes'" class="node-editor">
