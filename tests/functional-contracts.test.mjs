@@ -2,6 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const load=async name=>JSON.parse(await readFile(new URL(name,import.meta.url),'utf8'));
+test('ordinary Nginx log recovery keeps unknown outcomes and remaining compatibility gaps explicit',async()=>{
+ const contracts=await load('../registry/functional-contracts.json');
+ const app=contracts.apps.find(a=>a.id==='nginx');
+ assert(app.scenarios.some(s=>s.includes('USR1')));
+ assert(app.scenarios.some(s=>s.includes('SIGKILL')&&s.includes('未知')));
+ assert(app.scenarios.some(s=>s.includes('只追加证据')&&s.includes('不伪造')));
+ assert(app.boundaries.some(s=>s.includes('内核写保护')));
+ assert(app.boundaries.some(s=>s.includes('不伪造 Nginx')));
+ assert(app.gaps.some(s=>s.includes('Debian 12')&&s.includes('Ubuntu 26')));
+ assert(app.gaps.some(s=>s.includes('窄视口')));
+ assert.equal(contracts.commercial_feature_parity_complete,false);
+});
 test('all 50 applications have business scenarios, not install-only acceptance',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  assert.equal(contracts.commercial_feature_parity_complete,false);
