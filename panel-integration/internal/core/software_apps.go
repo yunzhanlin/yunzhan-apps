@@ -44,6 +44,7 @@ type WAFEvent struct {
 	Time      string `json:"time"`
 	Site      string `json:"site"`
 	IP        string `json:"ip"`
+	Peer      string `json:"peer,omitempty"`
 	Status    int    `json:"status"`
 	Method    string `json:"method"`
 	BadMethod string `json:"bad_method"`

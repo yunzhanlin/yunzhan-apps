@@ -34,6 +34,14 @@ func (s *Service) wafReplayMatches(raw map[string]any) bool {
 	if e != nil || current.Policy.Revision != wanted.Policy.Revision+1 {
 		return false
 	}
+	// Omitted independent fields mean preserve, including after a committed
+	// request loses its reply. Only an explicit object can change that policy.
+	if _, present := raw["body"]; !present {
+		wanted.Body = current.Body
+	}
+	if _, present := raw["trusted_proxy"]; !present {
+		wanted.TrustedProxy = current.TrustedProxy
+	}
 	wanted.Policy.Revision = current.Policy.Revision
 	a, _ := json.Marshal(wanted)
 	b, _ := json.Marshal(current)
@@ -64,6 +72,11 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 			return cfg, errors.New("请求体策略必须包含完整 policy 和当前修订号")
 		}
 	}
+	if _, proxy := raw["trusted_proxy"]; proxy {
+		if _, advanced := raw["policy"]; !advanced {
+			return cfg, errors.New("可信代理策略必须包含完整 policy 和当前修订号")
+		}
+	}
 	old, oldErr := s.readSoftwareManifest("nginx-waf")
 	if !install && oldErr == nil {
 		previous, e := core.DecodeWAFConfig(old.Settings)
@@ -72,6 +85,12 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		}
 		if _, present := raw["body"]; !present {
 			cfg.Body = previous.Body
+		}
+		if _, present := raw["trusted_proxy"]; !present {
+			cfg.TrustedProxy = previous.TrustedProxy
+		}
+		if cfg.TrustedProxy != nil && old.Version != core.WAFVersion {
+			return cfg, errors.New("可信代理策略需要先通过应用商店升级 Nginx WAF；不能用面板版本代替已安装应用版本")
 		}
 		if _, advanced := raw["policy"]; !advanced {
 			// Older API clients can still adjust their two supported fields, but
@@ -213,6 +232,16 @@ func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
 		if err := s.verifyWAFBodyEngine(v); err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
+		}
+		if v.TrustedProxy != nil && v.TrustedProxy.Enabled {
+			nginx, err := s.nginxBinary()
+			if err == nil {
+				err = s.verifyWAFTrustedProxy(r.Context(), v, nginx)
+			}
+			if err != nil {
+				respond(w, 409, map[string]string{"error": err.Error()})
+				return
+			}
 		}
 		plan, err := s.planWAFConfiguration(v, false)
 		if err != nil {

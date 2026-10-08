@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
@@ -11,11 +11,12 @@ interface BodyPolicy { mode: string; paranoia_level: number; inbound_threshold: 
 interface BodySite { site_id: string; policy: BodyPolicy }
 interface EngineStatus { job_id: string; state: string; error?: string; architecture?: string; engine_version?: string; crs_version?: string; nginx_version?: string; integrity_verified: boolean; module_abi_validated: boolean; build_only: boolean; steps: { time: string; message: string }[] }
 interface Preview { http_config: string; server_config: string; settings: Config; changes?: {path: string; action: string}[]; body_rules?: {site_id: string; configuration: string}[] }
-interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
+interface TrustedProxy { enabled: boolean; header: "X-Forwarded-For" | "X-Real-IP"; recursive: boolean; trusted_cidrs: string[]; acknowledge_header_control: boolean }
+interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; trusted_proxy?: TrustedProxy; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
 interface Status { installed: boolean; healthy: boolean; enabled: boolean; version?: string; detail: string }
 interface Site { id: string; name: string; domain: string; status?: string; settings?: { waf_enabled?: boolean; web_server?: string } }
 interface Dimension { name: string; count: number }
-interface Event { time: string; site: string; site_id?: string; ip: string; path?: string; method: string; status: number; reason: string; action: string }
+interface Event { time: string; site: string; site_id?: string; ip: string; peer?: string; path?: string; method: string; status: number; reason: string; action: string }
 interface Report { events: Event[]; total: number; blocked: number; observed: number; sources: number; partial: boolean; scanned: number; rules: Dimension[]; ips: Dimension[]; sites: Dimension[]; hours: Dimension[]; from: string; to: string }
 interface BodyEvent { time: string; site_id: string; rule_id: number; phase: number; severity: number; disruptive_mark: boolean }
 interface BodyReport { events: BodyEvent[]; rule_matches: number; available: boolean; partial: boolean; rejected_lines: number; scanned: number; counting_contract: string; log_bytes: number; max_bytes: number; capacity_exhausted: boolean; legacy_log: boolean; metadata_best_effort: boolean }
@@ -56,6 +57,29 @@ const listKind = ref("ip_deny"), listScope = ref(""), listValue = ref(""), siteS
 const newRule = ref<Omit<Rule, "id">>({ name: "", site_id: "", field: "uri", operator: "contains", value: "", action: "block", enabled: true });
 const newCC = ref<Omit<CCRule, "id">>({ site_id: "", path: "", prefix: false, rate_per_second: 5, burst: 10, enabled: true });
 const dirty = computed(() => !!cfg.value && JSON.stringify(cfg.value) !== JSON.stringify(applied.value));
+const disabledTrustedProxy = (): TrustedProxy => ({ enabled:false, header:"X-Forwarded-For", recursive:false, trusted_cidrs:[], acknowledge_header_control:false });
+function toggleTrustedProxy(value: string | number | boolean) {
+  if (!cfg.value) return;
+  cfg.value.trusted_proxy ||= disabledTrustedProxy();
+  cfg.value.trusted_proxy.enabled = value === true;
+  cfg.value.trusted_proxy.acknowledge_header_control = false;
+}
+function changeTrustedProxyHeader(value: string) {
+  if (!cfg.value?.trusted_proxy || !["X-Forwarded-For","X-Real-IP"].includes(value)) return;
+  cfg.value.trusted_proxy.header = value as TrustedProxy["header"];
+  cfg.value.trusted_proxy.acknowledge_header_control = false;
+  if (value === "X-Real-IP") cfg.value.trusted_proxy.recursive = false;
+}
+function changeTrustedProxyRecursive() { if (cfg.value?.trusted_proxy) cfg.value.trusted_proxy.acknowledge_header_control = false; }
+// Keep raw textarea edits separate so Enter and a partially typed CIDR are
+// not erased by a normalizing computed setter. Normalize only the payload.
+const trustedProxyCIDRs = ref("");
+watch(cfg, value => { trustedProxyCIDRs.value = (value?.trusted_proxy?.trusted_cidrs || []).join("\n"); }, {flush:"sync"});
+function editTrustedProxyCIDRs(value: string) {
+  if (!cfg.value?.trusted_proxy) return;
+  cfg.value.trusted_proxy.trusted_cidrs = value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  cfg.value.trusted_proxy.acknowledge_header_control = false;
+}
 const listCount = computed(() => Object.values(cfg.value?.policy.lists || {}).reduce((sum, xs) => sum + xs.length, 0));
 const scopedSites = computed(() => sites.value.filter(s => !siteSearch.value || `${s.name} ${s.domain}`.toLowerCase().includes(siteSearch.value.toLowerCase())));
 const siteName = (id?: string) => !id ? "全部受管站点" : sites.value.find(s => s.id === id)?.domain || `失效站点 ${id}`;
@@ -167,8 +191,8 @@ async function apply() {
   } catch (e) { error.value = (e as Error).message; await refreshHistory(); }
   finally { busy.value = false; }
 }
-function discard() { if (applied.value) cfg.value = clone(applied.value); preview.value = ""; error.value = ""; }
-function restoreDraft() { if (!defaults.value || !applied.value) return; cfg.value = clone(defaults.value); cfg.value.policy.revision = applied.value.policy.revision; saved.value = "默认配置已载入草稿，会清空独立策略、名单与自定义规则；尚未应用。可放弃草稿恢复生效配置。"; preview.value = ""; }
+function discard() { if (applied.value) cfg.value = clone(applied.value); preview.value = ""; error.value = ""; saved.value = ""; }
+function restoreDraft() { if (!defaults.value || !applied.value) return; cfg.value = clone(defaults.value); cfg.value.policy.revision = applied.value.policy.revision; if(!apache && applied.value.trusted_proxy) cfg.value.trusted_proxy = disabledTrustedProxy(); saved.value = "默认配置已载入草稿，会清空独立策略、名单与自定义规则并停用本应用的可信代理配置；尚未应用。可放弃草稿恢复生效配置。"; preview.value = ""; }
 function addSite() {
   if (!cfg.value || !selectedSite.value) return;
   if (cfg.value.policy.sites.some(p => p.site_id === selectedSite.value)) { ElMessage.warning("该站点已存在策略"); return; }
@@ -216,7 +240,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
           <div class="waf-metrics"><article v-for="m in [{name:'防护事件',value:report?.total},{name:'已阻断',value:report?.blocked},{name:'仅观察',value:report?.observed},{name:'来源 IP',value:report?.sources}]" :key="m.name"><span>{{m.name}}</span><strong>{{m.value ?? '—'}}</strong><small>筛选时间内真实日志</small></article></div>
           <p class="waf-muted">{{ report ? `${formatPanelDateTime(report.from)} — ${formatPanelDateTime(report.to)}；已读取最近 ${report.scanned} 条日志` : '安装后读取真实日志，不使用演示数据' }}。概览与防护日志共用筛选条件。</p>
           <el-alert v-if="report?.partial" title="日志读取达到最近 4 MiB / 5000 条上限；统计不是全历史总数，更早记录仍在服务器日志中。" type="warning" :closable="false" />
-          <div class="waf-two"><section><h4>命中规则排行</h4><el-table :data="report?.rules || []" max-height="220" empty-text="暂无命中"><el-table-column label="规则"><template #default="{row}">{{reasonName(row.name)}}</template></el-table-column><el-table-column prop="count" label="次数" width="80"/></el-table></section><section><h4>来源 IP 排行</h4><el-table :data="report?.ips || []" max-height="220" empty-text="暂无来源"><el-table-column prop="name" label="网络对端 IP"/><el-table-column prop="count" label="次数" width="80"/></el-table></section></div>
+          <div class="waf-two"><section><h4>命中规则排行</h4><el-table :data="report?.rules || []" max-height="220" empty-text="暂无命中"><el-table-column label="规则"><template #default="{row}">{{reasonName(row.name)}}</template></el-table-column><el-table-column prop="count" label="次数" width="80"/></el-table></section><section><h4>来源 IP 排行</h4><el-table :data="report?.ips || []" max-height="220" empty-text="暂无来源"><el-table-column prop="name" :label="apache ? '网络对端 IP' : '生效客户端 IP'"/><el-table-column prop="count" label="次数" width="80"/></el-table></section></div>
           <h4>每小时防护事件（UTC）</h4><div class="waf-trend" v-if="report?.hours.length"><div v-for="h in report.hours.slice(-48)" :key="h.name" :title="`${h.name} UTC · ${h.count} 次`"><span :style="{height: `${Math.max(3, h.count / Math.max(...report.hours.map(x=>x.count)) * 90)}px`}"></span><small>{{h.name.slice(-5)}}</small></div></div><el-empty v-else description="暂无防护事件；没有事件不代表已完成安全审计" :image-size="64"/>
           <el-alert :title="apache ? 'Apache 当前为独立请求元数据防护，不包含原生请求体引擎。观察模式不阻断 WAF 命中，但服务器原生拒绝仍有效。' : '元数据防护与原生请求体防护独立配置。请求体防护使用固定版本 ModSecurity / OWASP CRS，须先构建兼容引擎，再逐网站明确启用；概览和防护日志当前统计元数据事件，不将 CRS 规则命中数伪装成 HTTP 阻断次数。'" type="info" :closable="false" />
         </el-tab-pane>
@@ -236,7 +260,25 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
           <p>使用 Nginx 原生漏桶限速，站点之间不共享同一 IP 的额度；URL 规则与站点限速同时生效。观察 / 停用模式与白名单不限速。</p>
           <h4>URL 独立限速（最多 20 条）</h4><div class="waf-editor"><el-select v-model="newCC.site_id" filterable aria-label="URL 限速范围"><el-option value="" label="全部受管站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="newCC.path" placeholder="/api/login" aria-label="URL 限速路径"/><el-checkbox v-model="newCC.prefix">路径前缀</el-checkbox><el-input-number v-model="newCC.rate_per_second" :min="1" :max="200" aria-label="URL 速率"/><el-input-number v-model="newCC.burst" :min="1" :max="1000" aria-label="URL 突发容量"/><el-button @click="addCC">添加规则</el-button></div>
           <el-table :data="cfg.policy.cc_rules" empty-text="暂无 URL 独立限速"><el-table-column label="范围"><template #default="{row}">{{siteName(row.site_id)}}</template></el-table-column><el-table-column prop="path" label="路径"/><el-table-column label="匹配"><template #default="{row}">{{row.prefix?'前缀':'精确'}}</template></el-table-column><el-table-column prop="rate_per_second" label="次 / 秒" width="85"/><el-table-column prop="burst" label="突发" width="70"/><el-table-column label="启用" width="80"><template #default="{row}"><el-switch v-model="row.enabled"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.cc_rules=cfg.policy.cc_rules.filter(r=>r!==row)">删除</el-button></template></el-table-column></el-table>
-          <el-alert title="IP 取自 Nginx 可信网络对端，不直接信任浏览器提交的 X-Forwarded-For。使用 CDN / 反向代理时，应由管理员先配置可信 real_ip 来源，避免把 CDN 节点当作单个访客。" type="warning" :closable="false"/>
+          <el-alert title="CC 和 IP 名单使用 Nginx 生效客户端地址。使用 CDN / 反向代理时，请在“可信反代来源”明确配置受信任的网络对端；不要直接信任任意浏览器提交的转发头。" type="warning" :closable="false"/>
+        </el-tab-pane>
+        <el-tab-pane v-if="!apache" label="可信反代来源" name="trusted-proxy">
+          <el-alert v-if="status?.installed && status.version !== implementation" title="当前安装的 WAF 版本尚不支持此配置，请先在应用商店执行签名升级。面板程序更新不代表应用已升级。" type="warning" :closable="false"/>
+          <el-alert title="默认不启用。本策略只写入参与 WAF 的受管 server 块，不改变全局 Nginx、退出 WAF 的网站或负载均衡入口。保存前核实当前程序包含 real_ip 模块，缺失时拒绝应用，不自动重编译。" type="info" :closable="false"/>
+          <el-form label-position="top">
+            <el-form-item label="启用本应用的可信代理地址识别"><el-switch :model-value="cfg.trusted_proxy?.enabled || false" aria-label="启用可信代理识别" @change="toggleTrustedProxy"/></el-form-item>
+            <template v-if="cfg.trusted_proxy">
+              <el-form-item label="可信代理网络对端 CIDR（每行一个，最多 32 个）"><el-input v-model="trustedProxyCIDRs" type="textarea" :rows="5" :disabled="!cfg.trusted_proxy.enabled" aria-label="可信代理 CIDR" placeholder="例如 192.0.2.10/32 或 2001:db8:100::/48；不要填写网站域名" @input="editTrustedProxyCIDRs"/></el-form-item>
+              <div class="waf-two">
+                <el-form-item label="由可信代理控制的客户端地址请求头"><el-select :model-value="cfg.trusted_proxy.header" :disabled="!cfg.trusted_proxy.enabled" aria-label="可信代理地址请求头" @change="changeTrustedProxyHeader"><el-option value="X-Forwarded-For" label="X-Forwarded-For（地址链）"/><el-option value="X-Real-IP" label="X-Real-IP（单个地址）"/></el-select></el-form-item>
+                <el-form-item label="递归寻找地址链中最后一个非可信地址"><el-switch v-model="cfg.trusted_proxy.recursive" :disabled="!cfg.trusted_proxy.enabled || cfg.trusted_proxy.header !== 'X-Forwarded-For'" aria-label="递归可信代理地址链" @change="changeTrustedProxyRecursive"/></el-form-item>
+              </div>
+              <el-checkbox class="waf-proxy-ack" v-model="cfg.trusted_proxy.acknowledge_header_control" :disabled="!cfg.trusted_proxy.enabled">我已确认这些代理会删除、重写或安全追加该请求头，且所列 CIDR 不包含不受信任的客户端。</el-checkbox>
+            </template>
+          </el-form>
+          <p>仅接受规范的 IPv4 / IPv6 网络 CIDR，拒绝重复、重叠、映射地址和过宽网络；IPv4 至少 /8，IPv6 至少 /32。未列入的网络对端不能凭转发头修改身份。开启递归后采用地址链中最后一个非可信地址；关闭时采用末尾地址。</p>
+          <el-alert title="将回环地址列为可信来源，意味着本机能连接该端口的程序可以提供客户端身份。CDN 网段和代理部署会变化，请按你实际控制的网络维护，不能把公开网段列表当成授权证明。错误的信任配置可能绕过 IP 名单和 CC 限速。" type="warning" :closable="false"/>
+          <p class="waf-muted">停用并保存会删除本应用生成的 real_ip 指令，保留草稿中的 CIDR 便于核对；不会删除管理员在其它配置中手写的 real_ip 设置，外部继承设置仍可能影响客户端地址。日志分别展示生效客户端 IP 与原始网络对端；旧日志没有原始对端时明确显示“未记录”。</p>
         </el-tab-pane>
         <el-tab-pane v-if="!apache" label="请求体防护" name="body">
           <el-alert title="原生引擎构建不会自动修改网站或加载模块。仅使用固定摘要的开源程序及规则；编译使用 2 CPU / 1 GiB 内存预算，最长 4 小时，可能排队等待其他源码构建。保留失败证据，重试需新建任务。" type="info" :closable="false"/>
@@ -283,7 +325,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
           <div class="waf-filter"><el-select v-model="filter.site_id" filterable aria-label="日志站点"><el-option value="" label="全部站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="filter.ip" placeholder="精确来源 IP" aria-label="来源 IP"/><el-select v-model="filter.action" aria-label="日志动作"><el-option label="全部动作" value=""/><el-option label="已阻断" value="block"/><el-option label="仅观察" value="observe"/></el-select><el-select v-model="filter.rule" filterable aria-label="命中规则"><el-option label="全部规则" value=""/><el-option v-for="r in [...groups.map(g=>({id:g.id,name:g.name})),...cfg.policy.rules.map(r=>({id:`custom-${r.id}`,name:r.name})),...(!apache ? [{id:'cc',name:'CC 限速'}] : []),{id:'ip-deny',name:'IP 黑名单'},{id:'url-deny',name:'URL 黑名单'},{id:'ua-deny',name:'UA 黑名单'}]" :key="r.id" :label="r.name" :value="r.id"/></el-select></div>
           <div class="waf-filter"><el-date-picker v-model="range" type="datetimerange" start-placeholder="开始时间" end-placeholder="结束时间"/><el-button :loading="reportBusy" @click="refreshReport(true)">查询</el-button><el-button :disabled="reportBusy || !status?.installed" @click="exportLogs">导出筛选结果</el-button></div>
           <el-alert v-if="report?.partial" title="此结果来自最近 4 MiB / 5000 条，已截断。导出同样受此上限约束，不等于完整历史备份。" type="warning" :closable="false"/>
-          <el-table :data="report?.events || []" v-loading="reportBusy" max-height="350" empty-text="没有符合筛选条件的真实事件"><el-table-column label="时间" width="160"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column prop="site" label="站点" min-width="130" show-overflow-tooltip/><el-table-column prop="ip" label="来源 IP" min-width="130"/><el-table-column label="规则" min-width="120"><template #default="{row}">{{reasonName(row.reason)}}</template></el-table-column><el-table-column prop="path" label="路径" min-width="150" show-overflow-tooltip/><el-table-column prop="method" label="方法" width="75"/><el-table-column prop="status" label="状态" width="65"/><el-table-column label="动作" width="80"><template #default="{row}"><el-tag :type="row.action==='observe'?'info':'danger'">{{row.action==='observe'?'观察':'阻断'}}</el-tag></template></el-table-column></el-table><el-pagination v-model:current-page="page" :page-size="limit" :total="report?.total || 0" layout="total, prev, pager, next" @current-change="refreshReport()"/><p class="waf-muted">默认最近 24 小时，最多查询 90 天。仅记录时间、站点、网络对端、规范化路径和命中原因，不保存查询参数、Cookie、UA 或请求体；IPv4 / IPv6 属于敏感运维数据，日志仅管理员可读。</p>
+          <el-table :data="report?.events || []" v-loading="reportBusy" max-height="350" empty-text="没有符合筛选条件的真实事件"><el-table-column label="时间" width="160"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column prop="site" label="站点" min-width="130" show-overflow-tooltip/><el-table-column prop="ip" :label="apache ? '网络对端 IP' : '生效客户端 IP'" min-width="130"/><el-table-column v-if="!apache" label="原始网络对端" min-width="130"><template #default="{row}">{{row.peer || '未记录'}}</template></el-table-column><el-table-column label="规则" min-width="120"><template #default="{row}">{{reasonName(row.reason)}}</template></el-table-column><el-table-column prop="path" label="路径" min-width="150" show-overflow-tooltip/><el-table-column prop="method" label="方法" width="75"/><el-table-column prop="status" label="状态" width="65"/><el-table-column label="动作" width="80"><template #default="{row}"><el-tag :type="row.action==='observe'?'info':'danger'">{{row.action==='observe'?'观察':'阻断'}}</el-tag></template></el-table-column></el-table><el-pagination v-model:current-page="page" :page-size="limit" :total="report?.total || 0" layout="total, prev, pager, next" @current-change="refreshReport()"/><p class="waf-muted">默认最近 24 小时，最多查询 90 天。仅记录时间、站点、生效来源 IP、规范化路径和命中原因；Nginx 启用本应用的可信代理时额外记录原始网络对端，不保存查询参数、Cookie、UA 或请求体；IPv4 / IPv6 属于敏感运维数据，日志仅管理员可读。</p>
         </el-tab-pane>
         <el-tab-pane label="配置与版本" name="config">
           <el-descriptions :column="3" border><el-descriptions-item label="已安装版本">{{status?.version || '未安装'}}</el-descriptions-item><el-descriptions-item label="处理器版本">{{implementation}}</el-descriptions-item><el-descriptions-item label="配置修订">{{applied?.policy.revision}}</el-descriptions-item></el-descriptions><p>应用商店检查 GitHub 签名目录后提示更新；新版处理器由签名面板提供。WAF 升级会实际迁移并校验规则，不只改版本号。</p>
@@ -297,5 +339,6 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
 </template>
 
 <style scoped>
+.waf-proxy-ack{height:auto;max-width:100%;align-items:flex-start}.waf-proxy-ack :deep(.el-checkbox__label){white-space:normal;line-height:1.6}.waf-proxy-ack :deep(.el-checkbox__input){margin-top:4px}
 .waf-workspace{color:#30475b;font-size:13px}.waf-heading,.waf-toolbar,.waf-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.waf-heading{padding-bottom:14px;border-bottom:1px solid #e6edf2}.waf-heading h3{font-size:22px;color:#173e35;margin:0 0 7px}.waf-heading p{margin:0;color:#77899d}.waf-toolbar{margin:16px 0;padding:12px 14px;background:#f3f8f6;border:1px solid #e0eee7;border-radius:7px}.waf-toolbar>span{font-size:12px;color:#527165}.waf-workspace :deep(.el-alert){margin:12px 0}.waf-workspace :deep(.el-tabs__item){padding:0 12px;font-size:13px}.waf-workspace h4{margin:20px 0 10px;color:#263e51}.waf-workspace p{line-height:1.7}.waf-two,.waf-three{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.waf-three{grid-template-columns:repeat(3,minmax(0,1fr))}.waf-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding-top:12px}.waf-metrics article{border:1px solid #e1ebe7;border-radius:8px;padding:17px;background:linear-gradient(120deg,#f5faf7,#fff)}.waf-metrics span,.waf-metrics small,.waf-metrics strong{display:block}.waf-metrics strong{font-size:30px;color:#127848;margin:7px 0}.waf-metrics small,.waf-muted{font-size:12px;color:#73869b}.waf-group-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}.waf-group-grid article{display:flex;align-items:center;justify-content:space-between;padding:16px;border:1px solid #e6edf2;border-radius:6px}.waf-group-grid small{display:block;margin-top:6px;color:#73869b}.waf-filter,.waf-editor{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}.waf-filter>.el-input,.waf-filter>.el-select{width:220px}.waf-editor>.el-input,.waf-editor>.el-select{width:200px}.waf-site-groups{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding:15px}.waf-site-groups .el-form-item{display:block}.waf-site-warning{display:block;color:#b86521;margin-top:5px}.waf-add{margin:12px 0}.waf-code{white-space:pre-wrap;overflow-wrap:anywhere;max-height:320px;overflow:auto;background:#152b32;color:#dcefe4;padding:15px;border-radius:7px;font-size:12px}.waf-trend{display:flex;align-items:flex-end;gap:8px;height:125px;overflow:auto;border-bottom:1px solid #e1e9ed;padding-bottom:5px}.waf-trend>div{min-width:42px;display:flex;flex-direction:column;align-items:center;gap:8px}.waf-trend span{width:20px;background:#25b479;border-radius:3px 3px 0 0}.waf-trend small{color:#7e8ca0;font-size:10px}.waf-workspace :deep(.el-input-number){max-width:100%}.waf-workspace :deep(.el-select){width:100%}.waf-filter :deep(.el-select),.waf-editor :deep(.el-select){width:220px}@media(max-width:800px){.waf-two,.waf-three,.waf-group-grid,.waf-site-groups{grid-template-columns:1fr}.waf-metrics{grid-template-columns:repeat(2,1fr)}.waf-toolbar>div{display:flex;flex-wrap:wrap;gap:5px}.waf-toolbar .el-button{margin:0}.waf-heading{gap:15px}}
 </style>

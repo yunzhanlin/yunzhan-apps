@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const WAFVersion = "2.1.1"
+const WAFVersion = "2.2.0"
 
 var WAFGroupNames = []string{"method", "sql", "xss", "command", "traversal", "scanner", "cookie"}
 
@@ -60,10 +60,11 @@ type WAFPolicy struct {
 	CCRules   []WAFCCRule           `json:"cc_rules"`
 }
 type WAFConfig struct {
-	Profile string         `json:"profile"`
-	Rate    int            `json:"rate_per_second"`
-	Policy  WAFPolicy      `json:"policy"`
-	Body    *WAFBodyConfig `json:"body,omitempty"`
+	Profile      string                 `json:"profile"`
+	Rate         int                    `json:"rate_per_second"`
+	Policy       WAFPolicy              `json:"policy"`
+	Body         *WAFBodyConfig         `json:"body,omitempty"`
+	TrustedProxy *WAFTrustedProxyConfig `json:"trusted_proxy,omitempty"`
 }
 
 func DefaultWAFConfig() WAFConfig {
@@ -107,6 +108,9 @@ func DecodeWAFConfig(raw map[string]any) (WAFConfig, error) {
 		return v, errors.New("WAF 版本、修订号、模式或突发容量无效")
 	}
 	if err := validateWAFBodyConfig(v.Body); err != nil {
+		return v, err
+	}
+	if err := ValidateWAFTrustedProxy(v.TrustedProxy); err != nil {
 		return v, err
 	}
 	groupOK := func(groups map[string]bool) bool {

@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"local/panel/internal/core"
@@ -16,7 +17,46 @@ import (
 	"time"
 )
 
+type wafNativeFixture struct{ address, logPath string }
+
+func (f wafNativeFixture) request(t *testing.T, host, path, peer string, headers map[string]string) (int, http.Header) {
+	t.Helper()
+	dialer := &net.Dialer{Timeout: time.Second}
+	if peer != "" {
+		dialer.LocalAddr = &net.TCPAddr{IP: net.ParseIP(peer)}
+	}
+	transport := &http.Transport{Proxy: nil, DialContext: dialer.DialContext, DisableKeepAlives: true}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Transport: transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	r, err := http.NewRequestWithContext(context.Background(), "GET", "http://"+f.address+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Host = host
+	for k, v := range headers {
+		r.Header.Set(k, v)
+	}
+	res, err := client.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if _, err = io.Copy(io.Discard, io.LimitReader(res.Body, 64<<10)); err != nil {
+		t.Fatal(err)
+	}
+	return res.StatusCode, res.Header.Clone()
+}
+
 func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string, string) int {
+	f := wafTestNginxFixture(t, cfg)
+	return func(host, path, agent, cookie string) int {
+		t.Helper()
+		status, _ := f.request(t, host, path, "", map[string]string{"User-Agent": agent, "Cookie": cookie})
+		return status
+	}
+}
+
+func wafTestNginxFixture(t *testing.T, cfg core.WAFConfig) wafNativeFixture {
 	t.Helper()
 	bin, e := exec.LookPath("nginx")
 	if e != nil {
@@ -40,10 +80,17 @@ func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string,
 	h = strings.ReplaceAll(h, "listen 127.0.0.1:19101;", fmt.Sprintf("listen 127.0.0.1:%d;", port))
 	s = strings.ReplaceAll(s, "/var/log/nginx/panel-waf.log", filepath.Join(root, "waf.log"))
 	servers := ""
+	identityHeaders := "add_header X-Test-Client-IP $remote_addr always;"
+	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
+		identityHeaders += " add_header X-Test-Peer-IP $realip_remote_addr always;"
+	}
 	for i, host := range []string{"a.localhost", "b.localhost"} {
 		id := strings.Repeat(string(rune('a'+i)), 32)
-		servers += fmt.Sprintf("server { listen 127.0.0.1:%d; server_name %s; set $panel_waf_site %s; %s root %s; location / { try_files $uri /index.html; } location = /__panel_health_%s { return 200 healthy; } }\n", port, host, id, s, wafQuote(pub), id)
+		servers += fmt.Sprintf("server { listen 127.0.0.1:%d; server_name %s; set $panel_waf_site %s; %s %s root %s; location / { try_files $uri /index.html; } location = /__panel_health_%s { return 200 healthy; } }\n", port, host, id, s, identityHeaders, wafQuote(pub), id)
 	}
+	// No managed WAF include: a opted-out site cannot inherit this app's
+	// server-scoped trust just because it shares the same listener/process.
+	servers += fmt.Sprintf("server { listen 127.0.0.1:%d; server_name opted-out.localhost; add_header X-Test-Client-IP $remote_addr always; location / {return 200 opted-out;} }\n", port)
 	// Debian/Ubuntu binaries have absolute compiled-in temporary directories.
 	// Even `-t -p <private>` may chown them during configuration validation.
 	// Pin all five temp roots, not just client bodies; the fixture must never
@@ -111,24 +158,7 @@ func wafTestNginx(t *testing.T, cfg core.WAFConfig) func(string, string, string,
 		log, _ := os.ReadFile(outputPath)
 		t.Fatalf("private Nginx did not listen within 15 seconds: %s", log)
 	}
-	client := &http.Client{Timeout: 5 * time.Second}
-	return func(host, path, agent, cookie string) int {
-		t.Helper()
-		r, e := http.NewRequest("GET", "http://"+address+path, nil)
-		if e != nil {
-			t.Fatal(e)
-		}
-		r.Host = host
-		r.Header.Set("User-Agent", agent)
-		r.Header.Set("Cookie", cookie)
-		res, e := client.Do(r)
-		if e != nil {
-			t.Fatal(e)
-		}
-		io.Copy(io.Discard, res.Body)
-		res.Body.Close()
-		return res.StatusCode
-	}
+	return wafNativeFixture{address: address, logPath: filepath.Join(root, "waf.log")}
 }
 
 func TestWAFRealNginxMetadataAndScope(t *testing.T) {

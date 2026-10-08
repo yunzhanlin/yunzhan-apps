@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -141,6 +142,72 @@ func TestWAFVerified210UpdatePreservesPausedEngineAndRejectsDrift(t *testing.T) 
 				t.Fatal("migration silently activated paused engine")
 			}
 		})
+	}
+}
+
+func TestWAFVerified211UpgradeKeepsProxyDisabledAndBodyIdentity(t *testing.T) {
+	for _, bodyMode := range []string{"absent", "empty", "paused"} {
+		for _, drift := range []bool{false, true} {
+			t.Run(bodyMode+fmt.Sprint(drift), func(t *testing.T) {
+				s, cfg := wafLegacyVersionFixture(t, "2.1.1", func(cfg *core.WAFConfig) {
+					if bodyMode != "absent" {
+						cfg.Body = &core.WAFBodyConfig{EngineJobID: strings.Repeat("a", 32), Sites: []core.WAFBodySitePolicy{}}
+						if bodyMode == "paused" {
+							policy := core.DefaultWAFBodyPolicy()
+							policy.Mode = "off"
+							cfg.Body.Sites = append(cfg.Body.Sites, core.WAFBodySitePolicy{SiteID: strings.Repeat("b", 32), Policy: policy})
+						}
+					}
+				})
+				h, v := wafFiles(s)
+				if drift {
+					data, _ := os.ReadFile(v)
+					if err := os.WriteFile(v, append(data, []byte("# external administrator edit\n")...), 0640); err != nil {
+						t.Fatal(err)
+					}
+				}
+				paths := []string{h, v, s.Config.NginxConf, s.softwareManifestPath("nginx-waf")}
+				before := map[string][]byte{}
+				for _, path := range paths {
+					before[path], _ = os.ReadFile(path)
+				}
+				original, _ := s.readSoftwareManifest("nginx-waf")
+				err := s.updateSoftware(context.Background(), "nginx-waf", core.WAFVersion, func(string) {})
+				if drift {
+					if err == nil {
+						t.Fatal("manual 2.1.1 configuration overwritten")
+					}
+					for path, want := range before {
+						got, _ := os.ReadFile(path)
+						if !bytes.Equal(got, want) {
+							t.Fatal("rejected upgrade wrote", path)
+						}
+					}
+					if _, err := os.Stat(filepath.Join(s.Config.SecurityDir, "waf-backups")); !os.IsNotExist(err) {
+						t.Fatal("rejected upgrade created backup", err)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal("verified 2.1.1 upgrade rejected", err)
+				}
+				after, err := s.readSoftwareManifest("nginx-waf")
+				if err != nil || after.Version != core.WAFVersion || after.InstalledAt != original.InstalledAt {
+					t.Fatal("upgrade identity lost", err)
+				}
+				got, err := core.DecodeWAFConfig(after.Settings)
+				cfg.Policy.Revision++
+				want, _ := json.Marshal(cfg)
+				actual, _ := json.Marshal(got)
+				if err != nil || !bytes.Equal(want, actual) || got.TrustedProxy != nil {
+					t.Fatal("upgrade activated proxy or changed body/policy", err)
+				}
+				main, _ := os.ReadFile(s.Config.NginxConf)
+				if !bytes.Equal(main, before[s.Config.NginxConf]) {
+					t.Fatal("version-only upgrade changed global Nginx")
+				}
+			})
+		}
 	}
 }
 

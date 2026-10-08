@@ -25,6 +25,9 @@ func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
 	if cfg.Body != nil {
 		return cfg, errors.New("Apache 尚未实现原生请求体引擎；不能保存 Nginx 请求体策略冒充生效")
 	}
+	if cfg.TrustedProxy != nil {
+		return cfg, errors.New("Apache 尚未实现可信代理来源管理；不能保存 Nginx real_ip 策略冒充生效")
+	}
 	if cfg.Policy.CCEnabled || len(cfg.Policy.CCRules) != 0 {
 		return cfg, errors.New("Apache 元数据防护不提供 CC 限速；请关闭 CC 并通过 Nginx 入口配置限速")
 	}

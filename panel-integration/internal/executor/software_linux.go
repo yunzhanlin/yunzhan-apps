@@ -285,6 +285,9 @@ func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install
 		if err != nil {
 			return err
 		}
+		if err := s.verifyWAFTrustedProxy(ctx, current, nginx); err != nil {
+			return err
+		}
 		if err := s.verifyWAFBodyEngine(current); err != nil {
 			return err
 		}

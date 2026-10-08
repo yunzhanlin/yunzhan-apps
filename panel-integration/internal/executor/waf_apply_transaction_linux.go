@@ -110,6 +110,9 @@ func (s *Service) applyWAFTransaction(ctx context.Context, cfg core.WAFConfig, u
 
 func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFConfig, uninstall bool, nginx string, add func(string), legacy *softwareManifest) error {
 	if !uninstall {
+		if err := s.verifyWAFTrustedProxy(ctx, cfg, nginx); err != nil {
+			return err
+		}
 		if err := s.verifyWAFBodyEngine(cfg); err != nil {
 			return err
 		}

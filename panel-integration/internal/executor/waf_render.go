@@ -242,9 +242,13 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 		fmt.Fprintf(&http, "limit_req_zone $%s zone=%s:512k rate=%dr/s;\n", name, name, r.Rate)
 		fmt.Fprintf(&server, "limit_req zone=%s burst=%d nodelay;\n", name, r.Burst)
 	}
-	http.WriteString("log_format panel_waf escape=json '{\"time\":\"$time_iso8601\",\"site\":\"$server_name\",\"site_id\":\"$panel_waf_site\",\"ip\":\"$remote_addr\",\"status\":$status,\"method\":\"$request_method\",\"path\":\"$uri\",\"reason\":\"$pw_log_reason\",\"action\":\"$pw_log_action\",\"bad_method\":\"$panel_waf_bad_method\",\"bad_args\":\"$panel_waf_bad_args\",\"bad_uri\":\"$panel_waf_bad_uri\",\"bad_agent\":\"$panel_waf_bad_agent\",\"rate\":\"$limit_req_status\"}';\n")
+	metadataLog := "log_format panel_waf escape=json '{\"time\":\"$time_iso8601\",\"site\":\"$server_name\",\"site_id\":\"$panel_waf_site\",\"ip\":\"$remote_addr\",\"status\":$status,\"method\":\"$request_method\",\"path\":\"$uri\",\"reason\":\"$pw_log_reason\",\"action\":\"$pw_log_action\",\"bad_method\":\"$panel_waf_bad_method\",\"bad_args\":\"$panel_waf_bad_args\",\"bad_uri\":\"$panel_waf_bad_uri\",\"bad_agent\":\"$panel_waf_bad_agent\",\"rate\":\"$limit_req_status\"}';\n"
+	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
+		metadataLog = strings.Replace(metadataLog, `,"status":$status`, `,"peer":"$realip_remote_addr","status":$status`, 1)
+	}
+	http.WriteString(metadataLog)
 	// A dedicated loopback virtual host proves the exact configuration loaded,
 	// including installations whose legacy websites have no health route.
 	fmt.Fprintf(&http, "server { listen 127.0.0.1:19101; server_name panel-waf-check.invalid; access_log off; location = /__panel_waf_check { default_type text/plain; return 200 %s; } location / { return 404; } }\n", wafQuote(wafProbeValueVersion(cfg, version)))
-	return http.String(), "# managed by panel nginx-waf " + version + "\nif ($pw_method_block) { return 405; }\nif ($pw_block) { return 403; }\n" + server.String() + "limit_req_status 429;\naccess_log /var/log/nginx/panel-waf.log panel_waf if=$pw_event;\nadd_header X-Panel-WAF $pw_mode always;\nadd_header X-Panel-WAF-Revision " + strconv.FormatInt(cfg.Policy.Revision, 10) + " always;\n"
+	return http.String(), "# managed by panel nginx-waf " + version + "\n" + renderWAFTrustedProxy(cfg.TrustedProxy) + "if ($pw_method_block) { return 405; }\nif ($pw_block) { return 403; }\n" + server.String() + "limit_req_status 429;\naccess_log /var/log/nginx/panel-waf.log panel_waf if=$pw_event;\nadd_header X-Panel-WAF $pw_mode always;\nadd_header X-Panel-WAF-Revision " + strconv.FormatInt(cfg.Policy.Revision, 10) + " always;\n"
 }

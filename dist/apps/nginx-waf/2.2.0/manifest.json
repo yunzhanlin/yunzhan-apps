@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "nginx-waf",
+  "name": "Nginx 请求防火墙 · Nginx WAF",
+  "category": "professional",
+  "version": "2.2.0",
+  "summary": "站点规则、名单与 CC；显式可信反代 CIDR、限定来源头与原始网络对端审计，默认不信任转发头；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，表单与 JSON/上传检测、隐私规则命中报表、有界日志及中断恢复；重载核实旧进程关闭监听，升级保留策略与引擎；引擎需显式构建与启用。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nginx-waf",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "站点独立分类规则、启停与观察模式",
+    "IPv4/IPv6 与 URL/UA 名单",
+    "每站点 IP 与 URL CC 限速",
+    "自定义字面匹配规则、安全配置导入与预览",
+    "真实日志筛选、排行、导出与数值命中记录及同 inode 轮转",
+    "配置备份、修订冲突、重载探针及旧工作进程监听关闭核对",
+    "独立请求体引擎与固定开源 CRS；版本迁移保留原策略",
+    "表单、嵌套 JSON 与上传体检测",
+    "未提交索引与缺失快照显式恢复",
+    "显式可信代理 CIDR、限定来源请求头与风险确认，仅受管站点启用",
+    "可信来源模块与安装版本核对、旧客户端保留配置、修订冲突及失败回滚",
+    "名单与 CC 使用验证后的客户端 IP，命中审计另记原始网络对端"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/nginx-waf/config"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

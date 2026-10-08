@@ -18,12 +18,15 @@ test('published manifest OS values are permitted by the schema',async()=>{
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
- assert.equal(waf.version,'2.1.1');assert.equal(analytics.version,'2.2.0');
+ assert.equal(waf.version,'2.2.0');assert.equal(analytics.version,'2.2.0');
  assert.match(waf.summary,/显式构建与启用/);assert(!waf.summary.includes('不含完整请求体检测'));
  assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
  const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
  assert(w.scenarios.some(s=>s.includes('SIGKILL')));
  assert(waf.capabilities.some(s=>s.includes('旧工作进程')));
+ assert(waf.capabilities.some(s=>s.includes('可信代理 CIDR')));
+ assert(w.scenarios.some(s=>s.includes('未可信对端')));
+ assert(w.boundaries.some(s=>s.includes('不自动导入 CDN')));
  assert(w.boundaries.some(s=>s.includes('不是 HTTP 请求数')));
  assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('调度')));
  assert(a.boundaries.some(s=>s.includes('20000'))&&a.gaps.some(s=>s.includes('SPA 独立路由性能')));
