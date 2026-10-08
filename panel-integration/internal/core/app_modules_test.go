@@ -55,7 +55,7 @@ func TestAppModuleRoles(t *testing.T) {
 	for _, test := range []struct {
 		method, path string
 		want         bool
-	}{{"GET", "/api/sites", true}, {"GET", "/api/sites/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/files", true}, {"POST", "/api/sites/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/files", false}, {"GET", "/api/sites/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/files", false}, {"GET", "/api/system/files", false}, {"GET", "/api/software", false}, {"POST", "/api/account/password", true}} {
+	}{{"GET", "/api/sites", true}, {"GET", "/api/sites/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/files", true}, {"POST", "/api/sites/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/files", false}, {"GET", "/api/sites/bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb/files", false}, {"GET", "/api/system/files", false}, {"GET", "/api/software", false}, {"POST", "/api/app-modules/load-balance/check-http", false}, {"POST", "/api/account/password", true}} {
 		if got := a.appRoleAllowed(u, httptest.NewRequest(test.method, test.path, nil)); got != test.want {
 			t.Fatal(test, got)
 		}

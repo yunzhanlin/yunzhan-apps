@@ -22,64 +22,65 @@ type AppModuleField struct {
 	Kind  string `json:"kind"`
 }
 type AppModuleInput struct {
-	SiteID              string             `json:"site_id,omitempty"`
-	TargetSiteID        string             `json:"target_site_id,omitempty"`
-	TargetProjectID     string             `json:"target_project_id,omitempty"`
-	SiteIDs             []string           `json:"site_ids,omitempty"`
-	MenuIDs             []string           `json:"menu_ids"`
-	Path                string             `json:"path,omitempty"`
-	Excludes            []string           `json:"excludes,omitempty"`
-	ExpectedSHA         string             `json:"expected_sha,omitempty"`
-	Username            string             `json:"username,omitempty"`
-	Password            string             `json:"password,omitempty"`
-	Role                string             `json:"role,omitempty"`
-	ResourceID          string             `json:"resource_id,omitempty"`
-	Entry               string             `json:"entry,omitempty"`
-	PID                 int                `json:"pid,omitempty"`
-	StartTime           uint64             `json:"start_time,omitempty"`
-	Port                int                `json:"port,omitempty"`
-	Domain              string             `json:"domain,omitempty"`
-	Nodes               []AppUpstream      `json:"nodes,omitempty"`
-	Sticky              bool               `json:"sticky,omitempty"`
-	URL                 string             `json:"url,omitempty"`
-	Token               string             `json:"token,omitempty"`
-	Source              string             `json:"source,omitempty"`
-	ReadOnly            bool               `json:"read_only,omitempty"`
-	Interval            int                `json:"interval,omitempty"`
-	AutoRestore         bool               `json:"auto_restore,omitempty"`
-	Realtime            bool               `json:"realtime"`
-	Confirm             string             `json:"confirm,omitempty"`
-	DryRun              bool               `json:"dry_run,omitempty"`
-	FromTime            string             `json:"from_time,omitempty"`
-	ToTime              string             `json:"to_time,omitempty"`
-	Search              string             `json:"search,omitempty"`
-	StatusCode          int                `json:"status_code,omitempty"`
-	MinSeconds          float64            `json:"min_seconds,omitempty"`
-	OnlyBots            bool               `json:"only_bots,omitempty"`
-	Severity            string             `json:"severity,omitempty"`
-	Instances           int                `json:"instances,omitempty"`
-	MemoryMB            int                `json:"memory_mb,omitempty"`
-	EnvironmentPatch    map[string]*string `json:"environment_patch,omitempty"`
-	AllowInstallScripts bool               `json:"allow_install_scripts,omitempty"`
-	BindAddress         string             `json:"bind_address,omitempty"`
-	PassiveAddress      string             `json:"passive_address,omitempty"`
-	PassiveStart        int                `json:"passive_start,omitempty"`
-	PassiveEnd          int                `json:"passive_end,omitempty"`
-	CertificateID       string             `json:"certificate_id,omitempty"`
-	MaxClients          int                `json:"max_clients,omitempty"`
-	MaxPerIP            int                `json:"max_per_ip,omitempty"`
-	IdleMinutes         int                `json:"idle_minutes,omitempty"`
-	QuotaMB             int                `json:"quota_mb"`
-	QuotaFiles          int                `json:"quota_files"`
-	UploadKB            int                `json:"upload_kb"`
-	DownloadKB          int                `json:"download_kb"`
-	MaxSessions         int                `json:"max_sessions"`
-	ClientAllow         []string           `json:"client_allow"`
-	ClientDeny          []string           `json:"client_deny"`
-	Enabled             bool               `json:"enabled"`
-	ExpectedRevision    int64              `json:"expected_revision,omitempty"`
-	Limit               int                `json:"limit,omitempty"`
-	Offset              int                `json:"offset,omitempty"`
+	SiteID              string                 `json:"site_id,omitempty"`
+	TargetSiteID        string                 `json:"target_site_id,omitempty"`
+	TargetProjectID     string                 `json:"target_project_id,omitempty"`
+	SiteIDs             []string               `json:"site_ids,omitempty"`
+	MenuIDs             []string               `json:"menu_ids"`
+	Path                string                 `json:"path,omitempty"`
+	Excludes            []string               `json:"excludes,omitempty"`
+	ExpectedSHA         string                 `json:"expected_sha,omitempty"`
+	Username            string                 `json:"username,omitempty"`
+	Password            string                 `json:"password,omitempty"`
+	Role                string                 `json:"role,omitempty"`
+	ResourceID          string                 `json:"resource_id,omitempty"`
+	Entry               string                 `json:"entry,omitempty"`
+	PID                 int                    `json:"pid,omitempty"`
+	StartTime           uint64                 `json:"start_time,omitempty"`
+	Port                int                    `json:"port,omitempty"`
+	Domain              string                 `json:"domain,omitempty"`
+	Nodes               []AppUpstream          `json:"nodes,omitempty"`
+	Sticky              bool                   `json:"sticky,omitempty"`
+	HealthCheck         *LoadBalanceHTTPHealth `json:"health_check,omitempty"`
+	URL                 string                 `json:"url,omitempty"`
+	Token               string                 `json:"token,omitempty"`
+	Source              string                 `json:"source,omitempty"`
+	ReadOnly            bool                   `json:"read_only,omitempty"`
+	Interval            int                    `json:"interval,omitempty"`
+	AutoRestore         bool                   `json:"auto_restore,omitempty"`
+	Realtime            bool                   `json:"realtime"`
+	Confirm             string                 `json:"confirm,omitempty"`
+	DryRun              bool                   `json:"dry_run,omitempty"`
+	FromTime            string                 `json:"from_time,omitempty"`
+	ToTime              string                 `json:"to_time,omitempty"`
+	Search              string                 `json:"search,omitempty"`
+	StatusCode          int                    `json:"status_code,omitempty"`
+	MinSeconds          float64                `json:"min_seconds,omitempty"`
+	OnlyBots            bool                   `json:"only_bots,omitempty"`
+	Severity            string                 `json:"severity,omitempty"`
+	Instances           int                    `json:"instances,omitempty"`
+	MemoryMB            int                    `json:"memory_mb,omitempty"`
+	EnvironmentPatch    map[string]*string     `json:"environment_patch,omitempty"`
+	AllowInstallScripts bool                   `json:"allow_install_scripts,omitempty"`
+	BindAddress         string                 `json:"bind_address,omitempty"`
+	PassiveAddress      string                 `json:"passive_address,omitempty"`
+	PassiveStart        int                    `json:"passive_start,omitempty"`
+	PassiveEnd          int                    `json:"passive_end,omitempty"`
+	CertificateID       string                 `json:"certificate_id,omitempty"`
+	MaxClients          int                    `json:"max_clients,omitempty"`
+	MaxPerIP            int                    `json:"max_per_ip,omitempty"`
+	IdleMinutes         int                    `json:"idle_minutes,omitempty"`
+	QuotaMB             int                    `json:"quota_mb"`
+	QuotaFiles          int                    `json:"quota_files"`
+	UploadKB            int                    `json:"upload_kb"`
+	DownloadKB          int                    `json:"download_kb"`
+	MaxSessions         int                    `json:"max_sessions"`
+	ClientAllow         []string               `json:"client_allow"`
+	ClientDeny          []string               `json:"client_deny"`
+	Enabled             bool                   `json:"enabled"`
+	ExpectedRevision    int64                  `json:"expected_revision,omitempty"`
+	Limit               int                    `json:"limit,omitempty"`
+	Offset              int                    `json:"offset,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -98,7 +99,7 @@ func AppModules() []AppModuleDefinition {
 		{"daily-report", "每日运维报告", []string{"run"}, nil},
 		{"website-statistics-v2", "网站统计 v2", []string{"run"}, []AppModuleField{site}},
 		{"enterprise-tamper-proof", "企业网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path, {"auto_restore", "自动恢复已备份文件", "boolean"}}},
-		{"load-balance", "负载均衡", []string{"run", "save", "probe", "remove", "recover"}, []AppModuleField{{"domain", "小写域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}, {"expected_revision", "入口修订号（选择记录自动填写）", "identity"}}},
+		{"load-balance", "负载均衡", []string{"run", "save", "probe", "check-http", "remove", "recover"}, []AppModuleField{{"domain", "小写域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}, {"health_check", "持续 HTTP 应用检查（只观测）", "http-health"}, {"expected_revision", "入口修订号（选择记录自动填写）", "identity"}}},
 		{"mobile-pwa", "云栈移动端", []string{"run"}, nil},
 		{"apache-waf", "Apache 请求防火墙", []string{"run"}, nil},
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
@@ -290,7 +291,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "load-balance":
-			version = "1.3.1"
+			version = "1.4.0"
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":

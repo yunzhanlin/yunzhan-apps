@@ -27,13 +27,14 @@ import (
 // HTTP entries are bound to loopback. This record never claims an OSS TCP
 // connection probe is an active application health check.
 type loadBalanceEntry struct {
-	Format   int                `json:"format"`
-	Revision int64              `json:"revision"`
-	Domain   string             `json:"domain"`
-	Port     int                `json:"port"`
-	Nodes    []core.AppUpstream `json:"nodes"`
-	Sticky   bool               `json:"sticky"`
-	Removed  bool               `json:"removed"`
+	Format      int                         `json:"format"`
+	Revision    int64                       `json:"revision"`
+	Domain      string                      `json:"domain"`
+	Port        int                         `json:"port"`
+	Nodes       []core.AppUpstream          `json:"nodes"`
+	Sticky      bool                        `json:"sticky"`
+	Removed     bool                        `json:"removed"`
+	HealthCheck *core.LoadBalanceHTTPHealth `json:"health_check,omitempty"`
 }
 type loadBalanceTransaction struct {
 	Format    int               `json:"format"`
@@ -69,6 +70,12 @@ func loadBalancePrivateRead(path string, limit int64) ([]byte, error) {
 }
 
 func validateLoadBalanceEntry(v loadBalanceEntry) error {
+	if e := core.ValidateLoadBalanceHTTPHealth(v.HealthCheck); e != nil {
+		return e
+	}
+	if v.Format == 0 && v.HealthCheck != nil {
+		return errors.New("历史入口不能冒充已登记 HTTP 检查策略")
+	}
 	if !core.ValidDomain(v.Domain) || strings.ToLower(v.Domain) != v.Domain || v.Port < 20000 || v.Port > 60000 ||
 		len(v.Nodes) < 2 || len(v.Nodes) > 16 || (v.Format != 0 && v.Format != 1) || v.Revision < 0 || v.Revision >= 1<<60 ||
 		(v.Format == 0 && (v.Revision != 0 || v.Removed)) || (v.Format == 1 && v.Revision == 0) {
@@ -77,12 +84,8 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 	seen := map[string]bool{}
 	primary := 0
 	for _, n := range v.Nodes {
-		host, port, e := net.SplitHostPort(n.Address)
-		ip, ipErr := netip.ParseAddr(host)
-		p, portErr := strconv.Atoi(port)
-		if e != nil || ipErr != nil || portErr != nil || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() ||
-			ip.Is4In6() || ip.Zone() != "" || ip == netip.MustParseAddr("255.255.255.255") ||
-			p < 1 || p > 65535 || port != strconv.Itoa(p) || n.Address != net.JoinHostPort(ip.String(), port) ||
+		ip, p, e := loadBalanceNodeAddress(n.Address)
+		if e != nil ||
 			n.Weight < 1 || n.Weight > 100 || seen[n.Address] || (n.Backup && v.Sticky) ||
 			(ip.IsLoopback() && (p == v.Port || p == 19100 || p == 19102 || p == 19080)) {
 			return errors.New("上游须为唯一规范固定 IP:端口；拒绝自循环、面板控制端口、链路本地/组播/映射地址与非法权重，粘滞不能使用备用节点")
@@ -96,6 +99,17 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 		return errors.New("至少保留一个主节点，不能全部设置为备用")
 	}
 	return nil
+}
+func loadBalanceNodeAddress(address string) (netip.Addr, int, error) {
+	host, port, e := net.SplitHostPort(address)
+	ip, ipErr := netip.ParseAddr(host)
+	p, portErr := strconv.Atoi(port)
+	if e != nil || ipErr != nil || portErr != nil || ip.IsUnspecified() || ip.IsMulticast() || ip.IsLinkLocalUnicast() ||
+		ip.Is4In6() || ip.Zone() != "" || ip == netip.MustParseAddr("255.255.255.255") || ip == netip.MustParseAddr("fd00:ec2::254") ||
+		p < 1 || p > 65535 || port != strconv.Itoa(p) || address != net.JoinHostPort(ip.String(), port) {
+		return netip.Addr{}, 0, errors.New("上游不是允许的规范固定 IP:端口")
+	}
+	return ip, p, nil
 }
 func decodeLoadBalanceEntry(b []byte) (loadBalanceEntry, error) {
 	var head struct {
@@ -496,6 +510,9 @@ func RecoverLoadBalanceConfiguration() error {
 	return s.finishLoadBalanceTransaction(tx)
 }
 func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
+	if action == "check-http" {
+		return s.checkLoadBalanceHTTP(ctx, in)
+	}
 	if action != "run" && action != "recover" && action != "save" && action != "probe" && action != "remove" {
 		return nil, errors.New("负载均衡操作无效")
 	}
@@ -531,7 +548,11 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		return nil, e
 	}
 	if action == "run" || action == "recover" {
-		return map[string]any{"entries": entries, "count": len(entries), "pending": false, "transport": "HTTP loopback", "active_health_checks": false}, nil
+		health, err := s.loadBalanceHealthReports(entries, time.Now().UTC())
+		if err != nil {
+			return nil, err
+		}
+		return map[string]any{"entries": entries, "count": len(entries), "pending": false, "transport": "HTTP loopback", "active_health_checks": len(health) > 0 && s.loadBalanceHealthInstalled(), "http_health": health, "automatic_traffic_changes": false}, nil
 	}
 	old, present, e := s.readLoadBalanceEntry(in.Domain)
 	if e != nil {
@@ -558,7 +579,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 			}
 			nodes = append(nodes, map[string]any{"address": n.Address, "healthy": e == nil, "probe": "TCP connection only", "weight": n.Weight, "backup": n.Backup})
 		}
-		return map[string]any{"domain": old.Domain, "port": old.Port, "revision": old.Revision, "nodes": nodes, "entry_fingerprint_verified": old.Format == 1, "active_application_health_checks": false}, nil
+		return map[string]any{"domain": old.Domain, "port": old.Port, "revision": old.Revision, "nodes": nodes, "entry_fingerprint_verified": old.Format == 1, "active_application_health_checks": old.HealthCheck != nil}, nil
 	}
 	wanted := int64(0)
 	if present && !old.Removed {
@@ -567,7 +588,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 	if in.ExpectedRevision != wanted {
 		return nil, errors.New("入口修订号已改变，请刷新并选择当前记录，未覆盖")
 	}
-	next := loadBalanceEntry{Format: 1, Revision: old.Revision + 1, Domain: in.Domain, Port: in.Port, Nodes: in.Nodes, Sticky: in.Sticky}
+	next := loadBalanceEntry{Format: 1, Revision: old.Revision + 1, Domain: in.Domain, Port: in.Port, Nodes: in.Nodes, Sticky: in.Sticky, HealthCheck: in.HealthCheck}
 	if action == "remove" {
 		if !present || old.Removed {
 			return nil, errors.New("入口不存在")
@@ -577,7 +598,13 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		next.Revision++
 		next.Removed = true
 	} else {
+		if next.HealthCheck != nil && !s.loadBalanceHealthInstalled() {
+			return nil, errors.New("先更新已安装负载均衡到 v1.4.0，再启用持续 HTTP 检查")
+		}
 		if e := validateLoadBalanceEntry(next); e != nil {
+			return nil, e
+		}
+		if e := validateLoadBalanceHealthBudget(entries, next); e != nil {
 			return nil, e
 		}
 		if (!present || old.Removed) && len(entries) >= 64 {

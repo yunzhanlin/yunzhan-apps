@@ -125,7 +125,24 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 			out.Detail = err.Error()
 			return out
 		}
-		out.Detail = fmt.Sprintf("%d 个回环 HTTP 入口；配置与可信清单一致，节点 TCP 探测不等于应用健康检查", len(entries))
+		health, err := s.loadBalanceHealthReports(entries, time.Now().UTC())
+		if err != nil {
+			out.Healthy = false
+			out.Detail = err.Error()
+			return out
+		}
+		normal, failed, unknown := 0, 0, 0
+		for _, row := range health {
+			switch row["state"] {
+			case "healthy":
+				normal++
+			case "unhealthy":
+				failed++
+			default:
+				unknown++
+			}
+		}
+		out.Detail = fmt.Sprintf("%d 个回环 HTTP 入口；持续 HTTP 节点检查：%d 正常 / %d 失败 / %d 未判定或过期；只观测，不自动修改流量", len(entries), normal, failed, unknown)
 	}
 	switch id {
 	case "pure-ftpd":
@@ -1435,6 +1452,7 @@ func (s *Service) StartAppModuleWorker() {
 	s.moduleWatchWake = make(chan struct{}, 1)
 	s.mu.Unlock()
 	go s.runIntegrityWatcher(context.Background())
+	go s.runLoadBalanceHealthWorker(context.Background())
 	go func() {
 		s.mu.Lock()
 		s.recoverSyncPlans()

@@ -65,6 +65,9 @@ const definition = ref<Definition>(),
   report = ref<Record<string, any>>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
+function toggleHTTPHealth(enabled: boolean | string | number) {
+  form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2} : null;
+}
 const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean;status:string}[]>([]);
 const selectedPlanID = ref("");
 const selectedQuarantineState = ref("");
@@ -114,6 +117,7 @@ function tabChanged(name: string | number) { if (name === "history") void refres
 function historyPage(delta: number) { historyOffset.value = Math.max(0, historyOffset.value + delta * historyLimit.value); void refreshHistory(); }
 const labels: Record<string, string> = {
   run: "刷新报告",
+  "check-http": "立即执行 HTTP 检查",
   baseline: "建立基线",
   check: "检查变更",
   restore: "恢复所选文件",
@@ -222,6 +226,7 @@ async function show(id: string) {
       auto_restore: false,
       realtime: false,
       nodes: [{ address: "127.0.0.1:21001", weight: 1, backup: false }, { address: "127.0.0.1:21002", weight: 1, backup: false }],
+      health_check: null,
       site_ids: [],
       excludes: [],
       status_code: 0,
@@ -260,7 +265,7 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
-  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? "entry" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? Array.isArray(row.nodes) ? "entry" : "health" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
@@ -268,6 +273,8 @@ function selected(row: Record<string, any>) {
   }
   for (const f of definition.value?.fields || [])
     if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
+  if (id==="load-balance" && Array.isArray(row.nodes))
+    form.value.health_check=row.health_check ? {...row.health_check} : null;
   if (id === "nfs-manager") {
     if (row.clients) form.value.client_allow=JSON.stringify(row.clients,null,2);
     form.value.confirm="";
@@ -576,6 +583,19 @@ defineExpose({ show });
               <el-button link type="primary" @click="roleDefaultMenus">使用角色默认菜单</el-button>
               <small>菜单是原角色权限的上限，不会扩大网站范围。修改后撤销旧会话；至少保留一个完整权限管理员。</small>
             </div>
+            <div v-else-if="field.kind === 'http-health'" class="http-health-editor">
+              <el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" />
+              <template v-if="form.health_check">
+                <label>相对请求路径<el-input v-model="form.health_check.path" aria-label="HTTP 检查相对路径" maxlength="512" placeholder="/health" /></label>
+                <label>检查间隔（秒）<el-input-number v-model="form.health_check.interval" aria-label="HTTP 检查间隔秒" :min="30" :max="3600" :precision="0" /></label>
+                <label>请求超时（毫秒）<el-input-number v-model="form.health_check.timeout_ms" aria-label="HTTP 检查超时毫秒" :min="500" :max="5000" :precision="0" /></label>
+                <label>预期 HTTP 状态<el-input-number v-model="form.health_check.expected_status" aria-label="HTTP 检查预期状态码" :min="200" :max="299" :precision="0" /></label>
+                <label>响应包含的内容<el-input v-model="form.health_check.body_contains" aria-label="HTTP 检查内容包含" maxlength="256" placeholder="可留空，最多 256 字节" /></label>
+                <label>连续失败次数<el-input-number v-model="form.health_check.failures" aria-label="连续失败阈值" :min="1" :max="10" :precision="0" /></label>
+                <label>连续恢复次数<el-input-number v-model="form.health_check.successes" aria-label="连续恢复阈值" :min="1" :max="10" :precision="0" /></label>
+                <small>只观测，不自动改动流量；保存入口后检查策略才会生效。</small>
+              </template>
+            </div>
             <div v-else-if="field.key === 'nodes'" class="node-editor">
               <div
                 v-for="(node, index) in form.nodes"
@@ -797,6 +817,9 @@ defineExpose({ show });
 .node-editor {
   width: 100%;
 }
+.http-health-editor { width:100%; display:flex; flex-direction:column; gap:10px; }
+.http-health-editor small { color:#657181; line-height:1.6; }
+.http-health-editor label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:#526373; }
 .node-line {
   display: flex;
   flex-wrap: wrap;

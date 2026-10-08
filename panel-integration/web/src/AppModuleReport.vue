@@ -113,7 +113,7 @@ const names: Record<string, string> = {
   total_seconds: "总响应时间",
   not_after: "到期时间",
   issuer: "签发者",
-  checked_at: "检查时间",
+  checked_at: "检查时间（UTC）",
   invalid_lines: "跳过无效日志",
   partial: "结果不完整",
   copied: "已复制",
@@ -154,6 +154,16 @@ const names: Record<string, string> = {
   hosts: "主机",
   nodes: "上游节点",
   entries: "负载均衡入口",
+  http_health: "持续 HTTP 检查",
+  health_check: "HTTP 检查策略",
+  automatic_traffic_changes: "自动修改流量",
+  last_success: "最近一次检查通过",
+  http_status: "HTTP 响应状态",
+  latency_ms: "耗时（毫秒）",
+  failures: "连续失败次数",
+  successes: "连续成功次数",
+  worker_error: "后台检查错误",
+  transitions: "最近状态转换",
   transport: "转发范围",
   active_health_checks: "主动应用健康检查",
   active_application_health_checks: "主动应用健康检查",
@@ -315,6 +325,8 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
+  if (props.id==="load-balance" && key==="state") return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
+  if (props.id==="load-balance" && key==="reason") return ({ok:"状态与内容匹配",request_failed:"请求失败",timeout:"请求超时",status_mismatch:"状态码不匹配（不跟随跳转）",body_incomplete:"响应不完整",body_too_large:"响应超过 16 KiB",content_missing:"响应缺少指定内容"} as Record<string,string>)[String(value)] || String(value ?? "—");
   if (props.id === "php-code-security" && key === "state") return ({prepared:"隔离准备中（待核对）",quarantined:"已隔离",conflict:"并发冲突（未覆盖）",restoring:"恢复中断（待核对）",restored:"已恢复",cancelled:"已取消（备份保留）"} as Record<string,string>)[String(value)] || String(value || "—");
   if (key === "watcher_state") return ({ active: "运行中", pending: "准备中", disabled: "未启用", stopped: "已停止", degraded: "已降级（保留补查）", unavailable: "不可用（保留补查）" } as Record<string, string>)[String(value)] || String(value || "—");
   if (typeof value === "boolean") return value ? "是" : "否";
@@ -349,6 +361,8 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+  if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
+    return ["domain","revision","address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","worker_error"];
 	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];
 	if (props.id === "nfs-manager" && values.some(value=>value && typeof value==='object' && 'clients' in value)) return ["id","site_id","path","clients","read_only","export_id","uid","gid"];
 	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];
