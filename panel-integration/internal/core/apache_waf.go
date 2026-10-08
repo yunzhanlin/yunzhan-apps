@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const ApacheWAFVersion = "2.1.0"
+const ApacheWAFVersion = "2.2.0"
 
 func DefaultApacheWAFConfig() WAFConfig {
 	cfg := DefaultWAFConfig()

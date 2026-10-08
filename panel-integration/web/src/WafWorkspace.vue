@@ -344,7 +344,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
             </template>
           </el-form>
           <p>仅接受规范的 IPv4 / IPv6 网络 CIDR，拒绝重复、重叠、映射地址和过宽网络；IPv4 至少 /8，IPv6 至少 /32。未列入的网络对端不能凭转发头修改身份。{{ apache ? 'Apache 只支持从右向左核对地址链，停在最后一个非可信地址；明确列出的内部代理可以传递私网访客地址。' : '开启递归后采用地址链中最后一个非可信地址；关闭时采用末尾地址。' }}</p>
-          <el-alert title="将回环地址列为可信来源，意味着本机能连接该端口的程序可以提供客户端身份。CDN 网段和代理部署会变化，请按你实际控制的网络维护，不能把公开网段列表当成授权证明。错误的信任配置可能绕过 IP 名单和 CC 限速。" type="warning" :closable="false"/>
+          <el-alert :title="`将回环地址列为可信来源，意味着本机能连接该端口的程序可以提供客户端身份。CDN 网段和代理部署会变化，请按你实际控制的网络维护，不能把公开网段列表当成授权证明。错误的信任配置可能绕过 IP 名单${apache ? '；Apache 不提供 CC 限速。' : '和 CC 限速。'}`" type="warning" :closable="false"/>
           <p class="waf-muted">{{ apache ? '停用并保存会删除本应用生成的 RemoteIPHeader / RemoteIPInternalProxy，模块加载本身不建立信任。遇到外部 RemoteIP 指令会拒绝覆盖；不自动修改入口代理的请求头设置。' : '停用并保存会删除本应用生成的 real_ip 指令，保留草稿中的 CIDR 便于核对；不会删除管理员在其它配置中手写的 real_ip 设置，外部继承设置仍可能影响客户端地址。' }}日志分别展示生效客户端 IP 与原始网络对端；旧日志没有原始对端时明确显示“未记录”。</p>
         </el-tab-pane>
         <el-tab-pane v-if="!apache" label="请求体防护" name="body">

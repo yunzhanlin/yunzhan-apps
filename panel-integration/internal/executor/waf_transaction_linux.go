@@ -30,11 +30,22 @@ type wafTransaction struct {
 var errWAFConfigurationBusy = errors.New("WAF 正在变更或恢复，请稍后重试")
 
 func (s *Service) wafPendingPath() string {
+	if s.fileTransactionApplication == "apache-waf" {
+		return filepath.Join(s.moduleDir("apache-waf"), "config-transactions", "pending.json")
+	}
 	return filepath.Join(s.Config.SecurityDir, "waf-transactions", "pending.json")
 }
 
 func (s *Service) wafChangePathAllowed(path string) bool {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return false
+	}
+	if s.fileTransactionApplication == "apache-waf" {
+		for _, allowed := range s.apacheWAFConfigurationPaths() {
+			if path == allowed {
+				return true
+			}
+		}
 		return false
 	}
 	h, v := wafFiles(s)
@@ -89,11 +100,15 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 	if operation != syscall.LOCK_EX && operation != syscall.LOCK_SH {
 		return nil, errors.New("WAF 锁操作无效")
 	}
-	if err := s.wafOwnedDirectory(s.Config.SecurityDir, true); err != nil {
+	base := s.Config.SecurityDir
+	if s.fileTransactionApplication == "apache-waf" {
+		base = s.moduleDir("apache-waf")
+	}
+	if err := s.wafOwnedDirectory(base, true); err != nil {
 		return nil, err
 	}
-	path := filepath.Join(s.Config.SecurityDir, "waf-configuration.lock")
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW, 0600)
+	path := filepath.Join(base, "waf-configuration.lock")
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +133,9 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 }
 
 func (s *Service) wafTransactionContract(tx wafTransaction) error {
+	if s.fileTransactionApplication == "apache-waf" && (tx.Format != 2 || len(tx.Changes) != 3) {
+		return errors.New("Apache 防护恢复事务需要三个完整的 UID/GID 文件记录")
+	}
 	if (tx.Format != 1 && tx.Format != 2) || !core.ValidID(tx.ID) || (tx.State != "applying" && tx.State != "committed" && tx.State != "recovered") || len(tx.Changes) < 1 || len(tx.Changes) > 4096 || len(tx.Digests) != len(tx.Changes)*2 {
 		return errors.New("WAF 恢复记录身份、状态或条目数量异常")
 	}
@@ -160,7 +178,7 @@ func (s *Service) readWAFTransaction() (wafTransaction, error) {
 	if err := s.wafOwnedDirectory(filepath.Dir(path), false); err != nil {
 		return tx, err
 	}
-	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
 	if err != nil {
 		return tx, err
 	}
@@ -176,6 +194,16 @@ func (s *Service) readWAFTransaction() (wafTransaction, error) {
 	data, err := io.ReadAll(io.LimitReader(f, (16<<20)+1))
 	if err != nil || len(data) > 16<<20 {
 		return tx, errors.New("WAF 恢复记录读取失败或超限")
+	}
+	after, statErr := f.Stat()
+	current, pathErr := os.Lstat(path)
+	if statErr != nil || pathErr != nil || !os.SameFile(st, current) || st.Size() != after.Size() || !st.ModTime().Equal(after.ModTime()) || current.Mode()&os.ModeSymlink != 0 {
+		return tx, errors.New("WAF 恢复记录在读取期间被修改或替换")
+	}
+	afterOwner, ownerErr := fileOwnerForInfo(after)
+	currentOwner, currentErr := fileOwnerForInfo(current)
+	if ownerErr != nil || currentErr != nil || st.Mode() != after.Mode() || st.Mode() != current.Mode() || afterOwner.UID != stat.Uid || afterOwner.GID != stat.Gid || *afterOwner != *currentOwner || after.Sys().(*syscall.Stat_t).Nlink != 1 || current.Sys().(*syscall.Stat_t).Nlink != 1 {
+		return tx, errors.New("WAF 恢复记录权限、所有者或链接数在读取期间变化")
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.DisallowUnknownFields()
@@ -202,7 +230,13 @@ func (s *Service) wafCurrentMatches(c wafConfigChange, next bool) (bool, error) 
 			return false, errors.New("WAF 配置大小或链接数异常")
 		}
 	}
-	b, err := backupFile(c.Path)
+	var b fileBackup
+	var err error
+	if s.fileTransactionApplication == "apache-waf" {
+		b, err = s.apacheWAFStableBackup(c.Path)
+	} else {
+		b, err = backupFile(c.Path)
+	}
 	if err != nil {
 		return false, err
 	}
@@ -323,6 +357,17 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		return false, err
 	}
 	if tx.State != "applying" {
+		if s.fileTransactionApplication == "apache-waf" {
+			for _, c := range tx.Changes {
+				match, e := s.wafCurrentMatches(c, tx.State == "committed")
+				if e != nil || !match {
+					return false, errors.New("Apache 已提交或恢复文件被外部修改，保留事务且拒绝覆盖")
+				}
+			}
+			// Apache acknowledges only after native validation and, if running,
+			// reloading/probing the exact chosen version. Keep retry evidence.
+			return false, nil
+		}
 		return false, s.finishWAFTransaction(tx)
 	}
 	if tx.Format == 1 {
@@ -344,6 +389,9 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		}
 	}
 	tx.State = "recovered"
+	if s.fileTransactionApplication == "apache-waf" {
+		return true, wafWriteTransaction(s.wafPendingPath(), tx)
+	}
 	return true, s.finishWAFTransaction(tx)
 }
 

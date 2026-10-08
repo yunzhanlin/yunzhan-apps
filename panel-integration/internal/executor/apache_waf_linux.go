@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"syscall"
 	"time"
@@ -29,6 +28,17 @@ func (s *Service) apacheWAFSource() (string, map[string][]string, error) {
 	return string(data), bindings, err
 }
 func (s *Service) apacheWAFSettings(raw map[string]any, install bool) (core.WAFConfig, error) {
+	return s.apacheWAFSettingsForApply(raw, install, false)
+}
+
+// A known 2.1 installation must remain readable while the signed app-store
+// update is pending. This only decodes its retained settings: it performs no
+// write, revision increase, reload, version promotion, or healthy-status claim.
+// Preview and ordinary configure keep their separate legacy write refusal.
+func (s *Service) apacheWAFReadSettings() (core.WAFConfig, error) {
+	return s.apacheWAFSettingsForApply(nil, true, true)
+}
+func (s *Service) apacheWAFSettingsForApply(raw map[string]any, install, upgrading bool) (core.WAFConfig, error) {
 	cfg, err := core.DecodeApacheWAFConfig(raw)
 	if err != nil {
 		return cfg, err
@@ -63,7 +73,7 @@ func (s *Service) apacheWAFSettings(raw map[string]any, install bool) (core.WAFC
 				return cfg, errors.New("Apache WAF 配置已变化，请刷新后重新保存")
 			}
 		}
-		if cfg.TrustedProxy != nil && current.Version != core.ApacheWAFVersion {
+		if cfg.TrustedProxy != nil && current.Version != core.ApacheWAFVersion && !(upgrading && current.Version == "2.1.0") {
 			return cfg, errors.New("可信代理策略需要先通过应用商店升级 Apache WAF，不以面板版本冒充应用已升级")
 		}
 	}
@@ -122,11 +132,20 @@ func (s *Service) apacheWAFReplay(raw map[string]any) bool {
 }
 
 func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, install, upgrading bool, add func(string)) error {
+	txs := s.apacheWAFTransactionService()
+	lock, err := txs.lockWAFConfiguration()
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	if err = txs.recoverApacheWAFBeforeMutation(ctx); err != nil {
+		return err
+	}
 	if s.apacheWAFReplay(raw) {
 		add("Apache WAF 配置和修订号已提交，核对文件后确认幂等重放")
 		return nil
 	}
-	cfg, err := s.apacheWAFSettings(raw, install)
+	cfg, err := s.apacheWAFSettingsForApply(raw, install, upgrading)
 	if err != nil {
 		return err
 	}
@@ -165,20 +184,45 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 		}
 	}
 	dir := s.moduleDir("apache-waf")
-	paths := []string{s.Config.ApacheSiteConfig, filepath.Join(dir, "rules.conf"), filepath.Join(dir, "installed.json")}
+	paths := txs.apacheWAFConfigurationPaths()
 	backups := []fileBackup{}
 	for _, path := range paths {
-		backup, err := backupFile(path)
+		backup, err := txs.apacheWAFStableBackup(path)
 		if err != nil {
 			return err
 		}
 		backups = append(backups, backup)
 	}
+	installedAt := core.Now()
+	if backups[2].existed {
+		var previous struct {
+			ID          string         `json:"id"`
+			Version     string         `json:"version"`
+			InstalledAt string         `json:"installed_at"`
+			Settings    map[string]any `json:"settings"`
+		}
+		if err = json.Unmarshal(backups[2].data, &previous); err != nil || previous.ID != "apache-waf" {
+			return errors.New("Apache 安装记录身份异常，未开始修改")
+		}
+		if previous.Version != core.ApacheWAFVersion && !upgrading {
+			return errors.New("先通过应用商店执行 Apache WAF 签名升级")
+		}
+		if previous.Version != core.ApacheWAFVersion {
+			if err = s.verifyApacheWAFLegacyUpgrade(ctx, core.SoftwareAppStatus{Installed: true, Version: previous.Version, Settings: previous.Settings}); err != nil {
+				return err
+			}
+		} else if err = s.verifyApacheWAFHealth(ctx, previous.Version, previous.Settings); err != nil {
+			return err
+		}
+		if previous.InstalledAt != "" {
+			installedAt = previous.InstalledAt
+		}
+	}
 	base := filepath.Join(dir, "config-backups")
 	if err = os.MkdirAll(base, 0700); err != nil {
 		return err
 	}
-	if err = ordinary(base, true); err != nil {
+	if err = txs.wafOwnedDirectory(base, false); err != nil {
 		return err
 	}
 	entries, err := os.ReadDir(base)
@@ -200,26 +244,12 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 				return err
 			}
 		}
-		index = append(index, map[string]any{"source": backup.path, "file": name, "existed": backup.existed, "mode": backup.mode})
+		index = append(index, map[string]any{"source": backup.path, "file": name, "existed": backup.existed, "mode": backup.mode, "owner": backup.owner, "sha256": core.Hash(string(backup.data))})
 	}
 	if err = moduleWrite(filepath.Join(backupDir, "index.json"), map[string]any{"created_at": core.Now(), "files": index}); err != nil {
 		return err
 	}
 	add("已保存可恢复的 Apache 配置、规则与版本记录备份")
-	rollback := func(cause error) error {
-		if err := restoreFiles(backups); err != nil {
-			return fmt.Errorf("Apache WAF 操作失败且配置回滚失败，备份保存在 %s：%w", backupDir, err)
-		}
-		rollbackCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		if _, err := s.Config.Run(rollbackCtx, release.CLI(), "-t", "-f", s.Config.ApacheSiteConfig); err != nil {
-			return errors.New("Apache WAF 旧配置已还原，但原生校验失败，请核对备份")
-		}
-		if _, err := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "reload", "panel-apache"); err != nil {
-			return errors.New("Apache WAF 旧配置已还原，但服务重载失败，请核对服务")
-		}
-		return cause
-	}
 	updated := regexp.MustCompile(`(?ms)^<VirtualHost[^>]+>.*?</VirtualHost>`).ReplaceAllStringFunc(source, func(block string) string {
 		id := regexp.MustCompile(`panel-([a-f0-9]{32})\.access\.log combined`).FindStringSubmatch(block)
 		if len(id) == 2 && !strings.Contains(block, "PANEL_AW_SITE="+id[1]) {
@@ -230,49 +260,19 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 		}
 		return strings.Replace(block, "\n", "\n  "+apacheWAFInclude, 1)
 	})
-	if err = atomicWrite(paths[0], []byte(updated), 0644); err != nil {
-		return rollback(err)
+	manifest := map[string]any{"id": "apache-waf", "version": core.ApacheWAFVersion, "settings": core.WAFSettings(cfg), "installed_at": installedAt, "updated_at": core.Now()}
+	plan, err := txs.planApacheWAFTransaction(backups, updated, rules, manifest, false)
+	if err != nil {
+		return err
 	}
-	if err = atomicWrite(paths[1], []byte(rules), 0644); err != nil {
-		return rollback(err)
-	}
-	if _, err = s.Config.Run(ctx, release.CLI(), "-t", "-f", s.Config.ApacheSiteConfig); err != nil {
-		return rollback(err)
-	}
-	if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "panel-apache"); err != nil {
-		return rollback(err)
-	}
-	keys := make([]string, 0, len(bindings))
-	for id := range bindings {
-		keys = append(keys, id)
-	}
-	sort.Strings(keys)
-	client := &http.Client{Timeout: 2 * time.Second, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	defer client.CloseIdleConnections()
-	verified := false
-	for i := 0; i < 8; i++ {
-		verified = apacheWAFProbeLoaded(ctx, cfg, bindings[keys[0]][0], client) == nil
-		if verified {
-			break
+	if err = txs.applyApacheWAFPlanned(ctx, plan, func(bounded context.Context) error {
+		domain, e := apacheWAFConfigurationFilesMatch(updated, cfg, modulePath, paths[1])
+		if e != nil {
+			return e
 		}
-		select {
-		case <-ctx.Done():
-			return rollback(ctx.Err())
-		case <-time.After(250 * time.Millisecond):
-		}
-	}
-	if !verified {
-		return rollback(errors.New("Apache 重载后未读到新配置指纹，已恢复旧配置"))
-	}
-	installedAt := core.Now()
-	var previous map[string]any
-	if moduleRead(paths[2], &previous) == nil {
-		if at, ok := previous["installed_at"].(string); ok {
-			installedAt = at
-		}
-	}
-	if err = moduleWrite(paths[2], map[string]any{"id": "apache-waf", "version": core.ApacheWAFVersion, "settings": core.WAFSettings(cfg), "installed_at": installedAt, "updated_at": core.Now()}); err != nil {
-		return rollback(err)
+		return apacheWAFWaitLoadedVersion(bounded, cfg, domain, core.ApacheWAFVersion)
+	}, add); err != nil {
+		return err
 	}
 	add("Apache 原生校验、平滑重载和回环配置指纹核对通过；保留网站、日志和配置历史")
 	return nil
@@ -338,7 +338,7 @@ func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /v1/software/apache-waf/config", func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		cfg, err := s.apacheWAFSettings(nil, true)
+		cfg, err := s.apacheWAFReadSettings()
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return

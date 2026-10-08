@@ -29,6 +29,9 @@ func TestApacheWAFLegacyIntegrityOracleKeepsVersionAndOldLogShape(t *testing.T) 
 		t.Fatal("unknown old version accepted")
 	}
 	cfg.TrustedProxy = apacheTrustedProxyFixture()
+	if old, err := renderApacheWAFVersion(cfg, map[string][]string{}, "2.1.0"); err != nil || !strings.Contains(old, apacheWAFProbeVersion(cfg, "2.1.0")) || !strings.Contains(old, "RemoteIPHeader X-Forwarded-For") || !strings.Contains(old, "%{c}a") {
+		t.Fatal("known 2.1 signed migration oracle lost trust or dual identity", err)
+	}
 	if _, err := renderApacheWAFVersion(cfg, map[string][]string{}, "2.0.0"); err == nil {
 		t.Fatal("new identity policy claimed legacy integrity")
 	}

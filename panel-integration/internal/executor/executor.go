@@ -41,6 +41,9 @@ type Service struct {
 	moduleWatchStatus     map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
 	lbHealthStatusMu      sync.Mutex
 	lbHealthWorkerError   string
+	// Only a freshly constructed internal transaction adapter sets this.
+	// Never accepted from an API request or persisted configuration.
+	fileTransactionApplication string
 }
 
 type moduleRealtimeStatus struct {
@@ -217,6 +220,11 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 		return core.ApplyResult{Restored: true}, wafErr
 	}
 	defer finishWAF()
+	finishApache, apacheErr := s.lockApacheWAFSiteMutation()
+	if apacheErr != nil {
+		return core.ApplyResult{}, apacheErr
+	}
+	defer finishApache()
 	unlock, lockErr := s.lockRuntimeUse()
 	if lockErr != nil {
 		return core.ApplyResult{}, lockErr

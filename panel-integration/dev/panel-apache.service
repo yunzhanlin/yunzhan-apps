@@ -5,6 +5,7 @@ ConditionPathExists=/etc/panel/apache/httpd.conf
 
 [Service]
 Type=simple
+ExecStartPre=/opt/panel/bin/panel-executor --recover-apache-waf-config
 ExecStart=/opt/panel/runtimes/apache/2.4.68/bin/httpd -DFOREGROUND -f /etc/panel/apache/httpd.conf
 ExecReload=/bin/kill -USR1 $MAINPID
 Restart=on-failure
@@ -12,7 +13,7 @@ RestartSec=2
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=full
-ReadWritePaths=/run /var/log/apache2 /srv/panel/sites
+ReadWritePaths=/run /var/log/apache2 /srv/panel/sites /etc/panel/apache -/etc/panel/security-apps/modules/apache-waf
 NoNewPrivileges=true
 
 [Install]

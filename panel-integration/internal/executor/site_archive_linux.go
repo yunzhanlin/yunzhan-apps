@@ -27,7 +27,13 @@ func (s *Service) siteArchiveRoutes(m *http.ServeMux) {
 		finish, err := s.lockWAFSiteMutation()
 		if err == nil {
 			defer finish()
-			err = s.wafSiteArchiveReference(id)
+			finishApache, apacheErr := s.lockApacheWAFSiteMutation()
+			if apacheErr != nil {
+				err = apacheErr
+			} else {
+				defer finishApache()
+				err = s.wafSiteArchiveReference(id)
+			}
 		}
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
@@ -65,6 +71,11 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 		return result, wafErr
 	}
 	defer finishWAF()
+	finishApache, apacheErr := s.lockApacheWAFSiteMutation()
+	if apacheErr != nil {
+		return result, apacheErr
+	}
+	defer finishApache()
 	if err := s.wafSiteArchiveReference(in.Site.ID); err != nil {
 		return result, err
 	}

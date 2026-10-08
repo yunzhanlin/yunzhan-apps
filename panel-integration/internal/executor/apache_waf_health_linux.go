@@ -69,6 +69,9 @@ func apacheWAFConfigurationFilesMatchVersion(source string, cfg core.WAFConfig, 
 	if err != nil || len(bindings) == 0 {
 		return "", errors.New("Apache 受管站点无法核实")
 	}
+	if len(regexp.MustCompile(`(?m)^\s*IncludeOptional /etc/panel/security-apps/modules/apache-waf/rules\.conf\s*$`).FindAllString(source, -1)) != len(bindings) {
+		return "", errors.New("Apache 防护挂载出现在受管虚拟主机之外或被重复加载")
+	}
 	// A correct rules file is insufficient if another virtual host dropped its
 	// include or site identity. Check every owned host, not only the probe host.
 	for _, block := range regexp.MustCompile(`(?ms)^<VirtualHost[^>]+>.*?</VirtualHost>`).FindAllString(source, -1) {
@@ -110,8 +113,26 @@ func apacheWAFProbeLoaded(ctx context.Context, cfg core.WAFConfig, domain string
 	return apacheWAFProbeLoadedVersion(ctx, cfg, domain, client, core.ApacheWAFVersion)
 }
 
+func apacheWAFWaitLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain, version string) error {
+	client := &http.Client{Timeout: 1500 * time.Millisecond, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	defer client.CloseIdleConnections()
+	var err error
+	for i := 0; i < 8; i++ {
+		err = apacheWAFProbeLoadedVersion(ctx, cfg, domain, client, version)
+		if err == nil {
+			return nil
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+	return err
+}
+
 func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client, version string) error {
-	if version != core.ApacheWAFVersion && version != "2.0.0" && version != "1.0" {
+	if version != core.ApacheWAFVersion && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
 		return errors.New("Apache 配置指纹版本不支持")
 	}
 	if !core.ValidDomain(domain) {
@@ -149,14 +170,14 @@ func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain
 }
 
 func (s *Service) verifyApacheWAFLegacyUpgrade(ctx context.Context, status core.SoftwareAppStatus) error {
-	if !status.Installed || status.Version != "2.0.0" && status.Version != "1.0" {
-		return errors.New("仅允许已知完整旧版 Apache 1.0/2.0 防护经签名迁移")
+	if !status.Installed || status.Version != "2.1.0" && status.Version != "2.0.0" && status.Version != "1.0" {
+		return errors.New("仅允许已知完整旧版 Apache 1.0/2.0/2.1 防护经签名迁移")
 	}
 	if status.Version == "1.0" && len(status.Settings) != 0 {
 		return errors.New("Apache 1.0 安装记录含非原始空设置，拒绝猜测迁移")
 	}
 	cfg, err := core.DecodeApacheWAFConfig(status.Settings)
-	if err != nil || cfg.TrustedProxy != nil {
+	if err != nil || cfg.TrustedProxy != nil && status.Version != "2.1.0" {
 		return errors.New("旧版 Apache 防护记录含未知策略，未迁移")
 	}
 	source, _, err := s.apacheWAFSource()
@@ -183,6 +204,9 @@ func (s *Service) verifyApacheWAFLegacyUpgrade(ctx context.Context, status core.
 }
 
 func (s *Service) verifyApacheWAFHealth(ctx context.Context, version string, settings map[string]any) error {
+	if _, err := os.Lstat(s.apacheWAFTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+		return errors.New("Apache 防护仍有待恢复或待确认事务，未宣称保护正常")
+	}
 	cfg, err := core.DecodeApacheWAFConfig(settings)
 	if err != nil {
 		return err

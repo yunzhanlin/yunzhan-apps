@@ -52,6 +52,7 @@ func main() {
 	wafEngineBuild := flag.String("build-waf-engine", "", "build a pinned independent WAF engine without activating sites")
 	wafEngineVerify := flag.String("verify-waf-engine", "", "verify a built WAF program without activating or changing sites")
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
+	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
 	pm2Deploy := flag.String("pm2-deploy", "", "deploy locked dependencies for one managed PM2 application")
 	ftpServe := flag.Bool("serve-ftp", false, "serve the fixed managed FTPS configuration")
@@ -78,6 +79,12 @@ func main() {
 	}
 	if *wafRecover {
 		if err := executor.RecoverWAFConfiguration(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *apacheWAFRecover {
+		if err := executor.RecoverApacheWAFConfiguration(); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -244,6 +251,9 @@ func main() {
 			log.Fatal(err)
 		}
 		return
+	}
+	if err := executor.RecoverApacheWAFConfiguration(); err != nil {
+		log.Fatal(err)
 	}
 	account, err := user.Lookup("panel")
 	if err != nil {

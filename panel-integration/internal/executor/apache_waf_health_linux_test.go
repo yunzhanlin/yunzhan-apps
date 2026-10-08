@@ -35,14 +35,14 @@ func TestApacheWAFLegacyInstalledRulesAndLoadedFingerprintReadOnly(t *testing.T)
 	if err := moduleRead(path, &installed); err != nil {
 		t.Fatal(err)
 	}
-	if installed.Version != "2.0.0" && installed.Version != "1.0" {
+	if installed.Version != "2.1.0" && installed.Version != "2.0.0" && installed.Version != "1.0" {
 		t.Fatal("fixture not a preserved old Apache app", installed.Version)
 	}
 	status := core.SoftwareAppStatus{Installed: true, Version: installed.Version, Settings: installed.Settings}
 	if err := s.verifyApacheWAFLegacyUpgrade(context.Background(), status); err != nil {
 		t.Fatal("actual preserved old rules/fingerprint failed migration preflight", err)
 	}
-	for _, version := range []string{"0.9.0", "2.1.0", "9.0.0"} {
+	for _, version := range []string{"0.9.0", core.ApacheWAFVersion, "9.0.0"} {
 		changed := status
 		changed.Version = version
 		if err := s.verifyApacheWAFLegacyUpgrade(context.Background(), changed); err == nil {
@@ -157,6 +157,7 @@ func TestApacheWAFHealthExactFilesAndAllHostMounts(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, changed := range []string{
+		source + apacheWAFInclude,
 		strings.Replace(source, " "+apacheWAFInclude, "", 1),
 		strings.Replace(source, host(second, "second.localhost"), strings.Replace(host(second, "second.localhost"), " "+apacheWAFInclude, "", 1), 1),
 		strings.Replace(source, " "+apacheWAFInclude, " "+apacheWAFInclude+" "+apacheWAFInclude, 1),
