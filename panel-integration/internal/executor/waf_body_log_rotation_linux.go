@@ -221,6 +221,13 @@ func (s *Service) runWAFBodyRotationLocked(ctx context.Context, now time.Time, l
 	if cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
 		return out, nil
 	}
+	retention, _, retentionErr := s.readWAFBodyRetentionRecord()
+	if retentionErr != nil && !errors.Is(retentionErr, os.ErrNotExist) {
+		return out, retentionErr
+	}
+	if retentionErr == nil && retention.Operation != nil && (retention.Operation.State == "deleting" || retention.Operation.State == "unknown") {
+		return out, errors.New("自动清理结果未知；不开始新的日志轮转")
+	}
 	if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
 		return out, errors.New("WAF 配置事务尚未完成，不执行自动轮转")
 	}
@@ -351,7 +358,7 @@ func (s *Service) runWAFBodyLogRotationOnce(ctx context.Context, now time.Time) 
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.4.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
+	if manifest.Version != "2.4.0" && manifest.Version != "2.5.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
 		return nil
 	}
 	lock, err := s.lockWAFConfiguration()
@@ -368,7 +375,7 @@ func (s *Service) runWAFBodyLogRotationOnce(ctx context.Context, now time.Time) 
 	if err != nil {
 		return err
 	}
-	if manifest.Version != "2.4.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
+	if manifest.Version != "2.4.0" && manifest.Version != "2.5.0" || cfg.BodyLogRotation == nil || !cfg.BodyLogRotation.Enabled {
 		return nil
 	}
 	_, err = s.runWAFBodyRotationLocked(ctx, now, lock, cfg, func(intent string) (wafBodyLogArchive, error) { return s.rotateWAFBodyLogWithIntent(ctx, lock, intent) })

@@ -23,6 +23,8 @@ type wafConfigChange struct {
 	NextData   []byte      `json:"next_data"`
 	NextExists bool        `json:"next_exists"`
 	NextMode   os.FileMode `json:"next_mode"`
+	OldOwner   *fileOwner  `json:"old_owner,omitempty"`
+	NextOwner  *fileOwner  `json:"next_owner,omitempty"`
 }
 
 // A complete, bounded plan is built without writing any configuration. The
@@ -92,7 +94,14 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 		if _, exists := changes[b.path]; exists {
 			return errors.New("WAF 配置计划出现重复路径")
 		}
-		changes[b.path] = wafConfigChange{b.path, b.data, b.existed, b.mode, data, exists, mode}
+		nextOwner := b.owner
+		if exists && nextOwner == nil {
+			nextOwner = &fileOwner{UID: uint32(os.Geteuid()), GID: uint32(os.Getegid())}
+		}
+		if !exists {
+			nextOwner = nil
+		}
+		changes[b.path] = wafConfigChange{Path: b.path, OldData: b.data, OldExists: b.existed, OldMode: b.mode, NextData: data, NextExists: exists, NextMode: mode, OldOwner: b.owner, NextOwner: nextOwner}
 		return nil
 	}
 	main, err := read(s.Config.NginxConf)

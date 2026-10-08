@@ -45,6 +45,9 @@ func (s *Service) wafReplayMatches(raw map[string]any) bool {
 	if _, present := raw["body_log_rotation"]; !present {
 		wanted.BodyLogRotation = current.BodyLogRotation
 	}
+	if _, present := raw["body_log_retention"]; !present {
+		wanted.BodyLogRetention = current.BodyLogRetention
+	}
 	wanted.Policy.Revision = current.Policy.Revision
 	a, _ := json.Marshal(wanted)
 	b, _ := json.Marshal(current)
@@ -69,6 +72,14 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 	cfg, e := core.DecodeWAFConfig(raw)
 	if e != nil {
 		return cfg, e
+	}
+	if cfg.BodyLogRetention != nil {
+		if _, advanced := raw["policy"]; !advanced {
+			return cfg, errors.New("自动快照清理需要完整 policy 和当前修订号")
+		}
+		if core.WAFVersion != "2.5.0" {
+			return cfg, errors.New("自动快照清理尚未在此应用版本发布，不能用面板升级代替应用更新")
+		}
 	}
 	if _, body := raw["body"]; body {
 		if _, advanced := raw["policy"]; !advanced {
@@ -99,6 +110,12 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		}
 		if _, present := raw["body_log_rotation"]; !present {
 			cfg.BodyLogRotation = previous.BodyLogRotation
+		}
+		if _, present := raw["body_log_retention"]; !present {
+			cfg.BodyLogRetention = previous.BodyLogRetention
+		}
+		if cfg.BodyLogRetention != nil && old.Version != "2.5.0" {
+			return cfg, errors.New("自动快照清理需要先通过应用商店升级 Nginx WAF")
 		}
 		if cfg.BodyLogRotation != nil && old.Version != core.WAFVersion {
 			return cfg, errors.New("自动轮转策略需要先升级已安装的 Nginx WAF 应用")
@@ -203,7 +220,7 @@ func (s *Service) backupWAFConfiguration() (string, error) {
 				return "", e
 			}
 		}
-		index = append(index, map[string]any{"source": b.path, "file": file, "existed": b.existed, "mode": b.mode, "sha256": core.Hash(string(b.data))})
+		index = append(index, map[string]any{"source": b.path, "file": file, "existed": b.existed, "mode": b.mode, "owner": b.owner, "sha256": core.Hash(string(b.data))})
 	}
 	if e = moduleWrite(filepath.Join(dir, "index.json"), map[string]any{"created_at": core.Now(), "files": index}); e != nil {
 		return "", e

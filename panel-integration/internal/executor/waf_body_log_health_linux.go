@@ -63,6 +63,13 @@ func (s *Service) wafBodyLogHealthLocked(ctx context.Context) error {
 	if rotationErr == nil && (rotation.State == "rotating" || rotation.State == "unknown") {
 		return errors.New("自动轮转结果仍未知，请按摘要核对；不伪造日志维护成功")
 	}
+	retention, _, retentionErr := s.readWAFBodyRetentionRecord()
+	if retentionErr != nil && !errors.Is(retentionErr, os.ErrNotExist) {
+		return retentionErr
+	}
+	if retentionErr == nil && retention.Operation != nil && (retention.Operation.State == "deleting" || retention.Operation.State == "unknown") {
+		return errors.New("自动清理结果仍未知，请按摘要核对；不伪造日志维护成功")
+	}
 	log, err := s.readWAFBodyEventsLocked()
 	if err != nil {
 		return err

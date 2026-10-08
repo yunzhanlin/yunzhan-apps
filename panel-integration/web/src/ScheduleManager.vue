@@ -1046,7 +1046,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
           >
         </el-form-item>
         <el-form-item label="启用状态"
-          ><el-switch v-model="draft.enabled" active-text="创建后自动执行"
+          ><el-switch v-model="draft.enabled" active-text="创建后按计划执行"
         /></el-form-item>
       </el-form>
       <template #footer>

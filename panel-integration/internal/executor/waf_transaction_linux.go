@@ -112,7 +112,7 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 }
 
 func (s *Service) wafTransactionContract(tx wafTransaction) error {
-	if tx.Format != 1 || !core.ValidID(tx.ID) || (tx.State != "applying" && tx.State != "committed" && tx.State != "recovered") || len(tx.Changes) < 1 || len(tx.Changes) > 4096 || len(tx.Digests) != len(tx.Changes)*2 {
+	if (tx.Format != 1 && tx.Format != 2) || !core.ValidID(tx.ID) || (tx.State != "applying" && tx.State != "committed" && tx.State != "recovered") || len(tx.Changes) < 1 || len(tx.Changes) > 4096 || len(tx.Digests) != len(tx.Changes)*2 {
 		return errors.New("WAF 恢复记录身份、状态或条目数量异常")
 	}
 	if _, err := time.Parse(time.RFC3339, tx.CreatedAt); err != nil {
@@ -120,6 +120,14 @@ func (s *Service) wafTransactionContract(tx wafTransaction) error {
 	}
 	total, seen := 0, map[string]bool{}
 	for _, c := range tx.Changes {
+		if tx.Format == 2 && (c.OldExists != (c.OldOwner != nil) || c.NextExists != (c.NextOwner != nil)) {
+			return errors.New("WAF 事务缺少原 UID/GID，未当成完整恢复证据")
+		}
+		for _, owner := range []*fileOwner{c.OldOwner, c.NextOwner} {
+			if owner != nil && (owner.UID != uint32(os.Geteuid()) || owner.GID == ^uint32(0)) {
+				return errors.New("WAF 事务文件所有者不可核验")
+			}
+		}
 		if !s.wafChangePathAllowed(c.Path) || seen[c.Path] || c.OldMode&^0777 != 0 || c.NextMode&^0777 != 0 || c.OldMode&0022 != 0 || c.NextMode&0022 != 0 || (!c.OldExists && len(c.OldData) != 0) || (!c.NextExists && len(c.NextData) != 0) {
 			return errors.New("WAF 恢复记录路径、权限或归属异常")
 		}
@@ -193,18 +201,25 @@ func (s *Service) wafCurrentMatches(c wafConfigChange, next bool) (bool, error) 
 		return false, err
 	}
 	data, exists, mode := c.OldData, c.OldExists, c.OldMode
+	owner := c.OldOwner
 	if next {
 		data, exists, mode = c.NextData, c.NextExists, c.NextMode
+		owner = c.NextOwner
 	}
-	return b.existed == exists && (!exists || (bytes.Equal(b.data, data) && b.mode == mode)), nil
+	return b.existed == exists && (!exists || (bytes.Equal(b.data, data) && b.mode == mode && (owner == nil || b.owner != nil && *b.owner == *owner))), nil
 }
 
 func wafApplyChange(c wafConfigChange, next bool) error {
 	data, exists, mode := c.OldData, c.OldExists, c.OldMode
+	owner := c.OldOwner
 	if next {
 		data, exists, mode = c.NextData, c.NextExists, c.NextMode
+		owner = c.NextOwner
 	}
 	if exists {
+		if owner != nil {
+			return atomicWriteWithOwner(c.Path, data, mode, owner)
+		}
 		return atomicWrite(c.Path, data, mode)
 	}
 	if err := os.Remove(c.Path); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -219,7 +234,24 @@ func wafApplyChange(c wafConfigChange, next bool) error {
 }
 
 func (s *Service) startWAFTransaction(changes []wafConfigChange) (wafTransaction, error) {
-	tx := wafTransaction{Format: 1, ID: core.ID(), State: "applying", CreatedAt: core.Now(), Changes: changes, Digests: map[string]string{}}
+	changes = append([]wafConfigChange{}, changes...)
+	for i := range changes {
+		c := &changes[i]
+		if c.OldExists && c.OldOwner == nil {
+			b, err := backupFile(c.Path)
+			if err != nil || !b.existed || b.owner == nil {
+				return wafTransaction{}, errors.New("WAF 原文件 UID/GID 不可捕获，未开始写入")
+			}
+			c.OldOwner = b.owner
+		}
+		if c.NextExists && c.NextOwner == nil {
+			c.NextOwner = c.OldOwner
+			if c.NextOwner == nil {
+				c.NextOwner = &fileOwner{UID: uint32(os.Geteuid()), GID: uint32(os.Getegid())}
+			}
+		}
+	}
+	tx := wafTransaction{Format: 2, ID: core.ID(), State: "applying", CreatedAt: core.Now(), Changes: changes, Digests: map[string]string{}}
 	for _, c := range changes {
 		tx.Digests[c.Path+":old"], tx.Digests[c.Path+":next"] = core.Hash(string(c.OldData)), core.Hash(string(c.NextData))
 	}
@@ -286,6 +318,9 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 	}
 	if tx.State != "applying" {
 		return false, s.finishWAFTransaction(tx)
+	}
+	if tx.Format == 1 {
+		return false, errors.New("旧 WAF 未完成事务没有完整 UID/GID；无法保证原所有者，保留证据且不自动覆盖配置")
 	}
 	for _, c := range tx.Changes {
 		old, err := s.wafCurrentMatches(c, false)

@@ -20,14 +20,17 @@ import (
 // All other references must still resolve to a regular managed site config.
 // Normal policy edits continue to use the stricter prepareWAFSettings path.
 func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
-	if cfg.BodyLogRotation != nil && version != "2.4.0" {
+	if cfg.BodyLogRetention != nil && version != "2.5.0" {
 		return false
 	}
-	return version == core.WAFVersion || version == "2.3.0" || version == "2.2.0" || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
+	if cfg.BodyLogRotation != nil && version != "2.4.0" && version != "2.5.0" {
+		return false
+	}
+	return version == core.WAFVersion || version == "2.4.0" || version == "2.3.0" || version == "2.2.0" || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
 }
 
 func wafLegacyVersion(version string) bool {
-	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0"
+	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0" || version == "2.4.0"
 }
 
 func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
@@ -147,6 +150,9 @@ func (s *Service) verifyWAFLegacyUpgradePlan(manifest softwareManifest, cfg core
 	}
 	seen := map[string]bool{}
 	for _, change := range changes {
+		if change.OldExists && change.NextExists && (change.OldOwner == nil || change.NextOwner == nil || *change.OldOwner != *change.NextOwner) {
+			return errors.New("WAF 版本迁移不能改变原文件 UID/GID")
+		}
 		want, ok := files[change.Path]
 		if !ok && wafCCObservationVersion(core.WAFVersion) && filepath.Dir(change.Path) == s.Config.ConfDir {
 			if seen[change.Path] {

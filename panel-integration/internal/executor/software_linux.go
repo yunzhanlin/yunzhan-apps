@@ -160,6 +160,7 @@ type fileBackup struct {
 	data    []byte
 	existed bool
 	mode    os.FileMode
+	owner   *fileOwner
 }
 
 func backupFile(path string) (fileBackup, error) {
@@ -174,6 +175,10 @@ func backupFile(path string) (fileBackup, error) {
 	if !st.Mode().IsRegular() || st.Mode()&os.ModeSymlink != 0 {
 		return b, errors.New("受管配置路径类型异常")
 	}
+	b.owner, e = fileOwnerForInfo(st)
+	if e != nil {
+		return b, e
+	}
 	b.data, e = os.ReadFile(path)
 	b.existed = true
 	b.mode = st.Mode().Perm()
@@ -184,7 +189,7 @@ func restoreFiles(backups []fileBackup) error {
 	for i := len(backups) - 1; i >= 0; i-- {
 		b := backups[i]
 		if b.existed {
-			out = errors.Join(out, atomicWrite(b.path, b.data, b.mode))
+			out = errors.Join(out, atomicWriteWithOwner(b.path, b.data, b.mode, b.owner))
 		} else if e := os.Remove(b.path); e != nil && !errors.Is(e, os.ErrNotExist) {
 			out = errors.Join(out, e)
 		}

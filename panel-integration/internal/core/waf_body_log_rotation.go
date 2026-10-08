@@ -31,6 +31,12 @@ func ValidateWAFBodyLogRotation(v *WAFBodyLogRotationConfig) error {
 }
 
 func ValidateWAFBodyLogRotationSource(v WAFConfig) error {
+	if err := ValidateWAFBodyLogRetention(v.BodyLogRetention); err != nil {
+		return err
+	}
+	if v.BodyLogRetention != nil && v.BodyLogRetention.Enabled && (v.Body == nil || !ValidID(v.Body.EngineJobID)) {
+		return errors.New("自动快照清理需要明确选择本机原生请求体引擎；不会自动构建或启用防护")
+	}
 	if err := ValidateWAFBodyLogRotation(v.BodyLogRotation); err != nil {
 		return err
 	}

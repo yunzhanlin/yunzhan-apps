@@ -31,7 +31,7 @@ func wafPrepareAutomaticRotationQALogs(s *Service, backup string) (func() error,
 		return nil, err
 	}
 	cfg, err := core.DecodeWAFConfig(manifest.Settings)
-	if err != nil || cfg.Body != nil || cfg.BodyLogRotation != nil {
+	if err != nil || cfg.Body != nil || cfg.BodyLogRotation != nil || cfg.BodyLogRetention != nil {
 		return nil, errors.New("refuse to displace active or previously configured body evidence")
 	}
 	if _, err := s.wafBodyLogArchives(); err != nil {
@@ -47,7 +47,7 @@ func wafPrepareAutomaticRotationQALogs(s *Service, backup string) (func() error,
 		sha       string
 	}
 	entries := []entry{}
-	for i, path := range []string{s.systemPath(wafBodyLogPath), s.wafBodyLogArchiveDirectory(), s.wafBodyRotationPath()} {
+	for i, path := range []string{s.systemPath(wafBodyLogPath), s.wafBodyLogArchiveDirectory(), s.wafBodyRotationPath(), s.wafBodyRetentionPath()} {
 		info, err := os.Lstat(path)
 		if errors.Is(err, os.ErrNotExist) {
 			entries = append(entries, entry{path: path, old: filepath.Join(base, fmt.Sprintf("original-%d", i))})

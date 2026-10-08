@@ -20,6 +20,41 @@ func wafLegacy201Fixture(t *testing.T, edits ...func(*core.WAFConfig)) (*Service
 	return wafLegacyVersionFixture(t, "2.0.1", edits...)
 }
 
+func TestWAFVerified240UpgradePreservesRotationDraftAndNeverEnablesDeletion(t *testing.T) {
+	for _, rotation := range []bool{false, true} {
+		t.Run(fmt.Sprint(rotation), func(t *testing.T) {
+			s, cfg := wafLegacyVersionFixture(t, "2.4.0", func(cfg *core.WAFConfig) {
+				if rotation {
+					v := core.DefaultWAFBodyLogRotation()
+					v.RotateMiB, v.MaxAgeMinutes = 7, 23
+					cfg.BodyLogRotation = &v
+				}
+			})
+			before, err := s.readSoftwareManifest("nginx-waf")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := s.updateSoftware(context.Background(), "nginx-waf", core.WAFVersion, func(string) {}); err != nil {
+				t.Fatal(err)
+			}
+			after, err := s.readSoftwareManifest("nginx-waf")
+			if err != nil || after.Version != "2.5.0" || after.InstalledAt != before.InstalledAt {
+				t.Fatal("upgrade identity lost", err)
+			}
+			actual, err := core.DecodeWAFConfig(after.Settings)
+			cfg.Policy.Revision++
+			want, _ := json.Marshal(cfg)
+			got, _ := json.Marshal(actual)
+			if err != nil || !bytes.Equal(want, got) || actual.BodyLogRetention != nil {
+				t.Fatal("upgrade changed draft or opted into deletion", err)
+			}
+			if _, err := os.Lstat(s.wafBodyRetentionPath()); !os.IsNotExist(err) {
+				t.Fatal("upgrade created deletion record", err)
+			}
+		})
+	}
+}
+
 func TestWAFUpgradeLogHealthRequiresActualOwnedLock(t *testing.T) {
 	for _, fault := range []string{"held", "unlocked", "closed", "foreign"} {
 		t.Run(fault, func(t *testing.T) {

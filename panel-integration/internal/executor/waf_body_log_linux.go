@@ -501,6 +501,13 @@ func (s *Service) rotateWAFBodyLogWithIntent(ctx context.Context, lock *os.File,
 	} else if rotationErr == nil && (rotation.State == "rotating" || rotation.State == "unknown") {
 		return out, errors.New("自动轮转结果未知，手动操作也不会重复截断；请先按摘要核对保留")
 	}
+	retention, _, retentionErr := s.readWAFBodyRetentionRecord()
+	if retentionErr != nil && !errors.Is(retentionErr, os.ErrNotExist) {
+		return out, retentionErr
+	}
+	if retentionErr == nil && retention.Operation != nil && (retention.Operation.State == "deleting" || retention.Operation.State == "unknown") {
+		return out, errors.New("自动清理结果未知；不开始新的日志轮转")
+	}
 	if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
 		return out, errors.New("存在未完成防火墙配置事务，未轮转")
 	}
@@ -674,6 +681,23 @@ func (s *Service) removeWAFBodyLogArchive(ctx context.Context, id, sha string) e
 }
 
 func (s *Service) removeWAFBodyLogArchiveAt(ctx context.Context, id, sha string, checkpoint func(string) error) error {
+	if !core.ValidID(id) || !wafLogDigestValid(sha) {
+		return errors.New("元数据备份标识或摘要无效")
+	}
+	lock, err := s.lockWAFConfiguration()
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	return s.removeWAFBodyLogArchiveLockedAt(ctx, lock, id, sha, checkpoint)
+}
+
+// Automatic retention shares the actual exclusive configuration lock. Never
+// recursively acquire it or accept a caller-supplied file path.
+func (s *Service) removeWAFBodyLogArchiveLockedAt(ctx context.Context, lock *os.File, id, sha string, checkpoint func(string) error) error {
+	if err := s.verifyWAFHealthLock(lock); err != nil {
+		return err
+	}
 	mark := func(stage string) error {
 		if checkpoint != nil {
 			return checkpoint(stage)
@@ -683,11 +707,6 @@ func (s *Service) removeWAFBodyLogArchiveAt(ctx context.Context, id, sha string,
 	if !core.ValidID(id) || len(sha) != 64 || strings.Trim(sha, "0123456789abcdef") != "" {
 		return errors.New("元数据备份标识或摘要无效")
 	}
-	lock, err := s.lockWAFConfiguration()
-	if err != nil {
-		return err
-	}
-	defer lock.Close()
 	if _, err := s.wafBodyLogRecoveryEntries(ctx); err != nil {
 		return err
 	}
@@ -744,6 +763,18 @@ func (s *Service) removeWAFBodyLogArchiveAt(ctx context.Context, id, sha string,
 	}
 	defer directory.Close()
 	if !missing {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		original, e := f.Stat()
+		current, pathErr := os.Lstat(path)
+		actual, digestErr := wafNativeFileSHA(ctx, path, wafBodyLogLimit)
+		if e != nil || pathErr != nil || digestErr != nil || !os.SameFile(original, current) || actual != sha || current.Size() != entry.Bytes {
+			return errors.New("删除意图保存后快照身份或摘要变化；证据保留，未删除")
+		}
+		if err := siteLogExpiredOpenWriters(ctx, "/proc", []plannedSiteLog{{info: current}}); err != nil {
+			return err
+		}
 		if err := os.Remove(path); err != nil {
 			return err
 		}
@@ -755,6 +786,10 @@ func (s *Service) removeWAFBodyLogArchiveAt(ctx context.Context, id, sha string,
 	}
 	if err := mark("snapshot-unlink-durable"); err != nil {
 		return err
+	}
+	currentIndex, _, err := s.readWAFBodyLogIndex(id)
+	if err != nil || currentIndex != entry {
+		return errors.New("删除意图索引发生变化；原证据保留，未清除索引")
 	}
 	if err := os.Remove(index); err != nil {
 		return errors.New("所选快照已移除，但索引清理失败，请核对；不影响当前日志")

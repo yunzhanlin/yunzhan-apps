@@ -154,6 +154,7 @@ func BuildWAFBodyReport(snapshot WAFBodyEventsPage, q url.Values, now time.Time)
 }
 
 func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
+	a.wafBodyRetentionRoutes(m)
 	m.HandleFunc("POST /api/software/nginx-waf/body-log/rotation/retain", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		role, _, err := a.Store.appUserRole(u.ID)
 		if err != nil || role != "admin" {
@@ -261,6 +262,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		write                   bool
 	}{
 		{"GET /api/software/nginx-waf/body-log/rotation", "GET", "/v1/software/nginx-waf/body-log/rotation", false},
+		{"GET /api/software/nginx-waf/body-log/retention", "GET", "/v1/software/nginx-waf/body-log/retention", false},
 		{"GET /api/software/nginx-waf/body-log/archives", "GET", "/v1/software/nginx-waf/body-log/archives", false},
 		{"GET /api/software/nginx-waf/body-log/archives/{id}", "GET", "/v1/software/nginx-waf/body-log/archives/", false},
 		{"POST /api/software/nginx-waf/body-log/rotate", "POST", "/v1/software/nginx-waf/body-log/rotate", true},

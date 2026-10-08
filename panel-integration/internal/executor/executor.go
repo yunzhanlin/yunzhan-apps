@@ -139,13 +139,30 @@ func runCommandInput(ctx context.Context, input []byte, name string, args ...str
 	return out.String(), nil
 }
 func atomicWrite(path string, b []byte, mode os.FileMode) error {
+	owner, err := existingFileOwner(path)
+	if err != nil {
+		return err
+	}
+	return atomicWriteWithOwner(path, b, mode, owner)
+}
+
+func atomicWriteWithOwner(path string, b []byte, mode os.FileMode, owner *fileOwner) error {
+	if _, err := existingFileOwner(path); err != nil {
+		return err
+	}
 	f, err := os.CreateTemp(filepath.Dir(path), ".panel-write-")
 	if err != nil {
 		return err
 	}
 	name := f.Name()
 	defer os.Remove(name)
-	if err = f.Chmod(mode); err == nil {
+	if owner != nil {
+		err = f.Chown(int(owner.UID), int(owner.GID))
+	}
+	if err == nil {
+		err = f.Chmod(mode)
+	}
+	if err == nil {
 		_, err = f.Write(b)
 	}
 	if err == nil {

@@ -19,7 +19,7 @@ func (s *Service) verifyWAFBodyEngine(cfg core.WAFConfig) error {
 	if cfg.Body == nil {
 		return nil
 	}
-	required := cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled
+	required := cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled || cfg.BodyLogRetention != nil && cfg.BodyLogRetention.Enabled
 	for _, site := range cfg.Body.Sites {
 		if _, on := core.WAFEffectiveBodyPolicy(cfg, site.SiteID); on {
 			required = true

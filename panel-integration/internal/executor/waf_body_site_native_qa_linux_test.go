@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
@@ -43,6 +44,10 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 	}
 	if err := VerifyWAFEngineBuild(id); err != nil {
 		t.Fatal(err)
+	}
+	retentionQA := os.Getenv("PANEL_WAF_SITE_QA_RETENTION")
+	if retentionQA != "" && (retentionQA != "1" || os.Getenv("PANEL_WAF_SITE_QA_AUTO_ROTATION") != "1") {
+		t.Fatal("retention native QA requires the closed automatic-rotation preservation gate")
 	}
 	s := nativeWAFService()
 	manifest, err := s.readSoftwareManifest("nginx-waf")
@@ -78,6 +83,7 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 			File   string      `json:"file"`
 			Exists bool        `json:"existed"`
 			Mode   os.FileMode `json:"mode"`
+			Owner  *fileOwner  `json:"owner"`
 			SHA    string      `json:"sha256"`
 		} `json:"files"`
 	}
@@ -87,8 +93,11 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 	}
 	backups := []fileBackup{}
 	for _, file := range index.Files {
-		b := fileBackup{path: file.Source, existed: file.Exists, mode: file.Mode}
+		b := fileBackup{path: file.Source, existed: file.Exists, mode: file.Mode, owner: file.Owner}
 		if b.existed {
+			if b.owner == nil {
+				t.Fatal("new native QA backup lacks original UID/GID")
+			}
 			b.data, err = os.ReadFile(filepath.Join(backupDir, file.File))
 			if err != nil || core.Hash(string(b.data)) != file.SHA {
 				t.Fatal("QA original backup failed integrity")
@@ -171,7 +180,7 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 		}
 		for _, b := range backups {
 			got, err := backupFile(b.path)
-			if err != nil || got.existed != b.existed || string(got.data) != string(b.data) || (b.existed && got.mode != b.mode) {
+			if err != nil || got.existed != b.existed || string(got.data) != string(b.data) || (b.existed && (got.mode != b.mode || !reflect.DeepEqual(got.owner, b.owner))) {
 				t.Error("original configuration content/mode not exactly retained", b.path)
 			}
 		}
@@ -355,6 +364,9 @@ func TestWAFBodyManagedSiteNativeQA(t *testing.T) {
 	}
 	if restoreRotationLogs != nil {
 		wafAutomaticRotationManagedNativeQA(t, s, cfg, site, domain, backupDir)
+	}
+	if retentionQA == "1" {
+		wafRetentionManagedNativeQA(t, s, site, domain, backupDir)
 	}
 	if err := moduleWrite(filepath.Join(backupDir, "site-native-acceptance.json"), map[string]any{"passed": false, "http_functionality_verified": true, "source_candidate_only": true, "signed_release_acceptance": false, "architecture": runtime.GOARCH, "engine_job": id, "site_id": site, "http_results": results, "pre_existing_long_response_preserved_across_reload": longRequestPreserved, "legacy_210_active_body_migration_handler_verified": legacy210UpgradeVerified, "private_markers_logged": false, "native_program_immutable": true, "exact_historical_arm_QA_orphan_omitted_only_from_temporary_draft": omittedLegacyQAReference}); err != nil {
 		t.Fatal(err)

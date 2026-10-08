@@ -121,6 +121,7 @@ func readWAFBodyEventsFile(f *os.File, legacy bool) (core.WAFBodyEventsPage, err
 }
 
 func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
+	s.wafBodyRetentionRoutes(m)
 	m.HandleFunc("GET /v1/software/nginx-waf/body-log/rotation", func(w http.ResponseWriter, r *http.Request) {
 		if len(r.URL.Query()) != 0 {
 			respond(w, 400, map[string]string{"error": "自动轮转状态不接受自定义路径或参数"})
@@ -145,7 +146,7 @@ func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
 				respond(w, 503, map[string]string{"error": "实际轮转策略不可核验，不当成未启用或成功"})
 				return
 			}
-			if manifest.Version == "2.4.0" {
+			if manifest.Version == "2.4.0" || manifest.Version == "2.5.0" {
 				enabled = cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled
 				revision = cfg.Policy.Revision
 			}

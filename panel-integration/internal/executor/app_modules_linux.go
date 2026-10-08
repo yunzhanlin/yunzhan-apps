@@ -1454,6 +1454,7 @@ func (s *Service) StartAppModuleWorker() {
 	go s.runIntegrityWatcher(context.Background())
 	go s.runLoadBalanceHealthWorker(context.Background())
 	go s.runWAFBodyLogRotationWorker(context.Background())
+	go s.runWAFBodyLogRetentionWorker(context.Background())
 	go func() {
 		s.mu.Lock()
 		s.recoverSyncPlans()
