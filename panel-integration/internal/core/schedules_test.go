@@ -417,10 +417,14 @@ func TestLogCleanupScheduleUsesFixedSiteAndRetentionDays(t *testing.T) {
 	}
 	ex := &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		var in LogCleanupRequest
-		if r.Method != http.MethodPost || json.NewDecoder(r.Body).Decode(&in) != nil || in.SiteID != siteID || in.RetentionDays != 14 {
+		if r.Method != http.MethodPost || json.NewDecoder(r.Body).Decode(&in) != nil || in.RequestID != run.ID || in.SiteID != siteID || in.RetentionDays != 14 {
 			t.Fatalf("unexpected log cleanup request: %s", r.URL.String())
 		}
-		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"rotated":2,"deleted":3,"deleted_bytes":512,"files":[]}`)), Request: r}, nil
+		body, e := json.Marshal(LogCleanupResult{Rotated: 2, Deleted: 3, DeletedBytes: 512, Files: []string{"panel-" + siteID + ".access.log.20260801-010000", "panel-" + siteID + ".access.log.20260802-010000", "panel-" + siteID + ".error.log.20260801-010000"}})
+		if e != nil {
+			t.Fatal(e)
+		}
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(string(body))), Request: r}, nil
 	})}}
 	if e = s.executeLogCleanupScheduleRun(t.Context(), ex, base.Add(time.Second)); e != nil {
 		t.Fatal(e)

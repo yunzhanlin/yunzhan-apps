@@ -55,6 +55,65 @@ func (a *Server) hydrateScheduleDatabaseTarget(ctx context.Context, v *Schedule)
 }
 
 func (a *Server) scheduleRoutes(m *http.ServeMux) {
+	m.HandleFunc("POST /api/schedules/runs/{id}/log-cleanup/continue", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		var in LogCleanupContinueRequest
+		if !decode(w, r, &in) {
+			return
+		}
+		id := r.PathValue("id")
+		var site, state string
+		e := a.Store.DB.QueryRowContext(r.Context(), `SELECT l.site_id,s.state FROM schedule_log_operations l JOIN schedule_runs s ON s.id=l.run_id WHERE l.run_id=?`, id).Scan(&site, &state)
+		if e != nil || !ValidID(id) || in.RequestID != id || in.SiteID != site {
+			fail(w, 404, "日志清理任务记录不存在或对象不匹配")
+			return
+		}
+		if state != "failed" {
+			fail(w, 409, "仅允许核实已结束且失败的日志任务；不能介入执行、重试或已成功的任务")
+			return
+		}
+		if e = a.Store.Audit(u.Username, "schedule.log_cleanup.continuation_requested", id, "确认原操作未知；请求核实后续条件"); e != nil {
+			fail(w, 500, "无法保存核实请求审计；尚未解除阻塞")
+			return
+		}
+		var out LogCleanupContinuation
+		if a.Executor == nil || a.Executor.Call(r.Context(), http.MethodPost, "/v1/sites/"+site+"/logs/operations/"+id+"/continue", in, &out) != nil {
+			fail(w, 409, "日志、写入进程或原操作无法核实；保留阻塞与全部文件")
+			return
+		}
+		verifiedAt, parseErr := time.Parse(time.RFC3339Nano, out.VerifiedAt)
+		if out.RequestID != id || out.SiteID != site || out.PlanSHA256 != in.PlanSHA256 || !validLowerSHA256(out.EvidenceSHA256) || parseErr != nil || verifiedAt.UTC().Format(time.RFC3339Nano) != out.VerifiedAt {
+			fail(w, 409, "继续执行核实结果与原操作不匹配")
+			return
+		}
+		if e = a.Store.Audit(u.Username, "schedule.log_cleanup.safe_continuation", id, "原结果仍未知；已核实后续新操作条件"); e != nil {
+			fail(w, 503, "执行器已保存核实证据，但面板审计保存失败；可重试本次核实，不会重放日志操作")
+			return
+		}
+		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/schedules/runs/{id}/log-cleanup", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		id := r.PathValue("id")
+		if !ValidID(id) {
+			fail(w, 400, "日志任务标识无效")
+			return
+		}
+		var site string
+		e := a.Store.DB.QueryRowContext(r.Context(), `SELECT site_id FROM schedule_log_operations WHERE run_id=?`, id).Scan(&site)
+		if e != nil || !ValidID(site) {
+			fail(w, 404, "日志清理任务记录不存在")
+			return
+		}
+		var out LogCleanupInspection
+		if a.Executor == nil || a.Executor.Call(r.Context(), http.MethodGet, "/v1/sites/"+site+"/logs/operations/"+id, nil, &out) != nil {
+			fail(w, 409, "执行器无法核实日志操作；保留原文件，未执行修改")
+			return
+		}
+		if !ValidLogCleanupInspection(out, id, site) {
+			fail(w, 409, errLogCleanupInspection.Error())
+			return
+		}
+		send(w, 200, out)
+	}))
 	m.HandleFunc("GET /api/schedules", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		items, e := a.Store.Schedules()
 		if e != nil {

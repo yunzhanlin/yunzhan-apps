@@ -49,7 +49,28 @@ interface Run {
   artifact_id?: string;
   error?: string;
   log?: string;
+  log_cleanup?: boolean;
 }
+interface LogInspection {
+  request_id: string; site_id: string; state: string; retention_days: number;
+  started_at: string; plan_sha256?: string; read_only: boolean;
+  result?: { rotated: number; deleted: number; deleted_bytes: number };
+	continuation?: { verified_at: string; evidence_sha256: string };
+  files: { name: string; role: string; state: string; archive_state?: string; planned_bytes: number }[];
+}
+const logInspection = ref<LogInspection | null>(null);
+const logInspectionOpen = ref(false), logInspectionBusy = ref(false), logInspectionError = ref("");
+const logContinuationAcknowledged = ref(false), logContinuationBusy = ref(false), logInspectedRunState = ref("");
+let logInspectionRequest = 0;
+const logFileState: Record<string,string> = {
+  absent: "当前不存在（不能据此单独推断删除原因）",
+  unverifiable: "类型、归属或权限不可核实",
+  different_inode: "当前为不同 inode，文件保留",
+  original_inode_written: "原 inode 存在，随后有写入",
+  original_inode_unchanged: "原 inode 与记录一致",
+  original_inode_owner_changed: "原 inode 仍在，日志账户归属已变化",
+};
+const logOperationState: Record<string,string> = { not_recorded: "无持久记录", running: "已开始，未确认完成", unknown: "结果未知，已停止自动重复执行", completed: "已保存完成结果" };
 interface Database {
   id: string;
   server_id: string;
@@ -134,7 +155,7 @@ const scheduleLogs = computed(() => runs.value.filter(item => item.schedule_id =
 const lastRun = (item: Schedule) => runs.value.filter(run => run.schedule_id === item.id).sort((a, b) => b.scheduled_for - a.scheduled_for)[0];
 const readyPHPSites = computed(() => readySites.value.filter(site => site.php_version_id));
 const scriptSite = computed(() => readyPHPSites.value.find(site => site.id === draft.value.script_site_id));
-const scheduleKindLabel = (item: Schedule) => item.kind === "site_backup" ? "网站备份" : item.kind === "log_cleanup" ? "系统维护" : item.kind === "admin_script" ? (item.script_site_id ? "PHP 脚本" : "Shell 脚本") : item.database_engine === "mariadb" ? "MariaDB 备份" : "数据库备份";
+const scheduleKindLabel = (item: Schedule) => item.kind === "site_backup" ? "网站备份" : item.kind === "log_cleanup" ? "日志清理" : item.kind === "admin_script" ? (item.script_site_id ? "PHP 脚本" : "Shell 脚本") : item.database_engine === "mariadb" ? "MariaDB 备份" : "数据库备份";
 const statisticsRuns = computed(() => runs.value.filter((item) =>
   item.scheduled_for >= Math.floor(Date.now() / 1000) - statisticsDays.value * 86400,
 ));
@@ -164,6 +185,9 @@ const freshDraft = (): Schedule => ({
   updated_at: "",
 });
 const draft = ref<Schedule>(freshDraft());
+const logParametersLocked = computed(() => editing.value &&
+  runs.value.some((run) => run.schedule_id === draft.value.id && (run.state === "queued" || run.state === "running")) &&
+  (draft.value.kind === "log_cleanup" || schedules.value.find((item) => item.id === draft.value.id)?.kind === "log_cleanup"));
 const readyDatabases = computed(() =>
   databases.value.databases.filter((db) => {
     const actual = databases.value.actual.servers.find(
@@ -358,6 +382,42 @@ function openScheduleLogs(item: Schedule) {
   scheduleLogsTarget.value = item;
   scheduleLogsOpen.value = true;
 }
+async function inspectLogRun(run: Run) {
+  if (logInspectionBusy.value) return;
+  const request = ++logInspectionRequest;
+  logInspection.value = null; logInspectionError.value = "";
+  logContinuationAcknowledged.value = false; logInspectedRunState.value = run.state;
+  logInspectionOpen.value = true; logInspectionBusy.value = true;
+  try {
+    const result = await props.api<LogInspection>(`/schedules/runs/${run.id}/log-cleanup`);
+    if (request === logInspectionRequest && logInspectionOpen.value) logInspection.value = result;
+  } catch (e) {
+    if (request === logInspectionRequest && logInspectionOpen.value) logInspectionError.value = (e as Error).message;
+  } finally { if (request === logInspectionRequest) logInspectionBusy.value = false; }
+}
+function closeLogInspection() {
+  logInspectionRequest++; logInspectionBusy.value = false;
+  logInspection.value = null; logInspectionError.value = "";
+  logContinuationAcknowledged.value = false; logInspectedRunState.value = "";
+}
+async function continueLogRun() {
+  const item = logInspection.value;
+  if (!item?.plan_sha256 || !logContinuationAcknowledged.value || logContinuationBusy.value) return;
+  const request = logInspectionRequest;
+  logContinuationBusy.value = true; logInspectionError.value = "";
+  try {
+    await props.api(`/schedules/runs/${item.request_id}/log-cleanup/continue`, "POST", {
+      request_id: item.request_id, site_id: item.site_id, plan_sha256: item.plan_sha256, acknowledge_unknown: true,
+    });
+    const checked = await props.api<LogInspection>(`/schedules/runs/${item.request_id}/log-cleanup`);
+    if (request === logInspectionRequest && logInspectionOpen.value) {
+      logInspection.value = checked; logContinuationAcknowledged.value = false;
+      ElMessage.success("已保存后续可继续的核实证据；原操作仍为未知结果");
+    }
+  } catch (e) {
+    if (request === logInspectionRequest && logInspectionOpen.value) logInspectionError.value = (e as Error).message;
+  } finally { logContinuationBusy.value = false; }
+}
 async function runNow(item: Schedule) {
   try {
     await props.api(`/schedules/${item.id}/run`, "POST", {});
@@ -396,7 +456,7 @@ onMounted(() => {
   void refresh();
   timer = setInterval(() => { if (!selectedScheduleIDs.value.length && !batchBusy.value) void refresh(); }, 5000);
 });
-onUnmounted(() => clearInterval(timer));
+onUnmounted(() => { clearInterval(timer); closeLogInspection(); });
 defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.value = true; }, openTaskSettings: () => { taskSettingsOpen.value = true; } });
 </script>
 
@@ -709,8 +769,36 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         <el-table-column label="触发" width="80"><template #default="{ row }">{{ row.trigger === 'manual' ? '手动' : '计划' }}</template></el-table-column>
         <el-table-column label="结果" width="90"><template #default="{ row }">{{ stateName[row.state] }}</template></el-table-column>
         <el-table-column label="详情" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ runResult(row) }}</template></el-table-column>
+        <el-table-column label="核实" width="110"><template #default="{ row }"><el-button v-if="row.log_cleanup" link type="primary" :disabled="logInspectionBusy" @click="inspectLogRun(row)">日志文件核对</el-button></template></el-table-column>
       </el-table>
       <template #footer><el-button @click="scheduleLogsOpen = false">关闭</el-button></template>
+    </el-dialog>
+    <el-dialog v-model="logInspectionOpen" title="日志文件核对" width="min(960px, 96vw)" top="4vh" :style="{ maxHeight: '92vh', overflowY: 'auto' }" destroy-on-close @close="closeLogInspection">
+      <el-alert title="默认只读核对，不读取日志正文。下方的继续执行核实仅追加证据：不清除未知记录，不重新执行轮转或删除，不发送信号。" type="info" :closable="false" show-icon />
+      <p v-if="logInspectionBusy" role="status">正在核对记录和文件身份…</p>
+      <el-alert v-if="logInspectionError" :title="logInspectionError" type="error" :closable="false" show-icon />
+      <template v-if="logInspection">
+        <p>操作状态：{{ logOperationState[logInspection.state] || '不可核实' }} · 记录保留期：{{ logInspection.retention_days || '未记录' }} 天</p>
+        <p>操作标识：<code>{{ logInspection.request_id }}</code></p>
+        <p v-if="logInspection.plan_sha256">计划 SHA-256：<code>{{ logInspection.plan_sha256 }}</code></p>
+        <el-alert v-if="logInspection.state !== 'completed'" title="未当作已成功完成。无持久记录也不能证明旧版本没有执行过；请保留当前文件和操作记录，核对后再处理。" type="warning" :closable="false" show-icon />
+        <p v-if="logInspection.result">保存的完成结果：轮转 {{ logInspection.result.rotated }} 个，删除 {{ logInspection.result.deleted }} 个，释放 {{ logInspection.result.deleted_bytes }} 字节。</p>
+        <el-alert v-if="logInspection.continuation" :title="`已于 ${formatPanelDateTime(logInspection.continuation.verified_at)} 核实后续新任务可继续；原操作仍未当作成功。新任务按自己的固定标识执行，旧任务不会重放。`" type="info" :closable="false" show-icon />
+        <p v-if="logInspection.continuation">核实证据 SHA-256：<code>{{ logInspection.continuation.evidence_sha256 }}</code></p>
+        <el-table :data="logInspection.files" max-height="min(32vh, 240px)" empty-text="没有可核实的持久文件计划">
+          <el-table-column prop="name" label="计划文件名" min-width="280" show-overflow-tooltip />
+          <el-table-column label="操作" width="90"><template #default="{ row }">{{ row.role === 'rotation' ? '轮转' : '过期清理' }}</template></el-table-column>
+          <el-table-column label="当前路径" min-width="180"><template #default="{ row }">{{ logFileState[row.state] || '不可核实' }}</template></el-table-column>
+          <el-table-column label="轮转归档" min-width="180"><template #default="{ row }">{{ row.archive_state ? logFileState[row.archive_state] || '不可核实' : '不涉及' }}</template></el-table-column>
+          <el-table-column prop="planned_bytes" label="计划时字节" width="115" />
+        </el-table>
+        <div v-if="['running','unknown'].includes(logInspection.state) && !logInspection.continuation && logInspectedRunState === 'failed'">
+          <p>执行器将重新验证 Nginx 主进程、当前日志与原归档身份，并检查归档是否仍有写入句柄。条件不满足时保留阻塞；不会补删文件或重新轮转。</p>
+          <el-checkbox v-model="logContinuationAcknowledged" :disabled="logContinuationBusy">我确认原操作仍是未知结果，只请求核实后续新任务是否可以继续</el-checkbox>
+          <el-button type="primary" :loading="logContinuationBusy" :disabled="!logContinuationAcknowledged || logInspectionBusy" @click="continueLogRun">核实后续可继续条件</el-button>
+        </div>
+      </template>
+      <template #footer><el-button @click="logInspectionOpen = false">关闭</el-button></template>
     </el-dialog>
     <el-dialog v-model="taskSettingsOpen" title="新建任务默认设置" width="460px">
       <p class="run-picker-help">这些默认值保存在当前浏览器，只影响之后新建的任务。已创建任务保持原设置。</p>
@@ -728,6 +816,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
       destroy-on-close
     >
       <el-form label-position="top" @submit.prevent="save">
+        <el-alert v-if="logParametersLocked" title="该日志任务正在排队或执行。任务类型、网站和保留天数已固定；仍可停用后续调度，但不会取消已开始的操作。" type="info" :closable="false" show-icon />
         <el-form-item label="任务名称" required>
           <el-input
             v-model="draft.name"
@@ -738,6 +827,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         <el-form-item label="任务类型">
           <el-select
             :model-value="draft.kind"
+            :disabled="logParametersLocked"
             class="full"
             @change="chooseKind"
           >
@@ -761,6 +851,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         >
           <el-select
             v-model="draft.target_id"
+            :disabled="logParametersLocked"
             class="full"
             :placeholder="
               draft.kind !== 'database_backup'
@@ -938,6 +1029,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         >
           <el-input-number
             v-model="draft.retention_count"
+            :disabled="logParametersLocked"
             :min="1"
             :max="100"
           />

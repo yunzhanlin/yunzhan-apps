@@ -53,6 +53,7 @@ type ScheduleRun struct {
 	Error        string `json:"error,omitempty"`
 	Log          string `json:"log,omitempty"`
 	CreatedAt    string `json:"created_at"`
+	LogCleanup   bool   `json:"log_cleanup"`
 }
 
 func (s *Store) migrateSchedules() error {
@@ -73,6 +74,7 @@ func (s *Store) migrateSchedules() error {
  CREATE INDEX IF NOT EXISTS schedule_cleanup_pending ON schedule_cleanup_jobs(state,created_at);
  CREATE TABLE IF NOT EXISTS site_backups(id TEXT PRIMARY KEY,site_id TEXT NOT NULL REFERENCES sites(id),format TEXT NOT NULL,files INTEGER NOT NULL,source_bytes INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS schedule_direct_jobs(run_id TEXT PRIMARY KEY REFERENCES schedule_runs(id),attempts INTEGER NOT NULL DEFAULT 0,next_attempt_at INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',state TEXT NOT NULL CHECK(state IN ('pending','completed','failed')));
+ CREATE TABLE IF NOT EXISTS schedule_log_operations(run_id TEXT PRIMARY KEY REFERENCES schedule_runs(id),site_id TEXT NOT NULL REFERENCES sites(id),retention_days INTEGER NOT NULL CHECK(retention_days BETWEEN 1 AND 100),created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS site_schedule_cleanup_jobs(artifact_id TEXT PRIMARY KEY,schedule_id TEXT NOT NULL REFERENCES schedules(id),schedule_name TEXT NOT NULL,site_id TEXT NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,state TEXT NOT NULL CHECK(state IN ('pending','completed')),attempts INTEGER NOT NULL DEFAULT 0,last_error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,completed_at TEXT NOT NULL DEFAULT '');
  CREATE INDEX IF NOT EXISTS site_schedule_cleanup_pending ON site_schedule_cleanup_jobs(state,created_at);
 	CREATE TABLE IF NOT EXISTS schedule_scripts(schedule_id TEXT PRIMARY KEY REFERENCES schedules(id),script TEXT NOT NULL,timeout_seconds INTEGER NOT NULL CHECK(timeout_seconds BETWEEN 1 AND 60));
@@ -328,6 +330,14 @@ func (s *Store) UpdateSchedule(id string, v Schedule, actor string, now time.Tim
 		return v, e
 	}
 	defer tx.Rollback()
+	var previousKind, previousTarget string
+	var previousRetention, activeRuns int
+	if e = tx.QueryRow(`SELECT kind,target_id,retention_count,(SELECT count(*) FROM schedule_runs WHERE schedule_id=schedules.id AND state IN ('queued','running')) FROM schedules WHERE id=? AND deleted_at=0`, id).Scan(&previousKind, &previousTarget, &previousRetention, &activeRuns); e != nil {
+		return v, e
+	}
+	if activeRuns > 0 && (previousKind == "log_cleanup" || v.Kind == "log_cleanup") && (previousKind != v.Kind || previousTarget != v.TargetID || previousRetention != v.RetentionCount) {
+		return v, errors.New("日志计划正在排队或执行；当前操作的类型、网站和保留天数不可变，完成后再修改")
+	}
 	result, e := tx.Exec(`UPDATE schedules SET name=?,kind=?,target_id=?,schedule_type=?,timezone=?,minute=?,hour=?,weekday=?,retention_count=?,enabled=?,revision=revision+1,next_run_at=?,updated_at=? WHERE id=? AND revision=? AND deleted_at=0`, v.Name, v.Kind, v.TargetID, v.ScheduleType, v.Timezone, v.Minute, v.Hour, v.Weekday, v.RetentionCount, v.Enabled, next.Unix(), Now(), id, v.Revision)
 	if e != nil {
 		return v, errors.New("计划名称已存在")
@@ -409,11 +419,11 @@ func (s *Store) DeleteSchedule(id string, revision int64, confirm, actor string,
 
 func scanScheduleRun(row interface{ Scan(...any) error }) (ScheduleRun, error) {
 	var v ScheduleRun
-	e := row.Scan(&v.ID, &v.ScheduleID, &v.ScheduleName, &v.Trigger, &v.State, &v.ScheduledFor, &v.StartedAt, &v.FinishedAt, &v.JobID, &v.ArtifactID, &v.Error, &v.Log, &v.CreatedAt)
+	e := row.Scan(&v.ID, &v.ScheduleID, &v.ScheduleName, &v.Trigger, &v.State, &v.ScheduledFor, &v.StartedAt, &v.FinishedAt, &v.JobID, &v.ArtifactID, &v.Error, &v.Log, &v.CreatedAt, &v.LogCleanup)
 	return v, e
 }
 
-const scheduleRunSelect = `SELECT id,schedule_id,schedule_name,trigger,state,scheduled_for,started_at,finished_at,job_id,artifact_id,error,log,created_at FROM schedule_runs`
+const scheduleRunSelect = `SELECT id,schedule_id,schedule_name,trigger,state,scheduled_for,started_at,finished_at,job_id,artifact_id,error,log,created_at,EXISTS(SELECT 1 FROM schedule_log_operations WHERE run_id=schedule_runs.id) FROM schedule_runs`
 
 func (s *Store) ScheduleRuns(limit int) ([]ScheduleRun, error) {
 	if limit < 1 || limit > 500 {
@@ -455,6 +465,9 @@ func (s *Store) QueueScheduleRun(id, trigger, actor string, scheduledFor time.Ti
 	_, e = tx.Exec(`INSERT INTO schedule_runs(id,schedule_id,schedule_name,trigger,state,scheduled_for,created_at) VALUES(?,?,?,?,?,?,?)`, run.ID, run.ScheduleID, run.ScheduleName, run.Trigger, run.State, run.ScheduledFor, run.CreatedAt)
 	if e != nil {
 		return run, errors.New("该计划已有一次运行在处理")
+	}
+	if e = snapshotLogCleanupRun(tx, run.ID, v.ID); e != nil {
+		return run, e
 	}
 	if _, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'schedule.run',?,'queued',?)`, actor, v.Name, Now()); e != nil {
 		return run, e
@@ -505,6 +518,9 @@ func (s *Store) enqueueDueSchedules(now time.Time) error {
 		if active == 0 {
 			run := ScheduleRun{ID: ID(), ScheduleID: v.ID, ScheduleName: v.Name, Trigger: "scheduled", State: "queued", ScheduledFor: item.at, CreatedAt: Now()}
 			_, e = tx.Exec(`INSERT INTO schedule_runs(id,schedule_id,schedule_name,trigger,state,scheduled_for,created_at) VALUES(?,?,?,?,?,?,?)`, run.ID, run.ScheduleID, run.ScheduleName, run.Trigger, run.State, run.ScheduledFor, run.CreatedAt)
+			if e == nil {
+				e = snapshotLogCleanupRun(tx, run.ID, v.ID)
+			}
 		} else {
 			_, e = tx.Exec(`INSERT INTO schedule_runs(id,schedule_id,schedule_name,trigger,state,scheduled_for,finished_at,error,log,created_at) VALUES(?,?,?,'scheduled','skipped',?,?,?, ?,?)`, ID(), v.ID, v.Name, item.at, now.Unix(), "上一次运行尚未完成", "按不重叠规则跳过本次", Now())
 		}
@@ -571,6 +587,11 @@ func (s *Store) startQueuedScheduleRun(now time.Time) error {
 		n, _ := result.RowsAffected()
 		if n != 1 {
 			return nil
+		}
+		if v.Kind == "log_cleanup" {
+			if e = snapshotLogCleanupRun(tx, run.ID, v.ID); e != nil {
+				return e
+			}
 		}
 		if _, e = tx.Exec(`INSERT INTO schedule_direct_jobs(run_id,state) VALUES(?,'pending')`, run.ID); e != nil {
 			return e

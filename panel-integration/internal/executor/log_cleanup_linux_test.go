@@ -6,11 +6,56 @@ import (
 	"context"
 	"errors"
 	"local/panel/internal/core"
+	"math"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 )
+
+type siteLogSizedInfo struct {
+	os.FileInfo
+	bytes int64
+}
+
+func (info siteLogSizedInfo) Size() int64 { return info.bytes }
+
+func TestLogCleanupExpiredBytesRejectOverflowBeforeMutation(t *testing.T) {
+	for _, sizes := range [][]int64{{math.MaxInt64, 1}, {-1}, {0, math.MaxInt64}} {
+		items := []plannedSiteLog{}
+		for _, size := range sizes {
+			items = append(items, plannedSiteLog{info: siteLogSizedInfo{bytes: size}})
+		}
+		total, e := siteLogExpiredBytes(items)
+		valid := len(sizes) == 2 && sizes[0] == 0
+		if (e == nil) != valid || valid && total != math.MaxInt64 {
+			t.Fatal("unsafe byte accumulation", sizes, total, e)
+		}
+	}
+}
+
+func TestLogCleanupRetirementRefusalPreservesOldAndNewLogs(t *testing.T) {
+	_, in, logs, now := siteLogLedgerFixture(t)
+	name := "panel-" + in.SiteID + ".access.log"
+	archive := name + "." + now.UTC().Format("20060102-150405")
+	retired := name + ".20260901-100000"
+	siteLogFixtureWrite(t, filepath.Join(logs, name), "before")
+	siteLogFixtureWrite(t, filepath.Join(logs, retired), "retired")
+	reopened := false
+	result, e := cleanupSiteLogsAtGuarded(t.Context(), logs, in.SiteID, 2, now, func(context.Context) error {
+		reopened = true
+		siteLogFixtureWrite(t, filepath.Join(logs, name), "after")
+		return nil
+	}, nil, func() error { return errors.New("writer appeared after reopen") })
+	if e == nil || !reopened || result.Rotated != 1 || result.Deleted != 0 {
+		t.Fatal("retirement refusal was accepted", result, e)
+	}
+	for file, body := range map[string]string{name: "after", archive: "before", retired: "retired"} {
+		if actual, e := os.ReadFile(filepath.Join(logs, file)); e != nil || string(actual) != body {
+			t.Fatal("retirement refusal changed bytes", file, e)
+		}
+	}
+}
 
 func TestLogCleanupUsesFixedSiteNamesAndRollsBackReopenFailure(t *testing.T) {
 	base := t.TempDir()
