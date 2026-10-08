@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const WAFVersion = "2.3.0"
+const WAFVersion = "2.4.0"
 
 var WAFGroupNames = []string{"method", "sql", "xss", "command", "traversal", "scanner", "cookie"}
 
@@ -60,11 +60,12 @@ type WAFPolicy struct {
 	CCRules   []WAFCCRule           `json:"cc_rules"`
 }
 type WAFConfig struct {
-	Profile      string                 `json:"profile"`
-	Rate         int                    `json:"rate_per_second"`
-	Policy       WAFPolicy              `json:"policy"`
-	Body         *WAFBodyConfig         `json:"body,omitempty"`
-	TrustedProxy *WAFTrustedProxyConfig `json:"trusted_proxy,omitempty"`
+	Profile         string                    `json:"profile"`
+	Rate            int                       `json:"rate_per_second"`
+	Policy          WAFPolicy                 `json:"policy"`
+	Body            *WAFBodyConfig            `json:"body,omitempty"`
+	TrustedProxy    *WAFTrustedProxyConfig    `json:"trusted_proxy,omitempty"`
+	BodyLogRotation *WAFBodyLogRotationConfig `json:"body_log_rotation,omitempty"`
 }
 
 func DefaultWAFConfig() WAFConfig {
@@ -111,6 +112,9 @@ func DecodeWAFConfig(raw map[string]any) (WAFConfig, error) {
 		return v, err
 	}
 	if err := ValidateWAFTrustedProxy(v.TrustedProxy); err != nil {
+		return v, err
+	}
+	if err := ValidateWAFBodyLogRotation(v.BodyLogRotation); err != nil {
 		return v, err
 	}
 	groupOK := func(groups map[string]bool) bool {

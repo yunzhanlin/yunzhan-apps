@@ -12,7 +12,7 @@ func TestWAFNativeSourcesArePinnedAndIndependent(t *testing.T) {
 	if len(sources) != 3 {
 		t.Fatal("missing native engine/connector/CRS source")
 	}
-	for _, version := range []string{"1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
+	for _, version := range []string{"1.18.0", "1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
 		source, ok := wafNginxBuildSource(version)
 		if !ok || !reviewedWAFEngineSource(source) {
 			t.Fatal("missing reviewed build source", version)

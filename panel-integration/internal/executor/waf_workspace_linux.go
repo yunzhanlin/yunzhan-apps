@@ -42,6 +42,9 @@ func (s *Service) wafReplayMatches(raw map[string]any) bool {
 	if _, present := raw["trusted_proxy"]; !present {
 		wanted.TrustedProxy = current.TrustedProxy
 	}
+	if _, present := raw["body_log_rotation"]; !present {
+		wanted.BodyLogRotation = current.BodyLogRotation
+	}
 	wanted.Policy.Revision = current.Policy.Revision
 	a, _ := json.Marshal(wanted)
 	b, _ := json.Marshal(current)
@@ -77,6 +80,11 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 			return cfg, errors.New("可信代理策略必须包含完整 policy 和当前修订号")
 		}
 	}
+	if _, rotation := raw["body_log_rotation"]; rotation {
+		if _, advanced := raw["policy"]; !advanced {
+			return cfg, errors.New("自动轮转策略必须包含完整 policy 和当前修订号")
+		}
+	}
 	old, oldErr := s.readSoftwareManifest("nginx-waf")
 	if !install && oldErr == nil {
 		previous, e := core.DecodeWAFConfig(old.Settings)
@@ -88,6 +96,12 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		}
 		if _, present := raw["trusted_proxy"]; !present {
 			cfg.TrustedProxy = previous.TrustedProxy
+		}
+		if _, present := raw["body_log_rotation"]; !present {
+			cfg.BodyLogRotation = previous.BodyLogRotation
+		}
+		if cfg.BodyLogRotation != nil && old.Version != core.WAFVersion {
+			return cfg, errors.New("自动轮转策略需要先升级已安装的 Nginx WAF 应用")
 		}
 		if cfg.TrustedProxy != nil && old.Version != core.WAFVersion {
 			return cfg, errors.New("可信代理策略需要先通过应用商店升级 Nginx WAF；不能用面板版本代替已安装应用版本")
@@ -102,6 +116,9 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		} else if cfg.Policy.Revision != previous.Policy.Revision {
 			return cfg, errors.New("WAF 配置已变化，请刷新后重新预览和保存")
 		}
+	}
+	if e := core.ValidateWAFBodyLogRotationSource(cfg); e != nil {
+		return cfg, e
 	}
 	for _, id := range core.WAFScopedSites(cfg) {
 		path := filepath.Join(s.Config.ConfDir, id+".conf")

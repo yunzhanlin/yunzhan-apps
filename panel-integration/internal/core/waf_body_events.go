@@ -154,6 +154,30 @@ func BuildWAFBodyReport(snapshot WAFBodyEventsPage, q url.Values, now time.Time)
 }
 
 func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
+	m.HandleFunc("POST /api/software/nginx-waf/body-log/rotation/retain", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		role, _, err := a.Store.appUserRole(u.ID)
+		if err != nil || role != "admin" {
+			fail(w, 403, "仅管理员可核对自动轮转未知结果")
+			return
+		}
+		var in WAFBodyLogRotationRetainRequest
+		if !decode(w, r, &in) {
+			return
+		}
+		if !in.Valid() || len(r.URL.Query()) != 0 {
+			fail(w, 400, "自动轮转摘要或未知结果确认无效")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+		defer cancel()
+		var out any
+		if err := a.Executor.Call(ctx, "POST", "/v1/software/nginx-waf/body-log/rotation/retain", in, &out); err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		_ = a.Store.Audit(u.Username, "waf.body-log.rotation-retain", "nginx-waf", "digest-bound unknown outcome retained; no repeated truncate or automatic archive removal")
+		send(w, 200, out)
+	}))
 	m.HandleFunc("POST /api/software/nginx-waf/body-log/index-stages/{id}/retain", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		role, _, err := a.Store.appUserRole(u.ID)
 		if err != nil || role != "admin" {
@@ -236,6 +260,7 @@ func (a *Server) wafBodyReportRoutes(m *http.ServeMux) {
 		pattern, method, target string
 		write                   bool
 	}{
+		{"GET /api/software/nginx-waf/body-log/rotation", "GET", "/v1/software/nginx-waf/body-log/rotation", false},
 		{"GET /api/software/nginx-waf/body-log/archives", "GET", "/v1/software/nginx-waf/body-log/archives", false},
 		{"GET /api/software/nginx-waf/body-log/archives/{id}", "GET", "/v1/software/nginx-waf/body-log/archives/", false},
 		{"POST /api/software/nginx-waf/body-log/rotate", "POST", "/v1/software/nginx-waf/body-log/rotate", true},

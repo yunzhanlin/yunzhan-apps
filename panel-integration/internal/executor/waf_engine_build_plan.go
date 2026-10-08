@@ -37,10 +37,14 @@ func wafNativeBuildPlan(work, prefix, assets, nginxVersion string) ([]wafBuildCo
 		{"验证并应用连接器独立元数据日志补丁", connector, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-nginx-private-context.patch")}, nil},
 		{"验证并应用元数据日志并发锁及 32 MiB 硬上限补丁", connector, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-nginx-bounded-events.patch")}, nil},
 		{"非特权配置请求体引擎", engine, "./configure", []string{"--prefix=" + prefix, "--disable-static", "--disable-examples", "--disable-doxygen-doc", "--disable-debug-logs", "--with-yajl=yes", "--with-lua=no", "--with-lmdb=no", "--with-geoip=no", "--with-ssdeep=no", "--with-curl=no"}, nil},
-		{"非特权编译请求体引擎（最多 2 核）", engine, "/usr/bin/make", []string{"-j2"}, nil},
-		{"将引擎写入独立待验证目录，不改系统程序", engine, "/usr/bin/make", []string{"install"}, nil},
+		// The C++ parser and scanner each need several hundred MiB. Running
+		// them together can trigger global OOM on a 1 GiB server before a
+		// 1 GiB service limit protects the live panel. Always compile one at
+		// a time; neither caller settings nor inherited MAKEFLAGS select jobs.
+		{"非特权单路编译请求体引擎（最多 1 核）", engine, "/usr/bin/make", []string{"-j1"}, nil},
+		{"单路将引擎写入独立待验证目录，不改系统程序", engine, "/usr/bin/make", []string{"-j1", "install"}, nil},
 		{"匹配精确 Nginx 源码生成兼容动态模块", nginx, "./configure", []string{"--with-compat", "--with-debug", "--with-threads", "--with-http_ssl_module", "--with-http_v2_module", "--with-http_realip_module", "--with-http_stub_status_module", "--add-dynamic-module=" + connector}, []string{"MODSECURITY_INC=" + filepath.Join(prefix, "include"), "MODSECURITY_LIB=" + filepath.Join(prefix, "lib")}},
-		{"非特权编译 Nginx 动态模块，不安装或替换 Nginx", nginx, "/usr/bin/make", []string{"-j2", "modules"}, nil},
+		{"非特权单路编译 Nginx 动态模块，不安装或替换 Nginx", nginx, "/usr/bin/make", []string{"-j1", "modules"}, nil},
 	}, nil
 }
 

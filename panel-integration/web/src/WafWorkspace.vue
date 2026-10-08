@@ -12,7 +12,8 @@ interface BodySite { site_id: string; policy: BodyPolicy }
 interface EngineStatus { job_id: string; state: string; error?: string; architecture?: string; engine_version?: string; crs_version?: string; nginx_version?: string; integrity_verified: boolean; module_abi_validated: boolean; build_only: boolean; steps: { time: string; message: string }[] }
 interface Preview { http_config: string; server_config: string; settings: Config; changes?: {path: string; action: string}[]; body_rules?: {site_id: string; configuration: string}[] }
 interface TrustedProxy { enabled: boolean; header: "X-Forwarded-For" | "X-Real-IP"; recursive: boolean; trusted_cidrs: string[]; acknowledge_header_control: boolean }
-interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; trusted_proxy?: TrustedProxy; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
+interface BodyLogRotation { enabled:boolean; rotate_mib:number; max_age_minutes:number }
+interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; trusted_proxy?: TrustedProxy; body_log_rotation?:BodyLogRotation; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
 interface Status { installed: boolean; healthy: boolean; enabled: boolean; version?: string; detail: string }
 interface Site { id: string; name: string; domain: string; status?: string; settings?: { waf_enabled?: boolean; web_server?: string } }
 interface Dimension { name: string; count: number }
@@ -22,6 +23,8 @@ interface BodyEvent { time: string; site_id: string; rule_id: number; phase: num
 interface BodyReport { events: BodyEvent[]; rule_matches: number; available: boolean; partial: boolean; rejected_lines: number; scanned: number; counting_contract: string; log_bytes: number; max_bytes: number; capacity_exhausted: boolean; legacy_log: boolean; metadata_best_effort: boolean }
 interface BodyArchive {id:string;captured_at:string;bytes:number;sha256:string;state:string}
 interface BodyRecovery {archive:BodyArchive;index_sha256:string;snapshot_sha256:string;snapshot_bytes:number;snapshot_missing:boolean}
+interface BodyRotationRecord { id:string; state:string; checked_at:string; window_started_at:string; last_rotation_at?:string; log_bytes:number; archive_count:number; policy_revision:number; history:{id:string;at:string;outcome:string;archive?:BodyArchive}[] }
+interface BodyRotationStatus { available:boolean; enabled:boolean; stale:boolean; sha256?:string; record?:BodyRotationRecord; message?:string; history_limit:number; automatic_archive_deletion:boolean }
 interface History { id: string; kind: string; state: string; error: string; created_at: string }
 const props = defineProps<{ api: API; engine?: "nginx-waf" | "apache-waf"; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
 const engine = props.engine || "nginx-waf";
@@ -35,7 +38,8 @@ const modeLabel = (mode: string) => ({ block: "阻断", observe: "观察", off: 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const newID = () => crypto.randomUUID().replaceAll("-", "");
 const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), sites = ref<Site[]>([]), implementation = ref("");
-const ccObservationSupported = computed(() => !apache && status.value?.installed && status.value.version === "2.3.0");
+const ccObservationSupported = computed(() => !apache && status.value?.installed && ["2.3.0","2.4.0"].includes(status.value.version || ""));
+const bodyRotationSupported = computed(() => !apache && status.value?.installed && status.value.version === "2.4.0");
 const rateOutcome = (value?: string) => ({REJECTED:"已拒绝",REJECTED_DRY_RUN:"模拟拒绝（放行）",DELAYED_DRY_RUN:"模拟延迟（放行）",DELAYED:"已延迟",PASSED:"通过"}[value || ""] || "—");
 const defaults = ref<Config>();
 const tab = ref("overview"), busy = ref(false), reportBusy = ref(false), error = ref(""), saved = ref(""), preview = ref("");
@@ -43,6 +47,30 @@ const report = ref<Report>(), history = ref<History[]>([]), jsonInput = ref("");
 const engines = ref<EngineStatus[]>([]), engineJob = ref<EngineStatus>(), engineBusy = ref(false), bodySite = ref("");
 const bodyReport = ref<BodyReport>(), bodyReportBusy = ref(false), bodyPage = ref(1), bodyFilter = ref({site_id:"",rule:"",phase:""});
 const bodyArchives = ref<BodyArchive[]>([]), bodyLogBusy = ref(false);
+const bodyRotation = ref<BodyRotationStatus>(), bodyRotationError = ref("");
+let bodyRotationTimer: ReturnType<typeof setTimeout> | undefined;
+const bodyRotationState = (v?:string) => ({idle:"等待触发",rotating:"轮转中，结果尚未确认",completed:"备份与轮转已核对",blocked:"暂停，历史保留",unknown:"结果未知，需核对",retained_unknown:"未知结果已保留，未宣称成功"}[v || ""] || "尚无调度记录");
+function toggleBodyRotation(value: string | number | boolean) {
+  if (!cfg.value || !bodyRotationSupported.value) return;
+  cfg.value.body_log_rotation ||= {enabled:false,rotate_mib:16,max_age_minutes:60};
+  cfg.value.body_log_rotation.enabled = value === true;
+}
+async function refreshBodyRotation() {
+  if (!bodyRotationSupported.value) {bodyRotation.value=undefined;bodyRotationError.value="";return;}
+  try {bodyRotation.value=await props.api<BodyRotationStatus>(endpoint("body-log/rotation"));bodyRotationError.value="";}
+  catch(e){bodyRotationError.value=(e as Error).message;}
+}
+function scheduleBodyRotationStatus() {
+  if(bodyRotationTimer)clearTimeout(bodyRotationTimer);
+  if(disposed || tab.value!=="body" || !bodyRotationSupported.value)return;
+  bodyRotationTimer=setTimeout(async()=>{await refreshBodyRotation();scheduleBodyRotationStatus();},30000);
+}
+async function retainAutomaticRotation() {
+  if(bodyLogBusy.value || !bodyRotation.value?.sha256)return;
+  bodyLogBusy.value=true;error.value="";
+  try {await props.api(endpoint("body-log/rotation/retain"),"POST",{sha256:bodyRotation.value.sha256,acknowledge_unknown_rotation_not_repeated:true},newID());await refreshBodyRotation();saved.value="已按摘要保留未知轮转结果；当前日志与快照没有删除或再次截断。";}
+  catch(e){error.value=(e as Error).message;}finally{bodyLogBusy.value=false;}
+}
 type BodyIndexStage = {id:string;bytes:number;sha256:string};
 const bodyRecovery = ref<BodyRecovery[]>([]), bodyInventoryWarning = ref(""), bodyIndexStages = ref<BodyIndexStage[]>([]);
 const bodyArchiveState = (state:string) => ({completed:"备份与轮转完成",prepared:"轮转未确认完成",copying:"复制未完成",removing:"删除未完成，可按原摘要重试",retained:"证据已保留，轮转结果未知","retained-incomplete":"不完整快照已保留","retained-missing":"快照缺失，仅保留原意图"}[state] || state);
@@ -51,6 +79,7 @@ const exportedBodyArchives = ref<string[]>([]);
 const bodyRange = ref<[Date, Date]>();
 let engineTimer: ReturnType<typeof setTimeout> | undefined;
 let disposed = false;
+watch([tab,bodyRotationSupported],()=>scheduleBodyRotationStatus());
 const verifiedEngines = computed(() => engines.value.filter(x => x.state === "ready" && x.integrity_verified && x.module_abi_validated && x.build_only));
 const bodyDefault = (): BodyPolicy => ({ mode: "observe", paranoia_level: 1, inbound_threshold: 5, body_limit_kib: 1024, non_file_limit_kib: 256, json_depth: 64, argument_limit: 256 });
 const buildState = (s: string) => ({ queued:"排队", running:"构建中", ready:"程序已验证", succeeded:"构建任务完成", failed:"构建失败", needs_attention:"需要核对" }[s] || s);
@@ -162,7 +191,7 @@ async function refresh() {
   try {
     await loadConfig();
     const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = (Array.isArray(out) ? out : out.sites).filter(s => !apache || s.settings?.web_server === "apache");
-    await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives()]);
+    await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives(),refreshBodyRotation()]);
     const running = engines.value.find(x=>["queued", "running"].includes(x.state))?.job_id || history.value.find(x=>x.kind==="waf_engine_build" && ["queued","running"].includes(x.state))?.id;
     if (running && !engineTimer) await pollEngine(running);
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
@@ -226,7 +255,7 @@ async function importConfig() {
 function download(name: string, value: unknown) { const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
 async function exportLogs() { if (reportBusy.value) return; reportBusy.value = true; try { download("yunzhan-waf-events.json", await props.api<Report>(reportURL(true))); } catch (e) { error.value = (e as Error).message; } finally { reportBusy.value = false; } }
 onMounted(refresh);
-onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); });
+onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if(bodyRotationTimer)clearTimeout(bodyRotationTimer); });
 </script>
 
 <template>
@@ -258,7 +287,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
           <el-table :data="cfg.policy.sites" empty-text="所有站点继承全局策略" max-height="450"><el-table-column type="expand"><template #default="{row}"><div class="waf-site-groups"><el-form-item v-for="g in groups" :key="g.id" :label="g.name"><el-select :model-value="row.groups?.[g.id] === undefined ? 'inherit' : row.groups[g.id] ? 'on' : 'off'" @change="(value: string)=>siteGroup(row,g.id,value)"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></el-form-item></div></template></el-table-column><el-table-column label="站点" min-width="210"><template #default="{row}"><strong>{{siteName(row.site_id)}}</strong><small class="waf-site-warning" v-if="!apache && sites.find(s=>s.id===row.site_id)?.settings?.waf_enabled === false">网站设置已关闭 WAF，本策略不会生效</small></template></el-table-column><el-table-column label="模式" width="125"><template #default="{row}"><el-select v-model="row.mode"><el-option v-for="m in ['inherit','block','observe','off']" :key="m" :label="modeLabel(m)" :value="m"/></el-select></template></el-table-column><el-table-column v-if="!apache" label="CC 防护" width="125"><template #default="{row}"><el-select :model-value="row.cc_enabled === undefined ? 'inherit' : row.cc_enabled ? 'on' : 'off'" @change="(v: string)=>{if(v==='inherit')delete row.cc_enabled;else row.cc_enabled=v==='on'}"><el-option label="继承" value="inherit"/><el-option label="开启" value="on"/><el-option label="关闭" value="off"/></el-select></template></el-table-column><el-table-column v-if="!apache" label="速率 / 秒" width="150"><template #default="{row}"><el-input-number v-model="row.rate_per_second" :min="0" :max="200" controls-position="right"/></template></el-table-column><el-table-column v-if="!apache" label="突发容量" width="150"><template #default="{row}"><el-input-number v-model="row.burst" :min="0" :max="1000" controls-position="right"/></template></el-table-column><el-table-column width="75"><template #default="{row}"><el-button text type="danger" @click="cfg.policy.sites=cfg.policy.sites.filter(p=>p!==row)">移除</el-button></template></el-table-column></el-table><p class="waf-muted">展开每行可覆盖规则分类；{{ apache ? "Apache 不提供独立 CC 速率。" : "速率 / 突发值为 0 表示继承，独立速率须为 5–200。" }}移除策略只恢复继承，不删除网站。</p>
         </el-tab-pane>
         <el-tab-pane v-if="!apache" label="CC 防护" name="cc">
-          <el-form label-position="top" class="waf-three"><el-form-item label="启用 CC 限速"><el-switch v-model="cfg.policy.cc_enabled" aria-label="启用 CC 限速"/></el-form-item><el-form-item label="每站点 / 每 IP 速率（次 / 秒）"><el-input-number v-model="cfg.rate_per_second" :min="5" :max="200"/></el-form-item><el-form-item label="突发容量（超额立即返回 429）"><el-input-number v-model="cfg.policy.burst" :min="1" :max="1000"/></el-form-item></el-form>
+          <el-form label-position="top" class="waf-three"><el-form-item label="启用 CC 限速"><el-switch v-model="cfg.policy.cc_enabled" aria-label="启用 CC 限速"/></el-form-item><el-form-item label="每站点 / 每 IP 速率（次 / 秒）"><el-input-number v-model="cfg.rate_per_second" :min="5" :max="200"/></el-form-item><el-form-item label="突发容量（阻断模式超额返回 429）"><el-input-number v-model="cfg.policy.burst" :min="1" :max="1000"/></el-form-item></el-form>
           <p>使用 Nginx 原生漏桶限速，站点之间不共享同一 IP 的额度；URL 规则与站点限速同时生效。{{ ccObservationSupported ? "阻断模式超额返回 429；观察模式使用原生 dry-run，超额继续放行并记录为 CC 观察事件。停用模式与白名单不消耗额度。" : "此已安装版本在观察 / 停用模式与白名单下不计 CC 额度；升级到 2.3.0 后，观察模式才会记录真实超限事件。" }}</p>
           <el-alert v-if="ccObservationSupported" title="每个网站独立应用观察模式。网站有外部 include 或其它独立限速配置时，拒绝将其切换为观察，不会静默解除管理员原有限速。CC 防护关闭的网站也不会记录模拟超限。" type="info" :closable="false"/>
           <h4>URL 独立限速（最多 20 条）</h4><div class="waf-editor"><el-select v-model="newCC.site_id" filterable aria-label="URL 限速范围"><el-option value="" label="全部受管站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="newCC.path" placeholder="/api/login" aria-label="URL 限速路径"/><el-checkbox v-model="newCC.prefix">路径前缀</el-checkbox><el-input-number v-model="newCC.rate_per_second" :min="1" :max="200" aria-label="URL 速率"/><el-input-number v-model="newCC.burst" :min="1" :max="1000" aria-label="URL 突发容量"/><el-button @click="addCC">添加规则</el-button></div>
@@ -304,7 +333,23 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); })
           <el-alert v-if="bodyReport?.metadata_best_effort" title="规则元数据为尽力记录；并发争用、容量或磁盘故障可能漏记，不能作为完整请求取证或准确攻击总数。" type="info" :closable="false"/>
           <el-alert v-if="bodyReport?.legacy_log" title="正在读取保留的旧日志；它不具备本版写入硬上限。安全应用新引擎后使用独立受保护日志，不会删除旧文件。" type="warning" :closable="false"/>
           <el-alert v-if="bodyReport?.capacity_exhausted" title="当前元数据日志已达到 32 MiB 写入上限，后续可能漏记；防护继续执行。请备份并轮转后核对新记录。" type="error" :closable="false"/>
-          <div class="waf-actions"><span v-if="bodyReport?.available">当前文件 {{bodyBytes(bodyReport.log_bytes)}}<span v-if="bodyReport.max_bytes"> / {{bodyBytes(bodyReport.max_bytes)}}</span> · 保留 {{bodyArchives.length}} / 8 份备份</span><el-button :loading="bodyLogBusy" :disabled="!bodyReport?.available || bodyReport.legacy_log || !bodyReport.log_bytes || bodyRecovery.length>0 || bodyIndexStages.length>0 || bodyArchives.length>=8" @click="rotateBodyLog">备份并轮转元数据日志</el-button></div>
+          <h4>自动轮转请求体数值日志</h4>
+          <el-alert v-if="!bodyRotationSupported" title="先从应用商店升级 Nginx WAF 至 2.4.0 才能配置自动轮转。升级不会自动启用，原有日志与备份保留。" type="info" :closable="false"/>
+          <el-form label-position="top" class="waf-three">
+            <el-form-item label="启用自动轮转（默认关闭）"><el-switch :model-value="cfg.body_log_rotation?.enabled || false" :disabled="!bodyRotationSupported || !cfg.body?.engine_job_id" aria-label="启用请求体数值日志自动轮转" @change="toggleBodyRotation"/></el-form-item>
+            <el-form-item v-if="cfg.body_log_rotation" label="文件大小触发（MiB）"><el-input-number v-model="cfg.body_log_rotation.rotate_mib" :min="1" :max="28" :disabled="!bodyRotationSupported" aria-label="自动轮转大小阈值"/></el-form-item>
+            <el-form-item v-if="cfg.body_log_rotation" label="非空日志时间触发（分钟）"><el-input-number v-model="cfg.body_log_rotation.max_age_minutes" :min="10" :max="1440" :disabled="!bodyRotationSupported" aria-label="自动轮转时间阈值"/></el-form-item>
+          </el-form>
+          <p class="waf-muted">须先选择已核验的请求体引擎。保存草稿后才生效，每分钟检查一次；大小或时间任一达到阈值且日志非空时轮转。保留当前写入 inode，不重载 Nginx，只处理受保护的数字规则日志；普通防护、访问、错误日志不在此范围。最多 8 份快照，满额暂停，不自动删除历史。</p>
+          <div v-if="bodyRotationSupported" class="waf-actions"><span>服务器自动轮转：{{bodyRotation?.enabled ? '已启用' : '未启用'}} · {{bodyRotationState(bodyRotation?.record?.state)}}</span><el-button :disabled="bodyLogBusy" @click="refreshBodyRotation">刷新自动轮转状态</el-button></div>
+          <el-alert v-if="bodyRotationError" :title="bodyRotationError+'；状态未核验，不能当成成功或未发生。'" type="error" :closable="false"/>
+          <el-alert v-if="bodyRotation?.stale" title="调度记录未及时更新或策略修订已变化，请检查执行服务；这里不宣称自动轮转正在正常运行。" type="warning" :closable="false"/>
+          <el-descriptions v-if="bodyRotation?.record" :column="3" border><el-descriptions-item label="最近检查">{{formatPanelDateTime(bodyRotation.record.checked_at)}}</el-descriptions-item><el-descriptions-item label="时间窗口起点">{{formatPanelDateTime(bodyRotation.record.window_started_at)}}</el-descriptions-item><el-descriptions-item label="最近核验完成">{{bodyRotation.record.last_rotation_at ? formatPanelDateTime(bodyRotation.record.last_rotation_at) : '尚无已核验轮转'}}</el-descriptions-item></el-descriptions>
+          <el-alert v-if="bodyRotation?.message" :title="bodyRotation.message" :type="['unknown','rotating','blocked'].includes(bodyRotation.record?.state || '') ? 'warning' : 'info'" :closable="false"/>
+          <el-popconfirm v-if="['unknown','rotating'].includes(bodyRotation?.record?.state || '')" title="按当前摘要记录未知结果？不会再次截断日志，不会删除快照，也不会标成成功。" confirm-button-text="保留未知结果" @confirm="retainAutomaticRotation"><template #reference><el-button :disabled="bodyLogBusy || bodyRecovery.length>0 || bodyIndexStages.length>0 || !!bodyInventoryWarning || !bodyRotation?.sha256" :loading="bodyLogBusy">核对并保留自动轮转未知结果</el-button></template></el-popconfirm>
+          <el-table v-if="bodyRotation?.record?.history.length" :data="bodyRotation.record.history" max-height="180"><el-table-column label="记录时间" min-width="170"><template #default="{row}">{{formatPanelDateTime(row.at)}}</template></el-table-column><el-table-column label="结果" min-width="190"><template #default="{row}">{{row.outcome==='completed'?'备份与轮转已核对':'未知结果保留，未宣称成功'}}</template></el-table-column><el-table-column prop="id" label="操作标识" min-width="220"/></el-table>
+          <p v-if="bodyRotation?.record" class="waf-muted">最多保留 16 条调度结果摘要；未知结果不会自动清除。快照库存和完整摘要在下方单独核验，不以调度摘要代替完整取证。</p>
+          <div class="waf-actions"><span v-if="bodyReport?.available">当前文件 {{bodyBytes(bodyReport.log_bytes)}}<span v-if="bodyReport.max_bytes"> / {{bodyBytes(bodyReport.max_bytes)}}</span> · 保留 {{bodyArchives.length}} / 8 份备份</span><el-button :loading="bodyLogBusy" :disabled="!bodyReport?.available || bodyReport.legacy_log || !bodyReport.log_bytes || bodyRecovery.length>0 || bodyIndexStages.length>0 || bodyArchives.length>=8 || ['unknown','rotating'].includes(bodyRotation?.record?.state || '')" @click="rotateBodyLog">备份并轮转元数据日志</el-button></div>
           <el-alert v-if="bodyIndexStages.length" title="发现未提交索引残件，请先保留其原始文件。残件不会当成有效备份或成功轮转，也不会自动应用或丢弃。" type="warning" :closable="false"/>
           <el-table v-if="bodyIndexStages.length" :data="bodyIndexStages" max-height="180"><el-table-column prop="id" label="索引残件标识" min-width="220"/><el-table-column prop="bytes" label="实际字节" width="100"/><el-table-column prop="sha256" label="摘要" min-width="220"/><el-table-column width="190"><template #default="{row}"><el-popconfirm title="按摘要保留此残件的原始文件？不接管为有效索引，不修改当前日志。" confirm-button-text="保留原始证据" @confirm="retainBodyIndexStage(row)"><template #reference><el-button text :disabled="bodyLogBusy">保留索引写入残件</el-button></template></el-popconfirm></template></el-table-column></el-table>
           <el-alert v-if="bodyInventoryWarning" :title="bodyInventoryWarning+'；完整备份列表暂不展示，请先核对下方恢复记录。'" type="warning" :closable="false"/>

@@ -18,9 +18,9 @@ NoNewPrivileges=true
 RestrictSUIDSGID=true
 CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
-# Leave room for the two bounded C++ parser compilations. A 768 MiB high
-# watermark forced continuous reclaim before the 1 GiB hard cap was reached.
-MemoryHigh=900M
-MemoryMax=1G
+# Fixed single-job builds reserve headroom for live services on a 1 GiB host.
+# Exhaustion must fail this isolated build, not evict the panel or websites.
+MemoryHigh=576M
+MemoryMax=640M
 TasksMax=256
-CPUQuota=200%
+CPUQuota=100%

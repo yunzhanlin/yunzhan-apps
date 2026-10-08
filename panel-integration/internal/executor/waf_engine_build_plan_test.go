@@ -7,7 +7,7 @@ import (
 )
 
 func TestWAFNativeBuildPlanIsPinnedNonPrivilegedAndSeparated(t *testing.T) {
-	for _, version := range []string{"1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
+	for _, version := range []string{"1.18.0", "1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
 		plan, err := wafNativeBuildPlan("/var/cache/panel-build/waf-0123/work", "/opt/panel/app-modules/nginx-waf/engines/0123", "/var/cache/panel-build/waf-0123/assets", version)
 		if err != nil || len(plan) != 8 {
 			t.Fatal("incomplete native build plan", err)
@@ -22,8 +22,8 @@ func TestWAFNativeBuildPlanIsPinnedNonPrivilegedAndSeparated(t *testing.T) {
 				}
 			}
 		}
-		if !reflect.DeepEqual(plan[4].Arguments, []string{"-j2"}) || !reflect.DeepEqual(plan[7].Arguments, []string{"-j2", "modules"}) {
-			t.Fatal("CPU cap or no-Nginx-install boundary lost")
+		if !reflect.DeepEqual(plan[4].Arguments, []string{"-j1"}) || !reflect.DeepEqual(plan[5].Arguments, []string{"-j1", "install"}) || !reflect.DeepEqual(plan[7].Arguments, []string{"-j1", "modules"}) {
+			t.Fatal("single-compiler memory budget or no-Nginx-install boundary lost")
 		}
 		if !strings.Contains(plan[6].Directory, "nginx-"+version) || len(plan[6].Environment) != 2 {
 			t.Fatal("module source/version/library binding lost")

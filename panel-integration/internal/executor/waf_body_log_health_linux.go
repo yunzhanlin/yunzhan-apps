@@ -56,6 +56,13 @@ func (s *Service) wafBodyLogHealthLocked(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	rotation, _, rotationErr := s.readWAFBodyRotationRecord()
+	if rotationErr != nil && !errors.Is(rotationErr, os.ErrNotExist) {
+		return rotationErr
+	}
+	if rotationErr == nil && (rotation.State == "rotating" || rotation.State == "unknown") {
+		return errors.New("自动轮转结果仍未知，请按摘要核对；不伪造日志维护成功")
+	}
 	log, err := s.readWAFBodyEventsLocked()
 	if err != nil {
 		return err

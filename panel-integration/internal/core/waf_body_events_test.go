@@ -65,6 +65,7 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 	removeBody := `{"sha256":"` + strings.Repeat("a", 64) + `","acknowledge_bounded_export_and_permanent_removal":true}`
 	retainBody := `{"index_sha256":"` + strings.Repeat("a", 64) + `","snapshot_sha256":"` + strings.Repeat("b", 64) + `","snapshot_missing":false,"acknowledge_unknown_rotation_and_incomplete_snapshot":true}`
 	indexBody := `{"sha256":"` + strings.Repeat("c", 64) + `","acknowledge_uncommitted_index_not_applied":true}`
+	rotationBody := `{"sha256":"` + strings.Repeat("d", 64) + `","acknowledge_unknown_rotation_not_repeated":true}`
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
 		if !strings.HasPrefix(r.URL.Path, "/v1/software/nginx-waf/body-log/") || r.URL.RawQuery != "" {
@@ -79,7 +80,9 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 					t.Fatal("arbitrary removal target", r.URL.Path)
 				}
 			}
-			if strings.Contains(r.URL.Path, "/index-stages/") {
+			if r.URL.Path == "/v1/software/nginx-waf/body-log/rotation/retain" {
+				expected = rotationBody
+			} else if strings.Contains(r.URL.Path, "/index-stages/") {
 				expected = indexBody
 				if r.URL.Path != "/v1/software/nginx-waf/body-log/index-stages/"+archiveID+"/retain" {
 					t.Fatal("arbitrary index-stage target", r.URL.Path)
@@ -109,6 +112,15 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 		return w
 	}
 	base := "/api/software/nginx-waf/body-log/"
+	for _, method := range []string{"GET", "POST"} {
+		path, body := "rotation", ""
+		if method == "POST" {
+			path, body = "rotation/retain", rotationBody
+		}
+		if w := request(method, base+path, body, "", nil); w.Code != 401 {
+			t.Fatal("anonymous automatic rotation governance", method, w.Code)
+		}
+	}
 	if w := request("POST", base+"rotate", "{}", "", nil); w.Code != 401 {
 		t.Fatal("anonymous rotation", w.Code)
 	}
@@ -130,6 +142,9 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 		json.Unmarshal(login.Body.Bytes(), &auth)
 		cookie := login.Result().Cookies()[0]
 		before := calls
+		if w := request("POST", base+"rotation/retain", rotationBody, "", cookie); w.Code != 403 || calls != before {
+			t.Fatal("automatic rotation CSRF", name, w.Code)
+		}
 		if w := request("POST", base+"rotate", "{}", "", cookie); w.Code != 403 {
 			t.Fatal("rotation CSRF", name, w.Code)
 		}
@@ -143,7 +158,7 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 			t.Fatal("index recovery CSRF bypass", w.Code)
 		}
 		if name != "admin" {
-			for _, path := range []string{"archives", "archives/" + ID()} {
+			for _, path := range []string{"archives", "archives/" + ID(), "rotation"} {
 				if w := request("GET", base+path, "", auth.CSRF, cookie); w.Code != 403 {
 					t.Fatal("unauthorized metadata backup", name, w.Code)
 				}
@@ -160,7 +175,24 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 			if w := request("POST", base+"index-stages/"+archiveID+"/retain", indexBody, auth.CSRF, cookie); w.Code != 403 || calls != before {
 				t.Fatal("unauthorized index recovery", w.Code)
 			}
+			if w := request("POST", base+"rotation/retain", rotationBody, auth.CSRF, cookie); w.Code != 403 || calls != before {
+				t.Fatal("unauthorized automatic rotation retention", name, w.Code)
+			}
 			continue
+		}
+		for _, body := range []string{`{}`, `null`, strings.Replace(rotationBody, "true", "false", 1), strings.Replace(rotationBody, strings.Repeat("d", 64), strings.Repeat("D", 64), 1), strings.Replace(rotationBody, "true", "null", 1), strings.TrimSuffix(rotationBody, "}") + `,"path":"/etc/shadow"}`, rotationBody + ` {}`, strings.TrimSuffix(rotationBody, "}") + `,"acknowledge_unknown_rotation_not_repeated":null}`, strings.TrimSuffix(rotationBody, "}") + `,"sha256":"` + strings.Repeat("d", 64) + `"}`} {
+			if w := request("POST", base+"rotation/retain", body, auth.CSRF, cookie); w.Code != 400 || calls != before {
+				t.Fatal("unclosed automatic rotation retention", body, w.Code)
+			}
+		}
+		for _, method := range []string{"GET", "POST"} {
+			path, body := "rotation?force=true", ""
+			if method == "POST" {
+				path, body = "rotation/retain?path=/private", rotationBody
+			}
+			if w := request(method, base+path, body, auth.CSRF, cookie); w.Code != 400 || calls != before {
+				t.Fatal("automatic rotation query injection", w.Code)
+			}
 		}
 		for _, body := range []string{`{"path":"/var/log/nginx/access.log"}`, `{"truncate":true}`, `{"signal":"KILL"}`, `{} {}`} {
 			if w := request("POST", base+"rotate", body, auth.CSRF, cookie); w.Code != 400 || calls != before {
@@ -226,6 +258,12 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 		if w := request("POST", base+"index-stages/"+archiveID+"/retain", indexBody, auth.CSRF, cookie); w.Code != 200 || calls != before+6 {
 			t.Fatal("closed index recovery", w.Code, w.Body.String())
 		}
+		if w := request("GET", base+"rotation", "", auth.CSRF, cookie); w.Code != 200 || calls != before+7 {
+			t.Fatal("authorized automatic rotation status", w.Code)
+		}
+		if w := request("POST", base+"rotation/retain", rotationBody, auth.CSRF, cookie); w.Code != 200 || calls != before+8 {
+			t.Fatal("authorized automatic rotation retention", w.Code, w.Body.String())
+		}
 	}
 	var audits int
 	if err := s.DB.QueryRow("SELECT count(*) FROM audit_logs WHERE action='waf.body-log.rotate'").Scan(&audits); err != nil || audits != 1 {
@@ -239,5 +277,8 @@ func TestWAFBodyLogGovernanceAdministratorMenuCSRFClosedInputs(t *testing.T) {
 	}
 	if err := s.DB.QueryRow("SELECT count(*) FROM audit_logs WHERE action='waf.body-log.index-retain'").Scan(&audits); err != nil || audits != 1 {
 		t.Fatal("missing index recovery audit", audits, err)
+	}
+	if err := s.DB.QueryRow("SELECT count(*) FROM audit_logs WHERE action='waf.body-log.rotation-retain'").Scan(&audits); err != nil || audits != 1 {
+		t.Fatal("missing automatic rotation audit", audits, err)
 	}
 }

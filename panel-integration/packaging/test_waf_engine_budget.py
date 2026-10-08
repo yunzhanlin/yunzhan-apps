@@ -9,8 +9,9 @@ class WAFBuildSupervisor(unittest.TestCase):
         settings = dict(line.split('=', 1) for line in unit.splitlines() if '=' in line)
         self.assertEqual(settings['TimeoutStartSec'], '300min')
         self.assertEqual(settings['KillMode'], 'control-group')
-        self.assertEqual(settings['CPUQuota'], '200%')
-        self.assertEqual(settings['MemoryMax'], '1G')
+        self.assertEqual(settings['CPUQuota'], '100%')
+        self.assertEqual(settings['MemoryHigh'], '576M')
+        self.assertEqual(settings['MemoryMax'], '640M')
         self.assertEqual(settings['TasksMax'], '256')
         self.assertEqual(settings['UMask'], '0077')
         self.assertEqual(settings['ProtectSystem'], 'strict')
@@ -23,6 +24,16 @@ class WAFBuildSupervisor(unittest.TestCase):
         self.assertIn('/etc/nginx', settings['ReadOnlyPaths'].split())
         self.assertNotIn('CAP_SYS_ADMIN', settings['CapabilityBoundingSet'])
         self.assertEqual(settings['ExecStart'], '/opt/panel/bin/panel-executor --build-waf-engine %i')
+
+    def test_all_make_phases_are_single_job_and_environment_is_not_inherited(self):
+        root = pathlib.Path(__file__).resolve().parents[1]
+        plan = (root / 'internal/executor/waf_engine_build_plan.go').read_text()
+        self.assertNotIn('"-j2"', plan)
+        for args in ('[]string{"-j1"}', '[]string{"-j1", "install"}', '[]string{"-j1", "modules"}'):
+            self.assertIn(args, plan)
+        runner = (root / 'internal/executor/waf_engine_build_command_linux.go').read_text()
+        self.assertIn('"MAKEFLAGS="', runner)
+        self.assertNotIn('os.Environ()', runner)
 
 if __name__ == '__main__':
     unittest.main()

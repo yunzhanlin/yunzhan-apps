@@ -474,6 +474,33 @@ func (s *Service) rotateWAFBodyLog(ctx context.Context) (wafBodyLogArchive, erro
 		return out, err
 	}
 	defer lock.Close()
+	return s.rotateWAFBodyLogUnderLock(ctx, lock)
+}
+
+// The scheduler and manual operation share the exact engine/config/source
+// gates and snapshot primitive. Reusing an actual exclusive lock is required.
+func (s *Service) rotateWAFBodyLogUnderLock(ctx context.Context, lock *os.File) (wafBodyLogArchive, error) {
+	return s.rotateWAFBodyLogWithIntent(ctx, lock, "")
+}
+
+// Only the automatic coordinator can supply its own durable intent identity.
+// A manual HTTP call must never bypass an unknown automatic truncate result.
+func (s *Service) rotateWAFBodyLogWithIntent(ctx context.Context, lock *os.File, intent string) (wafBodyLogArchive, error) {
+	var out wafBodyLogArchive
+	if err := s.verifyWAFHealthLock(lock); err != nil {
+		return out, err
+	}
+	rotation, _, rotationErr := s.readWAFBodyRotationRecord()
+	if rotationErr != nil && !errors.Is(rotationErr, os.ErrNotExist) {
+		return out, rotationErr
+	}
+	if intent != "" {
+		if rotationErr != nil || rotation.State != "rotating" || rotation.ID != intent {
+			return out, errors.New("自动轮转持久意图身份不符，未截断日志")
+		}
+	} else if rotationErr == nil && (rotation.State == "rotating" || rotation.State == "unknown") {
+		return out, errors.New("自动轮转结果未知，手动操作也不会重复截断；请先按摘要核对保留")
+	}
 	if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
 		return out, errors.New("存在未完成防火墙配置事务，未轮转")
 	}

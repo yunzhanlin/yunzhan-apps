@@ -121,6 +121,63 @@ func readWAFBodyEventsFile(f *os.File, legacy bool) (core.WAFBodyEventsPage, err
 }
 
 func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
+	m.HandleFunc("GET /v1/software/nginx-waf/body-log/rotation", func(w http.ResponseWriter, r *http.Request) {
+		if len(r.URL.Query()) != 0 {
+			respond(w, 400, map[string]string{"error": "自动轮转状态不接受自定义路径或参数"})
+			return
+		}
+		lock, err := s.lockWAFObservation()
+		if err != nil {
+			respond(w, 503, map[string]string{"error": err.Error()})
+			return
+		}
+		defer lock.Close()
+		record, sha, err := s.readWAFBodyRotationRecord()
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			respond(w, 503, map[string]string{"error": err.Error()})
+			return
+		}
+		enabled := false
+		revision := int64(-1)
+		if manifest, e := s.readSoftwareManifest("nginx-waf"); e == nil {
+			cfg, e := core.DecodeWAFConfig(manifest.Settings)
+			if e != nil || core.ValidateWAFBodyLogRotationSource(cfg) != nil {
+				respond(w, 503, map[string]string{"error": "实际轮转策略不可核验，不当成未启用或成功"})
+				return
+			}
+			if manifest.Version == "2.4.0" {
+				enabled = cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled
+				revision = cfg.Policy.Revision
+			}
+		} else if !errors.Is(e, os.ErrNotExist) {
+			respond(w, 503, map[string]string{"error": "实际应用清单不可读取，自动轮转状态未核验"})
+			return
+		}
+		if errors.Is(err, os.ErrNotExist) {
+			respond(w, 200, map[string]any{"available": false, "enabled": enabled, "stale": enabled, "history_limit": wafBodyRotationHistoryLimit, "automatic_archive_deletion": false})
+			return
+		}
+		checked, _ := time.Parse(time.RFC3339, record.CheckedAt)
+		respond(w, 200, map[string]any{"available": true, "enabled": enabled, "record": record, "sha256": sha, "stale": enabled && (time.Since(checked) > 140*time.Second || checked.After(time.Now().Add(time.Minute)) || record.Revision != revision), "message": wafBodyRotationStatusMessage(record.ErrorCode), "history_limit": wafBodyRotationHistoryLimit, "automatic_archive_deletion": false})
+	})
+	m.HandleFunc("POST /v1/software/nginx-waf/body-log/rotation/retain", func(w http.ResponseWriter, r *http.Request) {
+		var in core.WAFBodyLogRotationRetainRequest
+		if !readJSON(w, r, &in) {
+			return
+		}
+		if !in.Valid() || len(r.URL.Query()) != 0 {
+			respond(w, 400, map[string]string{"error": "自动轮转结果的摘要或未知确认无效"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		out, err := s.retainWAFBodyRotationOutcome(ctx, in.SHA256, time.Now().UTC())
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		respond(w, 200, map[string]any{"record": out, "rotation_outcome": "unknown_retained_not_marked_successful", "current_log_untouched": true, "archives_not_deleted": true})
+	})
 	m.HandleFunc("POST /v1/software/nginx-waf/body-log/index-stages/{id}/retain", func(w http.ResponseWriter, r *http.Request) {
 		var in core.WAFBodyLogIndexRetainRequest
 		if !readJSON(w, r, &in) {

@@ -18,7 +18,7 @@ test('published manifest OS values are permitted by the schema',async()=>{
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
- assert.equal(waf.version,'2.3.0');assert.equal(analytics.version,'2.2.0');
+ assert.equal(waf.version,'2.4.0');assert.equal(analytics.version,'2.2.0');
  assert.match(waf.summary,/显式构建与启用/);assert(!waf.summary.includes('不含完整请求体检测'));
  assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
  const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
@@ -38,7 +38,15 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.gaps.some(s=>s.includes('请求体引擎同时启用')));
  assert(w.boundaries.some(s=>s.includes('不自动导入 CDN')));
  assert(w.boundaries.some(s=>s.includes('不是 HTTP 请求数')));
- assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('调度')));
+ assert(waf.capabilities.some(s=>s.includes('自动轮转')));
+ assert(w.scenarios.some(s=>s.includes('独立新 PID')));
+ assert(w.scenarios.some(s=>s.includes('同长度快照篡改')));
+ assert(w.scenarios.some(s=>s.includes('专用固定依赖进程')));
+ assert(w.scenarios.some(s=>s.includes('三个阶段均单路')&&s.includes('1 GiB')));
+ assert(w.boundaries.some(s=>s.includes('640 MiB')&&s.includes('不是连续峰值')));
+ assert(w.boundaries.some(s=>s.includes('不自动增大内存上限')));
+ assert(w.boundaries.some(s=>s.includes('32 MiB'))&&w.gaps.some(s=>s.includes('普通访问/错误日志')));
+ assert(w.gaps.some(s=>s.includes('签名实装 API')));
  assert(a.boundaries.some(s=>s.includes('20000'))&&a.gaps.some(s=>s.includes('SPA 独立路由性能')));
  assert(!a.gaps.some(s=>s.includes('INP')));
  assert.equal(contracts.commercial_feature_parity_complete,false);

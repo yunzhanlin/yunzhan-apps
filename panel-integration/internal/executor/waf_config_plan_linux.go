@@ -41,6 +41,11 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 	if err != nil {
 		return nil, err
 	}
+	if !uninstall {
+		if err := core.ValidateWAFBodyLogRotationSource(cfg); err != nil {
+			return nil, err
+		}
+	}
 	var previous core.WAFConfig
 	previousVersion := ""
 	if manifest, err := s.readSoftwareManifest("nginx-waf"); err == nil {

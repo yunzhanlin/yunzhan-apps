@@ -151,6 +151,9 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 		return err
 	}
 	record.NginxVersion, record.NginxBinary, record.NginxSHA = match[1], nginx, nginxSHA
+	if !s.wafBuildPackagesReady(wafBuildDependenciesForNginx(match[1])) {
+		return errors.New("实际 Nginx 所需的固定依赖未就绪；请核对专用固定依赖服务，未开始编译或启用")
+	}
 	if err := step("等待全局源码构建锁（最多 30 分钟），不并行抢占其他运行时构建"); err != nil {
 		return err
 	}
@@ -292,7 +295,7 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 	if err := os.Mkdir(resources, 0700); err != nil {
 		return err
 	}
-	for _, source := range wafEngineSources() {
+	for _, source := range sources {
 		if source.Name == "modsecurity-nginx" {
 			continue
 		}
@@ -324,6 +327,12 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 		if err := atomicWrite(filepath.Join(prefix, "licenses-and-changes", name), data, 0644); err != nil {
 			return err
 		}
+	}
+	// Preserve the exact matching-version copyright and full license, not
+	// only a license from another Nginx release. Read the root-owned,
+	// re-extracted pinned archive, never the compiler-writable workspace.
+	if err := copyWAFNativeFile(ctx, filepath.Join(resources, "nginx-build", "nginx-"+record.NginxVersion, "LICENSE"), filepath.Join(prefix, "licenses-and-changes/nginx-matching-source-LICENSE"), 32<<10, os.Geteuid()); err != nil {
+		return err
 	}
 	if err := step("使用同一实际 Nginx 程序进行独立模块 ABI 和完整 CRS 语法校验；不重载线上服务"); err != nil {
 		return err

@@ -1453,6 +1453,7 @@ func (s *Service) StartAppModuleWorker() {
 	s.mu.Unlock()
 	go s.runIntegrityWatcher(context.Background())
 	go s.runLoadBalanceHealthWorker(context.Background())
+	go s.runWAFBodyLogRotationWorker(context.Background())
 	go func() {
 		s.mu.Lock()
 		s.recoverSyncPlans()

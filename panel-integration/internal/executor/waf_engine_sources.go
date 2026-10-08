@@ -31,6 +31,9 @@ func wafEngineSources() []wafEngineSource {
 // Its ABI must still be proven by the selected binary's isolated nginx -t;
 // version equality alone cannot authorize a module or a global reload.
 func wafNginxBuildSource(version string) (wafEngineSource, bool) {
+	if version == "1.18.0" {
+		return wafEngineSource{"nginx-build", "1.18.0", "https://nginx.org/download/nginx-1.18.0.tar.gz", "4c373e7ab5bf91d34a4f11a0c9496561061ba5eee6020db272a17a7228d35f99", "official detached PGP signature verified with historical fingerprint B0F4253373F8F6F510D42178520A9993A1C052F8; key from nginx/nginx.org commit c151d13f2d9747a80be1524ac3648b50ee036754 text/keys/mdounin.key; distribution binary ABI still requires isolated nginx -t; no upstream security-support claim"}, true
+	}
 	if version == "1.24.0" {
 		return wafEngineSource{"nginx-build", "1.24.0", "https://nginx.org/download/nginx-1.24.0.tar.gz", "77a2541637b92a621e3ee76776c8b7b40cf6d707e69ba53a940283e30ff2f55d", "official detached PGP signature; signer 13C82A63B603576156E30A4EA0EA981B66B0D967 from nginx.org/keys/thresh.key"}, true
 	}

@@ -19,13 +19,17 @@ func (s *Service) verifyWAFBodyEngine(cfg core.WAFConfig) error {
 	if cfg.Body == nil {
 		return nil
 	}
+	required := cfg.BodyLogRotation != nil && cfg.BodyLogRotation.Enabled
 	for _, site := range cfg.Body.Sites {
 		if _, on := core.WAFEffectiveBodyPolicy(cfg, site.SiteID); on {
-			if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
-				return errors.New("请求体引擎仅可在真实受管环境启用，不能把模拟命令当成原生验收")
-			}
-			return VerifyWAFEngineBuild(cfg.Body.EngineJobID)
+			required = true
 		}
+	}
+	if required {
+		if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
+			return errors.New("请求体引擎及自动日志轮转仅可在真实受管环境启用，不能把模拟命令当成原生验收")
+		}
+		return VerifyWAFEngineBuild(cfg.Body.EngineJobID)
 	}
 	return nil
 }
