@@ -73,6 +73,19 @@ func (s *Service) wafOwnedDirectory(path string, create bool) error {
 }
 
 func (s *Service) lockWAFConfiguration() (*os.File, error) {
+	return s.lockWAFFile(syscall.LOCK_EX)
+}
+
+// Metadata observations are mutually compatible, but remain excluded from
+// rotation, policy changes, recovery and deletion across executor processes.
+func (s *Service) lockWAFObservation() (*os.File, error) {
+	return s.lockWAFFile(syscall.LOCK_SH)
+}
+
+func (s *Service) lockWAFFile(operation int) (*os.File, error) {
+	if operation != syscall.LOCK_EX && operation != syscall.LOCK_SH {
+		return nil, errors.New("WAF 锁操作无效")
+	}
 	if err := s.wafOwnedDirectory(s.Config.SecurityDir, true); err != nil {
 		return nil, err
 	}
@@ -91,7 +104,7 @@ func (s *Service) lockWAFConfiguration() (*os.File, error) {
 		f.Close()
 		return nil, errors.New("WAF 配置锁所有者或链接数异常")
 	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	if err := syscall.Flock(int(f.Fd()), operation|syscall.LOCK_NB); err != nil {
 		f.Close()
 		return nil, errors.New("WAF 正在变更或恢复，请稍后重试")
 	}

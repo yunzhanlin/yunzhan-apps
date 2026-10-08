@@ -140,6 +140,48 @@ func (s *Service) openWAFBodyLog(writable, legacy bool) (*os.File, error) {
 	return f, nil
 }
 
+// This is an absence check, never an authorization to read a legacy file.
+// Ubuntu's root-owned /var/log may be group-writable by syslog. Missing legacy
+// metadata there must not break a panel that never enabled the body engine.
+// Existing files still pass the original strict open/owner/permission checks;
+// links, foreign ancestors and world-writable paths never look like absence.
+func (s *Service) wafLegacyBodyLogMissing() (bool, error) {
+	anchor := s.Config.SystemRoot
+	if !filepath.IsAbs(anchor) || filepath.Clean(anchor) != anchor {
+		return false, errors.New("日志观察根路径无效")
+	}
+	if err := ownedRuntimePath(anchor, true); err != nil {
+		return false, err
+	}
+	parts := []string{"var", "log", "nginx", "panel-waf-body-events.log"}
+	path := anchor
+	for i, part := range parts {
+		path = filepath.Join(path, part)
+		info, err := os.Lstat(path)
+		if errors.Is(err, os.ErrNotExist) {
+			return true, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return false, errors.New("历史日志观察路径为链接，未当成缺失日志")
+		}
+		if i == len(parts)-1 {
+			return false, nil // Existing data must pass openWAFBodyLog unchanged.
+		}
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		writable := info.Mode().Perm()&0022 != 0
+		if i == 1 { // Only the fixed /var/log absence lookup allows group write.
+			writable = info.Mode().Perm()&0002 != 0
+		}
+		if !info.IsDir() || !ok || stat.Uid != uint32(os.Geteuid()) || writable {
+			return false, errors.New("历史日志观察祖先归属或权限异常，未当成缺失日志")
+		}
+	}
+	return false, nil
+}
+
 type wafBodyLogArchive struct {
 	ID         string `json:"id"`
 	CapturedAt string `json:"captured_at"`

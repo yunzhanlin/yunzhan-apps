@@ -14,7 +14,7 @@ import (
 // healthy. Serialize this bounded observation with rotation, recovery and
 // deletion; a pending first index must not look like an empty healthy archive.
 func (s *Service) wafBodyLogHealth(ctx context.Context) error {
-	lock, err := s.lockWAFConfiguration()
+	lock, err := s.lockWAFObservation()
 	if err != nil {
 		return err
 	}

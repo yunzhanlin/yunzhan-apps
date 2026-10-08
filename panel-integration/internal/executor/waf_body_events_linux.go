@@ -41,7 +41,7 @@ func parseWAFBodyEvent(line []byte) (core.WAFBodyEvent, bool) {
 }
 
 func (s *Service) readWAFBodyEvents() (core.WAFBodyEventsPage, error) {
-	lock, err := s.lockWAFConfiguration()
+	lock, err := s.lockWAFObservation()
 	if err != nil {
 		return core.WAFBodyEventsPage{}, err
 	}
@@ -55,6 +55,13 @@ func (s *Service) readWAFBodyEventsLocked() (core.WAFBodyEventsPage, error) {
 	legacy := false
 	f, err := s.openWAFBodyLog(false, false)
 	if errors.Is(err, os.ErrNotExist) {
+		missing, lookupErr := s.wafLegacyBodyLogMissing()
+		if lookupErr != nil {
+			return core.WAFBodyEventsPage{}, lookupErr
+		}
+		if missing {
+			return core.WAFBodyEventsPage{Events: []core.WAFBodyEvent{}, BestEffort: true}, nil
+		}
 		legacy = true
 		f, err = s.openWAFBodyLog(false, true)
 	}
@@ -181,7 +188,7 @@ func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "备份列表不接受自定义路径或参数"})
 			return
 		}
-		lock, lockErr := s.lockWAFConfiguration()
+		lock, lockErr := s.lockWAFObservation()
 		if lockErr != nil {
 			respond(w, 503, map[string]string{"error": lockErr.Error()})
 			return
@@ -216,7 +223,7 @@ func (s *Service) wafBodyReportRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "备份标识或参数无效"})
 			return
 		}
-		lock, lockErr := s.lockWAFConfiguration()
+		lock, lockErr := s.lockWAFObservation()
 		if lockErr != nil {
 			respond(w, 503, map[string]string{"error": lockErr.Error()})
 			return

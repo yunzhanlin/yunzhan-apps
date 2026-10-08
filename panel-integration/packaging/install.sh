@@ -49,15 +49,40 @@ if ((NO_SERVICES==0))&&((FRESH))&&[[ "$TARGET_ROOT" == / ]];then
     ss -H -ltn "sport = :$port" | grep -q . && { echo "port $port is already occupied" >&2;exit 1; } || true
   done
 fi
-if ((PREFLIGHT_ONLY));then echo "panel $PANEL_VERSION preflight passed without changes";exit 0;fi
+# Updating the panel is not authorization to upgrade host libraries. In
+# particular, needrestart may restart live PHP workers after an APT library
+# update. Check the existing dependency set before any upgrade-side writes,
+# including preflight-only runs; missing packages require deliberate host prep.
+check_upgrade_dependencies(){
+  local package
+  local missing=()
+  for package in "$@"; do
+    [[ "$(dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null)" == installed ]] || missing+=("$package")
+  done
+  if ((${#missing[@]})); then
+    printf '%s\n' "panel upgrade requires installed dependencies: ${missing[*]}; no APT or service changes made; prepare the host separately" >&2
+    return 1
+  fi
+}
 if ((NO_SERVICES==0)); then
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update
   AIO_PACKAGE=libaio1t64
   JPEG_PACKAGE=libjpeg62-turbo-dev
-  [[ "$PANEL_PLATFORM" == debian-12 || "$PANEL_PLATFORM" == ubuntu-22.04 ]] && AIO_PACKAGE=libaio1
+  FREETYPE_PACKAGE=libfreetype-dev
+  if [[ "$PANEL_PLATFORM" == debian-12 || "$PANEL_PLATFORM" == ubuntu-22.04 ]]; then
+    AIO_PACKAGE=libaio1
+    FREETYPE_PACKAGE=libfreetype6-dev
+  fi
   [[ "$ID" == ubuntu ]] && JPEG_PACKAGE=libjpeg-turbo8-dev
-  apt-get install -y --no-install-recommends ca-certificates curl nginx sqlite3 nftables openssh-server fail2ban python3-systemd acl unzip xz-utils build-essential autoconf pkg-config libxml2-dev libsqlite3-dev libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev zlib1g-dev libpng-dev "$JPEG_PACKAGE" libfreetype6-dev libicu-dev libpcre2-dev libapr1-dev libaprutil1-dev libnghttp2-dev bison flex re2c gpg gpg-agent "$AIO_PACKAGE" libnuma1 libncurses6 libtinfo6
+  REQUIRED_PACKAGES=(ca-certificates curl nginx sqlite3 nftables openssh-server fail2ban python3-systemd acl unzip xz-utils build-essential autoconf pkg-config libxml2-dev libsqlite3-dev libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev zlib1g-dev libpng-dev "$JPEG_PACKAGE" "$FREETYPE_PACKAGE" libicu-dev libpcre2-dev libapr1-dev libaprutil1-dev libnghttp2-dev bison flex re2c gpg gpg-agent "$AIO_PACKAGE" libnuma1 libncurses6 libtinfo6)
+  if ((FRESH==0)); then check_upgrade_dependencies "${REQUIRED_PACKAGES[@]}"; fi
+fi
+if ((PREFLIGHT_ONLY));then echo "panel $PANEL_VERSION preflight passed without changes";exit 0;fi
+if ((NO_SERVICES==0)); then
+  if ((FRESH)); then
+    export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
+    apt-get update
+    apt-get install -y --no-upgrade --no-install-recommends "${REQUIRED_PACKAGES[@]}"
+  fi
   getent group panel >/dev/null || groupadd --system panel
   id panel >/dev/null 2>&1 || useradd --system --gid panel --home-dir /var/lib/panel --shell /usr/sbin/nologin panel
   id panel-build >/dev/null 2>&1 || useradd --system --home-dir /var/cache/panel-build --shell /usr/sbin/nologin panel-build
