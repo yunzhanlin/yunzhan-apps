@@ -86,7 +86,12 @@ func wafTestNginxFixture(t *testing.T, cfg core.WAFConfig) wafNativeFixture {
 	}
 	for i, host := range []string{"a.localhost", "b.localhost"} {
 		id := strings.Repeat(string(rune('a'+i)), 32)
-		servers += fmt.Sprintf("server { listen 127.0.0.1:%d; server_name %s; set $panel_waf_site %s; %s %s root %s; location / { try_files $uri /index.html; } location = /__panel_health_%s { return 200 healthy; } }\n", port, host, id, s, identityHeaders, wafQuote(pub), id)
+		site := fmt.Sprintf("# managed by panel; site=%s\nserver {\n  set $panel_waf_site %s;\n  include /etc/panel/waf/server.d/*.conf;\n listen 127.0.0.1:%d; server_name %s; %s root %s; location / { try_files $uri /index.html; } location = /__panel_health_%s { return 200 healthy; } }\n", id, id, port, host, identityHeaders, wafQuote(pub), id)
+		site, e = renderWAFCCSite(site, id, wafEffectiveMetadataMode(cfg, id), true)
+		if e != nil {
+			t.Fatal(e)
+		}
+		servers += strings.Replace(site, "  include /etc/panel/waf/server.d/*.conf;\n", s, 1)
 	}
 	// No managed WAF include: a opted-out site cannot inherit this app's
 	// server-scoped trust just because it shares the same listener/process.

@@ -199,8 +199,14 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 	wafMap(&http, blockReason, "pw_has_block", "1", []wafMapEntry{{"", "0"}})
 	wafMap(&http, "$pw_mode:$pw_health:$pw_has_block", "pw_block", "0", []wafMapEntry{{"block:0:1", "1"}})
 	wafMap(&http, "$pw_block:$pw_visible_reason", "pw_method_block", "0", []wafMapEntry{{"1:method", "1"}})
-	wafMap(&http, "$pw_visible_reason:$limit_req_status", "pw_event", "1", []wafMapEntry{{"~^:(?!REJECTED$)", "0"}})
-	wafMap(&http, "$limit_req_status", "pw_log_reason", "$pw_visible_reason", []wafMapEntry{{"REJECTED", wafQuote("cc")}})
+	eventPattern := "~^:(?!REJECTED$)"
+	rateReasons := []wafMapEntry{{"REJECTED", wafQuote("cc")}}
+	if wafCCObservationVersion(version) {
+		eventPattern = "~^:(?!(?:REJECTED|REJECTED_DRY_RUN|DELAYED_DRY_RUN)$)"
+		rateReasons = append(rateReasons, wafMapEntry{"REJECTED_DRY_RUN", wafQuote("cc")}, wafMapEntry{"DELAYED_DRY_RUN", wafQuote("cc")})
+	}
+	wafMap(&http, "$pw_visible_reason:$limit_req_status", "pw_event", "1", []wafMapEntry{{eventPattern, "0"}})
+	wafMap(&http, "$limit_req_status", "pw_log_reason", "$pw_visible_reason", rateReasons)
 	wafMap(&http, "$pw_block:$limit_req_status", "pw_log_action", wafQuote("observe"), []wafMapEntry{{"~^1:", wafQuote("block")}, {"~:REJECTED$", wafQuote("block")}})
 	// Legacy event fields stay readable, but no queries, cookies, user agents,
 	// bodies or credentials are written to the security log.
@@ -217,6 +223,9 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 		rows := []wafMapEntry{}
 		if ccOn[scope] {
 			rows = append(rows, wafMapEntry{scope + ":block:0", wafQuote("$panel_waf_site:$binary_remote_addr")})
+			if wafCCObservationVersion(version) {
+				rows = append(rows, wafMapEntry{scope + ":observe:0", wafQuote("$panel_waf_site:$binary_remote_addr")})
+			}
 		}
 		key := "pw_cc_key_" + scope
 		wafMap(&http, "$pw_scope:$pw_mode:$pw_exempt", key, wafQuote(""), rows)
@@ -229,6 +238,9 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 		}
 		name := "pw_urlcc_" + strconv.Itoa(i)
 		pattern := "^block:0:1:"
+		if wafCCObservationVersion(version) {
+			pattern = "^(?:block|observe):0:1:"
+		}
 		if r.SiteID == "" {
 			pattern += "[^:]+:"
 		} else {

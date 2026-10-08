@@ -207,6 +207,12 @@ func (s *Service) siteSettingsRoutes(m *http.ServeMux) {
 		}
 		if site.Status == "stopped" || strings.Contains(string(previous), "; disabled") {
 			content = fmt.Sprintf("# managed by panel; site=%s; disabled\n", site.ID)
+		} else {
+			content, e = s.preserveWAFBodySiteConfig(content, site.ID)
+			if e != nil {
+				respond(w, 409, map[string]string{"error": e.Error()})
+				return
+			}
 		}
 		oldPHP, newPHP, e := s.phpSettingsPreview(site)
 		if e != nil {

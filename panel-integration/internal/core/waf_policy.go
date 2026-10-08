@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const WAFVersion = "2.2.0"
+const WAFVersion = "2.3.0"
 
 var WAFGroupNames = []string{"method", "sql", "xss", "command", "traversal", "scanner", "cookie"}
 

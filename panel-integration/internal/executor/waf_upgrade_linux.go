@@ -20,11 +20,11 @@ import (
 // All other references must still resolve to a regular managed site config.
 // Normal policy edits continue to use the stricter prepareWAFSettings path.
 func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
-	return version == core.WAFVersion || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
+	return version == core.WAFVersion || version == "2.2.0" || cfg.TrustedProxy == nil && (version == "2.0.1" && cfg.Body == nil || version == "2.1.0" || version == "2.1.1")
 }
 
 func wafLegacyVersion(version string) bool {
-	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1"
+	return version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0"
 }
 
 func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
@@ -112,9 +112,10 @@ func (s *Service) upgradeWAFLegacy(ctx context.Context, add func(string)) error 
 
 // Bind every old byte in the final transaction to the independently verified
 // old render, not merely to whatever happened to be on disk at plan time.
-// Only the two metadata includes and their manifest may change in this
-// migration. A concurrent external edit is rejected before creating backups
-// or replacing any active file.
+// Metadata includes, manifest and exact server-scoped CC mode blocks may
+// change. The latter never rewrite document roots, PHP, TLS or body policies.
+// A concurrent external edit is rejected before creating backups or replacing
+// any active file.
 func (s *Service) verifyWAFLegacyUpgradePlan(manifest softwareManifest, cfg core.WAFConfig, changes []wafConfigChange) error {
 	old, err := core.DecodeWAFConfig(manifest.Settings)
 	if err != nil || !wafLegacyVersion(manifest.Version) || !wafHistoricalVersionValid(manifest.Version, old) || cfg.Policy.Revision != old.Policy.Revision+1 {
@@ -138,12 +139,28 @@ func (s *Service) verifyWAFLegacyUpgradePlan(manifest softwareManifest, cfg core
 	}
 	data = append(data, '\n')
 	files := map[string][]byte{h: []byte(http), v: []byte(server), s.softwareManifestPath("nginx-waf"): data}
-	if len(changes) != len(files) {
+	if len(changes) < len(files) {
 		return errors.New("WAF 版本迁移出现额外配置变化，未开始修改")
 	}
 	seen := map[string]bool{}
 	for _, change := range changes {
 		want, ok := files[change.Path]
+		if !ok && wafCCObservationVersion(core.WAFVersion) && filepath.Dir(change.Path) == s.Config.ConfDir {
+			if seen[change.Path] {
+				return errors.New("WAF 历史迁移出现重复网站路径")
+			}
+			id := strings.TrimSuffix(filepath.Base(change.Path), ".conf")
+			base := string(change.OldData)
+			if !core.ValidID(id) || filepath.Base(change.Path) != id+".conf" || !strings.HasPrefix(base, "# managed by panel; site="+id) || strings.Contains(base, wafCCSiteBegin) || strings.Contains(base, wafCCSiteEnd) || !change.OldExists || !change.NextExists || change.OldMode != change.NextMode {
+				return errors.New("WAF 历史迁移包含非受管或已修改的 CC 网站配置")
+			}
+			next, err := renderWAFCCSite(base, id, wafEffectiveMetadataMode(old, id), true)
+			if err != nil || next == base || !bytes.Equal(change.NextData, []byte(next)) {
+				return errors.New("WAF 历史迁移包含 CC 模式之外的网站变化")
+			}
+			seen[change.Path] = true
+			continue
+		}
 		mode := os.FileMode(0640)
 		if change.Path == s.softwareManifestPath("nginx-waf") {
 			mode = 0600

@@ -18,13 +18,15 @@ test('published manifest OS values are permitted by the schema',async()=>{
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
- assert.equal(waf.version,'2.2.0');assert.equal(analytics.version,'2.2.0');
+ assert.equal(waf.version,'2.3.0');assert.equal(analytics.version,'2.2.0');
  assert.match(waf.summary,/显式构建与启用/);assert(!waf.summary.includes('不含完整请求体检测'));
  assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
  const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
  assert(w.scenarios.some(s=>s.includes('SIGKILL')));
  assert(waf.capabilities.some(s=>s.includes('旧工作进程')));
  assert(waf.capabilities.some(s=>s.includes('可信代理 CIDR')));
+ assert(waf.capabilities.some(s=>s.includes('CC 观察计数')));
+ assert(waf.capabilities.some(s=>s.includes('拒绝接管外部限速')));
  assert(w.scenarios.some(s=>s.includes('未可信对端')));
  assert(w.scenarios.some(s=>s.includes('96 个单次 GET')));
  assert(w.scenarios.some(s=>s.includes('不运行 APT')));

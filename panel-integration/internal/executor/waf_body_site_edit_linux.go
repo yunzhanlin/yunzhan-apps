@@ -72,11 +72,27 @@ func (s *Service) preserveWAFBodySiteConfig(content, id string) (string, error) 
 	// Explicit website opt-out pauses body inspection as well as metadata
 	// rules. Keep its saved policy/rule file for a later deliberate re-enable.
 	if strings.Contains(strings.SplitN(content, "\n", 2)[0], "panel-waf-disabled") {
-		return renderWAFBodySite(content, id, false)
+		content, err = renderWAFBodySite(content, id, false)
+		if err == nil && wafCCObservationVersion(manifest.Version) {
+			content, err = renderWAFCCSite(content, id, "off", false)
+		}
+		return content, err
 	}
 	cfg, err := core.DecodeWAFConfig(manifest.Settings)
 	if err != nil {
 		return "", err
+	}
+	if wafCCObservationVersion(manifest.Version) {
+		mode := wafEffectiveMetadataMode(cfg, id)
+		content, err = renderWAFCCSite(content, id, mode, true)
+		if err != nil {
+			return "", err
+		}
+		if mode == "observe" {
+			if err := s.verifyWAFCCObservationIncludes(); err != nil {
+				return "", err
+			}
+		}
 	}
 	if _, on := core.WAFEffectiveBodyPolicy(cfg, id); !on {
 		return content, nil

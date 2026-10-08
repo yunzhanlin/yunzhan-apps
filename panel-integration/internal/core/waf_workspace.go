@@ -33,7 +33,7 @@ type WAFReport struct {
 }
 
 func WAFEventReason(e WAFEvent) string {
-	if e.Rate == "REJECTED" {
+	if e.Rate == "REJECTED" || e.Rate == "REJECTED_DRY_RUN" || e.Rate == "DELAYED_DRY_RUN" {
 		return "cc"
 	}
 	if e.Reason != "" {
@@ -134,6 +134,9 @@ func BuildWAFReport(snapshot WAFEventsPage, q url.Values, now time.Time) (WAFRep
 		event.Reason = WAFEventReason(event)
 		if event.Action == "" {
 			event.Action = "block"
+			if event.Rate == "REJECTED_DRY_RUN" || event.Rate == "DELAYED_DRY_RUN" {
+				event.Action = "observe"
+			}
 		}
 		if rule := query.Get("rule"); rule != "" && event.Reason != rule {
 			continue

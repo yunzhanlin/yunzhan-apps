@@ -42,7 +42,9 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 		return nil, err
 	}
 	var previous core.WAFConfig
+	previousVersion := ""
 	if manifest, err := s.readSoftwareManifest("nginx-waf"); err == nil {
+		previousVersion = manifest.Version
 		previous, err = core.DecodeWAFConfig(manifest.Settings)
 		if err != nil {
 			return nil, err
@@ -133,6 +135,12 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 			continue
 		}
 		_, bodyOn := active[id]
+		if wafCCObservationVersion(previousVersion) && strings.Contains(string(b.data), wafCCSiteBegin) {
+			expected := wafCCSiteBegin + wafCCSiteLines(wafEffectiveMetadataMode(previous, id)) + wafCCSiteEnd
+			if strings.Count(string(b.data), expected) != strings.Count(string(b.data), "server {\n") {
+				return nil, errors.New("网站 CC 模式与已保存策略不符，未开始覆盖")
+			}
+		}
 		content, err := renderWAFBodySite(string(b.data), id, false)
 		if err != nil {
 			return nil, err
@@ -158,6 +166,17 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 			content, err = renderWAFBodySite(content, id, true)
 			if err != nil {
 				return nil, err
+			}
+		}
+		if wafCCObservationVersion(version) {
+			content, err = renderWAFCCSite(content, id, wafEffectiveMetadataMode(cfg, id), !uninstall)
+			if err != nil {
+				return nil, err
+			}
+			if !uninstall && wafEffectiveMetadataMode(cfg, id) == "observe" && strings.Contains(content, wafCCSiteBegin) {
+				if err := s.verifyWAFCCObservationIncludes(); err != nil {
+					return nil, err
+				}
 			}
 		}
 		if err := put(b, []byte(content), true, b.mode); err != nil {

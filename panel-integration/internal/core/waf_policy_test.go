@@ -64,3 +64,19 @@ func TestWAFReportFiltersLegacyAndPagination(t *testing.T) {
 		}
 	}
 }
+
+func TestWAFReportCCDryRunNeverCountsAsBlocked(t *testing.T) {
+	now := time.Date(2026, 10, 8, 12, 0, 0, 0, time.UTC)
+	events := []WAFEvent{}
+	for _, status := range []string{"REJECTED_DRY_RUN", "DELAYED_DRY_RUN", "REJECTED"} {
+		events = append(events, WAFEvent{Time: now.Add(-time.Minute).Format(time.RFC3339), Site: "a.test", IP: "192.0.2.1", Rate: status})
+	}
+	out, err := BuildWAFReport(WAFEventsPage{Events: events}, url.Values{"rule": {"cc"}}, now)
+	if err != nil || out.Total != 3 || out.Blocked != 1 || out.Observed != 2 {
+		t.Fatal("dry-run report fabricated blocking", out, err)
+	}
+	observed, err := BuildWAFReport(WAFEventsPage{Events: events}, url.Values{"rule": {"cc"}, "action": {"observe"}}, now)
+	if err != nil || observed.Total != 2 || observed.Blocked != 0 {
+		t.Fatal("CC observation filtering", observed, err)
+	}
+}
