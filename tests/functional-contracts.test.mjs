@@ -30,6 +30,10 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.scenarios.some(s=>s.includes('未可信对端')));
  assert(w.scenarios.some(s=>s.includes('96 个单次 GET')));
  assert(w.scenarios.some(s=>s.includes('不运行 APT')));
+ assert(w.scenarios.some(s=>s.includes('128 次真实业务请求')));
+ assert(w.scenarios.some(s=>s.includes('14 条 200 模拟拒绝')));
+ assert(w.scenarios.some(s=>s.includes('58 个受管网站')));
+ assert(!w.gaps.some(s=>s.includes('观察模式不执行')));
  assert(!w.gaps.some(s=>s.includes('可信反代来源的签名实装')));
  assert(w.gaps.some(s=>s.includes('请求体引擎同时启用')));
  assert(w.boundaries.some(s=>s.includes('不自动导入 CDN')));
