@@ -102,7 +102,7 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 	adminCookie, adminToken := login(master.Username)
 	for _, name := range []string{viewer.Username, operator.Username} {
 		cookie, token := login(name)
-		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs"} {
+		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs", "remote-archive", "archive-remote-job"} {
 			before := calls
 			w := request("/api/app-modules/files-sync/"+action, "{}", token, a.Config.Origin, cookie)
 			if w.Code != 403 || calls != before {

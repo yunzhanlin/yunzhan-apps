@@ -127,6 +127,8 @@ func AppModules() []AppModuleDefinition {
 		case "files-sync":
 			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-targets", "save-remote", "probe-remote", "remote-preview", "queue-remote", "remote-jobs", "remote-job", "cancel-remote", "recover-remote")
+			definitions[i].Actions = append(definitions[i].Actions, "remote-archive", "archive-remote-job")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"expected_sha", "所选远端任务完整记录摘要（自动填写）", "identity"}, AppModuleField{"confirm", "归档精确确认：ARCHIVE REMOTE 任务标识", "text"}, AppModuleField{"limit", "远端归档每页条数（最多 32）", "number"}, AppModuleField{"offset", "远端归档分页起点（最多 2048）", "number"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"remote_target_id", "远端连接标识（小写字母数字或短横线）", "text"}, AppModuleField{"remote_target", "固定 IP、端口、用户名、主机公钥和远端路径", "remote-sync"}, AppModuleField{"password", "SFTP 密码（与私钥二选一，仅写入）", "password"}, AppModuleField{"remote_private_key", "SFTP 私钥（无口令，仅写入）", "secret-text"}, AppModuleField{"remote_request_id", "远端任务标识（提交自动生成，重试保留）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"resource_id", "同步计划标识（小写字母数字）", "text"}, AppModuleField{"interval", "同步补查间隔（秒，60–86400）", "number"}, AppModuleField{"realtime", "启用 Linux 实时增量同步", "boolean"}, AppModuleField{"enabled", "启用同步计划", "boolean"}, AppModuleField{"expected_revision", "计划配置版本（选中计划自动填写）", "identity"})
 		case "network-threat-detection":
@@ -308,7 +310,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 			if d.ID == "files-sync" {
-				version = "1.5.2"
+				version = "1.6.0"
 			}
 		case "daily-report":
 			version = "1.4.0"

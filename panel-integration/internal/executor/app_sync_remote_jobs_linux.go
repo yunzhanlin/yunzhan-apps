@@ -21,6 +21,8 @@ import (
 )
 
 type remoteSyncJob struct {
+	Archived   bool     `json:"-"`
+	RecordSHA  string   `json:"-"`
 	ID         string   `json:"remote_request_id"`
 	TargetID   string   `json:"remote_target_id"`
 	SiteID     string   `json:"site_id"`
@@ -111,11 +113,34 @@ func (s *Service) readRemoteJob(id string) (remoteSyncJob, error) {
 	if !core.ValidID(id) {
 		return j, errors.New("远端任务标识无效")
 	}
-	if e := remoteRead(s.remoteJobPath(id), &j); e != nil {
+	present, e := s.remoteArchiveDirectoryPresent()
+	if e != nil {
+		return j, e
+	}
+	archiveExists := false
+	if present {
+		_, e = os.Lstat(s.remoteArchivePath(id))
+		archiveExists = e == nil
+		if e != nil && !errors.Is(e, os.ErrNotExist) {
+			return j, e
+		}
+	}
+	jobPath := s.remoteJobPath(id)
+	if archiveExists {
+		if _, e = os.Lstat(jobPath); e == nil || !errors.Is(e, os.ErrNotExist) {
+			return j, errors.New("任务身份在活动与归档命名空间重复或不可验证，未重新提交")
+		}
+		jobPath = s.remoteArchivePath(id)
+	}
+	if e := remoteRead(jobPath, &j); e != nil {
 		return j, e
 	}
 	if j.ID != id {
 		return j, errors.New("远端任务文件身份改变")
+	}
+	j.Archived = archiveExists
+	if archiveExists && !remoteArchivableJob(j) {
+		return j, errors.New("归档记录不是可验证终态，未重新提交")
 	}
 	return j, validateRemoteJob(j)
 }
@@ -268,6 +293,9 @@ func (s *Service) queueRemoteSync(c remoteSyncConfig, in core.AppModuleInput) (a
 	if e = moduleWrite(s.remoteJobPath(j.ID), j); e != nil {
 		return nil, e
 	}
+	if j, e = s.readRemoteJob(j.ID); e != nil {
+		return nil, e
+	}
 	return map[string]any{"job": remotePublicJob(j, true), "queued": true, "scope": remoteSyncScope}, nil
 }
 func (s *Service) remoteJobReport(in core.AppModuleInput) (any, error) {
@@ -300,7 +328,7 @@ func remotePublicJob(j remoteSyncJob, details bool) map[string]any {
 	if details {
 		paths = boundedModulePaths(j.Conflicts)
 	}
-	return map[string]any{"remote_request_id": j.ID, "remote_target_id": j.TargetID, "site_id": j.SiteID, "revision": j.Revision, "state": j.State, "created_at": j.CreatedAt, "started_at": j.StartedAt, "finished_at": j.FinishedAt, "copied_count": j.Copied, "skipped_count": j.Skipped, "conflicts_count": len(j.Conflicts), "conflicts": paths, "report_limited": len(paths) < len(j.Conflicts), "error": j.Error}
+	return map[string]any{"remote_request_id": j.ID, "remote_target_id": j.TargetID, "site_id": j.SiteID, "revision": j.Revision, "state": j.State, "created_at": j.CreatedAt, "started_at": j.StartedAt, "finished_at": j.FinishedAt, "copied_count": j.Copied, "skipped_count": j.Skipped, "conflicts_count": len(j.Conflicts), "conflicts": paths, "report_limited": len(paths) < len(j.Conflicts), "error": j.Error, "job_archived": j.Archived, "job_sha256": remoteJobSHA(j)}
 }
 func (s *Service) remoteCancelPath(id string) string {
 	return filepath.Join(s.remoteSyncDir(), "cancellations", id+".json")
@@ -321,6 +349,9 @@ func (s *Service) cancelRemoteSync(in core.AppModuleInput) (any, error) {
 		j.Error = "任务在执行前被取消，未传输文件"
 		j.FinishedAt = core.Now()
 		if e = moduleWrite(s.remoteJobPath(j.ID), j); e != nil {
+			return nil, e
+		}
+		if j, e = s.readRemoteJob(j.ID); e != nil {
 			return nil, e
 		}
 	}
@@ -807,7 +838,10 @@ func (s *Service) recoverRemoteSync(ctx context.Context, cfg remoteSyncConfig) (
 	if e = moduleWrite(s.remoteJobPath(j.ID), j); e != nil {
 		return nil, e
 	}
-	return map[string]any{"job": j, "recovered": true, "outcome": outcome, "scope": "保留原文件、暂存与任务证据；不自动重试剩余同步"}, nil
+	if j, e = s.readRemoteJob(j.ID); e != nil {
+		return nil, e
+	}
+	return map[string]any{"job": remotePublicJob(j, true), "recovered": true, "outcome": outcome, "scope": "保留原文件、暂存与任务证据；不自动重试剩余同步"}, nil
 }
 
 func (s *Service) runRemoteSyncWorker(ctx context.Context) {

@@ -28,3 +28,9 @@ test('preview labels do not claim writes; new-task preparation clears the previo
  assert.match(source,/\{\{ reportLabel\(key\) \}\}/);
  const manager=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');assert.match(manager,/remote_request_id="";report\.value=undefined;activeTab\.value="remote-transfer"/);
 });
+test('archive uses server-provided full-record digest and clears stale confirmation on selection',()=>{
+ const source=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
+ assert.match(source,/expected_sha:row\.job_sha256\|\|"",confirm:""/);
+ assert.match(source,/"archive-remote-job": "按摘要归档所选终态任务（保留证据）"/);
+ const report=readFileSync(new URL('../web/src/AppModuleReport.vue',import.meta.url),'utf8');assert.match(report,/job_archived: "任务已归档"/);
+});

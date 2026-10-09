@@ -170,6 +170,8 @@ const labels: Record<string, string> = {
   "queue-remote": "提交远端后台任务",
   "remote-jobs": "刷新持久任务列表",
   "remote-job": "读取所选任务进度",
+  "remote-archive": "读取已归档任务",
+  "archive-remote-job": "按摘要归档所选终态任务（保留证据）",
   "cancel-remote": "请求停止后续文件交接",
   "recover-remote": "核对并恢复中断交接",
   save: "保存入口",
@@ -318,7 +320,7 @@ function selected(row: Record<string, any>) {
       Object.assign(form.value,{remote_target_id:row.remote_target_id,remote_target:{...row.remote_target},enabled:row.enabled,expected_revision:row.revision});
       selectedPlanID.value=row.remote_target_id;activeTab.value="remote-target";
     } else if(validRemoteJob(row)) {
-      Object.assign(form.value,{remote_request_id:row.remote_request_id,remote_target_id:row.remote_target_id,site_id:row.site_id});
+      Object.assign(form.value,{remote_request_id:row.remote_request_id,remote_target_id:row.remote_target_id,site_id:row.site_id,expected_sha:row.job_sha256||"",confirm:""});
       activeTab.value="remote-jobs";
     }
     ElMessage.info("已选中远端记录；修改或新任务请先核对连接修订号与实际进度");return;
@@ -472,7 +474,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       selectedPlanID.value = "";
       form.value.expected_revision = 0;
     }
-    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-targets", "remote-preview", "probe-remote"].includes(action))
+    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
       if (["password", "secret-json", "secret-text"].includes(f.kind)) form.value[f.key] = "";

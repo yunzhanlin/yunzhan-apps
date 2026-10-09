@@ -242,6 +242,10 @@ const names: Record<string, string> = {
   remote_jobs: "远端持久任务",
   remote_target_id: "远端连接标识",
   remote_request_id: "远端任务标识",
+  job_archived: "任务已归档",
+  job_sha256: "完整任务记录摘要",
+  archive_bytes: "私有归档占用",
+  remote_files_changed: "改变远端文件",
   remote_target: "连接与目录策略",
   root: "远端目标目录",
   backup_root: "公开目录之外的私有备份",
@@ -431,7 +435,7 @@ function rows(values: any[]): Record<string, any>[] {
 }
 function columns(values: any[]) {
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
-  if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","site_id","state","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
     return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))

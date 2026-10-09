@@ -30,7 +30,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；最多 128 个持久任务、512 份远端事务及 256 MiB 备份，不自动删除证据。当前仅手动排队，未提供远端实时或定时计划。"
+const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；128 个活动任务，可按完整记录摘要归档终态任务到本机私有目录，最多 2048 份或 16 MiB；归档不释放原任务身份，不重新执行。远端最多 512 份事务及 256 MiB 备份，不自动删除证据。当前仅手动排队，未提供远端实时或定时计划。"
 
 type remoteSyncConfig struct {
 	ID       string                `json:"id"`
@@ -139,7 +139,13 @@ func remoteRead(p string, out any) error {
 	if len(b) > 4<<20 {
 		return errors.New("远端同步私有记录超过 4 MiB")
 	}
-	return json.Unmarshal(b, out)
+	if e = json.Unmarshal(b, out); e != nil {
+		return e
+	}
+	if job, ok := out.(*remoteSyncJob); ok {
+		job.RecordSHA = core.Hash(string(b))
+	}
+	return nil
 }
 func (s *Service) remoteKey() ([]byte, error) {
 	dir := s.remoteSyncDir()
@@ -490,6 +496,12 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 	}
 	if action == "cancel-remote" {
 		return s.cancelRemoteSync(in)
+	}
+	if action == "remote-archive" {
+		return s.remoteArchiveReport(in)
+	}
+	if action == "archive-remote-job" {
+		return s.archiveRemoteJob(in)
 	}
 	if action == "remote-jobs" || action == "remote-job" {
 		return s.remoteJobReport(in)

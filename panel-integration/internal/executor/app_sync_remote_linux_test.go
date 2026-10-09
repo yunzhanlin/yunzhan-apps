@@ -570,6 +570,15 @@ func TestRemoteSyncRecoveryRollbackAndCommit(t *testing.T) {
 	if e != nil || out.(map[string]any)["outcome"] != "rolled-back" || remoteFixtureRead(t, filepath.Join(f.root, "copy.txt")) != "old" {
 		t.Fatal("rollback", e, out)
 	}
+	public, ok := out.(map[string]any)["job"].(map[string]any)
+	if !ok || !coreSHA.MatchString(fmt.Sprint(public["job_sha256"])) || public["conflicts_count"] == nil {
+		t.Fatal("recovery did not return current bounded public record", out)
+	}
+	for _, key := range []string{"excludes", "spec_sha256", "cipher"} {
+		if _, exists := public[key]; exists {
+			t.Fatal("recovery leaked private policy", key)
+		}
+	}
 	if remoteFixtureRead(t, staged) != "new" || remoteFixtureRead(t, previous) != "old" {
 		t.Fatal("recovery erased evidence")
 	}
