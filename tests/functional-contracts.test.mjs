@@ -136,6 +136,9 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(a.gaps.some(s=>s.includes('完整五种系统')&&s.includes('窄视口')));
  assert(a.boundaries.some(s=>s.includes('1.18')&&s.includes('不自动替换')));
  assert(a.boundaries.some(s=>s.includes('交互页截图')&&s.includes('不冒充')));
+ assert(a.scenarios.some(s=>s.includes('19100 实际签名目录')&&s.includes('更新标记清除')));
+ assert(a.scenarios.some(s=>s.includes('1315 份配置身份')&&s.includes('统计事件')));
+ assert(a.boundaries.some(s=>s.includes('purpose')&&s.includes('不重复提交')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
 test('load balancing publishes bounded HTTP observations and recovery without claiming L4 or active traffic mutation',async()=>{
