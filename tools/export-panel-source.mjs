@@ -32,6 +32,8 @@ entries.push('scripts/test-app-ftp-boot.py');
 entries.push('scripts/test-app-php-quarantine.py');
 entries.push('scripts/test-store-search.mjs');
 entries.push('scripts/test-analytics-business-live.py');
+entries.push('scripts/test-analytics-html-filter.mjs');
+entries.push('scripts/test-analytics-html-state.mjs');
 entries.push('scripts/test-waf-rotation-refresh.mjs');
 entries.push('scripts/test-waf-body-inventory.mjs');
 async function copy(relative){

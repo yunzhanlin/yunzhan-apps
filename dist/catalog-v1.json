@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-08T19:48:00Z",
+  "generated_at": "2026-10-09T00:57:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1092,20 +1092,20 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.2.0",
-      "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；启停自动配置网站同源代理并校验回滚，HTML 标签仍需模板接入；需支持 2.2 的面板",
+      "version": "2.3.0",
+      "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；可选固定来源、实际 Nginx ABI 核验的 HTML 自动接入引擎，显式构建加载后逐站启用，默认关闭；保留模板和 CSP，启停配置失败回滚；需支持 2.3 的面板",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "website-analytics",
       "manage_route": "app-modules",
       "capabilities": [
-        "浏览器 JS 采集",
-        "启停自动配置同源代理",
-        "PV 与浏览器 UV",
-        "会话与访问旅程",
-        "入口和离开页面",
-        "页面与来源分布",
+        "浏览器 JS 采集、PV 与浏览器 UV",
+        "可选有界 HTML 自动接入，默认关闭",
+        "固定源码构建与实际 Nginx ABI 核验",
+        "实际工作进程确认后逐站启用同源代理",
+        "保留模板及 CSP，不适用响应原样通过",
+        "会话与访问旅程、入口/离开和页面来源分布",
         "点击坐标热图",
         "页面性能 p75 与官方标准 INP",
         "SPA 路由页面访问",
@@ -1113,8 +1113,8 @@
         "保留期和容量上限",
         "站点隔离与报告导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.2.0/manifest.json",
-      "sha256": "31a2c21ea430ce7aa6cfc4f3bbcb867ef3be0ab2e35d18bd1b6523cfec1c7b8a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-analytics/2.3.0/manifest.json",
+      "sha256": "4953ee9526b5e5b189f59eed5731d2ca40f3b76c715319e215b0f3fe3a9f1ec8"
     },
     {
       "id": "website-statistics-v2",

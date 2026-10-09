@@ -29,6 +29,7 @@ prefix(){ printf '%s%s' "${TARGET_ROOT%/}" "$1"; }
 if ((NO_SERVICES==0)); then
   command -v python3 >/dev/null || { echo 'python3 is required for read-only install preflight; no host changes made' >&2; exit 1; }
   python3 "$HERE/waf-state-directory.py" check --root "$TARGET_ROOT"
+  python3 "$HERE/native-build-directories.py" check --root "$TARGET_ROOT"
 fi
 RELEASE_DIR="$(prefix "/opt/panel/releases/$PANEL_VERSION")"
 CURRENT="$(prefix /opt/panel/current)"
@@ -97,6 +98,7 @@ install -d -m 0750 "$(prefix /etc/panel/security-apps)" "$(prefix /etc/panel/waf
 command -v flock >/dev/null || { echo 'flock is required for release updates' >&2; exit 1; }
 if ((NO_SERVICES==0)); then
   python3 "$HERE/waf-state-directory.py" create --root "$TARGET_ROOT"
+  python3 "$HERE/native-build-directories.py" create --root "$TARGET_ROOT"
 fi
 exec 9>"$(prefix /opt/panel/releases/.release.lock)"
 flock -x 9
@@ -134,7 +136,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done

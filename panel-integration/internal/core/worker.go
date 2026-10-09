@@ -242,6 +242,10 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 }
 
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+	if j.Kind == "analytics_html_build" {
+		runAnalyticsHTMLJob(ctx, s, e, j)
+		return
+	}
 	if j.Kind == "waf_engine_build" {
 		runWAFEngineJob(ctx, s, e, j)
 		return

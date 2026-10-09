@@ -453,6 +453,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
+	s.analyticsHTMLRoutes(m)
 	s.appDependencyRoutes(m)
 	s.apacheWAFWorkspaceRoutes(m)
 	s.moduleAlertRoutes(m)

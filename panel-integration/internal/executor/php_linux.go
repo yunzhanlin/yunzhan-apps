@@ -260,7 +260,7 @@ func phpConfig(site core.Site, dir string) string {
 		return "  location ~* \\.(php|phtml|phar)(/|$) { return 404; }\n"
 	}
 	socket := poolSocket(site)
-	return thinkPHPCompatibilityLocation(site, socket) + fmt.Sprintf("  location ~ \\.php$ {\n    try_files $uri =404;\n    fastcgi_hide_header X-Panel-Config;\n    include /etc/nginx/fastcgi_params;\n    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n    fastcgi_pass unix:%s;\n  }\n  location ~* \\.(php|phtml|phar)(/|$) { return 404; }\n", socket)
+	return thinkPHPCompatibilityLocation(site, socket) + fmt.Sprintf("  location ~ \\.php$ {\n%s    try_files $uri =404;\n    fastcgi_hide_header X-Panel-Config;\n    include /etc/nginx/fastcgi_params;\n    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;\n    fastcgi_pass unix:%s;\n  }\n  location ~* \\.(php|phtml|phar)(/|$) { return 404; }\n", siteAnalyticsHTMLFilters(site), socket)
 }
 func phpVersion(id string) string { r, _ := runtimecatalog.Find(id); return r.Version }
 

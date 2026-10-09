@@ -33,16 +33,16 @@ func TestAppModuleDefinitions(t *testing.T) {
 }
 func TestAnalyticsGuidanceMatchesImplementedBoundaries(t *testing.T) {
 	guide := ModuleGuidance("website-analytics")
-	if !strings.Contains(guide.Description, "INP") || !strings.Contains(guide.Description, "转化漏斗") {
+	if !strings.Contains(guide.Description, "INP") || !strings.Contains(guide.Description, "转化漏斗") || !strings.Contains(guide.Description, "HTML 自动接入") {
 		t.Fatal("implemented analytics capabilities missing from guidance")
 	}
 	limits := strings.Join(guide.Limitations, " ")
-	for _, boundary := range []string{"会话录像", "地理数据库", "SPA 路由性能", "20000", "8 MiB", "业务审计"} {
+	for _, boundary := range []string{"会话录像", "地理数据库", "SPA 路由性能", "20000", "8 MiB", "业务审计", "默认关闭", "不会开启任意网站", "未压缩", "UTF-8", "CSP", "原样通过", "ABI", "不改网站模板"} {
 		if !strings.Contains(limits, boundary) {
 			t.Fatal("missing truthful analytics boundary", boundary)
 		}
 	}
-	if strings.Contains(limits, "INP 或完整转化漏斗") {
+	if strings.Contains(limits, "INP 或完整转化漏斗") || strings.Contains(limits, "不会自动改写 HTML") {
 		t.Fatal("stale guidance denies implemented features")
 	}
 }

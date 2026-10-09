@@ -131,6 +131,26 @@ func (s *Service) apacheWAFReplay(raw map[string]any) bool {
 	return err == nil && string(actual) == rules
 }
 
+// Identical persisted bytes do not prove that the live daemon has loaded them.
+// A lost-ack retry may only succeed after the same read-only integrity check as
+// a healthy application. Never reload or repair files to make a replay succeed.
+func (s *Service) confirmApacheWAFReplay(ctx context.Context, raw map[string]any) (bool, error) {
+	if !s.apacheWAFReplay(raw) {
+		return false, nil
+	}
+	var current struct {
+		Version  string         `json:"version"`
+		Settings map[string]any `json:"settings"`
+	}
+	if err := moduleRead(filepath.Join(s.moduleDir("apache-waf"), "installed.json"), &current); err != nil {
+		return true, fmt.Errorf("Apache WAF 重放无法核实安装记录: %w", err)
+	}
+	if err := s.verifyApacheWAFHealth(ctx, current.Version, current.Settings); err != nil {
+		return true, fmt.Errorf("Apache WAF 重放未确认实际防护，未重新写入或重载: %w", err)
+	}
+	return true, nil
+}
+
 func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, install, upgrading bool, add func(string)) error {
 	txs := s.apacheWAFTransactionService()
 	lock, err := txs.lockWAFConfiguration()
@@ -141,8 +161,11 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 	if err = txs.recoverApacheWAFBeforeMutation(ctx); err != nil {
 		return err
 	}
-	if s.apacheWAFReplay(raw) {
-		add("Apache WAF 配置和修订号已提交，核对文件后确认幂等重放")
+	if replay, err := s.confirmApacheWAFReplay(ctx, raw); replay || err != nil {
+		if err != nil {
+			return err
+		}
+		add("Apache WAF 配置和修订号已提交，全部受管站点挂载、规则及实际加载指纹核对后确认幂等重放")
 		return nil
 	}
 	cfg, err := s.apacheWAFSettingsForApply(raw, install, upgrading)

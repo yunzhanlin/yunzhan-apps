@@ -17,7 +17,10 @@ func (s *Service) lockWAFSiteMutation() (func(), error) {
 	_, manifestErr := os.Lstat(s.softwareManifestPath("nginx-waf"))
 	_, lbPendingErr := os.Lstat(s.loadBalancePendingPath())
 	_, lbManifestErr := os.Lstat(filepath.Join(s.moduleDir("load-balance"), "installed.json"))
-	if errors.Is(pendingErr, os.ErrNotExist) && errors.Is(manifestErr, os.ErrNotExist) && errors.Is(lbPendingErr, os.ErrNotExist) && errors.Is(lbManifestErr, os.ErrNotExist) {
+	html := s.analyticsHTMLTransactionService()
+	_, htmlPendingErr := os.Lstat(html.wafPendingPath())
+	_, htmlActiveErr := os.Lstat(s.systemPath("/etc/panel/analytics-html/active.json"))
+	if errors.Is(pendingErr, os.ErrNotExist) && errors.Is(manifestErr, os.ErrNotExist) && errors.Is(lbPendingErr, os.ErrNotExist) && errors.Is(lbManifestErr, os.ErrNotExist) && errors.Is(htmlPendingErr, os.ErrNotExist) && errors.Is(htmlActiveErr, os.ErrNotExist) {
 		return func() {}, nil
 	}
 	lock, err := s.lockWAFConfiguration()
@@ -31,6 +34,10 @@ func (s *Service) lockWAFSiteMutation() (func(), error) {
 	if _, err := os.Lstat(s.loadBalancePendingPath()); !errors.Is(err, os.ErrNotExist) {
 		lock.Close()
 		return nil, errors.New("负载均衡存在未完成恢复事务，请先安全恢复，再修改网站")
+	}
+	if _, err := os.Lstat(html.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+		lock.Close()
+		return nil, errors.New("HTML 引擎存在未完成恢复事务，请先安全恢复，再修改网站")
 	}
 	return func() { _ = lock.Close() }, nil
 }

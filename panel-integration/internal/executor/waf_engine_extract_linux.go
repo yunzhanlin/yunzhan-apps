@@ -62,6 +62,13 @@ func extractWAFEngineSource(ctx context.Context, source wafEngineSource, archive
 // os.Root additionally confines descriptor-relative operations on Linux.
 // Failed trees remain private evidence and are not silently deleted/reused.
 func extractPinnedWAFSource(ctx context.Context, archive, destination, prefix, want string) error {
+	return extractPinnedSourceArchive(ctx, archive, destination, prefix, want, "")
+}
+
+// Only a fixed, SHA-verified Git source archive may opt into its exact commit
+// comment. Existing WAF extraction remains strict; path/link/size/global
+// overrides, duplicate metadata and metadata after an ordinary entry fail.
+func extractPinnedSourceArchive(ctx context.Context, archive, destination, prefix, want, gitCommit string) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -88,7 +95,7 @@ func extractPinnedWAFSource(ctx context.Context, archive, destination, prefix, w
 	if n, err := io.Copy(sum, io.LimitReader(&contextReader{ctx, f}, wafNativeSourceBytes+1)); err != nil || n > wafNativeSourceBytes || hex.EncodeToString(sum.Sum(nil)) != want {
 		return errors.New("WAF 源码归档固定哈希不匹配，未开始解包")
 	}
-	entries, err := scanWAFSourceArchive(ctx, f, prefix)
+	entries, err := scanPinnedSourceArchive(ctx, f, prefix, gitCommit)
 	if err != nil {
 		return err
 	}
@@ -121,6 +128,7 @@ func extractPinnedWAFSource(ctx context.Context, archive, destination, prefix, w
 	limited := &io.LimitedReader{R: gz, N: 1 << 30}
 	tr := tar.NewReader(limited)
 	i := 0
+	metadataSeen := false
 	for {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -131,6 +139,13 @@ func extractPinnedWAFSource(ctx context.Context, archive, destination, prefix, w
 		}
 		if err != nil {
 			return err
+		}
+		if h.Typeflag == tar.TypeXGlobalHeader {
+			if err := validatePinnedGitMetadata(h, gitCommit, metadataSeen || i != 0); err != nil {
+				return err
+			}
+			metadataSeen = true
+			continue
 		}
 		entry, err := wafSourceEntry(h, prefix)
 		if err != nil || i >= len(entries) || entry != entries[i] {
@@ -171,7 +186,7 @@ func extractPinnedWAFSource(ctx context.Context, archive, destination, prefix, w
 			return err
 		}
 	}
-	if i != len(entries) {
+	if i != len(entries) || (gitCommit != "" && !metadataSeen) {
 		return errors.New("WAF 源码归档在解包期间缩短")
 	}
 	if _, err := io.Copy(io.Discard, limited); err != nil {
@@ -231,6 +246,18 @@ func wafSourceEntry(h *tar.Header, prefix string) (wafArchiveEntry, error) {
 }
 
 func scanWAFSourceArchive(ctx context.Context, f *os.File, prefix string) ([]wafArchiveEntry, error) {
+	return scanPinnedSourceArchive(ctx, f, prefix, "")
+}
+
+func validatePinnedGitMetadata(h *tar.Header, want string, forbiddenPosition bool) error {
+	decoded, err := hex.DecodeString(want)
+	if forbiddenPosition || err != nil || len(decoded) != 20 || want != strings.ToLower(want) || h.Typeflag != tar.TypeXGlobalHeader || h.Name != "pax_global_header" || h.Size != 0 || h.Linkname != "" || len(h.PAXRecords) != 1 || h.PAXRecords["comment"] != want {
+		return errors.New("源码全局元数据不等于固定 Git 提交注释，拒绝路径、链接、大小或其他覆盖")
+	}
+	return nil
+}
+
+func scanPinnedSourceArchive(ctx context.Context, f *os.File, prefix, gitCommit string) ([]wafArchiveEntry, error) {
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return nil, err
 	}
@@ -245,6 +272,7 @@ func scanWAFSourceArchive(ctx context.Context, f *os.File, prefix string) ([]waf
 	entries := []wafArchiveEntry{}
 	objects := map[string]byte{}
 	var total int64
+	metadataSeen := false
 	for {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -255,6 +283,13 @@ func scanWAFSourceArchive(ctx context.Context, f *os.File, prefix string) ([]waf
 		}
 		if err != nil {
 			return nil, err
+		}
+		if h.Typeflag == tar.TypeXGlobalHeader {
+			if err := validatePinnedGitMetadata(h, gitCommit, metadataSeen || len(entries) != 0); err != nil {
+				return nil, err
+			}
+			metadataSeen = true
+			continue
 		}
 		e, err := wafSourceEntry(h, prefix)
 		if err != nil {
@@ -273,7 +308,7 @@ func scanWAFSourceArchive(ctx context.Context, f *os.File, prefix string) ([]waf
 	if _, err := io.Copy(io.Discard, limited); err != nil {
 		return nil, fmt.Errorf("WAF 源码 gzip 完整性校验失败: %w", err)
 	}
-	if limited.N == 0 || len(entries) == 0 {
+	if limited.N == 0 || len(entries) == 0 || (gitCommit != "" && !metadataSeen) {
 		return nil, errors.New("WAF 归档为空或展开数据超过限额")
 	}
 	for _, e := range entries {

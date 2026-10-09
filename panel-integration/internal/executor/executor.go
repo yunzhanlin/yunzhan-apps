@@ -244,6 +244,14 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 	if err := core.ValidateSiteSettings(in.Site.Settings, in.Site.Domain, in.Site.PHPVersionID); err != nil {
 		return result, err
 	}
+	// Preview is not a lasting authorization: re-check immutable program,
+	// actual Nginx and loaded ABI before any site/PHP/config mutation. A
+	// stop operation must remain possible even if the analytics engine broke.
+	if in.Enabled && in.Site.Settings.AnalyticsInjectHTML {
+		if err := s.requireAnalyticsHTMLReady(ctx); err != nil {
+			return result, err
+		}
+	}
 	if err := s.checkPHPWorkerSiteChange(in); err != nil {
 		return result, err
 	}

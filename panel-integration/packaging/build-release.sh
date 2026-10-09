@@ -50,6 +50,8 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-software-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-store-search.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-analytics-tracker.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-analytics-html-filter.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-html-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-menu-permissions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-rotation-refresh.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-body-inventory.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
@@ -66,7 +68,7 @@ done
 cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$STAGE/$NAME/systemd/"
 rm -f "$STAGE/$NAME/systemd/panel-pebble"*
 cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
-cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$STAGE/$NAME/"
+cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$STAGE/$NAME/"
 chmod 0755 "$STAGE/$NAME/install.sh" "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME/prune-releases.sh" "$STAGE/$NAME/bin/"*
 cat > "$STAGE/$NAME/RELEASE" <<EOF
 PANEL_FORMAT=1
@@ -77,7 +79,7 @@ EOF
 (command -v xattr >/dev/null && xattr -cr "$STAGE/$NAME") || true
 (
   cd "$STAGE/$NAME"
-  { find bin web systemd config -type f; printf '%s\n' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py; } | LC_ALL=C sort | xargs shasum -a 256 > SHA256SUMS
+  { find bin web systemd config -type f; printf '%s\n' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py native-build-directories.py; } | LC_ALL=C sort | xargs shasum -a 256 > SHA256SUMS
 )
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"
 COPYFILE_DISABLE=1 tar --no-xattrs -C "$STAGE" -czf "$STAGE/$NAME.tar.gz" "$NAME"

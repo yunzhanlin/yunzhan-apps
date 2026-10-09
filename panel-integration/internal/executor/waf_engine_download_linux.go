@@ -24,7 +24,7 @@ import (
 
 const wafNativeSourceBytes = 32 << 20
 
-var errWAFSourceTransport = errors.New("WAF 官方源码连接中断或暂时不可用")
+var errWAFSourceTransport = errors.New("固定引擎官方源码连接中断或暂时不可用")
 var errWAFSourceRedirect = errors.New("WAF 源码重定向超出官方来源")
 
 func wafSourceRetryable(err error) bool {
@@ -80,6 +80,12 @@ func downloadWAFEngineSourceAttempt(ctx context.Context, source wafEngineSource,
 	if !reviewedWAFEngineSource(source) {
 		return errors.New("WAF 源码未在固定发布清单中审核")
 	}
+	return downloadPinnedNativeSourceAttempt(ctx, source, destination, wafSourceRedirectAllowed)
+}
+
+// Shared transport, not shared source authority: each caller validates its
+// own fixed source allowlist before reaching this bounded TLS/hash pipeline.
+func downloadPinnedNativeSourceAttempt(ctx context.Context, source wafEngineSource, destination string, allowed func(*url.URL, int) bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -94,7 +100,7 @@ func downloadWAFEngineSourceAttempt(ctx context.Context, source wafEngineSource,
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 	client := &http.Client{Timeout: 8 * time.Minute, Transport: transport, CheckRedirect: func(r *http.Request, via []*http.Request) error {
-		if !wafSourceRedirectAllowed(r.URL, len(via)) {
+		if !allowed(r.URL, len(via)) {
 			return errWAFSourceRedirect
 		}
 		return nil
@@ -114,7 +120,7 @@ func downloadWAFEngineSourceAttempt(ctx context.Context, source wafEngineSource,
 			return errors.New("WAF 官方源码 HTTPS 证书校验失败，拒绝重试或跳过校验")
 		}
 		// Do not expose a temporary signed CDN redirect URL in API errors.
-		return fmt.Errorf("%w；未执行或发布源码", errWAFSourceTransport)
+		return pinnedSourceTransportFailure(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
@@ -127,6 +133,41 @@ func downloadWAFEngineSourceAttempt(ctx context.Context, source wafEngineSource,
 		return errors.New("WAF 官方源码包超过 32 MiB")
 	}
 	return streamVerifiedWAFSource(resp.Body, source.SHA256, destination)
+}
+
+// A closed diagnostic vocabulary is useful across all pinned engine builders.
+// Never return raw URL/DNS/proxy errors: they can contain signed CDN tokens,
+// proxy passwords or request URLs. Preserve the retry sentinel, not those data.
+func pinnedSourceTransportFailure(err error) error {
+	kind := "other-transport"
+	var dns *net.DNSError
+	var network net.Error
+	var record tls.RecordHeaderError
+	switch {
+	case errors.Is(err, context.Canceled):
+		return fmt.Errorf("固定源码下载已取消；未执行或发布源码：%w", context.Canceled)
+	case errors.Is(err, context.DeadlineExceeded):
+		return fmt.Errorf("固定源码下载观察超时；未执行或发布源码：%w", context.DeadlineExceeded)
+	case errors.As(err, &dns):
+		kind = "dns-resolution"
+	case errors.As(err, &record):
+		kind = "tls-protocol"
+	case errors.Is(err, syscall.EPERM), errors.Is(err, syscall.EACCES):
+		kind = "permission-denied"
+	case errors.Is(err, syscall.EROFS):
+		kind = "read-only-filesystem"
+	case errors.Is(err, syscall.ENETUNREACH), errors.Is(err, syscall.EHOSTUNREACH):
+		kind = "network-unreachable"
+	case errors.Is(err, syscall.ECONNREFUSED):
+		kind = "connection-refused"
+	case errors.Is(err, syscall.ECONNRESET):
+		kind = "connection-reset"
+	case errors.Is(err, io.EOF), errors.Is(err, io.ErrUnexpectedEOF):
+		kind = "unexpected-eof"
+	case errors.As(err, &network) && network.Timeout():
+		kind = "network-timeout"
+	}
+	return fmt.Errorf("%w；故障类别=%s；未执行或发布源码", errWAFSourceTransport, kind)
 }
 
 // An incomplete/unverified download is retained only as a private .pending

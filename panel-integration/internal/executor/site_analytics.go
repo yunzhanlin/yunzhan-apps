@@ -17,7 +17,7 @@ func siteAnalyticsProxy(site core.Site) string {
 	}
 	return fmt.Sprintf(`  # managed analytics proxy; site=%s
   location ^~ /__yunzhan/analytics/ {
-    if ($uri !~ "^/__yunzhan/analytics/(tracker[.]js|event)$") { return 404; }
+    if ($uri !~ "^/__yunzhan/analytics/(tracker[.]js|auto[.]js|event)$") { return 404; }
     proxy_pass http://%s/collect/analytics/;
     proxy_pass_request_headers off;
     proxy_set_header Host $host;
@@ -35,4 +35,21 @@ func siteAnalyticsProxy(site core.Site) string {
     access_log off;
   }
 `, site.ID, endpoint)
+}
+
+// Explicit opt-in: import only the immutable, signed context-aware program.
+// Body/header handlers must be attached to actual content locations, never
+// the health, collector, denied file or PHP diagnostic locations.
+func siteAnalyticsHTMLInjection(site core.Site) string {
+	if !site.Settings.AnalyticsInjectHTML || site.Settings.AnalyticsEndpoint == "" || !core.ValidID(site.ID) {
+		return ""
+	}
+	return fmt.Sprintf("  # managed analytics HTML injection; site=%s\n  js_engine qjs;\n  js_import analytics_html from %s;\n  set $panel_analytics_site %s;\n", site.ID, analyticsHTMLProgramPath(), site.ID)
+}
+
+func siteAnalyticsHTMLFilters(site core.Site) string {
+	if !site.Settings.AnalyticsInjectHTML || site.Settings.AnalyticsEndpoint == "" || !core.ValidID(site.ID) {
+		return ""
+	}
+	return "    js_header_filter analytics_html.header;\n    js_body_filter analytics_html.body buffer_type=buffer;\n"
 }

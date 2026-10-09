@@ -7,6 +7,7 @@ RELEASE_PATH="${1:?usage: upgrade-running-development.sh VERIFIED_RELEASE_DIRECT
 [[ $(id -u) == 0 ]] || { echo 'run this migration as root' >&2; exit 1; }
 "$RELEASE_PATH/verify-release.sh" "$RELEASE_PATH" >/dev/null
 python3 "$RELEASE_PATH/waf-state-directory.py" check
+python3 "$RELEASE_PATH/native-build-directories.py" check
 source "$RELEASE_PATH/RELEASE"
 [[ $(dpkg --print-architecture) == "$PANEL_ARCH" ]] || { echo 'architecture mismatch' >&2; exit 1; }
 [[ ! -e /etc/panel-release && ! -e /opt/panel/current && ! -L /opt/panel/current ]] || { echo 'use the production installer for this layout' >&2; exit 1; }
@@ -53,6 +54,7 @@ rollback() {
 }
 trap rollback EXIT
 python3 "$RELEASE_PATH/waf-state-directory.py" create
+python3 "$RELEASE_PATH/native-build-directories.py" create
 install -d -m 0755 /opt/panel/php-extensions /etc/panel/mysql /etc/panel/redis /etc/panel/mariadb /etc/panel/node /var/log/apache2 /srv/panel/mysql /srv/panel/redis /srv/panel/mariadb /srv/panel/sftp
 install -d -m 0700 /etc/panel/compose /var/lib/panel-executor/docker-jobs /var/lib/panel-executor/admin-scripts /var/lib/panel-executor/sftp-jobs /var/lib/panel-executor/sftp-users
 install -d -m 0750 /etc/panel/security-apps /etc/panel/waf /etc/panel/waf/http.d /etc/panel/waf/server.d

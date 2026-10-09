@@ -5,6 +5,7 @@ import { formatPanelDateTime } from "./panelTime";
 import { createRotationRefresh } from "./wafRotationRefresh";
 import { bodyInventoryPresentation } from "./wafBodyInventory";
 import WafBodyRetention from "./WafBodyRetention.vue";
+import { randomId } from "./randomId";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
 interface Entry { id: string; value: string; site_id?: string }
 interface Rule { id: string; name: string; site_id?: string; field: string; operator: string; value: string; action: string; enabled: boolean }
@@ -40,7 +41,7 @@ const listKinds = [ { id: "ip_allow", name: "IP 白名单" }, { id: "ip_deny", n
 const fields = [{ id: "uri", name: "请求路径" }, { id: "args", name: "查询参数" }, { id: "user_agent", name: "User-Agent" }, { id: "method", name: "请求方法" }, { id: "cookie", name: "Cookie" }];
 const modeLabel = (mode: string) => ({ block: "阻断", observe: "观察", off: "停用", inherit: "继承全局" }[mode] || mode);
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
-const newID = () => crypto.randomUUID().replaceAll("-", "");
+const newID = () => randomId().replaceAll("-", "");
 const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), sites = ref<Site[]>([]), implementation = ref("");
 const ccObservationSupported = computed(() => !apache && status.value?.installed && ["2.3.0","2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));
 const bodyRotationSupported = computed(() => !apache && status.value?.installed && ["2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));

@@ -52,6 +52,13 @@ func saveAnalyticsConfigTx(tx *sql.Tx, in AnalyticsConfig) (AnalyticsConfig, err
 }
 
 func sameAnalyticsRequest(a, b AnalyticsConfig) bool {
+	if a.AutoInjectHTML != nil {
+		wanted := b.AutoInjectHTML != nil && *b.AutoInjectHTML
+		if *a.AutoInjectHTML != wanted {
+			return false
+		}
+	}
+	a.AutoInjectHTML, b.AutoInjectHTML = nil, nil
 	a.Key = ""
 	b.Key = ""
 	a.ProxyEndpoint = ""
@@ -106,6 +113,10 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		fail(w, 400, "保留天数为 1–90，版本必须有效")
 		return
 	}
+	if in.AutoInjectHTML != nil && *in.AutoInjectHTML && !in.Enabled {
+		fail(w, 400, "先开启浏览器采集，再启用 HTML 自动接入")
+		return
+	}
 	key := r.Header.Get("Idempotency-Key")
 	if key == "" || len(key) > 128 {
 		fail(w, 400, "请提供有效的配置幂等键")
@@ -144,12 +155,27 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	settings := site.Settings
+	if in.AutoInjectHTML != nil {
+		settings.AnalyticsInjectHTML = *in.AutoInjectHTML
+	}
+	if !in.Enabled {
+		settings.AnalyticsInjectHTML = false
+	}
+	if settings.AnalyticsInjectHTML && module.Status.Version != "2.3.0" {
+		fail(w, 409, "请先在应用商店签名升级网站分析到 2.3.0；安装清单不代替新版面板能力")
+		return
+	}
+	requestedInjection := settings.AnalyticsInjectHTML
+	in.AutoInjectHTML = &requestedInjection
 	var baseline struct {
 		Current   string `json:"current"`
 		Candidate string `json:"candidate"`
 		ConfigSHA string `json:"config_sha"`
 	}
-	if err = a.Executor.Call(r.Context(), "POST", "/v1/sites/preview", site, &baseline); err != nil {
+	// Read-only old-config comparison must still work when an optional HTML
+	// engine failed, so the operator can opt out. Candidate preview and actual
+	// apply each independently enforce readiness before enabling injection.
+	if err = a.Executor.Call(r.Context(), "POST", "/v1/sites/preview?analytics_baseline=1", site, &baseline); err != nil {
 		fail(w, 409, "无法核对原网站配置："+err.Error())
 		return
 	}

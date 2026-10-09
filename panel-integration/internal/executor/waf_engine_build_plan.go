@@ -66,6 +66,12 @@ func validateWAFBuildCommand(command wafBuildCommand) error {
 		}
 	}
 	for _, value := range command.Environment {
+		// The analytics engine shares only this bounded non-root compiler
+		// runner. These two literals are fixed internal build-plan values,
+		// not caller-supplied flags or general environment overrides.
+		if value == "CFLAGS=-O2 -g0 -fPIC" || value == "NJS_LIBXSLT=NO" {
+			continue
+		}
 		name, path, ok := strings.Cut(value, "=")
 		if !ok || (name != "MODSECURITY_INC" && name != "MODSECURITY_LIB") || !wafEngineConfigPath(path) {
 			return errors.New("WAF 构建环境不允许覆盖命令、用户或系统环境")

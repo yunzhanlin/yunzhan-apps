@@ -7,7 +7,7 @@ const code=readFileSync(new URL("../internal/core/analytics_tracker.js",import.m
 const vitals=readFileSync(new URL("../internal/core/analytics_vendor/web-vitals-6.2.3.iife.js",import.meta.url),"utf8");
 const provenance=JSON.parse(readFileSync(new URL("../internal/core/analytics_vendor/source.json",import.meta.url),"utf8"));
 for(const [file,digest] of Object.entries(provenance.files))assert.equal(createHash("sha256").update(readFileSync(new URL(`../internal/core/analytics_vendor/${file}`,import.meta.url))).digest("hex"),digest,`pinned vendor identity: ${file}`);
-function fixture(privacy={},inp=false) {
+function fixture(privacy={},inp=false,overrides={}) {
   let clock=0;
   const sent=[],timers=new Map(),windowEvents=new Map(),documentEvents=new Map(),observers=new Map();
   let nextTimer=0;
@@ -15,7 +15,7 @@ function fixture(privacy={},inp=false) {
   const on=(events,k,v)=>events.set(k,[...(events.get(k)||[]),v]);
   const off=(events,k,v)=>events.set(k,(events.get(k)||[]).filter(callback=>callback!==v));
   const document={currentScript:{src:"https://analytics.example/__yunzhan/analytics/tracker.js?site="+"a".repeat(32)+"&key="+"b".repeat(32)},title:"Test",referrer:"https://source.example/search?private=secret",visibilityState:"visible",prerendering:false,readyState:"complete",documentElement:{scrollWidth:1000,scrollHeight:1000},addEventListener:(k,v)=>on(documentEvents,k,v)};
-  const location={pathname:"/first",search:"?token=secret&utm_campaign=launch"};
+  const location={origin:"https://analytics.example",pathname:"/first",search:"?token=secret&utm_campaign=launch"};
   class Observer {
     static supportedEntryTypes=["paint","largest-contentful-paint","layout-shift",...(inp?["event","first-input"]:[])];
     constructor(callback){this.callback=callback;}
@@ -33,9 +33,12 @@ function fixture(privacy={},inp=false) {
     fetch:(url,options)=>{sent.push({url,options,event:JSON.parse(options.body)});return Promise.resolve({status:204})},
     window:{addEventListener:(k,v)=>on(windowEvents,k,v)}};
   if(inp){class Timing{};Timing.prototype.interactionId=0;context.PerformanceEventTiming=Timing;}
-  vm.runInNewContext(`(()=>{${vitals}\n${code}\n})();`,context);
+  if(overrides.src!==undefined)document.currentScript.src=overrides.src;
+  if(overrides.config!==undefined)context.config=overrides.config;
+  const execute=()=>vm.runInNewContext(`(()=>{${vitals}\n${code}\n})();`,context);
+  execute();
   const dispatch=(events,name,event)=>{for(const callback of [...(events.get(name)||[])])callback({type:name,timeStamp:clock,...event})};
-  return {context,sent,timers,observers,advance:n=>clock+=n,documentEvent:name=>{dispatch(documentEvents,name,{});dispatch(windowEvents,name,{})},windowEvent:(name,event={})=>dispatch(windowEvents,name,event)};
+  return {context,sent,timers,observers,execute,advance:n=>clock+=n,documentEvent:name=>{dispatch(documentEvents,name,{});dispatch(windowEvents,name,{})},windowEvent:(name,event={})=>dispatch(windowEvents,name,event)};
 }
 
 for(const privacy of [{doNotTrack:"1"},{globalPrivacyControl:true}]) {const f=fixture(privacy);assert.equal(f.sent.length,0);assert.equal(f.timers.size,0);}
@@ -87,4 +90,11 @@ inp.windowEvent("pagehide");inp.advance(60000);inp.windowEvent("pageshow",{persi
 interactions(52,[{entryType:"event",interactionId:364,duration:320,startTime:60010}]);
 score=inp.sent.at(-1).event;assert.notEqual(score.page_id,firstNavigation);assert.equal(score.path,"/next-route");assert.equal(score.inp,320);
 assert.ok(f.sent.filter(x=>x.event.kind==="performance").every(x=>x.event.inp_available===false));
+const auto=fixture({},false,{src:"https://analytics.example/__yunzhan/analytics/auto.js?site="+"a".repeat(32)});
+assert.equal(auto.sent.length,1);assert.ok(auto.sent[0].url.startsWith("https://analytics.example/__yunzhan/analytics/event?"));
+const samePush=auto.context.history.pushState;auto.execute();
+auto.context.document.currentScript.src="https://analytics.example/__yunzhan/analytics/tracker.js?site="+"a".repeat(32)+"&key="+"b".repeat(32);auto.execute();
+assert.equal(auto.sent.length,1);assert.equal(auto.timers.size,1);assert.equal(auto.context.history.pushState,samePush);
+auto.context.history.pushState(null,"","/another");assert.equal(auto.sent.filter(x=>x.event.kind==="pageview").length,2);
+for(const overrides of [{src:"https://evil.example/__yunzhan/analytics/auto.js"},{src:"https://analytics.example/collect/not-a-tracker.js"},{config:{site:"bad",key:"b".repeat(32),clicks:true}}]){const rejected=fixture({},false,overrides);assert.equal(rejected.sent.length,0);assert.equal(rejected.timers.size,0);assert.equal(rejected.observers.size,0);}
 console.log("PASS analytics tracker: privacy, same-origin, SPA, BFCache, CLS and actual pinned INP grouping/outliers/document identity");

@@ -76,6 +76,7 @@ func renderSiteConfig(site core.Site, public string) (string, error) {
 	fmt.Fprintf(&out, "  location = %s { default_type text/plain; access_log off; return 200 %s; }\n", siteHealthPath(site), strconv.Quote(siteHealthBody(site)))
 	fmt.Fprintf(&out, "  add_header X-Panel-Config %s always;\n", strconv.Quote(core.Hash(siteHealthBody(site))))
 	out.WriteString(siteAnalyticsProxy(site))
+	out.WriteString(siteAnalyticsHTMLInjection(site))
 	out.WriteString(siteACMEConfig(site))
 	if settings.WebServer == "apache" {
 		out.WriteString("  location / {\n    proxy_pass http://127.0.0.1:19080;\n    proxy_http_version 1.1;\n    proxy_set_header Host $host;\n    proxy_set_header X-Real-IP $remote_addr;\n    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n    proxy_set_header X-Forwarded-Proto $scheme;\n  }\n}\n")
@@ -87,6 +88,7 @@ func renderSiteConfig(site core.Site, public string) (string, error) {
 	case "files":
 		out.WriteString(phpConfig(site, filepath.Dir(public)))
 		out.WriteString("  location / {\n")
+		out.WriteString(siteAnalyticsHTMLFilters(site))
 		switch settings.Rewrite {
 		case "none":
 			out.WriteString("    try_files $uri $uri/ =404;\n")
@@ -130,7 +132,7 @@ func thinkPHPCompatibilityLocation(site core.Site, socket string) string {
 	// PATH_INFO (/api.php/... or /admin.php/...). SCRIPT_FILENAME is fixed to
 	// the existing front controller, and this location only matches those two
 	// compatibility entry points.
-	return fmt.Sprintf("  location ~ \"^/(?:api|admin)\\.php(?:/|$)\" {\n    fastcgi_hide_header X-Panel-Config;\n    include /etc/nginx/fastcgi_params;\n    fastcgi_param SCRIPT_FILENAME $document_root/index.php;\n    fastcgi_param SCRIPT_NAME /index.php;\n    fastcgi_param PATH_INFO $uri;\n    fastcgi_pass unix:%s;\n  }\n", socket)
+	return fmt.Sprintf("  location ~ \"^/(?:api|admin)\\.php(?:/|$)\" {\n%s    fastcgi_hide_header X-Panel-Config;\n    include /etc/nginx/fastcgi_params;\n    fastcgi_param SCRIPT_FILENAME $document_root/index.php;\n    fastcgi_param SCRIPT_NAME /index.php;\n    fastcgi_param PATH_INFO $uri;\n    fastcgi_pass unix:%s;\n  }\n", siteAnalyticsHTMLFilters(site), socket)
 }
 func (s *Service) checkDomainOwners(site core.Site) error {
 	domains := map[string]bool{site.Domain: true}
@@ -188,6 +190,12 @@ func (s *Service) siteSettingsRoutes(m *http.ServeMux) {
 		if e := s.checkDomainOwners(site); e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
+		}
+		if site.Settings.AnalyticsInjectHTML && site.Status == "running" && r.URL.Query().Get("analytics_baseline") != "1" {
+			if err := s.requireAnalyticsHTMLReady(r.Context()); err != nil {
+				respond(w, 409, map[string]string{"error": "HTML 自动接入引擎未通过当前 Nginx 的摘要与加载核验：" + err.Error() + "；未写入网站配置，可继续使用手工采集标签。"})
+				return
+			}
 		}
 		public := filepath.Join(s.Config.SitesDir, site.ID, "public")
 		content, e := renderSiteConfig(site, public)

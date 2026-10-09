@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -39,13 +40,14 @@ var analyticsWebVitals string
 var analyticsWebVitalsLicense string
 
 type AnalyticsConfig struct {
-	SiteID        string `json:"site_id"`
-	Key           string `json:"key"`
-	Enabled       bool   `json:"enabled"`
-	Clicks        bool   `json:"clicks"`
-	Retention     int    `json:"retention_days"`
-	Revision      int64  `json:"revision"`
-	ProxyEndpoint string `json:"proxy_endpoint,omitempty"`
+	SiteID         string `json:"site_id"`
+	Key            string `json:"key"`
+	Enabled        bool   `json:"enabled"`
+	Clicks         bool   `json:"clicks"`
+	Retention      int    `json:"retention_days"`
+	Revision       int64  `json:"revision"`
+	ProxyEndpoint  string `json:"proxy_endpoint,omitempty"`
+	AutoInjectHTML *bool  `json:"auto_inject_html,omitempty"`
 }
 
 type analyticsRate struct {
@@ -246,6 +248,7 @@ func (a *Server) analyticsSite(r *http.Request) (Site, AnalyticsConfig, error) {
 }
 
 func (a *Server) analyticsRoutes(m *http.ServeMux) {
+	a.analyticsHTMLEngineRoutes(m)
 	m.HandleFunc("GET /api/analytics/sites/{id}/config", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		site, e := a.Store.Site(r.PathValue("id"))
 		if e != nil {
@@ -258,6 +261,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 			return
 		}
 		v.ProxyEndpoint = site.Settings.AnalyticsEndpoint
+		v.AutoInjectHTML = &site.Settings.AnalyticsInjectHTML
 		send(w, 200, v)
 	}))
 	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(a.configureAnalyticsProxy))
@@ -282,12 +286,58 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 			http.Error(w, "Not found", 404)
 			return
 		}
-		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		w.Header().Set("Cache-Control", "no-store")
-		cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks})
-		_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
+		serveAnalyticsTracker(w, c)
+	})
+	m.HandleFunc("GET /collect/analytics/auto.js", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Query().Get("site")
+		if !ValidID(id) {
+			http.Error(w, "Not found", 404)
+			return
+		}
+		site, err := a.Store.Site(id)
+		if err != nil || site.Status != "running" || !site.Settings.AnalyticsInjectHTML || site.Settings.AnalyticsEndpoint == "" || !analyticsAutoHost(site, r.Host) {
+			http.Error(w, "Not found", 404)
+			return
+		}
+		c, err := a.Store.analyticsConfig(id)
+		if err != nil || !c.Enabled || !ValidID(c.Key) {
+			http.Error(w, "Not found", 404)
+			return
+		}
+		// This is a first-party public browser script, not a management endpoint.
+		// It exposes only the same write-only site key as the manual HTML tag.
+		serveAnalyticsTracker(w, c)
 	})
 	m.HandleFunc("POST /collect/analytics/event", a.collectAnalytics)
+}
+
+func analyticsAutoHost(site Site, raw string) bool {
+	host := strings.ToLower(raw)
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		_, port, _ := net.SplitHostPort(host)
+		n, err := strconv.Atoi(port)
+		if err != nil || n < 1 || n > 65535 || strconv.Itoa(n) != port {
+			return false
+		}
+		host = h
+	}
+	if !ValidDomain(host) {
+		return false
+	}
+	for _, domain := range append([]string{site.Domain}, site.Settings.Domains...) {
+		if host == domain {
+			return true
+		}
+	}
+	return false
+}
+
+func serveAnalyticsTracker(w http.ResponseWriter, c AnalyticsConfig) {
+	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks})
+	_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
 }
 
 func analyticsClient(agent string) (string, string) {

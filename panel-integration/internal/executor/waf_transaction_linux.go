@@ -30,6 +30,9 @@ type wafTransaction struct {
 var errWAFConfigurationBusy = errors.New("WAF 正在变更或恢复，请稍后重试")
 
 func (s *Service) wafPendingPath() string {
+	if s.fileTransactionApplication == "analytics-html" {
+		return s.systemPath("/etc/panel/analytics-html/config-transactions/pending.json")
+	}
 	if s.fileTransactionApplication == "apache-waf" {
 		return filepath.Join(s.moduleDir("apache-waf"), "config-transactions", "pending.json")
 	}
@@ -38,6 +41,14 @@ func (s *Service) wafPendingPath() string {
 
 func (s *Service) wafChangePathAllowed(path string) bool {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return false
+	}
+	if s.fileTransactionApplication == "analytics-html" {
+		for _, allowed := range s.analyticsHTMLConfigurationPaths() {
+			if path == allowed {
+				return true
+			}
+		}
 		return false
 	}
 	if s.fileTransactionApplication == "apache-waf" {
@@ -129,10 +140,27 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 		}
 		return nil, fmt.Errorf("无法取得 WAF 配置锁: %w", err)
 	}
+	if operation == syscall.LOCK_EX && s.fileTransactionApplication != "analytics-html" && s.fileTransactionApplication != "apache-waf" {
+		if _, err := os.Lstat(s.analyticsHTMLTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+			f.Close()
+			return nil, errors.New("HTML 引擎有待恢复配置；禁止其他 Nginx 变更覆盖恢复集合")
+		}
+	}
 	return f, nil
 }
 
 func (s *Service) wafTransactionContract(tx wafTransaction) error {
+	if s.fileTransactionApplication == "analytics-html" {
+		paths := s.analyticsHTMLConfigurationPaths()
+		if tx.Format != 2 || len(tx.Changes) != len(paths) {
+			return errors.New("HTML 引擎恢复事务需要三个完整的 UID/GID 文件记录")
+		}
+		for i, path := range paths {
+			if tx.Changes[i].Path != path {
+				return errors.New("HTML 引擎恢复文件顺序或归属不匹配")
+			}
+		}
+	}
 	if s.fileTransactionApplication == "apache-waf" && (tx.Format != 2 || len(tx.Changes) != 3) {
 		return errors.New("Apache 防护恢复事务需要三个完整的 UID/GID 文件记录")
 	}
@@ -232,7 +260,9 @@ func (s *Service) wafCurrentMatches(c wafConfigChange, next bool) (bool, error) 
 	}
 	var b fileBackup
 	var err error
-	if s.fileTransactionApplication == "apache-waf" {
+	if s.fileTransactionApplication == "analytics-html" {
+		b, err = s.analyticsHTMLStableBackup(c.Path)
+	} else if s.fileTransactionApplication == "apache-waf" {
 		b, err = s.apacheWAFStableBackup(c.Path)
 	} else {
 		b, err = backupFile(c.Path)
@@ -357,7 +387,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		return false, err
 	}
 	if tx.State != "applying" {
-		if s.fileTransactionApplication == "apache-waf" {
+		if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" {
 			for _, c := range tx.Changes {
 				match, e := s.wafCurrentMatches(c, tx.State == "committed")
 				if e != nil || !match {
@@ -389,7 +419,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		}
 	}
 	tx.State = "recovered"
-	if s.fileTransactionApplication == "apache-waf" {
+	if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" {
 		return true, wafWriteTransaction(s.wafPendingPath(), tx)
 	}
 	return true, s.finishWAFTransaction(tx)

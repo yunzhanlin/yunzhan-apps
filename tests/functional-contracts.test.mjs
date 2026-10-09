@@ -76,9 +76,12 @@ test('daily SMTP publishes independent version and truthful transport/security b
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
- assert.equal(waf.version,'2.5.1');assert.equal(analytics.version,'2.2.0');
+ assert.equal(waf.version,'2.5.1');assert.equal(analytics.version,'2.3.0');
  assert.match(waf.summary,/默认不启用/);assert(!waf.summary.includes('不含完整请求体检测'));
  assert(analytics.capabilities.some(s=>s.includes('INP'))&&analytics.capabilities.some(s=>s.includes('转化漏斗')));
+ assert(analytics.capabilities.some(s=>s.includes('HTML 自动接入')&&s.includes('默认关闭')));
+ assert(analytics.capabilities.some(s=>s.includes('ABI'))&&analytics.capabilities.some(s=>s.includes('工作进程')));
+ assert.match(analytics.summary,/默认关闭/);assert.match(analytics.summary,/CSP/);
  const w=contracts.apps.find(a=>a.id===waf.id),a=contracts.apps.find(a=>a.id===analytics.id);
  assert(w.scenarios.some(s=>s.includes('SIGKILL')));
  assert(waf.capabilities.some(s=>s.includes('旧工作进程')));
@@ -126,6 +129,13 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(w.boundaries.some(s=>s.includes('不覆盖未保存')));
  assert(a.boundaries.some(s=>s.includes('20000'))&&a.gaps.some(s=>s.includes('SPA 独立路由性能')));
  assert(!a.gaps.some(s=>s.includes('INP')));
+ assert(a.scenarios.some(s=>s.includes('23r27b')&&s.includes('生产构建服务')));
+ assert(a.scenarios.some(s=>s.includes('两种架构实际浏览器')&&s.includes('DOM 标识')));
+ assert(a.scenarios.some(s=>s.includes('Unix 路径异常')&&s.includes('404')));
+ assert(!a.gaps.some(s=>s.includes('完整双架构 API/服务/浏览器与冷启动')));
+ assert(a.gaps.some(s=>s.includes('完整五种系统')&&s.includes('窄视口')));
+ assert(a.boundaries.some(s=>s.includes('1.18')&&s.includes('不自动替换')));
+ assert(a.boundaries.some(s=>s.includes('交互页截图')&&s.includes('不冒充')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
 test('load balancing publishes bounded HTTP observations and recovery without claiming L4 or active traffic mutation',async()=>{

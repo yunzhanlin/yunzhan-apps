@@ -514,7 +514,7 @@ defineExpose({ show });
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
         <el-alert v-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
-        <AnalyticsWorkspace v-if="definition.id === 'website-analytics'" :api="api" :installed="installed" :sites="sites">
+        <AnalyticsWorkspace v-if="definition.id === 'website-analytics'" :api="api" :installed="installed" :installed-version="versionStatus?.version_known ? versionStatus.installed_version : undefined" :sites="sites">
           <template #version>
             <el-descriptions :column="1" border>
               <el-descriptions-item label="已安装版本">{{versionStatus?.installed_version || '版本待核对'}}</el-descriptions-item>

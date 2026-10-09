@@ -91,7 +91,7 @@ func (s *Service) appDependencies(ctx context.Context, id string) error {
 // as the executor. New(Config{}) intentionally does not default NginxBin or
 // SitesDir and therefore cannot prove the actual Nginx version.
 func appDependencyService(id string) *Service {
-	if id == "nginx-waf" {
+	if id == "nginx-waf" || id == "website-analytics" {
 		return nativeWAFService()
 	}
 	return New(Config{})
@@ -99,7 +99,7 @@ func appDependencyService(id string) *Service {
 
 // Runs only in a dedicated root unit with a fixed package list, never a shell command from the API.
 func InstallAppDependencies(id string) (err error) {
-	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" {
+	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" && id != "website-analytics" {
 		return errors.New("依赖模块无效")
 	}
 	s := appDependencyService(id)
@@ -115,6 +115,24 @@ func InstallAppDependencies(id string) (err error) {
 		return installPrivateNFSRuntime(ctx)
 	}
 	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	if id == "website-analytics" {
+		nginx, selectionErr := s.nginxBinary()
+		if selectionErr != nil {
+			return selectionErr
+		}
+		version, selectionErr := s.moduleCommand(ctx, 5*time.Second, nginx, "-v")
+		match := wafNginxVersionPattern.FindStringSubmatch(strings.TrimSpace(version))
+		if selectionErr != nil || len(match) != 2 {
+			return errors.New("无法核对 HTML 引擎实际 Nginx")
+		}
+		if _, ok := analyticsHTMLSources(match[1]); !ok {
+			return errors.New("HTML 引擎实际 Nginx 未在固定构建清单中")
+		}
+		packages = append([]string{}, analyticsHTMLBuildDependencies...)
+		if s.wafBuildPackagesReady(packages) {
+			return nil
+		}
+	}
 	if id == "nginx-waf" {
 		var selectionErr error
 		packages, selectionErr = s.wafCurrentBuildPackages(ctx)
@@ -134,14 +152,14 @@ func InstallAppDependencies(id string) (err error) {
 			return err
 		}
 		args := []string{"install", "-y", "--no-install-recommends"}
-		if id == "nginx-waf" {
+		if id == "nginx-waf" || id == "website-analytics" {
 			args = append(args, "--no-upgrade")
 		}
 		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append(args, packages...)...); err != nil {
 			return err
 		}
 	}
-	if id == "nginx-waf" && !s.wafBuildPackagesReady(packages) {
+	if (id == "nginx-waf" || id == "website-analytics") && !s.wafBuildPackagesReady(packages) {
 		return errors.New("WAF 固定构建依赖未通过实际包状态核对")
 	}
 	if id == "pure-ftpd" {
@@ -1094,6 +1112,8 @@ func (s *Service) enableAnalyticsLogs(ctx context.Context) error {
 
 func (s *Service) appDependencyReady(id string) bool {
 	switch id {
+	case "website-analytics":
+		return s.wafBuildPackagesReady(analyticsHTMLBuildDependencies)
 	case "nginx-waf":
 		return s.wafCurrentBuildDependenciesReady()
 	case "pure-ftpd":
@@ -1145,7 +1165,7 @@ func (s *Service) appDependencyRoutes(m *http.ServeMux) {
 	for _, method := range []string{"GET", "POST"} {
 		m.HandleFunc(method+" /v1/app-dependencies/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
-			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" {
+			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" && id != "website-analytics" {
 				respond(w, 400, map[string]string{"error": "依赖标识无效"})
 				return
 			}

@@ -20,24 +20,25 @@ type RewriteRule struct {
 	Flag        string `json:"flag"`
 }
 type SiteSettings struct {
-	PublicIngress     bool          `json:"public_ingress,omitempty"`
-	AnalyticsEndpoint string        `json:"analytics_endpoint,omitempty"`
-	WAFEnabled        *bool         `json:"waf_enabled,omitempty"`
-	ACME              bool          `json:"acme,omitempty"`
-	TLS               *SiteTLS      `json:"tls,omitempty"`
-	PHP               *PHPSettings  `json:"php,omitempty"`
-	Domains           []string      `json:"domains"`
-	DocumentRoot      string        `json:"document_root"`
-	IndexFiles        []string      `json:"index_files"`
-	Mode              string        `json:"mode"`
-	Rewrite           string        `json:"rewrite"`
-	Rules             []RewriteRule `json:"rules"`
-	ProxyURL          string        `json:"proxy_url"`
-	ProxyPreserveHost bool          `json:"proxy_preserve_host,omitempty"`
-	RedirectURL       string        `json:"redirect_url"`
-	RedirectCode      int           `json:"redirect_code"`
-	PreserveURI       bool          `json:"preserve_uri"`
-	WebServer         string        `json:"web_server,omitempty"`
+	PublicIngress       bool          `json:"public_ingress,omitempty"`
+	AnalyticsEndpoint   string        `json:"analytics_endpoint,omitempty"`
+	AnalyticsInjectHTML bool          `json:"analytics_inject_html,omitempty"`
+	WAFEnabled          *bool         `json:"waf_enabled,omitempty"`
+	ACME                bool          `json:"acme,omitempty"`
+	TLS                 *SiteTLS      `json:"tls,omitempty"`
+	PHP                 *PHPSettings  `json:"php,omitempty"`
+	Domains             []string      `json:"domains"`
+	DocumentRoot        string        `json:"document_root"`
+	IndexFiles          []string      `json:"index_files"`
+	Mode                string        `json:"mode"`
+	Rewrite             string        `json:"rewrite"`
+	Rules               []RewriteRule `json:"rules"`
+	ProxyURL            string        `json:"proxy_url"`
+	ProxyPreserveHost   bool          `json:"proxy_preserve_host,omitempty"`
+	RedirectURL         string        `json:"redirect_url"`
+	RedirectCode        int           `json:"redirect_code"`
+	PreserveURI         bool          `json:"preserve_uri"`
+	WebServer           string        `json:"web_server,omitempty"`
 }
 
 // A missing value preserves the historical behavior for existing sites.
@@ -95,6 +96,9 @@ func ValidateSiteSettings(in SiteSettings, primary, php string) error {
 		if e := ValidateAnalyticsEndpoint(in.AnalyticsEndpoint); e != nil {
 			return e
 		}
+	}
+	if in.AnalyticsInjectHTML && (in.AnalyticsEndpoint == "" || in.Mode != "files" || in.WebServer != "nginx") {
+		return errors.New("HTML 自动接入仅支持已开启采集的 Nginx 文件/PHP 网站；代理、Apache 与跳转网站请使用手工标签")
 	}
 	if in.WebServer != "nginx" && in.WebServer != "apache" {
 		return errors.New("网站服务只支持 Nginx 或 Apache")
@@ -268,6 +272,9 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 	// internal upstream; preserve it through PHP, TLS and website changes.
 	if analytics == nil {
 		in.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
+		in.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
+	} else if analytics.SiteID != site.ID || (analytics.AutoInjectHTML != nil && in.AnalyticsInjectHTML != *analytics.AutoInjectHTML) {
+		return "", errors.New("采集任务的网站或自动接入意图与候选配置不一致，未入队")
 	}
 	in = DefaultSiteSettings(in)
 	sort.Strings(in.Domains)
@@ -389,6 +396,9 @@ func finishSiteSettings(tx *sql.Tx, j Job) error {
 		if p.Analytics.SiteID != j.SiteID || (p.Settings.AnalyticsEndpoint != "") != p.Analytics.Enabled {
 			return errors.New("采集配置任务身份不匹配")
 		}
+		if p.Analytics.AutoInjectHTML != nil && p.Settings.AnalyticsInjectHTML != *p.Analytics.AutoInjectHTML {
+			return errors.New("HTML 接入策略与采集任务不一致")
+		}
 		if _, e = saveAnalyticsConfigTx(tx, *p.Analytics); e != nil {
 			return e
 		}
@@ -438,6 +448,7 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 		}
 		in.Settings = DefaultSiteSettings(in.Settings)
 		in.Settings.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
+		in.Settings.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
 		if site.SettingsRevision != in.ExpectedRevision {
 			fail(w, 409, "网站设置已变化，请重新读取")
 			return

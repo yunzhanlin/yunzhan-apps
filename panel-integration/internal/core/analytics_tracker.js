@@ -5,9 +5,16 @@ if (navigator.doNotTrack === "1" || navigator.globalPrivacyControl === true) ret
 const script = document.currentScript;
 if (!script || !script.src) return;
 const endpoint = new URL(script.src);
-endpoint.pathname = endpoint.pathname.replace(/tracker\.js$/, "event");
+if(endpoint.origin!==location.origin || !/\/(?:tracker|auto)\.js$/.test(endpoint.pathname))return;
+endpoint.pathname = endpoint.pathname.replace(/(?:tracker|auto)\.js$/, "event");
 endpoint.search = new URLSearchParams({site: config.site, key: config.key}).toString();
 const valid = value => typeof value === "string" && /^[a-f0-9]{32}$/.test(value);
+if(!valid(config.site)||!valid(config.key))return;
+// Manual and automatic tags may coexist during migration. Only one collector
+// per document may hook history, observers or timers; the marker has no secrets.
+const activeSlot=Symbol.for("yunzhan.analytics.active-document");
+if(window[activeSlot]!==undefined)return;
+window[activeSlot]=config.site;
 const identifier = () => [...crypto.getRandomValues(new Uint8Array(16))].map(v=>v.toString(16).padStart(2,"0")).join("");
 let visitor, session;
 try {

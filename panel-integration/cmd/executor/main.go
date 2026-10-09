@@ -51,6 +51,7 @@ func main() {
 	appDependencies := flag.String("install-app-dependencies", "", "install fixed module dependencies")
 	wafEngineBuild := flag.String("build-waf-engine", "", "build a pinned independent WAF engine without activating sites")
 	wafEngineVerify := flag.String("verify-waf-engine", "", "verify a built WAF program without activating or changing sites")
+	analyticsHTMLBuild := flag.String("build-analytics-html", "", "build a pinned isolated analytics HTML engine without activating sites")
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
 	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
@@ -116,7 +117,7 @@ func main() {
 	for _, operation := range []struct {
 		id  string
 		run func(string) error
-	}{{*appDependencies, executor.InstallAppDependencies}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
+	}{{*appDependencies, executor.InstallAppDependencies}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*analyticsHTMLBuild, executor.RunAnalyticsHTMLBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
 		if operation.id != "" {
 			if e := operation.run(operation.id); e != nil {
 				log.Fatal(e)

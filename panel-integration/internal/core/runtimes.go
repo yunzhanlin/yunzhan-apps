@@ -200,9 +200,13 @@ func (s *Store) finishRuntime(j Job, detail string, steps []Step, uncertain bool
 		return e
 	}
 	defer tx.Rollback()
-	if j.Kind == "waf_engine_build" {
+	if j.Kind == "waf_engine_build" || j.Kind == "analytics_html_build" {
+		target := "nginx-waf"
+		if j.Kind == "analytics_html_build" {
+			target = "website-analytics"
+		}
 		var current string
-		if err := tx.QueryRow(`SELECT state FROM runtime_jobs WHERE id=? AND target_id='nginx-waf' AND kind='waf_engine_build'`, j.ID).Scan(&current); err != nil {
+		if err := tx.QueryRow(`SELECT state FROM runtime_jobs WHERE id=? AND target_id=? AND kind=?`, j.ID, target, j.Kind).Scan(&current); err != nil {
 			return err
 		}
 		if current != "queued" && current != "running" {
@@ -236,11 +240,11 @@ func (s *Store) NextRuntimeJob() (Job, error) {
 }
 
 func (s *Store) nextRuntimeInstallJob() (Job, error) {
-	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build','analytics_html_build') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 func (s *Store) nextRuntimeControlJob() (Job, error) {
-	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build','analytics_html_build') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 // The predicates above are fixed internal SQL, never request parameters.
@@ -270,7 +274,7 @@ func (s *Store) RetryRuntime(id, actor string) error {
 	if err := tx.QueryRow(`SELECT kind FROM runtime_jobs WHERE id=?`, id).Scan(&kind); err != nil {
 		return errors.New("任务不存在")
 	}
-	if kind == "waf_engine_build" {
+	if kind == "waf_engine_build" || kind == "analytics_html_build" {
 		return errors.New("原生防火墙构建证据不可覆盖；请创建新的构建任务，保留原失败记录")
 	}
 	r, e := tx.Exec(`UPDATE runtime_jobs SET state='queued',error='',updated_at=? WHERE id=? AND state IN ('failed','needs_attention')`, Now(), id)

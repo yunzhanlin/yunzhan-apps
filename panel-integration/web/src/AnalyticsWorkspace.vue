@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
+import { analyticsCollectorEnabled } from "./analyticsHTMLState";
+import { randomId } from "./randomId";
 type API = <T>(path:string,method?:string,body?:unknown,idempotencyKey?:string)=>Promise<T>;
-interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string}
+interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean}
 interface Dimension {name:string;count:number}
 interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[]}
 interface Funnel {source:string;from:string;to:string;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
@@ -12,13 +15,16 @@ interface Report {
   sessions:Session[];heatmap:{path:string;x:number;y:number;count:number}[];
   performance:Record<string,{samples:number;p75?:number}>;limitations:string[];
 }
-const props=defineProps<{api:API;installed:boolean;sites:{id:string;name:string;domain:string}[]}>();
+const props=defineProps<{api:API;installed:boolean;installedVersion?:string;sites:{id:string;name:string;domain:string}[]}>();
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),report=ref<Report>();
+const htmlEngineReady=ref(false);
+const htmlSupported=computed(()=>props.installed && props.installedVersion==="2.3.0");
 const range=ref<[Date,Date]>(),heatPath=ref("");
 const funnelSteps=ref("/\n/checkout\n/success"),funnelWindow=ref(30),funnelBusy=ref(false),funnelError=ref(""),funnel=ref<Funnel>();
 let funnelSequence=0;
 let sequence=0;
+let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
 const heat=computed(()=>report.value?.heatmap.filter(p=>p.path===heatPath.value)||[]);
 const snippet=computed(()=>settings.value?.key ? `<script defer src="/__yunzhan/analytics/tracker.js?site=${settings.value.site_id}&amp;key=${settings.value.key}"><\/script>` : "先保存采集配置，再生成代码。");
@@ -30,25 +36,31 @@ async function load(){
   finally{if(current===sequence)busy.value=false;}
 }
 function reportURL(){const q=new URLSearchParams();if(range.value){q.set("from",range.value[0].toISOString());q.set("to",range.value[1].toISOString());}return `/analytics/sites/${selected.value}/report?${q}`;}
-async function refresh(){if(!selected.value||busy.value)return;busy.value=true;error.value="";try{report.value=await props.api<Report>(reportURL());if(!report.value.heatmap.some(p=>p.path===heatPath.value))heatPath.value=report.value.heatmap[0]?.path||"";}catch(e){error.value=(e as Error).message;}finally{busy.value=false;}}
+async function refresh(){if(!selected.value||busy.value)return;const current=sequence;busy.value=true;error.value="";try{const out=await props.api<Report>(reportURL());if(disposed||current!==sequence)return;report.value=out;if(!out.heatmap.some(p=>p.path===heatPath.value))heatPath.value=out.heatmap[0]?.path||"";}catch(e){if(!disposed&&current===sequence)error.value=(e as Error).message;}finally{if(current===sequence)busy.value=false;}}
+function setEnabled(value:string|number|boolean){if(!settings.value)return;settings.value=analyticsCollectorEnabled(settings.value,value===true);void save();}
 async function save(){
   if(!settings.value||busy.value||!props.installed)return;
   busy.value=true;error.value="";saved.value="";
-  const id=selected.value;
+  const id=selected.value,current=sequence;
   try{
-    const queued=await props.api<{job_id:string}>(`/analytics/sites/${id}/config`,"POST",settings.value);
+    const payload=analyticsCollectorEnabled(settings.value,settings.value.enabled);
+    const queued=await props.api<{job_id:string}>(`/analytics/sites/${id}/config`,"POST",payload,randomId());
     let completed=false;
     for(let attempt=0;attempt<120;attempt++){
+      if(disposed||current!==sequence)return;
       const job=await props.api<{state:string;error?:string}>(`/jobs/${queued.job_id}`);
       if(job.state==="succeeded"){completed=true;break;}
       if(["failed","needs_attention"].includes(job.state))throw new Error(job.error||"配置应用失败；请在任务列表核对回滚结果。");
       await new Promise(resolve=>setTimeout(resolve,500));
     }
     if(!completed)throw new Error("配置任务仍在执行，请到任务列表核对；此处不会提前报告成功。");
-    settings.value=await props.api<Settings>(`/analytics/sites/${id}/config`);
-    saved.value=settings.value.enabled?"已启用：对应网站的采集代理已自动写入，Nginx 校验和应用成功。HTML 采集标签仍需加入网站模板。":"已停用：对应网站的采集代理已移除，Nginx 校验和应用成功；历史报告保留。";
-  }catch(e){error.value=(e as Error).message;try{settings.value=await props.api<Settings>(`/analytics/sites/${id}/config`);}catch{/* Keep the failure visible; never claim an unverified configuration was saved. */}}
-  finally{busy.value=false;}
+    const applied=await props.api<Settings>(`/analytics/sites/${id}/config`);
+    if(disposed||current!==sequence)return;
+    if(applied.enabled!==payload.enabled || !!applied.auto_inject_html!==!!payload.auto_inject_html)throw new Error("任务完成后的采集或自动接入状态不匹配，请核对配置；未宣称保存成功。");
+    settings.value=applied;
+    saved.value=applied.enabled ? applied.auto_inject_html ? "已启用：采集代理与 HTML 自动接入已写入对应网站，Nginx 校验和应用成功。" : "采集代理已启用，HTML 自动接入关闭。请使用网站模板中的手动采集标签。" : "已停用：对应网站的采集代理和 HTML 自动接入均已移除，Nginx 校验和应用成功；历史报告保留。";
+  }catch(e){if(disposed||current!==sequence)return;error.value=(e as Error).message;try{const actual=await props.api<Settings>(`/analytics/sites/${id}/config`);if(!disposed&&current===sequence)settings.value=actual;}catch{/* Keep the failure visible; never claim an unverified configuration was saved. */}}
+  finally{if(current===sequence)busy.value=false;}
 }
 function exportJSON(){if(!report.value)return;const url=URL.createObjectURL(new Blob([JSON.stringify(report.value,null,2)],{type:"application/json"}));const link=document.createElement("a");link.href=url;link.download=`website-analytics-${selected.value}.json`;link.click();URL.revokeObjectURL(url);}
 async function computeFunnel(){
@@ -65,6 +77,8 @@ async function computeFunnel(){
 function exportFunnel(){if(!funnel.value)return;const url=URL.createObjectURL(new Blob([JSON.stringify(funnel.value,null,2)],{type:"application/json"}));const link=document.createElement("a");link.href=url;link.download=`website-funnel-${selected.value}.json`;link.click();URL.revokeObjectURL(url);}
 watch([selected,range,funnelSteps,funnelWindow],()=>{++funnelSequence;funnel.value=undefined;funnelError.value="";funnelBusy.value=false;},{deep:true});
 watch(selected,()=>void load());
+watch([()=>props.installed,htmlSupported],()=>{if(!props.installed||!htmlSupported.value)htmlEngineReady.value=false;});
+onBeforeUnmount(()=>{disposed=true;++sequence;++funnelSequence;});
 const metrics=[{key:"pv",label:"浏览量 PV"},{key:"uv",label:"浏览器访客 UV"},{key:"sessions",label:"访问会话"},{key:"active_visitors",label:"5 分钟活跃访客"}] as const;
 const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"入口页面"},{key:"exit_pages",label:"离开页面"},{key:"sources",label:"来源域名"},{key:"campaigns",label:"推广活动"},{key:"browsers",label:"浏览器"},{key:"devices",label:"设备"}] as const;
 </script>
@@ -119,11 +133,12 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <el-descriptions v-if="report" :column="2" border><el-descriptions-item v-for="(value,key) in report.performance" :key="key" :label="String(key).toUpperCase()">{{value.p75 === undefined ? '无样本' : value.p75.toFixed(3)}} · {{value.samples}} 个样本</el-descriptions-item></el-descriptions>
       </el-tab-pane>
       <el-tab-pane label="采集设置" name="settings">
+        <AnalyticsHTMLEngine :api="api" :installed="installed" :supported="htmlSupported" @ready="htmlEngineReady=$event" />
         <template v-if="settings"><el-alert title="采集默认关闭。开启前请按你的网站隐私政策设置访客告知或同意机制；采集器尊重 DNT/GPC，且不采集输入内容。" type="info" :closable="false" />
-          <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>
+          <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="setEnabled" /></el-form-item><el-form-item label="HTML 自动接入（立即应用）"><el-switch v-model="settings.auto_inject_html" aria-label="HTML 自动接入" :disabled="!installed || busy || (!settings.auto_inject_html && (!settings.enabled || !htmlSupported || !htmlEngineReady))" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>
           <p>缩短保留天数会在后续采集时清理过期事件，不能恢复；导出统计只包含聚合结果，不是原始事件备份。</p>
-          <h4>同源采集代理（自动管理）</h4><p>开启立即自动添加到对应网站配置，关闭立即移除；执行器先备份，再校验 Nginx 并应用，失败恢复旧配置。仅允许 tracker.js 和 event，不代理面板管理接口。</p><p>访客入口：{{site?.domain}}/__yunzhan/analytics/ → 本机采集服务。{{settings.proxy_endpoint ? `已应用的内部上游：http://${settings.proxy_endpoint}/collect/analytics/` : '当前没有已应用的受管采集代理。'}}</p>
-          <h4>添加 JS 采集标签</h4><p>将代码加入 {{site?.domain}} 的 HTML 模板。浏览器始终使用当前网站的域名与协议；内部上游不应换成网站域名，否则可能循环代理。</p><pre>{{snippet}}</pre>
+          <h4>同源采集代理（自动管理）</h4><p>开启立即自动添加到对应网站配置，关闭立即移除；执行器先备份，再校验 Nginx 并应用，失败恢复旧配置。仅允许 tracker.js、auto.js 和 event，不代理面板管理接口。</p><p>访客入口：{{site?.domain}}/__yunzhan/analytics/ → 本机采集服务。{{settings.proxy_endpoint ? `已应用的内部上游：http://${settings.proxy_endpoint}/collect/analytics/` : '当前没有已应用的受管采集代理。'}}</p>
+          <h4>{{settings.auto_inject_html ? '已选择 HTML 自动接入' : '手动添加 JS 采集标签'}}</h4><p v-if="settings.auto_inject_html">无需修改模板。仅本网站启用，关闭自动接入会从 Nginx 配置撤掉响应过滤器，模板文件始终保持原样。已经手动加入的同一采集器会去重，不重复计数。</p><p v-else>将下列代码加入 {{site?.domain}} 的 HTML 模板；或先加载可选引擎，再开启本网站的 HTML 自动接入。</p><p>浏览器始终使用当前网站的域名与协议；内部上游不应换成网站域名，否则可能循环代理。严格 CSP、压缩上游或缺少明确 head 的页面可能需要手动接入；自动接入不改写这些页面。</p><pre v-if="!settings.auto_inject_html">{{snippet}}</pre>
           <h4>能力与边界</h4><ul><li v-for="note in report?.limitations || []" :key="note">{{note}}</li><li>全机最多保留 200000 条事件；每秒最多接收 100 个请求，同一网络对端每分钟最多 1200 个请求。达到上限会拒绝新采集，不伪造统计。</li></ul>
         </template><el-empty v-else description="先选择网站" />
       </el-tab-pane>
@@ -133,4 +148,18 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
 </template>
 <style scoped>
 .analytics-toolbar{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 20px}.analytics-toolbar .el-select{width:280px}.analytics-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.analytics-metrics article{border:1px solid var(--el-border-color);border-radius:8px;padding:16px}.analytics-metrics span{display:block;color:var(--el-text-color-secondary);font-size:12px}.analytics-metrics strong{display:block;font-size:28px;margin-top:8px}.analytics-dimension{margin-bottom:24px}.analytics-heatmap{display:block;width:100%;max-height:450px;margin-top:20px}.analytics-settings{display:flex;gap:20px;align-items:end;flex-wrap:wrap;margin-top:16px}pre{padding:16px;background:var(--el-fill-color-light);overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}li{margin-bottom:8px}.analytics-intro{color:var(--el-text-color-secondary)}@media(max-width:650px){.analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-workspace :deep(.el-tabs--left){display:block}.analytics-workspace :deep(.el-tabs__header){float:none}}
+</style>
+<style scoped>
+.analytics-workspace :deep(.el-tabs__content){min-width:0}
+@media(max-width:650px){
+  .analytics-workspace :deep(.el-tabs__header.is-left){width:100%;height:auto;margin:0 0 12px}
+  .analytics-workspace :deep(.el-tabs__nav-wrap){overflow:visible;margin-bottom:0}
+  .analytics-workspace :deep(.el-tabs__nav-wrap::after),
+  .analytics-workspace :deep(.el-tabs__active-bar),
+  .analytics-workspace :deep(.el-tabs__nav-prev),
+  .analytics-workspace :deep(.el-tabs__nav-next){display:none}
+  .analytics-workspace :deep(.el-tabs__nav.is-left){display:flex;flex-direction:row;flex-wrap:wrap;float:none;transform:none!important;gap:2px}
+  .analytics-workspace :deep(.el-tabs__item.is-left){height:36px;padding:0 10px;justify-content:center;border-radius:4px}
+  .analytics-workspace :deep(.el-tabs__item.is-active){background:var(--el-color-primary-light-9)}
+}
 </style>
