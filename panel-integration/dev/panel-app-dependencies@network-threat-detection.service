@@ -1,0 +1,21 @@
+[Unit]
+Description=CloudStack fixed IDS dependency preparation; never starts capture
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/panel/bin/panel-executor --install-app-dependencies network-threat-detection
+TimeoutStartSec=20min
+TimeoutStopSec=30s
+KillMode=control-group
+UMask=0027
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+MemoryHigh=576M
+MemoryMax=640M
+MemorySwapMax=0
+TasksMax=128
+CPUQuota=70%
+LimitCORE=0

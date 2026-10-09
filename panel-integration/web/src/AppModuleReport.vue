@@ -1,10 +1,30 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import {remoteConnectionRow} from "./remoteSync";
+import ThreatIDSReport from "./ThreatIDSReport.vue";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
   requests: "请求数",
+  history_persistent: "已持久化保存",
+  history_retention_days: "历史保留天数",
+  history_row_limit: "全站历史行数上限",
+  history_backlog_bytes: "尚未读取的日志",
+  history_blocked_sources: "进度冲突或缺失来源",
+  history_compressed_sources: "未自动导入的压缩归档",
+  history_missing_log: "当前无可读访问日志",
+  history_invalid_lines: "历史采集无效行",
+  history_evicted_rows: "因行数上限退役的历史",
+  history_before_retention: "查询开始早于保留窗口",
+  history_checked_at: "本次增量核对（UTC）",
+  history_first_request: "最早保留请求（UTC）",
+  history_last_request: "最近保留请求（UTC）",
+  history_raw_user_agents_stored: "保存原始 User-Agent",
+  history_query_strings_stored: "保存查询参数",
+  history_worker_checked_at: "后台采集最近核对（UTC）",
+  history_worker_error: "后台采集告警",
+  history_worker_fresh: "后台采集状态新鲜",
   unique_ips: "独立 IP",
   bytes: "流量 / 大小",
   errors: "错误请求",
@@ -128,6 +148,9 @@ const names: Record<string, string> = {
   copied: "已复制",
   skipped: "未变化",
   conflicts: "目标冲突",
+  preview: "仅预览（未写入目标）",
+  deletes: "删除目标文件",
+  checkpoint: "同步检查点",
   restored: "已恢复",
   findings: "风险命中",
   quarantine: "PHP 隔离记录",
@@ -215,6 +238,24 @@ const names: Record<string, string> = {
   sites: "网站数",
   running_sites: "运行网站",
   plans: "同步计划",
+  remote_targets: "跨服务器 SFTP 连接",
+  remote_jobs: "远端持久任务",
+  remote_target_id: "远端连接标识",
+  remote_request_id: "远端任务标识",
+  remote_target: "连接与目录策略",
+  root: "远端目标目录",
+  backup_root: "公开目录之外的私有备份",
+  auth_kind: "认证方式（不回显材料）",
+  host_key_fingerprint: "固定 SSH 主机公钥指纹",
+  ssh_host_key_verified: "主机公钥已核对",
+  sftp_subsystem: "真实 SFTP 子系统已连接",
+  job: "远端任务",
+  queued: "已接受后台排队（尚未完成）",
+  replayed: "读取原任务，未重复创建",
+  cancel_requested: "已请求停止后续交接",
+  skipped_count: "内容相同的文件数",
+  started_at: "开始时间（UTC）",
+  finished_at: "完成或停止时间（UTC）",
   policies: "监控策略",
   history: "执行历史",
   plan_errors: "计划记录错误",
@@ -281,6 +322,13 @@ const names: Record<string, string> = {
 const analytics = computed(() =>
   ["website-analytics", "website-statistics-v2"].includes(props.id),
 );
+function reportLabel(key:string):string {
+  if(props.id==="files-sync" && props.report.preview===true) {
+    const previewLabels:Record<string,string>={copied:"拟复制（尚未写入）",copied_count:"拟复制数",deletes:"拟删除（本模式不删除目标文件）"};
+    if(previewLabels[key])return previewLabels[key];
+  }
+  return names[key] || key;
+}
 const metrics = computed(() =>
   Object.entries(props.report).filter(
     ([key, value]) =>
@@ -315,7 +363,7 @@ const metrics = computed(() =>
   ),
 );
 const groups = computed(() =>
-  Object.entries({...props.report, ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
+  Object.entries({...props.report, ...(props.id==="files-sync" && props.report.job ? {remote_jobs:[props.report.job]} : {}), ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
     ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );
@@ -341,6 +389,8 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
+  if(props.id==="files-sync" && key==="state")return ({queued:"已排队（未完成）",running:"后台执行中",succeeded:"本次同步已完成",conflicts:"已处理可同步文件，存在保留冲突",failed:"未全部完成或已取消",interrupted:"中断或无法确认，需核对恢复",recovered:"交接已恢复，剩余文件未重传"} as Record<string,string>)[String(value)]||String(value??"—");
+  if(props.id==="files-sync" && key==="remote_target" && value && typeof value==="object") {const v=value as Record<string,any>;return `${v.address}:${v.port} · ${v.username} · ${v.root} · 私有备份 ${v.backup_root}`;}
   if (props.id==="load-balance" && ["state","from","to"].includes(key)) return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
   if (props.id==="load-balance" && key==="nodes" && Array.isArray(value)) return loadBalanceNodeSummary(value);
   if (props.id==="load-balance" && key==="reason") return ({ok:"状态与内容匹配",request_failed:"请求失败",timeout:"请求超时",status_mismatch:"状态码不匹配（不跟随跳转）",body_incomplete:"响应不完整",body_too_large:"响应超过 16 KiB",content_missing:"响应缺少指定内容",tls_validation_failed:"TLS 证书链、域名或有效期验证失败"} as Record<string,string>)[String(value)] || String(value ?? "—");
@@ -375,10 +425,13 @@ function rows(values: any[]): Record<string, any>[] {
         ),
       ),
       ...(props.id==="load-balance" && Array.isArray(v.nodes) ? loadBalanceEntryRow(v) : {}),
+      ...(props.id==="files-sync" ? remoteConnectionRow(v) : {}),
     };
   });
 }
 function columns(values: any[]) {
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","site_id","state","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
     return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
@@ -439,7 +492,8 @@ function mobileDownloadURL(value: unknown): string | undefined {
 }
 </script>
 <template>
-  <div class="functional-report">
+  <ThreatIDSReport v-if="id === 'network-threat-detection' && report.capture_state" :report="report" />
+  <div v-else class="functional-report">
     <el-alert
       v-if="report.partial"
       type="warning"
@@ -453,6 +507,10 @@ function mobileDownloadURL(value: unknown): string | undefined {
       :closable="false"
     />
     <p v-if="report.scope" class="report-scope">{{ report.scope }}</p>
+    <el-alert v-if="id === 'website-statistics-v2' && (report.history_blocked_sources || report.history_compressed_sources || report.history_missing_log)"
+      type="warning" title="部分日志无法自动续读：压缩归档不会重复导入，检查点冲突不会从头重置。已有历史保留；请核对日志轮转方式与历史范围。" :closable="false" />
+    <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"
+      type="warning" :title="report.history_worker_error || '后台采集尚未核对或状态已过期；本次手动读取成功不代表后台正在持续采集。'" :closable="false" />
     <section v-if="id === 'mobile-pwa' && Array.isArray(report.mobile_downloads)" class="mobile-downloads">
       <article v-for="item in report.mobile_downloads" :key="item.filename" class="diagnosis-check">
         <h4>{{ item.name }} <el-tag>{{ item.platform }}</el-tag></h4>
@@ -524,7 +582,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
     </el-tabs>
     <section v-for="[key, values] in groups" :key="key" class="report-group">
       <h4>
-        {{ names[key] || key }}
+        {{ reportLabel(key) }}
         <small
           >{{ values.length }} 项{{
             values.length > 200 ? "，只展示前 200 项" : ""
@@ -622,7 +680,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
     </section>
     <dl v-if="info.length" class="report-info">
       <template v-for="[key, value] in info" :key="key"
-        ><dt>{{ names[key] || key }}</dt>
+        ><dt>{{ reportLabel(key) }}</dt>
         <dd>{{ format(key, value) }}</dd></template
       >
     </dl>

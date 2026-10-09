@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/runtimecatalog"
 	"log"
 	"net"
@@ -242,6 +243,10 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 }
 
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+	if j.Kind == "network_ids_rulefeed_install" {
+		runNetworkIDSRuleFeedJob(ctx, s, e, j, appcatalog.Default())
+		return
+	}
 	if j.Kind == "analytics_html_build" {
 		runAnalyticsHTMLJob(ctx, s, e, j)
 		return

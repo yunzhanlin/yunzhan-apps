@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-09T00:57:00Z",
+  "generated_at": "2026-10-09T22:58:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -223,29 +223,29 @@
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "1.4.1",
-      "summary": "本机网站 Linux 实时事件增量同步、定时补查与持久计划；保护目标冲突、拒绝实时同步环，暂停立即停止后续写入，历史可筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "version": "1.5.2",
+      "summary": "本机实时和定时增量同步；新增固定 IP、公钥核对、加密凭据的手动跨服务器 SFTP 后台任务。目标冲突保留、旧文件私有备份、真实中断恢复；刷新保留原任务标识，重复提交不新建任务。远端实时与定时计划尚未提供。需要对应版本面板处理器。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
       "target": "files-sync",
       "manage_route": "app-modules",
       "capabilities": [
-        "增量同步",
-        "SHA-256 与逐文件检查点",
-        "目标冲突保护",
-        "隔离 PHP 网站部署",
-        "定时同步计划",
-        "Linux 实时同步与溢出补查",
-        "实时同步环拒绝",
-        "365 天有界历史分页",
-        "计划修订与暂停恢复",
-        "签名 Webhook 脱敏推送",
-        "持久队列与退避重试",
-        "实际送达记录"
+        "本机增量、本机定时与 Linux 实时补查",
+        "固定 IP 与 SSH 主机公钥核对",
+        "密码或私钥仅本机加密保存",
+        "非 root SFTP 子系统，不执行远端命令",
+        "受管旧文件私有备份与无覆盖交接",
+        "外部修改与额外文件保留",
+        "持久后台任务与同标识重放",
+        "刷新保留本账户待核对任务",
+        "取消后续交接与显式中断恢复",
+        "空目录来源绑定与修订冲突拒绝",
+        "有界输入、任务、备份和公开回执",
+        "本机计划历史与脱敏 Webhook"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.4.1/manifest.json",
-      "sha256": "97121999b27f0638e3c9983a6db4fb594c3254137d2d6eabbf59f304f8ace99d"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/files-sync/1.5.2/manifest.json",
+      "sha256": "5b6ab0af2af380e1c8cf878243be7a77269fb0e491b3e0c981ba03cf736b0170"
     },
     {
       "id": "load-balance",
@@ -1120,8 +1120,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.2.0",
-      "summary": "真实访问日志的时间、状态、路径/IP、爬虫与慢请求筛选，趋势、排行和隐私来源统计。",
+      "version": "2.3.0",
+      "summary": "真实访问日志后台增量采集到有界 SQLite 历史，30 天保留、全站最多 25 万行；时间、状态、路径/IP、爬虫与慢请求筛选。检查点与请求同事务提交，中断及轮转冲突保留历史，不从头重置。压缩归档和 IP 地理信息尚未提供。需要对应版本面板处理器。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1137,11 +1137,11 @@
         "时间与状态筛选",
         "路径/IP 筛选",
         "慢请求明细",
-        "专用操作流程",
-        "执行历史"
+        "后台增量采集与 30 天有界持久历史",
+        "检查点与请求同事务及中断保护"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.2.0/manifest.json",
-      "sha256": "d43af9e96371d41817a162b66a60dd1caa606dbe4d24083ac9d77d21e5b3b1c3"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.3.0/manifest.json",
+      "sha256": "5db6420daa7f00712879e4830643ba5fc0f0c124c597b85e0463a2b7bcc37012"
     },
     {
       "id": "website-tamper-proof",

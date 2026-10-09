@@ -36,4 +36,12 @@ class InstallDependencyPolicyTest(unittest.TestCase):
  def test_no_services_and_first_install_preflight_are_read_only(self):
   for flags in ({'services':1},{'fresh':1,'preflight':1}):
    result,logs=self.run_block(**flags);self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(logs['apt'],[]);self.assertEqual(logs['deps'],[])
+ def test_upgrade_preserves_private_executor_child_ownership(self):
+  lines=[line.strip() for line in SOURCE.splitlines() if 'chown' in line and '/var/lib/panel-executor' in line]
+  self.assertIn('chown root:panel /var/lib/panel-executor',lines)
+  self.assertTrue(all('-R' not in line and '--recursive' not in line for line in lines))
+  command='chown(){ printf "%s\\n" "$*"; };'+next(line for line in lines if line=='chown root:panel /var/lib/panel-executor')
+  result=subprocess.run(['bash','-eu','-c',command],capture_output=True,text=True)
+  self.assertEqual(result.returncode,0,result.stderr)
+  self.assertEqual(result.stdout,'root:panel /var/lib/panel-executor\n')
 if __name__=='__main__':unittest.main()

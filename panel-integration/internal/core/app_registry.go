@@ -333,27 +333,47 @@ func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
 }
 
 func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
-	var in struct {
-		Settings        map[string]any `json:"settings"`
-		Name            string         `json:"name"`
-		HostPort        int            `json:"host_port"`
-		ExpectedVersion string         `json:"expected_version"`
-		ExpectedSHA256  string         `json:"expected_sha256"`
-	}
+	var in registryInstallInput
 	if !decode(w, r, &in) {
+		return
+	}
+	requestInput := in // Preserve client identity before Compose defaults/names.
+	key := r.Header.Get("Idempotency-Key")
+	replay := func() bool {
+		prior, found, err := a.Store.registryInstallReplay(r.PathValue("id"), u.ID, key, requestInput)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return true
+		}
+		if found {
+			a.sendRegistryInstallReplay(w, r, prior)
+			return true
+		}
+		return false
+	}
+	if replay() {
 		return
 	}
 	catalog, _, err := a.loadAppCatalog(15*time.Second, r)
 	if err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 503, err.Error())
 		return
 	}
 	item, ok := appcatalog.Find(catalog, strings.TrimSpace(r.PathValue("id")))
 	if !ok {
+		if replay() {
+			return
+		}
 		fail(w, 404, "应用不在已签名目录中")
 		return
 	}
 	if (in.ExpectedVersion != "" && in.ExpectedVersion != item.Version) || (in.ExpectedSHA256 != "" && in.ExpectedSHA256 != item.SHA256) {
+		if replay() {
+			return
+		}
 		fail(w, 409, "应用目录已变化，请刷新后重试")
 		return
 	}
@@ -361,10 +381,16 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 	defer cancel()
 	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
 	if err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 409, err.Error())
 		return
 	}
 	if err = appCompatible(manifest); err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 409, err.Error())
 		return
 	}
@@ -384,13 +410,12 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, "应用包引用的运行时未纳入本机允许列表")
 			return
 		}
-		job, err := a.Store.QueueInstall(releaseID, r.Header.Get("Idempotency-Key"), u.Username)
+		job, err := a.Store.queueInstallBound(releaseID, key, u.Username, a.Store.bindRegistryInstall(item, releaseID, key, u.ID, in))
 		if err != nil {
+			if replay() {
+				return
+			}
 			fail(w, 409, err.Error())
-			return
-		}
-		if err = a.Store.trackRegistryJob(item, releaseID, job); err != nil {
-			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对任务")
 			return
 		}
 		send(w, 202, map[string]any{"job_id": job, "provider": "runtime", "target": releaseID})
@@ -404,13 +429,12 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, err.Error())
 			return
 		}
-		job, err := a.Store.QueueSoftwareAction(manifest.Delivery.Target, "install", in.Settings, r.Header.Get("Idempotency-Key"), u.Username)
+		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, "", key, u.Username, a.Store.bindRegistryInstall(item, manifest.Delivery.Target, key, u.ID, in))
 		if err != nil {
+			if replay() {
+				return
+			}
 			fail(w, 409, err.Error())
-			return
-		}
-		if err = a.Store.trackRegistryJob(item, manifest.Delivery.Target, job); err != nil {
-			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对任务")
 			return
 		}
 		send(w, 202, map[string]any{"job_id": job, "provider": "panel-module", "target": manifest.Delivery.Target})
@@ -438,14 +462,20 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, err.Error())
 			return
 		}
-		var result DockerJobResult
-		if err = a.Executor.Call(r.Context(), http.MethodPost, "/v1/docker/projects/jobs", op, &result); err != nil {
-			fail(w, 409, err.Error())
+		prior, fresh, err := a.Store.reserveRegistryCompose(item, key, u, requestInput, op)
+		if err != nil || !fresh {
+			if replay() {
+				return
+			}
+			fail(w, 409, "无法保留 Compose 安装身份，未提交")
 			return
 		}
-		_ = a.Store.Audit(u.Username, "app-registry.install", manifest.ID, "queued")
-		if err = a.Store.trackRegistryJob(item, op.ProjectID, result.JobID); err != nil {
-			fail(w, 503, "任务已提交，但应用版本记录未保存，请核对 Docker 任务")
+		var result DockerJobResult
+		if err = a.Executor.Call(r.Context(), http.MethodPost, "/v1/docker/projects/jobs", op, &result); err != nil ||
+			result.JobID != op.JobID || result.ProjectID != op.ProjectID || result.Kind != "compose" || !validRegistryComposeJobState(result.State) {
+			// A timeout may hide a successful write. Query the reserved job only;
+			// do not generate another project or resubmit the original POST.
+			a.sendRegistryInstallReplay(w, r, prior)
 			return
 		}
 		send(w, 202, result)
@@ -571,6 +601,8 @@ func (a *Server) appRegistryRoutes(m *http.ServeMux) {
 	}))
 	m.HandleFunc("POST /api/app-registry/{id}/install", a.authorize(a.installRegistryApp))
 	m.HandleFunc("POST /api/app-registry/{id}/update", a.authorize(a.updateRegistryApp))
+	m.HandleFunc("GET /api/app-registry/{id}/requests/{key}", a.authorize(a.registryRequestStatus))
+	m.HandleFunc("POST /api/app-registry/{id}/requests/{key}/close", a.authorize(a.closeRegistryRequest))
 }
 
 func appCompatible(manifest appcatalog.Manifest) error {

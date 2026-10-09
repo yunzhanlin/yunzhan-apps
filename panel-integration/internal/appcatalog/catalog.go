@@ -84,19 +84,21 @@ type Uninstall struct {
 }
 
 type Manifest struct {
-	SchemaVersion int           `json:"schema_version"`
-	ID            string        `json:"id"`
-	Name          string        `json:"name"`
-	Category      string        `json:"category"`
-	Version       string        `json:"version"`
-	Summary       string        `json:"summary"`
-	Stage         string        `json:"stage"`
-	Risk          string        `json:"risk"`
-	Delivery      Delivery      `json:"delivery"`
-	Compatibility Compatibility `json:"compatibility"`
-	Capabilities  []string      `json:"capabilities"`
-	Health        Health        `json:"health"`
-	Uninstall     Uninstall     `json:"uninstall"`
+	SchemaVersion   int              `json:"schema_version"`
+	ID              string           `json:"id"`
+	Name            string           `json:"name"`
+	Category        string           `json:"category"`
+	Version         string           `json:"version"`
+	Summary         string           `json:"summary"`
+	Stage           string           `json:"stage"`
+	Risk            string           `json:"risk"`
+	Delivery        Delivery         `json:"delivery"`
+	Compatibility   Compatibility    `json:"compatibility"`
+	Capabilities    []string         `json:"capabilities"`
+	Health          Health           `json:"health"`
+	Uninstall       Uninstall        `json:"uninstall"`
+	RuleFeeds       []RuleFeed       `json:"rule_feeds,omitempty"`
+	RuleDataChannel *RuleDataChannel `json:"rule_data_channel,omitempty"`
 }
 
 type LoadInfo struct {
@@ -177,7 +179,7 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 	req.Header.Set("Accept", "application/json, text/plain;q=0.8")
 	req.Header.Set("Cache-Control", "no-cache")
 	// GitHub raw is CDN-backed. A manual check must not reuse its old response.
-	if !strings.Contains(rawURL, "/dist/apps/") {
+	if !strings.Contains(rawURL, "/dist/apps/") || rawURL == c.BaseURL+"/dist/apps/network-threat-detection/rule-data/"+ruleDataChannelID+"/catalog-v1.bundle.json" {
 		q := req.URL.Query()
 		q.Set("check", fmt.Sprint(time.Now().UnixNano()))
 		req.URL.RawQuery = q.Encode()
@@ -396,11 +398,32 @@ func (c *Client) FetchManifest(ctx context.Context, item CatalogItem, cacheDir s
 	if err != nil {
 		return manifest, err
 	}
+	manifest, err = c.verifyManifestData(item, raw)
+	if err != nil {
+		return Manifest{}, err
+	}
+	path := filepath.Join(cacheDir, manifest.ID, manifest.Version, "manifest.json")
+	if err = atomicWrite(path, raw, 0600); err != nil {
+		return Manifest{}, err
+	}
+	return manifest, nil
+}
+
+// The network pull and root-side offline authority verification share the
+// exact same manifest binding and capability validation contract.
+func (c *Client) verifyManifestData(item CatalogItem, raw []byte) (Manifest, error) {
+	var manifest Manifest
+	if len(raw) == 0 || len(raw) > maxManifestBytes {
+		return manifest, errors.New("应用包超过容量或为空")
+	}
+	if err := c.validateCatalog(Catalog{SchemaVersion: 1, GeneratedAt: time.Now().UTC().Format(time.RFC3339), Apps: []CatalogItem{item}}); err != nil {
+		return manifest, err
+	}
 	digest := sha256.Sum256(raw)
 	if hex.EncodeToString(digest[:]) != item.SHA256 {
 		return manifest, errors.New("应用包 SHA-256 与已签名目录不一致")
 	}
-	if err = strictJSON(raw, &manifest); err != nil {
+	if err := strictJSON(raw, &manifest); err != nil {
 		return manifest, err
 	}
 	if manifest.SchemaVersion != 1 || manifest.ID != item.ID || manifest.Name != item.Name || manifest.Version != item.Version || manifest.Category != item.Category || manifest.Stage != item.Stage || manifest.Risk != item.Risk {
@@ -412,8 +435,7 @@ func (c *Client) FetchManifest(ctx context.Context, item CatalogItem, cacheDir s
 	if manifest.Stage != "ready" {
 		return Manifest{}, errors.New("该应用尚未通过安装验收")
 	}
-	path := filepath.Join(cacheDir, manifest.ID, manifest.Version, "manifest.json")
-	if err = atomicWrite(path, raw, 0600); err != nil {
+	if err := validateRuleFeeds(manifest); err != nil {
 		return Manifest{}, err
 	}
 	return manifest, nil

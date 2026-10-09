@@ -25,6 +25,8 @@ export function canReadPath(access: AccessPlan | null, value: string): boolean {
   if (root === "overview") return access.menu_ids.includes("overview");
   if (root === "monitor") return access.menu_ids.includes("monitor");
   if (access.role !== "admin") return false;
+  if (root === "app-modules") return access.menu_ids.includes("security")
+    && /^\/app-modules\/network-threat-detection\/operations(?:\/[a-f0-9]{32})?$/.test(value.split("?")[0]);
   const menu: Record<string, string> = { certificates: "sites", jobs: "audit", audit: "audit", notifications: "audit", runtimes: "runtimes", software: "runtimes", "app-registry": "runtimes" };
   return !!menu[root] && access.menu_ids.includes(menu[root]);
 }

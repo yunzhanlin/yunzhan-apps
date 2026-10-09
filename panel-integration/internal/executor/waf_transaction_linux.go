@@ -18,18 +18,22 @@ import (
 )
 
 type wafTransaction struct {
-	Format    int               `json:"format"`
-	ID        string            `json:"id"`
-	State     string            `json:"state"`
-	CreatedAt string            `json:"created_at"`
-	Changes   []wafConfigChange `json:"changes"`
-	Digests   map[string]string `json:"backup_sha256"`
+	Format    int                     `json:"format"`
+	ID        string                  `json:"id"`
+	State     string                  `json:"state"`
+	CreatedAt string                  `json:"created_at"`
+	Changes   []wafConfigChange       `json:"changes"`
+	Digests   map[string]string       `json:"backup_sha256"`
+	IDS       *threatIDSRecoveryState `json:"ids,omitempty"`
 }
 
 // Returned only before a configuration lock is acquired; no mutation occurred.
 var errWAFConfigurationBusy = errors.New("WAF 正在变更或恢复，请稍后重试")
 
 func (s *Service) wafPendingPath() string {
+	if s.fileTransactionApplication == "network-ids" {
+		return filepath.Join(s.moduleDir("network-threat-detection"), "config-transactions", "pending.json")
+	}
 	if s.fileTransactionApplication == "analytics-html" {
 		return s.systemPath("/etc/panel/analytics-html/config-transactions/pending.json")
 	}
@@ -41,6 +45,14 @@ func (s *Service) wafPendingPath() string {
 
 func (s *Service) wafChangePathAllowed(path string) bool {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return false
+	}
+	if s.fileTransactionApplication == "network-ids" {
+		for _, allowed := range s.threatIDSConfigurationPaths() {
+			if path == allowed {
+				return true
+			}
+		}
 		return false
 	}
 	if s.fileTransactionApplication == "analytics-html" {
@@ -115,6 +127,9 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 	if s.fileTransactionApplication == "apache-waf" {
 		base = s.moduleDir("apache-waf")
 	}
+	if s.fileTransactionApplication == "network-ids" {
+		base = s.moduleDir("network-threat-detection")
+	}
 	if err := s.wafOwnedDirectory(base, true); err != nil {
 		return nil, err
 	}
@@ -140,7 +155,7 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 		}
 		return nil, fmt.Errorf("无法取得 WAF 配置锁: %w", err)
 	}
-	if operation == syscall.LOCK_EX && s.fileTransactionApplication != "analytics-html" && s.fileTransactionApplication != "apache-waf" {
+	if operation == syscall.LOCK_EX && s.fileTransactionApplication != "analytics-html" && s.fileTransactionApplication != "apache-waf" && s.fileTransactionApplication != "network-ids" {
 		if _, err := os.Lstat(s.analyticsHTMLTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
 			f.Close()
 			return nil, errors.New("HTML 引擎有待恢复配置；禁止其他 Nginx 变更覆盖恢复集合")
@@ -150,6 +165,22 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 }
 
 func (s *Service) wafTransactionContract(tx wafTransaction) error {
+	if s.fileTransactionApplication == "network-ids" {
+		paths := s.threatIDSConfigurationPaths()
+		if tx.Format != 2 || len(tx.Changes) != len(paths) || tx.IDS == nil || tx.IDS.ApplyOwner == nil || tx.IDS.ApplyOwner.PID <= 1 || tx.IDS.ApplyOwner.StartTime == 0 || !threatPackageSHA.MatchString(tx.IDS.UnitSHA) || !threatPackageSHA.MatchString(tx.IDS.RuntimeRecordSHA) || tx.IDS.RecoveryOwner != nil && (tx.State == "applying" || tx.IDS.RecoveryOwner.PID <= 1 || tx.IDS.RecoveryOwner.StartTime == 0) {
+			return errors.New("IDS 恢复事务缺少完整配置、原状态、程序来源或执行身份")
+		}
+		for i, path := range paths {
+			if tx.Changes[i].Path != path {
+				return errors.New("IDS 恢复集合路径或顺序错误")
+			}
+		}
+		if err := validateThreatIDSJournal(tx); err != nil {
+			return err
+		}
+	} else if tx.IDS != nil {
+		return errors.New("非 IDS 事务不能包含 IDS 运行状态")
+	}
 	if s.fileTransactionApplication == "analytics-html" {
 		paths := s.analyticsHTMLConfigurationPaths()
 		if tx.Format != 2 || len(tx.Changes) != len(paths) {
@@ -264,6 +295,8 @@ func (s *Service) wafCurrentMatches(c wafConfigChange, next bool) (bool, error) 
 		b, err = s.analyticsHTMLStableBackup(c.Path)
 	} else if s.fileTransactionApplication == "apache-waf" {
 		b, err = s.apacheWAFStableBackup(c.Path)
+	} else if s.fileTransactionApplication == "network-ids" {
+		b, err = s.threatIDSStableBackup(c.Path)
 	} else {
 		b, err = backupFile(c.Path)
 	}
@@ -304,6 +337,10 @@ func wafApplyChange(c wafConfigChange, next bool) error {
 }
 
 func (s *Service) startWAFTransaction(changes []wafConfigChange) (wafTransaction, error) {
+	return s.startWAFTransactionState(changes, nil)
+}
+
+func (s *Service) startWAFTransactionState(changes []wafConfigChange, ids *threatIDSRecoveryState) (wafTransaction, error) {
 	changes = append([]wafConfigChange{}, changes...)
 	for i := range changes {
 		c := &changes[i]
@@ -321,7 +358,7 @@ func (s *Service) startWAFTransaction(changes []wafConfigChange) (wafTransaction
 			}
 		}
 	}
-	tx := wafTransaction{Format: 2, ID: core.ID(), State: "applying", CreatedAt: core.Now(), Changes: changes, Digests: map[string]string{}}
+	tx := wafTransaction{Format: 2, ID: core.ID(), State: "applying", CreatedAt: core.Now(), Changes: changes, Digests: map[string]string{}, IDS: ids}
 	for _, c := range changes {
 		tx.Digests[c.Path+":old"], tx.Digests[c.Path+":next"] = core.Hash(string(c.OldData)), core.Hash(string(c.NextData))
 	}
@@ -387,7 +424,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		return false, err
 	}
 	if tx.State != "applying" {
-		if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" {
+		if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" {
 			for _, c := range tx.Changes {
 				match, e := s.wafCurrentMatches(c, tx.State == "committed")
 				if e != nil || !match {
@@ -419,7 +456,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		}
 	}
 	tx.State = "recovered"
-	if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" {
+	if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" {
 		return true, wafWriteTransaction(s.wafPendingPath(), tx)
 	}
 	return true, s.finishWAFTransaction(tx)

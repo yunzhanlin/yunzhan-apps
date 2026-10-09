@@ -2953,6 +2953,10 @@ html.dark .el-table td.el-table__cell { border-color: #354357; }
   font-size: 12px;
 }
 .app-registry-source small { margin-left: auto; color: #6c7f75; }
+.registry-pending { margin-bottom: 16px; }
+.registry-pending > div:not(.el-alert) { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px; border: 1px solid var(--border, #dce4ef); border-top: 0; font-size: 13px; }
+.registry-pending small { color: var(--muted, #7586a1); overflow-wrap: anywhere; }
+.registry-pending .el-button { margin-left: auto; }
 .store-filter-empty { grid-column: 1 / -1; }
 .store-main .runtime-grid {
   gap: 10px;

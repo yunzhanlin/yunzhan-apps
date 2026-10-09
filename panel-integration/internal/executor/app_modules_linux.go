@@ -210,9 +210,25 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 		if !s.moduleInstalled(id) {
 			return errors.New("模块未安装")
 		}
+		if id == "files-sync" {
+			if err := s.remoteSyncUninstallPreflight(); err != nil {
+				return err
+			}
+		}
 		if id == "pure-ftpd" {
 			if _, e := s.Config.Run(ctx, "/usr/bin/systemctl", "disable", "--now", "panel-pure-ftpd"); e != nil {
 				return e
+			}
+		}
+		if id == "network-threat-detection" {
+			ids := s.threatIDSTransactionService()
+			lock, err := ids.lockWAFConfiguration()
+			if err != nil {
+				return err
+			}
+			defer lock.Close()
+			if err := ids.threatIDSUninstallPreflight(ctx); err != nil {
+				return err
 			}
 		}
 		if id == "php-code-security" {
@@ -453,6 +469,8 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
+	s.networkIDSOperationRoutes(m)
+	s.networkIDSRuleFeedJobRoutes(m)
 	s.analyticsHTMLRoutes(m)
 	s.appDependencyRoutes(m)
 	s.apacheWAFWorkspaceRoutes(m)
@@ -492,6 +510,10 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		id, action := r.PathValue("id"), r.PathValue("action")
 		if !core.ValidAppModuleAction(id, action) {
 			respond(w, 400, map[string]string{"error": "未知操作"})
+			return
+		}
+		if id == "network-threat-detection" && core.NetworkIDSBackgroundAction(action) {
+			respond(w, 409, map[string]string{"error": "IDS 原生控制须通过持久化后台任务；同步请求不会执行启停或配置"})
 			return
 		}
 		if !s.moduleInstalled(id) {
@@ -539,6 +561,9 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 		}
 		return s.moduleIntegrity(ctx, id, action, in)
 	case "files-sync":
+		if strings.Contains(action, "remote") {
+			return s.moduleRemoteSync(ctx, action, in)
+		}
 		if action != "preview" && action != "sync" {
 			return s.moduleSyncPlans(ctx, action, in)
 		}
@@ -549,9 +574,17 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
 		return s.moduleDiagnosis(ctx, in.SiteID)
-	case "website-analytics", "website-statistics-v2":
+	case "website-statistics-v2":
+		return s.moduleStatisticsHistory(ctx, in)
+	case "website-analytics":
 		return s.moduleAnalyticsFiltered(ctx, in)
 	case "network-threat-detection":
+		if action == "ids-report" {
+			return s.moduleThreatIDSReport(ctx, in)
+		}
+		if strings.HasPrefix(action, "ids-") {
+			return s.moduleThreatIDSControl(ctx, action, in)
+		}
 		return s.moduleThreat(ctx, action)
 	case "task-manager":
 		return s.moduleTasks(ctx, action, in)
@@ -1470,6 +1503,9 @@ func (s *Service) StartAppModuleWorker() {
 	go s.runLoadBalanceHealthWorker(context.Background())
 	go s.runWAFBodyLogRotationWorker(context.Background())
 	go s.runWAFBodyLogRetentionWorker(context.Background())
+	go s.runThreatIDSRotationWorker(context.Background())
+	go s.runStatisticsHistoryWorker(context.Background())
+	go s.runRemoteSyncWorker(context.Background())
 	go func() {
 		s.mu.Lock()
 		s.recoverSyncPlans()

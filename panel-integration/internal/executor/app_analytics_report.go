@@ -101,6 +101,26 @@ func analyticsReferer(value string) string {
 // Bounds apply to both log bytes and cardinality: report generation remains
 // usable on small servers, and returns explicit partial-result indicators.
 func buildAnalyticsReport(ctx context.Context, reader io.Reader, id string, in core.AppModuleInput, partial bool, now time.Time) (map[string]any, error) {
+	scanner := bufio.NewScanner(io.LimitReader(reader, 16<<20))
+	scanner.Buffer(make([]byte, 4096), 65536)
+	return buildAnalyticsRows(ctx, func() (analyticsAccess, error) {
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				return analyticsAccess{}, err
+			}
+			return analyticsAccess{}, io.EOF
+		}
+		var row analyticsAccess
+		if json.Unmarshal(scanner.Bytes(), &row) != nil {
+			return analyticsAccess{}, nil
+		}
+		return row, nil
+	}, id, in, partial, now)
+}
+
+// The durable history reader is bounded by its database row/page budgets, not
+// the legacy 16 MiB tail limit. Both sources use the same report accumulator.
+func buildAnalyticsRows(ctx context.Context, next func() (analyticsAccess, error), id string, in core.AppModuleInput, partial bool, now time.Time) (map[string]any, error) {
 	from, to, err := analyticsWindow(in)
 	if err != nil {
 		return nil, err
@@ -137,14 +157,18 @@ func buildAnalyticsReport(ctx context.Context, reader io.Reader, id string, in c
 		}
 		return append(rows, row)
 	}
-	scanner := bufio.NewScanner(io.LimitReader(reader, 16<<20))
-	scanner.Buffer(make([]byte, 4096), 65536)
-	for scanner.Scan() {
+	for {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
 		}
-		var row analyticsAccess
-		if json.Unmarshal(scanner.Bytes(), &row) != nil || row.Status < 100 || row.Status > 599 || row.Bytes < 0 || row.Bytes > 1<<40 || row.Seconds < 0 || row.Seconds > 86400 || len(row.Path) > 8192 || len(row.Method) > 32 || row.Remote != "" && net.ParseIP(row.Remote) == nil {
+		row, readErr := next()
+		if errors.Is(readErr, io.EOF) {
+			break
+		}
+		if readErr != nil {
+			return nil, readErr
+		}
+		if row.Status < 100 || row.Status > 599 || row.Bytes < 0 || row.Bytes > 1<<40 || math.IsNaN(row.Seconds) || math.IsInf(row.Seconds, 0) || row.Seconds < 0 || row.Seconds > 86400 || len(row.Path) > 8192 || len(row.Method) > 32 || row.Remote != "" && net.ParseIP(row.Remote) == nil {
 			invalid++
 			continue
 		}
@@ -220,9 +244,6 @@ func buildAnalyticsReport(ctx context.Context, reader io.Reader, id string, in c
 			slowCount++
 			slowRows = appendSample(slowRows, sample)
 		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
 	}
 	visitorRows := make([]analyticsVisitor, 0, len(visitors))
 	for _, v := range visitors {

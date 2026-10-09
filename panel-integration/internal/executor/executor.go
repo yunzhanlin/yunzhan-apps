@@ -39,6 +39,10 @@ type Service struct {
 	moduleWorkerStarted   bool
 	moduleWatchWake       chan struct{}
 	moduleWatchStatus     map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
+	idsOperationMu        sync.Mutex
+	idsOperationStarted   bool
+	idsOperationWake      chan struct{}
+	idsOperationError     error
 	lbHealthStatusMu      sync.Mutex
 	lbHealthWorkerError   string
 	// Only a freshly constructed internal transaction adapter sets this.

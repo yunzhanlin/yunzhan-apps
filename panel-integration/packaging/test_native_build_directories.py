@@ -25,7 +25,7 @@ class NativeBuildPackagingTests(unittest.TestCase):
         self.assertIn('"$HERE/native-build-directories.py"', copy)
         builder = (root / "packaging/build-release.sh").read_text()
         self.assertIn('"$BUILD_ROOT/packaging/native-build-directories.py"', builder)
-        self.assertIn('waf-state-directory.py native-build-directories.py;', builder)
+        self.assertIn('waf-state-directory.py native-build-directories.py release-file-modes.py;', builder)
         development = (root / "dev/provision-app.sh").read_text()
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" check'), development.index('touch /etc/panel-development-vm'))
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" create'), development.index('systemctl stop panel.service'))
@@ -44,13 +44,38 @@ class NativeBuildPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux" and os.geteuid() == 0, "actual root Linux private fixture required")
 class NativeBuildDirectoryTests(unittest.TestCase):
+    def test_rule_feed_parent_refuses_foreign_state_without_repairs(self):
+        for kind in ("writable", "private-mode", "foreign-owner", "foreign-group", "symlink"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory(prefix="panel-native-rules-test-") as directory:
+                root = pathlib.Path(directory)
+                module.prepare(root, True)
+                target = root / "opt/panel/network-rule-feeds"
+                if kind == "writable": target.chmod(0o777)
+                elif kind == "private-mode": target.chmod(0o700)
+                elif kind == "foreign-owner": os.chown(target, 65534, 0)
+                elif kind == "foreign-group": os.chown(target, 0, 65534)
+                else:
+                    retained = target.with_name("retained-rules")
+                    target.rename(retained); target.symlink_to(retained)
+                before = target.lstat()
+                for create in (False, True):
+                    with self.assertRaises(ValueError): module.prepare(root, create)
+                    after = target.lstat()
+                    self.assertEqual((before.st_mode, before.st_uid, before.st_gid, before.st_ino), (after.st_mode, after.st_uid, after.st_gid, after.st_ino))
+
     def test_check_is_read_only_and_creation_does_not_repair_or_change_contents(self):
         with tempfile.TemporaryDirectory(prefix="panel-native-cache-test-") as directory:
             root = pathlib.Path(directory)
             target = root / "var/cache/panel-analytics-html-build"
+            ids = root / "var/lib/panel-network-ids"
             module.prepare(root, False)
             self.assertEqual(list(root.iterdir()), [])
             module.prepare(root, True)
+            self.assertEqual((ids.stat().st_uid, ids.stat().st_gid, stat.S_IMODE(ids.stat().st_mode)), (0, 0, 0o755))
+            self.assertEqual(list(ids.iterdir()), [])  # no account/config/capture as part of a core update
+            rules = root / "opt/panel/network-rule-feeds"
+            self.assertEqual((rules.stat().st_uid, rules.stat().st_gid, stat.S_IMODE(rules.stat().st_mode)), (0, 0, 0o755))
+            self.assertEqual(list(rules.iterdir()), [])  # empty data root only, no rules or native application installed
             self.assertEqual((target.stat().st_uid, target.stat().st_gid, stat.S_IMODE(target.stat().st_mode)), (0, 0, 0o755))
             marker = target / "retained-private-build-evidence"
             marker.write_bytes(b"never prune or repair a previous compiler job")
@@ -61,6 +86,25 @@ class NativeBuildDirectoryTests(unittest.TestCase):
                 self.assertEqual((target.stat().st_ino, target.stat().st_mode), (before.st_ino, before.st_mode))
                 self.assertEqual(marker.read_bytes(), b"never prune or repair a previous compiler job")
                 self.assertEqual(stat.S_IMODE(marker.stat().st_mode), 0o600)
+
+    def test_ids_parent_preflight_refuses_external_state_without_repairs(self):
+        for kind in ("writable", "private-mode", "foreign-owner", "foreign-group", "symlink"):
+            with self.subTest(kind=kind), tempfile.TemporaryDirectory(prefix="panel-native-ids-test-") as directory:
+                root=pathlib.Path(directory)
+                module.prepare(root, True)
+                ids=root / "var/lib/panel-network-ids"
+                if kind=="writable":ids.chmod(0o777)
+                elif kind=="private-mode":ids.chmod(0o700)
+                elif kind=="foreign-owner":os.chown(ids,65534,0)
+                elif kind=="foreign-group":os.chown(ids,0,65534)
+                else:
+                    retained=ids.with_name("retained-ids")
+                    ids.rename(retained);ids.symlink_to(retained)
+                before=ids.lstat()
+                for create in (False,True):
+                    with self.assertRaises(ValueError):module.prepare(root,create)
+                    after=ids.lstat()
+                    self.assertEqual((before.st_mode,before.st_uid,before.st_gid,before.st_ino),(after.st_mode,after.st_uid,after.st_gid,after.st_ino))
 
     def test_foreign_paths_and_linked_ancestors_are_refused_without_repair(self):
         for kind in ("writable", "private-mode", "foreign-owner", "foreign-group", "symlink", "ancestor-symlink", "file"):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Provision the fixed analytics compiler cache before systemd confinement."""
+"""Provision fixed root native directories before systemd confinement."""
 import argparse
 import os
 import pathlib
@@ -12,10 +12,15 @@ def prepare(root, create):
     root = pathlib.Path(root)
     if root.anchor != "/" or str(root) != os.path.normpath(str(root)):
         raise ValueError("target root must be an absolute normalized ordinary directory")
-    target = root / "var/cache/panel-analytics-html-build"
+    for parts in (("var", "cache", "panel-analytics-html-build"), ("var", "lib", "panel-network-ids"), ("opt", "panel", "network-rule-feeds")):
+        prepare_target(root, parts, create)
+
+
+def prepare_target(root, parts, create):
+    target = root.joinpath(*parts)
     current = root
     missing = False
-    for component in (None, "var", "cache", "panel-analytics-html-build"):
+    for component in (None, *parts):
         if component is not None:
             current /= component
         try:

@@ -33,7 +33,7 @@ install -d -m 0750 -o panel-task -g panel-task /var/lib/panel-tasks/work
 install -d -m 0755 /opt/panel/app-modules /var/cache/panel-waf-build /var/cache/panel-waf-body
 install -d -m 0750 -o root -g www-data /var/lib/panel-waf
 python3 "$PANEL_NATIVE_BUILD_PREPARER" create
-for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-waf-engine-build@ panel-analytics-html-build@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@ panel-nfs-server panel-nfs-server-recover; do
+for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-waf-engine-build@ panel-analytics-html-build@ panel-network-rulefeed-install@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@ panel-nfs-server panel-nfs-server-recover; do
  install -m 0644 /workspace/dev/$unit.service /etc/systemd/system/$unit.service
 done
 systemctl stop panel.service panel-executor.service 2>/dev/null || true

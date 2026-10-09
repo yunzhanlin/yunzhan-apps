@@ -69,7 +69,7 @@ func (a *Server) reconcileRegistryReceipts(ctx context.Context) error {
 			if err = a.Executor.Call(ctx, http.MethodGet, "/v1/docker/jobs/"+v.JobID, nil, &result); err != nil {
 				continue
 			}
-			if result.ProjectID != v.Scope {
+			if result.JobID != v.JobID || result.ProjectID != v.Scope || result.Kind != "compose" {
 				continue
 			}
 			state = result.State

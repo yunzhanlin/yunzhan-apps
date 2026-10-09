@@ -37,3 +37,9 @@ test('async refresh discards old account payloads and menu grants are not only h
   assert(files.includes(':readonly="!canWriteSite"'));
   assert(files.includes('当前账户暂无已授权的可管理网站'));
 });
+test('IDS native task reads need security admin and exact closed paths only', () => {
+  const security={role:'admin',menu_ids:['security']};
+  for(const path of ['/app-modules/network-threat-detection/operations','/app-modules/network-threat-detection/operations/'+ 'a'.repeat(32)]) assert(canReadPath(security,path),path);
+  for(const plan of [{role:'admin',menu_ids:['runtimes']},{role:'viewer',menu_ids:['security']},null]) assert(!canReadPath(plan,'/app-modules/network-threat-detection/operations'));
+  for(const path of ['/app-modules/network-threat-detection/operations/foo','/app-modules/network-threat-detection/operations/../ids-start','/app-modules/network-threat-detection/ids-start','/app-modules/network-threat-detection/operations-extra','/app-modules/user-manager/operations','/app-modules/network-threat-detection/operations/'+ 'a'.repeat(32)+'/logs']) assert(!canReadPath(security,path),path);
+});

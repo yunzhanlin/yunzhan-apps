@@ -36,6 +36,9 @@ func (s *Store) registryUpdateReplay(appID, actorID, key string, in registryUpda
 	if err := validateRegistryUpdateRequest(appID, actorID, key, in); err != nil {
 		return out, false, err
 	}
+	if err := ensureRegistryRequestOpen(s.DB, key); err != nil {
+		return out, false, err
+	}
 	var oldActor, oldApp, version, digest, scope, target, kind, payload, jobKey string
 	err := s.DB.QueryRow(`SELECT q.actor_id,q.app_id,q.version,q.sha256,q.provider,q.scope,q.job_id,j.target_id,j.kind,j.payload,j.idempotency_key
  FROM app_registry_update_requests q JOIN runtime_jobs j ON j.id=q.job_id WHERE q.idempotency_key=?`, key).
@@ -70,6 +73,9 @@ func (s *Store) registryUpdateReplay(appID, actorID, key string, in registryUpda
 
 func (s *Store) bindRegistryUpdate(item appcatalog.CatalogItem, scope, key, actorID string) func(*sql.Tx, string, bool) error {
 	return func(tx *sql.Tx, job string, existing bool) error {
+		if err := ensureRegistryRequestOpen(tx, key); err != nil {
+			return err
+		}
 		var oldActor, oldApp, version, digest, provider, oldScope, oldJob string
 		err := tx.QueryRow(`SELECT actor_id,app_id,version,sha256,provider,scope,job_id FROM app_registry_update_requests WHERE idempotency_key=?`, key).
 			Scan(&oldActor, &oldApp, &version, &digest, &provider, &oldScope, &oldJob)

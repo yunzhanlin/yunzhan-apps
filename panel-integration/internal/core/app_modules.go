@@ -22,66 +22,74 @@ type AppModuleField struct {
 	Kind  string `json:"kind"`
 }
 type AppModuleInput struct {
-	SiteID              string                 `json:"site_id,omitempty"`
-	TargetSiteID        string                 `json:"target_site_id,omitempty"`
-	TargetProjectID     string                 `json:"target_project_id,omitempty"`
-	SiteIDs             []string               `json:"site_ids,omitempty"`
-	MenuIDs             []string               `json:"menu_ids"`
-	Path                string                 `json:"path,omitempty"`
-	Excludes            []string               `json:"excludes,omitempty"`
-	ExpectedSHA         string                 `json:"expected_sha,omitempty"`
-	Username            string                 `json:"username,omitempty"`
-	Password            string                 `json:"password,omitempty"`
-	Role                string                 `json:"role,omitempty"`
-	ResourceID          string                 `json:"resource_id,omitempty"`
-	Entry               string                 `json:"entry,omitempty"`
-	PID                 int                    `json:"pid,omitempty"`
-	StartTime           uint64                 `json:"start_time,omitempty"`
-	Port                int                    `json:"port,omitempty"`
-	Domain              string                 `json:"domain,omitempty"`
-	Nodes               []AppUpstream          `json:"nodes,omitempty"`
-	Sticky              bool                   `json:"sticky,omitempty"`
-	HealthCheck         *LoadBalanceHTTPHealth `json:"health_check,omitempty"`
-	BackendTLS          *LoadBalanceBackendTLS `json:"backend_tls,omitempty"`
-	URL                 string                 `json:"url,omitempty"`
-	Token               string                 `json:"token,omitempty"`
-	Source              string                 `json:"source,omitempty"`
-	ReadOnly            bool                   `json:"read_only,omitempty"`
-	Interval            int                    `json:"interval,omitempty"`
-	AutoRestore         bool                   `json:"auto_restore,omitempty"`
-	Realtime            bool                   `json:"realtime"`
-	Confirm             string                 `json:"confirm,omitempty"`
-	DryRun              bool                   `json:"dry_run,omitempty"`
-	FromTime            string                 `json:"from_time,omitempty"`
-	ToTime              string                 `json:"to_time,omitempty"`
-	Search              string                 `json:"search,omitempty"`
-	StatusCode          int                    `json:"status_code,omitempty"`
-	MinSeconds          float64                `json:"min_seconds,omitempty"`
-	OnlyBots            bool                   `json:"only_bots,omitempty"`
-	Severity            string                 `json:"severity,omitempty"`
-	Instances           int                    `json:"instances,omitempty"`
-	MemoryMB            int                    `json:"memory_mb,omitempty"`
-	EnvironmentPatch    map[string]*string     `json:"environment_patch,omitempty"`
-	AllowInstallScripts bool                   `json:"allow_install_scripts,omitempty"`
-	BindAddress         string                 `json:"bind_address,omitempty"`
-	PassiveAddress      string                 `json:"passive_address,omitempty"`
-	PassiveStart        int                    `json:"passive_start,omitempty"`
-	PassiveEnd          int                    `json:"passive_end,omitempty"`
-	CertificateID       string                 `json:"certificate_id,omitempty"`
-	MaxClients          int                    `json:"max_clients,omitempty"`
-	MaxPerIP            int                    `json:"max_per_ip,omitempty"`
-	IdleMinutes         int                    `json:"idle_minutes,omitempty"`
-	QuotaMB             int                    `json:"quota_mb"`
-	QuotaFiles          int                    `json:"quota_files"`
-	UploadKB            int                    `json:"upload_kb"`
-	DownloadKB          int                    `json:"download_kb"`
-	MaxSessions         int                    `json:"max_sessions"`
-	ClientAllow         []string               `json:"client_allow"`
-	ClientDeny          []string               `json:"client_deny"`
-	Enabled             bool                   `json:"enabled"`
-	ExpectedRevision    int64                  `json:"expected_revision,omitempty"`
-	Limit               int                    `json:"limit,omitempty"`
-	Offset              int                    `json:"offset,omitempty"`
+	SiteID              string                          `json:"site_id,omitempty"`
+	TargetSiteID        string                          `json:"target_site_id,omitempty"`
+	TargetProjectID     string                          `json:"target_project_id,omitempty"`
+	RemoteTargetID      string                          `json:"remote_target_id,omitempty"`
+	RemoteTarget        *RemoteSyncTarget               `json:"remote_target,omitempty"`
+	RemotePrivateKey    string                          `json:"remote_private_key,omitempty"`
+	RemoteRequestID     string                          `json:"remote_request_id,omitempty"`
+	SiteIDs             []string                        `json:"site_ids,omitempty"`
+	MenuIDs             []string                        `json:"menu_ids"`
+	Path                string                          `json:"path,omitempty"`
+	Excludes            []string                        `json:"excludes,omitempty"`
+	ExpectedSHA         string                          `json:"expected_sha,omitempty"`
+	Username            string                          `json:"username,omitempty"`
+	Password            string                          `json:"password,omitempty"`
+	Role                string                          `json:"role,omitempty"`
+	ResourceID          string                          `json:"resource_id,omitempty"`
+	Entry               string                          `json:"entry,omitempty"`
+	PID                 int                             `json:"pid,omitempty"`
+	StartTime           uint64                          `json:"start_time,omitempty"`
+	Port                int                             `json:"port,omitempty"`
+	Domain              string                          `json:"domain,omitempty"`
+	Nodes               []AppUpstream                   `json:"nodes,omitempty"`
+	Sticky              bool                            `json:"sticky,omitempty"`
+	HealthCheck         *LoadBalanceHTTPHealth          `json:"health_check,omitempty"`
+	BackendTLS          *LoadBalanceBackendTLS          `json:"backend_tls,omitempty"`
+	URL                 string                          `json:"url,omitempty"`
+	Token               string                          `json:"token,omitempty"`
+	Source              string                          `json:"source,omitempty"`
+	ReadOnly            bool                            `json:"read_only,omitempty"`
+	Interval            int                             `json:"interval,omitempty"`
+	AutoRestore         bool                            `json:"auto_restore,omitempty"`
+	Realtime            bool                            `json:"realtime"`
+	Confirm             string                          `json:"confirm,omitempty"`
+	DryRun              bool                            `json:"dry_run,omitempty"`
+	FromTime            string                          `json:"from_time,omitempty"`
+	ToTime              string                          `json:"to_time,omitempty"`
+	Search              string                          `json:"search,omitempty"`
+	StatusCode          int                             `json:"status_code,omitempty"`
+	MinSeconds          float64                         `json:"min_seconds,omitempty"`
+	OnlyBots            bool                            `json:"only_bots,omitempty"`
+	Severity            string                          `json:"severity,omitempty"`
+	Instances           int                             `json:"instances,omitempty"`
+	MemoryMB            int                             `json:"memory_mb,omitempty"`
+	EnvironmentPatch    map[string]*string              `json:"environment_patch,omitempty"`
+	AllowInstallScripts bool                            `json:"allow_install_scripts,omitempty"`
+	BindAddress         string                          `json:"bind_address,omitempty"`
+	PassiveAddress      string                          `json:"passive_address,omitempty"`
+	PassiveStart        int                             `json:"passive_start,omitempty"`
+	PassiveEnd          int                             `json:"passive_end,omitempty"`
+	CertificateID       string                          `json:"certificate_id,omitempty"`
+	MaxClients          int                             `json:"max_clients,omitempty"`
+	MaxPerIP            int                             `json:"max_per_ip,omitempty"`
+	IdleMinutes         int                             `json:"idle_minutes,omitempty"`
+	QuotaMB             int                             `json:"quota_mb"`
+	QuotaFiles          int                             `json:"quota_files"`
+	UploadKB            int                             `json:"upload_kb"`
+	DownloadKB          int                             `json:"download_kb"`
+	MaxSessions         int                             `json:"max_sessions"`
+	ClientAllow         []string                        `json:"client_allow"`
+	ClientDeny          []string                        `json:"client_deny"`
+	Enabled             bool                            `json:"enabled"`
+	ExpectedRevision    int64                           `json:"expected_revision,omitempty"`
+	NetworkInterface    string                          `json:"network_interface,omitempty"`
+	HomeNetworks        []string                        `json:"home_networks,omitempty"`
+	RuleProfile         *NetworkIDSRuleProfileSelection `json:"rule_profile,omitempty"`
+	PrepareIDS          bool                            `json:"prepare_ids,omitempty"`
+	Limit               int                             `json:"limit,omitempty"`
+	Offset              int                             `json:"offset,omitempty"`
 }
 type AppUpstream struct {
 	Address string `json:"address"`
@@ -118,7 +126,13 @@ func AppModules() []AppModuleDefinition {
 		switch definitions[i].ID {
 		case "files-sync":
 			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
+			definitions[i].Actions = append(definitions[i].Actions, "remote-targets", "save-remote", "probe-remote", "remote-preview", "queue-remote", "remote-jobs", "remote-job", "cancel-remote", "recover-remote")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"remote_target_id", "远端连接标识（小写字母数字或短横线）", "text"}, AppModuleField{"remote_target", "固定 IP、端口、用户名、主机公钥和远端路径", "remote-sync"}, AppModuleField{"password", "SFTP 密码（与私钥二选一，仅写入）", "password"}, AppModuleField{"remote_private_key", "SFTP 私钥（无口令，仅写入）", "secret-text"}, AppModuleField{"remote_request_id", "远端任务标识（提交自动生成，重试保留）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"resource_id", "同步计划标识（小写字母数字）", "text"}, AppModuleField{"interval", "同步补查间隔（秒，60–86400）", "number"}, AppModuleField{"realtime", "启用 Linux 实时增量同步", "boolean"}, AppModuleField{"enabled", "启用同步计划", "boolean"}, AppModuleField{"expected_revision", "计划配置版本（选中计划自动填写）", "identity"})
+		case "network-threat-detection":
+			definitions[i].Actions = append(definitions[i].Actions, "ids-report", "ids-prepare", "ids-config", "ids-rules", "ids-start", "ids-stop", "ids-boot", "ids-recover", "ids-rotate")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"network_interface", "真实网络接口", "text"}, AppModuleField{"home_networks", "本机 IPv4 / IPv6 CIDR（JSON 数组）", "json"}, AppModuleField{"prepare_ids", "显式准备或升级引擎（不启用采集）", "boolean"}, AppModuleField{"expected_revision", "IDS 配置修订号（刷新自动填写）", "identity"}, AppModuleField{"enabled", "开机启用（不改变当前运行状态）", "boolean"})
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"from_time", "告警开始时间", "datetime"}, AppModuleField{"to_time", "告警结束时间", "datetime"}, AppModuleField{"search", "规则、类别或 IP 筛选", "text"}, AppModuleField{"severity", "IDS 风险等级（1–4，留空全部）", "text"}, AppModuleField{"limit", "告警每页数量（最多 200）", "number"}, AppModuleField{"offset", "告警起点（最多 20000）", "number"})
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof":
 			definitions[i].Actions = append(definitions[i].Actions, "policies", "pause", "resume", "watch-mode", "history")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"interval", "后台补查间隔（秒，60–86400）", "number"}, AppModuleField{"realtime", "启用 Linux 实时文件事件", "boolean"}, AppModuleField{"expected_revision", "策略修订号（选择策略自动填写）", "identity"})
@@ -177,6 +191,8 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.networkIDSOperationRoutes(m)
+	a.networkIDSRuleFeedRoutes(m)
 	m.HandleFunc("GET /api/app-modules/{id}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		if _, ok := FindAppModule(r.PathValue("id")); !ok {
 			fail(w, 404, "应用模块不存在")
@@ -227,6 +243,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		id, action := r.PathValue("id"), r.PathValue("action")
 		if !ValidAppModuleAction(id, action) {
 			fail(w, 400, "应用操作不被支持")
+			return
+		}
+		if id == "network-threat-detection" && NetworkIDSBackgroundAction(action) {
+			a.submitNetworkIDSOperation(w, r, u, action)
 			return
 		}
 		var in AppModuleInput
@@ -287,6 +307,9 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		switch d.ID {
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
+			if d.ID == "files-sync" {
+				version = "1.5.2"
+			}
 		case "daily-report":
 			version = "1.4.0"
 		case "mobile-pwa", "php-code-security":
@@ -301,10 +324,12 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.0.54-compat6"
 		case "nfs-manager":
 			version = "1.3.0"
+		case "network-threat-detection":
+			version = "1.3.0"
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":
-			version = "2.2.0"
+			version = "2.3.0"
 		case "apache-waf":
 			version = ApacheWAFVersion
 		}
@@ -326,7 +351,7 @@ func validateModuleSettings(raw map[string]any) (map[string]any, error) {
 	if d.Decode(&in) != nil {
 		return nil, errors.New("模块配置字段无效")
 	}
-	if in.Password != "" || in.Token != "" || in.EnvironmentPatch != nil {
+	if in.Password != "" || in.Token != "" || in.RemotePrivateKey != "" || in.RemoteTarget != nil || in.EnvironmentPatch != nil {
 		return nil, errors.New("凭据和环境秘密只能通过对应业务操作写入，不能保存为安装配置")
 	}
 	return raw, nil

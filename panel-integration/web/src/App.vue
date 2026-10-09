@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDate, formatPanelDateTime } from "./panelTime";
 import { randomId } from "./randomId";
+import { RegistryRequestIdentity, type RegistryPendingRequest, type RegistryRequestOutcome } from "./registryRequestIdentity";
 import { apiURL } from "./panelBase";
 import { canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./menuPermissions";
 import SoftwareLogo from "./SoftwareLogo.vue";
@@ -205,11 +206,20 @@ const user = ref(""),
   error = ref(""),
   authError = ref("");
 const accessPlan = ref<AccessPlan | null>(null);
+const registryPending = ref<RegistryPendingRequest[]>([]);
+const registryRequestIdentity = new RegistryRequestIdentity({
+  getItem: key => window.sessionStorage.getItem(key),
+  setItem: (key, value) => window.sessionStorage.setItem(key, value),
+  removeItem: key => window.sessionStorage.removeItem(key),
+}, randomId, () => { registryPending.value = registryRequestIdentity.list(); });
+const registryReviewing = ref<string[]>([]);
 let accessEpoch = 0;
 const canManageSites = computed(() => accessPlan.value?.role === "admin" && canOpenView(accessPlan.value, "sites"));
 const accountRoleLabel = computed(() => accessPlan.value?.role === "admin" ? "管理员" : accessPlan.value?.role === "operator" ? "指定网站操作员" : "只读账户");
-function clearAccessData() {
+function clearAccessData(preserveRegistryRequests = false) {
   accessEpoch++;
+  if (!preserveRegistryRequests) registryRequestIdentity.clear();
+  registryReviewing.value = [];
   sites.value = []; jobs.value = []; audits.value = []; siteCertificates.value = [];
   siteTraffic.value = null; overview.value = null; samples.value = [];
   notifications.value = []; notificationUnread.value = 0;
@@ -218,9 +228,11 @@ function clearAccessData() {
   selectedJob.value = null; jobOpen.value = false; createOpen.value = false;
   siteTrafficLoadedAt = 0;
 }
-function applyAccess(value: unknown) {
+function applyAccess(value: unknown, restoreRegistryRequests = false) {
   if (!validAccessPlan(value)) throw new Error("账户授权未正确加载，请重新登录");
-  accessPlan.value = value; clearAccessData();
+  accessPlan.value = value; clearAccessData(restoreRegistryRequests);
+  const actor = (value as AccessPlan & { user_id?: string }).user_id || "";
+  registryRequestIdentity.bind(actor, restoreRegistryRequests);
   if (!canOpenView(value, view.value)) view.value = value.menu_ids[0] || "account";
 }
 async function permittedRead<T>(path: string): Promise<T | undefined> {
@@ -453,6 +465,36 @@ async function checkRegistryUpdates() {
     appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: (e as Error).message };
     ElMessage.error((e as Error).message);
   } finally { registryChecking.value = false; }
+}
+async function reviewRegistryRequest(pending: RegistryPendingRequest) {
+  if (registryReviewing.value.includes(pending.key)) return;
+  registryReviewing.value = [...registryReviewing.value, pending.key];
+  const epoch = accessEpoch;
+  try {
+    const result = await api<RegistryRequestOutcome>(`/app-registry/${pending.app}/requests/${pending.key}`);
+    if (epoch !== accessEpoch) return;
+    const finished = registryRequestIdentity.observe(pending, result);
+    if (finished) ElMessage.success(result.state === 'closed_without_submission' ? "原请求已安全关闭且未入队，可以修改配置后提交新请求" : `原任务已明确${result.state === 'succeeded' ? '完成' : '失败'}；如需再次安装，请明确提交新任务`);
+    else ElMessage.warning(result.state_known ? `原任务状态：${states[result.state] || result.state}；未重复安装` : "原任务结果仍未知，已保留原请求；未重复安装");
+    if (result.provider === "compose") void dockerManager.value?.open();
+    else if (result.job_id) await revealJob(result.job_id);
+    await refresh();
+  } catch (e) { if (epoch === accessEpoch) ElMessage.error((e as Error).message); }
+  finally { if (epoch === accessEpoch) registryReviewing.value = registryReviewing.value.filter(key => key !== pending.key); }
+}
+async function closeUnsubmittedRegistryRequest(pending: RegistryPendingRequest) {
+  if (pending.job || registryReviewing.value.includes(pending.key)) return;
+  registryReviewing.value = [...registryReviewing.value, pending.key];
+  const epoch = accessEpoch;
+  try {
+    const result = await api<RegistryRequestOutcome>(`/app-registry/${pending.app}/requests/${pending.key}/close`, "POST", {
+      action: pending.action, expected_version: pending.version, expected_sha256: pending.sha256,
+    });
+    if (epoch !== accessEpoch) return;
+    registryRequestIdentity.observe(pending, result);
+    ElMessage.success("原请求已安全关闭且未入队；迟到的旧请求也不能入队，可修改配置后重新提交");
+  } catch (e) { if (epoch === accessEpoch) ElMessage.error((e as Error).message); }
+  finally { if (epoch === accessEpoch) registryReviewing.value = registryReviewing.value.filter(key => key !== pending.key); }
 }
 async function updateRegistryApp(app: RegistryApp) {
   const status = registryStatus(app.id);
@@ -1122,17 +1164,24 @@ async function api<T>(
   idempotencyKey?: string,
 ): Promise<T> {
   const requestCSRF = csrf.value;
+  const requestEpoch = accessEpoch;
+  const wire = body === undefined ? undefined : JSON.stringify(body);
+  // Only signed-store install/update calls participate. No automatic POST retry
+  // and no key reuse for unrelated mutations or an explicitly supplied key.
+  const registryTicket = method === "POST" && !idempotencyKey && /^\/app-registry\/[a-z0-9-]{2,64}\/(install|update)$/.test(path)
+    ? registryRequestIdentity.begin(path, wire || "") : undefined;
   const r = await fetch(apiURL(path), {
     method,
     credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       "X-CSRF-Token": csrf.value,
-      ...(method === "POST" ? { "Idempotency-Key": idempotencyKey || randomId() } : {}),
+      ...(method === "POST" ? { "Idempotency-Key": idempotencyKey || registryTicket?.key || randomId() } : {}),
     },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: wire,
   });
   const data = await r.json();
+  if (registryTicket && (requestEpoch !== accessEpoch || requestCSRF !== csrf.value)) throw new Error("账户会话已改变，未复用旧账户的任务结果");
   if (!r.ok) {
     if (
       r.status === 401 &&
@@ -1143,6 +1192,10 @@ async function api<T>(
       user.value = ""; accessPlan.value = null; clearAccessData();
     }
     throw new Error(data.error || "请求失败");
+  }
+  if (registryTicket) {
+    if (r.status !== 202) throw new Error("安装响应未包含已接受的任务回执；已保留原请求，请核对原任务");
+    registryRequestIdentity.accepted(registryTicket, data);
   }
   return data;
 }
@@ -1180,6 +1233,7 @@ async function refresh(forceRegistry = false) {
       .then(async (d) => {
         if (!d) return;
         jobs.value = d;
+        registryRequestIdentity.terminalJobs(d);
         if (selectedJob.value) {
           const id = selectedJob.value.id;
           const found = d.find((x) => x.id === id);
@@ -1421,7 +1475,7 @@ onMounted(async () => {
     if (b.initialized) {
       try {
         const me = await api<AccessPlan & { username: string; csrf: string }>("/me");
-        applyAccess(me);
+        applyAccess(me, true);
         user.value = me.username;
         csrf.value = me.csrf;
         await refresh();
@@ -2177,6 +2231,15 @@ onUnmounted(() => {
                 <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">检查更新</el-button>
               </div>
               <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" :title="appRegistry.catalog.apps.length ? '未能确认仓库最新版本，当前显示已验签缓存' : '无法连接应用仓库，尚未加载签名目录'" :description="appRegistry.source.error" />
+              <section v-if="registryPending.length" class="registry-pending" aria-label="待确认应用请求">
+                <el-alert type="warning" :closable="false" title="以下应用已有待确认请求。相同配置再次提交会找回原任务，不会重新安装；不同配置请先核对原任务。" />
+                <div v-for="pending in registryPending" :key="pending.key">
+                  <span>{{ appRegistry.catalog.apps.find(app => app.id === pending.app)?.name || pending.app }} · {{ pending.action === 'install' ? '安装' : '更新' }} v{{ pending.version }}</span>
+                  <small>{{ pending.job ? `原任务 ${pending.job}` : '尚未收到任务回执，不代表没有提交' }}</small>
+                  <el-button size="small" :loading="registryReviewing.includes(pending.key)" @click="reviewRegistryRequest(pending)">核对原任务</el-button>
+                  <el-button v-if="!pending.job" size="small" :disabled="registryReviewing.includes(pending.key)" @click="closeUnsubmittedRegistryRequest(pending)">安全关闭未入队请求</el-button>
+                </div>
+              </section>
               <div v-if="!appRegistry.catalog.apps.length && softwareApps.catalog.length" class="software-fallback-notice">
                 <el-alert type="warning" :closable="false" title="仓库目录尚未加载：当前仅提供本机已审核的应用管理与安装，尚未确认在线版本。" />
                 <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">重新加载仓库</el-button>

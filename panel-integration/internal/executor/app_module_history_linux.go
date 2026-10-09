@@ -54,7 +54,7 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 	if operationError != nil {
 		event.Outcome = "failed"
 		event.Error = operationError.Error()
-		for _, secret := range []string{in.Password, in.Token} {
+		for _, secret := range []string{in.Password, in.Token, in.RemotePrivateKey} {
 			if secret != "" {
 				event.Error = strings.ReplaceAll(event.Error, secret, "[已隐藏]")
 			}

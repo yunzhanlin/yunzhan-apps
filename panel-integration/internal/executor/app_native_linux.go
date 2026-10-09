@@ -29,6 +29,11 @@ var moduleResourceID = regexp.MustCompile(`^[a-z][a-z0-9-]{2,31}$`)
 const appNativeRoot = "/opt/panel/app-modules"
 
 func (s *Service) moduleCommand(ctx context.Context, timeout time.Duration, name string, args ...string) (string, error) {
+	return s.moduleCommandEnvironment(ctx, timeout, name, nil, args...)
+}
+
+// Callers supply only compiled/validated native environment, never API values.
+func (s *Service) moduleCommandEnvironment(ctx context.Context, timeout time.Duration, name string, environment []string, args ...string) (string, error) {
 	if s.Config.SystemRoot != "/" {
 		return s.Config.Run(ctx, name, args...)
 	}
@@ -36,6 +41,7 @@ func (s *Service) moduleCommand(ctx context.Context, timeout time.Duration, name
 	defer cancel()
 	cmd := exec.CommandContext(c, name, args...)
 	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive"}
+	cmd.Env = append(cmd.Env, environment...)
 	if name == "/usr/bin/apt-get" {
 		// Report pending restarts; dependency setup must not restart websites
 		// or unrelated services behind the administrator's back.
@@ -99,20 +105,30 @@ func appDependencyService(id string) *Service {
 
 // Runs only in a dedicated root unit with a fixed package list, never a shell command from the API.
 func InstallAppDependencies(id string) (err error) {
-	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" && id != "website-analytics" {
+	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" {
 		return errors.New("依赖模块无效")
 	}
 	s := appDependencyService(id)
+	if id == "network-threat-detection" && !s.moduleInstalled(id) {
+		return errors.New("IDS 应用未安装；不准备留存或不存在的应用")
+	}
 	if err = moduleWrite(filepath.Join(s.moduleDir(id), "dependency-result.json"), map[string]any{"ok": false, "state": "installing", "time": core.Now()}); err != nil {
 		return err
 	}
 	defer func() {
 		_ = moduleWrite(filepath.Join(s.moduleDir(id), "dependency-result.json"), map[string]any{"ok": err == nil, "error": fmt.Sprint(err), "time": core.Now(), "lock_sha256": core.Hash(string(pm2Lock))})
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	budget := 8 * time.Minute
+	if id == "network-threat-detection" {
+		budget = 18 * time.Minute
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if id == "nfs-manager" {
 		return installPrivateNFSRuntime(ctx)
+	}
+	if id == "network-threat-detection" {
+		return preparePrivateThreatIDSService(ctx)
 	}
 	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
 	if id == "website-analytics" {
@@ -1112,6 +1128,13 @@ func (s *Service) enableAnalyticsLogs(ctx context.Context) error {
 
 func (s *Service) appDependencyReady(id string) bool {
 	switch id {
+	case "network-threat-detection":
+		runtime, err := s.threatIDSRuntime()
+		if err != nil || threatIDSRequireSupported(runtime.Package.Version) != nil || s.threatIDSUpgradeNoPending() != nil {
+			return false
+		}
+		_, err = s.threatIDSUnitRecord(runtime)
+		return err == nil
 	case "website-analytics":
 		return s.wafBuildPackagesReady(analyticsHTMLBuildDependencies)
 	case "nginx-waf":
@@ -1165,7 +1188,7 @@ func (s *Service) appDependencyRoutes(m *http.ServeMux) {
 	for _, method := range []string{"GET", "POST"} {
 		m.HandleFunc(method+" /v1/app-dependencies/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
-			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" && id != "website-analytics" {
+			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" {
 				respond(w, 400, map[string]string{"error": "依赖标识无效"})
 				return
 			}

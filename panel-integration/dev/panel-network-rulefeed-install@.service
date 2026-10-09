@@ -1,0 +1,32 @@
+[Unit]
+Description=Panel signed IDS rule data install %i (no capture or activation)
+ConditionPathIsDirectory=/opt/panel/network-rule-feeds
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/panel/bin/panel-executor --install-network-ids-rulefeed %i
+TimeoutStartSec=130s
+TimeoutStopSec=10s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+ReadWritePaths=/opt/panel/network-rule-feeds /var/lib/panel-executor/network-rule-feed-jobs
+ReadOnlyPaths=/etc/panel
+InaccessiblePaths=-/var/lib/panel-network-ids /etc/nginx /etc/systemd/system
+MemoryHigh=192M
+MemoryMax=256M
+MemorySwapMax=0
+TasksMax=16
+CPUQuota=70%
+LimitCORE=0

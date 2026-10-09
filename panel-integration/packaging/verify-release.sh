@@ -13,4 +13,5 @@ while IFS='=' read -r key value; do
   esac || { echo "invalid release field: $key" >&2; exit 1; }
 done < "$DIR/RELEASE"
 (cd "$DIR" && if command -v sha256sum >/dev/null; then sha256sum -c SHA256SUMS >/dev/null; else shasum -a 256 -c SHA256SUMS >/dev/null; fi)
+python3 "$DIR/release-file-modes.py" check "$DIR"
 echo 'release checksums verified'

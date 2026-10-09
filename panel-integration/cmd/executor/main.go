@@ -49,11 +49,14 @@ func main() {
 	mariadbInit := flag.String("init-mariadb", "", "initialize one managed MariaDB data directory")
 	nodeServe := flag.String("serve-node", "", "serve one managed Node.js application")
 	appDependencies := flag.String("install-app-dependencies", "", "install fixed module dependencies")
+	idsRuleFeed := flag.String("install-network-ids-rulefeed", "", "install signed passive rule data for a fixed verified job, without activation")
 	wafEngineBuild := flag.String("build-waf-engine", "", "build a pinned independent WAF engine without activating sites")
 	wafEngineVerify := flag.String("verify-waf-engine", "", "verify a built WAF program without activating or changing sites")
 	analyticsHTMLBuild := flag.String("build-analytics-html", "", "build a pinned isolated analytics HTML engine without activating sites")
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
 	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
+	idsRecover := flag.Bool("recover-network-ids", false, "recover the fixed private IDS two-file configuration before capture")
+	idsAuthorize := flag.Bool("authorize-network-ids-start", false, "verify private IDS committed configuration or live executor candidate")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
 	pm2Deploy := flag.String("pm2-deploy", "", "deploy locked dependencies for one managed PM2 application")
 	ftpServe := flag.Bool("serve-ftp", false, "serve the fixed managed FTPS configuration")
@@ -77,6 +80,18 @@ func main() {
 	}
 	if os.Geteuid() != 0 {
 		log.Fatal("executor must run under its root systemd unit")
+	}
+	if *idsRecover {
+		if err := executor.RecoverNetworkIDS(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *idsAuthorize {
+		if err := executor.AuthorizeNetworkIDSStart(); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *wafRecover {
 		if err := executor.RecoverWAFConfiguration(); err != nil {
@@ -117,7 +132,7 @@ func main() {
 	for _, operation := range []struct {
 		id  string
 		run func(string) error
-	}{{*appDependencies, executor.InstallAppDependencies}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*analyticsHTMLBuild, executor.RunAnalyticsHTMLBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
+	}{{*appDependencies, executor.InstallAppDependencies}, {*idsRuleFeed, executor.RunNetworkIDSRuleFeedInstall}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*analyticsHTMLBuild, executor.RunAnalyticsHTMLBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
 		if operation.id != "" {
 			if e := operation.run(operation.id); e != nil {
 				log.Fatal(e)
@@ -289,6 +304,9 @@ func main() {
 	}
 	svc := executor.New(executor.Config{SitesDir: "/srv/panel/sites", ConfDir: "/etc/panel/sites-enabled", StateDir: "/var/lib/panel-executor", NginxBin: "/usr/sbin/nginx", TerminalSocket: "/run/panel-terminal/control.sock", RootTerminalSocket: "/run/panel-terminal-root/control.sock"})
 	handler := svc.Handler()
+	if err = svc.StartNetworkIDSOperations(); err != nil {
+		log.Printf("IDS background queue unavailable; records preserved and control disabled: %v", err)
+	}
 	if err = svc.StartPHPWorkerOperations(); err != nil {
 		log.Fatal(err)
 	}

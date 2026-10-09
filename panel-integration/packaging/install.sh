@@ -110,7 +110,9 @@ if ((NO_SERVICES==0));then
   chown -R panel-build:panel-build /var/cache/panel-build
   chmod 0755 /var/cache/panel-build
   dpkg-query -W -f='${binary:Package}\t${Version}\n' > /var/lib/panel-build-deps/debian-packages.tsv
-  chown -R root:panel /var/lib/panel-executor
+  # Private children have producer-specific ownership (root jobs, signed
+  # results, daemon receipts). Upgrade must not recursively rewrite them.
+  chown root:panel /var/lib/panel-executor
   chmod 0750 /var/lib/panel-executor
   chown root:root /var/lib/panel-executor/sftp-jobs /var/lib/panel-executor/sftp-users /srv/panel/sftp
   chmod 0700 /var/lib/panel-executor/sftp-jobs /var/lib/panel-executor/sftp-users
@@ -136,7 +138,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done

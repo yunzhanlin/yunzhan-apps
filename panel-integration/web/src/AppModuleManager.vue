@@ -4,7 +4,11 @@ import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
 import WafWorkspace from "./WafWorkspace.vue";
+import ThreatIDSRuleFeeds from "./ThreatIDSRuleFeeds.vue";
+import ThreatIDSOperations from "./ThreatIDSOperations.vue";
+import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
+import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
 type API = <T>(
   path: string,
@@ -59,6 +63,14 @@ async function updateVersion() {
 const visible = ref(false),
   busy = ref(false),
   error = ref("");
+const idsOperationID = ref(""), idsOperationPending = ref(false);
+let idsPendingSubmission: {identity:string;key:string}|undefined, idsAccessGeneration=0;
+const pendingRemoteRequests=ref<RemoteRequestTicket[]>([]);
+const remoteRequestIdentity=new RemoteRequestIdentity({
+  getItem:key=>window.sessionStorage.getItem(key),
+  setItem:(key,value)=>window.sessionStorage.setItem(key,value),
+  removeItem:key=>window.sessionStorage.removeItem(key),
+},undefined,()=>{pendingRemoteRequests.value=remoteRequestIdentity.list();});
 const definition = ref<Definition>(),
   guidance = ref<Guidance>(),
   installed = ref(false),
@@ -91,13 +103,14 @@ function canExecutePHP(action: string) {
   return true;
 }
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "load-balance" ? form.value.domain : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : form.value.resource_id);
+const revisionIdentity = computed(() => definition.value?.id === "files-sync" && activeTab.value.startsWith("remote-") ? form.value.remote_target_id : integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "load-balance" ? form.value.domain : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : definition.value?.id === "network-threat-detection" ? "network-ids" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
-    if (["password", "secret-json"].includes(field.kind)) form.value[field.key] = "";
+    if (["password", "secret-json", "secret-text"].includes(field.kind)) form.value[field.key] = "";
 }
+watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
 watch(visible, value => { if (!value) clearWriteOnlyFields(); });
 onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
@@ -125,9 +138,20 @@ async function refreshHistory(reset = false) {
   catch (e) { error.value = (e as Error).message; }
   finally { busy.value = false; }
 }
-function tabChanged(name: string | number) { if (name === "history") void refreshHistory(true); }
+function tabChanged(name: string | number) {
+  if (name === "history") void refreshHistory(true);
+  if(definition.value?.id==="files-sync" && String(name).startsWith("remote-"))report.value=undefined;
+}
+function fieldLabel(field:Field,section:Section):string {
+  if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
+    if(field.key==="enabled")return "启用远端连接";
+    if(field.key==="expected_revision")return "连接策略修订号（选择连接自动填写）";
+  }
+  return field.label;
+}
 function historyPage(delta: number) { historyOffset.value = Math.max(0, historyOffset.value + delta * historyLimit.value); void refreshHistory(); }
 const labels: Record<string, string> = {
+  "ids-report":"刷新实际采集与告警", "ids-prepare":"准备或升级引擎（不启用采集）", "ids-config":"保存接口与本机范围", "ids-start":"启动被动采集", "ids-stop":"停止采集（保留日志）", "ids-boot":"保存开机启动选择", "ids-recover":"恢复中断迁移、配置或轮转", "ids-rotate":"立即轮转并保留历史",
   run: "刷新报告",
   "check-http": "立即执行 HTTP 检查",
   baseline: "建立基线",
@@ -139,6 +163,15 @@ const labels: Record<string, string> = {
   "recover-quarantine": "恢复中断的隔离事务",
   preview: "同步预览",
   sync: "开始同步",
+  "remote-targets": "刷新远端连接",
+  "save-remote": "保存加密连接策略",
+  "probe-remote": "只读验证 SFTP 与主机公钥",
+  "remote-preview": "预览远端差异与冲突",
+  "queue-remote": "提交远端后台任务",
+  "remote-jobs": "刷新持久任务列表",
+  "remote-job": "读取所选任务进度",
+  "cancel-remote": "请求停止后续文件交接",
+  "recover-remote": "核对并恢复中断交接",
   save: "保存入口",
   probe: "健康检测",
   remove: "移除入口",
@@ -257,6 +290,8 @@ async function show(id: string) {
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
     if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
     if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
+    if (id === "files-sync") Object.assign(form.value,{remote_target_id:"",remote_request_id:"",remote_target:{address:"",port:22,username:"",host_key:"",root:"",backup_root:""}});
+    if (id === "network-threat-detection") Object.assign(form.value,{network_interface:"",home_networks:"[]",prepare_ids:false,enabled:false,limit:50,offset:0});
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -278,6 +313,16 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
+  if(id==="files-sync" && row.remote_target_id) {
+    if(row.remote_target) {
+      Object.assign(form.value,{remote_target_id:row.remote_target_id,remote_target:{...row.remote_target},enabled:row.enabled,expected_revision:row.revision});
+      selectedPlanID.value=row.remote_target_id;activeTab.value="remote-target";
+    } else if(validRemoteJob(row)) {
+      Object.assign(form.value,{remote_request_id:row.remote_request_id,remote_target_id:row.remote_target_id,site_id:row.site_id});
+      activeTab.value="remote-jobs";
+    }
+    ElMessage.info("已选中远端记录；修改或新任务请先核对连接修订号与实际进度");return;
+  }
   const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? Array.isArray(row.nodes) ? "entry" : "health" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
@@ -323,17 +368,72 @@ function inputBody(action: string) {
   }
   return body;
 }
-async function execute(action: string) {
+const canCreateRemoteTask = computed(()=>remoteJobTerminal(report.value?.job) && report.value?.job.remote_request_id===form.value.remote_request_id && (!pendingRemoteRequests.value.some(row=>row.target===report.value?.job.remote_target_id) || pendingRemoteRequests.value.some(row=>row.key===form.value.remote_request_id)));
+function createNewRemoteTask() {
+  if(!canCreateRemoteTask.value)return;
+  try{if(pendingRemoteRequests.value.some(row=>row.target===report.value?.job.remote_target_id))remoteRequestIdentity.release(report.value?.job);}catch(e){error.value=e instanceof Error?e.message:String(e);return;}
+  form.value.remote_request_id="";report.value=undefined;activeTab.value="remote-transfer";
+  ElMessage.info("已清空旧任务标识；请先核对源网站、排除项和连接修订号，再预览和提交新任务");
+}
+async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   if (!definition.value || busy.value || !canExecutePHP(action)) return;
+  if (definition.value.id === "network-threat-detection" && idsOperationPending.value && idsBackgroundActions.includes(action)) return;
   busy.value = true;
   error.value = "";
+  const accessGeneration=idsAccessGeneration;
   try {
+    if (definition.value.id === "network-threat-detection" && idsBackgroundActions.includes(action)) {
+	  const accessGeneration=idsAccessGeneration;
+      const body:Record<string,unknown>={expected_revision:expectedRevision.value};
+      const input=inputBody(action);
+      if(action==='ids-config') { body.network_interface=input.network_interface;body.home_networks=input.home_networks; }
+      if(action==='ids-boot') body.enabled=form.value.enabled;
+      if(action==='ids-rules') {
+        if(!validIDSRuleProfile(ruleChoice))throw new Error("规则选择缺少明确身份；未提交");
+        body.rule_profile=ruleChoice;
+      }
+      const identity=JSON.stringify({action,body});
+      if(!idsPendingSubmission || idsPendingSubmission.identity!==identity) idsPendingSubmission={identity,key:crypto.randomUUID()};
+      const result=await props.api(`/app-modules/network-threat-detection/${action}`,"POST",body,idsPendingSubmission.key);
+      if(accessGeneration!==idsAccessGeneration)return;
+      if(!validIDSOperation(result) || result.action!==action || Object.keys(result.input).length!==Object.keys(body).length || Object.keys(body).some(key=>JSON.stringify((result.input as unknown as Record<string,unknown>)[key])!==JSON.stringify(body[key]))) throw new Error("原生后台回执不能核对；保留原提交键，不重复创建任务");
+      idsOperationID.value=result.id;idsOperationPending.value=['queued','running'].includes(result.state);idsPendingSubmission=undefined;
+      ElMessage.info("原生后台任务已接受；请查看任务进度和实际报表，尚未宣称完成。");
+      return;
+    }
+    const submitted=inputBody(action);
+    if(definition.value.id==="files-sync" && action==="queue-remote") {
+      const ticket=remoteRequestIdentity.begin(submitted);
+      form.value.remote_request_id=ticket.key;submitted.remote_request_id=ticket.key;
+    }
     const result = await props.api(
       `/app-modules/${definition.value.id}/${action}`,
       "POST",
-      inputBody(action),
+      submitted,
     );
+    if(accessGeneration!==idsAccessGeneration)return;
+    if(definition.value.id==="files-sync" && action==="queue-remote") {
+      if(!remoteQueueReplyMatches((result as any)?.job,submitted))throw new Error("远端任务回执无法核对；保留原任务标识，请读取持久任务，不重复创建");
+      ElMessage.info("后台任务已接受；尚未宣称同步完成，请在远端任务中读取实际进度");
+    }
     setReport(result);
+    if(definition.value.id==="files-sync" && action==="save-remote" && (result as any)?.revision) {
+      form.value.expected_revision=(result as any).revision;selectedPlanID.value=(result as any).remote_target_id;
+    }
+    if (definition.value.id === "network-threat-detection" && action.startsWith("ids-")) {
+      if (report.value?.configuration) {
+        form.value.network_interface=report.value.configuration.interface;
+        form.value.home_networks=JSON.stringify(report.value.configuration.home_networks);
+        form.value.expected_revision=report.value.configuration.revision;
+        selectedPlanID.value="network-ids";
+      } else if(action==='ids-report') {
+        selectedPlanID.value="";form.value.expected_revision=0;
+        form.value.network_interface="";form.value.home_networks="[]";
+      }
+      if (typeof report.value?.boot_enabled === "boolean") form.value.enabled=report.value.boot_enabled;
+      if (action === "ids-prepare") { form.value.prepare_ids=false; ElMessage.info("准备任务已提交；仅表示开始准备，没有启动采集。稍后刷新实际状态。"); }
+      if (report.value?.state === "recovering-runtime") ElMessage.info("引擎迁移恢复已提交，尚未完成；稍后刷新核对，采集保持关闭。");
+    }
     if (definition.value.id === "load-balance" && action === "save") {
       form.value.expected_revision = (result as any).revision;selectedPlanID.value = form.value.domain;
     }
@@ -372,10 +472,10 @@ async function execute(action: string) {
       selectedPlanID.value = "";
       form.value.expected_revision = 0;
     }
-    if (!["run", "logs", "probe", "check", "preview"].includes(action))
+    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-targets", "remote-preview", "probe-remote"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
-      if (["password", "secret-json"].includes(f.kind)) form.value[f.key] = "";
+      if (["password", "secret-json", "secret-text"].includes(f.kind)) form.value[f.key] = "";
     if (
       [
         "create",
@@ -443,10 +543,26 @@ async function execute(action: string) {
         ),
       );
   } catch (e) {
+    if(accessGeneration!==idsAccessGeneration)return;
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
+    if(definition.value?.id==="files-sync")clearWriteOnlyFields();
     busy.value = false;
   }
+}
+async function reviewRemoteTicket(ticket:RemoteRequestTicket) {
+  if(busy.value || !definition.value || definition.value.id!=="files-sync")return;
+  Object.assign(form.value,{remote_request_id:ticket.key,remote_target_id:ticket.target,site_id:ticket.site});
+  activeTab.value="remote-jobs";
+  await execute("remote-job");
+}
+async function refreshIDSAfterTask(id: string) {
+  if(id!==idsOperationID.value || definition.value?.id!=="network-threat-detection" || !installed.value || !visible.value || !props.access || !canReadPath(props.access,"/app-modules/network-threat-detection/operations"))return;
+  // A completed native operation can change the revision/profile. Do not
+  // permit a second mutation using the cached old report or invented revision.
+  selectedPlanID.value="";form.value.expected_revision=0;
+  if(report.value)report.value={...report.value,configuration:null,rule_profile:null};
+  if(!busy.value && definition.value.actions.includes("ids-report"))await execute("ids-report");
 }
 function exportReport() {
   if (!report.value || report.value.token) return;
@@ -514,6 +630,13 @@ defineExpose({ show });
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
         <el-alert v-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
+        <ThreatIDSOperations v-if="definition.id === 'network-threat-detection'" :api="api" :operation-id="idsOperationID" :installed="installed" :access="access" @pending="idsOperationPending=$event" @completed="refreshIDSAfterTask" />
+        <el-alert v-if="definition.id==='files-sync' && form.remote_request_id" :title="`当前远端任务标识：${form.remote_request_id}。未知回执或执行中保留原标识，读取持久任务核对；恢复前不要提交新的同步。`" type="info" :closable="false" />
+        <el-button v-if="definition.id==='files-sync' && form.remote_request_id" :disabled="busy || !canCreateRemoteTask" @click="createNewRemoteTask">已核对旧任务，准备新的同步（不立即执行）</el-button>
+        <div v-if="definition.id==='files-sync' && pendingRemoteRequests.length" class="remote-pending-requests" aria-label="本账户待核对远端任务">
+          <p>本账户待核对远端任务：关闭对话框或刷新页面仍保留标识；只保存任务身份，不保存密码、私钥或排除路径。</p>
+          <el-button v-for="ticket in pendingRemoteRequests" :key="ticket.key" :disabled="busy" @click="reviewRemoteTicket(ticket)">读取原任务 · {{ticket.target}} · {{ticket.key}}</el-button>
+        </div>
         <AnalyticsWorkspace v-if="definition.id === 'website-analytics'" :api="api" :installed="installed" :installed-version="versionStatus?.version_known ? versionStatus.installed_version : undefined" :sites="sites">
           <template #version>
             <el-descriptions :column="1" border>
@@ -544,12 +667,13 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />
+        <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />
         <el-alert v-if="definition.id === 'pure-ftpd' && ['account-limits','quota'].includes(section.id) && report?.account_limits_ready === false" type="warning" :closable="false" title="当前 FTP 尚未更新到受管独立运行时。请先在版本与更新中更新应用；不会静默替换系统 FTP。" />
         <el-form label-position="top" class="module-fields">
           <el-form-item
             v-for="field in sectionFields(section)"
             :key="field.key"
-            :label="field.label"
+            :label="fieldLabel(field,section)"
           >
             <el-input
               v-if="field.kind === 'identity'"
@@ -589,6 +713,17 @@ defineExpose({ show });
               default-first-option
               placeholder="输入排除目录并回车"
             />
+            <div v-else-if="field.kind === 'remote-sync'" class="http-health-editor">
+              <label>固定 IP<el-input v-model="form.remote_target.address" placeholder="服务器 IPv4 / IPv6，不接受域名" /></label>
+              <label>SFTP 端口<el-input-number v-model="form.remote_target.port" :min="1" :max="65535" /></label>
+              <label>受限非 root 账户<el-input v-model="form.remote_target.username" maxlength="32" /></label>
+              <label>已独立核实的 SSH 主机公钥<el-input v-model="form.remote_target.host_key" type="textarea" :rows="3" maxlength="2048" placeholder="ssh-ed25519 AAAA…；不得从首次连接自动信任" /></label>
+              <label>目标普通绝对目录<el-input v-model="form.remote_target.root" maxlength="512" placeholder="/srv/sites/example/public" /></label>
+              <label>公开目录之外的私有备份目录（0700）<el-input v-model="form.remote_target.backup_root" maxlength="512" placeholder="/srv/private/yunzhan-sync" /></label>
+            </div>
+            <div v-else-if="field.kind === 'secret-text'">
+              <el-input v-model="form[field.key]" type="textarea" :rows="5" maxlength="32768" autocomplete="off" spellcheck="false" placeholder="仅本次写入；提交、关闭或选择记录后清除，不回显、不保存到浏览器存储" />
+            </div>
             <div v-else-if="field.kind === 'menus'">
               <el-select v-model="form.menu_ids" multiple placeholder="空列表表示仅保留自身账户安全">
                 <el-option v-for="menu in menuCatalog" :key="menu.id" :label="menu.label" :value="menu.id" :disabled="menu.admin_only && form.role !== 'admin' || access !== undefined && !access?.menu_ids.includes(menu.id)" />
@@ -725,10 +860,10 @@ defineExpose({ show });
         </el-form>
         <div class="module-actions">
           <el-button
-            v-for="action in section.actions"
+            v-for="action in section.actions.filter(action=>action!=='ids-rules')"
             :key="action"
             :disabled="
-              !installed || busy || !canExecutePHP(action) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
+              !installed || busy || !canExecutePHP(action) || (definition.id === 'network-threat-detection' && idsOperationPending && idsBackgroundActions.includes(action)) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
             "
             :type="
               [
@@ -776,6 +911,9 @@ defineExpose({ show });
           <span v-if="history">{{history.total}} 条匹配记录 · 第 {{Math.floor(historyOffset / historyLimit) + 1}} 页</span>
           <AppModuleReport v-if="history" :id="definition.id" :report="history" />
           <el-empty v-else description="暂无已加载的执行历史" />
+        </el-tab-pane>
+        <el-tab-pane v-if="definition.id === 'network-threat-detection' && !workspace.some(section=>section.id==='ids-rules')" label="规则数据" name="rule-feeds" lazy>
+          <ThreatIDSRuleFeeds :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="definition.actions.includes('ids-rules') ? choice=>execute('ids-rules',choice) : undefined" />
         </el-tab-pane>
         <el-tab-pane label="版本与更新" name="version">
           <el-descriptions :column="1" border>

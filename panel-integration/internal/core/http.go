@@ -129,7 +129,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 			fail(w, 403, "账户授权不可用")
 			return
 		}
-		send(w, 200, map[string]any{"username": u.Username, "csrf": u.CSRF, "version": "0.1.0-dev", "role": access.Role, "menu_ids": access.MenuIDs, "menu_catalog": MenuPermissionCatalog(), "permission_revision": access.Revision})
+		send(w, 200, map[string]any{"user_id": u.ID, "username": u.Username, "csrf": u.CSRF, "version": "0.1.0-dev", "role": access.Role, "menu_ids": access.MenuIDs, "menu_catalog": MenuPermissionCatalog(), "permission_revision": access.Revision})
 	}))
 	m.HandleFunc("POST /api/logout", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		c, _, _ := a.sessionCookie(r)
