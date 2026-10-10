@@ -535,8 +535,12 @@ func (a *Server) siteConfig(w http.ResponseWriter, r *http.Request, u identity) 
 	send(w, 200, result)
 }
 func (a *Server) overview(w http.ResponseWriter, r *http.Request, u identity) {
+	// Health polling must not inherit the long timeout used for installation
+	// and other executor operations. A stalled executor is not a healthy sample.
+	ctx, cancel := context.WithTimeout(r.Context(), 4*time.Second)
+	defer cancel()
 	var result map[string]any
-	if err := a.Executor.Call(r.Context(), "GET", "/v1/overview", nil, &result); err != nil {
+	if err := a.Executor.Call(ctx, "GET", "/v1/overview", nil, &result); err != nil {
 		fail(w, 503, err.Error())
 		return
 	}

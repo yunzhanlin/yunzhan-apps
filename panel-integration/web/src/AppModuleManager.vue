@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
+import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
+import { analyticsQueryContext, analyticsQueryMatches, restoreAnalyticsQuery } from "./analyticsQueryContext";
 import AnalyticsWorkspace from "./AnalyticsWorkspace.vue";
 import WafWorkspace from "./WafWorkspace.vue";
 import ThreatIDSRuleFeeds from "./ThreatIDSRuleFeeds.vue";
@@ -78,6 +80,8 @@ const definition = ref<Definition>(),
   report = ref<Record<string, any>>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
+const statisticsQuery = computed(()=>definition.value?.id === "website-statistics-v2" ? analyticsQueryContext(report.value) : undefined);
+const statisticsDraftChanged = computed(()=>!!statisticsQuery.value && !analyticsQueryMatches(statisticsQuery.value,form.value));
 function toggleHTTPHealth(enabled: boolean | string | number) {
   form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2} : null;
 }
@@ -294,6 +298,10 @@ async function show(id: string) {
     if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
     if (id === "files-sync") Object.assign(form.value,{remote_target_id:"",remote_request_id:"",remote_target:{address:"",port:22,username:"",host_key:"",root:"",backup_root:""}});
     if (id === "network-threat-detection") Object.assign(form.value,{network_interface:"",home_networks:"[]",prepare_ids:false,enabled:false,limit:50,offset:0});
+    if (id === "website-statistics-v2") {
+      const savedQuery=restoreAnalyticsQuery(analyticsQueryContext(report.value),sites.value);
+      if (savedQuery) Object.assign(form.value,savedQuery);
+    }
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
@@ -882,9 +890,17 @@ defineExpose({ show });
             >{{ labels[action] || action }}</el-button
           >
         </div>
-        <section v-if="report !== undefined" class="workflow-result" aria-label="实际执行结果"><h3>服务器返回的实际结果</h3><AppModuleReport :id="definition.id" :report="report" @select="selected" /></section>
+        <section v-if="report !== undefined" class="workflow-result" aria-label="实际执行结果">
+          <h3>服务器返回的实际结果</h3>
+          <template v-if="definition.id === 'website-statistics-v2'">
+            <el-alert v-if="statisticsDraftChanged" type="warning" :closable="false" title="筛选条件已修改，尚未刷新：下方仍是已返回查询范围的报告，不是当前表单的结果。" />
+            <AnalyticsQueryContext :report="report" />
+          </template>
+          <AppModuleReport :id="definition.id" :report="report" @select="selected" />
+        </section>
         </el-tab-pane>
         <el-tab-pane label="报告与日志" name="reports">
+          <AnalyticsQueryContext v-if="definition.id === 'website-statistics-v2' && report !== undefined" :report="report" />
         <section aria-label="执行报告">
           <h3>实际执行结果</h3>
           <p v-if="report === undefined">

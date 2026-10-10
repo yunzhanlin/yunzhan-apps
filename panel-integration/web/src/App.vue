@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDate, formatPanelDateTime } from "./panelTime";
+import { panelHealthState, panelSampleIsCurrent } from "./panelHealth";
+import { EpochReadGate } from "./epochReadGate";
 import { randomId } from "./randomId";
 import { RegistryRequestIdentity, type RegistryPendingRequest, type RegistryRequestOutcome } from "./registryRequestIdentity";
 import { apiURL } from "./panelBase";
@@ -222,6 +224,7 @@ function clearAccessData(preserveRegistryRequests = false) {
   registryReviewing.value = [];
   sites.value = []; jobs.value = []; audits.value = []; siteCertificates.value = [];
   siteTraffic.value = null; overview.value = null; samples.value = [];
+  overviewReadError.value = ""; overviewReceivedAt.value = null;
   notifications.value = []; notificationUnread.value = 0;
   runtimes.value = { installed: [], catalog: [] }; softwareApps.value = { catalog: [], status: [] };
   appRegistry.value = { catalog: { schema_version: 1, generated_at: "", repository: "", apps: [] }, status: [], source: { source: "", stale: false } };
@@ -1040,12 +1043,16 @@ const uptime = computed(() => {
     : Math.floor(s / 3600) + " 小时 " + Math.floor((s % 3600) / 60) + " 分钟";
 });
 const serverSampleTime = computed(() => overview.value?.sampled_at ? formatPanelDateTime(overview.value.sampled_at) : "—");
-const healthState = computed(() => {
-  if (error.value) return { label: "连接异常", kind: "error" };
-  if (!overview.value) return { label: "正在获取状态", kind: "warning" };
-  if (!overview.value.nginx_active) return { label: "网站入口待检查", kind: "warning" };
-  return { label: "服务器运行正常", kind: "ok" };
-});
+const overviewReadError = ref("");
+const overviewReceivedAt = ref<number | null>(null);
+const healthClock = ref({monotonic:performance.now(),wall:Date.now()});
+const healthInput = computed(() => ({
+  permitted:canReadPath(accessPlan.value,"/overview"),overview:overview.value,
+  readError:overviewReadError.value,receivedAt:overviewReceivedAt.value,
+  monotonicNow:healthClock.value.monotonic,wallNow:healthClock.value.wall,
+}));
+const healthState = computed(() => panelHealthState(healthInput.value));
+const sampleIsCurrent = computed(() => panelSampleIsCurrent(healthInput.value));
 const series = (field: "cpu" | "memory") =>
   samples.value
     .map(
@@ -1199,8 +1206,33 @@ async function api<T>(
   }
   return data;
 }
+const overviewReadGate = new EpochReadGate();
+async function refreshOverview() {
+  if (!user.value || accountChanging.value || view.value === "account" || !canReadPath(accessPlan.value, "/overview")) return;
+  const epoch = accessEpoch, session = csrf.value;
+  const release = overviewReadGate.acquire(epoch);
+  if (!release) return;
+  try {
+    const d = await permittedRead<Overview>("/overview");
+    if (!d) return;
+    overview.value = d;
+    overviewReadError.value = "";
+    overviewReceivedAt.value = performance.now();
+    healthClock.value = {monotonic:performance.now(),wall:Date.now()};
+    samples.value = [
+      ...samples.value,
+      { cpu: d.cpu_percent, memory: d.memory_percent, time: Date.now() },
+    ].slice(-36);
+  } catch (e) {
+    if (epoch === accessEpoch && session === csrf.value) overviewReadError.value = (e as Error).message;
+  } finally {
+    release();
+  }
+}
 let refreshing = false;
 async function refresh(forceRegistry = false) {
+  // Overview has its own read gate, even while unrelated reads are pending.
+  void refreshOverview();
   if (
     !user.value ||
     refreshing ||
@@ -1212,16 +1244,6 @@ async function refresh(forceRegistry = false) {
   const epoch = accessEpoch;
   const errors: string[] = [];
   await Promise.allSettled([
-    permittedRead<Overview>("/overview")
-      .then((d) => {
-        if (!d) return;
-        overview.value = d;
-        samples.value = [
-          ...samples.value,
-          { cpu: d.cpu_percent, memory: d.memory_percent, time: Date.now() },
-        ].slice(-36);
-      })
-      .catch((e) => errors.push(e.message)),
     permittedRead<Site[]>("/sites")
       .then((d) => { if (d) sites.value = d; })
       .catch((e) => errors.push(e.message)),
@@ -1276,7 +1298,8 @@ async function refresh(forceRegistry = false) {
       .catch((e) => {
         if (epoch !== accessEpoch) return;
         appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: e.message };
-        if (!appRegistry.value.catalog.apps.length) errors.push(e.message);
+        // The store already shows its scoped failure/cache warning. A remote
+        // catalog failure is not evidence that the local Linux server is offline.
       }),
   ]);
   if (epoch === accessEpoch) error.value = errors[0] || "";
@@ -1307,7 +1330,7 @@ async function login() {
     password.value = "";
     otpCode.value = "";
     bootstrap.value = "";
-    await refresh();
+    void refresh();
   } catch (e) {
     authError.value = (e as Error).message;
   } finally {
@@ -1478,7 +1501,7 @@ onMounted(async () => {
         applyAccess(me, true);
         user.value = me.username;
         csrf.value = me.csrf;
-        await refresh();
+        void refresh();
       } catch {}
     }
   } catch (e) {
@@ -1486,7 +1509,10 @@ onMounted(async () => {
   } finally {
     ready.value = true;
   }
-  timer = setInterval(refresh, 5000);
+  timer = setInterval(() => {
+    healthClock.value = {monotonic:performance.now(),wall:Date.now()};
+    void refresh();
+  }, 5000);
 });
 onUnmounted(() => {
   clearInterval(timer);
@@ -1610,7 +1636,7 @@ onUnmounted(() => {
           <strong>Panel Dev</strong
           ><small
             ><span class="live-dot"></span
-            >{{ error ? "连接异常" : "本地开发环境" }}</small
+            >{{ healthState.label }}</small
           >
         </div>
         <span class="mini-tag">01</span>
@@ -1667,7 +1693,7 @@ onUnmounted(() => {
           </div>
           <span :class="['health-badge', healthState.kind]"
             ><span class="live-dot"></span>{{ healthState.label }}</span
-          ><span class="uptime-text">运行时间：{{ uptime }}</span>
+          ><span class="uptime-text">{{ sampleIsCurrent ? "运行时间：" : "最近记录的运行时间：" }}{{ overview ? uptime : "等待核对" }}</span>
         </div>
         <div class="topbar-right">
           <button class="global-search" type="button" aria-label="全局搜索" @click="openSearch">
@@ -1847,24 +1873,31 @@ onUnmounted(() => {
           v-if="error"
           class="page-alert"
           :title="error"
-          description="当前显示最近一次读取的数据，请检查虚拟机和执行服务。"
+          description="部分数据读取失败，当前保留最近一次结果；请核对对应功能及其连接。服务器状态单独核验，不由应用仓库或表单错误推断。"
           type="error"
           :closable="false"
           show-icon
         />
         <template v-if="view === 'overview'">
+          <el-alert
+            v-if="healthState.kind !== 'ok'"
+            class="page-alert"
+            :title="healthState.label"
+            :description="'当前显示最近一次结果或待加载占位；未核对到新鲜的服务器状态，不能据此判断运行正常。' + (overviewReadError ? ' ' + overviewReadError : '')"
+            :type="healthState.kind === 'error' ? 'error' : 'warning'"
+            :closable="false"
+            show-icon
+          />
           <div class="summary-strip">
             <div>
-              <span class="server-status"
+              <span :class="['server-status', healthState.kind]"
                 ><span class="live-dot"></span
-                >{{
-                  overview?.nginx_active ? "服务器在线" : "正在读取状态"
-                }}</span
+                >{{ healthState.label }}</span
               ><span class="strip-separator"></span
               ><span>{{ overview?.hostname || "panel-dev" }}</span
               ><span class="subtle">{{ overview?.os || "正在读取系统信息" }}</span>
             </div>
-            <small>已运行 {{ uptime }}</small>
+            <small>{{ sampleIsCurrent ? "已运行" : "最近记录已运行" }} {{ overview ? uptime : "等待核对" }}</small>
           </div>
           <div class="metric-grid">
             <article class="metric">
@@ -1872,7 +1905,7 @@ onUnmounted(() => {
                 <span>CPU 使用率</span><el-icon><Odometer /></el-icon>
               </div>
               <div class="metric-number">
-                {{ percent(overview?.cpu_percent) }}<span>%</span>
+                {{ overview ? percent(overview.cpu_percent) : "—" }}<span>%</span>
               </div>
               <el-progress
                 :percentage="Number(percent(overview?.cpu_percent))"
@@ -1881,7 +1914,7 @@ onUnmounted(() => {
                 color="#0f766e"
               />
               <div class="metric-footer">
-                {{ overview?.cpu_cores || "—" }} 核处理器 <span>实时采样</span>
+                {{ overview?.cpu_cores || "—" }} 核处理器 <span>{{ sampleIsCurrent ? "新鲜采样" : overview ? "最近结果 · 待核对" : "等待采样" }}</span>
               </div>
             </article>
             <article class="metric">
@@ -1889,7 +1922,7 @@ onUnmounted(() => {
                 <span>内存使用</span><el-icon><Box /></el-icon>
               </div>
               <div class="metric-number">
-                {{ percent(overview?.memory_percent) }}<span>%</span>
+                {{ overview ? percent(overview.memory_percent) : "—" }}<span>%</span>
               </div>
               <el-progress
                 :percentage="Number(percent(overview?.memory_percent))"
@@ -1898,8 +1931,8 @@ onUnmounted(() => {
                 color="#7e9b78"
               />
               <div class="metric-footer">
-                {{ bytes(overview?.memory_used) }}
-                <span>/ {{ bytes(overview?.memory_total) }}</span>
+                {{ overview ? bytes(overview.memory_used) : "—" }}
+                <span>/ {{ overview ? bytes(overview.memory_total) : "—" }}</span>
               </div>
             </article>
             <article class="metric">
@@ -1907,7 +1940,7 @@ onUnmounted(() => {
                 <span>磁盘使用</span><el-icon><Document /></el-icon>
               </div>
               <div class="metric-number">
-                {{ percent(overview?.disk_percent) }}<span>%</span>
+                {{ overview ? percent(overview.disk_percent) : "—" }}<span>%</span>
               </div>
               <el-progress
                 :percentage="Number(percent(overview?.disk_percent))"
@@ -1916,8 +1949,8 @@ onUnmounted(() => {
                 color="#c49a61"
               />
               <div class="metric-footer">
-                {{ bytes(overview?.disk_used) }}
-                <span>/ {{ bytes(overview?.disk_total) }}</span>
+                {{ overview ? bytes(overview.disk_used) : "—" }}
+                <span>/ {{ overview ? bytes(overview.disk_total) : "—" }}</span>
               </div>
             </article>
             <article class="metric website-metric">
@@ -1925,11 +1958,11 @@ onUnmounted(() => {
                 <span>托管网站</span><el-icon><Monitor /></el-icon>
               </div>
               <div class="metric-number">
-                {{ overview?.counts?.sites || 0 }}<span>个</span>
+                {{ overview?.counts?.sites ?? "—" }}<span>个</span>
               </div>
               <div class="site-count-detail">
                 <span class="live-dot"></span
-                >{{ overview?.counts?.running_sites || 0 }} 个运行中
+                >{{ sampleIsCurrent ? "" : "最近记录：" }}{{ overview?.counts?.running_sites ?? "—" }} 个运行中
               </div>
               <button class="text-link metric-footer" @click="go('sites')">
                 查看全部网站 <el-icon><ArrowRight /></el-icon>
@@ -1941,7 +1974,7 @@ onUnmounted(() => {
               <div class="card-heading">
                 <div>
                   <h2>资源趋势</h2>
-                  <p>当前会话 · 每 5 秒采样</p>
+                  <p>当前会话 · 每 5 秒尝试采样，仅记录成功结果</p>
                 </div>
                 <div class="legend">
                   <span><i class="cpu-line"></i>CPU</span
@@ -2014,10 +2047,10 @@ onUnmounted(() => {
                 <div><strong>Nginx</strong><small>网站入口</small></div>
                 <el-tag
                   disable-transitions
-                  :type="overview?.nginx_active ? 'success' : 'danger'"
+                  :type="healthState.kind === 'ok' ? 'success' : 'warning'"
                   effect="light"
                   round
-                  >{{ overview?.nginx_active ? "运行中" : "待检查" }}</el-tag
+                  >{{ healthState.kind === 'ok' ? "运行中" : overview ? "最近结果 · 待核对" : "等待核对" }}</el-tag
                 >
               </div>
               <div class="service-row">
@@ -2850,8 +2883,8 @@ onUnmounted(() => {
                     <dd>{{ overview?.kernel || "—" }}</dd>
                     <dt>服务器时间</dt>
                     <dd title="来自服务器采样时间，按面板界面时区显示">{{ serverSampleTime }}</dd>
-                    <dt>运行时间</dt>
-                    <dd>{{ uptime }}</dd>
+                    <dt>{{ sampleIsCurrent ? "运行时间" : "最近记录的运行时间" }}</dt>
+                    <dd>{{ overview ? uptime : "等待核对" }}</dd>
                     <dt>面板目录</dt>
                     <dd>/opt/panel</dd>
                     <dt>日志查看</dt>

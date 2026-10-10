@@ -430,6 +430,8 @@ button {
   align-items: center;
   font-weight: 550;
 }
+.server-status.warning .live-dot { background: #b66d16; }
+.server-status.error .live-dot { background: #c64646; }
 .strip-separator {
   height: 12px;
   border-left: 1px solid #cfdece;
