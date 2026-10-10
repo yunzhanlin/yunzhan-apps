@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24apprecoveryabh-linux-amd64.tar.gz",
-    "archive_sha256": "e08523947e4c913d470aa784e79c556796ca7df958de5f07cc75fc667f50b243",
-    "frozen_inputs_sha256": "85c54234bfa58b6e25b8919f96bab560466ba197493e233b11cef206d75971fe"
+    "archive": "panel-0.1.0-dev.proapps24apacheinspectadi-linux-amd64.tar.gz",
+    "archive_sha256": "203eddd7f66a7da29e21c3fce42cf56a7322c53ec519171c864199979d06a68c",
+    "frozen_inputs_sha256": "0c09ccd8603afc68d42caed2a2f1c71672cded67d16e9ab888c9fc6dcc7e0fbb"
   },
   "files": {
     "go.mod": "282b96e296dc25aae84d2af7736985b76b6747999da2efee42723bf1d1931a9a",
@@ -845,7 +845,7 @@
     "web/src/AnalyticsWorkspace.vue": "8e42777f501f8ed9d9314eb6e8f06f768a4e9704d834e40b697e94083a6c8e1c",
     "web/src/ApacheWafTransactions.vue": "49c7905010c9e59b77b9c85a1d01d72790dc93855f729a3626a4fc0cd3d51c7f",
     "web/src/App.vue": "181b5670a33cc65da958e2c007d83d49eeca50f35a50c79141b6a7a5b1afdc84",
-    "web/src/AppModuleManager.vue": "d7a89f6242d5839792439b203383e51d054602a908e5a2ae19078fb751b0914c",
+    "web/src/AppModuleManager.vue": "b8b20ea16a143b5db80bca920e682ff7a53a0c62fa35a5def650fb23f2edcae1",
     "web/src/AppModuleReport.vue": "e1a936da61424780b3a1618710e636cc6db353b0b4df076e0f8337251b284e3a",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
     "web/src/BatchSSLManager.vue": "3fad57eb329e6a91636164fe508c5f3c953d18972c70ab7d9d45443a32baf208",
@@ -891,6 +891,7 @@
     "web/src/loadBalanceTransactions.ts": "66e53455418bf15703e6a916f61d185b69302a915b8a429ff034898319452f26",
     "web/src/main.ts": "1b448a869c644174dbfcdd3aa7012dc337a0d6b3656e6634f093635b824403b3",
     "web/src/menuPermissions.ts": "17e0dc5e33c8db234f369e859ba1ea94264a3cbfd4b81a807dae21ad448a9b0e",
+    "web/src/moduleInitialInspection.ts": "76b863682403303869fab982731bde26c17cacecaee353a9c8452a2aa4f0f6a2",
     "web/src/networkIDSOperations.ts": "7d23aef19ac25c77f3e4c3b662db98fb6d60158719055d8220dbca22ab82cbef",
     "web/src/panelBase.ts": "dab7b8e35b289bb51d46d157f60d65d53d99c4a83e14b1c726de390cd559f826",
     "web/src/panelHealth.ts": "78bebbed7cd06cb072994cfaba7aaef7ec718a74941138836af037676b869347",
@@ -980,7 +981,7 @@
     "scripts/test-load-balance-transactions.mjs": "c9f8e04ec61487b679611804f62c9a549cbc0796945a959c7c861f32ea252823",
     "scripts/test-load-balance-report-export.mjs": "222840e1d7de0a6e83d7b658722ee7039f2ce8ac27afe8b7c15b2b79bb938e93",
     "scripts/test-apache-waf-transactions.mjs": "962d79454c7e3860829ecb54a00adcb35582e08d28e18b06bcfad81d0586d2d9",
-    "scripts/test-deferred-workspace.mjs": "053ea7dc73e3207f04a2ff92016de30b583e55c2ae2ba3f9d5d30b23f6c49fed",
+    "scripts/test-deferred-workspace.mjs": "4754ade571837c031c352361efb836a87af06d9501bb9590cfe01f11f8797595",
     "scripts/test-web-entry-budget.mjs": "930c8c560d0ebc952cde14f1543a106c4ccce9ce1505db9099428522e7a4527a",
     "scripts/web-entry-budget.mjs": "5c6d391ae44173cf06ff276686d6db3de1e6620da2664eccb79baf35a8347b06",
     "scripts/test-analytics-latency.mjs": "2afa52298a5850ac4846feb4d26acc27170198f5e23f99470dbc9b793dd1fcc4",

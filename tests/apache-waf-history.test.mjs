@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('Apache 2.3 private transaction maintenance is exact normal signed ABH source, with a mandatory gate',async()=>{
+test('Apache 2.3 private transaction maintenance is exact normal signed ADI source, with a mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'85c54234bfa58b6e25b8919f96bab560466ba197493e233b11cef206d75971fe');
- assert.equal(release.archive_sha256,'e08523947e4c913d470aa784e79c556796ca7df958de5f07cc75fc667f50b243');
- assert.equal(Object.keys(index.files).length,998);
+ assert.equal(release.frozen_inputs_sha256,'0c09ccd8603afc68d42caed2a2f1c71672cded67d16e9ab888c9fc6dcc7e0fbb');
+ assert.equal(release.archive_sha256,'203eddd7f66a7da29e21c3fce42cf56a7322c53ec519171c864199979d06a68c');
+ assert.equal(Object.keys(index.files).length,999);
  for(const file of ['internal/core/apache_waf_history.go','internal/core/apache_waf_history_test.go','internal/executor/apache_waf_history_linux.go','internal/executor/apache_waf_history_linux_test.go','web/src/apacheWafTransactions.ts','web/src/ApacheWafTransactions.vue','scripts/test-apache-waf-transactions.mjs','internal/executor/waf_transaction_linux.go','internal/executor/apache_waf_linux.go','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }

@@ -6,7 +6,82 @@ const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const compiled=p=>ts.transpileModule(read(p),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const {DeferredWorkspace,WorkspaceCodeLoadError,scopeWorkspaceAPI,scopeWorkspaceOperation}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/deferredWorkspace.ts')).toString('base64'));
 const {canOpenAppModule,canReadPath,menuPermissionIDs}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/menuPermissions.ts')).toString('base64'));
+const {initialModuleInspection}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/moduleInitialInspection.ts')).toString('base64'));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
+const initial=(id,actions=['run'],fields=null,installed=true,ready=true)=>initialModuleInspection(id,{id,actions,fields},installed,ready);
+test('dedicated Apache opening cannot issue a generic inspection; existing reviewed inspections stay intact',()=>{
+ for(const actions of [['run'],['run','policies'],['server-report','run']])assert.equal(initial('apache-waf',actions),undefined);
+ assert.equal(initial('nfs-manager',['server-report','policies','run']),'server-report');
+ assert.equal(initial('nfs-manager',['run']),undefined,'never substitute the mount report for the server report');
+ for(const id of ['file-monitor','website-tamper-proof','enterprise-tamper-proof'])assert.equal(initial(id,['policies','run'],[{key:'site_id',kind:'site'}]),'policies');
+ for(const id of ['files-sync','pure-ftpd'])assert.equal(initial(id,['run'],[{key:'site_id',kind:'site'}]),'run');
+ for(const id of ['network-threat-detection','daily-report','load-balance','mobile-pwa','task-manager','user-manager'])assert.equal(initial(id),'run');
+ for(const id of ['site-diagnosis','website-analytics','website-statistics-v2','php-code-security','disk-analysis','pm2-manager'])assert.equal(initial(id,['run'],[{key:'site_id',kind:'site'}]),undefined);
+ assert.equal(initial('platform-ops'),undefined);
+ assert.equal(initial('task-manager',['save','install','update','terminate']),undefined);
+});
+test('partial reads, wrong identities, unknown modules and malformed definitions cannot trigger an opening action',()=>{
+ for(const installed of [false,undefined,null,1,'true'])assert.equal(initialModuleInspection('task-manager',{id:'task-manager',actions:['run'],fields:null},installed,true),undefined);
+ for(const ready of [false,undefined,null,1,'true'])assert.equal(initialModuleInspection('task-manager',{id:'task-manager',actions:['run'],fields:null},true,ready),undefined);
+ for(const id of ['unknown','__proto__','constructor','../../task-manager','','nginx-waf'])assert.equal(initial(id),undefined);
+ for(const definition of [null,[],{}, {id:'daily-report',actions:['run'],fields:null},
+   {id:'task-manager',actions:null,fields:null}, {id:'task-manager',actions:['run','run'],fields:null},
+   {id:'task-manager',actions:['run','bad/action'],fields:null}, {id:'task-manager',actions:['run',17],fields:null},
+   {id:'task-manager',actions:Array.from({length:65},(_,i)=>'a'+i),fields:null},
+   ...[undefined,{},[null],[[]],[{key:'pid'}],[{key:'pid',kind:1}],
+     [{key:'../pid',kind:'site'}],[{key:'pid',kind:'bad/kind'}],
+     [{key:'pid',kind:'number'},{key:'pid',kind:'number'}],
+     Array.from({length:65},(_,i)=>({key:'a'+i,kind:'text'}))].map(fields=>({id:'task-manager',actions:['run'],fields})),
+ ])assert.equal(initialModuleInspection('task-manager',definition,true,true),undefined);
+ assert.equal(initial('task-manager',['run'],[{key:'start_time',kind:'number'}]),'run');
+});
+test('actual manager uses the closed selector only after its complete page and dependent reads succeed',()=>{
+ const manager=read('web/src/AppModuleManager.vue');
+ assert.match(manager,/import \{ initialModuleInspection \} from "\.\/moduleInitialInspection"/);
+ const show=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
+ assert.match(show,/let pageReady = false/);
+ assert.equal((show.match(/pageReady = true/g)||[]).length,1);
+ assert(show.indexOf('pageReady = true')>show.indexOf('restoreAnalyticsQuery('));
+ assert(show.indexOf('pageReady = true')<show.indexOf('} catch (e)'));
+ assert.match(show,/const inspection = initialModuleInspection\(id, definition.value, installed.value, pageReady\);\s*if \(inspection\) await execute\(inspection\);/);
+ assert.equal((show.match(/await execute\(/g)||[]).length,1);
+ assert.doesNotMatch(show,/execute\("(?:run|policies|server-report)"\)/);
+ assert.match(manager,/<WafWorkspace v-else-if="definition.id === 'apache-waf'"[^>]+engine="apache-waf"/);
+ // Keep this intentionally closed module inventory aligned with the real
+ // generic definitions, not the broader permission aliases or test fixtures.
+ const core=read('internal/core/app_modules.go');
+ const definitions=core.slice(core.indexOf('definitions := []AppModuleDefinition{'),core.indexOf('for i := range definitions'));
+ const ids=[...definitions.matchAll(/^\s*\{"([a-z0-9-]+)",/gm)].map(match=>match[1]);assert.equal(ids.length,20);
+ const selector=read('web/src/moduleInitialInspection.ts');
+ const declared=selector.slice(selector.indexOf('const modules = new Set(['),selector.indexOf(']);'));
+ assert.deepEqual([...declared.matchAll(/"([a-z0-9-]+)"/g)].map(match=>match[1]).sort(),ids.sort());
+ assert.doesNotMatch(selector,/fetch\(|localStorage|sessionStorage|setTimeout|setInterval|csrf|password|secret|cookie/);
+});
+test('the real compiled show function refuses automatic actions after page, site or certificate read failures',async()=>{
+ const manager=read('web/src/AppModuleManager.vue');
+ const source=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
+ const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ async function open(id,failedPath,actions=['run'],fields=null){
+  const refs=Object.fromEntries(['busy','error','visible','report','definition','guidance','installed','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions'].map(key=>[key,{value:undefined}]));
+  const requests=[],executed=[];
+  const bindings={...refs,initialModuleInspection,canReadPath,
+   props:{api:async path=>{requests.push(path);if(path===failedPath)throw new Error('retained read failure '+path);
+    return path==='/app-modules/'+id ? {definition:{id,actions,fields},status:{installed:true,healthy:true},report:null,workspace:[{id:'manage'}]} : []; }},
+   setReport:value=>{refs.report.value=value;},analyticsQueryContext:()=>undefined,restoreAnalyticsQuery:()=>undefined,
+   execute:async action=>{executed.push(action);}};
+  await new Function(...Object.keys(bindings),js+'\nreturn show;')(...Object.values(bindings))(id);
+  return {requests,executed,error:refs.error.value,installed:refs.installed.value};
+ }
+ for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){
+  const out=await open(id,path);assert.equal(out.requests.at(-1),path);assert.deepEqual(out.executed,[]);assert.match(out.error,/retained read failure/);
+  if(path==='/sites'||path==='/certificates')assert.equal(out.installed,true,'partial installation state must not authorize an action');
+ }
+ assert.deepEqual((await open('apache-waf')).executed,[]);
+ assert.deepEqual((await open('task-manager')).executed,['run']);
+ assert.deepEqual((await open('pure-ftpd',undefined,['run'],[{key:'site_id',kind:'site'}])).executed,['run']);
+ assert.deepEqual((await open('nfs-manager',undefined,['run','server-report'])).executed,['server-report']);
+ assert.deepEqual((await open('file-monitor',undefined,['policies'],[{key:'site_id',kind:'site'}])).executed,['policies']);
+});
 test('constructing the opener does not request any chunk or mount a workspace',()=>{
  let calls=0;new DeferredWorkspace(async()=>{calls++;return {};});assert.equal(calls,0);
 });

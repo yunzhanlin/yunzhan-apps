@@ -18,6 +18,7 @@ import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPla
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
 import {remoteBackupArchiveActions,remoteBackupArchiveBody,remoteBackupArchiveFields} from "./remoteBackupArchive";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
+import { initialModuleInspection } from "./moduleInitialInspection";
 type API = <T>(
   path: string,
   method?: string,
@@ -320,6 +321,7 @@ async function show(id: string) {
   workspace.value = []; history.value = undefined;
   historyFilter.value = {search: "", from_time: "", to_time: "", site_id: "", resource_id: ""}; historyOffset.value = 0;
   activeTab.value = "manage"; localVersions.value = undefined;
+  let pageReady = false;
   try {
     const page = await props.api<{
       definition: Definition;
@@ -370,23 +372,14 @@ async function show(id: string) {
       const savedQuery=restoreAnalyticsQuery(analyticsQueryContext(report.value),sites.value);
       if (savedQuery) Object.assign(form.value,savedQuery);
     }
+    pageReady = true;
   } catch (e) {
     error.value = e instanceof Error ? e.message : String(e);
   } finally {
     busy.value = false;
   }
-  if (installed.value && id === "nfs-manager") {
-    await execute("server-report");
-  } else if (installed.value && definition.value?.actions.includes("policies")) {
-    await execute("policies");
-  } else if (
-    installed.value &&
-    definition.value?.actions.includes("run") &&
-    (!(definition.value.fields || []).some((f) => f.kind === "site") ||
-      id === "files-sync" || id === "pure-ftpd") &&
-    id !== "platform-ops"
-  )
-    await execute("run");
+  const inspection = initialModuleInspection(id, definition.value, installed.value, pageReady);
+  if (inspection) await execute(inspection);
 }
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
