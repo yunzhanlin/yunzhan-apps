@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-test('normal YG signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
+test('normal YU signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'52ed833b8178b35985762c94e070e209296510a7644bf03265644b97f1e015f3');
- assert.equal(release.archive_sha256,'ff278e5eeb3668faaad70dd5ae632204c7dd8e499936b7d32534530c0b9651a6');
- assert.equal(Object.keys(index.files).length,980);
+ assert.equal(release.frozen_inputs_sha256,'0f7939250e83a31326c248908d07deb28fdfc6877f258fffa520bc2b84844a61');
+ assert.equal(release.archive_sha256,'df6ca0092e0ce9fade0c9ee566937033da0c0cc4446c6c8d4a398358f013f71f');
+ assert.equal(Object.keys(index.files).length,984);
  for(const file of ['internal/appcatalog/catalog.go','internal/appcatalog/github_catalog.go','internal/appcatalog/github_catalog_test.go','internal/appcatalog/github_catalog_rate.go','internal/appcatalog/github_catalog_rate_test.go','scripts/test-registry-freshness.mjs','web/src/registryFreshness.ts','web/src/App.vue','packaging/build-release.sh']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,19);assert(gates.includes('scripts/test-registry-freshness.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,20);assert(gates.includes('scripts/test-registry-freshness.mjs'));
  const code=await read('panel-integration/internal/appcatalog/github_catalog.go');assert.match(code,/git\/ref\/heads\/main/);assert.match(code,/c\.BaseURL != DefaultBaseURL/);assert.match(code,/uniqueGitHubReference\(raw\)/);assert.match(code,/githubCatalogCommitBase\+commit\+"\/"\+relative/);
  const checks=await read('panel-integration/internal/appcatalog/github_catalog_test.go');for(const name of ['UsesResolvedImmutableCommitNotStaleMain','InvalidBranchMetadataNeverReadsMain','LegacyFallbackPinnedToSameCommit','FailuresKeepVerifiedCacheButNotFreshness','ClosedPathsAndCancellation','ConcurrentCacheRefreshes'])assert(checks.includes('TestOfficialCatalog'+name));
  const receipt=await read('panel-integration/web/src/registryFreshness.ts');assert.match(receipt,/ticket\.checkPending \|\| this\.pendingCheck/);assert.match(receipt,/ticket\.checkBarrier !== this\.checkBarrier/);assert.match(receipt,/source: \{ \.\.\.source, \.\.\.this\.failedSource, stale: true \}/);assert.match(receipt,/catalog !== this\.receiptCatalog/);
@@ -21,7 +21,7 @@ test('normal YG signed frozen source includes pinned catalog reads, poll-safe re
  assert.match(code,/c\.githubRefMu\.Lock\(\)/);assert.match(code,/fmt\.Errorf\("无法定位官方仓库当前提交: %w", err\)/);
  const retryTests=await read('panel-integration/internal/appcatalog/github_catalog_rate_test.go');for(const name of ['RetryHeadersBounded','RateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry','SecondaryBackoffIncreasesAndSuccessfulLookupResets','ConcurrentQuotaDoesNotBurstOrReadMutableMain','RetryDoesNotInventMetadataForCustomSource'])assert(retryTests.includes('TestGitHubCatalog'+name));
  assert.match(view,/到期后仍须重新检查/);assert(gate.includes('server retry deadlines stay failure evidence'));
- const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24registryrateyg');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
- const lb=contracts.apps.find(a=>a.id==='load-balance');assert(lb.gaps.some(s=>s.includes('下载事件超时')));assert(lb.scenarios.some(s=>s.includes('1.8.0 到 1.8.1')&&s.includes('2 份归档')));
- const registry=JSON.parse(await read('registry/apps.json'));assert.equal(registry.apps.length,50);assert.equal(registry.apps.find(a=>a.id==='load-balance').version,'1.8.1');
+ const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24loadexportyu');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
+ const lb=contracts.apps.find(a=>a.id==='load-balance');assert(lb.boundaries.some(s=>s.includes('下载事件超时')));assert(lb.scenarios.some(s=>s.includes('1.8.0 到 1.8.1')&&s.includes('2 份归档')));
+ const registry=JSON.parse(await read('registry/apps.json'));assert.equal(registry.apps.length,50);assert.equal(registry.apps.find(a=>a.id==='load-balance').version,'1.8.2');
 });

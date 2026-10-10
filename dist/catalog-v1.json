@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-10T05:24:33Z",
+  "generated_at": "2026-10-10T12:05:13Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -251,8 +251,8 @@
       "id": "load-balance",
       "name": "负载均衡 · Load Balance",
       "category": "professional",
-      "version": "1.8.1",
-      "summary": "回环入口加权分流、IP 粘滞与备用节点；固定 IP HTTPS 后端与独立就绪检查，默认只观测、逐入口明确启用故障摘除与恢复；完整配置事务、私有库存与无覆盖归档保留原字节和标识；工作页报告与分页范围独立核对。",
+      "version": "1.8.2",
+      "summary": "回环入口加权分流、IP 粘滞与备用节点；固定 IP HTTPS 后端与独立就绪检查，默认只观测、逐入口明确启用故障摘除与恢复；完整事务与无覆盖私有归档；当前工作页报告以会话绑定、摘要核对的短期快照下载，不导出凭据。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -261,7 +261,7 @@
       "capabilities": [
         "加权轮询、备用节点与 IP 粘滞；删除重建保留递增修订身份",
         "TCP 建连探测与入口配置指纹；手工配置漂移与损坏备份拒绝覆盖",
-        "HTTP/HTTPS 完整持久事务与中断恢复；旧工作进程监听交接；库存分页、原摘要确认和已结束事务无覆盖私有归档；工作页报告不串页",
+        "HTTP/HTTPS 持久事务与中断恢复、工作进程交接、原摘要确认与无覆盖私有归档；当前页非敏感报告会话绑定和 SHA-256 下载，5 分钟过期、重启失效；不导出凭据或完整恢复备份",
         "签名仓库更新请求与任务原子绑定、完成后不重复提交",
         "持续 HTTP/HTTPS 状态码与内容检查（默认只观测）",
         "连续失败/恢复阈值、持久快照；实际自动流量与摘除数量，过期或后台异常不计为健康",
@@ -272,8 +272,8 @@
         "未知结果保留已摘除节点；策略编辑保留摘除状态，显式停用恢复注册节点",
         "自动流量 HTTP 三文件与 HTTPS 四文件持久事务；原生重载、进程强杀和冷重启恢复；策略修订与流量序列分开"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.8.1/manifest.json",
-      "sha256": "9fab0469e21f2a7dc64ce40323cc666a15c2ad1dd7aae4c8362a19bca3d2f212"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.8.2/manifest.json",
+      "sha256": "555f2ef5298758338917f44f65cb925751d4ce0082cb2cc4a998fc4decb7e69c"
     },
     {
       "id": "memcached",

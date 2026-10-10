@@ -15,7 +15,7 @@ func LoadBalanceHistoryAction(action string) bool {
 // Closed, reviewed archive implementations; do not infer compatibility from
 // a numerically newer, unknown application version.
 func LoadBalanceHistoryVersion(version string) bool {
-	return version == "1.8.0" || version == "1.8.1"
+	return version == "1.8.0" || version == "1.8.1" || version == "1.8.2"
 }
 
 // The history API cannot inherit node, health, TLS or filesystem fields from

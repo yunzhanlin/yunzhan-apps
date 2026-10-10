@@ -30,8 +30,8 @@ test('normal frozen build includes archive frontend input and recovery gates',as
  const build=await read('panel-integration/packaging/build-release.sh'),frontend=await read('panel-integration/web/src/remoteBackupArchive.ts');
  assert.match(build,/test-remote-backup-archive\.mjs/);assert.match(frontend,/limit<1\|\|limit>32/);assert.match(frontend,/confirm:''/);assert.match(frontend,/RECOVER/);
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'52ed833b8178b35985762c94e070e209296510a7644bf03265644b97f1e015f3');
- assert.equal(release.archive_sha256,'ff278e5eeb3668faaad70dd5ae632204c7dd8e499936b7d32534530c0b9651a6');
+ assert.equal(release.frozen_inputs_sha256,'0f7939250e83a31326c248908d07deb28fdfc6877f258fffa520bc2b84844a61');
+ assert.equal(release.archive_sha256,'df6ca0092e0ce9fade0c9ee566937033da0c0cc4446c6c8d4a398358f013f71f');
  for(const file of ['scripts/test-remote-backup-archive.mjs','internal/executor/app_sync_remote_backup_archive_linux.go','internal/executor/app_sync_remote_backup_archive_linux_test.go','web/src/remoteBackupArchive.ts']){assert.match(release.files[file],/^[0-9a-f]{64}$/);assert.equal(release.files[file],index.files[file]);}
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,19);
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,20);
 });

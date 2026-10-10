@@ -41,6 +41,10 @@ type Server struct {
 	outboundCollectMu  sync.Mutex
 	outboundDispatchMu sync.Mutex
 	outboundCancels    map[string]context.CancelFunc
+	reportExportMu     sync.Mutex
+	reportExports      map[string]loadBalanceReportExport
+	reportExportBytes  int
+	reportExportSeq    uint64
 }
 type identity struct{ ID, Username, CSRF string }
 

@@ -10,12 +10,12 @@ import (
 )
 
 func TestLoadBalanceHistoryVersionIsClosedAndRoutingCompatible(t *testing.T) {
-	for _, version := range []string{"1.8.0", "1.8.1"} {
+	for _, version := range []string{"1.8.0", "1.8.1", "1.8.2"} {
 		if !LoadBalanceHistoryVersion(version) || !LoadBalanceHealthRoutingVersion(version) {
 			t.Fatal("reviewed archive version rejected", version)
 		}
 	}
-	for _, version := range []string{"", "1.7.0", "1.7.1", "1.8.2", "1.9.0", "v1.8.1", "1.8.1 ", "1.8.1-beta"} {
+	for _, version := range []string{"", "1.7.0", "1.7.1", "1.8.3", "1.9.0", "v1.8.1", "1.8.1 ", "1.8.1-beta", "1.8.2 ", "1.8.2-beta"} {
 		if LoadBalanceHistoryVersion(version) {
 			t.Fatal("unreviewed archive version accepted", version)
 		}

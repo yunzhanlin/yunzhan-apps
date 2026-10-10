@@ -201,6 +201,7 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.loadBalanceReportExportRoutes(m)
 	a.networkIDSOperationRoutes(m)
 	a.networkIDSRuleFeedRoutes(m)
 	m.HandleFunc("GET /api/app-modules/{id}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
@@ -223,6 +224,13 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			}
 		}
 		out["workspace"] = ModuleWorkspace(r.PathValue("id"))
+		if r.PathValue("id") == "load-balance" {
+			if report, ok := out["report"].(map[string]any); ok {
+				if action, ok := report["action"].(string); ok {
+					report["result"] = a.withLoadBalanceReportExport(u, action, report["result"], time.Now())
+				}
+			}
+		}
 		send(w, 200, out)
 	}))
 	m.HandleFunc("GET /api/app-modules/{id}/history", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
@@ -246,6 +254,9 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		if err != nil {
 			fail(w, 409, err.Error())
 			return
+		}
+		if id == "load-balance" {
+			out = a.withLoadBalanceReportExport(u, "history", out, time.Now())
 		}
 		send(w, 200, out)
 	}))
@@ -321,6 +332,9 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		_ = a.Store.Audit(u.Username, "app-module."+action, id, "succeeded")
+		if id == "load-balance" {
+			out = a.withLoadBalanceReportExport(u, action, out, time.Now())
+		}
 		send(w, 200, out)
 	}))
 }
@@ -340,7 +354,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "load-balance":
-			version = "1.8.1"
+			version = "1.8.2"
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":

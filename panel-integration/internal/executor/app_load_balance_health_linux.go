@@ -435,7 +435,7 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		}
 		if core.LoadBalanceAutomaticTraffic(v.HealthCheck) && !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) {
 			lock.Close()
-			return errors.New("自动流量策略需要可信的负载均衡 v1.7.0 / v1.7.1 / v1.8.0 / v1.8.1 安装记录，未开始检查或改写")
+			return errors.New("自动流量策略需要可信的负载均衡 v1.7.0 / v1.7.1 / v1.8.0 / v1.8.1 / v1.8.2 安装记录，未开始检查或改写")
 		}
 		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			lock.Close()

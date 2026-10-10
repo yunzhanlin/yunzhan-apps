@@ -238,7 +238,7 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 	if action == "transactions" {
 		blocked := ""
 		if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
-			blocked = "归档需要已核对的 1.8.0 / 1.8.1 安装记录"
+			blocked = "归档需要已核对的 1.8.0 / 1.8.1 / 1.8.2 安装记录"
 		}
 		if inventory.Pending {
 			blocked = "负载均衡有待恢复事务"
@@ -272,7 +272,7 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 			"scope": "完整核对本机私有事务后返回非敏感分页元数据。活动最多 512 份 / 128 MiB，归档最多 2048 份 / 256 MiB；这是逻辑预算，不是内核硬配额，不自动归档或删除证据。"}, nil
 	}
 	if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
-		return nil, errors.New("归档须已安装经过核验的 1.8.0 / 1.8.1 应用，不替旧版本开放新操作")
+		return nil, errors.New("归档须已安装经过核验的 1.8.0 / 1.8.1 / 1.8.2 应用，不替旧版本开放新操作")
 	}
 	if inventory.Pending {
 		return nil, errors.New("有待恢复事务，禁止归档；先核对完整恢复集合")

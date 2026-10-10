@@ -11,6 +11,7 @@ import ThreatIDSOperations from "./ThreatIDSOperations.vue";
 import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
 import { loadBalanceRoutingSaveBody } from "./loadBalanceRouting";
+import { loadBalanceReportExportHref } from "./loadBalanceReportExport";
 import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody,loadBalanceReportForSection,loadBalanceTransactionQueryMatches} from "./loadBalanceTransactions";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
@@ -135,11 +136,15 @@ function sectionReport(section:string) {
   return definition.value?.id==='load-balance' ? loadBalanceReportForSection(section,report.value) : report.value;
 }
 const exportableReport=computed(()=>definition.value?.id==='load-balance'&&activeTab.value==='history' ? history.value : sectionReport(activeTab.value));
+const reportExportNow=ref(Date.now());
+const reportExportTimer=window.setInterval(()=>{reportExportNow.value=Date.now();},1000);
+onBeforeUnmount(()=>window.clearInterval(reportExportTimer));
+const nativeReportExportHref=computed(()=>definition.value?.id==='load-balance' ? loadBalanceReportExportHref(activeTab.value,exportableReport.value,reportExportNow.value) : undefined);
 function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
     if (["password", "secret-json", "secret-text"].includes(field.kind)) form.value[field.key] = "";
 }
-watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
+watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); if(definition.value?.id==='load-balance'){report.value=undefined;history.value=undefined;} remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
 watch(visible, value => { if (!value) clearWriteOnlyFields(); });
 onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
@@ -686,7 +691,7 @@ async function refreshIDSAfterTask(id: string) {
 }
 function exportReport() {
   const actual=exportableReport.value;
-  if (!actual || actual.token) return;
+  if (!actual || actual.token || definition.value?.id==='load-balance') return;
   const url = URL.createObjectURL(
     new Blob([JSON.stringify(actual, null, 2)], {
       type: "application/json",
@@ -1102,9 +1107,11 @@ defineExpose({ show });
         </el-tabs>
       </template>
     </div>
-    <template #footer
-      ><el-button
-        v-if="exportableReport && !exportableReport.token && !['website-analytics', 'apache-waf'].includes(definition?.id || '')"
+    <template #footer>
+      <span v-if="definition?.id==='load-balance' && exportableReport" class="report-export-note">{{ nativeReportExportHref ? '下载快照最长保留 5 分钟；过期、账户切换或面板重启后请重新查询本页。' : '本次下载快照未能核对或已失效，请重新查询本页。单份最多 1 MiB；不导出凭据或其他页面的缓存结果。' }}</span>
+      <el-button v-if="nativeReportExportHref" tag="a" :href="busy ? undefined : nativeReportExportHref" target="_blank" rel="noopener noreferrer" :disabled="busy" :aria-disabled="busy" @click="busy && $event.preventDefault()">导出真实报告</el-button>
+      <el-button
+        v-if="exportableReport && !exportableReport.token && !['load-balance', 'website-analytics', 'apache-waf'].includes(definition?.id || '')"
         :disabled="busy"
         @click="exportReport"
         >导出真实报告</el-button
@@ -1121,6 +1128,7 @@ defineExpose({ show });
   </el-dialog>
 </template>
 <style scoped>
+.report-export-note { display:block; margin-bottom:12px; color:var(--el-text-color-secondary); font-size:12px; line-height:1.6; text-align:left; }
 .module-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
