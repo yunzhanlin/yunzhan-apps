@@ -13,7 +13,14 @@ import (
 
 func threatIDSJournalFixture(t *testing.T) (*Service, []wafConfigChange, *threatIDSRecoveryState) {
 	t.Helper()
-	root := t.TempDir()
+	var root string
+	if os.Geteuid() == 0 {
+		// Root stop/recovery fixtures reuse this journal and validate every
+		// native ancestor. /tmp is intentionally rejected as writable.
+		root = threatIDSRootDirectoryFixture(t)
+	} else {
+		root = t.TempDir()
+	}
 	s := New(Config{SystemRoot: root, SecurityDir: filepath.Join(root, "security"), NginxConf: filepath.Join(root, "nginx.conf")}).threatIDSTransactionService()
 	paths := s.threatIDSConfigurationPaths()
 	for _, path := range paths {
