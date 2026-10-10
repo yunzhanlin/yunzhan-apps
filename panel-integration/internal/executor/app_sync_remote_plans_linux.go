@@ -16,21 +16,37 @@ import (
 // A durable reservation precedes job creation. An uncertain reservation never
 // generates a replacement ID; the operator must inspect it and explicitly resume.
 type remoteSyncPlan struct {
-	ID             string   `json:"id"`
-	TargetID       string   `json:"remote_target_id"`
-	SiteID         string   `json:"site_id"`
-	Revision       int64    `json:"revision"`
-	TargetRevision int64    `json:"remote_target_revision"`
-	SpecSHA        string   `json:"spec_sha256"`
-	Excludes       []string `json:"excludes"`
-	Interval       int      `json:"interval"`
-	Enabled        bool     `json:"enabled"`
-	NextRunAt      string   `json:"next_run_at,omitempty"`
-	PendingJobID   string   `json:"pending_job_id,omitempty"`
-	LastJobID      string   `json:"last_job_id,omitempty"`
-	LastState      string   `json:"last_state"`
-	LastError      string   `json:"last_error,omitempty"`
-	LastFinishedAt string   `json:"last_finished_at,omitempty"`
+	ID               string   `json:"id"`
+	TargetID         string   `json:"remote_target_id"`
+	SiteID           string   `json:"site_id"`
+	Revision         int64    `json:"revision"`
+	TargetRevision   int64    `json:"remote_target_revision"`
+	SpecSHA          string   `json:"spec_sha256"`
+	Excludes         []string `json:"excludes"`
+	Interval         int      `json:"interval"`
+	Enabled          bool     `json:"enabled"`
+	Realtime         bool     `json:"realtime"`
+	ChangeSequence   uint64   `json:"change_sequence"`
+	ConsumedSequence uint64   `json:"consumed_sequence"`
+	PendingSequence  uint64   `json:"pending_sequence"`
+	LastTrigger      string   `json:"last_trigger,omitempty"`
+	NextRunAt        string   `json:"next_run_at,omitempty"`
+	PendingJobID     string   `json:"pending_job_id,omitempty"`
+	LastJobID        string   `json:"last_job_id,omitempty"`
+	LastState        string   `json:"last_state"`
+	LastError        string   `json:"last_error,omitempty"`
+	LastFinishedAt   string   `json:"last_finished_at,omitempty"`
+}
+
+// Exact in browsers as well as Go; exhaustion pauses rather than wrapping.
+const remotePlanMaxSequence = 1<<53 - 1
+
+type remotePlanView struct {
+	remoteSyncPlan
+	WatcherState   string `json:"watcher_state"`
+	WatchDirs      int    `json:"watch_directories"`
+	WatchOverflows uint64 `json:"watch_overflows"`
+	WatchError     string `json:"watch_error,omitempty"`
 }
 
 func (s *Service) remotePlanPath(id string) string {
@@ -38,6 +54,12 @@ func (s *Service) remotePlanPath(id string) string {
 }
 func remotePlanBlockedID(id string) string { return "files-sync/remote-plan/" + id }
 func validateRemotePlan(p remoteSyncPlan) error {
+	if p.ChangeSequence > remotePlanMaxSequence || p.ConsumedSequence > p.ChangeSequence || p.PendingSequence > p.ChangeSequence || p.PendingJobID == "" && p.PendingSequence != 0 || !p.Realtime && (p.ChangeSequence != 0 || p.ConsumedSequence != 0 || p.PendingSequence != 0) {
+		return errors.New("远端实时变化与原预留任务序号不能核对")
+	}
+	if p.LastTrigger != "" && p.LastTrigger != "scheduled" && p.LastTrigger != "inotify" && p.LastTrigger != "inotify-reconcile" && p.LastTrigger != "inotify-overflow" {
+		return errors.New("远端计划触发来源无效")
+	}
 	if !syncPlanID.MatchString(p.ID) || !syncPlanID.MatchString(p.TargetID) || !core.ValidID(p.SiteID) || p.Revision < 1 || p.TargetRevision < 1 || !coreSHA.MatchString(p.SpecSHA) || p.Interval < 60 || p.Interval > 86400 || len(p.Excludes) > 64 || p.PendingJobID != "" && !core.ValidID(p.PendingJobID) || p.LastJobID != "" && !core.ValidID(p.LastJobID) {
 		return errors.New("远端定时计划身份、修订号或参数无效")
 	}
@@ -179,6 +201,7 @@ func (s *Service) settleRemotePlanReservation(p *remoteSyncPlan) error {
 		p.LastFinishedAt = j.FinishedAt
 	}
 	p.PendingJobID = ""
+	p.PendingSequence = 0
 	return nil
 }
 
@@ -193,8 +216,7 @@ func (s *Service) remotePlanControlRecordFailed(action string, in core.AppModule
 }
 
 func remotePlanInput(action string, in core.AppModuleInput) error {
-	// No credentials, arbitrary shell/targets, manual job ID or realtime policy
-	// is accepted by a periodic-plan action, even if those fields are valid elsewhere.
+	// Closed owner policy; event sequence/trigger and task IDs remain server-only.
 	rest := in
 	rest.ResourceID = ""
 	rest.ExpectedRevision = 0
@@ -204,13 +226,14 @@ func remotePlanInput(action string, in core.AppModuleInput) error {
 		rest.Excludes = nil
 		rest.Interval = 0
 		rest.Enabled = false
+		rest.Realtime = false
 		rest.RemoteTargetRevision = 0
 	}
 	if action == "resume-remote-plan" {
 		rest.RemoteTargetRevision = 0
 	}
 	if !reflect.DeepEqual(rest, core.AppModuleInput{}) {
-		return errors.New("远端定时计划包含不适用字段；实时策略和认证材料须使用对应操作")
+		return errors.New("远端计划包含不适用字段；认证材料须使用连接操作")
 	}
 	return nil
 }
@@ -223,14 +246,22 @@ func (s *Service) moduleRemotePlans(action string, in core.AppModuleInput) (any,
 		return nil, err
 	}
 	if action == "remote-plans" {
+		views := make([]remotePlanView, 0, len(rows))
 		for i := range rows {
 			if s.moduleAutoBlocked[remotePlanBlockedID(rows[i].ID)] {
 				rows[i].Enabled = false
 				rows[i].LastState = "paused-error"
 				rows[i].LastError = "后台状态不能持久核对，安全暂停；检查存储和原任务后显式重新启用"
 			}
+			status := s.moduleWatchStatus[remotePlanBlockedID(rows[i].ID)]
+			if !rows[i].Enabled || !rows[i].Realtime {
+				status.State = "disabled"
+			} else if status.State == "" {
+				status.State = "pending"
+			}
+			views = append(views, remotePlanView{rows[i], status.State, status.Directories, status.Overflows, status.Error})
 		}
-		return map[string]any{"remote_plans": rows, "scope": remoteSyncScope}, nil
+		return map[string]any{"remote_plans": views, "scope": remoteSyncScope}, nil
 	}
 	if !syncPlanID.MatchString(in.ResourceID) {
 		return nil, errors.New("远端计划标识应为 3–64 位小写字母数字或短横线")
@@ -271,7 +302,7 @@ func (s *Service) moduleRemotePlans(action string, in core.AppModuleInput) (any,
 		if !cfg.Enabled || cfg.Revision != in.RemoteTargetRevision {
 			return nil, errors.New("请先核对并选择已启用连接的当前修订号")
 		}
-		candidate := remoteSyncPlan{ID: in.ResourceID, TargetID: cfg.ID, SiteID: in.SiteID, Revision: p.Revision + 1, TargetRevision: cfg.Revision, SpecSHA: cfg.SpecSHA, Excludes: append([]string{}, in.Excludes...), Interval: in.Interval, Enabled: in.Enabled, LastState: "paused", LastJobID: p.LastJobID, LastFinishedAt: p.LastFinishedAt}
+		candidate := remoteSyncPlan{ID: in.ResourceID, TargetID: cfg.ID, SiteID: in.SiteID, Revision: p.Revision + 1, TargetRevision: cfg.Revision, SpecSHA: cfg.SpecSHA, Excludes: append([]string{}, in.Excludes...), Interval: in.Interval, Enabled: in.Enabled, Realtime: in.Realtime, LastState: "paused", LastJobID: p.LastJobID, LastFinishedAt: p.LastFinishedAt}
 		sort.Strings(candidate.Excludes)
 		if candidate.Enabled {
 			candidate.LastState = "pending"
@@ -353,6 +384,7 @@ func (s *Service) moduleRemotePlans(action string, in core.AppModuleInput) (any,
 		return nil, err
 	}
 	delete(s.moduleAutoBlocked, remotePlanBlockedID(p.ID))
+	s.wakeIntegrityWatcher()
 	if !p.Enabled && p.PendingJobID != "" {
 		if _, e := s.cancelRemoteSync(core.AppModuleInput{RemoteRequestID: p.PendingJobID}); e != nil {
 			if p.LastState != "removed" {
@@ -399,6 +431,10 @@ func (s *Service) scheduleRemotePlans(now time.Time) {
 				continue
 			}
 			p.PendingJobID = ""
+			// A change received while SFTP was running is NOT acknowledged by
+			// that older task. Keep it due for one subsequent incremental scan.
+			p.ConsumedSequence = p.PendingSequence
+			p.PendingSequence = 0
 			p.LastState = "succeeded"
 			p.LastError = ""
 			p.NextRunAt = now.Add(time.Duration(p.Interval) * time.Second).Format(time.RFC3339)
@@ -408,7 +444,8 @@ func (s *Service) scheduleRemotePlans(now time.Time) {
 			continue
 		}
 		due, e := time.Parse(time.RFC3339, p.NextRunAt)
-		if e != nil || now.Before(due) {
+		realtimeDue := p.Realtime && p.ChangeSequence > p.ConsumedSequence
+		if e != nil || now.Before(due) && !realtimeDue {
 			continue
 		}
 		busy, e := s.remoteTargetBusy(p.TargetID)
@@ -420,6 +457,10 @@ func (s *Service) scheduleRemotePlans(now time.Time) {
 			continue
 		}
 		p.PendingJobID = core.ID()
+		p.PendingSequence = p.ChangeSequence
+		if !realtimeDue {
+			p.LastTrigger = "scheduled"
+		}
 		p.LastState = "queueing"
 		if e = s.writeRemotePlan(p); e != nil {
 			continue
@@ -432,4 +473,28 @@ func (s *Service) scheduleRemotePlans(now time.Time) {
 		p.LastState = "queued"
 		_ = s.writeRemotePlan(p)
 	}
+}
+
+// Called with Service.mu by the shared kernel watcher. No SFTP, filesystem
+// copy or unbounded per-event queue runs on the watcher goroutine. A durable
+// sequence acknowledges only the changes captured by one original task.
+func (s *Service) markRemotePlanChanged(id, site string, revision int64, trigger string) {
+	p, err := s.readRemotePlan(id)
+	if err != nil {
+		// Do not silently forget an event after a formerly selected policy
+		// becomes unreadable/unsafe. Even if storage is externally repaired,
+		// this executor requires an explicit owner control action to resume.
+		s.blockModuleAutomation(remotePlanBlockedID(id))
+		return
+	}
+	if !p.Enabled || !p.Realtime || p.SiteID != site || p.Revision != revision || s.moduleAutoBlocked[remotePlanBlockedID(id)] {
+		return
+	}
+	if p.ChangeSequence >= remotePlanMaxSequence {
+		s.pauseRemotePlanError(&p, "实时变化序号达到安全上限；保留原任务，核对后重新保存策略")
+		return
+	}
+	p.ChangeSequence++
+	p.LastTrigger = trigger
+	_ = s.writeRemotePlan(p)
 }

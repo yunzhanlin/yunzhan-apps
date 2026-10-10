@@ -243,7 +243,10 @@ const names: Record<string, string> = {
   plans: "同步计划",
   remote_targets: "跨服务器 SFTP 连接",
   remote_jobs: "远端持久任务",
-  remote_plans: "远端定时计划",
+  remote_plans: "远端实时与定时计划",
+  change_sequence: "已持久接受的变化序号",
+  consumed_sequence: "原任务已核对的变化序号",
+  pending_sequence: "原预留任务捕获的变化序号",
   plan_revision: "计划修订号",
   excludes: "排除路径前缀",
   remote_target_revision: "绑定连接修订号",
@@ -447,7 +450,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
-  if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","plan_revision","remote_target_revision","interval","next_run_at","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","realtime","watcher_state","watch_directories","watch_overflows","watch_error","plan_revision","remote_target_revision","interval","next_run_at","last_trigger","change_sequence","consumed_sequence","pending_sequence","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","remote_plan_id","remote_plan_revision","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))

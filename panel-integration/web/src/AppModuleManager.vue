@@ -161,7 +161,7 @@ function tabChanged(name: string | number) {
 function fieldLabel(field:Field,section:Section):string {
   if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
     if(section.id==="remote-plans") {
-      if(field.key==="enabled")return "启用远端定时计划（明确保存后生效）";
+      if(field.key==="enabled")return "启用远端同步计划（明确保存后生效）";
       if(field.key==="expected_revision")return "计划修订号（选择计划自动填写）";
       if(field.key==="interval")return "成功完成后的补查间隔（秒，60–86400）";
       if(field.key==="resource_id")return "远端计划标识（与连接标识独立）";
@@ -197,8 +197,8 @@ const labels: Record<string, string> = {
   "archive-remote-job": "按摘要归档所选终态任务（保留证据）",
   "cancel-remote": "请求停止后续文件交接",
   "recover-remote": "核对并恢复中断交接",
-  "remote-plans":"刷新远端定时计划",
-  "schedule-remote-plan":"保存远端定时策略",
+  "remote-plans":"刷新远端实时与定时计划",
+  "schedule-remote-plan":"保存远端实时与定时策略",
   "pause-remote-plan":"暂停计划并请求取消原任务",
   "resume-remote-plan":"已核对原任务，重新启用计划",
   "remove-remote-plan":"移除计划（保留身份与证据）",

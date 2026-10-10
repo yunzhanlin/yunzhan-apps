@@ -5,9 +5,10 @@ export function remotePlanFields(value:unknown):Record<string,unknown>|undefined
   if(!value || typeof value!=='object' || Array.isArray(value))return;
   const v=value as Record<string,any>;
   if(!planID.test(v.id) || !planID.test(v.remote_target_id) || !siteID.test(v.site_id) || !revision(v.revision) || !revision(v.remote_target_revision) || typeof v.enabled!=='boolean' || !Number.isInteger(v.interval) || v.interval<60 || v.interval>86400 || !Array.isArray(v.excludes) || v.excludes.length>64 || v.excludes.some((p:unknown)=>typeof p!=='string' || p.length<1 || p.length>512) || !['pending','queueing','queued','succeeded','paused','paused-error','removed'].includes(v.last_state))return;
-  return {resource_id:v.id,remote_target_id:v.remote_target_id,site_id:v.site_id,expected_revision:v.revision,remote_target_revision:v.remote_target_revision,interval:v.interval,enabled:v.enabled,excludes:[...v.excludes]};
+  if(v.realtime!==undefined && typeof v.realtime!=='boolean')return;
+  return {resource_id:v.id,remote_target_id:v.remote_target_id,site_id:v.site_id,expected_revision:v.revision,remote_target_revision:v.remote_target_revision,interval:v.interval,enabled:v.enabled,realtime:v.realtime??false,excludes:[...v.excludes]};
 }
-// No credentials, manual task identity, realtime flag or unrelated form data
+// No credentials, manual task identity, event sequence or unrelated form data
 // can escape into these actions. Connection and plan revisions are independent.
 export function remotePlanBody(action:string,form:Record<string,any>,expectedRevision:unknown):Record<string,unknown> {
   if(!remotePlanActions.includes(action))throw Error('远端计划动作无效');
@@ -19,10 +20,10 @@ export function remotePlanBody(action:string,form:Record<string,any>,expectedRev
     body.remote_target_revision=form.remote_target_revision;
   }
   if(action==='schedule-remote-plan'){
-    if(!planID.test(form.remote_target_id) || !siteID.test(form.site_id) || !Number.isInteger(form.interval) || form.interval<60 || form.interval>86400 || typeof form.enabled!=='boolean')throw Error('远端计划来源、目标、启用选择或间隔无效');
+    if(!planID.test(form.remote_target_id) || !siteID.test(form.site_id) || !Number.isInteger(form.interval) || form.interval<60 || form.interval>86400 || typeof form.enabled!=='boolean' || typeof form.realtime!=='boolean')throw Error('远端计划来源、目标、启用选择、实时模式或间隔无效');
     const excludes=typeof form.excludes==='string'?JSON.parse(form.excludes||'[]'):form.excludes??[];
     if(!Array.isArray(excludes) || excludes.length>64 || excludes.some((p:unknown)=>typeof p!=='string' || !p.length || p.length>512))throw Error('最多 64 个有效排除路径');
-    Object.assign(body,{remote_target_id:form.remote_target_id,site_id:form.site_id,interval:form.interval,enabled:form.enabled,excludes:[...excludes].sort()});
+    Object.assign(body,{remote_target_id:form.remote_target_id,site_id:form.site_id,interval:form.interval,enabled:form.enabled,realtime:form.realtime,excludes:[...excludes].sort()});
   }
   return body;
 }

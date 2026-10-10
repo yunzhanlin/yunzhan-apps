@@ -2,18 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
-test('remote periodic plan publication is immutable and retains honest remaining boundaries',async()=>{
+test('remote realtime plan publication is immutable and retains honest remaining boundaries',async()=>{
  const registry=JSON.parse(await read('registry/apps.json'));
  const current=registry.apps.find(app=>app.id==='files-sync');
- assert.equal(current.version,'1.7.0');assert.match(current.summary,/跨服务器定时/);assert.match(current.summary,/远端实时尚未提供/);
+ assert.equal(current.version,'1.8.0');assert.match(current.summary,/跨服务器实时与定时/);assert.match(current.summary,/远端事务备份受控归档尚未提供/);
+ const periodic=JSON.parse(await read('dist/apps/files-sync/1.7.0/manifest.json'));
+ assert.equal(periodic.version,'1.7.0');assert.match(periodic.summary,/远端实时尚未提供/);
  const previous=JSON.parse(await read('dist/apps/files-sync/1.6.0/manifest.json'));
  assert.equal(previous.version,'1.6.0');assert.match(previous.summary,/远端实时与定时计划尚未提供/);
  const contracts=JSON.parse(await read('registry/functional-contracts.json'));
  assert.equal(contracts.commercial_feature_parity_complete,false);
  const contract=contracts.apps.find(app=>app.id===current.id);
- assert(contract.gaps.some(value=>value.includes('远端实时')));
+ assert(contract.gaps.some(value=>value.includes('远端事务备份')));
  assert(contract.boundaries.some(value=>value.includes('16')&&value.includes('计划')));
  assert(contract.boundaries.some(value=>value.includes('60')&&value.includes('秒')));
+ assert(contract.boundaries.some(value=>value.includes('4096')&&value.includes('100000')));
+ assert(contract.scenarios.some(value=>value.includes('39')&&value.includes('变化序号')));
 });
 test('published handlers distinguish plan revision from connection revision and include plan frontend regression gate',async()=>{
  const source=await read('panel-integration/internal/executor/app_sync_remote_plans_linux.go');
@@ -26,4 +30,8 @@ test('published handlers distinguish plan revision from connection revision and 
  assert.match(build,/test-remote-sync-plans\.mjs/);assert(gate.length>1000);
  const tests=await read('panel-integration/internal/executor/app_sync_remote_plans_linux_test.go');
  assert.match(tests,/SIGKILL/);assert.match(tests,/RealBackgroundTick/);
+ const realtime=await read('panel-integration/internal/executor/app_sync_remote_realtime_linux_test.go');
+ const watcher=await read('panel-integration/internal/executor/app_integrity_realtime_linux.go');
+ assert.match(source,/PendingSequence/);assert.match(source,/ConsumedSequence/);assert.match(source,/markRemotePlanChanged/);
+ assert.match(watcher,/RemotePlanID/);assert.match(realtime,/ProductionWorkersActualCopyPauseRestartConflict/);
 });

@@ -21,10 +21,11 @@ const integrityWatchLimit = 4096
 const integrityEventMask = unix.IN_CLOSE_WRITE | unix.IN_ATTRIB | unix.IN_CREATE | unix.IN_DELETE | unix.IN_MOVED_FROM | unix.IN_MOVED_TO | unix.IN_DELETE_SELF | unix.IN_MOVE_SELF | unix.IN_ONLYDIR | unix.IN_DONT_FOLLOW
 
 type integrityWatchPlan struct {
-	ID       string
-	SyncID   string
-	Policy   moduleIntegrityPolicy
-	Excludes []string
+	ID           string
+	SyncID       string
+	RemotePlanID string
+	Policy       moduleIntegrityPolicy
+	Excludes     []string
 }
 type integrityWatchSite struct {
 	Plans       []integrityWatchPlan
@@ -152,6 +153,14 @@ func (w *integrityWatcher) desired() map[string][]integrityWatchPlan {
 				result[plan.SiteID] = append(result[plan.SiteID], integrityWatchPlan{ID: "files-sync", SyncID: plan.ID, Policy: moduleIntegrityPolicy{Revision: plan.Revision}, Excludes: plan.Excludes})
 			}
 		}
+		remotePlans, err := s.allRemotePlans()
+		if err == nil {
+			for _, plan := range remotePlans {
+				if plan.Enabled && plan.Realtime && !s.moduleAutoBlocked[remotePlanBlockedID(plan.ID)] {
+					result[plan.SiteID] = append(result[plan.SiteID], integrityWatchPlan{ID: "files-sync", RemotePlanID: plan.ID, Policy: moduleIntegrityPolicy{Revision: plan.Revision}, Excludes: plan.Excludes})
+				}
+			}
+		}
 	}
 	return result
 }
@@ -159,7 +168,7 @@ func (w *integrityWatcher) desired() map[string][]integrityWatchPlan {
 func watchFingerprint(plans []integrityWatchPlan) string {
 	parts := []string{}
 	for _, plan := range plans {
-		parts = append(parts, fmt.Sprintf("%s:%s:%d", plan.ID, plan.SyncID, plan.Policy.Revision))
+		parts = append(parts, fmt.Sprintf("%s:%s:%s:%d", plan.ID, plan.SyncID, plan.RemotePlanID, plan.Policy.Revision))
 	}
 	return strings.Join(parts, ",")
 }
@@ -254,7 +263,7 @@ func (w *integrityWatcher) reconcile(ctx context.Context, now time.Time) {
 			// tick. The actual check verifies the signature again every time.
 			w.Service.mu.Lock()
 			for i := range state.Plans {
-				if state.Plans[i].SyncID != "" {
+				if state.Plans[i].SyncID != "" || state.Plans[i].RemotePlanID != "" {
 					continue
 				}
 				baseline, baselineErr := w.Service.readIntegrityBaseline(state.Plans[i].ID, site)
@@ -382,6 +391,9 @@ func (w *integrityWatcher) publish() {
 			key := plan.ID + "/" + site
 			if plan.SyncID != "" {
 				key = plan.ID + "/" + plan.SyncID
+			}
+			if plan.RemotePlanID != "" {
+				key = remotePlanBlockedID(plan.RemotePlanID)
 			}
 			statuses[key] = moduleRealtimeStatus{State: state.State, Directories: len(state.Watches), Error: state.Error, Overflows: w.Overflows, UpdatedAt: core.Now()}
 		}
@@ -512,6 +524,11 @@ func (w *integrityWatcher) flush(now time.Time) {
 		for _, plan := range state.Plans {
 			s := w.Service
 			s.mu.Lock()
+			if plan.RemotePlanID != "" {
+				s.markRemotePlanChanged(plan.RemotePlanID, site, plan.Policy.Revision, dirty.Trigger)
+				s.mu.Unlock()
+				continue
+			}
 			if plan.SyncID != "" {
 				var fresh moduleSyncPlan
 				if moduleRead(s.syncPlanPath(plan.SyncID), &fresh) == nil && validateSyncPlan(fresh) == nil && fresh.ID == plan.SyncID && fresh.SiteID == site && fresh.Enabled && fresh.Realtime && fresh.Revision == plan.Policy.Revision && !s.moduleAutoBlocked["files-sync/"+plan.SyncID] {

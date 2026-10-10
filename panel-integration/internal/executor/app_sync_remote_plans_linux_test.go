@@ -53,7 +53,7 @@ func remotePlanReload(t *testing.T, s *Service, id string) remoteSyncPlan {
 func TestRemoteSyncPlanPolicyAndDistinctRevisions(t *testing.T) {
 	f := newRemoteSyncFixture(t)
 	base := core.AppModuleInput{ResourceID: "periodic-one", RemoteTargetID: f.cfg.ID, RemoteTargetRevision: 1, SiteID: f.site, Interval: 60}
-	for _, alter := range []func(*core.AppModuleInput){func(v *core.AppModuleInput) { v.Interval = 59 }, func(v *core.AppModuleInput) { v.RemoteTargetRevision = 0 }, func(v *core.AppModuleInput) { v.Password = "secret" }, func(v *core.AppModuleInput) { v.Realtime = true }, func(v *core.AppModuleInput) { v.RemoteRequestID = core.ID() }, func(v *core.AppModuleInput) { v.TargetSiteID = core.ID() }} {
+	for _, alter := range []func(*core.AppModuleInput){func(v *core.AppModuleInput) { v.Interval = 59 }, func(v *core.AppModuleInput) { v.RemoteTargetRevision = 0 }, func(v *core.AppModuleInput) { v.Password = "secret" }, func(v *core.AppModuleInput) { v.Excludes = make([]string, 65) }, func(v *core.AppModuleInput) { v.RemoteRequestID = core.ID() }, func(v *core.AppModuleInput) { v.TargetSiteID = core.ID() }} {
 		in := base
 		alter(&in)
 		if _, e := f.s.moduleRemotePlans("schedule-remote-plan", in); e == nil {
@@ -535,7 +535,17 @@ func TestRemoteSyncPlanRealBackgroundTickAndPrivateBindings(t *testing.T) {
 	deadline := time.Now().Add(10 * time.Second)
 	for {
 		b, e := os.ReadFile(filepath.Join(f.root, "copy.txt"))
-		if e == nil && string(b) == "actual-background" {
+		// A published path precedes directory fsync/checkpoint/job commit.
+		// Cancelling at that intermediate point correctly interrupts SFTP;
+		// it must not be confused with a completed production task.
+		f.s.mu.Lock()
+		current, planErr := f.s.readRemotePlan(p.ID)
+		job, jobErr := f.s.readRemoteJob(current.PendingJobID)
+		f.s.mu.Unlock()
+		if planErr == nil && jobErr == nil && job.State != "queued" && job.State != "running" && job.State != "succeeded" {
+			t.Fatal("actual background task ended unsuccessfully", job.State, job.Error)
+		}
+		if e == nil && string(b) == "actual-background" && planErr == nil && jobErr == nil && job.State == "succeeded" {
 			break
 		}
 		if time.Now().After(deadline) {

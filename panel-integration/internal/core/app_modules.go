@@ -313,7 +313,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 			if d.ID == "files-sync" {
-				version = "1.7.0"
+				version = "1.8.0"
 			}
 		case "daily-report":
 			version = "1.4.0"
