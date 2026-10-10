@@ -15,6 +15,11 @@ if(releaseArg>=0){
  releaseInputs=JSON.parse(execFileSync('tar',['-xOzf',archive,basename.replace(/\.tar\.gz$/,'')+'/SOURCE_INPUTS.json'],{maxBuffer:16*1024*1024}));
  releaseInfo={archive:basename,archive_sha256:sha256(await readFile(archive)),frozen_inputs_sha256:releaseInputs.inputs_sha256};
 }
+let reviewedIndex;
+if(releaseInputs){
+ try{reviewedIndex=JSON.parse(await readFile(path.join(output,'source-sha256.json'),'utf8'));}
+ catch(error){if(error.code!=='ENOENT')throw error;}
+}
 const normalBuildGates=new Set(['scripts/test-software-routing.mjs','scripts/test-store-search.mjs','scripts/test-analytics-tracker.mjs','scripts/test-analytics-latency.mjs','scripts/test-panel-health-context.mjs','scripts/test-analytics-html-filter.mjs','scripts/test-analytics-html-state.mjs','scripts/test-menu-permissions.mjs','scripts/test-network-ids-operations.mjs','scripts/test-registry-request-identity.mjs','scripts/test-remote-sync.mjs','scripts/test-remote-sync-plans.mjs','scripts/test-remote-sync-backups.mjs','scripts/test-remote-backup-archive.mjs','scripts/test-waf-rotation-refresh.mjs','scripts/test-waf-body-inventory.mjs','scripts/test-load-balance-routing.mjs']);
 const qaOnly=relative=>relative.startsWith('scripts/test')&&!normalBuildGates.has(relative)||['scripts/panel_client.py','scripts/cache-app-qa-images.mjs','scripts/check-app-registry-compat-browser.mjs'].includes(relative);
 // Explicit source allowlist: no release binaries, QA state, credentials or signing keys.
@@ -56,10 +61,22 @@ async function copy(relative){
  if(releaseInputs&&!qaOnly(relative)){
   const expected=releaseInputs.files[relative]?.sha256;
   if(!expected){console.log('excluded post-release source:',relative);return;}
-  if(sha256(data)!==expected&&relative.endsWith('_test.go')){
+  const testFile=/^(?:cmd|internal)\/.+_test\.go$/.test(relative);
+  const reviewedOverride=reviewedIndex?.test_overrides?.[relative];
+  if(testFile&&sha256(data)===expected&&reviewedOverride?.release_sha256===expected){
+   // Re-exporting an unchanged frozen test must not resurrect its CI defect.
+   // Retain only the exact correction already recorded in the review index.
+   const previous=await readFile(path.join(output,relative));
+   const digest=reviewedIndex.files?.[relative];
+   if(!/^[0-9a-f]{64}$/.test(digest)||sha256(previous)!==digest||digest===expected||typeof reviewedOverride.reason!=='string'||!reviewedOverride.reason.trim())throw Error('Reviewed test fixture drift: '+relative);
+   data=previous;
+   console.log('preserved reviewed test fixture:',relative);
+  }
+  if(sha256(data)!==expected&&testFile){
    // Go tests are excluded from release binaries. Keep their frozen digest
    // alongside the corrected fixture instead of claiming a rebuilt release.
-   testOverrides[relative]={release_sha256:expected,reason:'Go test correction after the frozen release; production inputs remain pinned'};
+   const reason=reviewedOverride?.release_sha256===expected&&typeof reviewedOverride.reason==='string'&&reviewedOverride.reason.trim()?reviewedOverride.reason:'Go test correction after the frozen release; production inputs remain pinned';
+   testOverrides[relative]={release_sha256:expected,reason};
   }else if(sha256(data)!==expected){
    let previous;try{previous=await readFile(path.join(output,relative));}catch(error){if(error.code!=='ENOENT')throw error;}
    if(previous&&sha256(previous)===expected)data=previous;

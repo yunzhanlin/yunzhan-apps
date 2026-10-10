@@ -8,4 +8,4 @@
 
 12 个停止维护的 PHP 版本仅用于 x86_64 隔离兼容环境，不在 ARM64 上强制模拟运行。
 
-`panel-integration/source-sha256.json` 校验当前可审查源码，`release-source-inputs.json` 保留已发布包的冻结输入及原始哈希。发布后的 Go 测试修正通过 `test_overrides` 记录原始摘要和原因，仅允许 `cmd/`、`internal/` 下的 `_test.go` 文件；生产源码仍必须与冻结输入完全一致。测试修正不表示发布二进制已重建或线上服务已验证。
+`panel-integration/source-sha256.json` 校验当前可审查源码，`release-source-inputs.json` 保留已发布包的冻结输入及原始哈希。发布后的 Go 测试修正通过 `test_overrides` 记录原始摘要和原因，仅允许 `cmd/`、`internal/` 下的 `_test.go` 文件；再次导出相同冻结测试时保留已审查的修正，索引不匹配则拒绝导出。生产源码仍必须与冻结输入完全一致。测试修正不表示发布二进制已重建或线上服务已验证。
