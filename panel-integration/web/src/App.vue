@@ -4,6 +4,7 @@ import { panelHealthState, panelSampleIsCurrent } from "./panelHealth";
 import { EpochReadGate } from "./epochReadGate";
 import { randomId } from "./randomId";
 import { RegistryRequestIdentity, type RegistryPendingRequest, type RegistryRequestOutcome } from "./registryRequestIdentity";
+import { RegistryFreshness, type RegistryReadTicket, type RegistryCheckReceipt } from "./registryFreshness";
 import { apiURL } from "./panelBase";
 import { canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./menuPermissions";
 import SoftwareLogo from "./SoftwareLogo.vue";
@@ -197,7 +198,7 @@ interface RegistryStatus { id: string; state_known?: boolean; installed: boolean
 interface AppRegistry {
   catalog: { schema_version: number; generated_at: string; repository: string; apps: RegistryApp[] };
   status: RegistryStatus[];
-  source: { source: string; stale: boolean; fetched_at?: string; checked_at?: string; error?: string };
+  source: { source: string; stale: boolean; fetched_at?: string; checked_at?: string; error?: string; resolved_commit?: string };
   host?: { platform: string; architecture: string };
 }
 const user = ref(""),
@@ -215,6 +216,8 @@ const registryRequestIdentity = new RegistryRequestIdentity({
   removeItem: key => window.sessionStorage.removeItem(key),
 }, randomId, () => { registryPending.value = registryRequestIdentity.list(); });
 const registryReviewing = ref<string[]>([]);
+const registryFreshness = new RegistryFreshness<AppRegistry>();
+const registryLastCheck = ref<RegistryCheckReceipt | undefined>();
 let accessEpoch = 0;
 const canManageSites = computed(() => accessPlan.value?.role === "admin" && canOpenView(accessPlan.value, "sites"));
 const accountRoleLabel = computed(() => accessPlan.value?.role === "admin" ? "管理员" : accessPlan.value?.role === "operator" ? "指定网站操作员" : "只读账户");
@@ -228,6 +231,7 @@ function clearAccessData(preserveRegistryRequests = false) {
   notifications.value = []; notificationUnread.value = 0;
   runtimes.value = { installed: [], catalog: [] }; softwareApps.value = { catalog: [], status: [] };
   appRegistry.value = { catalog: { schema_version: 1, generated_at: "", repository: "", apps: [] }, status: [], source: { source: "", stale: false } };
+  registryFreshness.reset(); registryLastCheck.value = undefined; registryChecking.value = false;
   selectedJob.value = null; jobOpen.value = false; createOpen.value = false;
   siteTrafficLoadedAt = 0;
 }
@@ -457,17 +461,30 @@ const filteredSoftwareApps = computed(() => {
 const registryStatus = (id: string) => appRegistry.value.status.find((item) => item.id === id);
 const registryChecking = ref(false);
 const registryUpdates = computed(() => appRegistry.value.status.filter(item => item.update_available).length);
+function applyRegistryRead(ticket: RegistryReadTicket, result: AppRegistry): boolean {
+  const accepted = registryFreshness.complete(ticket, result);
+  if (!accepted) return false;
+  appRegistry.value = accepted; registryLastCheck.value = registryFreshness.lastSuccessfulCheck();
+  return true;
+}
+function failRegistryRead(ticket: RegistryReadTicket, message: string): boolean {
+  const accepted = registryFreshness.failure(ticket, appRegistry.value, message);
+  if (!accepted) return false;
+  appRegistry.value = accepted; registryLastCheck.value = registryFreshness.lastSuccessfulCheck();
+  return true;
+}
 async function checkRegistryUpdates() {
   if (registryChecking.value) return;
   registryChecking.value = true;
+  const ticket = registryFreshness.begin("check");
   try {
-    appRegistry.value = await api<AppRegistry>("/app-registry?refresh=1");
+    if (!applyRegistryRead(ticket, await api<AppRegistry>("/app-registry?refresh=1"))) return;
     if (appRegistry.value.source.stale) ElMessage.warning("仓库检查失败，当前显示已验签缓存；尚未确认最新版本");
     else ElMessage.success(`已检查 GitHub 应用目录，${registryUpdates.value} 个应用有新版`);
   } catch (e) {
-    appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: (e as Error).message };
+    if (!failRegistryRead(ticket, (e as Error).message)) return;
     ElMessage.error((e as Error).message);
-  } finally { registryChecking.value = false; }
+  } finally { if (registryFreshness.isCurrentCheck(ticket)) registryChecking.value = false; }
 }
 async function reviewRegistryRequest(pending: RegistryPendingRequest) {
   if (registryReviewing.value.includes(pending.key)) return;
@@ -1243,6 +1260,8 @@ async function refresh(forceRegistry = false) {
   refreshing = true;
   const epoch = accessEpoch;
   const errors: string[] = [];
+  const registryTicket = canReadPath(accessPlan.value, "/app-registry") ? registryFreshness.begin(forceRegistry === true ? "check" : "poll") : undefined;
+  if (registryTicket?.kind === "check") registryChecking.value = true;
   await Promise.allSettled([
     permittedRead<Site[]>("/sites")
       .then((d) => { if (d) sites.value = d; })
@@ -1294,13 +1313,14 @@ async function refresh(forceRegistry = false) {
       .then((d) => { if (d) softwareApps.value = d; })
       .catch((e) => errors.push(e.message)),
     permittedRead<AppRegistry>(forceRegistry === true ? "/app-registry?refresh=1" : "/app-registry")
-      .then((d) => { if (d) appRegistry.value = d; })
+      .then((d) => { if (d && registryTicket) applyRegistryRead(registryTicket, d); })
       .catch((e) => {
         if (epoch !== accessEpoch) return;
-        appRegistry.value.source = { ...appRegistry.value.source, stale: true, error: e.message };
+        if (registryTicket) failRegistryRead(registryTicket, e.message);
         // The store already shows its scoped failure/cache warning. A remote
         // catalog failure is not evidence that the local Linux server is offline.
-      }),
+      })
+      .finally(() => { if (registryTicket && registryFreshness.isCurrentCheck(registryTicket)) registryChecking.value = false; }),
   ]);
   if (epoch === accessEpoch) error.value = errors[0] || "";
   refreshing = false;
@@ -2260,7 +2280,9 @@ onUnmounted(() => {
                 <el-tag size="small" :type="appRegistry.source.stale ? 'warning' : 'success'">{{ appRegistry.source.stale ? '已验签缓存' : 'Ed25519 已验签' }}</el-tag>
                 <small>{{ appRegistry.catalog.apps.length }} 个应用 · {{ registryUpdates }} 个有新版 · 仅安装或更新时拉取应用包</small>
                 <small v-if="appRegistry.host">{{ appRegistry.host.platform || '未支持的系统' }} / {{ appRegistry.host.architecture }}</small>
-                <small v-if="appRegistry.source.fetched_at">目录检查：{{ formatPanelDateTime(appRegistry.source.fetched_at) }}</small>
+                <small v-if="registryLastCheck">最近成功核对：{{ formatPanelDateTime(registryLastCheck.checked_at) }}</small>
+                <small v-else-if="appRegistry.source.checked_at || appRegistry.source.fetched_at">{{ appRegistry.source.stale ? '最近检查' : '已验签缓存时间' }}：{{ formatPanelDateTime(appRegistry.source.checked_at || appRegistry.source.fetched_at || '') }}</small>
+                <small v-if="!appRegistry.source.stale && registryLastCheck?.resolved_commit">最近成功定位提交：{{ registryLastCheck.resolved_commit.slice(0, 12) }}</small>
                 <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">检查更新</el-button>
               </div>
               <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" :title="appRegistry.catalog.apps.length ? '未能确认仓库最新版本，当前显示已验签缓存' : '无法连接应用仓库，尚未加载签名目录'" :description="appRegistry.source.error" />

@@ -102,11 +102,12 @@ type Manifest struct {
 }
 
 type LoadInfo struct {
-	Source    string `json:"source"`
-	Stale     bool   `json:"stale"`
-	FetchedAt string `json:"fetched_at,omitempty"`
-	CheckedAt string `json:"checked_at,omitempty"`
-	Error     string `json:"error,omitempty"`
+	Source         string `json:"source"`
+	Stale          bool   `json:"stale"`
+	FetchedAt      string `json:"fetched_at,omitempty"`
+	CheckedAt      string `json:"checked_at,omitempty"`
+	Error          string `json:"error,omitempty"`
+	ResolvedCommit string `json:"resolved_commit,omitempty"`
 }
 
 // Both signature and payload travel and are cached as one atomic unit. The
@@ -178,13 +179,23 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 	}
 	req.Header.Set("Accept", "application/json, text/plain;q=0.8")
 	req.Header.Set("Cache-Control", "no-cache")
-	// GitHub raw is CDN-backed. A manual check must not reuse its old response.
+	// Legacy/custom mutable catalogs request cache revalidation. The official
+	// catalog separately resolves an immutable commit, rather than relying on
+	// this timestamp as proof that a branch response is current.
 	if !strings.Contains(rawURL, "/dist/apps/") || rawURL == c.BaseURL+"/dist/apps/network-threat-detection/rule-data/"+ruleDataChannelID+"/catalog-v1.bundle.json" {
 		q := req.URL.Query()
 		q.Set("check", fmt.Sprint(time.Now().UnixNano()))
 		req.URL.RawQuery = q.Encode()
 	}
-	resp, err := c.HTTP.Do(req)
+	return c.readResponse(req, limit)
+}
+
+// A supplied client may allow redirects. Closed repository reads never follow
+// them, so neither a branch lookup nor a signed package can widen its origin.
+func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
+	transport := *c.HTTP
+	transport.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := transport.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -269,35 +280,44 @@ func (c *Client) verifyCatalog(raw, signature []byte) (Catalog, error) {
 }
 
 func (c *Client) FetchCatalog(ctx context.Context) (Catalog, []byte, []byte, error) {
+	catalog, raw, signature, _, err := c.fetchCatalog(ctx)
+	return catalog, raw, signature, err
+}
+
+func (c *Client) fetchCatalog(ctx context.Context) (Catalog, []byte, []byte, string, error) {
 	var empty Catalog
-	bundleRaw, bundleErr := c.get(ctx, c.BaseURL+"/signatures/catalog-v1.bundle.json", 3*maxCatalogBytes)
+	commit, err := c.resolveCatalogCommit(ctx)
+	if err != nil {
+		return empty, nil, nil, "", err
+	}
+	bundleRaw, bundleErr := c.getCatalogAtCommit(ctx, commit, "signatures/catalog-v1.bundle.json", 3*maxCatalogBytes)
 	if bundleErr == nil {
 		var bundle catalogBundle
 		if err := strictJSON(bundleRaw, &bundle); err != nil {
-			return empty, nil, nil, err
+			return empty, nil, nil, "", err
 		}
 		if len(bundle.Catalog) > maxCatalogBytes || len(bundle.Signature) > 4096 {
-			return empty, nil, nil, errors.New("应用目录超过上限")
+			return empty, nil, nil, "", errors.New("应用目录超过上限")
 		}
 		raw, signature := []byte(bundle.Catalog), []byte(bundle.Signature)
 		catalog, err := c.verifyCatalog(raw, signature)
-		return catalog, raw, signature, err
+		return catalog, raw, signature, commit, err
 	}
 	// Only a missing bundle permits the legacy two-file protocol. An invalid
 	// bundle or a network failure must not silently downgrade verification.
 	if !errors.Is(bundleErr, os.ErrNotExist) {
-		return empty, nil, nil, bundleErr
+		return empty, nil, nil, "", bundleErr
 	}
-	raw, err := c.get(ctx, c.BaseURL+"/dist/catalog-v1.json", maxCatalogBytes)
+	raw, err := c.getCatalogAtCommit(ctx, commit, "dist/catalog-v1.json", maxCatalogBytes)
 	if err != nil {
-		return empty, nil, nil, err
+		return empty, nil, nil, "", err
 	}
-	signature, err := c.get(ctx, c.BaseURL+"/signatures/catalog-v1.sig", 4096)
+	signature, err := c.getCatalogAtCommit(ctx, commit, "signatures/catalog-v1.sig", 4096)
 	if err != nil {
-		return empty, nil, nil, err
+		return empty, nil, nil, "", err
 	}
 	catalog, err := c.verifyCatalog(raw, signature)
-	return catalog, raw, signature, err
+	return catalog, raw, signature, commit, err
 }
 
 func atomicWrite(path string, body []byte, mode os.FileMode) error {
@@ -369,7 +389,7 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
 		return cached, LoadInfo{Source: "verified-cache", FetchedAt: modified.UTC().Format(time.RFC3339)}, nil
 	}
-	catalog, raw, signature, fetchErr := c.FetchCatalog(ctx)
+	catalog, raw, signature, commit, fetchErr := c.fetchCatalog(ctx)
 	if fetchErr == nil {
 		if previous, _, err := c.cachedCatalog(cacheDir); err == nil {
 			fetchErr = catalogProgress(previous, catalog)
@@ -381,7 +401,7 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 			return Catalog{}, LoadInfo{}, err
 		}
 		now := time.Now().UTC().Format(time.RFC3339)
-		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now}, nil
+		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now, ResolvedCommit: commit}, nil
 	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil {
 		return cached, LoadInfo{Source: "verified-cache", Stale: true, FetchedAt: modified.UTC().Format(time.RFC3339), CheckedAt: time.Now().UTC().Format(time.RFC3339), Error: "仓库检查失败: " + fetchErr.Error()}, nil

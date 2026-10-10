@@ -57,6 +57,7 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-menu-permissions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-network-ids-operations.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-registry-request-identity.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-registry-freshness.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync-plans.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync-backups.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
