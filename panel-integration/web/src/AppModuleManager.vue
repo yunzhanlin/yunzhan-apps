@@ -11,6 +11,7 @@ import ThreatIDSOperations from "./ThreatIDSOperations.vue";
 import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
+import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
 type API = <T>(
   path: string,
@@ -107,8 +108,19 @@ function canExecutePHP(action: string) {
   return true;
 }
 const integrityModule = computed(() => ["file-monitor", "website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || ""));
-const revisionIdentity = computed(() => definition.value?.id === "files-sync" && activeTab.value.startsWith("remote-") ? form.value.remote_target_id : integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "load-balance" ? form.value.domain : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : definition.value?.id === "network-threat-detection" ? "network-ids" : form.value.resource_id);
+const revisionIdentity = computed(() => definition.value?.id === "files-sync" && activeTab.value==="remote-plans" ? `remote-plan/${form.value.resource_id || ''}` : definition.value?.id === "files-sync" && activeTab.value.startsWith("remote-") ? form.value.remote_target_id : integrityModule.value ? form.value.site_id : definition.value?.id === "user-manager" ? form.value.username : definition.value?.id === "load-balance" ? form.value.domain : definition.value?.id === "pure-ftpd" ? "ftp-service" : definition.value?.id === "nfs-manager" ? "nfs-server" : definition.value?.id === "network-threat-detection" ? "network-ids" : form.value.resource_id);
 const expectedRevision = computed(() => revisionIdentity.value === selectedPlanID.value ? form.value.expected_revision : 0);
+async function verifyRemotePlanConnection() {
+  if(busy.value || definition.value?.id!=="files-sync")return;
+  busy.value=true;error.value="";
+  try {
+    const out=await props.api<{remote_targets:Record<string,any>[]}>("/app-modules/files-sync/remote-targets","POST",{});
+    const rows=out.remote_targets?.filter(row=>row.remote_target_id===form.value.remote_target_id);
+    if(rows?.length!==1 || rows[0].enabled!==true || !Number.isSafeInteger(rows[0].revision) || rows[0].revision<1)throw Error("所选远端连接不存在、已停用或修订号不能核对");
+    form.value.remote_target_revision=rows[0].revision;
+    ElMessage.info("已只读核对当前连接修订号；尚未启用或执行定时同步");
+  }catch(e){error.value=(e as Error).message;}finally{busy.value=false;}
+}
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
@@ -148,8 +160,15 @@ function tabChanged(name: string | number) {
 }
 function fieldLabel(field:Field,section:Section):string {
   if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
+    if(section.id==="remote-plans") {
+      if(field.key==="enabled")return "启用远端定时计划（明确保存后生效）";
+      if(field.key==="expected_revision")return "计划修订号（选择计划自动填写）";
+      if(field.key==="interval")return "成功完成后的补查间隔（秒，60–86400）";
+      if(field.key==="resource_id")return "远端计划标识（与连接标识独立）";
+    } else {
     if(field.key==="enabled")return "启用远端连接";
     if(field.key==="expected_revision")return "连接策略修订号（选择连接自动填写）";
+    }
   }
   return field.label;
 }
@@ -178,6 +197,11 @@ const labels: Record<string, string> = {
   "archive-remote-job": "按摘要归档所选终态任务（保留证据）",
   "cancel-remote": "请求停止后续文件交接",
   "recover-remote": "核对并恢复中断交接",
+  "remote-plans":"刷新远端定时计划",
+  "schedule-remote-plan":"保存远端定时策略",
+  "pause-remote-plan":"暂停计划并请求取消原任务",
+  "resume-remote-plan":"已核对原任务，重新启用计划",
+  "remove-remote-plan":"移除计划（保留身份与证据）",
   save: "保存入口",
   probe: "健康检测",
   remove: "移除入口",
@@ -324,8 +348,13 @@ function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
   if(id==="files-sync" && row.remote_target_id) {
+    const planFields=remotePlanFields(row);
+    if(planFields) {
+      Object.assign(form.value,planFields);selectedPlanID.value=`remote-plan/${row.id}`;activeTab.value="remote-plans";
+      ElMessage.info("已选择远端计划；连接修订号和计划修订号独立，恢复前须核对原任务与当前连接");return;
+    }
     if(row.remote_target) {
-      Object.assign(form.value,{remote_target_id:row.remote_target_id,remote_target:{...row.remote_target},enabled:row.enabled,expected_revision:row.revision});
+      Object.assign(form.value,{remote_target_id:row.remote_target_id,remote_target:{...row.remote_target},enabled:row.enabled,expected_revision:row.revision,remote_target_revision:row.revision});
       selectedPlanID.value=row.remote_target_id;activeTab.value="remote-target";
     } else if(validRemoteJob(row)) {
       Object.assign(form.value,{remote_request_id:row.remote_request_id,remote_target_id:row.remote_target_id,site_id:row.site_id,expected_sha:row.job_sha256||"",confirm:""});
@@ -363,6 +392,7 @@ function selected(row: Record<string, any>) {
   else ElMessage.info("已填入所选记录，可执行对应操作");
 }
 function inputBody(action: string) {
+  if(definition.value?.id==="files-sync" && remotePlanActions.includes(action))return remotePlanBody(action,form.value,expectedRevision.value);
   const body: Record<string, unknown> = {};
   const section = workspace.value.find(section => section.id === activeTab.value && section.actions.includes(action)) || workspace.value.find(section => section.actions.includes(action));
   for (const f of definition.value?.fields || []) {
@@ -429,6 +459,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
     setReport(result);
     if(definition.value.id==="files-sync" && action==="save-remote" && (result as any)?.revision) {
       form.value.expected_revision=(result as any).revision;selectedPlanID.value=(result as any).remote_target_id;
+      form.value.remote_target_revision=(result as any).revision;
     }
     if (definition.value.id === "network-threat-detection" && action.startsWith("ids-")) {
       if (report.value?.configuration) {
@@ -461,6 +492,11 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       form.value.confirm = "";
     }
     if (definition.value.id === "user-manager" && form.value.menu_ids === undefined && menuCatalog.value.length) roleDefaultMenus();
+    if(definition.value.id==="files-sync" && (result as any)?.remote_plan) {
+      const planFields=remotePlanFields((result as any).remote_plan);
+      if(!planFields)throw Error("远端计划保存回执不能核对，请刷新原计划，不重复启用");
+      Object.assign(form.value,planFields);selectedPlanID.value=`remote-plan/${(result as any).remote_plan.id}`;
+    }
     // Reports are a distinct management section; parameters remain intact.
     if ((result as any)?.plan?.revision !== undefined) {
       selectedPlanID.value = (result as any).plan.id;
@@ -677,6 +713,7 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />
+        <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
         <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />
         <el-alert v-if="definition.id === 'pure-ftpd' && ['account-limits','quota'].includes(section.id) && report?.account_limits_ready === false" type="warning" :closable="false" title="当前 FTP 尚未更新到受管独立运行时。请先在版本与更新中更新应用；不会静默替换系统 FTP。" />
         <el-form label-position="top" class="module-fields">
@@ -821,6 +858,20 @@ defineExpose({ show });
             <el-switch
               v-else-if="field.kind === 'boolean'"
               v-model="form[field.key]"
+            />
+            <!-- Use the model directly: the composite number widget can keep
+                 an old display after a typed value is accepted on blur. -->
+            <input
+              v-else-if="definition.id === 'files-sync' && section.id === 'remote-plans' && field.key === 'interval'"
+              v-model.number="form.interval"
+              class="remote-plan-interval"
+              type="number"
+              inputmode="numeric"
+              min="60"
+              max="86400"
+              step="1"
+              :aria-label="fieldLabel(field, section)"
+              :disabled="busy"
             />
             <el-input-number
               v-else-if="field.kind === 'number' || field.kind === 'decimal'"
@@ -973,6 +1024,9 @@ defineExpose({ show });
   margin-top: 16px;
 }
 .workflow-result { margin-top: 22px; border-top: 1px solid #e7edf1; padding-top: 12px; }
+.remote-plan-interval { width:180px; max-width:100%; min-height:32px; padding:0 11px; box-sizing:border-box; border:1px solid var(--el-border-color); border-radius:4px; background:var(--el-fill-color-blank); color:var(--el-text-color-regular); font:inherit; }
+.remote-plan-interval:focus { outline:2px solid var(--el-color-primary); outline-offset:1px; }
+.remote-plan-interval:disabled { background:var(--el-disabled-bg-color); color:var(--el-disabled-text-color); }
 .module-fields .el-select,
 .module-fields .el-date-editor {
   width: 100%;

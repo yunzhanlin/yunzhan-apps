@@ -102,7 +102,7 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 	adminCookie, adminToken := login(master.Username)
 	for _, name := range []string{viewer.Username, operator.Username} {
 		cookie, token := login(name)
-		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs", "remote-archive", "archive-remote-job"} {
+		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs", "remote-archive", "archive-remote-job", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan"} {
 			before := calls
 			w := request("/api/app-modules/files-sync/"+action, "{}", token, a.Config.Origin, cookie)
 			if w.Code != 403 || calls != before {
@@ -114,10 +114,12 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 		token, origin string
 		cookie        *http.Cookie
 	}{{"wrong", a.Config.Origin, adminCookie}, {adminToken, "https://foreign.invalid", adminCookie}, {adminToken, a.Config.Origin, nil}} {
-		before := calls
-		w := request("/api/app-modules/files-sync/queue-remote", "{}", identity.token, identity.origin, identity.cookie)
-		if w.Code < 400 || calls != before {
-			t.Fatal("missing session/CSRF/origin reached executor", w.Code)
+		for _, action := range []string{"queue-remote", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan"} {
+			before := calls
+			w := request("/api/app-modules/files-sync/"+action, "{}", identity.token, identity.origin, identity.cookie)
+			if w.Code < 400 || calls != before {
+				t.Fatal("missing session/CSRF/origin reached executor", action, w.Code)
+			}
 		}
 	}
 	before := calls

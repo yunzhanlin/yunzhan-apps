@@ -30,7 +30,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；128 个活动任务，可按完整记录摘要归档终态任务到本机私有目录，最多 2048 份或 16 MiB；归档不释放原任务身份，不重新执行。远端最多 512 份事务及 256 MiB 备份，不自动删除证据。当前仅手动排队，未提供远端实时或定时计划。"
+const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；128 个活动任务，可按完整记录摘要归档终态任务到本机私有目录，最多 2048 份或 16 MiB；归档不释放原任务身份，不重新执行。远端最多 512 份事务及 256 MiB 备份，不自动删除证据。支持手动排队或显式启用的定时补查，间隔 60–86400 秒；最多保留 16 个计划，每个连接一个未移除计划，完整成功后再安排下一次，错过多次只合并一次。接受中断、冲突、凭据改变或持久化失败安全暂停，保留原任务标识，不盲目重传；暂停阻止后续交接，移除保留身份与证据。尚未提供远端实时同步。"
 
 type remoteSyncConfig struct {
 	ID       string                `json:"id"`
@@ -469,6 +469,9 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 			operationError = fmt.Errorf("SFTP 服务端状态码 %d；未回显不可信远端错误正文，请核对目录、权限和恢复记录", status.Code)
 		}
 	}()
+	if action == "remote-plans" || strings.HasSuffix(action, "-remote-plan") {
+		return s.moduleRemotePlans(action, in)
+	}
 	if action == "remote-targets" {
 		entries, err := os.ReadDir(filepath.Join(s.remoteSyncDir(), "targets"))
 		if errors.Is(err, os.ErrNotExist) {

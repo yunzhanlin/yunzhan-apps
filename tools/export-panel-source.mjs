@@ -39,6 +39,7 @@ entries.push('scripts/test-waf-body-inventory.mjs');
 entries.push('scripts/test-network-ids-operations.mjs');
 entries.push('scripts/test-registry-request-identity.mjs');
 entries.push('scripts/test-remote-sync.mjs');
+entries.push('scripts/test-remote-sync-plans.mjs');
 entries.push('scripts/test-analytics-latency.mjs');
 entries.push('scripts/test-panel-health-context.mjs');
 async function copy(relative){

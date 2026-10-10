@@ -536,6 +536,9 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		out, e := s.runAppModule(r.Context(), id, action, in)
 		if action != "history" && action != "policies" && action != "run-plan" {
 			if historyErr := s.appendModuleEvent(id, action, "manual", in, out, e); historyErr != nil && e == nil {
+				if id == "files-sync" {
+					s.remotePlanControlRecordFailed(action, in)
+				}
 				e = fmt.Errorf("业务可能已执行，但历史保存失败，请核对结果：%w", historyErr)
 			}
 		}
@@ -544,6 +547,9 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		if e = moduleWrite(filepath.Join(s.moduleDir(id), "last-report.json"), map[string]any{"time": core.Now(), "action": action, "result": out}); e != nil {
+			if id == "files-sync" {
+				s.remotePlanControlRecordFailed(action, in)
+			}
 			respond(w, 500, map[string]string{"error": e.Error()})
 			return
 		}

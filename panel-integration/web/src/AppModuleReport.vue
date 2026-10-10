@@ -243,6 +243,14 @@ const names: Record<string, string> = {
   plans: "同步计划",
   remote_targets: "跨服务器 SFTP 连接",
   remote_jobs: "远端持久任务",
+  remote_plans: "远端定时计划",
+  plan_revision: "计划修订号",
+  excludes: "排除路径前缀",
+  remote_target_revision: "绑定连接修订号",
+  remote_plan_id: "定时计划标识",
+  remote_plan_revision: "提交时计划修订号",
+  pending_job_id: "原预留任务标识",
+  last_job_id: "最近核对的原任务",
   remote_target_id: "远端连接标识",
   remote_request_id: "远端任务标识",
   job_archived: "任务已归档",
@@ -370,7 +378,7 @@ const metrics = computed(() =>
   ),
 );
 const groups = computed(() =>
-  Object.entries({...props.report, ...(props.id==="files-sync" && props.report.job ? {remote_jobs:[props.report.job]} : {}), ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
+  Object.entries({...props.report, ...(props.id==="files-sync" && props.report.job ? {remote_jobs:[props.report.job]} : {}), ...(props.id==="files-sync" && props.report.remote_plan ? {remote_plans:[props.report.remote_plan]} : {}), ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
     ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
   ),
 );
@@ -396,6 +404,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown) {
+  if(props.id==="files-sync" && key==="last_state")return ({pending:"等待下次定时补查",queueing:"已预留原任务，接受结果待核对",queued:"原任务已排队（未完成）",succeeded:"原任务已完整成功",paused:"已暂停",'paused-error':"异常暂停，需核对原任务",removed:"已移除（证据保留）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="state")return ({queued:"已排队（未完成）",running:"后台执行中",succeeded:"本次同步已完成",conflicts:"已处理可同步文件，存在保留冲突",failed:"未全部完成或已取消",interrupted:"中断或无法确认，需核对恢复",recovered:"交接已恢复，剩余文件未重传"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="remote_target" && value && typeof value==="object") {const v=value as Record<string,any>;return `${v.address}:${v.port} · ${v.username} · ${v.root} · 私有备份 ${v.backup_root}`;}
   if (props.id==="load-balance" && ["state","from","to"].includes(key)) return ({unknown:"未达到判定阈值",healthy:"检查正常",unhealthy:"检查失败",stale:"结果已过期",inactive:"后台检查未运行"} as Record<string,string>)[String(value)] || String(value ?? "—");
@@ -433,12 +442,14 @@ function rows(values: any[]): Record<string, any>[] {
       ),
       ...(props.id==="load-balance" && Array.isArray(v.nodes) ? loadBalanceEntryRow(v) : {}),
       ...(props.id==="files-sync" ? remoteConnectionRow(v) : {}),
+      ...(props.id==="files-sync" && v.remote_target_revision ? {plan_revision:v.revision} : {}),
     };
   });
 }
 function columns(values: any[]) {
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","plan_revision","remote_target_revision","interval","next_run_at","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
-  if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
+  if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","remote_plan_id","remote_plan_revision","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
     return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
@@ -660,6 +671,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
               'largest_files',
               'nodes',
               'plans',
+              'remote_plans',
               'policies',
             ].includes(key)
           "

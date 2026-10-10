@@ -1693,7 +1693,7 @@ onUnmounted(() => {
           </div>
           <span :class="['health-badge', healthState.kind]"
             ><span class="live-dot"></span>{{ healthState.label }}</span
-          ><span class="uptime-text">{{ sampleIsCurrent ? "运行时间：" : "最近记录的运行时间：" }}{{ overview ? uptime : "等待核对" }}</span>
+          ><span class="uptime-text" :title="`${sampleIsCurrent ? '运行时间：' : '最近记录的运行时间：'}${overview ? uptime : '等待核对'}`">{{ sampleIsCurrent ? "运行时间：" : "最近记录的运行时间：" }}{{ overview ? uptime : "等待核对" }}</span>
         </div>
         <div class="topbar-right">
           <button class="global-search" type="button" aria-label="全局搜索" @click="openSearch">

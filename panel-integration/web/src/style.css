@@ -1939,6 +1939,8 @@ a:focus-visible {
 .topbar-left {
   gap: 18px;
   min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
 }
 
 .topbar-right {
@@ -1998,7 +2000,12 @@ a:focus-visible {
   color: #536580;
   font-size: 12px;
   white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+.topbar-left > .mobile-menu, .topbar-left > .breadcrumb, .topbar-left > .health-badge { flex-shrink: 0; }
 
 .global-search {
   width: clamp(220px, 21vw, 330px);

@@ -21,22 +21,24 @@ import (
 )
 
 type remoteSyncJob struct {
-	Archived   bool     `json:"-"`
-	RecordSHA  string   `json:"-"`
-	ID         string   `json:"remote_request_id"`
-	TargetID   string   `json:"remote_target_id"`
-	SiteID     string   `json:"site_id"`
-	Revision   int64    `json:"revision"`
-	SpecSHA    string   `json:"spec_sha256"`
-	Excludes   []string `json:"excludes"`
-	State      string   `json:"state"`
-	CreatedAt  string   `json:"created_at"`
-	StartedAt  string   `json:"started_at,omitempty"`
-	FinishedAt string   `json:"finished_at,omitempty"`
-	Copied     int      `json:"copied_count"`
-	Skipped    int      `json:"skipped_count"`
-	Conflicts  []string `json:"conflicts"`
-	Error      string   `json:"error,omitempty"`
+	Archived     bool     `json:"-"`
+	RecordSHA    string   `json:"-"`
+	ID           string   `json:"remote_request_id"`
+	TargetID     string   `json:"remote_target_id"`
+	PlanID       string   `json:"remote_plan_id,omitempty"`
+	PlanRevision int64    `json:"remote_plan_revision,omitempty"`
+	SiteID       string   `json:"site_id"`
+	Revision     int64    `json:"revision"`
+	SpecSHA      string   `json:"spec_sha256"`
+	Excludes     []string `json:"excludes"`
+	State        string   `json:"state"`
+	CreatedAt    string   `json:"created_at"`
+	StartedAt    string   `json:"started_at,omitempty"`
+	FinishedAt   string   `json:"finished_at,omitempty"`
+	Copied       int      `json:"copied_count"`
+	Skipped      int      `json:"skipped_count"`
+	Conflicts    []string `json:"conflicts"`
+	Error        string   `json:"error,omitempty"`
 }
 type remoteSyncPending struct {
 	ID    string      `json:"id"`
@@ -90,6 +92,9 @@ func (s *Service) readRemoteCheckpoint(c remoteSyncConfig, site string) (remoteS
 	return cp, nil
 }
 func validateRemoteJob(j remoteSyncJob) error {
+	if j.PlanID == "" && j.PlanRevision != 0 || j.PlanID != "" && (!syncPlanID.MatchString(j.PlanID) || j.PlanRevision < 1) {
+		return errors.New("远端任务计划绑定无效")
+	}
 	if !core.ValidID(j.ID) || !syncPlanID.MatchString(j.TargetID) || !core.ValidID(j.SiteID) || j.Revision < 1 || !coreSHA.MatchString(j.SpecSHA) || len(j.Excludes) > 64 || j.Copied < 0 || j.Skipped < 0 || j.Copied+j.Skipped > 10000 || len(j.Conflicts) > 10000 {
 		return errors.New("远端任务身份无效")
 	}
@@ -193,6 +198,15 @@ func (s *Service) remoteTargetBusy(id string) (bool, error) {
 }
 
 func (s *Service) remoteSyncUninstallPreflight() error {
+	plans, err := s.allRemotePlans()
+	if err != nil {
+		return err
+	}
+	for _, p := range plans {
+		if p.Enabled {
+			return errors.New("远端定时计划仍启用；请先暂停并核对原任务，计划和证据保留")
+		}
+	}
 	jobs, e := s.allRemoteJobs()
 	if e != nil {
 		return e
@@ -231,6 +245,12 @@ func (s *Service) remoteSyncUninstallPreflight() error {
 	return nil
 }
 func (s *Service) queueRemoteSync(c remoteSyncConfig, in core.AppModuleInput) (any, error) {
+	return s.queueRemotePlanSync(c, in, "", 0)
+}
+func (s *Service) queueRemotePlanSync(c remoteSyncConfig, in core.AppModuleInput, planID string, planRevision int64) (any, error) {
+	if planID == "" && planRevision != 0 || planID != "" && (!syncPlanID.MatchString(planID) || planRevision < 1) {
+		return nil, errors.New("远端任务内部计划绑定无效")
+	}
 	if in.Excludes == nil {
 		in.Excludes = []string{}
 	} else {
@@ -250,7 +270,7 @@ func (s *Service) queueRemoteSync(c remoteSyncConfig, in core.AppModuleInput) (a
 	}
 	old, e := s.readRemoteJob(in.RemoteRequestID)
 	if e == nil {
-		if old.TargetID != c.ID || old.SiteID != in.SiteID || old.Revision != c.Revision || old.SpecSHA != c.SpecSHA || !reflect.DeepEqual(old.Excludes, in.Excludes) {
+		if old.TargetID != c.ID || old.SiteID != in.SiteID || old.Revision != c.Revision || old.SpecSHA != c.SpecSHA || old.PlanID != planID || old.PlanRevision != planRevision || !reflect.DeepEqual(old.Excludes, in.Excludes) {
 			return nil, errors.New("该任务标识已绑定不同的同步请求")
 		}
 		return map[string]any{"job": remotePublicJob(old, true), "replayed": true}, nil
@@ -289,7 +309,7 @@ func (s *Service) queueRemoteSync(c remoteSyncConfig, in core.AppModuleInput) (a
 	if e = moduleWrite(s.remoteCheckpointPath(c.ID), cp); e != nil {
 		return nil, e
 	}
-	j := remoteSyncJob{ID: in.RemoteRequestID, TargetID: c.ID, SiteID: in.SiteID, Revision: c.Revision, SpecSHA: c.SpecSHA, Excludes: in.Excludes, State: "queued", CreatedAt: core.Now(), Conflicts: []string{}}
+	j := remoteSyncJob{ID: in.RemoteRequestID, TargetID: c.ID, PlanID: planID, PlanRevision: planRevision, SiteID: in.SiteID, Revision: c.Revision, SpecSHA: c.SpecSHA, Excludes: in.Excludes, State: "queued", CreatedAt: core.Now(), Conflicts: []string{}}
 	if e = moduleWrite(s.remoteJobPath(j.ID), j); e != nil {
 		return nil, e
 	}
@@ -328,7 +348,7 @@ func remotePublicJob(j remoteSyncJob, details bool) map[string]any {
 	if details {
 		paths = boundedModulePaths(j.Conflicts)
 	}
-	return map[string]any{"remote_request_id": j.ID, "remote_target_id": j.TargetID, "site_id": j.SiteID, "revision": j.Revision, "state": j.State, "created_at": j.CreatedAt, "started_at": j.StartedAt, "finished_at": j.FinishedAt, "copied_count": j.Copied, "skipped_count": j.Skipped, "conflicts_count": len(j.Conflicts), "conflicts": paths, "report_limited": len(paths) < len(j.Conflicts), "error": j.Error, "job_archived": j.Archived, "job_sha256": remoteJobSHA(j)}
+	return map[string]any{"remote_request_id": j.ID, "remote_target_id": j.TargetID, "remote_plan_id": j.PlanID, "remote_plan_revision": j.PlanRevision, "site_id": j.SiteID, "revision": j.Revision, "state": j.State, "created_at": j.CreatedAt, "started_at": j.StartedAt, "finished_at": j.FinishedAt, "copied_count": j.Copied, "skipped_count": j.Skipped, "conflicts_count": len(j.Conflicts), "conflicts": paths, "report_limited": len(paths) < len(j.Conflicts), "error": j.Error, "job_archived": j.Archived, "job_sha256": remoteJobSHA(j)}
 }
 func (s *Service) remoteCancelPath(id string) string {
 	return filepath.Join(s.remoteSyncDir(), "cancellations", id+".json")
@@ -875,6 +895,7 @@ func (s *Service) runOneRemoteSyncJob(ctx context.Context) {
 		s.mu.Unlock()
 		return
 	}
+	s.scheduleRemotePlans(time.Now().UTC())
 	jobs, e := s.allRemoteJobs()
 	if e != nil {
 		s.mu.Unlock()
@@ -898,6 +919,9 @@ func (s *Service) runOneRemoteSyncJob(ctx context.Context) {
 	cfg, e := s.readRemoteConfig(j.TargetID)
 	if e == nil && (!cfg.Enabled || cfg.Revision != j.Revision || cfg.SpecSHA != j.SpecSHA) {
 		e = errors.New("远端连接已停用或修订号改变，未执行任务")
+	}
+	if e == nil {
+		e = s.remotePlanJobAllowed(j)
 	}
 	if e != nil {
 		j.State = "failed"
@@ -923,6 +947,9 @@ func (s *Service) runOneRemoteSyncJob(ctx context.Context) {
 		}
 		if !s.moduleInstalled("files-sync") {
 			return errors.New("应用已卸载，停止后续远端交接")
+		}
+		if e := s.remotePlanJobAllowed(j); e != nil {
+			return e
 		}
 		fresh, e := s.readRemoteConfig(cfg.ID)
 		if e != nil || !fresh.Enabled || fresh.Revision != cfg.Revision || fresh.SpecSHA != cfg.SpecSHA {
