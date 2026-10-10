@@ -177,6 +177,9 @@ func (s *Service) allRemoteJobs() ([]remoteSyncJob, error) {
 	return jobs, nil
 }
 func (s *Service) remoteTargetBusy(id string) (bool, error) {
+	if pending, err := s.remoteBackupArchivePending(id); err != nil || pending {
+		return pending, err
+	}
 	jobs, e := s.allRemoteJobs()
 	if e != nil {
 		return false, e
@@ -198,6 +201,24 @@ func (s *Service) remoteTargetBusy(id string) (bool, error) {
 }
 
 func (s *Service) remoteSyncUninstallPreflight() error {
+	targets, err := os.ReadDir(filepath.Join(s.remoteSyncDir(), "targets"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if len(targets) > 16 {
+		return errors.New("远端连接记录超限，未卸载")
+	}
+	for _, entry := range targets {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+			return errors.New("远端连接目录异常，未卸载")
+		}
+		id := strings.TrimSuffix(entry.Name(), ".json")
+		if pending, err := s.remoteBackupArchivePending(id); err != nil {
+			return err
+		} else if pending {
+			return errors.New("远端备份归档待恢复，保留全部记录并拒绝卸载")
+		}
+	}
 	plans, err := s.allRemotePlans()
 	if err != nil {
 		return err
@@ -675,6 +696,11 @@ func (s *Service) commitRemoteFile(ctx context.Context, c *remoteSyncClient, cfg
 }
 
 func (s *Service) executeRemoteSync(ctx context.Context, cfg remoteSyncConfig, j *remoteSyncJob, guard func() error) error {
+	if pending, err := s.remoteBackupArchivePending(cfg.ID); err != nil {
+		return err
+	} else if pending {
+		return errors.New("备份归档待显式恢复，未执行新的文件交接")
+	}
 	f, e := s.openFiles(j.SiteID)
 	if e != nil {
 		return e
@@ -747,6 +773,11 @@ func (s *Service) executeRemoteSync(ctx context.Context, cfg remoteSyncConfig, j
 }
 
 func (s *Service) recoverRemoteSync(ctx context.Context, cfg remoteSyncConfig) (any, error) {
+	if pending, err := s.remoteBackupArchivePending(cfg.ID); err != nil {
+		return nil, err
+	} else if pending {
+		return nil, errors.New("先核对并显式恢复原备份归档，不并发恢复文件交接")
+	}
 	cp, e := s.readRemoteCheckpoint(cfg, "")
 	if e != nil {
 		return nil, e

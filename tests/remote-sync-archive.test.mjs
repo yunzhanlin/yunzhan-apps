@@ -17,5 +17,5 @@ test('archived IDs remain private full-byte identities with native regression ca
  const fixtures=await read('panel-integration/internal/executor/app_sync_remote_archive_linux_test.go');
  for(const name of ['KeepsReplayAndFreesQueueSlot','RejectsUnknownWorkAndUnsafeNamespaces','BoundsAndReadOnlyPagination','TrueProcessExitPreservesIdentity'])assert(fixtures.includes('TestRemoteSyncArchive'+name));
  const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);
- const app=contracts.apps.find(a=>a.id==='files-sync');assert(app.scenarios.some(s=>s.includes('终态任务私有归档')));assert(app.gaps.some(s=>s.includes('远端事务备份的受控归档尚未提供')));assert(app.scenarios.some(s=>s.includes('远端计划')));
+ const app=contracts.apps.find(a=>a.id==='files-sync');assert(app.scenarios.some(s=>s.includes('终态任务私有归档')));assert(app.gaps.some(s=>s.includes('远端事务')&&s.includes('有限容量')));assert(app.scenarios.some(s=>s.includes('远端计划')));
 });

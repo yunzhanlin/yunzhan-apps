@@ -22,11 +22,12 @@ test('normal signed source pins the new mandatory frontend capacity regression g
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
  assert.equal(release.files['scripts/test-remote-sync-backups.mjs'],index.files['scripts/test-remote-sync-backups.mjs']);assert.match(release.files['scripts/test-remote-sync-backups.mjs'],/^[0-9a-f]{64}$/);
 });
-test('new immutable 1.8.1 package and contract retain honest archive and device boundaries',async()=>{
+test('immutable 1.8.1 readonly package remains distinct from current archive delivery',async()=>{
  const registry=JSON.parse(await read('registry/apps.json')),contracts=JSON.parse(await read('registry/functional-contracts.json'));
  const app=registry.apps.find(a=>a.id==='files-sync'),contract=contracts.apps.find(a=>a.id===app.id);
- assert.equal(app.version,'1.8.1');assert(app.capabilities.some(x=>x.includes('只读实际备份事务')));assert.equal(contracts.commercial_feature_parity_complete,false);
+ assert.equal(app.version,'1.9.0');assert(app.capabilities.some(x=>x.includes('只读实际备份事务')));assert.equal(contracts.commercial_feature_parity_complete,false);
  assert(contract.scenarios.some(x=>x.includes('43')&&x.includes('稀疏')));assert(contract.scenarios.some(x=>x.includes('420')&&x.includes('不代替')));
- assert(contract.boundaries.some(x=>x.includes('逻辑字节')&&x.includes('硬链接')));assert(contract.gaps.some(x=>x.includes('远端事务备份的受控归档尚未提供')));
+ assert(contract.boundaries.some(x=>x.includes('逻辑字节')&&x.includes('硬链接')));assert(contract.gaps.some(x=>x.includes('远端事务')&&x.includes('独立不可变快照')));
+ const readonly=JSON.parse(await read('dist/apps/files-sync/1.8.1/manifest.json'));assert.equal(readonly.version,'1.8.1');assert.match(readonly.summary,/受控归档尚未提供/);
  const old=JSON.parse(await read('dist/apps/files-sync/1.8.0/manifest.json'));assert.equal(old.version,'1.8.0');assert(!old.capabilities.some(x=>x.includes('只读实际备份事务')));
 });

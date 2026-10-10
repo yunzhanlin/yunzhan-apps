@@ -102,7 +102,7 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 	adminCookie, adminToken := login(master.Username)
 	for _, name := range []string{viewer.Username, operator.Username} {
 		cookie, token := login(name)
-		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs", "remote-archive", "archive-remote-job", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan"} {
+		for _, action := range []string{"save-remote", "queue-remote", "cancel-remote", "recover-remote", "probe-remote", "remote-jobs", "remote-archive", "archive-remote-job", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan", "remote-backups", "remote-backup-preview", "remote-backup-archive", "archive-remote-backup", "recover-remote-backup"} {
 			before := calls
 			w := request("/api/app-modules/files-sync/"+action, "{}", token, a.Config.Origin, cookie)
 			if w.Code != 403 || calls != before {
@@ -114,7 +114,7 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 		token, origin string
 		cookie        *http.Cookie
 	}{{"wrong", a.Config.Origin, adminCookie}, {adminToken, "https://foreign.invalid", adminCookie}, {adminToken, a.Config.Origin, nil}} {
-		for _, action := range []string{"queue-remote", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan"} {
+		for _, action := range []string{"queue-remote", "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan", "remote-backups", "remote-backup-preview", "remote-backup-archive", "archive-remote-backup", "recover-remote-backup"} {
 			before := calls
 			w := request("/api/app-modules/files-sync/"+action, "{}", identity.token, identity.origin, identity.cookie)
 			if w.Code < 400 || calls != before {
@@ -122,10 +122,12 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 			}
 		}
 	}
-	before := calls
-	w := request("/api/app-modules/files-sync/queue-remote", "{}", adminToken, a.Config.Origin, adminCookie)
-	if w.Code != 200 || calls != before+2 {
-		t.Fatal("authorized bounded dispatcher did not forward fixed route", w.Code, calls-before)
+	for _, action := range []string{"queue-remote", "remote-backup-preview", "remote-backup-archive", "archive-remote-backup", "recover-remote-backup"} {
+		before := calls
+		w := request("/api/app-modules/files-sync/"+action, "{}", adminToken, a.Config.Origin, adminCookie)
+		if w.Code != 200 || calls != before+2 {
+			t.Fatal("authorized bounded dispatcher did not forward fixed route", action, w.Code, calls-before)
+		}
 	}
 }
 

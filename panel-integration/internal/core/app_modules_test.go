@@ -46,6 +46,21 @@ func TestAnalyticsGuidanceMatchesImplementedBoundaries(t *testing.T) {
 		t.Fatal("stale guidance denies implemented features")
 	}
 }
+
+func TestRemoteSyncGuidanceMatchesArchiveAndRealtimeBoundaries(t *testing.T) {
+	guide := ModuleGuidance("files-sync")
+	text := guide.Description + " " + strings.Join(guide.Workflow, " ") + " " + strings.Join(guide.Limitations, " ")
+	for _, boundary := range []string{"内核事件", "完整摘要", "精确确认", "显式恢复", "不自动", "512", "1 GiB", "逻辑字节", "硬链接", "不可变", "磁盘硬配额", "条件式无覆盖", "同一远端账户"} {
+		if !strings.Contains(text, boundary) {
+			t.Fatal("missing truthful remote archive/realtime boundary", boundary)
+		}
+	}
+	for _, stale := range []string{"不提供远端命令或实时同步", "受控远端归档尚未提供"} {
+		if strings.Contains(text, stale) {
+			t.Fatal("stale guidance denies implemented capabilities", stale)
+		}
+	}
+}
 func TestAppModuleRoles(t *testing.T) {
 	s := testStore(t)
 	a := &Server{Store: s}

@@ -17,6 +17,11 @@ const remoteBackupTransactions = 512
 const remoteBackupBytes int64 = 256 << 20
 const remoteBackupReserve int64 = 16 << 20
 
+func remoteBackupOwnedFile(st os.FileInfo, owner uint32) bool {
+	a, ok := st.Sys().(*sftp.FileStat)
+	return ok && a.UID == owner && st.Mode().IsRegular() && st.Mode()&os.ModeType == 0 && st.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) == 0 && st.Size() >= 0 && st.Size() <= 8<<20
+}
+
 type remoteBackupFile struct {
 	Name string `json:"name"`
 	Size int64  `json:"bytes"`
@@ -116,6 +121,10 @@ func (s *Service) remoteBackupReport(c *remoteSyncClient, cfg remoteSyncConfig, 
 	if err != nil {
 		return nil, err
 	}
+	archivePending, err := s.remoteBackupArchivePending(cfg.ID)
+	if err != nil {
+		return nil, err
+	}
 	for i := range rows {
 		rows[i].Pending = cp.Pending != nil && rows[i].ID == cp.Pending.ID
 	}
@@ -125,5 +134,5 @@ func (s *Service) remoteBackupReport(c *remoteSyncClient, cfg remoteSyncConfig, 
 	}
 	start := min(in.Offset, len(rows))
 	end := min(start+limit, len(rows))
-	return map[string]any{"remote_backups": rows[start:end], "remote_target_id": cfg.ID, "revision": cfg.Revision, "total": len(rows), "backup_bytes": total, "transaction_limit": remoteBackupTransactions, "byte_limit": remoteBackupBytes, "transaction_slots_available": remoteBackupTransactions - len(rows), "bytes_available": remoteBackupBytes - total, "next_transaction_capacity_available": len(rows) < remoteBackupTransactions && total <= remoteBackupBytes-remoteBackupReserve, "pending_recovery": cp.Pending != nil, "limit": limit, "offset": in.Offset, "remote_files_changed": false, "scope": "只读核对远端实际事务库存与容量，不执行同步、归档或删除，不返回文件内容、密码或私钥。最多 512 份事务、256 MiB；每次交接预留 16 MiB。正好满额仍可查询；未知条目、链接或异主目录拒绝返回不完整统计。容量是受限 SFTP 元数据查询，不是磁盘硬配额，也不保证并发外部写入后的容量。受控远端归档尚未提供。"}, nil
+	return map[string]any{"remote_backups": rows[start:end], "remote_target_id": cfg.ID, "revision": cfg.Revision, "total": len(rows), "backup_bytes": total, "transaction_limit": remoteBackupTransactions, "byte_limit": remoteBackupBytes, "transaction_slots_available": remoteBackupTransactions - len(rows), "bytes_available": remoteBackupBytes - total, "next_transaction_capacity_available": len(rows) < remoteBackupTransactions && total <= remoteBackupBytes-remoteBackupReserve, "pending_recovery": cp.Pending != nil, "pending_archive_recovery": archivePending, "limit": limit, "offset": in.Offset, "remote_files_changed": false, "scope": "只读核对远端实际事务库存与容量，不执行同步、归档或删除，不返回文件内容、密码或私钥。最多 512 份事务、256 MiB；每次交接预留 16 MiB。正好满额仍可查询；未知条目、链接或异主目录拒绝返回不完整统计。容量是受限 SFTP 元数据查询，不是磁盘硬配额，也不保证并发外部写入后的容量。有容量不代表可以传输：文件交接或备份归档待恢复时仍安全暂停。受控归档须暂停计划、完整摘要核对与精确确认，归档库存单独查询，不自动删除。"}, nil
 }

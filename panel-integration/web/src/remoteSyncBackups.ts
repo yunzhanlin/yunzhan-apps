@@ -12,6 +12,6 @@ export function remoteBackupFields(row:unknown):Record<string,unknown>|undefined
 export function remoteBackupBody(form:Record<string,any>,revision:unknown):Record<string,unknown>{
   if(typeof form.remote_target_id!=="string" || !targetID.test(form.remote_target_id) || !Number.isSafeInteger(revision) || Number(revision)<1)throw Error("请先选择当前远端连接和有效修订号");
   const limit=form.limit === undefined ? 16 : form.limit,offset=form.offset === undefined ? 0 : form.offset;
-  if(!Number.isInteger(limit) || limit<0 || limit>32 || !Number.isInteger(offset) || offset<0 || offset>512)throw Error("备份容量每页最多 32 条，分页起点为 0–512");
+  if(!Number.isInteger(limit) || limit<1 || limit>32 || !Number.isInteger(offset) || offset<0 || offset>512)throw Error("备份容量每页为 1–32 条，分页起点为 0–512");
   return {remote_target_id:form.remote_target_id,expected_revision:revision,limit,offset};
 }

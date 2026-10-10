@@ -244,6 +244,10 @@ const names: Record<string, string> = {
   remote_targets: "跨服务器 SFTP 连接",
   remote_jobs: "远端持久任务",
   remote_backups: "远端实际事务备份",
+  remote_backup_archive:"远端保留备份归档",
+  backup_snapshot_sha256:"完整备份内容摘要",
+  backup_archive_state:"备份归档阶段",
+  content_verified:"此次已核对完整文件内容",
   backup_transaction_id: "原事务标识",
   backup_files: "保留文件与容量",
   transaction_limit: "事务数量上限",
@@ -252,6 +256,7 @@ const names: Record<string, string> = {
   bytes_available: "剩余备份容量",
   next_transaction_capacity_available: "容量可容纳下次交接（不代表可执行）",
   pending_recovery: "存在待恢复交接",
+  pending_archive_recovery: "存在待恢复备份归档（阻止新传输）",
   remote_plans: "远端实时与定时计划",
   change_sequence: "已持久接受的变化序号",
   consumed_sequence: "原任务已核对的变化序号",
@@ -416,6 +421,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown): string {
+  if(props.id==="files-sync" && key==="backup_archive_state")return ({reviewed:"内容已核对（未归档）",prepared:"原归档已持久预留（须显式恢复）",reserved:"原迁移已接受或回执待核对（须显式恢复）",committed:"归档已提交，证据保留"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_files" && Array.isArray(value))return value.map(file=>`${file.name==='previous'?'原文件备份':file.name==='staged'?'保留暂存':file.name} · ${format('bytes',file.bytes)} · ${Number(file.mode).toString(8).padStart(3,'0')}`).join("；")||"空事务目录（仍保留身份）";
   if(props.id==="files-sync" && key==="last_state")return ({pending:"等待下次定时补查",queueing:"已预留原任务，接受结果待核对",queued:"原任务已排队（未完成）",succeeded:"原任务已完整成功",paused:"已暂停",'paused-error':"异常暂停，需核对原任务",removed:"已移除（证据保留）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="state")return ({queued:"已排队（未完成）",running:"后台执行中",succeeded:"本次同步已完成",conflicts:"已处理可同步文件，存在保留冲突",failed:"未全部完成或已取消",interrupted:"中断或无法确认，需核对恢复",recovered:"交接已恢复，剩余文件未重传"} as Record<string,string>)[String(value)]||String(value??"—");
@@ -460,6 +466,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+  if(props.id==="files-sync" && values.some(value=>value && value.backup_archive_state))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_archive_state","backup_snapshot_sha256","pending_recovery","content_verified"];
   if(props.id==="files-sync" && values.some(value=>value && value.backup_transaction_id))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_files","pending_recovery"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","realtime","watcher_state","watch_directories","watch_overflows","watch_error","plan_revision","remote_target_revision","interval","next_run_at","last_trigger","change_sequence","consumed_sequence","pending_sequence","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
@@ -539,6 +546,10 @@ function mobileDownloadURL(value: unknown): string | undefined {
       :closable="false"
     />
     <p v-if="report.scope" class="report-scope">{{ report.scope }}</p>
+    <section v-if="id === 'files-sync' && report.backup_maintenance" class="diagnosis-check" aria-label="原备份归档与摘要核对">
+      <h4>原备份归档与摘要核对</h4>
+      <dl><template v-for="(value,key) in report.backup_maintenance" :key="key"><dt>{{ names[String(key)] || key }}</dt><dd>{{ format(String(key),value) }}</dd></template></dl>
+    </section>
     <el-alert v-if="id === 'website-statistics-v2' && (report.history_blocked_sources || report.history_compressed_sources || report.history_missing_log)"
       type="warning" title="部分日志无法自动续读：压缩归档不会重复导入，检查点冲突不会从头重置。已有历史保留；请核对日志轮转方式与历史范围。" :closable="false" />
     <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"

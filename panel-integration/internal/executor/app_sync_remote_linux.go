@@ -30,7 +30,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；128 个活动任务，可按完整记录摘要归档终态任务到本机私有目录，最多 2048 份或 16 MiB；归档不释放原任务身份，不重新执行。远端最多 512 份事务及 256 MiB 备份，不自动删除证据。支持手动排队或显式启用的定时补查，间隔 60–86400 秒；最多保留 16 个计划，每个连接一个未移除计划，完整成功后再安排下一次，错过多次只合并一次。接受中断、冲突、凭据改变或持久化失败安全暂停，保留原任务标识，不盲目重传；暂停阻止后续交接，移除保留身份与证据。可显式开启 Linux 内核事件，0.5–2 秒合并后持久保存变化序号，由 5 秒任务队列接收；首次监听、重启及目录变化补查。任务执行期间的新变化不由旧任务确认；监听超限或不可用显示降级并保留定时补查，队列或备份满额安全暂停。"
+const remoteSyncScope = "单向 SFTP 增量复制；不删除远端额外文件、不执行 SSH 命令。固定 IP 和主机公钥；密码或私钥仅本机加密保存。远端必须为可信 Linux/OpenSSH、受限非 root SFTP 账户，目标与私有备份目录由该账户拥有且同一文件系统；路径不接受符号链接。修改受管文件前保留原文件，更新有短暂路径交接，不保证零停机。每次最多 10000 文件、256 MiB，单文件 8 MiB、120 秒；128 个活动任务，可按完整记录摘要归档终态任务到本机私有目录，最多 2048 份或 16 MiB；归档不释放原任务身份，不重新执行。远端活动备份最多 512 份事务及 256 MiB；可暂停计划、核对完整摘要并精确确认后移动原事务目录到受控归档，最多 512 份/1 GiB 逻辑字节，保留原身份与硬链接，不是独立不可变备份或磁盘硬配额；中断只显式恢复，待恢复时阻止新传输。不自动删除证据。支持手动排队或显式启用的定时补查，间隔 60–86400 秒；最多保留 16 个计划，每个连接一个未移除计划，完整成功后再安排下一次，错过多次只合并一次。接受中断、冲突、凭据改变或持久化失败安全暂停，保留原任务标识，不盲目重传；暂停阻止后续交接，移除保留身份与证据。可显式开启 Linux 内核事件，0.5–2 秒合并后持久保存变化序号，由 5 秒任务队列接收；首次监听、重启及目录变化补查。任务执行期间的新变化不由旧任务确认；监听超限或不可用显示降级并保留定时补查，队列或备份满额安全暂停。"
 
 type remoteSyncConfig struct {
 	ID       string                `json:"id"`
@@ -586,6 +586,15 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 			return nil, errors.New("连接修订号改变，请重新选择连接")
 		}
 	}
+	backupMaintenance := action == "remote-backup-preview" || action == "remote-backup-archive" || action == "archive-remote-backup" || action == "recover-remote-backup"
+	if backupMaintenance {
+		if err = remoteBackupArchiveInput(action, in); err != nil {
+			return nil, err
+		}
+		if in.ExpectedRevision != c.Revision {
+			return nil, errors.New("连接修订号改变，请重新选择连接")
+		}
+	}
 	if action == "queue-remote" {
 		return s.queueRemoteSync(c, in)
 	}
@@ -607,6 +616,20 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 	}
 	if action == "remote-backups" {
 		return s.remoteBackupReport(conn.client, c, in)
+	}
+	if backupMaintenance {
+		owner, err := remoteRoots(conn.client, c)
+		if err != nil {
+			return nil, err
+		}
+		switch action {
+		case "remote-backup-archive":
+			return s.remoteBackupArchiveReport(conn.client, c, in, owner)
+		case "remote-backup-preview":
+			return s.remoteBackupArchivePreview(conn.client, c, in, owner)
+		default:
+			return s.archiveRemoteBackup(conn.client, c, in, owner, action == "recover-remote-backup")
+		}
 	}
 	if action == "probe-remote" {
 		out := remotePublicConfig(c)

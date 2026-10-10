@@ -43,6 +43,7 @@ type remoteSyncFixture struct {
 	commands             atomic.Int32
 	connections          sync.Map
 	listener             net.Listener
+	archiveReplyGate     atomic.Pointer[remoteBackupReplyGate]
 }
 
 func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
@@ -157,6 +158,13 @@ func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
 							cmd := exec.Command(native, "-e")
 							cmd.Stdin = stream
 							cmd.Stdout = stream
+							if gate := f.archiveReplyGate.Load(); gate != nil {
+								if gate.umask != "" {
+									cmd = exec.Command(native, "-e", "-u", gate.umask)
+								}
+								cmd.Stdin = &remoteBackupGateReader{source: stream, gate: gate}
+								cmd.Stdout = &remoteBackupGateWriter{target: stream, gate: gate}
+							}
 							_ = cmd.Run()
 							return
 						}
