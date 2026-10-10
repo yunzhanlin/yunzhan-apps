@@ -11,6 +11,7 @@ import ThreatIDSOperations from "./ThreatIDSOperations.vue";
 import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
 import { loadBalanceRoutingSaveBody } from "./loadBalanceRouting";
+import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody} from "./loadBalanceTransactions";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
@@ -171,6 +172,7 @@ function tabChanged(name: string | number) {
   }
 }
 function fieldLabel(field:Field,section:Section):string {
+  if(definition.value?.id==="load-balance" && section.id==="transaction-archive" && field.key==="confirm")return "归档精确确认：ARCHIVE LOAD TRANSACTION "+(form.value.resource_id||"原事务标识");
   if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
     if(section.id==="remote-backups") {
       if(field.key==="limit")return "备份容量每页条数（最多 32）";
@@ -233,6 +235,8 @@ const labels: Record<string, string> = {
   "resume-remote-plan":"已核对原任务，重新启用计划",
   "remove-remote-plan":"移除计划（保留身份与证据）",
   save: "保存入口",
+  transactions: "刷新完整事务库存",
+  "archive-transaction": "归档所选已结束事务（保留原证据）",
   probe: "健康检测",
   remove: "移除入口",
   recover: "恢复中断入口事务",
@@ -350,6 +354,7 @@ async function show(id: string) {
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
     if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
     if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
+    if (id === "load-balance") Object.assign(form.value,{limit:16,offset:0,resource_id:"",expected_sha:"",confirm:""});
     if (id === "files-sync") Object.assign(form.value,{remote_target_id:"",remote_request_id:"",remote_target:{address:"",port:22,username:"",host_key:"",root:"",backup_root:""}});
     if (id === "network-threat-detection") Object.assign(form.value,{network_interface:"",home_networks:"[]",prepare_ids:false,enabled:false,limit:50,offset:0});
     if (id === "website-statistics-v2") {
@@ -377,6 +382,12 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
+  if(id==="load-balance" && row.transaction_id!==undefined) {
+    const fields=loadBalanceTransactionFields(row);
+    if(!fields){ElMessage.error("事务记录身份、摘要或状态不可核对，请刷新完整库存");return;}
+    Object.assign(form.value,fields);activeTab.value="transaction-archive";
+    ElMessage.info(row.transaction_archived?"已选择原归档；同标识重试只核对原记录，不修改配置":"已选择事务；核对状态和完整摘要后精确确认，不自动归档");return;
+  }
   if(id==="files-sync" && row.remote_target_id) {
     if(row.backup_archive_state) {
       const fields=remoteBackupArchiveFields(row);
@@ -436,6 +447,7 @@ function selected(row: Record<string, any>) {
   else ElMessage.info("已填入所选记录，可执行对应操作");
 }
 function inputBody(action: string) {
+  if(definition.value?.id==="load-balance" && loadBalanceTransactionActions.includes(action))return loadBalanceTransactionBody(action,form.value);
   if(definition.value?.id==="files-sync" && remoteBackupArchiveActions.includes(action))return remoteBackupArchiveBody(action,form.value,expectedRevision.value);
   if(definition.value?.id==="files-sync" && action==="remote-backups")return remoteBackupBody(form.value,expectedRevision.value);
   if(definition.value?.id==="files-sync" && remotePlanActions.includes(action))return remotePlanBody(action,form.value,expectedRevision.value);
@@ -535,6 +547,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       form.value.expected_revision = (result as any).revision;selectedPlanID.value = form.value.domain;
       form.value.confirm='';
     }
+    if(definition.value.id==="load-balance" && action==="archive-transaction")form.value.confirm='';
     if (definition.value.id === "load-balance" && action === "remove") {
       form.value.expected_revision = 0;selectedPlanID.value = "";
     }
@@ -848,7 +861,7 @@ defineExpose({ show });
               <div class="http-health-toggle"><span>持续 HTTP 应用检查</span><el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" /></div>
               <template v-if="form.health_check">
                 <div class="http-health-toggle"><span>故障节点自动摘除与恢复</span><el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" /></div>
-                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 或 1.7.1 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
+                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 / 1.7.1 / 1.8.0 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
                 <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
                   <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
                 </el-select></label>

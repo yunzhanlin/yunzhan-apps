@@ -57,7 +57,7 @@ type loadBalanceTransaction struct {
 }
 
 func loadBalancePrivateRead(path string, limit int64) ([]byte, error) {
-	f, e := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	f, e := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 	if e != nil {
 		return nil, e
 	}
@@ -66,7 +66,7 @@ func loadBalancePrivateRead(path string, limit int64) ([]byte, error) {
 	if e = unix.Fstat(int(f.Fd()), &st); e != nil {
 		return nil, e
 	}
-	if st.Uid != uint32(os.Geteuid()) || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Mode&0777 != 0600 || st.Nlink != 1 || st.Size > limit {
+	if st.Uid != uint32(os.Geteuid()) || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Mode&07777 != 0600 || st.Nlink != 1 || st.Size < 0 || st.Size > limit {
 		return nil, errors.New("负载均衡私有记录身份、权限、链接数或大小异常")
 	}
 	b, e := io.ReadAll(io.LimitReader(f, limit+1))
@@ -435,6 +435,11 @@ func (s *Service) writeLoadBalanceTransaction(path string, tx loadBalanceTransac
 	if path != s.loadBalancePendingPath() && path != filepath.Join(dir, tx.ID+".json") {
 		return errors.New("事务写入目标不属于固定私有目录")
 	}
+	// Moving a completed transaction must never make its identity reusable,
+	// including during a retry or recovery of a previously archived record.
+	if e := s.loadBalanceArchivedIDReserved(tx.ID); e != nil {
+		return e
+	}
 	if b, e := loadBalancePrivateRead(path, 256<<10); e == nil {
 		var previous loadBalanceTransaction
 		if decodeFTPPrivateJSON(b, &previous) != nil || s.loadBalanceTransactionContract(previous) != nil || previous.ID != tx.ID {
@@ -628,6 +633,9 @@ func (s *Service) recoverLoadBalanceCold() error {
 	return s.finishLoadBalanceTransaction(tx)
 }
 func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
+	if core.LoadBalanceHistoryAction(action) {
+		return s.loadBalanceHistoryOperation(ctx, action, in)
+	}
 	if action == "check-http" {
 		return s.checkLoadBalanceHTTP(ctx, in)
 	}
@@ -735,7 +743,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		}
 		if core.LoadBalanceAutomaticTraffic(next.HealthCheck) {
 			if !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) || in.Confirm != "ENABLE HEALTH ROUTING "+next.Domain {
-				return nil, errors.New("自动流量须已安装经过核验的 v1.7.0 或 v1.7.1 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
+				return nil, errors.New("自动流量须已安装经过核验的 v1.7.0 / v1.7.1 / v1.8.0 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
 			}
 			next.Format = 3
 			next.Routing = &loadBalanceRouting{Down: []string{}}

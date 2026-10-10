@@ -125,6 +125,9 @@ func AppModules() []AppModuleDefinition {
 	}
 	for i := range definitions {
 		switch definitions[i].ID {
+		case "load-balance":
+			definitions[i].Actions = append(definitions[i].Actions, "transactions", "archive-transaction")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "事务标识（选择记录自动填写）", "identity"}, AppModuleField{"expected_sha", "所选事务完整文件摘要（自动填写）", "identity"}, AppModuleField{"limit", "事务每页条数（最多 32）", "number"}, AppModuleField{"offset", "事务分页起点（最多 2560）", "number"})
 		case "files-sync":
 			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-targets", "save-remote", "probe-remote", "remote-preview", "queue-remote", "remote-jobs", "remote-job", "cancel-remote", "recover-remote")
@@ -257,7 +260,18 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		var in AppModuleInput
-		if !decode(w, r, &in) {
+		var historyRaw json.RawMessage
+		if id == "load-balance" && LoadBalanceHistoryAction(action) {
+			if !decode(w, r, &historyRaw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = DecodeLoadBalanceHistoryInput(action, historyRaw)
+			if inputErr != nil {
+				fail(w, 400, inputErr.Error())
+				return
+			}
+		} else if !decode(w, r, &in) {
 			return
 		}
 		var out any
@@ -290,7 +304,11 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 					return
 				}
 			}
-			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, in, &out)
+			var payload any = in
+			if historyRaw != nil {
+				payload = historyRaw
+			}
+			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, payload, &out)
 		}
 		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
 			if e := a.Store.recordAppModuleEvent(id, action, u.Username, err); e != nil && err == nil {
@@ -322,7 +340,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "load-balance":
-			version = "1.7.1"
+			version = "1.8.0"
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":

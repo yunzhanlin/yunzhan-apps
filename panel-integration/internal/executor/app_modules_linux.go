@@ -510,7 +510,18 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		var in core.AppModuleInput
-		if !readJSON(w, r, &in) {
+		if id == "load-balance" && core.LoadBalanceHistoryAction(action) {
+			var raw json.RawMessage
+			if !readJSON(w, r, &raw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = core.DecodeLoadBalanceHistoryInput(action, raw)
+			if inputErr != nil {
+				respond(w, 400, map[string]string{"error": inputErr.Error()})
+				return
+			}
+		} else if !readJSON(w, r, &in) {
 			return
 		}
 		s.mu.Lock()

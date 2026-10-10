@@ -7,6 +7,21 @@ import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } f
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
+  load_transactions:"实际配置事务",
+  transaction_state:"事务状态",
+  transaction_format:"事务格式",
+  transaction_files:"完整恢复文件数",
+  transaction_sha256:"完整事务文件 SHA-256",
+  transaction_bytes:"事务文件大小",
+  transaction_archived:"已保留归档",
+  transaction_archivable:"当前允许归档",
+  transaction_active_count:"活动事务记录数",
+  transaction_archive_count:"归档事务记录数",
+  transaction_active_bytes:"活动事务逻辑字节",
+  transaction_archive_bytes:"归档事务逻辑字节",
+  transaction_archive_ready:"归档维护前提已满足",
+  transaction_archive_blocked:"归档暂停原因",
+  configuration_changed:"修改入口配置",
   requests: "请求数",
   history_persistent: "已持久化保存",
   history_retention_days: "历史保留天数",
@@ -426,6 +441,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown): string {
+  if(props.id==="load-balance" && key==="transaction_state")return ({committed:"变更已提交",recovered:"恢复已确认",applying:"变更未完成（不可归档）",restored:"原文件已恢复但原生确认未完成（不可归档）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_archive_state")return ({reviewed:"内容已核对（未归档）",prepared:"原归档已持久预留（须显式恢复）",reserved:"原迁移已接受或回执待核对（须显式恢复）",committed:"归档已提交，证据保留"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_files" && Array.isArray(value))return value.map(file=>`${file.name==='previous'?'原文件备份':file.name==='staged'?'保留暂存':file.name} · ${format('bytes',file.bytes)} · ${Number(file.mode).toString(8).padStart(3,'0')}`).join("；")||"空事务目录（仍保留身份）";
   if(props.id==="files-sync" && key==="last_state")return ({pending:"等待下次定时补查",queueing:"已预留原任务，接受结果待核对",queued:"原任务已排队（未完成）",succeeded:"原任务已完整成功",paused:"已暂停",'paused-error':"异常暂停，需核对原任务",removed:"已移除（证据保留）"} as Record<string,string>)[String(value)]||String(value??"—");

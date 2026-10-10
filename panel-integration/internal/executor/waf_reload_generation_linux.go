@@ -257,6 +257,36 @@ func (s *Service) captureWAFReloadGeneration(ctx context.Context, nginx string) 
 	return captureWAFReloadGeneration(ctx, s.systemPath("/proc"), nginx, pid)
 }
 
+// Linux can deny fd readlink while a worker is exiting, before stat exposes
+// the final zombie state. Permission failure is never evidence of drainage.
+// Recheck the exact original PID/start/parent; a still-live unreadable worker
+// must wait within the existing five-second barrier, then fail closed.
+func (g *wafReloadGeneration) workerSocketReadError(previous wafReloadProcess, readErr error) (bool, error) {
+	if !errors.Is(readErr, os.ErrPermission) && !errors.Is(readErr, os.ErrNotExist) {
+		if readErr == nil {
+			return false, errors.New("Nginx 工作进程套接字错误缺失")
+		}
+		return false, readErr
+	}
+	again, err := readWAFReloadProcess(g.ProcRoot, previous.PID)
+	if errors.Is(err, os.ErrNotExist) {
+		return true, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	if again.Start != previous.Start || again.State == "Z" || again.State == "X" {
+		return true, nil
+	}
+	if again.Parent != g.Master.PID {
+		return false, errors.New("Nginx 旧工作进程父身份变化")
+	}
+	if errors.Is(readErr, os.ErrNotExist) {
+		return false, readErr
+	}
+	return false, nil
+}
+
 func (g *wafReloadGeneration) drained(ctx context.Context) (bool, error) {
 	master, err := readWAFReloadProcess(g.ProcRoot, g.Master.PID)
 	if err != nil || master.Start != g.Master.Start || master.State == "Z" || master.State == "X" {
@@ -281,11 +311,18 @@ func (g *wafReloadGeneration) drained(ctx context.Context) (bool, error) {
 			return false, errors.New("Nginx 旧工作进程父身份变化")
 		}
 		sockets, err := wafProcessSockets(ctx, g.ProcRoot, previous.PID)
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
 		if err != nil {
-			return false, err
+			if ctx.Err() != nil {
+				return false, ctx.Err()
+			}
+			gone, checked := g.workerSocketReadError(previous, err)
+			if checked != nil {
+				return false, checked
+			}
+			if gone {
+				continue
+			}
+			return false, nil
 		}
 		for inode := range sockets {
 			if g.Listeners[inode] {

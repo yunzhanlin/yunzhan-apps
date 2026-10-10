@@ -251,8 +251,8 @@
       "id": "load-balance",
       "name": "负载均衡 · Load Balance",
       "category": "professional",
-      "version": "1.7.1",
-      "summary": "回环入口加权分流、IP 粘滞与备用节点；固定 IP HTTPS 后端、SNI/Host 与专用 CA 证书验证；HTTP/HTTPS 就绪检查默认只观测，可逐入口明确确认启用故障节点自动摘除与恢复；完整配置、清单、健康状态和 CA 事务保护。",
+      "version": "1.8.0",
+      "summary": "回环入口加权分流、IP 粘滞与备用节点；固定 IP HTTPS 后端与独立就绪检查，默认只观测、逐入口明确启用故障摘除与恢复；完整配置事务保护、私有事务库存与已结束事务无覆盖归档，完整字节和原标识保留。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -261,7 +261,7 @@
       "capabilities": [
         "加权轮询、备用节点与 IP 粘滞；删除重建保留递增修订身份",
         "TCP 建连探测与入口配置指纹；手工配置漂移与损坏备份拒绝覆盖",
-        "HTTP 两文件与 HTTPS 后端三文件持久事务、中断恢复与执行历史；旧工作进程关闭监听后提交",
+        "HTTP/HTTPS 完整持久事务与中断恢复；旧工作进程监听交接；库存分页、原摘要确认和已结束事务无覆盖私有归档",
         "签名仓库更新请求与任务原子绑定、完成后不重复提交",
         "持续 HTTP/HTTPS 状态码与内容检查（默认只观测）",
         "连续失败/恢复阈值、持久快照；实际自动流量与摘除数量，过期或后台异常不计为健康",
@@ -272,8 +272,8 @@
         "未知结果保留已摘除节点；策略编辑保留摘除状态，显式停用恢复注册节点",
         "自动流量 HTTP 三文件与 HTTPS 四文件持久事务；原生重载、进程强杀和冷重启恢复；策略修订与流量序列分开"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.7.1/manifest.json",
-      "sha256": "2857c573cc56ea972d3f97412dc99d7bcd4972ac3c10b8ad30af682e2c675dee"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.8.0/manifest.json",
+      "sha256": "d03bf8a75f86d8a5ead4485b74e822d1af51d11386c02939b7c6e8cea2cd2a11"
     },
     {
       "id": "memcached",

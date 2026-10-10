@@ -144,7 +144,7 @@ test('body WAF and analytics additions keep truthful limits and independent vers
 test('load balancing publishes explicitly authorized active health routing without claiming L4 or all distributions',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'1.7.1');
+ assert.equal(manifest.version,'1.8.0');
  assert(manifest.capabilities.some(s=>s.includes('修订')));
  assert(contract.scenarios.some(s=>s.includes('ABA')));
  assert(contract.scenarios.some(s=>s.includes('冷启动')));

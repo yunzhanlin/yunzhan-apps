@@ -4,14 +4,103 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
+
+func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.T) {
+	for _, name := range []string{"live_permission", "exited", "zombie", "dead", "pid_reused", "parent_changed", "stat_corrupt", "live_fd_missing", "other_error", "missing_error"} {
+		t.Run(name, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous := g.Workers[0]
+			readErr, wantGone, wantError := error(syscall.EACCES), false, false
+			switch name {
+			case "exited":
+				if err := os.Remove(filepath.Join(root, "101/stat")); err != nil {
+					t.Fatal(err)
+				}
+				wantGone = true
+			case "zombie", "dead":
+				state := "Z"
+				if name == "dead" {
+					state = "X"
+				}
+				wafReloadFixtureStat(t, root, 101, 100, 300, state)
+				wantGone = true
+			case "pid_reused":
+				wafReloadFixtureStat(t, root, 101, 999, 301, "S")
+				wantGone = true
+			case "parent_changed":
+				wafReloadFixtureStat(t, root, 101, 999, 300, "S")
+				wantError = true
+			case "stat_corrupt":
+				wafReloadFixtureFile(t, root, "101/stat", "corrupt")
+				wantError = true
+			case "live_fd_missing":
+				readErr, wantError = syscall.ENOENT, true
+			case "other_error":
+				readErr, wantError = syscall.EIO, true
+			case "missing_error":
+				readErr, wantError = nil, true
+			}
+			gone, err := g.workerSocketReadError(previous, readErr)
+			if gone != wantGone || (err != nil) != wantError {
+				t.Fatalf("gone=%v error=%v", gone, err)
+			}
+			if name == "other_error" && !errors.Is(err, syscall.EIO) {
+				t.Fatal("lost original error", err)
+			}
+			if name == "live_permission" {
+				if done, err := g.drained(context.Background()); err != nil || done {
+					t.Fatal("unreadable is not drainage", done, err)
+				}
+				// The formal isolated Linux regression runs UID501 without any
+				// capabilities, so this branch exercises real EACCES, not a mock.
+				if os.Geteuid() != 0 {
+					fd := filepath.Join(root, "101/fd")
+					if err := os.Chmod(fd, 0); err != nil {
+						t.Fatal(err)
+					}
+					defer os.Chmod(fd, 0700)
+					if _, err := wafProcessSockets(context.Background(), root, 101); !errors.Is(err, os.ErrPermission) {
+						t.Fatal("fixture is not actually unreadable", err)
+					}
+					if done, err := g.drained(context.Background()); err != nil || done {
+						t.Fatal("live EACCES was accepted or immediately failed", done, err)
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+					err := waitWAFReloadGeneration(ctx, g)
+					cancel()
+					if !errors.Is(err, context.DeadlineExceeded) {
+						t.Fatal("unreadable live worker did not fail within context", err)
+					}
+					if err := os.Chmod(fd, 0700); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Remove(filepath.Join(fd, "7")); err != nil {
+						t.Fatal(err)
+					}
+					if err := waitWAFReloadGeneration(context.Background(), g); err != nil {
+						t.Fatal("actual listener closure did not complete", err)
+					}
+					t.Log("actual UID501 EACCES waited, context expired closed, then readable listener closure verified")
+				}
+			}
+		})
+	}
+}
 
 const wafReloadFixtureBinary = "/usr/sbin/nginx"
 
