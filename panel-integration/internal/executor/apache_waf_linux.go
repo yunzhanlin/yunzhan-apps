@@ -73,7 +73,7 @@ func (s *Service) apacheWAFSettingsForApply(raw map[string]any, install, upgradi
 				return cfg, errors.New("Apache WAF 配置已变化，请刷新后重新保存")
 			}
 		}
-		if cfg.TrustedProxy != nil && current.Version != core.ApacheWAFVersion && !(upgrading && current.Version == "2.1.0") {
+		if cfg.TrustedProxy != nil && current.Version != core.ApacheWAFVersion && !(upgrading && (current.Version == "2.1.0" || current.Version == "2.2.0")) {
 			return cfg, errors.New("可信代理策略需要先通过应用商店升级 Apache WAF，不以面板版本冒充应用已升级")
 		}
 	}
@@ -206,7 +206,6 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 			return err
 		}
 	}
-	dir := s.moduleDir("apache-waf")
 	paths := txs.apacheWAFConfigurationPaths()
 	backups := []fileBackup{}
 	for _, path := range paths {
@@ -241,38 +240,9 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 			installedAt = previous.InstalledAt
 		}
 	}
-	base := filepath.Join(dir, "config-backups")
-	if err = os.MkdirAll(base, 0700); err != nil {
-		return err
-	}
-	if err = txs.wafOwnedDirectory(base, false); err != nil {
-		return err
-	}
-	entries, err := os.ReadDir(base)
-	if err != nil {
-		return err
-	}
-	if len(entries) >= 100 {
-		return errors.New("Apache WAF 配置备份达到 100 份，请先归档备份再保存")
-	}
-	backupDir := filepath.Join(base, core.ID())
-	if err = os.Mkdir(backupDir, 0700); err != nil {
-		return err
-	}
-	index := []map[string]any{}
-	for i, backup := range backups {
-		name := fmt.Sprintf("%d.conf", i)
-		if backup.existed {
-			if err = atomicWrite(filepath.Join(backupDir, name), backup.data, 0600); err != nil {
-				return err
-			}
-		}
-		index = append(index, map[string]any{"source": backup.path, "file": name, "existed": backup.existed, "mode": backup.mode, "owner": backup.owner, "sha256": core.Hash(string(backup.data))})
-	}
-	if err = moduleWrite(filepath.Join(backupDir, "index.json"), map[string]any{"created_at": core.Now(), "files": index}); err != nil {
-		return err
-	}
-	add("已保存可恢复的 Apache 配置、规则与版本记录备份")
+	// The owner-aware journal below already persists all three complete old
+	// and next files before mutation. Keep old config-backups untouched, but
+	// do not create a second unmaintainable backup namespace in version 2.3.
 	updated := regexp.MustCompile(`(?ms)^<VirtualHost[^>]+>.*?</VirtualHost>`).ReplaceAllStringFunc(source, func(block string) string {
 		id := regexp.MustCompile(`panel-([a-f0-9]{32})\.access\.log combined`).FindStringSubmatch(block)
 		if len(id) == 2 && !strings.Contains(block, "PANEL_AW_SITE="+id[1]) {
@@ -358,6 +328,7 @@ func (s *Service) readApacheWAFEvents() (core.WAFEventsPage, error) {
 }
 
 func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
+	s.apacheWAFHistoryRoutes(m)
 	m.HandleFunc("GET /v1/software/apache-waf/config", func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
 		defer s.mu.Unlock()

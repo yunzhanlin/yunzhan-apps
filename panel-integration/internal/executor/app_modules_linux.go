@@ -390,7 +390,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		}
 	}
 	legacyApache := false
-	if id == "apache-waf" && version == core.ApacheWAFVersion && status.Installed && (status.Version == "2.1.0" || status.Version == "2.0.0" || status.Version == "1.0") && !status.Healthy {
+	if id == "apache-waf" && version == core.ApacheWAFVersion && status.Installed && (status.Version == "2.2.0" || status.Version == "2.1.0" || status.Version == "2.0.0" || status.Version == "1.0") && !status.Healthy {
 		if err := s.verifyApacheWAFLegacyUpgrade(ctx, status); err != nil {
 			return fmt.Errorf("旧版 Apache 防护完整性未通过，未开始签名迁移：%w", err)
 		}

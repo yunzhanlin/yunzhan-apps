@@ -13,6 +13,22 @@ export function canOpenView(access: AccessPlan | null, key: string): boolean {
   const aliases: Record<string, string> = { jobs: "audit", backups: "system-tools", certificates: "sites" };
   return access.menu_ids.includes(aliases[key] || key);
 }
+// Interactive module opening follows Core ModuleMenu, not the deliberately
+// narrower background read allowlist below. No new API permission is granted.
+const moduleMenus: Record<string, string> = {
+  "user-manager": "panel-access",
+  "site-diagnosis": "sites", "website-analytics": "sites", "website-statistics-v2": "sites",
+  "daily-report": "audit",
+  "file-monitor": "security", "website-tamper-proof": "security", "enterprise-tamper-proof": "security",
+  "network-threat-detection": "security", "nginx-waf": "security", "apache-waf": "security",
+  "php-code-security": "security", "system-hardening": "security", "intrusion-prevention": "security", "anti-intrusion": "security",
+  "files-sync": "system-tools", "load-balance": "system-tools", "task-manager": "system-tools", "disk-analysis": "system-tools",
+  "platform-ops": "system-tools", "nfs-manager": "system-tools", "pm2-manager": "system-tools", "docker-manager": "system-tools",
+  "pure-ftpd": "files", "mobile-pwa": "runtimes", "mobile": "runtimes",
+};
+export function canOpenAppModule(access: AccessPlan | null, id: string): boolean {
+  return validAccessPlan(access) && access.role === "admin" && Object.hasOwn(moduleMenus, id) && access.menu_ids.includes(moduleMenus[id]);
+}
 // Background refresh must not issue unauthorized global queries or reuse the
 // previous account's data; the server independently checks every request.
 export function canReadPath(access: AccessPlan | null, value: string): boolean {

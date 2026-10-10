@@ -102,13 +102,14 @@ type Manifest struct {
 }
 
 type LoadInfo struct {
-	Source         string `json:"source"`
-	Stale          bool   `json:"stale"`
-	FetchedAt      string `json:"fetched_at,omitempty"`
-	CheckedAt      string `json:"checked_at,omitempty"`
-	Error          string `json:"error,omitempty"`
-	ResolvedCommit string `json:"resolved_commit,omitempty"`
-	RetryAt        string `json:"retry_at,omitempty"`
+	Source             string `json:"source"`
+	Stale              bool   `json:"stale"`
+	FetchedAt          string `json:"fetched_at,omitempty"`
+	CheckedAt          string `json:"checked_at,omitempty"`
+	Error              string `json:"error,omitempty"`
+	ResolvedCommit     string `json:"resolved_commit,omitempty"`
+	RetryAt            string `json:"retry_at,omitempty"`
+	ReferenceTransport string `json:"reference_transport,omitempty"`
 }
 
 // Both signature and payload travel and are cached as one atomic unit. The
@@ -119,13 +120,17 @@ type catalogBundle struct {
 }
 
 type Client struct {
-	BaseURL        string
-	PublicKey      ed25519.PublicKey
-	HTTP           *http.Client
-	cacheMu        sync.Mutex
-	githubRefMu    sync.Mutex
-	githubRetry    *githubCatalogRetryError
-	githubFailures uint
+	BaseURL                 string
+	PublicKey               ed25519.PublicKey
+	HTTP                    *http.Client
+	cacheMu                 sync.Mutex
+	githubRefMu             sync.Mutex
+	githubRetry             *githubCatalogRetryError
+	githubFailures          uint
+	githubGitRetry          *githubCatalogRetryError
+	githubGitFailures       uint
+	githubResolvedCommit    string
+	githubResolvedTransport string
 }
 
 func parsePublicKey(contents []byte) (ed25519.PublicKey, error) {
@@ -199,19 +204,33 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 	transport := *c.HTTP
 	transport.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	if req.URL.String() == githubCatalogRefURL || req.URL.String() == githubCatalogGitRefURL {
+		transport.Jar = nil
+	}
 	resp, err := transport.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	if req.URL.String() == githubCatalogRefURL && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) {
-		return nil, githubCatalogRetry(resp, time.Now())
+	if (req.URL.String() == githubCatalogRefURL || req.URL.String() == githubCatalogGitRefURL) && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) {
+		retry := githubCatalogRetry(resp, time.Now())
+		if req.URL.String() == githubCatalogGitRefURL {
+			retry.primaryQuota = false
+			retry.transport = "git-smart-http"
+		}
+		return nil, retry
 	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("应用仓库 HTTP %d", resp.StatusCode)
+	}
+	if req.URL.String() == githubCatalogGitRefURL {
+		values := resp.Header.Values("Content-Type")
+		if len(values) != 1 || values[0] != "application/x-git-upload-pack-advertisement" {
+			return nil, errors.New("官方 Git 引用响应类型无效")
+		}
 	}
 	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
 	if err != nil {
@@ -411,7 +430,7 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 			return Catalog{}, LoadInfo{}, err
 		}
 		now := time.Now().UTC().Format(time.RFC3339)
-		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now, ResolvedCommit: commit}, nil
+		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now, ResolvedCommit: commit, ReferenceTransport: c.catalogReferenceTransport(commit)}, nil
 	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil {
 		return cached, catalogFailureInfo(modified, fetchErr), nil

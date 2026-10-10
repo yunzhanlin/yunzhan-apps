@@ -6,14 +6,15 @@ import { randomId } from "./randomId";
 import { RegistryRequestIdentity, type RegistryPendingRequest, type RegistryRequestOutcome } from "./registryRequestIdentity";
 import { RegistryFreshness, type RegistryReadTicket, type RegistryCheckReceipt } from "./registryFreshness";
 import { apiURL } from "./panelBase";
-import { canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./menuPermissions";
+import { canOpenAppModule, canOpenView, canReadPath, validAccessPlan, type AccessPlan } from "./menuPermissions";
 import SoftwareLogo from "./SoftwareLogo.vue";
-import AppModuleManager from "./AppModuleManager.vue";
+import type AppModuleManager from "./AppModuleManager.vue";
+import { DeferredWorkspace, WorkspaceCodeLoadError, scopeWorkspaceAPI, scopeWorkspaceOperation } from "./deferredWorkspace";
 import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
 import { normalizeStoreSearch } from "./storeSearch";
 import type { SecurityAppCatalogItem, SecurityAppStatus } from "./SecurityAppManager.vue";
 import PanelIcon from "./PanelIcon.vue";
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   Odometer,
@@ -223,6 +224,8 @@ const canManageSites = computed(() => accessPlan.value?.role === "admin" && canO
 const accountRoleLabel = computed(() => accessPlan.value?.role === "admin" ? "管理员" : accessPlan.value?.role === "operator" ? "指定网站操作员" : "只读账户");
 function clearAccessData(preserveRegistryRequests = false) {
   accessEpoch++;
+  cancelAppModuleLoad();
+  appModuleComponent.value = undefined;
   if (!preserveRegistryRequests) registryRequestIdentity.clear();
   registryReviewing.value = [];
   sites.value = []; jobs.value = []; audits.value = []; siteCertificates.value = [];
@@ -412,10 +415,65 @@ const filteredCatalog = computed(() => {
 const softwareStatus = (id: string) => softwareApps.value.status.find((item) => item.id === id);
 const softwareManager = ref<InstanceType<typeof SecurityAppManager> | null>(null);
 const appModuleManager = ref<InstanceType<typeof AppModuleManager> | null>(null);
+const appModuleComponent = shallowRef<typeof AppModuleManager>();
+const appModuleLoading = ref(false), appModuleLoadError = ref(""), appModuleLoadTarget = ref("");
+const appModuleReloadRequired = ref(false);
+const appModuleLoader = new DeferredWorkspace(async () => (await import("./AppModuleManager.vue")).default);
+let appModuleScopeDisposed = false;
+const appModuleAPI = shallowRef(scopeWorkspaceAPI(api, () => false));
+const appModuleInstall = shallowRef(scopeWorkspaceOperation(queueSoftwareInstall, () => false));
+const appModuleJob = shallowRef(scopeWorkspaceOperation(lifecycleJob, () => false));
+function cancelAppModuleLoad() {
+  appModuleLoader.reset();
+  appModuleLoading.value = false; appModuleLoadError.value = ""; appModuleLoadTarget.value = "";
+  appModuleReloadRequired.value = false;
+}
+function reloadAppModuleWorkspace() {
+  if (!appModuleReloadRequired.value || !appModuleLoadError.value || appModuleLoading.value) return;
+  cancelAppModuleLoad();
+  // Explicit user action only. Never persist an app/operation intent or
+  // automatically replay an installation, update, or configuration request.
+  window.location.reload();
+}
+async function openAppModule(id: string) {
+  if (!/^[a-z0-9][a-z0-9-]{1,62}$/.test(id) || !user.value || !canOpenAppModule(accessPlan.value, id)) {
+    ElMessage.error("当前账户不能打开该应用，请核对授权后重试"); return;
+  }
+  const ticket = appModuleLoader.begin(), epoch = accessEpoch, session = csrf.value;
+  const current = () => appModuleLoader.current(ticket) && epoch === accessEpoch && session === csrf.value && !!user.value && canOpenAppModule(accessPlan.value, id);
+  appModuleLoading.value = true; appModuleLoadError.value = ""; appModuleLoadTarget.value = id;
+  appModuleReloadRequired.value = false;
+  try {
+    const component = await appModuleLoader.load(ticket);
+    if (!component || !current()) return;
+    if (!appModuleComponent.value) {
+      const scopeCurrent = () => !appModuleScopeDisposed && epoch === accessEpoch && session === csrf.value && !!user.value;
+      appModuleAPI.value = scopeWorkspaceAPI(api, scopeCurrent);
+      appModuleInstall.value = scopeWorkspaceOperation(queueSoftwareInstall, scopeCurrent);
+      appModuleJob.value = scopeWorkspaceOperation(async (job: string) => {
+        await refresh();
+        if (!scopeCurrent()) throw new Error("账户已改变，未打开旧账户任务");
+        await revealJob(job, scopeCurrent);
+      }, scopeCurrent);
+    }
+    appModuleComponent.value = component;
+    await nextTick();
+    if (!current()) return;
+    if (!appModuleManager.value) throw new Error("应用界面未完成挂载，请重试");
+    appModuleLoading.value = false;
+    await appModuleManager.value.show(id);
+  } catch (cause) {
+    if (current()) {
+      appModuleReloadRequired.value = cause instanceof WorkspaceCodeLoadError;
+      const detail = cause instanceof Error ? cause.message.slice(0, 512) : "界面读取未完成";
+      appModuleLoadError.value = `应用 ${id} 的界面未打开：${detail}。这次打开界面的操作没有提交安装、更新或配置变更。`;
+    }
+  } finally { if (current()) appModuleLoading.value = false; }
+}
 function openSoftwareApp(app: SecurityAppCatalogItem) {
   const manager = softwareManagerKind(app);
   if (manager === "security") softwareManager.value?.show(app, softwareStatus(app.id));
-  else if (manager === "module") void appModuleManager.value?.show(app.id);
+  else if (manager === "module") void openAppModule(app.id);
   else ElMessage.error("当前面板没有该应用的管理界面，请升级面板后重试");
 }
 function installSoftwareApp(app: SecurityAppCatalogItem) {
@@ -560,7 +618,7 @@ function openRegistryApp(app: RegistryApp) {
   if (app.provider === "panel-module") {
     const software = softwareApps.value.catalog.find(item => item.id === app.target);
     if (software) openSoftwareApp(software);
-    else if (!isSecuritySoftware(app.target)) void appModuleManager.value?.show(app.target);
+    else if (!isSecuritySoftware(app.target)) void openAppModule(app.target);
     else ElMessage.warning("安全软件目录尚未加载，请刷新后重试");
   }
   else if (app.manage_route === "docker") void dockerManager.value?.open();
@@ -1481,11 +1539,16 @@ const siteBusy = (s: Site) =>
   jobs.value.some(
     (j) => j.site_id === s.id && ["queued", "running"].includes(j.state),
   );
-async function revealJob(id: string) {
+async function revealJob(id: string, scopeCurrent: () => boolean = () => true) {
+  const epoch = accessEpoch, session = csrf.value;
+  const current = () => epoch === accessEpoch && session === csrf.value && !!user.value && scopeCurrent();
+  if (!current()) return;
   const list = await api<Job[]>("/jobs");
-  jobs.value = list;
+  if (!current()) return;
   const found =
     list.find((j) => j.id === id) || (await api<Job>("/jobs/" + id));
+  if (!current()) return;
+  jobs.value = list;
   openJob(found);
 }
 function openJob(j: Job) {
@@ -1535,6 +1598,8 @@ onMounted(async () => {
   }, 5000);
 });
 onUnmounted(() => {
+  appModuleScopeDisposed = true;
+  appModuleLoader.dispose();
   clearInterval(timer);
   window.removeEventListener("keydown", onGlobalShortcut);
   window.removeEventListener("pointerdown", onSessionActivity);
@@ -2946,7 +3011,7 @@ onUnmounted(() => {
             </div>
           </template>
           <div v-else-if="settingsTab === 'account'">
-            <section class="panel-card"><el-button type="primary" @click="appModuleManager?.show('user-manager')">面板用户与菜单授权</el-button><p class="muted">管理角色、独立菜单、网站范围与会话撤销。账户授权变更后需要重新登录。</p></section>
+            <section class="panel-card"><el-button type="primary" @click="openAppModule('user-manager')">面板用户与菜单授权</el-button><p class="muted">管理角色、独立菜单、网站范围与会话撤销。账户授权变更后需要重新登录。</p></section>
           <AccountManager
             ref="accountManager"
             :api="api"
@@ -3100,7 +3165,13 @@ onUnmounted(() => {
             ></el-table
           >
         </section>
-        <AppModuleManager ref="appModuleManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" :registry="appRegistry" :access="accessPlan" />
+        <component :is="appModuleComponent" v-if="appModuleComponent" ref="appModuleManager" :api="appModuleAPI" :on-job="appModuleJob" :on-install="appModuleInstall" :registry="appRegistry" :access="accessPlan" />
+        <el-dialog :model-value="appModuleLoading || !!appModuleLoadError" title="加载应用管理界面" width="min(520px, 94vw)" :close-on-click-modal="false" @close="cancelAppModuleLoad">
+          <p v-if="appModuleLoading" role="status">正在加载 {{appModuleLoadTarget}} 的实际管理界面，请稍候。此步骤不会安装应用或修改配置。</p>
+          <el-alert v-if="appModuleLoadError" :title="appModuleLoadError" type="error" :closable="false"/>
+          <p v-if="appModuleReloadRequired" role="note">浏览器可能保留失败的模块记录，需要刷新面板后重新打开应用。刷新会清除当前页面未保存的内容，不会自动重试已提交的任务。</p>
+          <template #footer><el-button @click="cancelAppModuleLoad">{{appModuleLoading ? '取消界面加载' : '关闭加载提示'}}</el-button><el-button v-if="appModuleLoadError && appModuleReloadRequired" type="primary" @click="reloadAppModuleWorkspace">刷新面板</el-button><el-button v-else-if="appModuleLoadError" type="primary" @click="openAppModule(appModuleLoadTarget)">重试打开界面</el-button></template>
+        </el-dialog>
         <footer class="page-footer">
           <span>自有面板 · 本地开发版</span
           ><span>数据来自实际 Linux 服务 <span class="live-dot"></span></span>

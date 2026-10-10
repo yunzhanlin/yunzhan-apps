@@ -132,7 +132,7 @@ func apacheWAFWaitLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain,
 }
 
 func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client, version string) error {
-	if version != core.ApacheWAFVersion && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
+	if version != core.ApacheWAFVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
 		return errors.New("Apache 配置指纹版本不支持")
 	}
 	if !core.ValidDomain(domain) {
@@ -170,14 +170,14 @@ func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain
 }
 
 func (s *Service) verifyApacheWAFLegacyUpgrade(ctx context.Context, status core.SoftwareAppStatus) error {
-	if !status.Installed || status.Version != "2.1.0" && status.Version != "2.0.0" && status.Version != "1.0" {
-		return errors.New("仅允许已知完整旧版 Apache 1.0/2.0/2.1 防护经签名迁移")
+	if !status.Installed || status.Version != "2.2.0" && status.Version != "2.1.0" && status.Version != "2.0.0" && status.Version != "1.0" {
+		return errors.New("仅允许已知完整旧版 Apache 1.0/2.0/2.1/2.2 防护经签名迁移")
 	}
 	if status.Version == "1.0" && len(status.Settings) != 0 {
 		return errors.New("Apache 1.0 安装记录含非原始空设置，拒绝猜测迁移")
 	}
 	cfg, err := core.DecodeApacheWAFConfig(status.Settings)
-	if err != nil || cfg.TrustedProxy != nil && status.Version != "2.1.0" {
+	if err != nil || cfg.TrustedProxy != nil && status.Version != "2.1.0" && status.Version != "2.2.0" {
 		return errors.New("旧版 Apache 防护记录含未知策略，未迁移")
 	}
 	source, _, err := s.apacheWAFSource()

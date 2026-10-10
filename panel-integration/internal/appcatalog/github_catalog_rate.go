@@ -11,16 +11,24 @@ import (
 // This is retry evidence, never signing authority. No upstream error body,
 // arbitrary URL, credential, or unbounded header is reflected to the panel.
 type githubCatalogRetryError struct {
-	until       time.Time
-	checkedAt   time.Time
-	status      int
-	rateLimited bool
+	until        time.Time
+	checkedAt    time.Time
+	status       int
+	rateLimited  bool
+	primaryQuota bool
+	transport    string
 }
 
 func (e *githubCatalogRetryError) Error() string {
 	reason := "GitHub 暂时拒绝请求"
+	if e.transport == "git-smart-http" {
+		reason = "GitHub Git 引用检查未完成"
+	}
 	if e.rateLimited {
 		reason = "GitHub 限流"
+	}
+	if e.status == 0 {
+		return fmt.Sprintf("%s，暂缓请求至 %s；尚未确认仓库最新版本", reason, e.until.UTC().Format(time.RFC3339))
 	}
 	return fmt.Sprintf("%s（HTTP %d），暂缓请求至 %s；尚未确认仓库最新版本", reason, e.status, e.until.UTC().Format(time.RFC3339))
 }
@@ -50,6 +58,12 @@ func githubCatalogRetry(response *http.Response, now time.Time) *githubCatalogRe
 	if one("X-RateLimit-Remaining") == "0" {
 		result.rateLimited = true
 		if reset, err := strconv.ParseInt(one("X-RateLimit-Reset"), 10, 64); err == nil && reset > 0 {
+			// Only a documented REST primary-quota exhaustion allows the
+			// independent official read-only Git ref service. A generic 403,
+			// secondary Retry-After, malformed or missing reset never does.
+			result.primaryQuota = response.StatusCode == http.StatusForbidden &&
+				len(response.Header.Values("Retry-After")) == 0 &&
+				time.Unix(reset, 0).After(now) && !time.Unix(reset, 0).After(now.Add(24*time.Hour))
 			update(time.Unix(reset, 0).Add(time.Second))
 		}
 	}
@@ -62,6 +76,12 @@ func (c *Client) githubBackoff() *githubCatalogRetryError {
 	c.githubRefMu.Lock()
 	defer c.githubRefMu.Unlock()
 	if c.githubRetry == nil || !time.Now().Before(c.githubRetry.until) {
+		return nil
+	}
+	if c.githubRetry.primaryQuota {
+		if c.githubGitRetry != nil && time.Now().Before(c.githubGitRetry.until) {
+			return c.githubGitRetry
+		}
 		return nil
 	}
 	return c.githubRetry

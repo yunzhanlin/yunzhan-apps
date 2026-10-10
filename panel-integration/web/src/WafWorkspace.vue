@@ -5,6 +5,7 @@ import { formatPanelDateTime } from "./panelTime";
 import { createRotationRefresh } from "./wafRotationRefresh";
 import { bodyInventoryPresentation } from "./wafBodyInventory";
 import WafBodyRetention from "./WafBodyRetention.vue";
+import ApacheWafTransactions from "./ApacheWafTransactions.vue";
 import { randomId } from "./randomId";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
 interface Entry { id: string; value: string; site_id?: string }
@@ -418,6 +419,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
           <h4>安全配置导入 / 导出</h4><el-button type="warning" plain @click="restoreDraft">恢复默认草稿（不立即生效）</el-button><el-button @click="download('yunzhan-waf-applied.json',applied)">导出生效配置</el-button><el-button @click="download('yunzhan-waf-draft.json',cfg)">导出草稿</el-button><p>仅接受本应用的 JSON 配置，128 KiB 上限；拒绝未知字段、任意服务器配置及不支持的网站。导入不会立即改变服务器。</p><el-input v-model="jsonInput" type="textarea" :rows="4" aria-label="导入 JSON 配置" placeholder="粘贴配置 JSON"/><el-button class="waf-add" @click="importConfig">校验并载入草稿</el-button>
           <h4>生成的 {{ engineName }} 配置（只读预览）</h4><el-button @click="showPreview">生成预览</el-button><pre v-if="preview" class="waf-code">{{preview}}</pre><p>保存前自动留下受限权限的完整配置备份，通过 {{ engineName }} 原生校验后才重载，并核对生效指纹；失败恢复旧文件。保存使用修订号检查，防止旧页面覆盖新配置。备份最多 100 份，达到上限拒绝修改，需管理员先归档。</p>
         </el-tab-pane>
+        <el-tab-pane v-if="apache" label="配置事务" name="transactions"><ApacheWafTransactions :api="api" :active="tab==='transactions'" :installed="!!status?.installed" :version="status?.version" :parent-busy="busy"/></el-tab-pane>
         <el-tab-pane label="操作记录" name="history"><div class="waf-actions"><p>最近 50 次持久化任务，包括安装、升级、配置与失败原因。</p><el-button @click="refreshHistory">刷新记录</el-button></div><el-table :data="history" max-height="420" empty-text="尚无操作记录"><el-table-column label="时间" width="170"><template #default="{row}">{{formatPanelDateTime(row.created_at)}}</template></el-table-column><el-table-column prop="kind" label="操作"/><el-table-column prop="state" label="状态"/><el-table-column prop="error" label="错误 / 结果" min-width="240" show-overflow-tooltip/><el-table-column prop="id" label="任务标识" min-width="220" show-overflow-tooltip/></el-table></el-tab-pane>
       </el-tabs>
     </template>

@@ -303,7 +303,7 @@ function setReport(value: any) {
         : { result: value };
 }
 async function show(id: string) {
-  if (busy.value) return;
+  if (busy.value) throw new Error("当前应用仍在读取或执行操作；等待结束后再打开其他应用");
   busy.value = true;
   error.value = "";
   visible.value = true;

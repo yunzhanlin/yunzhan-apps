@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const ApacheWAFVersion = "2.2.0"
+const ApacheWAFVersion = "2.3.0"
 
 func DefaultApacheWAFConfig() WAFConfig {
 	cfg := DefaultWAFConfig()
@@ -76,6 +76,7 @@ func (s *Store) validateApacheWAFSites(cfg WAFConfig) error {
 }
 
 func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
+	a.apacheWAFHistoryRoutes(m)
 	for _, operation := range []string{"config", "report"} {
 		m.HandleFunc("GET /api/software/apache-waf/"+operation, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 			path := "/v1/software/apache-waf/" + operation

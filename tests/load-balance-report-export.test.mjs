@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('1.8.2 report snapshots are exported from exact normal signed YU inputs and mandatory gate',async()=>{
+test('1.8.2 report snapshots are exported from exact current normal signed ABH inputs and mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'0f7939250e83a31326c248908d07deb28fdfc6877f258fffa520bc2b84844a61');
- assert.equal(release.archive_sha256,'df6ca0092e0ce9fade0c9ee566937033da0c0cc4446c6c8d4a398358f013f71f');
- assert.equal(Object.keys(index.files).length,984);
+ assert.equal(release.frozen_inputs_sha256,'85c54234bfa58b6e25b8919f96bab560466ba197493e233b11cef206d75971fe');
+ assert.equal(release.archive_sha256,'e08523947e4c913d470aa784e79c556796ca7df958de5f07cc75fc667f50b243');
+ assert.equal(Object.keys(index.files).length,998);
  for(const file of ['internal/core/load_balance_report_export.go','internal/core/load_balance_report_export_test.go','web/src/loadBalanceReportExport.ts','scripts/test-load-balance-report-export.mjs','internal/core/app_modules.go','web/src/AppModuleManager.vue','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,20);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,23);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
  const native=await read('panel-integration/internal/core/load_balance_report_export.go');
  for(const pattern of [/loadBalanceExportMaxBody\s*= 1 << 20/,/loadBalanceExportMaxBytes\s*= 8 << 20/,/loadBalanceExportMaxTickets = 32/,/loadBalanceExportPerSession = 8/,/loadBalanceExportTTL\s*= 5 \* time.Minute/,/decoder.UseNumber\(\)/,/Owner != loadBalanceExportOwner\(u\)/,/a.authorize\(/,/len\(query\["sha256"\]\) != 1/,/Cache-Control", "no-store, private"/])assert.match(native,pattern);
  assert.doesNotMatch(native,/a\.Executor|os\.ReadFile|os\.WriteFile|exec\.Command/);

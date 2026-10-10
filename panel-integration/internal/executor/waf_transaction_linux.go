@@ -369,6 +369,11 @@ func (s *Service) startWAFTransactionState(changes []wafConfigChange, ids *threa
 	if err := s.wafOwnedDirectory(dir, true); err != nil {
 		return tx, err
 	}
+	if s.fileTransactionApplication == "apache-waf" {
+		if err := s.apacheWAFReserveTransaction(context.Background(), tx); err != nil {
+			return tx, err
+		}
+	}
 	entries, err := os.ReadDir(dir)
 	if err != nil || len(entries) >= 100 {
 		return tx, errors.New("WAF 配置事务已达 100 份，请先归档，未修改配置")

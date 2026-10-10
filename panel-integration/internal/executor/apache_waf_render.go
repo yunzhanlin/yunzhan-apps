@@ -96,7 +96,7 @@ func renderApacheWAFVersion(cfg core.WAFConfig, bindings map[string][]string, ve
 		}
 		return apacheWAFInitialRules, nil
 	}
-	if version != core.ApacheWAFVersion && version != "2.1.0" && version != "2.0.0" || version == "2.0.0" && cfg.TrustedProxy != nil {
+	if version != core.ApacheWAFVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" || version == "2.0.0" && cfg.TrustedProxy != nil {
 		return "", errors.New("Apache 防护完整性版本或旧版代理策略不支持")
 	}
 	if err := core.ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {

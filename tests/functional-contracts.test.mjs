@@ -5,18 +5,19 @@ const load=async name=>JSON.parse(await readFile(new URL(name,import.meta.url),'
 test('Apache identity policies require explicit trust and do not claim unverified commercial parity',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='apache-waf'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'2.2.0');
+ assert.equal(manifest.version,'2.3.0');
  assert(manifest.capabilities.some(s=>s.includes('默认关闭')&&s.includes('CIDR')));
  assert(manifest.capabilities.some(s=>s.includes('原始连接 IP')));
  assert(manifest.capabilities.some(s=>s.includes('普通保存不隐式升级')));
- assert(manifest.capabilities.some(s=>s.includes('三文件持久恢复事务')&&s.includes('UID/GID')));
+ assert(manifest.capabilities.some(s=>s.includes('完整三文件持久备份')&&s.includes('UID/GID')));
  assert(manifest.capabilities.some(s=>s.includes('未确认恢复不清除事务')));
  assert(contract.scenarios.some(s=>s.includes('两种架构各 29 次')));
  assert(contract.scenarios.some(s=>s.includes('真实 SIGKILL 子进程')&&s.includes('四个提交截点')));
  assert(contract.boundaries.some(s=>s.includes('仅服务 inactive/failed')&&s.includes('MainPID')));
  assert(contract.boundaries.some(s=>s.includes('不等于正式签名执行服务')));
  assert(contract.boundaries.some(s=>s.includes('23r26a')&&s.includes('GET 返回 503')&&s.includes('失败证据保留')));
- assert(contract.gaps.some(s=>s.includes('100 份')&&s.includes('归档界面')));
+ assert(manifest.capabilities.some(s=>s.includes('100 份 / 128 MiB')&&s.includes('512 份 / 256 MiB')));
+ assert(contract.gaps.some(s=>s.includes('真实已安装签名应用更新')&&s.includes('旧 config-backups')&&s.includes('仍待完成')));
  assert(contract.scenarios.some(s=>s.includes('未可信对端')&&s.includes('IPv6')));
  assert(contract.scenarios.some(s=>s.includes('缺失指纹')&&s.includes('FIFO')));
  assert(contract.boundaries.some(s=>s.includes('未签名冻结测试')&&s.includes('签名面板')));

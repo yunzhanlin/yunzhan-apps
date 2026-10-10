@@ -59,6 +59,11 @@ func TestGitHubCatalogRateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry(t *te
 	limited := false
 	c.HTTP = &http.Client{Transport: githubCatalogTransport(func(r *http.Request) (*http.Response, error) {
 		calls++
+		if r.URL.String() == githubCatalogGitRefURL {
+			// Both independent official services failed in this fixture.
+			// A verified old cache is never presented as a fresh lookup.
+			return githubCatalogResponse(r, 503, "never reflect Git service payload"), nil
+		}
 		if r.URL.String() == githubCatalogRefURL {
 			if limited {
 				response := githubCatalogResponse(r, 403, "never reflect upstream payload or credential")
@@ -84,7 +89,7 @@ func TestGitHubCatalogRateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry(t *te
 	}
 	limited = true
 	_, first, err := c.LoadCatalog(context.Background(), cache, 0)
-	if err != nil || !first.Stale || first.RetryAt == "" || first.ResolvedCommit != "" || calls != 3 {
+	if err != nil || !first.Stale || first.RetryAt == "" || first.ResolvedCommit != "" || calls != 4 {
 		t.Fatal(first, err, calls)
 	}
 	for i := 0; i < 20; i++ {
@@ -93,7 +98,7 @@ func TestGitHubCatalogRateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry(t *te
 			age = time.Hour
 		}
 		catalog, info, err := c.LoadCatalog(context.Background(), cache, age)
-		if err != nil || !info.Stale || info.CheckedAt != first.CheckedAt || info.RetryAt != first.RetryAt || info.ResolvedCommit != "" || catalog.Apps[0].Version != "1.1.0" || calls != 3 || strings.Contains(info.Error, "credential") {
+		if err != nil || !info.Stale || info.CheckedAt != first.CheckedAt || info.RetryAt != first.RetryAt || info.ResolvedCommit != "" || catalog.Apps[0].Version != "1.1.0" || calls != 4 || strings.Contains(info.Error, "credential") {
 			t.Fatal(info, err, calls)
 		}
 		preserved, e := os.ReadFile(path)
@@ -109,7 +114,7 @@ func TestGitHubCatalogRateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry(t *te
 	c.githubRefMu.Unlock()
 	limited = false
 	_, info, err := c.LoadCatalog(context.Background(), cache, 0)
-	if err != nil || info.Stale || info.RetryAt != "" || info.ResolvedCommit != commit || calls != 5 || c.githubFailures != 0 {
+	if err != nil || info.Stale || info.RetryAt != "" || info.ResolvedCommit != commit || calls != 6 || c.githubFailures != 0 || c.githubGitFailures != 0 {
 		t.Fatal(info, err, calls)
 	}
 }

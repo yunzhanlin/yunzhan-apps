@@ -34,6 +34,9 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 		return "", err
 	}
 	if c.githubRetry != nil && time.Now().Before(c.githubRetry.until) {
+		if c.githubRetry.primaryQuota {
+			return c.resolveGitCatalogCommitLocked(ctx)
+		}
 		return "", c.githubRetry
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubCatalogRefURL, nil)
@@ -56,11 +59,16 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 				retry.until = minimum
 			}
 			c.githubRetry = retry
+			if retry.primaryQuota {
+				return c.resolveGitCatalogCommitLocked(ctx)
+			}
 		}
 		return "", fmt.Errorf("无法定位官方仓库当前提交: %w", err)
 	}
 	c.githubRetry = nil
 	c.githubFailures = 0
+	c.githubGitRetry = nil
+	c.githubGitFailures = 0
 	// Ignore GitHub's unrelated metadata; never use its supplied URLs. A second
 	// JSON value, duplicate critical fields or a different ref/type is refused.
 	var reference struct {
@@ -80,6 +88,8 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 	if reference.Ref != "refs/heads/main" || reference.Object.Type != "commit" || !githubCommitPattern.MatchString(reference.Object.SHA) {
 		return "", errors.New("官方仓库提交身份无效")
 	}
+	c.githubResolvedCommit = reference.Object.SHA
+	c.githubResolvedTransport = "github-git-ref-api"
 	return reference.Object.SHA, nil
 }
 

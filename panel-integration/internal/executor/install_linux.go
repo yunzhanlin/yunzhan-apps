@@ -433,36 +433,87 @@ type sourceHTTPError struct{ Status int }
 func (e sourceHTTPError) Error() string { return fmt.Sprintf("源码服务器 HTTP %d", e.Status) }
 
 func downloadRuntimeSource(ctx context.Context, r runtimecatalog.Release, dst string) error {
-	err := downloadVerified(ctx, r.URL, r.SHA256, dst)
+	return downloadRuntimeSourceWith(ctx, r, dst, downloadVerifiedWithLimits)
+}
+
+type sourceDownloadLimits struct {
+	Total, BodyIdle time.Duration
+}
+
+var errRuntimeSourceBodyIdle = errors.New("源码正文传输在有界空闲预算内无进展，未发布不完整运行时")
+
+// The normal Apache archive currently serves a pinned 9.6 MiB source slowly.
+// Its bounded progress budget is independent from the ordinary source budget;
+// certificate/digest errors and cancelled requests never trigger a fallback.
+func downloadRuntimeSourceWith(ctx context.Context, r runtimecatalog.Release, dst string, download func(context.Context, string, string, string, sourceDownloadLimits) error) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	known, ok := runtimecatalog.Find(r.ID)
+	if !ok || known != r {
+		return errors.New("源码身份不在固定已审核目录中")
+	}
+	limits := sourceDownloadLimits{Total: 8 * time.Minute, BodyIdle: 45 * time.Second}
+	err := download(ctx, r.URL, r.SHA256, dst, limits)
+	if cancelled := ctx.Err(); cancelled != nil {
+		return cancelled
+	}
 	var status sourceHTTPError
-	if errors.As(err, &status) && (status.Status == 404 || status.Status == 410) {
+	if ctx.Err() == nil && errors.As(err, &status) && (status.Status == 404 || status.Status == 410) {
 		if archive := runtimecatalog.SourceArchiveURL(r); archive != "" {
-			return downloadVerified(ctx, archive, r.SHA256, dst)
+			// Only this exact catalogued official Apache archive gets 20 minutes.
+			// No arbitrary mirrors, URLs, digests, retries or resumed partial bytes.
+			limits.Total = 20 * time.Minute
+			return download(ctx, archive, r.SHA256, dst, limits)
 		}
 	}
 	return err
 }
 
 func downloadVerified(ctx context.Context, url, digest, dst string) error {
-	client := &http.Client{Timeout: 8 * time.Minute, CheckRedirect: func(req *http.Request, via []*http.Request) error {
+	return downloadVerifiedWithLimits(ctx, url, digest, dst, sourceDownloadLimits{Total: 8 * time.Minute, BodyIdle: 45 * time.Second})
+}
+
+type sourceProgressReader struct {
+	Reader io.Reader
+	Timer  *time.Timer
+	Idle   time.Duration
+}
+
+func (r sourceProgressReader) Read(p []byte) (int, error) {
+	n, err := r.Reader.Read(p)
+	if n > 0 {
+		r.Timer.Reset(r.Idle)
+	}
+	return n, err
+}
+
+func downloadVerifiedWithLimits(ctx context.Context, url, digest, dst string, limits sourceDownloadLimits) error {
+	if limits.Total <= 0 || limits.Total > 20*time.Minute || limits.BodyIdle <= 0 || limits.BodyIdle > 45*time.Second {
+		return errors.New("源码下载预算不在固定有界范围内")
+	}
+	transferContext, transferCancel := context.WithCancelCause(ctx)
+	defer transferCancel(nil)
+	client := &http.Client{Timeout: limits.Total, CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		if len(via) > 3 || req.URL.Scheme != "https" || (req.URL.Host != "www.php.net" && req.URL.Host != "nginx.org" && req.URL.Host != "downloads.apache.org" && req.URL.Host != "archive.apache.org" && req.URL.Host != "pecl.php.net" && req.URL.Host != "download.redis.io" && req.URL.Host != "nodejs.org" && req.URL.Host != "download.pureftpd.org") {
 			return errors.New("源码下载重定向超出允许来源")
 		}
 		return nil
 	}}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 30 * time.Second
+	client.Transport = transport
+	defer transport.CloseIdleConnections()
 	if strings.HasPrefix(url, "https://download.pureftpd.org/") {
 		// The upstream mirror can reset HTTP/2 streams during source transfers.
 		// HTTPS/1.1 keeps normal certificate and complete digest verification.
-		transport := http.DefaultTransport.(*http.Transport).Clone()
 		transport.ForceAttemptHTTP2 = false
 		transport.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}}
 		transport.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
 		transport.Protocols = new(http.Protocols)
 		transport.Protocols.SetHTTP1(true)
-		client.Transport = transport
-		defer transport.CloseIdleConnections()
 	}
-	req, e := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, e := http.NewRequestWithContext(transferContext, "GET", url, nil)
 	if e != nil {
 		return e
 	}
@@ -480,9 +531,18 @@ func downloadVerified(ctx context.Context, url, digest, dst string) error {
 	}
 	defer f.Close()
 	h := sha256.New()
-	n, e := io.Copy(io.MultiWriter(f, h), io.LimitReader(resp.Body, 64*1024*1024+1))
+	idle := time.AfterFunc(limits.BodyIdle, func() { transferCancel(errRuntimeSourceBodyIdle) })
+	defer idle.Stop()
+	n, e := io.Copy(io.MultiWriter(f, h), io.LimitReader(sourceProgressReader{Reader: resp.Body, Timer: idle, Idle: limits.BodyIdle}, 64*1024*1024+1))
+	idle.Stop()
 	if e != nil {
+		if errors.Is(context.Cause(transferContext), errRuntimeSourceBodyIdle) {
+			return errRuntimeSourceBodyIdle
+		}
 		return e
+	}
+	if err := context.Cause(transferContext); err != nil {
+		return err
 	}
 	if n > 64*1024*1024 {
 		return errors.New("源码包超过限制")
@@ -490,7 +550,10 @@ func downloadVerified(ctx context.Context, url, digest, dst string) error {
 	if hex.EncodeToString(h.Sum(nil)) != digest {
 		return errors.New("源码 SHA-256 不匹配，拒绝执行")
 	}
-	return f.Sync()
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	return context.Cause(transferContext)
 }
 func extractSource(archive, dest string) error {
 	f, e := os.Open(archive)
