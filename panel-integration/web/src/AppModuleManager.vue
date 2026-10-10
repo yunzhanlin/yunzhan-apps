@@ -12,6 +12,7 @@ import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSR
 import { loadBalanceEntryFields } from "./loadBalanceReport";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
+import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
 type API = <T>(
   path: string,
@@ -157,9 +158,17 @@ async function refreshHistory(reset = false) {
 function tabChanged(name: string | number) {
   if (name === "history") void refreshHistory(true);
   if(definition.value?.id==="files-sync" && String(name).startsWith("remote-"))report.value=undefined;
+  if(definition.value?.id==="files-sync" && name==="remote-backups") {
+    if(!Number.isInteger(form.value.limit) || form.value.limit<1 || form.value.limit>32)form.value.limit=16;
+    if(!Number.isInteger(form.value.offset) || form.value.offset<0 || form.value.offset>512)form.value.offset=0;
+  }
 }
 function fieldLabel(field:Field,section:Section):string {
   if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
+    if(section.id==="remote-backups") {
+      if(field.key==="limit")return "备份容量每页条数（最多 32）";
+      if(field.key==="offset")return "备份容量分页起点（最多 512）";
+    }
     if(section.id==="remote-plans") {
       if(field.key==="enabled")return "启用远端同步计划（明确保存后生效）";
       if(field.key==="expected_revision")return "计划修订号（选择计划自动填写）";
@@ -194,6 +203,7 @@ const labels: Record<string, string> = {
   "remote-jobs": "刷新持久任务列表",
   "remote-job": "读取所选任务进度",
   "remote-archive": "读取已归档任务",
+  "remote-backups": "刷新远端实际备份与容量（只读）",
   "archive-remote-job": "按摘要归档所选终态任务（保留证据）",
   "cancel-remote": "请求停止后续文件交接",
   "recover-remote": "核对并恢复中断交接",
@@ -348,6 +358,13 @@ function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
   if(id==="files-sync" && row.remote_target_id) {
+    if(row.backup_transaction_id) {
+      const fields=remoteBackupFields(row);
+      if(!fields){ElMessage.error("备份库存记录身份或容量不可核对，请重新查询");return;}
+      Object.assign(form.value,fields);
+      selectedPlanID.value=row.remote_target_id;activeTab.value="remote-backups";
+      ElMessage.info("已选中实际备份库存；此页面只读，不执行同步、恢复或删除");return;
+    }
     const planFields=remotePlanFields(row);
     if(planFields) {
       Object.assign(form.value,planFields);selectedPlanID.value=`remote-plan/${row.id}`;activeTab.value="remote-plans";
@@ -392,6 +409,7 @@ function selected(row: Record<string, any>) {
   else ElMessage.info("已填入所选记录，可执行对应操作");
 }
 function inputBody(action: string) {
+  if(definition.value?.id==="files-sync" && action==="remote-backups")return remoteBackupBody(form.value,expectedRevision.value);
   if(definition.value?.id==="files-sync" && remotePlanActions.includes(action))return remotePlanBody(action,form.value,expectedRevision.value);
   const body: Record<string, unknown> = {};
   const section = workspace.value.find(section => section.id === activeTab.value && section.actions.includes(action)) || workspace.value.find(section => section.actions.includes(action));
@@ -518,7 +536,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       selectedPlanID.value = "";
       form.value.expected_revision = 0;
     }
-    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote"].includes(action))
+    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote", "remote-backups"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
       if (["password", "secret-json", "secret-text"].includes(f.kind)) form.value[f.key] = "";
@@ -869,6 +887,18 @@ defineExpose({ show });
               inputmode="numeric"
               min="60"
               max="86400"
+              step="1"
+              :aria-label="fieldLabel(field, section)"
+              :disabled="busy"
+            />
+            <input
+              v-else-if="definition.id === 'files-sync' && section.id === 'remote-backups' && ['limit', 'offset'].includes(field.key)"
+              v-model.number="form[field.key]"
+              class="remote-plan-interval"
+              type="number"
+              inputmode="numeric"
+              :min="field.key === 'limit' ? 1 : 0"
+              :max="field.key === 'limit' ? 32 : 512"
               step="1"
               :aria-label="fieldLabel(field, section)"
               :disabled="busy"

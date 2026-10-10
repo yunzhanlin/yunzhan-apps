@@ -578,6 +578,14 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 	if err != nil {
 		return nil, err
 	}
+	if action == "remote-backups" {
+		if err = remoteBackupInput(in); err != nil {
+			return nil, err
+		}
+		if in.ExpectedRevision != c.Revision {
+			return nil, errors.New("连接修订号改变，请重新选择连接")
+		}
+	}
 	if action == "queue-remote" {
 		return s.queueRemoteSync(c, in)
 	}
@@ -596,6 +604,9 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 	defer conn.Close()
 	if _, err = remoteRoots(conn.client, c); err != nil {
 		return nil, err
+	}
+	if action == "remote-backups" {
+		return s.remoteBackupReport(conn.client, c, in)
 	}
 	if action == "probe-remote" {
 		out := remotePublicConfig(c)

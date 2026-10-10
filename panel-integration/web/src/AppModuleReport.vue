@@ -243,6 +243,15 @@ const names: Record<string, string> = {
   plans: "同步计划",
   remote_targets: "跨服务器 SFTP 连接",
   remote_jobs: "远端持久任务",
+  remote_backups: "远端实际事务备份",
+  backup_transaction_id: "原事务标识",
+  backup_files: "保留文件与容量",
+  transaction_limit: "事务数量上限",
+  byte_limit: "备份容量上限（字节）",
+  transaction_slots_available: "剩余活动事务名额",
+  bytes_available: "剩余备份容量",
+  next_transaction_capacity_available: "容量可容纳下次交接（不代表可执行）",
+  pending_recovery: "存在待恢复交接",
   remote_plans: "远端实时与定时计划",
   change_sequence: "已持久接受的变化序号",
   consumed_sequence: "原任务已核对的变化序号",
@@ -406,7 +415,8 @@ const info = computed(() =>
       !metrics.value.some(([k]) => k === key),
   ),
 );
-function format(key: string, value: unknown) {
+function format(key: string, value: unknown): string {
+  if(props.id==="files-sync" && key==="backup_files" && Array.isArray(value))return value.map(file=>`${file.name==='previous'?'原文件备份':file.name==='staged'?'保留暂存':file.name} · ${format('bytes',file.bytes)} · ${Number(file.mode).toString(8).padStart(3,'0')}`).join("；")||"空事务目录（仍保留身份）";
   if(props.id==="files-sync" && key==="last_state")return ({pending:"等待下次定时补查",queueing:"已预留原任务，接受结果待核对",queued:"原任务已排队（未完成）",succeeded:"原任务已完整成功",paused:"已暂停",'paused-error':"异常暂停，需核对原任务",removed:"已移除（证据保留）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="state")return ({queued:"已排队（未完成）",running:"后台执行中",succeeded:"本次同步已完成",conflicts:"已处理可同步文件，存在保留冲突",failed:"未全部完成或已取消",interrupted:"中断或无法确认，需核对恢复",recovered:"交接已恢复，剩余文件未重传"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="remote_target" && value && typeof value==="object") {const v=value as Record<string,any>;return `${v.address}:${v.port} · ${v.username} · ${v.root} · 私有备份 ${v.backup_root}`;}
@@ -450,6 +460,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+  if(props.id==="files-sync" && values.some(value=>value && value.backup_transaction_id))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_files","pending_recovery"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","realtime","watcher_state","watch_directories","watch_overflows","watch_error","plan_revision","remote_target_revision","interval","next_run_at","last_trigger","change_sequence","consumed_sequence","pending_sequence","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","remote_plan_id","remote_plan_revision","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];

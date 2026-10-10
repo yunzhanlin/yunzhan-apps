@@ -1,0 +1,24 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import ts from '../web/node_modules/typescript/lib/typescript.js';
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const compiled=ts.transpileModule(read('web/src/remoteSyncBackups.ts'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const {remoteBackupFields,remoteBackupBody}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+const row={backup_transaction_id:'a'.repeat(32),remote_target_id:'target-one',revision:2,backup_bytes:3,pending_recovery:false,backup_files:[{name:'staged',bytes:3,mode:0o644}],password:'must-not-carry'};
+test('selected backup inventory carries only connection revision and bounded pagination',()=>{const f=remoteBackupFields(row);assert.deepEqual(f,{remote_target_id:'target-one',expected_revision:2,limit:16,offset:0});assert.equal(f.password,undefined);assert.equal(f.backup_files,undefined);});
+test('malformed identity/file sizes/modes and repeated children cannot select backup records',()=>{for(const bad of [null,[],{}, {...row,revision:0},{...row,backup_transaction_id:'../x'},{...row,backup_bytes:4},{...row,pending_recovery:'yes'},{...row,backup_files:[{name:'unknown',bytes:3,mode:0o644}]},{...row,backup_files:[{name:'staged',bytes:-1,mode:0o644}]},{...row,backup_files:[{name:'staged',bytes:3,mode:0o4644}]},{...row,backup_files:[...row.backup_files,...row.backup_files]}])assert.equal(remoteBackupFields(bad),undefined);});
+test('capacity query excludes secrets, source paths and synchronization policy',()=>{const b=remoteBackupBody({...remoteBackupFields(row),password:'secret',remote_private_key:'key',site_id:'b'.repeat(32),enabled:true,realtime:true,excludes:['secret-path'],resource_id:'c'.repeat(32),confirm:'never'},2);assert.deepEqual(b,{remote_target_id:'target-one',expected_revision:2,limit:16,offset:0});});
+test('invalid connection revision and pagination fail before any request',()=>{for(const v of [0,-1,1.5,'2',NaN])assert.throws(()=>remoteBackupBody(remoteBackupFields(row),v));for(const change of [{remote_target_id:'../bad'},{limit:33},{limit:-1},{limit:1.5},{offset:513},{offset:-1},{offset:'1'}])assert.throws(()=>remoteBackupBody({...remoteBackupFields(row),...change},2));assert.equal(remoteBackupBody({remote_target_id:'target-one'},2).limit,16);});
+test('manager and reports provide independent read-only capacity flow',()=>{const manager=read('web/src/AppModuleManager.vue'),report=read('web/src/AppModuleReport.vue'),workspace=read('internal/core/app_module_workspace.go');assert.match(manager,/action==="remote-backups"\)return remoteBackupBody/);assert.match(manager,/remoteBackupFields\(row\)/);assert.match(manager,/activeTab.value="remote-backups"/);assert.match(report,/原事务标识/);assert.match(report,/原文件备份/);assert.match(workspace,/受控远端归档尚未提供/);assert.match(read('packaging/build-release.sh'),/test-remote-sync-backups\.mjs/);});
+test('capacity pagination uses native model-bound integer inputs and dedicated bounds',()=>{
+ const manager=read('web/src/AppModuleManager.vue');
+ const input=manager.match(/<input\s+v-else-if="definition.id === 'files-sync' && section.id === 'remote-backups'[\s\S]*?\/>/)?.[0];
+ assert(input,'Dedicated native input is required; composite number widgets can retain an old display after typed pagination');
+ assert.match(input,/v-model.number="form\[field.key\]"/);
+ assert.match(input,/type="number"/);
+ assert.match(input,/:min="field.key === 'limit' \? 1 : 0"/);
+ assert.match(input,/:max="field.key === 'limit' \? 32 : 512"/);
+ assert.match(manager,/form.value.limit=16/);
+ for(const v of ['',null,'1',1.5])assert.throws(()=>remoteBackupBody({remote_target_id:'target-one',limit:v},2));
+});

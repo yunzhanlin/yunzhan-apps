@@ -5,7 +5,9 @@ const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 test('remote realtime plan publication is immutable and retains honest remaining boundaries',async()=>{
  const registry=JSON.parse(await read('registry/apps.json'));
  const current=registry.apps.find(app=>app.id==='files-sync');
- assert.equal(current.version,'1.8.0');assert.match(current.summary,/跨服务器实时与定时/);assert.match(current.summary,/远端事务备份受控归档尚未提供/);
+ assert.equal(current.version,'1.8.1');assert.match(current.summary,/跨服务器实时与定时/);assert.match(current.summary,/远端事务备份受控归档尚未提供/);
+ const realtime=JSON.parse(await read('dist/apps/files-sync/1.8.0/manifest.json'));
+ assert.equal(realtime.version,'1.8.0');assert(!realtime.capabilities.some(value=>value.includes('只读实际备份事务')));
  const periodic=JSON.parse(await read('dist/apps/files-sync/1.7.0/manifest.json'));
  assert.equal(periodic.version,'1.7.0');assert.match(periodic.summary,/远端实时尚未提供/);
  const previous=JSON.parse(await read('dist/apps/files-sync/1.6.0/manifest.json'));

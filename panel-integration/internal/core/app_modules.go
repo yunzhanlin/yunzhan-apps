@@ -129,6 +129,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "run", "schedule", "run-plan", "pause-plan", "resume-plan", "remove-plan", "history")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-targets", "save-remote", "probe-remote", "remote-preview", "queue-remote", "remote-jobs", "remote-job", "cancel-remote", "recover-remote")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-archive", "archive-remote-job")
+			definitions[i].Actions = append(definitions[i].Actions, "remote-backups")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"remote_target_revision", "所选连接修订号（与计划修订号独立）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"expected_sha", "所选远端任务完整记录摘要（自动填写）", "identity"}, AppModuleField{"confirm", "归档精确确认：ARCHIVE REMOTE 任务标识", "text"}, AppModuleField{"limit", "远端归档每页条数（最多 32）", "number"}, AppModuleField{"offset", "远端归档分页起点（最多 2048）", "number"})
@@ -313,7 +314,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 			if d.ID == "files-sync" {
-				version = "1.8.0"
+				version = "1.8.1"
 			}
 		case "daily-report":
 			version = "1.4.0"

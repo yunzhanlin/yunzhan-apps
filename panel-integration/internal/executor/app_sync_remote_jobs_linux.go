@@ -526,34 +526,15 @@ func remoteNamespace(c *remoteSyncClient, cfg remoteSyncConfig, owner uint32) (s
 	if !ok || a.UID != owner {
 		return "", errors.New("远端私有事务目录所有者改变")
 	}
-	entries, e := c.ReadDir(dir)
+	entries, total, e := remoteBackupInventory(c, cfg, owner)
 	if e != nil {
 		return "", e
 	}
-	if len(entries) >= 512 {
+	if len(entries) >= remoteBackupTransactions {
 		return "", errors.New("远端事务达到 512 份上限，保留证据并暂停")
 	}
-	var total int64
-	for _, entry := range entries {
-		if !core.ValidID(entry.Name()) || !entry.IsDir() || entry.Mode().Perm() != 0700 {
-			return "", errors.New("远端事务目录含有未知文件")
-		}
-		children, e := c.ReadDir(path.Join(dir, entry.Name()))
-		if e != nil {
-			return "", e
-		}
-		if len(children) > 2 {
-			return "", errors.New("远端事务目录内容异常")
-		}
-		for _, v := range children {
-			if (v.Name() != "staged" && v.Name() != "previous") || !v.Mode().IsRegular() || v.Size() < 0 || v.Size() > 8<<20 {
-				return "", errors.New("远端备份文件身份或大小异常")
-			}
-			total += v.Size()
-			if total > moduleMaxBytes-(16<<20) {
-				return "", errors.New("远端备份预算不足，保留旧备份并暂停")
-			}
-		}
+	if total > remoteBackupBytes-remoteBackupReserve {
+		return "", errors.New("远端备份预算不足，保留旧备份并暂停")
 	}
 	return dir, nil
 }
