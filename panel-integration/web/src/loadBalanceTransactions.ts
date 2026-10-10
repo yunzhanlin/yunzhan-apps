@@ -1,6 +1,28 @@
 type Form = Record<string,unknown>;
 const id=/^[a-f0-9]{32}$/,sha=/^[a-f0-9]{64}$/;
 export const loadBalanceTransactionActions=['transactions','archive-transaction'];
+// The server's last report belongs to its actual operation, not every tab.
+// Never put cached entry status in the transaction inventory or an inventory
+// into a completed archive receipt, including after an asynchronous tab change.
+export function loadBalanceReportForSection(section:string,value:Form|undefined):Form|undefined {
+  if(!value||Array.isArray(value)||typeof value!=='object')return;
+  if(section==='reports')return value;
+  const rows=value.load_transactions;
+  if(section==='transactions'||section==='transaction-archive') {
+    if(!Array.isArray(rows)||rows.length>32||value.records_retained!==true||value.configuration_changed!==false||rows.some(row=>!row||typeof row!=='object'||!loadBalanceTransactionFields(row)))return;
+    if(section==='transaction-archive') {
+      if(rows.length!==1||value.archived!==1||typeof value.replayed!=='boolean'||rows[0].transaction_archived!==true||rows[0].transaction_archivable!==false)return;
+    } else {
+      const bounded=(key:string,max:number,min=0)=>Number.isSafeInteger(value[key])&&Number(value[key])>=min&&Number(value[key])<=max;
+      if(!bounded('limit',32,1)||!bounded('offset',2560)||!bounded('total',2560)||!bounded('transaction_active_count',512)||!bounded('transaction_archive_count',2048)||Number(value.transaction_active_count)+Number(value.transaction_archive_count)!==value.total||rows.length>Number(value.limit)||rows.length>Number(value.total))return;
+    }
+    return value;
+  }
+  if(['entries','entry','health','recovery'].includes(section)&&rows===undefined)return value;
+}
+export function loadBalanceTransactionQueryMatches(value:Form|undefined,form:Form):boolean {
+  return !!loadBalanceReportForSection('transactions',value)&&value?.limit===(form.limit??16)&&value?.offset===(form.offset??0);
+}
 export function loadBalanceTransactionFields(row:Form):Form|undefined {
   if(typeof row.transaction_id!=='string'||!id.test(row.transaction_id)||typeof row.transaction_sha256!=='string'||!sha.test(row.transaction_sha256)||
     !['committed','recovered','applying','restored'].includes(String(row.transaction_state))||typeof row.transaction_archived!=='boolean'||typeof row.transaction_archivable!=='boolean'||

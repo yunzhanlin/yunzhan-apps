@@ -33,7 +33,7 @@ func LoadBalanceAutomaticTraffic(v *LoadBalanceHTTPHealth) bool {
 // Explicitly reviewed implementations only; an unknown future version is not
 // evidence that its persisted routing contract is understood by this panel.
 func LoadBalanceHealthRoutingVersion(version string) bool {
-	return version == "1.7.0" || version == "1.7.1" || version == "1.8.0"
+	return version == "1.7.0" || version == "1.7.1" || LoadBalanceHistoryVersion(version)
 }
 
 // LoadBalanceHealthRoots accepts public CA certificates only, never private

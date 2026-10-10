@@ -13,12 +13,12 @@ func TestLoadBalanceAutomaticTrafficRequiresExplicitTrue(t *testing.T) {
 }
 
 func TestLoadBalanceHealthRoutingVersionIsClosed(t *testing.T) {
-	for _, version := range []string{"1.7.0", "1.7.1", "1.8.0"} {
+	for _, version := range []string{"1.7.0", "1.7.1", "1.8.0", "1.8.1"} {
 		if !LoadBalanceHealthRoutingVersion(version) {
 			t.Fatal("reviewed compatible implementation rejected", version)
 		}
 	}
-	for _, version := range []string{"", "1.6.0", "1.7.2", "1.8.1", "1.9.0", "v1.7.0", "1.7.01", "1.7.1 extra"} {
+	for _, version := range []string{"", "1.6.0", "1.7.2", "1.8.2", "1.9.0", "v1.7.0", "1.7.01", "1.7.1 extra"} {
 		if LoadBalanceHealthRoutingVersion(version) {
 			t.Fatal("unreviewed version expanded routing authority", version)
 		}

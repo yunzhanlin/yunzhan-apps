@@ -11,7 +11,7 @@ import ThreatIDSOperations from "./ThreatIDSOperations.vue";
 import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
 import { loadBalanceRoutingSaveBody } from "./loadBalanceRouting";
-import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody} from "./loadBalanceTransactions";
+import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody,loadBalanceReportForSection,loadBalanceTransactionQueryMatches} from "./loadBalanceTransactions";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
@@ -131,6 +131,10 @@ async function verifyRemotePlanConnection() {
   }catch(e){error.value=(e as Error).message;}finally{busy.value=false;}
 }
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+function sectionReport(section:string) {
+  return definition.value?.id==='load-balance' ? loadBalanceReportForSection(section,report.value) : report.value;
+}
+const exportableReport=computed(()=>definition.value?.id==='load-balance'&&activeTab.value==='history' ? history.value : sectionReport(activeTab.value));
 function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
     if (["password", "secret-json", "secret-text"].includes(field.kind)) form.value[field.key] = "";
@@ -681,9 +685,10 @@ async function refreshIDSAfterTask(id: string) {
   if(!busy.value && definition.value.actions.includes("ids-report"))await execute("ids-report");
 }
 function exportReport() {
-  if (!report.value || report.value.token) return;
+  const actual=exportableReport.value;
+  if (!actual || actual.token) return;
   const url = URL.createObjectURL(
-    new Blob([JSON.stringify(report.value, null, 2)], {
+    new Blob([JSON.stringify(actual, null, 2)], {
       type: "application/json",
     }),
   );
@@ -861,7 +866,7 @@ defineExpose({ show });
               <div class="http-health-toggle"><span>持续 HTTP 应用检查</span><el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" /></div>
               <template v-if="form.health_check">
                 <div class="http-health-toggle"><span>故障节点自动摘除与恢复</span><el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" /></div>
-                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 / 1.7.1 / 1.8.0 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
+                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 / 1.7.1 / 1.8.0 / 1.8.1 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
                 <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
                   <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
                 </el-select></label>
@@ -1038,14 +1043,16 @@ defineExpose({ show });
             >{{ labels[action] || action }}</el-button
           >
         </div>
-        <section v-if="report !== undefined" class="workflow-result" aria-label="实际执行结果">
+        <section v-if="sectionReport(section.id) !== undefined" class="workflow-result" aria-label="实际执行结果">
           <h3>服务器返回的实际结果</h3>
           <template v-if="definition.id === 'website-statistics-v2'">
             <el-alert v-if="statisticsDraftChanged" type="warning" :closable="false" title="筛选条件已修改，尚未刷新：下方仍是已返回查询范围的报告，不是当前表单的结果。" />
             <AnalyticsQueryContext :report="report" />
           </template>
-          <AppModuleReport :id="definition.id" :report="report" @select="selected" />
+          <el-alert v-if="definition.id==='load-balance' && section.id==='transactions' && !loadBalanceTransactionQueryMatches(report,form)" type="warning" :closable="false" title="分页参数已修改，尚未刷新：下方仍是已返回分页范围的库存，不是当前表单的结果。" />
+          <AppModuleReport :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
         </section>
+        <p v-else-if="definition.id==='load-balance'" class="module-report-empty" role="status">此页面尚无对应操作的报告。请执行本页查询或操作；其他页面的缓存结果不会当作本页回执。</p>
         </el-tab-pane>
         <el-tab-pane label="报告与日志" name="reports">
           <AnalyticsQueryContext v-if="definition.id === 'website-statistics-v2' && report !== undefined" :report="report" />
@@ -1097,7 +1104,7 @@ defineExpose({ show });
     </div>
     <template #footer
       ><el-button
-        v-if="report && !report.token && !['website-analytics', 'apache-waf'].includes(definition?.id || '')"
+        v-if="exportableReport && !exportableReport.token && !['website-analytics', 'apache-waf'].includes(definition?.id || '')"
         :disabled="busy"
         @click="exportReport"
         >导出真实报告</el-button

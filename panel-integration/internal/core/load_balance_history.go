@@ -12,6 +12,12 @@ func LoadBalanceHistoryAction(action string) bool {
 	return action == "transactions" || action == "archive-transaction"
 }
 
+// Closed, reviewed archive implementations; do not infer compatibility from
+// a numerically newer, unknown application version.
+func LoadBalanceHistoryVersion(version string) bool {
+	return version == "1.8.0" || version == "1.8.1"
+}
+
 // The history API cannot inherit node, health, TLS or filesystem fields from
 // the large generic application form. Reject duplicate and unrelated keys in
 // both Core and executor, including unrelated fields with zero values.

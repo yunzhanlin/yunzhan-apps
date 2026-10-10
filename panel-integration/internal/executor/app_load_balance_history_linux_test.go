@@ -74,6 +74,31 @@ func TestLoadBalanceHistoryEmptyReadNeverCreatesArchiveOrRewritesInstallation(t 
 	}
 }
 
+func TestLoadBalanceHistoryReviewedPatchVersionsOnly(t *testing.T) {
+	for _, version := range []string{"1.8.0", "1.8.1", "1.8.2", "1.9.0"} {
+		t.Run(version, func(t *testing.T) {
+			s, tx, path, b := lbHistoryFixture(t)
+			lbRoutingInstalled(t, s, version)
+			out := lbHistoryReport(t, s, core.AppModuleInput{})
+			want := version == "1.8.0" || version == "1.8.1"
+			if out["transaction_archive_ready"] != want {
+				t.Fatal("archive eligibility differs from version contract", out)
+			}
+			_, err := s.moduleLoadBalance(context.Background(), "archive-transaction", lbHistoryInput(tx, b))
+			if (err == nil) != want {
+				t.Fatal("archive write differs from reviewed version contract", err)
+			}
+			if want {
+				path = filepath.Join(s.loadBalanceArchiveDir(), tx.ID+".json")
+			}
+			got, e := os.ReadFile(path)
+			if e != nil || !bytes.Equal(got, b) {
+				t.Fatal("version check changed original bytes", e)
+			}
+		})
+	}
+}
+
 func TestLoadBalanceHistoryExactBytesReplayAndPermanentIDReservation(t *testing.T) {
 	for _, tls := range []bool{false, true} {
 		t.Run(fmt.Sprint(tls), func(t *testing.T) {
@@ -181,6 +206,69 @@ func TestLoadBalanceHistoryUnfinishedPendingAndOldVersionRefuseMove(t *testing.T
 				t.Fatal("rejected request changed record")
 			}
 		})
+	}
+}
+
+func TestLoadBalanceHistoryHTMLPendingRefusesArchiveAndReplay(t *testing.T) {
+	for _, replay := range []bool{false, true} {
+		for _, kind := range []string{"file", "symlink", "fifo", "directory"} {
+			t.Run(fmt.Sprintf("replay=%t/%s", replay, kind), func(t *testing.T) {
+				s, tx, path, b := lbHistoryFixture(t)
+				in := lbHistoryInput(tx, b)
+				if replay {
+					if _, err := s.moduleLoadBalance(context.Background(), "archive-transaction", in); err != nil {
+						t.Fatal(err)
+					}
+					path = filepath.Join(s.loadBalanceArchiveDir(), tx.ID+".json")
+				}
+				pending := s.analyticsHTMLTransactionService().wafPendingPath()
+				if err := os.MkdirAll(filepath.Dir(pending), 0750); err != nil {
+					t.Fatal(err)
+				}
+				switch kind {
+				case "file":
+					if err := atomicWrite(pending, []byte(`{"unrecognized":true}`), 0600); err != nil {
+						t.Fatal(err)
+					}
+				case "symlink":
+					if err := os.Symlink(path, pending); err != nil {
+						t.Fatal(err)
+					}
+				case "fifo":
+					if err := syscall.Mkfifo(pending, 0600); err != nil {
+						t.Fatal(err)
+					}
+				case "directory":
+					if err := os.Mkdir(pending, 0700); err != nil {
+						t.Fatal(err)
+					}
+				}
+				pendingBefore, err := os.Lstat(pending)
+				if err != nil {
+					t.Fatal(err)
+				}
+				out := lbHistoryReport(t, s, core.AppModuleInput{})
+				if out["transaction_archive_ready"] != false || out["load_transactions"].([]loadBalanceHistoryRow)[0].Archivable {
+					t.Fatal("HTML pending inventory grants archive", out)
+				}
+				if _, err = s.moduleLoadBalance(context.Background(), "archive-transaction", in); err == nil {
+					t.Fatal("HTML transaction barrier bypassed", kind, replay)
+				}
+				got, err := os.ReadFile(path)
+				if err != nil || !bytes.Equal(got, b) {
+					t.Fatal("pending HTML changed original transaction", err)
+				}
+				pendingAfter, err := os.Lstat(pending)
+				if err != nil || !os.SameFile(pendingBefore, pendingAfter) || pendingBefore.Mode() != pendingAfter.Mode() || pendingBefore.Size() != pendingAfter.Size() {
+					t.Fatal("HTML pending evidence changed", err)
+				}
+				if !replay {
+					if _, err = os.Lstat(s.loadBalanceArchiveDir()); !os.IsNotExist(err) {
+						t.Fatal("blocked request created archive", err)
+					}
+				}
+			})
+		}
 	}
 }
 

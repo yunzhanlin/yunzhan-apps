@@ -204,6 +204,18 @@ func (s *Service) loadBalanceHistoryInventory(ctx context.Context) (loadBalanceH
 	return out, nil
 }
 
+// Both read eligibility and writes/replays use the same shared configuration
+// barrier. The global lock alone does not make an interrupted HTML transaction
+// safe: its pending marker survives the interrupted process.
+func (s *Service) loadBalanceHistorySharedPending() string {
+	for _, path := range []string{s.wafPendingPath(), s.analyticsHTMLTransactionService().wafPendingPath()} {
+		if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
+			return "防火墙或 HTML 引擎有待恢复事务或状态不可核对"
+		}
+	}
+	return ""
+}
+
 func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
 	if err := core.ValidateLoadBalanceHistoryInput(action, in); err != nil {
 		return nil, err
@@ -225,8 +237,8 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 	}
 	if action == "transactions" {
 		blocked := ""
-		if s.loadBalanceHealthVersion() != "1.8.0" {
-			blocked = "归档需要已核对的 1.8.0 安装记录"
+		if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
+			blocked = "归档需要已核对的 1.8.0 / 1.8.1 安装记录"
 		}
 		if inventory.Pending {
 			blocked = "负载均衡有待恢复事务"
@@ -234,10 +246,8 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 		if inventory.Archived >= loadBalanceArchivedTransactions || inventory.ArchiveBytes >= loadBalanceArchiveBytes {
 			blocked = "归档容量已满；原归档仍可按同一标识核对"
 		}
-		for _, path := range []string{s.wafPendingPath(), s.analyticsHTMLTransactionService().wafPendingPath()} {
-			if _, e := os.Lstat(path); !errors.Is(e, os.ErrNotExist) {
-				blocked = "防火墙或 HTML 引擎有待恢复事务或状态不可核对"
-			}
+		if shared := s.loadBalanceHistorySharedPending(); shared != "" {
+			blocked = shared
 		}
 		if blocked != "" {
 			for i := range inventory.Rows {
@@ -261,14 +271,14 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 			"transaction_archive_ready": blocked == "", "transaction_archive_blocked": blocked, "transaction_slots_available": loadBalanceActiveTransactions - inventory.Active,
 			"scope": "完整核对本机私有事务后返回非敏感分页元数据。活动最多 512 份 / 128 MiB，归档最多 2048 份 / 256 MiB；这是逻辑预算，不是内核硬配额，不自动归档或删除证据。"}, nil
 	}
-	if s.loadBalanceHealthVersion() != "1.8.0" {
-		return nil, errors.New("归档须已安装经过核验的 1.8.0 应用，不替旧版本开放新操作")
+	if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
+		return nil, errors.New("归档须已安装经过核验的 1.8.0 / 1.8.1 应用，不替旧版本开放新操作")
 	}
 	if inventory.Pending {
 		return nil, errors.New("有待恢复事务，禁止归档；先核对完整恢复集合")
 	}
-	if _, err = os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("防火墙有未完成事务，禁止维护交接")
+	if shared := s.loadBalanceHistorySharedPending(); shared != "" {
+		return nil, errors.New(shared + "；禁止归档交接或核对回放，保留原证据")
 	}
 	var selected *loadBalanceHistoryRow
 	for i := range inventory.Rows {

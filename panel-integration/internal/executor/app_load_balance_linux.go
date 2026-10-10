@@ -743,7 +743,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		}
 		if core.LoadBalanceAutomaticTraffic(next.HealthCheck) {
 			if !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) || in.Confirm != "ENABLE HEALTH ROUTING "+next.Domain {
-				return nil, errors.New("自动流量须已安装经过核验的 v1.7.0 / v1.7.1 / v1.8.0 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
+				return nil, errors.New("自动流量须已安装经过核验的 v1.7.0 / v1.7.1 / v1.8.0 / v1.8.1 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
 			}
 			next.Format = 3
 			next.Routing = &loadBalanceRouting{Down: []string{}}

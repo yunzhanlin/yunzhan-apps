@@ -9,6 +9,19 @@ import (
 	"testing"
 )
 
+func TestLoadBalanceHistoryVersionIsClosedAndRoutingCompatible(t *testing.T) {
+	for _, version := range []string{"1.8.0", "1.8.1"} {
+		if !LoadBalanceHistoryVersion(version) || !LoadBalanceHealthRoutingVersion(version) {
+			t.Fatal("reviewed archive version rejected", version)
+		}
+	}
+	for _, version := range []string{"", "1.7.0", "1.7.1", "1.8.2", "1.9.0", "v1.8.1", "1.8.1 ", "1.8.1-beta"} {
+		if LoadBalanceHistoryVersion(version) {
+			t.Fatal("unreviewed archive version accepted", version)
+		}
+	}
+}
+
 func TestLoadBalanceHistoryClosedRawBody(t *testing.T) {
 	id, sha := strings.Repeat("a", 32), strings.Repeat("b", 64)
 	valid := `{"resource_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE LOAD TRANSACTION ` + id + `"}`
