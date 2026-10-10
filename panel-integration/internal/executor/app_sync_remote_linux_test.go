@@ -238,37 +238,45 @@ func remoteFixtureRead(t *testing.T, p string) string {
 	return string(b)
 }
 
-func TestRemoteSyncEmptyQueuePinsSourceAndPersistenceFailure(t *testing.T) {
+func TestRemoteSyncEmptyQueuePinsSourceAndQueueFailure(t *testing.T) {
 	for _, failQueue := range []bool{false, true} {
-		t.Run(map[bool]string{false: "accepted-empty", true: "job-write-fails"}[failQueue], func(t *testing.T) {
+		t.Run(map[bool]string{false: "accepted-empty", true: "jobs-directory-not-private"}[failQueue], func(t *testing.T) {
 			s, site, other := appReliabilityFixture(t)
 			cfg := remoteSyncConfig{ID: "owned-empty", Revision: 1, SpecSHA: core.Hash("owned-empty-spec"), Enabled: true}
-			expectQueueFailure := false
 			if failQueue {
 				jobs := filepath.Join(s.remoteSyncDir(), "jobs")
 				if e := os.MkdirAll(jobs, 0700); e != nil {
 					t.Fatal(e)
 				}
-				// Listing remains readable; only the later job publication fails.
-				// A privileged test runner can bypass mode bits, so attest the
-				// actual write refusal rather than confuse an early read failure.
+				// An unprivileged runner cannot publish here. Root may publish,
+				// but remoteRead must still reject the non-0700 parent directory.
+				// OS write capability never makes this a valid private namespace.
 				if e := os.Chmod(jobs, 0500); e != nil {
 					t.Fatal(e)
 				}
 				t.Cleanup(func() { _ = os.Chmod(jobs, 0700) })
-				probe := filepath.Join(jobs, "write-probe")
-				f, e := os.OpenFile(probe, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
-				expectQueueFailure = e != nil
-				if e == nil {
-					f.Close()
-					if e = os.Remove(probe); e != nil {
-						t.Fatal(e)
-					}
-				}
 			}
-			out, e := s.queueRemoteSync(cfg, core.AppModuleInput{SiteID: site, RemoteRequestID: core.ID(), ExpectedRevision: 1})
-			if expectQueueFailure && e == nil || !expectQueueFailure && e != nil {
+			requestID := core.ID()
+			out, e := s.queueRemoteSync(cfg, core.AppModuleInput{SiteID: site, RemoteRequestID: requestID, ExpectedRevision: 1})
+			if failQueue && e == nil || !failQueue && e != nil {
 				t.Fatal("unexpected queue result", failQueue, e)
+			}
+			if failQueue {
+				if out != nil {
+					t.Fatal("failed queue returned an accepted job", out)
+				}
+				info, statErr := os.Lstat(filepath.Join(s.remoteSyncDir(), "jobs"))
+				if statErr != nil || info.Mode().Perm() != 0500 {
+					t.Fatal("queue repaired the non-private directory", statErr)
+				}
+				_, statErr = os.Lstat(s.remoteJobPath(requestID))
+				if errors.Is(statErr, os.ErrNotExist) {
+					if !errors.Is(e, os.ErrPermission) {
+						t.Fatal("queue did not fail at job publication", e)
+					}
+				} else if statErr != nil || !strings.Contains(e.Error(), "父目录权限或身份无效") {
+					t.Fatal("published job bypassed private parent validation", e, statErr)
+				}
 			}
 			cp, e := s.readRemoteCheckpoint(cfg, site)
 			if e != nil || cp.SiteID != site || len(cp.Files) != 0 || cp.Pending != nil {
@@ -277,10 +285,10 @@ func TestRemoteSyncEmptyQueuePinsSourceAndPersistenceFailure(t *testing.T) {
 			if _, e := s.readRemoteCheckpoint(cfg, other); e == nil {
 				t.Fatal("a different source silently reused an empty checkpoint")
 			}
-			if expectQueueFailure {
-				t.Log("PASS actual job-write refusal after durable empty-source checkpoint")
+			if failQueue {
+				t.Log("PASS queue refusal with non-private job directory after durable empty-source checkpoint")
 			}
-			if !expectQueueFailure {
+			if !failQueue {
 				public := out.(map[string]any)["job"].(map[string]any)
 				id := public["remote_request_id"].(string)
 				if _, e = s.cancelRemoteSync(core.AppModuleInput{RemoteRequestID: id}); e != nil {

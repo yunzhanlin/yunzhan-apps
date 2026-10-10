@@ -370,7 +370,7 @@
     "internal/executor/app_sync_remote_backups_linux_test.go": "49566f5c89910640865a5164bbfad10c45e5106c5c85b410df13a63faac3ed7e",
     "internal/executor/app_sync_remote_jobs_linux.go": "be4559af6d55eb09eef2c6942f08b2650dffac0ca87f1e8cc0a04b2dc8b703b4",
     "internal/executor/app_sync_remote_linux.go": "0af250510bbf38884326f77e53794c6a87d0a43dfbe19b6d9d3fac37d9c5bed3",
-    "internal/executor/app_sync_remote_linux_test.go": "c6cbf58c3166ed1d0e599e3360ce75209304238e832a4c6988153dd27afacc37",
+    "internal/executor/app_sync_remote_linux_test.go": "090f79b31700b5c95e5e98c20f3744de4964a40784fbe77820746d6767e17316",
     "internal/executor/app_sync_remote_plans_linux.go": "c033b7e147ede0b8e15b7fe52370a02d0804cbb898795fd8f2b92144cd02422d",
     "internal/executor/app_sync_remote_plans_linux_test.go": "55db79986716226306c6096ecf06c57ce6d69e6345d17659777f54fdfc0feee7",
     "internal/executor/app_sync_remote_realtime_linux_test.go": "006f4e6488864fd1b5ff7e1f62ffb4eaed0c6d4278fb0b5630176aeb6ab33487",
@@ -415,7 +415,7 @@
     "internal/executor/app_threat_rotation_budget.go": "10d6adfc41f84c05bc474cc0118154c85bb0d909da8d3b594262f9f87c35a4e1",
     "internal/executor/app_threat_rotation_budget_test.go": "ba488371d32c9dcc0c237228a827ebaf6e5e108856e977ec9c305c13496113f0",
     "internal/executor/app_threat_rotation_linux.go": "db048c96dc657d95129835b8eb2a015e37e54926a301648e9f228811053a566e",
-    "internal/executor/app_threat_rotation_linux_test.go": "df545ffb58da033fdcf1ff46ae493898d30ac5126b998f09a2a762d1e7f91394",
+    "internal/executor/app_threat_rotation_linux_test.go": "919f5aa32c5e0199a941fa9e6489445e5f23e80696a6c1f02228d849674fa372",
     "internal/executor/app_threat_rotation_proc.go": "54241da019ec1e768beedd0adf86a1af833f3f96da014c602ae130fc994bca98",
     "internal/executor/app_threat_rotation_proc_test.go": "c587ffab8044dcd49c95a5007896985854410439af5bd5bb9a0641ea1fd6041a",
     "internal/executor/app_threat_rotation_recovery_linux.go": "385fbd1860dca7f5d1439d2539b293485ff4a32b655c2b689c356707b86239cd",
@@ -445,7 +445,7 @@
     "internal/executor/app_threat_syntax_migration_linux.go": "309e9ef228107f950ab5dad8ec5a9e9d8b494fbef3f6bdf2b20054eddd6b4b1a",
     "internal/executor/app_threat_syntax_migration_linux_test.go": "84465cbc1a35d1b3d64af90aa9b73d318a04c9b069b383adff22247758cce3bc",
     "internal/executor/app_threat_transaction_linux.go": "72a79960a606793a53d9cd119ab57c16ca76db5b2153a3f0e948ec64c6d4573a",
-    "internal/executor/app_threat_transaction_linux_test.go": "f68118026bbbf391b4fbd6c7f39a239153d09b9989f7d2a882a21f8f90b44663",
+    "internal/executor/app_threat_transaction_linux_test.go": "edcf71af5a466117a294d847a7b34f4f1196772bbbb4e9ab436f6d1ee09ff81a",
     "internal/executor/app_threat_uninstall_linux.go": "06cd3f3a656139d93977df50c8afb5421444e315440ffdca2067e24675efe867",
     "internal/executor/app_threat_unit.go": "2c6655ab5a11701ef7bbbcf321820c331493d2f8496aa9681ba7188b1f45c430",
     "internal/executor/app_threat_unit_test.go": "3350f126c1346950ef2f321790a32407eabd2493b69a151a5cab520a677ac9b1",
@@ -972,5 +972,19 @@
     "scripts/test-analytics-tracker.mjs": "88def3a141999ec93cfdee52c8abffe986518d417f69fb137afc57b7c46997b8",
     "scripts/test-analytics-proxy-auto.py": "27c57d966329d82e38c1f76de3f1577dc01f8163f74e8449f085f1ff3573ddd9",
     "scripts/test-waf-workspace.py": "741318daea21d186475eb07dc87fe72400b49a23e5b4d69aeb7e349872f62b68"
+  },
+  "test_overrides": {
+    "internal/executor/app_sync_remote_linux_test.go": {
+      "release_sha256": "c6cbf58c3166ed1d0e599e3360ce75209304238e832a4c6988153dd27afacc37",
+      "reason": "CI fixture correction for fresh root runners; production inputs remain pinned"
+    },
+    "internal/executor/app_threat_rotation_linux_test.go": {
+      "release_sha256": "df545ffb58da033fdcf1ff46ae493898d30ac5126b998f09a2a762d1e7f91394",
+      "reason": "CI fixture correction for fresh root runners; production inputs remain pinned"
+    },
+    "internal/executor/app_threat_transaction_linux_test.go": {
+      "release_sha256": "f68118026bbbf391b4fbd6c7f39a239153d09b9989f7d2a882a21f8f90b44663",
+      "reason": "CI fixture correction for fresh root runners; production inputs remain pinned"
+    }
   }
 }
