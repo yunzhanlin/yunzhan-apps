@@ -10,6 +10,7 @@ import ThreatIDSRuleFeeds from "./ThreatIDSRuleFeeds.vue";
 import ThreatIDSOperations from "./ThreatIDSOperations.vue";
 import { idsBackgroundActions, validIDSOperation, validIDSRuleProfile, type IDSRuleProfile } from "./networkIDSOperations";
 import { loadBalanceEntryFields } from "./loadBalanceReport";
+import { loadBalanceRoutingSaveBody } from "./loadBalanceRouting";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
@@ -86,7 +87,12 @@ const form = ref<Record<string, any>>({}),
 const statisticsQuery = computed(()=>definition.value?.id === "website-statistics-v2" ? analyticsQueryContext(report.value) : undefined);
 const statisticsDraftChanged = computed(()=>!!statisticsQuery.value && !analyticsQueryMatches(statisticsQuery.value,form.value));
 function toggleHTTPHealth(enabled: boolean | string | number) {
-  form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2} : null;
+  form.value.health_check=enabled ? {path:"/health",interval:30,timeout_ms:1500,expected_status:200,body_contains:"",failures:2,successes:2,auto_traffic:false} : null;
+  form.value.confirm='';
+}
+function setHTTPAutomaticTraffic(value:unknown) {
+  if(typeof value!=='boolean'||!form.value.health_check)return;
+  form.value.health_check.auto_traffic=value;form.value.confirm='';
 }
 function toggleBackendTLS(enabled: boolean | string | number) {
   form.value.backend_tls=enabled ? {server_name:form.value.domain || "",ca_pem:""} : null;
@@ -446,7 +452,7 @@ function inputBody(action: string) {
             ? JSON.parse(v)
             : v;
   }
-  return body;
+  return definition.value?.id==='load-balance'&&action==='save' ? loadBalanceRoutingSaveBody(body) : body;
 }
 async function reviewSelectedRemoteBackup() {
   if(busy.value||definition.value?.id!=="files-sync"||! /^[0-9a-f]{32}$/.test(form.value.resource_id||""))return;
@@ -527,6 +533,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
     }
     if (definition.value.id === "load-balance" && action === "save") {
       form.value.expected_revision = (result as any).revision;selectedPlanID.value = form.value.domain;
+      form.value.confirm='';
     }
     if (definition.value.id === "load-balance" && action === "remove") {
       form.value.expected_revision = 0;selectedPlanID.value = "";
@@ -840,6 +847,8 @@ defineExpose({ show });
             <div v-else-if="field.kind === 'http-health'" class="http-health-editor">
               <el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" />
               <template v-if="form.health_check">
+                <el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" />
+                <small>检查默认只观测。自动流量须已安装 1.7.0 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
                 <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
                   <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
                 </el-select></label>

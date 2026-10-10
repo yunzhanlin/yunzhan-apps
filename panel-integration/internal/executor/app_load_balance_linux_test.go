@@ -344,7 +344,15 @@ func TestLoadBalanceLegacyExactMigrationAndManualDrift(t *testing.T) {
 			if drift {
 				rendered += "# handwritten\n"
 			}
-			os.WriteFile(conf, []byte(rendered), 0644)
+			// Ordinary WriteFile inherits the runner's umask. This legacy
+			// fixture must explicitly reproduce the historical 0644 config,
+			// including under the commercial test runner's strict 0077 mask.
+			if e := atomicWrite(conf, []byte(rendered), 0644); e != nil {
+				t.Fatal(e)
+			}
+			if st, e := os.Stat(conf); e != nil || st.Mode().Perm() != 0644 {
+				t.Fatal("historical fixture mode not reproduced", e)
+			}
 			before := lbFiles(t, s, in.Domain)
 			_, e := s.moduleLoadBalance(context.Background(), "save", in)
 			if drift {

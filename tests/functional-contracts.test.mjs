@@ -141,10 +141,10 @@ test('body WAF and analytics additions keep truthful limits and independent vers
  assert(a.boundaries.some(s=>s.includes('purpose')&&s.includes('不重复提交')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
-test('load balancing publishes bounded HTTP observations and recovery without claiming L4 or active traffic mutation',async()=>{
+test('load balancing publishes explicitly authorized active health routing without claiming L4 or live API acceptance',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  const manifest=registry.apps.find(a=>a.id==='load-balance'),contract=contracts.apps.find(a=>a.id===manifest.id);
- assert.equal(manifest.version,'1.6.0');
+ assert.equal(manifest.version,'1.7.0');
  assert(manifest.capabilities.some(s=>s.includes('修订')));
  assert(contract.scenarios.some(s=>s.includes('ABA')));
  assert(contract.scenarios.some(s=>s.includes('冷启动')));
@@ -159,7 +159,14 @@ test('load balancing publishes bounded HTTP observations and recovery without cl
  assert(contract.scenarios.some(s=>s.includes('节点数组')));
  assert(contract.boundaries.some(s=>s.includes('32 个节点')));
  assert(contract.boundaries.some(s=>s.includes('只观测')));
- assert(contract.gaps.some(s=>s.includes('摘除')));
+ assert(contract.gaps.some(s=>s.includes('外部告警')));
+ assert(manifest.capabilities.some(s=>s.includes('全故障不放行')));
+ assert(contract.scenarios.some(s=>s.includes('各 34 项 Linux 回归无跳过')));
+ assert(contract.scenarios.some(s=>s.includes('三个真实 SIGKILL')&&s.includes('四文件')));
+ assert(contract.scenarios.some(s=>s.includes('ENABLE HEALTH ROUTING')));
+ assert(contract.boundaries.some(s=>s.includes('默认只观测')&&s.includes('1.7.0')));
+ assert(contract.boundaries.some(s=>s.includes('其他发行版不等同')));
+ assert(contract.boundaries.some(s=>s.includes('运行序列单独递增')));
  assert(manifest.capabilities.some(s=>s.includes('入口专用 CA')));
  assert(contract.scenarios.some(s=>s.includes('错误域名')&&s.includes('过期证书')));
  assert(contract.boundaries.some(s=>s.includes('独立固定 IP 端口')&&s.includes('禁止私钥')));

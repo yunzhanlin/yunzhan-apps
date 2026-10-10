@@ -109,7 +109,7 @@ func AppModules() []AppModuleDefinition {
 		{"daily-report", "每日运维报告", []string{"run"}, nil},
 		{"website-statistics-v2", "网站统计 v2", []string{"run"}, []AppModuleField{site}},
 		{"enterprise-tamper-proof", "企业网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path, {"auto_restore", "自动恢复已备份文件", "boolean"}}},
-		{"load-balance", "负载均衡", []string{"run", "save", "probe", "check-http", "remove", "recover"}, []AppModuleField{{"domain", "小写域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}, {"backend_tls", "HTTPS 后端业务转发（显式启用）", "backend-tls"}, {"health_check", "持续 HTTP 应用检查（只观测）", "http-health"}, {"expected_revision", "入口修订号（选择记录自动填写）", "identity"}}},
+		{"load-balance", "负载均衡", []string{"run", "save", "probe", "check-http", "remove", "recover"}, []AppModuleField{{"domain", "小写域名", "text"}, {"port", "回环入口端口", "number"}, {"nodes", "上游节点", "json"}, {"sticky", "IP 会话粘滞", "boolean"}, {"backend_tls", "HTTPS 后端业务转发（显式启用）", "backend-tls"}, {"health_check", "HTTP 应用检查与可选自动流量", "http-health"}, {"confirm", "启用自动流量精确确认：ENABLE HEALTH ROUTING 入口域名（其余情况留空）", "text"}, {"expected_revision", "入口修订号（选择记录自动填写）", "identity"}}},
 		{"mobile-pwa", "云栈移动端", []string{"run"}, nil},
 		{"apache-waf", "Apache 请求防火墙", []string{"run"}, nil},
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
@@ -322,7 +322,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "mobile-pwa", "php-code-security":
 			version = "1.3.0"
 		case "load-balance":
-			version = "1.6.0"
+			version = "1.7.0"
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":

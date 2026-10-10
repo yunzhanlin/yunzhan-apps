@@ -332,7 +332,7 @@ func TestLoadBalanceHTTPActualModuleUpgradeManifestIsAccepted(t *testing.T) {
 	if e := moduleRead(path, &upgraded); e != nil {
 		t.Fatal(e)
 	}
-	if upgraded["installed_at"] != original["installed_at"] || upgraded["updated_at"] == nil || upgraded["version"] != "1.6.0" {
+	if upgraded["installed_at"] != original["installed_at"] || upgraded["updated_at"] == nil || upgraded["version"] != "1.7.0" {
 		t.Fatal(upgraded)
 	}
 	upgraded["unexpected_field"] = true

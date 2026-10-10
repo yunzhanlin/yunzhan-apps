@@ -195,6 +195,11 @@ const names: Record<string, string> = {
   http_transitions: "最近 HTTP 状态转换（界面最多 200 条）",
   health_check: "HTTP 检查策略",
   automatic_traffic_changes: "自动修改流量",
+  traffic_excluded: "已从新请求流量摘除",
+  routing_sequence: "实际流量运行序号",
+  excluded_nodes: "实际摘除节点",
+  completed_at: "完成时间（UTC）",
+  recovered: "本次为显式恢复",
   last_success: "最近一次检查通过",
   http_status: "HTTP 响应状态",
   latency_ms: "耗时（毫秒）",
@@ -472,9 +477,9 @@ function columns(values: any[]) {
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target))return ["remote_target_id","remote_target","auth_kind","enabled","revision","host_key_fingerprint"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_request_id))return ["remote_request_id","remote_target_id","remote_plan_id","remote_plan_revision","site_id","state","job_archived","copied_count","skipped_count","conflicts_count","created_at","started_at","finished_at","error"];
   if (props.id==="load-balance" && values.some(value=>value && Array.isArray(value.nodes)))
-    return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled"];
+    return ["domain","port","revision","nodes","backend_protocol","sticky","http_health_enabled","automatic_traffic_changes","routing_sequence","excluded_nodes"];
   if (props.id==="load-balance" && values.some(value=>value && typeof value==="object" && "checked_at" in value && "last_success" in value))
-    return ["domain","revision","address","scheme","check_address","state","stale","last_success","http_status","reason","latency_ms","failures","successes","checked_at","tls_verification","worker_error"];
+    return ["domain","revision","address","scheme","check_address","state","stale","traffic_excluded","routing_sequence","last_success","http_status","reason","latency_ms","failures","successes","checked_at","tls_verification","worker_error"];
 	if (props.id === "php-code-security" && values.some(value=>value && typeof value==='object' && 'state' in value)) return ["id","site_id","path","state","sha256","bytes","mode","source_present","backup_verified","backup_error","revision","created_at","updated_at"];
 	if (props.id === "nfs-manager" && values.some(value=>value && typeof value==='object' && 'clients' in value)) return ["id","site_id","path","clients","read_only","export_id","uid","gid"];
 	if (props.id === "pure-ftpd" && values.some(value => value && typeof value === "object" && "username" in value)) return ["username","site_id","quota_mb","quota_files","quota_usage_files","quota_usage_bytes","upload_kb","download_kb","max_sessions","client_allow","client_deny"];

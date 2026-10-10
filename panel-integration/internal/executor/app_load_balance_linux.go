@@ -14,6 +14,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -36,6 +37,14 @@ type loadBalanceEntry struct {
 	Removed     bool                        `json:"removed"`
 	HealthCheck *core.LoadBalanceHTTPHealth `json:"health_check,omitempty"`
 	BackendTLS  *core.LoadBalanceBackendTLS `json:"backend_tls,omitempty"`
+	Routing     *loadBalanceRouting         `json:"routing,omitempty"`
+}
+
+// Runtime routing is not an API input. A health transaction preserves the
+// administrator's policy revision and only advances this operational sequence.
+type loadBalanceRouting struct {
+	Sequence int64    `json:"sequence"`
+	Down     []string `json:"down"`
 }
 type loadBalanceTransaction struct {
 	Format    int               `json:"format"`
@@ -74,7 +83,7 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 	if e := core.ValidateLoadBalanceBackendTLS(v.BackendTLS); e != nil {
 		return e
 	}
-	if (v.Format == 2) != (v.BackendTLS != nil) {
+	if v.Format != 3 && (v.Format == 2) != (v.BackendTLS != nil) {
 		return errors.New("TLS 入口须使用格式 2；历史 HTTP 清单不得自动启用 TLS")
 	}
 	if b, e := json.Marshal(v); e != nil || len(b) > 32<<10 {
@@ -83,11 +92,14 @@ func validateLoadBalanceEntry(v loadBalanceEntry) error {
 	if e := core.ValidateLoadBalanceHTTPHealth(v.HealthCheck); e != nil {
 		return e
 	}
+	if e := validateLoadBalanceRouting(v); e != nil {
+		return e
+	}
 	if v.Format == 0 && v.HealthCheck != nil {
 		return errors.New("历史入口不能冒充已登记 HTTP 检查策略")
 	}
 	if !core.ValidDomain(v.Domain) || strings.ToLower(v.Domain) != v.Domain || v.Port < 20000 || v.Port > 60000 ||
-		len(v.Nodes) < 2 || len(v.Nodes) > 16 || (v.Format != 0 && v.Format != 1 && v.Format != 2) || v.Revision < 0 || v.Revision >= 1<<60 ||
+		len(v.Nodes) < 2 || len(v.Nodes) > 16 || (v.Format != 0 && v.Format != 1 && v.Format != 2 && v.Format != 3) || v.Revision < 0 || v.Revision >= 1<<60 ||
 		(v.Format == 0 && (v.Revision != 0 || v.Removed)) || (v.Format > 0 && v.Revision == 0) {
 		return errors.New("负载均衡入口身份、修订号、端口或节点数量无效")
 	}
@@ -185,6 +197,9 @@ func renderLoadBalanceEntryTrust(v loadBalanceEntry, trustPath string) (string, 
 		backup := ""
 		if n.Backup {
 			backup = " backup"
+		}
+		if loadBalanceNodeDown(v, n.Address) {
+			backup += " down"
 		}
 		fmt.Fprintf(&b, "  server %s weight=%d max_fails=1 fail_timeout=5s%s;\n", n.Address, n.Weight, backup)
 	}
@@ -323,12 +338,17 @@ func (s *Service) loadBalanceEntries() ([]loadBalanceEntry, error) {
 }
 func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) error {
 	count := 2
-	if tx.Format == 2 {
+	if tx.Format == 2 || tx.Format == 3 {
 		count = 3
+	} else if tx.Format == 4 {
+		count = 4
 	}
-	if (tx.Format != 1 && tx.Format != 2) || !core.ValidID(tx.ID) || !core.ValidDomain(tx.Domain) || len(tx.Changes) != count || len(tx.Digests) != count*2 ||
+	if tx.Format < 1 || tx.Format > 4 || !core.ValidID(tx.ID) || !core.ValidDomain(tx.Domain) || len(tx.Changes) != count || len(tx.Digests) != count*2 ||
 		(tx.State != "applying" && tx.State != "restored" && tx.State != "recovered" && tx.State != "committed") {
 		return errors.New("负载均衡事务身份、状态或条目无效")
+	}
+	if raw, err := json.Marshal(tx); err != nil || len(raw) > 256<<10 {
+		return errors.New("完整负载均衡恢复记录超过 256 KiB，未开始变更")
 	}
 	if _, e := time.Parse(time.RFC3339, tx.CreatedAt); e != nil {
 		return e
@@ -367,6 +387,9 @@ func (s *Service) loadBalanceTransactionContract(tx loadBalanceTransaction) erro
 		}
 	} else if cm.OldExists {
 		return errors.New("无原清单的配置不能接管")
+	}
+	if tx.Format >= 3 {
+		return s.loadBalanceRoutingTransactionContract(tx, old, next)
 	}
 	if (tx.Format == 2) != (old.BackendTLS != nil || next.BackendTLS != nil) {
 		return errors.New("TLS 变更必须完整绑定 CA、配置和清单；历史 HTTP 事务保持两文件契约")
@@ -573,7 +596,13 @@ func (s *Service) recoverLoadBalanceBeforeMutation(ctx context.Context, nginx st
 	return s.finishLoadBalanceTransaction(tx)
 }
 func RecoverLoadBalanceConfiguration() error {
-	s := nativeWAFService()
+	return nativeWAFService().recoverLoadBalanceCold()
+}
+
+// Shared by the normal pre-start command and private native acceptance.
+// Cold recovery validates the complete original set before Nginx starts; it
+// cannot claim a live generation until the subsequent actual service start.
+func (s *Service) recoverLoadBalanceCold() error {
 	if _, e := os.Lstat(s.loadBalancePendingPath()); errors.Is(e, os.ErrNotExist) {
 		return nil
 	}
@@ -641,7 +670,11 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		if err != nil {
 			return nil, err
 		}
-		return map[string]any{"entries": entries, "count": len(entries), "pending": false, "transport": "HTTP loopback", "active_health_checks": len(health) > 0 && s.loadBalanceHealthInstalled(), "http_health": health, "automatic_traffic_changes": false}, nil
+		automatic := false
+		for _, entry := range entries {
+			automatic = automatic || core.LoadBalanceAutomaticTraffic(entry.HealthCheck)
+		}
+		return map[string]any{"entries": entries, "count": len(entries), "pending": false, "transport": "HTTP loopback", "active_health_checks": len(health) > 0 && s.loadBalanceHealthInstalled(), "http_health": health, "automatic_traffic_changes": automatic}, nil
 	}
 	old, present, e := s.readLoadBalanceEntry(in.Domain)
 	if e != nil {
@@ -692,7 +725,30 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 		next.Revision++
 		next.Removed = true
 	} else {
-		if next.BackendTLS != nil && s.loadBalanceHealthVersion() != "1.6.0" {
+		if next.HealthCheck != nil {
+			policy := *next.HealthCheck
+			if policy.AutoTraffic == nil && old.HealthCheck != nil && old.HealthCheck.AutoTraffic != nil {
+				on := *old.HealthCheck.AutoTraffic
+				policy.AutoTraffic = &on
+			}
+			next.HealthCheck = &policy
+		}
+		if core.LoadBalanceAutomaticTraffic(next.HealthCheck) {
+			if s.loadBalanceHealthVersion() != "1.7.0" || in.Confirm != "ENABLE HEALTH ROUTING "+next.Domain {
+				return nil, errors.New("自动流量须已安装 v1.7.0 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
+			}
+			next.Format = 3
+			next.Routing = &loadBalanceRouting{Down: []string{}}
+			// A changed policy starts new health counters but does not silently
+			// admit previously excluded nodes that remain in the desired list.
+			for _, node := range next.Nodes {
+				if loadBalanceNodeDown(old, node.Address) {
+					next.Routing.Down = append(next.Routing.Down, node.Address)
+				}
+			}
+			sort.Strings(next.Routing.Down)
+		}
+		if next.BackendTLS != nil && s.loadBalanceHealthVersion() != "1.6.0" && s.loadBalanceHealthVersion() != "1.7.0" {
 			return nil, errors.New("先更新已安装负载均衡到 v1.6.0，再显式启用 HTTPS 后端转发")
 		}
 		if next.HealthCheck != nil && !s.loadBalanceHealthInstalled() {

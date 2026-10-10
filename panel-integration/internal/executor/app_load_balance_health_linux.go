@@ -92,7 +92,7 @@ func (s *Service) loadBalanceHealthVersion() string {
 		UpdatedAt   string         `json:"updated_at,omitempty"`
 		Settings    map[string]any `json:"settings"`
 	}
-	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1" && v.Version != "1.5.0" && v.Version != "1.6.0") {
+	if decodeFTPPrivateJSON(b, &v) != nil || v.ID != "load-balance" || (v.Version != "1.4.0" && v.Version != "1.4.1" && v.Version != "1.5.0" && v.Version != "1.6.0" && v.Version != "1.7.0") {
 		return ""
 	}
 	if _, e := time.Parse(time.RFC3339, v.InstalledAt); e != nil {
@@ -107,7 +107,7 @@ func (s *Service) loadBalanceHealthVersion() string {
 }
 func (s *Service) loadBalanceHTTPSInstalled() bool {
 	version := s.loadBalanceHealthVersion()
-	return version == "1.5.0" || version == "1.6.0"
+	return version == "1.5.0" || version == "1.6.0" || version == "1.7.0"
 }
 func (s *Service) loadBalanceHealthInstalled() bool { return s.loadBalanceHealthVersion() != "" }
 func (s *Service) loadBalanceHealthPath(domain string) string {
@@ -150,8 +150,14 @@ func (s *Service) readLoadBalanceHTTPState(v loadBalanceEntry, now time.Time) (*
 	if e != nil {
 		return nil, e
 	}
+	return decodeLoadBalanceHTTPState(v, b, now)
+}
+
+// The same bounded decoder validates all old/new health bytes in a recovery
+// transaction before the first configuration restore.
+func decodeLoadBalanceHTTPState(v loadBalanceEntry, b []byte, now time.Time) (*loadBalanceHTTPState, error) {
 	var out loadBalanceHTTPState
-	if decodeFTPPrivateJSON(b, &out) != nil || out.Format != 1 || out.Domain != v.Domain ||
+	if len(b) > 32<<10 || decodeFTPPrivateJSON(b, &out) != nil || out.Format != 1 || out.Domain != v.Domain ||
 		out.Revision < 1 || out.Revision >= 1<<60 || out.Sequence < 0 || out.Sequence >= 1<<60 ||
 		len(out.Nodes) < 2 || len(out.Nodes) > 16 || len(out.Transitions) > 32 {
 		return nil, errors.New("HTTP 检查记录内容损坏或身份不匹配；未覆盖")
@@ -393,7 +399,7 @@ func (s *Service) checkLoadBalanceHTTP(ctx context.Context, in core.AppModuleInp
 		return nil, errors.New("检查后入口修订号已改变，请刷新")
 	}
 	rows, e := s.loadBalanceHealthReports([]loadBalanceEntry{v}, time.Now().UTC())
-	return map[string]any{"domain": v.Domain, "revision": v.Revision, "http_health": rows, "automatic_traffic_changes": false}, e
+	return map[string]any{"domain": v.Domain, "revision": v.Revision, "http_health": rows, "automatic_traffic_changes": core.LoadBalanceAutomaticTraffic(v.HealthCheck)}, e
 }
 
 func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, selected *core.AppModuleInput) error {
@@ -426,6 +432,10 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 	for _, v := range entries {
 		if v.HealthCheck == nil {
 			continue
+		}
+		if core.LoadBalanceAutomaticTraffic(v.HealthCheck) && s.loadBalanceHealthVersion() != "1.7.0" {
+			lock.Close()
+			return errors.New("自动流量策略需要可信的负载均衡 v1.7.0 安装记录，未开始检查或改写")
 		}
 		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			lock.Close()
@@ -479,6 +489,10 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		return e
 	}
 	for i, v := range due {
+		if core.LoadBalanceAutomaticTraffic(v.HealthCheck) && s.loadBalanceHealthVersion() != "1.7.0" {
+			lock.Close()
+			return errors.New("自动流量检查开始前应用安装身份已改变，未继续")
+		}
 		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			lock.Close()
 			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
@@ -546,6 +560,9 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 	completed := time.Now().UTC()
 	// Validate ALL entries and previous records before publishing any result.
 	for i, v := range due {
+		if core.LoadBalanceAutomaticTraffic(v.HealthCheck) && s.loadBalanceHealthVersion() != "1.7.0" {
+			return errors.New("自动流量检查期间应用安装身份已改变，未提交结果")
+		}
 		if (v.HealthCheck.Scheme == "https" || v.HealthCheck.CheckPort != 0) && !s.loadBalanceHTTPSInstalled() {
 			return errors.New("HTTPS 检查期间应用安装身份已改变，未提交结果")
 		}
@@ -567,6 +584,18 @@ func (s *Service) runLoadBalanceHTTPBatch(ctx context.Context, now time.Time, se
 		state := advanceLoadBalanceHTTPState(v, oldStates[i], samples[i], completed)
 		if state.Sequence >= 1<<60 {
 			return errors.New("HTTP 状态转换序号达到上限")
+		}
+		if core.LoadBalanceAutomaticTraffic(v.HealthCheck) {
+			next, changed, err := loadBalanceRoutingNext(v, state)
+			if err != nil {
+				return err
+			}
+			if changed {
+				if err = s.commitLoadBalanceRouting(ctx, v, next, state); err != nil {
+					return err
+				}
+				continue
+			}
 		}
 		b, e := json.Marshal(state)
 		if e != nil || len(b) > 32<<10 {
@@ -600,7 +629,11 @@ func (s *Service) loadBalanceHealthReports(entries []loadBalanceEntry, now time.
 			rowInstalled := installed
 			row := map[string]any{"domain": v.Domain, "revision": v.Revision, "address": node.Address,
 				"state": "unknown", "stale": true, "path": v.HealthCheck.Path, "interval": v.HealthCheck.Interval,
-				"automatic_traffic_changes": false, "worker_error": workerError}
+				"automatic_traffic_changes": core.LoadBalanceAutomaticTraffic(v.HealthCheck), "worker_error": workerError,
+				"traffic_excluded": loadBalanceNodeDown(v, node.Address), "routing_sequence": int64(0)}
+			if v.Routing != nil {
+				row["routing_sequence"] = v.Routing.Sequence
+			}
 			row["scheme"] = "http"
 			row["check_address"], _ = loadBalanceHealthAddress(v, node.Address)
 			if v.HealthCheck.Scheme == "https" {

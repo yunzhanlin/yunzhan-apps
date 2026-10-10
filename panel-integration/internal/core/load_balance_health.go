@@ -9,8 +9,9 @@ import (
 	"unicode/utf8"
 )
 
-// LoadBalanceHTTPHealth is an opt-in observation policy, not authority to
-// rewrite traffic routing. Targets are the entry's already validated IP nodes.
+// Observation remains the historical default. AutoTraffic is a separate,
+// explicit opt-in authority; nil preserves the current value on an edit.
+// Targets are the entry's already validated fixed IP nodes.
 type LoadBalanceHTTPHealth struct {
 	Path           string `json:"path"`
 	Interval       int    `json:"interval"`
@@ -22,6 +23,11 @@ type LoadBalanceHTTPHealth struct {
 	Scheme         string `json:"scheme,omitempty"`
 	CAPEM          string `json:"ca_pem,omitempty"`
 	CheckPort      int    `json:"check_port,omitempty"`
+	AutoTraffic    *bool  `json:"auto_traffic,omitempty"`
+}
+
+func LoadBalanceAutomaticTraffic(v *LoadBalanceHTTPHealth) bool {
+	return v != nil && v.AutoTraffic != nil && *v.AutoTraffic
 }
 
 // LoadBalanceHealthRoots accepts public CA certificates only, never private
