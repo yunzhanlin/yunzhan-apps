@@ -845,10 +845,10 @@ defineExpose({ show });
               </template>
             </div>
             <div v-else-if="field.kind === 'http-health'" class="http-health-editor">
-              <el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" />
+              <div class="http-health-toggle"><span>持续 HTTP 应用检查</span><el-switch :model-value="Boolean(form.health_check)" aria-label="启用持续 HTTP 应用检查" @update:model-value="toggleHTTPHealth" /></div>
               <template v-if="form.health_check">
-                <el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" />
-                <small>检查默认只观测。自动流量须已安装 1.7.0 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
+                <div class="http-health-toggle"><span>故障节点自动摘除与恢复</span><el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" /></div>
+                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 或 1.7.1 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
                 <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
                   <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
                 </el-select></label>
@@ -861,7 +861,7 @@ defineExpose({ show });
                 <label>响应包含的内容<el-input v-model="form.health_check.body_contains" aria-label="HTTP 检查内容包含" maxlength="256" placeholder="可留空，最多 256 字节" /></label>
                 <label>连续失败次数<el-input-number v-model="form.health_check.failures" aria-label="连续失败阈值" :min="1" :max="10" :precision="0" /></label>
                 <label>连续恢复次数<el-input-number v-model="form.health_check.successes" aria-label="连续恢复阈值" :min="1" :max="10" :precision="0" /></label>
-                <small>检查与业务转发分别配置。HTTP 转发的 HTTPS 检查须用独立就绪端口；HTTPS 后端可在同一端口检查。检查仍验证入口域名（可与后端名称不同）、证书链和有效期，最低 TLS 1.2；检查 CA 独立于后端 CA。保存后只观测、不自动改动流量。</small>
+                <small>检查与业务转发分别配置。HTTP 转发的 HTTPS 检查须用独立就绪端口；HTTPS 后端可在同一端口检查。检查仍验证入口域名（可与后端名称不同）、证书链和有效期，最低 TLS 1.2；检查 CA 独立于后端 CA。默认只观测；只有明确开启自动流量并通过精确确认后才修改流量。</small>
               </template>
             </div>
             <div v-else-if="field.key === 'nodes'" class="node-editor">
@@ -1140,6 +1140,7 @@ defineExpose({ show });
 .http-health-editor { width:100%; display:flex; flex-direction:column; gap:10px; }
 .http-health-editor small { color:#657181; line-height:1.6; }
 .http-health-editor label { display:flex; flex-direction:column; gap:5px; font-size:12px; color:#526373; }
+.http-health-toggle { display:flex; align-items:center; justify-content:space-between; gap:12px; max-width:460px; font-size:13px; color:#526373; }
 .node-line {
   display: flex;
   flex-wrap: wrap;

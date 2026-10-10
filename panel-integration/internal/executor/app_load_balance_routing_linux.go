@@ -119,8 +119,8 @@ func (s *Service) loadBalanceRoutingTransactionContract(tx loadBalanceTransactio
 // all-entry revision/state checks. The same durable recovery path verifies
 // EVERY old/new file before the first restore, then confirms native generation.
 func (s *Service) commitLoadBalanceRouting(ctx context.Context, old, next loadBalanceEntry, state loadBalanceHTTPState) error {
-	if s.loadBalanceHealthVersion() != "1.7.0" {
-		return errors.New("自动流量需要已安装负载均衡 v1.7.0，不隐式升级授权")
+	if !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) {
+		return errors.New("自动流量需要可信的负载均衡 v1.7.0 或 v1.7.1 安装身份，不隐式升级授权")
 	}
 	unlock, err := s.lockRuntimeUse()
 	if err != nil {

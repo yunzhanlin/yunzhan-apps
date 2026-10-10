@@ -734,8 +734,8 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 			next.HealthCheck = &policy
 		}
 		if core.LoadBalanceAutomaticTraffic(next.HealthCheck) {
-			if s.loadBalanceHealthVersion() != "1.7.0" || in.Confirm != "ENABLE HEALTH ROUTING "+next.Domain {
-				return nil, errors.New("自动流量须已安装 v1.7.0 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
+			if !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) || in.Confirm != "ENABLE HEALTH ROUTING "+next.Domain {
+				return nil, errors.New("自动流量须已安装经过核验的 v1.7.0 或 v1.7.1 并精确确认 ENABLE HEALTH ROUTING 入口域名；不默认启用")
 			}
 			next.Format = 3
 			next.Routing = &loadBalanceRouting{Down: []string{}}
@@ -748,7 +748,7 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 			}
 			sort.Strings(next.Routing.Down)
 		}
-		if next.BackendTLS != nil && s.loadBalanceHealthVersion() != "1.6.0" && s.loadBalanceHealthVersion() != "1.7.0" {
+		if next.BackendTLS != nil && s.loadBalanceHealthVersion() != "1.6.0" && !core.LoadBalanceHealthRoutingVersion(s.loadBalanceHealthVersion()) {
 			return nil, errors.New("先更新已安装负载均衡到 v1.6.0，再显式启用 HTTPS 后端转发")
 		}
 		if next.HealthCheck != nil && !s.loadBalanceHealthInstalled() {

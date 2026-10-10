@@ -131,18 +131,7 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 			out.Detail = err.Error()
 			return out
 		}
-		normal, failed, unknown := 0, 0, 0
-		for _, row := range health {
-			switch row["state"] {
-			case "healthy":
-				normal++
-			case "unhealthy":
-				failed++
-			default:
-				unknown++
-			}
-		}
-		out.Detail = fmt.Sprintf("%d 个回环 HTTP 入口；持续 HTTP 节点检查：%d 正常 / %d 失败 / %d 未判定或过期；只观测，不自动修改流量", len(entries), normal, failed, unknown)
+		out.Detail = loadBalanceStatusDetail(entries, health, s.loadBalanceHealthVersion())
 	}
 	switch id {
 	case "pure-ftpd":

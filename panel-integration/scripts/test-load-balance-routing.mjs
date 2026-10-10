@@ -40,6 +40,11 @@ test('manager and packaging require dedicated explicit switch, closed save and n
   assert.match(manager,/auto_traffic:false/);
   assert.match(manager,/typeof value!=='boolean'/);
   assert.match(manager,/aria-label="启用故障节点自动摘除与恢复"/);
+  assert.match(manager,/<span>持续 HTTP 应用检查<\/span>/);
+  assert.match(manager,/<span>故障节点自动摘除与恢复<\/span>/);
+  assert.match(manager,/只有明确开启自动流量并通过精确确认后才修改流量/);
+  assert.doesNotMatch(manager,/保存后只观测、不自动改动流量/);
+  assert.match(read('internal/executor/app_load_balance_routing_linux.go'),/!core\.LoadBalanceHealthRoutingVersion\(s\.loadBalanceHealthVersion\(\)\)/);
   assert.match(manager,/action==='save' \? loadBalanceRoutingSaveBody\(body\)/);
   assert.match(manager,/auto_traffic=value;form.value.confirm=''/);
   assert.match(report,/traffic_excluded/);assert.match(report,/routing_sequence/);
