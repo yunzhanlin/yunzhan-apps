@@ -4,6 +4,7 @@ export interface RegistrySource {
   fetched_at?: string;
   checked_at?: string;
   resolved_commit?: string;
+  retry_at?: string;
   error?: string;
 }
 interface RegistrySnapshot { catalog: unknown; source: RegistrySource }

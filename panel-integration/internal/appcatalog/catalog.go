@@ -108,6 +108,7 @@ type LoadInfo struct {
 	CheckedAt      string `json:"checked_at,omitempty"`
 	Error          string `json:"error,omitempty"`
 	ResolvedCommit string `json:"resolved_commit,omitempty"`
+	RetryAt        string `json:"retry_at,omitempty"`
 }
 
 // Both signature and payload travel and are cached as one atomic unit. The
@@ -118,10 +119,13 @@ type catalogBundle struct {
 }
 
 type Client struct {
-	BaseURL   string
-	PublicKey ed25519.PublicKey
-	HTTP      *http.Client
-	cacheMu   sync.Mutex
+	BaseURL        string
+	PublicKey      ed25519.PublicKey
+	HTTP           *http.Client
+	cacheMu        sync.Mutex
+	githubRefMu    sync.Mutex
+	githubRetry    *githubCatalogRetryError
+	githubFailures uint
 }
 
 func parsePublicKey(contents []byte) (ed25519.PublicKey, error) {
@@ -200,6 +204,9 @@ func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if req.URL.String() == githubCatalogRefURL && (resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusTooManyRequests) {
+		return nil, githubCatalogRetry(resp, time.Now())
+	}
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, os.ErrNotExist
 	}
@@ -387,6 +394,9 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 	c.cacheMu.Lock()
 	defer c.cacheMu.Unlock()
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
+		if retry := c.githubBackoff(); retry != nil {
+			return cached, catalogFailureInfo(modified, retry), nil
+		}
 		return cached, LoadInfo{Source: "verified-cache", FetchedAt: modified.UTC().Format(time.RFC3339)}, nil
 	}
 	catalog, raw, signature, commit, fetchErr := c.fetchCatalog(ctx)
@@ -404,7 +414,7 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 		return catalog, LoadInfo{Source: "github", FetchedAt: now, CheckedAt: now, ResolvedCommit: commit}, nil
 	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil {
-		return cached, LoadInfo{Source: "verified-cache", Stale: true, FetchedAt: modified.UTC().Format(time.RFC3339), CheckedAt: time.Now().UTC().Format(time.RFC3339), Error: "仓库检查失败: " + fetchErr.Error()}, nil
+		return cached, catalogFailureInfo(modified, fetchErr), nil
 	}
 	return Catalog{}, LoadInfo{}, fetchErr
 }

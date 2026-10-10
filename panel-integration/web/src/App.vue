@@ -198,7 +198,7 @@ interface RegistryStatus { id: string; state_known?: boolean; installed: boolean
 interface AppRegistry {
   catalog: { schema_version: number; generated_at: string; repository: string; apps: RegistryApp[] };
   status: RegistryStatus[];
-  source: { source: string; stale: boolean; fetched_at?: string; checked_at?: string; error?: string; resolved_commit?: string };
+  source: { source: string; stale: boolean; fetched_at?: string; checked_at?: string; error?: string; resolved_commit?: string; retry_at?: string };
   host?: { platform: string; architecture: string };
 }
 const user = ref(""),
@@ -2283,6 +2283,7 @@ onUnmounted(() => {
                 <small v-if="registryLastCheck">最近成功核对：{{ formatPanelDateTime(registryLastCheck.checked_at) }}</small>
                 <small v-else-if="appRegistry.source.checked_at || appRegistry.source.fetched_at">{{ appRegistry.source.stale ? '最近检查' : '已验签缓存时间' }}：{{ formatPanelDateTime(appRegistry.source.checked_at || appRegistry.source.fetched_at || '') }}</small>
                 <small v-if="!appRegistry.source.stale && registryLastCheck?.resolved_commit">最近成功定位提交：{{ registryLastCheck.resolved_commit.slice(0, 12) }}</small>
+                <small v-if="appRegistry.source.stale && appRegistry.source.retry_at">服务端退避至：{{ formatPanelDateTime(appRegistry.source.retry_at) }}；到期后仍须重新检查</small>
                 <el-button size="small" :loading="registryChecking" @click="checkRegistryUpdates">检查更新</el-button>
               </div>
               <el-alert v-if="appRegistry.source.stale" type="warning" :closable="false" :title="appRegistry.catalog.apps.length ? '未能确认仓库最新版本，当前显示已验签缓存' : '无法连接应用仓库，尚未加载签名目录'" :description="appRegistry.source.error" />

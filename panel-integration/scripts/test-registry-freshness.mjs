@@ -18,7 +18,7 @@ test('catalog freshness is a bounded Git reference followed by immutable signed 
  assert.doesNotMatch(github,/Authorization|\.URL\.Query\(|\.Set\("check"/);
  assert.match(catalog,/transport\.CheckRedirect =/);assert.match(catalog,/http\.ErrUseLastResponse/);
  assert.match(catalog,/c\.resolveCatalogCommit\(ctx\)/);assert.match(catalog,/c\.verifyCatalog\(raw, signature\)/);
- assert.match(catalog,/catalogProgress\(previous, catalog\)/);assert.match(catalog,/Stale: true/);
+ assert.match(catalog,/catalogProgress\(previous, catalog\)/);assert.match(catalog,/catalogFailureInfo\(modified, fetchErr\)/);assert.match(read('internal/appcatalog/github_catalog_rate.go'),/Stale: true/);
  assert.match(catalog,/ResolvedCommit: commit/);
 });
 test('store shows actual checked time and successful resolved commit without unlocking stale updates',()=>{
@@ -104,4 +104,19 @@ test('returned receipt is a defensive copy and state never persists credentials 
  const state=new RegistryFreshness();state.complete(state.begin('check'),fresh());
  const receipt=state.lastSuccessfulCheck();receipt.resolved_commit='b'.repeat(40);assert.equal(state.lastSuccessfulCheck().resolved_commit,commit);
  assert.doesNotMatch(read('web/src/registryFreshness.ts'),/localStorage|sessionStorage|Authorization|fetch\(/);
+});
+test('server retry deadlines stay failure evidence and cache polls cannot erase their original check time',()=>{
+ const state=new RegistryFreshness(),retry='2026-10-10T10:10:00Z';
+ state.complete(state.begin('check'),snapshot({stale:true,error:'actual quota exhausted',checked_at:checked,retry_at:retry}));
+ for(let i=0;i<10;i++){
+  const result=state.complete(state.begin('poll'),snapshot());
+  assert(result.source.stale);assert.equal(result.source.checked_at,checked);assert.equal(result.source.retry_at,retry);assert.equal(state.lastSuccessfulCheck(),undefined);
+ }
+ const view=read('web/src/App.vue'),rate=read('internal/appcatalog/github_catalog_rate.go');
+ assert.match(view,/source\.stale && appRegistry\.source\.retry_at/);assert.match(view,/到期后仍须重新检查/);
+ assert.match(rate,/Header\.Values\(name\)/);assert.match(rate,/len\(values\) != 1/);assert.match(rate,/now\.Add\(24\s*\*\s*time\.Hour\)/);
+ assert.match(rate,/result\.CheckedAt = retry\.checkedAt/);assert.match(rate,/result\.RetryAt = retry\.until/);
+ assert.doesNotMatch(rate,/Authorization|\.Body|time\.Sleep|os\./);
+ const tests=read('internal/appcatalog/github_catalog_rate_test.go');
+ for(const name of ['RetryHeadersBounded','RateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry','SecondaryBackoffIncreasesAndSuccessfulLookupResets','ConcurrentQuotaDoesNotBurstOrReadMutableMain','RetryDoesNotInventMetadataForCustomSource'])assert(tests.includes('TestGitHubCatalog'+name));
 });

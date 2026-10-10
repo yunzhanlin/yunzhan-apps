@@ -202,9 +202,20 @@ func TestOfficialCatalogFailuresKeepVerifiedCacheButNotFreshness(t *testing.T) {
 		case "rollback":
 			bundleBody = githubCatalogBundle(t, key, "1.0", "2026-10-10T09:00:00Z", strings.Repeat("3", 64))
 		}
-		catalog, info, err := c.LoadCatalog(context.Background(), cache, 0)
+		// These are independent failures against the same original signed bytes,
+		// not retries inside another case's active rate-limit cooldown.
+		caseClient := &Client{BaseURL: c.BaseURL, PublicKey: c.PublicKey, HTTP: c.HTTP}
+		beforeCalls := len(calls)
+		catalog, info, err := caseClient.LoadCatalog(context.Background(), cache, 0)
 		if err != nil || !info.Stale || info.Source != "verified-cache" || info.CheckedAt == "" || info.Error == "" || info.ResolvedCommit != "" || catalog.Apps[0].Version != "1.1.0" {
 			t.Fatal(mode, catalog, info, err)
+		}
+		wantCalls := 2
+		if mode == "branch-offline" {
+			wantCalls = 1
+		}
+		if len(calls)-beforeCalls != wantCalls || (info.RetryAt != "") != (mode == "branch-offline") {
+			t.Fatal(mode, "another failure masked this actual request", calls, info)
 		}
 		kept, err := os.ReadFile(cachePath)
 		if err != nil || string(kept) != string(original) {
@@ -232,7 +243,7 @@ func TestOfficialCatalogClosedPathsAndCancellation(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if _, _, _, err := c.FetchCatalog(ctx); err == nil || calls != 1 {
+	if _, _, _, err := c.FetchCatalog(ctx); !errors.Is(err, context.Canceled) || calls != 0 {
 		t.Fatal("cancelled lookup escaped caller context", err, calls)
 	}
 }

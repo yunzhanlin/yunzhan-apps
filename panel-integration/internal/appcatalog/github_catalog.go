@@ -5,9 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"regexp"
+	"time"
 )
 
 const githubCatalogRefURL = "https://api.github.com/repos/yunzhanlin/yunzhan-apps/git/ref/heads/main"
@@ -26,6 +28,14 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 		// are never guessed into GitHub API targets or credential-bearing URLs.
 		return "", nil
 	}
+	c.githubRefMu.Lock()
+	defer c.githubRefMu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+	if c.githubRetry != nil && time.Now().Before(c.githubRetry.until) {
+		return "", c.githubRetry
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, githubCatalogRefURL, nil)
 	if err != nil {
 		return "", err
@@ -36,8 +46,21 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 	req.Header.Set("User-Agent", "YunzhanPanel-AppCatalog")
 	raw, err := c.readResponse(req, 16<<10)
 	if err != nil {
-		return "", errors.New("无法定位官方仓库当前提交: " + err.Error())
+		var retry *githubCatalogRetryError
+		if errors.As(err, &retry) {
+			if c.githubFailures < 6 {
+				c.githubFailures++
+			}
+			minimum := time.Now().Add(time.Minute * time.Duration(1<<(c.githubFailures-1)))
+			if minimum.After(retry.until) {
+				retry.until = minimum
+			}
+			c.githubRetry = retry
+		}
+		return "", fmt.Errorf("无法定位官方仓库当前提交: %w", err)
 	}
+	c.githubRetry = nil
+	c.githubFailures = 0
 	// Ignore GitHub's unrelated metadata; never use its supplied URLs. A second
 	// JSON value, duplicate critical fields or a different ref/type is refused.
 	var reference struct {
