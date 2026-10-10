@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import {remoteConnectionRow} from "./remoteSync";
 import ThreatIDSReport from "./ThreatIDSReport.vue";
+import AnalyticsLatencyReport from "./AnalyticsLatencyReport.vue";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
@@ -30,6 +31,8 @@ const names: Record<string, string> = {
   errors: "错误请求",
   bots: "爬虫请求",
   slow_count: "慢请求",
+  slow_threshold_seconds: "慢请求阈值（秒）",
+  cardinality_limited: "统计维度已达上限",
   average_seconds: "平均响应（秒）",
   max_seconds: "最大响应（秒）",
   qps_last_minute: "最近一分钟 QPS",
@@ -529,6 +532,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
         ><strong>{{ format(key, value) }}</strong>
       </div>
     </div>
+    <AnalyticsLatencyReport v-if="analytics && report.latency !== undefined" :report="report.latency" />
     <template v-if="report.checks">
       <section
         v-for="(value, key) in report.checks"

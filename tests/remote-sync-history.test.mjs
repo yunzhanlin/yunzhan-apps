@@ -5,7 +5,9 @@ const read=name=>readFile(new URL('../'+name,import.meta.url),'utf8');
 test('remote-sync and bounded history publish distinct immutable versions with remaining limits',async()=>{
  const registry=JSON.parse(await read('registry/apps.json')),contracts=JSON.parse(await read('registry/functional-contracts.json'));
  const sync=registry.apps.find(a=>a.id==='files-sync'),stats=registry.apps.find(a=>a.id==='website-statistics-v2');
- assert.equal(sync.version,'1.6.0');assert.equal(stats.version,'2.3.0');assert.match(sync.summary,/远端实时与定时计划尚未提供/);assert.match(stats.summary,/25 万行/);
+ assert.equal(sync.version,'1.6.0');assert.equal(stats.version,'2.4.0');assert.match(sync.summary,/远端实时与定时计划尚未提供/);assert.match(stats.summary,/25 万行/);
+ const previous=JSON.parse(await read('dist/apps/website-statistics-v2/2.3.0/manifest.json'));
+ assert.equal(previous.version,'2.3.0');assert.equal(previous.id,stats.id);
  assert.equal(contracts.commercial_feature_parity_complete,false);
  for(const id of [sync.id,stats.id])assert(contracts.apps.find(a=>a.id===id).gaps.length>0);
  const source=await read('panel-integration/internal/executor/app_sync_remote_jobs_linux.go');

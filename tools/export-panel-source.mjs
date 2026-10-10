@@ -39,6 +39,7 @@ entries.push('scripts/test-waf-body-inventory.mjs');
 entries.push('scripts/test-network-ids-operations.mjs');
 entries.push('scripts/test-registry-request-identity.mjs');
 entries.push('scripts/test-remote-sync.mjs');
+entries.push('scripts/test-analytics-latency.mjs');
 async function copy(relative){
  if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);

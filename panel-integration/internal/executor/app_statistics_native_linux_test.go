@@ -150,6 +150,10 @@ func TestStatisticsNativeNginxRequestsAndWriterRestart(t *testing.T) {
 	if e != nil || report["requests"] != 3 || report["errors"] != 3 || report["bots"] != 3 || report["partial"] != false || state.Backlog != 0 {
 		t.Fatal("native requests failed real durable aggregation", report, e)
 	}
+	latency := report["latency"].(analyticsLatencyReport)
+	if !latency.QuantilesAvailable || latency.Samples != 3 || latency.Requests != 3 || latency.PopulationPartial || latency.P50 == nil || latency.P99 == nil || *latency.P50 > *latency.P99 {
+		t.Fatal("actual native request timing did not enter exact aggregate", latency)
+	}
 	db.Close()
 	restarted := New(s.Config)
 	after, e := restarted.openStatisticsHistory(ctx)

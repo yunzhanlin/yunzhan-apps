@@ -148,6 +148,7 @@ func buildAnalyticsRows(ctx context.Context, next func() (analyticsAccess, error
 	requests, errorsCount, bots, invalid, recent, slowCount := 0, 0, 0, 0, 0, 0
 	var transferred int64
 	var seconds, maxSeconds float64
+	latency := analyticsLatencyAccumulator{}
 	errorRows, slowRows := []map[string]any{}, []map[string]any{}
 	appendSample := func(rows []map[string]any, row map[string]any) []map[string]any {
 		if len(rows) == 100 {
@@ -187,6 +188,7 @@ func buildAnalyticsRows(ctx context.Context, next func() (analyticsAccess, error
 			continue
 		}
 		requests++
+		latency.add(row.Seconds)
 		transferred += row.Bytes
 		seconds += row.Seconds
 		maxSeconds = max(maxSeconds, row.Seconds)
@@ -263,5 +265,9 @@ func buildAnalyticsRows(ctx context.Context, next func() (analyticsAccess, error
 		average = seconds / float64(requests)
 	}
 	filters := map[string]any{"from_time": in.FromTime, "to_time": in.ToTime, "search": in.Search, "status_code": in.StatusCode, "min_seconds": in.MinSeconds, "only_bots": in.OnlyBots}
-	return map[string]any{"site_id": id, "requests": requests, "bytes": transferred, "unique_ips": len(ips), "errors": errorsCount, "bots": bots, "paths": paths, "status_codes": codes, "hours": hours, "referers": referers, "total_seconds": seconds, "average_seconds": average, "max_seconds": maxSeconds, "qps_last_minute": float64(recent) / 60, "browsers": browsers, "devices": devices, "methods": methods, "spiders": spiders, "visitors": visitorRows, "error_requests": errorRows, "slow_requests": slowRows, "slow_count": slowCount, "slow_threshold_seconds": slowThreshold, "invalid_lines": invalid, "cardinality_limited": cardinalityLimited, "partial": partial || cardinalityLimited, "updated_at": now.UTC().Format(time.RFC3339), "filters": filters, "scope": "最后 16 MiB 网站访问日志；时间为 UTC；独立 IP 不等于 UV；错误和慢请求各保留最近 100 条"}, nil
+	latencyReport, err := latency.report(ctx, partial || cardinalityLimited)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"site_id": id, "requests": requests, "bytes": transferred, "unique_ips": len(ips), "errors": errorsCount, "bots": bots, "paths": paths, "status_codes": codes, "hours": hours, "referers": referers, "total_seconds": seconds, "average_seconds": average, "max_seconds": maxSeconds, "latency": latencyReport, "qps_last_minute": float64(recent) / 60, "browsers": browsers, "devices": devices, "methods": methods, "spiders": spiders, "visitors": visitorRows, "error_requests": errorRows, "slow_requests": slowRows, "slow_count": slowCount, "slow_threshold_seconds": slowThreshold, "invalid_lines": invalid, "cardinality_limited": cardinalityLimited, "partial": partial || cardinalityLimited, "updated_at": now.UTC().Format(time.RFC3339), "filters": filters, "scope": "最后 16 MiB 网站访问日志；时间为 UTC；独立 IP 不等于 UV；错误和慢请求各保留最近 100 条"}, nil
 }

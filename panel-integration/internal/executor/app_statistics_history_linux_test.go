@@ -229,6 +229,59 @@ func TestStatisticsHistoryIncrementalPrivateRestartAndPartialLine(t *testing.T) 
 	t.Log("PASS incremental complete-line cursor, actual SQLite restart replay, private classified metadata and real report")
 }
 
+func TestStatisticsHistoryLatencyUsesDurableRowsAndFilters(t *testing.T) {
+	s, db, id, path, now := statisticsHistoryFixture(t)
+	defer db.Close()
+	var log strings.Builder
+	for i, seconds := range []float64{0, .05, .1, .5, 1.2, 4} {
+		var row analyticsAccess
+		if err := json.Unmarshal([]byte(statisticsTestLine(now, fmt.Sprintf("/latency-%d?token=latency-secret", i))), &row); err != nil {
+			t.Fatal(err)
+		}
+		row.Seconds = seconds
+		// The shared fixture deliberately defaults to 503. Establish the
+		// mixed-status source explicitly; otherwise all six rows are errors.
+		row.Status = 200
+		if i >= 4 {
+			row.Status = 503
+		}
+		raw, err := json.Marshal(row)
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Write(raw)
+		log.WriteByte('\n')
+	}
+	if err := os.WriteFile(path, []byte(log.String()), 0600); err != nil {
+		t.Fatal(err)
+	}
+	state := statisticsTestIngest(t, s, db, id, now)
+	var actualErrors int
+	if err := db.QueryRow("SELECT count(*) FROM access_rows WHERE site=? AND status=503", id).Scan(&actualErrors); err != nil || actualErrors != 2 {
+		t.Fatal("independent fixture did not establish exactly two 503 rows", actualErrors, err)
+	}
+	for _, tc := range []struct {
+		status, count int
+		p50, p99      float64
+	}{{0, 6, .1, 4}, {503, 2, 1.2, 4}} {
+		out, err := statisticsHistoryReport(context.Background(), db, core.AppModuleInput{SiteID: id, StatusCode: tc.status, MinSeconds: 8}, state, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := out["latency"].(analyticsLatencyReport)
+		if out["requests"] != tc.count || out["slow_count"] != 0 || r.Requests != tc.count || r.Samples != tc.count || !r.QuantilesAvailable || r.PopulationPartial || *r.P50 != tc.p50 || *r.P99 != tc.p99 {
+			t.Fatal("durable SQL population differs from exact latency population", out)
+		}
+		raw, _ := json.Marshal(r)
+		if strings.Contains(string(raw), "secret") || strings.Contains(string(raw), "/latency-") {
+			t.Fatal("latency aggregate leaked row metadata")
+		}
+	}
+	if state.Backlog != 0 || statisticsTestCount(t, db) != 6 {
+		t.Fatal("report mutated ingestion progress", state)
+	}
+}
+
 func TestStatisticsHistoryRenameRotationRetainsUnreadAndAvoidsDuplicates(t *testing.T) {
 	s, db, id, path, now := statisticsHistoryFixture(t)
 	line := statisticsTestLine(now, "/old")

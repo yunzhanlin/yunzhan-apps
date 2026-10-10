@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.4.0",
+  "summary": "真实访问日志后台增量采集到有界 SQLite 历史，30 天保留、全站最多 25 万行；时间、状态、路径/IP 和爬虫筛选，错误及慢请求明细。新增请求总耗时精确 P50/P90/P95/P99 与九段分布；无样本或超限不伪造分位数。慢请求阈值不筛除其他请求。检查点与请求同事务提交；压缩导入及地理信息未提供，需要对应版本面板处理器。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-statistics-v2",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "小时趋势",
+    "独立 IP",
+    "爬虫识别",
+    "错误数",
+    "路径排行",
+    "来源统计",
+    "时间与状态筛选",
+    "路径/IP 筛选",
+    "慢请求明细",
+    "后台增量采集与 30 天有界持久历史",
+    "检查点与请求同事务及中断保护",
+    "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-statistics-v2"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

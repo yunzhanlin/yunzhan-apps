@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-09T22:58:00Z",
+  "generated_at": "2026-10-10T00:09:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1528,8 +1528,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.3.0",
-      "summary": "真实访问日志后台增量采集到有界 SQLite 历史，30 天保留、全站最多 25 万行；时间、状态、路径/IP、爬虫与慢请求筛选。检查点与请求同事务提交，中断及轮转冲突保留历史，不从头重置。压缩归档和 IP 地理信息尚未提供。需要对应版本面板处理器。",
+      "version": "2.4.0",
+      "summary": "真实访问日志后台增量采集到有界 SQLite 历史，30 天保留、全站最多 25 万行；时间、状态、路径/IP 和爬虫筛选，错误及慢请求明细。新增请求总耗时精确 P50/P90/P95/P99 与九段分布；无样本或超限不伪造分位数。慢请求阈值不筛除其他请求。检查点与请求同事务提交；压缩导入及地理信息未提供，需要对应版本面板处理器。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1561,7 +1561,8 @@
         "路径/IP 筛选",
         "慢请求明细",
         "后台增量采集与 30 天有界持久历史",
-        "检查点与请求同事务及中断保护"
+        "检查点与请求同事务及中断保护",
+        "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警"
       ],
       "health": {
         "probe": "panel-api",
