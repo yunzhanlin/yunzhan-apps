@@ -15,10 +15,18 @@ source "$RELEASE_PATH/RELEASE"
 "$RELEASE_PATH/bin/panel-executor" --check-apache-body-cache-upgrade
 [[ ! -e /etc/panel-release && ! -e /opt/panel/current && ! -L /opt/panel/current ]] || { echo 'use the production installer for this layout' >&2; exit 1; }
 [[ -f /opt/panel/bin/panel && -f /opt/panel/bin/panel-executor && -d /opt/panel/web && ! -L /opt/panel/web ]] || { echo 'not the original development layout' >&2; exit 1; }
+for pending in /opt/panel/web.new /opt/panel/bin/panel.new /opt/panel/bin/panel-executor.new; do
+  [[ ! -e "$pending" && ! -L "$pending" ]] || { echo 'retained development stage exists; inspect before upgrading' >&2; exit 1; }
+done
 [[ $(systemctl show panel -p User --value) == panel ]] || { echo 'unexpected panel service owner' >&2; exit 1; }
 systemctl is-active --quiet panel panel-executor
 [[ $(sqlite3 /var/lib/panel/panel.db 'PRAGMA integrity_check;') == ok ]] || { echo 'database integrity check failed' >&2; exit 1; }
-[[ $(sqlite3 /var/lib/panel/panel.db 'SELECT count(*) FROM jobs WHERE state IN ("queued","running");') == 0 ]] || { echo 'wait for active panel jobs before updating' >&2; exit 1; }
+check_queues() {
+  for queue in jobs runtime_jobs; do
+    [[ $(sqlite3 /var/lib/panel/panel.db "SELECT count(*) FROM $queue WHERE state IN ('queued','running');") == 0 ]] || { echo 'wait for active panel or runtime jobs before updating' >&2; return 1; }
+  done
+}
+check_queues
 nginx -t
 exec 9>/opt/panel/.development-update.lock
 flock -n 9 || { echo 'another development update is running' >&2; exit 1; }
@@ -33,6 +41,7 @@ for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer "$
   [[ ! -f "/etc/systemd/system/$name" ]] || cp -a "/etc/systemd/system/$name" "$BACKUP/units/"
 done
 CHANGED=0
+SERVICES_STOPPED=0
 rollback() {
   result=$?
   if ((result != 0 && CHANGED)); then
@@ -49,9 +58,19 @@ rollback() {
     # Database migrations are rolled back only while both writers are stopped.
     rm -f /var/lib/panel/panel.db-wal /var/lib/panel/panel.db-shm
     install -m 0600 -o panel -g panel "$BACKUP/panel.db" /var/lib/panel/panel.db
+    if [[ -f "$BACKUP/DEVELOPMENT_RELEASE" ]]; then
+      cp -a "$BACKUP/DEVELOPMENT_RELEASE" /opt/panel/DEVELOPMENT_RELEASE
+    elif [[ -e /opt/panel/DEVELOPMENT_RELEASE ]]; then
+      mv /opt/panel/DEVELOPMENT_RELEASE "$BACKUP/failed-development-release"
+    fi
     systemctl daemon-reload
     systemctl restart panel-executor panel || true
     echo "update failed; development program and database restored from $BACKUP" >&2
+  elif ((result != 0 && SERVICES_STOPPED)); then
+    # A failed backup or a late queued job occurs before any program swap.
+    # Restore the original services without replacing or deleting the database.
+    systemctl restart panel-executor panel || true
+    echo 'update refused before program changes; original services restarted' >&2
   fi
   return "$result"
 }
@@ -65,7 +84,9 @@ install -d -m 0755 /var/cache/panel-waf-build
 install -d -m 0750 /var/cache/panel-waf-body
 install -d -m 0750 /var/backups/panel/mysql /var/backups/panel/mariadb /var/backups/panel/sites
 id panel-mariadb >/dev/null 2>&1 || useradd --system --user-group --home-dir /srv/panel/mariadb --shell /usr/sbin/nologin --comment panel-mariadb panel-mariadb
+SERVICES_STOPPED=1
 systemctl stop panel panel-executor
+check_queues
 sqlite3 /var/lib/panel/panel.db ".backup '$BACKUP/panel.db'"
 chmod 0600 "$BACKUP/panel.db"
 CHANGED=1
@@ -92,4 +113,5 @@ curl -fsS --max-time 3 http://127.0.0.1:19100/api/ready >/dev/null
 nginx -t
 install -m 0644 "$RELEASE_PATH/RELEASE" /opt/panel/DEVELOPMENT_RELEASE
 CHANGED=0
+SERVICES_STOPPED=0
 echo "development panel upgraded to $PANEL_VERSION; rollback backup: $BACKUP"

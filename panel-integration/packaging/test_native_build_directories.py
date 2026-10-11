@@ -31,7 +31,7 @@ class NativeBuildPackagingTests(unittest.TestCase):
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" create'), development.index('systemctl stop panel.service'))
         migration = (root / "scripts/upgrade-running-development.sh").read_text()
         self.assertLess(migration.index('python3 "$RELEASE_PATH/native-build-directories.py" check'), migration.index('BACKUP='))
-        self.assertLess(migration.index('python3 "$RELEASE_PATH/native-build-directories.py" create'), migration.index('systemctl stop panel panel-executor\nsqlite3'))
+        self.assertLess(migration.index('python3 "$RELEASE_PATH/native-build-directories.py" create'), migration.index('systemctl stop panel panel-executor\ncheck_queues\nsqlite3'))
 
     def test_non_root_cannot_initialize_any_directory(self):
         with tempfile.TemporaryDirectory(prefix="panel-native-cache-refusal-") as directory:

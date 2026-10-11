@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('normal BEZ exact source keeps a bounded slow official Apache archive and independent idle timeout',async()=>{
+test('normal BECJ exact source keeps a bounded slow official Apache archive and independent idle timeout',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'1f00568288403307ea91dfe2bd0cea210bd1c311dc0d650c833a560ab8d21862');
- assert.equal(release.archive_sha256,'b930f24f4c1fd926f4a12dd4ffb4b8c8c4c058935bd64b3033d33e8ed4361bae');
+ assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');
+ assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');
  for(const file of ['internal/executor/install_linux.go','internal/executor/runtime_source_download_linux_test.go','internal/runtimecatalog/source_archive.go']){
   assert.equal(createHash('sha256').update(await read('panel-integration/'+file)).digest('hex'),release.files[file]);
  }

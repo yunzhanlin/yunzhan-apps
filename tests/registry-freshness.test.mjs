@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-test('normal BEZ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
+test('normal BECJ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'1f00568288403307ea91dfe2bd0cea210bd1c311dc0d650c833a560ab8d21862');
- assert.equal(release.archive_sha256,'b930f24f4c1fd926f4a12dd4ffb4b8c8c4c058935bd64b3033d33e8ed4361bae');
- assert.equal(Object.keys(index.files).length,1187);
+ assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');
+ assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');
+ assert.equal(Object.keys(index.files).length,1188);
  for(const file of ['internal/appcatalog/catalog.go','internal/appcatalog/github_catalog.go','internal/appcatalog/github_catalog_test.go','internal/appcatalog/github_catalog_rate.go','internal/appcatalog/github_catalog_rate_test.go','scripts/test-registry-freshness.mjs','web/src/registryFreshness.ts','web/src/App.vue','packaging/build-release.sh']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);
  }
@@ -21,7 +21,7 @@ test('normal BEZ signed frozen source includes pinned catalog reads, poll-safe r
  assert.match(code,/c\.githubRefMu\.Lock\(\)/);assert.match(code,/fmt\.Errorf\("无法定位官方仓库当前提交: %w", err\)/);
  const retryTests=await read('panel-integration/internal/appcatalog/github_catalog_rate_test.go');for(const name of ['RetryHeadersBounded','RateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry','SecondaryBackoffIncreasesAndSuccessfulLookupResets','ConcurrentQuotaDoesNotBurstOrReadMutableMain','RetryDoesNotInventMetadataForCustomSource'])assert(retryTests.includes('TestGitHubCatalog'+name));
  assert.match(view,/到期后仍须重新检查/);assert(gate.includes('server retry deadlines stay failure evidence'));
- const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24taskversionbez');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
+ const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24devsafetybecj');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
  const lb=contracts.apps.find(a=>a.id==='load-balance');assert(lb.boundaries.some(s=>s.includes('下载事件超时')));assert(lb.scenarios.some(s=>s.includes('1.8.0 到 1.8.1')&&s.includes('2 份归档')));
  const registry=JSON.parse(await read('registry/apps.json'));assert.equal(registry.apps.length,50);assert.equal(registry.apps.find(a=>a.id==='load-balance').version,'1.8.2');
 });

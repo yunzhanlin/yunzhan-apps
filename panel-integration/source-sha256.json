@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24taskversionbez-linux-amd64.tar.gz",
-    "archive_sha256": "b930f24f4c1fd926f4a12dd4ffb4b8c8c4c058935bd64b3033d33e8ed4361bae",
-    "frozen_inputs_sha256": "1f00568288403307ea91dfe2bd0cea210bd1c311dc0d650c833a560ab8d21862"
+    "archive": "panel-0.1.0-dev.proapps24devsafetybecj-linux-amd64.tar.gz",
+    "archive_sha256": "804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b",
+    "frozen_inputs_sha256": "e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e"
   },
   "files": {
     "go.mod": "282b96e296dc25aae84d2af7736985b76b6747999da2efee42723bf1d1931a9a",
@@ -983,9 +983,10 @@
     "packaging/test_analytics_html_budget.py": "a523e98eafebacab7f1e2ce522a5fe208dd73ec117bc64cad3c32f7e577be1f7",
     "packaging/test_apache_body_cache_budget.py": "bb1d039d22ec541eae50a262e8c2814f90a0d0469f10b083173a5635d9a84a12",
     "packaging/test_app_dependency_budget.py": "e93d375e3aae9ce5cbed214253ae23a124978b9c79b816a8daf14bdc19fe2669",
+    "packaging/test_development_upgrade_safety.py": "85f8f2fd268487d41919b1ccd1553cafd455b675bf6a9f9b9278dd59f693903c",
     "packaging/test_freeze_source.py": "24fdce8d717761e53b82aadd296517d2f6c1bd79cf69f9e66c44fa1429bd9519",
     "packaging/test_install_dependency_policy.py": "4efe31230661b9fe3bed62fe47c5b44034307865080b4acc042ea1674664ebca",
-    "packaging/test_native_build_directories.py": "875cb39a527ef6b6b05ca777c0f1041f99a264a8889274f116fe420b58140c4d",
+    "packaging/test_native_build_directories.py": "f30f7042895e4e721ed42c1125628139c8a1da4acca2b07184c2176ff5569897",
     "packaging/test_native_test_oracle.py": "913e2e59c7421f4e82a58acba15b141fdf004f3dd8742345feb2219c3ea5820e",
     "packaging/test_network_rulefeed_budget.py": "5584c3f0654b5661523307b61f66753db8bf74fb78ecdf2d8097e135440c8fb6",
     "packaging/test_release_file_modes.py": "4c0163b5bae941e2dff1ced73eb6807135d751a74e833abc7f1c2fd861130420",
@@ -1180,7 +1181,7 @@
     "scripts/test-app-completion.py": "a674026f37f69ba264a7a32fc5b1baa3368975b8a1133bc80ac2acfc9c26a391",
     "scripts/test-app-nfs-completion.py": "7b1b0bf215f73f7e1f9da0a59cccb3192ecf37a6754fa4bb970ef5454d9859e0",
     "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c",
-    "scripts/upgrade-running-development.sh": "637bccd3f080675a1cf7001f19c0567001f9501d65a7b925c8b481f7ae9837a4",
+    "scripts/upgrade-running-development.sh": "5c8d1aef32094d3bbb689a646f7264b9f71596ba0c762eb6429234a217b4b997",
     "scripts/check-app-registry-compat-browser.mjs": "695fc28e7a53ba3ce4ae2ea8a482070f708fe406e680ae3bdc76034d3dfd62c7",
     "scripts/test-app-functions.py": "4eb639ded3dbc0ea1f4e3dbdea5e40821b41f8806ccf48f5af895bbd906b6bdf",
     "scripts/test-app-functions-browser.mjs": "b29f6462770600694a03ae89fde4a9d61e52a3d070b0cbf6ff358c2677178a73",
