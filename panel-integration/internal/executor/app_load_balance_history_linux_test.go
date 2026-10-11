@@ -22,7 +22,18 @@ import (
 func lbHistoryFixture(t *testing.T, withTLS ...bool) (*Service, loadBalanceTransaction, string, []byte) {
 	t.Helper()
 	s, tx, _ := lbRoutingTransactionFixture(t, withTLS...)
+	// The routing filesystem fixture creates a traversable modules parent for
+	// Nginx configuration. Installation records require a private 0700 parent;
+	// provision this own fixture explicitly, never weaken the production gate.
+	for _, dir := range []string{filepath.Join(s.Config.SecurityDir, "modules"), s.moduleDir("load-balance")} {
+		if err := os.Chmod(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	lbRoutingInstalled(t, s, "1.8.0")
+	if _, err := s.moduleInstalledRecord("load-balance"); err != nil {
+		t.Fatal("private installed fixture not established", err)
+	}
 	tx.State = "committed"
 	path := filepath.Join(filepath.Dir(s.loadBalancePendingPath()), tx.ID+".json")
 	if err := s.writeLoadBalanceTransaction(path, tx); err != nil {

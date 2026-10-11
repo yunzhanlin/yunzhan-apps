@@ -5,6 +5,32 @@
     "archive_sha256": "d12bf662fb1d53efc4abb0372714a897aa3c3d4ea7da82aca7a30e921df0a839",
     "frozen_inputs_sha256": "0ab6c40d2ec09a83864804e455aa7d8e7a8c4fd07836308cb39985c1aa0b7bd1"
   },
+  "test_overrides": {
+    "internal/executor/app_load_balance_history_linux_test.go": {
+      "release_sha256": "20a660ffdbdd1f20e51a9b27e12b5335601a434eb84fb63fe23b29e1144fdc34",
+      "reason": "Provision private installation fixture directories before exercising closed HTTP history input"
+    },
+    "internal/executor/app_reliability_linux_test.go": {
+      "release_sha256": "043a07fb449d681e3e10ff7c4f2b5af63879e1328b4546bd3f4ec1f33ba3ed49",
+      "reason": "Inject actual SQLite insert failure after business preflight; preserve partial write and paused automation assertions"
+    },
+    "internal/executor/app_sync_remote_linux_test.go": {
+      "release_sha256": "c6cbf58c3166ed1d0e599e3360ce75209304238e832a4c6988153dd27afacc37",
+      "reason": "Root OS write access is not a private 0700 job parent; assert queue refusal and original checkpoint preservation"
+    },
+    "internal/executor/app_threat_rotation_linux_test.go": {
+      "release_sha256": "df545ffb58da033fdcf1ff46ae493898d30ac5126b998f09a2a762d1e7f91394",
+      "reason": "Provision missing trusted fixture ancestors through strict production checks and prove unsafe ancestors are never repaired"
+    },
+    "internal/executor/app_threat_transaction_linux_test.go": {
+      "release_sha256": "f68118026bbbf391b4fbd6c7f39a239153d09b9989f7d2a882a21f8f90b44663",
+      "reason": "Use trusted own root fixture ancestors for journal stop/recovery instead of world-writable tmp"
+    },
+    "internal/executor/app_update_linux_test.go": {
+      "release_sha256": "083c6ee753f85d1f911d4a7267385c44586cf6f6f05e423ff1a3847ac1abba74",
+      "reason": "Use closed documented installation fields with custom state in settings and current implemented version"
+    }
+  },
   "files": {
     "go.mod": "282b96e296dc25aae84d2af7736985b76b6747999da2efee42723bf1d1931a9a",
     "go.sum": "1831f722652fe85735ee01aaa9d25dfb94f2a4093bb48309ba8cced4641fbc64",
@@ -429,7 +455,7 @@
     "internal/executor/app_load_balance_health_linux.go": "54138c0069d7fa0cc3f29220221921c22068c62d2a177a7179aaf38348fae176",
     "internal/executor/app_load_balance_health_linux_test.go": "dbe6203c6265d401910ed3918bac8864ae247e870bc920067c8b26bf52db6612",
     "internal/executor/app_load_balance_history_linux.go": "fdb65962e2e412990e92ad14ca34d970b8af0d4457107b4823caee2e47b5754d",
-    "internal/executor/app_load_balance_history_linux_test.go": "20a660ffdbdd1f20e51a9b27e12b5335601a434eb84fb63fe23b29e1144fdc34",
+    "internal/executor/app_load_balance_history_linux_test.go": "f579d0ac6af45815d0b937b8dbd92f16efb24bbe0a98ef5818f49dbdf1c9e6a0",
     "internal/executor/app_load_balance_https_linux_test.go": "925948fe06fab1787f28f08b33fa302e2ff64428ce2cd347fa7ed6e0d02dcf65",
     "internal/executor/app_load_balance_https_native_qa_linux_test.go": "6a5f6ead8020f8e9a817de1a8a9f2f500d00653e9c43981dbe9c1ef6a4df3f1f",
     "internal/executor/app_load_balance_linux.go": "29071e76c9f285919559e2caa91a2753df35e70716efa124f27ad7c8fb0a3066",
@@ -470,7 +496,7 @@
     "internal/executor/app_pm2_environment_linux_test.go": "a3c0ec1577c5c32c32c1ef95c71ad1fafda732b6fb9e3101ae664d8439ea7d57",
     "internal/executor/app_pm2_linux_test.go": "0243d51347f421090849b919c84145698eec159835215bf1a1dd44c91dd2df29",
     "internal/executor/app_pm2_platform_test.go": "c8b99a674522aebe08ed4b3b204f03f37e5c413dce37dcd520b198041fdac91f",
-    "internal/executor/app_reliability_linux_test.go": "043a07fb449d681e3e10ff7c4f2b5af63879e1328b4546bd3f4ec1f33ba3ed49",
+    "internal/executor/app_reliability_linux_test.go": "d13ab6071ffac75a4cb8d1e540f8f4b78b294989d29537ef125af2597fcd153a",
     "internal/executor/app_statistics_history_linux.go": "4dc9709c517a63038ee5c1acaf4213d128545eebfa35271dd7e3393e53128447",
     "internal/executor/app_statistics_history_linux_test.go": "ae242911d36b99b8893ce5d96db411f40345ed90e19fbcf2c35868330da1fdb4",
     "internal/executor/app_statistics_native_linux_test.go": "9ffbef3f56ef635e33adc6597e87c7f27ac0df969fd31568d56528d40165fd8a",
@@ -484,7 +510,7 @@
     "internal/executor/app_sync_remote_backups_linux_test.go": "49566f5c89910640865a5164bbfad10c45e5106c5c85b410df13a63faac3ed7e",
     "internal/executor/app_sync_remote_jobs_linux.go": "be4559af6d55eb09eef2c6942f08b2650dffac0ca87f1e8cc0a04b2dc8b703b4",
     "internal/executor/app_sync_remote_linux.go": "0af250510bbf38884326f77e53794c6a87d0a43dfbe19b6d9d3fac37d9c5bed3",
-    "internal/executor/app_sync_remote_linux_test.go": "c6cbf58c3166ed1d0e599e3360ce75209304238e832a4c6988153dd27afacc37",
+    "internal/executor/app_sync_remote_linux_test.go": "090f79b31700b5c95e5e98c20f3744de4964a40784fbe77820746d6767e17316",
     "internal/executor/app_sync_remote_plans_linux.go": "c033b7e147ede0b8e15b7fe52370a02d0804cbb898795fd8f2b92144cd02422d",
     "internal/executor/app_sync_remote_plans_linux_test.go": "55db79986716226306c6096ecf06c57ce6d69e6345d17659777f54fdfc0feee7",
     "internal/executor/app_sync_remote_realtime_linux_test.go": "006f4e6488864fd1b5ff7e1f62ffb4eaed0c6d4278fb0b5630176aeb6ab33487",
@@ -534,7 +560,7 @@
     "internal/executor/app_threat_rotation_budget.go": "10d6adfc41f84c05bc474cc0118154c85bb0d909da8d3b594262f9f87c35a4e1",
     "internal/executor/app_threat_rotation_budget_test.go": "ba488371d32c9dcc0c237228a827ebaf6e5e108856e977ec9c305c13496113f0",
     "internal/executor/app_threat_rotation_linux.go": "db048c96dc657d95129835b8eb2a015e37e54926a301648e9f228811053a566e",
-    "internal/executor/app_threat_rotation_linux_test.go": "df545ffb58da033fdcf1ff46ae493898d30ac5126b998f09a2a762d1e7f91394",
+    "internal/executor/app_threat_rotation_linux_test.go": "919f5aa32c5e0199a941fa9e6489445e5f23e80696a6c1f02228d849674fa372",
     "internal/executor/app_threat_rotation_proc.go": "54241da019ec1e768beedd0adf86a1af833f3f96da014c602ae130fc994bca98",
     "internal/executor/app_threat_rotation_proc_test.go": "c587ffab8044dcd49c95a5007896985854410439af5bd5bb9a0641ea1fd6041a",
     "internal/executor/app_threat_rotation_recovery_linux.go": "385fbd1860dca7f5d1439d2539b293485ff4a32b655c2b689c356707b86239cd",
@@ -564,13 +590,13 @@
     "internal/executor/app_threat_syntax_migration_linux.go": "309e9ef228107f950ab5dad8ec5a9e9d8b494fbef3f6bdf2b20054eddd6b4b1a",
     "internal/executor/app_threat_syntax_migration_linux_test.go": "84465cbc1a35d1b3d64af90aa9b73d318a04c9b069b383adff22247758cce3bc",
     "internal/executor/app_threat_transaction_linux.go": "72a79960a606793a53d9cd119ab57c16ca76db5b2153a3f0e948ec64c6d4573a",
-    "internal/executor/app_threat_transaction_linux_test.go": "f68118026bbbf391b4fbd6c7f39a239153d09b9989f7d2a882a21f8f90b44663",
+    "internal/executor/app_threat_transaction_linux_test.go": "edcf71af5a466117a294d847a7b34f4f1196772bbbb4e9ab436f6d1ee09ff81a",
     "internal/executor/app_threat_uninstall_linux.go": "06cd3f3a656139d93977df50c8afb5421444e315440ffdca2067e24675efe867",
     "internal/executor/app_threat_unit.go": "2c6655ab5a11701ef7bbbcf321820c331493d2f8496aa9681ba7188b1f45c430",
     "internal/executor/app_threat_unit_test.go": "3350f126c1346950ef2f321790a32407eabd2493b69a151a5cab520a677ac9b1",
     "internal/executor/app_threat_upgrade_linux.go": "9ae5354283155c07b1ee7beba30e7753aa1192b1c271d730698fa457d71704e3",
     "internal/executor/app_threat_upgrade_linux_test.go": "4e4a671e406cfe346bb2bac266d94060c654c50caddeb1a00c58978b13d0bd5a",
-    "internal/executor/app_update_linux_test.go": "083c6ee753f85d1f911d4a7267385c44586cf6f6f05e423ff1a3847ac1abba74",
+    "internal/executor/app_update_linux_test.go": "0da1f48b940f6cefb4021f3e56d78599e5af407a463a3f1a2ce0b6433dcb6bbc",
     "internal/executor/apply_cancel_test.go": "5b9810bf4f89456f2537d7fccfaa6a20b743b0f2d134db5fe46854f67eb96e9d",
     "internal/executor/apt_acquisition.go": "c7f23d02fca7927f6335bbc45426e442f44958d7e98038b0848d8da8724166fc",
     "internal/executor/apt_acquisition_test.go": "6fc8b75cf92b934101f134d290fa21640c4d2a635eeac605c1c9248c90f065aa",

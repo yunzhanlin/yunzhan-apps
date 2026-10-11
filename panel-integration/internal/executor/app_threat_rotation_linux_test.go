@@ -64,13 +64,15 @@ func TestThreatIDSRotationRecordClosedCapacityAndSealingIdentity(t *testing.T) {
 	}
 }
 
-func threatIDSRotationRootFixture(t *testing.T) *Service {
+func threatIDSRootDirectoryFixture(t *testing.T) string {
 	t.Helper()
 	if os.Geteuid() != 0 {
 		t.Skip("requires actual Linux root private fixture")
 	}
 	base := "/var/lib/panel-executor"
-	if err := threatIDSTrustedParents(base, false); err != nil {
+	// Fresh CI runners have no executor installation. Provision missing fixture
+	// parents through the same strict checks; existing unsafe parents still fail.
+	if err := threatIDSTrustedParents(base, true); err != nil {
 		t.Fatal(err)
 	}
 	root, err := os.MkdirTemp(base, "ids-rotation-fixture-")
@@ -79,6 +81,13 @@ func threatIDSRotationRootFixture(t *testing.T) *Service {
 	}
 	// Retain bounded own fixture data alongside proof on failure. No cleanup
 	// can erase evidence while this test is diagnosing unknown file edits.
+	t.Log("bounded retained private fixture", root)
+	return root
+}
+
+func threatIDSRotationRootFixture(t *testing.T) *Service {
+	t.Helper()
+	root := threatIDSRootDirectoryFixture(t)
 	s := New(Config{SystemRoot: root, SecurityDir: filepath.Join(root, "security")}).threatIDSTransactionService()
 	if err := threatIDSTrustedParents(s.moduleDir("network-threat-detection"), true); err != nil {
 		t.Fatal(err)
@@ -89,8 +98,62 @@ func threatIDSRotationRootFixture(t *testing.T) *Service {
 	if _, err := s.threatIDSHistoryDirectory(true); err != nil {
 		t.Fatal(err)
 	}
-	t.Log("bounded retained private fixture", root)
 	return s
+}
+
+func TestThreatIDSTrustedParentsRefuseUnsafeAncestorsWithoutRepair(t *testing.T) {
+	s := threatIDSRotationRootFixture(t)
+	for _, kind := range []string{"group-writable", "world-writable", "foreign-owner", "symlink", "regular-file"} {
+		t.Run(kind, func(t *testing.T) {
+			parent := filepath.Join(s.Config.SystemRoot, kind)
+			if kind == "regular-file" {
+				if err := os.WriteFile(parent, []byte("retained fixture"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else if kind == "symlink" {
+				if err := os.Symlink(s.Config.SystemRoot, parent); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if err := os.Mkdir(parent, 0755); err != nil {
+					t.Fatal(err)
+				}
+				switch kind {
+				case "group-writable", "world-writable":
+					mode := os.FileMode(0775)
+					if kind == "world-writable" {
+						mode = 0777
+					}
+					if err := os.Chmod(parent, mode); err != nil {
+						t.Fatal(err)
+					}
+				case "foreign-owner":
+					if err := os.Chown(parent, 800, 801); err != nil {
+						t.Fatal(err)
+					}
+				}
+			}
+			before, err := os.Lstat(parent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			child := filepath.Join(parent, "must-not-create")
+			if err := threatIDSTrustedParents(child, true); err == nil {
+				t.Fatal("unsafe fixture ancestor accepted")
+			}
+			after, err := os.Lstat(parent)
+			if err != nil {
+				t.Fatal(err)
+			}
+			beforeOwner, afterOwner := before.Sys().(*syscall.Stat_t), after.Sys().(*syscall.Stat_t)
+			if !os.SameFile(before, after) || before.Mode() != after.Mode() || beforeOwner.Uid != afterOwner.Uid || beforeOwner.Gid != afterOwner.Gid {
+				t.Fatal("unsafe ancestor repaired or replaced", err)
+			}
+			if _, err := os.Lstat(child); err == nil || !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTDIR) {
+				t.Fatal("unsafe ancestor used to create a child", err)
+			}
+		})
+	}
 }
 
 func threatIDSRotationArchiveFixture(t *testing.T, s *Service) (threatIDSArchive, string) {

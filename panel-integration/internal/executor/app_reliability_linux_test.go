@@ -330,9 +330,22 @@ func TestAppReliabilityPermissionOnlySyncAndHistoryFailure(t *testing.T) {
 	if err != nil || out.(map[string]any)["conflicts_count"] != 1 || fixtureRead(t, svc, target, "mode.txt") != "same-content" {
 		t.Fatal("target permission change overwritten", out, err)
 	}
-	history := filepath.Join(svc.moduleDir("files-sync"), "history.json")
-	if err = os.WriteFile(history, []byte("corrupt"), 0600); err != nil {
+	// Corrupt legacy JSON is now rejected before business execution. Exercise
+	// the distinct post-write failure by refusing inserts in this own SQLite
+	// ledger; root write capability cannot bypass this explicit failure.
+	db, err := svc.openModuleLedger(context.Background(), "files-sync")
+	if err != nil {
 		t.Fatal(err)
+	}
+	if _, err = db.Exec(`CREATE TRIGGER qa_refuse_event BEFORE INSERT ON module_events BEGIN SELECT RAISE(ABORT,'own fixture history publication refused'); END`); err != nil {
+		db.Close()
+		t.Fatal(err)
+	}
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err = svc.moduleRetrospectivePreflight("files-sync"); err != nil {
+		t.Fatal("post-write fixture failed before business execution", err)
 	}
 	fixtureWrite(t, svc, source, "new.txt", "actual-write")
 	if _, err = svc.moduleSyncPlans(context.Background(), "run-plan", input); err == nil {
