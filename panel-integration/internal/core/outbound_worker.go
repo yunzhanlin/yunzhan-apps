@@ -39,21 +39,35 @@ func (a *Server) collectModuleNotifications(ctx context.Context) error {
 	}
 	defer a.outboundCollectMu.Unlock()
 	var firstError error
-	for _, module := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "php-code-security"} {
-		if err := a.collectOneModuleNotification(ctx, module); err != nil && firstError == nil {
+	healthAvailable, trafficAvailable := false, false
+	if ctx.Err() == nil {
+		bounded, cancel := context.WithTimeout(ctx, 2*time.Second)
+		if err := a.collectLoadBalanceSnapshot(bounded, &healthAvailable); err != nil && firstError == nil {
 			firstError = err
 		}
+		cancel()
+	}
+	if ctx.Err() == nil {
+		bounded, cancel := context.WithTimeout(ctx, 2*time.Second)
+		if err := a.collectLoadBalanceTrafficSnapshot(bounded, &trafficAvailable); err != nil && firstError == nil {
+			firstError = err
+		}
+		cancel()
+	}
+	// A cancelled parent is not a source failure. The two feeds are each read
+	// exactly once; only validated inventories and committed cursors are ready.
+	if ctx.Err() == nil {
+		if err := a.Store.observeLoadBalanceSource(ctx, healthAvailable && trafficAvailable, time.Now().Unix()); err != nil && firstError == nil {
+			firstError = err
+		}
+	}
+	// Source status has its own bounded reads before unrelated module I/O, so a
+	// slow module does not exhaust the cycle before this observation is recorded.
+	for _, module := range []string{"file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync", "php-code-security"} {
 		if ctx.Err() != nil {
 			break
 		}
-	}
-	if ctx.Err() == nil {
-		if err := a.collectLoadBalanceNotifications(ctx); err != nil && firstError == nil {
-			firstError = err
-		}
-	}
-	if ctx.Err() == nil {
-		if err := a.collectLoadBalanceTrafficNotifications(ctx); err != nil && firstError == nil {
+		if err := a.collectOneModuleNotification(ctx, module); err != nil && firstError == nil {
 			firstError = err
 		}
 	}
@@ -234,10 +248,15 @@ func (a *Server) sendOutbound(ctx context.Context, client *http.Client, d outbou
 	if _, e = validateWebhookURL(credential.URL); e != nil {
 		return 0, "推送地址无效", 0
 	}
-	if len(d.Payload) > 4096 {
-		return 0, "推送摘要超过限制", 0
+	message, e := outboundDeliverySummary(d.Payload, "")
+	if e != nil {
+		return 400, "原推送摘要无法核对，未发送；原证据保留", 0
 	}
-	req, e := http.NewRequestWithContext(ctx, "POST", credential.URL, bytes.NewBufferString(d.Payload))
+	payload, e := json.Marshal(message)
+	if e != nil || len(payload) > 4096 {
+		return 400, "脱敏推送摘要无法核对，未发送", 0
+	}
+	req, e := http.NewRequestWithContext(ctx, "POST", credential.URL, bytes.NewReader(payload))
 	if e != nil {
 		return 0, "推送请求无效", 0
 	}
@@ -246,7 +265,7 @@ func (a *Server) sendOutbound(ctx context.Context, client *http.Client, d outbou
 	req.Header.Set("User-Agent", "Yunzhan-Notifications/1.0")
 	req.Header.Set("X-Yunzhan-Delivery-ID", d.ID)
 	req.Header.Set("X-Yunzhan-Timestamp", timestamp)
-	req.Header.Set("X-Yunzhan-Signature", webhookSignature(credential.Secret, d.ID, timestamp, []byte(d.Payload)))
+	req.Header.Set("X-Yunzhan-Signature", webhookSignature(credential.Secret, d.ID, timestamp, payload))
 	response, e := client.Do(req)
 	if e != nil {
 		return 0, "推送网络或证书验证失败", 0

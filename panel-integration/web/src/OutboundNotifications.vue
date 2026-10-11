@@ -5,9 +5,9 @@ import { formatPanelDateTime } from "./panelTime";
 import {outboundSourceInventory,outboundSourceReplyMatches} from './outboundSourceView';
 interface SMTPPublic { host: string; port: number; tls_mode: string; server_name: string; ca_pem: string; auth_mode: string; username_set: boolean; password_set: boolean; from: string; to: string[] }
 interface Channel { id: string; name: string; endpoint_host: string; enabled: boolean; kinds: string[]; revision: number; secret_set: boolean; updated_at: string; type: string; smtp?: SMTPPublic; credential_error?: string }
-interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number; day?:string; source_sha?:string; channel_revision?:number }
+interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number; day?:string; source_sha?:string; channel_revision?:number; kind?:string; event_type?:string; title?:string; message?:string; severity?:string; event_created_at?:number; test?:boolean }
 const props = defineProps<{ api: <T>(path: string, method?: string, body?: unknown) => Promise<T> }>();
-const kinds = [{ id: "load-balance-traffic", label: "负载均衡切流事务与后台调度" }, { id: "load-balance", label: "负载均衡健康变化与事件缺口" }, { id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
+const kinds = [{ id: "load-balance-source", label: "负载均衡告警来源可用性" }, { id: "load-balance-traffic", label: "负载均衡切流事务与后台调度" }, { id: "load-balance", label: "负载均衡健康变化与事件缺口" }, { id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
 const states: Record<string, string> = { pending: "等待发送 / 重试", running: "发送中", succeeded: "接收端已接收", failed: "失败，需处理", cancelled: "配置变更，已取消",source_blocked:"原日报来源待核对（未发送）",source_resolved:"来源已核对入队（非送达）" };
 const channels = ref<Channel[]>([]), deliveries = ref<Delivery[]>([]);
 const sourceInventoryKnown=ref(false),sourceTotal=ref(0),sourceShown=ref(0);
@@ -193,6 +193,7 @@ defineExpose({ refresh });
       <el-form-item label="发送事件"><el-checkbox-group v-model="draft.kinds"><el-checkbox v-for="kind in kinds" :key="kind.id" :value="kind.id">{{ kind.label }}</el-checkbox></el-checkbox-group></el-form-item>
       <el-alert v-if="draft.kinds.includes('load-balance')" type="info" :closable="false" title="需要已核对的负载均衡 1.8.3。每入口保留最多 32 条阈值变化；首次读取、新入口或配置修订建立基线，不补发先前记录。事件缺口另行告警；健康确认不代表实际流量已切换或整体恢复。只发送固定摘要，不含域名、节点地址、正文或密钥。" />
       <el-alert v-if="draft.kinds.includes('load-balance-traffic')" type="info" :closable="false" title="切流与后台调度为独立范围，需要可信负载均衡 1.8.4，旧健康通道不自动订阅。完整核对最多 512 份活动和 2048 份归档事务；首次读取仅建立已结束历史基线，当前未完成事务仍告警。归档不重复发送，调度未知不当作恢复；调度消息是当前采样状态，不是完整故障日志。仅固定摘要，不外发域名、节点、配置或原始错误。" />
+      <el-alert v-if="draft.kinds.includes('load-balance-source')" type="info" :closable="false" title="来源可用性为第三个独立范围，不自动订阅旧健康或切流通道。需要可信负载均衡 1.8.4 / 1.8.5 的两个告警源；明确启用后，未安装、不支持、读取失败、完整库存或原游标无法核对会提示来源待核对。来源重新可核对不代表业务恢复。这是当前采样记录，不补全采样间隔内的故障，也不补发停用期间的事件。仅固定摘要，不发送原始错误或配置。" />
       <el-form-item label="启用通道"><el-switch v-model="draft.enabled" aria-label="启用当前推送通道" /></el-form-item>
       <el-alert title="保存或停用会取消旧队列，并中止仍在等待响应的旧连接；重新启用不补发历史事件。接收端已处理的数据无法撤回。" type="info" :closable="false" />
     </el-form>
@@ -207,6 +208,7 @@ defineExpose({ refresh });
     <el-table :data="deliveries" :empty-text="sourceInventoryKnown?'暂无发送记录':'来源与发送记录待核对'" v-loading="historyLoading">
       <el-table-column label="时间 / 原记录标识" min-width="215"><template #default="{ row }">{{ time(row.created_at) }}<small class="host delivery-id">{{ row.id }}</small><div v-if="row.state==='source_blocked'||row.state==='source_resolved'" class="source-identity" aria-label="原日报来源身份（只读）"><span>原日报 {{ row.day || '日期待核对' }} · 原通道 v{{ row.channel_revision }}</span><small class="host delivery-id">原事件 {{ row.event_id }}</small><small class="host delivery-id">原配置摘要（只读） {{ row.source_sha }}</small></div></template></el-table-column>
       <el-table-column label="实际状态" min-width="150"><template #default="{ row }"><el-tag :type="row.state === 'succeeded' ? 'success' : row.state === 'failed' ? 'danger' : 'info'">{{ states[row.state] || row.state }}</el-tag></template></el-table-column>
+      <el-table-column label="脱敏事件 / 摘要" min-width="270"><template #default="{ row }"><template v-if="row.title"><strong>{{ row.test ? '测试 · ' : '' }}{{ row.title }}</strong><small class="host">{{ kindLabel(row.kind || '') }} · {{ row.severity === 'critical' ? '严重' : row.severity === 'warning' ? '警告' : '提示' }} · 事件时间 {{ time(row.event_created_at || 0) }}</small><p class="delivery-summary">{{ row.message }}</p></template><span v-else>{{ row.state === 'source_blocked' || row.state === 'source_resolved' ? '原日报来源核对记录，尚非送达结果' : '旧版本未提供事件摘要，原记录保留' }}</span></template></el-table-column>
       <el-table-column prop="attempts" label="次数" width="60" />
       <el-table-column :label="selected?.type === 'smtp' ? 'SMTP' : 'HTTP'" width="75"><template #default="{ row }">{{ row.http_status || '—' }}</template></el-table-column>
       <el-table-column prop="error" label="结果或待核对原因" min-width="190" />
@@ -227,6 +229,7 @@ defineExpose({ refresh });
 .outbound-heading p { margin-top: 6px; }
 .host { display: block; color: var(--el-text-color-secondary); font-size: 12px; }
 .delivery-id { font-family: monospace; overflow-wrap: anywhere; }
+.delivery-summary { margin-top: 6px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .source-identity { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--el-border-color-lighter); font-size: 12px; overflow-wrap: anywhere; }
 .history-error-anchor { margin-bottom: 8px; scroll-margin-block: 12px; }
 .history-error-anchor:focus-visible { outline: 2px solid var(--el-color-danger); outline-offset: 2px; }

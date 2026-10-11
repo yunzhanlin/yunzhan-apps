@@ -294,15 +294,15 @@ func TestOutboundLoadBalanceCursorCapacityRollsBackEarlierEntryEvents(t *testing
 }
 
 func TestLoadBalanceAlertsRequireIndependentReviewedPatchVersion(t *testing.T) {
-	if SoftwareImplementationVersion("load-balance") != "1.8.4" {
+	if SoftwareImplementationVersion("load-balance") != "1.8.5" {
 		t.Fatal("alert handler changed without an independent app version")
 	}
-	for _, version := range []string{"1.8.2", "1.8.3", "1.8.4"} {
+	for _, version := range []string{"1.8.2", "1.8.3", "1.8.4", "1.8.5"} {
 		if err := ValidateSoftwareUpdate("load-balance", version); err != nil {
 			t.Fatal("prior/current reviewed app release refused", err)
 		}
 	}
-	if ValidateSoftwareUpdate("load-balance", "1.8.5") == nil {
+	if ValidateSoftwareUpdate("load-balance", "1.8.6") == nil {
 		t.Fatal("unimplemented future app update accepted")
 	}
 	var definition AppModuleDefinition
@@ -318,13 +318,13 @@ func TestLoadBalanceAlertsRequireIndependentReviewedPatchVersion(t *testing.T) {
 	found := false
 	for _, item := range moduleSoftwareCatalog() {
 		if item.ID == "load-balance" {
-			found = item.Version == "1.8.4"
+			found = item.Version == "1.8.5"
 		}
 	}
 	if !found {
 		t.Fatal("actual normal module handler did not advertise the independent alert patch")
 	}
-	if !LoadBalanceHistoryVersion("1.8.4") || LoadBalanceHistoryVersion("1.8.5") {
+	if !LoadBalanceHistoryVersion("1.8.4") || !LoadBalanceHistoryVersion("1.8.5") || LoadBalanceHistoryVersion("1.8.6") {
 		t.Fatal("new version lacks the reviewed inherited contract or accepts unknown future")
 	}
 }

@@ -980,8 +980,9 @@ defineExpose({ show });
               <template v-if="form.health_check">
                 <div class="http-health-toggle"><span>故障节点自动摘除与恢复</span><el-switch :model-value="form.health_check.auto_traffic===true" aria-label="启用故障节点自动摘除与恢复" @update:model-value="setHTTPAutomaticTraffic" /></div>
                 <small>健康变化推送需要负载均衡 1.8.3，并在面板推送设置明确选择“负载均衡健康变化与事件缺口”；不自动订阅旧通道。首次读取或配置修订建立基线，不补发旧记录；健康告警与实际流量变更仍须分别核对。</small>
+                <small>1.8.5 另行选择“负载均衡告警来源可用性”，不扩大旧健康或切流范围。来源重新可核对不代表业务恢复；通知页发送记录显示重新生成的脱敏事件摘要，原摘要损坏时保留证据并提示核对。</small>
                 <small>1.8.4 可另行选择“负载均衡切流事务与后台调度”：区分已提交、恢复旧配置与未完成交接。旧健康范围不会自动扩大；调度消息是当前采样，不是完整错误历史，不能当作所有节点或业务恢复。</small>
-                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 / 1.7.1 / 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
+                <small>检查默认只观测。自动流量须已安装经过核验的 1.7.0 / 1.7.1 / 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 / 1.8.5 并精确确认；达到失败阈值摘除，达到恢复阈值重新加入。初始未知节点可转发，全部失败时全部摘除，不自动放行失败节点；旧长请求不中断。修改策略保留仍在清单中的既有摘除节点，重新达到恢复阈值才加入。</small>
                 <label>检查协议<el-select :model-value="form.health_check.scheme || 'http'" aria-label="应用检查协议" @update:model-value="setHTTPHealthScheme">
                   <el-option value="http" label="HTTP" /><el-option value="https" label="HTTPS（验证证书）" />
                 </el-select></label>

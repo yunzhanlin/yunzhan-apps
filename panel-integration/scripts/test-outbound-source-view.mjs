@@ -15,6 +15,13 @@ test('acknowledgements must bind original block and event; never infer delivery'
  assert(outboundSourceReplyMatches(row,reply));assert(outboundSourceReplyMatches(row,{...reply,already_resolved:true}));
  for(const bad of [null,[],{},Object.create(reply),{...reply,id:'f'.repeat(32)},{...reply,event_id:'f'.repeat(32)},{...reply,state:'succeeded'},{...reply,token:'private'},{...reply,delivery_id:'bad'}])assert(!outboundSourceReplyMatches(row,bad));
 });
+test('closed delivery summaries remain readable; partial, unrelated and unbounded fields never render as valid history',()=>{
+ const delivery={id:'d'.repeat(32),event_id:'e'.repeat(32),state:'succeeded',attempts:1,http_status:204,error:'',created_at:1790000000,completed_at:1790000001,kind:'load-balance-source',event_type:'source_ready',title:'负载均衡告警来源重新可核对',message:'不代表业务恢复',severity:'info',event_created_at:1790000000,test:false};
+ assert(outboundSourceInventory({...inventory,deliveries:[delivery]}));
+ for(const mutate of [{event_type:'arbitrary-private-source'},{kind:'load-balance',event_type:'source_ready'},{title:''},{message:'x'.repeat(257)},{test:1},{event_created_at:0},{secret:'private'}])assert(!outboundSourceInventory({...inventory,deliveries:[{...delivery,...mutate}]}));
+ const incomplete={...delivery};delete incomplete.event_type;assert(!outboundSourceInventory({...inventory,deliveries:[incomplete]}));
+ assert(source.includes('label="脱敏事件 / 摘要"'));assert(source.includes('{{ row.message }}'));assert(!source.includes('v-html='));
+});
 const source=readFileSync(new URL('../web/src/OutboundNotifications.vue',import.meta.url),'utf8');
 const readStart=source.indexOf('async function focusHistoryError('),readEnd=source.indexOf('function showHistory(',readStart);
 const writeStart=source.indexOf('async function reconcileSource('),writeEnd=source.indexOf('onMounted(',writeStart);

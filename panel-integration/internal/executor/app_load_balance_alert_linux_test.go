@@ -110,7 +110,7 @@ func TestLoadBalanceAlertNativeRefusesUnknownInstalledIdentityAndUnsafeFiles(t *
 	if err = os.Chmod(path, 0600); err != nil {
 		t.Fatal(err)
 	}
-	lbAlertNativeInstall(t, s, "1.8.5")
+	lbAlertNativeInstall(t, s, "1.8.6")
 	lbAlertNativeRead(t, s, "", 409)
 	lbAlertNativeInstall(t, s, "1.8.2")
 	if feed := lbAlertNativeRead(t, s, "", 200); feed.Available {
