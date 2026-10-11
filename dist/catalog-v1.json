@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-11T18:29:53Z",
+  "generated_at": "2026-10-11T19:16:16Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1046,8 +1046,8 @@
       "id": "task-manager",
       "name": "Task manager",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "读取真实 CPU/内存/进程身份，拒绝终止 PID1 与非受管进程",
+      "version": "1.2.1",
+      "summary": "真实进程身份优先表格、当前快照名称/PID 筛选和受管过滤；CPU/I/O 未取得显示未知。只读原 PID/启动身份，只允许受管非 root 进程 SIGTERM，不自动重发或宣称退出；需要支持 1.2.1 的签名面板。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -1059,10 +1059,13 @@
         "网络连接",
         "受管非 root 进程终止",
         "专用操作流程",
-        "执行历史"
+        "执行历史",
+        "名称/PID 快照筛选，不重新采样或改变权限",
+        "身份优先列和真实未知速率，最多显示 500 条",
+        "信号接受不等于退出；原 PID/启动身份只读"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.2.0/manifest.json",
-      "sha256": "210dc302db5f1c87915a3f20dc96d5c94232cfbd66da229e50ae30e9c7be0600"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/task-manager/1.2.1/manifest.json",
+      "sha256": "99d3fd64c47b6b8983ac81eb413c08e70a557f03f9a85059b70f7b0a9c44d219"
     },
     {
       "id": "user-manager",

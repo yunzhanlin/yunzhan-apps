@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import {remoteConnectionRow} from "./remoteSync";
 import ThreatIDSReport from "./ThreatIDSReport.vue";
 import AnalyticsLatencyReport from "./AnalyticsLatencyReport.vue";
 import DailyReportSummary from "./DailyReportSummary.vue";
 import {dailySnapshot} from "./dailyReportView";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
+import {taskProcessColumns,taskProcessRows} from './taskManager';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
+const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
+  pm2_version: "PM2 版本",
   signal_accepted:"信号发送已接受",
   exit_verified:"退出已核对",
   connections:"连接明细",
@@ -460,6 +463,7 @@ const info = computed(() =>
 );
 function format(key: string, value: unknown, row?:Record<string,unknown>): string {
   if(props.id==='task-manager') {
+    if(key==='state')return ({R:'运行中',S:'睡眠',D:'不可中断等待',I:'内核空闲',T:'已停止',t:'跟踪停止',Z:'僵尸',X:'已退出',x:'已退出'} as Record<string,string>)[String(value)]||'未知';
     if(key==='connections' && props.report.connections_available!==true)return '未取得，当前状态未知';
     if(['cpu_percent','read_rate','write_rate'].includes(key) && (typeof value!=='number' || !Number.isFinite(value) || value<0 || !row || row[key==='cpu_percent'?'cpu_available':'io_available']!==true))return '未知';
   }
@@ -491,8 +495,9 @@ function format(key: string, value: unknown, row?:Record<string,unknown>): strin
   if (Array.isArray(value)) return value.join(", ");
   return String(value ?? "—");
 }
-function rows(values: any[]): Record<string, any>[] {
-  return values.slice(0, props.id==='task-manager' ? 500 : 200).map((v) => {
+function rows(values: any[],key=''): Record<string, any>[] {
+  const selected=props.id==='task-manager'&&key==='processes'?taskProcessRows(values,taskQuery.value,taskManagedOnly.value):values;
+  return selected.slice(0, props.id==='task-manager' ? 500 : 200).map((v) => {
     if (v === null || typeof v !== "object") return { path: String(v) };
     return {
       ...(v.app || v.mount || {}),
@@ -509,6 +514,7 @@ function rows(values: any[]): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+  if(props.id==='task-manager'&&values.some(value=>value&&typeof value==='object'&&'pid' in value))return taskProcessColumns(values);
   if(props.id==="files-sync" && values.some(value=>value && value.backup_archive_state))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_archive_state","backup_snapshot_sha256","pending_recovery","content_verified"];
   if(props.id==="files-sync" && values.some(value=>value && value.backup_transaction_id))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_files","pending_recovery"];
   if(props.id==="files-sync" && values.some(value=>value && value.remote_target_revision))return ["id","remote_target_id","site_id","enabled","realtime","watcher_state","watch_directories","watch_overflows","watch_error","plan_revision","remote_target_revision","interval","next_run_at","last_trigger","change_sequence","consumed_sequence","pending_sequence","last_state","pending_job_id","last_job_id","last_finished_at","last_error","excludes"];
@@ -674,10 +680,15 @@ function mobileDownloadURL(value: unknown): string | undefined {
         {{ reportLabel(key) }}
         <small
           >{{ values.length }} 项{{
-            values.length > 200 ? "，只展示前 200 项" : ""
+            values.length > (id==='task-manager'?500:200) ? `，只展示前 ${id==='task-manager'?500:200} 项` : ""
           }}</small
         >
       </h4>
+      <div v-if="id==='task-manager'&&key==='processes'" class="task-snapshot-filter" role="region" aria-label="筛选当前进程快照">
+        <el-input v-model="taskQuery" aria-label="筛选当前快照的进程名称或 PID" placeholder="进程名称或 PID（当前快照）" maxlength="128" clearable />
+        <el-checkbox v-model="taskManagedOnly">仅云栈受管进程（包括不可终止项）</el-checkbox>
+        <p role="status">当前筛选 {{taskProcessRows(values,taskQuery,taskManagedOnly).length}} / {{Math.min(values.length,500)}} 条；仅筛选已返回快照，不重新采样，不代表全部进程。点击“刷新报告”核对最新状态。</p>
+      </div>
       <p v-if="!values.length">暂无记录。</p>
       <template
         v-else-if="
@@ -699,7 +710,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
       ></template>
       <el-table
         v-else
-        :data="rows(values)"
+        :data="rows(values,key)"
         stripe
         max-height="370"
         @row-click="choose"
@@ -721,7 +732,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
             ].includes(column)
           "
           :min-width="
-            ['path', 'evidence', 'url', 'source'].includes(column) ? 220 : 100
+            id==='task-manager'&&column==='name' ? 160 : ['path', 'evidence', 'url', 'source'].includes(column) ? 220 : 100
           "
           show-overflow-tooltip
           ><template #default="{ row }">{{
@@ -868,6 +879,15 @@ pre {
 .functional-report {
   min-width: 0;
 }
+.task-snapshot-filter {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+  max-width: 100%;
+}
+.task-snapshot-filter .el-input { max-width: 360px; }
+.task-snapshot-filter .el-checkbox { height: auto; white-space: normal; }
+.task-snapshot-filter p { margin: 0; font-size: 12px; color: #657181; overflow-wrap: anywhere; }
 .report-distributions {
   max-width: 100%;
 }

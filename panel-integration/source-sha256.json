@@ -1,35 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24dependencybudgetbdv-linux-amd64.tar.gz",
-    "archive_sha256": "d12bf662fb1d53efc4abb0372714a897aa3c3d4ea7da82aca7a30e921df0a839",
-    "frozen_inputs_sha256": "0ab6c40d2ec09a83864804e455aa7d8e7a8c4fd07836308cb39985c1aa0b7bd1"
-  },
-  "test_overrides": {
-    "internal/executor/app_load_balance_history_linux_test.go": {
-      "release_sha256": "20a660ffdbdd1f20e51a9b27e12b5335601a434eb84fb63fe23b29e1144fdc34",
-      "reason": "Provision private installation fixture directories before exercising closed HTTP history input"
-    },
-    "internal/executor/app_reliability_linux_test.go": {
-      "release_sha256": "043a07fb449d681e3e10ff7c4f2b5af63879e1328b4546bd3f4ec1f33ba3ed49",
-      "reason": "Inject actual SQLite insert failure after business preflight; preserve partial write and paused automation assertions"
-    },
-    "internal/executor/app_sync_remote_linux_test.go": {
-      "release_sha256": "c6cbf58c3166ed1d0e599e3360ce75209304238e832a4c6988153dd27afacc37",
-      "reason": "Root OS write access is not a private 0700 job parent; assert queue refusal and original checkpoint preservation"
-    },
-    "internal/executor/app_threat_rotation_linux_test.go": {
-      "release_sha256": "df545ffb58da033fdcf1ff46ae493898d30ac5126b998f09a2a762d1e7f91394",
-      "reason": "Provision missing trusted fixture ancestors through strict production checks and prove unsafe ancestors are never repaired"
-    },
-    "internal/executor/app_threat_transaction_linux_test.go": {
-      "release_sha256": "f68118026bbbf391b4fbd6c7f39a239153d09b9989f7d2a882a21f8f90b44663",
-      "reason": "Use trusted own root fixture ancestors for journal stop/recovery instead of world-writable tmp"
-    },
-    "internal/executor/app_update_linux_test.go": {
-      "release_sha256": "083c6ee753f85d1f911d4a7267385c44586cf6f6f05e423ff1a3847ac1abba74",
-      "reason": "Use closed documented installation fields with custom state in settings and current implemented version"
-    }
+    "archive": "panel-0.1.0-dev.proapps24taskversionbez-linux-amd64.tar.gz",
+    "archive_sha256": "b930f24f4c1fd926f4a12dd4ffb4b8c8c4c058935bd64b3033d33e8ed4361bae",
+    "frozen_inputs_sha256": "1f00568288403307ea91dfe2bd0cea210bd1c311dc0d650c833a560ab8d21862"
   },
   "files": {
     "go.mod": "282b96e296dc25aae84d2af7736985b76b6747999da2efee42723bf1d1931a9a",
@@ -111,8 +85,8 @@
     "internal/core/app_module_identity_test.go": "ccb270bb8e79a245193dc6d930d127543ae7782dc98e79aa01bdb319e3a050cc",
     "internal/core/app_module_workspace.go": "fa39262d643dddba4c21cf8c96bd7e830dd6264fae35acf61a0b8b5cdbd78bc3",
     "internal/core/app_module_workspace_test.go": "bd632c2f0419e2487c26ada8c86aaa4c51c33011bb881c34eaa3dc4f3aee9c51",
-    "internal/core/app_modules.go": "ddb6db1f9dc34fbf4595b91ec688a4c65ef38f03f667f4ec9dfc97097f81ef72",
-    "internal/core/app_modules_test.go": "2b9ecbffba131ec10627058820416f4a8a00473ae32d6e98cd7d7888174c57c0",
+    "internal/core/app_modules.go": "f89ecfe2a25c0981c6bf8fc6b9054542017dd36b882d0eb0752c2448f557d0ca",
+    "internal/core/app_modules_test.go": "02c04f77a0a0bfdd164b2bd9ca79f7920e01379f7432df5df32dbdb4a1e9c3dc",
     "internal/core/app_platform_transaction_test.go": "1bda14ca61a86e223271aad6dc089f0116a590d11cb94706757d2f8d75ab8c6b",
     "internal/core/app_registry.go": "c281ad28235169288e41eb55da6a49df85b7cef48eae183c665bb3d66fa4e972",
     "internal/core/app_registry_compatibility_test.go": "e1e330a7d9a7d64fc4e75d4938a195a709118a7f555c08e84837a61872a788fb",
@@ -1032,7 +1006,7 @@
     "web/src/ApacheWafTransactions.vue": "49c7905010c9e59b77b9c85a1d01d72790dc93855f729a3626a4fc0cd3d51c7f",
     "web/src/App.vue": "2b46932c8722cf8f971faa51c66763a56b568545541f8ee748855ce686304e73",
     "web/src/AppModuleManager.vue": "22e195abf5553ebf9f9c1708a89fad01542ef26f2d5e7d45e470b5f2a9222e3c",
-    "web/src/AppModuleReport.vue": "28a566a1fe8eded607945a2bf41a1645a90c9088d46b0afd39f13a0216bdc4c3",
+    "web/src/AppModuleReport.vue": "5f55a988a27ad1e32438cf75c61978424aef5e5d242344f8b89354e42cf6ba10",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
     "web/src/BatchSSLManager.vue": "3fad57eb329e6a91636164fe508c5f3c953d18972c70ab7d9d45443a32baf208",
     "web/src/CertificateManager.vue": "46aabbba8cedf671570cda40c1518a9f4a47d1e07c811cf039579c56df7f2b0c",
@@ -1102,7 +1076,7 @@
     "web/src/softwareState.ts": "682077c194773a4a5b87506e91f837463b3845c3934a4b6ff0a0cba4faec053f",
     "web/src/storeSearch.ts": "7647a6ea3cc47bbb30acede2ec03c4eeedd86e67dfb9de951960ede49ed511b2",
     "web/src/style.css": "2f7dba4d5bbcd425a6f3a66f67992ad21ea91318f362791e8f1b2f6909cd2b7b",
-    "web/src/taskManager.ts": "4b3f92b701a756ab4238ac584220affcdb823c589aeb9e816f3bce09e7d6be86",
+    "web/src/taskManager.ts": "b3112ebc9fcab3bec692badcf862e030abfb94115209b3c6aac4176dc6f351a6",
     "web/src/userManagementReceipt.ts": "8a612f63e5a60a2720844d9000ea17ac24b72b2ea50c21b6b6a338a296085c8b",
     "web/src/wafApplyRecovery.ts": "579be45299d3a3c2d03fa2f8a3e5bd6aaf3bc221c1bd523e30305be3e95a8885",
     "web/src/wafApplyTask.ts": "bc2ac5d9f1c1532bd9efe4329a2b48227b2b4f5f8931fef08be0d3a56510ac78",
@@ -1193,7 +1167,7 @@
     "scripts/test-analytics-tracker.mjs": "88def3a141999ec93cfdee52c8abffe986518d417f69fb137afc57b7c46997b8",
     "scripts/test-waf-apply-task.mjs": "ad8e9089fa5594933b28589e3e8e2481eae1e189624ab0b0e0a22ff44306b525",
     "scripts/test-waf-apply-recovery.mjs": "a55988249c7fd47ea600a7b4fa6f43568844f6a1feb30dc4633aef2a8137c454",
-    "scripts/test-task-manager.mjs": "b30d469f552ca22398116dbcff71a2c67f6e7cc6eacb867ef901b3c1b934fd83",
+    "scripts/test-task-manager.mjs": "fe34677b6c5cc8b158f46412edd03757eb846a51d4960f1f6399d057f9188bd2",
     "scripts/test-user-management-receipt.mjs": "06d9150c9801ce6586b0eee9dcc800e3694cc0cb892eff52dde2fa423b021476",
     "scripts/test-platform-management-receipt.mjs": "5dbde69c336a321b50a6cb5081baa08edc7c44850070f1b7401cf02a0ea2c5a2",
     "scripts/test-module-state.mjs": "d81a943e8aeba125a87023fea7971bbb4ef64e3c512f9feaefdc2017eaa5243a",
