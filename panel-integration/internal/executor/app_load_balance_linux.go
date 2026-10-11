@@ -69,14 +69,32 @@ func loadBalancePrivateRead(path string, limit int64) ([]byte, error) {
 	if st.Uid != uint32(os.Geteuid()) || st.Mode&unix.S_IFMT != unix.S_IFREG || st.Mode&07777 != 0600 || st.Nlink != 1 || st.Size < 0 || st.Size > limit {
 		return nil, errors.New("负载均衡私有记录身份、权限、链接数或大小异常")
 	}
-	b, e := io.ReadAll(io.LimitReader(f, limit+1))
-	if e != nil {
+	// The verified size bounds this one allocation. ReadAll's growing buffers
+	// multiply memory/copy work when a complete history contains large records.
+	b := make([]byte, int(st.Size))
+	if _, e = io.ReadFull(f, b); e != nil {
 		return nil, e
 	}
-	if int64(len(b)) > limit {
-		return nil, errors.New("负载均衡私有记录超限")
+	var extra [1]byte
+	n, readError := f.Read(extra[:])
+	if n != 0 || readError != io.EOF {
+		return nil, errors.New("负载均衡私有记录读取期间大小改变或无法核对")
+	}
+	var after unix.Stat_t
+	if e = unix.Fstat(int(f.Fd()), &after); e != nil {
+		return nil, e
+	}
+	if !loadBalancePrivateStatUnchanged(st, after) {
+		return nil, errors.New("负载均衡私有记录读取期间身份、权限或内容时间改变")
 	}
 	return b, nil
+}
+
+func loadBalancePrivateStatUnchanged(a, b unix.Stat_t) bool {
+	// Reads may legitimately update access time. Content/change times and all
+	// trusted identity, ownership, permissions, links and size must not change.
+	return a.Dev == b.Dev && a.Ino == b.Ino && a.Mode == b.Mode && a.Nlink == b.Nlink &&
+		a.Uid == b.Uid && a.Gid == b.Gid && a.Size == b.Size && a.Mtim == b.Mtim && a.Ctim == b.Ctim
 }
 
 func validateLoadBalanceEntry(v loadBalanceEntry) error {

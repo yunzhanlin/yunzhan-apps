@@ -4,12 +4,14 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -30,6 +32,93 @@ func lbTrafficNativeRead(t *testing.T, s *Service, query string, want int) core.
 		t.Fatal("invalid JSON feed")
 	}
 	return f
+}
+func TestLoadBalanceAlertCancelledCallerDoesNotScanAfterWaitingOnConfigurationLock(t *testing.T) {
+	s := wafPolicyFixture(t)
+	for _, path := range []string{"/v1/load-balance-alert-events", "/v1/load-balance-traffic-alert-events"} {
+		mux := http.NewServeMux()
+		s.moduleAlertRoutes(mux)
+		ctx, cancel := context.WithCancel(context.Background())
+		req := httptest.NewRequest("GET", path, nil).WithContext(ctx)
+		w := httptest.NewRecorder()
+		s.mu.Lock()
+		var started sync.WaitGroup
+		started.Add(1)
+		done := make(chan struct{})
+		go func() { started.Done(); mux.ServeHTTP(w, req); close(done) }()
+		started.Wait()
+		cancel()
+		s.mu.Unlock()
+		select {
+		case <-done:
+		case <-time.After(2 * time.Second):
+			t.Fatal("cancelled caller retained the observation lock")
+		}
+		if w.Body.Len() != 0 {
+			t.Fatal("cancelled caller produced a successful inventory", w.Body.String())
+		}
+	}
+}
+func TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands(t *testing.T) {
+	s, tx, _, _ := lbHistoryFixture(t)
+	lbAlertNativeInstall(t, s, "1.8.5")
+	if e := os.Mkdir(s.loadBalanceArchiveDir(), 0700); e != nil {
+		t.Fatal(e)
+	}
+	// These are private filesystem capacity fixtures, not generated live traffic
+	// transactions, cold-cache benchmarks or a production/power-loss acceptance.
+	for _, spec := range []struct {
+		dir         string
+		count, size int
+	}{
+		{filepath.Dir(s.loadBalancePendingPath()), 512, 256 << 10},
+		{s.loadBalanceArchiveDir(), 2048, 128 << 10},
+	} {
+		for i := 0; i < spec.count; i++ {
+			copy := tx
+			if spec.count == 512 && i == 0 {
+				copy.ID = tx.ID
+			} else {
+				copy.ID = core.ID()
+			}
+			raw, e := json.Marshal(copy)
+			if e != nil || len(raw) >= spec.size {
+				t.Fatal("capacity fixture cannot fit the original contract", e)
+			}
+			raw = append(raw, bytes.Repeat([]byte(" "), spec.size-len(raw))...)
+			if e := atomicWrite(filepath.Join(spec.dir, copy.ID+".json"), raw, 0600); e != nil {
+				t.Fatal(e)
+			}
+		}
+	}
+	start := time.Now()
+	f := lbTrafficNativeRead(t, s, "", 200)
+	elapsed := time.Since(start)
+	if !f.Available || len(f.Records) != 2560 || core.ValidateLoadBalanceTrafficFeed(f, time.Now()) != nil {
+		t.Fatal("maximum full inventory was truncated or fabricated")
+	}
+	t.Logf("private warm filesystem fixture: 2560 records / 384 MiB, complete verified scan %s; no hard OS I/O latency claim", elapsed)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	mux, response := http.NewServeMux(), httptest.NewRecorder()
+	s.moduleAlertRoutes(mux)
+	mux.ServeHTTP(response, httptest.NewRequest("GET", "/v1/load-balance-traffic-alert-events", nil).WithContext(ctx))
+	var bounded core.LoadBalanceTrafficFeed
+	if ctx.Err() != nil || response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &bounded) != nil || len(bounded.Records) != 2560 {
+		t.Fatal("production-size private warm fixture exceeded source read budget; do not claim this hardware cohort accepted", ctx.Err(), response.Code)
+	}
+	// Exact capacities remain strict: one additional original identity refuses
+	// the entire response; no truncation, cleanup or evidence overwrite.
+	tx.ID = core.ID()
+	raw, _ := json.Marshal(tx)
+	extra := filepath.Join(s.loadBalanceArchiveDir(), tx.ID+".json")
+	if e := atomicWrite(extra, raw, 0600); e != nil {
+		t.Fatal(e)
+	}
+	lbTrafficNativeRead(t, s, "", 409)
+	if original, e := os.ReadFile(extra); e != nil || !bytes.Equal(original, raw) {
+		t.Fatal("over-capacity evidence discarded", e)
+	}
 }
 func TestLoadBalanceTrafficNativeReadsValidatedWholeHistoryWithoutCommandsOrPrivateData(t *testing.T) {
 	s, tx, p, before := lbHistoryFixture(t)
@@ -112,7 +201,7 @@ func TestLoadBalanceTrafficNativeWorkerSamplingAndUnsafeInventoryRemainExplicit(
 	if e := os.Chmod(p, 0600); e != nil {
 		t.Fatal(e)
 	}
-	lbAlertNativeInstall(t, s, "1.8.5")
+	lbAlertNativeInstall(t, s, "1.8.6")
 	lbTrafficNativeRead(t, s, "", 409)
 	lbAlertNativeInstall(t, s, "1.8.4")
 	unknown := filepath.Join(filepath.Dir(s.loadBalancePendingPath()), "unknown-retained-file")

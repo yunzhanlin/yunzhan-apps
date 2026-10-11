@@ -82,6 +82,11 @@ func insertLoadBalanceNotification(ctx context.Context, tx *sql.Tx, source, sour
 }
 
 func (a *Server) collectLoadBalanceNotifications(ctx context.Context) error {
+	var available bool
+	return a.collectLoadBalanceSnapshot(ctx, &available)
+}
+func (a *Server) collectLoadBalanceSnapshot(ctx context.Context, available *bool) error {
+	*available = false
 	var feed LoadBalanceAlertFeed
 	if err := a.Executor.Call(ctx, "GET", "/v1/load-balance-alert-events", nil, &feed); err != nil {
 		return err
@@ -151,5 +156,9 @@ func (a *Server) collectLoadBalanceNotifications(ctx context.Context) error {
 			return err
 		}
 	}
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	*available = true
+	return nil
 }

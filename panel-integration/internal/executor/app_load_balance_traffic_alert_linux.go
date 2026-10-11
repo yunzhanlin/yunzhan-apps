@@ -22,6 +22,9 @@ func (s *Service) loadBalanceTrafficAlertRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if r.Context().Err() != nil {
+			return // Do not start a full scan after a cancelled caller waited on the lock.
+		}
 		feed, e := s.loadBalanceTrafficAlertFeed(r)
 		if e != nil {
 			respond(w, 409, map[string]string{"error": "切流事务或调度库存无法完整核对，保留原证据"})
@@ -47,7 +50,7 @@ func (s *Service) loadBalanceTrafficAlertFeed(r *http.Request) (core.LoadBalance
 	if version == "" {
 		return f, errors.New("切流安装身份不可核对")
 	}
-	if version != "1.8.4" {
+	if version != "1.8.4" && version != "1.8.5" {
 		return f, nil
 	}
 	lock, e := s.lockWAFObservation()

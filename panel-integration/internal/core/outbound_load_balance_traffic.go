@@ -86,7 +86,10 @@ func (s *Store) migrateLoadBalanceTrafficCursors() error {
  transaction_id TEXT PRIMARY KEY,entry_id TEXT NOT NULL,state TEXT NOT NULL CHECK(state IN ('pending','committed','recovered')),created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS load_balance_traffic_source(id INTEGER PRIMARY KEY CHECK(id=1),worker_state TEXT NOT NULL CHECK(worker_state IN ('unknown','clear','error','stale')),worker_sequence INTEGER NOT NULL CHECK(worker_sequence>=0 AND worker_sequence<1152921504606846976),worker_checked_at TEXT NOT NULL);
  INSERT OR IGNORE INTO schema_migrations VALUES(45,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
-	return e
+	if e != nil {
+		return e
+	}
+	return s.migrateLoadBalanceSourceObservation()
 }
 func insertLoadBalanceTrafficNotice(ctx context.Context, tx *sql.Tx, source, sourceID, severity string) error {
 	var count int
@@ -100,6 +103,11 @@ func insertLoadBalanceTrafficNotice(ctx context.Context, tx *sql.Tx, source, sou
 	return e
 }
 func (a *Server) collectLoadBalanceTrafficNotifications(ctx context.Context) error {
+	var available bool
+	return a.collectLoadBalanceTrafficSnapshot(ctx, &available)
+}
+func (a *Server) collectLoadBalanceTrafficSnapshot(ctx context.Context, available *bool) error {
+	*available = false
 	var f LoadBalanceTrafficFeed
 	if e := a.Executor.Call(ctx, "GET", "/v1/load-balance-traffic-alert-events", nil, &f); e != nil {
 		return e
@@ -214,5 +222,9 @@ func (a *Server) collectLoadBalanceTrafficNotifications(ctx context.Context) err
 	if e != nil {
 		return e
 	}
-	return tx.Commit()
+	if e = tx.Commit(); e != nil {
+		return e
+	}
+	*available = true
+	return nil
 }

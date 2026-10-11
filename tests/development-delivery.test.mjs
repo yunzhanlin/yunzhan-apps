@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
 test('normal BECJ captures actual development migration safety and all its guard fixtures, not post-release overrides',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'6fdc72d70fcd93867414097ae22f12938f7fe8f58151b979af4d0ba9fd5df742');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'aa555c256b44b62167c3914518602c619e01b69c7c614a70058156fff0d377a3');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const f of ['scripts/upgrade-running-development.sh','packaging/test_development_upgrade_safety.py','packaging/test_native_build_directories.py']){const digest=sum(await read('panel-integration/'+f));assert.equal(index.files[f],digest);assert.equal(release.files[f],digest);}
  const migration=await read('panel-integration/scripts/upgrade-running-development.sh');
  assert.equal(sum(migration),'5c8d1aef32094d3bbb689a646f7264b9f71596ba0c762eb6429234a217b4b997');
@@ -26,5 +26,5 @@ test('scoped Main delivery and active PM2 graceful cold boot remain separate fro
 test('new load-balance publication preserves previous Main scope and other49 immutable catalog identities',async()=>{
  const catalog=JSON.parse(await read('dist/catalog-v1.json'));assert.equal(catalog.apps.length,50);assert.equal(sum(JSON.stringify(catalog.apps.filter(a=>a.id!=='load-balance').sort((a,b)=>a.id.localeCompare(b.id)))),'c31316553d4408fadb4abbbd449a497d0832ed3d9f1d51c011a01ea8cc5089fd');
  assert.equal(sum(await read('dist/apps/load-balance/1.8.2/manifest.json')),'555f2ef5298758338917f44f65cb925751d4ce0082cb2cc4a998fc4decb7e69c');assert.equal(sum(await read('dist/apps/task-manager/1.2.1/manifest.json')),'99d3fd64c47b6b8983ac81eb413c08e70a557f03f9a85059b70f7b0a9c44d219');
- const c=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(c.reviewed_normal_release.main_release_delivered,true);assert.equal(c.previous_load_alert_release.main_release_delivered,true);assert.equal(c.previous_main_delivery.release,'0.1.0-dev.proapps24devsafetybecj');assert.equal(c.previous_main_delivery.main_release_delivered,true);
+ const c=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(c.reviewed_normal_release.main_release_delivered,false);assert.equal(c.previous_load_alert_release.main_release_delivered,true);assert.equal(c.previous_main_delivery.release,'0.1.0-dev.proapps24devsafetybecj');assert.equal(c.previous_main_delivery.main_release_delivered,true);
 });

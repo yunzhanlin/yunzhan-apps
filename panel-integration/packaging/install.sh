@@ -240,9 +240,29 @@ EOF
   printf '[sshd]\nbackend = systemd\nport = %s\n' "$SSH_LISTEN_PORT" > /etc/fail2ban/jail.d/panel-sshd.local
   chmod 0644 /etc/fail2ban/jail.d/panel-sshd.local
 fi
+enable_program_services(){
+  systemctl enable panel-terminal panel-terminal-root panel-executor panel panel-nginx-recovery panel-firewall-recovery panel-firewall
+  # An ordinary program upgrade is not permission to enable a deliberately
+  # disabled website gateway. First-install provisioning is a separate action.
+  if ((FRESH));then systemctl enable nginx;fi
+}
+restart_release_services(){
+  if ((FRESH));then
+    systemctl restart panel-terminal panel-terminal-root panel-executor panel nginx
+  else
+    # Existing Nginx configuration/binary and its master are not replaced by
+    # this panel program update. Keep established traffic and service state.
+    systemctl restart panel-terminal panel-terminal-root panel-executor panel
+  fi
+}
+restart_previous_services(){
+  # Upgrade rollback restores the previous panel pointer/database, not the
+  # website gateway. Neither update nor rollback may restart that master.
+  systemctl restart panel-terminal panel-terminal-root panel-executor panel
+}
 systemctl daemon-reload
 FAILED=0
-systemctl enable nginx panel-terminal panel-terminal-root panel-executor panel panel-nginx-recovery panel-firewall-recovery panel-firewall
+enable_program_services
 if systemctl cat docker.service >/dev/null 2>&1; then
   systemctl enable panel-compose-recovery
 else
@@ -255,7 +275,7 @@ systemctl restart panel-nginx-recovery panel-firewall-recovery panel-firewall ||
 if systemctl cat docker.service >/dev/null 2>&1; then
   systemctl restart panel-compose-recovery || FAILED=1
 fi
-systemctl restart panel-terminal panel-terminal-root panel-executor panel nginx || FAILED=1
+restart_release_services || FAILED=1
 if ((FRESH));then systemctl enable --now fail2ban || FAILED=1;fi
 for _ in {1..30};do curl -fsS --max-time 2 http://127.0.0.1:19100/api/ready >/dev/null 2>&1&&break;sleep 1;done
 curl -fsS --max-time 3 http://127.0.0.1:19100/api/ready >/dev/null||FAILED=1
@@ -267,7 +287,7 @@ if ((FAILED));then
   if [[ -n "$PREVIOUS" ]];then ln -sfn "$PREVIOUS" "$CURRENT.new";mv -Tf "$CURRENT.new" "$CURRENT";fi
   if [[ -n "$OLD_MARKER" ]];then printf '%s\n' "$OLD_MARKER" > "$MARKER";else rm -f "$MARKER";fi
   if [[ -n "$ROLLBACK_DB" ]];then rm -f /var/lib/panel/panel.db-wal /var/lib/panel/panel.db-shm;install -m 0600 -o panel -g panel "$ROLLBACK_DB" /var/lib/panel/panel.db;fi
-  if [[ -n "$PREVIOUS" ]];then systemctl restart panel-terminal panel-terminal-root panel-executor panel nginx || true;else rm -f "$CURRENT";systemctl stop panel panel-executor panel-terminal panel-terminal-root nginx || true;fi
+  if [[ -n "$PREVIOUS" ]];then restart_previous_services || true;else rm -f "$CURRENT";systemctl stop panel panel-executor panel-terminal panel-terminal-root nginx || true;fi
   echo 'install/update health check failed; previous release restored' >&2
   exit 1
 fi

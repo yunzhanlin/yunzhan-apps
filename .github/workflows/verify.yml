@@ -19,12 +19,16 @@ jobs:
       - run: npm test
       - name: Development migration guard fixtures (not a live service-upgrade proof)
         run: python3 -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
+      - name: Ordinary upgrade gateway policy fixtures (not native traffic acceptance)
+        run: python3 -m unittest discover -s panel-integration/packaging -p 'test_install_gateway_policy.py'
       - name: Read-only WAF rotation and inventory UI regression
         run: node --experimental-strip-types --test panel-integration/scripts/test-waf-rotation-refresh.mjs panel-integration/scripts/test-waf-body-inventory.mjs
       - name: Locked frontend dependencies for actual notification editor regression
         run: npm ci --prefix panel-integration/web --ignore-scripts
       - name: Load-balance alert scope and actual save handler (not installed business proof)
         run: node --test panel-integration/scripts/test-load-balance-alerts.mjs
+      - name: Closed readable delivery summaries and actual history handlers
+        run: node --experimental-strip-types --test panel-integration/scripts/test-outbound-source-view.mjs
       - run: git diff --exit-code -- dist
       - uses: actions/setup-go@v5
         with:
@@ -33,3 +37,6 @@ jobs:
       - name: Native Linux implementation regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test ./...
+      - name: Bounded history reader race regression (not capacity timing acceptance)
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHistoryParallelReadersRemainBoundedAndFailClosed$' -count=1

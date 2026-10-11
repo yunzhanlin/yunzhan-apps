@@ -17,7 +17,12 @@ test('new frontend guard is mandatory and backend still scrubs arbitrary origina
  const builder=read('packaging/build-release.sh');assert(builder.includes('test-load-balance-alerts.mjs'));
  const manager=read('web/src/AppModuleManager.vue');assert(manager.includes('不自动订阅旧通道'));assert(manager.includes('健康告警与实际流量变更仍须分别核对'));
  const backend=read('internal/core/outbound_notifications.go');assert.match(backend,/case "load-balance":/);assert(backend.includes('不代表所有节点或业务已恢复'));assert(backend.includes('Source messages can include arbitrary task output'));
- const core=read('internal/core/outbound_load_balance.go');assert(core.includes('revision > entry.Revision'));assert(core.includes('sequence > entry.Sequence'));assert(core.includes('count >= 10000'));assert(core.includes('return tx.Commit()'));
+ const core=read('internal/core/outbound_load_balance.go');assert(core.includes('revision > entry.Revision'));assert(core.includes('sequence > entry.Sequence'));assert(core.includes('count >= 10000'));assert.match(core,/if err = tx\.Commit\(\); err != nil/);assert(core.indexOf('*available = true')>core.indexOf('if err = tx.Commit()'));
+});
+test('source scope is explicitly selected without expanding either earlier scope; actual save keeps defaults unchanged',async()=>{
+ const {kinds,draft}=state();assert.deepEqual(draft.value.kinds,['integrity','sync','daily']);assert.equal(kinds.filter(k=>k.id==='load-balance-source').length,1);assert(source.includes("draft.kinds.includes('load-balance-source')"));
+ for(const phrase of ['第三个独立范围','来源重新可核对不代表业务恢复','不补发停用期间的事件'])assert(source.includes(phrase));
+ for(const selected of [['load-balance'],['load-balance-traffic'],['load-balance-source']]){const e=editor(selected);await e.save();assert.equal(e.calls.length,1);assert.deepEqual(e.calls[0][2].kinds,selected);}
 });
 test('traffic and worker scope is separately opt-in, preserves old health scope and executes the actual save handler',async()=>{
  const {kinds,draft}=state();assert.equal(kinds.filter(k=>k.id==='load-balance-traffic').length,1);assert.equal(kinds.find(k=>k.id==='load-balance-traffic').label,'负载均衡切流事务与后台调度');assert(!draft.value.kinds.includes('load-balance-traffic'));assert(source.includes("draft.kinds.includes('load-balance-traffic')"));

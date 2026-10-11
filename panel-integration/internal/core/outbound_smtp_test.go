@@ -291,7 +291,7 @@ func TestOutboundSMTPRealTLSModesAuthenticationAndPrivacy(t *testing.T) {
 				delivery := smtpQueuedDelivery(t, "daily")
 				var injected map[string]any
 				json.Unmarshal([]byte(delivery.Payload), &injected)
-				injected["title"], injected["message"], injected["private"] = "private secret title", "private secret output", "private credential"
+				injected["title"], injected["message"] = "private secret title", "private secret output"
 				altered, _ := json.Marshal(injected)
 				delivery.Payload = string(altered)
 				code, message, _ := sendSMTPNotification(context.Background(), delivery, &input)

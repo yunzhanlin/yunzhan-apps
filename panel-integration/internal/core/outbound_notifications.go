@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security", "load-balance", "load-balance-traffic"}
+var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security", "load-balance", "load-balance-traffic", "load-balance-source"}
 
 type NotificationChannel struct {
 	ID              string                  `json:"id"`
@@ -434,6 +434,13 @@ func safeOutboundMessage(n Notification) OutboundMessage {
 				title, message = "负载均衡后台调度本轮完成", "最近一轮后台调度未返回错误；不代表所有节点或业务健康，也不补全采样间隔内的错误历史。"
 			}
 		}
+	case "load-balance-source":
+		title, message = "负载均衡告警来源待核对", "健康及切流告警源不能同时完整核对，请登录面板检查安装身份、执行服务和原始记录；这不是网站或节点故障结论。"
+		eventType = "source_unavailable"
+		if n.Source == "app:load-balance-source-ready" {
+			eventType = "source_ready"
+			title, message = "负载均衡告警来源重新可核对", "本轮健康及切流告警源与原游标均核对通过；不代表全部节点、实际流量或业务恢复，也不补全采样间隔中的事件。"
+		}
 	}
 	// Source messages can include arbitrary task output, file names or credentials.
 	// External notifications contain only this fixed summary and opaque event ID.
@@ -588,23 +595,28 @@ func webhookSignature(secret, deliveryID, timestamp string, payload []byte) stri
 }
 
 func (s *Store) NotificationDeliveryHistory(id string) ([]map[string]any, error) {
-	rows, e := s.DB.Query(`SELECT CASE WHEN length(CAST(id AS BLOB))=32 THEN id ELSE NULL END,CASE WHEN length(CAST(event_id AS BLOB))=32 THEN event_id ELSE NULL END,CASE WHEN length(CAST(state AS BLOB))<=16 THEN state ELSE NULL END,attempts,http_status,CASE WHEN length(CAST(error AS BLOB))<=2048 THEN error ELSE NULL END,created_at,completed_at FROM notification_deliveries WHERE channel_id=? ORDER BY rowid DESC LIMIT 100`, id)
+	rows, e := s.DB.Query(`SELECT CASE WHEN length(CAST(id AS BLOB))=32 THEN id ELSE NULL END,CASE WHEN length(CAST(event_id AS BLOB))=32 THEN event_id ELSE NULL END,CASE WHEN length(CAST(state AS BLOB))<=16 THEN state ELSE NULL END,attempts,http_status,CASE WHEN length(CAST(error AS BLOB))<=2048 THEN error ELSE NULL END,created_at,completed_at,CASE WHEN length(CAST(payload AS BLOB)) BETWEEN 1 AND 4096 THEN payload ELSE NULL END FROM notification_deliveries WHERE channel_id=? ORDER BY rowid DESC LIMIT 100`, id)
 	if e != nil {
 		return nil, e
 	}
 	defer rows.Close()
 	out := []map[string]any{}
 	for rows.Next() {
-		var id, event, state, message string
+		var id, event, state, message, payload string
 		var attempts, status int
 		var at, completed int64
-		if e = rows.Scan(&id, &event, &state, &attempts, &status, &message, &at, &completed); e != nil {
-			return nil, e
+		if e = rows.Scan(&id, &event, &state, &attempts, &status, &message, &at, &completed, &payload); e != nil {
+			return nil, errors.New("原推送记录或摘要无法完整核对；原证据保留")
 		}
 		if !ValidID(id) || !ValidID(event) || !containsMenu([]string{"pending", "running", "succeeded", "failed", "cancelled"}, state) || attempts < 0 || attempts > 6 || status < 0 || status > 599 || at < 1 || completed < 0 {
 			return nil, errors.New("原推送记录身份或结果无法核对；不返回不完整历史")
 		}
-		out = append(out, map[string]any{"id": id, "event_id": event, "state": state, "attempts": attempts, "http_status": status, "error": message, "created_at": at, "completed_at": completed})
+		m, e := outboundDeliverySummary(payload, event)
+		if e != nil {
+			return nil, e
+		}
+		out = append(out, map[string]any{"id": id, "event_id": event, "state": state, "attempts": attempts, "http_status": status, "error": message, "created_at": at, "completed_at": completed,
+			"kind": m.Kind, "event_type": m.EventType, "title": m.Title, "message": m.Message, "severity": m.Severity, "event_created_at": m.CreatedAt, "test": m.Test})
 	}
 	return out, rows.Err()
 }

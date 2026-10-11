@@ -21,6 +21,9 @@ func (s *Service) loadBalanceAlertRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if r.Context().Err() != nil {
+			return
+		}
 		feed, err := s.loadBalanceAlertFeed(r)
 		if err != nil {
 			respond(w, 409, map[string]string{"error": "负载均衡告警源无法完整核对，原状态保留"})
@@ -48,7 +51,7 @@ func (s *Service) loadBalanceAlertFeed(r *http.Request) (core.LoadBalanceAlertFe
 	}
 	// Historical signed implementations remain usable without claiming this
 	// newly reviewed alert contract. Unknown future versions were rejected above.
-	if version != "1.8.3" && version != "1.8.4" {
+	if version != "1.8.3" && version != "1.8.4" && version != "1.8.5" {
 		return feed, nil
 	}
 	lock, err := s.lockWAFObservation()

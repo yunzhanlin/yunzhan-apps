@@ -3,13 +3,17 @@
 package executor
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -81,15 +85,19 @@ func (s *Service) loadBalanceHistoryRecord(path, id string, archived bool) (load
 		return row, err
 	}
 	var tx loadBalanceTransaction
-	if decodeFTPPrivateJSON(b, &tx) != nil || tx.ID != id || s.loadBalanceTransactionContract(tx) != nil {
+	// Only JSON's four permitted ASCII whitespace bytes may be omitted from
+	// the decoder input. Exact complete original bytes still bind the digest
+	// and byte budget; Unicode/vertical/form-feed padding remains invalid.
+	if decodeFTPPrivateJSON(bytes.TrimRight(b, " \t\r\n"), &tx) != nil || tx.ID != id || s.loadBalanceTransactionContract(tx) != nil {
 		return row, errors.New("事务身份、完整内容或摘要不可核对；原证据保留")
 	}
 	terminal := tx.State == "committed" || tx.State == "recovered"
 	if archived && !terminal {
 		return row, errors.New("归档含未完成事务，保留并拒绝不完整库存")
 	}
+	digest := sha256.Sum256(b)
 	return loadBalanceHistoryRow{ID: tx.ID, Domain: tx.Domain, State: tx.State, CreatedAt: tx.CreatedAt, Format: tx.Format,
-		Files: len(tx.Changes), SHA: core.Hash(string(b)), Bytes: int64(len(b)), Archived: archived, Archivable: terminal && !archived}, nil
+		Files: len(tx.Changes), SHA: hex.EncodeToString(digest[:]), Bytes: int64(len(b)), Archived: archived, Archivable: terminal && !archived}, nil
 }
 
 type loadBalanceHistoryInventory struct {
@@ -99,6 +107,68 @@ type loadBalanceHistoryInventory struct {
 	ActiveBytes  int64
 	ArchiveBytes int64
 	Pending      bool
+}
+
+type loadBalanceHistoryRead struct {
+	path, id string
+	archived bool
+	bytes    int64
+}
+
+// At most two complete private records are decoded at once. This improves
+// large-inventory scheduling without caching stale records, truncating the
+// inventory, retaining private bodies or allowing an unbounded worker fanout.
+func loadBalanceHistoryReadRows(ctx context.Context, records []loadBalanceHistoryRead, read func(string, string, bool) (loadBalanceHistoryRow, error)) ([]loadBalanceHistoryRow, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	rows := make([]loadBalanceHistoryRow, len(records))
+	work := make(chan int)
+	var workers sync.WaitGroup
+	var once sync.Once
+	var firstError error
+	for i := 0; i < 2 && i < len(records); i++ {
+		workers.Add(1)
+		go func() {
+			defer workers.Done()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case index, ok := <-work:
+					if !ok || ctx.Err() != nil {
+						return
+					}
+					item := records[index]
+					row, err := read(item.path, item.id, item.archived)
+					if err == nil && row.Bytes != item.bytes {
+						err = errors.New("库存读取期间记录改变，未返回部分结果")
+					}
+					if err != nil {
+						once.Do(func() { firstError = err; cancel() })
+						return
+					}
+					rows[index] = row
+				}
+			}
+		}()
+	}
+send:
+	for index := range records {
+		select {
+		case work <- index:
+		case <-ctx.Done():
+			break send
+		}
+	}
+	close(work)
+	workers.Wait()
+	if firstError != nil {
+		return nil, firstError
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return rows, nil
 }
 
 // Full content is validated one record at a time, not retained in memory or
@@ -145,6 +215,7 @@ func (s *Service) loadBalanceHistoryInventory(ctx context.Context) (loadBalanceH
 		}
 		count := 0
 		var size int64
+		var records []loadBalanceHistoryRead
 		for _, entry := range entries {
 			if err = ctx.Err(); err != nil {
 				return out, err
@@ -168,21 +239,19 @@ func (s *Service) loadBalanceHistoryInventory(ctx context.Context) (loadBalanceH
 			if st.Size() < 0 || st.Size() > 256<<10 || size > spec.budget-st.Size() {
 				return out, errors.New("事务库存字节超过预算，未返回部分统计")
 			}
-			row, err := s.loadBalanceHistoryRecord(filepath.Join(spec.path, name), id, spec.archived)
-			if err != nil {
-				return out, err
-			}
-			if row.Bytes != st.Size() {
-				return out, errors.New("库存读取期间记录改变，未返回部分结果")
-			}
-			size += row.Bytes
+			records = append(records, loadBalanceHistoryRead{path: filepath.Join(spec.path, name), id: id, archived: spec.archived, bytes: st.Size()})
+			size += st.Size()
 			count++
 			seen[id] = true
-			out.Rows = append(out.Rows, row)
 		}
 		if count > spec.max {
 			return out, errors.New("事务记录超过上限，未返回不完整库存")
 		}
+		rows, err := loadBalanceHistoryReadRows(ctx, records, s.loadBalanceHistoryRecord)
+		if err != nil {
+			return out, err
+		}
+		out.Rows = append(out.Rows, rows...)
 		if spec.archived {
 			out.Archived = count
 			out.ArchiveBytes = size
@@ -238,7 +307,7 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 	if action == "transactions" {
 		blocked := ""
 		if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
-			blocked = "归档需要已核对的 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 安装记录"
+			blocked = "归档需要已核对的 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 / 1.8.5 安装记录"
 		}
 		if inventory.Pending {
 			blocked = "负载均衡有待恢复事务"
@@ -272,7 +341,7 @@ func (s *Service) loadBalanceHistoryOperation(ctx context.Context, action string
 			"scope": "完整核对本机私有事务后返回非敏感分页元数据。活动最多 512 份 / 128 MiB，归档最多 2048 份 / 256 MiB；这是逻辑预算，不是内核硬配额，不自动归档或删除证据。"}, nil
 	}
 	if !core.LoadBalanceHistoryVersion(s.loadBalanceHealthVersion()) {
-		return nil, errors.New("归档须已安装经过核验的 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 应用，不替旧版本开放新操作")
+		return nil, errors.New("归档须已安装经过核验的 1.8.0 / 1.8.1 / 1.8.2 / 1.8.3 / 1.8.4 / 1.8.5 应用，不替旧版本开放新操作")
 	}
 	if inventory.Pending {
 		return nil, errors.New("有待恢复事务，禁止归档；先核对完整恢复集合")
