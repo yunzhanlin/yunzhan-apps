@@ -15,7 +15,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -27,6 +26,31 @@ import (
 // namespaces. The host root is read-only; no original service is signaled.
 func analyticsHTMLPrivateCanonicalMounts(t *testing.T, base string) {
 	t.Helper()
+	if os.Getenv("PANEL_QA_ANALYTICS_NATIVE_PREBOUND") == "1" {
+		var marker struct {
+			Format  int      `json:"format"`
+			Mount   string   `json:"init_mount_namespace"`
+			Network string   `json:"init_network_namespace"`
+			Jobs    []string `json:"job_ids"`
+		}
+		if err := readAnalyticsHTMLPrivateJSON("/etc/panel/.native-analytics-fixture.json", 4096, &marker); err != nil {
+			t.Fatal("private canonical binding witness", err)
+		}
+		var fs syscall.Statfs_t
+		if marker.Format != 1 || os.Getenv("PANEL_QA_ANALYTICS_NATIVE") != "1" || os.Geteuid() != 0 || syscall.Statfs("/", &fs) != nil || fs.Flags&1 == 0 || !strings.HasPrefix(base, "/tmp/analytics-native-") || len(marker.Jobs) != 2 || marker.Jobs[0] != os.Getenv("PANEL_QA_ANALYTICS_WORKER_JOB") || marker.Jobs[1] != os.Getenv("PANEL_QA_ANALYTICS_NEXT_WORKER_JOB") || !core.ValidID(marker.Jobs[0]) || !core.ValidID(marker.Jobs[1]) || marker.Jobs[0] == marker.Jobs[1] {
+			t.Fatal("private prebound root or genuine producer pair invalid")
+		}
+		for kind, captured := range map[string]string{"mnt": marker.Mount, "net": marker.Network} {
+			self, err := os.Readlink("/proc/self/ns/" + kind)
+			if err != nil || !strings.HasPrefix(captured, kind+":[") || !strings.HasSuffix(captured, "]") || self == captured {
+				t.Fatal("prebound canonical fixture shares original namespace", kind, err)
+			}
+		}
+		// The outer strict helper supplies these binds and separately compares
+		// every original byte/identity afterwards. No SYS_ADMIN is given to the
+		// payload just to create canonical test mounts in this branch.
+		return
+	}
 	for _, kind := range []string{"mnt", "net"} {
 		self, e := os.Readlink("/proc/self/ns/" + kind)
 		init, e2 := os.Readlink("/proc/1/ns/" + kind)
@@ -72,7 +96,29 @@ func analyticsHTMLPrivateCanonicalMounts(t *testing.T, base string) {
 	}
 }
 
-func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base, compiled, nginx, version string) {
+func TestAnalyticsHTMLNativeProducedStaticLifecycle(t *testing.T) {
+	if os.Getenv("PANEL_QA_ANALYTICS_PRODUCED_STATIC_LIFECYCLE") != "1" {
+		t.Skip("requires two genuine private source producers and bounded canonical static-site fixture")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
+	defer cancel()
+	base, err := os.MkdirTemp("/tmp", "analytics-native-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(base, 0755); err != nil {
+		t.Fatal(err)
+	}
+	analyticsHTMLPrivateCanonicalMounts(t, base)
+	first, err := nativeWAFService().verifyAnalyticsHTMLBuild(ctx, os.Getenv("PANEL_QA_ANALYTICS_WORKER_JOB"))
+	if err != nil {
+		t.Fatal("first genuine source worker", err)
+	}
+	analyticsHTMLNativeGlobalLifecycle(t, ctx, base, "", first.NginxBinary, first.NginxVersion, true)
+	t.Log("PASS two genuine collection-v2 source producers: actual private static-site activation/replay/collector/privacy/disable, failed reload and false acknowledgment rollback, authenticated Core/Unix executor/worker/SQLite enable-disable; no PHP runtime, app-package installation, browser or original-service acceptance")
+}
+
+func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base, compiled, nginx, version string, staticOnly bool) {
 	t.Helper()
 	analyticsHTMLPrivateCanonicalMounts(t, base)
 	for _, path := range []string{"/run/panel-nginx", "/etc/panel/sites-enabled", analyticsHTMLNativeRoot, analyticsHTMLBuilds} {
@@ -83,33 +129,15 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 	if err := os.Chmod(analyticsHTMLBuilds, 0700); err != nil {
 		t.Fatal(err)
 	}
-	id, nextID := strings.Repeat("b", 32), strings.Repeat("c", 32)
+	id, nextID := os.Getenv("PANEL_QA_ANALYTICS_WORKER_JOB"), os.Getenv("PANEL_QA_ANALYTICS_NEXT_WORKER_JOB")
+	if !core.ValidID(id) || !core.ValidID(nextID) || id == nextID {
+		t.Fatal("global lifecycle needs two actual independent source-producer receipts; no hand-created readiness")
+	}
 	var first analyticsHTMLBuildRecord
 	for _, jobID := range []string{id, nextID} {
-		prefix := filepath.Join(analyticsHTMLNativeRoot, jobID)
-		if err := publishAnalyticsHTMLProgram(ctx, compiled, prefix); err != nil {
-			t.Fatal("actual program publication", err)
-		}
-		if err := publishAnalyticsHTMLSharedProgram(ctx, prefix); err != nil {
-			t.Fatal("actual shared program publication", err)
-		}
-		record := analyticsHTMLBuildRecord{analyticsHTMLEngineIdentity: analyticsHTMLEngineIdentity{Format: 1, JobID: jobID, State: "ready", Architecture: runtime.GOARCH, Prefix: prefix, ProgramSHA: analyticsHTMLProgramSHA, NginxBinary: nginx}, NginxVersion: version, PatchSourceSHA: analyticsNJSHeaderSourceSHA, SourceSHA: map[string]string{}, StartedAt: core.Now(), FinishedAt: core.Now(), Steps: []core.Step{{Time: core.Now(), Message: "private fixture: actual compiled ABI/program copied and verified; not the production build unit"}}, ABIValidated: true}
-		sources, _ := analyticsHTMLSources(version)
-		for _, source := range sources {
-			record.SourceSHA[source.Name] = source.SHA256
-		}
-		var err error
-		if record.NginxSHA, err = analyticsHTMLFileSHA(ctx, nginx, 32<<20); err != nil {
-			t.Fatal(err)
-		}
-		if record.ModuleSHA, err = analyticsHTMLFileSHA(ctx, filepath.Join(prefix, "ngx_http_js_module.so"), 32<<20); err != nil {
-			t.Fatal(err)
-		}
-		if record.TreeSHA, err = runtimeTreeSHA(ctx, prefix, prefix); err != nil {
-			t.Fatal(err)
-		}
-		if err := createAnalyticsHTMLPrivateJSON(filepath.Join(analyticsHTMLBuilds, jobID+".json"), record); err != nil {
-			t.Fatal(err)
+		record, err := nativeWAFService().verifyAnalyticsHTMLBuild(ctx, jobID)
+		if err != nil || record.NginxBinary != nginx || record.NginxVersion != version {
+			t.Fatal("actual producer receipt/full tree/source/patch/runtime identity", err)
 		}
 		if jobID == id {
 			first = record
@@ -120,7 +148,11 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { store.DB.Close() })
-	for _, slug := range []string{"native-static", "native-php"} {
+	slugs := []string{"native-static", "native-php"}
+	if staticOnly {
+		slugs = []string{"native-static"}
+	}
+	for _, slug := range slugs {
 		if _, err := store.CreateSiteAtDomain("Private real analytics", slug, slug+".example.test", core.ID(), "private QA"); err != nil {
 			t.Fatal(err)
 		}
@@ -144,7 +176,7 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 	}))
 	t.Cleanup(collector.Close)
 	sites, err := store.Sites()
-	if err != nil || len(sites) != 2 {
+	if err != nil || len(sites) != len(slugs) {
 		t.Fatal(sites, err)
 	}
 	wafOff := false
@@ -448,6 +480,7 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 			t.Fatal(err)
 		}
 	}
+	tripletMetadata := analyticsHTMLNativeSnapshotTriplet(t, s)
 	for _, fault := range []string{"reload-error", "false-command-success"} {
 		rejectNext, suppressNext = fault == "reload-error", fault == "false-command-success"
 		if err := s.activateAnalyticsHTML(ctx, nextID); err == nil {
@@ -459,6 +492,7 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 				t.Fatal("actual recovery did not preserve full original triplet", fault, path)
 			}
 		}
+		analyticsHTMLNativeMatchTriplet(t, s, tripletMetadata)
 		if err := s.probeAnalyticsHTMLLoaded(ctx, first.analyticsHTMLEngineIdentity); err != nil {
 			t.Fatal("rollback did not restore actual previous worker fingerprint", fault, err)
 		}
@@ -466,12 +500,17 @@ func analyticsHTMLNativeGlobalLifecycle(t *testing.T, ctx context.Context, base,
 			t.Fatal("verified native recovery did not archive pending journal", err)
 		}
 	}
+	analyticsHTMLNativeActualHandover(t, ctx, s, site, id, nextID, &reloads, &rejectNext)
 	for _, candidate := range sites {
 		if candidate.PHPVersionID == "" {
 			analyticsHTMLNativeAuthenticatedSiteAPI(t, ctx, base, s, panel, store, candidate, strings.TrimPrefix(collector.URL, "http://"))
 		}
 	}
-	t.Log("PASS actual private canonical activation/reload/Unix worker acknowledgment; static HTML + PHP-FPM + ThinkPHP + real first-party collector/replay/privacy/disable; both reload failures restore exact triplet and actual old worker; no original services or template files changed; not a signed API/build-unit/power-loss acceptance")
+	if staticOnly {
+		t.Log("PASS actual private canonical static-site activation/reload/Unix worker acknowledgment/collector/replay/privacy/disable; both reload failures restore exact triplet and actual old worker; static Core/API only, PHP explicitly outside this fixture")
+	} else {
+		t.Log("PASS actual private canonical activation/reload/Unix worker acknowledgment; static HTML + PHP-FPM + ThinkPHP + real first-party collector/replay/privacy/disable; both reload failures restore exact triplet and actual old worker; no original services or template files changed; not a signed API/build-unit/power-loss acceptance")
+	}
 }
 
 func strconvQuotePHP(value string) string {

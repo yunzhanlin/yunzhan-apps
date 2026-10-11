@@ -16,6 +16,7 @@ if(releaseArg>=0){
  releaseInfo={archive:basename,archive_sha256:sha256(await readFile(archive)),frozen_inputs_sha256:releaseInputs.inputs_sha256};
 }
 const normalBuildGates=new Set(['scripts/test-software-routing.mjs','scripts/test-store-search.mjs','scripts/test-analytics-tracker.mjs','scripts/test-analytics-latency.mjs','scripts/test-panel-health-context.mjs','scripts/test-analytics-html-filter.mjs','scripts/test-analytics-html-state.mjs','scripts/test-menu-permissions.mjs','scripts/test-network-ids-operations.mjs','scripts/test-registry-request-identity.mjs','scripts/test-remote-sync.mjs','scripts/test-remote-sync-plans.mjs','scripts/test-remote-sync-backups.mjs','scripts/test-remote-backup-archive.mjs','scripts/test-waf-rotation-refresh.mjs','scripts/test-waf-body-inventory.mjs','scripts/test-load-balance-routing.mjs','scripts/test-load-balance-transactions.mjs','scripts/test-registry-freshness.mjs','scripts/test-load-balance-report-export.mjs','scripts/test-apache-waf-transactions.mjs','scripts/test-deferred-workspace.mjs','scripts/test-web-entry-budget.mjs']);
+for(const name of ['test-waf-apply-task','test-waf-apply-recovery','test-task-manager','test-user-management-receipt','test-platform-management-receipt','test-module-state','test-outbound-source-view','test-software-state','test-waf-sites','test-waf-config-backups','test-apache-body-build','test-apache-body-report'])normalBuildGates.add('scripts/'+name+'.mjs');
 const qaOnly=relative=>relative.startsWith('scripts/test')&&!normalBuildGates.has(relative)||['scripts/panel_client.py','scripts/cache-app-qa-images.mjs','scripts/check-app-registry-compat-browser.mjs'].includes(relative);
 // Explicit source allowlist: no release binaries, QA state, credentials or signing keys.
 const entries=['go.mod','go.sum','cmd','internal','dev','packaging','web/src','web/public','web/index.html','web/package.json','web/package-lock.json','web/tsconfig.json','web/tsconfig.node.json','web/vite.config.ts','scripts/env.sh','scripts/test-app-modules.py','scripts/test-app-native.py','scripts/test-app-compose-matrix.py','scripts/test-app-modules-extended.py','scripts/test-app-module-lifecycle.py','scripts/test-app-base-refresh.py','scripts/test-app-security-refresh.py','scripts/test-app-memcached-refresh.py','scripts/test-app-registry-compose.py','scripts/test-app-registry-phpmyadmin.py','scripts/test-app-store-50-browser.mjs','scripts/test-app-reboot.py','scripts/test-app-registry-fifty.py','scripts/cache-app-qa-images.mjs','scripts/test_app_registry_common.py','scripts/panel_client.py'];
@@ -53,6 +54,7 @@ entries.push('scripts/web-entry-budget.mjs');
 entries.push('scripts/test-analytics-latency.mjs');
 entries.push('scripts/test-panel-health-context.mjs');
 entries.push('scripts/test-registry-freshness.mjs');
+entries.push(...normalBuildGates);
 async function copy(relative){
  if(relative.startsWith('mobile/')&&(relative.split(path.sep).some(name=>['build','.gradle','.build','.swiftpm','xcuserdata'].includes(name))||['local.properties','.DS_Store'].includes(path.basename(relative))))return;
  const input=path.join(panel,relative),st=await lstat(input);

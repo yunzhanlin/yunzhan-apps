@@ -216,8 +216,8 @@ func (a *Server) networkIDSRuleFeedRoutes(m *http.ServeMux) {
 		var module struct {
 			Status SoftwareAppStatus `json:"status"`
 		}
-		if err := a.Executor.Call(ctx, "GET", "/v1/app-modules/network-threat-detection", nil, &module); err != nil || !module.Status.Installed {
-			fail(w, 409, "请先安装网络威胁检测模块")
+		if err := a.Executor.Call(ctx, "GET", "/v1/app-modules/network-threat-detection", nil, &module); err != nil || !knownInstalledAppModule("network-threat-detection", module.Status) {
+			fail(w, 409, "网络威胁检测安装身份或状态待核对；未读取规则仓库")
 			return
 		}
 		catalog, source, err := a.loadAppCatalog(15*time.Second, r)
@@ -311,8 +311,8 @@ func (a *Server) networkIDSRuleFeedRoutes(m *http.ServeMux) {
 		var module struct {
 			Status SoftwareAppStatus `json:"status"`
 		}
-		if err := a.Executor.Call(ctx, "GET", "/v1/app-modules/network-threat-detection", nil, &module); err != nil || !module.Status.Installed {
-			fail(w, 409, "请先安装网络威胁检测模块")
+		if err := a.Executor.Call(ctx, "GET", "/v1/app-modules/network-threat-detection", nil, &module); err != nil || !knownInstalledAppModule("network-threat-detection", module.Status) {
+			fail(w, 409, "网络威胁检测安装身份或状态待核对；未提交规则安装")
 			return
 		}
 		q := r.URL.Query()

@@ -273,7 +273,10 @@ func (s *Service) stagePrivateThreatIDSRuntime(ctx context.Context, out *threatI
 	if err = validateThreatAPTPlan(plan); err != nil {
 		return err
 	}
-	if _, err = s.moduleCommand(ctx, 12*time.Minute, "/usr/bin/apt-get", append(args, deps...)...); err != nil {
+	if _, err = s.moduleCommand(ctx, 12*time.Minute, "/usr/bin/apt-get", append(append(append([]string{}, args...), "--download-only"), deps...)...); err != nil {
+		return errors.New("IDS 固定库下载核对失败；未安装或升级系统库")
+	}
+	if _, err = s.moduleCommand(ctx, 12*time.Minute, "/usr/bin/apt-get", append(append(append([]string{}, args...), "--no-download"), deps...)...); err != nil {
 		return errors.New("IDS 固定库准备失败；未安装系统 Suricata 服务，请核对固定依赖日志")
 	}
 	if err := s.threatIDSCheckInstalledDependencies(ctx, threatIDSHostLibraryDependencies(p.Depends, libraries != nil)); err != nil {

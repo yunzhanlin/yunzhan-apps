@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -73,12 +74,18 @@ func parseMenuIDs(role, raw string) ([]string, error) {
 	return normalizeMenuIDs(role, ids)
 }
 
-type accessReader interface{ QueryRow(string, ...any) *sql.Row }
+type accessReader interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
 
 func readUserAccess(db accessReader, id string) (UserAccess, error) {
+	return readUserAccessContext(context.Background(), db, id)
+}
+
+func readUserAccessContext(ctx context.Context, db accessReader, id string) (UserAccess, error) {
 	var access UserAccess
 	var sites, menus string
-	err := db.QueryRow(`SELECT COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),COALESCE(m.menu_ids,'null'),COALESCE(m.revision,1) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id WHERE u.id=?`, id).Scan(&access.Role, &sites, &menus, &access.Revision)
+	err := db.QueryRowContext(ctx, `SELECT COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),COALESCE(m.menu_ids,'null'),COALESCE(m.revision,1) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id WHERE u.id=?`, id).Scan(&access.Role, &sites, &menus, &access.Revision)
 	if err != nil {
 		return access, err
 	}
@@ -225,8 +232,8 @@ func accessAllowsMenus(access UserAccess, r *http.Request) bool {
 	return menuSubset(menus, access.MenuIDs)
 }
 
-func completeAdminCount(tx *sql.Tx) (int, error) {
-	rows, err := tx.Query(`SELECT COALESCE(r.role,'admin'),COALESCE(m.menu_ids,'null') FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id`)
+func completeAdminCount(ctx context.Context, tx *sql.Tx) (int, error) {
+	rows, err := tx.QueryContext(ctx, `SELECT COALESCE(r.role,'admin'),COALESCE(m.menu_ids,'null') FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id`)
 	if err != nil {
 		return 0, err
 	}

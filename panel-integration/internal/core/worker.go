@@ -243,6 +243,10 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 }
 
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+	if j.Kind == "apache_body_build" {
+		runApacheBodyEngineJob(ctx, s, e, j)
+		return
+	}
 	if j.Kind == "network_ids_rulefeed_install" {
 		runNetworkIDSRuleFeedJob(ctx, s, e, j, appcatalog.Default())
 		return
@@ -346,7 +350,12 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		Architecture string `json:"architecture"`
 	}
 	endpoint := "/v1/runtimes/install"
-	args := map[string]any{"job_id": j.ID, "release_id": j.TargetID, "retry": true}
+	retry, grantErr := s.takeRuntimeNativeRetry(j)
+	if grantErr != nil {
+		_ = s.finishRuntime(j, grantErr.Error(), nil, true)
+		return
+	}
+	args := map[string]any{"job_id": j.ID, "release_id": j.TargetID, "retry": retry}
 	var extension ExtensionJobPayload
 	if j.Kind == "install_php_extension" {
 		if er := json.Unmarshal([]byte(j.Payload), &extension); er != nil {
@@ -383,8 +392,24 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 				return
 			}
 			_ = s.UpdateRuntimeSteps(j.ID, st.Steps)
+			if st.State == "needs_attention" {
+				detail := st.Error
+				if detail == "" {
+					detail = "安装服务缺少可核实的完成结果；原生记录保留，未发布运行时"
+				}
+				_ = s.finishRuntime(j, detail, st.Steps, true)
+				return
+			}
+			if st.State != "queued" && st.State != "running" && st.State != "failed" && st.State != "succeeded" || st.State == "succeeded" && st.Error != "" {
+				_ = s.finishRuntime(j, "原生安装返回未知或矛盾状态；未自动重试、发布运行时或记为成功", st.Steps, true)
+				return
+			}
 			if st.State == "failed" {
-				_ = s.FinishRuntime(j, st.Error, st.Steps)
+				detail := st.Error
+				if detail == "" {
+					detail = "原生安装已报告失败，但缺少错误详情；请核对保留日志"
+				}
+				_ = s.FinishRuntime(j, detail, st.Steps)
 				return
 			}
 			if st.State == "succeeded" {

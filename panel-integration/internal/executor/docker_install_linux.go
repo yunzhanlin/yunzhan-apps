@@ -18,15 +18,17 @@ import (
 )
 
 func dockerInstallCommand(ctx context.Context, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C", "DEBIAN_FRONTEND=noninteractive"}
-	out := &boundedBuffer{max: 128 * 1024}
-	cmd.Stdout, cmd.Stderr = out, out
-	cmd.WaitDelay = 3 * time.Second
-	if e := cmd.Run(); e != nil {
-		return out.String(), fmt.Errorf("%s: %w: %s", filepath.Base(name), e, strings.TrimSpace(out.String()))
-	}
-	return out.String(), nil
+	return fixedAPTCommand(ctx, name, args, func(fixed []string) (string, error) {
+		cmd := exec.CommandContext(ctx, name, fixed...)
+		cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "LC_ALL=C", "DEBIAN_FRONTEND=noninteractive", "NEEDRESTART_MODE=l"}
+		out := &boundedBuffer{max: 128 * 1024}
+		cmd.Stdout, cmd.Stderr = out, out
+		cmd.WaitDelay = 3 * time.Second
+		if e := cmd.Run(); e != nil {
+			return out.String(), fmt.Errorf("%s: %w: %s", filepath.Base(name), e, strings.TrimSpace(out.String()))
+		}
+		return out.String(), nil
+	})
 }
 
 const dockerBookwormKeyFingerprint = "9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
@@ -163,7 +165,10 @@ func installDocker(ctx context.Context, r runtimecatalog.Release, id string, add
 		return e
 	}
 	args := append([]string{"install", "-y", "--no-install-recommends"}, spec.Packages...)
-	if _, e := dockerInstallCommand(ctx, "/usr/bin/apt-get", args...); e != nil {
+	if _, e := dockerInstallCommand(ctx, "/usr/bin/apt-get", append(append([]string{}, args...), "--download-only")...); e != nil {
+		return e
+	}
+	if _, e := dockerInstallCommand(ctx, "/usr/bin/apt-get", append(append([]string{}, args...), "--no-download")...); e != nil {
 		return e
 	}
 	for _, item := range spec.Packages {

@@ -6,7 +6,15 @@ import { createRotationRefresh } from "./wafRotationRefresh";
 import { bodyInventoryPresentation } from "./wafBodyInventory";
 import WafBodyRetention from "./WafBodyRetention.vue";
 import ApacheWafTransactions from "./ApacheWafTransactions.vue";
+import ApacheBodyBuild from "./ApacheBodyBuild.vue";
+import ApacheBodyEvents from "./ApacheBodyEvents.vue";
+import WafConfigBackups from "./WafConfigBackups.vue";
+import WafApplyRecovery from "./WafApplyRecovery.vue";
+import {wafRecoveredApplyTicket,type WafOriginalRequest} from "./wafApplyRecovery";
 import { randomId } from "./randomId";
+import { wafApplyTaskOutcome, wafQueuedApplyID, wafCommittedConfiguration, type WafApplyKind } from "./wafApplyTask";
+import { readWafSites, type WafSiteChoice } from "./wafSites";
+import { softwareInstallState } from "./softwareState";
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
 interface Entry { id: string; value: string; site_id?: string }
 interface Rule { id: string; name: string; site_id?: string; field: string; operator: string; value: string; action: string; enabled: boolean }
@@ -20,8 +28,8 @@ interface TrustedProxy { enabled: boolean; header: "X-Forwarded-For" | "X-Real-I
 interface BodyLogRotation { enabled:boolean; rotate_mib:number; max_age_minutes:number }
 interface BodyLogRetention {enabled:boolean;days:number;keep_latest:number;confirm_delete_completed_snapshots:boolean}
 interface Config { profile: string; rate_per_second: number; body?: {engine_job_id: string; sites: BodySite[]}; trusted_proxy?: TrustedProxy; body_log_rotation?:BodyLogRotation; body_log_retention?:BodyLogRetention; policy: { schema_version: number; revision: number; mode: string; cc_enabled: boolean; burst: number; groups: Record<string, boolean>; lists: Record<string, Entry[]>; rules: Rule[]; sites: SitePolicy[]; cc_rules: CCRule[] } }
-interface Status { installed: boolean; healthy: boolean; enabled: boolean; version?: string; detail: string }
-interface Site { id: string; name: string; domain: string; status?: string; settings?: { waf_enabled?: boolean; web_server?: string } }
+interface Status { installed: boolean; healthy: boolean; enabled: boolean; state_unknown?: boolean; version?: string; detail: string }
+type Site = WafSiteChoice;
 interface Dimension { name: string; count: number }
 interface Event { time: string; site: string; site_id?: string; ip: string; peer?: string; path?: string; method: string; status: number; reason: string; action: string; rate?: string }
 interface Report { events: Event[]; total: number; blocked: number; observed: number; sources: number; partial: boolean; scanned: number; rules: Dimension[]; ips: Dimension[]; sites: Dimension[]; hours: Dimension[]; from: string; to: string }
@@ -44,12 +52,15 @@ const modeLabel = (mode: string) => ({ block: "阻断", observe: "观察", off: 
 const clone = <T,>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
 const newID = () => randomId().replaceAll("-", "");
 const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), sites = ref<Site[]>([]), implementation = ref("");
+const installState = computed(() => softwareInstallState(status.value ? {id:engine,...status.value} : undefined));
 const ccObservationSupported = computed(() => !apache && status.value?.installed && ["2.3.0","2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));
 const bodyRotationSupported = computed(() => !apache && status.value?.installed && ["2.4.0","2.5.0","2.5.1"].includes(status.value.version || ""));
 const bodyRetentionSupported = computed(() => !apache && status.value?.installed && ["2.5.0","2.5.1"].includes(status.value.version || ""));
 const rateOutcome = (value?: string) => ({REJECTED:"已拒绝",REJECTED_DRY_RUN:"模拟拒绝（放行）",DELAYED_DRY_RUN:"模拟延迟（放行）",DELAYED:"已延迟",PASSED:"通过"}[value || ""] || "—");
 const defaults = ref<Config>();
 const tab = ref("overview"), busy = ref(false), reportBusy = ref(false), error = ref(""), saved = ref(""), preview = ref("");
+const pendingApply = ref<{kind:WafApplyKind; key:string; settings:Record<string,unknown>; job?:string}>();
+const recoveredApplyNote=ref("");
 const report = ref<Report>(), history = ref<History[]>([]), jsonInput = ref("");
 const engines = ref<EngineStatus[]>([]), engineJob = ref<EngineStatus>(), engineBusy = ref(false), bodySite = ref("");
 const bodyReport = ref<BodyReport>(), bodyReportBusy = ref(false), bodyPage = ref(1), bodyFilter = ref({site_id:"",rule:"",phase:""});
@@ -143,9 +154,18 @@ const scopedSites = computed(() => sites.value.filter(s => !siteSearch.value || 
 const siteName = (id?: string) => !id ? "全部受管站点" : sites.value.find(s => s.id === id)?.domain || `失效站点 ${id}`;
 const reasonName = (id: string) => groups.find(g => g.id === id)?.name || ({ cc: "CC 请求限速", "ip-deny": "IP 黑名单", "url-deny": "URL 黑名单", "ua-deny": "UA 黑名单", "legacy-args": "旧版参数规则", "legacy-uri": "旧版地址规则" }[id]) || cfg.value?.policy.rules.find(r => `custom-${r.id}` === id)?.name || id;
 async function loadConfig() {
+	status.value = undefined;
+  saved.value = "";
   const out = await props.api<{ settings: Config; defaults: Config; status: Status; implementation_version: string }>(endpoint("config"));
+  status.value = out.status; implementation.value = out.implementation_version;
+  if (installState.value === "unknown") {
+    cfg.value = undefined; applied.value = undefined; saved.value = "";
+    error.value = "安装记录尚未核对，不能据此认定未安装或防护已生效。已保留原记录，不提交预览、安装或配置变更。";
+    return false;
+  }
   defaults.value = clone(out.defaults);
   cfg.value = clone(out.settings); applied.value = clone(out.settings); status.value = out.status; implementation.value = out.implementation_version;
+  return true;
 }
 function reportURL(exportAll = false) {
   const q = new URLSearchParams({ page: String(exportAll ? 1 : page.value), limit: String(exportAll ? 5000 : limit) });
@@ -197,6 +217,7 @@ async function pollEngine(id: string) {
   } catch(e) { error.value = `暂时无法核实构建状态，未宣称成功：${(e as Error).message}`; engineTimer = setTimeout(() => pollEngine(id), 15000); }
 }
 async function buildEngine() {
+  if (installState.value === "unknown") { error.value="安装状态尚未核对；未提交引擎构建"; return; }
   if (apache || engineBusy.value || busy.value || engineJob.value && ["queued", "running"].includes(engineJob.value.state)) return;
   engineBusy.value = true; error.value = "";
   try { const out = await props.api<{job_id:string}>(endpoint("engine/build"), "POST", {}, newID()); await pollEngine(out.job_id); }
@@ -224,8 +245,10 @@ async function refresh() {
   if (dirty.value) { error.value = "存在未保存的草稿。请先保存，或使用“放弃草稿”再刷新。"; return; }
   busy.value = true; error.value = "";
   try {
-    await loadConfig();
-    const out = await props.api<Site[] | { sites: Site[] }>("/sites"); sites.value = (Array.isArray(out) ? out : out.sites).filter(s => !apache || s.settings?.web_server === "apache");
+    if (await loadConfig() === false) return;
+    const choices = await readWafSites(engine, path => props.api(path), () => !disposed);
+    if (disposed) return;
+    sites.value = choices;
     await Promise.all([refreshReport(), refreshHistory(), refreshEngines(), refreshBodyReport(),refreshBodyArchives()]);
     await refreshBodyRotation();
     const running = engines.value.find(x=>["queued", "running"].includes(x.state))?.job_id || history.value.find(x=>x.kind==="waf_engine_build" && ["queued","running"].includes(x.state))?.id;
@@ -233,34 +256,91 @@ async function refresh() {
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
 async function validate() {
+  if (installState.value === "unknown") throw new Error("安装状态尚未核对；未提交配置预览");
   if (!cfg.value) return;
   const out = await props.api<Preview>(endpoint("preview"), "POST", { settings: cfg.value });
   cfg.value = clone(out.settings); preview.value = previewText(out);
 }
 async function showPreview() { if (busy.value) return; busy.value = true; error.value = ""; try { await validate(); tab.value = "config"; } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; } }
-async function apply() {
-  if (!cfg.value || busy.value) return;
-  busy.value = true; error.value = ""; saved.value = "";
+function recoverOriginalApply(original:WafOriginalRequest){
+  if(disposed||busy.value||pendingApply.value)return;
+  try{
+    pendingApply.value=wafRecoveredApplyTicket(engine,original);
+    recoveredApplyNote.value=`原任务 ${pendingApply.value.job} 已载入，仅保留原配置和已知任务身份。尚未核对实际结果；下一次点击“核对原任务”只读取同一任务，不创建新请求。当前草稿未替换。`;
+    error.value="";saved.value="";
+  }catch(e){error.value=e instanceof Error?e.message:"原任务身份不可核对，未恢复。";}
+}
+async function recheckUnknownOriginal() {
+  const ticket = pendingApply.value;
+  if (disposed || busy.value || !ticket?.job || installState.value !== "unknown") return;
+  busy.value = true; saved.value = ""; error.value = "";
   try {
-    await validate();
-    const settings = clone(cfg.value) as unknown as Record<string, unknown>;
-    const id = status.value?.installed ? (await props.api<{ job_id: string }>(endpoint("configure"), "POST", { settings }, newID())).job_id : await props.onInstall(engine, settings);
+    const result = await props.api(endpoint(`jobs/${ticket.job}`));
+    const outcome = wafApplyTaskOutcome(ticket.job, engine, ticket.kind, result);
+    error.value = outcome.state === "succeeded"
+      ? "原任务已完成，但当前安装记录或防护状态无法核对；未宣称防护已生效，原请求保留。"
+      : `原任务只读核对：${outcome.detail || '仍在执行'}。当前安装状态未核实，原请求保留，不自动重发。`;
+  } catch (cause) { error.value = `原任务只读核对未完成：${(cause as Error).message}；原请求保留，不自动重发。`; }
+  finally { busy.value = false; }
+}
+async function apply() {
+  if (disposed || !cfg.value || busy.value) return;
+  if (installState.value === "unknown") { error.value="安装状态尚未核对；未提交安装或配置变更"; return; }
+  busy.value = true; error.value = ""; saved.value = "";recoveredApplyNote.value="";
+  try {
+    let ticket = pendingApply.value;
+    if (!ticket) {
+      await validate();
+      if (disposed) return;
+      ticket = {kind:status.value?.installed ? "software_configure" : "software_install", key:newID(), settings:clone(cfg.value) as unknown as Record<string,unknown>};
+      pendingApply.value = ticket; // Keep the exact ticket BEFORE its reply.
+    }
+    // An explicit recheck with an already known job only reads that job.
+    // An unknown configure reply reuses its original key and exact payload;
+    // installation identity remains managed by the signed-store callback.
+    if (!ticket.job) {
+      if (disposed) return;
+      const queued = ticket.kind === "software_configure" ? await props.api(endpoint("configure"), "POST", {settings:ticket.settings}, ticket.key) : await props.onInstall(engine,ticket.settings);
+      ticket.job = wafQueuedApplyID(queued);
+      pendingApply.value = ticket;
+    }
     let completed = false;
     for (let n = 0; n < 120; n++) {
-      const job = await props.api<{ state: string; error: string }>(`/jobs/${id}`);
-      if (job.state === "failed" || job.state === "cancelled") throw new Error(job.error || "配置任务失败；请核对操作记录与当前生效配置。");
-      if (job.state === "succeeded") { completed = true; break; }
+      if (disposed) return;
+      const job = await props.api(endpoint(`jobs/${ticket.job}`));
+      const outcome = wafApplyTaskOutcome(ticket.job, engine, ticket.kind, job);
+      if (outcome.state === "failed") { pendingApply.value = undefined; throw new Error(outcome.detail); }
+      if (outcome.state === "attention") throw new Error(outcome.detail);
+      if (outcome.state === "succeeded") { completed = true; break; }
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    if (!completed) throw new Error("任务仍在执行，未宣称已生效。请在操作记录中核对后再刷新。");
-    await loadConfig(); saved.value = `配置已备份、通过 ${engineName} 原生检查和重载核对；现显示实际生效配置。`;
+    if (!completed) throw new Error("原任务结果尚未确认，未宣称已生效；点击“核对原任务”只核对同一任务，不提交新的配置任务。");
+    await loadConfig();
+    if (softwareInstallState(status.value ? {id:engine,...status.value} : undefined) === "unknown") throw new Error("原任务已完成，但当前安装状态无法核对；原请求保留，未宣称当前防护已生效。");
+    pendingApply.value = undefined;
+    if (!status.value?.healthy) throw new Error(`任务已完成，但当前实际防护状态未核实：${status.value?.detail || '请核对操作记录与实际规则。'}`);
+    if (!wafCommittedConfiguration(ticket.settings, applied.value)) throw new Error("原任务已完成，但当前配置或修订号不再与本次提交一致；可能有后续修改。已读取当前配置，未宣称本次配置仍在生效，也未重新提交。");
+    saved.value = `配置已备份、通过 ${engineName} 原生检查和重载核对；现显示实际生效配置。`;
     await Promise.all([refreshHistory(), refreshReport(), refreshBodyReport(),refreshBodyArchives()]);
     await refreshBodyRotation();
   } catch (e) { error.value = (e as Error).message; await refreshHistory(); }
   finally { busy.value = false; }
 }
 function discard() { if (applied.value) cfg.value = clone(applied.value); preview.value = ""; error.value = ""; saved.value = ""; }
-function restoreDraft() { if (!defaults.value || !applied.value) return; cfg.value = clone(defaults.value); cfg.value.policy.revision = applied.value.policy.revision; if(applied.value.trusted_proxy) cfg.value.trusted_proxy = disabledTrustedProxy(); saved.value = "默认配置已载入草稿，会清空独立策略、名单与自定义规则并停用本应用的可信代理配置；尚未应用。可放弃草稿恢复生效配置。"; preview.value = ""; }
+function restoreDraft() {
+  if (!defaults.value || !applied.value) return;
+  cfg.value = clone(defaults.value); cfg.value.policy.revision = applied.value.policy.revision;
+  cfg.value.policy.mode = applied.value.policy.mode;
+  if (applied.value.trusted_proxy) cfg.value.trusted_proxy = disabledTrustedProxy();
+  // Reset only this metadata workspace. Preserve independently selected body
+  // sites, engine and log lifecycle policies instead of hiding their retained
+  // server-side values behind absent fields in a defaults-only draft.
+  if (applied.value.body) cfg.value.body = clone(applied.value.body);
+  if (applied.value.body_log_rotation) cfg.value.body_log_rotation = clone(applied.value.body_log_rotation);
+  if (applied.value.body_log_retention) cfg.value.body_log_retention = clone(applied.value.body_log_retention);
+  saved.value = "元数据默认配置已载入草稿：独立元数据策略、名单与自定义规则会清空，本应用的可信代理会停用；全局运行模式保留，原生请求体引擎、网站策略和日志策略保留。尚未应用，可放弃草稿恢复已保存配置。";
+  preview.value = "";
+}
 function addSite() {
   if (!cfg.value || !selectedSite.value) return;
   if (cfg.value.policy.sites.some(p => p.site_id === selectedSite.value)) { ElMessage.warning("该站点已存在策略"); return; }
@@ -297,20 +377,25 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
 
 <template>
   <section class="waf-workspace" v-loading="busy">
-    <div class="waf-heading"><div><h3>{{ engineName }} 请求防火墙</h3><p>请求防护 · 站点策略 · {{ apache ? "独立名单" : "CC 限速" }} · 审计与报表</p></div><div class="waf-actions"><el-tag :type="status?.healthy ? 'success' : 'warning'">{{ !status ? (busy ? '正在读取真实状态' : '状态尚未核实') : !status.installed ? '未安装' : status.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
+    <div class="waf-heading"><div><h3>{{ engineName }} 请求防火墙</h3><p>请求防护 · 站点策略 · {{ apache ? "独立名单" : "CC 限速" }} · 审计与报表</p></div><div class="waf-actions"><el-tag :type="installState === 'unknown' ? 'warning' : status?.healthy ? 'success' : 'warning'">{{ installState === 'unknown' ? (busy ? '正在读取真实状态' : '安装状态待核对') : installState === 'absent' ? '未安装' : status?.healthy ? `已加载 · ${modeLabel(applied?.policy.mode || '')}` : '需要核对' }}</el-tag><el-tag type="info">v{{ status?.version || implementation || '—' }}</el-tag><el-button :disabled="busy || dirty" @click="refresh">刷新状态</el-button></div></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false" />
     <el-alert v-if="saved" :title="saved" type="success" :closable="false" />
-    <el-alert v-if="status?.installed && !status.healthy" :title="status.detail" type="warning" :closable="false" />
-    <template v-if="cfg">
-      <div class="waf-toolbar"><span>{{ dirty ? '存在未保存草稿' : '当前显示生效配置' }} · 修订 {{ applied?.policy.revision }} · {{ cfg.policy.sites.length }} 个独立站点策略 · {{ listCount }} 条名单</span><div><el-button :disabled="busy || !dirty" @click="discard">放弃草稿</el-button><el-button :disabled="busy" @click="showPreview">预览配置</el-button><el-button type="primary" :disabled="busy" @click="apply">{{ status?.installed ? '保存并应用' : '安装并验证' }}</el-button></div></div>
+    <el-alert v-if="recoveredApplyNote" :title="recoveredApplyNote" type="info" :closable="false"/>
+    <el-alert v-if="installState === 'unknown' && !busy" title="安装状态尚未核对，不能据此认定未安装。当前页面不提交预览、安装或配置；请核对原记录后刷新。" type="warning" :closable="false"/>
+    <el-button v-if="installState === 'unknown' && pendingApply?.job" :disabled="busy" @click="recheckUnknownOriginal">只读核对原任务</el-button>
+    <el-alert v-if="installState === 'installed' && status && !status.healthy" :title="status.detail" type="warning" :closable="false" />
+    <template v-if="cfg && installState !== 'unknown'">
+      <el-alert v-if="pendingApply" :title="`原任务结果尚未确认${pendingApply.job ? ' · '+pendingApply.job : '，提交回复尚未核实'}。核对时保留原请求身份与配置；更改草稿不会替换原请求。服务端已入队的绑定请求可在“原任务恢复”只读找回；尚未到达服务端的请求仅保留在本工作区，请记录原身份。没有记录不代表未提交，不自动重发。`" type="warning" :closable="false"/>
+      <div class="waf-toolbar"><span>{{ dirty ? '存在未保存草稿' : status?.healthy ? '当前显示生效配置' : '当前显示已保存配置，实际生效尚未核实' }} · 修订 {{ applied?.policy.revision }} · {{ cfg.policy.sites.length }} 个独立站点策略 · {{ listCount }} 条名单</span><div><el-button :disabled="busy || !dirty" @click="discard">放弃草稿</el-button><el-button :disabled="busy" @click="showPreview">预览配置</el-button><el-button type="primary" :disabled="busy" @click="apply">{{ pendingApply ? '核对原任务' : status?.installed ? '保存并应用' : '安装并验证' }}</el-button></div></div>
       <el-tabs v-model="tab" class="waf-tabs">
+        <el-tab-pane label="原任务恢复" name="request-recovery"><WafApplyRecovery :api="api" :engine="engine" :active="tab==='request-recovery'" :blocked="!!pendingApply || busy" @restore="recoverOriginalApply"/></el-tab-pane>
         <el-tab-pane label="防护概览" name="overview">
           <div class="waf-metrics"><article v-for="m in [{name:'防护事件',value:report?.total},{name:'已阻断',value:report?.blocked},{name:'仅观察',value:report?.observed},{name:'来源 IP',value:report?.sources}]" :key="m.name"><span>{{m.name}}</span><strong>{{m.value ?? '—'}}</strong><small>筛选时间内真实日志</small></article></div>
           <p class="waf-muted">{{ report ? `${formatPanelDateTime(report.from)} — ${formatPanelDateTime(report.to)}；已读取最近 ${report.scanned} 条日志` : '安装后读取真实日志，不使用演示数据' }}。概览与防护日志共用筛选条件。</p>
           <el-alert v-if="report?.partial" title="日志读取达到最近 4 MiB / 5000 条上限；统计不是全历史总数，更早记录仍在服务器日志中。" type="warning" :closable="false" />
           <div class="waf-two"><section><h4>命中规则排行</h4><el-table :data="report?.rules || []" max-height="220" empty-text="暂无命中"><el-table-column label="规则"><template #default="{row}">{{reasonName(row.name)}}</template></el-table-column><el-table-column prop="count" label="次数" width="80"/></el-table></section><section><h4>来源 IP 排行</h4><el-table :data="report?.ips || []" max-height="220" empty-text="暂无来源"><el-table-column prop="name" label="生效客户端 IP"/><el-table-column prop="count" label="次数" width="80"/></el-table></section></div>
           <h4>每小时防护事件（UTC）</h4><div class="waf-trend" v-if="report?.hours.length"><div v-for="h in report.hours.slice(-48)" :key="h.name" :title="`${h.name} UTC · ${h.count} 次`"><span :style="{height: `${Math.max(3, h.count / Math.max(...report.hours.map(x=>x.count)) * 90)}px`}"></span><small>{{h.name.slice(-5)}}</small></div></div><el-empty v-else description="暂无防护事件；没有事件不代表已完成安全审计" :image-size="64"/>
-          <el-alert :title="apache ? 'Apache 当前为独立请求元数据防护，不包含原生请求体引擎。观察模式不阻断 WAF 命中，但服务器原生拒绝仍有效。' : '元数据防护与原生请求体防护独立配置。请求体防护使用固定版本 ModSecurity / OWASP CRS，须先构建兼容引擎，再逐网站明确启用；概览和防护日志当前统计元数据事件，不将 CRS 规则命中数伪装成 HTTP 阻断次数。'" type="info" :closable="false" />
+          <el-alert :title="apache ? '本页概览与防护日志仅统计独立请求元数据防护。引擎构建完成不代表已安装的元数据应用已升级、加载或启用请求体防护；原生程序、已安装应用版本、网站策略和实际加载须分别核实。CRS 规则命中数不是 HTTP 阻断次数，观察模式不能绕过服务器原生拒绝。' : '元数据防护与原生请求体防护独立配置。请求体防护使用固定版本 ModSecurity / OWASP CRS，须先构建兼容引擎，再逐网站明确启用；概览和防护日志当前统计元数据事件，不将 CRS 规则命中数伪装成 HTTP 阻断次数。'" type="info" :closable="false" />
         </el-tab-pane>
         <el-tab-pane label="全局防护" name="global">
           <el-form label-position="top" class="waf-two"><el-form-item label="运行模式"><el-select v-model="cfg.policy.mode"><el-option label="阻断：规则命中立即拒绝" value="block"/><el-option label="观察：只记录，不阻断或限速" value="observe"/><el-option label="停用：所有站点不阻断或限速" value="off"/></el-select></el-form-item><el-form-item label="特征策略"><el-select v-model="cfg.profile"><el-option label="平衡：常见攻击特征" value="balanced"/><el-option label="严格：扩展特征，可能增加误报" value="strict"/></el-select></el-form-item></el-form>
@@ -419,6 +504,9 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
           <h4>安全配置导入 / 导出</h4><el-button type="warning" plain @click="restoreDraft">恢复默认草稿（不立即生效）</el-button><el-button @click="download('yunzhan-waf-applied.json',applied)">导出生效配置</el-button><el-button @click="download('yunzhan-waf-draft.json',cfg)">导出草稿</el-button><p>仅接受本应用的 JSON 配置，128 KiB 上限；拒绝未知字段、任意服务器配置及不支持的网站。导入不会立即改变服务器。</p><el-input v-model="jsonInput" type="textarea" :rows="4" aria-label="导入 JSON 配置" placeholder="粘贴配置 JSON"/><el-button class="waf-add" @click="importConfig">校验并载入草稿</el-button>
           <h4>生成的 {{ engineName }} 配置（只读预览）</h4><el-button @click="showPreview">生成预览</el-button><pre v-if="preview" class="waf-code">{{preview}}</pre><p>保存前自动留下受限权限的完整配置备份，通过 {{ engineName }} 原生校验后才重载，并核对生效指纹；失败恢复旧文件。保存使用修订号检查，防止旧页面覆盖新配置。备份最多 100 份，达到上限拒绝修改，需管理员先归档。</p>
         </el-tab-pane>
+        <el-tab-pane v-if="!apache" label="配置备份" name="config-backups"><WafConfigBackups :api="api" :active="tab==='config-backups'"/></el-tab-pane>
+        <el-tab-pane v-if="apache" label="请求体引擎构建" name="apache-body-build"><ApacheBodyBuild :api="api" :active="tab==='apache-body-build'" :parent-busy="busy"/></el-tab-pane>
+        <el-tab-pane v-if="apache" label="请求体数值记录" name="apache-body-events"><ApacheBodyEvents :api="api" :active="tab==='apache-body-events'" :sites="sites"/></el-tab-pane>
         <el-tab-pane v-if="apache" label="配置事务" name="transactions"><ApacheWafTransactions :api="api" :active="tab==='transactions'" :installed="!!status?.installed" :version="status?.version" :parent-busy="busy"/></el-tab-pane>
         <el-tab-pane label="操作记录" name="history"><div class="waf-actions"><p>最近 50 次持久化任务，包括安装、升级、配置与失败原因。</p><el-button @click="refreshHistory">刷新记录</el-button></div><el-table :data="history" max-height="420" empty-text="尚无操作记录"><el-table-column label="时间" width="170"><template #default="{row}">{{formatPanelDateTime(row.created_at)}}</template></el-table-column><el-table-column prop="kind" label="操作"/><el-table-column prop="state" label="状态"/><el-table-column prop="error" label="错误 / 结果" min-width="240" show-overflow-tooltip/><el-table-column prop="id" label="任务标识" min-width="220" show-overflow-tooltip/></el-table></el-tab-pane>
       </el-tabs>

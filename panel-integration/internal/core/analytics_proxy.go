@@ -141,8 +141,8 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 	var module struct {
 		Status SoftwareAppStatus `json:"status"`
 	}
-	if err = a.Executor.Call(r.Context(), "GET", "/v1/app-modules/website-analytics", nil, &module); err != nil || !module.Status.Installed {
-		fail(w, 409, "请先安装网站分析应用")
+	if err = a.Executor.Call(r.Context(), "GET", "/v1/app-modules/website-analytics", nil, &module); err != nil || !knownInstalledAppModule("website-analytics", module.Status) {
+		fail(w, 409, "网站分析安装身份或状态待核对；未提交网站配置")
 		return
 	}
 	if in.Enabled && site.Status != "running" {

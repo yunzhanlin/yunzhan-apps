@@ -40,6 +40,8 @@ func wafSourceRedirectAllowed(u *url.URL, redirects int) bool {
 		return false
 	}
 	switch u.Host {
+	case "deb.debian.org":
+		return u.Path == "/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz" && u.RawQuery == ""
 	case "nginx.org":
 		return strings.HasPrefix(u.Path, "/download/nginx-") && strings.HasSuffix(u.Path, ".tar.gz") && u.RawQuery == ""
 	case "github.com":

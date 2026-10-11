@@ -8,7 +8,10 @@ test('published managers route modules independently and reject generic SSH fall
   const module=await readFile(new URL('../panel-integration/web/src/AppModuleManager.vue',import.meta.url),'utf8');
   assert(app.includes('@click="openSoftwareApp(app)"'));
   assert(!app.includes('@click="softwareManager?.show'));
-  assert(app.includes(':on-install="queueSoftwareInstall"'));
+  assert(app.includes(':on-install="securityWorkspaceScope.install"'));
+  assert(app.includes('install: scopeWorkspaceOperation(queueSoftwareInstall, current)'));
+  assert(app.includes(':on-install="appModuleInstall"'));
+  assert(app.includes('appModuleInstall.value = scopeWorkspaceOperation(queueSoftwareInstall, scopeCurrent)'));
   assert(app.includes('expected_sha256: app.sha256'));
   assert(security.includes('v-else-if="selected.id === \'intrusion-prevention\'"'));
   assert(security.includes('!isSecuritySoftware(selected.value.id)'));

@@ -146,7 +146,10 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 	rollback := func(cause error) error {
 		_, restoreErr := s.recoverWAFTransaction()
 		if restoreErr == nil {
-			bounded, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			// Recovery must have its own finite budget after cancellation. It
+			// includes syntax/identity checks and the same verified listener
+			// handoff as the forward path, not just a successful reload command.
+			bounded, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 			_, restoreErr = s.Config.Run(bounded, nginx, "-t", "-c", s.Config.NginxConf)
 			if restoreErr == nil {
 				var generation *wafReloadGeneration

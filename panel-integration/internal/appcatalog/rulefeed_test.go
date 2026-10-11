@@ -123,7 +123,7 @@ func TestSignedManifestRuleFeedDownloadsOnlyExplicitClosedDataset(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	verified, err := client.FetchManifest(context.Background(), catalog.Apps[0], t.TempDir())
+	verified, err := client.FetchManifest(context.Background(), catalog.Apps[0], filepath.Join(t.TempDir(), "packages"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +152,7 @@ func TestSignedRuleFeedRejectsTamperedMemberAndUnsafeMetadata(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			verified, err := client.FetchManifest(context.Background(), catalog.Apps[0], t.TempDir())
+			verified, err := client.FetchManifest(context.Background(), catalog.Apps[0], filepath.Join(t.TempDir(), "packages"))
 			if err != nil {
 				t.Fatal(err)
 			}

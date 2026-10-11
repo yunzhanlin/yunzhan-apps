@@ -10,7 +10,10 @@ import (
 )
 
 // Only distribution-signed, fixed build dependencies; never API package names.
-var wafBuildDependencies = []string{"build-essential", "pkg-config", "libpcre2-dev", "libxml2-dev", "libyajl-dev", "libssl-dev", "zlib1g-dev", "patch"}
+// YAJL is independently SHA/CVE-pinned, compiled and statically linked into
+// this engine's new private prefix. System headers/library presence is neither
+// sufficient nor required for that private source authority.
+var wafBuildDependencies = []string{"build-essential", "pkg-config", "libpcre2-dev", "libxml2-dev", "libssl-dev", "zlib1g-dev", "patch"}
 
 // Nginx 1.18 predates PCRE2 support. Add only this distribution package for
 // its reviewed source; never substitute an API-supplied package or Nginx.

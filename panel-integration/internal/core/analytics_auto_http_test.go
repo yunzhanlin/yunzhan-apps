@@ -25,7 +25,7 @@ func TestAnalyticsAutoHTTPQueuesWithoutPrematurePublicOptInAndAllowsSafeOptOut(t
 		status, body := 200, ""
 		switch r.URL.Path {
 		case "/v1/app-modules/website-analytics":
-			body = `{"status":{"installed":true,"version":"` + version + `"}}`
+			body = `{"status":{"id":"website-analytics","installed":true,"version":"` + version + `"}}`
 		case "/v1/sites/preview":
 			var candidate Site
 			if json.NewDecoder(r.Body).Decode(&candidate) != nil || candidate.ID != site.ID {

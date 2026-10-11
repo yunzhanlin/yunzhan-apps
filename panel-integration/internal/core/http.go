@@ -45,6 +45,9 @@ type Server struct {
 	reportExports      map[string]loadBalanceReportExport
 	reportExportBytes  int
 	reportExportSeq    uint64
+	dailyWorkerMu      sync.Mutex
+	dailyWorkerStarted bool
+	dailyWorkerStatus  DailyWorkerStatus
 }
 type identity struct{ ID, Username, CSRF string }
 

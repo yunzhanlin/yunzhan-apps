@@ -3,10 +3,23 @@ import { computed } from "vue";
 import {remoteConnectionRow} from "./remoteSync";
 import ThreatIDSReport from "./ThreatIDSReport.vue";
 import AnalyticsLatencyReport from "./AnalyticsLatencyReport.vue";
+import DailyReportSummary from "./DailyReportSummary.vue";
+import {dailySnapshot} from "./dailyReportView";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
+  signal_accepted:"信号发送已接受",
+  exit_verified:"退出已核对",
+  connections:"连接明细",
+  connections_available:"连接数据可核对",
+  cpu_available:"CPU 速率可核对",
+  io_available:"I/O 速率可核对",
+  sample_limit:"进程采样上限",
+  display_limit:"进程展示上限",
+  sampled_processes:"已采样进程数",
+  displayed_processes:"本次展示进程数",
+  display_limited:"展示限制已触发",
   load_transactions:"实际配置事务",
   transaction_state:"事务状态",
   transaction_format:"事务格式",
@@ -202,6 +215,9 @@ const names: Record<string, string> = {
   actual_nfs_v4_rpc: "真实 NFSv4 RPC 检查通过",
   export_error: "导出目录告警",
   hosts: "主机",
+  tokens: "本机只读授权",
+  token_id: "授权标识（非访问令牌）",
+  telemetry_complete: "CPU / 内存 / 磁盘指标均可用",
   nodes: "上游节点",
   entries: "负载均衡入口",
   http_health: "持续 HTTP 检查",
@@ -375,6 +391,8 @@ const analytics = computed(() =>
   ["website-analytics", "website-statistics-v2"].includes(props.id),
 );
 function reportLabel(key:string):string {
+  if(props.id==='platform-ops'&&key==='healthy')return 'HTTPS 与健康协议通过';
+  if(props.id==='platform-ops'&&key==='expected_sha')return '主机配置摘要（只读）';
   if(props.id==="files-sync" && props.report.preview===true) {
     const previewLabels:Record<string,string>={copied:"拟复制（尚未写入）",copied_count:"拟复制数",deletes:"拟删除（本模式不删除目标文件）"};
     if(previewLabels[key])return previewLabels[key];
@@ -440,7 +458,11 @@ const info = computed(() =>
       !metrics.value.some(([k]) => k === key),
   ),
 );
-function format(key: string, value: unknown): string {
+function format(key: string, value: unknown, row?:Record<string,unknown>): string {
+  if(props.id==='task-manager') {
+    if(key==='connections' && props.report.connections_available!==true)return '未取得，当前状态未知';
+    if(['cpu_percent','read_rate','write_rate'].includes(key) && (typeof value!=='number' || !Number.isFinite(value) || value<0 || !row || row[key==='cpu_percent'?'cpu_available':'io_available']!==true))return '未知';
+  }
   if(props.id==="load-balance" && key==="transaction_state")return ({committed:"变更已提交",recovered:"恢复已确认",applying:"变更未完成（不可归档）",restored:"原文件已恢复但原生确认未完成（不可归档）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_archive_state")return ({reviewed:"内容已核对（未归档）",prepared:"原归档已持久预留（须显式恢复）",reserved:"原迁移已接受或回执待核对（须显式恢复）",committed:"归档已提交，证据保留"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_files" && Array.isArray(value))return value.map(file=>`${file.name==='previous'?'原文件备份':file.name==='staged'?'保留暂存':file.name} · ${format('bytes',file.bytes)} · ${Number(file.mode).toString(8).padStart(3,'0')}`).join("；")||"空事务目录（仍保留身份）";
@@ -470,7 +492,7 @@ function format(key: string, value: unknown): string {
   return String(value ?? "—");
 }
 function rows(values: any[]): Record<string, any>[] {
-  return values.slice(0, 200).map((v) => {
+  return values.slice(0, props.id==='task-manager' ? 500 : 200).map((v) => {
     if (v === null || typeof v !== "object") return { path: String(v) };
     return {
       ...(v.app || v.mount || {}),
@@ -553,11 +575,13 @@ function mobileDownloadURL(value: unknown): string | undefined {
 </script>
 <template>
   <ThreatIDSReport v-if="id === 'network-threat-detection' && report.capture_state" :report="report" />
+  <DailyReportSummary v-else-if="id==='daily-report' && dailySnapshot(report)" :report="report" />
   <div v-else class="functional-report">
+    <el-alert v-if="id==='daily-report' && report.report_contents_verified===false" type="info" :closable="false" title="目录只核对日期、记录时间和字节数；未据此宣称报告内容完整。选择日期后再严格读取原报告。" />
     <el-alert
       v-if="report.partial"
       type="warning"
-      title="这是有界扫描的部分结果，不能据此认定全量数据已统计或网站没有风险。"
+      :title="id==='task-manager' ? '进程列表达到采样或展示上限，属于部分结果，不能据此判断全部进程状态。' : '这是有界采样或扫描的部分结果，不能据此认定全部数据已核对。'"
       :closable="false"
     />
     <el-alert
@@ -684,7 +708,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
           v-for="column in columns(values)"
           :key="column"
           :prop="column"
-          :label="names[column] || column"
+          :label="reportLabel(column)"
           :sortable="
             [
               'cpu_percent',
@@ -701,7 +725,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
           "
           show-overflow-tooltip
           ><template #default="{ row }">{{
-            format(column, row[column])
+            format(column, row[column], row)
           }}</template></el-table-column
         >
         <el-table-column
@@ -713,6 +737,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
               'mounts',
               'exports',
               'hosts',
+              'tokens',
               'changes',
               'largest_files',
               'nodes',

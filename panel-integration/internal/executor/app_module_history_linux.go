@@ -7,7 +7,6 @@ import (
 	"errors"
 	"local/panel/internal/core"
 	"os"
-	"path/filepath"
 	"strings"
 )
 
@@ -94,9 +93,8 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 			event.Outcome = "conflicts"
 		}
 	}
-	path := filepath.Join(s.moduleDir(id), "history.json")
 	events := []moduleEvent{}
-	if err := moduleRead(path, &events); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := s.moduleRetrospectiveRecord(id, "history.json", &events); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.New("历史记录损坏，未覆盖旧记录")
 	}
 	if err := s.saveModuleLedger(id, events, &event); err != nil {
@@ -116,11 +114,14 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 		}
 		events = events[1:]
 	}
-	return moduleWrite(path, events)
+	return s.writeModuleRetrospectiveRecord(id, "history.json", events)
 }
 func (s *Service) moduleHistory(id string, in core.AppModuleInput) (any, error) {
+	if _, err := s.moduleInstalledRecord(id); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return nil, errors.New("安装记录无法核对，未读取或修改原历史")
+	}
 	events := []moduleEvent{}
-	err := moduleRead(filepath.Join(s.moduleDir(id), "history.json"), &events)
+	err := s.moduleRetrospectiveRecord(id, "history.json", &events)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return nil, err
 	}

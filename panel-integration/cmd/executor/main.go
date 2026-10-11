@@ -52,9 +52,14 @@ func main() {
 	idsRuleFeed := flag.String("install-network-ids-rulefeed", "", "install signed passive rule data for a fixed verified job, without activation")
 	wafEngineBuild := flag.String("build-waf-engine", "", "build a pinned independent WAF engine without activating sites")
 	wafEngineVerify := flag.String("verify-waf-engine", "", "verify a built WAF program without activating or changing sites")
+	apacheBodyBuild := flag.String("build-apache-body", "", "build the pinned independent Apache request-body engine without activating sites")
+	apacheBodyVerify := flag.String("verify-apache-body", "", "read-only verification of a sealed Apache request-body engine")
 	analyticsHTMLBuild := flag.String("build-analytics-html", "", "build a pinned isolated analytics HTML engine without activating sites")
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
 	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
+	apacheBodyPrepare := flag.Bool("prepare-apache-body-runtime", false, "verify committed Apache native body policy and prepare only missing bounded cache leaves at startup")
+	apacheBodyCacheCheck := flag.Bool("check-apache-body-cache-mount", false, "read-only fixed pre-mount guard; never hide existing cache contents or replace unknown mounts")
+	apacheBodyCachePreflight := flag.Bool("check-apache-body-cache-upgrade", false, "read-only fixed installer preflight before host or service changes; missing cache is not provisioned")
 	idsRecover := flag.Bool("recover-network-ids", false, "recover the fixed private IDS two-file configuration before capture")
 	idsAuthorize := flag.Bool("authorize-network-ids-start", false, "verify private IDS committed configuration or live executor candidate")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
@@ -105,6 +110,24 @@ func main() {
 		}
 		return
 	}
+	if *apacheBodyCachePreflight {
+		if err := executor.CheckApacheBodyCacheUpgradePreflight(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *apacheBodyCacheCheck {
+		if err := executor.CheckApacheBodyCacheMount(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *apacheBodyPrepare {
+		if err := executor.PrepareApacheBodyRuntime(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if *ftpRecover {
 		if e := executor.RecoverPureFTP(); e != nil {
 			log.Fatal(e)
@@ -132,7 +155,7 @@ func main() {
 	for _, operation := range []struct {
 		id  string
 		run func(string) error
-	}{{*appDependencies, executor.InstallAppDependencies}, {*idsRuleFeed, executor.RunNetworkIDSRuleFeedInstall}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*analyticsHTMLBuild, executor.RunAnalyticsHTMLBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
+	}{{*appDependencies, executor.InstallAppDependencies}, {*idsRuleFeed, executor.RunNetworkIDSRuleFeedInstall}, {*wafEngineBuild, executor.RunWAFEngineBuild}, {*wafEngineVerify, executor.VerifyWAFEngineBuild}, {*apacheBodyBuild, executor.RunApacheBodyBuild}, {*apacheBodyVerify, executor.VerifyApacheBodyBuild}, {*analyticsHTMLBuild, executor.RunAnalyticsHTMLBuild}, {*pm2Serve, executor.ServePM2}, {*pm2Deploy, executor.RunPM2Dependencies}, {*nfsMount, func(id string) error { return executor.NFSMountOperation(id, false) }}, {*nfsUnmount, func(id string) error { return executor.NFSMountOperation(id, true) }}} {
 		if operation.id != "" {
 			if e := operation.run(operation.id); e != nil {
 				log.Fatal(e)

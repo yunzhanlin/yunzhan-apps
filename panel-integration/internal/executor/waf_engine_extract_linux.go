@@ -44,6 +44,8 @@ func wafArchivePrefix(source wafEngineSource) (string, error) {
 		return "coreruleset-" + source.Version, nil
 	case "nginx-build":
 		return "nginx-" + source.Version, nil
+	case "nginx-yajl":
+		return "yajl-" + source.Version, nil
 	}
 	return "", errors.New("WAF 源码类型无效")
 }
@@ -52,6 +54,12 @@ func extractWAFEngineSource(ctx context.Context, source wafEngineSource, archive
 	prefix, err := wafArchivePrefix(source)
 	if err != nil {
 		return err
+	}
+	if source.Name == "nginx-yajl" {
+		// The independent Nginx allowlist has already checked every source
+		// field. Only this SHA-pinned Git export may carry its one exact
+		// leading comment; never grant arbitrary global PAX overrides.
+		return extractPinnedSourceArchive(ctx, archive, destination, prefix, source.SHA256, "a0ecdde0c042b9256170f2f8890dd9451a4240aa")
 	}
 	return extractPinnedWAFSource(ctx, archive, destination, prefix, source.SHA256)
 }

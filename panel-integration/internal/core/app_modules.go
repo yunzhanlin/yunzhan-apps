@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -50,6 +51,7 @@ type AppModuleInput struct {
 	BackendTLS           *LoadBalanceBackendTLS          `json:"backend_tls,omitempty"`
 	URL                  string                          `json:"url,omitempty"`
 	Token                string                          `json:"token,omitempty"`
+	TokenID              string                          `json:"token_id,omitempty"`
 	Source               string                          `json:"source,omitempty"`
 	ReadOnly             bool                            `json:"read_only,omitempty"`
 	Interval             int                             `json:"interval,omitempty"`
@@ -98,6 +100,14 @@ type AppUpstream struct {
 	Backup  bool   `json:"backup"`
 }
 
+// Installed is not an identity proof by itself. Keep this check common to
+// Core-owned mutations and executor dispatch; unhealthy/disabled applications
+// may still need explicit inspection or repair.
+func knownInstalledAppModule(id string, status SoftwareAppStatus) bool {
+	_, declared := FindAppModule(id)
+	return declared && status.ID == id && status.Installed && !status.StateUnknown
+}
+
 func AppModules() []AppModuleDefinition {
 	site := AppModuleField{"site_id", "网站", "site"}
 	path := AppModuleField{"path", "相对文件路径", "text"}
@@ -113,12 +123,12 @@ func AppModules() []AppModuleDefinition {
 		{"mobile-pwa", "云栈移动端", []string{"run"}, nil},
 		{"apache-waf", "Apache 请求防火墙", []string{"run"}, nil},
 		{"php-code-security", "PHP 代码安全", []string{"run"}, []AppModuleField{site}},
-		{"task-manager", "任务管理器", []string{"run", "terminate"}, []AppModuleField{{"pid", "进程 PID", "number"}, {"start_time", "进程启动序号", "number"}}},
+		{"task-manager", "任务管理器", []string{"run", "terminate"}, []AppModuleField{{"pid", "原进程 PID（从当前列表选择）", "identity"}, {"start_time", "原进程启动序号", "identity"}}},
 		{"website-tamper-proof", "网站防篡改", []string{"baseline", "check", "restore"}, []AppModuleField{site, path}},
 		{"user-manager", "面板用户管理", []string{"run", "create", "update", "revoke", "delete"}, []AppModuleField{{"username", "用户名", "text"}, {"password", "新密码", "password"}, {"role", "角色", "text"}, {"site_ids", "网站权限范围", "json"}, {"menu_ids", "菜单授权", "menus"}, {"expected_revision", "账户授权修订号", "identity"}}},
 		{"file-monitor", "文件监控", []string{"baseline", "check"}, []AppModuleField{site, {"excludes", "排除路径前缀", "json"}}},
 		{"disk-analysis", "磁盘分析", []string{"run"}, []AppModuleField{site}},
-		{"platform-ops", "多主机运维", []string{"run", "add", "remove", "issue-token", "revoke-token"}, []AppModuleField{{"resource_id", "主机标识", "text"}, {"url", "主机 HTTPS API 地址", "text"}, {"token", "只读访问令牌", "password"}}},
+		{"platform-ops", "多主机运维", []string{"run", "add", "remove", "token-list", "issue-token", "revoke-token"}, []AppModuleField{{"resource_id", "主机标识", "text"}, {"url", "主机 HTTPS API 地址", "text"}, {"token", "只读访问令牌", "password"}, {"token_id", "授权标识（从清单选择，非访问令牌）", "text"}, {"expected_sha", "原主机配置摘要（选择记录自动填写）", "identity"}}},
 		{"nfs-manager", "NFS 管理", []string{"run", "mount", "unmount"}, []AppModuleField{{"resource_id", "挂载名称", "text"}, {"source", "服务端:/绝对导出路径", "text"}, {"read_only", "只读挂载", "boolean"}}},
 		{"pm2-manager", "PM2 进程管理", []string{"run", "create", "start", "stop", "restart", "logs", "delete"}, []AppModuleField{site, {"resource_id", "应用标识", "text"}, {"entry", "网站内 JS 入口", "text"}, {"port", "应用回环端口", "number"}}},
 		{"pure-ftpd", "Pure-FTPd", []string{"run", "create", "delete"}, []AppModuleField{site, {"username", "FTP 用户名", "text"}, {"password", "FTP 密码", "password"}}},
@@ -162,7 +172,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Fields = append(definitions[i].Fields, path, AppModuleField{"resource_id", "隔离记录标识（选择记录自动填写）", "identity"}, AppModuleField{"expected_sha", "已审查文件摘要（自动填写）", "identity"}, AppModuleField{"expected_revision", "隔离记录修订号（自动填写）", "identity"}, AppModuleField{"confirm", "隔离 / 恢复的精确确认", "text"}, AppModuleField{"limit", "隔离清单每页条数（最多 200）", "number"}, AppModuleField{"offset", "隔离清单分页起点", "number"})
 		case "daily-report":
 			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
-			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"})
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"}, AppModuleField{"limit", "目录每页条数（最多 100）", "number"}, AppModuleField{"offset", "目录起点（最多 100000）", "number"})
 		case "pure-ftpd":
 			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe", "account-limits", "recount-quota")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"quota_mb", "FTP 容量限制（MiB，0 不限制）", "number"}, AppModuleField{"quota_files", "FTP 文件与目录数量（0 不限制）", "number"}, AppModuleField{"upload_kb", "上传限速（KiB/s，0 不限制）", "number"}, AppModuleField{"download_kb", "下载限速（KiB/s，0 不限制）", "number"}, AppModuleField{"max_sessions", "账户并发会话（0 不限制）", "number"}, AppModuleField{"client_allow", "允许客户端 IPv4/CIDR（JSON 数组，空为全部）", "json"}, AppModuleField{"client_deny", "拒绝客户端 IPv4/CIDR（JSON 数组）", "json"}, AppModuleField{"expected_sha", "所选账户当前摘要（自动填写）", "identity"})
@@ -215,12 +225,14 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		if r.PathValue("id") == "daily-report" {
-			var raw string
-			if e := a.Store.DB.QueryRow(`SELECT report FROM app_daily_reports ORDER BY day DESC LIMIT 1`).Scan(&raw); e == nil {
-				var report any
-				if json.Unmarshal([]byte(raw), &report) == nil {
-					out["report"] = report
-				}
+			out["daily_worker"] = a.dailyWorkerSnapshot(time.Now())
+			out["report"] = nil
+			_, report, err := readDailyReportRecord(r.Context(), a.Store.DB, "")
+			if err == nil {
+				out["report"] = report
+				out["report_state_unknown"] = false
+			} else {
+				out["report_state_unknown"] = !errors.Is(err, sql.ErrNoRows)
 			}
 		}
 		out["workspace"] = ModuleWorkspace(r.PathValue("id"))
@@ -292,14 +304,27 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		var module struct {
 			Status SoftwareAppStatus `json:"status"`
 		}
-		if err = a.Executor.Call(ctx, "GET", "/v1/app-modules/"+id, nil, &module); err != nil || !module.Status.Installed {
-			fail(w, 409, "请先安装此应用模块")
+		if err = a.Executor.Call(ctx, "GET", "/v1/app-modules/"+id, nil, &module); err != nil || !knownInstalledAppModule(id, module.Status) {
+			fail(w, 409, "应用安装身份或状态待核对；请安装应用或核对原记录，未执行业务")
+			return
+		}
+		if id == "task-manager" && action == "terminate" {
+			out, err = a.terminateAppTask(ctx, u, in)
+			if err != nil {
+				fail(w, 409, err.Error())
+				return
+			}
+			send(w, 200, out)
+			return
+		}
+		if id == "daily-report" && action == "run" && (!module.Status.Enabled || !module.Status.Healthy) {
+			fail(w, 409, "日报应用身份或运行状态待核对；未生成或覆盖日报")
 			return
 		}
 		if id == "user-manager" {
-			out, err = a.manageAppUsers(u, action, in)
+			out, err = a.manageAppUsers(ctx, u, action, in)
 		} else if id == "platform-ops" {
-			out, err = a.platformOperation(ctx, action, in)
+			out, err = a.platformOperation(ctx, u, action, in)
 		} else if id == "daily-report" {
 			out, err = a.dailyReportOperation(ctx, action, in)
 		} else {
@@ -320,6 +345,24 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 				payload = historyRaw
 			}
 			err = a.Executor.Call(ctx, "POST", "/v1/app-modules/"+id+"/"+action, payload, &out)
+		}
+		if id == "user-manager" && action != "run" || id == "platform-ops" && action != "run" && action != "token-list" {
+			// Successful account mutations already include history and audit in
+			// the account transaction. Never publish a duplicate after commit.
+			if err != nil {
+				if failureErr := a.Store.recordCoreModuleFailure(ctx, id, u.Username, action, err); failureErr != nil {
+					message := "账户操作未确认共同提交；失败审计亦无法保存，请核对原账户及存储"
+					if id == "platform-ops" {
+						message = "多主机操作未确认共同提交；失败审计亦无法保存，请核对原记录及存储"
+					}
+					fail(w, 409, message)
+					return
+				}
+				fail(w, 409, err.Error())
+				return
+			}
+			send(w, 200, out)
+			return
 		}
 		if id == "daily-report" || id == "user-manager" || id == "platform-ops" {
 			if e := a.Store.recordAppModuleEvent(id, action, u.Username, err); e != nil && err == nil {

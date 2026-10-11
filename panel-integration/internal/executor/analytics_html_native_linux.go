@@ -22,6 +22,19 @@ const analyticsNJSCommit = "1b648f8805596c95368f8fa428a5c38c5d279857"
 // supply a dedicated bounded service and the global runtime-build lock. No
 // settings/catalog/HTTP input can choose source versions, flags or programs.
 func buildAnalyticsHTMLModule(ctx context.Context, s *Service, archives, work, prefix, version, nginx string, step func(string) error) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := verifyNginxNativeWorkerCapabilities(); err != nil {
+		return err
+	}
+	scope, err := beginNativeCompilerScope(nativeAnalyticsHTMLCompilerAuthority)
+	if err != nil {
+		return err
+	}
+	if err := scope.Close(); err != nil {
+		return err
+	}
 	source, ok := wafNginxBuildSource(version)
 	if !ok || version == "1.18.0" {
 		return errors.New("实际 Nginx 缺少已审核的精确版本源码")
@@ -122,7 +135,7 @@ func buildAnalyticsHTMLModule(ctx context.Context, s *Service, archives, work, p
 		if err := step(command.Label); err != nil {
 			return err
 		}
-		if err := runWAFNativeBuildCommand(ctx, command, filepath.Join(filepath.Dir(work), "build.log"), work); err != nil {
+		if err := runAnalyticsHTMLNativeBuildCommand(ctx, command, filepath.Join(filepath.Dir(work), "build.log"), work); err != nil {
 			return err
 		}
 	}

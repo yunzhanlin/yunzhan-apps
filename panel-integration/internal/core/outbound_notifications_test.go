@@ -374,6 +374,9 @@ func TestOutboundURLTLSRedirectLimitsAndNoSecretErrors(t *testing.T) {
 func TestOutboundQueueBackpressureDoesNotSkipCursorAndDailyOnce(t *testing.T) {
 	s, _ := outboundFixture(t)
 	c := outboundCreate(t, s, "http://127.0.0.1:21555/hooks")
+	if err := s.saveDailyReportRecord(context.Background(), "2026-10-07", map[string]any{"sites": 0}); err != nil {
+		t.Fatal(err)
+	}
 	if e := s.QueueDailyNotification("2026-10-07"); e != nil {
 		t.Fatal(e)
 	}

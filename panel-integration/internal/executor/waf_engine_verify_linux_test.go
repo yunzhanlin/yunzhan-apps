@@ -18,7 +18,7 @@ func wafFixtureReadyRecord() wafEngineBuildRecord {
 	for _, source := range append(wafEngineSources(), nginx) {
 		sourceSHA[source.Name] = source.SHA256
 	}
-	return wafEngineBuildRecord{Format: 1, JobID: id, State: "ready", Architecture: runtime.GOARCH, Engine: wafBodyEngineVersion, Connector: wafBodyConnectorVersion, CRS: wafBodyCRSVersion, NginxVersion: "1.24.0", NginxBinary: "/usr/sbin/nginx", NginxSHA: strings.Repeat("a", 64), ModuleSHA: strings.Repeat("b", 64), LibrarySHA: strings.Repeat("c", 64), TreeSHA: strings.Repeat("d", 64), Prefix: filepath.Join(wafNativeEngines, id), SourceSHA: sourceSHA, AssetSHA: wafEngineAssetPins(), StartedAt: "2026-10-07T00:00:00Z", FinishedAt: "2026-10-07T01:00:00Z", ABIValidated: true, Steps: []core.Step{{Time: "2026-10-07T01:00:00Z", Message: "built without site activation"}}}
+	return wafEngineBuildRecord{Format: 1, JobID: id, State: "ready", Architecture: runtime.GOARCH, Engine: wafBodyEngineVersion, Connector: wafBodyConnectorVersion, CRS: wafBodyCRSVersion, NginxVersion: "1.24.0", NginxBinary: "/usr/sbin/nginx", NginxSHA: strings.Repeat("a", 64), ModuleSHA: strings.Repeat("b", 64), LibrarySHA: strings.Repeat("c", 64), TreeSHA: strings.Repeat("d", 64), Prefix: filepath.Join(wafNativeEngines, id), SourceSHA: sourceSHA, AssetSHA: wafEngineAssetPins(), StartedAt: "2026-10-07T00:00:00Z", FinishedAt: "2026-10-07T01:00:00Z", ABIValidated: true, CompilerCollection: nativeCompilerCollectionContract, Steps: []core.Step{{Time: "2026-10-07T01:00:00Z", Message: "built without site activation"}}}
 }
 
 func TestWAFReadyRecordBindsCompleteSourceProgramAndNginxIdentity(t *testing.T) {
@@ -26,23 +26,31 @@ func TestWAFReadyRecordBindsCompleteSourceProgramAndNginxIdentity(t *testing.T) 
 		t.Fatal(err)
 	}
 	for name, mutate := range map[string]func(*wafEngineBuildRecord){
-		"job":                func(v *wafEngineBuildRecord) { v.JobID = "../evil" },
-		"format":             func(v *wafEngineBuildRecord) { v.Format = 2 },
-		"failed":             func(v *wafEngineBuildRecord) { v.State = "failed" },
-		"partial":            func(v *wafEngineBuildRecord) { v.State = "building" },
-		"error":              func(v *wafEngineBuildRecord) { v.Error = "build failed" },
-		"not-abi-tested":     func(v *wafEngineBuildRecord) { v.ABIValidated = false },
-		"wrong-architecture": func(v *wafEngineBuildRecord) { v.Architecture = "other" },
-		"engine":             func(v *wafEngineBuildRecord) { v.Engine = "unpatched" },
-		"connector":          func(v *wafEngineBuildRecord) { v.Connector = "unpatched" },
-		"crs":                func(v *wafEngineBuildRecord) { v.CRS = "main" },
-		"program-path":       func(v *wafEngineBuildRecord) { v.Prefix = "/tmp/arbitrary" },
-		"nginx-path":         func(v *wafEngineBuildRecord) { v.NginxBinary = "/usr/bin/env" },
-		"nginx-version":      func(v *wafEngineBuildRecord) { v.NginxVersion = "unknown" },
-		"missing-source":     func(v *wafEngineBuildRecord) { delete(v.SourceSHA, "modsecurity") },
-		"extra-source":       func(v *wafEngineBuildRecord) { v.SourceSHA["remote-plugin"] = "arbitrary" },
-		"wrong-source":       func(v *wafEngineBuildRecord) { v.SourceSHA["modsecurity"] = strings.Repeat("0", 64) },
-		"missing-license":    func(v *wafEngineBuildRecord) { delete(v.AssetSHA, "modsecurity-libinjection-COPYING") },
+		"no-collection":                  func(v *wafEngineBuildRecord) { v.CompilerCollection = "" },
+		"group-only-collection":          func(v *wafEngineBuildRecord) { v.CompilerCollection = "process_group_only" },
+		"exit-only-v1":                   func(v *wafEngineBuildRecord) { v.CompilerCollection = "dedicated_cgroup_v2_pidfd_reaped_v1" },
+		"job":                            func(v *wafEngineBuildRecord) { v.JobID = "../evil" },
+		"format":                         func(v *wafEngineBuildRecord) { v.Format = 2 },
+		"failed":                         func(v *wafEngineBuildRecord) { v.State = "failed" },
+		"partial":                        func(v *wafEngineBuildRecord) { v.State = "building" },
+		"error":                          func(v *wafEngineBuildRecord) { v.Error = "build failed" },
+		"not-abi-tested":                 func(v *wafEngineBuildRecord) { v.ABIValidated = false },
+		"wrong-architecture":             func(v *wafEngineBuildRecord) { v.Architecture = "other" },
+		"engine":                         func(v *wafEngineBuildRecord) { v.Engine = "unpatched" },
+		"old-system-yajl-engine":         func(v *wafEngineBuildRecord) { v.Engine = "3.0.17-yz2" },
+		"old-unwaited-fork-probe-engine": func(v *wafEngineBuildRecord) { v.Engine = "3.0.17-yz3" },
+		"connector":                      func(v *wafEngineBuildRecord) { v.Connector = "unpatched" },
+		"crs":                            func(v *wafEngineBuildRecord) { v.CRS = "main" },
+		"program-path":                   func(v *wafEngineBuildRecord) { v.Prefix = "/tmp/arbitrary" },
+		"nginx-path":                     func(v *wafEngineBuildRecord) { v.NginxBinary = "/usr/bin/env" },
+		"nginx-version":                  func(v *wafEngineBuildRecord) { v.NginxVersion = "unknown" },
+		"missing-source":                 func(v *wafEngineBuildRecord) { delete(v.SourceSHA, "modsecurity") },
+		"missing-private-yajl-source":    func(v *wafEngineBuildRecord) { delete(v.SourceSHA, "nginx-yajl") },
+		"missing-private-yajl-patch":     func(v *wafEngineBuildRecord) { delete(v.AssetSHA, "apache-body-yajl-CVE-2023-33460.patch") },
+		"missing-private-yajl-copyright": func(v *wafEngineBuildRecord) { delete(v.AssetSHA, "apache-body-yajl-COPYING") },
+		"extra-source":                   func(v *wafEngineBuildRecord) { v.SourceSHA["remote-plugin"] = "arbitrary" },
+		"wrong-source":                   func(v *wafEngineBuildRecord) { v.SourceSHA["modsecurity"] = strings.Repeat("0", 64) },
+		"missing-license":                func(v *wafEngineBuildRecord) { delete(v.AssetSHA, "modsecurity-libinjection-COPYING") },
 		"altered-patch": func(v *wafEngineBuildRecord) {
 			v.AssetSHA["modsecurity-metadata-only-logs.patch"] = strings.Repeat("0", 64)
 		},

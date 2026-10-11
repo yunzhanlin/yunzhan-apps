@@ -7,6 +7,9 @@ Bundled Mbed TLS and TF-PSA-Crypto: Apache-2.0 option selected from the
 upstream Apache-2.0 OR GPL-2.0-or-later dual license. Original full dual
 license texts are retained; this distribution does not remove that option.
 Nginx matching-version module build headers: upstream BSD-2-Clause license.
+Private YAJL 2.1.0: ISC; Debian copyright notices and three exact Debian
+2.1.0-5 CVE patches accompany the engine. It is linked statically into the
+private engine, not installed into or substituted for the system YAJL.
 All original full license texts accompany the engine and its source record.
 
 Upstream source archives, their reviewed digests, and verification boundaries
@@ -15,6 +18,8 @@ verified against its official detached PGP signature with fingerprint
 13C82A63B603576156E30A4EA0EA981B66B0D967 (nginx.org/keys/thresh.key).
 Other source digests were checked against upstream release asset metadata or
 the official SHA-256 file. No upstream PGP verification is claimed for them.
+The private YAJL archive digest is pinned to Debian's source DSC SHA-256;
+this is not a claim of a detached PGP verification.
 
 CloudStack modifications, 2026-10-07:
 - src/modsecurity.cc: emit numerical rule metadata instead of matched data,
@@ -35,6 +40,21 @@ CloudStack modifications, 2026-10-08:
   a fixed 32 MiB file limit and non-blocking POSIX record locks shared by the
   privileged metadata rotation. Enforcement continues when logging is full,
   contended or unavailable. Numerical metadata is explicitly best-effort.
+
+CloudStack modifications, 2026-10-11:
+- Private YAJL: retain and apply exact Debian fixes for CVE-2017-16516,
+  CVE-2022-24795 and CVE-2023-33460 before compiling its nine fixed C files.
+- build/yajl.m4 and the shipped generated configure script: require the
+  private static archive and headers; never use system/pkg-config YAJL.
+- The private engine must have no shared YAJL dependency, RPATH or RUNPATH.
+  Publication requires bounded readelf verification after sealing, and the
+  normal readiness verifier repeats that check before activation.
+- The pinned release's shipped generated configure script tests actual fork
+  and waits for the exact probe child with EINTR handling and checked exit
+  status. The upstream probe returns immediately from both processes, which
+  leaves an exited orphan under a dedicated build subreaper. No feature cache
+  result is forced and the closed compiler's full-task-reaping gate remains.
+  This is an exact generated-release patch, not a host-autoconf regeneration.
 
 Audit/body/debug logging is disabled by the managed engine configuration.
 Request bodies, matched values, headers, authentication cookies, form values

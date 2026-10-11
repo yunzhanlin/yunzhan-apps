@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"net/http"
 	"os"
@@ -88,21 +87,6 @@ func (s *Service) systemPath(path string) string {
 }
 func (s *Service) softwareManifestPath(id string) string {
 	return filepath.Join(s.Config.SecurityDir, id+".json")
-}
-func (s *Service) readSoftwareManifest(id string) (softwareManifest, error) {
-	var v softwareManifest
-	b, e := os.ReadFile(s.softwareManifestPath(id))
-	if e != nil {
-		return v, e
-	}
-	cmp, valid := 0, false
-	if e = json.Unmarshal(b, &v); e == nil {
-		cmp, valid = appcatalog.CompareVersions(v.Version, core.SoftwareImplementationVersion(id))
-	}
-	if e != nil || v.ID != id || !valid || cmp > 0 {
-		return v, errors.New("软件安装清单无效")
-	}
-	return v, nil
 }
 func (s *Service) writeSoftwareManifest(v softwareManifest) error {
 	if e := os.MkdirAll(s.Config.SecurityDir, 0700); e != nil {
@@ -255,6 +239,9 @@ func (s *Service) ensureWAFIncludes() ([]fileBackup, error) {
 	return backups, nil
 }
 func (s *Service) applyWAF(ctx context.Context, settings map[string]any, install bool, add func(string)) error {
+	if _, err := s.readSoftwareManifest("nginx-waf"); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("Nginx WAF 安装记录无法核对；未执行变更: %w", err)
+	}
 	nginx, err := s.nginxBinary()
 	if err != nil {
 		return err
@@ -364,6 +351,9 @@ func (s *Service) sysctlValue(ctx context.Context, key string) (string, error) {
 }
 func (s *Service) applyHardening(ctx context.Context, settings map[string]any, install bool, add func(string)) error {
 	old, oldErr := s.readSoftwareManifest("system-hardening")
+	if oldErr != nil && !errors.Is(oldErr, os.ErrNotExist) {
+		return fmt.Errorf("系统加固安装记录无法核对；未执行变更: %w", oldErr)
+	}
 	if install && oldErr == nil {
 		return errors.New("系统基线加固已安装，请使用配置操作")
 	}
@@ -469,6 +459,9 @@ func (s *Service) waitFail2ban(ctx context.Context) error {
 
 func (s *Service) applyIntrusion(ctx context.Context, settings map[string]any, install bool, add func(string)) error {
 	old, oldErr := s.readSoftwareManifest("intrusion-prevention")
+	if oldErr != nil && !errors.Is(oldErr, os.ErrNotExist) {
+		return fmt.Errorf("SSH 防入侵安装记录无法核对；未执行变更: %w", oldErr)
+	}
 	if install && oldErr == nil {
 		return errors.New("SSH 防入侵已安装，请使用配置操作")
 	}
@@ -557,6 +550,10 @@ func (s *Service) softwareStatusWithWAFLock(ctx context.Context, id string, wafL
 	out := core.SoftwareAppStatus{ID: id, Detail: "未安装"}
 	manifest, e := s.readSoftwareManifest(id)
 	if e != nil {
+		if !errors.Is(e, os.ErrNotExist) {
+			out.StateUnknown = true
+			out.Detail = "软件安装记录无法核对，未将异常当作未安装"
+		}
 		return out
 	}
 	out.Installed = true
@@ -672,6 +669,10 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 	s.wafWorkspaceRoutes(m)
 	m.HandleFunc("GET /v1/software/nginx-waf/events", func(w http.ResponseWriter, r *http.Request) {
 		if _, err := s.readSoftwareManifest("nginx-waf"); err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				respond(w, 409, map[string]any{"error": "Nginx WAF 安装记录无法核对；未读取事件", "state_unknown": true})
+				return
+			}
 			respond(w, 409, map[string]string{"error": "Nginx WAF 未安装"})
 			return
 		}
@@ -717,6 +718,12 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		if !moduleOK {
+			if _, err := s.readSoftwareManifest(id); err != nil && !errors.Is(err, os.ErrNotExist) {
+				respond(w, 409, map[string]any{"error": "软件安装记录无法核对；未执行安装、配置、卸载或更新", "state_unknown": true})
+				return
+			}
+		}
 		var e error
 		install := action == "install"
 		if action == "update" {

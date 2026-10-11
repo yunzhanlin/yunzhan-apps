@@ -200,8 +200,11 @@ func (s *Store) finishRuntime(j Job, detail string, steps []Step, uncertain bool
 		return e
 	}
 	defer tx.Rollback()
-	if j.Kind == "waf_engine_build" || j.Kind == "analytics_html_build" || j.Kind == "network_ids_rulefeed_install" {
+	if j.Kind == "waf_engine_build" || j.Kind == "apache_body_build" || j.Kind == "analytics_html_build" || j.Kind == "network_ids_rulefeed_install" {
 		target := "nginx-waf"
+		if j.Kind == "apache_body_build" {
+			target = "apache-waf"
+		}
 		if j.Kind == "analytics_html_build" {
 			target = "website-analytics"
 		}
@@ -243,11 +246,11 @@ func (s *Store) NextRuntimeJob() (Job, error) {
 }
 
 func (s *Store) nextRuntimeInstallJob() (Job, error) {
-	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build','analytics_html_build','network_ids_rulefeed_install') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 func (s *Store) nextRuntimeControlJob() (Job, error) {
-	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build','analytics_html_build','network_ids_rulefeed_install') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 // The predicates above are fixed internal SQL, never request parameters.
@@ -277,7 +280,7 @@ func (s *Store) RetryRuntime(id, actor string) error {
 	if err := tx.QueryRow(`SELECT kind FROM runtime_jobs WHERE id=?`, id).Scan(&kind); err != nil {
 		return errors.New("任务不存在")
 	}
-	if kind == "waf_engine_build" || kind == "analytics_html_build" || kind == "network_ids_rulefeed_install" {
+	if kind == "waf_engine_build" || kind == "apache_body_build" || kind == "analytics_html_build" || kind == "network_ids_rulefeed_install" {
 		return errors.New("原生防火墙构建证据不可覆盖；请创建新的构建任务，保留原失败记录")
 	}
 	r, e := tx.Exec(`UPDATE runtime_jobs SET state='queued',error='',updated_at=? WHERE id=? AND state IN ('failed','needs_attention')`, Now(), id)
@@ -287,6 +290,13 @@ func (s *Store) RetryRuntime(id, actor string) error {
 	n, _ := r.RowsAffected()
 	if n != 1 {
 		return errors.New("任务不存在或当前状态不能重试")
+	}
+	if kind == "install_runtime" || kind == "install_php_extension" {
+		// Do not alter payload: signed registry requests bind its original hash.
+		// A consumed grant is never restored by panel restart/recovery.
+		if _, e = tx.Exec(`INSERT INTO runtime_native_retry_grants(job_id,actor,granted_at,consumed_at) VALUES(?,?,?,NULL) ON CONFLICT(job_id) DO UPDATE SET actor=excluded.actor,granted_at=excluded.granted_at,consumed_at=NULL`, id, actor, Now()); e != nil {
+			return e
+		}
 	}
 	_, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'job.retry',?,'queued',?)`, actor, id, Now())
 	if e != nil {

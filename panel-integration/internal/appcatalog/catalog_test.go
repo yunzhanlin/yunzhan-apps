@@ -90,7 +90,7 @@ func TestSignedCatalogAndManifest(t *testing.T) {
 func TestUnsignedCatalogAndUnreadyManifestAreRejected(t *testing.T) {
 	client, item, server := testRepository(t, "design")
 	defer server.Close()
-	if _, err := client.FetchManifest(context.Background(), item, t.TempDir()); err == nil {
+	if _, err := client.FetchManifest(context.Background(), item, filepath.Join(t.TempDir(), "packages")); err == nil {
 		t.Fatal("design-stage application was accepted")
 	}
 	client.PublicKey[0] ^= 0xff

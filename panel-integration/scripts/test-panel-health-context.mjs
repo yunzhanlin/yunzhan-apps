@@ -6,6 +6,7 @@ async function load(name){const source=readFileSync(new URL('../web/src/'+name+'
 const {panelHealthState,panelSampleIsCurrent}=await load('panelHealth');
 const {EpochReadGate}=await load('epochReadGate');
 const {analyticsQueryContext,analyticsQueryMatches,restoreAnalyticsQuery}=await load('analyticsQueryContext');
+const {resourcePercent,resourceSeries}=await load('resourceMetrics');
 const wall=Date.parse('2026-10-10T00:00:00Z');
 const healthy=()=>({permitted:true,overview:{nginx_active:true,sampled_at:new Date(wall).toISOString()},readError:'',receivedAt:100,monotonicNow:5000,wallNow:wall});
 const site='0123456789abcdef0123456789abcdef';
@@ -27,7 +28,26 @@ test('sample labels are fresh only after authorized successful time-validated re
  for(const change of [{permitted:false},{readError:'stalled executor'},{overview:null},{receivedAt:null},{overview:{}},{monotonicNow:45101},{wallNow:wall+90001}])assert.equal(panelSampleIsCurrent({...healthy(),...change}),false);
  const app=readFileSync(new URL('../web/src/App.vue',import.meta.url),'utf8');assert.doesNotMatch(app,/<span>实时采样<\/span>/);
  assert.match(app,/sampleIsCurrent \? "新鲜采样"/);assert.match(app,/最近记录的运行时间/);assert.match(app,/每 5 秒尝试采样，仅记录成功结果/);
- assert.match(app,/overview \? percent\(overview.cpu_percent\) : "—"/);
+ assert.match(app,/percent\(overviewMetric\('cpu_percent'\)\)/);
+ assert.match(app,/v-if="overviewMetric\('cpu_percent'\)!==null"/);
+});
+test('actual overview formatting keeps unavailable resources unknown, genuine idle zero, and chart gaps',()=>{
+ const app=readFileSync(new URL('../web/src/App.vue',import.meta.url),'utf8');
+ const declarations=['percent','overviewMetric','series'].map(name=>{
+  const match=app.match(new RegExp('^const '+name+' =?[^\\n]*;|^const '+name+'=[^\\n]*;','m'));
+  assert(match,'actual resource declaration '+name+' must be present');return match[0];
+ }).join('\n');
+ const js=ts.transpileModule(declarations,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const overview={value:null},samples={value:[]};
+ const view=new Function('overview','samples','resourcePercent','resourceSeries',js+';return {percent,overviewMetric,series};')(overview,samples,resourcePercent,resourceSeries);
+ for(const field of ['cpu_percent','memory_percent','disk_percent'])assert.equal(view.percent(view.overviewMetric(field)),'待核对');
+ overview.value={cpu_percent:0,memory_percent:0,memory_available:true,disk_percent:50,disk_available:4096,disk_percent_available:false};
+ assert.equal(view.percent(view.overviewMetric('cpu_percent')),'待核对');assert.equal(view.percent(view.overviewMetric('memory_percent')),'0.0');assert.equal(view.overviewMetric('disk_percent'),null);
+ overview.value.cpu_available=true;assert.equal(view.percent(view.overviewMetric('cpu_percent')),'0.0');
+ for(const value of [NaN,Infinity,-1,101,'0']){overview.value.cpu_percent=value;assert.equal(view.overviewMetric('cpu_percent'),null);}
+ samples.value=[{cpu:0},{cpu:10},{cpu:null},{cpu:20},{cpu:30}];assert.deepEqual(view.series('cpu'),['0,180 180,164','540,148 720,132']);
+ for(const field of ['cpu_percent','memory_percent','disk_percent'])assert(app.includes(`v-if="overviewMetric('${field}')!==null"`));
+ assert.match(app,/v-for="\(points,index\) in series\('cpu'\)"/);
 });
 test('retained statistics queries restore only validated read filters and an authorized existing site',()=>{
  const value=report();value.password='NEVER';value.confirm='DELETE';value.action='remove';value.expected_revision=99;

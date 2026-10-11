@@ -113,6 +113,11 @@ func (s *Service) analyticsHTMLStatus(ctx context.Context, id string) (core.WAFE
 		out.ABIValidated = record.ABIValidated
 		switch record.State {
 		case "ready":
+			if record.CompilerCollection != nativeCompilerCollectionContract {
+				out.ABIValidated = false
+				out.State, out.Error = "needs_attention", "旧 HTML 编译记录及程序保留，缺少当前稳定进程完整回收契约；未自动升级或授权启用，请显式创建新构建"
+				return out, nil
+			}
 			if err := verifyAnalyticsHTMLBuildContext(ctx, s, id); err != nil {
 				out.State, out.Error = "needs_attention", err.Error()
 			} else {

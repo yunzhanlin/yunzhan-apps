@@ -25,6 +25,9 @@ func nativeWAFService() *Service {
 }
 
 func wafBuildRecordContract(record wafEngineBuildRecord) error {
+	if record.CompilerCollection != nativeCompilerCollectionContract {
+		return errors.New("Nginx 请求体程序缺少当前专用 cgroup 与稳定进程完整回收契约；原记录保留，不能自动升级或授权启用")
+	}
 	if record.Format != 1 || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || !record.ABIValidated || record.ProductionUsed || record.Architecture != runtime.GOARCH || record.Engine != wafBodyEngineVersion || record.Connector != wafBodyConnectorVersion || record.CRS != wafBodyCRSVersion || record.Prefix != filepath.Join(wafNativeEngines, record.JobID) {
 		return errors.New("WAF 引擎记录未完成、架构不匹配或发布身份异常")
 	}
@@ -147,6 +150,9 @@ func verifyWAFEngineBuildContext(parent context.Context, id string) error {
 	actual, err := runtimeTreeSHA(ctx, record.Prefix, record.Prefix)
 	if err != nil || actual != record.TreeSHA {
 		return errors.New("WAF 完整程序、规则或许可目录发生变化；拒绝启用")
+	}
+	if err := verifyNginxPrivateYAJLLinkage(ctx, nativeWAFService(), record.Prefix); err != nil {
+		return err
 	}
 	return ctx.Err()
 }

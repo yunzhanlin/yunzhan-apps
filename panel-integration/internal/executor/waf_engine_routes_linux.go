@@ -155,6 +155,11 @@ func (s *Service) wafEngineStatus(ctx context.Context, id string) (core.WAFEngin
 		out.ABIValidated = record.ABIValidated
 		switch record.State {
 		case "ready":
+			if record.CompilerCollection != nativeCompilerCollectionContract {
+				out.ABIValidated = false
+				out.State, out.Error = "needs_attention", "旧编译记录及程序保留，缺少当前稳定进程完整回收契约；不证明当前 ABI 或可安全启用，请显式创建新构建"
+				return out, nil
+			}
 			if err := verifyWAFEngineBuildContext(ctx, id); err != nil {
 				out.State, out.Error = "needs_attention", err.Error()
 			} else {

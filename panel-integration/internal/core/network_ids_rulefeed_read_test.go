@@ -35,7 +35,7 @@ func TestNetworkIDSRuleFeedReadOnlySignedInventoryAndAccess(t *testing.T) {
 		var out any
 		switch r.URL.Path {
 		case "/v1/app-modules/network-threat-detection":
-			out = map[string]any{"status": SoftwareAppStatus{Installed: installed}}
+			out = map[string]any{"status": SoftwareAppStatus{ID: "network-threat-detection", Installed: installed}}
 		case "/v1/network-ids/rule-feeds":
 			out = NetworkIDSRuleFeedInventory{StateKnown: known, Rows: []NetworkIDSRuleFeedStored{}, Error: func() string {
 				if known {
@@ -87,11 +87,14 @@ func TestNetworkIDSRuleFeedReadOnlySignedInventoryAndAccess(t *testing.T) {
 				t.Fatal("false readiness or wrong signed metadata", w.Code, w.Body.String())
 			}
 		}
-		if calls != 4 || requests.Load() != 4 {
+		// The catalog's two-file fixture and the exact app manifest are read
+		// once (3 requests); the second inventory revalidates private cache.
+		// The six rule assets are never fetched by this read-only flow.
+		if calls != 4 || requests.Load() != 3 {
 			t.Fatal("inventory fetched data or privileged mutation", calls, requests.Load())
 		}
 		installed = false
-		if w := request("GET", endpoint, "", cookie); w.Code != 409 || requests.Load() != 4 || calls != 5 {
+		if w := request("GET", endpoint, "", cookie); w.Code != 409 || requests.Load() != 3 || calls != 5 {
 			t.Fatal("viewing auto-installed absent module", w.Code, calls, requests.Load())
 		}
 	}

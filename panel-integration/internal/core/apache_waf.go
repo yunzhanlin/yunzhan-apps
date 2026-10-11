@@ -8,6 +8,10 @@ import (
 
 const ApacheWAFVersion = "2.3.0"
 
+// This separate identity is not published or accepted by the metadata-only
+// application's install/configure APIs until native activation is verified.
+const ApacheWAFNativeBodyVersion = "2.4.0"
+
 func DefaultApacheWAFConfig() WAFConfig {
 	cfg := DefaultWAFConfig()
 	cfg.Policy.CCEnabled = false
@@ -15,6 +19,17 @@ func DefaultApacheWAFConfig() WAFConfig {
 }
 
 func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
+	return decodeApacheWAFConfig(raw, false)
+}
+
+// A native candidate and its recovery oracle share the same closed policy
+// decoder. Keeping this separate prevents a Core upgrade from silently giving
+// an installed 2.3 metadata-only application new capabilities or receipts.
+func DecodeApacheWAFNativeBodyConfig(raw map[string]any) (WAFConfig, error) {
+	return decodeApacheWAFConfig(raw, true)
+}
+
+func decodeApacheWAFConfig(raw map[string]any, nativeBody bool) (WAFConfig, error) {
 	if len(raw) == 0 {
 		return DefaultApacheWAFConfig(), nil
 	}
@@ -33,7 +48,7 @@ func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
 	if err != nil {
 		return cfg, err
 	}
-	if cfg.Body != nil {
+	if cfg.Body != nil && !nativeBody {
 		return cfg, errors.New("Apache 尚未实现原生请求体引擎；不能保存 Nginx 请求体策略冒充生效")
 	}
 	if err := ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {
@@ -76,6 +91,8 @@ func (s *Store) validateApacheWAFSites(cfg WAFConfig) error {
 }
 
 func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
+	a.apacheBodyEngineRoutes(m)
+	a.apacheBodyReportRoutes(m)
 	a.apacheWAFHistoryRoutes(m)
 	for _, operation := range []string{"config", "report"} {
 		m.HandleFunc("GET /api/software/apache-waf/"+operation, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {

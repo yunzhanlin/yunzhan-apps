@@ -79,7 +79,7 @@ func TestLoadBalanceHistoryHTTPAuthorizationAndExactForwarding(t *testing.T) {
 	var lastBody []byte
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
-		body := `{"status":{"installed":true}}`
+		body := `{"status":{"id":"load-balance","installed":true}}`
 		if r.Method == "POST" {
 			lastBody, _ = io.ReadAll(r.Body)
 			body = `{"load_transactions":[],"configuration_changed":false}`

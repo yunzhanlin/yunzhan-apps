@@ -124,6 +124,8 @@ type Client struct {
 	PublicKey               ed25519.PublicKey
 	HTTP                    *http.Client
 	cacheMu                 sync.Mutex
+	manifestOnce            sync.Once
+	manifestGate            chan struct{}
 	githubRefMu             sync.Mutex
 	githubRetry             *githubCatalogRetryError
 	githubFailures          uint
@@ -443,6 +445,33 @@ func (c *Client) FetchManifest(ctx context.Context, item CatalogItem, cacheDir s
 	if err := c.validateCatalog(Catalog{SchemaVersion: 1, GeneratedAt: time.Now().UTC().Format(time.RFC3339), Apps: []CatalogItem{item}}); err != nil {
 		return manifest, err
 	}
+	// A cache never authorizes a package by itself. Recheck its complete bytes
+	// against the caller's already verified current catalog item on every read.
+	// Serialize pulls in this client with a cancellable gate, not an unbounded
+	// mutex wait. A second attempt can use the immutable verified package offline.
+	c.manifestOnce.Do(func() { c.manifestGate = make(chan struct{}, 1) })
+	select {
+	case c.manifestGate <- struct{}{}:
+		defer func() { <-c.manifestGate }()
+	case <-ctx.Done():
+		return manifest, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return manifest, err
+	}
+	cache, err := openManifestCache(cacheDir, item)
+	if err != nil {
+		return manifest, err
+	}
+	defer cache.Close()
+	if raw, err := cache.Read(); err == nil {
+		if err := ctx.Err(); err != nil {
+			return manifest, err
+		}
+		return c.verifyManifestData(item, raw)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return manifest, err
+	}
 	raw, err := c.get(ctx, item.PackageURL, maxManifestBytes)
 	if err != nil {
 		return manifest, err
@@ -451,8 +480,10 @@ func (c *Client) FetchManifest(ctx context.Context, item CatalogItem, cacheDir s
 	if err != nil {
 		return Manifest{}, err
 	}
-	path := filepath.Join(cacheDir, manifest.ID, manifest.Version, "manifest.json")
-	if err = atomicWrite(path, raw, 0600); err != nil {
+	if err = ctx.Err(); err != nil {
+		return Manifest{}, err
+	}
+	if err = cache.Publish(raw); err != nil {
 		return Manifest{}, err
 	}
 	return manifest, nil

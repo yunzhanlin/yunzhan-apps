@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { apiURL } from "./panelBase";
+import {resourcePercent} from "./resourceMetrics";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { Terminal } from "@xterm/xterm";
@@ -24,11 +25,14 @@ interface Overview {
   os: string;
   arch: string;
   cpu_cores: number;
-  cpu_percent: number;
-  memory_percent: number;
+  cpu_percent: number | null;
+  cpu_available?: boolean;
+  memory_percent: number | null;
+  memory_available?: boolean;
   memory_used: number;
   memory_total: number;
-  disk_percent: number;
+  disk_percent: number | null;
+  disk_percent_available?: boolean;
   disk_used: number;
   disk_total: number;
   uptime_seconds: number;
@@ -491,7 +495,8 @@ onMounted(() => {
 });
 defineExpose({ start, startRoot });
 const host = computed(() => props.overview?.hostname || "panel-server");
-const gb = (value = 0) => `${(value / 1024 / 1024 / 1024).toFixed(1)} GB`;
+const gb = (value?:number) => typeof value==='number'&&Number.isFinite(value)&&value>=0?`${(value / 1024 / 1024 / 1024).toFixed(1)} GB`:'待核对';
+const resourceLabel=(value:unknown,available?:unknown,cpu=false)=>{const n=resourcePercent(value,available,cpu);return n===null?'待核对':`${n.toFixed(1)}%`;};
 const uptime = computed(() => {
   const seconds = Math.max(0, props.overview?.uptime_seconds || 0);
   const days = Math.floor(seconds / 86400);
@@ -597,17 +602,17 @@ const uptime = computed(() => {
           <dt>系统负载</dt>
           <dd>{{ overview?.load || "—" }}</dd>
           <dt>CPU 使用率</dt>
-          <dd>{{ overview?.cpu_percent?.toFixed(1) || "0.0" }}%</dd>
+          <dd>{{ resourceLabel(overview?.cpu_percent,overview?.cpu_available,true) }}</dd>
           <dt>内存使用率</dt>
           <dd>
-            {{ overview?.memory_percent?.toFixed(1) || "0.0" }}%（{{
+            {{ resourceLabel(overview?.memory_percent,overview?.memory_available) }}（{{
               gb(overview?.memory_used)
             }}
             / {{ gb(overview?.memory_total) }}）
           </dd>
           <dt>磁盘使用率</dt>
           <dd>
-            {{ overview?.disk_percent?.toFixed(1) || "0.0" }}%（{{
+            {{ resourceLabel(overview?.disk_percent,overview?.disk_percent_available) }}（{{
               gb(overview?.disk_used)
             }}
             / {{ gb(overview?.disk_total) }}）

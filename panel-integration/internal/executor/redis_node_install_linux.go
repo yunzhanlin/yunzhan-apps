@@ -17,11 +17,8 @@ import (
 )
 
 func prepareRuntimeSource(ctx context.Context, r runtimecatalog.Release, id string, add func(string) error) (string, string, error) {
-	base := filepath.Join("/var/cache/panel-build", id)
-	if e := os.MkdirAll(base, 0700); e != nil {
-		return "", "", e
-	}
-	if e := os.Chmod(base, 0755); e != nil {
+	base, e := prepareRuntimeBuildDirectory(id)
+	if e != nil {
 		return "", "", e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
@@ -31,11 +28,8 @@ func prepareRuntimeSource(ctx context.Context, r runtimecatalog.Release, id stri
 	if e := add("已从官方站点下载固定版本，并通过官方 SHA-256 清单校验"); e != nil {
 		return "", "", e
 	}
-	work := filepath.Join(base, "work")
-	if e := os.RemoveAll(work); e != nil {
-		return "", "", e
-	}
-	if e := os.Mkdir(work, 0755); e != nil {
+	work, e := prepareRuntimeBuildWork(base)
+	if e != nil {
 		return "", "", e
 	}
 	if e := extractSource(archive, work); e != nil {

@@ -166,6 +166,11 @@ func (s *Service) ftpBinary(name string) (string, error) {
 // Executed only by the fixed root dependency unit. Configure and compile run
 // as panel-build; only the selected regular binaries and full license promote.
 func installPrivateFTPRuntime(ctx context.Context) error {
+	lock, err := acquireRuntimeNativeBuildSerialization(ctx)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
 	s := New(Config{})
 	if s.validateFTPRuntime() == nil {
 		return ensureFTPRuntimeNotices(filepath.Join(appNativeRoot, "pure-ftpd", ftpRuntimeVersion))
@@ -174,22 +179,16 @@ func installPrivateFTPRuntime(ctx context.Context) error {
 	if _, e := os.Lstat(target); !errors.Is(e, os.ErrNotExist) {
 		return errors.New("FTP 独立程序目录已存在但清单不符，拒绝覆盖")
 	}
-	if e := os.MkdirAll("/var/cache/panel-build", 0755); e != nil {
-		return e
-	}
-	base, e := os.MkdirTemp("/var/cache/panel-build", "ftp-"+core.ID()+"-")
+	base, e := prepareRuntimeBuildDirectory(core.ID())
 	if e != nil {
-		return e
-	}
-	if e = os.Chmod(base, 0755); e != nil {
 		return e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
 	if e = downloadVerified(ctx, ftpRuntimeSource, ftpRuntimeSourceSHA, archive); e != nil {
 		return e
 	}
-	work := filepath.Join(base, "work")
-	if e = os.Mkdir(work, 0755); e != nil {
+	work, e := prepareRuntimeBuildWork(base)
+	if e != nil {
 		return e
 	}
 	if e = extractSource(archive, work); e != nil {

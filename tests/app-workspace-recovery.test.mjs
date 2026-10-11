@@ -3,26 +3,26 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('ADI exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
+test('BDV exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(release.frozen_inputs_sha256,'0c09ccd8603afc68d42caed2a2f1c71672cded67d16e9ab888c9fc6dcc7e0fbb');
- assert.equal(release.archive_sha256,'203eddd7f66a7da29e21c3fce42cf56a7322c53ec519171c864199979d06a68c');
- assert.equal(Object.keys(index.files).length,999);
+ assert.equal(release.frozen_inputs_sha256,'0ab6c40d2ec09a83864804e455aa7d8e7a8c4fd07836308cb39985c1aa0b7bd1');
+ assert.equal(release.archive_sha256,'d12bf662fb1d53efc4abb0372714a897aa3c3d4ea7da82aca7a30e921df0a839');
+ assert.equal(Object.keys(index.files).length,1187);
  for(const file of ['internal/appcatalog/github_catalog_git.go','internal/appcatalog/github_catalog_git_test.go','web/src/deferredWorkspace.ts','web/src/menuPermissions.ts','web/src/App.vue','scripts/test-deferred-workspace.mjs','web/src/moduleInitialInspection.ts','web/src/AppModuleManager.vue','scripts/test-web-entry-budget.mjs','scripts/web-entry-budget.mjs','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,23);
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,35);
  const build=await read('panel-integration/packaging/build-release.sh');for(const gate of ['test-deferred-workspace.mjs','test-web-entry-budget.mjs','web-entry-budget.mjs'])assert(build.includes(gate));
  const deferred=await read('panel-integration/web/src/deferredWorkspace.ts');assert.match(deferred,/if \(this.codeFailure\) throw this.codeFailure/);assert.match(deferred,/return this.current\(ticket\) \? value : undefined/);assert.equal((deferred.match(/if \(!current\(\)\) throw expiredWorkspace\(\)/g)||[]).length,4);assert.match(deferred,/message.slice\(0, 512\)/);
  const view=await read('panel-integration/web/src/App.vue');assert.match(view,/window.location.reload\(\)/);assert.match(view,/cause instanceof WorkspaceCodeLoadError/);assert.match(view,/epoch === accessEpoch && session === csrf.value/);assert.match(view,/canOpenAppModule\(accessPlan.value, id\)/);
- const fixtures=await read('panel-integration/scripts/test-deferred-workspace.mjs');assert.equal((fixtures.match(/^test\(/gm)||[]).length,18);assert(fixtures.includes('never replayed'));assert(fixtures.includes('changing accounts'));
+ const fixtures=await read('panel-integration/scripts/test-deferred-workspace.mjs');assert.equal((fixtures.match(/^test\(/gm)||[]).length,26);assert(fixtures.includes('never replayed'));assert(fixtures.includes('changing accounts'));assert(fixtures.includes('actual late /me reply or error cannot overwrite a newer account context'));
  const budget=await read('panel-integration/scripts/web-entry-budget.mjs');assert.match(budget,/const limit=1_200_000/);assert.match(budget,/constants.O_NOFOLLOW/);assert.match(budget,/visited.size>=64/);assert.match(budget,/total>limit/);assert.match(budget,/Application manager is still eagerly loaded/);assert.match(budget,/all.length>128/);assert.match(budget,/deferred.length!==1/);
  assert.equal((await read('panel-integration/scripts/test-web-entry-budget.mjs')).match(/^test\(/gm).length,12);
 });
 test('current signed manager opens Apache read-only and never inspects a partially loaded page',async()=>{
  const selector=await read('panel-integration/web/src/moduleInitialInspection.ts'),manager=await read('panel-integration/web/src/AppModuleManager.vue');
  assert.match(selector,/loadSucceeded !== true \|\| installed !== true/);
- assert.match(selector,/d.id !== id/);assert.match(selector,/if \(id === "apache-waf"\) return/);
+ assert.match(selector,/d.id !== id/);assert.match(selector,/if \(id === "apache-waf" \|\| id === "daily-report"\) return/);
  assert.match(selector,/if \(id === "nfs-manager"\) return d.actions.includes\("server-report"\)/);
  assert.match(selector,/d.actions.includes\("policies"\)/);assert.match(selector,/id !== "platform-ops"/);
  const show=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));

@@ -3,6 +3,7 @@ package executor
 import (
 	"errors"
 	"path/filepath"
+	"reflect"
 	"strings"
 )
 
@@ -32,11 +33,25 @@ func wafNativeBuildPlan(work, prefix, assets, nginxVersion string) ([]wafBuildCo
 	engine := filepath.Join(work, "modsecurity", "modsecurity-v3.0.17")
 	connector := filepath.Join(work, "connector", "ModSecurity-nginx-v1.0.4")
 	nginx := filepath.Join(work, "nginx", "nginx-"+nginxVersion)
-	return []wafBuildCommand{
+	plan := []wafBuildCommand{}
+	yajl := filepath.Join(work, "yajl", "yajl-2.1.0")
+	for _, cve := range []string{"2017-16516", "2022-24795", "2023-33460"} {
+		plan = append(plan, wafBuildCommand{"应用固定 Nginx YAJL CVE 补丁 " + cve, yajl, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "apache-body-yajl-CVE-"+cve+".patch")}, nil})
+	}
+	objects := []string{}
+	for _, name := range apacheYAJLCFiles {
+		object := filepath.Join(work, name+".o")
+		objects = append(objects, object)
+		plan = append(plan, wafBuildCommand{"非特权单路编译私有 Nginx JSON 解析器 " + name, yajl, "/usr/bin/cc", []string{"-O2", "-g0", "-fPIC", "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-DYAJL_BUILD", "-I" + filepath.Join(prefix, "include"), "-c", filepath.Join(yajl, "src", name+".c"), "-o", object}, nil})
+	}
+	plan = append(plan, wafBuildCommand{"创建私有 JSON 静态依赖，不安装系统 YAJL", yajl, "/usr/bin/ar", append([]string{"rcsD", filepath.Join(prefix, "lib/libyajl.a")}, objects...), nil})
+	plan = append(plan, []wafBuildCommand{
 		{"验证并应用引擎隐私及请求体限额补丁", engine, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-metadata-only-logs.patch")}, nil},
 		{"验证并应用连接器独立元数据日志补丁", connector, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-nginx-private-context.patch")}, nil},
 		{"验证并应用元数据日志并发锁及 32 MiB 硬上限补丁", connector, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-nginx-bounded-events.patch")}, nil},
-		{"非特权配置请求体引擎", engine, "./configure", []string{"--prefix=" + prefix, "--disable-static", "--disable-examples", "--disable-doxygen-doc", "--disable-debug-logs", "--with-yajl=yes", "--with-lua=no", "--with-lmdb=no", "--with-geoip=no", "--with-ssdeep=no", "--with-curl=no"}, nil},
+		{"固定私有静态 YAJL，禁止 pkg-config 或系统共享库替代", engine, "/usr/bin/patch", []string{"--batch", "--forward", "--fuzz=0", "-p1", "-i", filepath.Join(assets, "modsecurity-private-yajl.patch")}, nil},
+		{"保留已审核生成脚本时间顺序，不调用宿主生成器", engine, "/usr/bin/touch", []string{"-r", filepath.Join(engine, "aclocal.m4"), filepath.Join(engine, "build/yajl.m4")}, nil},
+		{"非特权配置请求体引擎及已修补私有 YAJL", engine, "./configure", []string{"--prefix=" + prefix, "--disable-static", "--disable-examples", "--disable-doxygen-doc", "--disable-debug-logs", "--with-yajl=" + prefix, "--with-lua=no", "--with-lmdb=no", "--with-geoip=no", "--with-ssdeep=no", "--with-curl=no"}, nil},
 		// The C++ parser and scanner each need several hundred MiB. Running
 		// them together can trigger global OOM on a 1 GiB server before a
 		// 1 GiB service limit protects the live panel. Always compile one at
@@ -45,7 +60,21 @@ func wafNativeBuildPlan(work, prefix, assets, nginxVersion string) ([]wafBuildCo
 		{"单路将引擎写入独立待验证目录，不改系统程序", engine, "/usr/bin/make", []string{"-j1", "install"}, nil},
 		{"匹配精确 Nginx 源码生成兼容动态模块", nginx, "./configure", []string{"--with-compat", "--with-debug", "--with-threads", "--with-http_ssl_module", "--with-http_v2_module", "--with-http_realip_module", "--with-http_stub_status_module", "--add-dynamic-module=" + connector}, []string{"MODSECURITY_INC=" + filepath.Join(prefix, "include"), "MODSECURITY_LIB=" + filepath.Join(prefix, "lib")}},
 		{"非特权单路编译 Nginx 动态模块，不安装或替换 Nginx", nginx, "/usr/bin/make", []string{"-j1", "modules"}, nil},
-	}, nil
+	}...)
+	return plan, nil
+}
+
+// The Nginx source entry point uses exact re-derived commands, never broadens
+// HTML's validator to cc/ar/touch or accepts a panel-supplied build argument.
+func validateNginxWAFSourceBuildCommand(work, prefix, assets, version string, index int, command wafBuildCommand) error {
+	plan, err := wafNativeBuildPlan(work, prefix, assets, version)
+	if err != nil {
+		return err
+	}
+	if index < 0 || index >= len(plan) || !reflect.DeepEqual(plan[index], command) {
+		return errors.New("Nginx 构建命令不是固定审核计划的对应步骤")
+	}
+	return nil
 }
 
 func validateWAFBuildCommand(command wafBuildCommand) error {

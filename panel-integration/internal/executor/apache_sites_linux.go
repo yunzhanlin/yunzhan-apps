@@ -106,6 +106,9 @@ func (s *Service) applyApacheSites(ctx context.Context, sites []core.Site, add f
 	if e != nil {
 		return nil, e
 	}
+	if rollback, handled, err := s.applyApacheNativeBodySites(ctx, content, count, add); handled {
+		return rollback, err
+	}
 	old, readErr := os.ReadFile(s.Config.ApacheSiteConfig)
 	hadOld := readErr == nil
 	if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {

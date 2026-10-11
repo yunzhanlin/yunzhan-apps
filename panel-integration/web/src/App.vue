@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatPanelDate, formatPanelDateTime } from "./panelTime";
+import {resourcePercent,resourceSeries} from "./resourceMetrics";
 import { panelHealthState, panelSampleIsCurrent } from "./panelHealth";
 import { EpochReadGate } from "./epochReadGate";
 import { randomId } from "./randomId";
@@ -12,6 +13,7 @@ import type AppModuleManager from "./AppModuleManager.vue";
 import { DeferredWorkspace, WorkspaceCodeLoadError, scopeWorkspaceAPI, scopeWorkspaceOperation } from "./deferredWorkspace";
 import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
 import { normalizeStoreSearch } from "./storeSearch";
+import { softwareInstallState, uniqueSoftwareStatus } from "./softwareState";
 import type { SecurityAppCatalogItem, SecurityAppStatus } from "./SecurityAppManager.vue";
 import PanelIcon from "./PanelIcon.vue";
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef } from "vue";
@@ -128,11 +130,14 @@ interface Overview {
   kernel?: string;
   arch: string;
   cpu_cores: number;
-  cpu_percent: number;
-  memory_percent: number;
+  cpu_percent: number | null;
+  cpu_available?: boolean;
+  memory_percent: number | null;
+  memory_available?: boolean;
   memory_used: number;
   memory_total: number;
-  disk_percent: number;
+  disk_percent: number | null;
+  disk_percent_available?: boolean;
   disk_used: number;
   disk_total: number;
   disk_available?: number;
@@ -226,6 +231,8 @@ function clearAccessData(preserveRegistryRequests = false) {
   accessEpoch++;
   cancelAppModuleLoad();
   appModuleComponent.value = undefined;
+  securityWorkspaceScope.value = undefined;
+  securityWorkspaceEpoch.value++;
   if (!preserveRegistryRequests) registryRequestIdentity.clear();
   registryReviewing.value = [];
   sites.value = []; jobs.value = []; audits.value = []; siteCertificates.value = [];
@@ -315,7 +322,7 @@ const overview = ref<Overview | null>(null),
   softwareApps = ref<SoftwareApps>({ catalog: [], status: [] }),
   appRegistry = ref<AppRegistry>({ catalog: { schema_version: 1, generated_at: "", repository: "", apps: [] }, status: [], source: { source: "", stale: false } }),
   registryInstalling = ref<string[]>([]);
-const samples = ref<{ cpu: number; memory: number; time: number }[]>([]),
+const samples = ref<{ cpu: number | null; memory: number | null; time: number }[]>([]),
   query = ref(""),
   siteStatusFilter = ref("all"),
   sitePHPFilter = ref("all"),
@@ -412,8 +419,45 @@ const filteredCatalog = computed(() => {
   if (storeSort.value === "installed") items.sort((a, b) => Number(runtimeInstalled(versions.value[b.family] || "")) - Number(runtimeInstalled(versions.value[a.family] || "")));
   return items;
 });
-const softwareStatus = (id: string) => softwareApps.value.status.find((item) => item.id === id);
+const softwareStatus = (id: string) => uniqueSoftwareStatus(softwareApps.value.status, id);
+const softwareState = (id: string) => softwareInstallState(softwareStatus(id));
 const softwareManager = ref<InstanceType<typeof SecurityAppManager> | null>(null);
+const securityWorkspaceEpoch = ref(0);
+const securityWorkspaceScope = shallowRef<{
+  api: typeof api;
+  install: typeof queueSoftwareInstall;
+  job: typeof lifecycleJob;
+}>();
+function bindSecurityWorkspace() {
+  const epoch = accessEpoch, session = csrf.value, account = user.value;
+  const current = () => !appModuleScopeDisposed && epoch === accessEpoch && session === csrf.value &&
+    !!session && !!account && user.value === account && !accountChanging.value && validAccessPlan(accessPlan.value) && accessPlan.value.role === "admin";
+  securityWorkspaceScope.value = {
+    api: scopeWorkspaceAPI(api, current),
+    install: scopeWorkspaceOperation(queueSoftwareInstall, current),
+    job: scopeWorkspaceOperation(async (id: string) => {
+      await refresh();
+      if (!current()) throw new Error("账户已改变，未打开旧账户的安全软件任务");
+      await revealJob(id, current);
+    }, current),
+  };
+}
+async function replaceAccountSession(value: {username: string; csrf: string}) {
+  user.value = value.username; csrf.value = value.csrf;
+  clearAccessData(true);
+  const epoch = accessEpoch, session = csrf.value;
+  try {
+    const me = await api<AccessPlan & {username: string; csrf: string}>("/me");
+    if (epoch !== accessEpoch || session !== csrf.value || !user.value) return;
+    if (me.username !== value.username || me.csrf !== session) throw new Error("新会话身份尚未核实，请重新登录");
+    applyAccess(me, true); bindSecurityWorkspace();
+    void refresh();
+  } catch (cause) {
+    if (epoch !== accessEpoch || session !== csrf.value) return;
+    user.value = ""; csrf.value = ""; accessPlan.value = null; clearAccessData(true);
+    authError.value = cause instanceof Error ? cause.message : "新会话授权尚未核实，请重新登录";
+  }
+}
 const appModuleManager = ref<InstanceType<typeof AppModuleManager> | null>(null);
 const appModuleComponent = shallowRef<typeof AppModuleManager>();
 const appModuleLoading = ref(false), appModuleLoadError = ref(""), appModuleLoadTarget = ref("");
@@ -472,17 +516,30 @@ async function openAppModule(id: string) {
 }
 function openSoftwareApp(app: SecurityAppCatalogItem) {
   const manager = softwareManagerKind(app);
+  if (manager === "security" && (!securityWorkspaceScope.value || accountChanging.value || !user.value || !canOpenAppModule(accessPlan.value, app.id))) {
+    ElMessage.error("当前账户不能打开该安全软件，请核对授权后重试"); return;
+  }
   if (manager === "security") softwareManager.value?.show(app, softwareStatus(app.id));
   else if (manager === "module") void openAppModule(app.id);
   else ElMessage.error("当前面板没有该应用的管理界面，请升级面板后重试");
 }
 function installSoftwareApp(app: SecurityAppCatalogItem) {
-  if (softwareManagerKind(app) === "security") void softwareManager.value?.install(app, softwareStatus(app.id));
+  if (softwareState(app.id) === "unknown") {
+    ElMessage.warning("安装状态尚未核对；已保留原记录，仅打开状态页，不提交安装");
+    openSoftwareApp(app); return;
+  }
+  if (softwareManagerKind(app) === "security") {
+    if (!securityWorkspaceScope.value || accountChanging.value || !user.value || !canOpenAppModule(accessPlan.value, app.id)) {
+      ElMessage.error("当前账户不能安装该安全软件，请核对授权后重试"); return;
+    }
+    void softwareManager.value?.install(app, softwareStatus(app.id));
+  }
   else openSoftwareApp(app);
 }
 async function queueSoftwareInstall(id: string, settings: Record<string, unknown> = {}): Promise<string> {
   const software = softwareApps.value.catalog.find(item => item.id === id);
   if (!software || !softwareManagerKind(software)) throw new Error("当前面板没有该应用的已审核处理器");
+  if (softwareState(id) === "unknown") throw new Error("安装状态尚未核对；未提交安装，请刷新并核对原记录");
   const app = appRegistry.value.catalog.apps.find(item => item.provider === "panel-module" && item.target === id);
   let result: { job_id: string };
   if (app) {
@@ -507,13 +564,14 @@ const filteredSoftwareApps = computed(() => {
     if (!["recommended", "all", "deployment", "professional"].includes(storeCategory.value) && !registryCategoryMap[storeCategory.value]?.includes(catalogID)) return false;
     const status = softwareStatus(app.id);
     if (term && !normalizeStoreSearch(`${app.name} ${app.family} ${app.description} ${app.capabilities.join(" ")}`).includes(term)) return false;
-    if (storeStatus.value === "installed" && !status?.installed) return false;
-    if (storeStatus.value === "installable" && status?.installed) return false;
+    const state = softwareInstallState(status);
+    if (storeStatus.value === "installed" && state !== "installed") return false;
+    if (storeStatus.value === "installable" && state !== "absent") return false;
     if (storeStatus.value === "unavailable") return false;
     return true;
   });
   if (storeSort.value === "name") items.sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
-  if (storeSort.value === "installed") items.sort((a, b) => Number(Boolean(softwareStatus(b.id)?.installed)) - Number(Boolean(softwareStatus(a.id)?.installed)));
+  if (storeSort.value === "installed") items.sort((a, b) => Number(softwareState(b.id) === "installed") - Number(softwareState(a.id) === "installed"));
   return items;
 });
 const registryStatus = (id: string) => appRegistry.value.status.find((item) => item.id === id);
@@ -1104,13 +1162,14 @@ const date = (s: string) =>
     second: "2-digit",
     hour12: false,
   });
-const bytes = (v = 0) =>
-  v >= 1073741824
+const bytes = (v?: number | null) =>
+  typeof v !== 'number' || !Number.isFinite(v) || v<0 ? '待核对' : v >= 1073741824
     ? (v / 1073741824).toFixed(1) + " GB"
     : v >= 1048576
       ? (v / 1048576).toFixed(0) + " MB"
       : (v / 1024).toFixed(0) + " KB";
-const percent = (v = 0) => Math.max(0, Math.min(100, v)).toFixed(1);
+const percent = (v: number | null) => v===null?'待核对':v.toFixed(1);
+const overviewMetric=(field:'cpu_percent'|'memory_percent'|'disk_percent')=>resourcePercent(overview.value?.[field],overview.value?.[field==='cpu_percent'?'cpu_available':field==='memory_percent'?'memory_available':'disk_percent_available'],field==='cpu_percent');
 const uptime = computed(() => {
   const s = overview.value?.uptime_seconds || 0;
   return s >= 86400
@@ -1128,13 +1187,7 @@ const healthInput = computed(() => ({
 }));
 const healthState = computed(() => panelHealthState(healthInput.value));
 const sampleIsCurrent = computed(() => panelSampleIsCurrent(healthInput.value));
-const series = (field: "cpu" | "memory") =>
-  samples.value
-    .map(
-      (s, i) =>
-        `${samples.value.length > 1 ? (i / (samples.value.length - 1)) * 720 : 0},${180 - Math.min(100, Math.max(0, s[field])) * 1.6}`,
-    )
-    .join(" ");
+const series = (field: "cpu" | "memory") => resourceSeries(samples.value.map(s=>s[field]));
 const go = (key: string) => {
   if (!canOpenView(accessPlan.value, key)) { ElMessage.warning("当前账户未获该菜单授权"); return; }
   view.value = key;
@@ -1296,7 +1349,7 @@ async function refreshOverview() {
     healthClock.value = {monotonic:performance.now(),wall:Date.now()};
     samples.value = [
       ...samples.value,
-      { cpu: d.cpu_percent, memory: d.memory_percent, time: Date.now() },
+      { cpu: resourcePercent(d.cpu_percent,d.cpu_available,true), memory: resourcePercent(d.memory_percent,d.memory_available), time: Date.now() },
     ].slice(-36);
   } catch (e) {
     if (epoch === accessEpoch && session === csrf.value) overviewReadError.value = (e as Error).message;
@@ -1404,6 +1457,7 @@ async function login() {
     const access = await api<AccessPlan>("/me");
     applyAccess(access);
     user.value = me.username;
+    bindSecurityWorkspace();
     lastSessionActivitySentAt = Date.now();
     password.value = "";
     otpCode.value = "";
@@ -1584,6 +1638,7 @@ onMounted(async () => {
         applyAccess(me, true);
         user.value = me.username;
         csrf.value = me.csrf;
+        bindSecurityWorkspace();
         void refresh();
       } catch {}
     }
@@ -1990,10 +2045,11 @@ onUnmounted(() => {
                 <span>CPU 使用率</span><el-icon><Odometer /></el-icon>
               </div>
               <div class="metric-number">
-                {{ overview ? percent(overview.cpu_percent) : "—" }}<span>%</span>
+                {{ percent(overviewMetric('cpu_percent')) }}<span v-if="overviewMetric('cpu_percent')!==null">%</span>
               </div>
               <el-progress
-                :percentage="Number(percent(overview?.cpu_percent))"
+                v-if="overviewMetric('cpu_percent')!==null"
+                :percentage="overviewMetric('cpu_percent')!"
                 :show-text="false"
                 :stroke-width="5"
                 color="#0f766e"
@@ -2007,10 +2063,11 @@ onUnmounted(() => {
                 <span>内存使用</span><el-icon><Box /></el-icon>
               </div>
               <div class="metric-number">
-                {{ overview ? percent(overview.memory_percent) : "—" }}<span>%</span>
+                {{ percent(overviewMetric('memory_percent')) }}<span v-if="overviewMetric('memory_percent')!==null">%</span>
               </div>
               <el-progress
-                :percentage="Number(percent(overview?.memory_percent))"
+                v-if="overviewMetric('memory_percent')!==null"
+                :percentage="overviewMetric('memory_percent')!"
                 :show-text="false"
                 :stroke-width="5"
                 color="#7e9b78"
@@ -2025,10 +2082,11 @@ onUnmounted(() => {
                 <span>磁盘使用</span><el-icon><Document /></el-icon>
               </div>
               <div class="metric-number">
-                {{ overview ? percent(overview.disk_percent) : "—" }}<span>%</span>
+                {{ percent(overviewMetric('disk_percent')) }}<span v-if="overviewMetric('disk_percent')!==null">%</span>
               </div>
               <el-progress
-                :percentage="Number(percent(overview?.disk_percent))"
+                v-if="overviewMetric('disk_percent')!==null"
+                :percentage="overviewMetric('disk_percent')!"
                 :show-text="false"
                 :stroke-width="5"
                 color="#c49a61"
@@ -2087,21 +2145,23 @@ onUnmounted(() => {
                     stroke-dasharray="4 4"
                   />
                   <polyline
-                    v-if="samples.length > 1"
-                    :points="series('memory')"
+                    v-for="(points,index) in series('memory')"
+                    :key="`memory-${index}`"
+                    :points="points"
                     fill="none"
                     stroke="#8ca681"
                     stroke-width="2"
                   />
                   <polyline
-                    v-if="samples.length > 1"
-                    :points="series('cpu')"
+                    v-for="(points,index) in series('cpu')"
+                    :key="`cpu-${index}`"
+                    :points="points"
                     fill="none"
                     stroke="#0f766e"
                     stroke-width="2.5"
                   />
                   <text
-                    v-if="samples.length < 2"
+                    v-if="!series('cpu').length && !series('memory').length"
                     x="360"
                     y="105"
                     text-anchor="middle"
@@ -2536,13 +2596,13 @@ onUnmounted(() => {
                   <div class="runtime-card-head">
                     <SoftwareLogo :family="app.family" />
                     <div class="runtime-product"><h2>{{ app.name }}</h2><span>v{{ app.version }} · {{ app.source }}</span></div>
-                    <el-tag disable-transitions :type="softwareStatus(app.id)?.installed ? (softwareStatus(app.id)?.healthy ? 'success' : 'warning') : 'info'" size="small">{{ softwareStatus(app.id)?.installed ? (softwareStatus(app.id)?.healthy ? '已安装' : '待核对') : '可安装' }}</el-tag>
+                    <el-tag disable-transitions :type="softwareState(app.id) === 'unknown' ? 'warning' : softwareState(app.id) === 'installed' ? (softwareStatus(app.id)?.healthy ? 'success' : 'warning') : 'info'" size="small">{{ softwareState(app.id) === 'unknown' ? '状态待核对' : softwareState(app.id) === 'installed' ? (softwareStatus(app.id)?.healthy ? '已安装' : '待核对') : '可安装' }}</el-tag>
                   </div>
                   <p>{{ app.description }}</p>
                   <div class="runtime-card-tags"><span v-for="tag in runtimeCardTags[app.family] || app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
                   <div class="runtime-card-actions">
-                    <el-button v-if="softwareStatus(app.id)?.installed" @click="openSoftwareApp(app)">设置</el-button>
-                    <el-button type="primary" :disabled="runtimeBusy(app.id)" @click="softwareStatus(app.id)?.installed ? openSoftwareApp(app) : installSoftwareApp(app)">{{ runtimeBusy(app.id) ? '执行中' : softwareStatus(app.id)?.installed ? '打开管理' : '安装' }}</el-button>
+                    <el-button v-if="softwareState(app.id) === 'installed'" @click="openSoftwareApp(app)">设置</el-button>
+                    <el-button type="primary" :disabled="runtimeBusy(app.id)" @click="softwareState(app.id) === 'absent' ? installSoftwareApp(app) : openSoftwareApp(app)">{{ runtimeBusy(app.id) ? '执行中' : softwareState(app.id) === 'unknown' ? '核对状态' : softwareState(app.id) === 'installed' ? '打开管理' : '安装' }}</el-button>
                   </div>
                 </article>
                 <article v-for="app in filteredBuiltInApps" :key="app.id" class="panel-card runtime-card built-in-runtime-card">
@@ -2690,7 +2750,7 @@ onUnmounted(() => {
             </aside>
           </div>
           <DockerManager ref="dockerManager" :api="api" />
-          <SecurityAppManager ref="softwareManager" :api="api" :on-job="lifecycleJob" :on-install="queueSoftwareInstall" />
+          <SecurityAppManager v-if="securityWorkspaceScope" :key="securityWorkspaceEpoch" ref="softwareManager" :api="securityWorkspaceScope.api" :on-job="securityWorkspaceScope.job" :on-install="securityWorkspaceScope.install" />
           <el-dialog v-model="versionManagerOpen" :title="`${versionManagerRuntime?.name || '软件'} · 版本管理`" width="500px">
             <p class="runtime-version-help">精确版本独立安装并存；安装后可在对应网站或数据库设置中切换，现有绑定保持不变。</p>
             <el-select v-model="versionManagerSelection" style="width: 100%" aria-label="选择另一软件版本" placeholder="当前目录中没有待安装版本">
@@ -2949,7 +3009,7 @@ onUnmounted(() => {
                 :theme="theme"
                 :sidebar-style="sidebarStyle"
                 :display-density="displayDensity"
-                :on-session="(value) => { user = value.username; csrf = value.csrf; }"
+                :on-session="replaceAccountSession"
                 :on-busy="(value) => (accountChanging = value)"
                 @tab="(value) => (settingsTab = value)"
                 @theme="setTheme"
@@ -3015,12 +3075,7 @@ onUnmounted(() => {
           <AccountManager
             ref="accountManager"
             :api="api"
-            :on-session="
-              (value) => {
-                user = value.username;
-                csrf = value.csrf;
-              }
-            "
+            :on-session="replaceAccountSession"
             :on-busy="(value) => (accountChanging = value)"
           />
           </div>
@@ -3071,12 +3126,7 @@ onUnmounted(() => {
           ref="accountManager"
           v-if="view === 'account'"
           :api="api"
-          :on-session="
-            (value) => {
-              user = value.username;
-              csrf = value.csrf;
-            }
-          "
+          :on-session="replaceAccountSession"
           :on-busy="(value) => (accountChanging = value)"
         />
         <section v-if="view === 'jobs'" class="panel-card list-card">

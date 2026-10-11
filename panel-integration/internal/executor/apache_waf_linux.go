@@ -328,6 +328,8 @@ func (s *Service) readApacheWAFEvents() (core.WAFEventsPage, error) {
 }
 
 func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
+	s.apacheBodyEngineRoutes(m)
+	s.apacheBodyReportRoutes(m)
 	s.apacheWAFHistoryRoutes(m)
 	m.HandleFunc("GET /v1/software/apache-waf/config", func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()

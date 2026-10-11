@@ -203,7 +203,13 @@ func smtpNotificationMessage(d outboundDelivery, v *SMTPNotificationInput) ([]by
 				return nil, errors.New("SMTP 日报统计无效")
 			}
 		}
-		body += fmt.Sprintf("日期：%s\n网站：%d（运行 %d）\n失败网站任务：%d\n失败环境任务：%d\n24 小时审计事件：%d\n14 天内到期证书：%d\n", r.Day, r.Sites, r.RunningSites, r.FailedSiteJobs, r.FailedRuntimeJobs, r.AuditEvents, r.CertificatesDue)
+		count := func(key string, n int) string {
+			if r.CountAvailable != nil && !r.CountAvailable[key] || r.CountAvailable == nil && n == 0 {
+				return "未记录"
+			}
+			return strconv.Itoa(n)
+		}
+		body += fmt.Sprintf("日期：%s\n网站：%s（运行 %s）\n失败网站任务：%s\n失败环境任务：%s\n24 小时审计事件：%s\n14 天内到期证书：%s\n", r.Day, count("sites", r.Sites), count("running_sites", r.RunningSites), count("failed_site_jobs", r.FailedSiteJobs), count("failed_runtime_jobs", r.FailedRuntimeJobs), count("audit_events_24h", r.AuditEvents), count("certificates_due_14_days", r.CertificatesDue))
 		for _, resource := range []struct {
 			name  string
 			value *float64

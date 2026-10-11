@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"io"
 	"io/fs"
 	"local/panel/internal/appcatalog"
@@ -23,7 +22,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -89,23 +87,22 @@ func moduleRead(path string, value any) error {
 	return json.Unmarshal(b, value)
 }
 func (s *Service) moduleInstalled(id string) bool {
-	var v map[string]any
-	return moduleRead(filepath.Join(s.moduleDir(id), "installed.json"), &v) == nil && v["id"] == id
+	_, err := s.moduleInstalledRecord(id)
+	return err == nil
 }
 
 func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareAppStatus {
 	out := core.SoftwareAppStatus{ID: id, Detail: "未安装"}
-	if !s.moduleInstalled(id) {
+	manifest, err := s.moduleInstalledRecord(id)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			out.StateUnknown = true
+			out.Detail = "安装记录身份、权限或内容无法核对；未将异常当作未安装，请先核对原记录"
+		}
 		return out
 	}
 	out.Installed = true
 	out.Enabled = true
-	var manifest map[string]any
-	if moduleRead(filepath.Join(s.moduleDir(id), "installed.json"), &manifest) != nil {
-		out.Healthy = false
-		out.Detail = "安装记录读取失败"
-		return out
-	}
 	out.Version, _ = manifest["version"].(string)
 	if out.Version == "" {
 		out.Version = "1.0"
@@ -195,6 +192,9 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 	if _, ok := core.FindAppModule(id); !ok {
 		return errors.New("未知模块")
 	}
+	if _, err := s.moduleInstalledRecord(id); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return errors.New("原安装记录身份、权限或内容无法核对，未执行安装、配置或卸载")
+	}
 	if action == "uninstall" {
 		if !s.moduleInstalled(id) {
 			return errors.New("模块未安装")
@@ -282,6 +282,11 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 	if e := os.MkdirAll(s.moduleDir(id), 0700); e != nil {
 		return e
 	}
+	directory, err := s.moduleRecordDirectory(id)
+	if err != nil {
+		return err
+	}
+	directory.Close()
 	switch id {
 	case "website-analytics", "website-statistics-v2":
 		if e := s.enableAnalyticsLogs(ctx); e != nil {
@@ -491,9 +496,16 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 404, map[string]string{"error": "未知模块"})
 			return
 		}
+		status := s.appModuleStatus(r.Context(), id)
 		var report any
-		_ = moduleRead(filepath.Join(s.moduleDir(id), "last-report.json"), &report)
-		respond(w, 200, map[string]any{"definition": d, "guidance": core.ModuleGuidance(id), "status": s.appModuleStatus(r.Context(), id), "report": report})
+		reportUnknown := false
+		if !status.StateUnknown {
+			if err := s.moduleRetrospectiveRecord(id, "last-report.json", &report); err != nil {
+				report = nil
+				reportUnknown = !errors.Is(err, os.ErrNotExist)
+			}
+		}
+		respond(w, 200, map[string]any{"definition": d, "guidance": core.ModuleGuidance(id), "status": status, "report": report, "report_state_unknown": reportUnknown || status.StateUnknown})
 	})
 	m.HandleFunc("POST /v1/app-modules/{id}/{action}", func(w http.ResponseWriter, r *http.Request) {
 		id, action := r.PathValue("id"), r.PathValue("action")
@@ -533,6 +545,12 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "应用已卸载，未执行排队操作"})
 			return
 		}
+		if action != "history" {
+			if err := s.moduleRetrospectivePreflight(id); err != nil {
+				respond(w, 409, map[string]any{"error": err.Error(), "report_state_unknown": true})
+				return
+			}
+		}
 		out, e := s.runAppModule(r.Context(), id, action, in)
 		if action != "history" && action != "policies" && action != "run-plan" {
 			if historyErr := s.appendModuleEvent(id, action, "manual", in, out, e); historyErr != nil && e == nil {
@@ -546,7 +564,11 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		if e = moduleWrite(filepath.Join(s.moduleDir(id), "last-report.json"), map[string]any{"time": core.Now(), "action": action, "result": out}); e != nil {
+		if action == "history" {
+			respond(w, 200, out)
+			return
+		}
+		if e = s.writeModuleRetrospectiveRecord(id, "last-report.json", map[string]any{"time": core.Now(), "action": action, "result": out}); e != nil {
 			if id == "files-sync" {
 				s.remotePlanControlRecordFailed(action, in)
 			}
@@ -1433,41 +1455,14 @@ func (s *Service) moduleThreat(ctx context.Context, action string) (any, error) 
 	return out, nil
 }
 func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
+	if action == "terminate" {
+		return terminateTaskProcess(ctx, in.PID, in.StartTime)
+	}
 	first, total, e := readProcessSample("/proc")
 	if e != nil {
 		return nil, e
 	}
-	if action == "terminate" {
-		p, ok := first[in.PID]
-		if !ok || in.PID < 2 || in.StartTime == 0 || p.StartTime != in.StartTime {
-			return nil, errors.New("进程身份已经改变")
-		}
-		uidInfo, e := os.Stat(filepath.Join("/proc", strconv.Itoa(in.PID)))
-		if e != nil {
-			return nil, e
-		}
-		uid := uidInfo.Sys().(*syscall.Stat_t).Uid
-		if uid == 0 {
-			return nil, errors.New("不允许终止 root 进程")
-		}
-		cmdline, _ := os.ReadFile(filepath.Join("/proc", strconv.Itoa(in.PID), "cgroup"))
-		if !strings.Contains(string(cmdline), "panel-node@") && !strings.Contains(string(cmdline), "panel-pm2@") && !strings.Contains(string(cmdline), "panel-php@") {
-			return nil, errors.New("仅允许终止云栈受管进程")
-		}
-		fd, err := unix.PidfdOpen(in.PID, 0)
-		if err != nil {
-			return nil, err
-		}
-		defer unix.Close(fd)
-		fresh, _, err := readProcessSample("/proc")
-		if err != nil || fresh[in.PID].StartTime != in.StartTime {
-			return nil, errors.New("进程身份已经改变")
-		}
-		if e = unix.PidfdSendSignal(fd, unix.SIGTERM, nil, 0); e != nil {
-			return nil, e
-		}
-		return map[string]any{"signal": "SIGTERM", "pid": in.PID}, nil
-	}
+	started := time.Now()
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -1477,22 +1472,25 @@ func (s *Service) moduleTasks(ctx context.Context, action string, in core.AppMod
 	if e != nil {
 		return nil, e
 	}
-	processes := computeProcesses(first, second, total, totalSecond, 250*time.Millisecond)
+	processes := computeProcesses(first, second, total, totalSecond, time.Since(started))
 	rows := []map[string]any{}
 	for _, p := range processes {
-		uidInfo, statErr := os.Stat(filepath.Join("/proc", strconv.Itoa(p.PID)))
-		cgroup, _ := os.ReadFile(filepath.Join("/proc", strconv.Itoa(p.PID), "cgroup"))
-		managed := strings.Contains(string(cgroup), "panel-node@") || strings.Contains(string(cgroup), "panel-pm2@") || strings.Contains(string(cgroup), "panel-php@")
-		canTerminate := false
-		if statErr == nil {
-			if stat, ok := uidInfo.Sys().(*syscall.Stat_t); ok {
-				canTerminate = p.PID > 1 && stat.Uid != 0 && managed
-			}
+		identity, identityErr := readTaskProcessIdentity("/proc", p.PID)
+		managed := identityErr == nil && identity.StartTime == second[p.PID].StartTime
+		canTerminate := managed && identity.SafeUser
+		var cpu, read, write any
+		if p.CPUAvailable {
+			cpu = p.CPUPercent
 		}
-		rows = append(rows, map[string]any{"pid": p.PID, "name": p.Name, "cpu_percent": p.CPUPercent, "memory": p.Memory, "read_rate": p.ReadRate, "write_rate": p.WriteRate, "state": p.State, "start_time": second[p.PID].StartTime, "managed": managed, "can_terminate": canTerminate})
+		if p.IOAvailable {
+			read, write = p.ReadRate, p.WriteRate
+		}
+		rows = append(rows, map[string]any{"pid": p.PID, "name": p.Name, "cpu_percent": cpu, "cpu_available": p.CPUAvailable, "io_available": p.IOAvailable, "memory": p.Memory, "read_rate": read, "write_rate": write, "state": p.State, "start_time": second[p.PID].StartTime, "managed": managed, "can_terminate": canTerminate})
 	}
-	connections, _ := s.Config.Run(ctx, "/usr/bin/ss", "-H", "-ntp")
-	return map[string]any{"processes": rows, "connections": connections}, nil
+	connections, connectionErr := s.Config.Run(ctx, "/usr/bin/ss", "-H", "-ntp")
+	out := processSnapshotLimits(first, second, len(rows))
+	out["processes"], out["connections"], out["connections_available"] = rows, connections, connectionErr == nil
+	return out, nil
 }
 
 // The worker resumes from private persisted policies after executor restarts.

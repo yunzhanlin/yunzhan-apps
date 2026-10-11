@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"local/panel/internal/core"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -61,6 +62,57 @@ func TestAnalyticsHTMLNativeModuleAndActualResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("actual ABI accepted: nginx=%s module_sha256=%s program_sha256=%s", version, moduleSHA, analyticsHTMLProgramSHA)
+	analyticsHTMLActualResponses(t, ctx, base, prefix, nginx, version)
+	analyticsHTMLNativeGlobalLifecycle(t, ctx, base, prefix, nginx, version, false)
+}
+
+// Consume a genuine source-worker receipt rather than attaching a collection
+// field to a hand-created ready fixture. Canonical state/program mounts are
+// read-only; this test never compiles, publishes or activates an engine.
+func TestAnalyticsHTMLNativeProducedModuleActualResponses(t *testing.T) {
+	if os.Getenv("PANEL_QA_ANALYTICS_PRODUCED_HTTP") != "1" {
+		t.Skip("requires genuine private source-producer state/program and an isolated HTTP namespace")
+	}
+	id := os.Getenv("PANEL_QA_ANALYTICS_WORKER_JOB")
+	var fs syscall.Statfs_t
+	if os.Geteuid() != 0 || !core.ValidID(id) || syscall.Statfs("/", &fs) != nil || fs.Flags&1 == 0 {
+		t.Fatal("genuine producer HTTP fixture requires root-read-only boundary")
+	}
+	for _, kind := range []string{"mnt", "net"} {
+		self, err := os.Readlink("/proc/self/ns/" + kind)
+		prior := os.Getenv("PANEL_QA_ANALYTICS_INIT_" + strings.ToUpper(kind) + "_NAMESPACE")
+		if err != nil || !strings.HasPrefix(prior, kind+":[") || !strings.HasSuffix(prior, "]") || self == prior {
+			t.Fatal("HTTP fixture lacks private namespace", kind, err)
+		}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	path := filepath.Join(analyticsHTMLBuilds, id+".json")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	record, err := nativeWAFService().verifyAnalyticsHTMLBuild(ctx, id)
+	if err != nil {
+		t.Fatal("genuine completed source record/source/patch/ABI/tree identity", err)
+	}
+	base, err := os.MkdirTemp("/run/panel-analytics-html-http24aoh", "responses-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(base, 0755); err != nil {
+		t.Fatal(err)
+	}
+	analyticsHTMLActualResponses(t, ctx, base, record.Prefix, record.NginxBinary, record.NginxVersion)
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) {
+		t.Fatal("read-only HTTP proof changed actual producer receipt", err)
+	}
+	t.Log("PASS genuine current collection-v2 producer module: 32 actual HTTP cases; no fixture-authored ready receipt or global/site activation")
+}
+
+func analyticsHTMLActualResponses(t *testing.T, ctx context.Context, base, prefix, nginx, version string) {
+	t.Helper()
 	uidUser, err := user.Lookup("panel-build")
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +223,7 @@ func TestAnalyticsHTMLNativeModuleAndActualResponses(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer log.Close()
-	cmd := exec.Command("/usr/sbin/runuser", "-u", "panel-build", "--", nginx, "-e", "stderr", "-p", run+"/", "-c", confPath)
+	cmd := exec.Command("/usr/sbin/runuser", runtimeBuildIdentityArgs(nginx, "-e", "stderr", "-p", run+"/", "-c", confPath)...)
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C.UTF-8"}
 	cmd.Stdout = log
 	cmd.Stderr = log
@@ -205,6 +257,40 @@ func TestAnalyticsHTMLNativeModuleAndActualResponses(t *testing.T) {
 	}
 	if !ready {
 		t.Fatal("private Nginx did not start; retained native-http.log")
+	}
+	// Observe the actual serving process, not just the account in a command.
+	children, err := os.ReadFile(fmt.Sprintf("/proc/%d/task/%d/children", cmd.Process.Pid, cmd.Process.Pid))
+	if err != nil {
+		t.Fatal("private server children identity", err)
+	}
+	observed := false
+	for _, pid := range append([]string{strconv.Itoa(cmd.Process.Pid)}, strings.Fields(string(children))...) {
+		status, err := os.ReadFile("/proc/" + pid + "/status")
+		if err != nil {
+			continue
+		}
+		fields := map[string]string{}
+		for _, line := range strings.Split(string(status), "\n") {
+			if key, value, ok := strings.Cut(line, ":"); ok {
+				fields[key] = strings.TrimSpace(value)
+			}
+		}
+		ids := strings.Fields(fields["Uid"])
+		if len(ids) != 4 || ids[1] != strconv.Itoa(uid) {
+			continue
+		}
+		for _, key := range []string{"CapInh", "CapPrm", "CapEff", "CapAmb"} {
+			if fields[key] != "0000000000000000" {
+				t.Fatal("actual serving process retained capabilities", key, fields[key])
+			}
+		}
+		if fields["NoNewPrivs"] != "1" {
+			t.Fatal("actual serving process lacks NNP")
+		}
+		observed = true
+	}
+	if !observed {
+		t.Fatal("no actual zero-capability non-root serving process observed")
 	}
 	request := func(method, path string, headers map[string]string) ([]byte, http.Header, int) {
 		t.Helper()
@@ -292,6 +378,8 @@ func TestAnalyticsHTMLNativeModuleAndActualResponses(t *testing.T) {
 		t.Fatal("actual loaded QuickJS health fingerprint mismatch", response.StatusCode, string(health))
 	}
 	checked++
+	if checked != 32 {
+		t.Fatal("actual HTTP acceptance matrix incomplete", checked)
+	}
 	t.Logf("PASS %d actual HTTP response cases on %s; non-root compiler/server; no real Nginx/site/service changes", checked, version)
-	analyticsHTMLNativeGlobalLifecycle(t, ctx, base, prefix, nginx, version)
 }

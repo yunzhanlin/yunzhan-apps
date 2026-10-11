@@ -542,7 +542,7 @@ func (w *integrityWatcher) flush(now time.Time) {
 							if err != nil {
 								report["error"] = err.Error()
 							}
-							if moduleWrite(filepath.Join(s.moduleDir("files-sync"), "last-report.json"), report) != nil {
+							if s.writeModuleRetrospectiveRecord("files-sync", "last-report.json", report) != nil {
 								s.blockModuleAutomation("files-sync/" + plan.SyncID)
 							}
 						}
