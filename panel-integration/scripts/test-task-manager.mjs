@@ -2,7 +2,25 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from '../web/node_modules/typescript/lib/typescript.js';
-import {taskSelection,taskTerminationNotice} from '../web/src/taskManager.ts';
+import {taskSelection,taskTerminationNotice,taskProcessColumns,taskProcessRows} from '../web/src/taskManager.ts';
+test('process columns prioritize operational identity and omit permission/sampling flags without mutating the report',()=>{
+ const row={can_terminate:false,cpu_available:false,io_available:false,cpu_percent:null,memory:100,name:'worker',pid:42,read_rate:null,write_rate:null,state:'S',managed:true,start_time:123,token:'never-display'};
+ assert.deepEqual(taskProcessColumns([row]),['name','pid','cpu_percent','memory','read_rate','write_rate','state','managed']);
+ assert.equal(row.start_time,123);assert.equal(row.can_terminate,false);
+ for(const invalid of [null,undefined,{},'processes'])assert.deepEqual(taskProcessColumns(invalid),[]);
+ assert.deepEqual(taskProcessColumns([{name:'worker',pid:42},null,[]]),['name','pid']);
+});
+test('snapshot filter is bounded, case-insensitive and cannot create authorization or adopt an out-of-snapshot ticket',()=>{
+ const root={pid:2,name:'RootWorker',start_time:100,managed:true,can_terminate:false};
+ const app={pid:42,name:'NodeHTTP',start_time:101,managed:true,can_terminate:true};
+ const foreign={pid:142,name:'Foreign',start_time:102,managed:false,can_terminate:false};
+ const rows=[root,app,foreign];assert.deepEqual(taskProcessRows(rows,'  node  '),[app]);assert.equal(taskProcessRows(rows,'42').length,2);
+ assert.deepEqual(taskProcessRows(rows,'',true),[root,app]);assert.deepEqual(taskProcessRows(rows,'', 'true'),rows);
+ assert.equal(taskSelection(taskProcessRows(rows,'root')[0]),undefined);assert.strictEqual(taskProcessRows(rows,'node')[0],app);assert.deepEqual(taskSelection(app),{pid:42,start_time:101});
+ assert.deepEqual(taskProcessRows(rows,'not present'),[]);assert.deepEqual(taskProcessRows(null),[]);
+ const large=[...Array(500).fill(root),app];assert.equal(taskProcessRows(large).length,500);assert.deepEqual(taskProcessRows(large,'node'),[]);
+ assert.deepEqual(rows,[root,app,foreign]);
+});
 test('selection only adopts a complete current non-root authorized process ticket',()=>{
  const row={pid:42,start_time:12345,managed:true,can_terminate:true};
  const selected=taskSelection(row);assert.deepEqual(selected,{pid:42,start_time:12345});assert(Object.isFrozen(selected));
@@ -14,6 +32,12 @@ test('signal reply binds the original PID and does not claim exit',()=>{
  for(const value of [null,[],{}, {...reply,pid:43},{...reply,pid:'42'},{...reply,signal:'SIGKILL'},{...reply,signal_accepted:false},{...reply,exit_verified:true},{...reply,secret:'extra'}, {pid:42,signal:'SIGTERM'}])assert.throws(()=>taskTerminationNotice(value,42),/可能已发送/);
 });
 const source=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
+test('material task snapshot update has an independent app patch version and translated PM2 runtime identity',()=>{
+ const definitions=readFileSync(new URL('../internal/core/app_modules.go',import.meta.url),'utf8');
+ assert.match(definitions,/case "task-manager":\s+version = "1\.2\.1"/);
+ const report=readFileSync(new URL('../web/src/AppModuleReport.vue',import.meta.url),'utf8');
+ assert.match(report,/pm2_version:\s*"PM2 版本"/);
+});
 test('actual component row selection clears prior identity on root/unknown rows and does not dispatch',()=>{
  const actual=source.slice(source.indexOf('function selected('),source.indexOf('function inputBody('));
  const js=ts.transpileModule(actual,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
@@ -64,6 +88,16 @@ test('actual task table no longer silently truncates 500 returned rows to the ge
  const input=Array.from({length:501},(_,i)=>({pid:i+1,start_time:100}));
  assert.equal(new Function('props',js+';return rows;')({id:'task-manager'})(input).length,500);
  assert.equal(new Function('props',js+';return rows;')({id:'site-diagnosis'})(input).length,200);
+});
+test('actual report table uses snapshot filtering and ordered columns, with no request or signal side effects',()=>{
+ const report=readFileSync(new URL('../web/src/AppModuleReport.vue',import.meta.url),'utf8');
+ const actual=report.slice(report.indexOf('function rows('),report.indexOf('function columns('));const js=ts.transpileModule(actual,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const row={pid:42,name:'NodeHTTP',start_time:100,managed:true,can_terminate:true,cpu_available:false,cpu_percent:null};
+ const bindings={props:{id:'task-manager'},taskProcessRows,taskQuery:{value:'node'},taskManagedOnly:{value:true}};
+ const rows=new Function(...Object.keys(bindings),js+';return rows;')(...Object.values(bindings));assert.deepEqual(rows([row], 'processes'),[row]);
+ bindings.taskQuery.value='missing';assert.deepEqual(rows([row],'processes'),[]);assert.deepEqual(rows([row],'history'),[row]);
+ assert(report.includes(':data="rows(values,key)"'));assert(report.includes('return taskProcessColumns(values)'));assert(report.includes('仅筛选已返回快照，不重新采样，不代表全部进程'));assert(report.includes('包括不可终止项'));
+ assert.doesNotMatch(actual,/fetch\(|props\.api|execute\(|terminateTask/);
 });
 test('actual monitoring helpers expose unknown rates, reject reused identity and label bounded snapshots',()=>{
  const monitor=readFileSync(new URL('../web/src/MonitoringManager.vue',import.meta.url),'utf8');

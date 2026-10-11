@@ -31,6 +31,24 @@ func TestAppModuleDefinitions(t *testing.T) {
 		t.Fatal(len(seen))
 	}
 }
+func TestTaskSnapshotReleaseHasIndependentPatchVersion(t *testing.T) {
+	// A material application UI update must have a new signed app identity.
+	// The normal executor may still read the prior installed 1.2.0 record;
+	// version validation never means an application was actually updated.
+	if version := SoftwareImplementationVersion("task-manager"); version != "1.2.1" {
+		t.Fatal("task snapshot change was published under an unchanged version", version)
+	}
+	for _, version := range []string{"1.2.0", "1.2.1"} {
+		if err := ValidateSoftwareUpdate("task-manager", version); err != nil {
+			t.Fatal("documented prior/current task release refused", version, err)
+		}
+	}
+	for _, version := range []string{"1.2.2", "99.0.0", "invalid"} {
+		if err := ValidateSoftwareUpdate("task-manager", version); err == nil {
+			t.Fatal("unimplemented or invalid task version accepted", version)
+		}
+	}
+}
 func TestAnalyticsGuidanceMatchesImplementedBoundaries(t *testing.T) {
 	guide := ModuleGuidance("website-analytics")
 	if !strings.Contains(guide.Description, "INP") || !strings.Contains(guide.Description, "转化漏斗") || !strings.Contains(guide.Description, "HTML 自动接入") {
