@@ -19,7 +19,7 @@ test('Task snapshot patch is independently versioned, preserving the original pa
 
 test('Task implementation and all corrected fixtures match exact normal BECJ source without runtime or test overrides',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'393a3bd5b9b370e638cd6340983a68ba31c9d2aaa3e3cd54788d0772814da06e');assert.equal(release.archive_sha256,'311f2d77ccc8da40de1067dab5b51895f144de760f7b61f8057a2e51addda929');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'aa555c256b44b62167c3914518602c619e01b69c7c614a70058156fff0d377a3');assert.equal(release.archive_sha256,'9b0cdcf80a1431e735e240fda3ea8a728c067dd2e45d414f511d56310338975b');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const file of ['internal/core/app_modules.go','internal/core/app_modules_test.go','web/src/AppModuleReport.vue','web/src/taskManager.ts','scripts/test-task-manager.mjs','internal/executor/app_load_balance_history_linux_test.go','internal/executor/app_reliability_linux_test.go','internal/executor/app_sync_remote_linux_test.go','internal/executor/app_threat_rotation_linux_test.go','internal/executor/app_threat_transaction_linux_test.go','internal/executor/app_update_linux_test.go']){
   const actual=sum(await read('panel-integration/'+file));assert.equal(index.files[file],actual,file);assert.equal(release.files[file],actual,file);
  }
