@@ -5,11 +5,11 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sum=value=>createHash('sha256').update(value).digest('hex');
 
-test('Task snapshot patch is independently versioned, preserving the original package and all other 49 catalog identities',async()=>{
+test('Task snapshot patch is independently versioned, preserving the original package and all other 48 non-load-balance catalog identities',async()=>{
  const catalog=JSON.parse(await read('dist/catalog-v1.json'));
  const task=catalog.apps.find(a=>a.id==='task-manager');assert.equal(task.version,'1.2.1');assert.equal(catalog.apps.length,50);
- const other=catalog.apps.filter(a=>a.id!=='task-manager').sort((a,b)=>a.id.localeCompare(b.id));
- assert.equal(sum(JSON.stringify(other)),'6bdd44e36d1a33161de32e061ac0163577de6e1864e3ea5ec949d6ff1ee4fd3b');
+ const other=catalog.apps.filter(a=>!['task-manager','load-balance'].includes(a.id)).sort((a,b)=>a.id.localeCompare(b.id));
+ assert.equal(sum(JSON.stringify(other)),'d20234c1fa053a58c7b3390be8926260092765baac464697eebfa3ecb7d6102c');
  const old=await read('dist/apps/task-manager/1.2.0/manifest.json');assert.equal(sum(old),'210dc302db5f1c87915a3f20dc96d5c94232cfbd66da229e50ae30e9c7be0600');
  const current=await read('dist/apps/task-manager/1.2.1/manifest.json');assert.equal(sum(current),task.sha256);
  const manifest=JSON.parse(current),registry=JSON.parse(await read('registry/apps.json'));
@@ -19,7 +19,7 @@ test('Task snapshot patch is independently versioned, preserving the original pa
 
 test('Task implementation and all corrected fixtures match exact normal BECJ source without runtime or test overrides',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'234bd8c2ee1a24c7a2b517d8ff71e9e0994ee9d40118a3a854cdc0c1a4f638e3');assert.equal(release.archive_sha256,'3641e0027dee1133f770000382fcba743ac992420a661c86886afa42436617bb');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const file of ['internal/core/app_modules.go','internal/core/app_modules_test.go','web/src/AppModuleReport.vue','web/src/taskManager.ts','scripts/test-task-manager.mjs','internal/executor/app_load_balance_history_linux_test.go','internal/executor/app_reliability_linux_test.go','internal/executor/app_sync_remote_linux_test.go','internal/executor/app_threat_rotation_linux_test.go','internal/executor/app_threat_transaction_linux_test.go','internal/executor/app_update_linux_test.go']){
   const actual=sum(await read('panel-integration/'+file));assert.equal(index.files[file],actual,file);assert.equal(release.files[file],actual,file);
  }
@@ -30,6 +30,6 @@ test('Task implementation and all corrected fixtures match exact normal BECJ sou
 
 test('Task source publication never substitutes for live app update or commercial acceptance',async()=>{
  const contracts=JSON.parse(await read('registry/functional-contracts.json'));
- assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.reviewed_normal_release.all_50_commercial,false);assert.equal(contracts.reviewed_normal_release.main_release_delivered,true);
- const task=contracts.apps.find(a=>a.id==='task-manager');assert(task.scenarios.some(s=>s.includes('签名仓库实际更新已独立核对')));assert(task.boundaries.some(s=>s.includes('真实更新不能用面板程序升级代替')));assert.equal(contracts.reviewed_normal_release.actual_main_task_update_proof_sha256,'6355284beb0e908f6bd79bd399e4c568ac2e3b96892cddd1f30fc5990f411180');
+ assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.reviewed_normal_release.all_50_commercial,false);assert.equal(contracts.reviewed_normal_release.main_release_delivered,false);
+ const task=contracts.apps.find(a=>a.id==='task-manager');assert(task.scenarios.some(s=>s.includes('签名仓库实际更新已独立核对')));assert(task.boundaries.some(s=>s.includes('真实更新不能用面板程序升级代替')));assert.equal(contracts.previous_main_delivery.actual_main_task_update_proof_sha256,'6355284beb0e908f6bd79bd399e4c568ac2e3b96892cddd1f30fc5990f411180');
 });

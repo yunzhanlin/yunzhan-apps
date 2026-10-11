@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security"}
+var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security", "load-balance"}
 
 type NotificationChannel struct {
 	ID              string                  `json:"id"`
@@ -115,7 +115,10 @@ INSERT OR IGNORE INTO schema_migrations VALUES(42,strftime('%Y-%m-%dT%H:%M:%SZ',
 	_, e = s.DB.Exec(`CREATE TABLE IF NOT EXISTS notification_source_blocks(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES notification_channels(id),channel_revision INTEGER NOT NULL,event_id TEXT NOT NULL,sequence INTEGER NOT NULL,kind TEXT NOT NULL,severity TEXT NOT NULL,event_created_at INTEGER NOT NULL,source_id TEXT NOT NULL,state TEXT NOT NULL CHECK(state IN ('blocked','resolved')),created_at INTEGER NOT NULL,resolved_at INTEGER NOT NULL DEFAULT 0,UNIQUE(channel_id,event_id));
 CREATE INDEX IF NOT EXISTS notification_source_block_state ON notification_source_blocks(channel_id,state);
 INSERT OR IGNORE INTO schema_migrations VALUES(43,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
-	return e
+	if e != nil {
+		return e
+	}
+	return s.migrateLoadBalanceAlertCursors()
 }
 func validateWebhookURL(raw string) (*url.URL, error) {
 	u, e := url.Parse(raw)
@@ -406,6 +409,11 @@ func safeOutboundMessage(n Notification) OutboundMessage {
 		title, message = "PHP 代码安全事件", "PHP 扫描有待审查结果或隔离、恢复操作，请查看应用记录；静态命中不等于已确认后门。"
 	case "daily":
 		title, message = "每日运维报告", "今日运维报告已生成，请登录面板查看资源、网站、任务与证书情况。"
+	case "load-balance":
+		title, message = "负载均衡健康变化", "受管入口出现健康状态变化或事件缺口，请登录面板核对 HTTP 检查及实际流量记录。"
+		if n.Severity == "info" {
+			title, message = "负载均衡健康确认", "受管节点已达到所配置的健康阈值，请登录面板核对检查和实际流量记录；不代表所有节点或业务已恢复。"
+		}
 	case "test":
 		title, message = "云栈推送测试", "推送通道测试消息。"
 	}

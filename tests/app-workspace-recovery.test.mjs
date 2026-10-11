@@ -5,13 +5,13 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('BECJ exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');
- assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');
- assert.equal(Object.keys(index.files).length,1188);
+ assert.equal(release.frozen_inputs_sha256,'234bd8c2ee1a24c7a2b517d8ff71e9e0994ee9d40118a3a854cdc0c1a4f638e3');
+ assert.equal(release.archive_sha256,'3641e0027dee1133f770000382fcba743ac992420a661c86886afa42436617bb');
+ assert.equal(Object.keys(index.files).length,1193);
  for(const file of ['internal/appcatalog/github_catalog_git.go','internal/appcatalog/github_catalog_git_test.go','web/src/deferredWorkspace.ts','web/src/menuPermissions.ts','web/src/App.vue','scripts/test-deferred-workspace.mjs','web/src/moduleInitialInspection.ts','web/src/AppModuleManager.vue','scripts/test-web-entry-budget.mjs','scripts/web-entry-budget.mjs','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,35);
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,36);
  const build=await read('panel-integration/packaging/build-release.sh');for(const gate of ['test-deferred-workspace.mjs','test-web-entry-budget.mjs','web-entry-budget.mjs'])assert(build.includes(gate));
  const deferred=await read('panel-integration/web/src/deferredWorkspace.ts');assert.match(deferred,/if \(this.codeFailure\) throw this.codeFailure/);assert.match(deferred,/return this.current\(ticket\) \? value : undefined/);assert.equal((deferred.match(/if \(!current\(\)\) throw expiredWorkspace\(\)/g)||[]).length,4);assert.match(deferred,/message.slice\(0, 512\)/);
  const view=await read('panel-integration/web/src/App.vue');assert.match(view,/window.location.reload\(\)/);assert.match(view,/cause instanceof WorkspaceCodeLoadError/);assert.match(view,/epoch === accessEpoch && session === csrf.value/);assert.match(view,/canOpenAppModule\(accessPlan.value, id\)/);

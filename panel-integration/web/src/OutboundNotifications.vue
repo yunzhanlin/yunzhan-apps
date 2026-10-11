@@ -7,7 +7,7 @@ interface SMTPPublic { host: string; port: number; tls_mode: string; server_name
 interface Channel { id: string; name: string; endpoint_host: string; enabled: boolean; kinds: string[]; revision: number; secret_set: boolean; updated_at: string; type: string; smtp?: SMTPPublic; credential_error?: string }
 interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number; day?:string; source_sha?:string; channel_revision?:number }
 const props = defineProps<{ api: <T>(path: string, method?: string, body?: unknown) => Promise<T> }>();
-const kinds = [{ id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
+const kinds = [{ id: "load-balance", label: "负载均衡健康变化与事件缺口" }, { id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
 const states: Record<string, string> = { pending: "等待发送 / 重试", running: "发送中", succeeded: "接收端已接收", failed: "失败，需处理", cancelled: "配置变更，已取消",source_blocked:"原日报来源待核对（未发送）",source_resolved:"来源已核对入队（非送达）" };
 const channels = ref<Channel[]>([]), deliveries = ref<Delivery[]>([]);
 const sourceInventoryKnown=ref(false),sourceTotal=ref(0),sourceShown=ref(0);
@@ -191,6 +191,7 @@ defineExpose({ refresh });
         <el-form-item label="收件地址（最多 5 个）"><el-input v-model="smtpDraft.recipients" type="textarea" :rows="3" placeholder="每行一个，或逗号分隔；不使用显示名" aria-label="SMTP 收件地址" /></el-form-item>
       </template>
       <el-form-item label="发送事件"><el-checkbox-group v-model="draft.kinds"><el-checkbox v-for="kind in kinds" :key="kind.id" :value="kind.id">{{ kind.label }}</el-checkbox></el-checkbox-group></el-form-item>
+      <el-alert v-if="draft.kinds.includes('load-balance')" type="info" :closable="false" title="需要已核对的负载均衡 1.8.3。每入口保留最多 32 条阈值变化；首次读取、新入口或配置修订建立基线，不补发先前记录。事件缺口另行告警；健康确认不代表实际流量已切换或整体恢复。只发送固定摘要，不含域名、节点地址、正文或密钥。" />
       <el-form-item label="启用通道"><el-switch v-model="draft.enabled" aria-label="启用当前推送通道" /></el-form-item>
       <el-alert title="保存或停用会取消旧队列，并中止仍在等待响应的旧连接；重新启用不补发历史事件。接收端已处理的数据无法撤回。" type="info" :closable="false" />
     </el-form>

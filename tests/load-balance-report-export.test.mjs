@@ -5,13 +5,13 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('1.8.2 report snapshots are exported from exact current normal signed ADI inputs and mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');
- assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');
- assert.equal(Object.keys(index.files).length,1188);
+ assert.equal(release.frozen_inputs_sha256,'234bd8c2ee1a24c7a2b517d8ff71e9e0994ee9d40118a3a854cdc0c1a4f638e3');
+ assert.equal(release.archive_sha256,'3641e0027dee1133f770000382fcba743ac992420a661c86886afa42436617bb');
+ assert.equal(Object.keys(index.files).length,1193);
  for(const file of ['internal/core/load_balance_report_export.go','internal/core/load_balance_report_export_test.go','web/src/loadBalanceReportExport.ts','scripts/test-load-balance-report-export.mjs','internal/core/app_modules.go','web/src/AppModuleManager.vue','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,35);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,36);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
  const native=await read('panel-integration/internal/core/load_balance_report_export.go');
  for(const pattern of [/loadBalanceExportMaxBody\s*= 1 << 20/,/loadBalanceExportMaxBytes\s*= 8 << 20/,/loadBalanceExportMaxTickets = 32/,/loadBalanceExportPerSession = 8/,/loadBalanceExportTTL\s*= 5 \* time.Minute/,/decoder.UseNumber\(\)/,/Owner != loadBalanceExportOwner\(u\)/,/a.authorize\(/,/len\(query\["sha256"\]\) != 1/,/Cache-Control", "no-store, private"/])assert.match(native,pattern);
  assert.doesNotMatch(native,/a\.Executor|os\.ReadFile|os\.WriteFile|exec\.Command/);
@@ -21,9 +21,9 @@ test('1.8.2 report snapshots are exported from exact current normal signed ADI i
 test('1.8.2 publishes bounded nonsecret snapshots without rewriting old packages or declaring all apps complete',async()=>{
  const registry=JSON.parse(await read('registry/apps.json')),contracts=JSON.parse(await read('registry/functional-contracts.json'));
  const app=registry.apps.find(a=>a.id==='load-balance'),row=contracts.apps.find(a=>a.id===app.id);
- assert.equal(registry.apps.length,50);assert.equal(app.version,'1.8.2');assert(app.capabilities.some(s=>s.includes('5 分钟')&&s.includes('不导出凭据')));
+ assert.equal(registry.apps.length,50);assert.equal(app.version,'1.8.3');assert(app.capabilities.some(s=>s.includes('5 分钟')&&s.includes('不导出凭据')));
  const prior=JSON.parse(await read('dist/apps/load-balance/1.8.1/manifest.json'));assert.equal(prior.version,'1.8.1');assert(!prior.capabilities.some(s=>s.includes('5 分钟')));
- const delivered=JSON.parse(await read('dist/apps/load-balance/1.8.2/manifest.json'));assert.deepEqual(delivered,app);
+ const delivered=JSON.parse(await read('dist/apps/load-balance/1.8.3/manifest.json'));assert.deepEqual(delivered,app);
  assert.equal(contracts.commercial_feature_parity_complete,false);assert(row.gaps.some(s=>s.includes('TCP/UDP')));assert(row.gaps.some(s=>s.includes('其他实际浏览器')));
  assert(row.scenarios.some(s=>s.includes('两次直接点击')&&s.includes('7781')));assert(row.scenarios.some(s=>s.includes('旧快照 410')&&s.includes('1:3')));
  assert(row.boundaries.some(s=>s.includes('最多 32 份 / 8 MiB / 5 分钟')));assert(row.boundaries.some(s=>s.includes('下载事件超时')));
