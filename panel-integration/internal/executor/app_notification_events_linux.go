@@ -10,6 +10,7 @@ import (
 )
 
 func (s *Service) moduleAlertRoutes(m *http.ServeMux) {
+	s.loadBalanceAlertRoutes(m)
 	m.HandleFunc("GET /v1/module-alert-events", func(w http.ResponseWriter, r *http.Request) {
 		module := r.URL.Query().Get("module")
 		allowed := false

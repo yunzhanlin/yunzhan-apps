@@ -75,6 +75,7 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-sites.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-config-backups.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-alerts.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-report-export.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-waf-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"

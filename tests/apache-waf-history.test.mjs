@@ -5,13 +5,13 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('Apache 2.3 private transaction maintenance is exact normal signed ADI source, with a mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'e236058a7dfae0e050bc7a04bbdd89dcea3b78af5321b2fafa1b6bd5a4241c0e');
- assert.equal(release.archive_sha256,'804d171f2176266810d9443f00161be9a9a8b6fe5a24e579f6a8678b63842d8b');
- assert.equal(Object.keys(index.files).length,1188);
+ assert.equal(release.frozen_inputs_sha256,'234bd8c2ee1a24c7a2b517d8ff71e9e0994ee9d40118a3a854cdc0c1a4f638e3');
+ assert.equal(release.archive_sha256,'3641e0027dee1133f770000382fcba743ac992420a661c86886afa42436617bb');
+ assert.equal(Object.keys(index.files).length,1193);
  for(const file of ['internal/core/apache_waf_history.go','internal/core/apache_waf_history_test.go','internal/executor/apache_waf_history_linux.go','internal/executor/apache_waf_history_linux_test.go','web/src/apacheWafTransactions.ts','web/src/ApacheWafTransactions.vue','scripts/test-apache-waf-transactions.mjs','internal/executor/waf_transaction_linux.go','internal/executor/apache_waf_linux.go','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,35);assert(gates.includes('scripts/test-apache-waf-transactions.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,36);assert(gates.includes('scripts/test-apache-waf-transactions.mjs'));
  const native=await read('panel-integration/internal/executor/apache_waf_history_linux.go');
  for(const pattern of [/apacheWAFActiveTransactions = 100/,/apacheWAFArchivedTransactions = 512/,/apacheWAFActiveBytes int64 = 128 << 20/,/apacheWAFArchiveBytes int64 = 256 << 20/,/unix\.RENAME_NOREPLACE/,/lockWAFObservation\(\)/,/lockWAFConfiguration\(\)/,/final\.owner != row\.owner/,/final\.inode != row\.inode/,/version != core\.ApacheWAFVersion/])assert.match(native,pattern);
  assert.doesNotMatch(native,/os\.Remove|Config\.Run|wafApplyChange|recoverWAFTransaction\(/);

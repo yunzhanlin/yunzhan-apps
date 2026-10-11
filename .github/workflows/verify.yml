@@ -21,6 +21,10 @@ jobs:
         run: python3 -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
       - name: Read-only WAF rotation and inventory UI regression
         run: node --experimental-strip-types --test panel-integration/scripts/test-waf-rotation-refresh.mjs panel-integration/scripts/test-waf-body-inventory.mjs
+      - name: Locked frontend dependencies for actual notification editor regression
+        run: npm ci --prefix panel-integration/web --ignore-scripts
+      - name: Load-balance alert scope and actual save handler (not installed business proof)
+        run: node --test panel-integration/scripts/test-load-balance-alerts.mjs
       - run: git diff --exit-code -- dist
       - uses: actions/setup-go@v5
         with:
