@@ -13,6 +13,7 @@ import (
 )
 
 func (s *Service) loadBalanceAlertRoutes(m *http.ServeMux) {
+	s.loadBalanceTrafficAlertRoutes(m)
 	m.HandleFunc("GET /v1/load-balance-alert-events", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.RawQuery != "" {
 			respond(w, 400, map[string]string{"error": "告警源不接受自定义目标、游标或查询参数"})
@@ -47,7 +48,7 @@ func (s *Service) loadBalanceAlertFeed(r *http.Request) (core.LoadBalanceAlertFe
 	}
 	// Historical signed implementations remain usable without claiming this
 	// newly reviewed alert contract. Unknown future versions were rejected above.
-	if version != "1.8.3" {
+	if version != "1.8.3" && version != "1.8.4" {
 		return feed, nil
 	}
 	lock, err := s.lockWAFObservation()

@@ -52,6 +52,11 @@ func (a *Server) collectModuleNotifications(ctx context.Context) error {
 			firstError = err
 		}
 	}
+	if ctx.Err() == nil {
+		if err := a.collectLoadBalanceTrafficNotifications(ctx); err != nil && firstError == nil {
+			firstError = err
+		}
+	}
 	return firstError
 }
 func (a *Server) collectOneModuleNotification(ctx context.Context, module string) error {

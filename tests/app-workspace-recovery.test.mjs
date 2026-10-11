@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('BECJ exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(release.frozen_inputs_sha256,'234bd8c2ee1a24c7a2b517d8ff71e9e0994ee9d40118a3a854cdc0c1a4f638e3');
- assert.equal(release.archive_sha256,'3641e0027dee1133f770000382fcba743ac992420a661c86886afa42436617bb');
- assert.equal(Object.keys(index.files).length,1193);
+ assert.equal(release.frozen_inputs_sha256,'6fdc72d70fcd93867414097ae22f12938f7fe8f58151b979af4d0ba9fd5df742');
+ assert.equal(release.archive_sha256,'8b141e6b16406111ad8a8de45a88eea692e8611da81c13fd9001fd24d0addf5a');
+ assert.equal(Object.keys(index.files).length,1197);
  for(const file of ['internal/appcatalog/github_catalog_git.go','internal/appcatalog/github_catalog_git_test.go','web/src/deferredWorkspace.ts','web/src/menuPermissions.ts','web/src/App.vue','scripts/test-deferred-workspace.mjs','web/src/moduleInitialInspection.ts','web/src/AppModuleManager.vue','scripts/test-web-entry-budget.mjs','scripts/web-entry-budget.mjs','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }

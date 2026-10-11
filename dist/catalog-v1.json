@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-11T20:50:21Z",
+  "generated_at": "2026-10-11T21:43:38Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -251,8 +251,8 @@
       "id": "load-balance",
       "name": "负载均衡 · Load Balance",
       "category": "professional",
-      "version": "1.8.3",
-      "summary": "回环入口加权分流、IP 粘滞与备用节点；固定 IP HTTPS 后端与独立就绪检查，默认只观测、逐入口明确启用故障摘除与恢复；完整事务与无覆盖私有归档；当前工作页报告以会话绑定、摘要核对的短期快照下载，不导出凭据。 需支持 1.8.3 的签名面板；健康阈值变化可显式订阅签名 Webhook/TLS SMTP，旧通道不自动开启，健康确认不表示整体恢复或流量切换。",
+      "version": "1.8.4",
+      "summary": "回环入口加权分流、IP 粘滞、备用节点与严格 HTTPS；逐入口明确启用连续健康阈值摘除和恢复，完整事务与私有归档、会话绑定报告下载。需支持 1.8.4 的签名面板；健康变化和切流事务/后台采样分别显式订阅 HMAC Webhook 或 TLS SMTP，旧通道不扩范围；提交、回滚与未完成分别报告，不将后台无错误或节点恢复当作整体业务恢复。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -262,18 +262,18 @@
         "加权轮询、备用节点与 IP 粘滞；删除重建保留递增修订身份",
         "TCP 建连探测与入口指纹；配置漂移、未知修改及损坏记录拒绝覆盖",
         "HTTP/HTTPS 持久事务与无覆盖私有归档；当前页报告会话绑定和 SHA-256，5 分钟过期，不导出凭据",
-        "签名仓库更新请求与任务原子绑定、完成后不重复提交；1.8.3 需对应新版签名面板",
+        "签名更新请求与任务原子绑定、完成不重复；1.8.4 需对应新版签名面板",
         "持续 HTTP/HTTPS 状态码与内容检查，默认只观测；连续失败/恢复阈值、过期和后台异常明确展示",
         "固定 IP、独立 HTTPS 检查端口、入口专用 CA 与严格证书验证；禁止跳转及环境代理，有界并发/响应",
         "显式 HTTPS 后端转发、固定 SNI/Host 和专用公共 CA；TLS 1.2/1.3，失败不降级 HTTP",
         "逐入口明确确认启用健康驱动流量，连续失败摘除、连续恢复重新加入，全故障不放行；初始未知允许流量",
-        "未知结果保留已摘除节点；策略编辑保留摘除，显式停用恢复登记节点；自动流量持久事务与中断恢复",
-        "健康阈值变化可明确订阅签名 Webhook 或强制 TLS SMTP；旧通道不自动开启，同标识持久重试",
-        "首次读取、新入口及新修订只建基线不补发历史；修订/序号回退拒绝，最近 32 次转换跨窗单独报缺口",
-        "外发固定摘要不含域名/IP/正文/CA；健康确认非整体恢复；4096 身份/10000 通知满额保留原游标"
+        "未知保留摘除、编辑保留策略、停用恢复登记节点；自动切流持久事务与中断恢复",
+        "健康变化与切流/后台分别订阅 HMAC 或 TLS SMTP；旧通道不自动开启，同标识重试",
+        "健康首次/新修订建基线、跨32次单报缺口；切流历史建基线、当前未完成报警，归档不重发",
+        "固定摘要不含域名/IP/正文/CA；健康确认非整体恢复；4096身份/10000通知满额保全"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.8.3/manifest.json",
-      "sha256": "588babcbc38cae9b2c1bf120acd9bfcb02482af1f3ce8ca1d1f740b38087cf13"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/load-balance/1.8.4/manifest.json",
+      "sha256": "696449c0199a870365459f603bcfd71e5a2f275a72e2230878e346894699c1ff"
     },
     {
       "id": "memcached",
