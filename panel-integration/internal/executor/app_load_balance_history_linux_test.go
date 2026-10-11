@@ -86,12 +86,12 @@ func TestLoadBalanceHistoryEmptyReadNeverCreatesArchiveOrRewritesInstallation(t 
 }
 
 func TestLoadBalanceHistoryReviewedPatchVersionsOnly(t *testing.T) {
-	for _, version := range []string{"1.8.0", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.9.0"} {
+	for _, version := range []string{"1.8.0", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.8.5", "1.9.0"} {
 		t.Run(version, func(t *testing.T) {
 			s, tx, path, b := lbHistoryFixture(t)
 			lbRoutingInstalled(t, s, version)
 			out := lbHistoryReport(t, s, core.AppModuleInput{})
-			want := version == "1.8.0" || version == "1.8.1" || version == "1.8.2" || version == "1.8.3"
+			want := version == "1.8.0" || version == "1.8.1" || version == "1.8.2" || version == "1.8.3" || version == "1.8.4"
 			if out["transaction_archive_ready"] != want {
 				t.Fatal("archive eligibility differs from version contract", out)
 			}

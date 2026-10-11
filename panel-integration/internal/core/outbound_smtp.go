@@ -185,7 +185,11 @@ func smtpNotificationMessage(d outboundDelivery, v *SMTPNotificationInput) ([]by
 	if len(d.Payload) > 4096 || !ValidID(d.ID) || json.Unmarshal([]byte(d.Payload), &source) != nil || source.SchemaVersion != 1 || !ValidID(source.EventID) || (!containsMenu(outboundKinds, source.Kind) && source.Kind != "test") {
 		return nil, errors.New("SMTP 推送摘要无效")
 	}
-	message := safeOutboundMessage(Notification{ID: source.EventID, Kind: source.Kind, Severity: source.Severity, CreatedAt: source.CreatedAt})
+	subtype, subtypeError := loadBalanceTrafficEventSource(source.EventType)
+	if subtypeError != nil || source.Kind != "load-balance-traffic" && source.EventType != "" {
+		return nil, errors.New("SMTP 切流事件类型不可核对")
+	}
+	message := safeOutboundMessage(Notification{ID: source.EventID, Kind: source.Kind, Source: subtype, Severity: source.Severity, CreatedAt: source.CreatedAt})
 	if source.Test {
 		message.Title = "测试 · " + message.Title
 	}

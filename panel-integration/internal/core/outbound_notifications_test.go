@@ -29,6 +29,10 @@ func TestOutboundModuleCursorIsolationDeduplicationAndDailyPrivacy(t *testing.T)
 	ids := map[string]string{"file-monitor": ID(), "files-sync": ID()}
 	stage := 0
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/load-balance-traffic-alert-events" {
+			body, _ := json.Marshal(LoadBalanceTrafficFeed{SchemaVersion: 1, Records: []LoadBalanceTrafficRecord{}, WorkerState: "unknown"})
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(body)), Header: make(http.Header)}, nil
+		}
 		if r.URL.Path == "/v1/load-balance-alert-events" {
 			body, _ := json.Marshal(LoadBalanceAlertFeed{SchemaVersion: 1, Entries: []LoadBalanceAlertEntry{}})
 			return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader(body)), Header: make(http.Header)}, nil

@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security", "load-balance"}
+var outboundKinds = []string{"schedule", "remote", "monitor", "integrity", "sync", "daily", "php-security", "load-balance", "load-balance-traffic"}
 
 type NotificationChannel struct {
 	ID              string                  `json:"id"`
@@ -60,6 +60,7 @@ type OutboundMessage struct {
 	SchemaVersion int                   `json:"schema_version"`
 	EventID       string                `json:"event_id"`
 	Kind          string                `json:"kind"`
+	EventType     string                `json:"event_type,omitempty"`
 	Title         string                `json:"title"`
 	Message       string                `json:"message"`
 	Severity      string                `json:"severity"`
@@ -394,6 +395,7 @@ func (s *Store) pauseUnreadableNotificationChannel(id string, in NotificationCha
 
 func safeOutboundMessage(n Notification) OutboundMessage {
 	title, message := "云栈运维通知", "发生一条新的运维事件，请登录面板查看详情。"
+	eventType := ""
 	switch n.Kind {
 	case "schedule":
 		title, message = "计划任务失败", "计划任务执行失败，请查看面板中的运行记录。"
@@ -416,10 +418,26 @@ func safeOutboundMessage(n Notification) OutboundMessage {
 		}
 	case "test":
 		title, message = "云栈推送测试", "推送通道测试消息。"
+	case "load-balance-traffic":
+		eventType = loadBalanceTrafficEventType(n.Source)
+		title, message = "负载均衡切流记录需核对", "请登录面板核对切流事务和后台调度；未将此记录当作全部业务恢复。"
+		switch n.Source {
+		case "app:load-balance-traffic-committed":
+			title, message = "负载均衡切流事务已提交", "已读取核对通过的自动切流提交记录；对应当时原生重载和入口指纹，不代表当前所有节点或业务已恢复。"
+		case "app:load-balance-traffic-recovered":
+			title, message = "负载均衡切流尝试已恢复", "已读取核对通过的旧配置恢复记录；本次切流未按原新状态完成，不代表故障已修复。"
+		case "app:load-balance-traffic-pending":
+			title, message = "负载均衡切流事务待核对", "存在未完成或交接尚未核对的自动切流事务；保留恢复证据，请核对原记录，不将未知结果当作成功。"
+		case "app:load-balance-worker":
+			title, message = "负载均衡后台调度需处理", "最近后台调度返回错误或检查时钟已过期，请核对面板；这是采样状态，不是完整故障历史。"
+			if n.Severity == "info" {
+				title, message = "负载均衡后台调度本轮完成", "最近一轮后台调度未返回错误；不代表所有节点或业务健康，也不补全采样间隔内的错误历史。"
+			}
+		}
 	}
 	// Source messages can include arbitrary task output, file names or credentials.
 	// External notifications contain only this fixed summary and opaque event ID.
-	return OutboundMessage{SchemaVersion: 1, EventID: n.ID, Kind: n.Kind, Title: title, Message: message, Severity: n.Severity, CreatedAt: n.CreatedAt}
+	return OutboundMessage{SchemaVersion: 1, EventID: n.ID, Kind: n.Kind, EventType: eventType, Title: title, Message: message, Severity: n.Severity, CreatedAt: n.CreatedAt}
 }
 func insertOutbound(tx *sql.Tx, channel string, revision int64, message OutboundMessage) error {
 	var pending, total int
@@ -515,6 +533,7 @@ func queueChannelNotifications(ctx context.Context, tx *sql.Tx, c NotificationCh
 			return false, errors.New("推送事件身份无法核对，原事件保留")
 		}
 		if x.n.CreatedAt >= c.StartedAt && containsMenu(c.Kinds, x.n.Kind) {
+			x.n.Source = x.source
 			message := safeOutboundMessage(x.n)
 			if x.n.Kind == "daily" && x.source == "daily-report" {
 				var sourceErr error

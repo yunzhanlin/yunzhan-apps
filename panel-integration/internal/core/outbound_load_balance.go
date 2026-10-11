@@ -34,7 +34,10 @@ func (s *Store) migrateLoadBalanceAlertCursors() error {
  entry_id TEXT PRIMARY KEY,revision INTEGER NOT NULL CHECK(revision>0 AND revision<1152921504606846976),
  sequence INTEGER NOT NULL CHECK(sequence>=0 AND sequence<1152921504606846976));
  INSERT OR IGNORE INTO schema_migrations VALUES(44,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
-	return err
+	if err != nil {
+		return err
+	}
+	return s.migrateLoadBalanceTrafficCursors()
 }
 func ValidateLoadBalanceAlertFeed(feed LoadBalanceAlertFeed, now time.Time) error {
 	if feed.SchemaVersion != 1 || feed.Entries == nil || len(feed.Entries) > 8 || (!feed.Available && len(feed.Entries) != 0) {

@@ -19,3 +19,8 @@ test('new frontend guard is mandatory and backend still scrubs arbitrary origina
  const backend=read('internal/core/outbound_notifications.go');assert.match(backend,/case "load-balance":/);assert(backend.includes('不代表所有节点或业务已恢复'));assert(backend.includes('Source messages can include arbitrary task output'));
  const core=read('internal/core/outbound_load_balance.go');assert(core.includes('revision > entry.Revision'));assert(core.includes('sequence > entry.Sequence'));assert(core.includes('count >= 10000'));assert(core.includes('return tx.Commit()'));
 });
+test('traffic and worker scope is separately opt-in, preserves old health scope and executes the actual save handler',async()=>{
+ const {kinds,draft}=state();assert.equal(kinds.filter(k=>k.id==='load-balance-traffic').length,1);assert.equal(kinds.find(k=>k.id==='load-balance-traffic').label,'负载均衡切流事务与后台调度');assert(!draft.value.kinds.includes('load-balance-traffic'));assert(source.includes("draft.kinds.includes('load-balance-traffic')"));
+ for(const phrase of ['旧健康通道不自动订阅','当前未完成事务仍告警','调度未知不当作恢复','不是完整故障日志'])assert(source.includes(phrase));
+ const old=editor(['load-balance']);await old.save();assert.deepEqual(old.calls[0][2].kinds,['load-balance']);const e=editor(['load-balance-traffic']);await e.save();assert.deepEqual(e.calls[0][2].kinds,['load-balance-traffic']);assert.equal(e.calls.length,1);
+});
