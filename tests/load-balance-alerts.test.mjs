@@ -29,11 +29,11 @@ test('new signed manifest retains immutable1.8.2 and other49 identities; origina
  assert(manifest.capabilities.some(s=>s.includes('旧通道不自动开启')));assert(manifest.capabilities.some(s=>s.includes('健康确认非整体恢复')));
  const view=await read('panel-integration/web/src/OutboundNotifications.vue');assert(view.includes('kinds: ["integrity", "sync", "daily"]'));assert(view.includes('{ id: "load-balance", label: "负载均衡健康变化与事件缺口" }'));
 });
-test('source and own QA program upgrade do not substitute for Main or installed alert business acceptance',async()=>{
+test('scoped actual Main and installed alert proofs do not substitute for all50, physical mobile or full matrix acceptance',async()=>{
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_normal_release,lb=c.apps.find(x=>x.id==='load-balance');
- assert.equal(r.release,'0.1.0-dev.proapps24loadalertbecv');assert.equal(r.main_release_delivered,false);assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
- assert.equal(r.original_sql_tables_compared,14);assert.equal(r.actual_becv_upgrade_proof_sha256,'7a0882108106db61b833f454abe6c4da5afa916312fa6deafbfe6b8453316924');
+ assert.equal(r.release,'0.1.0-dev.proapps24loadalertbecv');assert.equal(r.main_release_delivered,true);assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
+ assert.equal(r.original_sql_tables_compared,14);assert.equal(r.actual_main_program_delivery_proof_sha256,'f0ae62bd9bea2fc3e504c4e767ff36e60b3efa9a31dd3144bfe06c2c8765563e');assert.equal(r.actual_main_direct_origin_browser_proof_sha256,'6f1b0659c26e1ab20502b0ea9aff2e4ed45b55311cb0ad00a7ea38f2a4806908');assert.equal(r.main_auto_installed_new_apps,0);assert.equal(r.original_main_site_count,58);const a=r.installed_load_balance_alert_acceptance;assert.equal(a.actual_job_id,'284ea23ad7593c2377aa7544bf813357');assert.equal(a.actual_business_followup_proof_sha256,'2aa82768aeb5567e0477939e6cfc43a37e7e4a1df10296a045617e1775ec97d6');assert.equal(a.actual_browser_proof_sha256,'a3c238084f0f8186c266b0edf5c00358de948236a681525429c5c4ffb0a4f87e');assert.equal(a.real_browser_checks,41);assert.equal(a.retained_browser_failures.length,4);assert.match(a.scope,/not lost pre-BEDF|original readiness-race/);assert.match(a.scope,/no Main Load Balance installation/);assert.equal(r.actual_becv_upgrade_proof_sha256,'7a0882108106db61b833f454abe6c4da5afa916312fa6deafbfe6b8453316924');
  assert.equal(c.previous_main_delivery.release,'0.1.0-dev.proapps24devsafetybecj');assert.equal(c.previous_main_delivery.main_release_delivered,true);
- assert(lb.gaps.some(s=>s.includes('真实已安装签名 GitHub')&&s.includes('仍待完成')));assert(lb.gaps.some(s=>s.includes('自动流量执行结果')&&s.includes('仍未实现')));assert(lb.gaps.some(s=>s.includes('TCP/UDP')));
+ assert(lb.gaps.some(s=>s.includes('其余主流系统/架构')&&s.includes('仍待完成')));assert(lb.gaps.some(s=>s.includes('自动流量执行结果')&&s.includes('仍未实现')));assert(lb.gaps.some(s=>s.includes('TCP/UDP')));
  assert(lb.boundaries.some(s=>s.includes('单节点达到健康阈值不代表全部节点恢复')));assert(lb.scenarios.some(s=>s.includes('124项特定原生环境跳过')));
 });

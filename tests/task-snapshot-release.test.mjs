@@ -30,6 +30,6 @@ test('Task implementation and all corrected fixtures match exact normal BECJ sou
 
 test('Task source publication never substitutes for live app update or commercial acceptance',async()=>{
  const contracts=JSON.parse(await read('registry/functional-contracts.json'));
- assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.reviewed_normal_release.all_50_commercial,false);assert.equal(contracts.reviewed_normal_release.main_release_delivered,false);
+ assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.reviewed_normal_release.all_50_commercial,false);assert.equal(contracts.reviewed_normal_release.main_release_delivered,true);
  const task=contracts.apps.find(a=>a.id==='task-manager');assert(task.scenarios.some(s=>s.includes('签名仓库实际更新已独立核对')));assert(task.boundaries.some(s=>s.includes('真实更新不能用面板程序升级代替')));assert.equal(contracts.previous_main_delivery.actual_main_task_update_proof_sha256,'6355284beb0e908f6bd79bd399e4c568ac2e3b96892cddd1f30fc5990f411180');
 });
