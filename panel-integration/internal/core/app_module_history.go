@@ -2,30 +2,81 @@ package core
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"errors"
 	"strings"
 	"time"
 )
 
 func (s *Store) recordAppModuleEvent(id, action, actor string, operationError error) error {
+	return s.recordAppModuleEventContext(context.Background(), id, action, actor, operationError)
+}
+
+func (s *Store) recordAppModuleEventContext(ctx context.Context, id, action, actor string, operationError error) error {
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err = recordAppModuleEventTx(ctx, tx, id, action, actor, operationError); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// The caller owns the transaction: account changes, session invalidation,
+// success history and its audit must either all commit or all roll back.
+func recordAppModuleEventTx(ctx context.Context, tx *sql.Tx, id, action, actor string, operationError error) error {
 	outcome := "succeeded"
 	if operationError != nil {
 		outcome = "failed"
 	}
 	// Never persist operation inputs, output tokens or command errors here.
-	tx, err := s.DB.Begin()
+	if _, err := tx.ExecContext(ctx, `INSERT INTO app_module_events(id,module_id,action,actor,outcome,created_at) VALUES(?,?,?,?,?,?)`, ID(), id, action, actor, outcome, Now()); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM app_module_events WHERE module_id=? AND created_at<?`, id, time.Now().AddDate(0, 0, -365).UTC().Format(time.RFC3339)); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM app_module_events WHERE module_id=? AND rowid <= COALESCE((SELECT rowid FROM app_module_events WHERE module_id=? ORDER BY rowid DESC LIMIT 1 OFFSET 100000),-1)`, id, id); err != nil {
+		return err
+	}
+	return nil
+}
+
+func recordAppUserOutcomeTx(ctx context.Context, tx *sql.Tx, actor, action string, operationError error) error {
+	return recordCoreModuleOutcomeTx(ctx, tx, "user-manager", actor, action, operationError)
+}
+
+func recordCoreModuleOutcomeTx(ctx context.Context, tx *sql.Tx, module, actor, action string, operationError error) error {
+	if module != "user-manager" && module != "platform-ops" {
+		return errors.New("不是本地事务管理模块")
+	}
+	if err := recordAppModuleEventTx(ctx, tx, module, action, actor, operationError); err != nil {
+		return err
+	}
+	result := "succeeded"
+	if operationError != nil {
+		result = "failed"
+	}
+	_, err := tx.ExecContext(ctx, `INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,?,?,?,?)`, actor, "app-module."+action, module, result, Now())
+	return err
+}
+
+func (s *Store) recordAppUserFailure(ctx context.Context, actor, action string, operationError error) error {
+	return s.recordCoreModuleFailure(ctx, "user-manager", actor, action, operationError)
+}
+
+func (s *Store) recordCoreModuleFailure(ctx context.Context, module, actor, action string, operationError error) error {
+	if operationError == nil {
+		return errors.New("不能将成功的本地模块操作记录为失败")
+	}
+	tx, err := s.DB.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.Exec(`INSERT INTO app_module_events(id,module_id,action,actor,outcome,created_at) VALUES(?,?,?,?,?,?)`, ID(), id, action, actor, outcome, Now()); err != nil {
-		return err
-	}
-	if _, err = tx.Exec(`DELETE FROM app_module_events WHERE module_id=? AND created_at<?`, id, time.Now().AddDate(0, 0, -365).UTC().Format(time.RFC3339)); err != nil {
-		return err
-	}
-	if _, err = tx.Exec(`DELETE FROM app_module_events WHERE module_id=? AND rowid <= COALESCE((SELECT rowid FROM app_module_events WHERE module_id=? ORDER BY rowid DESC LIMIT 1 OFFSET 100000),-1)`, id, id); err != nil {
+	if err = recordCoreModuleOutcomeTx(ctx, tx, module, actor, action, operationError); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -93,20 +144,30 @@ func (a *Server) dailyReportOperation(ctx context.Context, action string, in App
 		if err != nil || day.Format("2006-01-02") != in.ResourceID {
 			return nil, errors.New("请选择有效的报告日期 YYYY-MM-DD")
 		}
-		var raw string
-		if err = a.Store.DB.QueryRow(`SELECT report FROM app_daily_reports WHERE day=?`, in.ResourceID).Scan(&raw); err != nil {
+		_, report, err := readDailyReportRecord(ctx, a.Store.DB, in.ResourceID)
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New("该日期没有已保存的日报")
 		}
-		var report any
-		if err = json.Unmarshal([]byte(raw), &report); err != nil {
-			return nil, errors.New("日报记录损坏，未修改记录")
+		if err != nil {
+			return nil, err
 		}
 		return report, nil
 	}
 	if action != "archive" {
 		return nil, errors.New("日报操作无效")
 	}
-	rows, err := a.Store.DB.Query(`SELECT day,created_at,length(report) FROM app_daily_reports ORDER BY day DESC LIMIT 90`)
+	if in.Limit < 0 || in.Limit > 100 || in.Offset < 0 || in.Offset > 100000 {
+		return nil, errors.New("日报目录分页无效；每页最多 100 条，起点最多 100000")
+	}
+	limit := in.Limit
+	if limit == 0 {
+		limit = 90
+	}
+	var total int
+	if err := a.Store.DB.QueryRowContext(ctx, `SELECT count(*) FROM app_daily_reports`).Scan(&total); err != nil {
+		return nil, err
+	}
+	rows, err := a.Store.DB.QueryContext(ctx, `SELECT day,created_at,length(CAST(report AS BLOB)) FROM app_daily_reports ORDER BY day DESC LIMIT ? OFFSET ?`, limit, in.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +179,13 @@ func (a *Server) dailyReportOperation(ctx context.Context, action string, in App
 		if err = rows.Scan(&day, &at, &bytes); err != nil {
 			return nil, err
 		}
-		reports = append(reports, map[string]any{"day": day, "resource_id": day, "created_at": at, "bytes": bytes})
+		if !validDailyReportDay(day) {
+			return nil, errors.New("日报目录含无效日期身份，未返回部分正常库存")
+		}
+		if _, err := time.Parse(time.RFC3339, at); err != nil {
+			return nil, errors.New("日报目录含无效生成时间，保留原记录")
+		}
+		reports = append(reports, map[string]any{"day": day, "resource_id": day, "created_at": at, "bytes": bytes, "record_size_valid": bytes > 0 && bytes <= dailyReportRecordBytes})
 	}
-	return map[string]any{"reports": reports, "scope": "显示最近 90 个已保存日期，选择日期查看真实历史日报；不删除更早记录"}, rows.Err()
+	return map[string]any{"reports": reports, "total": total, "limit": limit, "offset": in.Offset, "read_only": true, "report_contents_verified": false, "scope": "只读分页实际保存日期，默认每页 90 条、最多 100 条；字节数不等于内容已校验，选择日期后才严格核对原报告。不删除、修复或重写更早记录。"}, rows.Err()
 }

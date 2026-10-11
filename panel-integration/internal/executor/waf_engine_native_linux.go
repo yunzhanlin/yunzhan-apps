@@ -30,28 +30,29 @@ const wafNativeEngines = appNativeRoot + "/nginx-waf/engines"
 const wafNativeBuildCache = "/var/cache/panel-waf-build"
 
 type wafEngineBuildRecord struct {
-	Format         int               `json:"format"`
-	JobID          string            `json:"job_id"`
-	State          string            `json:"state"`
-	Error          string            `json:"error,omitempty"`
-	Architecture   string            `json:"architecture"`
-	Engine         string            `json:"engine_version"`
-	Connector      string            `json:"connector_version"`
-	CRS            string            `json:"crs_version"`
-	NginxVersion   string            `json:"nginx_version"`
-	NginxBinary    string            `json:"nginx_binary"`
-	NginxSHA       string            `json:"nginx_sha256"`
-	Prefix         string            `json:"prefix"`
-	ModuleSHA      string            `json:"module_sha256,omitempty"`
-	LibrarySHA     string            `json:"library_sha256,omitempty"`
-	TreeSHA        string            `json:"tree_sha256,omitempty"`
-	SourceSHA      map[string]string `json:"source_sha256"`
-	AssetSHA       map[string]string `json:"asset_sha256"`
-	StartedAt      string            `json:"started_at"`
-	FinishedAt     string            `json:"finished_at,omitempty"`
-	Steps          []core.Step       `json:"steps"`
-	ABIValidated   bool              `json:"module_abi_validated"`
-	ProductionUsed bool              `json:"production_loaded"`
+	Format             int               `json:"format"`
+	JobID              string            `json:"job_id"`
+	State              string            `json:"state"`
+	Error              string            `json:"error,omitempty"`
+	Architecture       string            `json:"architecture"`
+	Engine             string            `json:"engine_version"`
+	Connector          string            `json:"connector_version"`
+	CRS                string            `json:"crs_version"`
+	NginxVersion       string            `json:"nginx_version"`
+	NginxBinary        string            `json:"nginx_binary"`
+	NginxSHA           string            `json:"nginx_sha256"`
+	Prefix             string            `json:"prefix"`
+	ModuleSHA          string            `json:"module_sha256,omitempty"`
+	LibrarySHA         string            `json:"library_sha256,omitempty"`
+	TreeSHA            string            `json:"tree_sha256,omitempty"`
+	SourceSHA          map[string]string `json:"source_sha256"`
+	AssetSHA           map[string]string `json:"asset_sha256"`
+	StartedAt          string            `json:"started_at"`
+	FinishedAt         string            `json:"finished_at,omitempty"`
+	Steps              []core.Step       `json:"steps"`
+	ABIValidated       bool              `json:"module_abi_validated"`
+	ProductionUsed     bool              `json:"production_loaded"`
+	CompilerCollection string            `json:"compiler_collection_contract,omitempty"`
 }
 
 var wafNginxVersionPattern = regexp.MustCompile(`^nginx version: nginx/([0-9]+\.[0-9]+\.[0-9]+)(?:\s|$)`)
@@ -73,6 +74,18 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 	ctx, cancel := context.WithTimeout(parent, 4*time.Hour)
 	defer cancel()
 	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := verifyNginxNativeWorkerCapabilities(); err != nil {
+		return err
+	}
+	// Refuse a wrong unit, unavailable pidfd reaping witness or pre-existing
+	// children before any directory/record/download/compiler permission write.
+	scope, err := beginNginxWAFCompilerScope()
+	if err != nil {
+		return err
+	}
+	if err := scope.Close(); err != nil {
 		return err
 	}
 	if err := readWAFEngineControl(wafEngineCancellations, id); err == nil {
@@ -208,7 +221,7 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 	if err := os.Chmod(sourceCache, 0755); err != nil {
 		return err
 	}
-	workNames := map[string]string{"modsecurity": "modsecurity", "modsecurity-nginx": "connector", "owasp-crs": "crs", "nginx-build": "nginx"}
+	workNames := map[string]string{"modsecurity": "modsecurity", "modsecurity-nginx": "connector", "owasp-crs": "crs", "nginx-build": "nginx", "nginx-yajl": "yajl"}
 	for _, source := range sources {
 		if err := step("下载、固定摘要校验及完整预检源码：" + source.Name + " " + source.Version); err != nil {
 			return err
@@ -232,6 +245,9 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 			return err
 		}
 		record.SourceSHA[source.Name] = source.SHA256
+	}
+	if err := collectNginxPrivateYAJLHeaders(ctx, work, assets); err != nil {
+		return err
 	}
 	buildUser, err := user.Lookup("panel-build")
 	if err != nil {
@@ -267,19 +283,29 @@ func runWAFEngineBuildContext(parent context.Context, id string) (err error) {
 	if err := os.Chown(prefix, uid, gid); err != nil {
 		return err
 	}
+	if err := prepareNginxPrivateYAJL(ctx, assets, prefix, uid, gid); err != nil {
+		return err
+	}
 	plan, err := wafNativeBuildPlan(work, prefix, assets, record.NginxVersion)
 	if err != nil {
 		return err
 	}
-	for _, command := range plan {
+	for index, command := range plan {
 		if err := step(command.Label); err != nil {
 			return err
 		}
-		if err := runWAFNativeBuildCommand(ctx, command, filepath.Join(build, "build.log"), work); err != nil {
+		if err := validateNginxWAFSourceBuildCommand(work, prefix, assets, record.NginxVersion, index, command); err != nil {
+			return err
+		}
+		if err := runScopedNativeBuildCommand(ctx, command, filepath.Join(build, "build.log"), work, nativeNginxWAFCompilerAuthority); err != nil {
 			return err
 		}
 	}
+	record.CompilerCollection = nativeCompilerCollectionContract
 	if err := sealWAFNativeTree(prefix, uid); err != nil {
+		return err
+	}
+	if err := verifyNginxPrivateYAJLLinkage(ctx, s, prefix); err != nil {
 		return err
 	}
 	module := filepath.Join(work, "nginx", "nginx-"+record.NginxVersion, "objs/ngx_http_modsecurity_module.so")

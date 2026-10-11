@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"encoding/json"
 	"golang.org/x/crypto/bcrypt"
 	"io"
@@ -136,31 +137,31 @@ func TestMenuMutationPreservesLegacyAndProtectsLastFullAdmin(t *testing.T) {
 		{Username: "master", Role: "admin", MenuIDs: []string{"files"}, ExpectedRevision: 1},
 		{Username: "master", Role: "viewer", MenuIDs: []string{"files"}, ExpectedRevision: 1},
 	} {
-		if _, err := a.manageAppUsers(master, "update", in); err == nil {
+		if _, err := a.manageAppUsers(context.Background(), master, "update", in); err == nil {
 			t.Fatal("last full administrator restricted")
 		}
 	}
-	if _, err := a.manageAppUsers(limited, "update", AppModuleInput{Username: "master", Role: "admin", MenuIDs: []string{"panel-access"}, ExpectedRevision: 1}); err == nil {
+	if _, err := a.manageAppUsers(context.Background(), limited, "update", AppModuleInput{Username: "master", Role: "admin", MenuIDs: []string{"panel-access"}, ExpectedRevision: 1}); err == nil {
 		t.Fatal("limited administrator modified higher authority")
 	}
-	if _, err := a.manageAppUsers(limited, "create", AppModuleInput{Username: "elevated", Password: "access-test-password-long", Role: "admin", MenuIDs: []string{"terminal"}}); err == nil {
+	if _, err := a.manageAppUsers(context.Background(), limited, "create", AppModuleInput{Username: "elevated", Password: "access-test-password-long", Role: "admin", MenuIDs: []string{"terminal"}}); err == nil {
 		t.Fatal("administrator granted outside own ceiling")
 	}
-	if _, err := a.manageAppUsers(master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{"overview"}}); err == nil {
+	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{"overview"}}); err == nil {
 		t.Fatal("explicit grants without revision accepted")
 	}
 	// Existing client omitting menus must preserve a narrowed grant.
-	if _, err := a.manageAppUsers(master, "update", AppModuleInput{Username: "reader", Role: "viewer"}); err != nil {
+	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "reader", Role: "viewer"}); err != nil {
 		t.Fatal(err)
 	}
 	got, err := s.UserAccess(target.ID)
 	if err != nil || got.Revision != 2 || !reflect.DeepEqual(got.MenuIDs, []string{"files"}) {
 		t.Fatal(got, err)
 	}
-	if _, err := a.manageAppUsers(master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{}, ExpectedRevision: 1}); err == nil {
+	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{}, ExpectedRevision: 1}); err == nil {
 		t.Fatal("stale revision accepted")
 	}
-	if _, err := a.manageAppUsers(master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{}, ExpectedRevision: 2}); err != nil {
+	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{}, ExpectedRevision: 2}); err != nil {
 		t.Fatal(err)
 	}
 	got, err = s.UserAccess(target.ID)
@@ -169,10 +170,10 @@ func TestMenuMutationPreservesLegacyAndProtectsLastFullAdmin(t *testing.T) {
 	}
 	// A second valid full administrator permits reduction of the first.
 	accessUser(t, s, "rescue", "admin", nil)
-	if _, err := a.manageAppUsers(master, "update", AppModuleInput{Username: "master", Role: "admin", MenuIDs: []string{"panel-access"}, ExpectedRevision: 1}); err != nil {
+	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "master", Role: "admin", MenuIDs: []string{"panel-access"}, ExpectedRevision: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.manageAppUsers(limited, "delete", AppModuleInput{Username: "rescue"}); err == nil {
+	if _, err := a.manageAppUsers(context.Background(), limited, "delete", AppModuleInput{Username: "rescue"}); err == nil {
 		t.Fatal("limited administrator deleted rescue")
 	}
 }
@@ -188,7 +189,7 @@ func TestMenuHTTPChecksEveryRequestAndRevokesLogin(t *testing.T) {
 	calls := 0
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
-		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"status":{"installed":true}}`))}, nil
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"status":{"id":"user-manager","installed":true}}`))}, nil
 	})}}
 	request := func(method, path, body, csrf string, cookie *http.Cookie) *httptest.ResponseRecorder {
 		r := httptest.NewRequest(method, path, strings.NewReader(body))

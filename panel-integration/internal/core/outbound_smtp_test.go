@@ -576,7 +576,7 @@ func TestOutboundDamagedCredentialIsolationAndEvidencePreservingPause(t *testing
 	if err != nil || len(channels) != 2 || channels[0].Type != "invalid" || channels[0].CredentialError == "" || channels[1].Type != "smtp" {
 		t.Fatal("damaged envelope blocked unrelated channel", err)
 	}
-	if err = s.QueueDailyNotification("2026-10-08"); err != nil {
+	if err = s.saveDailyReportRecord(context.Background(), "2026-10-08", map[string]any{"sites": 0}); err != nil {
 		t.Fatal(err)
 	}
 	if err = s.QueueOutboundNotifications(); err != nil {

@@ -10,6 +10,9 @@ python3 "$RELEASE_PATH/waf-state-directory.py" check
 python3 "$RELEASE_PATH/native-build-directories.py" check
 source "$RELEASE_PATH/RELEASE"
 [[ $(dpkg --print-architecture) == "$PANEL_ARCH" ]] || { echo 'architecture mismatch' >&2; exit 1; }
+# Reject an unsafe cache before taking a lock, creating a backup, provisioning
+# directories or stopping a service. This never mounts or hides retained data.
+"$RELEASE_PATH/bin/panel-executor" --check-apache-body-cache-upgrade
 [[ ! -e /etc/panel-release && ! -e /opt/panel/current && ! -L /opt/panel/current ]] || { echo 'use the production installer for this layout' >&2; exit 1; }
 [[ -f /opt/panel/bin/panel && -f /opt/panel/bin/panel-executor && -d /opt/panel/web && ! -L /opt/panel/web ]] || { echo 'not the original development layout' >&2; exit 1; }
 [[ $(systemctl show panel -p User --value) == panel ]] || { echo 'unexpected panel service owner' >&2; exit 1; }
@@ -25,7 +28,7 @@ install -d -m 0700 "$BACKUP" "$BACKUP/units"
 cp -a /opt/panel/bin "$BACKUP/bin"
 cp -a /opt/panel/web "$BACKUP/web"
 [[ ! -f /opt/panel/DEVELOPMENT_RELEASE ]] || cp -a /opt/panel/DEVELOPMENT_RELEASE "$BACKUP/DEVELOPMENT_RELEASE"
-for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer; do
+for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer "$RELEASE_PATH/systemd/"*.mount; do
   name=$(basename "$unit")
   [[ ! -f "/etc/systemd/system/$name" ]] || cp -a "/etc/systemd/system/$name" "$BACKUP/units/"
 done
@@ -38,7 +41,7 @@ rollback() {
     # Keep the failed frontend as evidence; never delete existing user files.
     mv /opt/panel/web "$BACKUP/failed-web"
     cp -a "$BACKUP/web" /opt/panel/web
-    for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer; do
+    for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer "$RELEASE_PATH/systemd/"*.mount; do
       name=$(basename "$unit")
       if [[ -f "$BACKUP/units/$name" ]]; then cp -a "$BACKUP/units/$name" "/etc/systemd/system/$name";
       else rm -f "/etc/systemd/system/$name"; fi
@@ -74,7 +77,7 @@ install -d -m 0755 /opt/panel/web.new
 cp -a "$RELEASE_PATH/web/." /opt/panel/web.new/
 mv /opt/panel/web "$BACKUP/previous-web"
 mv /opt/panel/web.new /opt/panel/web
-for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer; do
+for unit in "$RELEASE_PATH/systemd/"*.service "$RELEASE_PATH/systemd/"*.timer "$RELEASE_PATH/systemd/"*.mount; do
   install -m 0644 "$unit" "/etc/systemd/system/$(basename "$unit")"
 done
 systemctl daemon-reload

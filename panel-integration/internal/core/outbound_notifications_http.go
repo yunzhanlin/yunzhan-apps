@@ -2,7 +2,9 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 )
@@ -72,7 +74,36 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 			fail(w, 500, "读取推送历史失败")
 			return
 		}
-		send(w, 200, map[string]any{"deliveries": items})
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		blocked, total, e := a.Store.OutboundSourceBlocks(ctx, id)
+		if e != nil {
+			fail(w, 500, "读取原来源隔离库存失败；未按没有隔离记录返回")
+			return
+		}
+		send(w, 200, map[string]any{"deliveries": items, "blocked_sources": blocked, "blocked_source_total": total, "blocked_source_limit": 100})
+	}))
+	m.HandleFunc("POST /api/notification-channels/{id}/sources/{source}/reconcile", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		var in struct {
+			Revision    int64  `json:"revision"`
+			ExpectedSHA string `json:"expected_sha"`
+		}
+		if !decode(w, r, &in) {
+			return
+		}
+		if !a.outboundMu.TryLock() {
+			fail(w, 409, "推送处理中，请稍后核对原来源")
+			return
+		}
+		defer a.outboundMu.Unlock()
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		out, e := a.reconcileOutboundSource(ctx, u, r.PathValue("id"), r.PathValue("source"), in.ExpectedSHA, in.Revision)
+		if e != nil {
+			fail(w, 409, "原来源核对未确认共同提交；请刷新原隔离身份，不重复盲提交")
+			return
+		}
+		send(w, 202, out)
 	}))
 	m.HandleFunc("POST /api/notification-channels/{id}/test", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var in struct {
@@ -119,17 +150,20 @@ func (a *Server) outboundNotificationRoutes(m *http.ServeMux) {
 				fail(w, 409, "该通道未选择每日运维报告，未发送测试日报")
 				return
 			}
-			var day, raw string
-			if tx.QueryRow(`SELECT day,report FROM app_daily_reports ORDER BY day DESC LIMIT 1`).Scan(&day, &raw) != nil {
-				fail(w, 409, "尚无保存的日报，请先在每日运维报告应用生成报告")
+			day, record, recordErr := readDailyReportRecord(r.Context(), tx, "")
+			if recordErr != nil {
+				if errors.Is(recordErr, sql.ErrNoRows) {
+					fail(w, 409, "尚无保存的日报，请先在每日运维报告应用生成报告")
+				} else {
+					fail(w, 409, "原日报无法核对，保留记录；未按没有日报处理或发送测试摘要")
+				}
 				return
 			}
-			var summary OutboundDailySummary
-			if _, err := time.Parse("2006-01-02", day); err != nil || json.Unmarshal([]byte(raw), &summary) != nil {
+			summary, summaryErr := outboundDailyReportSummary(day, record)
+			if summaryErr != nil {
 				fail(w, 409, "保存的日报无法读取，未发送测试日报")
 				return
 			}
-			summary.Day = day
 			message = safeOutboundMessage(Notification{ID: message.EventID, Kind: "daily", Severity: "info", CreatedAt: message.CreatedAt})
 			message.Report, message.Test = &summary, true
 		}

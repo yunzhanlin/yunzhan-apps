@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
 import { isSecuritySoftware } from "./softwareRouting";
+import { softwareInstallState } from "./softwareState";
 import WafWorkspace from "./WafWorkspace.vue";
 
 type API = <T>(path: string, method?: string, body?: unknown, idempotencyKey?: string) => Promise<T>;
@@ -22,6 +23,7 @@ export interface SecurityAppStatus {
   installed: boolean;
   enabled: boolean;
   healthy: boolean;
+  state_unknown?: boolean;
   version?: string;
   detail: string;
   settings?: Record<string, string | number>;
@@ -33,7 +35,8 @@ const open = ref(false), busy = ref(false);
 const selected = ref<SecurityAppCatalogItem | null>(null);
 const status = ref<SecurityAppStatus | null>(null);
 const form = ref<Record<string, string | number>>({});
-const installed = computed(() => Boolean(status.value?.installed));
+const stateKnown = computed(() => softwareInstallState(status.value) !== "unknown");
+const installed = computed(() => softwareInstallState(status.value) === "installed");
 const events = ref<WAFEvent[]>([]), eventsBusy = ref(false), eventsError = ref(""), eventsMore = ref(false);
 const eventRule = (event: WAFEvent) => event.rate === "REJECTED" ? "请求限速" : event.bad_method === "1" ? "请求方法" : event.bad_args === "1" ? "查询参数" : event.bad_uri === "1" ? "请求地址" : event.bad_agent === "1" ? "User-Agent" : "其他规则";
 
@@ -60,7 +63,7 @@ function show(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
   }
   selected.value = app;
   status.value = current || null;
-  form.value = { ...app.defaults, ...(current?.settings || {}) };
+  form.value = { ...app.defaults, ...(softwareInstallState(current) !== "unknown" ? current?.settings || {} : {}) };
   open.value = true;
   events.value = [];
   eventsMore.value = false;
@@ -68,6 +71,7 @@ function show(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
 }
 async function queue(action: "install" | "configure" | "uninstall") {
   if (!selected.value || !isSecuritySoftware(selected.value.id) || busy.value) return;
+  if (!stateKnown.value) { ElMessage.warning("安装状态尚未核对；未提交安装、配置或卸载"); return; }
   const app = selected.value;
   try {
     if (action === "uninstall") {
@@ -94,6 +98,7 @@ async function queue(action: "install" | "configure" | "uninstall") {
 async function install(app: SecurityAppCatalogItem, current?: SecurityAppStatus) {
   if (!isSecuritySoftware(app.id)) { show(app, current); return; }
   show(app, current);
+  if (softwareInstallState(current) === "unknown") return;
   if (app.id === "nginx-waf") return;
   try {
     await ElMessageBox.confirm(
@@ -115,10 +120,11 @@ defineExpose({ show, install });
       <div class="security-app-summary">
         <span :class="['software-icon', 'software-logo', selected.family]">{{ selected.family.slice(0, 2).toUpperCase() }}</span>
         <div><strong>{{ selected.name }}</strong><small>{{ selected.source }} · v{{ selected.version }}</small></div>
-        <el-tag :type="installed ? (status?.healthy ? 'success' : 'warning') : 'info'">{{ installed ? (status?.healthy ? '运行正常' : '需要核对') : '未安装' }}</el-tag>
+        <el-tag :type="!stateKnown ? 'warning' : installed ? (status?.healthy ? 'success' : 'warning') : 'info'">{{ !stateKnown ? '安装状态待核对' : installed ? (status?.healthy ? '运行正常' : '需要核对') : '未安装' }}</el-tag>
       </div>
-      <p class="security-app-detail">{{ status?.detail || selected.description }}</p>
-      <el-form label-position="top">
+      <p class="security-app-detail">{{ !stateKnown ? '当前安装状态无法核对；未将记录缺失、异常或旧状态说明当作未安装或运行正常。' : status?.detail || selected.description }}</p>
+      <el-alert v-if="!stateKnown" type="warning" :closable="false" title="安装记录尚未核对，不能据此认定未安装。请核对原记录后刷新；此页不提交安装、配置或卸载。"/>
+      <el-form label-position="top" :disabled="!stateKnown || busy">
         <template v-if="selected.id === 'nginx-waf'">
           <el-form-item label="防护级别"><el-select v-model="form.profile"><el-option value="balanced" label="平衡 · 常用攻击特征"/><el-option value="strict" label="严格 · 扩展扫描器与 SQL 特征"/></el-select></el-form-item>
           <el-form-item label="单 IP 请求速率"><el-input-number v-model="form.rate_per_second" :min="5" :max="200"/><span class="field-suffix">次 / 秒</span></el-form-item>
@@ -143,6 +149,6 @@ defineExpose({ show, install });
       </section>
     </template>
     </template>
-    <template #footer><template v-if="selected?.id !== 'nginx-waf'"><el-button v-if="installed" type="danger" plain :loading="busy" @click="queue('uninstall')">卸载</el-button><span class="dialog-spacer"></span></template><el-button @click="open = false">关闭</el-button><el-button v-if="selected?.id !== 'nginx-waf'" type="primary" :loading="busy" @click="queue(installed ? 'configure' : 'install')">{{ installed ? '保存并应用' : '安装并验证' }}</el-button></template>
+    <template #footer><template v-if="selected?.id !== 'nginx-waf'"><el-button v-if="installed" type="danger" plain :loading="busy" @click="queue('uninstall')">卸载</el-button><span class="dialog-spacer"></span></template><el-button @click="open = false">关闭</el-button><el-button v-if="selected?.id !== 'nginx-waf'" type="primary" :loading="busy" :disabled="!stateKnown || busy" @click="queue(installed ? 'configure' : 'install')">{{ !stateKnown ? '安装状态待核对' : installed ? '保存并应用' : '安装并验证' }}</el-button></template>
   </el-dialog>
 </template>

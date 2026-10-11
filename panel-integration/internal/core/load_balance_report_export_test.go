@@ -147,7 +147,7 @@ func TestLoadBalanceReportExportHTTPAuthorizationReceiptExpiryAndNoExecutorOnDow
 	marker := "original-actual-query"
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
-		body := `{"status":{"installed":true},"report":{"action":"run","result":{"entries":[],"marker":"` + marker + `"}}}`
+		body := `{"status":{"id":"load-balance","installed":true},"report":{"action":"run","result":{"entries":[],"marker":"` + marker + `"}}}`
 		if r.Method == "POST" {
 			body = `{"entries":[],"marker":"` + marker + `"}`
 		} else if strings.Contains(r.URL.Path, "/history") {

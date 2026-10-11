@@ -22,13 +22,14 @@ type SoftwareAppCatalogItem struct {
 }
 
 type SoftwareAppStatus struct {
-	ID        string         `json:"id"`
-	Installed bool           `json:"installed"`
-	Enabled   bool           `json:"enabled"`
-	Healthy   bool           `json:"healthy"`
-	Version   string         `json:"version,omitempty"`
-	Detail    string         `json:"detail"`
-	Settings  map[string]any `json:"settings,omitempty"`
+	ID           string         `json:"id"`
+	StateUnknown bool           `json:"state_unknown,omitempty"`
+	Installed    bool           `json:"installed"`
+	Enabled      bool           `json:"enabled"`
+	Healthy      bool           `json:"healthy"`
+	Version      string         `json:"version,omitempty"`
+	Detail       string         `json:"detail"`
+	Settings     map[string]any `json:"settings,omitempty"`
 }
 
 type SoftwareAppsPage struct {
@@ -268,6 +269,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 }
 
 func (a *Server) softwareAppRoutes(m *http.ServeMux) {
+	a.wafApplyTaskRoutes(m)
+	a.wafApplyRecoveryRoutes(m)
+	a.wafSiteRoutes(m)
 	a.wafWorkspaceRoutes(m)
 	m.HandleFunc("GET /api/software/nginx-waf/events", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var page WAFEventsPage
@@ -294,7 +298,13 @@ func (a *Server) softwareAppRoutes(m *http.ServeMux) {
 		}
 		id := strings.TrimSpace(r.PathValue("id"))
 		action := strings.TrimSpace(r.PathValue("action"))
-		job, e := a.Store.QueueSoftwareAction(id, action, in.Settings, r.Header.Get("Idempotency-Key"), u.Username)
+		var job string
+		var e error
+		if wafApplyApp(id) && (action == "install" || action == "configure") {
+			job, e = a.Store.queueWAFApplyRequest(id, action, in.Settings, r.Header.Get("Idempotency-Key"), u)
+		} else {
+			job, e = a.Store.QueueSoftwareAction(id, action, in.Settings, r.Header.Get("Idempotency-Key"), u.Username)
+		}
 		if e != nil {
 			fail(w, 409, e.Error())
 			return

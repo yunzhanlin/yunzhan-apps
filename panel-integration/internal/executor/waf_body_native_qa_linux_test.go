@@ -32,6 +32,14 @@ import (
 	"local/panel/internal/core"
 )
 
+type wafQAEngineIdentity struct {
+	Root      string `json:"root"`
+	State     string `json:"state"`
+	Module    string `json:"module"`
+	ModuleSHA string `json:"module_sha256"`
+	Prototype bool   `json:"prototype"`
+}
+
 // An explicit private QA build is required. This never loads a module into the
 // existing Nginx master and never changes a production configuration or unit.
 func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
@@ -45,13 +53,7 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 		t.Fatal("not an authorized isolated native WAF QA host/root")
 	}
 	nginxBinary, nginxVersion, sourceRoot := "/usr/sbin/nginx", "1.24.0", filepath.Join(root, "build")
-	var manifest struct {
-		Root      string `json:"root"`
-		State     string `json:"state"`
-		Module    string `json:"module"`
-		ModuleSHA string `json:"module_sha256"`
-		Prototype bool   `json:"prototype"`
-	}
+	var manifest wafQAEngineIdentity
 	if engineJob != "" {
 		if root != "" || !core.ValidID(engineJob) {
 			t.Fatal("exactly one native QA build identity required")
@@ -91,9 +93,19 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 	if err != nil || len(versionMatch) != 2 || versionMatch[1] != nginxVersion {
 		t.Fatal("selected Nginx changed")
 	}
-	before := wafQANativeProtectedSnapshot(t)
+	wafNativeActualBodyResponses(t, root, engineJob, nginxBinary, nginxVersion, sourceRoot, manifest, false)
+}
+
+// The private produced variant reuses the complete HTTP oracle, never a
+// hand-built ready receipt or a hostname substitution for the older gate.
+func wafNativeActualBodyResponses(t *testing.T, root, engineJob, nginxBinary, nginxVersion, sourceRoot string, manifest wafQAEngineIdentity, producedPrivate bool) {
+	protected := wafQANativeProtectedSnapshot
+	if producedPrivate {
+		protected = wafProducedPrivateConfigurationSnapshot
+	}
+	before := protected(t)
 	defer func() {
-		if changed, ok := wafQANativeChanges(before, wafQANativeProtectedSnapshot(t)); !ok {
+		if changed, ok := wafQANativeChanges(before, protected(t)); !ok || (producedPrivate && len(changed) != 0) {
 			t.Error("protected native identities/configuration changed", changed)
 		}
 	}()
@@ -143,6 +155,7 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 	metadataEvents := 0
 	logBoundaryVerified := false
 	privacyOK, privacyCheckedModes := true, 0
+	zeroCapabilityModes := 0
 	client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(r *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}
 	for _, mode := range []string{"block", "observe", "off"} {
 		t.Run(mode, func(t *testing.T) {
@@ -187,6 +200,11 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 				t.Fatalf("isolated native config/ABI rejected: %s", check)
 			}
 			cmd := exec.Command(nginxBinary, "-p", probe+"/", "-c", confPath, "-g", "daemon off;")
+			if producedPrivate {
+				// Root setup keeps the existing bounded budget; no inheritable
+				// or ambient grants pass into the Nginx worker UID transition.
+				cmd = exec.Command("/usr/bin/setpriv", "--no-new-privs", "--inh-caps=-all", "--ambient-caps=-all", "--", nginxBinary, "-p", probe+"/", "-c", confPath, "-g", "daemon off;")
+			}
 			cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 			var processLog bytes.Buffer
 			cmd.Stdout = &processLog
@@ -223,6 +241,10 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 					t.Fatal("isolated native Nginx did not start")
 				}
 				time.Sleep(50 * time.Millisecond)
+			}
+			if producedPrivate {
+				verifyWAFProducedHTTPWorkers(t, cmd.Process.Pid, nginxBinary, uid)
+				zeroCapabilityModes++
 			}
 			sqli := "1' OR '1'='1' -- " + secret
 			xss := "<script>alert('" + secret + "')</script>"
@@ -334,7 +356,8 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 			eventPattern := regexp.MustCompile(`yunzhan_waf_body rule=[0-9]+ phase=[1-5] severity=[0-9]+ disruptive=[01] site=0123456789abcdef0123456789abcdef`)
 			events := eventPattern.FindAll(logs, -1)
 			for _, line := range strings.Split(strings.TrimSpace(string(logs)), "\n") {
-				if line != "" && !eventPattern.MatchString(line) {
+				_, closed := parseWAFBodyEvent([]byte(line))
+				if line != "" && (!eventPattern.MatchString(line) || !closed) {
 					privacyOK = false
 					t.Error("dedicated WAF log contained a non-metadata entry")
 				}
@@ -451,12 +474,17 @@ func TestWAFNativeBodyThroughRealNginx(t *testing.T) {
 			t.Logf("real Nginx %s: %d request cases, %d bounded metadata events; dedicated-log privacy=%v", mode, len(cases), len(events), privacyOK)
 		})
 	}
-	after := wafQANativeProtectedSnapshot(t)
+	after := protected(t)
 	changed, preserved := wafQANativeChanges(before, after)
+	if producedPrivate && len(changed) != 0 {
+		preserved = false
+	}
 	if !preserved {
 		t.Error("protected native identities/configuration changed", changed)
 	}
 	report := map[string]any{"passed": !t.Failed(), "prototype": engineJob == "", "production_loaded": false, "bounded_worker_build_job": engineJob, "built_engine_verified": engineJob != "", "selected_nginx": nginxVersion, "selected_nginx_binary": nginxBinary, "engine_version": wafBodyEngineVersion, "connector_version": wafBodyConnectorVersion, "crs_version": wafBodyCRSVersion, "module_sha256": manifest.ModuleSHA, "cases": results, "metadata_event_count": metadataEvents, "external_entity_fetches": externalFetches.Load(), "no_private_marker_in_managed_events": privacyOK && privacyCheckedModes == 3, "website_error_log_boundary": "ordinary Nginx website errors are separate and may retain request context", "protected_native_state_unchanged": preserved, "before_snapshot": json.RawMessage(before), "after_snapshot": json.RawMessage(after), "named_live_monitor_changes": changed}
+	report["private_current_producer_http"] = producedPrivate
+	report["actual_worker_zero_privileged_capabilities_all_three_modes"] = producedPrivate && zeroCapabilityModes == 3
 	if engineJob != "" {
 		if err := VerifyWAFEngineBuild(engineJob); err != nil {
 			t.Fatal("sealed program changed after real HTTP probe", err)

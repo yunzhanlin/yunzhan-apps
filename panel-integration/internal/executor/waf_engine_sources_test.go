@@ -9,8 +9,8 @@ import (
 
 func TestWAFNativeSourcesArePinnedAndIndependent(t *testing.T) {
 	sources := wafEngineSources()
-	if len(sources) != 3 {
-		t.Fatal("missing native engine/connector/CRS source")
+	if len(sources) != 4 {
+		t.Fatal("missing native engine/connector/CRS/private patched YAJL source")
 	}
 	for _, version := range []string{"1.18.0", "1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
 		source, ok := wafNginxBuildSource(version)
@@ -26,7 +26,7 @@ func TestWAFNativeSourcesArePinnedAndIndependent(t *testing.T) {
 	}
 	for _, source := range sources {
 		u, err := url.Parse(source.URL)
-		if err != nil || u.Scheme != "https" || (u.Host != "github.com" && u.Host != "nginx.org") || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
+		if err != nil || u.Scheme != "https" || (u.Host != "github.com" && u.Host != "nginx.org" && !(source.Name == "nginx-yajl" && u.Host == "deb.debian.org" && u.Path == "/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz")) || u.User != nil || u.RawQuery != "" || u.Fragment != "" {
 			t.Fatalf("unreviewed source: %+v", source)
 		}
 		b, err := hex.DecodeString(source.SHA256)

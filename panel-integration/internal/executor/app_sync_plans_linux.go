@@ -236,6 +236,10 @@ func (s *Service) rejectRealtimeSyncCycle(candidate moduleSyncPlan) error {
 }
 
 func (s *Service) executeSyncPlan(ctx context.Context, plan *moduleSyncPlan, trigger string, now time.Time) (any, error) {
+	if err := s.moduleRetrospectivePreflight("files-sync"); err != nil {
+		s.blockModuleAutomation("files-sync/" + plan.ID)
+		return nil, err
+	}
 	if plan.LastState == "running" {
 		return nil, errors.New("同步计划仍在执行，不能重叠运行")
 	}
@@ -349,7 +353,9 @@ func (s *Service) runDueSyncPlans(now time.Time) {
 			if err != nil {
 				report["error"] = err.Error()
 			}
-			_ = moduleWrite(filepath.Join(s.moduleDir("files-sync"), "last-report.json"), report)
+			if reportErr := s.writeModuleRetrospectiveRecord("files-sync", "last-report.json", report); reportErr != nil {
+				s.blockModuleAutomation("files-sync/" + fresh.ID)
+			}
 		}
 		s.mu.Unlock()
 	}

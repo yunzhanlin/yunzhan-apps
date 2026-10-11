@@ -20,7 +20,7 @@ import (
 func TestAnalyticsHTMLBuildContractRequiresExactCompletedProvenance(t *testing.T) {
 	id := strings.Repeat("a", 32)
 	sha := strings.Repeat("b", 64)
-	record := analyticsHTMLBuildRecord{analyticsHTMLEngineIdentity: analyticsHTMLEngineIdentity{Format: 1, JobID: id, State: "ready", Architecture: runtime.GOARCH, Prefix: filepath.Join(analyticsHTMLNativeRoot, id), ProgramSHA: analyticsHTMLProgramSHA, NginxBinary: "/usr/sbin/nginx", NginxSHA: sha, ModuleSHA: sha, TreeSHA: sha}, NginxVersion: "1.24.0", PatchSourceSHA: analyticsNJSHeaderSourceSHA, SourceSHA: map[string]string{}, StartedAt: core.Now(), FinishedAt: core.Now(), Steps: []core.Step{{Time: core.Now(), Message: "actual ABI"}}, ABIValidated: true}
+	record := analyticsHTMLBuildRecord{analyticsHTMLEngineIdentity: analyticsHTMLEngineIdentity{Format: 1, JobID: id, State: "ready", Architecture: runtime.GOARCH, Prefix: filepath.Join(analyticsHTMLNativeRoot, id), ProgramSHA: analyticsHTMLProgramSHA, NginxBinary: "/usr/sbin/nginx", NginxSHA: sha, ModuleSHA: sha, TreeSHA: sha, CompilerCollection: nativeCompilerCollectionContract}, NginxVersion: "1.24.0", PatchSourceSHA: analyticsNJSHeaderSourceSHA, SourceSHA: map[string]string{}, StartedAt: core.Now(), FinishedAt: core.Now(), Steps: []core.Step{{Time: core.Now(), Message: "actual ABI"}}, ABIValidated: true}
 	sources, _ := analyticsHTMLSources(record.NginxVersion)
 	for _, source := range sources {
 		record.SourceSHA[source.Name] = source.SHA256
@@ -29,6 +29,7 @@ func TestAnalyticsHTMLBuildContractRequiresExactCompletedProvenance(t *testing.T
 		t.Fatal(err)
 	}
 	for _, mutate := range []func(*analyticsHTMLBuildRecord){
+		func(r *analyticsHTMLBuildRecord) { r.CompilerCollection = "" }, func(r *analyticsHTMLBuildRecord) { r.CompilerCollection = "process_group_only" }, func(r *analyticsHTMLBuildRecord) { r.CompilerCollection = "dedicated_cgroup_v2_pidfd_reaped_v1" },
 		func(r *analyticsHTMLBuildRecord) { r.State = "building" }, func(r *analyticsHTMLBuildRecord) { r.ABIValidated = false }, func(r *analyticsHTMLBuildRecord) { r.ProgramSHA = strings.Repeat("c", 64) }, func(r *analyticsHTMLBuildRecord) { r.PatchSourceSHA = "unknown" }, func(r *analyticsHTMLBuildRecord) { r.NginxSHA = strings.ToUpper(sha) }, func(r *analyticsHTMLBuildRecord) { r.FinishedAt = "" }, func(r *analyticsHTMLBuildRecord) { r.Prefix = "/arbitrary" }, func(r *analyticsHTMLBuildRecord) { r.SourceSHA = map[string]string{} }, func(r *analyticsHTMLBuildRecord) { r.Error = "unresolved" },
 	} {
 		changed := record

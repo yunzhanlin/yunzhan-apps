@@ -72,7 +72,9 @@ func (s *Service) activateAnalyticsHTML(ctx context.Context, id string) error {
 			// Lost reply/replay: real worker acknowledgment is still mandatory.
 			return s.requireAnalyticsHTMLReady(ctx)
 		}
-		if err := s.requireAnalyticsHTMLReady(ctx); err != nil {
+		// A different new-v2 record was verified above. Check exact old bytes
+		// for this explicit handover without calling the old program current-ready.
+		if err := s.verifyAnalyticsHTMLLoaded(ctx, true); err != nil {
 			return err
 		}
 	}

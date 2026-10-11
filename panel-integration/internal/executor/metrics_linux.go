@@ -9,17 +9,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
+	"time"
 )
 
-var cpuState struct {
-	sync.Mutex
-	total, idle uint64
-}
+var cpuState cpuMetricState
 
 func Snapshot() map[string]any {
-	out := map[string]any{"os": "Linux", "arch": runtime.GOARCH, "cpu_cores": runtime.NumCPU()}
+	out := map[string]any{"os": "Linux", "arch": runtime.GOARCH, "cpu_cores": runtime.NumCPU(), "cpu_percent": nil, "cpu_available": false, "memory_percent": nil, "memory_available": false, "disk_percent": nil, "disk_percent_available": false}
 	hostname, _ := os.Hostname()
 	out["hostname"] = hostname
 	var uts syscall.Utsname
@@ -41,51 +38,37 @@ func Snapshot() map[string]any {
 		}
 	}
 	if b, e := os.ReadFile("/proc/meminfo"); e == nil {
-		vals := map[string]uint64{}
-		for _, l := range strings.Split(string(b), "\n") {
-			f := strings.Fields(l)
-			if len(f) >= 2 {
-				v, _ := strconv.ParseUint(f[1], 10, 64)
-				vals[strings.TrimSuffix(f[0], ":")] = v * 1024
-			}
-		}
-		total, available := vals["MemTotal"], vals["MemAvailable"]
-		if total > 0 && available <= total {
+		if total, used, ok := parseMemoryMetric(b); ok {
 			out["memory_total"] = total
-			out["memory_used"] = total - available
-			out["memory_percent"] = float64(total-available) * 100 / float64(total)
+			out["memory_used"] = used
+			out["memory_percent"] = float64(used) * 100 / float64(total)
+			out["memory_available"] = true
 		}
 	}
-	if b, e := os.ReadFile("/proc/stat"); e == nil {
-		f := strings.Fields(strings.SplitN(string(b), "\n", 2)[0])
-		var total, idle uint64
-		for i := 1; i < len(f) && i <= 8; i++ {
-			n, _ := strconv.ParseUint(f[i], 10, 64)
-			total += n
-			if i == 4 || i == 5 {
-				idle += n
-			}
+	var cpuLine []byte
+	if f, err := os.Open("/proc/stat"); err == nil {
+		if line, err := readCPUMetricLine(f); err == nil {
+			cpuLine = line
 		}
-		cpuState.Lock()
-		percent := float64(0)
-		if cpuState.total > 0 && total > cpuState.total && idle >= cpuState.idle {
-			percent = (1 - float64(idle-cpuState.idle)/float64(total-cpuState.total)) * 100
+		f.Close()
+	}
+	if total, idle, percent, ok := cpuState.observe(cpuLine, time.Now()); ok {
+		if percent != nil {
+			out["cpu_percent"] = *percent
+			out["cpu_available"] = true
 		}
-		cpuState.total = total
-		cpuState.idle = idle
-		cpuState.Unlock()
-		out["cpu_percent"] = percent
 		out["cpu_total"] = total
 		out["cpu_idle"] = idle
 	}
 	var fs syscall.Statfs_t
-	if syscall.Statfs("/srv/panel", &fs) == nil {
+	if syscall.Statfs("/srv/panel", &fs) == nil && fs.Bsize > 0 && fs.Blocks > 0 && fs.Blocks <= ^uint64(0)/uint64(fs.Bsize) && fs.Bfree <= fs.Blocks && fs.Bavail <= fs.Bfree {
 		total, used, available := diskUsage(fs)
 		out["disk_total"] = total
 		out["disk_used"] = used
 		out["disk_available"] = available
 		if total > 0 {
 			out["disk_percent"] = float64(used) * 100 / float64(total)
+			out["disk_percent_available"] = true
 		}
 	}
 	if b, e := os.ReadFile("/proc/uptime"); e == nil {

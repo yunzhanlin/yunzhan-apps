@@ -28,7 +28,7 @@ export function initialModuleInspection(
   // The dedicated Apache workspace already reads its own configuration and
   // reports via GET. A generic POST run would create an unnecessary history
   // entry and last-report rewrite just by opening that workspace.
-  if (id === "apache-waf") return;
+  if (id === "apache-waf" || id === "daily-report") return;
   if (id === "nfs-manager") return d.actions.includes("server-report") ? "server-report" : undefined;
   if (d.actions.includes("policies")) return "policies";
   if (d.actions.includes("run") && id !== "platform-ops"

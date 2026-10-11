@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/netip"
@@ -193,6 +194,7 @@ func BuildWAFReport(snapshot WAFEventsPage, q url.Values, now time.Time) (WAFRep
 }
 
 func (a *Server) wafWorkspaceRoutes(m *http.ServeMux) {
+	a.wafBackupArchiveRoutes(m)
 	a.wafEngineRoutes(m)
 	a.wafBodyReportRoutes(m)
 	a.apacheWAFWorkspaceRoutes(m)
@@ -214,6 +216,70 @@ func (a *Server) wafWorkspaceRoutes(m *http.ServeMux) {
 			return
 		}
 		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/software/nginx-waf/config-backups", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		if !admin(u, w) {
+			return
+		}
+		if r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "防火墙备份库存不接受查询字段")
+			return
+		}
+		var raw json.RawMessage
+		if err := a.Executor.Call(r.Context(), "GET", "/v1/software/nginx-waf/config-backups", nil, &raw); err != nil {
+			fail(w, 503, "原防火墙备份尚未完整核验；未执行归档、删除或重新配置")
+			return
+		}
+		out, err := DecodeWAFBackupInventory(raw)
+		if err != nil {
+			fail(w, 503, "原防火墙备份尚未完整核验；未执行归档、删除或重新配置")
+			return
+		}
+		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/software/nginx-waf/config-backup-slots", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		if !admin(u, w) {
+			return
+		}
+		if r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "原快照目录标识不接受查询字段")
+			return
+		}
+		var raw json.RawMessage
+		if err := a.Executor.Call(r.Context(), "GET", "/v1/software/nginx-waf/config-backup-slots", nil, &raw); err != nil {
+			fail(w, 503, "原快照目录标识尚未核对；未返回部分标识或执行维护")
+			return
+		}
+		out, err := DecodeWAFBackupSlots(raw)
+		if err != nil {
+			fail(w, 503, "原快照目录标识不可核对；未宣称完整内容通过")
+			return
+		}
+		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/software/nginx-waf/config-backups/{id}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		if !admin(u, w) {
+			return
+		}
+		id := r.PathValue("id")
+		if !ValidID(id) || r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "原配置快照标识或查询字段无效")
+			return
+		}
+		var raw json.RawMessage
+		if err := a.Executor.Call(r.Context(), "GET", "/v1/software/nginx-waf/config-backups/"+id, nil, &raw); err != nil {
+			fail(w, 503, "所选原快照未完整核验；未执行配置修改、归档或删除")
+			return
+		}
+		row, err := DecodeWAFBackupSnapshot(raw)
+		if err != nil || row.ID != id {
+			fail(w, 503, "所选原快照身份或完整元数据不可核对；未执行维护")
+			return
+		}
+		send(w, 200, row)
 	}))
 	m.HandleFunc("POST /api/software/nginx-waf/preview", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		if !admin(u, w) {

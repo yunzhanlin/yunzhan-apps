@@ -1,14 +1,18 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { ElMessage } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
+import {outboundSourceInventory,outboundSourceReplyMatches} from './outboundSourceView';
 interface SMTPPublic { host: string; port: number; tls_mode: string; server_name: string; ca_pem: string; auth_mode: string; username_set: boolean; password_set: boolean; from: string; to: string[] }
 interface Channel { id: string; name: string; endpoint_host: string; enabled: boolean; kinds: string[]; revision: number; secret_set: boolean; updated_at: string; type: string; smtp?: SMTPPublic; credential_error?: string }
-interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number }
+interface Delivery { id: string; event_id: string; state: string; attempts: number; http_status: number; error: string; created_at: number; completed_at: number; day?:string; source_sha?:string; channel_revision?:number }
 const props = defineProps<{ api: <T>(path: string, method?: string, body?: unknown) => Promise<T> }>();
 const kinds = [{ id: "integrity", label: "文件监控与防篡改" }, { id: "php-security", label: "PHP 风险审查与隔离恢复" }, { id: "sync", label: "文件同步冲突与失败" }, { id: "daily", label: "每日运维报告" }, { id: "schedule", label: "计划任务失败" }, { id: "remote", label: "远端备份失败" }, { id: "monitor", label: "资源告警" }];
-const states: Record<string, string> = { pending: "等待发送 / 重试", running: "发送中", succeeded: "接收端已接收", failed: "失败，需处理", cancelled: "配置变更，已取消" };
+const states: Record<string, string> = { pending: "等待发送 / 重试", running: "发送中", succeeded: "接收端已接收", failed: "失败，需处理", cancelled: "配置变更，已取消",source_blocked:"原日报来源待核对（未发送）",source_resolved:"来源已核对入队（非送达）" };
 const channels = ref<Channel[]>([]), deliveries = ref<Delivery[]>([]);
+const sourceInventoryKnown=ref(false),sourceTotal=ref(0),sourceShown=ref(0);
+const historyError=ref(''),historyErrorAnchor=ref<HTMLElement|null>(null);
+const sourceReconcileObservation=ref<{channel_id:string;revision:number;id:string;event_id:string;source_sha:string;state:'unverified'|'acknowledged'}|null>(null);
 const loading = ref(false), saving = ref(false), historyLoading = ref(false), busyID = ref("");
 const error = ref(""), workerError = ref(""), workerCheckedAt = ref("");
 const editor = ref(false), history = ref(false), selected = ref<Channel | null>(null);
@@ -66,16 +70,47 @@ async function toggle(channel: Channel) {
   } catch (e) { ElMessage.error((e as Error).message); await refresh(); }
   finally { busyID.value = ""; }
 }
-async function refreshHistory() {
-  if (!selected.value || historyLoading.value) return;
-  const id = selected.value.id; historyLoading.value = true;
+async function focusHistoryError() {
+  await nextTick();
+  const anchor=historyErrorAnchor.value;
+  if(!mounted||!history.value||!anchor?.isConnected)return;
+  anchor.scrollIntoView({block:'nearest'});anchor.focus({preventScroll:true});
+}
+async function refreshHistory(manual=false):Promise<boolean> {
+  if (!selected.value || historyLoading.value) return false;
+  const id = selected.value.id,revision=selected.value.revision; historyLoading.value = true;
+  const originalObservation=sourceReconcileObservation.value;
+  if(manual||originalObservation?.channel_id!==id||originalObservation.revision!==revision)historyError.value='';
+  deliveries.value=[];sourceInventoryKnown.value=false;sourceTotal.value=0;sourceShown.value=0;
   try {
-    const result = await props.api<{ deliveries: Delivery[] }>("/notification-channels/" + id + "/deliveries");
-    if (mounted && selected.value?.id === id) deliveries.value = result.deliveries;
-  } catch (e) { if (mounted) ElMessage.error((e as Error).message); }
+    const result = await props.api<{ deliveries: Delivery[];blocked_sources?:Delivery[];blocked_source_total?:number;blocked_source_limit?:number }>("/notification-channels/" + id + "/deliveries");
+    if (mounted && selected.value?.id === id&&selected.value?.revision===revision) {
+      const inventory=outboundSourceInventory(result);
+      sourceInventoryKnown.value=!!inventory;sourceTotal.value=inventory?.total||0;sourceShown.value=inventory?.rows.length||0;
+      if(!inventory)throw Error('推送记录或原来源隔离库存无法完整核对；未按没有故障返回');
+      deliveries.value=[...inventory.rows,...result.deliveries];
+      const observation=sourceReconcileObservation.value;
+      if(observation?.channel_id===id&&observation.revision===revision){
+        const original=inventory.rows.find(row=>row.id===observation.id&&row.event_id===observation.event_id&&row.source_sha===observation.source_sha&&row.channel_revision===observation.revision);
+        if(original&&(manual||observation.state==='acknowledged')){sourceReconcileObservation.value=null;historyError.value='';}
+        else if(manual)throw Error('当前有界记录页未核对到同一原隔离身份；重复写入保护仍保留，不按不存在处理。');
+      }
+      return true;
+    }
+    return false;
+  } catch (e) {
+    if(mounted&&selected.value?.id===id&&selected.value?.revision===revision){
+      const observation=sourceReconcileObservation.value;
+      const acknowledged=observation?.channel_id===id&&observation.revision===revision&&observation.state==='acknowledged';
+      sourceInventoryKnown.value=false;
+      historyError.value=(acknowledged?'已收到原来源入队成功回执，但刷新未核对；不将刷新失败当作未入队。请只读刷新原记录。':'')+(e as Error).message;
+      await focusHistoryError();
+    }
+    return false;
+  }
   finally { historyLoading.value = false; }
 }
-function showHistory(channel: Channel) { selected.value = channel; deliveries.value = []; history.value = true; void refreshHistory(); }
+function showHistory(channel: Channel) { selected.value = channel; deliveries.value = [];sourceInventoryKnown.value=false;historyError.value=''; history.value = true; void refreshHistory(true); }
 async function test(channel: Channel, daily = false) {
   if (busyID.value) return; busyID.value = channel.id;
   try {
@@ -92,6 +127,27 @@ async function retry(delivery: Delivery) {
     await refreshHistory(); ElMessage.success("已重新入队，将在至少 15 秒后发送；接收端应按推送标识去重。");
   } catch (e) { ElMessage.error((e as Error).message); }
   finally { busyID.value = ""; }
+}
+async function reconcileSource(row:Delivery) {
+  const channel=selected.value;
+  if(!channel||busyID.value||!sourceInventoryKnown.value||row.state!=='source_blocked'||row.channel_revision!==channel.revision||!channel.enabled||sourceReconcileObservation.value?.channel_id===channel.id&&sourceReconcileObservation.value.revision===channel.revision)return;
+  busyID.value=row.id;
+  historyError.value='';
+  sourceReconcileObservation.value={channel_id:channel.id,revision:channel.revision,id:row.id,event_id:row.event_id,source_sha:row.source_sha!,state:'unverified'};
+  let acknowledged=false;
+  try {
+    const reply=await props.api<Record<string,unknown>>('/notification-channels/'+channel.id+'/sources/'+row.id+'/reconcile','POST',{revision:channel.revision,expected_sha:row.source_sha});
+    if(!mounted||selected.value?.id!==channel.id||selected.value?.revision!==channel.revision)return;
+    if(!outboundSourceReplyMatches({id:row.id,event_id:row.event_id},reply))throw Error('原来源核对回执无法匹配；可能已入队，请只读刷新原隔离身份，不重复盲提交');
+    acknowledged=true;
+    sourceReconcileObservation.value={...sourceReconcileObservation.value!,state:'acknowledged'};
+    ElMessage.success('原来源已核对并入队，尚未认定接收端已接收；原隔离身份保留。');
+    if(!await refreshHistory()&&mounted&&selected.value?.id===channel.id&&selected.value?.revision===channel.revision){
+      if(!historyError.value)historyError.value='已收到原来源入队成功回执，但刷新未核对；不将刷新失败当作未入队。请只读刷新原记录。';
+      await focusHistoryError();
+    }
+  } catch(e) {if(mounted&&selected.value?.id===channel.id&&selected.value?.revision===channel.revision){sourceInventoryKnown.value=false;historyError.value=(acknowledged?'已收到原来源入队成功回执，但刷新未核对；不将刷新失败当作未入队。请只读刷新原记录。':'原来源操作或回执尚未核对，可能已入队；请只读刷新原隔离身份，不重复盲提交。')+(e as Error).message;await focusHistoryError();}}
+  finally {busyID.value='';}
 }
 onMounted(() => { void refresh(); interval = setInterval(() => { if (history.value) { void refresh(); void refreshHistory(); } }, 5000); });
 onBeforeUnmount(() => { mounted = false; clearCredentials(); if (interval) clearInterval(interval); });
@@ -141,20 +197,24 @@ defineExpose({ refresh });
     <template #footer><el-button :disabled="saving" @click="editor = false">取消</el-button><el-button type="primary" :loading="saving" @click="save">保存通道</el-button></template>
   </el-dialog>
   <el-dialog v-model="history" class="outbound-dialog" align-center :title="(selected?.name || '') + ' · 发送记录'" width="min(1080px, 96vw)">
-    <div class="history-heading"><p>最近 100 条。自动重试沿用同一推送标识；SMTP Message-ID 不保证接收端去重或进入收件箱。</p><el-button :loading="historyLoading" @click="refreshHistory">刷新记录</el-button></div>
-    <el-table :data="deliveries" empty-text="暂无发送记录" v-loading="historyLoading">
-      <el-table-column label="时间 / 推送标识" min-width="215"><template #default="{ row }">{{ time(row.created_at) }}<small class="host delivery-id">{{ row.id }}</small></template></el-table-column>
+    <div class="history-heading"><p>最近 100 条发送记录，另显示最多 100 项原来源隔离记录。自动重试沿用同一推送标识；SMTP Message-ID 不保证接收端去重或进入收件箱。</p><el-button :loading="historyLoading" @click="refreshHistory(true)">刷新记录</el-button></div>
+    <div v-if="historyError" ref="historyErrorAnchor" tabindex="-1" role="alert" class="history-error-anchor"><el-alert :title="historyError" type="error" :closable="false" /></div>
+    <el-alert v-if="sourceReconcileObservation?.channel_id===selected?.id&&sourceReconcileObservation?.revision===selected?.revision" type="warning" :closable="false" title="原来源操作或后续读取尚未完整核对；已暂停重复写入。后台轮询不能解除未知回执保护，请主动只读刷新核对同一原记录。" />
+    <el-alert v-if="!sourceInventoryKnown" type="warning" :closable="false" title="来源隔离库存尚未核对；不按没有故障返回。请只读刷新记录，不重复提交来源核对。" />
+    <el-alert v-else type="info" :closable="false" :title="`来源隔离共 ${sourceTotal} 项，此页显示 ${sourceShown} 项（最多 100）；待核对来源不发送正常摘要，不阻挡其他有效告警。只有原通道版本及有效原日报核对通过，才能按原事件入队；改通道版本不会自动补发。原隔离记录保留。`" />
+    <el-table :data="deliveries" :empty-text="sourceInventoryKnown?'暂无发送记录':'来源与发送记录待核对'" v-loading="historyLoading">
+      <el-table-column label="时间 / 原记录标识" min-width="215"><template #default="{ row }">{{ time(row.created_at) }}<small class="host delivery-id">{{ row.id }}</small><div v-if="row.state==='source_blocked'||row.state==='source_resolved'" class="source-identity" aria-label="原日报来源身份（只读）"><span>原日报 {{ row.day || '日期待核对' }} · 原通道 v{{ row.channel_revision }}</span><small class="host delivery-id">原事件 {{ row.event_id }}</small><small class="host delivery-id">原配置摘要（只读） {{ row.source_sha }}</small></div></template></el-table-column>
       <el-table-column label="实际状态" min-width="150"><template #default="{ row }"><el-tag :type="row.state === 'succeeded' ? 'success' : row.state === 'failed' ? 'danger' : 'info'">{{ states[row.state] || row.state }}</el-tag></template></el-table-column>
       <el-table-column prop="attempts" label="次数" width="60" />
       <el-table-column :label="selected?.type === 'smtp' ? 'SMTP' : 'HTTP'" width="75"><template #default="{ row }">{{ row.http_status || '—' }}</template></el-table-column>
-      <el-table-column prop="error" label="失败原因" min-width="190" />
-      <el-table-column label="处理" width="95"><template #default="{ row }"><el-button v-if="row.state === 'failed'" link type="primary" :disabled="!selected?.enabled || !!busyID" @click="retry(row)">重新入队</el-button></template></el-table-column>
+      <el-table-column prop="error" label="结果或待核对原因" min-width="190" />
+      <el-table-column label="处理" width="145"><template #default="{ row }"><el-button v-if="row.state === 'failed'" link type="primary" :disabled="!selected?.enabled || !!busyID" @click="retry(row)">重新入队</el-button><el-button v-else-if="row.state==='source_blocked'" link type="primary" :disabled="!selected?.enabled||!!busyID||!sourceInventoryKnown||row.channel_revision!==selected?.revision||sourceReconcileObservation?.channel_id===selected?.id&&sourceReconcileObservation?.revision===selected?.revision" @click="reconcileSource(row)">核对原报告并入队</el-button></template></el-table-column>
     </el-table>
   </el-dialog>
 </template>
 
 <style scoped>
-:global(.outbound-dialog) { max-height: calc(100dvh - 32px); display: flex; flex-direction: column; }
+:global(.outbound-dialog) { max-height: calc(100vh - 32px); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; }
 :global(.outbound-dialog .el-dialog__body) { min-height: 0; overflow-y: auto; }
 :global(.outbound-dialog .el-dialog__header),:global(.outbound-dialog .el-dialog__footer) { flex-shrink: 0; }
 .outbound-card { padding: 18px; }
@@ -165,6 +225,9 @@ defineExpose({ refresh });
 .outbound-heading p { margin-top: 6px; }
 .host { display: block; color: var(--el-text-color-secondary); font-size: 12px; }
 .delivery-id { font-family: monospace; overflow-wrap: anywhere; }
+.source-identity { margin-top: 8px; padding-top: 6px; border-top: 1px solid var(--el-border-color-lighter); font-size: 12px; overflow-wrap: anywhere; }
+.history-error-anchor { margin-bottom: 8px; scroll-margin-block: 12px; }
+.history-error-anchor:focus-visible { outline: 2px solid var(--el-color-danger); outline-offset: 2px; }
 .credential-error { display: block; color: var(--el-color-danger); font-size: 12px; }
 .event-tags { display: flex; gap: 5px; flex-wrap: wrap; }
 .outbound-footer { margin-top: 14px; flex-wrap: wrap; }

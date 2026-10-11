@@ -75,14 +75,15 @@ func TestAppModuleRoles(t *testing.T) {
 			t.Fatal(test, got)
 		}
 	}
-	if _, e := a.manageAppUsers(identity{ID: "admin"}, "delete", AppModuleInput{Username: "admin"}); e == nil {
+	if _, e := a.manageAppUsers(context.Background(), identity{ID: "admin"}, "delete", AppModuleInput{Username: "admin"}); e == nil {
 		t.Fatal("last admin deleted")
 	}
 }
 func TestPlatformTokenLifecycle(t *testing.T) {
 	s := testStore(t)
 	a := &Server{Store: s}
-	v, e := a.platformOperation(context.Background(), "issue-token", AppModuleInput{})
+	actor := accessUser(t, s, "platform-owner", "admin", nil)
+	v, e := a.platformOperation(context.Background(), actor, "issue-token", AppModuleInput{})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -94,10 +95,10 @@ func TestPlatformTokenLifecycle(t *testing.T) {
 	if e = s.DB.QueryRow(`SELECT token_hash FROM app_platform_tokens`).Scan(&hash); e != nil || hash == token || hash != Hash(token) {
 		t.Fatal("token stored unsafely")
 	}
-	if _, e = a.platformOperation(context.Background(), "revoke-token", AppModuleInput{Token: token}); e != nil {
+	if _, e = a.platformOperation(context.Background(), actor, "revoke-token", AppModuleInput{Token: token}); e != nil {
 		t.Fatal(e)
 	}
-	if _, e = a.platformOperation(context.Background(), "add", AppModuleInput{ResourceID: "test", URL: "http://example.com", Token: strings.Repeat("a", 64)}); e == nil {
+	if _, e = a.platformOperation(context.Background(), actor, "add", AppModuleInput{ResourceID: "test", URL: "http://example.com", Token: strings.Repeat("a", 64)}); e == nil {
 		t.Fatal("insecure remote accepted")
 	}
 }

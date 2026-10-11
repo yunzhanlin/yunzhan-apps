@@ -70,7 +70,7 @@ func TestRemoteSyncHTTPAuthorizationAndCSRFBeforeExecutor(t *testing.T) {
 	calls := 0
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
-		body := `{"status":{"installed":true}}`
+		body := `{"status":{"id":"files-sync","installed":true}}`
 		if r.Method == "POST" {
 			body = `{"queued":true}`
 		}

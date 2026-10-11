@@ -118,6 +118,9 @@ func createAnalyticsHTMLPrivateJSON(path string, value any) error {
 }
 
 func analyticsHTMLBuildContract(record analyticsHTMLBuildRecord) error {
+	if record.CompilerCollection != nativeCompilerCollectionContract {
+		return errors.New("HTML 引擎缺少当前专用 cgroup 与稳定进程完整回收契约；原记录保留，不能自动升级或授权启用")
+	}
 	if record.Format != 1 || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.Architecture != runtime.GOARCH || record.Prefix != filepath.Join(analyticsHTMLNativeRoot, record.JobID) || record.ProgramSHA != analyticsHTMLProgramSHA || record.PatchSourceSHA != analyticsNJSHeaderSourceSHA || !record.ABIValidated {
 		return errors.New("HTML 引擎尚未完成、架构或固定发布身份不符")
 	}
@@ -188,6 +191,19 @@ func RunAnalyticsHTMLBuild(id string) error {
 func runAnalyticsHTMLBuild(parent context.Context, id string) (err error) {
 	if os.Geteuid() != 0 || !core.ValidID(id) {
 		return errors.New("HTML 引擎仅允许专用 root 服务及有效任务标识")
+	}
+	if err := parent.Err(); err != nil {
+		return err
+	}
+	if err := verifyNginxNativeWorkerCapabilities(); err != nil {
+		return err
+	}
+	scope, err := beginNativeCompilerScope(nativeAnalyticsHTMLCompilerAuthority)
+	if err != nil {
+		return err
+	}
+	if err := scope.Close(); err != nil {
+		return err
 	}
 	if err := readWAFEngineControl(analyticsHTMLRequests, id); err != nil {
 		return errors.New("HTML 构建缺少本面板持久请求，未开始构建")
@@ -312,6 +328,7 @@ func runAnalyticsHTMLBuild(parent context.Context, id string) (err error) {
 	if err := buildAnalyticsHTMLModule(ctx, s, archives, filepath.Join(build, "work"), program, match[1], nginx, step); err != nil {
 		return err
 	}
+	record.CompilerCollection = nativeCompilerCollectionContract
 	if err := step("发布新的只读独立程序及完整许可；不改动网站或 Nginx 服务"); err != nil {
 		return err
 	}

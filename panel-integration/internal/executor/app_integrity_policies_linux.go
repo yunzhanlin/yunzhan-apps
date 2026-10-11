@@ -214,6 +214,10 @@ func (s *Service) runDueIntegrity(now time.Time) {
 // The caller holds mu. A queued kernel event re-reads the policy under this same
 // lock, so pause/revision changes cannot be followed by an old queued restore.
 func (s *Service) runIntegrityPolicy(id, site string, policy moduleIntegrityPolicy, trigger string) {
+	if err := s.moduleRetrospectivePreflight(id); err != nil {
+		s.blockModuleAutomation(id + "/" + site)
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	input := core.AppModuleInput{SiteID: site}
 	result, err := s.moduleIntegrity(ctx, id, "check", input)
@@ -275,7 +279,7 @@ func (s *Service) runIntegrityPolicy(id, site string, policy moduleIntegrityPoli
 		report["error"] = err.Error()
 	}
 	if trigger == "scheduled" || trigger == "inotify-overflow" || changes != 0 || err != nil {
-		if reportErr := moduleWrite(filepath.Join(s.moduleDir(id), "last-report.json"), report); reportErr != nil {
+		if reportErr := s.writeModuleRetrospectiveRecord(id, "last-report.json", report); reportErr != nil {
 			policy.Enabled = false
 			policy.LastState = "paused-error"
 			policy.LastError = "检查报告不能持久化：" + reportErr.Error()

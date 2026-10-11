@@ -26,7 +26,7 @@ func TestNetworkIDSRuleFeedIndependentChannelReadSubmitAndWorker(t *testing.T) {
 		var out any
 		switch {
 		case r.Method == "GET" && r.URL.Path == "/v1/app-modules/network-threat-detection":
-			out = map[string]any{"status": SoftwareAppStatus{Installed: true}}
+			out = map[string]any{"status": SoftwareAppStatus{ID: "network-threat-detection", Installed: true}}
 		case r.Method == "GET" && r.URL.Path == "/v1/network-ids/rule-feeds":
 			out = NetworkIDSRuleFeedInventory{StateKnown: true, Rows: []NetworkIDSRuleFeedStored{}}
 		case r.Method == "POST" && strings.HasPrefix(r.URL.Path, "/v1/network-ids/rule-feeds/jobs/"):

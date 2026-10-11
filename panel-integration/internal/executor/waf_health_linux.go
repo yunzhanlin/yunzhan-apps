@@ -55,6 +55,45 @@ func (s *Service) verifyWAFReloadVersion(ctx context.Context, cfg core.WAFConfig
 	return s.verifyWAFReloadGeneration(ctx, cfg, nginx, version, nil)
 }
 
+func verifyWAFReloadGenerationDrained(ctx context.Context, generation *wafReloadGeneration) error {
+	if generation != nil {
+		drained, err := generation.drained(ctx)
+		if err != nil {
+			return err
+		}
+		if !drained {
+			// A worker can enter its verified exit transition while the probe
+			// is in flight. Remain unconfirmed and wait within THIS probe
+			// context, never start a new budget or accept an unknown title.
+			if err := waitWAFReloadGeneration(ctx, generation); err != nil {
+				return err
+			}
+		}
+	}
+	return ctx.Err()
+}
+
+// A fast fingerprint from one new worker cannot acknowledge the old worker
+// generation. Complete the exact original-listener barrier first, then give
+// the fixed fingerprint probe its own five-second budget. Neither phase can
+// extend an earlier caller deadline, and a failed barrier never probes.
+func verifyWAFReloadAfterHandoff(ctx context.Context, generation *wafReloadGeneration, probe func(context.Context) error) error {
+	if err := waitWAFReloadGeneration(ctx, generation); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if err := probe(ctx); err != nil {
+		return err
+	}
+	// A probe reply is not permission to commit if the original master or
+	// listener evidence changed while the request was in flight.
+	return verifyWAFReloadGenerationDrained(ctx, generation)
+}
+
 func (s *Service) verifyWAFReloadGeneration(ctx context.Context, cfg core.WAFConfig, nginx, version string, generation *wafReloadGeneration) error {
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
 		return nil
@@ -62,43 +101,32 @@ func (s *Service) verifyWAFReloadGeneration(ctx context.Context, cfg core.WAFCon
 	if e := s.wafNginxRunning(ctx, nginx); e != nil {
 		return e
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	client := &http.Client{Timeout: time.Second, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	defer client.CloseIdleConnections()
-	for attempt := 0; attempt < 50; attempt++ {
-		if generation != nil {
-			drained, err := generation.drained(ctx)
-			if err != nil {
+	return verifyWAFReloadAfterHandoff(ctx, generation, func(ctx context.Context) error {
+		client := &http.Client{Timeout: time.Second, Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+		defer client.CloseIdleConnections()
+		for attempt := 0; attempt < 50; attempt++ {
+			if err := verifyWAFReloadGenerationDrained(ctx, generation); err != nil {
 				return err
 			}
-			if !drained {
-				select {
-				case <-ctx.Done():
-					return errors.New("Nginx 旧工作进程未确认停止接收新连接，未提交配置")
-				case <-time.After(100 * time.Millisecond):
-					continue
+			r, e := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:19101/__panel_waf_check", nil)
+			if e != nil {
+				return e
+			}
+			r.Host = "panel-waf-check.invalid"
+			res, e := client.Do(r)
+			if e == nil {
+				body, readErr := io.ReadAll(io.LimitReader(res.Body, 1024))
+				res.Body.Close()
+				if readErr == nil && res.StatusCode == 200 && string(body) == wafProbeValueVersion(cfg, version) {
+					return nil
 				}
 			}
-		}
-		r, e := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:19101/__panel_waf_check", nil)
-		if e != nil {
-			return e
-		}
-		r.Host = "panel-waf-check.invalid"
-		res, e := client.Do(r)
-		if e == nil {
-			body, readErr := io.ReadAll(io.LimitReader(res.Body, 1024))
-			res.Body.Close()
-			if readErr == nil && res.StatusCode == 200 && string(body) == wafProbeValueVersion(cfg, version) {
-				return nil
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(100 * time.Millisecond):
 			}
 		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(100 * time.Millisecond):
-		}
-	}
-	return errors.New("Nginx 重载后实际配置指纹探针不匹配，未确认新版规则已加载")
+		return errors.New("Nginx 重载后实际配置指纹探针不匹配，未确认新版规则已加载")
+	})
 }

@@ -30,6 +30,12 @@ if ((NO_SERVICES==0)); then
   command -v python3 >/dev/null || { echo 'python3 is required for read-only install preflight; no host changes made' >&2; exit 1; }
   python3 "$HERE/waf-state-directory.py" check --root "$TARGET_ROOT"
   python3 "$HERE/native-build-directories.py" check --root "$TARGET_ROOT"
+  # Only a real host has the fixed kernel mount namespace being protected.
+  # Alternate --root trees are staging roots, not evidence of a host mount.
+  # This candidate binary has already passed the release integrity verifier.
+  if [[ "$TARGET_ROOT" == / ]]; then
+    "$HERE/bin/panel-executor" --check-apache-body-cache-upgrade
+  fi
 fi
 RELEASE_DIR="$(prefix "/opt/panel/releases/$PANEL_VERSION")"
 CURRENT="$(prefix /opt/panel/current)"
@@ -65,6 +71,26 @@ check_upgrade_dependencies(){
     return 1
   fi
 }
+# Retry only acquisition, in independent APT processes with bounded backoff.
+# In-process delayed retries in affected distribution APT can exhaust memory.
+# An install/service mutation must never be passed to this helper or replayed.
+fresh_apt_acquire(){
+  local attempt status
+  [[ "${1:-}" == apt-get ]] || return 2
+  case "${2:-}" in
+    update) ;;
+    install) [[ " $* " == *' --download-only '* && " $* " != *' --no-download '* ]] || return 2;;
+    *) return 2;;
+  esac
+  for attempt in 1 2 3; do
+    if "$@"; then return 0; else status=$?; fi
+    # A killed/crashed process is not a transient package acquisition error.
+    ((status==100)) || return "$status"
+    ((attempt<3)) || return "$status"
+    printf 'APT acquisition attempt %s/3 failed (exit %s); retrying acquisition only after %ss\n' "$attempt" "$status" "$((attempt*2))" >&2
+    sleep "$((attempt*2))"
+  done
+}
 if ((NO_SERVICES==0)); then
   AIO_PACKAGE=libaio1t64
   JPEG_PACKAGE=libjpeg62-turbo-dev
@@ -81,8 +107,17 @@ if ((PREFLIGHT_ONLY));then echo "panel $PANEL_VERSION preflight passed without c
 if ((NO_SERVICES==0)); then
   if ((FRESH)); then
     export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
-    apt-get update
-    apt-get install -y --no-upgrade --no-install-recommends "${REQUIRED_PACKAGES[@]}"
+    # Debian APT 2.6.1/3.0.3 can accumulate an unbounded warning queue while
+    # cycling delayed retries (Debian #1111554), exhausting a small server.
+    # Apply these options only to this fresh install; never rewrite host APT
+    # configuration, trust, sandbox, proxy or IPv4/IPv6 policy. A transient
+    # failure is an error, not permission to use stale indexes or omit a dep.
+    APT_ACQUIRE_OPTIONS=(-o Acquire::Retries=0 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
+    fresh_apt_acquire apt-get update --error-on=any "${APT_ACQUIRE_OPTIONS[@]}"
+    # Fetch and authenticate the complete set before dpkg/NSS/service writes.
+    # Only the last command can install packages, and it cannot download.
+    fresh_apt_acquire apt-get install -y --no-upgrade --no-install-recommends --download-only "${APT_ACQUIRE_OPTIONS[@]}" "${REQUIRED_PACKAGES[@]}"
+    apt-get install -y --no-upgrade --no-install-recommends --no-download "${APT_ACQUIRE_OPTIONS[@]}" "${REQUIRED_PACKAGES[@]}"
   fi
   getent group panel >/dev/null || groupadd --system panel
   id panel >/dev/null 2>&1 || useradd --system --gid panel --home-dir /var/lib/panel --shell /usr/sbin/nologin panel
@@ -107,8 +142,8 @@ chmod 0700 "$(prefix /var/backups/panel/system)"
 for sub in client proxy fastcgi uwsgi scgi;do mkdir -p "$(prefix "/var/cache/panel-nginx/$sub")";done
 if ((NO_SERVICES==0));then
   chown -R www-data:www-data /var/cache/panel-nginx
-  chown -R panel-build:panel-build /var/cache/panel-build
-  chmod 0755 /var/cache/panel-build
+  # Legacy compiler-owned cache is retained unchanged, never re-owned during
+  # upgrade. New runtime/FTP builds use the preflighted Root-managed cache.
   dpkg-query -W -f='${binary:Package}\t${Version}\n' > /var/lib/panel-build-deps/debian-packages.tsv
   # Private children have producer-specific ownership (root jobs, signed
   # results, daemon receipts). Upgrade must not recursively rewrite them.
@@ -164,7 +199,7 @@ mkdir -p "$(prefix /opt/panel/app-modules)" "$(prefix /var/cache/panel-waf-build
 # Already checked/provisioned before the release symlink changed; never chmod
 # or chown an existing foreign state directory during an update.
 # Production units use the atomic current release symlink.
-for unit in "$HERE/systemd/"*.service "$HERE/systemd/"*.timer;do
+for unit in "$HERE/systemd/"*.service "$HERE/systemd/"*.timer "$HERE/systemd/"*.mount;do
   name="$(basename "$unit")"
   sed 's#/opt/panel/bin/#/opt/panel/current/bin/#g;s#/opt/panel/web#/opt/panel/current/web#g;s/development //g' "$unit" > "/etc/systemd/system/$name"
 done

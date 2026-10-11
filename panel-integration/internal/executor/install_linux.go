@@ -83,16 +83,30 @@ func readInstall(id string) (InstallStatus, error) {
 	if !core.ValidID(id) {
 		return st, errors.New("无效任务标识")
 	}
-	b, e := os.ReadFile(installPath(id))
+	b, e := readRuntimeInstallRecordBytes(id)
 	if e == nil {
 		e = json.Unmarshal(b, &st)
+		if e == nil {
+			e = validateRuntimeInstallStatus(st, id)
+		}
 	}
 	return st, e
 }
 func writeInstall(st InstallStatus) error {
+	if e := validateRuntimeInstallStatus(st, st.JobID); e != nil {
+		return e
+	}
+	root, e := runtimeInstallRecordRoot()
+	if e != nil {
+		return e
+	}
+	root.Close()
 	b, e := json.Marshal(st)
 	if e != nil {
 		return e
+	}
+	if len(b) > runtimeInstallRecordLimit {
+		return errors.New("安装记录超过固定容量，未覆盖原件")
 	}
 	return atomicWrite(installPath(st.JobID), b, 0600)
 }
@@ -174,24 +188,55 @@ func startInstallOperation(ctx context.Context, id, release, extension string, r
 		if old.ReleaseID != release || old.ExtensionID != extension {
 			return st, errors.New("任务与版本不匹配")
 		}
-		active, _ := RunCommand(ctx, "/usr/bin/systemctl", "show", "-p", "ActiveState", "--value", "panel-install@"+id+".service")
-		if strings.TrimSpace(active) == "activating" || strings.TrimSpace(active) == "active" {
-			return old, nil
+		observed, err := readRuntimeInstallStatus(ctx, id, RunCommand)
+		if err != nil {
+			return st, err
 		}
-		if old.State == "succeeded" {
-			return old, nil
+		if !retry || observed.State == "queued" || observed.State == "running" || observed.State == "succeeded" {
+			// Panel restart is observation, never an implicit new compilation.
+			return observed, nil
 		}
-		if old.State == "failed" && !retry {
-			return old, nil
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return st, fmt.Errorf("已有安装记录不可读取，未覆盖或重新启动: %w", e)
+	}
+	// Observation above requires no writable lock or new native evidence.
+	// Only a new request or explicit retry reaches the mutation boundary.
+	startLock, err := runtimeInstallStartLock(ctx)
+	if err != nil {
+		return st, err
+	}
+	defer startLock.Close()
+	old, e = readInstall(id)
+	if e == nil {
+		if old.ReleaseID != release || old.ExtensionID != extension {
+			return st, errors.New("任务与版本不匹配")
+		}
+		observed, err := readRuntimeInstallStatus(ctx, id, RunCommand)
+		if err != nil {
+			return st, err
+		}
+		if !retry || observed.State == "queued" || observed.State == "running" || observed.State == "succeeded" {
+			return observed, nil
+		}
+	} else if !errors.Is(e, os.ErrNotExist) {
+		return st, fmt.Errorf("已有安装记录不可读取，未覆盖或重新启动: %w", e)
+	}
+	seen, err := observeRuntimeInstallUnit(ctx, id, release, RunCommand)
+	if err != nil {
+		return st, err
+	}
+	if seen.Pending || seen.Active != "inactive" && seen.Active != "failed" {
+		return st, errors.New("安装服务仍在运行或排队；未覆盖原记录或重复启动")
+	}
+	if e == nil {
+		if e = retainRuntimeInstallAttempt(id, old); e != nil {
+			return st, e
 		}
 	}
 	if e = writeInstall(st); e != nil {
 		return st, e
 	}
-	unit := "panel-install@" + id + ".service"
-	if release, ok := runtimecatalog.Find(release); ok && release.Family == "docker" {
-		unit = "panel-docker-install@" + id + ".service"
-	}
+	unit := runtimeInstallUnitName(id, release)
 	_, e = RunCommand(ctx, "/usr/bin/systemctl", "start", "--no-block", unit)
 	return st, e
 }
@@ -228,18 +273,11 @@ func InstallJob(id string) (ret error) {
 	if e = add("核对固定版本目录，等待源码构建锁"); e != nil {
 		return e
 	}
-	lock, e := os.OpenFile("/var/lib/panel-executor/build.lock", os.O_CREATE|os.O_RDWR, 0600)
+	lock, e := acquireRuntimeNativeBuildSerialization(context.Background())
 	if e != nil {
 		return e
 	}
 	defer lock.Close()
-	lockContext, lockCancel := context.WithTimeout(context.Background(), 30*time.Minute)
-	e = acquireRuntimeBuildLock(lockContext, lock)
-	lockCancel()
-	if e != nil {
-		return fmt.Errorf("等待源码构建锁失败（最多 30 分钟）；未开始安装: %w", e)
-	}
-	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	if st.ExtensionID != "" {
 		ext, ok := runtimecatalog.FindExtension(st.ExtensionID)
 		if !ok {
@@ -280,12 +318,8 @@ func InstallJob(id string) (ret error) {
 	if r.Family == "node" {
 		return installNode(ctx, r, id, add)
 	}
-	base := filepath.Join("/var/cache/panel-build", id)
-	if e = os.MkdirAll(base, 0700); e != nil {
-		return e
-	}
-	// The top-level directory is root-owned. The build user can only mutate work/.
-	if e = os.Chmod(base, 0755); e != nil {
+	base, e := prepareRuntimeBuildDirectory(id)
+	if e != nil {
 		return e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
@@ -295,12 +329,8 @@ func InstallJob(id string) (ret error) {
 	if e = add("已从官方站点下载源码，并通过目录中固定的 SHA-256 校验"); e != nil {
 		return e
 	}
-	work := filepath.Join(base, "work")
-	// Retry gets a clean, task-specific build tree; no sites or runtime data here.
-	if e = os.RemoveAll(work); e != nil {
-		return e
-	}
-	if e = os.Mkdir(work, 0755); e != nil {
+	work, e := prepareRuntimeBuildWork(base)
+	if e != nil {
 		return e
 	}
 	if e = extractSource(archive, work); e != nil {
@@ -525,11 +555,18 @@ func downloadVerifiedWithLimits(ctx context.Context, url, digest, dst string, li
 	if resp.StatusCode != 200 {
 		return sourceHTTPError{Status: resp.StatusCode}
 	}
-	f, e := os.OpenFile(dst, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
+	f, e := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0600)
 	if e != nil {
 		return e
 	}
 	defer f.Close()
+	info, e := f.Stat()
+	if e != nil || !runtimeBuildPrivateFile(info) || info.Size() > 64*1024*1024 {
+		return errors.New("源码暂存文件身份或容量异常，未截断或修复")
+	}
+	if e := f.Truncate(0); e != nil {
+		return e
+	}
 	h := sha256.New()
 	idle := time.AfterFunc(limits.BodyIdle, func() { transferCancel(errRuntimeSourceBodyIdle) })
 	defer idle.Stop()
@@ -637,18 +674,42 @@ func extractSource(archive, dest string) error {
 		}
 	}
 }
+
+// Changing UID alone does not clear an inherited capability set (for example
+// when an enclosing restricted installer unit has an ambient set). Clear it
+// before executing any source configure script, compiler, make or dependency
+// tool. This boundary applies to every native runtime that uses this builder.
+func runtimeBuildIdentityArgs(name string, args ...string) []string {
+	return append([]string{"-u", "panel-build", "--", "/usr/bin/setpriv", "--inh-caps=-all", "--ambient-caps=-all", "--no-new-privs", "--", name}, args...)
+}
+
 func buildCommand(ctx context.Context, dir, logPath, name string, args ...string) error {
-	file, e := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0600)
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	scope, err := beginRuntimeCompilerScope()
+	if err != nil {
+		return err
+	}
+	defer scope.Close()
+	file, e := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0600)
 	if e != nil {
 		return e
 	}
 	defer file.Close()
-	argv := append([]string{"-u", "panel-build", "--", name}, args...)
+	logInfo, e := file.Stat()
+	if e != nil || !runtimeBuildPrivateFile(logInfo) || logInfo.Size() >= 64*1024*1024 {
+		return errors.New("构建日志身份、类型或容量异常，未截断、修复或执行编译")
+	}
+	argv := runtimeBuildIdentityArgs(name, args...)
 	cmd := exec.CommandContext(ctx, "/usr/sbin/runuser", argv...)
 	cmd.Dir = dir
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C", "CFLAGS=-O2", "HOME=" + filepath.Dir(dir), "MAKEFLAGS="}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.Cancel = func() error {
+		_, err := scope.signalMembers()
+		return err
+	}
 	cmd.WaitDelay = 3 * time.Second
 	out := &boundedBuffer{max: 24 * 1024}
 	stat, _ := file.Stat()
@@ -658,10 +719,16 @@ func buildCommand(ctx context.Context, dir, logPath, name string, args ...string
 	}
 	cmd.Stdout = io.MultiWriter(&cappedLog{File: file, Remaining: remaining}, out)
 	cmd.Stderr = cmd.Stdout
-	if e = cmd.Run(); e != nil {
+	e = cmd.Run()
+	leftovers, collectErr := scope.collect()
+	if e == nil && leftovers {
+		e = errors.New("构建命令返回后仍有后台子进程，已在本服务内终止与回收，未发布运行时")
+	}
+	e = errors.Join(e, ctx.Err(), collectErr, scope.writeCollectionDiagnostics(file), file.Sync())
+	if e != nil {
 		return fmt.Errorf("%s 执行失败: %w；查看 %s", filepath.Base(name), e, logPath)
 	}
-	return nil
+	return file.Sync()
 }
 func copyBuildTree(src, dest string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, e error) error {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
@@ -19,6 +19,10 @@ import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
 import {remoteBackupArchiveActions,remoteBackupArchiveBody,remoteBackupArchiveFields} from "./remoteBackupArchive";
 import { canReadPath, type AccessPlan } from "./menuPermissions";
 import { initialModuleInspection } from "./moduleInitialInspection";
+import {dailyWorkerMessage} from "./dailyReportView";
+import { taskSelection, taskTerminationNotice } from "./taskManager";
+import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, type UserMutationObservation } from "./userManagementReceipt";
+import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
 type API = <T>(
   path: string,
   method?: string,
@@ -83,8 +87,13 @@ const remoteRequestIdentity=new RemoteRequestIdentity({
 const definition = ref<Definition>(),
   guidance = ref<Guidance>(),
   installed = ref(false),
+  installedUnknown = ref(true),
   healthy = ref(false),
   report = ref<Record<string, any>>();
+const reportStateUnknown = ref(false);
+const userMutationObservation = ref<UserMutationObservation>();
+const platformMutationObservation = ref<PlatformObservation>();
+const userErrorAnchor = ref<HTMLElement>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
 const statisticsQuery = computed(()=>definition.value?.id === "website-statistics-v2" ? analyticsQueryContext(report.value) : undefined);
@@ -145,7 +154,7 @@ function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
     if (["password", "secret-json", "secret-text"].includes(field.kind)) form.value[field.key] = "";
 }
-watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); if(definition.value?.id==='load-balance'){report.value=undefined;history.value=undefined;} remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
+watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
 watch(visible, value => { if (!value) clearWriteOnlyFields(); });
 onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
@@ -157,18 +166,23 @@ watch(() => form.value.role, () => {
 const historyFilter = ref({search: "", from_time: "", to_time: "", site_id: "", resource_id: ""});
 const historyOffset = ref(0), historyLimit = ref(50);
 const scopedHistory = computed(() => !["daily-report", "user-manager", "platform-ops"].includes(definition.value?.id || ""));
+const dailyWorker = ref<unknown>();
+const dailyWorkerNotice = computed(()=>dailyWorkerMessage(dailyWorker.value,reportExportNow.value));
 function sectionFields(section: Section) { return (definition.value?.fields || []).filter(field => section.fields?.includes(field.key)); }
 async function refreshHistory(reset = false) {
   if (!definition.value || busy.value) return;
+  const requestedID = definition.value.id, accessGeneration = idsAccessGeneration;
   if (reset) historyOffset.value = 0;
   busy.value = true; error.value = "";
+  history.value = undefined;
   try {
     const query = new URLSearchParams({limit: String(historyLimit.value), offset: String(historyOffset.value)});
     for (const [key, value] of Object.entries(historyFilter.value)) {
       if (!value || !scopedHistory.value && ["site_id", "resource_id"].includes(key)) continue;
       query.set(key, key.endsWith("_time") ? new Date(value).toISOString() : value);
     }
-    history.value = await props.api<Record<string, any>>(`/app-modules/${definition.value.id}/history?${query}`);
+    const result = await props.api<Record<string, any>>(`/app-modules/${requestedID}/history?${query}`);
+    if (definition.value?.id === requestedID && idsAccessGeneration === accessGeneration && visible.value) history.value = result;
   }
   catch (e) { error.value = (e as Error).message; }
   finally { busy.value = false; }
@@ -258,6 +272,7 @@ const labels: Record<string, string> = {
   add: "添加主机",
   "issue-token": "生成只读令牌",
   "revoke-token": "撤销只读令牌",
+  "token-list": "只读刷新授权清单",
   mount: "挂载",
   unmount: "卸载挂载",
   "server-report": "刷新共享服务",
@@ -296,6 +311,7 @@ const labels: Record<string, string> = {
   report: "读取所选日期报告",
 };
 function setReport(value: any) {
+  reportStateUnknown.value = false;
   report.value =
     value?.result && typeof value.result === "object"
       ? value.result
@@ -309,9 +325,14 @@ async function show(id: string) {
   error.value = "";
   visible.value = true;
   report.value = undefined;
+  reportStateUnknown.value = false;
   definition.value = undefined;
+  userMutationObservation.value = undefined;
+  platformMutationObservation.value = undefined;
   guidance.value = undefined;
+  dailyWorker.value = undefined;
   installed.value = false;
+  installedUnknown.value = true;
   healthy.value = false;
   form.value = {};
   sites.value = [];
@@ -326,17 +347,24 @@ async function show(id: string) {
     const page = await props.api<{
       definition: Definition;
       guidance: Guidance;
-      status: { installed: boolean; healthy: boolean };
+      status: { id: string; installed: boolean; healthy: boolean; state_unknown?: boolean };
       report: unknown;
+      report_state_unknown?: boolean;
+      daily_worker?: unknown;
       workspace: Section[];
     }>(`/app-modules/${id}`);
+    if (page.definition?.id !== id) throw new Error("应用页面身份无法核对；未展示其他应用的管理操作");
     definition.value = page.definition;
     workspace.value = page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }];
     activeTab.value = workspace.value[0]?.id || "overview";
     guidance.value = page.guidance;
-    installed.value = page.status.installed;
-    healthy.value = page.status.healthy;
-    if (page.report !== null && page.report !== undefined)
+    if(id==='daily-report')dailyWorker.value = page.daily_worker;
+    installedUnknown.value = !page.status || page.status.id !== id || typeof page.status.installed !== 'boolean' || typeof page.status.healthy !== 'boolean' || page.status.state_unknown === true || page.status.state_unknown !== undefined && typeof page.status.state_unknown !== 'boolean';
+    installed.value = !installedUnknown.value && page.status.installed === true;
+    healthy.value = installed.value && page.status.healthy === true;
+    if (installedUnknown.value) error.value = "应用安装身份或状态无法核对；未自动运行、安装或展示原报告";
+    reportStateUnknown.value = page.report_state_unknown === true;
+    if (!installedUnknown.value && !reportStateUnknown.value && page.report !== null && page.report !== undefined)
       setReport(page.report);
     if (props.access === undefined || canReadPath(props.access, "/sites")) sites.value = await props.api<typeof sites.value>("/sites");
     if (id === "pure-ftpd" && (props.access === undefined || canReadPath(props.access, "/certificates"))) certificates.value = await props.api<typeof certificates.value>("/certificates");
@@ -365,6 +393,7 @@ async function show(id: string) {
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
     if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
     if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
+    if (id === "daily-report") Object.assign(form.value,{limit:90,offset:0});
     if (id === "load-balance") Object.assign(form.value,{limit:16,offset:0,resource_id:"",expected_sha:"",confirm:""});
     if (id === "files-sync") Object.assign(form.value,{remote_target_id:"",remote_request_id:"",remote_target:{address:"",port:22,username:"",host_key:"",root:"",backup_root:""}});
     if (id === "network-threat-detection") Object.assign(form.value,{network_interface:"",home_networks:"[]",prepare_ids:false,enabled:false,limit:50,offset:0});
@@ -378,12 +407,18 @@ async function show(id: string) {
   } finally {
     busy.value = false;
   }
-  const inspection = initialModuleInspection(id, definition.value, installed.value, pageReady);
+  const inspection = reportStateUnknown.value ? undefined : initialModuleInspection(id, definition.value, installed.value, pageReady);
   if (inspection) await execute(inspection);
 }
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
+  if(id==='task-manager') {
+    const original=taskSelection(row);
+    form.value.pid=original?.pid || 0;form.value.start_time=original?.start_time || 0;
+    activeTab.value=original?'terminate':'processes';
+    ElMessage.info(original?'已选择原进程身份；发送前服务器会重新核对授权，不自动终止。':'此行不能安全终止；已清除旧选择，请刷新实际进程状态。');return;
+  }
   if(id==="load-balance" && row.transaction_id!==undefined) {
     const fields=loadBalanceTransactionFields(row);
     if(!fields){ElMessage.error("事务记录身份、摘要或状态不可核对，请刷新完整库存");return;}
@@ -421,6 +456,12 @@ function selected(row: Record<string, any>) {
   }
   const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? Array.isArray(row.nodes) ? "entry" : "health" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
+  if (id === 'platform-ops') {
+    activeTab.value = typeof row.token_id === 'string' ? 'tokens' : 'host';
+    selectedPlanID.value=typeof row.token_id==='string'?'':row.id;
+    form.value.resource_id=typeof row.token_id==='string'?'':row.id;
+    form.value.token = ''; form.value.token_id = '';form.value.expected_sha = '';
+  }
   if (row.site_id !== undefined && row.site_id !== form.value.site_id) {
     form.value.path = "";
     form.value.expected_sha = "";
@@ -446,9 +487,12 @@ function selected(row: Record<string, any>) {
   if (row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(definition.value?.id || "")) form.value.expected_sha = row.after || "";
   if (row.drill && definition.value?.id === "disk-analysis")
     void execute("run");
-  else ElMessage.info("已填入所选记录，可执行对应操作");
+  else if(!['user-manager','platform-ops'].includes(id || ''))ElMessage.info("已填入所选记录，可执行对应操作");
 }
 function inputBody(action: string) {
+  if(definition.value?.id==='platform-ops') {
+    return platformActionBody(action,form.value,selectedPlanID.value);
+  }
   if(definition.value?.id==="load-balance" && loadBalanceTransactionActions.includes(action))return loadBalanceTransactionBody(action,form.value);
   if(definition.value?.id==="files-sync" && remoteBackupArchiveActions.includes(action))return remoteBackupArchiveBody(action,form.value,expectedRevision.value);
   if(definition.value?.id==="files-sync" && action==="remote-backups")return remoteBackupBody(form.value,expectedRevision.value);
@@ -481,11 +525,17 @@ function createNewRemoteTask() {
   ElMessage.info("已清空旧任务标识；请先核对源网站、排除项和连接修订号，再预览和提交新任务");
 }
 async function execute(action: string, ruleChoice?: IDSRuleProfile) {
-  if (!definition.value || busy.value || !canExecutePHP(action)) return;
+  if (!definition.value || installedUnknown.value || busy.value || !canExecutePHP(action)) return;
+  const userMutation = definition.value.id === 'user-manager' && isUserMutation(action);
+  if (userMutation && userMutationNeedsRead(userMutationObservation.value, action)) return;
+  const platformMutation = definition.value.id === 'platform-ops' && isPlatformMutation(action);
+  if (platformMutation && platformMutationNeedsRead(platformMutationObservation.value,action)) return;
   if (definition.value.id === "network-threat-detection" && idsOperationPending.value && idsBackgroundActions.includes(action)) return;
   busy.value = true;
   error.value = "";
   const accessGeneration=idsAccessGeneration;
+  let submittedUser: UserMutationObservation | undefined;
+  let submittedPlatform: PlatformObservation | undefined;
   try {
     if (definition.value.id === "network-threat-detection" && idsBackgroundActions.includes(action)) {
 	  const accessGeneration=idsAccessGeneration;
@@ -507,6 +557,15 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       return;
     }
     const submitted=inputBody(action);
+    if (platformMutation) {
+      submittedPlatform = await platformObservation(action as PlatformObservation['action'],submitted);
+      if(accessGeneration!==idsAccessGeneration)return;
+      platformMutationObservation.value=undefined;
+    }
+    if (userMutation) {
+      submittedUser = {action: action as UserMutationObservation['action'], username: typeof submitted.username === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{2,31}$/.test(submitted.username) ? submitted.username : '', state: 'unverified'};
+      userMutationObservation.value = undefined;
+    }
     if(definition.value.id==="files-sync" && action==="queue-remote") {
       const ticket=remoteRequestIdentity.begin(submitted);
       form.value.remote_request_id=ticket.key;submitted.remote_request_id=ticket.key;
@@ -517,6 +576,30 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       submitted,
     );
     if(accessGeneration!==idsAccessGeneration)return;
+    if (submittedPlatform) {
+      if (!await platformMutationReplyMatches(submittedPlatform,result)) throw Error('多主机操作回执身份无法核对；原操作可能已执行，请只读刷新对应清单，不重复提交');
+      if(accessGeneration!==idsAccessGeneration)return;
+      submittedPlatform={...submittedPlatform,state:'acknowledged'};
+      platformMutationObservation.value=submittedPlatform;
+      if(submittedPlatform.action==='add'){form.value.expected_sha=(result as Record<string,unknown>).expected_sha;selectedPlanID.value=submittedPlatform.resourceID;}
+      if(submittedPlatform.action==='remove'){form.value.expected_sha='';selectedPlanID.value='';}
+    }
+    if(definition.value.id==='platform-ops' && ['run','token-list'].includes(action)) {
+      if(!platformReadKnown(action,result))throw Error('多主机只读清单身份或完整性无法核对；未据此解除重复提交保护');
+      if(action==='run'){const row=(result as Record<string,any>).hosts.find((row:Record<string,any>)=>row.id===form.value.resource_id);form.value.expected_sha=row?.expected_sha||'';selectedPlanID.value=row?.id||'';}
+      if(platformMutationObservation.value?.requiredRead===action)platformMutationObservation.value=undefined;
+    }
+    if (submittedUser) {
+      if (!userMutationReplyMatches(submittedUser.action, submittedUser.username, result)) throw Error('账户操作回执身份无法核对；原操作可能已执行，请只读刷新账户列表，不重复提交');
+      submittedUser = {...submittedUser, state:'acknowledged'};
+      userMutationObservation.value = submittedUser;
+    }
+    if (definition.value.id === 'user-manager' && action === 'run') {
+      if (!userManagementListKnown(result)) throw Error('账户列表的身份、授权或修订无法核对；未据此解除重复提交保护');
+      userMutationObservation.value = undefined;
+    }
+    let taskNotice='';
+    if(definition.value.id==='task-manager' && action==='terminate')taskNotice=taskTerminationNotice(result,submitted.pid);
     if(definition.value.id==="files-sync" && action==="queue-remote") {
       if(!remoteQueueReplyMatches((result as any)?.job,submitted))throw new Error("远端任务回执无法核对；保留原任务标识，请读取持久任务，不重复创建");
       ElMessage.info("后台任务已接受；尚未宣称同步完成，请在远端任务中读取实际进度");
@@ -590,7 +673,8 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       selectedPlanID.value = "";
       form.value.expected_revision = 0;
     }
-    if (!["run", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote", "remote-backups", "remote-backup-preview", "remote-backup-archive"].includes(action))
+    if(taskNotice)ElMessage.info(taskNotice);
+    else if (!["run", "token-list", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote", "remote-backups", "remote-backup-preview", "remote-backup-archive"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
       if (["password", "secret-json", "secret-text"].includes(f.kind)) form.value[f.key] = "";
@@ -622,9 +706,14 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       ].includes(action) &&
       definition.value.actions.includes("run")
     )
-      setReport(
-        await props.api(`/app-modules/${definition.value.id}/${definition.value.id==='nfs-manager' && action!=='mount' && action!=='unmount' ? 'server-report' : 'run'}`, "POST", {}),
-      );
+    {
+      const refreshed = await props.api(`/app-modules/${definition.value.id}/${definition.value.id==='nfs-manager' && action!=='mount' && action!=='unmount' ? 'server-report' : 'run'}`, "POST", {});
+      if(accessGeneration!==idsAccessGeneration)return;
+      if (submittedUser && !userManagementListKnown(refreshed)) throw Error('刷新返回的账户列表身份、授权或修订无法核对');
+      if (submittedPlatform && !platformReadKnown('run',refreshed)) throw Error('刷新返回的多主机清单身份或完整性无法核对');
+      setReport(refreshed);
+      if(submittedPlatform){const row=(refreshed as Record<string,any>).hosts?.find((row:Record<string,any>)=>row.id===form.value.resource_id);form.value.expected_sha=row?.expected_sha||'';selectedPlanID.value=row?.id||'';}
+    }
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
       for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
       form.value.expected_revision = report.value.config.revision; selectedPlanID.value = "ftp-service";
@@ -663,8 +752,24 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   } catch (e) {
     if(accessGeneration!==idsAccessGeneration)return;
     error.value = e instanceof Error ? e.message : String(e);
+    if (submittedUser) {
+      userMutationObservation.value = {...submittedUser,state:submittedUser.state==='acknowledged'?'refresh_failed':'unverified'};
+      if (submittedUser.state === 'acknowledged') error.value = '已收到服务器账户操作成功回执，但账户列表刷新失败；不要重复提交，请手动只读刷新核对。'+error.value;
+      form.value.expected_revision = 0; selectedPlanID.value = '';
+    }
+    if (submittedPlatform) {
+      platformMutationObservation.value={...submittedPlatform,state:submittedPlatform.state==='acknowledged'?'refresh_failed':'unverified'};
+      if(submittedPlatform.state==='acknowledged')error.value='已收到多主机操作成功回执，但后续刷新失败；不要重复提交，请手动只读刷新核对。'+error.value;
+    }
+    if(['user-manager','platform-ops'].includes(definition.value.id)) {
+      await nextTick();
+      if(visible.value&&accessGeneration===idsAccessGeneration){userErrorAnchor.value?.scrollIntoView({block:'nearest'});userErrorAnchor.value?.focus({preventScroll:true});}
+    }
   } finally {
     if(definition.value?.id==="files-sync")clearWriteOnlyFields();
+    if(userMutation && accessGeneration===idsAccessGeneration)clearWriteOnlyFields();
+    if(platformMutation && accessGeneration===idsAccessGeneration)clearWriteOnlyFields();
+    if(accessGeneration===idsAccessGeneration && definition.value?.id==='task-manager' && action==='terminate') {form.value.pid=0;form.value.start_time=0;}
     busy.value = false;
   }
 }
@@ -697,7 +802,7 @@ function exportReport() {
   URL.revokeObjectURL(url);
 }
 async function uninstall() {
-  if (!definition.value || busy.value) return;
+  if (!definition.value || installedUnknown.value || busy.value) return;
   busy.value = true;
   try {
     const out = await props.api<{ job_id: string }>(
@@ -714,7 +819,7 @@ async function uninstall() {
   }
 }
 async function install() {
-  if (!definition.value || installed.value || busy.value) return;
+  if (!definition.value || installedUnknown.value || installed.value || busy.value) return;
   busy.value = true;
   error.value = "";
   try {
@@ -736,11 +841,13 @@ defineExpose({ show });
     destroy-on-close
   >
     <div v-loading="busy">
-      <el-alert v-if="error" :title="error" type="error" :closable="false" />
+      <div v-if="error" ref="userErrorAnchor" tabindex="-1" class="module-error-anchor"><el-alert :title="error" type="error" :closable="false" /></div>
+      <el-alert v-if="definition?.id==='user-manager' && userMutationObservation?.state !== 'acknowledged' && userMutationObservation" type="warning" :closable="false" title="账户操作或后续刷新未完全核对。已暂停重复写入；请在账户列表手动刷新核对，不能将断网或刷新失败当作未执行。" />
+      <el-alert v-if="definition?.id==='platform-ops' && platformMutationObservation && platformMutationObservation.state!=='acknowledged'" type="warning" :closable="false" :title="`多主机操作或后续刷新未完全核对，已暂停重复写入。请手动${platformMutationObservation.requiredRead==='token-list'?'只读刷新授权清单（可按标识撤销丢失回执的授权）':'刷新主机健康清单'}；断网不等于未执行。`" />
       <template v-if="definition">
         <p>
           <el-tag :type="healthy ? 'success' : 'warning'">{{
-            installed
+            installedUnknown ? "安装状态待核对" : installed
               ? healthy
                 ? "已安装 · 依赖正常"
                 : "已安装 · 需要核对"
@@ -748,7 +855,14 @@ defineExpose({ show });
           }}</el-tag>
           <span>实际操作、状态和报告来自服务器，不使用演示数据。</span>
         </p>
-        <el-alert v-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
+        <el-alert v-if="installedUnknown" title="安装记录的身份、权限或内容无法核对，不能据此认定未安装；暂停安装、配置和卸载，保留原记录，请先核对。" type="warning" :closable="false" />
+        <el-alert v-else-if="!installed" title="先安装并验证模块依赖，再执行下面的实际操作；此处参数属于当前应用，不使用其他软件的设置模板。" type="info" :closable="false" />
+        <el-alert v-if="reportStateUnknown && !installedUnknown" title="原报告的身份、权限或内容无法核对；保留原文件，未展示为正常结果或没有报告。请先核对原记录；只读历史查询不会自动修复或覆盖报告。" type="warning" :closable="false" />
+        <template v-if="definition.id==='task-manager'">
+          <el-alert v-if="report?.partial===true" title="进程快照受 2000 条采样边界或 500 条展示上限限制：这是部分结果，不代表全部进程。" type="warning" :closable="false" />
+          <el-alert v-if="report?.connections_available===false" title="连接数据暂不可核对，不能解释为没有连接。" type="warning" :closable="false" />
+          <el-alert v-if="report?.signal_accepted===true && report?.exit_verified===false" title="SIGTERM 发送已接受，但尚未核对退出；应用可处理信号或被监督器重启。请刷新核对，不自动重发。" type="info" :closable="false" />
+        </template>
         <ThreatIDSOperations v-if="definition.id === 'network-threat-detection'" :api="api" :operation-id="idsOperationID" :installed="installed" :access="access" @pending="idsOperationPending=$event" @completed="refreshIDSAfterTask" />
         <el-alert v-if="definition.id==='files-sync' && form.remote_request_id" :title="`当前远端任务标识：${form.remote_request_id}。未知回执或执行中保留原标识，读取持久任务核对；恢复前不要提交新的同步。`" type="info" :closable="false" />
         <el-button v-if="definition.id==='files-sync' && form.remote_request_id" :disabled="busy || !canCreateRemoteTask" @click="createNewRemoteTask">已核对旧任务，准备新的同步（不立即执行）</el-button>
@@ -770,6 +884,7 @@ defineExpose({ show });
         </AnalyticsWorkspace>
         <WafWorkspace v-else-if="definition.id === 'apache-waf'" :api="api" engine="apache-waf" :on-install="onInstall" />
         <el-tabs v-else v-model="activeTab" class="module-manager-tabs" @tab-change="tabChanged">
+        <el-alert v-if="definition.id==='daily-report'" :title="dailyWorkerNotice.message" :type="dailyWorkerNotice.observed?'info':'warning'" :closable="false" class="daily-worker-status" />
         <el-tab-pane label="概览" name="overview">
         <p v-if="guidance">{{ guidance.description }}</p>
         <ol v-if="guidance" class="module-workflow">
@@ -798,7 +913,7 @@ defineExpose({ show });
           >
             <el-input
               v-if="field.kind === 'identity'"
-              :model-value="field.key === 'expected_revision' ? expectedRevision : form[field.key]"
+              :model-value="field.key === 'expected_revision' ? expectedRevision : definition.id === 'platform-ops' && field.key === 'expected_sha' ? platformHostSnapshotSHA(form,selectedPlanID) : form[field.key]"
               readonly
             />
             <el-select
@@ -1024,7 +1139,7 @@ defineExpose({ show });
             v-for="action in section.actions.filter(action=>action!=='ids-rules')"
             :key="action"
             :disabled="
-              !installed || busy || !canExecutePHP(action) || (definition.id === 'network-threat-detection' && idsOperationPending && idsBackgroundActions.includes(action)) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
+              !installed || busy || !canExecutePHP(action) || (definition.id === 'user-manager' && userMutationNeedsRead(userMutationObservation, action)) || (definition.id==='platform-ops' && platformMutationNeedsRead(platformMutationObservation,action)) || (definition.id === 'network-threat-detection' && idsOperationPending && idsBackgroundActions.includes(action)) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
             "
             :type="
               [
@@ -1038,7 +1153,7 @@ defineExpose({ show });
                 : 'primary'
             "
             @click="execute(action)"
-            >{{ labels[action] || action }}</el-button
+            >{{ definition.id === 'user-manager' && action === 'run' ? '只读刷新账户列表' : definition.id === 'platform-ops' && action === 'remove' ? '移除主机' : definition.id === 'platform-ops' && action === 'add' ? '登记或更新主机' : labels[action] || action }}</el-button
           >
         </div>
         <section v-if="sectionReport(section.id) !== undefined" class="workflow-result" aria-label="实际执行结果">
@@ -1056,7 +1171,8 @@ defineExpose({ show });
           <AnalyticsQueryContext v-if="definition.id === 'website-statistics-v2' && report !== undefined" :report="report" />
         <section aria-label="执行报告">
           <h3>实际执行结果</h3>
-          <p v-if="report === undefined">
+          <p v-if="reportStateUnknown">原报告待核对，未据此认定执行成功、失败或没有执行。</p>
+          <p v-else-if="report === undefined">
             选择参数并执行操作，报告将显示在这里。
           </p>
           <AppModuleReport
@@ -1068,7 +1184,7 @@ defineExpose({ show });
         </section>
         </el-tab-pane>
         <el-tab-pane label="执行历史" name="history">
-          <p>查看真实执行摘要；不保存输入密码、访问令牌或完整请求正文。</p>
+          <p>只读查询真实执行摘要；不自动迁移、修复或修剪原历史，不保存输入密码、访问令牌或完整请求正文。</p>
           <el-form inline label-position="top">
             <el-form-item label="关键词"><el-input v-model="historyFilter.search" maxlength="128" clearable /></el-form-item>
             <el-form-item label="开始时间"><el-date-picker v-model="historyFilter.from_time" type="datetime" clearable /></el-form-item>
@@ -1115,7 +1231,7 @@ defineExpose({ show });
         :disabled="busy"
         @click="uninstall"
         >卸载模块 · 保留报告和备份</el-button
-      ><el-button v-if="definition && !installed" type="primary" :disabled="busy" @click="install">安装并验证</el-button
+      ><el-button v-if="definition && !installed" type="primary" :disabled="busy || installedUnknown" @click="install">{{installedUnknown ? '安装状态待核对' : '安装并验证'}}</el-button
       ><el-button @click="visible = false">关闭</el-button></template
     >
   </el-dialog>
@@ -1193,8 +1309,19 @@ p {
 <style>
 .app-module-dialog {
   max-width: calc(100vw - 24px) !important;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  margin-top: 24px !important;
+  margin-bottom: 24px !important;
 }
+.app-module-dialog .el-dialog__header,
+.app-module-dialog .el-dialog__footer { flex-shrink: 0; }
 .app-module-dialog .el-dialog__body {
+  min-height: 0;
   overflow-x: hidden;
+  overflow-y: auto;
 }
+.app-module-dialog .module-error-anchor { scroll-margin-block-start: 16px; }
 </style>

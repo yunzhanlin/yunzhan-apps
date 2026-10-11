@@ -17,7 +17,7 @@ import (
 )
 
 func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.T) {
-	for _, name := range []string{"live_permission", "exited", "zombie", "dead", "pid_reused", "parent_changed", "stat_corrupt", "live_fd_missing", "other_error", "missing_error"} {
+	for _, name := range []string{"live_permission", "exited", "zombie", "dead", "pid_reused", "parent_changed", "stat_corrupt", "live_fd_missing", "other_error", "missing_error", "exit_metadata_exited", "exit_metadata_zombie", "exit_metadata_pid_reused", "exit_metadata_live", "exit_metadata_parent_changed", "exit_metadata_stat_corrupt", "io_error_after_verified_exit", "known_title_live_stays_undrained", "known_title_verified_exit"} {
 		t.Run(name, func(t *testing.T) {
 			root := wafReloadFixture(t)
 			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
@@ -26,26 +26,35 @@ func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.
 			}
 			previous := g.Workers[0]
 			readErr, wantGone, wantError := error(syscall.EACCES), false, false
+			if strings.HasPrefix(name, "exit_metadata_") {
+				readErr = errors.New("Nginx 工作进程标题不可核对")
+			}
+			if strings.HasPrefix(name, "known_title_") {
+				readErr = errWAFWorkerTitleUnverifiable
+			}
 			switch name {
-			case "exited":
+			case "exited", "exit_metadata_exited", "io_error_after_verified_exit", "known_title_verified_exit":
 				if err := os.Remove(filepath.Join(root, "101/stat")); err != nil {
 					t.Fatal(err)
 				}
 				wantGone = true
-			case "zombie", "dead":
+				if name == "io_error_after_verified_exit" {
+					readErr = syscall.EIO
+				}
+			case "zombie", "dead", "exit_metadata_zombie":
 				state := "Z"
 				if name == "dead" {
 					state = "X"
 				}
 				wafReloadFixtureStat(t, root, 101, 100, 300, state)
 				wantGone = true
-			case "pid_reused":
+			case "pid_reused", "exit_metadata_pid_reused":
 				wafReloadFixtureStat(t, root, 101, 999, 301, "S")
 				wantGone = true
-			case "parent_changed":
+			case "parent_changed", "exit_metadata_parent_changed":
 				wafReloadFixtureStat(t, root, 101, 999, 300, "S")
 				wantError = true
-			case "stat_corrupt":
+			case "stat_corrupt", "exit_metadata_stat_corrupt":
 				wafReloadFixtureFile(t, root, "101/stat", "corrupt")
 				wantError = true
 			case "live_fd_missing":
@@ -54,6 +63,8 @@ func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.
 				readErr, wantError = syscall.EIO, true
 			case "missing_error":
 				readErr, wantError = nil, true
+			case "exit_metadata_live":
+				wantError = true
 			}
 			gone, err := g.workerSocketReadError(previous, readErr)
 			if gone != wantGone || (err != nil) != wantError {
@@ -103,6 +114,98 @@ func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.
 }
 
 const wafReloadFixtureBinary = "/usr/sbin/nginx"
+
+func TestWAFReloadGenerationSeparateHandoffAndFingerprintBudgets(t *testing.T) {
+	t.Run("slow_listener_handoff_then_fresh_probe_budget", func(t *testing.T) {
+		root := wafReloadFixture(t)
+		g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// These are bounded /proc-shaped filesystem fixtures, not native
+		// Nginx workers or proof of actual application activation.
+		closed := make(chan error, 1)
+		go func() {
+			time.Sleep(5200 * time.Millisecond)
+			closed <- os.Remove(filepath.Join(root, "101/fd/7"))
+		}()
+		started := time.Now()
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		probes := 0
+		err = verifyWAFReloadAfterHandoff(ctx, g, func(probeCtx context.Context) error {
+			probes++
+			if time.Since(started) < 5*time.Second {
+				return errors.New("probe ran before actual listener closure")
+			}
+			deadline, ok := probeCtx.Deadline()
+			remaining := time.Until(deadline)
+			if !ok || remaining < 4500*time.Millisecond || remaining > 5*time.Second {
+				return fmt.Errorf("fingerprint did not receive its own bounded budget: %s", remaining)
+			}
+			return probeCtx.Err()
+		})
+		if closeErr := <-closed; closeErr != nil {
+			t.Fatal(closeErr)
+		}
+		if err != nil || probes != 1 {
+			t.Fatal("slow handoff failed or probe repeated", probes, err)
+		}
+		if _, err := os.Stat(filepath.Join(root, "101/stat")); err != nil {
+			t.Fatal("waiting must not kill old clients", err)
+		}
+	})
+	for _, name := range []string{"earlier_deadline", "cancelled", "changed_master", "probe_failure", "changed_master_during_probe", "listener_reopened_during_probe", "cancelled_during_probe"} {
+		t.Run(name, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+			defer cancel()
+			probeFailure := errors.New("fresh fingerprint is wrong")
+			wantProbes := 0
+			switch name {
+			case "cancelled":
+				cancel()
+			case "changed_master":
+				wafReloadFixtureStat(t, root, 100, 1, 201, "S")
+			case "probe_failure", "changed_master_during_probe", "listener_reopened_during_probe", "cancelled_during_probe":
+				if err := os.Remove(filepath.Join(root, "101/fd/7")); err != nil {
+					t.Fatal(err)
+				}
+				wantProbes = 1
+			}
+			probes := 0
+			err = verifyWAFReloadAfterHandoff(ctx, g, func(probeCtx context.Context) error {
+				probes++
+				deadline, _ := probeCtx.Deadline()
+				parentDeadline, _ := ctx.Deadline()
+				if deadline.After(parentDeadline) {
+					t.Fatal("probe extended earlier caller deadline")
+				}
+				switch name {
+				case "probe_failure":
+					return probeFailure
+				case "changed_master_during_probe":
+					wafReloadFixtureStat(t, root, 100, 1, 201, "S")
+				case "listener_reopened_during_probe":
+					wafReloadFixtureLink(t, root, "101/fd/7", "socket:[700]")
+				case "cancelled_during_probe":
+					cancel()
+				}
+				return nil
+			})
+			if err == nil || probes != wantProbes {
+				t.Fatal("unknown handoff/fingerprint accepted", probes, err)
+			}
+			if name == "earlier_deadline" && !errors.Is(err, context.DeadlineExceeded) || (name == "cancelled" || name == "cancelled_during_probe") && !errors.Is(err, context.Canceled) || name == "probe_failure" && !errors.Is(err, probeFailure) {
+				t.Fatal("original verification failure was lost", err)
+			}
+		})
+	}
+}
 
 func wafReloadFixtureStat(t *testing.T, root string, pid, parent int, start uint64, state string) {
 	t.Helper()

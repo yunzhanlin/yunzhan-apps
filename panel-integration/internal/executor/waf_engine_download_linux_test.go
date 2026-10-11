@@ -16,13 +16,13 @@ import (
 )
 
 func TestWAFEngineDownloadSourceAndRedirectBoundaries(t *testing.T) {
-	for _, raw := range []string{"https://nginx.org/download/nginx-1.24.0.tar.gz", "https://github.com/owasp-modsecurity/ModSecurity/releases/download/v3.0.17/modsecurity-v3.0.17.tar.gz", "https://github.com/coreruleset/coreruleset/releases/download/v4.30.0/coreruleset-4.30.0-minimal.tar.gz", "https://release-assets.githubusercontent.com/github-production-release-asset/123/456?temporary-token=opaque"} {
+	for _, raw := range []string{"https://nginx.org/download/nginx-1.24.0.tar.gz", "https://github.com/owasp-modsecurity/ModSecurity/releases/download/v3.0.17/modsecurity-v3.0.17.tar.gz", "https://github.com/coreruleset/coreruleset/releases/download/v4.30.0/coreruleset-4.30.0-minimal.tar.gz", "https://release-assets.githubusercontent.com/github-production-release-asset/123/456?temporary-token=opaque", "https://deb.debian.org/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz"} {
 		u, _ := url.Parse(raw)
 		if !wafSourceRedirectAllowed(u, 1) {
 			t.Fatal("rejected official redirect", u.Host)
 		}
 	}
-	for _, raw := range []string{"http://nginx.org/download/nginx-1.24.0.tar.gz", "https://nginx.org:443/download/nginx-1.24.0.tar.gz", "https://user@nginx.org/download/nginx-1.24.0.tar.gz", "https://nginx.org/download/nginx-1.24.0.tar.gz#fragment", "https://127.0.0.1/private", "https://github.com/attacker/plugin/releases/download/main/run.sh", "https://release-assets.githubusercontent.com.evil.invalid/github-production-release-asset/a", "https://release-assets.githubusercontent.com/private"} {
+	for _, raw := range []string{"http://nginx.org/download/nginx-1.24.0.tar.gz", "https://nginx.org:443/download/nginx-1.24.0.tar.gz", "https://user@nginx.org/download/nginx-1.24.0.tar.gz", "https://nginx.org/download/nginx-1.24.0.tar.gz#fragment", "https://127.0.0.1/private", "https://github.com/attacker/plugin/releases/download/main/run.sh", "https://release-assets.githubusercontent.com.evil.invalid/github-production-release-asset/a", "https://release-assets.githubusercontent.com/private", "http://deb.debian.org/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz", "https://deb.debian.org/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz?token=not-allowed", "https://deb.debian.org/debian/pool/main/y/yajl/other.tar.gz", "https://deb.debian.org/debian/pool/main/y/yajl/../yajl/yajl_2.1.0.orig.tar.gz", "https://deb.debian.org.evil.invalid/debian/pool/main/y/yajl/yajl_2.1.0.orig.tar.gz"} {
 		u, _ := url.Parse(raw)
 		if wafSourceRedirectAllowed(u, 1) {
 			t.Fatal("accepted forbidden redirect", raw)
@@ -41,6 +41,37 @@ func TestWAFEngineDownloadSourceAndRedirectBoundaries(t *testing.T) {
 	cancel()
 	if err := downloadWAFEngineSource(ctx, wafEngineSources()[0], "/nonexistent"); !errors.Is(err, context.Canceled) {
 		t.Fatal("cancelled download continued", err)
+	}
+}
+
+func TestNginxPrivateYAJLDownloadRefusesOtherSourceAuthorityBeforeTransport(t *testing.T) {
+	dir := t.TempDir()
+	for _, original := range []wafEngineSource{wafEngineSources()[3], apacheBodySources()[1]} {
+		for _, field := range []string{"name", "version", "url", "sha", "verification"} {
+			changed := original
+			switch field {
+			case "name":
+				changed.Name += "-other"
+			case "version":
+				changed.Version += "-other"
+			case "url":
+				changed.URL += "?unreviewed=1"
+			case "sha":
+				changed.SHA256 = strings.Repeat("0", 64)
+			case "verification":
+				changed.Verification = "caller says approved"
+			}
+			if err := downloadWAFEngineSourceAttempt(context.Background(), changed, filepath.Join(dir, field)); err == nil {
+				t.Fatal("unreviewed source reached transport", original.Name, field)
+			}
+		}
+	}
+	if err := downloadWAFEngineSourceAttempt(context.Background(), apacheBodySources()[1], filepath.Join(dir, "apache-alias")); err == nil {
+		t.Fatal("same reviewed source digest silently granted Apache alias")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil || len(entries) != 0 {
+		t.Fatal("unreviewed source wrote a temporary or published file", err)
 	}
 }
 

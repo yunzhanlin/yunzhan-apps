@@ -120,6 +120,64 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	// Select the exact journal-backed manifest before invoking httpd -t: that
+	// command loads DSOs. For the native candidate, a restored configuration
+	// is not permission to execute a changed engine, even during cold boot.
+	c := tx.Changes[2]
+	data, exists := c.OldData, c.OldExists
+	if tx.State == "committed" {
+		data, exists = c.NextData, c.NextExists
+	}
+	var old struct {
+		ID       string         `json:"id"`
+		Version  string         `json:"version"`
+		Settings map[string]any `json:"settings"`
+	}
+	var cfg core.WAFConfig
+	if exists {
+		if _, err := apacheBodySiteManifestDocument(data); err != nil {
+			return err
+		}
+		if err = json.Unmarshal(data, &old); err != nil {
+			return err
+		}
+		if old.ID != "apache-waf" {
+			return errors.New("Apache 恢复安装身份与固定防护应用不一致，保留事务")
+		}
+		if old.Version != core.ApacheWAFNativeBodyVersion {
+			if old.Version != core.ApacheWAFVersion && old.Version != "2.2.0" && old.Version != "2.1.0" && old.Version != "2.0.0" && old.Version != "1.0" {
+				return errors.New("Apache 恢复安装版本未知，未加载模块且保留事务")
+			}
+			if body, exists := old.Settings["body"]; exists && body != nil {
+				return errors.New("Apache 旧版恢复记录不能声明请求体能力")
+			}
+			if err := s.apacheBodyNoOrphanSource(); err != nil {
+				return err
+			}
+		}
+		if old.Version == core.ApacheWAFNativeBodyVersion {
+			cfg, err = core.DecodeApacheWAFNativeBodyConfig(old.Settings)
+			if err != nil {
+				return err
+			}
+			if err = s.verifyApacheBodyTransition(ctx, cfg, cfg); err != nil {
+				return err
+			}
+			source, _, sourceErr := s.apacheWAFSource()
+			unchanged, checkErr := transitionApacheBodySource(source, cfg, cfg)
+			if sourceErr != nil || checkErr != nil || source != unchanged {
+				return errors.New("Apache 原生恢复配置挂载不可核实，未加载模块且保留事务")
+			}
+			// A cold boot resets tmpfs. Recreate only missing site leaves after
+			// sealed program/source verification and before httpd -t loads the
+			// restored DSO. Never acknowledge a journal with an unusable cache.
+			if err := s.prepareApacheBodyStorage(ctx, cfg); err != nil {
+				return err
+			}
+		}
+	} else if err := s.apacheBodyNoOrphanSource(); err != nil {
+		return err
+	}
 	release, err := apacheRelease()
 	if err != nil {
 		return err
@@ -156,12 +214,6 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 	}
 	// Recovery of an old installation uses its exact version oracle, never the
 	// new application's healthy badge. An uninstalled original has no WAF probe.
-	c := tx.Changes[2]
-	data := c.OldData
-	exists := c.OldExists
-	if tx.State == "committed" {
-		data, exists = c.NextData, c.NextExists
-	}
 	if !exists {
 		_, bindings, e := s.apacheWAFSource()
 		if e != nil || len(bindings) == 0 {
@@ -177,16 +229,11 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 		}
 		return acknowledge()
 	}
-	var old struct {
-		Version  string         `json:"version"`
-		Settings map[string]any `json:"settings"`
-	}
-	if err = json.Unmarshal(data, &old); err != nil {
-		return err
-	}
-	cfg, err := core.DecodeApacheWAFConfig(old.Settings)
-	if err != nil {
-		return err
+	if old.Version != core.ApacheWAFNativeBodyVersion {
+		cfg, err = core.DecodeApacheWAFConfig(old.Settings)
+		if err != nil {
+			return err
+		}
 	}
 	source, _, err := s.apacheWAFSource()
 	if err != nil {

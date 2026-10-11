@@ -12,11 +12,15 @@ PrivateTmp=true
 PrivateDevices=true
 ProtectHome=true
 ProtectSystem=strict
+ProtectControlGroups=true
 ReadWritePaths=/var/lib/panel-executor /var/cache/panel-analytics-html-build /opt/panel/app-modules
 ReadOnlyPaths=/etc/nginx /etc/panel
 NoNewPrivileges=true
 RestrictSUIDSGID=true
 CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
+# Preserve exactly the existing supervisor budget across RestrictSUIDSGID/NNP.
+# The fixed setpriv guard clears all grants before any source compiler runs.
+AmbientCapabilities=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
 MemoryHigh=576M
 MemoryMax=640M

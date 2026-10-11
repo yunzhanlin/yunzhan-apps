@@ -97,6 +97,9 @@ func (s *Service) prepareWAFSettings(raw map[string]any, install bool) (core.WAF
 		}
 	}
 	old, oldErr := s.readSoftwareManifest("nginx-waf")
+	if oldErr != nil && !errors.Is(oldErr, os.ErrNotExist) {
+		return cfg, errors.New("Nginx WAF 安装记录无法核对；未准备新配置")
+	}
 	if !install && oldErr == nil {
 		previous, e := core.DecodeWAFConfig(old.Settings)
 		if e != nil {
@@ -229,6 +232,7 @@ func (s *Service) backupWAFConfiguration() (string, error) {
 }
 
 func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
+	s.wafBackupInventoryRoutes(m)
 	s.wafEngineRoutes(m)
 	s.wafBodyReportRoutes(m)
 	m.HandleFunc("GET /v1/software/nginx-waf/config", func(w http.ResponseWriter, r *http.Request) {
@@ -253,6 +257,10 @@ func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		_, e := s.readSoftwareManifest("nginx-waf")
+		if e != nil && !errors.Is(e, os.ErrNotExist) {
+			respond(w, 409, map[string]any{"error": "Nginx WAF 安装记录无法核对；未预览或执行配置检查", "state_unknown": true})
+			return
+		}
 		v, e := s.prepareWAFSettings(raw, e != nil)
 		if e != nil {
 			respond(w, 409, map[string]string{"error": e.Error()})

@@ -64,10 +64,22 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-backup-archive.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-rotation-refresh.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-body-inventory.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-apply-task.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-apply-recovery.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-task-manager.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-user-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-module-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-outbound-source-view.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-software-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-sites.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-config-backups.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-report-export.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-waf-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-build.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-report.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-deferred-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-web-entry-budget.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/executor-tests" ./internal/executor)
@@ -81,7 +93,7 @@ cp "$BUILD_ROOT/SOURCE_INPUTS.json" "$STAGE/$NAME/"
 find "$STAGE/$NAME/web/assets" -type f \( -name '*.js' -o -name '*.css' \) -print0 | while IFS= read -r -d '' asset; do
   gzip -9 -n -c "$asset" > "$asset.gz"
 done
-cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$STAGE/$NAME/systemd/"
+cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$BUILD_ROOT/dev/"*.mount "$STAGE/$NAME/systemd/"
 rm -f "$STAGE/$NAME/systemd/panel-pebble"*
 cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
 cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$STAGE/$NAME/"
@@ -95,7 +107,10 @@ EOF
 (command -v xattr >/dev/null && xattr -cr "$STAGE/$NAME") || true
 (
   cd "$STAGE/$NAME"
-  { find bin web systemd config -type f; printf '%s\n' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py; } | LC_ALL=C sort | xargs shasum -a 256 > SHA256SUMS
+  # Escaped systemd mount names contain literal backslashes. Ordinary xargs
+  # interprets those characters and can hash a different nonexistent path.
+  # Keep the complete filename NUL-delimited through sorting and hashing.
+  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
 )
 python3 "$BUILD_ROOT/packaging/release-file-modes.py" normalize "$STAGE/$NAME"
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"

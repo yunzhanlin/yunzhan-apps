@@ -15,7 +15,8 @@ test('dedicated Apache opening cannot issue a generic inspection; existing revie
  assert.equal(initial('nfs-manager',['run']),undefined,'never substitute the mount report for the server report');
  for(const id of ['file-monitor','website-tamper-proof','enterprise-tamper-proof'])assert.equal(initial(id,['policies','run'],[{key:'site_id',kind:'site'}]),'policies');
  for(const id of ['files-sync','pure-ftpd'])assert.equal(initial(id,['run'],[{key:'site_id',kind:'site'}]),'run');
- for(const id of ['network-threat-detection','daily-report','load-balance','mobile-pwa','task-manager','user-manager'])assert.equal(initial(id),'run');
+ for(const id of ['network-threat-detection','load-balance','mobile-pwa','task-manager','user-manager'])assert.equal(initial(id),'run');
+ assert.equal(initial('daily-report'),undefined,'opening stored daily reports must not regenerate, rewrite or enqueue a source event');
  for(const id of ['site-diagnosis','website-analytics','website-statistics-v2','php-code-security','disk-analysis','pm2-manager'])assert.equal(initial(id,['run'],[{key:'site_id',kind:'site'}]),undefined);
  assert.equal(initial('platform-ops'),undefined);
  assert.equal(initial('task-manager',['save','install','update','terminate']),undefined);
@@ -43,7 +44,7 @@ test('actual manager uses the closed selector only after its complete page and d
  assert.equal((show.match(/pageReady = true/g)||[]).length,1);
  assert(show.indexOf('pageReady = true')>show.indexOf('restoreAnalyticsQuery('));
  assert(show.indexOf('pageReady = true')<show.indexOf('} catch (e)'));
- assert.match(show,/const inspection = initialModuleInspection\(id, definition.value, installed.value, pageReady\);\s*if \(inspection\) await execute\(inspection\);/);
+ assert.match(show,/const inspection = reportStateUnknown.value \? undefined : initialModuleInspection\(id, definition.value, installed.value, pageReady\);\s*if \(inspection\) await execute\(inspection\);/);
  assert.equal((show.match(/await execute\(/g)||[]).length,1);
  assert.doesNotMatch(show,/execute\("(?:run|policies|server-report)"\)/);
  assert.match(manager,/<WafWorkspace v-else-if="definition.id === 'apache-waf'"[^>]+engine="apache-waf"/);
@@ -61,26 +62,43 @@ test('the real compiled show function refuses automatic actions after page, site
  const manager=read('web/src/AppModuleManager.vue');
  const source=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
- async function open(id,failedPath,actions=['run'],fields=null){
-  const refs=Object.fromEntries(['busy','error','visible','report','definition','guidance','installed','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions'].map(key=>[key,{value:undefined}]));
+ async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
+  const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation'].map(key=>[key,{value:undefined}]));
+  refs.userMutationObservation.value={action:'update',username:'old-account',state:'unverified'};
+  refs.platformMutationObservation.value={action:'issue-token',state:'unverified',requiredRead:'token-list'};
   const requests=[],executed=[];
   const bindings={...refs,initialModuleInspection,canReadPath,
    props:{api:async path=>{requests.push(path);if(path===failedPath)throw new Error('retained read failure '+path);
-    return path==='/app-modules/'+id ? {definition:{id,actions,fields},status:{installed:true,healthy:true},report:null,workspace:[{id:'manage'}]} : []; }},
+    return path==='/app-modules/'+id ? {definition:{id,actions,fields},status:{id,installed:true,healthy:true,state_unknown:unknown},report:unknown||reportUnknown?{untrusted:'not-current'}:null,report_state_unknown:reportUnknown,workspace:[{id:'manage'}],...pageChange} : []; }},
    setReport:value=>{refs.report.value=value;},analyticsQueryContext:()=>undefined,restoreAnalyticsQuery:()=>undefined,
    execute:async action=>{executed.push(action);}};
   await new Function(...Object.keys(bindings),js+'\nreturn show;')(...Object.values(bindings))(id);
-  return {requests,executed,error:refs.error.value,installed:refs.installed.value};
+  assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
+  assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
+  return {requests,executed,error:refs.error.value,installed:refs.installed.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
  }
  for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){
   const out=await open(id,path);assert.equal(out.requests.at(-1),path);assert.deepEqual(out.executed,[]);assert.match(out.error,/retained read failure/);
   if(path==='/sites'||path==='/certificates')assert.equal(out.installed,true,'partial installation state must not authorize an action');
  }
  assert.deepEqual((await open('apache-waf')).executed,[]);
+ assert.deepEqual((await open('daily-report')).executed,[],'real show function does not rewrite or regenerate a daily report');
  assert.deepEqual((await open('task-manager')).executed,['run']);
+ for(const status of [undefined,{}, {id:'other',installed:true,healthy:true},{id:'task-manager',installed:'true',healthy:true},{id:'task-manager',installed:true,healthy:'true'},{id:'task-manager',installed:true,healthy:true,state_unknown:'false'}]){
+  const out=await open('task-manager',undefined,['run'],null,false,false,{status,report:{untrusted:'not-current'}});
+  assert.equal(out.unknown,true);assert.equal(out.installed,false);assert.equal(out.report,undefined);assert.deepEqual(out.executed,[]);assert.match(out.error,/安装身份或状态无法核对/);
+ }
+ const wrongDefinition=await open('task-manager',undefined,['run'],null,false,false,{definition:{id:'user-manager',actions:['delete'],fields:[]}});
+ assert.equal(wrongDefinition.unknown,true);assert.equal(wrongDefinition.installed,false);assert.deepEqual(wrongDefinition.executed,[]);assert.match(wrongDefinition.error,/页面身份无法核对/);
  assert.deepEqual((await open('pure-ftpd',undefined,['run'],[{key:'site_id',kind:'site'}])).executed,['run']);
  assert.deepEqual((await open('nfs-manager',undefined,['run','server-report'])).executed,['server-report']);
  assert.deepEqual((await open('file-monitor',undefined,['policies'],[{key:'site_id',kind:'site'}])).executed,['policies']);
+ for(const id of ['task-manager','pure-ftpd','file-monitor']){
+  const state=await open(id,undefined,['run'],null,true);
+  assert.equal(state.unknown,true);assert.equal(state.installed,false);assert.equal(state.report,undefined);assert.deepEqual(state.executed,[]);
+  const report=await open(id,undefined,['run'],null,false,true);
+  assert.equal(report.installed,true);assert.equal(report.unknown,false);assert.equal(report.reportUnknown,true);assert.equal(report.report,undefined);assert.deepEqual(report.executed,[],'unknown original report must not be automatically overwritten by an opening inspection');
+ }
 });
 test('constructing the opener does not request any chunk or mount a workspace',()=>{
  let calls=0;new DeferredWorkspace(async()=>{calls++;return {};});assert.equal(calls,0);
@@ -181,4 +199,86 @@ test('all module entry points wait for code and the actual mounted ref; reset te
  assert.doesNotMatch(read('web/src/deferredWorkspace.ts'),/fetch\(|localStorage|sessionStorage|setTimeout|setInterval|csrf|password|secret|cookie/);
  assert.match(read('web/vite.config.ts'),/chunkSizeWarningLimit: 1200/);
  assert.match(read('packaging/build-release.sh'),/test-deferred-workspace\.mjs/);
+});
+
+const appSource=read('web/src/App.vue');
+const securityBinding=appSource.slice(appSource.indexOf('function bindSecurityWorkspace()'),appSource.indexOf('async function replaceAccountSession('));
+const bindingJS=ts.transpileModule(securityBinding,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+function securityScope(options={}) {
+ const calls=[],opened=[];const d=options.deferred;
+ const bindings={accessEpoch:7,csrf:{value:'original-session'},user:{value:'original-admin'},accountChanging:{value:false},accessPlan:{value:{role:'admin',menu_ids:['security','runtimes','audit']}},appModuleScopeDisposed:false,securityWorkspaceScope:{value:undefined},validAccessPlan:()=>bindings.accessPlan.value?.role==='admin',scopeWorkspaceAPI,scopeWorkspaceOperation,
+  api:async(...args)=>{calls.push(args);return d ? d.promise : {fixture:'original response'};},
+  queueSoftwareInstall:async(...args)=>{calls.push(['install',...args]);return d ? d.promise : 'a'.repeat(32);},
+  refresh:async()=>{calls.push(['refresh']);if(options.refresh)await options.refresh(bindings);},
+  revealJob:async(id,current)=>{assert(current());opened.push(id);}};
+ const bind=new Function('bindings','with(bindings){'+bindingJS+'\nreturn bindSecurityWorkspace;}')(bindings);
+ bind();return {bindings,bind,scope:bindings.securityWorkspaceScope.value,calls,opened};
+}
+test('actual security binder preserves unchanged request and install identity without prefetch',async()=>{
+ const h=securityScope();assert.deepEqual(h.calls,[]);const body={policy:{fixture:'original'}};
+ await h.scope.api('/software/nginx-waf/configure','POST',body,'original-key');
+ assert.deepEqual(h.calls,[['/software/nginx-waf/configure','POST',body,'original-key']]);assert.equal(h.calls[0][2],body);
+ const id=await h.scope.install('nginx-waf',body);assert.equal(id,'a'.repeat(32));assert.equal(h.calls[1][2],body);
+});
+test('actual old security workspace refuses requests, installs and job navigation after every context boundary',async()=>{
+ for(const mutate of [b=>b.accessEpoch++,b=>b.csrf.value='new-session',b=>b.user.value='other-admin',b=>b.user.value='',b=>b.csrf.value='',b=>b.accountChanging.value=true,b=>b.accessPlan.value=null,b=>b.accessPlan.value={role:'viewer',menu_ids:[]},b=>b.appModuleScopeDisposed=true]){
+  const h=securityScope();mutate(h.bindings);
+  await assert.rejects(h.scope.api('/software/nginx-waf/config'),/上下文已改变/);
+  await assert.rejects(h.scope.api('/software/nginx-waf/configure','POST',{},'same-key'),/上下文已改变/);
+  await assert.rejects(h.scope.install('nginx-waf',{}),/上下文已改变/);
+  await assert.rejects(h.scope.job('a'.repeat(32)),/上下文已改变/);assert.equal(h.calls.length,0);assert.equal(h.opened.length,0);
+ }
+});
+test('actual old security read cannot chain a mutation after a session changes during its reply',async()=>{
+ const d=deferred(),h=securityScope({deferred:d});let continued=false;
+ const work=(async()=>{await h.scope.api('/software/nginx-waf/preview','POST',{});continued=true;await h.scope.api('/software/nginx-waf/configure','POST',{},'old-key');})();
+ h.bindings.csrf.value='new-session';d.resolve({settings:{fixture:'old-preview'}});await assert.rejects(work,/未复用旧结果/);
+ assert.equal(h.calls.length,1);assert(!continued);
+});
+test('actual already-submitted security write or install remains uncertain after account change, never replayed',async()=>{
+ for(const install of [false,true]){
+  const d=deferred(),h=securityScope({deferred:d}),work=install ? h.scope.install('nginx-waf',{}) : h.scope.api('/software/nginx-waf/configure','POST',{},'original-key');
+  h.bindings.accessEpoch++;d.resolve(install ? 'a'.repeat(32) : {job_id:'a'.repeat(32)});
+  await assert.rejects(work,/上下文已改变/);assert.equal(h.calls.length,1);assert.equal(h.opened.length,0);
+ }
+});
+test('actual security job navigation stops after background refresh if account changed',async()=>{
+ const h=securityScope({refresh:b=>{b.accessEpoch++;}});await assert.rejects(h.scope.job('a'.repeat(32)),/账户已改变/);
+ assert.deepEqual(h.calls,[['refresh']]);assert.equal(h.opened.length,0);
+});
+test('actual keyed security instance is removed on access reset and only receives scoped callbacks',()=>{
+ assert.match(appSource,/securityWorkspaceScope\.value = undefined;\s*securityWorkspaceEpoch\.value\+\+/);
+ assert.match(appSource,/<SecurityAppManager v-if="securityWorkspaceScope" :key="securityWorkspaceEpoch"[^>]+:api="securityWorkspaceScope.api"[^>]+:on-job="securityWorkspaceScope.job"[^>]+:on-install="securityWorkspaceScope.install"/);
+ assert.equal((appSource.match(/:on-session="replaceAccountSession"/g)||[]).length,3);
+ assert.doesNotMatch(appSource,/<SecurityAppManager[^>]+:api="api"/);
+ assert.match(appSource,/user.value = me.username;\s*bindSecurityWorkspace\(\)/);
+ assert.match(appSource,/csrf.value = me.csrf;\s*bindSecurityWorkspace\(\)/);
+});
+const replacement=appSource.slice(appSource.indexOf('async function replaceAccountSession('),appSource.indexOf('const appModuleManager'));
+const replacementJS=ts.transpileModule(replacement,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+function accountReplacement(options={}) {
+ const events=[],bindings={user:{value:'old'},csrf:{value:'old-session'},accessPlan:{value:{role:'admin'}},authError:{value:''},accessEpoch:7,
+  clearAccessData:preserve=>{bindings.accessEpoch++;events.push(['clear',preserve]);},
+  api:async path=>{events.push(['get',path]);return options.read ? options.read(bindings) : {username:'new',csrf:'new-session',role:'admin'};},
+  applyAccess:(me,preserve)=>{events.push(['access',me.username,preserve]);},bindSecurityWorkspace:()=>{events.push(['bind']);},refresh:()=>{events.push(['refresh']);}};
+ const replace=new Function('bindings','with(bindings){'+replacementJS+'\nreturn replaceAccountSession;}')(bindings);
+ return {bindings,events,replace};
+}
+test('actual rotated session clears old data before read and binds only independently matched /me',async()=>{
+ const h=accountReplacement();await h.replace({username:'new',csrf:'new-session'});
+ assert.deepEqual(h.events,[['clear',true],['get','/me'],['access','new',true],['bind'],['refresh']]);
+ for(const result of [{username:'wrong',csrf:'new-session'},{username:'new',csrf:'wrong'}]){
+  const bad=accountReplacement({read:()=>result});await bad.replace({username:'new',csrf:'new-session'});
+  assert.equal(bad.bindings.user.value,'');assert.equal(bad.bindings.csrf.value,'');assert.equal(bad.bindings.accessPlan.value,null);
+  assert.match(bad.bindings.authError.value,/新会话身份尚未核实/);assert(!bad.events.some(v=>v[0]==='bind'));
+ }
+});
+test('actual late /me reply or error cannot overwrite a newer account context',async()=>{
+ for(const reject of [false,true]){
+  const d=deferred(),h=accountReplacement({read:()=>d.promise}),work=h.replace({username:'new',csrf:'new-session'});
+  h.bindings.accessEpoch++;h.bindings.user.value='newer';h.bindings.csrf.value='newer-session';
+  if(reject)d.reject(new Error('old read failed'));else d.resolve({username:'new',csrf:'new-session'});
+  await work;assert.equal(h.bindings.user.value,'newer');assert.equal(h.bindings.csrf.value,'newer-session');assert.equal(h.bindings.authError.value,'');
+  assert.deepEqual(h.events,[['clear',true],['get','/me']]);
+ }
 });

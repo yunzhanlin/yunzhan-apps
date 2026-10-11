@@ -80,8 +80,8 @@ func installMariaDB(ctx context.Context, r runtimecatalog.Release, id string, ad
 	if runtime.GOARCH != "amd64" {
 		return errors.New("MariaDB 官方通用二进制当前仅提供 x86_64")
 	}
-	base := filepath.Join("/var/cache/panel-build", id)
-	if e := os.MkdirAll(base, 0755); e != nil {
+	base, e := prepareRuntimeBuildDirectory(id)
+	if e != nil {
 		return e
 	}
 	archive := filepath.Join(base, "mariadb.tar.gz")

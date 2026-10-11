@@ -9,11 +9,11 @@ import (
 func TestWAFNativeBuildPlanIsPinnedNonPrivilegedAndSeparated(t *testing.T) {
 	for _, version := range []string{"1.18.0", "1.24.0", "1.26.3", "1.30.4", "1.31.5"} {
 		plan, err := wafNativeBuildPlan("/var/cache/panel-build/waf-0123/work", "/opt/panel/app-modules/nginx-waf/engines/0123", "/var/cache/panel-build/waf-0123/assets", version)
-		if err != nil || len(plan) != 8 {
+		if err != nil || len(plan) != 23 {
 			t.Fatal("incomplete native build plan", err)
 		}
-		for _, command := range plan {
-			if err := validateWAFBuildCommand(command); err != nil {
+		for index, command := range plan {
+			if err := validateNginxWAFSourceBuildCommand("/var/cache/panel-build/waf-0123/work", "/opt/panel/app-modules/nginx-waf/engines/0123", "/var/cache/panel-build/waf-0123/assets", version, index, command); err != nil {
 				t.Fatal(err)
 			}
 			for _, arg := range command.Arguments {
@@ -22,10 +22,10 @@ func TestWAFNativeBuildPlanIsPinnedNonPrivilegedAndSeparated(t *testing.T) {
 				}
 			}
 		}
-		if !reflect.DeepEqual(plan[4].Arguments, []string{"-j1"}) || !reflect.DeepEqual(plan[5].Arguments, []string{"-j1", "install"}) || !reflect.DeepEqual(plan[7].Arguments, []string{"-j1", "modules"}) {
+		if !reflect.DeepEqual(plan[19].Arguments, []string{"-j1"}) || !reflect.DeepEqual(plan[20].Arguments, []string{"-j1", "install"}) || !reflect.DeepEqual(plan[22].Arguments, []string{"-j1", "modules"}) {
 			t.Fatal("single-compiler memory budget or no-Nginx-install boundary lost")
 		}
-		if !strings.Contains(plan[6].Directory, "nginx-"+version) || len(plan[6].Environment) != 2 {
+		if !strings.Contains(plan[21].Directory, "nginx-"+version) || len(plan[21].Environment) != 2 {
 			t.Fatal("module source/version/library binding lost")
 		}
 		again, _ := wafNativeBuildPlan("/var/cache/panel-build/waf-0123/work", "/opt/panel/app-modules/nginx-waf/engines/0123", "/var/cache/panel-build/waf-0123/assets", version)

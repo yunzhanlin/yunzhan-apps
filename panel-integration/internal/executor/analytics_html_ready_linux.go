@@ -16,19 +16,28 @@ import (
 )
 
 type analyticsHTMLEngineIdentity struct {
-	Format       int    `json:"format"`
-	JobID        string `json:"job_id"`
-	State        string `json:"state"`
-	Architecture string `json:"architecture"`
-	Prefix       string `json:"prefix"`
-	NginxBinary  string `json:"nginx_binary"`
-	NginxSHA     string `json:"nginx_sha256"`
-	ModuleSHA    string `json:"module_sha256"`
-	ProgramSHA   string `json:"program_sha256"`
-	TreeSHA      string `json:"tree_sha256"`
+	Format             int    `json:"format"`
+	JobID              string `json:"job_id"`
+	State              string `json:"state"`
+	Architecture       string `json:"architecture"`
+	Prefix             string `json:"prefix"`
+	NginxBinary        string `json:"nginx_binary"`
+	NginxSHA           string `json:"nginx_sha256"`
+	ModuleSHA          string `json:"module_sha256"`
+	ProgramSHA         string `json:"program_sha256"`
+	TreeSHA            string `json:"tree_sha256"`
+	CompilerCollection string `json:"compiler_collection_contract,omitempty"`
 }
 
 func (s *Service) requireAnalyticsHTMLReady(ctx context.Context) error {
+	return s.verifyAnalyticsHTMLLoaded(ctx, false)
+}
+
+// priorReplacement is internal and is used only after a DIFFERENT current-v2
+// build has already passed the full verifier. A prior exact empty contract may
+// prove the old loaded bytes/config for safe handover, never new site injection,
+// a ready status, replay, or promotion of that old program.
+func (s *Service) verifyAnalyticsHTMLLoaded(ctx context.Context, priorReplacement bool) error {
 	var identity analyticsHTMLEngineIdentity
 	active := s.systemPath("/etc/panel/analytics-html/active.json")
 	if err := ownedRuntimePath(active, false); err != nil {
@@ -40,6 +49,9 @@ func (s *Service) requireAnalyticsHTMLReady(ctx context.Context) error {
 	wantPrefix := filepath.Join(appNativeRoot, "website-analytics/html-engines", identity.JobID)
 	if identity.Format != 1 || !core.ValidID(identity.JobID) || identity.State != "active" || identity.Architecture != runtime.GOARCH || identity.Prefix != wantPrefix || identity.ProgramSHA != analyticsHTMLProgramSHA {
 		return errors.New("HTML 引擎记录身份不匹配")
+	}
+	if identity.CompilerCollection != nativeCompilerCollectionContract && !(priorReplacement && identity.CompilerCollection == "") {
+		return errors.New("HTML 启用记录缺少当前稳定进程完整回收契约；未改写旧记录或继续授权新网站注入")
 	}
 	nginx, err := s.nginxBinary()
 	if err != nil || identity.NginxBinary != nginx {

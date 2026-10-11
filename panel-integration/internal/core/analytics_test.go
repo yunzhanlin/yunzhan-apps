@@ -292,7 +292,7 @@ func TestAnalyticsAdminEndpointsStillRequireAuthCSRFAndInstalledModule(t *testin
 		if r.URL.Path != "/v1/app-modules/website-analytics" {
 			t.Errorf("unexpected executor request %s", r.URL.Path)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]any{"status": map[string]bool{"installed": installed}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": map[string]any{"id": "website-analytics", "installed": installed}})
 	}))
 	defer executor.Close()
 	address := strings.TrimPrefix(executor.URL, "http://")

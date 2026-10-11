@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -24,19 +25,37 @@ func runtimeRoutes(m *http.ServeMux) {
 			respond(w, 404, map[string]string{"error": "安装任务不存在"})
 			return
 		}
-		path := filepath.Join("/var/cache/panel-build", id, "build.log")
-		if e := ordinary(path, false); e != nil {
-			respond(w, 200, map[string]string{"content": "构建日志尚未生成"})
+		path := filepath.Join(runtimeBuildCache, id, "build.log")
+		cache, err := runtimeBuildCacheRoot()
+		if err != nil {
+			respond(w, 503, map[string]string{"error": "构建缓存身份不可核实；旧日志保留，不读取可变旧路径"})
 			return
 		}
-		f, e := os.Open(path)
+		defer cache.Close()
+		if err := verifyRuntimeBuildDirectory(filepath.Dir(path)); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				respond(w, 200, map[string]string{"content": "新构建日志尚未生成；旧日志保留在原缓存，不自动迁移或读取"})
+			} else {
+				respond(w, 503, map[string]string{"error": "构建任务目录身份异常，未读取或修复"})
+			}
+			return
+		}
+		if e := ordinary(path, false); e != nil {
+			if errors.Is(e, os.ErrNotExist) {
+				respond(w, 200, map[string]string{"content": "构建日志尚未生成"})
+			} else {
+				respond(w, 503, map[string]string{"error": "构建日志类型异常，未读取或修复"})
+			}
+			return
+		}
+		f, e := cache.OpenFile(filepath.Join(id, "build.log"), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
 		if e != nil {
 			respond(w, 500, map[string]string{"error": "读取构建日志失败"})
 			return
 		}
 		defer f.Close()
 		st, e := f.Stat()
-		if e != nil {
+		if e != nil || !runtimeInstallPrivateFile(st) || st.Size() > 64*1024*1024 {
 			respond(w, 500, map[string]string{"error": "读取构建日志失败"})
 			return
 		}
@@ -77,31 +96,14 @@ func runtimeRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "无效任务"})
 			return
 		}
-		st, e := readInstall(id)
+		st, e := readRuntimeInstallStatus(r.Context(), id, RunCommand)
 		if e != nil {
-			respond(w, 404, map[string]string{"error": "安装记录不存在"})
+			code := 503
+			if errors.Is(e, os.ErrNotExist) {
+				code = 404
+			}
+			respond(w, code, map[string]string{"error": e.Error()})
 			return
-		}
-		if st.State == "running" || st.State == "queued" {
-			unit := "panel-install@" + id + ".service"
-			if release, ok := runtimecatalog.Find(st.ReleaseID); ok && release.Family == "docker" {
-				unit = "panel-docker-install@" + id + ".service"
-			}
-			active, _ := RunCommand(r.Context(), "/usr/bin/systemctl", "show", "-p", "ActiveState", "--value", unit)
-			if strings.TrimSpace(active) == "failed" || strings.TrimSpace(active) == "inactive" {
-				// The oneshot service writes its terminal state immediately before
-				// systemd changes ActiveState. Re-read after systemctl so a poll that
-				// crossed that boundary cannot overwrite a successful atomic write.
-				if latest, er := readInstall(id); er == nil {
-					st = latest
-				}
-				result, _ := RunCommand(r.Context(), "/usr/bin/systemctl", "show", "-p", "Result", "--value", unit)
-				if (st.State == "running" || st.State == "queued") && (strings.TrimSpace(active) == "failed" || strings.TrimSpace(result) != "success") {
-					st.State = "failed"
-					st.Error = "构建进程已停止，核对日志后可以重试"
-					_ = writeInstall(st)
-				}
-			}
 		}
 		respond(w, 200, map[string]any{"job_id": st.JobID, "release_id": st.ReleaseID, "state": st.State, "error": st.Error, "steps": st.Steps, "architecture": runtime.GOARCH})
 	})

@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"database/sql"
@@ -67,13 +68,14 @@ type OutboundMessage struct {
 	Test          bool                  `json:"test,omitempty"`
 }
 type OutboundDailySummary struct {
-	Day               string `json:"day"`
-	Sites             int    `json:"sites"`
-	RunningSites      int    `json:"running_sites"`
-	FailedSiteJobs    int    `json:"failed_site_jobs"`
-	FailedRuntimeJobs int    `json:"failed_runtime_jobs"`
-	AuditEvents       int    `json:"audit_events_24h"`
-	CertificatesDue   int    `json:"certificates_due_14_days"`
+	Day               string          `json:"day"`
+	Sites             int             `json:"sites"`
+	RunningSites      int             `json:"running_sites"`
+	FailedSiteJobs    int             `json:"failed_site_jobs"`
+	FailedRuntimeJobs int             `json:"failed_runtime_jobs"`
+	AuditEvents       int             `json:"audit_events_24h"`
+	CertificatesDue   int             `json:"certificates_due_14_days"`
+	CountAvailable    map[string]bool `json:"count_available,omitempty"`
 	Resources         struct {
 		CPU    *float64 `json:"cpu_percent,omitempty"`
 		Memory *float64 `json:"memory_percent,omitempty"`
@@ -107,6 +109,12 @@ CREATE TRIGGER IF NOT EXISTS notification_order_delete AFTER DELETE ON notificat
  DELETE FROM notification_event_order WHERE notification_id=OLD.id;
 END;
 INSERT OR IGNORE INTO schema_migrations VALUES(42,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
+	if e != nil {
+		return e
+	}
+	_, e = s.DB.Exec(`CREATE TABLE IF NOT EXISTS notification_source_blocks(id TEXT PRIMARY KEY,channel_id TEXT NOT NULL REFERENCES notification_channels(id),channel_revision INTEGER NOT NULL,event_id TEXT NOT NULL,sequence INTEGER NOT NULL,kind TEXT NOT NULL,severity TEXT NOT NULL,event_created_at INTEGER NOT NULL,source_id TEXT NOT NULL,state TEXT NOT NULL CHECK(state IN ('blocked','resolved')),created_at INTEGER NOT NULL,resolved_at INTEGER NOT NULL DEFAULT 0,UNIQUE(channel_id,event_id));
+CREATE INDEX IF NOT EXISTS notification_source_block_state ON notification_source_blocks(channel_id,state);
+INSERT OR IGNORE INTO schema_migrations VALUES(43,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
 	return e
 }
 func validateWebhookURL(raw string) (*url.URL, error) {
@@ -410,7 +418,7 @@ func insertOutbound(tx *sql.Tx, channel string, revision int64, message Outbound
 	if e := tx.QueryRow(`SELECT count(*) FROM notification_deliveries WHERE state IN ('pending','running') AND channel_id=?`, channel).Scan(&pending); e != nil {
 		return e
 	}
-	if e := tx.QueryRow(`SELECT count(*) FROM notification_deliveries`).Scan(&total); e != nil {
+	if e := tx.QueryRow(`SELECT (SELECT count(*) FROM notification_deliveries)+(SELECT count(*) FROM notification_source_blocks)`).Scan(&total); e != nil {
 		return e
 	}
 	if pending >= 1000 || total >= 10000 {
@@ -431,38 +439,49 @@ func (s *Store) QueueOutboundNotifications() error {
 	if e != nil {
 		return e
 	}
+	var firstError error
 	for _, c := range channels {
 		if !c.Enabled {
 			continue
 		}
-		tx, e := s.DB.Begin()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		tx, e := s.DB.BeginTx(ctx, nil)
 		if e != nil {
-			return e
+			cancel()
+			if firstError == nil {
+				firstError = e
+			}
+			continue
 		}
-		e = queueChannelNotifications(tx, c)
+		blocked, queueErr := queueChannelNotifications(ctx, tx, c)
+		e = queueErr
 		if e == nil {
 			e = tx.Commit()
 		} else {
 			tx.Rollback()
 		}
-		if e != nil {
-			return e
+		cancel()
+		if e != nil && firstError == nil {
+			firstError = e
+		}
+		if e == nil && blocked && firstError == nil {
+			firstError = errOutboundSourceBlocked
 		}
 	}
-	return nil
+	return firstError
 }
-func queueChannelNotifications(tx *sql.Tx, c NotificationChannel) error {
+func queueChannelNotifications(ctx context.Context, tx *sql.Tx, c NotificationChannel) (bool, error) {
 	var cursor, revision int64
 	var enabled bool
-	if e := tx.QueryRow(`SELECT watermark,revision,enabled FROM notification_channels WHERE id=?`, c.ID).Scan(&cursor, &revision, &enabled); e != nil {
-		return e
+	if e := tx.QueryRowContext(ctx, `SELECT watermark,revision,enabled FROM notification_channels WHERE id=?`, c.ID).Scan(&cursor, &revision, &enabled); e != nil {
+		return false, e
 	}
 	if revision != c.Revision || !enabled {
-		return nil
+		return false, nil
 	}
-	rows, e := tx.Query(`SELECT o.sequence,n.id,n.kind,n.severity,n.created_at,n.source,n.source_id FROM notification_event_order o JOIN notifications n ON n.id=o.notification_id WHERE o.sequence>? ORDER BY o.sequence LIMIT 100`, cursor)
+	rows, e := tx.QueryContext(ctx, `SELECT o.sequence,CASE WHEN length(CAST(n.id AS BLOB))=32 THEN n.id ELSE NULL END,CASE WHEN length(CAST(n.kind AS BLOB))<=32 THEN n.kind ELSE NULL END,CASE WHEN length(CAST(n.severity AS BLOB))<=16 THEN n.severity ELSE NULL END,n.created_at,CASE WHEN length(CAST(n.source AS BLOB))<=64 THEN n.source ELSE NULL END,CASE WHEN length(CAST(n.source_id AS BLOB))<=128 THEN n.source_id ELSE NULL END FROM notification_event_order o JOIN notifications n ON n.id=o.notification_id WHERE o.sequence>? ORDER BY o.sequence LIMIT 100`, cursor)
 	if e != nil {
-		return e
+		return false, e
 	}
 	type item struct {
 		seq              int64
@@ -474,39 +493,58 @@ func queueChannelNotifications(tx *sql.Tx, c NotificationChannel) error {
 		var x item
 		if e = rows.Scan(&x.seq, &x.n.ID, &x.n.Kind, &x.n.Severity, &x.n.CreatedAt, &x.source, &x.sourceID); e != nil {
 			rows.Close()
-			return e
+			return false, e
 		}
 		items = append(items, x)
 	}
 	e = rows.Err()
 	rows.Close()
 	if e != nil {
-		return e
+		return false, e
 	}
 	for _, x := range items {
+		if !ValidID(x.n.ID) || x.seq <= cursor || len(x.source) > 64 || len(x.sourceID) > 128 {
+			return false, errors.New("推送事件身份无法核对，原事件保留")
+		}
 		if x.n.CreatedAt >= c.StartedAt && containsMenu(c.Kinds, x.n.Kind) {
 			message := safeOutboundMessage(x.n)
 			if x.n.Kind == "daily" && x.source == "daily-report" {
-				var raw string
-				if err := tx.QueryRow(`SELECT report FROM app_daily_reports WHERE day=?`, x.sourceID).Scan(&raw); err == nil {
-					var report OutboundDailySummary
-					if json.Unmarshal([]byte(raw), &report) != nil {
-						return errors.New("日报摘要不可读取")
+				var sourceErr error
+				if day, record, err := readDailyReportRecord(ctx, tx, x.sourceID); err == nil {
+					report, summaryErr := outboundDailyReportSummary(day, record)
+					if summaryErr != nil {
+						sourceErr = summaryErr
 					}
-					report.Day = x.sourceID
-					message.Report = &report
-				} else if !errors.Is(err, sql.ErrNoRows) {
-					return err
+					if sourceErr == nil {
+						message.Report = &report
+					}
+				} else {
+					if !errors.Is(err, sql.ErrNoRows) && !errors.Is(err, errDailyReportInvalid) {
+						return false, err
+					}
+					sourceErr = err
+				}
+				if sourceErr != nil {
+					if err := insertOutboundSourceBlock(ctx, tx, c, x.n, x.seq, x.sourceID); err != nil {
+						return false, err
+					}
+					cursor = x.seq
+					continue
 				}
 			}
 			if e = insertOutbound(tx, c.ID, c.Revision, message); e != nil {
-				return e
+				return false, e
 			}
 		}
 		cursor = x.seq
 	}
-	_, e = tx.Exec(`UPDATE notification_channels SET watermark=? WHERE id=? AND revision=?`, cursor, c.ID, c.Revision)
-	return e
+	_, e = tx.ExecContext(ctx, `UPDATE notification_channels SET watermark=? WHERE id=? AND revision=?`, cursor, c.ID, c.Revision)
+	if e != nil {
+		return false, e
+	}
+	var blocks int
+	e = tx.QueryRowContext(ctx, `SELECT count(*) FROM notification_source_blocks WHERE channel_id=? AND state='blocked'`, c.ID).Scan(&blocks)
+	return blocks > 0, e
 }
 func (s *Store) QueueDailyNotification(day string) error {
 	if _, e := time.Parse("2006-01-02", day); e != nil {
@@ -523,7 +561,7 @@ func webhookSignature(secret, deliveryID, timestamp string, payload []byte) stri
 }
 
 func (s *Store) NotificationDeliveryHistory(id string) ([]map[string]any, error) {
-	rows, e := s.DB.Query(`SELECT id,event_id,state,attempts,http_status,error,created_at,completed_at FROM notification_deliveries WHERE channel_id=? ORDER BY rowid DESC LIMIT 100`, id)
+	rows, e := s.DB.Query(`SELECT CASE WHEN length(CAST(id AS BLOB))=32 THEN id ELSE NULL END,CASE WHEN length(CAST(event_id AS BLOB))=32 THEN event_id ELSE NULL END,CASE WHEN length(CAST(state AS BLOB))<=16 THEN state ELSE NULL END,attempts,http_status,CASE WHEN length(CAST(error AS BLOB))<=2048 THEN error ELSE NULL END,created_at,completed_at FROM notification_deliveries WHERE channel_id=? ORDER BY rowid DESC LIMIT 100`, id)
 	if e != nil {
 		return nil, e
 	}
@@ -535,6 +573,9 @@ func (s *Store) NotificationDeliveryHistory(id string) ([]map[string]any, error)
 		var at, completed int64
 		if e = rows.Scan(&id, &event, &state, &attempts, &status, &message, &at, &completed); e != nil {
 			return nil, e
+		}
+		if !ValidID(id) || !ValidID(event) || !containsMenu([]string{"pending", "running", "succeeded", "failed", "cancelled"}, state) || attempts < 0 || attempts > 6 || status < 0 || status > 599 || at < 1 || completed < 0 {
+			return nil, errors.New("原推送记录身份或结果无法核对；不返回不完整历史")
 		}
 		out = append(out, map[string]any{"id": id, "event_id": event, "state": state, "attempts": attempts, "http_status": status, "error": message, "created_at": at, "completed_at": completed})
 	}

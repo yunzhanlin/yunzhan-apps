@@ -65,6 +65,17 @@ func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module,
 }
 
 func apacheWAFConfigurationFilesMatchVersion(source string, cfg core.WAFConfig, module, rulesPath, version string) (string, error) {
+	if version == core.ApacheWAFNativeBodyVersion {
+		if _, err := core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg)); err != nil {
+			return "", err
+		}
+	} else if cfg.Body != nil {
+		return "", errors.New("Apache 旧版安装记录不能声明请求体策略")
+	}
+	unchanged, err := transitionApacheBodySource(source, cfg, cfg)
+	if err != nil || unchanged != source {
+		return "", errors.New("Apache 请求体完整挂载与保存策略不一致")
+	}
 	bindings, err := apacheWAFBindings(source)
 	if err != nil || len(bindings) == 0 {
 		return "", errors.New("Apache 受管站点无法核实")
@@ -84,8 +95,15 @@ func apacheWAFConfigurationFilesMatchVersion(source string, cfg core.WAFConfig, 
 	if proxy == nil {
 		proxy = &core.WAFTrustedProxyConfig{Header: "X-Forwarded-For", Recursive: true, TrustedCIDRs: []string{}}
 	}
-	prepared, err := prepareApacheWAFTrustedProxySource(source, proxy, module)
-	if err != nil || prepared != source {
+	// The canonical body sections contain sealed CRS includes. Verify and
+	// temporarily remove exactly those sections before checking the outside
+	// proxy scope; never relax the proxy guard to allow arbitrary includes.
+	proxySource, err := transitionApacheBodySource(source, cfg, core.DefaultApacheWAFConfig())
+	if err != nil {
+		return "", err
+	}
+	prepared, err := prepareApacheWAFTrustedProxySource(proxySource, proxy, module)
+	if err != nil || prepared != proxySource {
 		return "", errors.New("Apache 可信代理模块或外部指令与已保存配置不一致")
 	}
 	if proxy.Enabled {
@@ -132,7 +150,7 @@ func apacheWAFWaitLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain,
 }
 
 func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client, version string) error {
-	if version != core.ApacheWAFVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
+	if version != core.ApacheWAFVersion && version != core.ApacheWAFNativeBodyVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
 		return errors.New("Apache 配置指纹版本不支持")
 	}
 	if !core.ValidDomain(domain) {

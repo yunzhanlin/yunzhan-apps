@@ -246,7 +246,7 @@ func TestNetworkIDSRuleFeedHTTPAdministratorMenuCSRFAndSignedSelection(t *testin
 		if r.Method != "GET" || r.URL.Path != "/v1/app-modules/network-threat-detection" {
 			t.Fatal("queueing started privileged install or capture", r.URL)
 		}
-		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"status":{"installed":true}}`))}, nil
+		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(`{"status":{"id":"network-threat-detection","installed":true}}`))}, nil
 	})}}
 	endpoint := "/api/software/network-threat-detection/rule-feeds/install"
 	request := func(path, body, csrf string, cookie *http.Cookie) *httptest.ResponseRecorder {
@@ -305,9 +305,10 @@ func TestNetworkIDSRuleFeedHTTPAdministratorMenuCSRFAndSignedSelection(t *testin
 		if w.Code != 202 || !strings.Contains(w.Body.String(), `"data_only":true`) || !strings.Contains(w.Body.String(), `"capture_started":false`) || !strings.Contains(w.Body.String(), `"native_syntax_verified":false`) {
 			t.Fatal("queueing claimed readiness or capture", w.Code, w.Body.String())
 		}
-		// Each manifest check reads only the catalog and app manifest, never
-		// the six rule assets; the background worker owns that explicit pull.
-		if requests.Load() != 4 || executorCalls != 2 {
+		// The catalog fixture (2 reads) and exact manifest (1 read) are pulled
+		// once. Subsequent checks reverify private cached bytes against the
+		// current signed binding, never the six assets owned by the worker.
+		if requests.Load() != 3 || executorCalls != 2 {
 			t.Fatal("API pulled rule data or privileged install", requests.Load(), executorCalls)
 		}
 		var accepted struct {
@@ -323,7 +324,7 @@ func TestNetworkIDSRuleFeedHTTPAdministratorMenuCSRFAndSignedSelection(t *testin
 				}
 			}
 			w := request(endpoint, string(encoded), auth.CSRF, cookie)
-			if w.Code != 202 || !strings.Contains(w.Body.String(), `"replayed":true`) || !strings.Contains(w.Body.String(), accepted.JobID) || executorCalls != 2 || requests.Load() != 4 {
+			if w.Code != 202 || !strings.Contains(w.Body.String(), `"replayed":true`) || !strings.Contains(w.Body.String(), accepted.JobID) || executorCalls != 2 || requests.Load() != 3 {
 				t.Fatal("lost reply or terminal failure pulled newer catalog/requeued", state, w.Code, w.Body.String())
 			}
 		}

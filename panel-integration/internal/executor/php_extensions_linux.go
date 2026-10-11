@@ -177,11 +177,8 @@ func installPHPExtension(ctx context.Context, r runtimecatalog.Release, ext runt
 	if _, e = os.Lstat(ext.Prefix(r)); !os.IsNotExist(e) {
 		return errors.New("扩展目标目录已存在但校验未通过，拒绝覆盖")
 	}
-	base := filepath.Join("/var/cache/panel-build", id)
-	if e = os.MkdirAll(base, 0755); e != nil {
-		return e
-	}
-	if e = os.Chmod(base, 0755); e != nil {
+	base, e := prepareRuntimeBuildDirectory(id)
+	if e != nil {
 		return e
 	}
 	archive := filepath.Join(base, "extension.tgz")
@@ -191,11 +188,8 @@ func installPHPExtension(ctx context.Context, r runtimecatalog.Release, ext runt
 	if e = add("官方扩展源码 SHA-256 通过，绑定 " + r.ID + " / " + abi.ExtensionBuild); e != nil {
 		return e
 	}
-	work := filepath.Join(base, "work")
-	if e = os.RemoveAll(work); e != nil {
-		return e
-	}
-	if e = os.Mkdir(work, 0755); e != nil {
+	work, e := prepareRuntimeBuildWork(base)
+	if e != nil {
 		return e
 	}
 	if e = extractSource(archive, work); e != nil {

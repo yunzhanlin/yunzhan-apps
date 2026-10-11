@@ -32,11 +32,20 @@ func (s *Service) openModuleLedger(ctx context.Context, id string) (*sql.DB, err
 	}
 	for _, path := range []string{s.Config.SecurityDir, filepath.Join(s.Config.SecurityDir, "modules"), dir} {
 		info, err := os.Lstat(path)
-		if err != nil || !info.IsDir() || info.Mode().Perm()&0022 != 0 || int(info.Sys().(*syscall.Stat_t).Uid) != os.Geteuid() {
+		if err != nil || !moduleRecordInfo(info, true, path == s.Config.SecurityDir) {
 			return nil, errors.New("历史目录不安全，未创建或修改记录")
 		}
 	}
 	path := filepath.Join(dir, "history.sqlite")
+	for _, name := range []string{path, path + "-journal", path + "-wal", path + "-shm"} {
+		info, err := os.Lstat(name)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil || !moduleRecordInfo(info, false, false) || info.Size() > 128<<20 {
+			return nil, errors.New("历史数据库路径或权限不安全，拒绝打开")
+		}
+	}
 	created, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDONLY|syscall.O_NOFOLLOW, 0600)
 	if err == nil {
 		err = created.Close()
@@ -45,15 +54,6 @@ func (s *Service) openModuleLedger(ctx context.Context, id string) (*sql.DB, err
 	}
 	if err != nil {
 		return nil, err
-	}
-	for _, name := range []string{path, path + "-journal", path + "-wal", path + "-shm"} {
-		info, err := os.Lstat(name)
-		if errors.Is(err, os.ErrNotExist) && name != path {
-			continue
-		}
-		if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || int(info.Sys().(*syscall.Stat_t).Uid) != os.Geteuid() {
-			return nil, errors.New("历史数据库路径或权限不安全，拒绝打开")
-		}
 	}
 	u := url.URL{Scheme: "file", Path: path, RawQuery: "mode=rw"}
 	db, err := sql.Open("sqlite", u.String())
@@ -75,6 +75,9 @@ CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);`)
 }
 
 func insertModuleLedgerEvent(ctx context.Context, tx *sql.Tx, event moduleEvent) error {
+	if err := validateModuleLedgerEvent(event); err != nil {
+		return err
+	}
 	at, err := time.Parse(time.RFC3339, event.Time)
 	if err != nil || !core.ValidID(event.ID) || len(event.Error) > 516 || len(event.Action) > 80 || len(event.Trigger) > 40 {
 		return errors.New("历史摘要格式损坏，未导入")
@@ -142,15 +145,17 @@ func (s *Service) readModuleLedger(id string, in core.AppModuleInput, legacy []m
 	if err := core.ValidateModuleHistoryInput(in); err != nil {
 		return nil, err
 	}
-	if err := s.saveModuleLedger(id, legacy, nil); err != nil {
-		return nil, err
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	db, err := s.openModuleLedger(ctx, id)
+	db, directory, pinned, before, err := s.openModuleLedgerReadOnly(ctx, id)
+	if errors.Is(err, os.ErrNotExist) {
+		return readLegacyModuleHistory(in, legacy)
+	}
 	if err != nil {
 		return nil, err
 	}
+	defer directory.Close()
+	defer pinned.Close()
 	defer db.Close()
 	where, args := []string{"1=1"}, []any{}
 	for _, filter := range []struct{ column, value string }{{"site_id", in.SiteID}, {"resource_id", in.ResourceID}} {
@@ -196,10 +201,16 @@ func (s *Service) readModuleLedger(id string, in core.AppModuleInput, legacy []m
 		if err := rows.Scan(&raw); err != nil {
 			return nil, err
 		}
-		if len(raw) > 4096 || json.Unmarshal([]byte(raw), &event) != nil {
+		if len(raw) > 4096 || decodeModuleRetrospectiveJSON([]byte("["+raw+"]"), &[]moduleEvent{}, true) != nil || json.Unmarshal([]byte(raw), &event) != nil || validateModuleLedgerEvent(event) != nil {
 			return nil, errors.New("历史摘要损坏，拒绝返回错误记录")
 		}
 		events = append(events, event)
 	}
-	return map[string]any{"history": events, "total": count, "retained_count": retained, "limit": limit, "offset": in.Offset, "retention_days": moduleHistoryRetention, "record_limit": moduleHistoryRows, "history_limited": count > len(events), "scope": "私有数据库保留最近 365 天、最多 100000 条操作摘要；可按网站、计划、时间和关键词筛选分页。不保存密码、令牌或完整请求正文。旧版 JSON 摘要保留用于回退。"}, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if !moduleLedgerReadUnchanged(directory, pinned, before) {
+		return nil, errors.New("历史数据库读取期间变化，未返回混合或旧身份结果")
+	}
+	return map[string]any{"history": events, "total": count, "retained_count": retained, "limit": limit, "offset": in.Offset, "retention_days": moduleHistoryRetention, "record_limit": moduleHistoryRows, "history_limited": count > len(events), "read_only": true, "source": "private-sqlite", "scope": "只读查询私有数据库，不导入、不修剪、不修复或创建文件。保留策略在保存摘要时执行；旧版 JSON 摘要无数据库时只读分页，不保存密码、令牌或完整请求正文。"}, nil
 }

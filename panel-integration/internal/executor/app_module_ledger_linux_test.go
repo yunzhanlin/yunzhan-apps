@@ -119,6 +119,11 @@ func TestModuleLedgerRetentionAndRecordCap(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Retention is a write-time policy. Read-only queries never prune or
+	// recover databases, including this deliberately over-limit fixture.
+	if err := svc.saveModuleLedger("file-monitor", nil, nil); err != nil {
+		t.Fatal(err)
+	}
 	out, err := svc.moduleHistory("file-monitor", core.AppModuleInput{Limit: 10})
 	if err != nil || out.(map[string]any)["retained_count"].(int) > 100000 || len(out.(map[string]any)["history"].([]moduleEvent)) != 10 {
 		t.Fatal(out, err)

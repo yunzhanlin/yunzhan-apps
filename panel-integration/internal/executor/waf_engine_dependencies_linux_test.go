@@ -11,6 +11,11 @@ import (
 
 func TestWAFBuildDependenciesMatchReviewedNginxWithoutMutatingBase(t *testing.T) {
 	base := append([]string{}, wafBuildDependencies...)
+	for _, pkg := range base {
+		if pkg == "libyajl-dev" {
+			t.Fatal("system package wrongly substitutes the compiled CVE-pinned private parser")
+		}
+	}
 	legacy := wafBuildDependenciesForNginx("1.18.0")
 	if len(legacy) != len(base)+1 || legacy[len(base)] != "libpcre3-dev" || !reflect.DeepEqual(legacy[:len(base)], base) {
 		t.Fatal("1.18 PCRE1 dependency not closed and version specific", legacy)

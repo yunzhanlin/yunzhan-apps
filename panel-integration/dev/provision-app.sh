@@ -33,9 +33,11 @@ install -d -m 0750 -o panel-task -g panel-task /var/lib/panel-tasks/work
 install -d -m 0755 /opt/panel/app-modules /var/cache/panel-waf-build /var/cache/panel-waf-body
 install -d -m 0750 -o root -g www-data /var/lib/panel-waf
 python3 "$PANEL_NATIVE_BUILD_PREPARER" create
-for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-waf-engine-build@ panel-analytics-html-build@ panel-network-rulefeed-install@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@ panel-nfs-server panel-nfs-server-recover; do
+for unit in panel-install@ panel-docker-install@ panel-docker-job@ panel-compose-job@ panel-site-user@ panel-php@ panel-mysql@ panel-mysql-user@ panel-mysql-job@ panel-sftp-job@ panel-redis@ panel-node@ panel-pm2@ panel-pm2-deploy@ panel-app-dependencies@ panel-waf-engine-build@ panel-apache-body-build@ panel-analytics-html-build@ panel-network-rulefeed-install@ panel-pure-ftpd panel-pure-ftpd-recover panel-nfs@ panel-nfs-server panel-nfs-server-recover; do
  install -m 0644 /workspace/dev/$unit.service /etc/systemd/system/$unit.service
 done
+install -m 0644 /workspace/dev/panel-apache-body-cache-check.service /etc/systemd/system/panel-apache-body-cache-check.service
+install -m 0644 '/workspace/dev/var-cache-panel\x2dapache\x2dbody.mount' '/etc/systemd/system/var-cache-panel\x2dapache\x2dbody.mount'
 systemctl stop panel.service panel-executor.service 2>/dev/null || true
 install -d -m 0755 /opt/panel/bin /opt/panel/web /etc/panel/sites-enabled /srv/panel/sites
 install -d -m 0700 /etc/panel/sites-archive /srv/panel/sites/.archives

@@ -39,7 +39,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 			section("remote-backup-store", "远端保留归档库存", "只读核对全部实际容器和分页元数据，每连接最多 512 份、1 GiB 逻辑字节，未知或缺失记录拒绝不完整统计。此清单不重新读取完整文件内容；选择原记录再核对或显式恢复。硬链接可能随公开目标的外部写入改变，不是独立不可变快照。不会自动清理，满额须另行备份维护。", []string{"remote_target_id", "expected_revision", "limit", "offset"}, []string{"remote-backup-archive"}),
 		}
 	case "daily-report":
-		return []AppModuleSection{section("daily", "生成今日报告", "汇总资源、网站、任务、安全与证书到期情况；每日报告保存在面板数据库。", nil, []string{"run"}), section("archive", "历史日报", "选择历史日期读取已保存的报告，不会重新执行检查或覆盖旧日报。", []string{"resource_id"}, []string{"archive", "report"})}
+		return []AppModuleSection{section("daily", "生成今日报告", "汇总资源、网站、任务、安全与证书到期情况；每日报告和唯一推送来源一同提交，损坏原日报不覆盖。", nil, []string{"run"}), section("archive", "历史日报", "只读分页实际保存日期。字节数不证明内容完整，选择日期后严格核对；不会重新检查、修复或重写旧日报。", []string{"resource_id", "limit", "offset"}, []string{"archive", "report"})}
 	case "enterprise-tamper-proof", "website-tamper-proof", "file-monitor":
 		fields := append([]string{}, integrity...)
 		if id == "enterprise-tamper-proof" {
@@ -66,11 +66,11 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "task-manager":
 		return []AppModuleSection{section("processes", "实时进程", "读取 CPU、内存、IO 和进程启动身份。单击受管进程进入终止操作。", nil, []string{"run"}), section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"})}
 	case "user-manager":
-		return []AppModuleSection{section("users", "账户列表", "查看角色、网站范围、菜单授权、双重验证和有效会话数。", nil, []string{"run"}), section("account", "账户与授权", "独立菜单限制与后端校验同时生效，不扩大原角色与网站范围。更新权限立即撤销旧会话，使用当前修订号防止覆盖。", []string{"username", "password", "role", "site_ids", "menu_ids", "expected_revision"}, []string{"create", "update"}), section("sessions", "会话与删除", "不允许删除当前用户、最后一个完整权限管理员或管理权限高于自身的账户。", []string{"username", "expected_revision"}, []string{"revoke", "delete"})}
+		return []AppModuleSection{section("users", "账户列表", "查看角色、网站范围、菜单授权、双重验证和有效会话数。", nil, []string{"run"}), section("account", "账户与授权", "使用当前修订号防止覆盖，事务内重新核对菜单和网站范围。账户、旧会话撤销、成功摘要与审计共同提交；其中任一步失败不提交账户改动。断网或提交异常请刷新核对，不重复盲提交。", []string{"username", "password", "role", "site_ids", "menu_ids", "expected_revision"}, []string{"create", "update"}), section("sessions", "会话与删除", "不允许删除当前用户、最后一个完整权限管理员或管理权限高于自身的账户。会话撤销或删除与摘要、审计共同提交，失败保留原账户及会话。", []string{"username", "expected_revision"}, []string{"revoke", "delete"})}
 	case "disk-analysis":
 		return []AppModuleSection{section("disk", "目录空间分析", "查看目录、扩展名和大文件分布；单击目录下钻。只读，不删除文件，不跟随符号链接。", []string{"site_id", "path"}, []string{"run"})}
 	case "platform-ops":
-		return []AppModuleSection{section("hosts", "主机健康", "读取已登记主机的只读健康数据；验证 HTTPS 证书，不支持远程命令。", nil, []string{"run"}), section("host", "登记主机", "只读令牌加密保存。移除仅删除主机登记，不操作远端软件。", []string{"resource_id", "url", "token"}, []string{"add", "remove"}), section("tokens", "本机只读授权", "令牌只在生成时显示一次；输入要撤销的令牌，撤销立即生效。", []string{"token"}, []string{"issue-token", "revoke-token"})}
+		return []AppModuleSection{section("hosts", "主机健康", "最多 12 台，只读验证 HTTPS 证书、单次 5 秒期限、256 KiB 完整协议和样本时间（允许过去 2 分钟、未来 30 秒的时差）。健康表示通信协议通过，不等于网站、告警或全部指标正常；指标不可用保持 null。拒绝跳转、错误页面、重复字段与部分响应，不支持远程命令。", nil, []string{"run"}), section("host", "登记主机", "只读令牌加密保存。更新或移除既有主机须从当前清单选择其配置摘要；更改标识即为另一主机，不沿用旧摘要。满 12 台仍可更新既有主机，新增须先明确移除；不自动删除记录。登记、移除与成功摘要及审计共同提交。移除仅删除登记，不操作远端软件；断网请刷新核对，不盲重复提交。", []string{"resource_id", "url", "token", "expected_sha"}, []string{"add", "remove"}), section("tokens", "本机只读授权", "最多保留 128 个令牌，只存摘要，生成与审计共同提交后显示一次。只读刷新清单可选择公开授权标识撤销，标识不是访问令牌；也可仅填写原令牌撤销，两者不可同时填写。回执丢失不能恢复令牌原文，但可按清单标识撤销；不自动删除旧授权。撤销阻止后续认证，不中止已通过认证的在途读取。", []string{"token", "token_id"}, []string{"token-list", "issue-token", "revoke-token"})}
 	case "nfs-manager":
 		return []AppModuleSection{
 			section("server", "共享服务状态", "独立 NFSv4 用户态服务，只导出受管网站目录。AUTH_SYS 不加密，仅用于可信网络或 VPN；不修改防火墙、系统 NFS 配置或 RPC 映射。启停保留网站文件。", nil, []string{"server-report", "server-probe", "server-start", "server-stop", "server-recover"}),

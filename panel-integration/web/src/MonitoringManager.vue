@@ -61,6 +61,19 @@ interface MonitorProcess {
   read_rate: number;
   write_rate: number;
   state: string;
+  start_time?:number;
+  cpu_available?:boolean;
+  io_available?:boolean;
+}
+interface ProcessSnapshot {
+  processes: MonitorProcess[];
+  tcp_connections: number | null;
+  partial?: boolean;
+  display_limited?: boolean;
+  sample_limit?: number;
+  display_limit?: number;
+  sampled_processes?: number;
+  displayed_processes?: number;
 }
 const props = defineProps<{
   api: <T>(path: string, method?: string, body?: unknown) => Promise<T>;
@@ -72,6 +85,8 @@ const points = ref<Point[]>([]),
   events = ref<Event[]>([]),
   services = ref<ServiceStatus[]>([]),
   processes = ref<MonitorProcess[]>([]),
+  processSnapshot = ref<ProcessSnapshot>(),
+  processSampleStale = ref(true),
   processListOpen = ref(false),
   processDetailOpen = ref(false),
   processDetail = ref<MonitorProcess | null>(null),
@@ -144,10 +159,22 @@ function axisTime(index: number) {
 const failureCount = computed(() =>
   points.value.reduce((n, v) => n + v.failures, 0),
 );
-const rankedProcesses = computed(() => processes.value.slice().sort((a, b) =>
-  processSort.value === "memory" ? b.memory - a.memory :
-    processSort.value === "disk" ? b.read_rate + b.write_rate - a.read_rate - a.write_rate : b.cpu_percent - a.cpu_percent,
-));
+const rankedProcesses = computed(() => processes.value.slice().sort((a, b) => {
+  if(processSort.value==='memory')return b.memory-a.memory;
+  const flag=processSort.value==='disk'?'io_available':'cpu_available';
+  if((a[flag]===true)!==(b[flag]===true))return a[flag]===true?-1:1;
+  return processSort.value==='disk'?b.read_rate+b.write_rate-a.read_rate-a.write_rate:b.cpu_percent-a.cpu_percent;
+}));
+function processCPU(process:MonitorProcess) {return process.cpu_available===true && Number.isFinite(process.cpu_percent) && process.cpu_percent>=0?process.cpu_percent.toFixed(1)+'%':'未知';}
+function processIO(process:MonitorProcess,key:'read_rate'|'write_rate') {return process.io_available===true && Number.isFinite(process[key]) && process[key]>=0?bytes(process[key]):'未知';}
+function sameProcessIdentity(current:MonitorProcess, previous:MonitorProcess) {
+  return current.pid===previous.pid && current.name===previous.name && typeof current.start_time==='number' && current.start_time>0 && Number.isSafeInteger(current.start_time) && current.start_time===previous.start_time;
+}
+function processSnapshotLabel(snapshot?:ProcessSnapshot) {
+  if(!snapshot || !Array.isArray(snapshot.processes) || snapshot.sample_limit!==2000 || snapshot.display_limit!==500 || !Number.isSafeInteger(snapshot.sampled_processes) || !Number.isSafeInteger(snapshot.displayed_processes) || snapshot.sampled_processes!<snapshot.displayed_processes! || snapshot.sampled_processes!>2000 || snapshot.displayed_processes!<0 || snapshot.displayed_processes!>500 || snapshot.displayed_processes!==snapshot.processes.length || typeof snapshot.partial!=='boolean' || typeof snapshot.display_limited!=='boolean' || snapshot.display_limited!==(snapshot.displayed_processes!<snapshot.sampled_processes!) || (snapshot.display_limited || snapshot.sampled_processes===2000) && !snapshot.partial) return '采样范围暂不可核对，不能据此判断全部进程状态。';
+  return `本次采样 ${snapshot.sampled_processes} 条，返回 ${snapshot.displayed_processes} 条${snapshot.partial?'，属于部分结果':''}；采样上限 2000 条、返回上限 500 条，并非原子全量快照。`;
+}
+const processSamplingNote = computed(()=>`${processSampleStale.value?'当前采样未取得或已失效，现有记录不可当作实时状态。 ':''}${processSnapshotLabel(processSnapshot.value)}`);
 const sortedProcesses = computed(() => rankedProcesses.value.slice(0, 5));
 const memorySize = (value: number) => value >= 1073741824 ? (value / 1073741824).toFixed(1) + " GiB" : value >= 1048576 ? (value / 1048576).toFixed(1) + " MiB" : value >= 1024 ? (value / 1024).toFixed(1) + " KiB" : value + " B";
 const processState = (value: string) => value === "R" ? "运行中" : value === "S" || value === "I" ? "休眠" : value === "D" ? "等待 IO" : value === "Z" ? "僵尸" : value;
@@ -250,7 +277,7 @@ async function refresh() {
       ),
       props.api<{ alerts: Alert[]; events: Event[] }>("/monitor/alerts"),
       props.api<{ services: ServiceStatus[] }>("/monitor/services"),
-      props.api<{ processes: MonitorProcess[]; tcp_connections: number | null }>("/monitor/processes"),
+      props.api<ProcessSnapshot>("/monitor/processes"),
     ]);
     points.value = history.points;
     settings.value = history.settings;
@@ -258,8 +285,10 @@ async function refresh() {
     events.value = alertData.events;
     services.value = serviceData.services;
     processes.value = processData.processes;
+    processSnapshot.value = processData;
+    processSampleStale.value = false;
     if (processDetailOpen.value && processDetail.value) {
-      const current = processData.processes.find(item => item.pid === processDetail.value?.pid && item.name === processDetail.value?.name);
+      const current = processData.processes.find(item => sameProcessIdentity(item,processDetail.value!));
       processDetailStale.value = !current;
       if (current) {
         processDetail.value = { ...current };
@@ -269,6 +298,8 @@ async function refresh() {
     tcpConnections.value = processData.tcp_connections;
     error.value = "";
   } catch (e) {
+    processSampleStale.value = true;
+    processDetailStale.value = true;
     error.value = (e as Error).message;
   }
 }
@@ -605,7 +636,8 @@ defineExpose({ refresh });
     </section>
     <section class="panel-card monitor-process-card">
       <div class="monitor-process-heading"><h2>进程排行</h2><div><button v-for="item in [{ id: 'cpu', label: '按 CPU' }, { id: 'memory', label: '按内存' }, { id: 'disk', label: '按磁盘' }]" :key="item.id" :class="{ active: processSort === item.id }" @click="setProcessSort(item.id)">{{ item.label }}</button><button class="monitor-text-button" @click="processListOpen = true">查看更多 ›</button></div></div>
-      <table class="monitor-process-table"><thead><tr><th>#</th><th>进程名</th><th>PID</th><th>CPU 使用率</th><th>内存使用</th><th>读取/写入</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-for="(process, index) in sortedProcesses" :key="process.pid"><td>{{ index + 1 }}</td><td>{{ process.name }}</td><td>{{ process.pid }}</td><td><span class="monitor-cpu-bar"><i :style="{ width: `${Math.min(100, process.cpu_percent)}%` }"></i></span>{{ process.cpu_percent.toFixed(1) }}%</td><td>{{ memorySize(process.memory) }}</td><td>{{ bytes(process.read_rate) }} / {{ bytes(process.write_rate) }}</td><td>{{ processState(process.state) }}</td><td><button @click="showProcess(process)">查看</button></td></tr><tr v-if="!sortedProcesses.length"><td colspan="8" class="monitor-process-empty">正在读取进程数据</td></tr></tbody></table>
+      <p class="monitor-process-note">{{ processSamplingNote }} 当前排行展示前 5 条；不可读的速率显示未知。</p>
+      <table class="monitor-process-table"><thead><tr><th>#</th><th>进程名</th><th>PID</th><th>CPU 使用率</th><th>内存使用</th><th>读取/写入</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-for="(process, index) in sortedProcesses" :key="process.pid"><td>{{ index + 1 }}</td><td>{{ process.name }}</td><td>{{ process.pid }}</td><td><span class="monitor-cpu-bar"><i :style="{ width: `${process.cpu_available===true ? Math.min(100, process.cpu_percent) : 0}%` }"></i></span>{{ processCPU(process) }}</td><td>{{ memorySize(process.memory) }}</td><td>{{ processIO(process, "read_rate") }} / {{ processIO(process, "write_rate") }}</td><td>{{ processState(process.state) }}</td><td><button @click="showProcess(process)">查看</button></td></tr><tr v-if="!sortedProcesses.length"><td colspan="8" class="monitor-process-empty">正在读取进程数据</td></tr></tbody></table>
     </section>
     <section class="panel-card service-card">
       <div class="chart-heading">
@@ -721,11 +753,11 @@ defineExpose({ refresh });
     </section>
   </div>
   <el-dialog v-model="processListOpen" title="进程列表 · 前 20 项" width="min(760px, 96vw)" append-to-body>
-    <p class="monitor-process-note">按当前排序展示 Linux 实际进程采样，可点击“查看”读取单项详情。</p>
+    <p class="monitor-process-note">{{ processSamplingNote }} 按当前排序展示前 20 条，可点击“查看”读取单项详情。</p>
     <el-table :data="rankedProcesses.slice(0, 20)" max-height="500" empty-text="当前无进程样本">
       <el-table-column prop="name" label="进程名" min-width="130" show-overflow-tooltip />
       <el-table-column prop="pid" label="PID" width="82" />
-      <el-table-column label="CPU" width="86"><template #default="scope">{{ scope.row.cpu_percent.toFixed(1) }}%</template></el-table-column>
+      <el-table-column label="CPU" width="86"><template #default="scope">{{ processCPU(scope.row) }}</template></el-table-column>
       <el-table-column label="内存" width="105"><template #default="scope">{{ memorySize(scope.row.memory) }}</template></el-table-column>
       <el-table-column label="状态" width="80"><template #default="scope">{{ processState(scope.row.state) }}</template></el-table-column>
       <el-table-column label="操作" width="70"><template #default="scope"><el-button link type="primary" @click="showProcess(scope.row)">查看</el-button></template></el-table-column>
@@ -734,18 +766,19 @@ defineExpose({ refresh });
   </el-dialog>
   <el-dialog v-model="processDetailOpen" :title="processDetail ? `${processDetail.name} · 进程详情` : '进程详情'" width="460px" append-to-body>
     <template v-if="processDetail">
-      <el-alert v-if="processDetailStale" title="当前采样中未找到该进程，以下为最后一次记录" type="warning" :closable="false" />
+      <el-alert v-if="processDetailStale" title="当前启动身份或进程状态无法核对，以下仅是最后一次记录" type="warning" :closable="false" />
       <dl class="monitor-process-detail">
         <dt>进程名</dt><dd>{{ processDetail.name }}</dd>
         <dt>PID</dt><dd>{{ processDetail.pid }}</dd>
+        <dt>启动计数</dt><dd>{{ processDetail.start_time ?? '未知' }}</dd>
         <dt>状态</dt><dd>{{ processState(processDetail.state) }}</dd>
-        <dt>CPU 使用率</dt><dd>{{ processDetail.cpu_percent.toFixed(1) }}%</dd>
+        <dt>CPU 使用率</dt><dd>{{ processCPU(processDetail) }}</dd>
         <dt>内存占用</dt><dd>{{ memorySize(processDetail.memory) }} · {{ processDetail.memory.toLocaleString('zh-CN') }} B</dd>
-        <dt>磁盘读取</dt><dd>{{ bytes(processDetail.read_rate) }}</dd>
-        <dt>磁盘写入</dt><dd>{{ bytes(processDetail.write_rate) }}</dd>
+        <dt>磁盘读取</dt><dd>{{ processIO(processDetail,'read_rate') }}</dd>
+        <dt>磁盘写入</dt><dd>{{ processIO(processDetail,'write_rate') }}</dd>
         <dt>采样时间</dt><dd>{{ formatPanelDateTime(processDetailAt) }}</dd>
       </dl>
-      <p class="monitor-process-note">CPU 与磁盘速率来自 Linux 进程两次采样，数值可能随刷新变化。</p>
+      <p class="monitor-process-note">CPU 与磁盘速率来自同一启动身份的两次采样；权限不足、首次采样或计数回退时显示未知，不当作零。CPU 占比以全部 CPU 总时间为分母。最多采样 2000 条、返回前 500 条；并非原子全量快照。</p>
     </template>
     <template #footer><el-button @click="processDetailOpen = false">关闭</el-button><el-button type="primary" @click="refresh">刷新采样</el-button></template>
   </el-dialog>

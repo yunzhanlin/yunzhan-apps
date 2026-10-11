@@ -2,10 +2,10 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"golang.org/x/crypto/bcrypt"
-	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -76,13 +76,16 @@ func (a *Server) scopeSites(u identity, sites []Site) []Site {
 	return out
 }
 
-func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput) (any, error) {
-	actorAccess, e := a.Store.UserAccess(actor.ID)
+func (a *Server) manageAppUsers(ctx context.Context, actor identity, action string, in AppModuleInput) (any, error) {
+	actorAccess, e := readUserAccessContext(ctx, a.Store.DB, actor.ID)
+	if ctx.Err() != nil {
+		return nil, ctx.Err()
+	}
 	if e != nil || actorAccess.Role != "admin" || !containsMenu(actorAccess.MenuIDs, "panel-access") {
 		return nil, errors.New("需要管理员角色")
 	}
 	if action == "run" {
-		rows, e := a.Store.DB.Query(`SELECT u.id,u.username,COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),COALESCE(m.menu_ids,'null'),COALESCE(m.revision,1),EXISTS(SELECT 1 FROM account_security s WHERE s.user_id=u.id AND length(s.totp_secret)>0),(SELECT count(*) FROM sessions s WHERE s.user_id=u.id AND expires_at>?) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id ORDER BY u.created_at`, time.Now().Unix())
+		rows, e := a.Store.DB.QueryContext(ctx, `SELECT u.id,u.username,COALESCE(r.role,'admin'),COALESCE(r.site_ids,'[]'),COALESCE(m.menu_ids,'null'),COALESCE(m.revision,1),EXISTS(SELECT 1 FROM account_security s WHERE s.user_id=u.id AND length(s.totp_secret)>0),(SELECT count(*) FROM sessions s WHERE s.user_id=u.id AND expires_at>?) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id LEFT JOIN app_user_menus m ON m.user_id=u.id ORDER BY u.created_at`, time.Now().Unix())
 		if e != nil {
 			return nil, e
 		}
@@ -105,6 +108,9 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		}
 		return map[string]any{"users": users, "menu_catalog": MenuPermissionCatalog()}, rows.Err()
 	}
+	if action != "create" && action != "update" && action != "revoke" && action != "delete" {
+		return nil, errors.New("用户操作不被支持")
+	}
 	if !regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_.-]{2,31}$`).MatchString(in.Username) {
 		return nil, errors.New("用户名应为 3–32 位字母数字")
 	}
@@ -112,34 +118,58 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		if in.Role != "admin" && in.Role != "operator" && in.Role != "viewer" {
 			return nil, errors.New("角色应为 admin/operator/viewer")
 		}
-		for _, id := range in.SiteIDs {
-			if _, e = a.Store.Site(id); e != nil {
-				return nil, errors.New("资源范围中的网站不存在")
-			}
-		}
 	}
+	var passwordHash []byte
 	if action == "create" || (action == "update" && in.Password != "") {
 		if len(in.Password) < 16 || len(in.Password) > 72 {
 			return nil, errors.New("密码应为 16–72 字节")
 		}
+		if e = ctx.Err(); e != nil {
+			return nil, e
+		}
+		// Fixed-cost hashing is done before opening a transaction. It cannot be
+		// interrupted by bcrypt, but cancelled work never writes account data.
+		passwordHash, e = bcrypt.GenerateFromPassword([]byte(in.Password), 12)
+		if e != nil {
+			return nil, e
+		}
 	}
-	tx, e := a.Store.DB.Begin()
+	tx, e := a.Store.DB.BeginTx(ctx, nil)
 	if e != nil {
 		return nil, e
 	}
 	defer tx.Rollback()
 	// Re-read inside the same write transaction that changes the target.
-	actorAccess, e = readUserAccess(tx, actor.ID)
+	actorAccess, e = readUserAccessContext(ctx, tx, actor.ID)
 	if e != nil || actorAccess.Role != "admin" || !containsMenu(actorAccess.MenuIDs, "panel-access") {
 		return nil, errors.New("账户授权已变化")
 	}
+	if action == "create" || action == "update" {
+		for _, siteID := range in.SiteIDs {
+			var exists bool
+			if e = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM sites WHERE id=? AND status!='archived')`, siteID).Scan(&exists); e != nil {
+				return nil, e
+			}
+			if !exists {
+				return nil, errors.New("资源范围中的网站不存在")
+			}
+		}
+	}
 	var id, oldrole string
 	var previous UserAccess
-	if action != "create" {
-		if e = tx.QueryRow(`SELECT u.id,COALESCE(r.role,'admin') FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id WHERE u.username=?`, in.Username).Scan(&id, &oldrole); e != nil {
+	if action == "create" {
+		var exists bool
+		if e = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE username=?)`, in.Username).Scan(&exists); e != nil {
+			return nil, e
+		}
+		if exists {
+			return nil, errors.New("用户名已存在")
+		}
+	} else {
+		if e = tx.QueryRowContext(ctx, `SELECT u.id,COALESCE(r.role,'admin') FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id WHERE u.username=?`, in.Username).Scan(&id, &oldrole); e != nil {
 			return nil, errors.New("用户不存在")
 		}
-		previous, e = readUserAccess(tx, id)
+		previous, e = readUserAccessContext(ctx, tx, id)
 		if e != nil {
 			return nil, e
 		}
@@ -154,7 +184,9 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		}
 		if (action == "delete" || action == "update" && in.Role != "admin") && oldrole == "admin" {
 			var admins int
-			_ = tx.QueryRow(`SELECT count(*) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id WHERE COALESCE(r.role,'admin')='admin'`).Scan(&admins)
+			if e = tx.QueryRowContext(ctx, `SELECT count(*) FROM users u LEFT JOIN app_user_roles r ON r.user_id=u.id WHERE COALESCE(r.role,'admin')='admin'`).Scan(&admins); e != nil {
+				return nil, e
+			}
 			if admins <= 1 {
 				return nil, errors.New("不能删除或降级最后一个管理员")
 			}
@@ -185,7 +217,7 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		}
 	}
 	if (action == "delete" || action == "update" && !fullAdministrator(UserAccess{Role: in.Role, MenuIDs: menuIDs})) && fullAdministrator(previous) {
-		count, err := completeAdminCount(tx)
+		count, err := completeAdminCount(ctx, tx)
 		if err != nil {
 			return nil, err
 		}
@@ -196,36 +228,28 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 	raw, _ := json.Marshal(in.SiteIDs)
 	switch action {
 	case "create":
-		hash, e := bcrypt.GenerateFromPassword([]byte(in.Password), 12)
-		if e != nil {
-			return nil, e
-		}
 		id = ID()
-		if _, e = tx.Exec(`INSERT INTO users(id,username,password_hash,created_at) VALUES(?,?,?,?)`, id, in.Username, hash, Now()); e != nil {
-			return nil, errors.New("用户名已存在")
+		if _, e = tx.ExecContext(ctx, `INSERT INTO users(id,username,password_hash,created_at) VALUES(?,?,?,?)`, id, in.Username, passwordHash, Now()); e != nil {
+			return nil, errors.New("账户创建写入失败；未提交，请刷新核对原账户及存储")
 		}
-		_, e = tx.Exec(`INSERT INTO app_user_roles(user_id,role,site_ids) VALUES(?,?,?)`, id, in.Role, string(raw))
+		_, e = tx.ExecContext(ctx, `INSERT INTO app_user_roles(user_id,role,site_ids) VALUES(?,?,?)`, id, in.Role, string(raw))
 	case "update":
-		_, e = tx.Exec(`INSERT INTO app_user_roles(user_id,role,site_ids) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET role=excluded.role,site_ids=excluded.site_ids`, id, in.Role, string(raw))
+		_, e = tx.ExecContext(ctx, `INSERT INTO app_user_roles(user_id,role,site_ids) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET role=excluded.role,site_ids=excluded.site_ids`, id, in.Role, string(raw))
 		if e == nil && in.Password != "" {
-			hash, er := bcrypt.GenerateFromPassword([]byte(in.Password), 12)
-			if er != nil {
-				return nil, er
-			}
-			_, e = tx.Exec(`UPDATE users SET password_hash=? WHERE id=?`, hash, id)
+			_, e = tx.ExecContext(ctx, `UPDATE users SET password_hash=? WHERE id=?`, passwordHash, id)
 		}
 		if e == nil {
-			_, e = tx.Exec(`DELETE FROM sessions WHERE user_id=?`, id)
+			_, e = tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id=?`, id)
 		}
 	case "revoke":
-		_, e = tx.Exec(`DELETE FROM sessions WHERE user_id=?`, id)
+		_, e = tx.ExecContext(ctx, `DELETE FROM sessions WHERE user_id=?`, id)
 	case "delete":
 		for _, table := range []string{"sessions", "account_recovery", "account_security", "account_profiles", "app_user_roles", "app_user_menus"} {
-			if _, e = tx.Exec(`DELETE FROM `+table+` WHERE user_id=?`, id); e != nil {
+			if _, e = tx.ExecContext(ctx, `DELETE FROM `+table+` WHERE user_id=?`, id); e != nil {
 				return nil, e
 			}
 		}
-		_, e = tx.Exec(`DELETE FROM users WHERE id=?`, id)
+		_, e = tx.ExecContext(ctx, `DELETE FROM users WHERE id=?`, id)
 	default:
 		return nil, errors.New("用户操作不被支持")
 	}
@@ -238,14 +262,24 @@ func (a *Server) manageAppUsers(actor identity, action string, in AppModuleInput
 		if action == "update" {
 			revision = previous.Revision + 1
 		}
-		if _, e = tx.Exec(`INSERT INTO app_user_menus(user_id,menu_ids,revision) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET menu_ids=excluded.menu_ids,revision=excluded.revision`, id, string(menus), revision); e != nil {
+		if _, e = tx.ExecContext(ctx, `INSERT INTO app_user_menus(user_id,menu_ids,revision) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET menu_ids=excluded.menu_ids,revision=excluded.revision`, id, string(menus), revision); e != nil {
 			return nil, e
 		}
 	}
-	return map[string]any{"username": in.Username, "action": action, "ok": true}, tx.Commit()
+	if e = recordAppUserOutcomeTx(ctx, tx, actor.Username, action, nil); e != nil {
+		return nil, errors.New("账户改动与审计未共同提交；拒绝提交，请核对原账户及存储")
+	}
+	if e = tx.Commit(); e != nil {
+		return nil, e
+	}
+	return map[string]any{"username": in.Username, "action": action, "ok": true}, nil
 }
 func (a *Server) appDailyReport(ctx context.Context) (any, error) {
-	out := map[string]any{"created_at": Now()}
+	return a.appDailyReportAt(ctx, time.Now())
+}
+
+func (a *Server) appDailyReportAt(ctx context.Context, at time.Time) (any, error) {
+	out := map[string]any{"created_at": at.UTC().Format(time.RFC3339)}
 	var overview map[string]any
 	if e := a.Executor.Call(ctx, "GET", "/v1/overview", nil, &overview); e != nil {
 		return nil, e
@@ -253,7 +287,7 @@ func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 	out["resources"] = overview
 	for name, q := range map[string]string{"sites": "SELECT count(*) FROM sites", "running_sites": "SELECT count(*) FROM sites WHERE status='running'", "failed_site_jobs": "SELECT count(*) FROM jobs WHERE state IN ('failed','needs_attention')", "failed_runtime_jobs": "SELECT count(*) FROM runtime_jobs WHERE state IN ('failed','needs_attention')", "audit_events_24h": "SELECT count(*) FROM audit_logs WHERE julianday(created_at)>=julianday('now','-1 day')"} {
 		var n int
-		if e := a.Store.DB.QueryRow(q).Scan(&n); e != nil {
+		if e := a.Store.DB.QueryRowContext(ctx, q).Scan(&n); e != nil {
 			return nil, e
 		}
 		out[name] = n
@@ -263,10 +297,10 @@ func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 		var in any
 		method := "GET"
 		if item.name == "traffic" {
-			sites, _ := a.Store.Sites()
-			ids := []string{}
-			for _, site := range sites {
-				ids = append(ids, site.ID)
+			ids, siteErr := a.Store.dailyTrafficSiteIDs(ctx)
+			if siteErr != nil {
+				out["traffic_error"] = "网站清单不可核对，未采集或当作零流量"
+				continue
 			}
 			method = "POST"
 			in = map[string]any{"site_ids": ids}
@@ -277,110 +311,188 @@ func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 			out[item.name+"_error"] = e.Error()
 		}
 	}
-	var count int
-	certs, err := a.Store.Certificates()
+	if count, err := a.Store.dailyCertificatesDue(ctx, at); err == nil {
+		out["certificates_due_14_days"] = count
+	} else {
+		out["certificates_error"] = "保存的证书清单或有效期无法完整核对；未按零个到期证书统计"
+	}
+	day := at.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
+	return out, a.Store.saveDailyReportRecord(ctx, day, out)
+}
+func (a *Server) platformOperation(ctx context.Context, actor identity, action string, in AppModuleInput) (any, error) {
+	access, err := readUserAccessContext(ctx, a.Store.DB, actor.ID)
 	if err != nil {
 		return nil, err
 	}
-	for _, c := range certs {
-		expires, err := time.Parse(time.RFC3339, c.NotAfter)
+	if access.Role != "admin" || !containsMenu(access.MenuIDs, "system-tools") {
+		return nil, errors.New("需要当前管理员的系统工具授权")
+	}
+	if action == "token-list" {
+		return a.Store.platformTokenList(ctx)
+	}
+	if action != "run" {
+		if action != "issue-token" && action != "revoke-token" && action != "add" && action != "remove" {
+			return nil, errors.New("多主机操作不被支持")
+		}
+		if action == "add" && !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(in.Token) {
+			return nil, errors.New("只读令牌应为 64 位小写十六进制字符")
+		}
+		if action == "revoke-token" && (in.Token == "" && in.TokenID == "" || in.Token != "" && in.TokenID != "" || in.Token != "" && !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(in.Token) || in.TokenID != "" && !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(in.TokenID)) {
+			return nil, errors.New("撤销须提供一个明确的 64 位授权标识或原令牌；不能同时填写")
+		}
+		if (action == "add" || action == "remove") && !regexp.MustCompile(`^[a-z][a-z0-9-]{2,31}$`).MatchString(in.ResourceID) {
+			return nil, errors.New("主机标识应为 3–32 位小写字母数字或短横线")
+		}
+		if (action == "add" || action == "remove") && in.ExpectedSHA != "" && !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(in.ExpectedSHA) {
+			return nil, errors.New("原主机配置摘要无效，请只读刷新并选择原记录")
+		}
+		var encrypted []byte
+		if action == "add" {
+			u, err := url.Parse(in.URL)
+			if err != nil || len(in.URL) > 2048 || u.Scheme != "https" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Hostname() == "" {
+				return nil, errors.New("主机必须使用无账号、查询或片段的 HTTPS 地址和只读令牌")
+			}
+			encrypted, err = encryptCredential(a.accountSecretKey, "app-host:"+in.ResourceID, []byte(in.Token))
+			if err != nil {
+				return nil, err
+			}
+		}
+		tx, err := a.Store.DB.BeginTx(ctx, nil)
 		if err != nil {
 			return nil, err
 		}
-		if expires.Before(time.Now().AddDate(0, 0, 14)) {
-			count++
+		defer tx.Rollback()
+		access, err = readUserAccessContext(ctx, tx, actor.ID)
+		if err != nil {
+			return nil, err
 		}
-	}
-	out["certificates_due_14_days"] = count
-	raw, _ := json.Marshal(out)
-	day := time.Now().In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
-	_, e := a.Store.DB.Exec(`INSERT INTO app_daily_reports(day,report,created_at) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET report=excluded.report,created_at=excluded.created_at`, day, string(raw), Now())
-	if e == nil {
-		e = a.Store.QueueDailyNotification(day)
-	}
-	return out, e
-}
-func (a *Server) platformOperation(ctx context.Context, action string, in AppModuleInput) (any, error) {
-	if action == "revoke-token" {
-		if len(in.Token) != 64 {
-			return nil, errors.New("只读令牌无效")
+		if access.Role != "admin" || !containsMenu(access.MenuIDs, "system-tools") {
+			return nil, errors.New("多主机操作授权已变化")
 		}
-		_, e := a.Store.DB.Exec(`DELETE FROM app_platform_tokens WHERE token_hash=?`, Hash(in.Token))
-		return map[string]any{"revoked": true}, e
-	}
-	if action == "issue-token" {
-		token := Token()
-		_, e := a.Store.DB.Exec(`INSERT INTO app_platform_tokens(token_hash,created_at) VALUES(?,?)`, Hash(token), Now())
-		return map[string]any{"token": token, "scope": "health-read-only", "endpoint": "/api/platform/agent"}, e
-	}
-	if action == "add" {
-		var count int
-		if e := a.Store.DB.QueryRow(`SELECT count(*) FROM app_platform_hosts`).Scan(&count); e != nil {
-			return nil, e
+		if action == "add" || action == "remove" {
+			var address, created string
+			var original []byte
+			err = tx.QueryRowContext(ctx, `SELECT url,token,created_at FROM app_platform_hosts WHERE id=?`, in.ResourceID).Scan(&address, &original, &created)
+			if err != nil && err != sql.ErrNoRows {
+				return nil, err
+			}
+			if err == nil && in.ExpectedSHA != platformHostIdentity(in.ResourceID, address, original, created) || err == sql.ErrNoRows && in.ExpectedSHA != "" {
+				return nil, errors.New("原主机配置已变化、消失或尚未选择；拒绝覆盖或删除，请只读刷新核对")
+			}
+			err = nil
 		}
-		if count >= 12 {
-			return nil, errors.New("最多管理 12 个主机")
+		var out any
+		switch action {
+		case "issue-token":
+			var count int
+			if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM app_platform_tokens`).Scan(&count); err != nil {
+				return nil, err
+			}
+			if count >= 128 {
+				return nil, errors.New("已达 128 个保留只读令牌上限；不自动删除旧授权，请先明确撤销")
+			}
+			token := Token()
+			_, err = tx.ExecContext(ctx, `INSERT INTO app_platform_tokens(token_hash,created_at) VALUES(?,?)`, Hash(token), Now())
+			out = map[string]any{"token": token, "token_id": Hash(token), "scope": "health-read-only", "endpoint": "/api/platform/agent"}
+		case "revoke-token":
+			tokenID := in.TokenID
+			if in.Token != "" {
+				tokenID = Hash(in.Token)
+			}
+			result, deleteErr := tx.ExecContext(ctx, `DELETE FROM app_platform_tokens WHERE token_hash=?`, tokenID)
+			if deleteErr != nil {
+				return nil, deleteErr
+			}
+			n, rowsErr := result.RowsAffected()
+			if rowsErr != nil {
+				return nil, rowsErr
+			}
+			out = map[string]any{"revoked": true, "token_id": tokenID, "already_absent": n == 0}
+		case "add":
+			var count int
+			var exists bool
+			if err = tx.QueryRowContext(ctx, `SELECT count(*),EXISTS(SELECT 1 FROM app_platform_hosts WHERE id=?) FROM app_platform_hosts`, in.ResourceID).Scan(&count, &exists); err != nil {
+				return nil, err
+			}
+			if count > 12 || count == 12 && !exists {
+				return nil, errors.New("最多管理 12 个主机；满额时仍可更新已登记主机，不自动删除原记录")
+			}
+			_, err = tx.ExecContext(ctx, `INSERT INTO app_platform_hosts(id,url,token,created_at) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET url=excluded.url,token=excluded.token`, in.ResourceID, strings.TrimRight(in.URL, "/"), encrypted, Now())
+			if err != nil {
+				return nil, err
+			}
+			var created string
+			if err = tx.QueryRowContext(ctx, `SELECT created_at FROM app_platform_hosts WHERE id=?`, in.ResourceID).Scan(&created); err != nil {
+				return nil, err
+			}
+			out = map[string]any{"id": in.ResourceID, "url": in.URL, "expected_sha": platformHostIdentity(in.ResourceID, strings.TrimRight(in.URL, "/"), encrypted, created)}
+		case "remove":
+			result, deleteErr := tx.ExecContext(ctx, `DELETE FROM app_platform_hosts WHERE id=?`, in.ResourceID)
+			if deleteErr != nil {
+				return nil, deleteErr
+			}
+			n, rowsErr := result.RowsAffected()
+			if rowsErr != nil {
+				return nil, rowsErr
+			}
+			out = map[string]any{"removed": in.ResourceID, "already_absent": n == 0}
 		}
-		u, e := url.Parse(in.URL)
-		if e != nil || u.Scheme != "https" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Host == "" || len(in.Token) != 64 || !regexp.MustCompile(`^[a-z][a-z0-9-]{2,31}$`).MatchString(in.ResourceID) {
-			return nil, errors.New("主机必须使用 HTTPS 地址和只读令牌")
+		if err != nil {
+			return nil, err
 		}
-		encrypted, e := encryptCredential(a.accountSecretKey, "app-host:"+in.ResourceID, []byte(in.Token))
-		if e != nil {
-			return nil, e
+		if err = recordCoreModuleOutcomeTx(ctx, tx, "platform-ops", actor.Username, action, nil); err != nil {
+			return nil, errors.New("多主机改动与审计未共同提交；拒绝提交，请核对原记录及存储")
 		}
-		_, e = a.Store.DB.Exec(`INSERT INTO app_platform_hosts(id,url,token,created_at) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET url=excluded.url,token=excluded.token`, in.ResourceID, strings.TrimRight(in.URL, "/"), encrypted, Now())
-		return map[string]any{"id": in.ResourceID, "url": in.URL}, e
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return out, nil
 	}
-	if action == "remove" {
-		_, e := a.Store.DB.Exec(`DELETE FROM app_platform_hosts WHERE id=?`, in.ResourceID)
-		return map[string]any{"removed": in.ResourceID}, e
-	}
-	rows, e := a.Store.DB.Query(`SELECT id,url,token FROM app_platform_hosts ORDER BY id`)
+	rows, e := a.Store.DB.QueryContext(ctx, `SELECT id,url,token,created_at FROM app_platform_hosts ORDER BY id LIMIT 13`)
 	if e != nil {
 		return nil, e
 	}
 	type host struct {
-		id, url string
-		token   []byte
+		id, url, created string
+		token            []byte
 	}
 	hosts := []host{}
 	for rows.Next() {
 		var h host
-		if e = rows.Scan(&h.id, &h.url, &h.token); e != nil {
+		if e = rows.Scan(&h.id, &h.url, &h.token, &h.created); e != nil {
 			rows.Close()
 			return nil, e
 		}
 		hosts = append(hosts, h)
 	}
+	if e = rows.Err(); e != nil {
+		rows.Close()
+		return nil, e
+	}
 	rows.Close()
+	if len(hosts) > 12 {
+		return nil, errors.New("原主机记录超过 12 个上限；保留原记录，未扫描部分主机冒充完整结果")
+	}
 	out := []map[string]any{}
-	client := &http.Client{Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := platformHealthClient()
+	defer client.CloseIdleConnections()
 	for _, h := range hosts {
-		entry := map[string]any{"id": h.id, "url": h.url, "healthy": false}
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		secret, e := decryptCredential(a.accountSecretKey, "app-host:"+h.id, h.token)
 		if e != nil {
-			return nil, e
+			out = append(out, map[string]any{"id": h.id, "url": h.url, "expected_sha": platformHostIdentity(h.id, h.url, h.token, h.created), "healthy": false, "telemetry_complete": false, "error": "登记令牌无法解密；保留原记录，未发出请求"})
+			continue
 		}
-		req, e := http.NewRequestWithContext(ctx, "GET", h.url+"/api/platform/agent", nil)
-		if e != nil {
-			return nil, e
-		}
-		req.Header.Set("Authorization", "Bearer "+string(secret))
-		resp, e := client.Do(req)
-		if e != nil {
-			entry["error"] = e.Error()
-		} else {
-			var data any
-			decodeErr := json.NewDecoder(io.LimitReader(resp.Body, 256<<10)).Decode(&data)
-			resp.Body.Close()
-			entry["healthy"] = resp.StatusCode == 200 && decodeErr == nil
-			entry["status"] = resp.StatusCode
-			entry["report"] = data
-		}
+		entry := readPlatformHealth(ctx, client, h.id, h.url, string(secret))
+		entry["expected_sha"] = platformHostIdentity(h.id, h.url, h.token, h.created)
 		out = append(out, entry)
 	}
-	return map[string]any{"hosts": out, "checked_at": Now()}, nil
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return map[string]any{"hosts": out, "checked_at": Now(), "scope": "healthy 仅代表本次可信 HTTPS 与健康协议通过；指标可用性另行展示，不等于全部业务、网站或告警正常"}, nil
 }
 func (a *Server) platformAgent(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(r.Header.Get("Authorization"), "Bearer ") {
@@ -389,7 +501,7 @@ func (a *Server) platformAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	var count int
-	if len(token) != 64 || a.Store.DB.QueryRow(`SELECT count(*) FROM app_platform_tokens WHERE token_hash=?`, Hash(token)).Scan(&count) != nil || count != 1 {
+	if !regexp.MustCompile(`^[a-f0-9]{64}$`).MatchString(token) || a.Store.DB.QueryRowContext(r.Context(), `SELECT count(*) FROM app_platform_tokens WHERE token_hash=?`, Hash(token)).Scan(&count) != nil || count != 1 {
 		fail(w, 401, "只读令牌无效")
 		return
 	}
@@ -399,37 +511,4 @@ func (a *Server) platformAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	send(w, 200, map[string]any{"health": out, "version": "app-modules-1", "time": Now()})
-}
-
-func (a *Server) StartAppDailyWorker(ctx context.Context) {
-	go func() {
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-ticker.C:
-				var page []SoftwareAppStatus
-				if a.Executor.Call(ctx, "GET", "/v1/software", nil, &page) != nil {
-					continue
-				}
-				installed := false
-				for _, v := range page {
-					if v.ID == "daily-report" && v.Installed {
-						installed = true
-					}
-				}
-				if !installed {
-					continue
-				}
-				day := time.Now().In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
-				var n int
-				_ = a.Store.DB.QueryRow(`SELECT count(*) FROM app_daily_reports WHERE day=?`, day).Scan(&n)
-				if n == 0 {
-					_, _ = a.appDailyReport(ctx)
-				}
-			}
-		}
-	}()
 }

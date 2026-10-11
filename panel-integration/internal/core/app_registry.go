@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/runtimecatalog"
@@ -173,6 +174,9 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	}
 	if softwareErr == nil {
 		for _, item := range softwareRows {
+			if _, duplicate := software[item.ID]; duplicate {
+				item.StateUnknown = true
+			}
 			software[item.ID] = item
 		}
 	}
@@ -221,8 +225,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.VersionKnown = appcatalog.ValidVersion(status.InstalledVersion)
 			status.Healthy = status.Installed
 		case "panel-module":
-			status.StateKnown = softwareErr == nil
-			row := software[app.Target]
+			row, present := software[app.Target]
+			status.StateKnown = softwareErr == nil && present && !row.StateUnknown
 			status.Installed, status.Healthy = row.Installed, row.Healthy
 			status.InstalledVersion = row.Version
 			status.VersionKnown = status.Installed && appcatalog.ValidVersion(row.Version)
@@ -251,6 +255,11 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				status.InstalledVersion = status.Instances[0].Version
 				status.VersionKnown = appcatalog.ValidVersion(status.InstalledVersion)
 			}
+		}
+		if !status.StateKnown {
+			status.Installed, status.Healthy, status.VersionKnown = false, false, false
+			status.InstalledVersion = ""
+			status.UpdateAvailable = false
 		}
 		if status.Installed && status.VersionKnown {
 			cmp, valid := appcatalog.CompareVersions(status.InstalledVersion, app.Version)
@@ -429,7 +438,18 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			fail(w, 409, err.Error())
 			return
 		}
-		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, "", key, u.Username, a.Store.bindRegistryInstall(item, manifest.Delivery.Target, key, u.ID, in))
+		bind := a.Store.bindRegistryInstall(item, manifest.Delivery.Target, key, u.ID, in)
+		if wafApplyApp(manifest.Delivery.Target) {
+			registryBind := bind
+			wafBind := a.Store.bindWAFApplyRequest(manifest.Delivery.Target, key, u)
+			bind = func(tx *sql.Tx, job string, existing bool) error {
+				if err := registryBind(tx, job, existing); err != nil {
+					return err
+				}
+				return wafBind(tx, job, existing)
+			}
+		}
+		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, "", key, u.Username, bind)
 		if err != nil {
 			if replay() {
 				return

@@ -227,11 +227,11 @@ func captureWAFReloadGeneration(ctx context.Context, root, binary string, pid in
 		if !strings.HasPrefix(string(title), "nginx: worker process") {
 			continue
 		}
-		actual, err := os.Readlink(filepath.Join(root, child, "exe"))
+		err = wafReloadWorkerExecutable(ctx, root, binary, p)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
-		if err != nil || actual != binary {
+		if err != nil {
 			return nil, errors.New("Nginx 工作进程程序无法验证")
 		}
 		g.Workers = append(g.Workers, p)
@@ -257,16 +257,14 @@ func (s *Service) captureWAFReloadGeneration(ctx context.Context, nginx string) 
 	return captureWAFReloadGeneration(ctx, s.systemPath("/proc"), nginx, pid)
 }
 
-// Linux can deny fd readlink while a worker is exiting, before stat exposes
-// the final zombie state. Permission failure is never evidence of drainage.
-// Recheck the exact original PID/start/parent; a still-live unreadable worker
-// must wait within the existing five-second barrier, then fail closed.
+// Linux can deny fd readlink or stop exposing cmdline/credentials while a
+// worker exits between the first stat and the bounded same-UID read. Neither
+// failure nor an empty title is evidence of drainage. Re-read the exact
+// original PID/start/state/parent first. Only verified death or PID reuse can
+// excuse a read error; a still-live ambiguous worker remains fail-closed.
 func (g *wafReloadGeneration) workerSocketReadError(previous wafReloadProcess, readErr error) (bool, error) {
-	if !errors.Is(readErr, os.ErrPermission) && !errors.Is(readErr, os.ErrNotExist) {
-		if readErr == nil {
-			return false, errors.New("Nginx 工作进程套接字错误缺失")
-		}
-		return false, readErr
+	if readErr == nil {
+		return false, errors.New("Nginx 工作进程套接字错误缺失")
 	}
 	again, err := readWAFReloadProcess(g.ProcRoot, previous.PID)
 	if errors.Is(err, os.ErrNotExist) {
@@ -280,6 +278,13 @@ func (g *wafReloadGeneration) workerSocketReadError(previous wafReloadProcess, r
 	}
 	if again.Parent != g.Master.PID {
 		return false, errors.New("Nginx 旧工作进程父身份变化")
+	}
+	// A fixed observer's disappearing title may precede the kernel's zombie
+	// state. It remains NOT drained: retry only within the existing context
+	// until exact exit or actual listener closure can be verified. Arbitrary
+	// IO/identity failures of a still-live process are still fatal.
+	if !errors.Is(readErr, os.ErrPermission) && !errors.Is(readErr, os.ErrNotExist) && !errors.Is(readErr, errWAFWorkerTitleUnverifiable) {
+		return false, readErr
 	}
 	if errors.Is(readErr, os.ErrNotExist) {
 		return false, readErr
@@ -310,7 +315,7 @@ func (g *wafReloadGeneration) drained(ctx context.Context) (bool, error) {
 		if current.Parent != g.Master.PID {
 			return false, errors.New("Nginx 旧工作进程父身份变化")
 		}
-		sockets, err := wafProcessSockets(ctx, g.ProcRoot, previous.PID)
+		sockets, err := wafReloadWorkerSockets(ctx, g.ProcRoot, g.Binary, previous)
 		if err != nil {
 			if ctx.Err() != nil {
 				return false, ctx.Err()
@@ -345,11 +350,17 @@ func (g *wafReloadGeneration) drained(ctx context.Context) (bool, error) {
 	return true, ctx.Err()
 }
 
+// Loading the full request-body rule set on a low-CPU server can take longer
+// than a fingerprint request. This budget is for listener handoff only: it
+// never waits for existing clients, increases process privileges or forces a
+// worker to exit. Earlier caller deadlines still take precedence.
+const wafReloadHandoffTimeout = 30 * time.Second
+
 func waitWAFReloadGeneration(ctx context.Context, g *wafReloadGeneration) error {
 	if g == nil {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, wafReloadHandoffTimeout)
 	defer cancel()
 	for {
 		done, err := g.drained(ctx)

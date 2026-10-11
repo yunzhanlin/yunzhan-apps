@@ -205,17 +205,19 @@ func (s *Service) validateNFSRuntime(v nfsRuntimeSelection) (nfsRuntimeSelection
 	return v, nil
 }
 func nfsCommandIn(ctx context.Context, dir, name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
-	cmd.Dir = dir
-	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive"}
-	out := &boundedBuffer{max: 128 << 10}
-	cmd.Stdout = out
-	cmd.Stderr = out
-	cmd.WaitDelay = time.Second
-	if e := cmd.Run(); e != nil {
-		return "", fmt.Errorf("NFS 固定命令 %s 失败：%w：%s", filepath.Base(name), e, out.String())
-	}
-	return out.String(), nil
+	return fixedAPTCommand(ctx, name, args, func(fixed []string) (string, error) {
+		cmd := exec.CommandContext(ctx, name, fixed...)
+		cmd.Dir = dir
+		cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive", "NEEDRESTART_MODE=l"}
+		out := &boundedBuffer{max: 128 << 10}
+		cmd.Stdout = out
+		cmd.Stderr = out
+		cmd.WaitDelay = time.Second
+		if e := cmd.Run(); e != nil {
+			return "", fmt.Errorf("NFS 固定命令 %s 失败：%w：%s", filepath.Base(name), e, out.String())
+		}
+		return out.String(), nil
+	})
 }
 func copyNFSNative(source, target string, mode os.FileMode) error {
 	if e := ownedRuntimePath(source, false); e != nil {
@@ -302,7 +304,10 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 	sort.Strings(install)
 	// No nfs-ganesha package is installed: its maintainer scripts and system
 	// service must never execute or replace an existing host NFS server.
-	if _, e := s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends"}, install...)...); e != nil {
+	if _, e := s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends", "--download-only"}, install...)...); e != nil {
+		return e
+	}
+	if _, e := s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends", "--no-download"}, install...)...); e != nil {
 		return e
 	}
 	base := filepath.Join(appNativeRoot, "nfs-manager")

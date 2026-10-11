@@ -13,6 +13,11 @@ class AnalyticsHTMLBudget(unittest.TestCase):
         for path in ('/etc/panel','/etc/nginx','/srv/panel/sites'):
             self.assertNotIn(path,settings['ReadWritePaths'].split())
         self.assertNotIn('CAP_SYS_ADMIN',settings['CapabilityBoundingSet'])
+        self.assertEqual(settings['AmbientCapabilities'],settings['CapabilityBoundingSet'])
+        self.assertEqual(set(settings['CapabilityBoundingSet'].split()),{'CAP_CHOWN','CAP_DAC_OVERRIDE','CAP_SETUID','CAP_SETGID','CAP_FOWNER','CAP_KILL'})
+        self.assertEqual(settings['ProtectControlGroups'],'true')
+        worker=(root/'internal/executor/analytics_html_build_linux.go').read_text()
+        self.assertLess(worker.index('verifyNginxNativeWorkerCapabilities()'),worker.index('readWAFEngineControl(analyticsHTMLRequests, id)'))
         source=(root/'internal/executor/analytics_html_native_linux.go').read_text()
         self.assertNotIn('"-j2"',source)
         self.assertNotIn('os.Environ()',source)

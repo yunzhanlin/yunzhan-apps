@@ -5,13 +5,13 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('1.8.2 report snapshots are exported from exact current normal signed ADI inputs and mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'0c09ccd8603afc68d42caed2a2f1c71672cded67d16e9ab888c9fc6dcc7e0fbb');
- assert.equal(release.archive_sha256,'203eddd7f66a7da29e21c3fce42cf56a7322c53ec519171c864199979d06a68c');
- assert.equal(Object.keys(index.files).length,999);
+ assert.equal(release.frozen_inputs_sha256,'0ab6c40d2ec09a83864804e455aa7d8e7a8c4fd07836308cb39985c1aa0b7bd1');
+ assert.equal(release.archive_sha256,'d12bf662fb1d53efc4abb0372714a897aa3c3d4ea7da82aca7a30e921df0a839');
+ assert.equal(Object.keys(index.files).length,1187);
  for(const file of ['internal/core/load_balance_report_export.go','internal/core/load_balance_report_export_test.go','web/src/loadBalanceReportExport.ts','scripts/test-load-balance-report-export.mjs','internal/core/app_modules.go','web/src/AppModuleManager.vue','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,23);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,35);assert(gates.includes('scripts/test-load-balance-report-export.mjs'));
  const native=await read('panel-integration/internal/core/load_balance_report_export.go');
  for(const pattern of [/loadBalanceExportMaxBody\s*= 1 << 20/,/loadBalanceExportMaxBytes\s*= 8 << 20/,/loadBalanceExportMaxTickets = 32/,/loadBalanceExportPerSession = 8/,/loadBalanceExportTTL\s*= 5 \* time.Minute/,/decoder.UseNumber\(\)/,/Owner != loadBalanceExportOwner\(u\)/,/a.authorize\(/,/len\(query\["sha256"\]\) != 1/,/Cache-Control", "no-store, private"/])assert.match(native,pattern);
  assert.doesNotMatch(native,/a\.Executor|os\.ReadFile|os\.WriteFile|exec\.Command/);

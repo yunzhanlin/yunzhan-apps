@@ -34,27 +34,29 @@ func (s *Service) moduleCommand(ctx context.Context, timeout time.Duration, name
 
 // Callers supply only compiled/validated native environment, never API values.
 func (s *Service) moduleCommandEnvironment(ctx context.Context, timeout time.Duration, name string, environment []string, args ...string) (string, error) {
-	if s.Config.SystemRoot != "/" {
-		return s.Config.Run(ctx, name, args...)
-	}
 	c, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	cmd := exec.CommandContext(c, name, args...)
-	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive"}
-	cmd.Env = append(cmd.Env, environment...)
-	if name == "/usr/bin/apt-get" {
-		// Report pending restarts; dependency setup must not restart websites
-		// or unrelated services behind the administrator's back.
-		cmd.Env = append(cmd.Env, "NEEDRESTART_MODE=l")
-	}
-	out := &boundedBuffer{max: 128 << 10}
-	cmd.Stdout = out
-	cmd.Stderr = out
-	cmd.WaitDelay = time.Second
-	if e := cmd.Run(); e != nil {
-		return "", fmt.Errorf("%s: %w: %s", filepath.Base(name), e, out.String())
-	}
-	return out.String(), nil
+	return fixedAPTCommand(c, name, args, func(fixed []string) (string, error) {
+		if s.Config.SystemRoot != "/" {
+			return s.Config.Run(c, name, fixed...)
+		}
+		cmd := exec.CommandContext(c, name, fixed...)
+		cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C", "DEBIAN_FRONTEND=noninteractive"}
+		cmd.Env = append(cmd.Env, environment...)
+		if name == "/usr/bin/apt-get" {
+			// Report pending restarts; dependency setup must not restart websites
+			// or unrelated services behind the administrator's back.
+			cmd.Env = append(cmd.Env, "NEEDRESTART_MODE=l")
+		}
+		out := &boundedBuffer{max: 128 << 10}
+		cmd.Stdout = out
+		cmd.Stderr = out
+		cmd.WaitDelay = time.Second
+		if e := cmd.Run(); e != nil {
+			return "", fmt.Errorf("%s: %w: %s", filepath.Base(name), e, out.String())
+		}
+		return out.String(), nil
+	})
 }
 func (s *Service) appDependencies(ctx context.Context, id string) error {
 	if s.Config.SystemRoot != "/" {
@@ -97,7 +99,7 @@ func (s *Service) appDependencies(ctx context.Context, id string) error {
 // as the executor. New(Config{}) intentionally does not default NginxBin or
 // SitesDir and therefore cannot prove the actual Nginx version.
 func appDependencyService(id string) *Service {
-	if id == "nginx-waf" || id == "website-analytics" {
+	if id == "nginx-waf" || id == "website-analytics" || id == "apache-waf" {
 		return nativeWAFService()
 	}
 	return New(Config{})
@@ -105,10 +107,18 @@ func appDependencyService(id string) *Service {
 
 // Runs only in a dedicated root unit with a fixed package list, never a shell command from the API.
 func InstallAppDependencies(id string) (err error) {
-	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" {
+	if id != "pure-ftpd" && id != "nfs-manager" && id != "pm2-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" && id != "apache-waf" {
 		return errors.New("依赖模块无效")
 	}
 	s := appDependencyService(id)
+	if id == "apache-waf" {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		err := s.apacheBodyRuntimeReady(ctx)
+		cancel()
+		if err != nil {
+			return err // Read-only prerequisite, before any dependency-result write.
+		}
+	}
 	if id == "network-threat-detection" && !s.moduleInstalled(id) {
 		return errors.New("IDS 应用未安装；不准备留存或不存在的应用")
 	}
@@ -131,6 +141,12 @@ func InstallAppDependencies(id string) (err error) {
 		return preparePrivateThreatIDSService(ctx)
 	}
 	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	if id == "apache-waf" {
+		packages = apacheBodyBuildDependencies()
+		if s.wafBuildPackagesReady(packages) {
+			return nil
+		}
+	}
 	if id == "website-analytics" {
 		nginx, selectionErr := s.nginxBinary()
 		if selectionErr != nil {
@@ -168,14 +184,17 @@ func InstallAppDependencies(id string) (err error) {
 			return err
 		}
 		args := []string{"install", "-y", "--no-install-recommends"}
-		if id == "nginx-waf" || id == "website-analytics" {
+		if id == "nginx-waf" || id == "website-analytics" || id == "apache-waf" {
 			args = append(args, "--no-upgrade")
 		}
-		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append(args, packages...)...); err != nil {
+		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append(append(append([]string{}, args...), "--download-only"), packages...)...); err != nil {
+			return err
+		}
+		if _, err = s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append(append(append([]string{}, args...), "--no-download"), packages...)...); err != nil {
 			return err
 		}
 	}
-	if (id == "nginx-waf" || id == "website-analytics") && !s.wafBuildPackagesReady(packages) {
+	if (id == "nginx-waf" || id == "website-analytics" || id == "apache-waf") && !s.wafBuildPackagesReady(packages) {
 		return errors.New("WAF 固定构建依赖未通过实际包状态核对")
 	}
 	if id == "pure-ftpd" {
@@ -1128,6 +1147,10 @@ func (s *Service) enableAnalyticsLogs(ctx context.Context) error {
 
 func (s *Service) appDependencyReady(id string) bool {
 	switch id {
+	case "apache-waf":
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		return s.apacheBodyBuildReady(ctx) == nil
 	case "network-threat-detection":
 		runtime, err := s.threatIDSRuntime()
 		if err != nil || threatIDSRequireSupported(runtime.Package.Version) != nil || s.threatIDSUpgradeNoPending() != nil {
@@ -1188,7 +1211,7 @@ func (s *Service) appDependencyRoutes(m *http.ServeMux) {
 	for _, method := range []string{"GET", "POST"} {
 		m.HandleFunc(method+" /v1/app-dependencies/{id}", func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")
-			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" {
+			if id != "pure-ftpd" && id != "pm2-manager" && id != "nfs-manager" && id != "nginx-waf" && id != "website-analytics" && id != "network-threat-detection" && id != "apache-waf" {
 				respond(w, 400, map[string]string{"error": "依赖标识无效"})
 				return
 			}

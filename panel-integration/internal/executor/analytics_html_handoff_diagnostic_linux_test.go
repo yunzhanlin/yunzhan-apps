@@ -65,5 +65,5 @@ func TestAnalyticsHTMLCanonicalHandoffDiagnosis(t *testing.T) {
 		t.Fatal("strict private diagnostic copy", err)
 	}
 	t.Log("private handoff diagnosis reuses a retained module; NOT source-build, signed release, production unit or power-loss acceptance")
-	analyticsHTMLNativeGlobalLifecycle(t, ctx, base, copy, nginx, match[1])
+	analyticsHTMLNativeGlobalLifecycle(t, ctx, base, copy, nginx, match[1], false)
 }
