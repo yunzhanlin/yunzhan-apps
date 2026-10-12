@@ -16,7 +16,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             base = pathlib.Path(directory)
             for name in ("bin", "web", "systemd", "config"):
                 (base / name).mkdir()
-            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py", "development-upgrade.py"):
+            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py", "development-upgrade.py", "start-guard-install.py"):
                 (base / name).write_bytes(b"owned checksum fixture\n")
             mount = base / "systemd" / r"var-cache-panel\x2dapache\x2dbody.mount"
             mount.write_bytes(b"owned exact escaped mount filename\n")
@@ -28,7 +28,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             self.assertIn("shasum -a 256 --strict -c", verifier)
             self.assertIn('"$(uname -s)" == Darwin', verifier)
             verified = subprocess.run([*checker, "SHA256SUMS"], cwd=base, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(verified.stdout.count(b": OK"), 15)
+            self.assertEqual(verified.stdout.count(b": OK"), 16)
             sums = (base / "SHA256SUMS").read_bytes()
             (base / "SHA256SUMS").write_bytes(sums + b"malformed line cannot be skipped\n")
             malformed = subprocess.run([*checker, "SHA256SUMS"], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)

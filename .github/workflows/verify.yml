@@ -19,6 +19,8 @@ jobs:
       - run: npm test
       - name: Root development transaction and startup binding fixtures (service runner is not native systemd acceptance)
         run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
+      - name: Immutable external startup interlock filesystem fixtures (not native boot acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_start_guard_install.py'
       - name: Ordinary upgrade gateway policy fixtures (not native traffic acceptance)
         run: python3 -m unittest discover -s panel-integration/packaging -p 'test_install_gateway_policy.py'
       - name: Production upgrade trusted-root filesystem and SQLite fixtures (service runner is not native systemd acceptance)

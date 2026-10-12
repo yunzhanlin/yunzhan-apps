@@ -240,6 +240,10 @@ func runningProgramSHA() (string, error) {
 		return "", errors.New("running program identity unavailable")
 	}
 	defer file.Close()
+	return startupProgramSHA(file)
+}
+
+func startupProgramSHA(file *os.File) (string, error) {
 	var before, after unix.Stat_t
 	if unix.Fstat(int(file.Fd()), &before) != nil || before.Uid != 0 || before.Mode&unix.S_IFMT != unix.S_IFREG || before.Mode&0022 != 0 || before.Nlink != 1 || before.Size <= 0 || before.Size > 256*1024*1024 {
 		return "", errors.New("running program is not a retained root-controlled payload")
@@ -271,6 +275,13 @@ func runningProgramSHA() (string, error) {
 }
 
 func startupAt(marker, lock string) error {
+	return startupVerifyAt(marker, lock, runningProgramSHA, "")
+}
+
+func startupVerifyAt(marker, lock string, readDigest func() (string, error), kind string) error {
+	if kind != "" && kind != "panel" && kind != "panel-executor" {
+		return errors.New("startup program outside fixed payload scope")
+	}
 	raw, info, err := startupFile(marker)
 	if err != nil {
 		return err
@@ -282,8 +293,14 @@ func startupAt(marker, lock string) error {
 	if err := ownerLive(record, lock); err != nil {
 		return err
 	}
-	digest, err := runningProgramSHA()
-	if err != nil || (digest != record.PanelSHA && digest != record.ExecutorSHA) {
+	digest, err := readDigest()
+	accepted := digest == record.PanelSHA || digest == record.ExecutorSHA
+	if kind == "panel" {
+		accepted = digest == record.PanelSHA
+	} else if kind == "panel-executor" {
+		accepted = digest == record.ExecutorSHA
+	}
+	if err != nil || !accepted {
 		return errors.New("running program was not authorized by the active transaction")
 	}
 	if err := ownerLive(record, lock); err != nil {

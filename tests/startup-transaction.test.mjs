@@ -5,26 +5,26 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('normal startup authorization binds real root FLOCK and signed native proofs without claiming durable or Main delivery',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_quiescent_stop_release,history=c.reviewed_startup_release,current=c.reviewed_fixture_input_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_quiescent_stop_release,history=c.reviewed_startup_release,current=c.reviewed_interlock_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24quiescencebeie');assert.equal(r.frozen_source_files,16865);assert.equal(r.exported_normal_source_files,1217);assert.equal(r.exported_build_input_files,1176);assert.equal(r.source_overrides,0);
- assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1217);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1223);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const pins={
-  'packaging/development-upgrade.py':'1b570a417da77ec36c98889cf8ce3da3cc46c52685e94cb6b2b9ba75847ab4c6',
-  'packaging/upgrade-release.py':'07f07c0d43936627672b8079d1119ba9d0d02c81563b79e8bc65c5934e82d49c',
-  'packaging/build-release.sh':'0c899c785708b1ca2f3b458e13d79a64b3a042f375936fbb8d523935e45e861b',
-  'packaging/install.sh':'5f61efa1e76e4306c4419bea0c60c406e713a84ad8092324eaae83319e9463d0',
-  'internal/upgradeguard/startup_linux.go':'8dc7fc752bc4a3796704c7c0c74447bfcde4ef9c7e0c9f41469d7ab29951a966',
+  'packaging/development-upgrade.py':'b749caf71c335907ce252c4e28fca6bcfb7ffcbd7ca5b1776de33320a3488baa',
+  'packaging/upgrade-release.py':'3557380bdd4d32a4edb2204d5cb7445d553e92ee0554ea8a5f4db617c16ec6c1',
+  'packaging/build-release.sh':'01b86faac5dd718127d14a75c700e17dbdee2cb52ffce954a83f768919fa4880',
+  'packaging/install.sh':'37c38f83c98e1bb2cbac9c2dfaa500a5f7e99c54127a6171bdfe5152877ddf15',
+  'internal/upgradeguard/startup_linux.go':'2e3d52e621506d308d7f854895c677e2b3fbe62a8e0dec7e87e4238bf170c968',
   'internal/upgradeguard/startup_linux_test.go':'dcc3a2fcf59a96670271cefe880dd482c09f707c2273da621c7029eecf0f67fc',
   'internal/upgradeguard/startup_other.go':'742ac68eeb76bc5c6f29477347a6d8b97375f5a034904eb3df0f713ac9215472'
  };
  for(const [file,pin] of Object.entries(pins)){assert.equal(sha(await read('panel-integration/'+file)),pin,file);assert.equal(index.files[file],pin,file);assert.equal(inputs.files[file],pin,file);}
  for(const arch of ['amd64','arm64']){
   const a=r.signed_normal_release[arch];assert.match(a.archive,/^[a-f0-9]{64}$/);assert.match(a.startup_companion,/^[a-f0-9]{64}$/);assert.notEqual(a.companion,a.startup_companion);
-  assert.equal(a.development_helper,pins['packaging/development-upgrade.py']);assert.equal(a.upgrade_helper,pins['packaging/upgrade-release.py']);assert.equal(a.prune_helper,c.reviewed_release_retention_release.signed_normal_release[arch].prune_helper);
+  assert.equal(a.development_helper,'1b570a417da77ec36c98889cf8ce3da3cc46c52685e94cb6b2b9ba75847ab4c6');assert.equal(a.upgrade_helper,'07f07c0d43936627672b8079d1119ba9d0d02c81563b79e8bc65c5934e82d49c');assert.equal(a.prune_helper,c.reviewed_release_retention_release.signed_normal_release[arch].prune_helper);assert.equal(current.signed_normal_release[arch].development_helper,pins['packaging/development-upgrade.py']);assert.equal(current.signed_normal_release[arch].upgrade_helper,pins['packaging/upgrade-release.py']);
  }
  const source=await read('panel-integration/internal/upgradeguard/startup_linux.go');
- for(const text of ['CheckStartup() error','Marker, DevelopmentMarker','multiple or unsafe program upgrade markers','unknown or duplicate startup authorization field','decoder.Decode(&trailing) != io.EOF','unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC','before.Mode&0777 != 0644','before.Size > 2048','fs.Type != unix.PROC_SUPER_MAGIC','/proc/locks','4*1024*1024','len(fields) == 8','fields[1] == "FLOCK"','fields[3] == "WRITE"','fields[4] == strconv.Itoa(record.PID)','matches == 1','processTicks(processStat, record.PID)','"0 0 0 0"','/proc/self/exe','256*1024*1024','time.Now().Add(5 * time.Second)','digest != record.PanelSHA && digest != record.ExecutorSHA','sameStartupStat(info, latest)'])assert(source.includes(text),text);
+ for(const text of ['CheckStartup() error','Marker, DevelopmentMarker','multiple or unsafe program upgrade markers','unknown or duplicate startup authorization field','decoder.Decode(&trailing) != io.EOF','unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC','before.Mode&0777 != 0644','before.Size > 2048','fs.Type != unix.PROC_SUPER_MAGIC','/proc/locks','4*1024*1024','len(fields) == 8','fields[1] == "FLOCK"','fields[3] == "WRITE"','fields[4] == strconv.Itoa(record.PID)','matches == 1','processTicks(processStat, record.PID)','"0 0 0 0"','/proc/self/exe','256*1024*1024','time.Now().Add(5 * time.Second)','digest == record.PanelSHA || digest == record.ExecutorSHA','kind == "panel"','accepted = digest == record.PanelSHA','kind == "panel-executor"','accepted = digest == record.ExecutorSHA','sameStartupStat(info, latest)'])assert(source.includes(text),text);
  assert.equal((source.match(/ownerLive\(record, lock\)/g)||[]).length,2);
  for(const prohibited of ['os.Remove(','os.Chmod(','os.Getenv(','O_CREAT'])assert(!source.includes(prohibited),prohibited);
  const fixture=await read('panel-integration/internal/upgradeguard/startup_linux_test.go');for(const text of ['TestStartupRootLiveLeaseStaleBootPIDBytesAndUnprivilegedRead','/usr/sbin/runuser','"nobody"','unix.LOCK_EX|unix.LOCK_NB','unix.LOCK_UN','marker link accepted','writable marker accepted'])assert(fixture.includes(text),text);

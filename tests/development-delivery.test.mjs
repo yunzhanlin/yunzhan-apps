@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
 test('normal BEIW strict development transaction and startup guard are exact frozen source, not prior Main delivery',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'b73307e7563dce81d91dfee8bac49fff134333e4ae7cafde3df7109edbdf8f55');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const f of ['scripts/upgrade-running-development.sh','packaging/development-upgrade.py','packaging/upgrade-release.py','packaging/test_development_upgrade_safety.py','packaging/test_native_build_directories.py','cmd/panel/main.go','cmd/executor/main.go','internal/upgradeguard/guard.go','internal/upgradeguard/startup_linux.go','internal/upgradeguard/startup_linux_test.go','internal/upgradeguard/startup_other.go']){const digest=sum(await read('panel-integration/'+f));assert.equal(index.files[f],digest,f);assert.equal(release.files[f],digest,f);}
  const migration=await read('panel-integration/scripts/upgrade-running-development.sh'),helper=await read('panel-integration/packaging/development-upgrade.py'),production=await read('panel-integration/packaging/upgrade-release.py');
  assert.equal(sum(migration),'b116481c2a3d4e95922884d10f4baeb5ed4a828d902231fb0202eb25a9da8695');

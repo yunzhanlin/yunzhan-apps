@@ -4,9 +4,9 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 test('ephemeral fixture self-port repair is sole frozen input change with no runtime override and distinct native-development evidence',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_fixture_input_release,old=c.reviewed_quiescent_stop_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_fixture_input_release,old=c.reviewed_quiescent_stop_release,current=c.reviewed_interlock_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(r.release,'0.1.0-dev.proapps24fixturebeiw');assert.equal(r.frozen_inputs_sha256,inputs.frozen_inputs_sha256);assert.equal(r.signed_normal_release.amd64.archive,inputs.archive_sha256);
+ assert.equal(r.release,'0.1.0-dev.proapps24fixturebeiw');assert.equal(r.frozen_inputs_sha256,'7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7');assert.equal(r.signed_normal_release.amd64.archive,'39ed7b660eb5b59d231d6ac0f336f657a4a204154128ee6cbff937fb469e16af');assert.equal(current.frozen_inputs_sha256,inputs.frozen_inputs_sha256);assert.equal(current.signed_normal_release.amd64.archive,inputs.archive_sha256);
  assert.equal(r.source_overrides,0);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.deepEqual(r.only_frozen_input_change,['internal/executor/app_load_balance_health_linux_test.go']);
  const fixture=await read('panel-integration/internal/executor/app_load_balance_health_linux_test.go');
  assert.equal(sha(fixture),'acfd99ca6c9743a337c0d5cba0e6069f88c8903ec54a61272f126412d9b2204b');assert.equal(r.changed_fixture_sha256,sha(fixture));assert.equal(inputs.files['internal/executor/app_load_balance_health_linux_test.go'],sha(fixture));
