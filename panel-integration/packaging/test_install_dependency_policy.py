@@ -20,11 +20,13 @@ apt-get(){
  return 0
 }
 sleep(){ printf '%s\\n' "$*" >> "$SLEEP_LOG"; }
+exec(){ "$@"; }
+python3(){ :; }
 """
 class InstallDependencyPolicyTest(unittest.TestCase):
  def run_block(self,platform='ubuntu-24.04',fresh=0,services=0,preflight=0,**extra):
   with tempfile.TemporaryDirectory() as directory:
-   env=os.environ.copy();env.update(PANEL_PLATFORM=platform,ID=platform.split('-')[0],PANEL_VERSION='0.1.0-dev.fixture',FRESH=str(fresh),NO_SERVICES=str(services),PREFLIGHT_ONLY=str(preflight),APT_LOG=directory+'/apt',DEPS_LOG=directory+'/deps',SLEEP_LOG=directory+'/sleep',**extra)
+   env=os.environ.copy();env.update(HERE=directory,PANEL_PLATFORM=platform,ID=platform.split('-')[0],PANEL_VERSION='0.1.0-dev.fixture',FRESH=str(fresh),NO_SERVICES=str(services),PREFLIGHT_ONLY=str(preflight),APT_LOG=directory+'/apt',DEPS_LOG=directory+'/deps',SLEEP_LOG=directory+'/sleep',**extra)
    result=subprocess.run(['bash','-eu','-c',STUBS+BLOCK],env=env,capture_output=True,text=True)
    logs={name:pathlib.Path(directory,name).read_text().splitlines() if pathlib.Path(directory,name).exists() else [] for name in ('apt','deps','sleep')}
    return result,logs

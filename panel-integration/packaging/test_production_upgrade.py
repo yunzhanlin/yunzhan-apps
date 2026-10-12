@@ -1,0 +1,310 @@
+"""Real filesystem/SQLite transaction fixtures, not native systemd acceptance."""
+import contextlib
+import importlib.util
+import json
+import os
+import pathlib
+import sqlite3
+import stat
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+SPEC = importlib.util.spec_from_file_location('production_upgrade', pathlib.Path(__file__).with_name('upgrade-release.py'))
+upgrade = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(upgrade)
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+
+
+class UpgradePolicyTests(unittest.TestCase):
+    def test_ordinary_entrypoint_is_before_nss_and_fresh_provisioning(self):
+        installer = (ROOT/'packaging/install.sh').read_text()
+        entry = 'exec python3 "$HERE/upgrade-release.py" run "$HERE"'
+        self.assertLess(installer.index(entry), installer.index('getent group panel'))
+        self.assertLess(installer.index(entry), installer.index('mkdir -p "$(dirname "$RELEASE_DIR")"'))
+        self.assertLess(installer.index('python3 "$HERE/upgrade-release.py" check "$HERE"'), installer.index('if ((PREFLIGHT_ONLY));then'))
+        self.assertIn('alternate roots require --no-services', installer)
+        builder = (ROOT/'packaging/build-release.sh').read_text()
+        self.assertIn('"$BUILD_ROOT/packaging/upgrade-release.py"', builder)
+        self.assertIn('release-file-modes.py upgrade-release.py;', builder)
+        source = pathlib.Path(upgrade.__file__).read_text()
+        self.assertNotIn('apt-get', source)
+        self.assertNotIn('rmtree', source)
+        self.assertNotIn("'enable'", source)
+        self.assertNotIn("'restart'", source)
+        self.assertIn('signal.signal(signal.SIGTERM', source)
+        self.assertIn('signal.signal(signal.SIGINT', source)
+        self.assertNotIn("add_argument('--root'", source)
+
+    def test_all_four_real_sqlite_queues_refuse_pending_and_missing_schema(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            transaction = upgrade.Upgrade(root)
+            transaction.database = root/'panel.db'
+            transaction.db_owner = os.geteuid()
+            with sqlite3.connect(transaction.database) as db:
+                for table in upgrade.QUEUES:
+                    db.execute(f'CREATE TABLE {table}(id TEXT PRIMARY KEY,state TEXT)')
+            transaction.database.chmod(0o600)
+            transaction.queue_check()
+            for table in upgrade.QUEUES:
+                for state in ('queued', 'running'):
+                    with self.subTest(table=table, state=state):
+                        with sqlite3.connect(transaction.database) as db:
+                            db.execute(f'INSERT INTO {table} VALUES (?,?)', ('owned', state))
+                        with self.assertRaises(ValueError):
+                            transaction.queue_check()
+                        with sqlite3.connect(transaction.database) as db:
+                            db.execute(f'DELETE FROM {table}')
+            with sqlite3.connect(transaction.database) as db:
+                db.execute('DROP TABLE runtime_jobs')
+            with self.assertRaises(sqlite3.OperationalError):
+                transaction.queue_check()
+
+    def test_unsafe_wal_never_reaches_sqlite(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            transaction = upgrade.Upgrade(root)
+            transaction.database = root/'panel.db'
+            transaction.db_owner = os.geteuid()
+            transaction.database.write_bytes(b'not opened')
+            transaction.database.chmod(0o600)
+            (root/'panel.db-wal').symlink_to(root/'unrelated')
+            with mock.patch.object(upgrade.sqlite3, 'connect', side_effect=AssertionError('unsafe link reached SQLite')):
+                with self.assertRaises(ValueError):
+                    with transaction.connect():
+                        pass
+
+    def test_stop_failure_or_still_active_writer_is_not_success(self):
+        for failing in (True, False):
+            calls = []
+            def run(*args, **kwargs):
+                calls.append(args)
+                if args[1] == 'stop' and failing:
+                    raise RuntimeError('actual runner fixture stop failure')
+                return 'LoadState=loaded\nActiveState=active\nSubState=running\nUnitFileState=enabled'
+            transaction = upgrade.Upgrade(ROOT, runner=run)
+            with self.assertRaises(RuntimeError):
+                transaction.stop_writers()
+            self.assertEqual(calls[0][1], 'stop')
+            self.assertTrue(all('nginx.service' not in call for call in calls))
+
+    def test_service_masks_failures_and_transitions_are_not_coerced_to_inactive(self):
+        for field, value in (('LoadState','masked'), ('ActiveState','failed'), ('ActiveState','activating'), ('UnitFileState','masked'), ('UnitFileState','')):
+            record = dict(LoadState='loaded', ActiveState='active', SubState='running', UnitFileState='enabled')
+            record[field] = value
+            transaction = upgrade.Upgrade(ROOT, runner=lambda *args: '\n'.join(k+'='+v for k,v in record.items()))
+            with self.assertRaises(ValueError):
+                transaction.state('panel.service')
+
+
+class Runner:
+    """Scope-owned deterministic service state machine; no host service calls."""
+    def __init__(self, root, gateway_active=True):
+        self.root = root
+        self.calls = []
+        self.states = {unit:dict(LoadState='loaded',ActiveState='active',SubState='running',UnitFileState='enabled') for unit in upgrade.PROGRAMS}
+        self.states[upgrade.TIMER] = dict(LoadState='loaded',ActiveState='active',SubState='waiting',UnitFileState='enabled')
+        self.states['panel-mysql-overwrite-recovery.service'] = dict(LoadState='loaded',ActiveState='inactive',SubState='dead',UnitFileState='static')
+        self.states['nginx.service'] = dict(LoadState='loaded',ActiveState='active' if gateway_active else 'inactive',SubState='running' if gateway_active else 'dead',UnitFileState='enabled' if gateway_active else 'disabled')
+        self.fail_start_once = False
+        self.inject_late_queue = False
+        self.inject_candidate_job = False
+        self.stop_count = 0
+    def __call__(self, *args, **kwargs):
+        self.calls.append(args)
+        if pathlib.Path(args[0]).name == 'verify-release.sh':
+            return 'checksums verified by fixture; not a signature acceptance'
+        if args[0] == '/usr/bin/dpkg':
+            return 'arm64'
+        if args[0] == '/usr/bin/id':
+            return '1001'
+        if args[0] in ('/usr/sbin/nginx', '/usr/bin/curl'):
+            return ''
+        if args[0] != '/usr/bin/systemctl':
+            raise AssertionError('unknown fixture command')
+        if args[1] == 'show':
+            if args[3] == '--property=User':
+                return 'panel'
+            if args[3] == '--property=MainPID':
+                return '1234' if self.states['nginx.service']['ActiveState'] == 'active' else '0'
+            return '\n'.join(k+'='+v for k,v in self.states[args[2]].items())
+        if args[1] == 'daemon-reload':
+            return ''
+        if args[1] not in ('stop', 'start'):
+            raise AssertionError('fixture attempted enablement/restart or unrelated action')
+        if args[1] == 'start' and self.fail_start_once:
+            self.fail_start_once = False
+            raise RuntimeError('candidate start fixture failure')
+        for unit in args[2:]:
+            if unit not in upgrade.PROGRAMS+(upgrade.TIMER,):
+                raise AssertionError('gateway/unrelated service mutation')
+            self.states[unit]['ActiveState'] = 'active' if args[1]=='start' else 'inactive'
+            self.states[unit]['SubState'] = ('waiting' if unit==upgrade.TIMER else 'running') if args[1]=='start' else 'dead'
+        if args[1] == 'stop' and 'panel.service' in args:
+            self.stop_count += 1
+            if self.inject_late_queue and self.stop_count == 1:
+                with sqlite3.connect(self.root/'var/lib/panel/panel.db') as db:
+                    db.execute("INSERT INTO runtime_jobs VALUES ('late','queued')")
+        if args[1] == 'start' and 'panel.service' in args and self.inject_candidate_job:
+            self.inject_candidate_job = False
+            with sqlite3.connect(self.root/'var/lib/panel/panel.db') as db:
+                db.execute("INSERT INTO runtime_jobs VALUES ('external-root-change','succeeded')")
+            raise RuntimeError('candidate start and external root change fixture')
+        return ''
+
+
+@unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid()==0, 'actual root Linux ordinary ownership fixture required')
+class UpgradeTransactionTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def fixture(self, gateway_active=True):
+        with tempfile.TemporaryDirectory(prefix='panel-own-production-upgrade-') as temporary:
+            root = pathlib.Path(temporary).resolve()
+            for name in ('opt/panel/releases','etc/systemd/system','var/backups/panel/system','var/lib/panel-executor','var/lib/panel'):
+                (root/name).mkdir(parents=True, exist_ok=True)
+            (root/'var/backups/panel/system').chmod(0o700)
+            os.chown(root/'var/lib/panel', 1001,1001)
+            (root/'var/lib/panel').chmod(0o750)
+            release = root/'candidate'
+            release.mkdir()
+            (release/'systemd').mkdir()
+            (release/'verify-release.sh').write_text('#!/bin/sh\nexit 0\n')
+            (release/'verify-release.sh').chmod(0o755)
+            (release/'RELEASE').write_text('PANEL_FORMAT=1\nPANEL_VERSION=0.1.0-dev.fixture2\nPANEL_OS=linux\nPANEL_ARCH=arm64\n')
+            for unit in upgrade.PROGRAMS+('panel-firewall.service',):
+                (release/'systemd'/unit).write_text('[Service]\nExecStart=/opt/panel/bin/panel-executor\n')
+                (root/'etc/systemd/system'/unit).write_text('# original root unit '+unit+'\n')
+            previous = root/'opt/panel/releases/0.1.0-dev.fixture1'
+            previous.mkdir()
+            (root/'opt/panel/current').symlink_to(previous)
+            (root/'etc/panel-release').write_text('version=0.1.0-dev.fixture1\narch=arm64\n')
+            lock = root/'opt/panel/releases/.release.lock'
+            lock.write_bytes(b'retained lock bytes')
+            lock.chmod(0o644)
+            lock = root/'var/lib/panel-executor/runtime-lifecycle.lock'
+            lock.write_bytes(b'')
+            lock.chmod(0o600)
+            database = root/'var/lib/panel/panel.db'
+            with sqlite3.connect(database) as db:
+                for table in upgrade.QUEUES:
+                    db.execute(f'CREATE TABLE {table}(id TEXT PRIMARY KEY,state TEXT)')
+                db.execute('CREATE TABLE configuration(value TEXT)')
+                db.execute("INSERT INTO configuration VALUES ('original')")
+            database.chmod(0o600)
+            os.chown(database,1001,1001)
+            runner = Runner(root,gateway_active)
+            transaction = upgrade.Upgrade(release,root,runner)
+            try:
+                yield transaction,runner,root
+            finally:
+                transaction.close()
+
+    def test_commit_preserves_active_or_stopped_disabled_gateway_and_all_enablement(self):
+        for active in (True, False):
+            with self.subTest(gateway_active=active),self.fixture(active) as (transaction,runner,root):
+                states = json.loads(json.dumps(runner.states))
+                transaction.run()
+                self.assertTrue(transaction.committed)
+                self.assertFalse((root/'opt/panel/releases/.program-upgrade.pending').exists())
+                self.assertEqual(runner.states,states)
+                self.assertEqual(os.readlink(root/'opt/panel/current'),str(transaction.destination))
+                self.assertEqual((root/'opt/panel/releases/.release.lock').read_bytes(),b'retained lock bytes')
+                self.assertEqual(stat.S_IMODE((root/'opt/panel/releases/.release.lock').stat().st_mode),0o600)
+                self.assertEqual(json.loads((transaction.backup/'transaction.json').read_text())['phase'],'committed')
+                stops = [call for call in runner.calls if call[0]=='/usr/bin/systemctl' and call[1]=='stop']
+                self.assertEqual(len(stops),2)
+                self.assertTrue(all('nginx.service' not in call for call in stops))
+
+    def test_first_queue_refusal_has_no_backup_stage_marker_or_service_mutation(self):
+        with self.fixture() as (transaction,runner,root):
+            with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
+                db.execute("INSERT INTO jobs VALUES ('busy','running')")
+            with self.assertRaises(ValueError):
+                transaction.run()
+            self.assertEqual(list((root/'var/backups/panel/system').iterdir()),[])
+            self.assertFalse(transaction.stopping)
+            self.assertFalse(any(call[0]=='/usr/bin/systemctl' and call[1] in ('stop','start') for call in runner.calls))
+
+    def test_late_queue_refusal_restores_services_and_retains_new_job_without_database_replacement(self):
+        with self.fixture() as (transaction,runner,root):
+            runner.inject_late_queue=True
+            original_info=(root/'var/lib/panel/panel.db').stat()
+            states=json.loads(json.dumps(runner.states))
+            with self.assertRaises(ValueError):
+                transaction.run()
+            transaction.rollback()
+            self.assertFalse(transaction.changed)
+            self.assertEqual(runner.states,states)
+            self.assertEqual((root/'var/lib/panel/panel.db').stat().st_ino,original_info.st_ino)
+            with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
+                self.assertEqual(db.execute("SELECT state FROM runtime_jobs WHERE id='late'").fetchone(),('queued',))
+            self.assertFalse((transaction.backup/'panel.db').exists())
+            self.assertFalse(transaction.pending_created)
+
+    def test_candidate_start_failure_restores_exact_pointer_marker_units_database_and_service_states(self):
+        with self.fixture() as (transaction,runner,root):
+            previous=os.readlink(root/'opt/panel/current')
+            marker=(root/'etc/panel-release').read_bytes()
+            units={path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir()}
+            states=json.loads(json.dumps(runner.states))
+            runner.fail_start_once=True
+            with self.assertRaises(RuntimeError):
+                transaction.run()
+            transaction.rollback()
+            self.assertEqual(os.readlink(root/'opt/panel/current'),previous)
+            self.assertEqual((root/'etc/panel-release').read_bytes(),marker)
+            self.assertEqual({path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if not path.name.startswith('.program-upgrade-')},units)
+            self.assertEqual(runner.states,states)
+            with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
+                self.assertEqual(db.execute('SELECT value FROM configuration').fetchone(),('original',))
+            self.assertEqual((root/'var/lib/panel/panel.db').stat().st_uid,1001)
+            self.assertTrue(transaction.destination.exists())
+            self.assertTrue((transaction.backup/'failed-panel.db').exists())
+            self.assertFalse(transaction.pending_created)
+            self.assertEqual(json.loads((transaction.backup/'transaction.json').read_text())['phase'],'rolled-back')
+
+    def test_external_candidate_job_change_refuses_destructive_rollback_and_retains_interlock(self):
+        with self.fixture() as (transaction,runner,root):
+            runner.inject_candidate_job=True
+            with self.assertRaises(RuntimeError):
+                transaction.run()
+            with self.assertRaisesRegex(RuntimeError,'accepted job changes'):
+                transaction.rollback()
+            self.assertTrue(transaction.pending_created)
+            self.assertTrue(all(runner.states[unit]['ActiveState']=='inactive' for unit in upgrade.PROGRAMS))
+            with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
+                self.assertEqual(db.execute("SELECT state FROM runtime_jobs WHERE id='external-root-change'").fetchone(),('succeeded',))
+            self.assertEqual(os.readlink(root/'opt/panel/current'),str(transaction.destination))
+
+    def test_retained_stage_or_backup_is_not_deleted(self):
+        for target in ('stage','backup'):
+            with self.subTest(target=target),self.fixture() as (transaction,runner,root):
+                retained=(root/'opt/panel/releases/0.1.0-dev.fixture2.tmp') if target=='stage' else (root/'var/backups/panel/system/production-0.1.0-dev.fixture2')
+                retained.mkdir(mode=0o700)
+                (retained/'private-sentinel').write_bytes(b'do not overwrite')
+                with self.assertRaises(ValueError):
+                    transaction.run()
+                self.assertEqual((retained/'private-sentinel').read_bytes(),b'do not overwrite')
+                self.assertFalse(transaction.stopping)
+
+    def test_original_signed_verifier_private_anchor_beneath_sticky_tmp_is_exactly_scoped(self):
+        with self.fixture() as (transaction,runner,root):
+            parent=root/'tmp';parent.mkdir();parent.chmod(0o1777)
+            anchor=parent/'signed-private';anchor.mkdir(mode=0o700)
+            release=anchor/'release';release.mkdir()
+            transaction.parents(release)
+            parent.chmod(0o777)
+            with self.assertRaises(ValueError):
+                transaction.parents(release)
+            parent.chmod(0o1777);anchor.chmod(0o755)
+            with self.assertRaises(ValueError):
+                transaction.parents(release)
+            anchor.chmod(0o700)
+            foreign=root/'writable-other';foreign.mkdir();foreign.chmod(0o1777)
+            with self.assertRaises(ValueError):
+                transaction.parents(foreign/'release')
+
+
+if __name__=='__main__':
+    unittest.main()

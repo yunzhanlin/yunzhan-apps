@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"local/panel/internal/core"
+	"local/panel/internal/upgradeguard"
 	"log"
 	"net"
 	"net/http"
@@ -47,11 +48,17 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	go core.RunWorker(ctx, store, app.Executor)
-	app.StartAppDailyWorker(ctx)
-	app.StartAnalyticsMaintenance(ctx)
-	app.StartOutboundNotifications(ctx)
-	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 100 * time.Second, IdleTimeout: 60 * time.Second}
+	go func() {
+		if !upgradeguard.Wait(ctx) {
+			return
+		}
+		go core.RunWorker(ctx, store, app.Executor)
+		app.StartAppDailyWorker(ctx)
+		app.StartAnalyticsMaintenance(ctx)
+		app.StartOutboundNotifications(ctx)
+	}()
+	handler := upgradeguard.Handler(app, "/api/ready")
+	srv := &http.Server{Addr: *listen, Handler: handler, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 100 * time.Second, IdleTimeout: 60 * time.Second}
 	go func() {
 		<-ctx.Done()
 		stop, c := context.WithTimeout(context.Background(), 5*time.Second)

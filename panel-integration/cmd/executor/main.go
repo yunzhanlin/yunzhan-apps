@@ -6,6 +6,7 @@ import (
 	"context"
 	"flag"
 	"local/panel/internal/executor"
+	"local/panel/internal/upgradeguard"
 	"log"
 	"net"
 	"net/http"
@@ -327,13 +328,26 @@ func main() {
 	}
 	svc := executor.New(executor.Config{SitesDir: "/srv/panel/sites", ConfDir: "/etc/panel/sites-enabled", StateDir: "/var/lib/panel-executor", NginxBin: "/usr/sbin/nginx", TerminalSocket: "/run/panel-terminal/control.sock", RootTerminalSocket: "/run/panel-terminal-root/control.sock"})
 	handler := svc.Handler()
-	if err = svc.StartNetworkIDSOperations(); err != nil {
-		log.Printf("IDS background queue unavailable; records preserved and control disabled: %v", err)
+	startWorkers := func() {
+		if err := svc.StartNetworkIDSOperations(); err != nil {
+			log.Printf("IDS background queue unavailable; records preserved and control disabled: %v", err)
+		}
+		if err := svc.StartPHPWorkerOperations(); err != nil {
+			log.Fatal(err)
+		}
+		svc.StartAppModuleWorker()
 	}
-	if err = svc.StartPHPWorkerOperations(); err != nil {
-		log.Fatal(err)
+	if upgradeguard.Blocked() {
+		go func() {
+			if upgradeguard.Wait(context.Background()) {
+				startWorkers()
+			}
+		}()
+	} else {
+		// Preserve synchronous initialization/error handling outside upgrades.
+		startWorkers()
 	}
-	svc.StartAppModuleWorker()
+	guardedHandler := upgradeguard.Handler(handler, "/v1/overview", "/v1/health")
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 90 * time.Second, IdleTimeout: 30 * time.Second,
 		ConnContext: func(ctx context.Context, c net.Conn) context.Context {
 			peer := -1
@@ -354,7 +368,7 @@ func main() {
 				http.Error(w, "forbidden peer", 403)
 				return
 			}
-			handler.ServeHTTP(w, r)
+			guardedHandler.ServeHTTP(w, r)
 		})}
 	log.Print("executor ready on private Unix socket")
 	if err = server.Serve(l); err != nil && err != http.ErrServerClosed {
