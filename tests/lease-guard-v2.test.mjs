@@ -5,12 +5,12 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('normal signed bounded lease scans and recorded immutable v2 transition preserve old failures and do not claim all50',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_lease_release,old=c.reviewed_canonical_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_lease_release,old=c.reviewed_canonical_release,current=c[c.current_reviewed_release];
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),f=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(c.current_reviewed_release,'reviewed_lease_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
+ assert.equal(c.current_reviewed_release,'reviewed_statistics_version_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
  assert.equal(r.frozen_source_files,16872);assert.equal(r.frozen_inputs_sha256,'c9a2b2cdbc39ff86d1fe3a27d86ada9587921898d638e8231b23145987b8004c');
- assert.equal(f.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(f.archive_sha256,r.signed_normal_release.amd64.archive);
- assert.equal(Object.keys(i.files).length,1224);assert.equal(Object.keys(f.files).length,1183);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
+ assert.equal(f.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(f.archive_sha256,current.signed_normal_release.amd64.archive);
+ assert.equal(Object.keys(i.files).length,1227);assert.equal(Object.keys(f.files).length,1186);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
  assert.deepEqual(r.only_frozen_input_changes,['internal/upgradeguard/startup_linux.go','internal/upgradeguard/startup_lease_linux_test.go','packaging/start-guard-install.py','packaging/test_start_guard_install.py','packaging/test_production_upgrade.py']);
  for(const p of r.only_frozen_input_changes){const h=sha(await read('panel-integration/'+p));assert.equal(i.files[p],h,p);assert.equal(f.files[p],h,p);}
  const source=await read('panel-integration/internal/upgradeguard/startup_linux.go');

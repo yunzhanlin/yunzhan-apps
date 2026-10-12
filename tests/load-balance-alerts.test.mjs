@@ -1,3 +1,4 @@
+import {catalogBeforeStatistics241} from './previous-statistics-catalog.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -5,8 +6,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
 test('load-balance1.8.5 health, traffic and source handlers match exact normal BEFA source',async()=>{
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),r=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(r.frozen_inputs_sha256,'c9a2b2cdbc39ff86d1fe3a27d86ada9587921898d638e8231b23145987b8004c');assert.equal(r.archive_sha256,'d752fe42156246162bcaf7f03db845e959d8b20fd81e33a0c0c8fbbd2af43d06');
- assert.equal(Object.keys(i.files).length,1224);assert.equal(Object.keys(i.test_overrides??{}).length,0);
+ assert.equal(r.frozen_inputs_sha256,'918458c33fde22e77952d50b9a976bf124321b4106c4e9ec366b67edf4be24d0');assert.equal(r.archive_sha256,'fcf14be23b186a9b975a7ba9062f7f8a7744f1f96e26a9734dfe5d680c58f8e3');
+ assert.equal(Object.keys(i.files).length,1227);assert.equal(Object.keys(i.test_overrides??{}).length,0);
  for(const f of ['internal/core/outbound_load_balance.go','internal/core/outbound_load_balance_test.go','internal/core/outbound_load_balance_traffic.go','internal/core/outbound_load_balance_traffic_test.go','internal/core/outbound_notifications.go','internal/core/outbound_worker.go','internal/core/outbound_smtp.go','internal/executor/app_load_balance_alert_linux.go','internal/executor/app_load_balance_alert_linux_test.go','internal/executor/app_load_balance_traffic_alert_linux.go','internal/executor/app_load_balance_traffic_alert_linux_test.go','internal/executor/app_notification_events_linux.go','web/src/OutboundNotifications.vue','web/src/AppModuleManager.vue','scripts/test-load-balance-alerts.mjs','packaging/build-release.sh']){
   const hash=sum(await read('panel-integration/'+f));assert.equal(i.files[f],hash,f);assert.equal(r.files[f],hash,f);
  }
@@ -22,7 +23,7 @@ test('alert source is read-only, version-closed and all entry cursors advance in
  assert.equal((await read('panel-integration/internal/executor/app_load_balance_alert_linux_test.go')).match(/^func Test/gm).length,3);
 });
 test('new signed manifest retains immutable1.8.2 and other49 identities; original limits and old subscriptions do not silently expand',async()=>{
- const catalog=JSON.parse(await read('dist/catalog-v1.json')),item=catalog.apps.find(x=>x.id==='load-balance'),manifest=JSON.parse(await read('dist/apps/load-balance/1.8.5/manifest.json'));
+ const catalog=await catalogBeforeStatistics241(JSON.parse(await read('dist/catalog-v1.json'))),item=catalog.apps.find(x=>x.id==='load-balance'),manifest=JSON.parse(await read('dist/apps/load-balance/1.8.5/manifest.json'));
  assert.equal(item.version,'1.8.5');assert.equal(sum(await read('dist/apps/load-balance/1.8.5/manifest.json')),item.sha256);assert.equal(sum(await read('dist/apps/load-balance/1.8.4/manifest.json')),'696449c0199a870365459f603bcfd71e5a2f275a72e2230878e346894699c1ff');assert.equal(sum(await read('dist/apps/load-balance/1.8.3/manifest.json')),'588babcbc38cae9b2c1bf120acd9bfcb02482af1f3ce8ca1d1f740b38087cf13');assert.equal(sum(await read('dist/apps/load-balance/1.8.2/manifest.json')),'555f2ef5298758338917f44f65cb925751d4ce0082cb2cc4a998fc4decb7e69c');
  assert.equal(sum(JSON.stringify(catalog.apps.filter(a=>a.id!=='load-balance').sort((a,b)=>a.id.localeCompare(b.id)))),'c31316553d4408fadb4abbbd449a497d0832ed3d9f1d51c011a01ea8cc5089fd');
  assert.equal(catalog.apps.length,50);assert.equal(manifest.capabilities.length,12);assert(manifest.capabilities.every(s=>s.length<=64));assert(manifest.summary.length<=240);
@@ -68,5 +69,5 @@ test('source availability scope, bounded reads and regenerated summaries are exa
  const worker=await read('panel-integration/internal/core/outbound_worker.go');assert.equal((worker.match(/context.WithTimeout\(ctx, 2\*time.Second\)/g)||[]).length,2);assert(worker.includes('healthAvailable && trafficAvailable'));assert(worker.includes('bytes.NewReader(payload)'));assert(worker.includes('webhookSignature(credential.Secret, d.ID, timestamp, payload)'));
  const summary=await read('panel-integration/internal/core/outbound_delivery_summary.go');for(const s of ['outboundJSONUniqueKeys','DisallowUnknownFields','source.EventID != eventID','原推送事件状态与严重性不可核对'])assert(summary.includes(s));assert.equal((await read('panel-integration/internal/core/outbound_load_balance_source_test.go')).match(/^func Test/gm).length,6);assert.equal((await read('panel-integration/internal/core/outbound_delivery_summary_test.go')).match(/^func Test/gm).length,5);
  const c=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(c.reviewed_normal_release.release,'0.1.0-dev.proapps24inventorybefm');assert.equal(c.reviewed_normal_release.main_release_delivered,true);assert.equal(c.previous_traffic_release.main_release_delivered,true);assert.equal(c.commercial_feature_parity_complete,false);assert.equal(c.reviewed_normal_release.all_50_commercial,false);
- assert.equal(sum(await read('dist/catalog-v1.json')),'0114de28a20ec3b8d023b0fe786272d42f7b3b5e7ed95ff363b8638dc4e2a0b5');assert.equal(sum(await read('dist/apps/load-balance/1.8.5/manifest.json')),'df0707bc72114bae7571e23b6d6a8f430c583a2b5e8225d6fda99acf0601d915');
+ const previousCatalog=await catalogBeforeStatistics241(JSON.parse(await read('dist/catalog-v1.json')));assert.equal(sum(JSON.stringify(previousCatalog,null,2)+'\n'),'0114de28a20ec3b8d023b0fe786272d42f7b3b5e7ed95ff363b8638dc4e2a0b5');assert.equal(sum(await read('dist/apps/load-balance/1.8.5/manifest.json')),'df0707bc72114bae7571e23b6d6a8f430c583a2b5e8225d6fda99acf0601d915');
 });

@@ -2,7 +2,7 @@
 """Strict original-layout program transaction; never provision host resources.
 
 The CLI supports only the real / host. Isolated roots and command runners are
-test-only constructor arguments. Interrupted evidence is retained, not replayed.
+test-only constructor arguments. Recovery is explicit, never silently retried.
 """
 import argparse
 import contextlib
@@ -30,9 +30,11 @@ class DevelopmentUpgrade(production.Upgrade):
         super().__init__(release, root, runner)
         self.old_trees = {}
         self.new_trees = {}
+        self.new_tree_identities = {}
         self.tree_intents = []
         self.marker_changed = False
         self.runtime_locked = False
+        self.layout = 'development'
 
     def tree(self, base, identities=False):
         """Complete, bounded root-owned code inventory; no links or mounts."""
@@ -96,6 +98,206 @@ class DevelopmentUpgrade(production.Upgrade):
                 os.close(descriptor)
         return values
 
+    @staticmethod
+    def stable_tree(values):
+        # The outer directory's ctime changes when renamed. Every inode,
+        # owner, mode, size, mtime, link count and digest remains mandatory.
+        return {name:tuple(value[:-1])+(tuple(value[-1][:-1]),) for name,value in values.items()}
+
+    def retain_tree_intent(self, name):
+        if name not in ('bin','web'):
+            raise ValueError('tree rename outside fixed development scope')
+        target = self.backup/('tree-rename-'+name+'.json')
+        if self.exists(target):
+            raise ValueError('retained development tree intent must not be overwritten')
+        record = {'format':1,'version':self.version,'name':name,
+                  'original':self.original_tree_identities[name],'candidate':self.new_tree_identities[name]}
+        raw = (json.dumps(record,sort_keys=True)+'\n').encode()
+        if len(raw)>8*1024*1024:
+            raise ValueError('development tree intent exceeds complete metadata budget')
+        self.atomic(target,raw,0o600)
+        if (self.tree(self.base/name,identities=True) != self.original_tree_identities[name]
+                or self.tree(self.base/(name+'.new'),identities=True) != self.new_tree_identities[name]):
+            raise ValueError('development tree inode changed after durable rename intent')
+
+    @staticmethod
+    def decode_tree_record(values):
+        if not isinstance(values,dict):
+            raise ValueError('invalid closed development recovery tree')
+        inventory,decoded = {},{}
+        for name,value in values.items():
+            if not isinstance(value,list) or not value:
+                raise ValueError('invalid development recovery tree entry')
+            if value[0]=='directory' and len(value)==3:
+                inventory[name] = {'kind':'directory','mode':value[1],'identity':value[2]}
+            elif value[0]=='file' and len(value)==5:
+                inventory[name] = {'kind':'file','mode':value[1],'size':value[2],'sha256':value[3],'identity':value[4]}
+            else:
+                raise ValueError('unknown development recovery tree entry')
+            decoded[name] = tuple(value[:-1])+(tuple(value[-1]),)
+        production.Upgrade.validate_inventory_record(inventory)
+        return decoded
+
+    def retain_development_stage(self):
+        for name in ('bin','web'):
+            base = self.base/(name+'.new')
+            inventory = self.code_inventory(base)
+            for relative,value in inventory.items():
+                if value['kind']=='file':
+                    descriptor = os.open(base/relative,os.O_RDONLY|os.O_NOFOLLOW)
+                    try:
+                        if self.file_snapshot(b'',os.fstat(descriptor))['identity']!=value['identity']:
+                            raise ValueError('development stage changed before persistence')
+                        os.fsync(descriptor)
+                    finally:
+                        os.close(descriptor)
+            for relative,value in sorted(inventory.items(),key=lambda pair:len(pathlib.PurePath(pair[0]).parts),reverse=True):
+                if value['kind']=='directory':
+                    self.sync_directory(base if relative=='.' else base/relative)
+            self.sync_directory(base.parent)
+            if self.tree(base,identities=True)!=self.new_tree_identities[name]:
+                raise ValueError('development stage changed during persistence')
+        target = self.backup/'development-stage.json'
+        if self.exists(target):
+            raise ValueError('retained development stage receipt must not be overwritten')
+        raw = (json.dumps({'format':1,'version':self.version,'trees':self.new_tree_identities},sort_keys=True)+'\n').encode()
+        if len(raw)>8*1024*1024:
+            raise ValueError('complete development stage receipt exceeds budget')
+        self.atomic(target,raw,0o600)
+
+    def recover_layout_plan(self, plan, arch):
+        if self.exists(self.base/'current') or self.exists(self.path('/etc/panel-release')) or self.exists(self.base/'releases/.program-upgrade.pending'):
+            raise ValueError('production layout cannot be reconstructed as development')
+        original = plan['original_trees']
+        if not isinstance(original,dict) or set(original)!={'bin','web'}:
+            raise ValueError('development recovery original tree inventory is incomplete')
+        self.original_tree_identities = {name:self.decode_tree_record(value) for name,value in original.items()}
+        self.old_trees = {name:{relative:tuple(value[:-1])+(None,) for relative,value in tree.items()} for name,tree in self.original_tree_identities.items()}
+        for name in ('bin','web'):
+            if self.tree(self.backup/name)!=self.old_trees[name]:
+                raise ValueError('private development code backup differs from complete original')
+        marker = plan['original_marker']
+        if marker is None:
+            if self.exists(self.backup/'DEVELOPMENT_RELEASE'):
+                raise ValueError('unexpected private original development marker')
+            self.marker_bytes,self.marker_info = None,None
+        else:
+            self.valid_snapshot(marker)
+            raw = self.file(self.backup/'DEVELOPMENT_RELEASE',mode=0o600,limit=256)[0]
+            if hashlib.sha256(raw).hexdigest()!=marker['sha256']:
+                raise ValueError('private development marker differs from recovery plan')
+            self.marker_bytes,self.marker_info = raw,self.snapshot_info(marker)
+        stage_path = self.backup/'development-stage.json'
+        if self.exists(stage_path):
+            stage = self.read_record(stage_path)
+            if (set(stage)!={'format','version','trees'} or type(stage['format'])is not int or stage['format']!=1
+                    or stage['version']!=self.version or not isinstance(stage['trees'],dict) or set(stage['trees'])!={'bin','web'}):
+                raise ValueError('invalid complete development stage receipt')
+            self.new_tree_identities = {name:self.decode_tree_record(value) for name,value in stage['trees'].items()}
+            self.new_trees = {name:{relative:tuple(value[:-1])+(None,) for relative,value in tree.items()} for name,tree in self.new_tree_identities.items()}
+        for name in ('bin','web'):
+            proof = self.backup/('tree-rename-'+name+'.json')
+            if self.exists(proof):
+                record = self.read_record(proof)
+                if (set(record)!={'format','version','name','original','candidate'} or type(record['format'])is not int or record['format']!=1
+                        or record['version']!=self.version or record['name']!=name
+                        or self.decode_tree_record(record['original'])!=self.original_tree_identities[name]
+                        or name not in self.new_tree_identities or self.decode_tree_record(record['candidate'])!=self.new_tree_identities[name]):
+                    raise ValueError('development rename intent lacks exact original/staged inode lineage')
+                self.tree_intents.append(name)
+        if self.tree_intents not in ([],['bin'],['bin','web']):
+            raise ValueError('development tree intent order is not contiguous')
+        self.validate_development_tree_lineage()
+
+    def validate_restore_lineage(self):
+        super().validate_restore_lineage()
+        # Untouched stages are never recovery inputs or removal targets. A
+        # changed bin can still be restored from its bound previous inode
+        # while a foreign, unused web.new is preserved byte-for-byte. Every
+        # live original and every moved candidate remains strictly bound.
+        self.validate_development_tree_lineage(check_stages=False)
+
+    def validate_development_tree_lineage(self, *, check_stages=True):
+        for name in ('bin','web'):
+            live,previous,new,failed = self.base/name,self.backup/('previous-'+name),self.base/(name+'.new'),self.backup/('failed-'+name)
+            reverse = self.backup/('tree-restore-'+name+'.json')
+            reversing = self.exists(reverse)
+            if reversing:
+                record = self.read_record(reverse)
+                if (set(record)!={'format','version','name','original','candidate'} or type(record['format'])is not int or record['format']!=1
+                        or record['version']!=self.version or record['name']!=name or name not in self.tree_intents
+                        or self.decode_tree_record(record['original'])!=self.original_tree_identities[name]
+                        or self.decode_tree_record(record['candidate'])!=self.new_tree_identities[name]):
+                    raise ValueError('reverse development tree move lacks exact durable authority')
+            if self.exists(failed) and not reversing:
+                raise ValueError('failed development candidate lacks durable reverse intent')
+            if name not in self.tree_intents:
+                if self.exists(previous) or self.tree(live,identities=True)!=self.original_tree_identities[name]:
+                    raise ValueError('untouched original development code inode changed')
+                if check_stages and name in self.new_tree_identities and (not self.exists(new) or self.tree(new,identities=True)!=self.new_tree_identities[name]):
+                    raise ValueError('untouched staged development code inode changed')
+                continue
+            if self.exists(previous):
+                if self.stable_tree(self.tree(previous,identities=True))!=self.stable_tree(self.original_tree_identities[name]):
+                    raise ValueError('retained previous development code inode changed')
+                installed = self.exists(live)
+                staged = self.exists(new)
+                retained = self.exists(failed)
+                if sum((installed,staged,retained))!=1:
+                    raise ValueError('development candidate must exist at exactly one owned location')
+                location = live if installed else (new if staged else failed)
+                if self.stable_tree(self.tree(location,identities=True))!=self.stable_tree(self.new_tree_identities[name]):
+                    raise ValueError('installed or staged development candidate inode changed')
+            elif reversing:
+                if (not self.exists(live) or self.stable_tree(self.tree(live,identities=True))!=self.stable_tree(self.original_tree_identities[name])
+                        or self.exists(new)==self.exists(failed)):
+                    raise ValueError('reversed development tree does not select owned original code')
+                location = new if self.exists(new)else failed
+                if self.stable_tree(self.tree(location,identities=True))!=self.stable_tree(self.new_tree_identities[name]):
+                    raise ValueError('reversed failed development code inode changed')
+            elif (not self.exists(live) or self.tree(live,identities=True)!=self.original_tree_identities[name]
+                  or not self.exists(new) or self.tree(new,identities=True)!=self.new_tree_identities[name]):
+                raise ValueError('development rename has no complete original and staged code')
+
+    def retain_reverse_tree_intent(self, name):
+        self.validate_development_tree_lineage(check_stages=False)
+        target = self.backup/('tree-restore-'+name+'.json')
+        if not self.exists(target):
+            record = {'format':1,'version':self.version,'name':name,'original':self.original_tree_identities[name],
+                      'candidate':self.new_tree_identities[name]}
+            raw = (json.dumps(record,sort_keys=True)+'\n').encode()
+            if len(raw)>8*1024*1024:
+                raise ValueError('reverse development tree intent exceeds budget')
+            self.atomic(target,raw,0o600)
+        self.validate_development_tree_lineage(check_stages=False)
+
+    def verify_recovery_original_code(self):
+        for name in ('bin','web'):
+            if self.stable_tree(self.tree(self.base/name,identities=True))!=self.stable_tree(self.original_tree_identities[name]):
+                raise ValueError('restored development recovery does not select original code')
+        current = self.file(self.marker,mode=0o644,limit=256)[0]if self.exists(self.marker)else None
+        if current!=self.marker_bytes:
+            raise ValueError('restored development recovery marker differs from original')
+
+    def recovery_code_changed(self):
+        self.marker_changed = bool(self.file_mutations.get(str(self.marker)))
+        return bool(self.tree_intents) or self.marker_changed
+
+    def recover_committed(self):
+        for name in ('bin','web'):
+            if self.stable_tree(self.tree(self.base/name,identities=True))!=self.stable_tree(self.new_tree_identities[name]):
+                raise ValueError('committed development recovery no longer selects candidate code')
+        if self.file(self.marker,mode=0o644,limit=256)[0]!=self.file(self.release/'RELEASE',limit=256)[0]:
+            raise ValueError('committed development recovery marker changed')
+        self.verify_recovery_candidate_units()
+        self.defer_timer()
+        self.stop_timer()
+        self.verify_states()
+        self.wait_readiness()
+        self.remove_pending()
+        self.restore_timer()
+        self.journal('recovered-committed')
+
     def preflight(self):
         self.parents(self.release)
         self.directory(self.release)
@@ -129,6 +331,7 @@ class DevelopmentUpgrade(production.Upgrade):
         if self.exists(self.marker):
             self.marker_bytes, self.marker_info = self.file(self.marker, mode=0o644, limit=256)
         database_info = self.database.lstat()
+        self.original_database_inode = self.file_snapshot(b'',database_info)['identity'][:6]
         self.db_owner, self.db_group = database_info.st_uid, database_info.st_gid
         if self.db_owner == 0 or str(self.db_owner) != self.run_command('/usr/bin/id', '-u', 'panel') or str(self.db_group) != self.run_command('/usr/bin/id', '-g', 'panel'):
             raise ValueError('database does not belong to the fixed panel identity')
@@ -164,7 +367,7 @@ class DevelopmentUpgrade(production.Upgrade):
             self.run_command('/usr/bin/python3', str(self.release/helper), 'check')
         self.run_command(str(self.release/'bin/panel-executor'), '--check-apache-body-cache-upgrade', timeout=10)
         code_size = sum(value[2] for tree in self.old_trees.values() for value in tree.values() if value[0] == 'file')
-        for path, required in ((self.base, size+code_size), (self.backup_path.parent, code_size+database_info.st_size*2), (self.database.parent, database_info.st_size)):
+        for path, required in ((self.base, size+code_size), (self.backup_path.parent, size+code_size+database_info.st_size*2), (self.database.parent, database_info.st_size)):
             if shutil.disk_usage(path).free < required+32*1024*1024:
                 raise ValueError('insufficient development stage, backup or rollback space')
         self.start_guard()
@@ -172,20 +375,10 @@ class DevelopmentUpgrade(production.Upgrade):
     def journal(self, phase):
         record = {'format':2, 'layout':'development', 'version':self.version, 'phase':phase, 'services':self.states, 'tree_intents':self.tree_intents, 'unit_intents':sorted(self.replaced_units), 'marker_intent':self.marker_changed}
         self.atomic(self.backup/'transaction.json', (json.dumps(record, sort_keys=True)+'\n').encode(), 0o600)
+        self.last_phase = phase
 
     def create_pending(self):
-        self.pending_bytes = ('version='+self.version+'\n').encode('ascii')
-        descriptor = os.open(self.pending, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
-        try:
-            os.fchmod(descriptor, 0o644)
-            if os.write(descriptor, self.pending_bytes) != len(self.pending_bytes):
-                raise RuntimeError('incomplete development maintenance marker')
-            os.fsync(descriptor)
-            self.pending_identity = os.fstat(descriptor)
-            self.pending_created = True
-        finally:
-            os.close(descriptor)
-        self.sync_directory(self.base)
+        super().create_pending()
 
     def stop_timer(self):
         self.run_command('/usr/bin/systemctl', 'stop', TIMER)
@@ -193,10 +386,7 @@ class DevelopmentUpgrade(production.Upgrade):
             raise RuntimeError('database timer did not stop')
 
     def verify_states(self):
-        for unit in PROGRAMS+(TIMER, 'nginx.service'):
-            current = self.state(unit)
-            if current['ActiveState'] != self.states[unit]['ActiveState'] or current['UnitFileState'] != self.states[unit]['UnitFileState']:
-                raise RuntimeError('original service activity or enablement changed')
+        self.verify_original_activity()
         self.run_command('/usr/sbin/nginx', '-t')
         if self.run_command('/usr/bin/systemctl', 'show', 'nginx.service', '--property=MainPID', '--value') != self.nginx_pid:
             raise RuntimeError('website gateway process changed')
@@ -217,7 +407,9 @@ class DevelopmentUpgrade(production.Upgrade):
         self.preflight()
         self.backup = self.backup_path
         self.backup.mkdir(mode=0o700)
+        self.sync_directory(self.backup.parent)
         (self.backup/'units').mkdir(mode=0o700)
+        self.sync_directory(self.backup)
         for name, value in self.original_units.items():
             if value is not None:
                 self.atomic(self.backup/'units'/name, value[0], 0o600)
@@ -227,6 +419,8 @@ class DevelopmentUpgrade(production.Upgrade):
             shutil.copytree(self.base/name, self.backup/name)
             if self.tree(self.backup/name) != self.old_trees[name]:
                 raise ValueError('development backup differs from original code')
+        self.retain_candidate_plan()
+        self.defer_timer()
         self.journal('prepared')
         self.start_guard(install=True)
         shutil.copytree(self.base/'bin', self.base/'bin.new')
@@ -235,9 +429,12 @@ class DevelopmentUpgrade(production.Upgrade):
             (self.base/'bin.new'/name).chmod(0o755)
         shutil.copytree(self.release/'web', self.base/'web.new')
         self.new_trees = {name:self.tree(self.base/(name+'.new')) for name in ('bin', 'web')}
+        self.new_tree_identities = {name:self.tree(self.base/(name+'.new'), identities=True) for name in ('bin', 'web')}
+        self.retain_development_stage()
+        self.stop_timer()
+        self.queue_check()
         self.create_pending()
         self.stopping = True
-        self.stop_timer()
         self.stop_writers()
         self.queue_check()
         self.journal('writers-stopped')
@@ -253,10 +450,12 @@ class DevelopmentUpgrade(production.Upgrade):
         finally:
             os.close(descriptor)
         self.sync_directory(self.backup)
+        self.retain_database_receipt()
         self.journal('database-backed-up')
         for name in ('bin', 'web'):
-            if self.tree(self.base/(name+'.new')) != self.new_trees[name]:
+            if self.tree(self.base/(name+'.new'), identities=True) != self.new_tree_identities[name]:
                 raise ValueError('development candidate changed before switch')
+            self.retain_tree_intent(name)
             self.tree_intents.append(name)
             self.changed = True
             self.journal('switching-'+name)
@@ -287,23 +486,20 @@ class DevelopmentUpgrade(production.Upgrade):
         self.run_command('/usr/bin/systemctl', 'daemon-reload')
         self.release_runtime()
         self.start_previous_state()
-        for attempt in range(30):
-            try:
-                self.run_command('/usr/bin/curl', '-fsS', '--max-time', '2', 'http://127.0.0.1:19100/api/ready', timeout=3)
-                break
-            except (RuntimeError, production.subprocess.TimeoutExpired):
-                if attempt == 29:
-                    raise
-                time.sleep(1)
+        self.wait_readiness()
         self.queue_check()
         self.verify_states()
         self.journal('committed')
         self.committed = True
         self.remove_pending()
+        self.restore_timer()
         print('development panel '+self.version+' upgraded; private rollback evidence: '+str(self.backup))
 
     def rollback(self):
-        if self.committed or not self.stopping:
+        if self.committed:
+            return
+        if not self.stopping:
+            super().rollback()
             return
         self.stop_timer()
         self.stop_writers()
@@ -311,13 +507,23 @@ class DevelopmentUpgrade(production.Upgrade):
             self.lock(self.path('/var/lib/panel-executor/runtime-lifecycle.lock'))
             self.runtime_locked = True
         if not self.changed:
+            # An unused foreign candidate is retained, never installed or
+            # removed. Only the still-live original code/config is authority
+            # to resume the original services without a database replacement.
+            super().validate_restore_lineage()
+            self.validate_development_tree_lineage(check_stages=False)
             self.release_runtime()
             self.start_previous_state()
+            self.wait_readiness()
             self.verify_states()
             self.journal('refused-before-program-change')
             self.remove_pending()
+            self.restore_timer()
             return
         self.queue_check()
+        self.validate_restore_lineage()
+        self.validate_database_backup()
+        self.validate_database_lineage()
         with contextlib.closing(sqlite3.connect(self.backup/'panel.db')) as old, self.connect() as current:
             for table in QUEUES:
                 if old.execute(f'SELECT * FROM {table} ORDER BY id').fetchall() != current.execute(f'SELECT * FROM {table} ORDER BY id').fetchall():
@@ -327,69 +533,72 @@ class DevelopmentUpgrade(production.Upgrade):
             previous = self.backup/('previous-'+name)
             installed = self.base/name
             if self.exists(previous):
-                if self.tree(previous) != self.old_trees[name] or (self.exists(installed) and self.tree(installed) != self.new_trees[name]):
+                if (self.stable_tree(self.tree(previous, identities=True)) != self.stable_tree(self.original_tree_identities[name])
+                        or (self.exists(installed) and self.stable_tree(self.tree(installed, identities=True)) != self.stable_tree(self.new_tree_identities[name]))):
                     raise ValueError('development tree changed outside transaction; rollback refused')
-            elif not self.exists(installed) or self.tree(installed) != self.old_trees[name]:
+            elif not self.exists(installed) or self.stable_tree(self.tree(installed, identities=True)) != self.stable_tree(self.original_tree_identities[name]):
                 raise ValueError('original development tree unavailable')
             if self.exists(self.backup/('failed-'+name)):
-                raise ValueError('retained failed code exists; recovery cannot overwrite it')
+                if (self.exists(installed) and self.exists(previous)) or self.stable_tree(self.tree(self.backup/('failed-'+name),identities=True))!=self.stable_tree(self.new_tree_identities[name]):
+                    raise ValueError('retained failed code changed; recovery cannot overwrite it')
         for name, candidate in self.replaced_units.items():
             target = self.path('/etc/systemd/system')/name
-            original = self.original_units[name]
-            value = self.file(target, mode=0o644, limit=65536)[0] if self.exists(target) else None
-            if value not in (candidate, original[0] if original else None):
-                raise ValueError('unit changed outside transaction; rollback refused')
+            self.validate_managed_file(target)
         if self.marker_changed:
-            value = self.file(self.marker, mode=0o644, limit=256)[0] if self.exists(self.marker) else None
-            if value not in (self.candidate_marker, self.marker_bytes):
-                raise ValueError('development marker changed outside transaction')
-        if self.exists(self.backup/'failed-panel.db'):
-            raise ValueError('failed database evidence already exists')
-        with self.connect() as failed, contextlib.closing(sqlite3.connect(self.backup/'failed-panel.db')) as evidence:
-            failed.backup(evidence)
-        os.chmod(self.backup/'failed-panel.db', 0o600)
+            self.validate_managed_file(self.marker)
+        self.retain_failed_database()
+        self.journal('rollback-evidence-retained')
         for name in reversed(self.tree_intents):
             previous = self.backup/('previous-'+name)
             if self.exists(previous):
+                self.retain_reverse_tree_intent(name)
+                self.journal('restoring-'+name)
                 if self.exists(self.base/name):
+                    if self.exists(self.backup/('failed-'+name)):
+                        raise ValueError('owned failed code must not be replaced')
                     os.rename(self.base/name, self.backup/('failed-'+name))
+                    self.sync_directory(self.base)
+                    self.sync_directory(self.backup)
                 os.rename(previous, self.base/name)
                 self.sync_directory(self.base)
                 self.sync_directory(self.backup)
         for name in self.replaced_units:
             target = self.path('/etc/systemd/system')/name
             original = self.original_units[name]
-            if original is not None:
+            if original is not None and self.file(target,mode=0o644,limit=65536)[0]!=original[0]:
                 self.atomic(target, original[0], 0o644, original[1].st_uid, original[1].st_gid)
-            elif self.exists(target):
-                target.unlink()
-                self.sync_directory(target.parent)
+            elif original is None and self.exists(target):
+                self.remove_managed_file(target)
         if self.marker_changed:
             if self.marker_bytes is not None:
-                self.atomic(self.marker, self.marker_bytes, 0o644)
+                if self.file(self.marker,mode=0o644,limit=256)[0]!=self.marker_bytes:
+                    self.atomic(self.marker, self.marker_bytes, 0o644)
             elif self.exists(self.marker):
-                os.rename(self.marker, self.backup/'failed-development-release')
-                self.sync_directory(self.base)
-                self.sync_directory(self.backup)
-        for suffix in ('-wal', '-shm'):
-            sidecar = self.database.with_name(self.database.name+suffix)
-            if self.exists(sidecar):
-                info = sidecar.lstat()
-                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_uid != self.db_owner or stat.S_IMODE(info.st_mode) != 0o600:
-                    raise ValueError('unsafe stopped database journal; rollback refused')
-                sidecar.unlink()
+                self.validate_managed_file(self.marker)
+                failed = self.backup/'failed-development-release'
+                raw = self.file(self.marker,mode=0o644,limit=256)[0]
+                if self.exists(failed):
+                    if self.file(failed,mode=0o600,limit=256)[0]!=raw:
+                        raise ValueError('retained failed development marker differs')
+                else:
+                    self.atomic(failed,raw,0o600)
+                self.remove_managed_file(self.marker)
+        self.remove_database_sidecars()
         self.restore_database()
+        self.journal('rollback-data-restored')
         self.run_command('/usr/bin/systemctl', 'daemon-reload')
         self.release_runtime()
         self.start_previous_state()
+        self.wait_readiness()
         self.verify_states()
         self.journal('rolled-back')
         self.remove_pending()
+        self.restore_timer()
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('check', 'run'))
+    parser.add_argument('action', choices=('check', 'run', 'recover-check', 'recover'))
     parser.add_argument('release', type=pathlib.Path)
     args = parser.parse_args()
     if os.geteuid() != 0:
@@ -400,16 +609,20 @@ def main():
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     try:
-        if args.action == 'check':
+        if args.action in ('recover-check','recover'):
+            result = transaction.recover(args.release,check=args.action=='recover-check')
+            print(json.dumps({'recovery':args.action,**result},sort_keys=True))
+        elif args.action == 'check':
             transaction.preflight()
             print('development upgrade preflight passed without changes')
         else:
             transaction.run()
     except BaseException as error:
-        try:
-            transaction.rollback()
-        except BaseException:
-            print('automatic development rollback incomplete; private evidence and maintenance marker retained; recovery not confirmed', file=sys.stderr)
+        if args.action not in ('recover-check','recover'):
+            try:
+                transaction.rollback()
+            except BaseException:
+                print('automatic development rollback incomplete; private evidence and maintenance marker retained; recovery not confirmed', file=sys.stderr)
         parser.exit(1, 'development upgrade failed: '+str(error)+'\n')
     finally:
         transaction.close()

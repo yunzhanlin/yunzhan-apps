@@ -14,7 +14,7 @@ test('actual source acceptance proof cohorts stay distinct from prior failures, 
  for(const ci of [r.actual_github_pr_linux_ci,r.actual_github_main_linux_ci]){assert.equal(ci.passed,true);assert.equal(ci.targeted_reader_race_passed,true);assert.match(ci.log_sha256,/^[a-f0-9]{64}$/);}
  assert.equal(c.previous_gateway_release.actual_first_github_pr_ci_passed,false);assert.equal(c.previous_gateway_release.actual_first_github_pr_ci_run,38182561913);
  assert.equal(c.previous_source_release.actual_signed_upgrade_verification_passed,false);assert.equal(c.previous_source_release.immediate_failed_upgrade_full_baseline_saved,false);
- assert.equal(a.version,'1.8.5');assert.equal(a.catalog_sha256,sha(await read('dist/catalog-v1.json')));assert.equal(a.manifest_sha256,sha(await read('dist/apps/load-balance/1.8.5/manifest.json')));
+ assert.equal(a.version,'1.8.5');assert.equal(a.catalog_sha256,'0114de28a20ec3b8d023b0fe786272d42f7b3b5e7ed95ff363b8638dc4e2a0b5');assert.equal(a.manifest_sha256,sha(await read('dist/apps/load-balance/1.8.5/manifest.json')));
  assert.equal(a.actual_signed_update_proof_sha256,'247ef697892c585571184dbe983474948fba4f0d311b01d61293df75fa778ee5');assert.equal(a.actual_signed_update_checks,43);assert.equal(a.actual_update_ui_posts,1);assert.equal(a.controlled_same_identity_replays,1);
  assert.equal(a.actual_update_job_id,'a916f2837ec3dc0a3c480f88d4422759');assert.equal(a.actual_update_request_identity,'5f16a2ee-0c53-41f4-a0de-79ddcad1636b');
  assert.equal(a.actual_business_proof_sha256,'56c4c829656948829db6db53e6fab374e20d82ce78478760b5525c7e56c14ffa');assert.equal(a.actual_business_checks,5);assert.equal(a.source_delivery_requests,4);assert.equal(a.health_delivery_requests,1);assert.equal(a.traffic_delivery_requests,5);

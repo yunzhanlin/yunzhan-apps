@@ -48,6 +48,7 @@ const names: Record<string, string> = {
   history_missing_log: "当前无可读访问日志",
   history_invalid_lines: "历史采集无效行",
   history_evicted_rows: "因行数上限退役的历史",
+  history_expired_streams: "本次退役的过期已读文件进度",
   history_before_retention: "查询开始早于保留窗口",
   history_checked_at: "本次增量核对（UTC）",
   history_first_request: "最早保留请求（UTC）",

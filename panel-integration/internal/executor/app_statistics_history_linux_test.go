@@ -534,6 +534,97 @@ func TestStatisticsHistoryStreamLimitDoesNotResetOrLoseData(t *testing.T) {
 	}
 }
 
+func TestStatisticsHistoryExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs(t *testing.T) {
+	s, db, id, path, now := statisticsHistoryFixture(t)
+	contents := statisticsTestLine(now, "/still-collecting-after-years-of-rotation")
+	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := db.Exec("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i<?) INSERT INTO access_streams(site,identity,name,offset,anchor,size,seen) SELECT ?,printf('0:%d',i),'retired-owned-archive',0,?,0,? FROM n", statisticsHistoryStreams, id, fmt.Sprintf("%064d", 0), now.AddDate(0, 0, -31).Unix())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := statisticsTestIngest(t, s, db, id, now)
+	var streams int
+	if err = db.QueryRow("SELECT count(*) FROM access_streams").Scan(&streams); err != nil {
+		t.Fatal(err)
+	}
+	if streams != 1 || state.ExpiredStreams != statisticsHistoryStreams || statisticsTestCount(t, db) != 1 {
+		t.Fatal("expired derived cursors permanently exhausted the unchanged budget", streams, state)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != contents {
+		t.Fatal("retention changed original logs", err)
+	}
+	report, err := statisticsHistoryReport(context.Background(), db, core.AppModuleInput{SiteID: id}, state, now)
+	if err != nil || report["history_expired_streams"] != statisticsHistoryStreams || report["partial"] != false {
+		t.Fatal("retention report mismatch", report, err)
+	}
+	state = statisticsTestIngest(t, s, db, id, now)
+	if state.ExpiredStreams != 0 || statisticsTestCount(t, db) != 1 {
+		t.Fatal("retirement re-read accepted requests", state)
+	}
+}
+
+func TestStatisticsHistoryRetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary(t *testing.T) {
+	s, db, id, path, now := statisticsHistoryFixture(t)
+	old := now.AddDate(0, 0, -31)
+	contents := statisticsTestLine(old, "/live-old-archive")
+	if err := os.WriteFile(path, []byte(contents), 0600); err != nil {
+		t.Fatal(err)
+	}
+	statisticsTestIngest(t, s, db, id, old)
+	cutoff := now.AddDate(0, 0, -statisticsHistoryDays).Add(-time.Minute).Unix()
+	for _, entry := range []struct {
+		site, identity string
+		offset, size   int64
+		seen           int64
+		blocked        int
+	}{
+		{id, "0:10", 0, 0, old.Unix(), 0},
+		{id, "0:11", 0, 4, old.Unix(), 0},
+		{id, "0:12", 4, 4, old.Unix(), 1},
+		{id, "0:13", 0, 0, cutoff, 0},
+		{strings.Repeat("b", 32), "0:14", 0, 0, old.Unix(), 0},
+	} {
+		if _, err := db.Exec("INSERT INTO access_streams(site,identity,name,offset,anchor,size,seen,blocked) VALUES(?,?,'derived',?,?,?,?,?)", entry.site, entry.identity, entry.offset, fmt.Sprintf("%064d", 0), entry.size, entry.seen, entry.blocked); err != nil {
+			t.Fatal(err)
+		}
+	}
+	state := statisticsTestIngest(t, s, db, id, now)
+	var streams int
+	if err := db.QueryRow("SELECT count(*) FROM access_streams").Scan(&streams); err != nil {
+		t.Fatal(err)
+	}
+	if streams != 5 || state.ExpiredStreams != 1 || state.Blocked != 2 || state.Backlog != 4 {
+		t.Fatal("protected progress or retention grace was discarded", streams, state)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != contents {
+		t.Fatal("live original log changed", err)
+	}
+}
+
+func TestStatisticsHistoryRetirementAndRowsAreOneTransaction(t *testing.T) {
+	s, db, id, path, now := statisticsHistoryFixture(t)
+	if err := os.WriteFile(path, []byte(statisticsTestLine(now, "/refused")), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO access_streams(site,identity,name,offset,anchor,size,seen) VALUES(?,'0:99','absent',0,?,0,?)", id, fmt.Sprintf("%064d", 0), now.AddDate(0, 0, -31).Unix()); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("CREATE TRIGGER owned_fixture_refusal BEFORE INSERT ON access_rows BEGIN SELECT RAISE(ABORT,'owned refusal'); END"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ingestStatisticsHistory(context.Background(), db, id, now); err == nil {
+		t.Fatal("failed ingestion committed retirement")
+	}
+	var streams int
+	if err := db.QueryRow("SELECT count(*) FROM access_streams WHERE identity='0:99'").Scan(&streams); err != nil || streams != 1 || statisticsTestCount(t, db) != 0 {
+		t.Fatal("partial retention transaction", streams, err)
+	}
+}
+
 func TestStatisticsHistoryBackgroundCollectionAndUninstallFence(t *testing.T) {
 	s, db, _, path, now := statisticsHistoryFixture(t)
 	manifest := filepath.Join(s.moduleDir("website-statistics-v2"), "installed.json")

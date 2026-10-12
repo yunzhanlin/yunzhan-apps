@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-11T22:33:53Z",
+  "generated_at": "2026-10-12T11:05:11Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1126,8 +1126,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.4.0",
-      "summary": "真实访问日志后台增量采集到有界 SQLite 历史，30 天保留、全站最多 25 万行；时间、状态、路径/IP 和爬虫筛选，错误及慢请求明细。新增请求总耗时精确 P50/P90/P95/P99 与九段分布；无样本或超限不伪造分位数。慢请求阈值不筛除其他请求。检查点与请求同事务提交；压缩导入及地理信息未提供，需要对应版本面板处理器。",
+      "version": "2.4.1",
+      "summary": "真实日志后台增量 SQLite 历史、30 天/25 万行有界保留、筛选及精确耗时分布。修复长期轮转耗尽文件进度容量：仅退役已读完、已消失且超过保留窗口的进度，不删原日志或未读/冲突证据；与新请求同事务提交。必须先升级到支持该能力的面板；旧处理器拒绝安装。压缩导入及地理信息未提供。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1143,12 +1143,12 @@
         "时间与状态筛选",
         "路径/IP 筛选",
         "慢请求明细",
-        "后台增量采集与 30 天有界持久历史",
+        "30 天后台增量历史与过期已读进度安全退役",
         "检查点与请求同事务及中断保护",
         "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.4.0/manifest.json",
-      "sha256": "45a02dd14bd30421d238d32a1453656faca5f9282991eafe3f67056d64322124"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.4.1/manifest.json",
+      "sha256": "8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e"
     },
     {
       "id": "website-tamper-proof",
