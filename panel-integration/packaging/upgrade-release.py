@@ -55,15 +55,31 @@ class Upgrade:
         self.failed_stop_snapshots = 0
 
     def path(self, value):
-        return self.root/value.lstrip('/')
+        value = pathlib.Path(value)
+        if not value.is_absolute() or '..' in value.parts or str(value).startswith('//'):
+            raise ValueError('privileged upgrade target is not canonical absolute')
+        return self.scoped_path(self.root/str(value).lstrip('/'))
+
+    def scoped_path(self, path):
+        # Do not resolve here: resolving would follow a privileged link before
+        # the ordinary-parent checks. Relative paths previously skipped those
+        # checks entirely when a helper was invoked directly from a cwd.
+        path = pathlib.Path(path)
+        if (not self.root.is_absolute() or '..' in self.root.parts or str(self.root).startswith('//')
+                or not path.is_absolute() or '..' in path.parts or str(path).startswith('//')
+                or '\x00' in str(path) or (path != self.root and self.root not in path.parents)):
+            raise ValueError('upgrade path is relative, noncanonical or outside its fixed scope')
+        return path
 
     def directory(self, path, owner=0, private=False):
+        path = self.scoped_path(path)
         info = path.lstat()
         if not stat.S_ISDIR(info.st_mode) or info.st_uid != owner or info.st_mode & 0o022 or (private and stat.S_IMODE(info.st_mode) != 0o700):
             raise ValueError('untrusted upgrade directory')
         return info
 
     def parents(self, path):
+        path = self.scoped_path(path)
         # Every traversed privileged parent must be ordinary and root controlled.
         for parent in reversed(path.parents):
             if parent == self.root or self.root in parent.parents:
@@ -80,6 +96,7 @@ class Upgrade:
                 self.directory(parent)
 
     def file(self, path, owner=0, mode=None, limit=2*1024*1024):
+        path = self.scoped_path(path)
         descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
         try:
             before = os.fstat(descriptor)
@@ -100,6 +117,7 @@ class Upgrade:
             os.close(descriptor)
 
     def payload_size(self):
+        self.scoped_path(self.release)
         paths = [self.release]+list(self.release.rglob('*'))
         if len(paths) > 10000:
             raise ValueError('upgrade payload exceeds tree-check budget')
@@ -116,6 +134,7 @@ class Upgrade:
         return size
 
     def atomic(self, target, data, mode, uid=0, gid=0):
+        target = self.scoped_path(target)
         descriptor, name = tempfile.mkstemp(prefix='.program-upgrade-'+target.name+'-', dir=target.parent)
         temporary = pathlib.Path(name)
         try:
@@ -131,6 +150,7 @@ class Upgrade:
         self.sync_directory(target.parent)
 
     def sync_directory(self, path):
+        path = self.scoped_path(path)
         descriptor = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
         try:
             os.fsync(descriptor)
@@ -138,6 +158,7 @@ class Upgrade:
             os.close(descriptor)
 
     def exists(self, path):
+        path = self.scoped_path(path)
         return path.exists() or path.is_symlink()
 
     def state(self, unit):

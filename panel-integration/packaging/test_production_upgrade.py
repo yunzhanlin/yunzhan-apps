@@ -18,6 +18,26 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
 class UpgradePolicyTests(unittest.TestCase):
+    def test_privileged_paths_never_skip_ancestry_via_cwd_dotdot_or_another_root(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            calls = []
+            for release in (pathlib.Path('candidate'), root/'..'/'candidate', pathlib.Path('//untrusted/candidate'), root.parent/'outside-candidate'):
+                transaction = upgrade.Upgrade(release, root, lambda *args, **kwargs:calls.append(args))
+                with self.subTest(release=str(release)), self.assertRaises(ValueError):
+                    transaction.preflight()
+                self.assertEqual(calls, [])
+            transaction = upgrade.Upgrade(root/'candidate', root)
+            for path in (pathlib.Path('target'), root/'..'/'target', root.parent/'outside-target', pathlib.Path('//untrusted/target')):
+                for operation in (transaction.parents, transaction.directory, transaction.file, transaction.exists,
+                                  transaction.sync_directory, lambda p:transaction.atomic(p,b'not written',0o600)):
+                    with self.subTest(path=str(path), operation=str(operation)), self.assertRaises(ValueError):
+                        operation(path)
+            for target in ('relative','/opt/../etc/target','//etc/target'):
+                with self.subTest(target=target), self.assertRaises(ValueError):
+                    transaction.path(target)
+            self.assertEqual(transaction.path('/etc/panel'), root/'etc/panel')
+
     def test_ordinary_entrypoint_is_before_nss_and_fresh_provisioning(self):
         installer = (ROOT/'packaging/install.sh').read_text()
         entry = 'exec python3 "$HERE/upgrade-release.py" run "$HERE"'
