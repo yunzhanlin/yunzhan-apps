@@ -40,7 +40,7 @@ class UpgradePolicyTests(unittest.TestCase):
     def test_all_four_real_sqlite_queues_refuse_pending_and_missing_schema(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary).resolve()
-            transaction = upgrade.Upgrade(root)
+            transaction = upgrade.Upgrade(root, runner=lambda *args, **kwargs: '')
             transaction.database = root/'panel.db'
             transaction.db_owner = os.geteuid()
             with sqlite3.connect(transaction.database) as db:
@@ -111,11 +111,18 @@ class Runner:
         self.fail_start_once = False
         self.inject_late_queue = False
         self.inject_candidate_job = False
+        self.native_queue_calls = 0
+        self.native_queue_fail_at = 0
         self.stop_count = 0
     def __call__(self, *args, **kwargs):
         self.calls.append(args)
         if pathlib.Path(args[0]).name == 'verify-release.sh':
             return 'checksums verified by fixture; not a signature acceptance'
+        if args == (str(self.root/'candidate/bin/panel-executor'), '--check-program-upgrade-queues'):
+            self.native_queue_calls += 1
+            if self.native_queue_fail_at == self.native_queue_calls:
+                raise RuntimeError('owned native queue fixture refusal')
+            return ''  # Pure command contract fixture, not native queue proof.
         if args[0] == '/usr/bin/dpkg':
             return 'arm64'
         if args[0] == '/usr/bin/id':
@@ -241,6 +248,36 @@ class UpgradeTransactionTests(unittest.TestCase):
                 self.assertEqual(db.execute("SELECT state FROM runtime_jobs WHERE id='late'").fetchone(),('queued',))
             self.assertFalse((transaction.backup/'panel.db').exists())
             self.assertFalse(transaction.pending_created)
+
+    def test_first_or_locked_native_queue_refusal_never_stops_services_or_creates_backup(self):
+        for point in (1,2):
+            with self.subTest(check=point),self.fixture() as (transaction,runner,root):
+                runner.native_queue_fail_at=point
+                before=(root/'var/lib/panel/panel.db').stat()
+                with self.assertRaisesRegex(RuntimeError,'native queue fixture refusal'):
+                    transaction.run()
+                transaction.rollback()
+                self.assertEqual(runner.native_queue_calls,point)
+                self.assertEqual(list((root/'var/backups/panel/system').iterdir()),[])
+                self.assertEqual((root/'var/lib/panel/panel.db').stat().st_ino,before.st_ino)
+                self.assertFalse(any(call[0]=='/usr/bin/systemctl' and call[1] in ('stop','start') for call in runner.calls))
+
+    def test_after_stop_native_queue_refusal_restores_services_without_database_backup_or_program_change(self):
+        with self.fixture() as (transaction,runner,root):
+            runner.native_queue_fail_at=3
+            before=(root/'var/lib/panel/panel.db').stat()
+            states=json.loads(json.dumps(runner.states))
+            previous=os.readlink(root/'opt/panel/current')
+            with self.assertRaisesRegex(RuntimeError,'native queue fixture refusal'):
+                transaction.run()
+            transaction.rollback()
+            self.assertFalse(transaction.changed)
+            self.assertFalse(transaction.pending_created)
+            self.assertEqual(runner.states,states)
+            self.assertEqual(os.readlink(root/'opt/panel/current'),previous)
+            self.assertEqual((root/'var/lib/panel/panel.db').stat().st_ino,before.st_ino)
+            self.assertFalse((transaction.backup/'panel.db').exists())
+            self.assertEqual(json.loads((transaction.backup/'transaction.json').read_text())['phase'],'refused-before-program-change')
 
     def test_candidate_start_failure_restores_exact_pointer_marker_units_database_and_service_states(self):
         with self.fixture() as (transaction,runner,root):

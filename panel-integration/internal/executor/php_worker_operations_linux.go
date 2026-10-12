@@ -70,25 +70,8 @@ func readPHPWorkerOperations(dir string) ([]phpWorkerOperationRecord, error) {
 		if e = json.Unmarshal(b, &v); e != nil {
 			return nil, e
 		}
-		if _, e = time.Parse(time.RFC3339Nano, v.CreatedAt); e != nil {
-			return nil, errors.New("PHP 进程操作创建时间损坏")
-		}
-		if _, e = time.Parse(time.RFC3339Nano, v.UpdatedAt); e != nil {
-			return nil, errors.New("PHP 进程操作更新时间损坏")
-		}
-		r, found := runtimecatalog.Find(v.Input.ObservedReleaseID)
-		if v.ID != id || !core.ValidID(v.SiteID) || !core.ValidID(v.WorkerID) || v.Input.ID != v.WorkerID || v.Input.SiteID != v.SiteID || core.ValidatePHPWorkerSpec(v.Input.PHPWorkerSpec) != nil || !found || r.Family != "php" {
-			return nil, errors.New("PHP 进程操作元数据损坏")
-		}
-		switch v.Action {
-		case "create", "start", "stop", "restart", "delete":
-		default:
-			return nil, errors.New("PHP 进程操作类型损坏")
-		}
-		switch v.State {
-		case "queued", "running", "succeeded", "failed", "needs_attention", "resolved":
-		default:
-			return nil, errors.New("PHP 进程操作状态损坏")
+		if e = validatePHPWorkerOperationRecord(id, v); e != nil {
+			return nil, e
 		}
 		out = append(out, v)
 	}
@@ -101,6 +84,30 @@ func readPHPWorkerOperations(dir string) ([]phpWorkerOperationRecord, error) {
 		return a.Before(b)
 	})
 	return out, nil
+}
+
+func validatePHPWorkerOperationRecord(id string, v phpWorkerOperationRecord) error {
+	if _, e := time.Parse(time.RFC3339Nano, v.CreatedAt); e != nil {
+		return errors.New("PHP 进程操作创建时间损坏")
+	}
+	if _, e := time.Parse(time.RFC3339Nano, v.UpdatedAt); e != nil {
+		return errors.New("PHP 进程操作更新时间损坏")
+	}
+	r, found := runtimecatalog.Find(v.Input.ObservedReleaseID)
+	if v.ID != id || !core.ValidID(v.SiteID) || !core.ValidID(v.WorkerID) || v.Input.ID != v.WorkerID || v.Input.SiteID != v.SiteID || core.ValidatePHPWorkerSpec(v.Input.PHPWorkerSpec) != nil || !found || r.Family != "php" {
+		return errors.New("PHP 进程操作元数据损坏")
+	}
+	switch v.Action {
+	case "create", "start", "stop", "restart", "delete":
+	default:
+		return errors.New("PHP 进程操作类型损坏")
+	}
+	switch v.State {
+	case "queued", "running", "succeeded", "failed", "needs_attention", "resolved":
+	default:
+		return errors.New("PHP 进程操作状态损坏")
+	}
+	return nil
 }
 
 func (s *Service) savePHPWorkerOperation(v phpWorkerOperationRecord) error {

@@ -6,10 +6,10 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 
 test('release cleanup uses exact normal source and keeps native fixtures, real preview and rejected candidates independent',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release,current=c.reviewed_native_queue_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24retentionbegx');assert.equal(r.frozen_source_files,16857);assert.equal(r.exported_normal_source_files,1209);assert.equal(r.source_overrides,0);
- assert.equal(inputs.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,r.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1209);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1213);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const f=r.actual_linux_root_cleanup_fixtures;
  assert.equal(f.passed,true);assert.equal(f.tests,21);assert.equal(f.skips,0);assert.equal(f.actual_native_private_bind_mount_case_ran,true);assert.equal(f.actual_qa_program_gateway_and_lock_preserved,true);assert.equal(f.host_installation_pruned,false);
  for(const [file,expected] of Object.entries(f.input_sha256)){
