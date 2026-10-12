@@ -6,7 +6,7 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 
 test('release cleanup uses exact normal source and keeps native fixtures, real preview and rejected candidates independent',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release,current=c.reviewed_interlock_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release,current=c.reviewed_canonical_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24retentionbegx');assert.equal(r.frozen_source_files,16857);assert.equal(r.exported_normal_source_files,1209);assert.equal(r.source_overrides,0);
  assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1223);assert.equal(Object.keys(index.test_overrides??{}).length,0);

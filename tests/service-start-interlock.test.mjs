@@ -5,10 +5,10 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('independent immutable service interlock has exact normal source, separate native upgrade proofs and explicit remaining recovery gaps',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_interlock_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_interlock_release,current=c.reviewed_canonical_release;
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),f=JSON.parse(await read('panel-integration/release-source-inputs.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24interlockbejc');assert.equal(r.frozen_source_files,16871);assert.equal(r.exported_normal_source_files,1223);assert.equal(r.exported_build_input_files,1182);
- assert.equal(r.frozen_inputs_sha256,f.frozen_inputs_sha256);assert.equal(r.signed_normal_release.amd64.archive,f.archive_sha256);assert.equal(Object.keys(i.files).length,1223);assert.equal(Object.keys(f.files).length,1182);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
+ assert.equal(current.frozen_inputs_sha256,f.frozen_inputs_sha256);assert.equal(current.signed_normal_release.amd64.archive,f.archive_sha256);assert.equal(Object.keys(i.files).length,1223);assert.equal(Object.keys(f.files).length,1182);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
  for(const name of ['cmd/startguard/main.go','internal/upgradeguard/service_startup_linux.go','internal/upgradeguard/service_startup_other.go','internal/upgradeguard/service_startup_linux_test.go','packaging/start-guard-install.py','packaging/test_start_guard_install.py']){
   const digest=sha(await read('panel-integration/'+name));assert.equal(i.files[name],digest);assert.equal(f.files[name],digest);
  }

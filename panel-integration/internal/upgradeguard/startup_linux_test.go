@@ -84,7 +84,17 @@ func TestStartupOwnUnprivilegedProbe(t *testing.T) {
 		t.Fatal("invalid child fixture scope")
 	}
 	if err := startupAt(filepath.Join(base, "pending"), filepath.Join(base, "lock")); err != nil {
-		t.Fatal("unprivileged startup evidence failed", err)
+		raw, _, readErr := startupFile(filepath.Join(base, "pending"))
+		record, parseErr := parseStartup(raw)
+		locks, lockErr := procRead("/proc/locks", 4*1024*1024)
+		own := []string{}
+		for _, line := range strings.Split(string(locks), "\n") {
+			fields := strings.Fields(line)
+			if len(fields) >= 6 && (fields[4] == strconv.Itoa(record.PID) || strings.HasSuffix(fields[5], ":"+strconv.FormatUint(record.LockInode, 10))) {
+				own = append(own, line)
+			}
+		}
+		t.Fatalf("unprivileged startup evidence failed %v; own-record read=%v parse=%v kernel=%v exact=%v expected-pid=%d device=%x inode=%d own-kernel-entries=%q", err, readErr, parseErr, lockErr, ownsStartupLock(locks, record), record.PID, record.LockDevice, record.LockInode, own)
 	}
 }
 
@@ -218,7 +228,8 @@ func TestStartupRootLiveLeaseStaleBootPIDBytesAndUnprivilegedRead(t *testing.T) 
 	command.Env = append(os.Environ(), "PANEL_OWN_STARTUP_PROBE="+base)
 	output, err := command.CombinedOutput()
 	if err != nil {
-		t.Fatal("scope-owned unprivileged procfs proof failed", err, string(output))
+		locks, lockErr := procRead("/proc/locks", 4*1024*1024)
+		t.Fatal("scope-owned unprivileged procfs proof failed", err, string(output), "parent-live-proof", ownerLive(record, lock), "parent-kernel-read", lockErr, "parent-exact-lease", ownsStartupLock(locks, record))
 	}
 	t.Log("root live lease, wrong boot/ticks/PID/inode/program, released lock, unsafe marker and actual nobody startup evidence checked; owner PID " + strconv.Itoa(record.PID))
 }

@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('1.8.2 exports the exact normal frozen routing/status source and mandatory frontend gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'b73307e7563dce81d91dfee8bac49fff134333e4ae7cafde3df7109edbdf8f55');
- assert.equal(release.archive_sha256,'35b120093efe102c38344493092ae1c5925dc53df8abf39c6d60955f6e32942b');
+ assert.equal(release.frozen_inputs_sha256,'6084afe3f66b6c870556ca1d58b1227f6726339968d9a8ee4133bca108401f63');
+ assert.equal(release.archive_sha256,'5902e3954cccb284c1ff6d6fe43f4a90c11887d889588a60d6854c7eef89f4aa');
  for(const file of ['scripts/test-load-balance-routing.mjs','web/src/loadBalanceRouting.ts','internal/core/load_balance_routing_test.go','internal/executor/app_load_balance_routing_linux.go','internal/executor/app_load_balance_routing_linux_test.go','internal/executor/app_load_balance_active_native_qa_linux_test.go','internal/executor/app_load_balance_status_linux.go','internal/executor/app_load_balance_status_linux_test.go']){
   const body=await read('panel-integration/'+file),sha=createHash('sha256').update(body).digest('hex');
   assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);

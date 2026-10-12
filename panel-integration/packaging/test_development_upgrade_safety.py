@@ -20,6 +20,14 @@ SPEC.loader.exec_module(support)
 
 
 class DevelopmentUpgradePolicyTests(unittest.TestCase):
+    def test_direct_helper_refuses_relative_and_traversing_release_before_commands(self):
+        for release in (pathlib.Path('candidate'),pathlib.Path('/opt/panel/../candidate'),pathlib.Path('//untrusted/candidate')):
+            calls=[]
+            transaction=development.DevelopmentUpgrade(release,runner=lambda *args,**kwargs:calls.append(args))
+            with self.subTest(release=str(release)),self.assertRaises(ValueError):
+                transaction.preflight()
+            self.assertEqual(calls,[])
+
     def test_entrypoint_never_sources_metadata_or_provisions_host(self):
         wrapper = (ROOT/'scripts/upgrade-running-development.sh').read_text()
         self.assertIn('exec /usr/bin/python3 "$RELEASE_PATH/development-upgrade.py" run "$RELEASE_PATH"', wrapper)
