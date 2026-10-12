@@ -1,3 +1,4 @@
+import {catalogBeforeStatistics241} from './previous-statistics-catalog.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -6,7 +7,7 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sum=value=>createHash('sha256').update(value).digest('hex');
 
 test('Task snapshot patch is independently versioned, preserving the original package and all other 48 non-load-balance catalog identities',async()=>{
- const catalog=JSON.parse(await read('dist/catalog-v1.json'));
+ const catalog=await catalogBeforeStatistics241(JSON.parse(await read('dist/catalog-v1.json')));
  const task=catalog.apps.find(a=>a.id==='task-manager');assert.equal(task.version,'1.2.1');assert.equal(catalog.apps.length,50);
  const other=catalog.apps.filter(a=>!['task-manager','load-balance'].includes(a.id)).sort((a,b)=>a.id.localeCompare(b.id));
  assert.equal(sum(JSON.stringify(other)),'d20234c1fa053a58c7b3390be8926260092765baac464697eebfa3ecb7d6102c');
@@ -19,7 +20,7 @@ test('Task snapshot patch is independently versioned, preserving the original pa
 
 test('Task implementation and all corrected fixtures match exact normal BECJ source without runtime or test overrides',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'c9a2b2cdbc39ff86d1fe3a27d86ada9587921898d638e8231b23145987b8004c');assert.equal(release.archive_sha256,'d752fe42156246162bcaf7f03db845e959d8b20fd81e33a0c0c8fbbd2af43d06');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'918458c33fde22e77952d50b9a976bf124321b4106c4e9ec366b67edf4be24d0');assert.equal(release.archive_sha256,'fcf14be23b186a9b975a7ba9062f7f8a7744f1f96e26a9734dfe5d680c58f8e3');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const file of ['internal/core/app_modules.go','internal/core/app_modules_test.go','web/src/AppModuleReport.vue','web/src/taskManager.ts','scripts/test-task-manager.mjs','internal/executor/app_load_balance_history_linux_test.go','internal/executor/app_reliability_linux_test.go','internal/executor/app_sync_remote_linux_test.go','internal/executor/app_threat_rotation_linux_test.go','internal/executor/app_threat_transaction_linux_test.go','internal/executor/app_update_linux_test.go']){
   const actual=sum(await read('panel-integration/'+file));assert.equal(index.files[file],actual,file);assert.equal(release.files[file],actual,file);
  }

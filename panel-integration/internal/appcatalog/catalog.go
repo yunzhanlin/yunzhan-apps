@@ -84,21 +84,22 @@ type Uninstall struct {
 }
 
 type Manifest struct {
-	SchemaVersion   int              `json:"schema_version"`
-	ID              string           `json:"id"`
-	Name            string           `json:"name"`
-	Category        string           `json:"category"`
-	Version         string           `json:"version"`
-	Summary         string           `json:"summary"`
-	Stage           string           `json:"stage"`
-	Risk            string           `json:"risk"`
-	Delivery        Delivery         `json:"delivery"`
-	Compatibility   Compatibility    `json:"compatibility"`
-	Capabilities    []string         `json:"capabilities"`
-	Health          Health           `json:"health"`
-	Uninstall       Uninstall        `json:"uninstall"`
-	RuleFeeds       []RuleFeed       `json:"rule_feeds,omitempty"`
-	RuleDataChannel *RuleDataChannel `json:"rule_data_channel,omitempty"`
+	SchemaVersion         int              `json:"schema_version"`
+	ID                    string           `json:"id"`
+	Name                  string           `json:"name"`
+	Category              string           `json:"category"`
+	Version               string           `json:"version"`
+	Summary               string           `json:"summary"`
+	Stage                 string           `json:"stage"`
+	Risk                  string           `json:"risk"`
+	Delivery              Delivery         `json:"delivery"`
+	Compatibility         Compatibility    `json:"compatibility"`
+	Capabilities          []string         `json:"capabilities"`
+	Health                Health           `json:"health"`
+	Uninstall             Uninstall        `json:"uninstall"`
+	RuleFeeds             []RuleFeed       `json:"rule_feeds,omitempty"`
+	RuleDataChannel       *RuleDataChannel `json:"rule_data_channel,omitempty"`
+	RequiredPanelFeatures []string         `json:"required_panel_features,omitempty"`
 }
 
 type LoadInfo struct {
@@ -514,6 +515,9 @@ func (c *Client) verifyManifestData(item CatalogItem, raw []byte) (Manifest, err
 	}
 	if manifest.Stage != "ready" {
 		return Manifest{}, errors.New("该应用尚未通过安装验收")
+	}
+	if err := validatePanelRequirements(manifest, panelFeatureAvailable); err != nil {
+		return Manifest{}, err
 	}
 	if err := validateRuleFeeds(manifest); err != nil {
 		return Manifest{}, err

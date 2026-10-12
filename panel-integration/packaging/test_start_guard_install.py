@@ -159,7 +159,11 @@ class StartupInterlockFilesystemTests(unittest.TestCase):
                     for target, data, mode in guard.inventory(transaction):
                         self.assertEqual(target.read_bytes(), data)
                         self.assertEqual(stat.S_IMODE(target.stat().st_mode), mode)
-                    self.assertTrue(transaction.pending_created)
+                    if args[2:]==(support.upgrade.TIMER,):
+                        self.assertTrue(transaction.timer_deferred)
+                        self.assertEqual(json.loads((transaction.backup/'timer-deferred.json').read_bytes()),transaction.timer_declaration())
+                    else:
+                        self.assertTrue(transaction.pending_created)
                 return command(*args, **kwargs)
             transaction.run_command = checked
             with self.assertRaises(RuntimeError):

@@ -10,7 +10,7 @@ func TestStatisticsLatencyCapabilityVersionAndTruthfulGuidance(t *testing.T) {
 	for _, app := range SoftwareAppCatalog() {
 		if app.ID == "website-statistics-v2" {
 			found = true
-			if app.Version != "2.4.0" {
+			if app.Version != "2.4.1" {
 				t.Fatal("statistical capability version was not advanced", app.Version)
 			}
 		}

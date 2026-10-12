@@ -141,13 +141,57 @@ func statisticsPrivateRow(raw []byte, now time.Time) (analyticsAccess, int64, bo
 }
 
 type statisticsIngestion struct {
-	Backlog    int64
-	Invalid    int64
-	Blocked    int
-	Compressed int
-	Missing    int
-	Sources    int
-	Updated    string
+	Backlog        int64
+	Invalid        int64
+	Blocked        int
+	Compressed     int
+	Missing        int
+	Sources        int
+	ExpiredStreams int
+	Updated        string
+}
+
+// Only absent, fully consumed, non-conflicting cursors can retire. A request
+// may be timestamped one minute after its ingestion, so the extra minute is
+// required before every previously accepted row is outside retention. This
+// never removes original logs, unread/conflicting evidence or another site.
+func retireStatisticsStreams(ctx context.Context, tx *sql.Tx, id string, present map[string]bool, now time.Time) (int, error) {
+	cutoff := now.AddDate(0, 0, -statisticsHistoryDays).Add(-time.Minute).Unix()
+	rows, err := tx.QueryContext(ctx, "SELECT identity,offset,size,seen,blocked,invalid,anchor FROM access_streams WHERE site=? AND seen<? LIMIT ?", id, cutoff, statisticsHistoryStreams+1)
+	if err != nil {
+		return 0, err
+	}
+	retired := []string{}
+	count := 0
+	for rows.Next() {
+		count++
+		var identity, anchor string
+		var offset, size, seen, invalid int64
+		var blocked int
+		if err = rows.Scan(&identity, &offset, &size, &seen, &blocked, &invalid, &anchor); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		_, anchorErr := hex.DecodeString(anchor)
+		if count > statisticsHistoryStreams || offset < 0 || size < 0 || seen <= 0 || invalid < 0 || blocked < 0 || blocked > 1 || len(anchor) != 64 || anchorErr != nil {
+			rows.Close()
+			return 0, errors.New("统计文件进度记录损坏，未清理")
+		}
+		if !present[identity] && blocked == 0 && offset == size {
+			retired = append(retired, identity)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return 0, err
+	}
+	for _, identity := range retired {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM access_streams WHERE site=? AND identity=? AND blocked=0 AND offset=size AND seen<?", id, identity, cutoff); err != nil {
+			return 0, err
+		}
+	}
+	return len(retired), nil
 }
 
 // Caller holds s.mu (the same lifecycle/rotation lock). Renamed files preserve
@@ -217,6 +261,19 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 	if len(names) == 0 {
 		result.Missing = 1
 	}
+	// Establish the complete bounded source identity set before retiring any
+	// cursor. A live archive stays tracked even when all its rows have expired.
+	discovered := map[string]os.FileInfo{}
+	present := map[string]bool{}
+	for _, name := range names {
+		info, e := root.Lstat(name)
+		if e != nil || privateLogEntry(info) != nil {
+			return result, errors.New("访问日志身份异常，未清理历史进度")
+		}
+		st := info.Sys().(*syscall.Stat_t)
+		discovered[name] = info
+		present[fmt.Sprintf("%d:%d", st.Dev, st.Ino)] = true
+	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return result, err
@@ -231,6 +288,14 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM access_streams").Scan(&streamCount); err != nil {
 		return result, err
 	}
+	if streamCount > statisticsHistoryStreams {
+		return result, errors.New("统计文件身份记录异常超限，未清理或新增")
+	}
+	result.ExpiredStreams, err = retireStatisticsStreams(ctx, tx, id, present, now)
+	if err != nil {
+		return result, err
+	}
+	streamCount -= result.ExpiredStreams
 	seen := map[string]bool{}
 	budget := statisticsHistoryBatchBytes
 	rowBudget := statisticsHistoryBatchRows
@@ -243,7 +308,7 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			return result, errors.New("访问日志不是普通无链接文件，原进度保留")
 		}
 		info, e := f.Stat()
-		if e != nil || privateLogEntry(info) != nil {
+		if e != nil || privateLogEntry(info) != nil || !os.SameFile(info, discovered[name]) {
 			f.Close()
 			return result, errors.New("访问日志归属、权限或链接数异常，未读取")
 		}
@@ -387,6 +452,12 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			return result, err
 		}
 	}
+	for name, original := range discovered {
+		current, e := root.Lstat(name)
+		if e != nil || privateLogEntry(current) != nil || !os.SameFile(original, current) {
+			return result, errors.New("采集期间访问日志身份改变，未提交清理或新进度")
+		}
+	}
 	return result, tx.Commit()
 }
 
@@ -514,6 +585,7 @@ func statisticsHistoryReport(ctx context.Context, db *sql.DB, in core.AppModuleI
 	out["history_missing_log"] = state.Missing > 0
 	out["history_invalid_lines"] = state.Invalid
 	out["history_evicted_rows"] = evicted
+	out["history_expired_streams"] = state.ExpiredStreams
 	out["history_before_retention"] = historyLimited
 	out["history_checked_at"] = state.Updated
 	out["history_raw_user_agents_stored"] = false

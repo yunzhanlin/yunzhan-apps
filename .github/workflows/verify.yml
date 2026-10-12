@@ -52,3 +52,9 @@ jobs:
       - name: Read-only native upgrade inventory identity and typed JSON race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1
+      - name: Statistics expired-cursor ownership and one-transaction retirement race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatisticsHistory(ExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs|RetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary|RetirementAndRowsAreOneTransaction)$' -count=1
+      - name: Checksum-bound panel handler requirements and strict legacy refusal race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^Test(PanelRequirements|LegacyStrictDecoderRefusesRequiredHandlerField|NewStatisticsVersionsCannotOmitMandatoryHandlerRequirement)' -count=1
