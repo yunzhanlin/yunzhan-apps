@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('1.8.2 production interlocks and corrected CI fixtures stay frozen, with immutable prior packages',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'202f4a57cdbf8889fac52778f7d191e6b40139de36264d17a857c563d2946832');
- assert.equal(release.archive_sha256,'89e1afb677871c939b955970dd914649dc517f8dfd0913405b2b720cfb0c6241');
+ assert.equal(release.frozen_inputs_sha256,'7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7');
+ assert.equal(release.archive_sha256,'39ed7b660eb5b59d231d6ac0f336f657a4a204154128ee6cbff937fb469e16af');
  for(const file of ['internal/core/load_balance_history.go','internal/core/load_balance_history_test.go','internal/executor/app_load_balance_history_linux.go','internal/executor/app_load_balance_history_linux_test.go','web/src/loadBalanceTransactions.ts','scripts/test-load-balance-transactions.mjs','internal/executor/waf_reload_generation_linux.go','internal/executor/waf_reload_generation_linux_test.go']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],sha,file);
   assert.equal(release.files[file],sha,file);

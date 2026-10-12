@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24quiescencebeie-linux-amd64.tar.gz",
-  "archive_sha256": "89e1afb677871c939b955970dd914649dc517f8dfd0913405b2b720cfb0c6241",
-  "frozen_inputs_sha256": "202f4a57cdbf8889fac52778f7d191e6b40139de36264d17a857c563d2946832",
+  "archive": "panel-0.1.0-dev.proapps24fixturebeiw-linux-amd64.tar.gz",
+  "archive_sha256": "39ed7b660eb5b59d231d6ac0f336f657a4a204154128ee6cbff937fb469e16af",
+  "frozen_inputs_sha256": "7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7",
   "files": {
     "go.mod": "282b96e296dc25aae84d2af7736985b76b6747999da2efee42723bf1d1931a9a",
     "go.sum": "1831f722652fe85735ee01aaa9d25dfb94f2a4093bb48309ba8cced4641fbc64",
@@ -435,7 +435,7 @@
     "internal/executor/app_load_balance_backend_native_qa_linux_test.go": "4e323a1de53bed2c29fa894eaa4566de84d0f66783fef6cf1b7fd40174e41dbb",
     "internal/executor/app_load_balance_cold_native_qa_linux_test.go": "40104b0a9dafccaf022be06f570ca5f082a8d88469ef147e856fc74eda385958",
     "internal/executor/app_load_balance_health_linux.go": "b744454e07fad442c798c959d897f5863424cf36d988b8d0e615521557dc22e8",
-    "internal/executor/app_load_balance_health_linux_test.go": "5cb773bdfcd6965935b9626e3dcd8ef33969df4d7d67cbccaf976a1562fdf105",
+    "internal/executor/app_load_balance_health_linux_test.go": "acfd99ca6c9743a337c0d5cba0e6069f88c8903ec54a61272f126412d9b2204b",
     "internal/executor/app_load_balance_history_linux.go": "03eacbe83ed226792d07b960b68914c47aad1acdee62a3caa844d431061a9208",
     "internal/executor/app_load_balance_history_linux_test.go": "283002a8afbc46faf2f24e4df11cf06b46bb8ac3b878fb285345a35e4c0e479f",
     "internal/executor/app_load_balance_history_read_linux_test.go": "faa67f38b263f9aa44a3e96757affc562639f1b4c4f189ab20a42852d0300db0",
