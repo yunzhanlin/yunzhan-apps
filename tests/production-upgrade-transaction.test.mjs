@@ -7,13 +7,13 @@ const sha=s=>createHash('sha256').update(s).digest('hex');
 
 test('ordinary production transaction is exact normal source and maintains independent native, fixture and failure evidence',async()=>{
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_upgrade_transaction_release,current=c.reviewed_release_retention_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_upgrade_transaction_release,current=c.reviewed_native_queue_release;
  assert.equal(r.release,'0.1.0-dev.proapps24transactionbegh');assert.equal(r.frozen_source_files,16855);assert.equal(r.exported_normal_source_files,1207);
- assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1209);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);assert.equal(current.source_overrides,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1213);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);assert.equal(current.source_overrides,0);
  for(const file of ['cmd/panel/main.go','cmd/executor/main.go','internal/upgradeguard/guard.go','internal/upgradeguard/guard_test.go','packaging/install.sh','packaging/build-release.sh','packaging/upgrade-release.py','packaging/test_production_upgrade.py']){
   const digest=sha(await read('panel-integration/'+file));assert.equal(inputs.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }
- assert.equal(r.signed_normal_release.arm64.upgrade_helper,sha(await read('panel-integration/packaging/upgrade-release.py')));
+ assert.equal(r.signed_normal_release.arm64.upgrade_helper,'b8732bac82e8470d58671b82a74894e972826dde4eac1bcbe3605ae16a94ce10');assert.equal(current.signed_normal_release.arm64.upgrade_helper,sha(await read('panel-integration/packaging/upgrade-release.py')));
  assert.equal(r.normal_build_python_tests,68);assert.equal(r.normal_build_python_skips,16);assert.equal(r.normal_build_node_gates,36);assert.equal(r.normal_build_go_and_vet_passed_both_architectures,true);
  assert.equal(r.actual_normal_executor_companion.pass_count,637);assert.equal(r.actual_normal_executor_companion.skip_count,124);assert.equal(r.actual_normal_executor_companion.fail_count,0);assert.equal(r.actual_normal_executor_companion.installed_state_preserved,true);
  assert.equal(r.actual_private_capacity.records,2560);assert.equal(r.actual_private_capacity.bytes,384*1024*1024);assert.equal(r.actual_private_capacity.original_deadline_seconds,2);assert.equal(r.actual_private_capacity.deadline_relaxed,false);assert.equal(r.actual_private_capacity.cold_os_cache_verified,false);

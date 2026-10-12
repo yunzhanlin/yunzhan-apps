@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('1.8.2 report snapshots are exported from exact current normal signed ADI inputs and mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'318f424f3e7902afc3669045b5d802cf4a234b80d22f7daba4604310a2dacfc7');
- assert.equal(release.archive_sha256,'11d90dae350ed9b2dbc912e11cd2a3189fccb96e8f7af9f85f5436086d9df5ea');
- assert.equal(Object.keys(index.files).length,1209);
+ assert.equal(release.frozen_inputs_sha256,'e05d2d4f01d9600b7257b71dcebe4740c4c84c04440fc738e0c3c15c0535ec18');
+ assert.equal(release.archive_sha256,'022038d5ca226e2992e7f7c30894844fd524049a78c6379ce20a1755d14effc9');
+ assert.equal(Object.keys(index.files).length,1213);
  for(const file of ['internal/core/load_balance_report_export.go','internal/core/load_balance_report_export_test.go','web/src/loadBalanceReportExport.ts','scripts/test-load-balance-report-export.mjs','internal/core/app_modules.go','web/src/AppModuleManager.vue','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }

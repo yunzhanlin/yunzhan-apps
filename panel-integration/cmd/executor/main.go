@@ -61,6 +61,7 @@ func main() {
 	apacheBodyPrepare := flag.Bool("prepare-apache-body-runtime", false, "verify committed Apache native body policy and prepare only missing bounded cache leaves at startup")
 	apacheBodyCacheCheck := flag.Bool("check-apache-body-cache-mount", false, "read-only fixed pre-mount guard; never hide existing cache contents or replace unknown mounts")
 	apacheBodyCachePreflight := flag.Bool("check-apache-body-cache-upgrade", false, "read-only fixed installer preflight before host or service changes; missing cache is not provisioned")
+	programQueuePreflight := flag.Bool("check-program-upgrade-queues", false, "read-only fixed-path pending native-operation guard; never repairs or replays records")
 	idsRecover := flag.Bool("recover-network-ids", false, "recover the fixed private IDS two-file configuration before capture")
 	idsAuthorize := flag.Bool("authorize-network-ids-start", false, "verify private IDS committed configuration or live executor candidate")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
@@ -86,6 +87,12 @@ func main() {
 	}
 	if os.Geteuid() != 0 {
 		log.Fatal("executor must run under its root systemd unit")
+	}
+	if *programQueuePreflight {
+		if err := executor.CheckProgramUpgradeQueues(); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	if *idsRecover {
 		if err := executor.RecoverNetworkIDS(); err != nil {

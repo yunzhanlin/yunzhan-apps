@@ -169,6 +169,11 @@ class Upgrade:
             for table in QUEUES:
                 if connection.execute(f"SELECT count(*) FROM {table} WHERE state IN ('queued','running')").fetchone() != (0,):
                     raise ValueError('wait for active panel, runtime, database or certificate jobs before upgrading')
+        # Execute only the already verified root-controlled candidate. This
+        # fixed-path reader starts no Service or worker and edits no records.
+        # Repeated at preflight, under the leases, after strict writer stop,
+        # after candidate readiness and before any database rollback.
+        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
 
     def preflight(self):
         self.parents(self.release)

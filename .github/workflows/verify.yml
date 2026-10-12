@@ -47,3 +47,6 @@ jobs:
       - name: Candidate maintenance gate and cancellation race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/upgradeguard -count=1
+      - name: Read-only native upgrade inventory identity and typed JSON race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1
