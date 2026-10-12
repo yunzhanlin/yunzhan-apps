@@ -24,6 +24,9 @@ func main() {
 	recoverAccount := flag.String("recover-account", "", "root-only local account recovery; read new password from stdin")
 	flag.Parse()
 	if *recoverAccount != "" {
+		if upgradeguard.Blocked() {
+			log.Fatal("program upgrade pending; account recovery refused")
+		}
 		if e := recoverLocalAccount(*data, *recoverAccount); e != nil {
 			log.Fatal(e)
 		}
@@ -33,6 +36,9 @@ func main() {
 	host, _, err := net.SplitHostPort(*listen)
 	if err != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
 		log.Fatal("development build only supports an explicit loopback listen address")
+	}
+	if err := upgradeguard.CheckStartup(); err != nil {
+		log.Fatal(err)
 	}
 	store, err := core.OpenStore(filepath.Join(*data, "panel.db"))
 	if err != nil {

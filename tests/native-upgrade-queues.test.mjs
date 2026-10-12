@@ -6,10 +6,10 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 
 test('native upgrade drain binds exact normal source, closed inventories and independent actual signed refusal evidence',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_native_queue_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_native_queue_release,current=c.reviewed_quiescent_stop_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24nativequeuesbehi');assert.equal(r.frozen_source_files,16861);assert.equal(r.exported_normal_source_files,1213);assert.equal(r.source_overrides,0);
- assert.equal(inputs.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,r.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1213);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1217);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const files=['cmd/executor/main.go','internal/executor/php_worker_operations_linux.go','internal/executor/program_upgrade_queues_linux.go','internal/executor/program_upgrade_queues_linux_test.go','internal/executor/program_upgrade_native_records_linux.go','internal/executor/program_upgrade_native_records_linux_test.go','packaging/upgrade-release.py','packaging/test_production_upgrade.py'];
  for(const file of files){const digest=sha(await read('panel-integration/'+file));assert.equal(inputs.files[file],digest,file);assert.equal(index.files[file],digest,file);}
  assert.equal(r.normal_build_go_and_vet_passed_both_architectures,true);assert.equal(r.normal_build_python_tests,91);assert.equal(r.normal_build_python_skips,20);assert.equal(r.normal_build_node_gates,36);

@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: 22
       - run: npm test
-      - name: Development migration guard fixtures (not a live service-upgrade proof)
-        run: python3 -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
+      - name: Root development transaction and startup binding fixtures (service runner is not native systemd acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
       - name: Ordinary upgrade gateway policy fixtures (not native traffic acceptance)
         run: python3 -m unittest discover -s panel-integration/packaging -p 'test_install_gateway_policy.py'
       - name: Production upgrade trusted-root filesystem and SQLite fixtures (service runner is not native systemd acceptance)
@@ -44,7 +44,7 @@ jobs:
       - name: Bounded history reader race regression (not capacity timing acceptance)
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHistoryParallelReadersRemainBoundedAndFailClosed$' -count=1
-      - name: Candidate maintenance gate and cancellation race regression
+      - name: Candidate maintenance gate, actual root FLOCK and nobody startup race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/upgradeguard -count=1
       - name: Read-only native upgrade inventory identity and typed JSON race regression

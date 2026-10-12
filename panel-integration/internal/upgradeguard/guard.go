@@ -12,10 +12,11 @@ import (
 )
 
 const Marker = "/opt/panel/releases/.program-upgrade.pending"
+const DevelopmentMarker = "/opt/panel/.development-upgrade.pending"
 
 // Blocked treats unreadable or malformed paths as pending, not as success.
 // It never parses credentials, follows a marker symlink or changes the file.
-func Blocked() bool { return blockedAt(Marker) }
+func Blocked() bool { return blockedAt(Marker) || blockedAt(DevelopmentMarker) }
 
 // Handler blocks all routes, including GETs that reconcile durable state,
 // except the fixed read-only health probes required by the installer.

@@ -6,14 +6,20 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 
 test('release cleanup uses exact normal source and keeps native fixtures, real preview and rejected candidates independent',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release,current=c.reviewed_native_queue_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_release_retention_release,current=c.reviewed_quiescent_stop_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24retentionbegx');assert.equal(r.frozen_source_files,16857);assert.equal(r.exported_normal_source_files,1209);assert.equal(r.source_overrides,0);
- assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1213);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1217);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const f=r.actual_linux_root_cleanup_fixtures;
  assert.equal(f.passed,true);assert.equal(f.tests,21);assert.equal(f.skips,0);assert.equal(f.actual_native_private_bind_mount_case_ran,true);assert.equal(f.actual_qa_program_gateway_and_lock_preserved,true);assert.equal(f.host_installation_pruned,false);
  for(const [file,expected] of Object.entries(f.input_sha256)){
-  const digest=sha(await read('panel-integration/packaging/'+file));assert.equal(digest,expected,file);assert.equal(inputs.files['packaging/'+file],digest,file);assert.equal(index.files['packaging/'+file],digest,file);
+  const digest=sha(await read('panel-integration/packaging/'+file));
+  // BEGX fixture inputs remain historical; the normal BEHW builder also emits
+  // the separately pinned Linux startup companion and development helper.
+  if(file==='build-release.sh')assert.equal(expected,'ede25bb13dd5892305fd820ab5b02d911a36598398b88f406d5f3673f46d4074');
+  else if(file==='install.sh')assert.equal(expected,'aa4ed60dc324406da11d57b129709e74d18edb87d0dbe3616f98fb29b0af4cec');
+  else assert.equal(digest,expected,file);
+  assert.equal(inputs.files['packaging/'+file],digest,file);assert.equal(index.files['packaging/'+file],digest,file);
  }
  assert.equal(f.proof_sha256,'2ab2b4b994487952ebcbc5b809bac34ed7f0e1d13c32996ce22c47fb97aa170c');
  assert.equal(r.normal_build_go_and_vet_passed_both_architectures,true);assert.equal(r.normal_build_python_tests,89);assert.equal(r.normal_build_python_skips,18);assert.equal(r.normal_build_node_gates,36);

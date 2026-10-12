@@ -80,6 +80,9 @@ func main() {
 		return
 	}
 	if *terminalServer != "" {
+		if err := upgradeguard.CheckStartup(); err != nil {
+			log.Fatal(err)
+		}
 		if e := executor.ServeTerminalSocket(*terminalServer, *terminalUser); e != nil {
 			log.Fatal(e)
 		}
@@ -298,6 +301,9 @@ func main() {
 			log.Fatal(err)
 		}
 		return
+	}
+	if err := upgradeguard.CheckStartup(); err != nil {
+		log.Fatal(err)
 	}
 	if err := executor.RecoverApacheWAFConfiguration(); err != nil {
 		log.Fatal(err)

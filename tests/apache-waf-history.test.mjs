@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('Apache 2.3 private transaction maintenance is exact normal signed ADI source, with a mandatory gate',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'e05d2d4f01d9600b7257b71dcebe4740c4c84c04440fc738e0c3c15c0535ec18');
- assert.equal(release.archive_sha256,'022038d5ca226e2992e7f7c30894844fd524049a78c6379ce20a1755d14effc9');
- assert.equal(Object.keys(index.files).length,1213);
+ assert.equal(release.frozen_inputs_sha256,'202f4a57cdbf8889fac52778f7d191e6b40139de36264d17a857c563d2946832');
+ assert.equal(release.archive_sha256,'89e1afb677871c939b955970dd914649dc517f8dfd0913405b2b720cfb0c6241');
+ assert.equal(Object.keys(index.files).length,1217);
  for(const file of ['internal/core/apache_waf_history.go','internal/core/apache_waf_history_test.go','internal/executor/apache_waf_history_linux.go','internal/executor/apache_waf_history_linux_test.go','web/src/apacheWafTransactions.ts','web/src/ApacheWafTransactions.vue','scripts/test-apache-waf-transactions.mjs','internal/executor/waf_transaction_linux.go','internal/executor/apache_waf_linux.go','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(index.files[file],digest,file);assert.equal(release.files[file],digest,file);
  }

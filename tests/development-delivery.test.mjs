@@ -1,16 +1,19 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
-test('normal BECJ captures actual development migration safety and all its guard fixtures, not post-release overrides',async()=>{
+test('normal BEIE strict development transaction and startup guard are exact frozen source, not prior Main delivery',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'e05d2d4f01d9600b7257b71dcebe4740c4c84c04440fc738e0c3c15c0535ec18');assert.equal(Object.keys(index.test_overrides??{}).length,0);
- for(const f of ['scripts/upgrade-running-development.sh','packaging/test_development_upgrade_safety.py','packaging/test_native_build_directories.py']){const digest=sum(await read('panel-integration/'+f));assert.equal(index.files[f],digest);assert.equal(release.files[f],digest);}
- const migration=await read('panel-integration/scripts/upgrade-running-development.sh');
- assert.equal(sum(migration),'5c8d1aef32094d3bbb689a646f7264b9f71596ba0c762eb6429234a217b4b997');
- assert(migration.includes('for queue in jobs runtime_jobs; do'));assert(migration.includes('for pending in /opt/panel/web.new /opt/panel/bin/panel.new /opt/panel/bin/panel-executor.new; do'));
- const stop=migration.indexOf('SERVICES_STOPPED=1\nsystemctl stop panel panel-executor\ncheck_queues\nsqlite3'),swap=migration.indexOf('CHANGED=1\n');assert(stop>=0&&swap>stop);
- assert.match(migration,/elif \(\(result != 0 && SERVICES_STOPPED\)\); then/);assert(migration.includes('systemctl restart panel-executor panel || true'));assert(migration.includes('failed-development-release'));assert(migration.includes('return "$result"'));
- assert(migration.includes('nginx -t'));assert(migration.includes('PRAGMA integrity_check;'));assert.doesNotMatch(migration,/rm -rf|apt-get|--no-services/);
- const fixture=await read('panel-integration/packaging/test_development_upgrade_safety.py');assert.equal((fixture.match(/^    def test_/gm)||[]).length,4);assert(fixture.includes('guard fixture, not a live production job or upgrade proof'));
+ assert.equal(release.frozen_inputs_sha256,'202f4a57cdbf8889fac52778f7d191e6b40139de36264d17a857c563d2946832');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ for(const f of ['scripts/upgrade-running-development.sh','packaging/development-upgrade.py','packaging/upgrade-release.py','packaging/test_development_upgrade_safety.py','packaging/test_native_build_directories.py','cmd/panel/main.go','cmd/executor/main.go','internal/upgradeguard/guard.go','internal/upgradeguard/startup_linux.go','internal/upgradeguard/startup_linux_test.go','internal/upgradeguard/startup_other.go']){const digest=sum(await read('panel-integration/'+f));assert.equal(index.files[f],digest,f);assert.equal(release.files[f],digest,f);}
+ const migration=await read('panel-integration/scripts/upgrade-running-development.sh'),helper=await read('panel-integration/packaging/development-upgrade.py'),production=await read('panel-integration/packaging/upgrade-release.py');
+ assert.equal(sum(migration),'b116481c2a3d4e95922884d10f4baeb5ed4a828d902231fb0202eb25a9da8695');
+ assert(migration.includes('exec /usr/bin/python3 "$RELEASE_PATH/development-upgrade.py" run "$RELEASE_PATH"'));assert(migration.indexOf('verify-release.sh')<migration.indexOf('exec /usr/bin/python3'));
+ assert.doesNotMatch(migration,/^\s*(?:source|\.)\s+/m);
+ for(const text of ["QUEUES = ('jobs', 'runtime_jobs', 'mysql_jobs', 'acme_orders')","'--check-program-upgrade-queues', timeout=10","self.authorize_startup()"])assert(production.includes(text),text);
+ for(const text of ['self.stop_timer()','self.stop_writers()','self.tree_intents.append(name)',"self.journal('switching-'+name)",'self.replaced_units[source.name] = data','self.restore_database()','candidate accepted job changes; database rollback refused','development tree changed outside transaction; rollback refused',"self.journal('rolled-back')",'self.verify_states()'])assert(helper.includes(text),text);
+ assert(helper.indexOf('self.stop_writers()')<helper.indexOf('source.backup(destination)'));assert(helper.indexOf("self.journal('database-backed-up')")<helper.indexOf("os.rename(self.base/name"));
+ for(const text of ['useradd','apt-get','rm -rf','|| true',"'restart'","add_argument('--root'"])assert(!(helper+migration).includes(text),text);
+ const fixture=await read('panel-integration/packaging/test_development_upgrade_safety.py');assert.equal((fixture.match(/^    def test_/gm)||[]).length,17);assert(fixture.includes('not native systemd proof'));assert(fixture.includes('test_failure_between_bin_renames_recovers_original_tree_without_overwrite'));assert(fixture.includes('test_each_start_is_bound_to_live_owner_lease_and_exact_selected_program_bytes'));assert(fixture.includes('test_shared_failed_writer_with_control_process_does_not_reset_or_restore_any_tree'));
+ const panel=await read('panel-integration/cmd/panel/main.go');assert(panel.indexOf('upgradeguard.CheckStartup()')<panel.indexOf('core.OpenStore('));assert(panel.indexOf('upgradeguard.CheckStartup()')<panel.indexOf('store.Recover()'));
 });
 test('scoped Main delivery and active PM2 graceful cold boot remain separate from incomplete all50 commercial acceptance',async()=>{
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.previous_main_delivery;assert.equal(c.commercial_feature_parity_complete,false);assert.equal(r.all_50_commercial,false);
