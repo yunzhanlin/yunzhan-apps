@@ -14,6 +14,14 @@ while (($#)); do case "$1" in --root) TARGET_ROOT="${2:?}";shift 2;;--no-service
 source "$HERE/RELEASE"
 [[ "$(id -u)" == 0 ]] || { echo 'installer must run as root' >&2; exit 1; }
 [[ -d "$TARGET_ROOT" && ! -L "$TARGET_ROOT" ]] || { echo 'target root must be an existing ordinary directory' >&2; exit 1; }
+# Service commands and NSS operations target the running host, never a staging
+# tree. An alternate root must explicitly select the no-services workflow.
+if [[ "$TARGET_ROOT" != / ]] && ((NO_SERVICES==0)); then
+  echo 'alternate roots require --no-services; no running-host changes made' >&2; exit 1
+fi
+if [[ "$TARGET_ROOT" == / ]] && ((NO_SERVICES)); then
+  echo '--no-services requires an isolated alternate root; refusing a live-host pointer or database swap' >&2; exit 1
+fi
 if [[ "$TARGET_ROOT" == / ]]; then
   [[ -f /etc/os-release ]] || { echo 'os-release missing' >&2; exit 1; }
   source /etc/os-release
@@ -55,6 +63,9 @@ if ((NO_SERVICES==0))&&((FRESH))&&[[ "$TARGET_ROOT" == / ]];then
   for port in 80 443 19100 19101 19102 19443;do
     ss -H -ltn "sport = :$port" | grep -q . && { echo "port $port is already occupied" >&2;exit 1; } || true
   done
+fi
+if ((FRESH==0 && NO_SERVICES==0));then
+  python3 "$HERE/upgrade-release.py" check "$HERE"
 fi
 # Updating the panel is not authorization to upgrade host libraries. In
 # particular, needrestart may restart live PHP workers after an APT library
@@ -104,6 +115,11 @@ if ((NO_SERVICES==0)); then
   if ((FRESH==0)); then check_upgrade_dependencies "${REQUIRED_PACKAGES[@]}"; fi
 fi
 if ((PREFLIGHT_ONLY));then echo "panel $PANEL_VERSION preflight passed without changes";exit 0;fi
+if ((FRESH==0 && NO_SERVICES==0));then
+  # Every ordinary upgrade has one transaction owner. The fresh provisioning
+  # path below must not mutate NSS, ingress, firewall or service enablement.
+  exec python3 "$HERE/upgrade-release.py" run "$HERE"
+fi
 if ((NO_SERVICES==0)); then
   if ((FRESH)); then
     export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
@@ -173,7 +189,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done

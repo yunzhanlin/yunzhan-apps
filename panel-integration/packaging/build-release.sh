@@ -97,7 +97,7 @@ done
 cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$BUILD_ROOT/dev/"*.mount "$STAGE/$NAME/systemd/"
 rm -f "$STAGE/$NAME/systemd/panel-pebble"*
 cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
-cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$STAGE/$NAME/"
+cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$STAGE/$NAME/"
 chmod 0755 "$STAGE/$NAME/install.sh" "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME/prune-releases.sh" "$STAGE/$NAME/bin/"*
 cat > "$STAGE/$NAME/RELEASE" <<EOF
 PANEL_FORMAT=1
@@ -111,7 +111,7 @@ EOF
   # Escaped systemd mount names contain literal backslashes. Ordinary xargs
   # interprets those characters and can hash a different nonexistent path.
   # Keep the complete filename NUL-delimited through sorting and hashing.
-  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
 )
 python3 "$BUILD_ROOT/packaging/release-file-modes.py" normalize "$STAGE/$NAME"
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"

@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
 test('load-balance1.8.5 health, traffic and source handlers match exact normal BEFA source',async()=>{
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),r=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(r.frozen_inputs_sha256,'aa555c256b44b62167c3914518602c619e01b69c7c614a70058156fff0d377a3');assert.equal(r.archive_sha256,'9b0cdcf80a1431e735e240fda3ea8a728c067dd2e45d414f511d56310338975b');
- assert.equal(Object.keys(i.files).length,1203);assert.equal(Object.keys(i.test_overrides??{}).length,0);
+ assert.equal(r.frozen_inputs_sha256,'3e4ca267ccd739c1f377f9bafe1bd4fa22565dfb9432d0a430bad03fbc7d8307');assert.equal(r.archive_sha256,'68aebc9d4a80b836d77c8ab03b0e0a06ab3ce1b4e3ed83566bd6495789c99f8c');
+ assert.equal(Object.keys(i.files).length,1207);assert.equal(Object.keys(i.test_overrides??{}).length,0);
  for(const f of ['internal/core/outbound_load_balance.go','internal/core/outbound_load_balance_test.go','internal/core/outbound_load_balance_traffic.go','internal/core/outbound_load_balance_traffic_test.go','internal/core/outbound_notifications.go','internal/core/outbound_worker.go','internal/core/outbound_smtp.go','internal/executor/app_load_balance_alert_linux.go','internal/executor/app_load_balance_alert_linux_test.go','internal/executor/app_load_balance_traffic_alert_linux.go','internal/executor/app_load_balance_traffic_alert_linux_test.go','internal/executor/app_notification_events_linux.go','web/src/OutboundNotifications.vue','web/src/AppModuleManager.vue','scripts/test-load-balance-alerts.mjs','packaging/build-release.sh']){
   const hash=sum(await read('panel-integration/'+f));assert.equal(i.files[f],hash,f);assert.equal(r.files[f],hash,f);
  }

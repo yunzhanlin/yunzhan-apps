@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
 test('normal BECJ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'aa555c256b44b62167c3914518602c619e01b69c7c614a70058156fff0d377a3');
- assert.equal(release.archive_sha256,'9b0cdcf80a1431e735e240fda3ea8a728c067dd2e45d414f511d56310338975b');
- assert.equal(Object.keys(index.files).length,1203);
+ assert.equal(release.frozen_inputs_sha256,'3e4ca267ccd739c1f377f9bafe1bd4fa22565dfb9432d0a430bad03fbc7d8307');
+ assert.equal(release.archive_sha256,'68aebc9d4a80b836d77c8ab03b0e0a06ab3ce1b4e3ed83566bd6495789c99f8c');
+ assert.equal(Object.keys(index.files).length,1207);
  for(const file of ['internal/appcatalog/catalog.go','internal/appcatalog/github_catalog.go','internal/appcatalog/github_catalog_test.go','internal/appcatalog/github_catalog_rate.go','internal/appcatalog/github_catalog_rate_test.go','scripts/test-registry-freshness.mjs','web/src/registryFreshness.ts','web/src/App.vue','packaging/build-release.sh']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);
  }
