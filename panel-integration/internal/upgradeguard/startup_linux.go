@@ -192,6 +192,34 @@ func ownsStartupLock(raw []byte, record startupRecord) bool {
 	return matches == 1
 }
 
+// /proc/locks is a seq_file, not an atomic snapshot across read calls.
+// locks_start/locks_stop serialize only an individual kernel buffer fill;
+// unrelated lock churn can move the iterator between fills, omitting or
+// repeating our otherwise continuously held lock. Never accept duplicates or
+// absence: reopen for a bounded fresh enumeration and require one exact lease.
+// Owner boot/PID/start time and locked inode checks are still mandatory, and
+// startupVerifyAt repeats ownerLive after executable/marker verification.
+// See Linux fs/locks.c locks_start/locks_stop and fs/seq_file.c seq_read_iter.
+func startupLeaseSnapshot(record startupRecord, read func() ([]byte, error), now func() time.Time) error {
+	deadline := now().Add(100 * time.Millisecond)
+	for attempt := 0; attempt < 8; attempt++ {
+		if !now().Before(deadline) {
+			break
+		}
+		raw, err := read()
+		if err != nil {
+			return err
+		}
+		if len(raw) > 4*1024*1024 || !now().Before(deadline) {
+			return errors.New("startup lease enumeration exceeds budget")
+		}
+		if ownsStartupLock(raw, record) {
+			return nil
+		}
+	}
+	return errors.New("root installer no longer holds its exclusive startup lease")
+}
+
 func ownerLive(record startupRecord, lock string) error {
 	if err := trustedStartupParents(lock); err != nil {
 		return err
@@ -227,11 +255,9 @@ func ownerLive(record startupRecord, lock string) error {
 	if err != nil || ticks != record.StartTicks {
 		return errors.New("startup owner exited or PID was reused")
 	}
-	locks, err := procRead("/proc/locks", 4*1024*1024)
-	if err != nil || !ownsStartupLock(locks, record) {
-		return errors.New("root installer no longer holds its exclusive startup lease")
-	}
-	return nil
+	return startupLeaseSnapshot(record, func() ([]byte, error) {
+		return procRead("/proc/locks", 4*1024*1024)
+	}, time.Now)
 }
 
 func runningProgramSHA() (string, error) {

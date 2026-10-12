@@ -1,10 +1,13 @@
 """Immutable interlock filesystem fixtures, not native systemd/boot proof."""
 import importlib.util
+import hashlib
+import json
 import os
 import pathlib
 import stat
 import sys
 import unittest
+from unittest import mock
 
 HERE = pathlib.Path(__file__).parent
 SPEC = importlib.util.spec_from_file_location('own_start_guard', HERE/'start-guard-install.py')
@@ -35,6 +38,73 @@ class StartupInterlockPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0, 'actual root Linux ordinary ownership fixture required')
 class StartupInterlockFilesystemTests(unittest.TestCase):
+    def legacy(self, transaction, root):
+        """Synthetic bytes only; real v1 hash/architecture tested natively."""
+        path = root/guard.LEGACY.lstrip('/')
+        path.parent.mkdir(mode=0o755)
+        data = b'synthetic scope-owned old guard; no native proof'
+        path.write_bytes(data);path.chmod(0o755)
+        for unit in guard.SERVICES:
+            target = root/'etc/systemd/system'/(unit+'.d')/guard.DROPIN
+            target.parent.mkdir(mode=0o755)
+            target.write_bytes(guard.dropin(unit).replace(guard.GUARD.encode(),guard.LEGACY.encode()));target.chmod(0o644)
+        return path, data
+
+    def test_reviewed_legacy_transition_keeps_binary_and_records_scope_before_first_mutation(self):
+        with support.UpgradeTransactionTests().fixture() as (transaction, runner, root):
+            legacy, data = self.legacy(transaction, root)
+            before = (legacy.stat().st_ino, legacy.read_bytes())
+            transaction.backup = root/'var/backups/panel/system/own-transition'
+            transaction.backup.mkdir(mode=0o700)
+            original = transaction.atomic
+            def atomic(target, value, mode, *args):
+                proof = transaction.backup/'startup-guard-v2-transition.json'
+                if target != proof:
+                    record = json.loads(proof.read_bytes())
+                    self.assertTrue(record['legacy_retained']);self.assertEqual(len(record['files']),6)
+                    self.assertEqual(record['legacy_sha256'],hashlib.sha256(data).hexdigest())
+                    self.assertEqual(stat.S_IMODE(proof.stat().st_mode),0o600)
+                return original(target,value,mode,*args)
+            transaction.atomic = atomic
+            with mock.patch.dict(guard.LEGACY_SHA, {'arm64':hashlib.sha256(data).hexdigest()}):
+                guard.install(transaction)
+                identities={str(p):p.stat().st_ino for p,_,_ in guard.inventory(transaction)}
+                guard.install(transaction)
+                self.assertEqual(identities,{str(p):p.stat().st_ino for p,_,_ in guard.inventory(transaction)})
+            self.assertEqual((legacy.stat().st_ino,legacy.read_bytes()),before)
+            self.assertTrue((root/guard.GUARD.lstrip('/')).is_file())
+            self.assertFalse(any(call[0]=='/usr/bin/systemctl' and call[1] in ('start','stop','restart','enable') for call in runner.calls))
+
+    def test_unknown_legacy_or_missing_private_authority_never_writes_v2(self):
+        for reviewed in (False,True):
+            with self.subTest(reviewed=reviewed),support.UpgradeTransactionTests().fixture() as (transaction,runner,root):
+                legacy,data=self.legacy(transaction,root)
+                before={str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)}
+                with mock.patch.dict(guard.LEGACY_SHA, {'arm64':hashlib.sha256(data).hexdigest()} if reviewed else {}):
+                    with self.assertRaises(ValueError):guard.install(transaction)
+                self.assertFalse((root/guard.GUARD.lstrip('/')).exists())
+                self.assertEqual(before,{str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)})
+
+    def test_legacy_drift_and_transition_evidence_write_failure_do_not_replace_any_condition(self):
+        for fault in ('proof','identity'):
+            with self.subTest(fault=fault),support.UpgradeTransactionTests().fixture() as (transaction,runner,root):
+                legacy,data=self.legacy(transaction,root)
+                transaction.backup=root/'var/backups/panel/system/own-transition';transaction.backup.mkdir(mode=0o700)
+                originals={str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)}
+                atomic=transaction.atomic
+                def changed(target,value,mode,*args):
+                    if target.name=='startup-guard-v2-transition.json':
+                        if fault=='proof':raise OSError('own retained evidence fixture failure')
+                        result=atomic(target,value,mode,*args)
+                        replacement=legacy.with_name('own-legacy-replacement');replacement.write_bytes(data);replacement.chmod(0o755);os.replace(replacement,legacy)
+                        return result
+                    return atomic(target,value,mode,*args)
+                transaction.atomic=changed
+                with mock.patch.dict(guard.LEGACY_SHA, {'arm64':hashlib.sha256(data).hexdigest()}):
+                    with self.assertRaises((ValueError,OSError)):guard.install(transaction)
+                self.assertFalse((root/guard.GUARD.lstrip('/')).exists())
+                self.assertEqual(originals,{str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)})
+
     def test_install_is_idempotent_private_umask_independent_and_retains_inode_bytes(self):
         with support.UpgradeTransactionTests().fixture() as (transaction, runner, root):
             original = os.umask(0o077)

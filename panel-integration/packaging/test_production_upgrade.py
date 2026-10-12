@@ -348,7 +348,7 @@ class UpgradeTransactionTests(unittest.TestCase):
             self.assertEqual(os.readlink(root/'opt/panel/current'),previous)
             self.assertEqual((root/'etc/panel-release').read_bytes(),marker)
             self.assertEqual({path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if path.is_file() and not path.name.startswith('.program-upgrade-')},units)
-            self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v1').is_file())
+            self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v2').is_file())
             self.assertEqual(runner.states,states)
             with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
                 self.assertEqual(db.execute('SELECT value FROM configuration').fetchone(),('original',))

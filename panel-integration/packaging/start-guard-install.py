@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Install the fixed v1 service interlock; never start, enable or stop services.
+"""Install the fixed v2 service interlock; never start, enable or stop services.
 
-The v1 binary and drop-ins are immutable once installed. A future incompatible
-interlock needs a separately reviewed v2 transition, not an implicit overwrite.
-Existing foreign files, links or writable parents are always a refusal.
+The v1 binary is retained byte-for-byte. Only the two reviewed normal v1
+program digests can authorize a recorded transition of the fixed conditions.
+The v2 binary is immutable. Foreign files, links or writable parents refuse.
 """
 import argparse
+import hashlib
 import importlib.util
+import json
 import os
 import pathlib
 
@@ -14,7 +16,12 @@ SPEC = importlib.util.spec_from_file_location('panel_guard_upgrade', pathlib.Pat
 production = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(production)
 
-GUARD = '/usr/lib/panel-program-upgrade/start-guard-v1'
+GUARD = '/usr/lib/panel-program-upgrade/start-guard-v2'
+LEGACY = '/usr/lib/panel-program-upgrade/start-guard-v1'
+LEGACY_SHA = {
+    'amd64':'31a497fdd653b13b1c3ab254e914a71f3a73f24313fa5aad2abfea14dcb13f9f',
+    'arm64':'26daa8f5c8360000ab5471ccde5b5eec35c06439fdd777d12c75331bb283c61e',
+}
 SERVICES = production.PROGRAMS+('panel-mysql-overwrite-recovery.service',)
 DROPIN = '00-panel-program-start-guard.conf'
 
@@ -31,6 +38,15 @@ def inventory(transaction):
     transaction.parents(transaction.release)
     transaction.directory(transaction.release)
     binary = transaction.file(transaction.release/'bin/panel-start-guard', mode=0o755, limit=16*1024*1024)[0]
+    legacy = transaction.path(LEGACY)
+    legacy_verified = False
+    if transaction.exists(legacy):
+        transaction.parents(legacy)
+        data, _ = transaction.file(legacy, mode=0o755, limit=16*1024*1024)
+        arch = transaction.run_command('/usr/bin/dpkg', '--print-architecture')
+        if arch not in LEGACY_SHA or hashlib.sha256(data).hexdigest() != LEGACY_SHA[arch]:
+            raise ValueError('unreviewed immutable v1 guard; transition refused')
+        legacy_verified = True
     targets = [(transaction.path(GUARD), binary, 0o755)]
     for unit in SERVICES:
         targets.append((transaction.path('/etc/systemd/system')/(unit+'.d')/DROPIN, dropin(unit), 0o644))
@@ -43,14 +59,50 @@ def inventory(transaction):
                     transaction.directory(parent)
                 elif parent not in (transaction.path('/usr/lib/panel-program-upgrade'), target.parent):
                     raise ValueError('startup guard prerequisite parent is absent')
-        if transaction.exists(target) and transaction.file(target, mode=mode, limit=16*1024*1024)[0] != data:
-            raise ValueError('existing startup interlock differs; immutable v1 cannot overwrite it')
+        if transaction.exists(target):
+            actual = transaction.file(target, mode=mode, limit=16*1024*1024)[0]
+            legacy_condition = data.replace(GUARD.encode(), LEGACY.encode())
+            if actual != data and not (mode == 0o644 and legacy_verified and actual == legacy_condition):
+                raise ValueError('existing startup interlock differs; immutable v2 cannot overwrite it')
     return targets
 
 
 def install(transaction):
     targets = inventory(transaction)  # Whole-scope validation before writes.
+    originals = {}
+    transitioning = False
+    identity = lambda info:(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    legacy = transaction.path(LEGACY)
+    legacy_snapshot = transaction.file(legacy, mode=0o755, limit=16*1024*1024) if transaction.exists(legacy) else None
+    if legacy_snapshot is not None:
+        arch = transaction.run_command('/usr/bin/dpkg', '--print-architecture')
+        if arch not in LEGACY_SHA or hashlib.sha256(legacy_snapshot[0]).hexdigest() != LEGACY_SHA[arch]:
+            raise ValueError('legacy guard changed after scope validation')
     for target, data, mode in targets:
+        original = transaction.file(target, mode=mode, limit=16*1024*1024) if transaction.exists(target) else None
+        originals[str(target)] = original
+        transitioning = transitioning or (original is not None and original[0] != data)
+    if transitioning:
+        # Do not mutate legacy conditions without retained private authority.
+        # Whole-scope proof is durable before the new binary or any condition.
+        if transaction.backup is None:
+            raise ValueError('v1 transition requires a private upgrade transaction backup')
+        transaction.parents(transaction.backup)
+        transaction.directory(transaction.backup, private=True)
+        proof = transaction.backup/'startup-guard-v2-transition.json'
+        if transaction.exists(proof):
+            raise ValueError('retained v2 transition evidence must not be overwritten')
+        legacy_data, legacy_info = transaction.file(transaction.path(LEGACY), mode=0o755, limit=16*1024*1024)
+        record = {'format':1,'legacy_retained':True,'legacy_sha256':hashlib.sha256(legacy_data).hexdigest(),'legacy_identity':identity(legacy_info),'files':[]}
+        for target, data, mode in targets:
+            original = originals[str(target)]
+            record['files'].append({'path':str(target),'candidate_sha256':hashlib.sha256(data).hexdigest(),'candidate_mode':mode,'previous_sha256':hashlib.sha256(original[0]).hexdigest() if original is not None else None,'previous_identity':identity(original[1]) if original is not None else None})
+        transaction.atomic(proof, (json.dumps(record,sort_keys=True)+'\n').encode(), 0o600)
+    for target, data, mode in targets:
+        if legacy_snapshot is not None:
+            actual_legacy = transaction.file(legacy, mode=0o755, limit=16*1024*1024)
+            if actual_legacy[0] != legacy_snapshot[0] or identity(actual_legacy[1]) != identity(legacy_snapshot[1]):
+                raise ValueError('immutable legacy guard changed during transition')
         if not transaction.exists(target.parent):
             target.parent.mkdir(mode=0o755)
             descriptor = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
@@ -61,9 +113,11 @@ def install(transaction):
                 os.close(descriptor)
             transaction.sync_directory(target.parent.parent)
         transaction.parents(target)
-        if transaction.exists(target):
-            if transaction.file(target, mode=mode, limit=16*1024*1024)[0] != data:
-                raise ValueError('startup interlock changed during installation')
+        original = originals[str(target)]
+        actual = transaction.file(target, mode=mode, limit=16*1024*1024) if transaction.exists(target) else None
+        if (actual is None) != (original is None) or (actual is not None and (actual[0] != original[0] or identity(actual[1]) != identity(original[1]))):
+            raise ValueError('startup interlock changed during installation')
+        if actual is not None and actual[0] == data:
             continue
         transaction.atomic(target, data, mode)
     transaction.run_command('/usr/bin/systemctl', 'daemon-reload')
