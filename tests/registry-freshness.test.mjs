@@ -21,7 +21,7 @@ test('normal BECJ signed frozen source includes pinned catalog reads, poll-safe 
  assert.match(code,/c\.githubRefMu\.Lock\(\)/);assert.match(code,/fmt\.Errorf\("无法定位官方仓库当前提交: %w", err\)/);
  const retryTests=await read('panel-integration/internal/appcatalog/github_catalog_rate_test.go');for(const name of ['RetryHeadersBounded','RateCacheNeverClaimsFreshOrTouchesNetworkBeforeRetry','SecondaryBackoffIncreasesAndSuccessfulLookupResets','ConcurrentQuotaDoesNotBurstOrReadMutableMain','RetryDoesNotInventMetadataForCustomSource'])assert(retryTests.includes('TestGitHubCatalog'+name));
  assert.match(view,/到期后仍须重新检查/);assert(gate.includes('server retry deadlines stay failure evidence'));
- const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24trafficbedeu');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
+ const contracts=JSON.parse(await read('registry/functional-contracts.json'));assert.equal(contracts.commercial_feature_parity_complete,false);assert.equal(contracts.catalog_delivery.reviewed_panel_release,'0.1.0-dev.proapps24inventorybefm');assert(contracts.catalog_delivery.retry_boundaries.some(s=>s.includes('进程内')));
  const lb=contracts.apps.find(a=>a.id==='load-balance');assert(lb.boundaries.some(s=>s.includes('下载事件超时')));assert(lb.scenarios.some(s=>s.includes('1.8.0 到 1.8.1')&&s.includes('2 份归档')));
  const registry=JSON.parse(await read('registry/apps.json'));assert.equal(registry.apps.length,50);assert.equal(registry.apps.find(a=>a.id==='load-balance').version,'1.8.5');
 });
