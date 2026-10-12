@@ -23,6 +23,8 @@ jobs:
         run: python3 -m unittest discover -s panel-integration/packaging -p 'test_install_gateway_policy.py'
       - name: Production upgrade trusted-root filesystem and SQLite fixtures (service runner is not native systemd acceptance)
         run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_production_upgrade.py'
+      - name: Rollback-referenced cleanup fixtures and own bind mount (never prunes an installation)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_prune_releases.py'
       - name: Read-only WAF rotation and inventory UI regression
         run: node --experimental-strip-types --test panel-integration/scripts/test-waf-rotation-refresh.mjs panel-integration/scripts/test-waf-body-inventory.mjs
       - name: Locked frontend dependencies for actual notification editor regression

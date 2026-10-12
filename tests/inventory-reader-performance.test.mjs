@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('complete private inventory optimization retains exact limits, byte identity, bounded readers and original CI failure evidence',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),inputs=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(inputs.archive_sha256,'68aebc9d4a80b836d77c8ab03b0e0a06ab3ce1b4e3ed83566bd6495789c99f8c');assert.equal(inputs.frozen_inputs_sha256,'3e4ca267ccd739c1f377f9bafe1bd4fa22565dfb9432d0a430bad03fbc7d8307');assert.equal(Object.keys(index.files).length,1207);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.archive_sha256,'11d90dae350ed9b2dbc912e11cd2a3189fccb96e8f7af9f85f5436086d9df5ea');assert.equal(inputs.frozen_inputs_sha256,'318f424f3e7902afc3669045b5d802cf4a234b80d22f7daba4604310a2dacfc7');assert.equal(Object.keys(index.files).length,1209);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const file of ['internal/executor/app_load_balance_linux.go','internal/executor/app_load_balance_history_linux.go','internal/executor/app_load_balance_history_read_linux_test.go','internal/executor/app_load_balance_traffic_alert_linux_test.go']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(inputs.files[file],sha);assert.equal(index.files[file],sha);
  }
