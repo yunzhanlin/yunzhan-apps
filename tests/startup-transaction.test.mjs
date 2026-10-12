@@ -5,16 +5,16 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('normal startup authorization binds real root FLOCK and signed native proofs without claiming durable or Main delivery',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_quiescent_stop_release,history=c.reviewed_startup_release,current=c.reviewed_canonical_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_quiescent_stop_release,history=c.reviewed_startup_release,current=c.reviewed_lease_release;
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  assert.equal(r.release,'0.1.0-dev.proapps24quiescencebeie');assert.equal(r.frozen_source_files,16865);assert.equal(r.exported_normal_source_files,1217);assert.equal(r.exported_build_input_files,1176);assert.equal(r.source_overrides,0);
- assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1223);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1224);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const pins={
   'packaging/development-upgrade.py':'b749caf71c335907ce252c4e28fca6bcfb7ffcbd7ca5b1776de33320a3488baa',
   'packaging/upgrade-release.py':'c0ee72addbc12b362951ef86a8f65e31a19e7ee4994801749e53f0b57095fc81',
   'packaging/build-release.sh':'01b86faac5dd718127d14a75c700e17dbdee2cb52ffce954a83f768919fa4880',
   'packaging/install.sh':'37c38f83c98e1bb2cbac9c2dfaa500a5f7e99c54127a6171bdfe5152877ddf15',
-  'internal/upgradeguard/startup_linux.go':'2e3d52e621506d308d7f854895c677e2b3fbe62a8e0dec7e87e4238bf170c968',
+  'internal/upgradeguard/startup_linux.go':'ffcbb22bfe3d9a0a7bbd4bf7a0a856cbc088fe64f685808228f800b87a82d689',
   'internal/upgradeguard/startup_linux_test.go':'fbe4cb20be4059f64e0027ce74017565882536d35d960456096fc7d712d65272',
   'internal/upgradeguard/startup_other.go':'742ac68eeb76bc5c6f29477347a6d8b97375f5a034904eb3df0f713ac9215472'
  };

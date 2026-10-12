@@ -5,10 +5,10 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('canonical privileged paths and scoped diagnostics bind the normal signed candidate without dismissing the earlier CI failure',async()=>{
- const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_canonical_release,old=c.reviewed_interlock_release;
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_canonical_release,old=c.reviewed_interlock_release,current=c.reviewed_lease_release;
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),f=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(c.current_reviewed_release,'reviewed_canonical_release');assert.equal(r.release,'0.1.0-dev.proapps24canonicalbejp');assert.equal(r.frozen_inputs_sha256,f.frozen_inputs_sha256);assert.equal(r.signed_normal_release.amd64.archive,f.archive_sha256);
- assert.equal(Object.keys(i.files).length,1223);assert.equal(Object.keys(f.files).length,1182);assert.equal(Object.keys(i.test_overrides??{}).length,0);
+ assert.equal(c.current_reviewed_release,'reviewed_lease_release');assert.equal(r.release,'0.1.0-dev.proapps24canonicalbejp');assert.equal(current.frozen_inputs_sha256,f.frozen_inputs_sha256);assert.equal(current.signed_normal_release.amd64.archive,f.archive_sha256);
+ assert.equal(Object.keys(i.files).length,1224);assert.equal(Object.keys(f.files).length,1183);assert.equal(Object.keys(i.test_overrides??{}).length,0);
  for(const p of r.only_frozen_input_changes){assert.equal(sha(await read('panel-integration/'+p)),f.files[p],p);assert.equal(i.files[p],f.files[p],p);}
  const helper=await read('panel-integration/packaging/upgrade-release.py');
  for(const s of ['def scoped_path(self, path):','not path.is_absolute()',"'..' in path.parts",'self.root not in path.parents','path = self.scoped_path(path)','target = self.scoped_path(target)'])assert(helper.includes(s),s);
