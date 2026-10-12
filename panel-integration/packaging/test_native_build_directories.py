@@ -25,7 +25,7 @@ class NativeBuildPackagingTests(unittest.TestCase):
         self.assertIn('"$HERE/native-build-directories.py"', copy)
         builder = (root / "packaging/build-release.sh").read_text()
         self.assertIn('"$BUILD_ROOT/packaging/native-build-directories.py"', builder)
-        self.assertIn('waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py;', builder)
+        self.assertIn('waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py start-guard-install.py;', builder)
         development = (root / "dev/provision-app.sh").read_text()
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" check'), development.index('touch /etc/panel-development-vm'))
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" create'), development.index('systemctl stop panel.service'))

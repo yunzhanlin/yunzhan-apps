@@ -67,6 +67,9 @@ fi
 if ((FRESH==0 && NO_SERVICES==0));then
   python3 "$HERE/upgrade-release.py" check "$HERE"
 fi
+if ((FRESH && NO_SERVICES==0));then
+  python3 "$HERE/start-guard-install.py" check "$HERE"
+fi
 # Updating the panel is not authorization to upgrade host libraries. In
 # particular, needrestart may restart live PHP workers after an APT library
 # update. Check the existing dependency set before any upgrade-side writes,
@@ -189,7 +192,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$HERE/start-guard-install.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done
@@ -220,6 +223,7 @@ for unit in "$HERE/systemd/"*.service "$HERE/systemd/"*.timer "$HERE/systemd/"*.
   sed 's#/opt/panel/bin/#/opt/panel/current/bin/#g;s#/opt/panel/web#/opt/panel/current/web#g;s/development //g' "$unit" > "/etc/systemd/system/$name"
 done
 if ((FRESH));then
+  python3 "$HERE/start-guard-install.py" install "$HERE"
   install -m 0644 "$HERE/config/nginx.conf" /etc/nginx/nginx.conf
   if [[ "$PANEL_PLATFORM" == ubuntu-22.04 ]]; then
     # Jammy's supported distribution Nginx is 1.18, predating

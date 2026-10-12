@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('normal BECJ exact source keeps a bounded slow official Apache archive and independent idle timeout',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7');
- assert.equal(release.archive_sha256,'39ed7b660eb5b59d231d6ac0f336f657a4a204154128ee6cbff937fb469e16af');
+ assert.equal(release.frozen_inputs_sha256,'b73307e7563dce81d91dfee8bac49fff134333e4ae7cafde3df7109edbdf8f55');
+ assert.equal(release.archive_sha256,'35b120093efe102c38344493092ae1c5925dc53df8abf39c6d60955f6e32942b');
  for(const file of ['internal/executor/install_linux.go','internal/executor/runtime_source_download_linux_test.go','internal/runtimecatalog/source_archive.go']){
   assert.equal(createHash('sha256').update(await read('panel-integration/'+file)).digest('hex'),release.files[file]);
  }

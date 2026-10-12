@@ -35,7 +35,7 @@ class DevelopmentUpgradePolicyTests(unittest.TestCase):
     def test_normal_payload_includes_checksum_bound_transaction(self):
         builder = (ROOT/'packaging/build-release.sh').read_text()
         self.assertIn('"$BUILD_ROOT/packaging/development-upgrade.py"', builder)
-        self.assertIn('upgrade-release.py development-upgrade.py;', builder)
+        self.assertIn('upgrade-release.py development-upgrade.py start-guard-install.py;', builder)
         self.assertIn('DevelopmentMarker = "/opt/panel/.development-upgrade.pending"', (ROOT/'internal/upgradeguard/guard.go').read_text())
 
     def test_initializers_cannot_run_before_startup_authorization(self):
@@ -91,7 +91,7 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
 
     def snapshot(self, transaction, runner, root):
         return {'trees':{name:transaction.tree(root/'opt/panel'/name) for name in ('bin','web')},
-                'units':{p.name:p.read_bytes() for p in (root/'etc/systemd/system').iterdir()},
+                'units':{p.name:p.read_bytes() for p in (root/'etc/systemd/system').iterdir() if p.is_file()},
                 'marker':(root/'opt/panel/DEVELOPMENT_RELEASE').read_bytes() if (root/'opt/panel/DEVELOPMENT_RELEASE').exists() else None,
                 'states':json.loads(json.dumps(runner.states))}
 

@@ -167,6 +167,7 @@ class DevelopmentUpgrade(production.Upgrade):
         for path, required in ((self.base, size+code_size), (self.backup_path.parent, code_size+database_info.st_size*2), (self.database.parent, database_info.st_size)):
             if shutil.disk_usage(path).free < required+32*1024*1024:
                 raise ValueError('insufficient development stage, backup or rollback space')
+        self.start_guard()
 
     def journal(self, phase):
         record = {'format':2, 'layout':'development', 'version':self.version, 'phase':phase, 'services':self.states, 'tree_intents':self.tree_intents, 'unit_intents':sorted(self.replaced_units), 'marker_intent':self.marker_changed}
@@ -227,6 +228,7 @@ class DevelopmentUpgrade(production.Upgrade):
             if self.tree(self.backup/name) != self.old_trees[name]:
                 raise ValueError('development backup differs from original code')
         self.journal('prepared')
+        self.start_guard(install=True)
         shutil.copytree(self.base/'bin', self.base/'bin.new')
         for name in ('panel', 'panel-executor'):
             shutil.copyfile(self.release/'bin'/name, self.base/'bin.new'/name)

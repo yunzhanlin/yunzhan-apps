@@ -9,6 +9,7 @@ import argparse
 import contextlib
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 import pathlib
@@ -177,6 +178,21 @@ class Upgrade:
         # after candidate readiness and before any database rollback.
         self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
 
+    def start_guard(self, install=False):
+        location = pathlib.Path(__file__).with_name('start-guard-install.py')
+        spec = importlib.util.spec_from_file_location('panel_fixed_start_guard', location)
+        guard = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(guard)
+        if install:
+            guard.install(self)
+            records = []
+            for path, data, mode in guard.inventory(self):
+                info = path.lstat()
+                records.append({'path':str(path),'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,'device':info.st_dev,'inode':info.st_ino})
+            self.atomic(self.backup/'startup-interlock.json', (json.dumps({'format':1,'retained_on_rollback':True,'files':records}, sort_keys=True)+'\n').encode(), 0o600)
+        else:
+            guard.inventory(self)
+
     def preflight(self):
         self.parents(self.release)
         self.directory(self.release)
@@ -256,6 +272,7 @@ class Upgrade:
         if self.run_command('/usr/bin/systemctl', 'show', 'panel.service', '--property=User', '--value') != 'panel':
             raise ValueError('unexpected production panel owner')
         self.run_command('/usr/sbin/nginx', '-t')
+        self.start_guard()
 
     def lock(self, path, create=False):
         self.parents(path)
@@ -459,6 +476,10 @@ class Upgrade:
                 self.atomic(self.backup/'units'/name, value[0], 0o600)
         self.atomic(self.backup/'panel-release', self.marker_bytes, 0o600)
         self.journal('prepared')
+        # Independent immutable interlock remains installed on rollback. It
+        # protects the original retained binaries before the pending marker
+        # or the first code/unit mutation exists, including cold boot.
+        self.start_guard(install=True)
         stage = self.destination.with_name(self.version+'.tmp')
         shutil.copytree(self.release, stage)
         self.run_command(str(stage/'verify-release.sh'), str(stage))

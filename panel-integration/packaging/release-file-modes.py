@@ -9,7 +9,7 @@ import os
 import pathlib
 import stat
 
-EXECUTABLES={"bin/panel","bin/panel-executor","install.sh","verify-release.sh","prune-releases.sh"}
+EXECUTABLES={"bin/panel","bin/panel-executor","bin/panel-start-guard","install.sh","verify-release.sh","prune-releases.sh"}
 
 def payload_modes(root,normalize=False):
     root=pathlib.Path(root)

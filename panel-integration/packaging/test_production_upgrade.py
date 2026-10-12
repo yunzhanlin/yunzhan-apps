@@ -27,7 +27,7 @@ class UpgradePolicyTests(unittest.TestCase):
         self.assertIn('alternate roots require --no-services', installer)
         builder = (ROOT/'packaging/build-release.sh').read_text()
         self.assertIn('"$BUILD_ROOT/packaging/upgrade-release.py"', builder)
-        self.assertIn('release-file-modes.py upgrade-release.py development-upgrade.py;', builder)
+        self.assertIn('release-file-modes.py upgrade-release.py development-upgrade.py start-guard-install.py;', builder)
         source = pathlib.Path(upgrade.__file__).read_text()
         self.assertNotIn('apt-get', source)
         self.assertNotIn('rmtree', source)
@@ -197,7 +197,7 @@ class UpgradeTransactionTests(unittest.TestCase):
     def fixture(self, gateway_active=True):
         with tempfile.TemporaryDirectory(prefix='panel-own-production-upgrade-') as temporary:
             root = pathlib.Path(temporary).resolve()
-            for name in ('opt/panel/releases','etc/systemd/system','var/backups/panel/system','var/lib/panel-executor','var/lib/panel'):
+            for name in ('opt/panel/releases','etc/systemd/system','var/backups/panel/system','var/lib/panel-executor','var/lib/panel','usr/lib'):
                 (root/name).mkdir(parents=True, exist_ok=True)
             (root/'var/backups/panel/system').chmod(0o700)
             os.chown(root/'var/lib/panel', 1001,1001)
@@ -218,6 +218,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 for name in ('panel', 'panel-executor'):
                     (program/'bin'/name).write_bytes(('owned program '+program.name+' '+name).encode())
                     (program/'bin'/name).chmod(0o755)
+            (release/'bin/panel-start-guard').write_bytes(b'owned inert interlock fixture; no native proof')
+            (release/'bin/panel-start-guard').chmod(0o755)
             (root/'opt/panel/current').symlink_to(previous)
             (root/'etc/panel-release').write_text('version=0.1.0-dev.fixture1\narch=arm64\n')
             lock = root/'opt/panel/releases/.release.lock'
@@ -317,7 +319,7 @@ class UpgradeTransactionTests(unittest.TestCase):
         with self.fixture() as (transaction,runner,root):
             previous=os.readlink(root/'opt/panel/current')
             marker=(root/'etc/panel-release').read_bytes()
-            units={path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir()}
+            units={path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if path.is_file()}
             states=json.loads(json.dumps(runner.states))
             runner.fail_start_once=True
             with self.assertRaises(RuntimeError):
@@ -325,7 +327,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             transaction.rollback()
             self.assertEqual(os.readlink(root/'opt/panel/current'),previous)
             self.assertEqual((root/'etc/panel-release').read_bytes(),marker)
-            self.assertEqual({path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if not path.name.startswith('.program-upgrade-')},units)
+            self.assertEqual({path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if path.is_file() and not path.name.startswith('.program-upgrade-')},units)
+            self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v1').is_file())
             self.assertEqual(runner.states,states)
             with sqlite3.connect(root/'var/lib/panel/panel.db') as db:
                 self.assertEqual(db.execute('SELECT value FROM configuration').fetchone(),('original',))
