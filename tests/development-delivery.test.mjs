@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import {rea
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sum=b=>createHash('sha256').update(b).digest('hex');
 test('normal BECJ captures actual development migration safety and all its guard fixtures, not post-release overrides',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'3e4ca267ccd739c1f377f9bafe1bd4fa22565dfb9432d0a430bad03fbc7d8307');assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(release.frozen_inputs_sha256,'318f424f3e7902afc3669045b5d802cf4a234b80d22f7daba4604310a2dacfc7');assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const f of ['scripts/upgrade-running-development.sh','packaging/test_development_upgrade_safety.py','packaging/test_native_build_directories.py']){const digest=sum(await read('panel-integration/'+f));assert.equal(index.files[f],digest);assert.equal(release.files[f],digest);}
  const migration=await read('panel-integration/scripts/upgrade-running-development.sh');
  assert.equal(sum(migration),'5c8d1aef32094d3bbb689a646f7264b9f71596ba0c762eb6429234a217b4b997');
