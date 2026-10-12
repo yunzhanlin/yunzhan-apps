@@ -5,8 +5,8 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('ordinary upgrade gateway policy is frozen, CI-checked and scoped actual acceptance retains original failure',async()=>{
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(inputs.frozen_inputs_sha256,'e05d2d4f01d9600b7257b71dcebe4740c4c84c04440fc738e0c3c15c0535ec18');
- assert.equal(inputs.archive_sha256,'022038d5ca226e2992e7f7c30894844fd524049a78c6379ce20a1755d14effc9');
+ assert.equal(inputs.frozen_inputs_sha256,'7bef3092d99873d11da6dd7cf9c32452f1dd900a1fb26a99c37d9952588800e7');
+ assert.equal(inputs.archive_sha256,'39ed7b660eb5b59d231d6ac0f336f657a4a204154128ee6cbff937fb469e16af');
  for(const file of ['packaging/install.sh','packaging/test_install_gateway_policy.py']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');
   assert.equal(inputs.files[file],digest);assert.equal(index.files[file],digest);

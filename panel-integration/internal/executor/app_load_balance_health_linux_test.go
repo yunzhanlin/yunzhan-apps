@@ -23,6 +23,48 @@ import (
 func lbHTTPPolicy() *core.LoadBalanceHTTPHealth {
 	return &core.LoadBalanceHTTPHealth{Path: "/ready?check=1", Interval: 30, TimeoutMS: 500, ExpectedStatus: 200, BodyContains: "READY", Failures: 2, Successes: 2}
 }
+func lbHTTPFixtureAvoidOwnPort(t *testing.T, in *core.AppModuleInput) {
+	t.Helper()
+	ports := make(map[int]bool)
+	for _, node := range in.Nodes {
+		_, port, err := loadBalanceNodeAddress(node.Address)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ports[port] = true
+	}
+	if !ports[in.Port] {
+		return
+	}
+	// The two live ephemeral backends can receive this fixture's entry port.
+	// Change only the mock entry port; real self-routing remains forbidden.
+	for port := 20000; port <= 20002; port++ {
+		if !ports[port] {
+			in.Port = port
+			return
+		}
+	}
+	t.Fatal("two-backend fixture has no distinct entry port")
+}
+func TestLoadBalanceHTTPFixtureOwnPortCollisionDoesNotRelaxSelfRouting(t *testing.T) {
+	for _, nodes := range [][]core.AppUpstream{
+		{{Address: "127.0.0.1:42791", Weight: 1}, {Address: "127.0.0.1:42792", Weight: 1}},
+		{{Address: "127.0.0.1:20000", Weight: 1}, {Address: "127.0.0.1:42791", Weight: 1}},
+		{{Address: "[::1]:42791", Weight: 1}, {Address: "[::1]:20001", Weight: 1}},
+	} {
+		in := lbFixtureInput()
+		in.Nodes = nodes
+		entry := loadBalanceEntry{Format: 1, Revision: 1, Domain: in.Domain, Port: in.Port, Nodes: nodes}
+		if validateLoadBalanceEntry(entry) == nil {
+			t.Fatal("actual self-routing guard accepted colliding entry")
+		}
+		lbHTTPFixtureAvoidOwnPort(t, &in)
+		entry.Port = in.Port
+		if err := validateLoadBalanceEntry(entry); err != nil {
+			t.Fatal("corrected fixture did not meet unchanged production guard", err)
+		}
+	}
+}
 func lbHTTPFixture(t *testing.T, handler http.HandlerFunc) (*Service, core.AppModuleInput) {
 	t.Helper()
 	first := httptest.NewServer(handler)
@@ -36,6 +78,7 @@ func lbHTTPFixture(t *testing.T, handler http.HandlerFunc) (*Service, core.AppMo
 	in := lbFixtureInput()
 	in.HealthCheck = lbHTTPPolicy()
 	in.Nodes = []core.AppUpstream{{Address: strings.TrimPrefix(first.URL, "http://"), Weight: 1}, {Address: strings.TrimPrefix(second.URL, "http://"), Weight: 3}}
+	lbHTTPFixtureAvoidOwnPort(t, &in)
 	lbSave(t, s, in)
 	in.ExpectedRevision = 1
 	return s, in

@@ -13,6 +13,7 @@ for suffix in '' .sha256 .manifest .sig; do
   [[ ! -e "$OUT/$NAME.tar.gz$suffix" ]] || { echo 'release already exists; choose a new version' >&2; exit 1; }
 done
 [[ ! -e "$OUT/$NAME.executor-tests" && ! -e "$OUT/$NAME.executor-tests.sha256" ]] || { echo 'release test artifact already exists; choose a new version' >&2; exit 1; }
+[[ ! -e "$OUT/$NAME.upgradeguard-tests" && ! -e "$OUT/$NAME.upgradeguard-tests.sha256" ]] || { echo 'release startup test artifact already exists; choose a new version' >&2; exit 1; }
 LOCK="$OUT/.build-$NAME.lock"
 mkdir "$LOCK" 2>/dev/null || { echo 'this release is already building; do not replace its stage' >&2; exit 1; }
 STAGE=''
@@ -84,6 +85,7 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-deferred-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-web-entry-budget.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/executor-tests" ./internal/executor)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/upgradeguard-tests" ./internal/upgradeguard)
 printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build >/dev/null)
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/web-entry-budget.mjs "$BUILD_ROOT/web/dist") 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
@@ -97,7 +99,7 @@ done
 cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$BUILD_ROOT/dev/"*.mount "$STAGE/$NAME/systemd/"
 rm -f "$STAGE/$NAME/systemd/panel-pebble"*
 cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
-cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/prune-releases.py" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$STAGE/$NAME/"
+cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/prune-releases.py" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$BUILD_ROOT/packaging/development-upgrade.py" "$STAGE/$NAME/"
 chmod 0755 "$STAGE/$NAME/install.sh" "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME/prune-releases.sh" "$STAGE/$NAME/bin/"*
 cat > "$STAGE/$NAME/RELEASE" <<EOF
 PANEL_FORMAT=1
@@ -111,7 +113,7 @@ EOF
   # Escaped systemd mount names contain literal backslashes. Ordinary xargs
   # interprets those characters and can hash a different nonexistent path.
   # Keep the complete filename NUL-delimited through sorting and hashing.
-  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh prune-releases.py first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh prune-releases.py first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
 )
 python3 "$BUILD_ROOT/packaging/release-file-modes.py" normalize "$STAGE/$NAME"
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"
@@ -123,4 +125,7 @@ ln "$STAGE/archive.sha256" "$OUT/$NAME.tar.gz.sha256"
 ln "$STAGE/executor-tests" "$OUT/$NAME.executor-tests"
 printf '%s  %s\n' "$(shasum -a 256 "$STAGE/executor-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.executor-tests" > "$STAGE/executor-tests.sha256"
 ln "$STAGE/executor-tests.sha256" "$OUT/$NAME.executor-tests.sha256"
+ln "$STAGE/upgradeguard-tests" "$OUT/$NAME.upgradeguard-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/upgradeguard-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.upgradeguard-tests" > "$STAGE/upgradeguard-tests.sha256"
+ln "$STAGE/upgradeguard-tests.sha256" "$OUT/$NAME.upgradeguard-tests.sha256"
 echo "$OUT/$NAME.tar.gz"

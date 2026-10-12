@@ -8,6 +8,7 @@ An interrupted journal is retained for inspection, not silently retried.
 import argparse
 import contextlib
 import fcntl
+import hashlib
 import json
 import os
 import pathlib
@@ -50,6 +51,7 @@ class Upgrade:
         self.original_units = {}
         self.pending_created = False
         self.replaced_units = {}
+        self.failed_stop_snapshots = 0
 
     def path(self, value):
         return self.root/value.lstrip('/')
@@ -299,7 +301,7 @@ class Upgrade:
     def remove_pending(self):
         if not self.pending_created:
             return
-        raw, info = self.file(self.pending, mode=0o644, limit=256)
+        raw, info = self.file(self.pending, mode=0o644, limit=2048)
         if raw != self.pending_bytes or (info.st_dev, info.st_ino) != (self.pending_identity.st_dev, self.pending_identity.st_ino):
             raise ValueError('upgrade marker identity changed; preserve it for inspection')
         self.pending.unlink()
@@ -308,14 +310,106 @@ class Upgrade:
 
     def stop_writers(self):
         self.run_command('/usr/bin/systemctl', 'stop', *reversed(PROGRAMS))
+        stopped = {unit:self.stopped_program(unit) for unit in PROGRAMS}
+        self.no_program_jobs()
+        failed = [unit for unit in PROGRAMS if stopped[unit]['ActiveState'] == 'failed']
+        if failed:
+            # systemctl stop can leave a failed unit even with no remaining
+            # process or cgroup (for example a killed ExecStartPre). Never
+            # confuse that with running writers or relax ordinary preflight.
+            # Preserve failure evidence before clearing only our fixed units.
+            if self.backup is None or self.failed_stop_snapshots >= 8:
+                raise ValueError('failed stop lacks bounded private transaction evidence')
+            self.parents(self.backup)
+            self.directory(self.backup, private=True)
+            self.failed_stop_snapshots += 1
+            target = self.backup/('stopped-failed-programs-'+str(self.failed_stop_snapshots)+'.json')
+            if self.exists(target):
+                raise ValueError('retained failed stop evidence must not be replaced')
+            self.atomic(target, (json.dumps({'format':1,'services':stopped},sort_keys=True)+'\n').encode(), 0o600)
+            if any(self.stopped_program(unit) != stopped[unit] for unit in PROGRAMS):
+                raise RuntimeError('stopped writer evidence changed before failed state normalization')
+            self.no_program_jobs()
+            self.run_command('/usr/bin/systemctl', 'reset-failed', *failed)
         for unit in PROGRAMS:
-            if self.state(unit)['ActiveState'] != 'inactive':
+            if self.stopped_program(unit)['ActiveState'] != 'inactive':
                 raise RuntimeError('program writer did not stop; database must not be replaced')
+        self.no_program_jobs()
+
+    def stopped_program(self, unit):
+        if unit not in PROGRAMS:
+            raise ValueError('stopped writer check outside fixed program scope')
+        raw = self.run_command('/usr/bin/systemctl', 'show', unit, '--property=LoadState,ActiveState,SubState,UnitFileState,MainPID,ControlPID,ControlGroup,Result')
+        names = {'LoadState','ActiveState','SubState','UnitFileState','MainPID','ControlPID','ControlGroup','Result'}
+        if len(raw) > 16384:
+            raise ValueError('stopped writer evidence exceeds budget')
+        record = {}
+        for line in raw.splitlines():
+            fields = line.split('=', 1)
+            if len(fields) != 2 or fields[0] not in names or fields[0] in record:
+                raise ValueError('unknown or duplicate stopped writer property')
+            record[fields[0]] = fields[1]
+        if set(record) != names or record['LoadState'] != 'loaded' or record['UnitFileState'] not in ('enabled','disabled','static','indirect','enabled-runtime'):
+            raise ValueError('unsafe stopped writer unit identity')
+        if (record['ActiveState'],record['SubState']) not in (('inactive','dead'),('failed','failed')) or record['MainPID'] != '0' or record['ControlPID'] != '0' or record['ControlGroup'] != '':
+            raise RuntimeError('program writer has processes, cgroup or a transitional state; database must not be replaced')
+        if record['Result'] not in ('success','exit-code','signal','core-dump','timeout','watchdog','oom-kill','start-limit-hit','resources','protocol','exec-condition'):
+            raise ValueError('unsupported stopped writer result')
+        return record
+
+    def no_program_jobs(self):
+        raw = self.run_command('/usr/bin/systemctl', 'list-jobs', '--no-legend', '--no-pager')
+        lines = raw.splitlines()
+        if len(raw) > 1024*1024 or len(lines) > 4096:
+            raise ValueError('systemd job inventory exceeds complete budget')
+        for line in lines:
+            fields = line.split()
+            if len(fields) != 4 or not fields[0].isascii() or not fields[0].isdigit():
+                raise ValueError('unverifiable systemd job inventory')
+            if fields[1] in PROGRAMS+(TIMER,'panel-mysql-overwrite-recovery.service'):
+                raise RuntimeError('program or database recovery job remains scheduled')
+
+    def release_runtime(self):
+        if len(self.locks) == 2:
+            os.close(self.locks.pop())
+        elif len(self.locks) != 1:
+            raise ValueError('program start lacks exact release/runtime lease state')
 
     def start_previous_state(self):
+        self.release_runtime()
+        self.authorize_startup()
         self.run_command('/usr/bin/systemctl', 'start', *PROGRAMS)
         if self.states[TIMER]['ActiveState'] == 'active':
             self.run_command('/usr/bin/systemctl', 'start', TIMER)
+
+    def startup_program_directory(self):
+        target = pathlib.Path(os.readlink(self.current))
+        if target.parent != self.releases or not VERSION.fullmatch(target.name):
+            raise ValueError('startup program reference outside retained releases')
+        self.directory(target)
+        return target/'bin'
+
+    def authorize_startup(self):
+        if not self.pending_created or not self.locks:
+            raise ValueError('program start lacks owned transaction marker or release lease')
+        raw, info = self.file(self.pending, mode=0o644, limit=2048)
+        if raw != self.pending_bytes or (info.st_dev, info.st_ino) != (self.pending_identity.st_dev, self.pending_identity.st_ino):
+            raise ValueError('startup marker changed outside this transaction')
+        lease = os.fstat(self.locks[0])
+        if lease.st_uid != 0 or stat.S_IMODE(lease.st_mode) != 0o600 or lease.st_nlink != 1 or not stat.S_ISREG(lease.st_mode):
+            raise ValueError('startup release lease identity invalid')
+        process = pathlib.Path('/proc/self/stat').read_text()
+        suffix = process[process.rindex(') ')+2:].split()
+        ticks = int(suffix[19])
+        boot = pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+        if ticks <= 0 or not re.fullmatch(r'[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}', boot):
+            raise ValueError('startup owner boot identity unavailable')
+        programs = self.startup_program_directory()
+        digests = {name:hashlib.sha256(self.file(programs/name, mode=0o755, limit=256*1024*1024)[0]).hexdigest() for name in ('panel', 'panel-executor')}
+        record = {'format':2, 'version':self.version, 'pid':os.getpid(), 'start_ticks':ticks, 'boot_id':boot, 'lock_device':lease.st_dev, 'lock_inode':lease.st_ino, 'phase':'program-start', 'panel_sha256':digests['panel'], 'executor_sha256':digests['panel-executor']}
+        self.pending_bytes = (json.dumps(record, sort_keys=True)+'\n').encode('ascii')
+        self.atomic(self.pending, self.pending_bytes, 0o644)
+        self.pending_identity = self.pending.lstat()
 
     def switch(self, previous):
         temporary = self.current.with_name('current.new')
@@ -406,7 +500,7 @@ class Upgrade:
         self.run_command('/usr/bin/systemctl', 'daemon-reload')
         # Release the runtime lock before executor readiness requests, which
         # take shared runtime leases. Release serialization remains held.
-        os.close(self.locks.pop())
+        self.release_runtime()
         self.start_previous_state()
         for attempt in range(30):
             try:
@@ -442,9 +536,15 @@ class Upgrade:
             self.journal('refused-before-program-change')
             self.remove_pending()
             return
-        self.stop_writers()
         if self.states[TIMER]['ActiveState'] == 'active':
             self.run_command('/usr/bin/systemctl', 'stop', TIMER)
+        self.stop_writers()
+        if len(self.locks) == 1:
+            self.lock(self.path('/var/lib/panel-executor/runtime-lifecycle.lock'))
+        elif len(self.locks) != 2:
+            raise ValueError('rollback lacks exact release/runtime lease state')
+        if self.state('panel-mysql-overwrite-recovery.service')['ActiveState'] != 'inactive':
+            raise RuntimeError('database replacement recovery is active; rollback refused')
         # Never erase a newly accepted job during the candidate health window.
         # Such a transaction needs deliberate recovery, with evidence retained.
         self.queue_check()

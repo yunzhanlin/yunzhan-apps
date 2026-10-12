@@ -25,13 +25,17 @@ class NativeBuildPackagingTests(unittest.TestCase):
         self.assertIn('"$HERE/native-build-directories.py"', copy)
         builder = (root / "packaging/build-release.sh").read_text()
         self.assertIn('"$BUILD_ROOT/packaging/native-build-directories.py"', builder)
-        self.assertIn('waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py;', builder)
+        self.assertIn('waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py;', builder)
         development = (root / "dev/provision-app.sh").read_text()
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" check'), development.index('touch /etc/panel-development-vm'))
         self.assertLess(development.index('"$PANEL_NATIVE_BUILD_PREPARER" create'), development.index('systemctl stop panel.service'))
         migration = (root / "scripts/upgrade-running-development.sh").read_text()
-        self.assertLess(migration.index('python3 "$RELEASE_PATH/native-build-directories.py" check'), migration.index('BACKUP='))
-        self.assertLess(migration.index('python3 "$RELEASE_PATH/native-build-directories.py" create'), migration.index('systemctl stop panel panel-executor\ncheck_queues\nsqlite3'))
+        self.assertIn('exec /usr/bin/python3 "$RELEASE_PATH/development-upgrade.py" run "$RELEASE_PATH"', migration)
+        transaction = (root / 'packaging/development-upgrade.py').read_text()
+        self.assertIn("for helper in ('waf-state-directory.py', 'native-build-directories.py'):", transaction)
+        self.assertIn("str(self.release/helper), 'check'", transaction)
+        self.assertNotIn("str(self.release/helper), 'create'", transaction)
+        self.assertLess(transaction.index('self.preflight()\n'), transaction.index('self.backup.mkdir(mode=0o700)'))
 
     def test_non_root_cannot_initialize_any_directory(self):
         with tempfile.TemporaryDirectory(prefix="panel-native-cache-refusal-") as directory:

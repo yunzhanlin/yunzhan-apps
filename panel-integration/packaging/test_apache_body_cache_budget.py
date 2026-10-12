@@ -16,7 +16,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             base = pathlib.Path(directory)
             for name in ("bin", "web", "systemd", "config"):
                 (base / name).mkdir()
-            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py"):
+            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py", "development-upgrade.py"):
                 (base / name).write_bytes(b"owned checksum fixture\n")
             mount = base / "systemd" / r"var-cache-panel\x2dapache\x2dbody.mount"
             mount.write_bytes(b"owned exact escaped mount filename\n")
@@ -28,7 +28,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             self.assertIn("shasum -a 256 --strict -c", verifier)
             self.assertIn('"$(uname -s)" == Darwin', verifier)
             verified = subprocess.run([*checker, "SHA256SUMS"], cwd=base, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(verified.stdout.count(b": OK"), 14)
+            self.assertEqual(verified.stdout.count(b": OK"), 15)
             sums = (base / "SHA256SUMS").read_bytes()
             (base / "SHA256SUMS").write_bytes(sums + b"malformed line cannot be skipped\n")
             malformed = subprocess.run([*checker, "SHA256SUMS"], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -85,7 +85,10 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
         development = (root / "dev/provision-app.sh").read_text()
         self.assertIn('"$BUILD_ROOT/dev/"*.mount', builder)
         self.assertIn('"$HERE/systemd/"*.mount', installer)
-        self.assertEqual(migration.count('"$RELEASE_PATH/systemd/"*.mount'), 3)
+        self.assertIn('development-upgrade.py', migration)
+        transaction = (root/'packaging/development-upgrade.py').read_text()
+        self.assertIn("self.units = sorted((self.release/'systemd').iterdir())", transaction)
+        self.assertIn('production.UNIT.fullmatch(source.name)', transaction)
         self.assertIn(r"var-cache-panel\x2dapache\x2dbody.mount", development)
         self.assertIn('(("var", "cache", "panel-apache-body"), 0o755)', (root / "packaging/native-build-directories.py").read_text())
         self.assertIn('(("var", "lib", "panel-apache-body"), 0o755)', (root / "packaging/native-build-directories.py").read_text())
@@ -118,9 +121,11 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             self.assertLess(installer.index(guard), installer.index(mutation))
         self.assertLess(installer.index('"$HERE/verify-release.sh" "$HERE"'), installer.index(guard))
         migration = (root / "scripts/upgrade-running-development.sh").read_text()
-        guard = '"$RELEASE_PATH/bin/panel-executor" --check-apache-body-cache-upgrade'
-        for mutation in ('exec 9>', 'install -d -m 0700 "$BACKUP"', 'native-build-directories.py" create', 'systemctl stop panel'):
-            self.assertLess(migration.index(guard), migration.index(mutation))
+        self.assertIn('development-upgrade.py', migration)
+        transaction = (root/'packaging/development-upgrade.py').read_text()
+        self.assertIn("str(self.release/'bin/panel-executor'), '--check-apache-body-cache-upgrade'", transaction)
+        self.assertLess(transaction.index('self.preflight()\n'), transaction.index('self.backup.mkdir(mode=0o700)'))
+        self.assertLess(transaction.index('self.preflight()\n'), transaction.index('self.stop_writers()\n'))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
+test('ephemeral fixture self-port repair is sole frozen input change with no runtime override and distinct native-development evidence',async()=>{
+ const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_fixture_input_release,old=c.reviewed_quiescent_stop_release;
+ const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
+ assert.equal(r.release,'0.1.0-dev.proapps24fixturebeiw');assert.equal(r.frozen_inputs_sha256,inputs.frozen_inputs_sha256);assert.equal(r.signed_normal_release.amd64.archive,inputs.archive_sha256);
+ assert.equal(r.source_overrides,0);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.deepEqual(r.only_frozen_input_change,['internal/executor/app_load_balance_health_linux_test.go']);
+ const fixture=await read('panel-integration/internal/executor/app_load_balance_health_linux_test.go');
+ assert.equal(sha(fixture),'acfd99ca6c9743a337c0d5cba0e6069f88c8903ec54a61272f126412d9b2204b');assert.equal(r.changed_fixture_sha256,sha(fixture));assert.equal(inputs.files['internal/executor/app_load_balance_health_linux_test.go'],sha(fixture));
+ for(const text of ['lbHTTPFixtureAvoidOwnPort','ports[in.Port]','port := 20000; port <= 20002','lbHTTPFixtureAvoidOwnPort(t, &in)','TestLoadBalanceHTTPFixtureOwnPortCollisionDoesNotRelaxSelfRouting','actual self-routing guard accepted colliding entry','[::1]:42791'])assert(fixture.includes(text),text);
+ for(const arch of ['amd64','arm64'])for(const field of ['panel','executor','upgrade_helper','development_helper','prune_helper'])assert.equal(r.signed_normal_release[arch][field],old.signed_normal_release[arch][field],arch+':'+field);
+ const failed=r.retained_linux_ci_failure;assert.equal(failed.head,'8168cab5ce54d2b002a18f177f2ad51d0c1a1c4d');assert.equal(failed.conclusion,'failure');assert.equal(failed.log_sha256,'f6dd6cb9d181dba18906c71bea46a875bb86054352df2275ce9cdb5e8cba11c4');
+ const n=r.actual_normal_native_fixtures;assert.equal(n.passed,true);assert.equal(n.executor_pass,663);assert.equal(n.executor_skip,124);assert.equal(n.executor_fail,0);assert.equal(n.startup_pass,7);assert.equal(n.startup_skip,1);assert.equal(n.python_count,36);assert.equal(n.python_skips,0);assert.equal(n.installed_state_preserved,true);assert.equal(n.candidate_installed,false);assert.equal(n.normal_archive_sha256,r.signed_normal_release.arm64.archive);
+ const d=r.actual_native_development_positive;assert.equal(d.passed,true);assert.equal(d.release,old.release);assert.equal(d.source_inputs_sha256,old.frozen_inputs_sha256);assert.equal(d.actual_detached_key_verified_native_development_upgrade,true);assert.equal(d.installer_exit,0);assert.equal(d.actual_readonly_maintenance_samples,41);assert.equal(d.protected_sql_tables_compared,21);assert.equal(d.original_nginx_pid_preserved,true);assert.equal(d.original_credentials_login_verified,true);assert.equal(d.legacy_lock_inode_and_content_preserved,true);assert.equal(d.proof_sha256,'709c6afc55b8e4457ba898a01eb62c41752e11443722770f173be29efc685f2f');
+ assert.equal(r.retained_development_setup_failures.independent_readonly_audit_passed,true);assert.equal(r.native_development_layout_complete,false);assert.equal(r.durable_interrupted_journal_recovery_complete,false);assert.equal(r.main_release_delivered,false);assert.equal(r.main_auto_installed_new_apps,0);assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
+});
