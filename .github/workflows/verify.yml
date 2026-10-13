@@ -42,7 +42,13 @@ jobs:
           cache-dependency-path: panel-integration/go.sum
       - name: Native Linux implementation regression
         working-directory: panel-integration
-        run: sudo "$(command -v go)" test ./...
+        # Do not run the 384 MiB/2s source-read capacity test concurrently
+        # with other packages' CPU/I/O-heavy fixtures on a shared runner.
+        # Keep every test, original capacity and original deadline intact.
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: Unchanged maximum source-read capacity repeated in an isolated package process
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=3
       - name: Bounded history reader race regression (not capacity timing acceptance)
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHistoryParallelReadersRemainBoundedAndFailClosed$' -count=1
