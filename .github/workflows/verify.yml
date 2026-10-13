@@ -72,6 +72,9 @@ jobs:
       - name: Geography candidate authority and complete database reader race regression (not app installation acceptance)
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/geodata ./internal/appcatalog -count=1
+      - name: Same-commit repository partial-read recovery and unchanged authority boundaries
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^TestRepository' -count=1
       - name: Geography candidate root storage, epoch, bounded cache and verifier contract regression (not native systemd acceptance)
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueuesGeo)' -count=1
