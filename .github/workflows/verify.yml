@@ -57,4 +57,9 @@ jobs:
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatisticsHistory(ExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs|RetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary|RetirementAndRowsAreOneTransaction)$' -count=1
       - name: Checksum-bound panel handler requirements and strict legacy refusal race regression
         working-directory: panel-integration
-        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^Test(PanelRequirements|LegacyStrictDecoderRefusesRequiredHandlerField|NewStatisticsVersionsCannotOmitMandatoryHandlerRequirement)' -count=1
+        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^Test(PanelRequirements|LegacyStrictDecoderRefusesRequiredHandlerField|NewStatisticsVersionsCannotOmitMandatoryHandlerRequirement|StatisticsIdentityVersionRequiresBothBoundHandlersAndRejectsOldAvailability)' -count=1
+      - name: Statistics2.5 exact schema and closed lifecycle race regression (not installed native Nginx acceptance)
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatistics(SchemaExact|IdentityLifecycle|RequestReceipt|RequestIdentity|RequestProgramUpgrade|RequestSelectedInstall|Gzip|ArchiveRuntime|LogTransaction)' -count=1
+      - name: Statistics history UI and bounded report regression
+        run: node --test panel-integration/scripts/test-statistics-history.mjs

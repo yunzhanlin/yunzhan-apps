@@ -22,6 +22,7 @@ import (
 	"syscall"
 	"time"
 
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 )
 
@@ -30,11 +31,39 @@ const statisticsHistoryRows = 250000
 const statisticsHistoryStreams = 4096
 const statisticsHistoryBatchBytes int64 = 4 << 20
 const statisticsHistoryBatchRows = 10000
+const statisticsHistoryReceipts = 1000000
 
 // This is deliberately separate from panel.db: root-private, no cookies,
 // credentials, request query strings or raw user agents. FULL synchronous
 // commits put accepted rows and their source cursor in the SAME transaction.
 func (s *Service) openStatisticsHistory(ctx context.Context) (*sql.DB, error) {
+	lock, err := s.statisticsLogReadLock()
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Close()
+	// Only an installed application can advance its history schema. Merely
+	// updating panel binaries must not migrate an older application's data.
+	schema := 1
+	manifest, err := s.moduleInstalledRecord("website-statistics-v2")
+	if err == nil {
+		version, _ := manifest["version"].(string)
+		if comparison, valid := appcatalog.CompareVersions(version, "2.5.0"); valid && comparison >= 0 {
+			schema = 2
+			if _, err := s.statisticsHistorySchemaReadOnly(ctx); err != nil {
+				return nil, err
+			}
+		}
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return nil, err
+	}
+	return s.openStatisticsHistorySchema(ctx, schema)
+}
+
+func (s *Service) openStatisticsHistorySchema(ctx context.Context, schema int) (*sql.DB, error) {
+	if schema != 1 && schema != 2 {
+		return nil, errors.New("统计历史模式不支持，未修改原数据")
+	}
 	dir := s.moduleDir("website-statistics-v2")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
@@ -75,15 +104,33 @@ func (s *Service) openStatisticsHistory(ctx context.Context) (*sql.DB, error) {
 		db.Close()
 		return nil, errors.New("统计历史页大小不支持，未放宽 512 MiB 预算")
 	}
-	if err = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil || version != 0 && version != 1 {
+	if err = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&version); err != nil || version < 0 || version > schema {
 		db.Close()
 		return nil, errors.New("统计历史损坏或版本不支持，保留原文件")
 	}
-	_, err = db.ExecContext(ctx, "PRAGMA busy_timeout=1500; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA secure_delete=ON; PRAGMA max_page_count=131072; "+
-		"CREATE TABLE IF NOT EXISTS access_rows(seq INTEGER PRIMARY KEY,site TEXT NOT NULL,stamp INTEGER NOT NULL,ip TEXT NOT NULL,path TEXT NOT NULL,status INTEGER NOT NULL,seconds REAL NOT NULL,bot INTEGER NOT NULL,payload TEXT NOT NULL); "+
-		"CREATE INDEX IF NOT EXISTS access_site_time ON access_rows(site,stamp,seq); CREATE INDEX IF NOT EXISTS access_time ON access_rows(stamp); "+
-		"CREATE TABLE IF NOT EXISTS access_streams(site TEXT NOT NULL,identity TEXT NOT NULL,name TEXT NOT NULL,offset INTEGER NOT NULL,anchor TEXT NOT NULL,size INTEGER NOT NULL,seen INTEGER NOT NULL,blocked INTEGER NOT NULL DEFAULT 0,invalid INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(site,identity)); "+
-		"CREATE TABLE IF NOT EXISTS access_retention(site TEXT PRIMARY KEY,evicted INTEGER NOT NULL DEFAULT 0); PRAGMA user_version=1;")
+	_, err = db.ExecContext(ctx, "PRAGMA busy_timeout=1500; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL; PRAGMA secure_delete=ON; PRAGMA foreign_keys=ON; PRAGMA max_page_count=131072;")
+	if err != nil {
+		db.Close()
+		return nil, errors.New("统计历史无法安全设置预算，保留原数据")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	for _, statement := range statisticsSchemaStatements(schema) {
+		if _, err = tx.ExecContext(ctx, statement); err != nil {
+			break
+		}
+	}
+	if err == nil {
+		_, err = tx.ExecContext(ctx, fmt.Sprintf("PRAGMA user_version=%d", schema))
+	}
+	if err == nil {
+		err = tx.Commit()
+	} else {
+		_ = tx.Rollback()
+	}
 	if err != nil {
 		db.Close()
 		return nil, errors.New("统计历史无法安全打开，保留原数据")
@@ -111,7 +158,7 @@ func statisticsLogAnchor(f *os.File, offset int64) (string, error) {
 // arbitrary secrets in this second database.
 func statisticsPrivateRow(raw []byte, now time.Time) (analyticsAccess, int64, bool) {
 	var row analyticsAccess
-	if json.Unmarshal(raw, &row) != nil || row.Status < 100 || row.Status > 599 || row.Bytes < 0 || row.Bytes > 1<<40 || math.IsNaN(row.Seconds) || math.IsInf(row.Seconds, 0) || row.Seconds < 0 || row.Seconds > 86400 || len(row.Path) > 8192 || len(row.Agent) > 16384 || len(row.Referer) > 16384 || len(row.Method) < 1 || len(row.Method) > 32 || row.Remote != "" && net.ParseIP(row.Remote) == nil {
+	if json.Unmarshal(raw, &row) != nil || row.RequestID != "" && !statisticsRequestID(row.RequestID) || row.Status < 100 || row.Status > 599 || row.Bytes < 0 || row.Bytes > 1<<40 || math.IsNaN(row.Seconds) || math.IsInf(row.Seconds, 0) || row.Seconds < 0 || row.Seconds > 86400 || len(row.Path) > 8192 || len(row.Agent) > 16384 || len(row.Referer) > 16384 || len(row.Method) < 1 || len(row.Method) > 32 || row.Remote != "" && net.ParseIP(row.Remote) == nil {
 		return row, 0, false
 	}
 	ts, err := time.Parse(time.RFC3339, row.Time)
@@ -141,14 +188,19 @@ func statisticsPrivateRow(raw []byte, now time.Time) (analyticsAccess, int64, bo
 }
 
 type statisticsIngestion struct {
-	Backlog        int64
-	Invalid        int64
-	Blocked        int
-	Compressed     int
-	Missing        int
-	Sources        int
-	ExpiredStreams int
-	Updated        string
+	Backlog              int64
+	Invalid              int64
+	Blocked              int
+	Compressed           int
+	Missing              int
+	Sources              int
+	ExpiredStreams       int
+	Duplicates           int
+	VerifiedArchives     int
+	RequestIDsEnabled    bool
+	UnsupportedRotations int
+	DeferredArchives     int
+	Updated              string
 }
 
 // Only absent, fully consumed, non-conflicting cursors can retire. A request
@@ -199,6 +251,11 @@ func retireStatisticsStreams(ctx context.Context, tx *sql.Tx, id string, present
 // NOT silently reset: doing so could duplicate a copied/truncated archive.
 func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id string, now time.Time) (statisticsIngestion, error) {
 	result := statisticsIngestion{Updated: now.UTC().Format(time.RFC3339)}
+	lock, err := s.statisticsLogReadLock()
+	if err != nil {
+		return result, err
+	}
+	defer lock.Close()
 	if !core.ValidID(id) {
 		return result, errors.New("统计网站标识无效")
 	}
@@ -215,6 +272,11 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		}
 		return result, errors.New("访问日志目录身份异常，未采集")
 	}
+	var schema int
+	if err = db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&schema); err != nil || schema != 1 && schema != 2 {
+		return result, errors.New("统计历史模式无法核对，未采集")
+	}
+	result.RequestIDsEnabled = schema == 2
 	root, err := os.OpenRoot(base)
 	if err != nil {
 		return result, err
@@ -234,13 +296,25 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 	}
 	current := "panel-" + id + ".access.log"
 	names := []string{}
+	archives := []string{}
 	for _, entry := range entries {
 		name := entry.Name()
-		if name != current && !(strings.HasPrefix(name, current+".") && core.ValidSiteLogArchiveName(id, name)) {
+		if name != current && !statisticsLogArchiveName(id, name) {
+			if strings.HasPrefix(name, current+".") || strings.HasPrefix(name, current+"-") {
+				result.UnsupportedRotations++
+			}
+			continue
+		}
+		if name != current && schema == 1 && !core.ValidSiteLogArchiveName(id, name) {
+			result.UnsupportedRotations++
 			continue
 		}
 		if strings.HasSuffix(name, ".gz") {
-			result.Compressed++
+			if schema == 2 {
+				archives = append(archives, name)
+			} else {
+				result.Compressed++
+			}
 			continue
 		}
 		names = append(names, name)
@@ -254,25 +328,30 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		}
 		return names[i] < names[j]
 	})
-	if len(names) > 512 {
+	sort.Strings(archives)
+	if len(names)+len(archives)+result.UnsupportedRotations > 512 {
 		return result, errors.New("单网站访问日志超过 512 份，未覆盖读取进度")
 	}
-	result.Sources = len(names)
-	if len(names) == 0 {
+	result.Sources = len(names) + len(archives)
+	if result.Sources == 0 {
 		result.Missing = 1
 	}
 	// Establish the complete bounded source identity set before retiring any
 	// cursor. A live archive stays tracked even when all its rows have expired.
 	discovered := map[string]os.FileInfo{}
 	present := map[string]bool{}
-	for _, name := range names {
+	for _, name := range append(append([]string{}, names...), archives...) {
 		info, e := root.Lstat(name)
 		if e != nil || privateLogEntry(info) != nil {
 			return result, errors.New("访问日志身份异常，未清理历史进度")
 		}
 		st := info.Sys().(*syscall.Stat_t)
 		discovered[name] = info
-		present[fmt.Sprintf("%d:%d", st.Dev, st.Ino)] = true
+		identity := fmt.Sprintf("%d:%d", st.Dev, st.Ino)
+		if strings.HasSuffix(name, ".gz") {
+			identity = "gzip:" + identity
+		}
+		present[identity] = true
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -284,12 +363,34 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 	if _, err = tx.ExecContext(ctx, "DELETE FROM access_rows WHERE stamp<?", now.AddDate(0, 0, -statisticsHistoryDays).Unix()); err != nil {
 		return result, err
 	}
+	var receiptCount, actualSchema int
+	if err = tx.QueryRowContext(ctx, "PRAGMA user_version").Scan(&actualSchema); err != nil || actualSchema != schema {
+		return result, errors.New("统计历史模式无法核对，未提交新进度")
+	}
+	if schema == 2 {
+		if _, err = tx.ExecContext(ctx, "DELETE FROM access_receipts WHERE stamp<?", now.AddDate(0, 0, -statisticsHistoryDays).Add(-time.Minute).Unix()); err != nil {
+			return result, err
+		}
+		if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM access_receipts").Scan(&receiptCount); err != nil {
+			return result, err
+		}
+		if receiptCount > statisticsHistoryReceipts {
+			return result, errors.New("统计请求身份记录异常超限，未覆盖或重置")
+		}
+	}
 	var streamCount int
 	if err = tx.QueryRowContext(ctx, "SELECT count(*) FROM access_streams").Scan(&streamCount); err != nil {
 		return result, err
 	}
 	if streamCount > statisticsHistoryStreams {
 		return result, errors.New("统计文件身份记录异常超限，未清理或新增")
+	}
+	if schema == 2 {
+		// Validate evidence before retirement: a corrupt cursor must not be
+		// silently classified as a consumed, absent file and then deleted.
+		if err = validateStatisticsArchiveEvidence(ctx, tx); err != nil {
+			return result, err
+		}
 	}
 	result.ExpiredStreams, err = retireStatisticsStreams(ctx, tx, id, present, now)
 	if err != nil {
@@ -331,7 +432,7 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			f.Close()
 			return result, e
 		}
-		if offset < 0 || oldSize < 0 || invalid < 0 || len(anchor) != 64 || blocked < 0 || blocked > 1 {
+		if offset < 0 || oldSize < 0 || invalid < 0 || invalid > offset || len(anchor) != 64 || blocked < 0 || blocked > 1 {
 			f.Close()
 			return result, errors.New("统计文件进度记录损坏，未重置")
 		}
@@ -370,11 +471,19 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 				}
 				row, stamp, valid := statisticsPrivateRow(line, now)
 				if valid && stamp >= now.AddDate(0, 0, -statisticsHistoryDays).Unix() {
-					payload, _ := json.Marshal(row)
-					_, e = tx.ExecContext(ctx, "INSERT INTO access_rows(site,stamp,ip,path,status,seconds,bot,payload) VALUES(?,?,?,?,?,?,?,?)", id, stamp, row.Remote, row.Path, row.Status, row.Seconds, strings.Contains(row.Agent, "bot"), string(payload))
+					var duplicate bool
+					if schema == 2 {
+						duplicate, e = insertStatisticsRequest(ctx, tx, id, row, stamp, &receiptCount)
+					} else {
+						row.RequestID = ""
+						duplicate, e = insertStatisticsRequest(ctx, tx, id, row, stamp, nil)
+					}
 					if e != nil {
 						f.Close()
-						return result, errors.New("统计历史容量不足或写入失败，未提交新进度")
+						return result, e
+					}
+					if duplicate {
+						result.Duplicates++
 					}
 				} else if !valid {
 					invalid++
@@ -404,10 +513,15 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			}
 		}
 		f.Close()
-		result.Backlog += max(int64(0), info.Size()-offset)
+		result.Backlog = statisticsAddBacklog(result.Backlog, max(int64(0), info.Size()-offset))
 		result.Invalid += invalid
 		_, err = tx.ExecContext(ctx, "INSERT INTO access_streams(site,identity,name,offset,anchor,size,seen,blocked,invalid) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(site,identity) DO UPDATE SET name=excluded.name,offset=excluded.offset,anchor=excluded.anchor,size=excluded.size,seen=excluded.seen,blocked=excluded.blocked,invalid=excluded.invalid", id, identity, name, offset, anchor, info.Size(), now.Unix(), blocked, invalid)
 		if err != nil {
+			return result, err
+		}
+	}
+	if schema == 2 {
+		if err = s.ingestStatisticsGzipArchives(ctx, tx, root, archives, discovered, id, now, &budget, &rowBudget, &receiptCount, &streamCount, seen, &result); err != nil {
 			return result, err
 		}
 	}
@@ -429,7 +543,7 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			result.Invalid += invalid
 			if size > offset || blocked != 0 {
 				result.Blocked++
-				result.Backlog += max(int64(0), size-offset)
+				result.Backlog = statisticsAddBacklog(result.Backlog, max(int64(0), size-offset))
 			}
 		}
 	}
@@ -454,7 +568,7 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 	}
 	for name, original := range discovered {
 		current, e := root.Lstat(name)
-		if e != nil || privateLogEntry(current) != nil || !os.SameFile(original, current) {
+		if e != nil || privateLogEntry(current) != nil || !os.SameFile(original, current) || strings.HasSuffix(name, ".gz") && statisticsGzipMetadata(original) != statisticsGzipMetadata(current) {
 			return result, errors.New("采集期间访问日志身份改变，未提交清理或新进度")
 		}
 	}
@@ -467,6 +581,11 @@ func (s *Service) moduleStatisticsHistory(ctx context.Context, in core.AppModule
 	}
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
+	lock, err := s.statisticsLogReadLock()
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Close()
 	db, err := s.openStatisticsHistory(ctx)
 	if err != nil {
 		return nil, err
@@ -498,6 +617,10 @@ func (s *Service) moduleStatisticsHistory(ctx context.Context, in core.AppModule
 }
 
 func statisticsHistoryReport(ctx context.Context, db *sql.DB, in core.AppModuleInput, state statisticsIngestion, now time.Time) (map[string]any, error) {
+	var schema int
+	if err := db.QueryRowContext(ctx, "PRAGMA user_version").Scan(&schema); err != nil || schema != 1 && schema != 2 {
+		return nil, errors.New("统计历史模式无法核对，未生成报告")
+	}
 	from, to, err := analyticsWindow(in)
 	if err != nil {
 		return nil, err
@@ -546,7 +669,7 @@ func statisticsHistoryReport(ctx context.Context, db *sql.DB, in core.AppModuleI
 		return nil, err
 	}
 	defer rows.Close()
-	partial := historyLimited || evicted > 0 || state.Blocked > 0 || state.Compressed > 0 || state.Missing > 0 || state.Backlog > 0 || state.Invalid > 0
+	partial := historyLimited || evicted > 0 || state.Blocked > 0 || state.Compressed > 0 || state.Missing > 0 || state.Backlog > 0 || state.Invalid > 0 || state.UnsupportedRotations > 0
 	out, err := buildAnalyticsRows(ctx, func() (analyticsAccess, error) {
 		if !rows.Next() {
 			if e := rows.Err(); e != nil {
@@ -582,10 +705,26 @@ func statisticsHistoryReport(ctx context.Context, db *sql.DB, in core.AppModuleI
 	out["history_backlog_bytes"] = state.Backlog
 	out["history_blocked_sources"] = state.Blocked
 	out["history_compressed_sources"] = state.Compressed
+	out["history_unsupported_rotation_sources"] = state.UnsupportedRotations
 	out["history_missing_log"] = state.Missing > 0
 	out["history_invalid_lines"] = state.Invalid
 	out["history_evicted_rows"] = evicted
 	out["history_expired_streams"] = state.ExpiredStreams
+	out["history_duplicate_requests"] = state.Duplicates
+	out["history_request_receipt_limit"] = 0
+	if schema == 2 {
+		out["history_request_receipt_limit"] = statisticsHistoryReceipts
+	}
+	out["history_request_ids_enabled"] = schema == 2
+	out["history_gzip_import_enabled"] = schema == 2
+	out["history_gzip_scan_limit_per_pass"] = 1
+	out["history_gzip_legacy_missing_id_policy"] = "无请求标识的旧压缩行不计入，保留原日志并报告不完整"
+	out["history_verified_compressed_sources"] = state.VerifiedArchives
+	out["history_deferred_compressed_sources"] = state.DeferredArchives
+	out["history_gzip_read_timeout_seconds"] = 3
+	out["history_gzip_scheduler_site_limit"] = statisticsHistoryStreams
+	out["history_compressed_source_limit_bytes"] = statisticsGzipSourceBytes
+	out["history_compressed_expansion_limit_bytes"] = statisticsGzipExpandedBytes
 	out["history_before_retention"] = historyLimited
 	out["history_checked_at"] = state.Updated
 	out["history_raw_user_agents_stored"] = false
@@ -641,23 +780,28 @@ func (s *Service) runStatisticsHistoryWorker(ctx context.Context) {
 			err = errors.New("受管网站目录超过 10000 项")
 		}
 		if len(ids) > 0 && err == nil {
-			db, e := s.openStatisticsHistory(bounded)
+			lock, e := s.statisticsLogReadLock()
 			err = e
 			if err == nil {
-				for i := 0; i < min(len(ids), 4); i++ {
-					id := ids[(cursor+i)%len(ids)]
-					_, e = s.ingestStatisticsHistory(bounded, db, id, time.Now())
-					if e != nil {
-						err = errors.New("历史采集未完成；原数据及进度保留，请刷新网站报告核对")
-						// Continue other sites while the budget remains. A single
-						// broken website cannot monopolize every future batch.
-						if bounded.Err() != nil {
-							break
+				db, openErr := s.openStatisticsHistory(bounded)
+				err = openErr
+				if err == nil {
+					for i := 0; i < min(len(ids), 4); i++ {
+						id := ids[(cursor+i)%len(ids)]
+						_, e = s.ingestStatisticsHistory(bounded, db, id, time.Now())
+						if e != nil {
+							err = errors.New("历史采集未完成；原数据及进度保留，请刷新网站报告核对")
+							// Continue other sites while the budget remains. A single
+							// broken website cannot monopolize every future batch.
+							if bounded.Err() != nil {
+								break
+							}
 						}
 					}
+					db.Close()
+					cursor = (cursor + 4) % len(ids)
 				}
-				db.Close()
-				cursor = (cursor + 4) % len(ids)
+				lock.Close()
 			}
 		}
 		detail := ""

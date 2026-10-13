@@ -62,7 +62,7 @@ func TestStatisticsHistoryKilledWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Config contains functions; serialize only fixed fixture paths instead.
-	config, _ := json.Marshal(map[string]string{"SitesDir": s.Config.SitesDir, "SecurityDir": s.Config.SecurityDir, "SystemRoot": s.Config.SystemRoot})
+	config, _ := json.Marshal(map[string]string{"SitesDir": s.Config.SitesDir, "SecurityDir": s.Config.SecurityDir, "SystemRoot": s.Config.SystemRoot, "ConfDir": s.Config.ConfDir, "StateDir": s.Config.StateDir, "NginxConf": s.Config.NginxConf})
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	child := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestStatisticsHistoryKilledWriter$", "-test.timeout=30s")
@@ -133,7 +133,7 @@ func statisticsHistoryFixture(t *testing.T) (*Service, *sql.DB, string, string, 
 	sites := filepath.Join(base, "sites")
 	logs := filepath.Join(base, "system/var/log/nginx")
 	security := filepath.Join(base, "security")
-	for _, dir := range []string{filepath.Join(sites, id, "public"), logs, security} {
+	for _, dir := range []string{filepath.Join(sites, id, "public"), logs, security, filepath.Join(base, "config"), filepath.Join(base, "state")} {
 		if e := os.MkdirAll(dir, 0700); e != nil {
 			t.Fatal(e)
 		}
@@ -141,7 +141,7 @@ func statisticsHistoryFixture(t *testing.T) (*Service, *sql.DB, string, string, 
 	if e := os.WriteFile(filepath.Join(sites, id, ".panel-site.json"), []byte("{\"id\":\""+id+"\"}"), 0600); e != nil {
 		t.Fatal(e)
 	}
-	s := New(Config{SitesDir: sites, SecurityDir: security, SystemRoot: filepath.Join(base, "system")})
+	s := New(Config{SitesDir: sites, SecurityDir: security, SystemRoot: filepath.Join(base, "system"), ConfDir: filepath.Join(base, "config"), StateDir: filepath.Join(base, "state"), NginxConf: filepath.Join(base, "system/etc/nginx/nginx.conf")})
 	db, e := s.openStatisticsHistory(context.Background())
 	if e != nil {
 		t.Fatal(e)

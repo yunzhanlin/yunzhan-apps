@@ -2,7 +2,7 @@
 set -euo pipefail
 PANEL_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PANEL_DEV_HOME="${PANEL_DEV_HOME:-/Volumes/MacSSD/MacData/PanelDev}"
-export PATH="$PANEL_DEV_HOME/tools/go/bin:$PANEL_DEV_HOME/tools/lima/bin:$PATH"
+export PATH="$PANEL_DEV_HOME/tools/go1.27.2/bin:$PANEL_DEV_HOME/tools/lima/bin:$PATH"
 export LIMA_HOME="$PANEL_DEV_HOME/lima"
 export GOCACHE="$PANEL_DEV_HOME/cache/go-build"
 export GOMODCACHE="$PANEL_DEV_HOME/cache/go-mod"

@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-test('normal BECJ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
+test('normal BEOQ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'918458c33fde22e77952d50b9a976bf124321b4106c4e9ec366b67edf4be24d0');
- assert.equal(release.archive_sha256,'fcf14be23b186a9b975a7ba9062f7f8a7744f1f96e26a9734dfe5d680c58f8e3');
- assert.equal(Object.keys(index.files).length,1227);
+ assert.equal(release.frozen_inputs_sha256,'5411b3087db37b56677b8906865896802ec772390a7179f54af50415c5677457');
+ assert.equal(release.archive_sha256,'1b48dab44be6513c434203544ce5048aa1cab88031fed17cf4bd1c7216af1d0b');
+ assert.equal(Object.keys(index.files).length,1250);
  for(const file of ['internal/appcatalog/catalog.go','internal/appcatalog/github_catalog.go','internal/appcatalog/github_catalog_test.go','internal/appcatalog/github_catalog_rate.go','internal/appcatalog/github_catalog_rate_test.go','scripts/test-registry-freshness.mjs','web/src/registryFreshness.ts','web/src/App.vue','packaging/build-release.sh']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,36);assert(gates.includes('scripts/test-registry-freshness.mjs'));
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,37);assert(gates.includes('scripts/test-registry-freshness.mjs'));
  const code=await read('panel-integration/internal/appcatalog/github_catalog.go');assert.match(code,/git\/ref\/heads\/main/);assert.match(code,/c\.BaseURL != DefaultBaseURL/);assert.match(code,/uniqueGitHubReference\(raw\)/);assert.match(code,/githubCatalogCommitBase\+commit\+"\/"\+relative/);
  const checks=await read('panel-integration/internal/appcatalog/github_catalog_test.go');for(const name of ['UsesResolvedImmutableCommitNotStaleMain','InvalidBranchMetadataNeverReadsMain','LegacyFallbackPinnedToSameCommit','FailuresKeepVerifiedCacheButNotFreshness','ClosedPathsAndCancellation','ConcurrentCacheRefreshes'])assert(checks.includes('TestOfficialCatalog'+name));
  const receipt=await read('panel-integration/web/src/registryFreshness.ts');assert.match(receipt,/ticket\.checkPending \|\| this\.pendingCheck/);assert.match(receipt,/ticket\.checkBarrier !== this\.checkBarrier/);assert.match(receipt,/source: \{ \.\.\.source, \.\.\.this\.failedSource, stale: true \}/);assert.match(receipt,/catalog !== this\.receiptCatalog/);

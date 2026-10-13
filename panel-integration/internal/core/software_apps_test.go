@@ -1,6 +1,9 @@
 package core
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+)
 
 func TestSoftwareActionQueueValidationAndIdempotency(t *testing.T) {
 	s := testStore(t)
@@ -46,5 +49,41 @@ func TestSoftwareSettingsAreClosedSchemas(t *testing.T) {
 	}
 	if _, err := normalizeSoftwareSettings("system-hardening", map[string]any{"profile": "dangerous"}); err == nil {
 		t.Fatal("unknown hardening profile accepted")
+	}
+}
+
+func TestStatisticsInstallQueueBindsSelectedVersionWithoutImplicitUpgrade(t *testing.T) {
+	s := testStore(t)
+	job, err := s.queueSoftwareAction("website-statistics-v2", "install", nil, "2.4.0", "selected-statistics", "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var raw string
+	if err = s.DB.QueryRow("SELECT payload FROM runtime_jobs WHERE id=?", job).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	var payload struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal([]byte(raw), &payload) != nil || payload.Version != "2.4.0" {
+		t.Fatal("selected package version was not retained", raw)
+	}
+	if _, err = s.queueSoftwareAction("website-statistics-v2", "install", nil, "2.6.0", "unimplemented-statistics", "admin"); err == nil {
+		t.Fatal("unimplemented schema opt-in accepted")
+	}
+	// Complete the old queue-only fixture before requesting another action;
+	// the real same-target pending-job exclusion remains intact.
+	if _, err = s.DB.Exec("UPDATE runtime_jobs SET state='succeeded' WHERE id=?", job); err != nil {
+		t.Fatal(err)
+	}
+	job, err = s.queueSoftwareAction("website-statistics-v2", "install", nil, "2.5.0", "implemented-statistics", "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.DB.QueryRow("SELECT payload FROM runtime_jobs WHERE id=?", job).Scan(&raw); err != nil {
+		t.Fatal(err)
+	}
+	if json.Unmarshal([]byte(raw), &payload) != nil || payload.Version != "2.5.0" {
+		t.Fatal("actual selected identity version was lost", raw)
 	}
 }

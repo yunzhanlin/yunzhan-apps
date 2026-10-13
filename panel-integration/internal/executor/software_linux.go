@@ -729,7 +729,7 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 		if action == "update" {
 			e = s.updateSoftware(r.Context(), id, in.Version, add)
 		} else if moduleOK {
-			e = s.appModuleLifecycle(r.Context(), id, action, in.Settings, add)
+			e = s.appModuleLifecycleVersion(r.Context(), id, action, in.Settings, in.Version, add)
 		} else if action == "uninstall" {
 			switch id {
 			case "nginx-waf":

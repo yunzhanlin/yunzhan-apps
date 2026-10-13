@@ -38,6 +38,38 @@ class StartupInterlockPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0, 'actual root Linux ordinary ownership fixture required')
 class StartupInterlockFilesystemTests(unittest.TestCase):
+    def test_reviewed_v2_transition_keeps_every_old_binary_and_refuses_unknown_v2(self):
+        for reviewed in (False, True):
+            with self.subTest(reviewed=reviewed),support.UpgradeTransactionTests().fixture() as (transaction,runner,root):
+                previous=root/guard.PREVIOUS.lstrip('/')
+                previous.parent.mkdir(mode=0o755)
+                data=b'owned synthetic reviewed v2; not native executable evidence'
+                previous.write_bytes(data);previous.chmod(0o755)
+                before=(previous.stat().st_ino,previous.read_bytes())
+                conditions={}
+                for unit in guard.SERVICES:
+                    target=root/'etc/systemd/system'/(unit+'.d')/guard.DROPIN
+                    target.parent.mkdir(mode=0o755)
+                    value=guard.dropin(unit).replace(guard.GUARD.encode(),guard.PREVIOUS.encode())
+                    target.write_bytes(value);target.chmod(0o644);conditions[str(target)]=value
+                transaction.backup=root/'var/backups/panel/system/owned-v2-transition'
+                transaction.backup.mkdir(mode=0o700)
+                with mock.patch.dict(guard.PREVIOUS_SHA,{'arm64':hashlib.sha256(data).hexdigest()} if reviewed else {}):
+                    if not reviewed:
+                        with self.assertRaises(ValueError):guard.install(transaction)
+                        self.assertFalse((root/guard.GUARD.lstrip('/')).exists())
+                        self.assertEqual(conditions,{str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)})
+                    else:
+                        guard.install(transaction)
+                        proof=json.loads((transaction.backup/'startup-guard-v3-transition.json').read_bytes())
+                        self.assertEqual(proof['guard_version'],3)
+                        self.assertEqual(len(proof['retained_guards']),1)
+                        self.assertEqual(proof['retained_guards'][0]['sha256'],hashlib.sha256(data).hexdigest())
+                        self.assertTrue((root/guard.GUARD.lstrip('/')).is_file())
+                        for unit in guard.SERVICES:
+                            self.assertEqual((root/'etc/systemd/system'/(unit+'.d')/guard.DROPIN).read_bytes(),guard.dropin(unit))
+                self.assertEqual((previous.stat().st_ino,previous.read_bytes()),before)
+
     def legacy(self, transaction, root):
         """Synthetic bytes only; real v1 hash/architecture tested natively."""
         path = root/guard.LEGACY.lstrip('/')
@@ -58,7 +90,7 @@ class StartupInterlockFilesystemTests(unittest.TestCase):
             transaction.backup.mkdir(mode=0o700)
             original = transaction.atomic
             def atomic(target, value, mode, *args):
-                proof = transaction.backup/'startup-guard-v2-transition.json'
+                proof = transaction.backup/'startup-guard-v3-transition.json'
                 if target != proof:
                     record = json.loads(proof.read_bytes())
                     self.assertTrue(record['legacy_retained']);self.assertEqual(len(record['files']),6)
@@ -93,7 +125,7 @@ class StartupInterlockFilesystemTests(unittest.TestCase):
                 originals={str(p):p.read_bytes() for p in (root/'etc/systemd/system').rglob(guard.DROPIN)}
                 atomic=transaction.atomic
                 def changed(target,value,mode,*args):
-                    if target.name=='startup-guard-v2-transition.json':
+                    if target.name=='startup-guard-v3-transition.json':
                         if fault=='proof':raise OSError('own retained evidence fixture failure')
                         result=atomic(target,value,mode,*args)
                         replacement=legacy.with_name('own-legacy-replacement');replacement.write_bytes(data);replacement.chmod(0o755);os.replace(replacement,legacy)

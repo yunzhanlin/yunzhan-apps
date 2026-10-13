@@ -32,3 +32,14 @@ test('schema preserves strict legacy rejection while defining the new bounded fi
  const field=schema.properties.required_panel_features;
  assert.equal(field.type,'array');assert.equal(field.minItems,1);assert.equal(field.maxItems,8);assert.equal(field.uniqueItems,true);
 });
+
+test('statistics2.5 requires both exact reviewed handlers and rejects version aliases',()=>{
+ const identity='statistics-request-identity-v1';
+ const app=candidate();app.version='2.5.0';
+ assert(validateManifest(app).length>0);
+ app.required_panel_features=[feature,identity];
+ assert.deepEqual(validateManifest(app),[]);
+ for(const version of ['2.5','2.5.0-compat1','2.5.1','2.6.0']){const alias={...app,version};assert(validateManifest(alias).length>0,version);}
+ for(const requirements of [[identity],[identity,identity],[feature,identity,'unreviewed-v1']])assert(validateManifest({...app,required_panel_features:requirements}).length>0);
+ assert(validateManifest({...app,id:'daily-report',delivery:{provider:'panel-module',target:'daily-report'}}).length>0);
+});

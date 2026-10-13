@@ -56,3 +56,34 @@ func TestAppUpdatePreservesSettingsBaselineHistoryAndInstallTime(t *testing.T) {
 		t.Fatal("uninstalled module marked updated")
 	}
 }
+
+func TestAppConfigureDoesNotImplicitlyUpgradeOrInventLegacyVersion(t *testing.T) {
+	for _, preversioned := range []bool{false, true} {
+		t.Run(map[bool]string{false: "older-version", true: "pre-versioned"}[preversioned], func(t *testing.T) {
+			svc, _, _ := appReliabilityFixture(t)
+			id := "files-sync"
+			path := filepath.Join(svc.moduleDir(id), "installed.json")
+			before := map[string]any{"id": id, "version": "1.0", "settings": map[string]any{"interval": float64(600)}, "installed_at": "2026-01-01T00:00:00Z", "updated_at": "2026-01-02T00:00:00Z"}
+			if preversioned {
+				delete(before, "version")
+			}
+			if err := moduleWrite(path, before); err != nil {
+				t.Fatal(err)
+			}
+			settings := map[string]any{"interval": float64(1200), "custom_state": "keep"}
+			if err := svc.appModuleLifecycle(context.Background(), id, "configure", settings, func(string) {}); err != nil {
+				t.Fatal(err)
+			}
+			after, err := svc.moduleInstalledRecord(id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if after["version"] != before["version"] || after["installed_at"] != before["installed_at"] || after["updated_at"] != before["updated_at"] || !reflect.DeepEqual(after["settings"], settings) {
+				t.Fatal("configuration adopted newer handler or erased identity", after)
+			}
+			if _, exists := after["version"]; exists == preversioned {
+				t.Fatal("legacy version presence changed")
+			}
+		})
+	}
+}

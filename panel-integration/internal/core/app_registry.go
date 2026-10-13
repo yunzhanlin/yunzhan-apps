@@ -449,7 +449,13 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 				return wafBind(tx, job, existing)
 			}
 		}
-		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, "", key, u.Username, bind)
+		selectedVersion := ""
+		if manifest.Delivery.Target == "website-statistics-v2" {
+			// A newer statistics handler must not treat an older signed package
+			// as an opt-in to a new data schema or native request-ID logging.
+			selectedVersion = manifest.Version
+		}
+		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, selectedVersion, key, u.Username, bind)
 		if err != nil {
 			if replay() {
 				return

@@ -31,6 +31,9 @@ type wafTransaction struct {
 var errWAFConfigurationBusy = errors.New("WAF 正在变更或恢复，请稍后重试")
 
 func (s *Service) wafPendingPath() string {
+	if s.fileTransactionApplication == "statistics-nginx" {
+		return filepath.Join(s.moduleDir("website-statistics-v2"), "config-transactions", "pending.json")
+	}
 	if s.fileTransactionApplication == "network-ids" {
 		return filepath.Join(s.moduleDir("network-threat-detection"), "config-transactions", "pending.json")
 	}
@@ -45,6 +48,14 @@ func (s *Service) wafPendingPath() string {
 
 func (s *Service) wafChangePathAllowed(path string) bool {
 	if !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return false
+	}
+	if s.fileTransactionApplication == "statistics-nginx" {
+		for _, allowed := range s.statisticsLogConfigurationPaths() {
+			if path == allowed {
+				return true
+			}
+		}
 		return false
 	}
 	if s.fileTransactionApplication == "network-ids" {
@@ -97,6 +108,9 @@ func (s *Service) wafOwnedDirectory(path string, create bool) error {
 		stop = path == s.Config.SystemRoot || path == filepath.Dir(s.Config.ConfDir) || path == filepath.Dir(s.Config.StateDir)
 	}
 	if !stop {
+		if filepath.Dir(path) == path {
+			return errors.New("WAF 配置路径不属于已声明的信任根，未创建或接管")
+		}
 		if err := s.wafOwnedDirectory(filepath.Dir(path), create); err != nil {
 			return err
 		}
@@ -161,10 +175,47 @@ func (s *Service) lockWAFFile(operation int) (*os.File, error) {
 			return nil, errors.New("HTML 引擎有待恢复配置；禁止其他 Nginx 变更覆盖恢复集合")
 		}
 	}
+	if operation == syscall.LOCK_EX && s.fileTransactionApplication != "statistics-nginx" && s.fileTransactionApplication != "apache-waf" && s.fileTransactionApplication != "network-ids" {
+		if _, err := os.Lstat(s.statisticsLogTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+			f.Close()
+			return nil, errors.New("统计日志格式有待恢复事务；禁止其他 Nginx 变更覆盖恢复集合")
+		}
+	}
 	return f, nil
 }
 
 func (s *Service) wafTransactionContract(tx wafTransaction) error {
+	if s.fileTransactionApplication == "statistics-nginx" {
+		paths := s.statisticsLogConfigurationPaths()
+		if tx.Format != 2 || len(tx.Changes) != len(paths) {
+			return errors.New("统计日志格式恢复需要完整的两个固定文件及 UID/GID")
+		}
+		for i, path := range paths {
+			if tx.Changes[i].Path != path {
+				return errors.New("统计日志格式恢复路径或顺序错误")
+			}
+		}
+		if !tx.Changes[0].OldExists || !tx.Changes[0].NextExists || !tx.Changes[1].NextExists || tx.Changes[1].NextMode != 0600 {
+			return errors.New("统计日志格式事务缺少原配置或私有安装记录")
+		}
+		if _, err := validateStatisticsNextInstalled(tx.Changes[1].NextData); err != nil {
+			return err
+		}
+		if _, _, err := statisticsRequestIDNginxConfig(tx.Changes[0].OldData); err != nil {
+			return err
+		}
+		if next, changed, err := statisticsRequestIDNginxConfig(tx.Changes[0].NextData); err != nil || changed || !bytes.Equal(next, tx.Changes[0].NextData) {
+			return errors.New("统计日志格式候选不是已核对的请求标识格式")
+		}
+		nonce, err := statisticsHealthConfigNonce(tx.Changes[0].NextData, s.statisticsHealthSocket())
+		if err != nil || nonce == "" {
+			return errors.New("统计日志格式事务缺少固定本机生效探针")
+		}
+		expected, err := statisticsNginxHealthConfig(tx.Changes[0].OldData, s.statisticsHealthSocket(), nonce)
+		if err != nil || !bytes.Equal(expected, tx.Changes[0].NextData) {
+			return errors.New("统计事务包含日志格式和固定探针之外的配置变更")
+		}
+	}
 	if s.fileTransactionApplication == "network-ids" {
 		paths := s.threatIDSConfigurationPaths()
 		if tx.Format != 2 || len(tx.Changes) != len(paths) || tx.IDS == nil || tx.IDS.ApplyOwner == nil || tx.IDS.ApplyOwner.PID <= 1 || tx.IDS.ApplyOwner.StartTime == 0 || !threatPackageSHA.MatchString(tx.IDS.UnitSHA) || !threatPackageSHA.MatchString(tx.IDS.RuntimeRecordSHA) || tx.IDS.RecoveryOwner != nil && (tx.State == "applying" || tx.IDS.RecoveryOwner.PID <= 1 || tx.IDS.RecoveryOwner.StartTime == 0) {
@@ -293,6 +344,8 @@ func (s *Service) wafCurrentMatches(c wafConfigChange, next bool) (bool, error) 
 	var err error
 	if s.fileTransactionApplication == "analytics-html" {
 		b, err = s.analyticsHTMLStableBackup(c.Path)
+	} else if s.fileTransactionApplication == "statistics-nginx" {
+		b, err = s.statisticsLogStableBackup(c.Path)
 	} else if s.fileTransactionApplication == "apache-waf" {
 		b, err = s.apacheWAFStableBackup(c.Path)
 	} else if s.fileTransactionApplication == "network-ids" {
@@ -429,7 +482,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		return false, err
 	}
 	if tx.State != "applying" {
-		if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" {
+		if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" || s.fileTransactionApplication == "statistics-nginx" {
 			for _, c := range tx.Changes {
 				match, e := s.wafCurrentMatches(c, tx.State == "committed")
 				if e != nil || !match {
@@ -461,7 +514,7 @@ func (s *Service) recoverWAFTransaction() (bool, error) {
 		}
 	}
 	tx.State = "recovered"
-	if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" {
+	if s.fileTransactionApplication == "apache-waf" || s.fileTransactionApplication == "analytics-html" || s.fileTransactionApplication == "network-ids" || s.fileTransactionApplication == "statistics-nginx" {
 		return true, wafWriteTransaction(s.wafPendingPath(), tx)
 	}
 	return true, s.finishWAFTransaction(tx)

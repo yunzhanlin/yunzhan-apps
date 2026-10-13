@@ -413,7 +413,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "pm2-manager":
 			version = "7.0.4-compat4"
 		case "website-statistics-v2":
-			version = "2.4.1"
+			version = "2.5.0"
 		case "apache-waf":
 			version = ApacheWAFVersion
 		}

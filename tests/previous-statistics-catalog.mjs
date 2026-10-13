@@ -37,10 +37,12 @@ const sha=b=>createHash('sha256').update(b).digest('hex');
 export async function catalogBeforeStatistics241(catalog) {
  assert.equal(catalog.apps.length,50);
  const actual=catalog.apps.find(a=>a.id==='website-statistics-v2');
- assert.equal(actual.version,'2.4.1');
- assert.equal(actual.sha256,'8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e');
+ assert.equal(actual.version,'2.5.0');
+ const latest=await readFile(new URL('../dist/apps/website-statistics-v2/2.5.0/manifest.json',import.meta.url));
+ assert.equal(sha(latest),actual.sha256);
+ assert.deepEqual(JSON.parse(latest).required_panel_features,['statistics-cursor-retirement-v1','statistics-request-identity-v1']);
  const current=await readFile(new URL('../dist/apps/website-statistics-v2/2.4.1/manifest.json',import.meta.url));
- assert.equal(sha(current),actual.sha256);
+ assert.equal(sha(current),'8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e');
  assert.deepEqual(JSON.parse(current).required_panel_features,['statistics-cursor-retirement-v1']);
  const old=await readFile(new URL('../dist/apps/website-statistics-v2/2.4.0/manifest.json',import.meta.url));
  assert.equal(sha(old),previousStatistics.sha256);

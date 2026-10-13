@@ -125,3 +125,31 @@ func TestNewStatisticsVersionsCannotOmitMandatoryHandlerRequirement(t *testing.T
 		}
 	}
 }
+
+func TestStatisticsIdentityVersionRequiresBothBoundHandlersAndRejectsOldAvailability(t *testing.T) {
+	m := panelRequirementFixture()
+	m.Version = "2.5.0"
+	if err := validatePanelRequirements(m, func(string) bool { return true }); err == nil {
+		t.Fatal("2.5 omitted request identity handler")
+	}
+	m.RequiredPanelFeatures = []string{StatisticsCursorRetirementFeature, StatisticsRequestIdentityFeature}
+	if err := validatePanelRequirements(m, func(f string) bool { return f == StatisticsCursorRetirementFeature }); err == nil {
+		t.Fatal("old2.4.1 availability accepted2.5")
+	}
+	if err := validatePanelRequirements(m, func(string) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
+	m.Delivery.Target = "daily-report"
+	if err := validatePanelRequirements(m, func(string) bool { return true }); err == nil {
+		t.Fatal("identity requirement escaped fixed target")
+	}
+	m.Delivery.Target = m.ID
+	raw, _ := json.Marshal(m)
+	digest := sha256.Sum256(raw)
+	item := CatalogItem{ID: m.ID, Name: m.Name, Category: m.Category, Version: m.Version, Summary: m.Summary, Stage: m.Stage, Risk: m.Risk, Provider: m.Delivery.Provider, Target: m.Delivery.Target, ManageRoute: m.Delivery.ManageRoute, Capabilities: m.Capabilities, PackageURL: "https://example.invalid/dist/apps/website-statistics-v2/2.5.0/manifest.json", SHA256: hex.EncodeToString(digest[:])}
+	client := &Client{BaseURL: "https://example.invalid"}
+	_, err := client.verifyManifestData(item, raw)
+	if (err == nil) != (runtime.GOOS == "linux") {
+		t.Fatal("2.5 did not use actual compiled availability and bound manifest", err)
+	}
+}

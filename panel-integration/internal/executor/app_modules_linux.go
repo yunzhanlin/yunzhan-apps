@@ -93,6 +93,13 @@ func (s *Service) moduleInstalled(id string) bool {
 
 func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareAppStatus {
 	out := core.SoftwareAppStatus{ID: id, Detail: "未安装"}
+	if id == "website-statistics-v2" {
+		if _, err := os.Lstat(s.statisticsLogTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
+			out.StateUnknown = true
+			out.Detail = "存在待恢复统计日志事务；未宣称应用或采集已正常生效"
+			return out
+		}
+	}
 	manifest, err := s.moduleInstalledRecord(id)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
@@ -110,6 +117,14 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	out.Settings, _ = manifest["settings"].(map[string]any)
 	out.Healthy = true
 	out.Detail = "模块已安装，可配置并执行"
+	if id == "website-statistics-v2" {
+		if comparison, valid := appcatalog.CompareVersions(out.Version, statisticsIdentityVersion); valid && comparison >= 0 {
+			if err := s.statisticsInstalledReady(ctx); err != nil {
+				out.Healthy = false
+				out.Detail = err.Error()
+			}
+		}
+	}
 	if id == "load-balance" {
 		if _, err := os.Lstat(s.loadBalancePendingPath()); !errors.Is(err, os.ErrNotExist) {
 			out.Healthy = false
@@ -189,11 +204,47 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	return out
 }
 func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, settings map[string]any, add func(string)) error {
+	return s.appModuleLifecycleVersion(ctx, id, action, settings, "", add)
+}
+
+func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action string, settings map[string]any, selectedVersion string, add func(string)) error {
 	if _, ok := core.FindAppModule(id); !ok {
 		return errors.New("未知模块")
 	}
+	if selectedVersion != "" {
+		if id != "website-statistics-v2" || action != "install" {
+			return errors.New("安装版本选择不适用于该应用或动作；配置保存不能代替版本更新")
+		}
+		if err := core.ValidateSoftwareUpdate(id, selectedVersion); err != nil {
+			return err
+		}
+	} else {
+		selectedVersion = core.SoftwareImplementationVersion(id)
+	}
+	if id == "website-statistics-v2" && action == "install" && selectedVersion == statisticsIdentityVersion {
+		return s.statisticsIdentityLifecycle(ctx, "install", settings, add)
+	}
 	if _, err := s.moduleInstalledRecord(id); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return errors.New("原安装记录身份、权限或内容无法核对，未执行安装、配置或卸载")
+	}
+	if id == "website-statistics-v2" {
+		reader, err := s.statisticsLogReadLock()
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
+	}
+	if id == "website-statistics-v2" && action == "install" && s.moduleInstalled(id) {
+		return errors.New("统计应用已安装；请使用签名更新流程，安装不能覆盖版本或原历史")
+	}
+	if id == "website-statistics-v2" && action == "install" {
+		schema, err := s.statisticsHistorySchemaReadOnly(ctx)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if schema == 2 {
+			return errors.New("保留的统计历史已使用2.5格式；拒绝安装旧版覆盖身份，原数据保留")
+		}
 	}
 	if action == "uninstall" {
 		if !s.moduleInstalled(id) {
@@ -313,22 +364,25 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 		return s.applyApacheWAF(ctx, settings, action == "install", false, add)
 	}
 	add("固定功能处理器与依赖检查通过")
-	installedAt := core.Now()
+	installedRecord := map[string]any{"id": id, "version": selectedVersion, "settings": settings, "installed_at": core.Now()}
 	if action == "configure" {
-		var previous map[string]any
-		if e := moduleRead(filepath.Join(s.moduleDir(id), "installed.json"), &previous); e != nil {
+		previous, e := s.moduleInstalledRecord(id)
+		if e != nil {
 			return e
 		}
-		if at, ok := previous["installed_at"].(string); ok {
-			installedAt = at
-		}
+		// Saving settings is not an application update. Keep the verified
+		// original version, optional legacy fields and update/install times.
+		// In particular, a newer panel must not opt old statistics into its
+		// new history schema merely because the user saved a configuration.
+		installedRecord = previous
+		installedRecord["settings"] = settings
 	}
 	manifestPath := filepath.Join(s.moduleDir(id), "installed.json")
 	previous, e := backupFile(manifestPath)
 	if e != nil {
 		return e
 	}
-	if e = moduleWrite(manifestPath, map[string]any{"id": id, "version": core.SoftwareImplementationVersion(id), "settings": settings, "installed_at": installedAt}); e != nil {
+	if e = moduleWrite(manifestPath, installedRecord); e != nil {
 		return e
 	}
 	if id == "pure-ftpd" && action == "install" && !previous.existed {
@@ -360,6 +414,16 @@ func (s *Service) appModuleLifecycle(ctx context.Context, id, action string, set
 func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {
 	if err := core.ValidateSoftwareUpdate(id, version); err != nil {
 		return err
+	}
+	if id == "website-statistics-v2" && version == statisticsIdentityVersion {
+		return s.statisticsIdentityLifecycle(ctx, "update", nil, add)
+	}
+	if id == "website-statistics-v2" {
+		reader, err := s.statisticsLogReadLock()
+		if err != nil {
+			return err
+		}
+		defer reader.Close()
 	}
 	status := s.softwareStatus(ctx, id)
 	stoppedFTP := false

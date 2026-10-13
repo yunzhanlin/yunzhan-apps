@@ -6,15 +6,15 @@ import (
 )
 
 func TestStatisticsCursorRetirementReleaseVersionMatchesActualUpdateHandler(t *testing.T) {
-	if version := SoftwareImplementationVersion("website-statistics-v2"); version != "2.4.1" {
+	if version := SoftwareImplementationVersion("website-statistics-v2"); version != "2.5.0" {
 		t.Fatal("implemented cursor retirement cannot be installed through version binding", version)
 	}
-	for _, version := range []string{"2.3.0", "2.4.0", "2.4.1"} {
+	for _, version := range []string{"2.3.0", "2.4.0", "2.4.1", "2.5.0"} {
 		if err := ValidateSoftwareUpdate("website-statistics-v2", version); err != nil {
 			t.Fatal("reviewed current or older statistics handler refused", version, err)
 		}
 	}
-	for _, version := range []string{"2.4.2", "2.5.0", "3.0", "invalid", "18446744073709551616.0"} {
+	for _, version := range []string{"2.5", "2.5.0-compat1", "2.5.1", "2.6.0", "3.0", "invalid", "18446744073709551616.0"} {
 		if err := ValidateSoftwareUpdate("website-statistics-v2", version); err == nil {
 			t.Fatal("unimplemented statistics version accepted", version)
 		}
