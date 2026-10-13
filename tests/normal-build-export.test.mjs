@@ -1,8 +1,8 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('every actual BEOQ Node build gate is exported and pinned to the same frozen release',async()=>{
+test('every actual normal Node build gate is exported and pinned to the same frozen release',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.archive_sha256,'1b48dab44be6513c434203544ce5048aa1cab88031fed17cf4bd1c7216af1d0b');assert.equal(release.frozen_inputs_sha256,'5411b3087db37b56677b8906865896802ec772390a7179f54af50415c5677457');
+ assert.equal(release.archive_sha256,'d738507fae774d74d87ad2a50881b8775af4b894c85056646ef3c700730d336e');assert.equal(release.frozen_inputs_sha256,'0d375c83b9e9cbec38d321a3cf5bfadb50a24e36432bab1481028a9aedac33c4');
  const build=await read('panel-integration/packaging/build-release.sh');
  const invoked=[...new Set([...build.matchAll(/node (?:--test )?(scripts\/test-[a-z0-9-]+\.mjs)/g)].map(m=>m[1]))].sort();
  const exported=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f)).sort();assert.equal(invoked.length,37);assert.deepEqual(exported,invoked);

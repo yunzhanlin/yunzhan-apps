@@ -7,7 +7,7 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHas
 test('normal signed bounded lease scans and recorded immutable v2 transition preserve old failures and do not claim all50',async()=>{
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_lease_release,old=c.reviewed_canonical_release,current=c[c.current_reviewed_release];
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),f=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(c.current_reviewed_release,'reviewed_statistics_identity_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
+ assert.equal(c.current_reviewed_release,'reviewed_statistics_rootfixture_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
  assert.equal(r.frozen_source_files,16872);assert.equal(r.frozen_inputs_sha256,'c9a2b2cdbc39ff86d1fe3a27d86ada9587921898d638e8231b23145987b8004c');
  assert.equal(f.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(f.archive_sha256,current.signed_normal_release.amd64.archive);
  assert.equal(Object.keys(i.files).length,1250);assert.equal(Object.keys(f.files).length,1209);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);

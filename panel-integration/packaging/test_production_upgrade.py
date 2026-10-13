@@ -965,7 +965,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             self.assertFalse((transaction.backup/'recovery-plan.json').exists())
             self.assertTrue((transaction.backup/'candidate').exists())
             self.assertEqual(os.readlink(root/'opt/panel/current'),before_pointer)
-            self.assertFalse((root/'usr/lib/panel-program-upgrade/start-guard-v2').exists())
+            for version in ('v1','v2','v3'):
+                self.assertFalse((root/('usr/lib/panel-program-upgrade/start-guard-'+version)).exists())
             self.assertFalse(any(c[0]=='/usr/bin/systemctl' and c[1] in ('start','stop') for c in runner.calls))
 
     def test_complete_candidate_inventory_rejects_links_specials_and_same_device_mounts(self):
@@ -1152,7 +1153,7 @@ class UpgradeTransactionTests(unittest.TestCase):
             self.assertEqual(os.readlink(root/'opt/panel/current'),previous)
             self.assertEqual((root/'etc/panel-release').read_bytes(),marker)
             self.assertEqual({path.name:path.read_bytes() for path in (root/'etc/systemd/system').iterdir() if path.is_file() and not path.name.startswith('.program-upgrade-')},units)
-            self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v2').is_file())
+            self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v3').is_file())
             self.assertEqual(runner.states,states)
             with contextlib.closing(sqlite3.connect(root/'var/lib/panel/panel.db')) as db, db:
                 self.assertEqual(db.execute('SELECT value FROM configuration').fetchone(),('original',))

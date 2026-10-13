@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=path=>readFile(new URL('../'+path,import.meta.url),'utf8');
-test('normal BEOQ signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
+test('current normal signed frozen source includes pinned catalog reads, poll-safe receipts and bounded quota backoff',async()=>{
  const index=JSON.parse(await read('panel-integration/source-sha256.json')),release=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(release.frozen_inputs_sha256,'5411b3087db37b56677b8906865896802ec772390a7179f54af50415c5677457');
- assert.equal(release.archive_sha256,'1b48dab44be6513c434203544ce5048aa1cab88031fed17cf4bd1c7216af1d0b');
+ assert.equal(release.frozen_inputs_sha256,'0d375c83b9e9cbec38d321a3cf5bfadb50a24e36432bab1481028a9aedac33c4');
+ assert.equal(release.archive_sha256,'d738507fae774d74d87ad2a50881b8775af4b894c85056646ef3c700730d336e');
  assert.equal(Object.keys(index.files).length,1250);
  for(const file of ['internal/appcatalog/catalog.go','internal/appcatalog/github_catalog.go','internal/appcatalog/github_catalog_test.go','internal/appcatalog/github_catalog_rate.go','internal/appcatalog/github_catalog_rate_test.go','scripts/test-registry-freshness.mjs','web/src/registryFreshness.ts','web/src/App.vue','packaging/build-release.sh']){
   const sha=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],sha,file);assert.equal(index.files[file],sha,file);

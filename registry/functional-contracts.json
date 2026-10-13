@@ -1,6 +1,91 @@
 {
   "schema_version": 1,
-  "current_reviewed_release": "reviewed_statistics_identity_release",
+  "current_reviewed_release": "reviewed_statistics_rootfixture_release",
+  "reviewed_statistics_rootfixture_release": {
+    "release": "0.1.0-dev.proapps24statsrootfixturebepg",
+    "frozen_inputs_sha256": "0d375c83b9e9cbec38d321a3cf5bfadb50a24e36432bab1481028a9aedac33c4",
+    "frozen_source_files": 16898,
+    "exported_normal_source_files": 1250,
+    "exported_build_input_files": 1209,
+    "source_overrides": 0,
+    "signed_normal_release": {
+      "arm64": {
+        "archive": "9d2a8419e8cdde60af2dc60521fcb86bb0b005aa216e3bb1f1276a3f42b64314",
+        "manifest": "d75930a06a799cd4f3ff0e41aaf5632d8506f260db91ebbada708e1fcb57c3f8",
+        "signature": "3de06696ca2efee22df319ed4d816b42266a671d7dacbfb63caffa0b74c4ee2e",
+        "panel": "b2d7712e4e951424b5b4e9c05e4343606824583df9135076a3cb2d1f77a74e69",
+        "executor": "5435a6456cf15e9a4f9bb3b710d302ef9fc81c569ea1580e757b2c9505378a96",
+        "guard_program": "0ad6a58956ba7d0320e44f7b9a36561cbd1db8f514bdb9ce217c783093e17fec",
+        "guard_installer": "95b7f0482ffc178866ac5f4ed7f054231919c6ccfd8abc4ba87ed162174b5494",
+        "development_helper": "94ebc15a19ed60c78603dc5d8d42e28ba96a64dde6f66cdc0b0edc8383dcb5ff",
+        "upgrade_helper": "865c9c38982f13088bf77b753d05061ad40f65df7a8df4160a17700560c2806c",
+        "prune_helper": "0fd7436b139ad823167590bef4ae52a778061c9139a969933e974496ddc6c563",
+        "web_index": "02162f916330f7d11e3123b671bd149a47576b7fb1c149314482681ef732cede",
+        "companion": "9d3df9f68753025c07d2a59c3a7344866c1ac0242c3c52db831a3b38556578e9",
+        "startup_companion": "4ef5edf64568e6385a6bfb048f5b5c4468a780cd7b26442a475784395370e176"
+      },
+      "amd64": {
+        "archive": "d738507fae774d74d87ad2a50881b8775af4b894c85056646ef3c700730d336e",
+        "manifest": "f22cf0136a7902e4ac620d652b0916030eb1c5c6a038ad6a62fd1cf687e90ffc",
+        "signature": "b00431b7ba853cb5ee58b41cb3ff0f7312c20f7183c63cea7905c87a70258040",
+        "panel": "dd6e2362eaba316cabc17ff6f4b9755b0c8aaf36a6bb2c34a1c5eff3093c19a9",
+        "executor": "c9b202a743ff6cab81a2993fd9856d7f9f6fe5716c559b77eb6241cea75030e4",
+        "guard_program": "832c30b7708fd9fd83187a851ec7e19b43fab78aff5a2086baf43063554c6cd6",
+        "guard_installer": "95b7f0482ffc178866ac5f4ed7f054231919c6ccfd8abc4ba87ed162174b5494",
+        "development_helper": "94ebc15a19ed60c78603dc5d8d42e28ba96a64dde6f66cdc0b0edc8383dcb5ff",
+        "upgrade_helper": "865c9c38982f13088bf77b753d05061ad40f65df7a8df4160a17700560c2806c",
+        "prune_helper": "0fd7436b139ad823167590bef4ae52a778061c9139a969933e974496ddc6c563",
+        "web_index": "02162f916330f7d11e3123b671bd149a47576b7fb1c149314482681ef732cede",
+        "companion": "5e339354ba66ad5212ab31909130ed024b1335cf88051ed47fbbd984eaa48cd4",
+        "startup_companion": "55389f3ec936b0810e07fbfd64d909c6a4ee0e9421a9c7a4c9e199ada0f33edc"
+      }
+    },
+    "predecessor": "reviewed_statistics_identity_release",
+    "predecessor_object_sha256": "4641a07261a5dd6c46c32f7deeddb7f606ed22e592b8149948370992f9fb90e6",
+    "only_frozen_input_changes": [
+      "packaging/test_production_upgrade.py"
+    ],
+    "runtime_program_helper_and_guard_bytes_unchanged": true,
+    "normal_build_go_and_vet_passed_both_architectures": true,
+    "normal_build_python_tests": 167,
+    "normal_build_python_skips": 91,
+    "normal_build_node_gates": 37,
+    "scope": "Exact signed BEPG successor changes only a Python fixture. BEOQ actual upgrade, cold boot and native companion evidence remains historical; none is relabelled as BEPG signed application acceptance.",
+    "source_root_python_fixture_fix": {
+      "passed": true,
+      "proof_sha256": "62fc9d806d0a975c2836ccd97fdf670990eebcbf3310c9b5459fb443f956bcb3",
+      "source_test_sha256": "a9c0fe4315dfac4d5b64e7625ed10dfb1282bf78a253513e3c3451f7dcd4d776",
+      "production": 54,
+      "development": 32,
+      "start_guard": 8,
+      "fail": 0,
+      "skip": 0,
+      "native_systemd_acceptance": false,
+      "protected_preserved": true
+    },
+    "retained_first_ci_failure": {
+      "head": "1ee5aab94038c6c2b7523c425fb2b065e4c4023d",
+      "run": 38386298427,
+      "job": 115258819902,
+      "conclusion": "failure",
+      "npm_pass": 77,
+      "production_fail": 1,
+      "failure": "Root production test still asserted retained v2; correction verifies retained v3 and forbids any v1/v2/v3 creation on preflight drift.",
+      "latest_head_ci_success": false
+    },
+    "actual_signed_statistics_25_update_verified": false,
+    "production_layout_upgrade_verified": false,
+    "full_current_native_companion_verified": false,
+    "cold_boot_orphan_interlock_verified": false,
+    "main_release_delivered": false,
+    "main_changed": false,
+    "main_auto_installed_new_apps": 0,
+    "all_50_commercial": false,
+    "remaining_gaps": [
+      "Current signed default GitHub Statistics2.5 install/update and preservation of installed2.4.1 real history, current exact native companion and actual production-layout program upgrade remain to verify.",
+      "Full OS/architecture matrix, orphan recovery, abrupt power loss, long soak and physical mobile acceptance remain incomplete."
+    ]
+  },
   "reviewed_statistics_identity_release": {
     "release": "0.1.0-dev.proapps24statsguardv3beoq",
     "frozen_inputs_sha256": "5411b3087db37b56677b8906865896802ec772390a7179f54af50415c5677457",

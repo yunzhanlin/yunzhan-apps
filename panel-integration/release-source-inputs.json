@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24statsguardv3beoq-linux-amd64.tar.gz",
-  "archive_sha256": "1b48dab44be6513c434203544ce5048aa1cab88031fed17cf4bd1c7216af1d0b",
-  "frozen_inputs_sha256": "5411b3087db37b56677b8906865896802ec772390a7179f54af50415c5677457",
+  "archive": "panel-0.1.0-dev.proapps24statsrootfixturebepg-linux-amd64.tar.gz",
+  "archive_sha256": "d738507fae774d74d87ad2a50881b8775af4b894c85056646ef3c700730d336e",
+  "frozen_inputs_sha256": "0d375c83b9e9cbec38d321a3cf5bfadb50a24e36432bab1481028a9aedac33c4",
   "files": {
     "go.mod": "b76ecc6e09e228846e0d22b7481dd01d1b6b35230d7aef80b087f06dc603515e",
     "go.sum": "1831f722652fe85735ee01aaa9d25dfb94f2a4093bb48309ba8cced4641fbc64",
@@ -1042,7 +1042,7 @@
     "packaging/test_native_build_directories.py": "36ff1a333f3835eb707c5ac5d5d9f712e00c41c2825f118bed835176b812c0bb",
     "packaging/test_native_test_oracle.py": "913e2e59c7421f4e82a58acba15b141fdf004f3dd8742345feb2219c3ea5820e",
     "packaging/test_network_rulefeed_budget.py": "5584c3f0654b5661523307b61f66753db8bf74fb78ecdf2d8097e135440c8fb6",
-    "packaging/test_production_upgrade.py": "245871b569fccea6157a02be9df142b116696a775723ada6dbc24ab79a5fe9b4",
+    "packaging/test_production_upgrade.py": "a9c0fe4315dfac4d5b64e7625ed10dfb1282bf78a253513e3c3451f7dcd4d776",
     "packaging/test_prune_releases.py": "56bd2639cd114189c81adaa42ae38628614da5663886128147d05e1e37ad0fba",
     "packaging/test_release_file_modes.py": "4c0163b5bae941e2dff1ced73eb6807135d751a74e833abc7f1c2fd861130420",
     "packaging/test_runtime_install_budget.py": "ecde4ec114cd987a35c953fda50889c43f3ed89248ed829909d5d9acb4998a15",

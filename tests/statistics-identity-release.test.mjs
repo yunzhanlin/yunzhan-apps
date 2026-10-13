@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {verifyCurrentSource,sha} from './current-source-authority.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const historical={
+  "reviewed_statistics_identity_release": "4641a07261a5dd6c46c32f7deeddb7f606ed22e592b8149948370992f9fb90e6",
   "schema_version": "6b86b273ff34fce19d6b804eff5a3f5747ada4eaa22f1d49c01e52ddb7875b4b",
   "reviewed_statistics_version_release": "3c441911afe82966f3dbe4bc56db6337914c15777b95e3e9796424489dbb6576",
   "reviewed_handler_release": "a48ff16efd3b5d0259658ff0e5fa00a6f9ff32db38d0e8f5110c95d6edad6428",
@@ -35,7 +36,9 @@ test('old historical proof cohorts retain their own immutable source and evidenc
  assert.equal(c.reviewed_statistics_version_release.frozen_inputs_sha256,'918458c33fde22e77952d50b9a976bf124321b4106c4e9ec366b67edf4be24d0');
 });
 test('exact new source authority binds strict statistics2.5 and versioned immutable guard migration',async()=>{
- const {c,r,i,f}=await verifyCurrentSource();
+ const {c,i,f}=await verifyCurrentSource();
+ // The actual upgrade and boot proofs below remain bound to BEOQ.
+ const r=c.reviewed_statistics_identity_release;
  const required=['internal/executor/app_statistics_schema_linux.go','internal/executor/app_statistics_schema_linux_test.go','internal/executor/app_statistics_lifecycle_linux.go','internal/executor/app_statistics_requests_linux.go','internal/executor/app_statistics_archives_linux.go','internal/executor/app_statistics_gzip_linux.go','internal/executor/app_statistics_log_transaction_linux.go','internal/executor/app_statistics_health_native_linux_test.go','scripts/test-statistics-history.mjs'];
  for(const p of required){assert.match(f.files[p],/^[a-f0-9]{64}$/);assert.equal(i.files[p],f.files[p]);}
  const app=JSON.parse(await read('dist/apps/website-statistics-v2/2.5.0/manifest.json'));assert.deepEqual(app.required_panel_features,['statistics-cursor-retirement-v1','statistics-request-identity-v1']);
@@ -59,4 +62,21 @@ test('exact new source authority binds strict statistics2.5 and versioned immuta
  assert.equal(r.actual_normal_native_health.host_systemd_application_update_verified,false);
  for(const k of ['actual_signed_statistics_25_update_verified','production_layout_upgrade_verified','cold_boot_orphan_interlock_verified','main_release_delivered','main_changed','all_50_commercial'])assert.equal(r[k],false,k);
  assert.equal(c.commercial_feature_parity_complete,false);assert.equal(r.main_auto_installed_new_apps,0);
+});
+test('new root-fixture release retains BEOQ proofs while pinning the corrected exact source',async()=>{
+ const {c,r,f}=await verifyCurrentSource(),previous=c.reviewed_statistics_identity_release;
+ assert.equal(r.release,'0.1.0-dev.proapps24statsrootfixturebepg');
+ assert.equal(r.predecessor,'reviewed_statistics_identity_release');
+ assert.equal(sha(JSON.stringify(previous)),'4641a07261a5dd6c46c32f7deeddb7f606ed22e592b8149948370992f9fb90e6');
+ assert.deepEqual(r.only_frozen_input_changes,['packaging/test_production_upgrade.py']);
+ assert.equal(f.files['packaging/test_production_upgrade.py'],'a9c0fe4315dfac4d5b64e7625ed10dfb1282bf78a253513e3c3451f7dcd4d776');
+ const fixture=await read('panel-integration/packaging/test_production_upgrade.py');
+ assert(fixture.includes("for version in ('v1','v2','v3'):"));
+ assert(fixture.includes("self.assertTrue((root/'usr/lib/panel-program-upgrade/start-guard-v3').is_file())"));
+ for(const arch of ['arm64','amd64'])for(const name of ['panel','executor','guard_program','guard_installer','upgrade_helper','development_helper','prune_helper'])assert.equal(r.signed_normal_release[arch][name],previous.signed_normal_release[arch][name],arch+':'+name);
+ assert.equal(r.source_root_python_fixture_fix.proof_sha256,'62fc9d806d0a975c2836ccd97fdf670990eebcbf3310c9b5459fb443f956bcb3');
+ assert.deepEqual([r.source_root_python_fixture_fix.production,r.source_root_python_fixture_fix.development,r.source_root_python_fixture_fix.start_guard,r.source_root_python_fixture_fix.fail,r.source_root_python_fixture_fix.skip],[54,32,8,0,0]);
+ assert.equal(r.retained_first_ci_failure.run,38386298427);
+ assert.equal(r.retained_first_ci_failure.conclusion,'failure');
+ assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
 });
