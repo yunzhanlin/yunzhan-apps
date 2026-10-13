@@ -148,7 +148,7 @@ func (s *Store) QueueStatisticsGeo(in StatisticsGeoSelection, key, actor string)
 		return id, err
 	}
 	var count int
-	if err := tx.QueryRow("SELECT count(*) FROM runtime_jobs WHERE kind='statistics_geodata'").Scan(&count); err != nil {
+	if err := tx.QueryRow("SELECT count(*) FROM runtime_jobs j WHERE kind='statistics_geodata' AND NOT EXISTS(SELECT 1 FROM statistics_geodata_job_archives a WHERE a.job_id=j.id)").Scan(&count); err != nil {
 		return "", err
 	}
 	if count >= 128 {
@@ -165,6 +165,7 @@ func (s *Store) QueueStatisticsGeo(in StatisticsGeoSelection, key, actor string)
 	return id, tx.Commit()
 }
 func (a *Server) statisticsGeoRoutes(m *http.ServeMux) {
+	a.statisticsGeoArchiveRoutes(m)
 	admin := func(w http.ResponseWriter, u identity) bool {
 		role, _, err := a.Store.appUserRole(u.ID)
 		if err != nil || role != "admin" {

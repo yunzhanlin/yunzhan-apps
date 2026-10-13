@@ -61,46 +61,7 @@ func statisticsGeoJobContents(root *os.Root, published bool) error {
 	return nil
 }
 func readStatisticsGeoJob(id string) (statisticsGeoRequest, []byte, *statisticsGeoDirectory, *os.Root, error) {
-	var request statisticsGeoRequest
-	if !core.ValidID(id) {
-		return request, nil, nil, nil, errors.New("地域任务标识无效")
-	}
-	base, err := statisticsGeoJobsOpen(false)
-	if err != nil {
-		return request, nil, nil, nil, err
-	}
-	fail := func(err error) (statisticsGeoRequest, []byte, *statisticsGeoDirectory, *os.Root, error) {
-		base.Close()
-		return request, nil, nil, nil, err
-	}
-	info, err := base.Lstat(id)
-	if err != nil || !moduleRecordInfo(info, true, false) {
-		return fail(errors.New("地域任务目录身份异常"))
-	}
-	root, err := base.OpenRoot(id)
-	if err != nil {
-		return fail(err)
-	}
-	bad := func(err error) (statisticsGeoRequest, []byte, *statisticsGeoDirectory, *os.Root, error) {
-		root.Close()
-		return fail(err)
-	}
-	opened, err := root.Stat(".")
-	if err != nil || !os.SameFile(info, opened) || !base.current() {
-		return bad(errors.New("地域任务目录打开期间变化"))
-	}
-	if err = statisticsGeoJobContents(root, true); err != nil {
-		return bad(err)
-	}
-	raw, err := geoStoreRead(root, "request.json", 4096)
-	if err != nil || decodeStatisticsGeoPrivate(raw, &request) != nil || request.Format != 1 || request.JobID != id || core.ValidateStatisticsGeoSelection(request.Selection) != nil || !networkIDSRootSHA.MatchString(request.EnvelopeSHA) {
-		return bad(errors.New("地域任务原始请求损坏"))
-	}
-	envelope, err := geoStoreRead(root, "envelope.json", appcatalog.MaxGeoDataEnvelopeBytes)
-	if err != nil || core.Hash(string(envelope)) != request.EnvelopeSHA {
-		return bad(errors.New("地域任务原始签名材料损坏"))
-	}
-	return request, envelope, base, root, nil
+	return readStatisticsGeoJobAt(productionStatisticsGeoJobArchiveStore(), id)
 }
 func (s *Service) statisticsGeoGuard(selection core.StatisticsGeoSelection) error {
 	if err := upgradeguard.CheckStartup(); err != nil {
@@ -172,6 +133,20 @@ func (s *Service) createStatisticsGeoJob(id string, in core.StatisticsGeoSelecti
 		return err
 	}
 	defer base.Close()
+	// Original archived IDs are permanently terminal and cannot be republished.
+	archive, archiveErr := geoJobDirectory(statisticsGeoJobsArchiveRoot, false)
+	if archiveErr == nil {
+		_, foundErr := archive.Lstat(id)
+		archive.Close()
+		if foundErr == nil {
+			return errors.New("原地域任务已归档，不重发或重建")
+		}
+		if !errors.Is(foundErr, os.ErrNotExist) {
+			return foundErr
+		}
+	} else if !errors.Is(archiveErr, os.ErrNotExist) {
+		return archiveErr
+	}
 	if _, err = base.Lstat(id); err == nil {
 		prior, _, p, r, err := readStatisticsGeoJob(id)
 		if err != nil {
@@ -284,6 +259,7 @@ func (s *Service) statisticsGeoJobStatus(ctx context.Context, id string) (core.S
 	return out, nil
 }
 func (s *Service) statisticsGeoJobRoutes(m *http.ServeMux) {
+	s.statisticsGeoArchiveRoutes(m)
 	m.HandleFunc("GET /v1/statistics/geodata", func(w http.ResponseWriter, r *http.Request) {
 		out, err := s.statisticsGeoState()
 		if err != nil {
