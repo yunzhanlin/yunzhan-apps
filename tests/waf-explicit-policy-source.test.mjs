@@ -5,7 +5,7 @@ import {createHash}from'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 test('two-file WAF fix is pinned to a new real signed release, not rewritten historical BESO source',async()=>{
- const current=JSON.parse(await read('panel-integration-geography/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24statsboundedbeso/source-sha256.json'));
+ const current=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24wafpolicybetu/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24statsboundedbeso/source-sha256.json'));
  const oldBuild=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24statsboundedbeso/release-source-inputs.json'));
  assert.equal(old.release.frozen_inputs_sha256,'261a5b89d1288ae85c5b3a3160f8e886bc20319cfcf4202c5bb8242cd9182dd0');assert.equal(old.release.archive_sha256,'84ffbf8cbd8c39d89c64eeb7cb93abdfc2c779654091fb2e86eac05f1737d9a7');
  assert.deepEqual(Object.keys(current.files),Object.keys(old.files));assert.deepEqual(current.test_overrides??{},{});assert.deepEqual(old.test_overrides??{},{});

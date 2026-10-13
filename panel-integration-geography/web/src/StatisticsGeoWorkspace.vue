@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {onMounted,ref} from 'vue';
+import StatisticsGeoJobRecords from './StatisticsGeoJobRecords.vue';
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 type Stored={release:string;manifest_sha256:string;app_manifest_sha256:string;selected:boolean};
 type Selection={action:'install'|'rollback';app_version:string;app_manifest_sha256:string;installation_id:string;release:string;data_manifest_sha256:string};
@@ -39,6 +40,7 @@ onMounted(refresh);
         <p>回滚不会删除较新库或降低防重放记录。内存报表读取可能晚于提交完成；以实际报表的库月份、错误与后台核对状态为准。</p>
       </template>
       <h4>保留的后台任务</h4><el-table :data="page.jobs" empty-text="没有地域后台任务"><el-table-column prop="created_at" label="创建时间" /><el-table-column prop="state" label="状态" /><el-table-column prop="error" label="告警" /><el-table-column label="查看"><template #default="scope"><el-button @click="onJob(scope.row.id)">查看原任务</el-button></template></el-table-column></el-table>
+      <StatisticsGeoJobRecords :api="api" :on-job="onJob"/>
     </template>
   </section>
 </template>

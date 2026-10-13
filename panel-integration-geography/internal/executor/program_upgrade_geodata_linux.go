@@ -16,7 +16,12 @@ import (
 // A request still counts as pending even when no unit/list-jobs row exists.
 // Preflight observes immutable receipts only; it never starts/replays a job.
 func (r *programQueueReader) statisticsGeoJobs() error {
-	relative := "var/lib/panel-executor/statistics-geodata-jobs"
+	if err := r.statisticsGeoJobTree("var/lib/panel-executor/statistics-geodata-jobs", core.StatisticsGeoActiveJobsMax); err != nil {
+		return err
+	}
+	return r.statisticsGeoJobTree("var/lib/panel-executor/statistics-geodata-job-archive", core.StatisticsGeoArchivedJobsMax)
+}
+func (r *programQueueReader) statisticsGeoJobTree(relative string, max int) error {
 	root, err := r.directory(relative)
 	if err != nil || root == nil {
 		return err
@@ -26,9 +31,9 @@ func (r *programQueueReader) statisticsGeoJobs() error {
 	if err != nil {
 		return err
 	}
-	entries, err := d.ReadDir(129)
+	entries, err := d.ReadDir(max + 1)
 	d.Close()
-	if err != nil && !errors.Is(err, io.EOF) || len(entries) > 128 {
+	if err != nil && !errors.Is(err, io.EOF) || len(entries) > max {
 		return errors.New("geographic job complete inventory exceeds budget")
 	}
 	for _, entry := range entries {
