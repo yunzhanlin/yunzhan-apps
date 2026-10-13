@@ -63,3 +63,12 @@ jobs:
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatistics(SchemaExact|IdentityLifecycle|RequestReceipt|RequestIdentity|RequestProgramUpgrade|RequestSelectedInstall|Gzip|ArchiveRuntime|LogTransaction)' -count=1
       - name: Statistics history UI and bounded report regression
         run: node --test panel-integration/scripts/test-statistics-history.mjs
+      - name: Geography candidate authority and complete database reader race regression (not app installation acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/geodata ./internal/appcatalog -count=1
+      - name: Geography candidate root storage, epoch, bounded cache and verifier contract regression (not native systemd acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueuesGeo)' -count=1
+      - name: Geography authenticated API, permissions and worker regression
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^TestStatisticsGeo' -count=1

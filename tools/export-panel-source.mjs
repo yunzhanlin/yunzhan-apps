@@ -6,7 +6,10 @@ import {sha256,pretty} from './lib.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const sourceArg=process.argv.indexOf('--panel-root');
 const panel=sourceArg>=0?path.resolve(process.argv[sourceArg+1]):path.resolve(root,'../panel');
-const output=path.join(root,'panel-integration');
+const outputArg=process.argv.indexOf('--output-name');
+const outputName=outputArg>=0?process.argv[outputArg+1]:'panel-integration';
+if(!['panel-integration','panel-integration-geography'].includes(outputName))throw Error('Unknown fixed source export scope');
+const output=path.join(root,outputName);
 const releaseArg=process.argv.indexOf('--release');
 let releaseInputs,releaseInfo;
 if(releaseArg>=0){
@@ -93,7 +96,7 @@ async function copy(relative){
    let previous;try{previous=await readFile(path.join(output,relative));}catch(error){if(error.code!=='ENOENT')throw error;}
    if(previous&&sha256(previous)===expected)data=previous;
    else{
-    const committed=execFileSync('git',['show','HEAD:panel-integration/'+relative],{cwd:root,maxBuffer:2*1024*1024});
+    const committed=execFileSync('git',['show','HEAD:'+outputName+'/'+relative],{cwd:root,maxBuffer:2*1024*1024});
     if(sha256(committed)!==expected)throw Error('No verified release source available: '+relative);
     data=committed;
    }

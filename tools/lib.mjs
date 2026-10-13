@@ -38,10 +38,11 @@ export function validateManifest(app) {
   const requirements=app.required_panel_features;
   const retirement="statistics-cursor-retirement-v1";
   const identity="statistics-request-identity-v1";
+  const geography="statistics-geodata-v2";
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||app.delivery?.provider!=="panel-module")errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity))errors.push("required panel feature has no reviewed implementation");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature===retirement||feature===identity)&&(app.id!=="website-statistics-v2"||app.delivery?.target!==app.id))errors.push("statistics handler requirement belongs only to website-statistics-v2");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature===retirement||feature===identity||feature===geography)&&(app.id!=="website-statistics-v2"||app.delivery?.target!==app.id))errors.push("statistics handler requirement belongs only to website-statistics-v2");
   }
   if(app.id==="website-statistics-v2"&&typeof app.version==="string"&&/^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(app.version)){
     const parts=app.version.split("-")[0].split(".").map(BigInt),floor=[2n,4n,1n];let comparison=0;
@@ -52,8 +53,13 @@ export function validateManifest(app) {
     for(let i=0;i<Math.max(parts.length,identityFloor.length);i++){const a=parts[i]??0n,b=identityFloor[i]??0n;if(a!==b){identityComparison=a>b?1:-1;break;}}
     if(identityComparison>=0){
       if(!Array.isArray(requirements)||!requirements.includes(identity))errors.push("statistics2.5 requires the actual request identity, migration and gzip panel handler");
-      if(app.version!=="2.5.0")errors.push("statistics new format requires the complete reviewed2.5.0 version, not aliases or unreviewed revisions");
+      if(app.version!=="2.5.0"&&app.version!=="2.6.0")errors.push("statistics new format requires exact reviewed2.5.0 or2.6.0, not aliases or unreviewed revisions");
     }
+  }
+  const geoPresent=Object.hasOwn(app,"geo_data_channel"),geoRequired=Array.isArray(requirements)&&requirements.includes(geography);
+  if(geoPresent||geoRequired||app.id==="website-statistics-v2"&&app.version==="2.6.0"){
+    const channel=app.geo_data_channel;
+    if(app.id!=="website-statistics-v2"||app.version!=="2.6.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||!geoRequired||!channel||typeof channel!=="object"||Array.isArray(channel)||Object.keys(channel).sort().join(",")!=="format,id"||channel.id!=="dbip-city-lite-v1"||channel.format!==1)errors.push("geography requires exact2.6 with bounded-reader ABI and fixed signed data channel; no URLs, keys or scripts");
   }
   if (!Array.isArray(app.compatibility?.os) || !app.compatibility.os.length) errors.push("missing compatible os");
   if (!Array.isArray(app.compatibility?.architectures) || !app.compatibility.architectures.length) errors.push("missing architectures");
