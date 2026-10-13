@@ -37,9 +37,12 @@ const sha=b=>createHash('sha256').update(b).digest('hex');
 export async function catalogBeforeStatistics241(catalog) {
  assert.equal(catalog.apps.length,50);
  const actual=catalog.apps.find(a=>a.id==='website-statistics-v2');
- assert.equal(actual.version,'2.5.0');
+ assert.equal(actual.version,'2.6.0');
+ const currentManifest=await readFile(new URL('../dist/apps/website-statistics-v2/2.6.0/manifest.json',import.meta.url));
+ assert.equal(sha(currentManifest),actual.sha256);
+ assert.deepEqual(JSON.parse(currentManifest).required_panel_features,['statistics-cursor-retirement-v1','statistics-request-identity-v1','statistics-geodata-v2']);
  const latest=await readFile(new URL('../dist/apps/website-statistics-v2/2.5.0/manifest.json',import.meta.url));
- assert.equal(sha(latest),actual.sha256);
+ assert.equal(sha(latest),'7a2d358fbb5f5a3bf0718b72ccc7401ae83df4d10596da837d1ed259a2ce2d13');
  assert.deepEqual(JSON.parse(latest).required_panel_features,['statistics-cursor-retirement-v1','statistics-request-identity-v1']);
  const current=await readFile(new URL('../dist/apps/website-statistics-v2/2.4.1/manifest.json',import.meta.url));
  assert.equal(sha(current),'8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e');

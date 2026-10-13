@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-12T11:05:11Z",
+  "generated_at": "2026-10-13T20:14:40Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1126,29 +1126,29 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.5.0",
-      "summary": "真实日志后台增量 SQLite 历史、30 天/25 万行有界保留、筛选及精确耗时分布。显式更新启用原生请求标识、私有去重回执与完整 CRC 校验的压缩续读；固定配置备份、实际加载探针、待恢复保护。只退役已消失且过期的已读进度，不删原日志。压缩及展开各限64 MiB、每次一份/三秒；百万回执上限不等于吞吐验收。无地理库；需支持两个必需能力的新版面板。",
+      "version": "2.6.0",
+      "summary": "真实日志后台 SQLite 历史、30 天/25 万行保留、原生请求标识、私有去重及精确耗时分布。新增独立签名离线国家/地区/城市库，管理员显式安装和回滚；受限后台完整核对与旧库回退。需支持三项必需能力的新版面板。最多8份库、128份任务；清理与完整商用流程仍在验收，不自动下载数据，不等于50项商用验收完成。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "website-statistics-v2",
       "manage_route": "app-modules",
       "capabilities": [
-        "小时趋势",
-        "独立 IP",
-        "爬虫识别",
-        "错误数",
-        "路径排行",
-        "来源统计",
-        "时间与状态筛选",
-        "路径/IP 筛选",
+        "小时趋势与独立 IP",
+        "爬虫识别及错误数",
+        "路径排行与来源统计",
+        "时间、状态、路径/IP 筛选",
         "慢请求明细",
         "30 天有界历史、进度/请求同事务与安全退役",
         "原生请求标识、私有去重回执、CRC 压缩续读及实际加载恢复保护",
-        "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警"
+        "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警",
+        "离线 IPv4/IPv6 国家、地区、城市与未定位分区",
+        "独立签名月份显式安装及数据回滚",
+        "受限后台完整核对与重启旧库回退",
+        "8份库/128任务容量保护；不自动删除证据"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.5.0/manifest.json",
-      "sha256": "7a2d358fbb5f5a3bf0718b72ccc7401ae83df4d10596da837d1ed259a2ce2d13"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.6.0/manifest.json",
+      "sha256": "17d8a5fb7f48a2e448103580c77067b249281d413f3182c3f7d1e2291ac54d70"
     },
     {
       "id": "website-tamper-proof",

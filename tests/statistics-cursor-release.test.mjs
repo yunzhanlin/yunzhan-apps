@@ -7,7 +7,8 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHas
 test('2.5 changes only statistics and retains immutable2.4.1 packages and their historical review',async()=>{
  const catalog=JSON.parse(await read('dist/catalog-v1.json')),app=catalog.apps.find(a=>a.id==='website-statistics-v2');
  assert.equal(sha(JSON.stringify(catalog.apps.filter(a=>a.id!=='website-statistics-v2').sort((a,b)=>a.id.localeCompare(b.id)))),'bffecb66de76955218323de30d9eee1c7312ba4ac27089e788d6f5b3b6df5a89');
- assert.equal(app.version,'2.5.0');assert.equal(app.sha256,sha(await read('dist/apps/website-statistics-v2/2.5.0/manifest.json')));
+ assert.equal(app.version,'2.6.0');assert.equal(app.sha256,sha(await read('dist/apps/website-statistics-v2/2.6.0/manifest.json')));
+ assert.equal(sha(await read('dist/apps/website-statistics-v2/2.5.0/manifest.json')),'7a2d358fbb5f5a3bf0718b72ccc7401ae83df4d10596da837d1ed259a2ce2d13');
  const latest=JSON.parse(await read('dist/apps/website-statistics-v2/2.5.0/manifest.json'));
  assert.deepEqual(latest.required_panel_features,['statistics-cursor-retirement-v1','statistics-request-identity-v1']);
  assert.equal(sha(await read('dist/apps/website-statistics-v2/2.4.1/manifest.json')),'8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e');

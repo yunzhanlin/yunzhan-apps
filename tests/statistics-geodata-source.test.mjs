@@ -21,11 +21,13 @@ test('geography implementation is exact separate signed BESO source; historical 
  for(const [name,digest]of Object.entries(release.files))assert.equal(index.files[name],digest,name);
  for(const p of ['internal/geodata/geodata.go','internal/geodata/structure_stream.go','internal/executor/app_statistics_geodata_cache.go','internal/executor/app_statistics_geodata_store_linux.go','internal/executor/app_statistics_geodata_verify_linux.go','internal/appcatalog/panel_features.go'])assert(Object.hasOwn(release.files,p),p);
 });
-test('geography manifest is only an integration candidate and official catalogue remains2.5',async()=>{
+test('candidate history remains integration and signed2.6 delivery keeps commercial qualification unproven',async()=>{
  const candidate=JSON.parse(await readFile(new URL('../registry/candidates/website-statistics-v2-2.6.0.json',import.meta.url)));
  assert.equal(candidate.stage,'integration');assert.deepEqual(validateManifest(candidate),[]);
  const catalog=JSON.parse(await readFile(new URL('../dist/catalog-v1.json',import.meta.url)));
- assert.equal(catalog.apps.find(a=>a.id===candidate.id).version,'2.5.0');
+ assert.equal(catalog.apps.find(a=>a.id===candidate.id).version,'2.6.0');
+ const manifest=JSON.parse(await readFile(new URL('../dist/apps/website-statistics-v2/2.6.0/manifest.json',import.meta.url)));
+ assert.deepEqual(validateManifest(manifest),[]);assert.equal(manifest.stage,'ready');assert.match(manifest.summary,/商用.*仍在验收/);
  const schema=JSON.parse(await readFile(new URL('../schema/app.schema.json',import.meta.url)));
  const clause=schema.allOf.find(c=>c.if?.properties?.version?.const==='2.6.0');
  assert.deepEqual(clause.then.required,['geo_data_channel','required_panel_features']);

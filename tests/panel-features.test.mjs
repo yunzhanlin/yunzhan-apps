@@ -4,7 +4,7 @@ import {test}from'node:test';
 import {validateManifest}from'../tools/lib.mjs';
 
 const registry=JSON.parse(await readFile(new URL('../registry/apps.json',import.meta.url),'utf8'));
-const original=registry.apps.find(app=>app.id==='website-statistics-v2');
+const original=JSON.parse(await readFile(new URL('../dist/apps/website-statistics-v2/2.5.0/manifest.json',import.meta.url),'utf8'));
 const feature='statistics-cursor-retirement-v1';
 const candidate=()=>({...structuredClone(original),version:'2.4.1',required_panel_features:[feature]});
 

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {validateManifest} from '../tools/lib.mjs';
 const source=JSON.parse(await readFile(new URL('../registry/apps.json',import.meta.url),'utf8'));
-const original=source.apps.find(a=>a.id==='website-statistics-v2');
+const original=JSON.parse(await readFile(new URL('../dist/apps/website-statistics-v2/2.5.0/manifest.json',import.meta.url),'utf8'));
 const candidate=()=>({...structuredClone(original),version:'2.6.0',geo_data_channel:{id:'dbip-city-lite-v1',format:1},required_panel_features:['statistics-cursor-retirement-v1','statistics-request-identity-v1','statistics-geodata-v2']});
 test('original2.5 remains valid and bounded2.6 has an independent fixed data channel',()=>{
  assert.deepEqual(validateManifest(original),[]);assert.deepEqual(validateManifest(candidate()),[]);
