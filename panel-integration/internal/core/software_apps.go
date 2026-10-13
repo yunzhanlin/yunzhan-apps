@@ -89,6 +89,12 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "website-statistics-v2" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, "2.5.0"); valid && comparison >= 0 && version != "2.5.0" {
+			return errors.New("统计新格式仅允许已实现的完整固定版本2.5.0，拒绝别名或未审核修订")
+		}
+	}
 	cmp, valid := appcatalog.CompareVersions(version, SoftwareImplementationVersion(id))
 	if !valid || cmp > 0 {
 		return errors.New("新版应用需要先升级面板，当前受限处理器尚未提供该版本")
@@ -194,6 +200,11 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	}
 	if action != "install" && action != "configure" && action != "uninstall" && action != "update" {
 		return "", errors.New("软件生命周期操作无效")
+	}
+	if action == "install" && id == "website-statistics-v2" && version != "" {
+		if err := ValidateSoftwareUpdate(id, version); err != nil {
+			return "", err
+		}
 	}
 	if action == "update" {
 		if err := ValidateSoftwareUpdate(id, version); err != nil {

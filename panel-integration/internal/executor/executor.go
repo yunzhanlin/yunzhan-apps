@@ -29,23 +29,24 @@ type Config struct {
 	RunWait                                                                                     TimedCommand
 }
 type Service struct {
-	Config                  Config
-	mu                      sync.Mutex
-	terminal                *terminalManager
-	phpWorkerQueueMu        sync.Mutex
-	phpWorkerQueueStarted   bool
-	phpWorkerQueueWake      chan struct{}
-	moduleAutoBlocked       map[string]bool // Guarded by mu; stop automatic writes after persistence failure.
-	moduleWorkerStarted     bool
-	moduleWatchWake         chan struct{}
-	moduleWatchStatus       map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
-	idsOperationMu          sync.Mutex
-	idsOperationStarted     bool
-	idsOperationWake        chan struct{}
-	idsOperationError       error
-	lbHealthStatusMu        sync.Mutex
-	lbHealthWorkerError     string
-	lbHealthWorkerCheckedAt string
+	Config                      Config
+	mu                          sync.Mutex
+	terminal                    *terminalManager
+	phpWorkerQueueMu            sync.Mutex
+	phpWorkerQueueStarted       bool
+	phpWorkerQueueWake          chan struct{}
+	moduleAutoBlocked           map[string]bool // Guarded by mu; stop automatic writes after persistence failure.
+	statisticsArchiveScanCursor map[string]int  // Guarded by mu; bounded scheduling only, never history authority.
+	moduleWorkerStarted         bool
+	moduleWatchWake             chan struct{}
+	moduleWatchStatus           map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
+	idsOperationMu              sync.Mutex
+	idsOperationStarted         bool
+	idsOperationWake            chan struct{}
+	idsOperationError           error
+	lbHealthStatusMu            sync.Mutex
+	lbHealthWorkerError         string
+	lbHealthWorkerCheckedAt     string
 	// Only a freshly constructed internal transaction adapter sets this.
 	// Never accepted from an API request or persisted configuration.
 	fileTransactionApplication string

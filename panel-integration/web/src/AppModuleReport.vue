@@ -7,6 +7,7 @@ import DailyReportSummary from "./DailyReportSummary.vue";
 import {dailySnapshot} from "./dailyReportView";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 import {taskProcessColumns,taskProcessRows} from './taskManager';
+import {statisticsHistoryNotice} from './statisticsHistory';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
@@ -44,7 +45,20 @@ const names: Record<string, string> = {
   history_row_limit: "全站历史行数上限",
   history_backlog_bytes: "尚未读取的日志",
   history_blocked_sources: "进度冲突或缺失来源",
-  history_compressed_sources: "未自动导入的压缩归档",
+  history_compressed_sources: "尚未完成或无法导入的压缩归档",
+  history_unsupported_rotation_sources: "尚不能核对的轮转来源",
+  history_verified_compressed_sources: "完整校验过的压缩来源",
+  history_deferred_compressed_sources: "校验超时后延后重试的压缩来源",
+  history_gzip_read_timeout_seconds: "每个压缩来源校验时间上限（秒）",
+  history_gzip_scheduler_site_limit: "压缩轮询网站身份上限",
+  history_request_ids_enabled: "请求标识去重已启用",
+  history_duplicate_requests: "本次识别并跳过的重复请求",
+  history_request_receipt_limit: "全站去重身份记录上限",
+  history_gzip_import_enabled: "压缩归档导入已启用",
+  history_gzip_scan_limit_per_pass: "每次完整校验的压缩归档上限",
+  history_gzip_legacy_missing_id_policy: "旧压缩行标识策略",
+  history_compressed_source_limit_bytes: "单个压缩来源校验字节上限",
+  history_compressed_expansion_limit_bytes: "单个归档解压字节上限",
   history_missing_log: "当前无可读访问日志",
   history_invalid_lines: "历史采集无效行",
   history_evicted_rows: "因行数上限退役的历史",
@@ -463,6 +477,8 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown, row?:Record<string,unknown>): string {
+  if(props.id==='website-statistics-v2' && key==='history_request_receipt_limit' && props.report.history_request_ids_enabled!==true)return '未启用（旧版历史模式）';
+  if(props.id==='website-statistics-v2' && key==='history_gzip_scan_limit_per_pass' && props.report.history_gzip_import_enabled!==true)return '未启用';
   if(props.id==='task-manager') {
     if(key==='state')return ({R:'运行中',S:'睡眠',D:'不可中断等待',I:'内核空闲',T:'已停止',t:'跟踪停止',Z:'僵尸',X:'已退出',x:'已退出'} as Record<string,string>)[String(value)]||'未知';
     if(key==='connections' && props.report.connections_available!==true)return '未取得，当前状态未知';
@@ -602,8 +618,8 @@ function mobileDownloadURL(value: unknown): string | undefined {
       <h4>原备份归档与摘要核对</h4>
       <dl><template v-for="(value,key) in report.backup_maintenance" :key="key"><dt>{{ names[String(key)] || key }}</dt><dd>{{ format(String(key),value) }}</dd></template></dl>
     </section>
-    <el-alert v-if="id === 'website-statistics-v2' && (report.history_blocked_sources || report.history_compressed_sources || report.history_missing_log)"
-      type="warning" title="部分日志无法自动续读：压缩归档不会重复导入，检查点冲突不会从头重置。已有历史保留；请核对日志轮转方式与历史范围。" :closable="false" />
+    <el-alert v-if="id === 'website-statistics-v2' && statisticsHistoryNotice(report)"
+      type="warning" :title="statisticsHistoryNotice(report)" :closable="false" />
     <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"
       type="warning" :title="report.history_worker_error || '后台采集尚未核对或状态已过期；本次手动读取成功不代表后台正在持续采集。'" :closable="false" />
     <section v-if="id === 'mobile-pwa' && Array.isArray(report.mobile_downloads)" class="mobile-downloads">

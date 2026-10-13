@@ -4,7 +4,7 @@ import test from 'node:test';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('statistics 2.4 advances the immutable manifest and publishes real bounded latency accumulation',async()=>{
  const registry=JSON.parse(await read('registry/apps.json')),app=registry.apps.find(a=>a.id==='website-statistics-v2');
- assert.equal(app.version,'2.4.1');assert(app.capabilities.some(c=>c.includes('P50/P90/P95/P99')));
+ assert.equal(app.version,'2.5.0');assert(app.capabilities.some(c=>c.includes('P50/P90/P95/P99')));
  const source=await read('panel-integration/internal/executor/app_analytics_latency.go');
  assert.match(source,/analyticsLatencySampleLimit = 250000/);assert.match(source,/a.samples = nil/);assert.match(source,/len\(a.samples\)\*percent \+ 99/);
  assert.match(source,/Source: "nginx_request_time"/);assert.match(source,/Method: "nearest_rank"/);assert.match(source,/\*float64/);

@@ -12,9 +12,10 @@ import (
 // field, so an old handler cannot merely publish a newer installed version.
 // Both HTTP-side pulls and executor-side offline verification use this gate.
 const StatisticsCursorRetirementFeature = "statistics-cursor-retirement-v1"
+const StatisticsRequestIdentityFeature = "statistics-request-identity-v1"
 
 func panelFeatureAvailable(feature string) bool {
-	return runtime.GOOS == "linux" && feature == StatisticsCursorRetirementFeature
+	return runtime.GOOS == "linux" && (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature)
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
@@ -33,6 +34,19 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 				return errors.New("统计历史新版本缺少必需的面板处理器声明，未安装或更新应用")
 			}
 		}
+		identity, valid := CompareVersions(base, "2.5.0")
+		if !valid {
+			return errors.New("统计请求标识版本无法核对")
+		}
+		if identity >= 0 {
+			found := false
+			for _, feature := range manifest.RequiredPanelFeatures {
+				found = found || feature == StatisticsRequestIdentityFeature
+			}
+			if !found {
+				return errors.New("统计2.5缺少必需的请求标识、迁移恢复及压缩归档处理器声明")
+			}
+		}
 	}
 	if len(manifest.RequiredPanelFeatures) == 0 {
 		return nil
@@ -46,7 +60,7 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
-		if feature == StatisticsCursorRetirementFeature && (manifest.ID != "website-statistics-v2" || manifest.Delivery.Target != manifest.ID) {
+		if (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature) && (manifest.ID != "website-statistics-v2" || manifest.Delivery.Target != manifest.ID) {
 			return errors.New("统计历史处理器要求不属于该应用")
 		}
 		if !available(feature) {

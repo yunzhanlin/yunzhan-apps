@@ -1126,8 +1126,8 @@
       "id": "website-statistics-v2",
       "name": "Website statistics-v2",
       "category": "professional",
-      "version": "2.4.1",
-      "summary": "真实日志后台增量 SQLite 历史、30 天/25 万行有界保留、筛选及精确耗时分布。修复长期轮转耗尽文件进度容量：仅退役已读完、已消失且超过保留窗口的进度，不删原日志或未读/冲突证据；与新请求同事务提交。必须先升级到支持该能力的面板；旧处理器拒绝安装。压缩导入及地理信息未提供。",
+      "version": "2.5.0",
+      "summary": "真实日志后台增量 SQLite 历史、30 天/25 万行有界保留、筛选及精确耗时分布。显式更新启用原生请求标识、私有去重回执与完整 CRC 校验的压缩续读；固定配置备份、实际加载探针、待恢复保护。只退役已消失且过期的已读进度，不删原日志。压缩及展开各限64 MiB、每次一份/三秒；百万回执上限不等于吞吐验收。无地理库；需支持两个必需能力的新版面板。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1143,12 +1143,12 @@
         "时间与状态筛选",
         "路径/IP 筛选",
         "慢请求明细",
-        "30 天后台增量历史与过期已读进度安全退役",
-        "检查点与请求同事务及中断保护",
+        "30 天有界历史、进度/请求同事务与安全退役",
+        "原生请求标识、私有去重回执、CRC 压缩续读及实际加载恢复保护",
         "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.4.1/manifest.json",
-      "sha256": "8b0bc77a7ddba94e1a29ea434c080b6c40c212d1edc592b904f757a3aa74f74e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/website-statistics-v2/2.5.0/manifest.json",
+      "sha256": "7a2d358fbb5f5a3bf0718b72ccc7401ae83df4d10596da837d1ed259a2ce2d13"
     },
     {
       "id": "website-tamper-proof",

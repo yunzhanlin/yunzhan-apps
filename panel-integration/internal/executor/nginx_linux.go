@@ -168,6 +168,9 @@ func RecoverNginx() error {
 }
 func NginxCommand(mode string) error {
 	if mode == "test" || mode == "start" {
+		if err := RecoverStatisticsLogConfiguration(); err != nil {
+			return err
+		}
 		if err := RecoverAnalyticsHTMLConfiguration(); err != nil {
 			return err
 		}

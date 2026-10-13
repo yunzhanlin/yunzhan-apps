@@ -18,6 +18,7 @@ import (
 
 type analyticsAccess struct {
 	Time, Remote, Method, Path, Agent, Referer string
+	RequestID                                  string `json:"request_id,omitempty"`
 	Status                                     int
 	Bytes                                      int64
 	Seconds                                    float64

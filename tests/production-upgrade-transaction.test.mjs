@@ -9,7 +9,7 @@ test('ordinary production transaction is exact normal source and maintains indep
  const inputs=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_upgrade_transaction_release,current=c[c.current_reviewed_release];
  assert.equal(r.release,'0.1.0-dev.proapps24transactionbegh');assert.equal(r.frozen_source_files,16855);assert.equal(r.exported_normal_source_files,1207);
- assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1227);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);assert.equal(current.source_overrides,0);
+ assert.equal(inputs.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(inputs.archive_sha256,current.signed_normal_release.amd64.archive);assert.equal(Object.keys(index.files).length,1250);assert.equal(Object.keys(index.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);assert.equal(current.source_overrides,0);
  for(const file of ['cmd/panel/main.go','cmd/executor/main.go','internal/upgradeguard/guard.go','internal/upgradeguard/guard_test.go','packaging/install.sh','packaging/build-release.sh','packaging/upgrade-release.py','packaging/test_production_upgrade.py']){
   const digest=sha(await read('panel-integration/'+file));assert.equal(inputs.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }

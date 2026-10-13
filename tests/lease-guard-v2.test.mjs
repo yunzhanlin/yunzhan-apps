@@ -7,10 +7,10 @@ const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHas
 test('normal signed bounded lease scans and recorded immutable v2 transition preserve old failures and do not claim all50',async()=>{
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.reviewed_lease_release,old=c.reviewed_canonical_release,current=c[c.current_reviewed_release];
  const i=JSON.parse(await read('panel-integration/source-sha256.json')),f=JSON.parse(await read('panel-integration/release-source-inputs.json'));
- assert.equal(c.current_reviewed_release,'reviewed_statistics_version_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
+ assert.equal(c.current_reviewed_release,'reviewed_statistics_rootfixture_release');assert.equal(r.release,'0.1.0-dev.proapps24leasebejz');
  assert.equal(r.frozen_source_files,16872);assert.equal(r.frozen_inputs_sha256,'c9a2b2cdbc39ff86d1fe3a27d86ada9587921898d638e8231b23145987b8004c');
  assert.equal(f.frozen_inputs_sha256,current.frozen_inputs_sha256);assert.equal(f.archive_sha256,current.signed_normal_release.amd64.archive);
- assert.equal(Object.keys(i.files).length,1227);assert.equal(Object.keys(f.files).length,1186);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
+ assert.equal(Object.keys(i.files).length,1250);assert.equal(Object.keys(f.files).length,1209);assert.equal(Object.keys(i.test_overrides??{}).length,0);assert.equal(r.source_overrides,0);
  assert.deepEqual(r.only_frozen_input_changes,['internal/upgradeguard/startup_linux.go','internal/upgradeguard/startup_lease_linux_test.go','packaging/start-guard-install.py','packaging/test_start_guard_install.py','packaging/test_production_upgrade.py']);
  for(const p of r.only_frozen_input_changes){const h=sha(await read('panel-integration/'+p));assert.equal(i.files[p],h,p);assert.equal(f.files[p],h,p);}
  const source=await read('panel-integration/internal/upgradeguard/startup_linux.go');
@@ -21,12 +21,12 @@ test('normal signed bounded lease scans and recorded immutable v2 transition pre
  const fixture=await read('panel-integration/internal/upgradeguard/startup_lease_linux_test.go');
  for(const s of ['calls != 3','calls != 8','calls != 1','absent, duplicate, foreign or shared kernel lease accepted','kernel I/O failure must refuse immediately','oversized enumeration accepted','late exact enumeration accepted'])assert(fixture.includes(s),s);
  const install=await read('panel-integration/packaging/start-guard-install.py');
- for(const s of ["GUARD = '/usr/lib/panel-program-upgrade/start-guard-v2'","LEGACY = '/usr/lib/panel-program-upgrade/start-guard-v1'","'startup-guard-v2-transition.json'","'legacy_retained':True","'previous_identity'","'candidate_sha256'","identity(actual[1]) != identity(original[1])","identity(actual_legacy[1]) != identity(legacy_snapshot[1])",'unreviewed immutable v1 guard','v1 transition requires a private upgrade transaction backup','retained v2 transition evidence must not be overwritten'])assert(install.includes(s),s);
+ for(const s of ["GUARD = '/usr/lib/panel-program-upgrade/start-guard-v3'","LEGACY = '/usr/lib/panel-program-upgrade/start-guard-v1'","'startup-guard-v3-transition.json'","'legacy_retained':True","'previous_identity'","'candidate_sha256'","identity(actual[1]) != identity(original[1])","identity(actual_legacy[1]) != identity(info_before)",'unreviewed immutable previous guard','previous guard transition requires private authority and retained verified binaries','retained v3 transition evidence must not be overwritten'])assert(install.includes(s),s);
  assert(install.indexOf('transaction.atomic(proof,')<install.indexOf('transaction.atomic(target,'));
  for(const arch of ['amd64','arm64']){
   assert.equal(r.approved_legacy_guard_sha256[arch],old.signed_normal_release[arch].guard_program);
   assert(install.includes(r.approved_legacy_guard_sha256[arch]));assert.notEqual(r.signed_normal_release[arch].guard_program,r.approved_legacy_guard_sha256[arch]);
-  assert.equal(r.signed_normal_release[arch].guard_installer,sha(install));
+  assert.equal(current.signed_normal_release[arch].guard_installer,sha(install));
   for(const p of ['development_helper','upgrade_helper','prune_helper'])assert.equal(r.signed_normal_release[arch][p],old.signed_normal_release[arch][p]);
  }
  const python=await read('panel-integration/packaging/test_start_guard_install.py');

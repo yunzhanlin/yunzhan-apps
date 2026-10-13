@@ -57,6 +57,7 @@ func main() {
 	apacheBodyVerify := flag.String("verify-apache-body", "", "read-only verification of a sealed Apache request-body engine")
 	analyticsHTMLBuild := flag.String("build-analytics-html", "", "build a pinned isolated analytics HTML engine without activating sites")
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
+	statisticsLogRecover := flag.Bool("recover-statistics-log-config", false, "recover fixed statistics log configuration and installed record without starting Nginx")
 	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
 	apacheBodyPrepare := flag.Bool("prepare-apache-body-runtime", false, "verify committed Apache native body policy and prepare only missing bounded cache leaves at startup")
 	apacheBodyCacheCheck := flag.Bool("check-apache-body-cache-mount", false, "read-only fixed pre-mount guard; never hide existing cache contents or replace unknown mounts")
@@ -111,6 +112,12 @@ func main() {
 	}
 	if *wafRecover {
 		if err := executor.RecoverWAFConfiguration(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *statisticsLogRecover {
+		if err := executor.RecoverStatisticsLogConfiguration(); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -342,6 +349,13 @@ func main() {
 	svc := executor.New(executor.Config{SitesDir: "/srv/panel/sites", ConfDir: "/etc/panel/sites-enabled", StateDir: "/var/lib/panel-executor", NginxBin: "/usr/sbin/nginx", TerminalSocket: "/run/panel-terminal/control.sock", RootTerminalSocket: "/run/panel-terminal-root/control.sock"})
 	handler := svc.Handler()
 	startWorkers := func() {
+		// Run only after the program-upgrade guard opens. An interrupted
+		// statistics migration must be reconciled before any history worker.
+		// Unknown external state remains pending/frozen; unrelated modules
+		// stay reachable for diagnosis rather than losing the whole executor.
+		if err := executor.RecoverStatisticsLogConfiguration(); err != nil {
+			log.Printf("Statistics migration recovery not confirmed; original evidence retained and statistics mutations/ingestion blocked: %v", err)
+		}
 		if err := svc.StartNetworkIDSOperations(); err != nil {
 			log.Printf("IDS background queue unavailable; records preserved and control disabled: %v", err)
 		}

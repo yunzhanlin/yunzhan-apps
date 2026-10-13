@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('BECJ exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
+test('Current release exports the exact signed recovery, session, Git transport and unchanged byte-budget inputs',async()=>{
  const release=JSON.parse(await read('panel-integration/release-source-inputs.json')),index=JSON.parse(await read('panel-integration/source-sha256.json'));
- assert.equal(release.frozen_inputs_sha256,'918458c33fde22e77952d50b9a976bf124321b4106c4e9ec366b67edf4be24d0');
- assert.equal(release.archive_sha256,'fcf14be23b186a9b975a7ba9062f7f8a7744f1f96e26a9734dfe5d680c58f8e3');
- assert.equal(Object.keys(index.files).length,1227);
+ assert.equal(release.frozen_inputs_sha256,'0d375c83b9e9cbec38d321a3cf5bfadb50a24e36432bab1481028a9aedac33c4');
+ assert.equal(release.archive_sha256,'d738507fae774d74d87ad2a50881b8775af4b894c85056646ef3c700730d336e');
+ assert.equal(Object.keys(index.files).length,1250);
  for(const file of ['internal/appcatalog/github_catalog_git.go','internal/appcatalog/github_catalog_git_test.go','web/src/deferredWorkspace.ts','web/src/menuPermissions.ts','web/src/App.vue','scripts/test-deferred-workspace.mjs','web/src/moduleInitialInspection.ts','web/src/AppModuleManager.vue','scripts/test-web-entry-budget.mjs','scripts/web-entry-budget.mjs','packaging/build-release.sh']){
   const digest=createHash('sha256').update(await read('panel-integration/'+file)).digest('hex');assert.equal(release.files[file],digest,file);assert.equal(index.files[file],digest,file);
  }
- const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,36);
+ const gates=Object.keys(release.files).filter(f=>/^scripts\/test-[a-z0-9-]+\.mjs$/.test(f));assert.equal(gates.length,37);
  const build=await read('panel-integration/packaging/build-release.sh');for(const gate of ['test-deferred-workspace.mjs','test-web-entry-budget.mjs','web-entry-budget.mjs'])assert(build.includes(gate));
  const deferred=await read('panel-integration/web/src/deferredWorkspace.ts');assert.match(deferred,/if \(this.codeFailure\) throw this.codeFailure/);assert.match(deferred,/return this.current\(ticket\) \? value : undefined/);assert.equal((deferred.match(/if \(!current\(\)\) throw expiredWorkspace\(\)/g)||[]).length,4);assert.match(deferred,/message.slice\(0, 512\)/);
  const view=await read('panel-integration/web/src/App.vue');assert.match(view,/window.location.reload\(\)/);assert.match(view,/cause instanceof WorkspaceCodeLoadError/);assert.match(view,/epoch === accessEpoch && session === csrf.value/);assert.match(view,/canOpenAppModule\(accessPlan.value, id\)/);
