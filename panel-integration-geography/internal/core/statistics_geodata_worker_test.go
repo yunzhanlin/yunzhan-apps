@@ -85,3 +85,38 @@ func TestStatisticsGeoWorkerOriginalIDNoLostReplyRedispatch(t *testing.T) {
 		})
 	}
 }
+func TestStatisticsGeoMaintenanceWorkerSendsOnlyEmptyOriginalSelection(t *testing.T) {
+	for _, action := range []string{"archive", "restore"} {
+		t.Run(action, func(t *testing.T) {
+			s := testStore(t)
+			in := statisticsGeoSelectionFixture()
+			in.Action = action
+			id, err := s.QueueStatisticsGeo(in, "maintenance-original-"+action, strings.Repeat("d", 32))
+			if err != nil {
+				t.Fatal(err)
+			}
+			job, err := s.nextRuntimeInstallJob()
+			if err != nil {
+				t.Fatal(err)
+			}
+			posts := 0
+			e := &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+				posts++
+				raw, err := io.ReadAll(r.Body)
+				selection, parseErr := ParseStatisticsGeoSelectionQuery(r.URL.Query())
+				if err != nil || parseErr != nil || r.Method != "POST" || string(raw) != "{}" || selection != in || r.URL.Path != "/v1/statistics/geodata/jobs/"+id {
+					t.Fatal("maintenance mixed downloads, arbitrary fields or another identity", r.Method, r.URL, string(raw), err, parseErr)
+				}
+				out := StatisticsGeoOperation{JobID: id, Selection: in, State: "succeeded", Steps: []Step{}}
+				body, _ := json.Marshal(out)
+				return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(string(body)))}, nil
+			})}}
+			runStatisticsGeoJob(context.Background(), s, e, job, appcatalog.Default())
+			var state string
+			s.DB.QueryRow("SELECT state FROM runtime_jobs WHERE id=?", id).Scan(&state)
+			if state != "succeeded" || posts != 1 {
+				t.Fatal(state, posts)
+			}
+		})
+	}
+}

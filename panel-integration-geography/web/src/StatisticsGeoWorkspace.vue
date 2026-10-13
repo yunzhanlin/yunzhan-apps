@@ -2,8 +2,8 @@
 import {onMounted,ref} from 'vue';
 import StatisticsGeoJobRecords from './StatisticsGeoJobRecords.vue';
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
-type Stored={release:string;manifest_sha256:string;app_manifest_sha256:string;selected:boolean};
-type Selection={action:'install'|'rollback';app_version:string;app_manifest_sha256:string;installation_id:string;release:string;data_manifest_sha256:string};
+type Stored={release:string;manifest_sha256:string;app_manifest_sha256:string;selected:boolean;archived?:boolean;previous?:boolean;high_water?:boolean};
+type Selection={action:'install'|'rollback'|'archive'|'restore';app_version:string;app_manifest_sha256:string;installation_id:string;release:string;data_manifest_sha256:string};
 type Page={state:{installed:boolean;app_version:string;installation_id:string;loading:boolean;error?:string;checked_at:string;metadata:{available:boolean;release?:string;stale?:boolean};stored:Stored[]};available?:{app_version:string;app_manifest_sha256:string;manifest_sha256:string;manifest:{release:string;compressed_bytes:number}}|null;source_error:string;jobs:{id:string;state:string;error:string;created_at:string}[]};
 const props=defineProps<{api:API;onJob:(id:string)=>Promise<void>}>();
 const page=ref<Page>(),busy=ref(false),error=ref(''),pending=ref<{selection:Selection;key:string}>();
@@ -20,6 +20,7 @@ async function submit(selection:Selection){
 }
 function install(){const p=page.value;if(!p?.available)return;void submit({action:'install',app_version:p.available.app_version,app_manifest_sha256:p.available.app_manifest_sha256,installation_id:p.state.installation_id,release:p.available.manifest.release,data_manifest_sha256:p.available.manifest_sha256});}
 function rollback(row:Stored){const p=page.value;if(!p)return;void submit({action:'rollback',app_version:p.state.app_version,app_manifest_sha256:row.app_manifest_sha256,installation_id:p.state.installation_id,release:row.release,data_manifest_sha256:row.manifest_sha256});}
+function maintain(row:Stored,action:'archive'|'restore'){const p=page.value;if(!p)return;void submit({action,app_version:p.state.app_version,app_manifest_sha256:row.app_manifest_sha256,installation_id:p.state.installation_id,release:row.release,data_manifest_sha256:row.manifest_sha256});}
 onMounted(refresh);
 </script>
 <template>
@@ -36,15 +37,17 @@ onMounted(refresh);
         <p>后台读取：{{page.state.loading?'完整库核对中':'未在读取'}}；报表内存库：{{page.state.metadata.available?page.state.metadata.release:'尚不可用'}}；最近核对：{{page.state.checked_at||'尚未完成'}}。</p>
         <el-alert v-if="page.source_error" type="warning" :title="`最新签名目录待核对：${page.source_error}`" :closable="false" />
         <div v-if="page.available" class="geo-available"><span>已验签数据月份：{{page.available.manifest.release}} · 下载约 {{(page.available.manifest.compressed_bytes/1048576).toFixed(1)}} MiB</span><el-button type="primary" :disabled="busy||!!pending" @click="install">下载或切换已签名城市库</el-button></div>
-        <el-table :data="page.state.stored" empty-text="没有已保留副本"><el-table-column prop="release" label="数据月份" /><el-table-column label="当前选择"><template #default="scope">{{scope.row.selected?'是':'否'}}</template></el-table-column><el-table-column label="操作"><template #default="scope"><el-button :disabled="busy||!!pending||scope.row.selected" @click="rollback(scope.row)">核对并回滚到此副本</el-button></template></el-table-column></el-table>
+        <p>活动区最多8份；私有归档区最多24份。归档只移动并保留完整原副本，不切换数据；当前、上一份及最高签名月份的防重放锚点禁止归档。恢复只返回活动区，回滚需另行明确提交。归档满后仍需后续导出与受控清理，不会自动删除数据。</p>
+        <el-table :data="page.state.stored" empty-text="没有已保留副本"><el-table-column prop="release" label="数据月份" width="110"/><el-table-column label="位置／保护" min-width="185"><template #default="{row}">{{row.archived?'私有归档':'活动区'}}<small>{{[row.selected?'当前选择':'',row.previous?'上一份':'',row.high_water?'防重放锚点':''].filter(Boolean).join(' · ')}}</small></template></el-table-column><el-table-column label="操作" min-width="240"><template #default="{row}"><el-button v-if="!row.archived" :disabled="busy||!!pending||row.selected" @click="rollback(row)">核对并回滚到此副本</el-button><el-button v-if="row.archived!==undefined" :disabled="busy||!!pending||!row.archived&&(row.selected||row.previous||row.high_water)" @click="maintain(row,row.archived?'restore':'archive')">{{row.archived?'恢复副本（不切换）':'归档旧副本（不删除）'}}</el-button></template></el-table-column></el-table>
         <p>回滚不会删除较新库或降低防重放记录。内存报表读取可能晚于提交完成；以实际报表的库月份、错误与后台核对状态为准。</p>
       </template>
-      <h4>保留的后台任务</h4><el-table :data="page.jobs" empty-text="没有地域后台任务"><el-table-column prop="created_at" label="创建时间" /><el-table-column prop="state" label="状态" /><el-table-column prop="error" label="告警" /><el-table-column label="查看"><template #default="scope"><el-button @click="onJob(scope.row.id)">查看原任务</el-button></template></el-table-column></el-table>
+      <h4>保留的后台任务</h4><el-table :data="page.jobs" empty-text="没有地域后台任务"><el-table-column prop="created_at" label="创建时间" min-width="165"/><el-table-column label="状态" min-width="90"><template #default="{row}">{{({succeeded:'成功',failed:'失败',queued:'排队中',running:'运行中',needs_attention:'待核对'} as Record<string,string>)[row.state]||'状态待核对'}}</template></el-table-column><el-table-column prop="error" label="告警" min-width="145"/><el-table-column label="查看" width="120"><template #default="scope"><el-button @click="onJob(scope.row.id)">查看原任务</el-button></template></el-table-column></el-table>
       <StatisticsGeoJobRecords :api="api" :on-job="onJob"/>
     </template>
   </section>
 </template>
 <style scoped>
 .geo-workspace{min-width:0}.geo-workspace p{line-height:1.7;color:var(--el-text-color-secondary);overflow-wrap:anywhere}.geo-workspace .el-alert{margin:12px 0}.geo-available{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:16px 0}.geo-available span{overflow-wrap:anywhere}
+.geo-workspace small{display:block;overflow-wrap:anywhere}.geo-workspace :deep(.el-table .cell){overflow-wrap:anywhere}
 @media(max-width:640px){.geo-available{flex-direction:column;align-items:flex-start}}
 </style>

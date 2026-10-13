@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+test('retention is a new immutable signed source and preserves prior job archival evidence',async()=>{
+ const current=JSON.parse(await read('panel-integration-geography/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24geojobsbeuf/source-sha256.json')),record=JSON.parse(await read('registry/geodata-retention-release.json'));
+ assert.equal(old.release.frozen_inputs_sha256,'6171a7c254489e727a62b989e6a5b986c7875e611af12cfa8722268b5f587629');assert.equal(old.release.archive_sha256,'2c38c2a330f5ab6224e75439e3f025d00b787fc2a64cda5f134105a55380443f');
+ assert.equal(record.frozen_inputs_sha256,current.release.frozen_inputs_sha256);assert.equal(record.normal_original_key_archives.amd64,current.release.archive_sha256);assert.deepEqual(Object.keys(current.files).filter(p=>old.files[p]!==current.files[p]),record.only_source_changes);for(const p of Object.keys(old.files))assert(Object.hasOwn(current.files,p));assert.deepEqual(current.test_overrides??{},{});
+ assert.equal(record.commercial_all50,false);assert.equal(record.main_delivered,false);assert.equal(record.positive_real_old_month_maintenance_proved,false);assert.equal(record.actual_normal_http.positive_old_month_maintenance_proved,false);assert.equal(record.actual_normal_browser.maintenance_submissions,0);assert.equal(record.actual_normal_browser.intercepted_or_synthetic_api,false);assert.equal(record.bounds.new_worker_write_paths,false);
+ const native=await read('panel-integration-geography/internal/executor/app_statistics_geodata_retention_linux.go');for(const gate of ['filepath.Join(store.base, ".archive")','original.Selected || original.Previous || original.HighWater','unix.RENAME_NOREPLACE','loadStore.load(ctx','loadStore.publicationCurrent','geoDatasetSameFiles','geoSelectorSameIdentity'])assert(native.includes(gate),gate);assert(!native.includes('RemoveAll(')&&!native.includes('os.Remove('));
+ const core=await read('panel-integration-geography/internal/core/statistics_geodata.go');assert(core.includes('!entry.Selected && !entry.Previous && !entry.HighWater'));assert(core.includes('in.Action != "install"'));
+ const receipt=await read('panel-integration-geography/internal/core/statistics_geodata_archive.go');assert(receipt.includes('StatisticsGeoJobEvidenceMaxBytes = 3<<20 + 40<<10'));assert.equal(record.bounds.original_job_evidence_bytes_max,3*1048576+40*1024);
+ const worker=await read('panel-integration-geography/internal/executor/app_statistics_geodata_jobs_linux.go');assert(worker.includes('statisticsGeoBoundedError(err)'));assert(worker.includes('utf8.ValidString(text)'));assert(worker.includes('store.maintain(ctx'));
+ const unitPath='dev/panel-statistics-geodata@.service',unit=await read('panel-integration-geography/'+unitPath);assert.equal(current.files[unitPath],old.files[unitPath]);assert(!unit.includes('ReadWritePaths=/var/lib/panel-executor\n'));
+});

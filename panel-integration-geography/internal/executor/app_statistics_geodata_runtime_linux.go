@@ -112,6 +112,13 @@ func (s *Service) statisticsGeoState() (core.StatisticsGeoState, error) {
 	}
 	root, err := store.open(false)
 	if errors.Is(err, os.ErrNotExist) {
+		archive, names, archiveErr := store.archivedInventory()
+		if archive != nil {
+			archive.Close()
+		}
+		if archiveErr != nil || len(names) > 0 {
+			return out, errors.New("活动数据目录缺失但归档状态不可核对；未隐藏原副本或猜测防重放记录")
+		}
 		return out, nil
 	}
 	if err != nil {
@@ -123,18 +130,8 @@ func (s *Service) statisticsGeoState() (core.StatisticsGeoState, error) {
 		return out, err
 	}
 	out.Selected = selected.Dataset
-	names, err := store.inventory(root)
-	if err != nil {
-		return out, err
-	}
-	for _, name := range names {
-		a, err := store.authority(root.Root, name)
-		if err != nil {
-			return out, err
-		}
-		out.Stored = append(out.Stored, core.StatisticsGeoStored{Release: a.Data().Manifest().Release, ManifestSHA: a.Data().SHA256(), AppSHA: a.AppSHA256(), Selected: name == out.Selected})
-	}
-	return out, nil
+	out.Stored, err = store.storedRows(root, selected)
+	return out, err
 }
 func (s *Service) refreshStatisticsGeoCache(ctx context.Context) {
 	if ctx == nil || ctx.Err() != nil || upgradeguard.Blocked() {

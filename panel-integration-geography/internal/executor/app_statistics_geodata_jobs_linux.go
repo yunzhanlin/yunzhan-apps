@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/sys/unix"
 	"local/panel/internal/appcatalog"
@@ -93,17 +94,21 @@ func (s *Service) verifyStatisticsGeoJob(in core.StatisticsGeoSelection, raw []b
 		}
 	} else {
 		if !bytes.Equal(raw, []byte("{}")) {
-			return store, errors.New("回滚不能混入新交付")
+			return store, errors.New("副本维护或回滚不能混入新交付")
 		}
-		root, err := store.open(false)
+		source := store
+		if in.Action == "restore" {
+			source = store.archiveStore()
+		}
+		root, err := source.open(false)
 		if err != nil {
 			return store, err
 		}
 		defer root.Close()
 		name := geodata.Channel + "-" + in.Release + "-" + in.DataManifestSHA
-		a, err := store.authority(root.Root, name)
+		a, err := source.authority(root.Root, name)
 		if err != nil || a.AppVersion() != in.AppVersion || a.AppSHA256() != in.AppManifestSHA {
-			return store, errors.New("回滚副本不能独立核对")
+			return store, errors.New("所选原副本不能独立核对")
 		}
 	}
 	return store, nil
@@ -287,9 +292,9 @@ func (s *Service) statisticsGeoJobRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "地域交付超限"})
 			return
 		}
-		if in.Action == "rollback" {
+		if in.Action != "install" {
 			if !bytes.Equal(bytes.TrimSpace(raw), []byte("{}")) {
-				respond(w, 400, map[string]string{"error": "回滚不能混入新交付或未知字段"})
+				respond(w, 400, map[string]string{"error": "副本维护或回滚不能混入新交付或未知字段"})
 				return
 			}
 			raw = []byte("{}")
@@ -397,27 +402,33 @@ func RunStatisticsGeoJob(id string) error {
 				return err
 			}
 			snapshot = value
-		} else {
+		} else if request.Selection.Action == "rollback" {
 			name := geodata.Channel + "-" + request.Selection.Release + "-" + request.Selection.DataManifestSHA
 			value, err := store.rollback(ctx, name)
 			if err != nil {
 				return err
 			}
 			snapshot = value
+		} else {
+			name := geodata.Channel + "-" + request.Selection.Release + "-" + request.Selection.DataManifestSHA
+			if err = store.maintain(ctx, request.Selection.Action, name); err != nil {
+				return err
+			}
 		}
 		if snapshot != nil {
 			snapshot.Close()
 		}
 		out.State = "succeeded"
-		out.Steps = append(out.Steps, core.Step{Time: core.Now(), Message: "原始应用与数据签名、安装实例和完整城市库已核对，数据选择已持久提交；不安装/卸载应用或修改网站"})
+		message := "原始应用与数据签名、安装实例和完整城市库已核对，数据选择已持久提交；不安装/卸载应用或修改网站"
+		if request.Selection.Action == "archive" || request.Selection.Action == "restore" {
+			message = "原签名和完整数据库已核对，副本已在活动区/私有归档区持久交接；未删除文件、选择数据、下载或修改网站；当前、上一份和最高月份的签名锚点保留"
+		}
+		out.Steps = append(out.Steps, core.Step{Time: core.Now(), Message: message})
 		return nil
 	}
 	err = apply()
 	if err != nil {
-		out.Error = err.Error()
-		if len(out.Error) > 1024 {
-			out.Error = out.Error[:1024]
-		}
+		out.Error = statisticsGeoBoundedError(err)
 	}
 	result, _ := json.Marshal(out)
 	if writeErr := ruleFeedStoreWrite(root, "result.json", result, 0600); writeErr != nil {
@@ -427,4 +438,18 @@ func RunStatisticsGeoJob(id string) error {
 		return syncErr
 	}
 	return err
+}
+
+func statisticsGeoBoundedError(err error) string {
+	if err == nil {
+		return ""
+	}
+	text := strings.ToValidUTF8(err.Error(), "\uFFFD")
+	if len(text) > 1024 {
+		text = text[:1024]
+	}
+	for !utf8.ValidString(text) {
+		text = text[:len(text)-1]
+	}
+	return text
 }

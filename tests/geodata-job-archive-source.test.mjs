@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=s=>createHash('sha256').update(s).digest('hex');
 test('job archival source and actual acceptance scope are bound to a new immutable original-key program',async()=>{
- const current=JSON.parse(await read('panel-integration-geography/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24wafpolicybetu/source-sha256.json')),record=JSON.parse(await read('registry/geodata-job-archive-release.json'));
+ const current=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24geojobsbeuf/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24wafpolicybetu/source-sha256.json')),record=JSON.parse(await read('registry/geodata-job-archive-release.json'));
  assert.equal(old.release.frozen_inputs_sha256,'f0977771ba0e9d457eeae17d80ce68d9958410910cb5de27d34b817975e6ddd5');
  assert.equal(record.frozen_inputs_sha256,current.release.frozen_inputs_sha256);assert.equal(record.normal_original_key_archives.amd64,current.release.archive_sha256);
  assert.deepEqual(Object.keys(current.files).filter(p=>old.files[p]!==current.files[p]),record.only_source_changes);for(const p of Object.keys(old.files))assert(Object.hasOwn(current.files,p),p);

@@ -89,11 +89,13 @@ type geoStoreFixture struct {
 }
 
 func geoStoreRootFixture(t *testing.T) *geoStoreFixture {
+	return geoStoreRootFixtureIn(t, "/var/lib/panel-executor")
+}
+func geoStoreRootFixtureIn(t *testing.T, parent string) *geoStoreFixture {
 	t.Helper()
 	if os.Geteuid() != 0 {
 		t.Skip("root-private filesystem store acceptance requires Linux root under trusted /var")
 	}
-	parent := "/var/lib/panel-executor"
 	if _, err := os.Lstat(parent); errors.Is(err, os.ErrNotExist) {
 		if err = os.Mkdir(parent, 0700); err != nil {
 			t.Fatal(err)
