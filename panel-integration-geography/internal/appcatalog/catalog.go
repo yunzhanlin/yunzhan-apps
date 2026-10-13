@@ -206,6 +206,43 @@ func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, e
 // A supplied client may allow redirects. Closed repository reads never follow
 // them, so neither a branch lookup nor a signed package can widen its origin.
 func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
+	if c == nil || c.HTTP == nil || req == nil || limit < 1 {
+		return nil, errors.New("应用仓库读取环境或容量无效")
+	}
+	// One response budget, not one new budget per attempt. All caller deadlines
+	// remain parents. A supplied zero-timeout client still gets a finite budget.
+	budget := c.HTTP.Timeout
+	if budget <= 0 {
+		budget = 12 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(req.Context(), budget)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	original := req.Clone(ctx)
+	raw, err := c.readResponseOnce(original, limit)
+	// Only an interrupted, idempotent, body-less GET can be read again. No
+	// status, quota, redirect, capacity, JSON or signature failure is retried.
+	if err == nil || original.Method != http.MethodGet || original.Body != nil && original.Body != http.NoBody || !errors.Is(err, io.ErrUnexpectedEOF) && !errors.Is(err, io.EOF) {
+		return raw, err
+	}
+	timer := time.NewTimer(100 * time.Millisecond)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-timer.C:
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	// Preserve the exact resolved commit, URL/query, headers and origin. Do not
+	// re-resolve a branch, switch transports or fall back to mutable main.
+	return c.readResponseOnce(original.Clone(ctx), limit)
+}
+
+func (c *Client) readResponseOnce(req *http.Request, limit int64) ([]byte, error) {
 	transport := *c.HTTP
 	transport.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	if req.URL.String() == githubCatalogRefURL || req.URL.String() == githubCatalogGitRefURL {
@@ -230,6 +267,9 @@ func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("应用仓库 HTTP %d", resp.StatusCode)
 	}
+	if resp.ContentLength > limit {
+		return nil, errors.New("应用仓库响应超过上限")
+	}
 	if req.URL.String() == githubCatalogGitRefURL {
 		values := resp.Header.Values("Content-Type")
 		if len(values) != 1 || values[0] != "application/x-git-upload-pack-advertisement" {
@@ -242,6 +282,9 @@ func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 	}
 	if int64(len(body)) > limit {
 		return nil, errors.New("应用仓库响应超过上限")
+	}
+	if resp.ContentLength > 0 && int64(len(body)) < resp.ContentLength {
+		return nil, io.ErrUnexpectedEOF
 	}
 	return body, nil
 }

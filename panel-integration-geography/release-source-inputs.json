@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24georetentionbeuv-linux-amd64.tar.gz",
-  "archive_sha256": "196cf483d772d8bab3d9877e74e16e6ac3cd1f7325dba1df79fbbb02e5bcb0f1",
-  "frozen_inputs_sha256": "c5f704bc1e3f0b8787403ea10764b55eab9b1ec2e56bf548cee02a00767dd748",
+  "archive": "panel-0.1.0-dev.proapps24repositoryretrybevk-linux-amd64.tar.gz",
+  "archive_sha256": "5a35db5582b151587e88ede031d8ad14cef28af154085b5c2ff170004bf2403b",
+  "frozen_inputs_sha256": "00bee33af5d4feb6e15300e4ace2ac673edae0aa784c23f4d1728d6671ac096d",
   "files": {
     "go.mod": "698294c2dbd7f3ff6dee08357e50ccd627e713e42a83b79be38da9f7b3aa89cc",
     "go.sum": "dad24fba765fc17ca4c4cb220919d5ed92ec1eb1130b0f37bac4cc4f0b1bbb22",
@@ -14,7 +14,7 @@
     "cmd/rulefeed/main.go": "ebfb866ac16d11d257c743ae9c1bb17fc0915104c7ad46e1d669394c4096202b",
     "cmd/rulefeed/main_test.go": "c44890ea927993de71c6ed0fa2289c4a201d122bcd01d6a585c287564e7f2f44",
     "cmd/startguard/main.go": "7768bb25b2722509105dc046e8c60bff5252822c6bdd0d0ec6694650a274d4a4",
-    "internal/appcatalog/catalog.go": "f9f58a305b9fee7e42e73620e01e9af908420302f75eee24e921cad650176b8d",
+    "internal/appcatalog/catalog.go": "e610024fddbe9c4e5ae16f36f5b867f1be1b0c557ab008b989ef424bb9dde3b9",
     "internal/appcatalog/catalog_test.go": "d64e936867a677ef21c5b255f54a2111ee27a514ede68c25c624f1aa22919e6b",
     "internal/appcatalog/geodata.go": "2d2f84e3a9fe093500cf998e48b10657445ebee341278a0d5542fc0f490d5bf6",
     "internal/appcatalog/geodata_linux_test.go": "33ff40046c5f85b057bed390114f71c3033589b95f6990b2826f576ab417ecd2",
@@ -30,6 +30,7 @@
     "internal/appcatalog/manifest_cache_unix.go": "6c833c298f1020cebd836ca653f5137ccb89f875730ad07ebf609472038291f8",
     "internal/appcatalog/panel_features.go": "178dfe5aed873b808b3809e5e52d182a0a5b7d5ff207e3f2b532ab3497368ba5",
     "internal/appcatalog/panel_features_test.go": "814d4024de892cb8e3dc5ec719b53dbb535c242ff7526f8523989a1db39e1322",
+    "internal/appcatalog/repository_read_retry_test.go": "4fecb053b2594d27f42471a3fc1460c1ce4819e06659c70716f5a6ac60d6cae9",
     "internal/appcatalog/ruledata_channel.go": "146cce1465f6d568f8c5070a41d9c44db5c1e72680f6c05ce3b35a66693357c9",
     "internal/appcatalog/ruledata_channel_test.go": "c633a107d94ab1204d88477694f3a320708ec03d83c5ed6210c8435063621293",
     "internal/appcatalog/rulefeed.go": "2ae7efdc97b40d939402f0ffdb9111958fa53bfa9042ef2e6a76b710c98e8831",

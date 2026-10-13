@@ -8,10 +8,10 @@ import {validateManifest} from '../tools/lib.mjs';
 const root=fileURLToPath(new URL('../panel-integration-geography/',import.meta.url));
 const read=p=>readFile(path.join(root,p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('current geography/WAF/archive/retention implementation is exact signed BEUV source; earlier source indexes are retained',async()=>{
+test('current geography/WAF/retention/repository implementation is exact signed BEVK source; earlier source indexes are retained',async()=>{
  const index=JSON.parse(await read('source-sha256.json')),release=JSON.parse(await read('release-source-inputs.json'));
- assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24georetentionbeuv-linux-amd64.tar.gz',archive_sha256:'196cf483d772d8bab3d9877e74e16e6ac3cd1f7325dba1df79fbbb02e5bcb0f1',frozen_inputs_sha256:'c5f704bc1e3f0b8787403ea10764b55eab9b1ec2e56bf548cee02a00767dd748'});
- assert.equal(Object.keys(index.files).length,1287);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24repositoryretrybevk-linux-amd64.tar.gz',archive_sha256:'5a35db5582b151587e88ede031d8ad14cef28af154085b5c2ff170004bf2403b',frozen_inputs_sha256:'00bee33af5d4feb6e15300e4ace2ac673edae0aa784c23f4d1728d6671ac096d'});
+ assert.equal(Object.keys(index.files).length,1288);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const [name,digest]of Object.entries(index.files)){
   assert(!name.startsWith('/')&&!name.split('/').includes('..'));
   const s=await lstat(path.join(root,name));assert(s.isFile()&&!s.isSymbolicLink());

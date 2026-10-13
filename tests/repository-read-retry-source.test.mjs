@@ -1,0 +1,12 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+test('repository recovery is a new exact signed source with unchanged authority and historical evidence',async()=>{
+ const current=JSON.parse(await read('panel-integration-geography/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24georetentionbeuv/source-sha256.json')),record=JSON.parse(await read('registry/repository-read-retry-release.json'));
+ assert.equal(old.release.frozen_inputs_sha256,'c5f704bc1e3f0b8787403ea10764b55eab9b1ec2e56bf548cee02a00767dd748');assert.equal(record.frozen_inputs_sha256,current.release.frozen_inputs_sha256);assert.equal(record.normal_original_key_archives.amd64,current.release.archive_sha256);assert.deepEqual(Object.keys(current.files).filter(p=>old.files[p]!==current.files[p]),record.only_source_changes);for(const p of Object.keys(old.files))assert(Object.hasOwn(current.files,p));assert.deepEqual(current.test_overrides??{},{});
+ assert.equal(record.commercial_all50,false);assert.equal(record.main_delivered,false);assert.equal(record.bounds.attempts_max,2);assert.equal(record.bounds.response_limits_relaxed,false);assert.equal(record.bounds.signature_validation_relaxed,false);assert.equal(record.bounds.rate_backoff_relaxed,false);assert.equal(record.bounds.caller_context_reset,false);
+ const code=await read('panel-integration-geography/internal/appcatalog/catalog.go');for(const gate of ['c.readResponseOnce(original, limit)','original.Method != http.MethodGet','original.Body != nil && original.Body != http.NoBody','errors.Is(err, io.ErrUnexpectedEOF)','context.WithTimeout(req.Context(), budget)','case <-ctx.Done()','original.Clone(ctx)','transport.CheckRedirect','int64(len(body)) > limit'])assert(code.includes(gate),gate);
+ const fixture=await read('panel-integration-geography/internal/appcatalog/repository_read_retry_test.go');for(const gate of ['TestRepositoryPartialReadRetriesOnlySameResolvedSignedCommit','TestRepositoryReadRetryPreservesNegativeSecurityAndRateBoundaries','TestRepositoryReadRetryTamperedCompletedResponseNeverReplacesVerifiedCache','TestRepositoryReadRetryActualLocalTLSTruncationUsesSameGET'])assert(fixture.includes(gate),gate);
+ assert.equal(record.actual_normal_live_repository_read.signed_catalogue_apps,50);assert.equal(record.actual_normal_live_repository_read.source_error,'');
+});
