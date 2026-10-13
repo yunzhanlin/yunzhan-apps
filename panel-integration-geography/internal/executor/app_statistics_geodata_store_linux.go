@@ -257,6 +257,12 @@ func (store statisticsGeoStore) inventory(root *statisticsGeoDirectory) ([]strin
 		if err != nil {
 			return nil, err
 		}
+		if name == ".archive" {
+			if !moduleRecordInfo(info, true, false) {
+				return nil, errors.New("地域数据私有归档目录身份异常")
+			}
+			continue
+		}
 		if name == "store.lock" || name == "selected.json" || strings.HasPrefix(name, ".selector-") && core.ValidID(strings.TrimPrefix(name, ".selector-")) {
 			if !moduleRecordInfo(info, false, false) || info.Size() > 1024 {
 				return nil, errors.New("地理库控制记录身份异常")

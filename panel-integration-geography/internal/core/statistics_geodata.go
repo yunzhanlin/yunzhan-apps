@@ -39,6 +39,9 @@ type StatisticsGeoStored struct {
 	ManifestSHA string `json:"manifest_sha256"`
 	AppSHA      string `json:"app_manifest_sha256"`
 	Selected    bool   `json:"selected"`
+	Archived    bool   `json:"archived"`
+	Previous    bool   `json:"previous"`
+	HighWater   bool   `json:"high_water"`
 }
 type StatisticsGeoState struct {
 	Installed      bool                  `json:"installed"`
@@ -56,7 +59,7 @@ var statisticsGeoSHA = regexp.MustCompile(`^[a-f0-9]{64}$`)
 var statisticsGeoMonth = regexp.MustCompile(`^20[2-9][0-9]-(0[1-9]|1[0-2])$`)
 
 func ValidateStatisticsGeoSelection(in StatisticsGeoSelection) error {
-	if in.Action != "install" && in.Action != "rollback" || in.AppVersion != StatisticsGeoVersion || !ValidID(in.InstallationID) || !statisticsGeoSHA.MatchString(in.AppManifestSHA) || !statisticsGeoSHA.MatchString(in.DataManifestSHA) || !statisticsGeoMonth.MatchString(in.Release) {
+	if in.Action != "install" && in.Action != "rollback" && in.Action != "archive" && in.Action != "restore" || in.AppVersion != StatisticsGeoVersion || !ValidID(in.InstallationID) || !statisticsGeoSHA.MatchString(in.AppManifestSHA) || !statisticsGeoSHA.MatchString(in.DataManifestSHA) || !statisticsGeoMonth.MatchString(in.Release) {
 		return errors.New("统计地域任务的动作、应用实例、版本或签名摘要无效")
 	}
 	return nil
@@ -251,10 +254,11 @@ func (a *Server) statisticsGeoRoutes(m *http.ServeMux) {
 		} else {
 			found := false
 			for _, entry := range state.Stored {
-				found = found || entry.AppSHA == in.AppManifestSHA && entry.Release == in.Release && entry.ManifestSHA == in.DataManifestSHA
+				eligible := in.Action == "restore" && entry.Archived || in.Action == "rollback" && !entry.Archived || in.Action == "archive" && !entry.Archived && !entry.Selected && !entry.Previous && !entry.HighWater
+				found = found || eligible && entry.AppSHA == in.AppManifestSHA && entry.Release == in.Release && entry.ManifestSHA == in.DataManifestSHA
 			}
 			if !found {
-				fail(w, 409, "选定回滚副本不能核对")
+				fail(w, 409, "选定副本或维护权限不能核对；当前、上一份和防重放锚点不能归档")
 				return
 			}
 		}
@@ -298,7 +302,7 @@ func runStatisticsGeoJob(parent context.Context, s *Store, e *ExecutorClient, j 
 	var out StatisticsGeoOperation
 	submit, stop := context.WithTimeout(ctx, 20*time.Second)
 	var payload any = envelope
-	if in.Action == "rollback" {
+	if in.Action != "install" {
 		payload = map[string]any{}
 	}
 	err = e.Call(submit, "POST", endpoint+"?"+query, payload, &out)

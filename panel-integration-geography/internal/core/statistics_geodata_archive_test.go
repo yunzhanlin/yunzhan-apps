@@ -49,6 +49,17 @@ func TestStatisticsGeoArchiveClosedRequestsInventoryAndReceipt(t *testing.T) {
 		t.Fatal("duplicate inventory accepted")
 	}
 }
+func TestStatisticsGeoArchiveEvidenceBudgetMatchesEveryNativeLeaf(t *testing.T) {
+	_, out := geoArchiveFixture(strings.Repeat("d", 32))
+	out.Record.Bytes = StatisticsGeoJobEvidenceMaxBytes
+	if !validStatisticsGeoJobRecord(out.Record) {
+		t.Fatal("legitimate maximum native envelope/request/start/result rejected")
+	}
+	out.Record.Bytes++
+	if validStatisticsGeoJobRecord(out.Record) {
+		t.Fatal("evidence above complete native leaf bound accepted")
+	}
+}
 func TestStatisticsGeoArchiveFreesOnlyVerifiedTerminalCapacityAndKeepsReplay(t *testing.T) {
 	s := testStore(t)
 	actor := strings.Repeat("b", 32)

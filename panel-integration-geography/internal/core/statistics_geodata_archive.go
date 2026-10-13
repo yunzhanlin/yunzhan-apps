@@ -13,6 +13,10 @@ import (
 const StatisticsGeoActiveJobsMax = 128
 const StatisticsGeoArchivedJobsMax = 512
 
+// Native leaves:3 MiB original envelope,4 KiB request,4 KiB start,
+// 32 KiB terminal and an empty lock. Do not reject a valid large original job.
+const StatisticsGeoJobEvidenceMaxBytes = 3<<20 + 40<<10
+
 type StatisticsGeoJobRecord struct {
 	JobID    string `json:"job_id"`
 	State    string `json:"state"`
@@ -51,7 +55,7 @@ func DecodeStatisticsGeoArchive(raw []byte) (StatisticsGeoArchiveInput, error) {
 }
 func validStatisticsGeoJobRecord(row StatisticsGeoJobRecord) bool {
 	terminal := row.State == "succeeded" || row.State == "failed"
-	return ValidID(row.JobID) && row.Bytes > 0 && row.Bytes <= 2<<20 && (terminal && statisticsGeoSHA.MatchString(row.SHA) || !row.Archived && row.State == "pending" && row.SHA == "")
+	return ValidID(row.JobID) && row.Bytes > 0 && row.Bytes <= StatisticsGeoJobEvidenceMaxBytes && (terminal && statisticsGeoSHA.MatchString(row.SHA) || !row.Archived && row.State == "pending" && row.SHA == "")
 }
 func DecodeStatisticsGeoJobInventory(raw []byte) (StatisticsGeoJobInventory, error) {
 	var out StatisticsGeoJobInventory
