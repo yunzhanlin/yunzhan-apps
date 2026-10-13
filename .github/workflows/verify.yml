@@ -42,7 +42,13 @@ jobs:
           cache-dependency-path: panel-integration/go.sum
       - name: Native Linux implementation regression
         working-directory: panel-integration
-        run: sudo "$(command -v go)" test ./...
+        # Do not run the 384 MiB/2s source-read capacity test concurrently
+        # with other packages' CPU/I/O-heavy fixtures on a shared runner.
+        # Keep every test, original capacity and original deadline intact.
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: Unchanged maximum source-read capacity repeated in an isolated package process
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=3
       - name: Bounded history reader race regression (not capacity timing acceptance)
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHistoryParallelReadersRemainBoundedAndFailClosed$' -count=1
@@ -63,3 +69,12 @@ jobs:
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatistics(SchemaExact|IdentityLifecycle|RequestReceipt|RequestIdentity|RequestProgramUpgrade|RequestSelectedInstall|Gzip|ArchiveRuntime|LogTransaction)' -count=1
       - name: Statistics history UI and bounded report regression
         run: node --test panel-integration/scripts/test-statistics-history.mjs
+      - name: Geography candidate authority and complete database reader race regression (not app installation acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/geodata ./internal/appcatalog -count=1
+      - name: Geography candidate root storage, epoch, bounded cache and verifier contract regression (not native systemd acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueuesGeo)' -count=1
+      - name: Geography authenticated API, permissions and worker regression
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^TestStatisticsGeo' -count=1

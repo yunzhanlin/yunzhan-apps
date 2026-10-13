@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.6.0",
+  "summary": "统计2.6候选版：真实日志历史、请求标识与去重、耗时分布；可显式安装独立签名的离线城市库，受限后台核对、重启旧库回退及数据回滚。候选版尚未进入正式目录，不代表全部商用验收通过。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": { "provider": "panel-module", "target": "website-statistics-v2", "manage_route": "app-modules" },
+  "compatibility": { "os": ["debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"], "architectures": ["amd64", "arm64"] },
+  "capabilities": [
+    "小时趋势与独立 IP",
+    "爬虫识别与错误数",
+    "路径排行与来源统计",
+    "时间、状态、路径与 IP 筛选",
+    "慢请求与精确耗时分布",
+    "30 天有界历史与安全进度退役",
+    "原生请求标识、私有去重与 CRC 压缩续读",
+    "配置备份与实际加载恢复保护",
+    "离线 IPv4/IPv6 国家、地区、城市",
+    "地域查询上限与未定位明确分区",
+    "独立签名月份安装与显式数据回滚",
+    "受限后台完整核对与重启旧库回退"
+  ],
+  "required_panel_features": ["statistics-cursor-retirement-v1", "statistics-request-identity-v1", "statistics-geodata-v2"],
+  "geo_data_channel": { "id": "dbip-city-lite-v1", "format": 1 },
+  "health": { "probe": "panel-api", "target": "/api/app-modules/website-statistics-v2" },
+  "uninstall": { "preserve_data": true, "reference_check": false }
+}
