@@ -80,3 +80,11 @@ test('new root-fixture release retains BEOQ proofs while pinning the corrected e
  assert.equal(r.retained_first_ci_failure.conclusion,'failure');
  assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
 });
+test('real delivered program and signed statistics update preserve scope and original failures',async()=>{
+ const {r}=await verifyCurrentSource();
+ for(const key of ['main_release_delivered','production_layout_upgrade_verified','full_current_native_companion_verified','actual_signed_statistics_25_update_verified'])assert.equal(r[key],true,key);
+ assert.equal(r.actual_main_program_delivery.proof_sha256,'38661d935f754e5bb86f8cf7aee162b368739d9b7e301d39d7fae34990afe003');assert.equal(r.actual_main_program_delivery.site_count,58);assert.equal(r.actual_main_program_delivery.protected_sql_tables,21);assert.equal(r.actual_main_program_delivery.application_install_update_uninstall_requests,0);assert.equal(r.actual_main_direct_origin_browser.checks,44);
+ assert.equal(r.actual_signed_production_upgrade.original_statistics_version,'2.4.1');assert.equal(r.actual_signed_production_upgrade.original_statistics_rows,29);assert.equal(r.actual_signed_production_upgrade.original_statistics_schema,1);
+ assert.deepEqual([r.actual_normal_native_companion.executor.pass,r.actual_normal_native_companion.executor.fail,r.actual_normal_native_companion.executor.skip],[701,0,126]);assert.equal(r.actual_normal_native_companion.retained_first_capacity_failure.fail,1);assert.equal(r.actual_normal_native_companion.retained_first_capacity_failure.deadline_relaxed,false);
+ const a=r.actual_signed_statistics_25_update;assert.equal(a.proof_sha256,'0212e977242819139e523ddde65571512b6e94d2f1f775ceac1cf37ce9e184b0');assert.equal(a.original29_rows_preserved,true);assert.equal(a.rows,33);assert.equal(a.native_new_rows,4);assert.equal(a.receipt_count,4);assert.equal(a.valid_gzip_copy_deduplicated,true);assert.equal(a.new_update_jobs,1);assert.equal(a.update_available_after,false);assert.equal(a.retained_early_archive_partial_proof_sha256,'0e980dd5e6403cb26e00a95e9b823531dd84340ab2acfd661d2cb27dbab3da9c');assert.equal(r.all_50_commercial,false);assert.equal(r.main_auto_installed_new_apps,0);
+});
