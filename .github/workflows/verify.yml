@@ -78,3 +78,6 @@ jobs:
       - name: Geography authenticated API, permissions and worker regression
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/core -run '^TestStatisticsGeo' -count=1
+      - name: WAF legacy settings cannot acknowledge and discard advanced intent
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^Test(WAFLegacySettingsNeverSilentlyDiscardAdvancedPolicyFields|SoftwareActionQueueValidationAndIdempotency|SoftwareSettingsAreClosedSchemas|WAFTrustedProxy)' -count=1
