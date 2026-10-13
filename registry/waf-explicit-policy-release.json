@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24wafpolicybetu",
+  "commercial_all50": false,
+  "main_delivered": false,
+  "frozen_inputs_sha256": "f0977771ba0e9d457eeae17d80ce68d9958410910cb5de27d34b817975e6ddd5",
+  "frozen_files": 16932,
+  "previous_frozen_inputs_sha256": "261a5b89d1288ae85c5b3a3160f8e886bc20319cfcf4202c5bb8242cd9182dd0",
+  "only_source_changes": ["internal/core/software_apps.go", "internal/core/software_apps_test.go"],
+  "runtime_change": "Legacy profile/rate requests remain valid. Every other WAF field requires explicit complete policy/current revision; partial trusted-proxy/engine/rotation/retention intent is rejected, never silently discarded with a successful task.",
+  "normal_original_key_archives": {"arm64":"5bcf001857e6663ed9ba3f15f2c1e09eb1218b32c15ac4daa2cd32de77a2bb3e","amd64":"f7a412b1bee8f670e9a4b2a0be0496953c8976871ade6d575b3d604bae9c59d9"},
+  "tests": {"red_regression_sha256":"775b34e91b00b60c6ce060631737e51629a788585f5bad3c461a854595492801","green_race_sha256":"f423c45659e0d6402391fb56df81ebc3ec2e7b1dd1d10296a4cb1911b7a000ec","all_go_packages_sha256":"92c5b1903e29a55f06c53183d041d74192050c2f0a918889a800877243594ea6"},
+  "actual_normal_signed_qa_program_upgrade": {"ok":true,"proof_sha256":"f977ae29bc07339d3d47b1f38805c963daa15d792146c687f16f3b18c9adef21","protected_tables":95,"protected_paths":16,"qa_sites":1,"nginx_master_pid":725,"existing_app_records_data_site_files_key_guards_preserved":true},
+  "actual_installed_http_rejection": {"ok":true,"proof_sha256":"74c9f48cc596d8db69461e2c9cda3366d2a89df0c0d72b7c107416db9be79b79","rejections":3,"jobs_success_audits_and_config_bytes_unchanged":true,"original_geo_epoch_dataset_and_prior_report_retained":true},
+  "actual_stats_http_report": {"proof_sha256":"1c3dfd9acf9d2627257477d9ca305c4a560475932d75743881fb46172d051c36","real_http_requests":6,"population_filters":5,"loopback_non_public":6,"slow_threshold_preserves_population":true,"privacy_canary_not_leaked":true},
+  "actual_complete_policy_forwarder_integration": {"proof_sha256":"16da7d75ef4232a25f41ba5445af5a0c9a2cc2eaf66449fde2b4ce6342dea3ba","ipv4_ipv6_located_requests":3,"synthetic_forwarded_ips":true,"actual_public_visitors":false,"malformed_and_nonlisted_peers_ignored":true,"native_trust_disabled_after_test":true},
+  "scope": "Owned Debian13 ARM64 QA only. Real normal signed program/app/provider/HTTP/SQL paths; forwarded public addresses are explicitly synthetic and are not physical location evidence. No Main, browser, different-month rollback, corrupt-current fallback, physical full OS/architecture matrix, mobile, power-loss or all50 commercial claim. Existing signed app/catalogue and historical proof bytes remain unchanged."
+}

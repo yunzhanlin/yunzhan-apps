@@ -52,6 +52,43 @@ func TestSoftwareSettingsAreClosedSchemas(t *testing.T) {
 	}
 }
 
+func TestWAFLegacySettingsNeverSilentlyDiscardAdvancedPolicyFields(t *testing.T) {
+	cfg := DefaultWAFConfig()
+	cfg.TrustedProxy = &WAFTrustedProxyConfig{Enabled: true, Header: "X-Forwarded-For", Recursive: true, TrustedCIDRs: []string{"127.0.0.1/32"}, AcknowledgeHeaderControl: true}
+	rotation, retention := DefaultWAFBodyLogRotation(), DefaultWAFBodyLogRetention()
+	cfg.BodyLogRotation, cfg.BodyLogRetention = &rotation, &retention
+	complete := WAFSettings(cfg)
+	for _, field := range []string{"trusted_proxy", "body_log_rotation", "body_log_retention"} {
+		t.Run(field, func(t *testing.T) {
+			partial := map[string]any{"profile": "balanced", "rate_per_second": 20, field: complete[field]}
+			if normalized, err := normalizeSoftwareSettings("nginx-waf", partial); err == nil {
+				t.Fatalf("advanced intent silently accepted/discarded without policy: %s %#v", field, normalized)
+			}
+			s := testStore(t)
+			if _, err := s.QueueSoftwareAction("nginx-waf", "configure", partial, "partial-advanced-"+field, "admin"); err == nil {
+				t.Fatal("partial advanced policy queued")
+			}
+			var jobs, audits int
+			_ = s.DB.QueryRow("SELECT count(*) FROM runtime_jobs").Scan(&jobs)
+			_ = s.DB.QueryRow("SELECT count(*) FROM audit_logs WHERE action='software.configure'").Scan(&audits)
+			if jobs != 0 || audits != 0 {
+				t.Fatal("rejected partial intent created jobs or success audit", jobs, audits)
+			}
+		})
+	}
+	normalized, err := normalizeSoftwareSettings("nginx-waf", complete)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range []string{"trusted_proxy", "body_log_rotation", "body_log_retention", "policy"} {
+		before, _ := json.Marshal(complete[field])
+		after, _ := json.Marshal(normalized[field])
+		if string(before) != string(after) {
+			t.Fatal("complete advanced policy changed", field)
+		}
+	}
+}
+
 func TestStatisticsInstallQueueBindsSelectedVersionWithoutImplicitUpgrade(t *testing.T) {
 	s := testStore(t)
 	job, err := s.queueSoftwareAction("website-statistics-v2", "install", nil, "2.4.0", "selected-statistics", "admin")

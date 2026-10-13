@@ -148,8 +148,13 @@ func normalizeSoftwareSettings(id string, raw map[string]any) (map[string]any, e
 			return nil, e
 		}
 		if _, advanced := v["policy"]; !advanced {
-			if _, body := v["body"]; body {
-				return nil, errors.New("请求体策略必须同时提交完整 policy 配置和当前修订号")
+			// Legacy clients submit only these two knobs. Every advanced
+			// field requires explicit policy/revision; never acknowledge a
+			// trusted-proxy, engine or cleanup intent then silently discard it.
+			for field := range v {
+				if field != "profile" && field != "rate_per_second" {
+					return nil, errors.New("高级 WAF 参数必须同时提交完整 policy 配置和当前修订号；未保存或忽略部分配置")
+				}
 			}
 			return map[string]any{"profile": cfg.Profile, "rate_per_second": cfg.Rate}, nil
 		}

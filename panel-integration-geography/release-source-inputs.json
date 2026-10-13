@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24statsboundedbeso-linux-amd64.tar.gz",
-  "archive_sha256": "84ffbf8cbd8c39d89c64eeb7cb93abdfc2c779654091fb2e86eac05f1737d9a7",
-  "frozen_inputs_sha256": "261a5b89d1288ae85c5b3a3160f8e886bc20319cfcf4202c5bb8242cd9182dd0",
+  "archive": "panel-0.1.0-dev.proapps24wafpolicybetu-linux-amd64.tar.gz",
+  "archive_sha256": "f7a412b1bee8f670e9a4b2a0be0496953c8976871ade6d575b3d604bae9c59d9",
+  "frozen_inputs_sha256": "f0977771ba0e9d457eeae17d80ce68d9958410910cb5de27d34b817975e6ddd5",
   "files": {
     "go.mod": "698294c2dbd7f3ff6dee08357e50ccd627e713e42a83b79be38da9f7b3aa89cc",
     "go.sum": "dad24fba765fc17ca4c4cb220919d5ed92ec1eb1130b0f37bac4cc4f0b1bbb22",
@@ -277,8 +277,8 @@
     "internal/core/site_settings.go": "2596cc409e82d7e442a2a0d22d018f05d703f9ed509793b0fabb8fa90abec69c",
     "internal/core/site_settings_test.go": "d21b1055a503949d4e2853154797d730af3fce1fc68b7b41347bad66f4c36fa0",
     "internal/core/site_traffic.go": "5cdde8ca811029a5ba8a143565369cadee0794a4f82a11c1519037bed46dbf87",
-    "internal/core/software_apps.go": "dad1c3ac92c7540394d61f194ae51ab6d3ab90690933a74b988f82c644232835",
-    "internal/core/software_apps_test.go": "8e63949726f4bef5826e0a0f3789df3e138c84b92b1ff785fa0743fb50ba52d4",
+    "internal/core/software_apps.go": "7b08f38152efbaf94d2403c92f40f26e439fc0b2ddccfcaf0aab059207af592b",
+    "internal/core/software_apps_test.go": "afa5bfabbc7204f1860f85985b180eaa2a159b0f6cdf88f3918eea1c9a4f81d9",
     "internal/core/static_assets.go": "616bd83935e372fe32ed8ab459827d8990d6c64d533e1b274ed6f2d3203a2359",
     "internal/core/static_assets_test.go": "c3b89c2a3952e7f9faa5a43e69559ec80b15f8a939734b033edc6e7cc0a8d971",
     "internal/core/statistics_geodata.go": "31c5dce770705f2ce0b581af8627b2e6e656a6ca80bdf38ee91730fd9300c5dd",
