@@ -1,0 +1,92 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24geoevidencebexh",
+  "previous_program": "0.1.0-dev.proapps24repositoryretrybevk",
+  "commercial_all50": false,
+  "main_delivered": false,
+  "actual_main_program": "0.1.0-dev.proapps24repositoryretrybevk",
+  "actual_previous_main_delivery_proof_sha256": "0ee0ec4dcf073128d79eec09a2682d7d36970e522294437b5b93a2e28bb674d2",
+  "frozen_inputs_sha256": "83ff19a32f424744c5d0850460a38ce7e1901aca129ade1a80d4c5d0925055d0",
+  "frozen_files": 16946,
+  "normal_original_key_archives": {
+    "arm64": "aee2fa1c2ff1eeca7ccdb453e82534605345c913639964ba2c80c71bd8b2b634",
+    "amd64": "cd30cc376ba6c827bccc6f480c0e6c1f805adea30c99c351bd6f0332a2ef9434"
+  },
+  "only_source_changes": [
+    "internal/core/statistics_geodata_archive.go",
+    "internal/core/statistics_geodata_export.go",
+    "internal/core/statistics_geodata_export_test.go",
+    "internal/executor/app_statistics_geodata_archive_linux.go",
+    "internal/executor/app_statistics_geodata_export_linux.go",
+    "internal/executor/app_statistics_geodata_export_linux_test.go",
+    "web/src/StatisticsGeoJobRecords.vue"
+  ],
+  "operation": "Admin-only original-ID/complete-SHA-bound download of five original terminal job leaves; exact bytes independently checked in Root, Core and browser. Request/completion audit binds actor, original ID and fingerprint; no path input, replayed mutation, server evidence overwrite, deletion, archive move, dataset selection, failure reset or application installation. A download is unsigned evidence, not a new software/data authority and not acknowledged safe purge. New native scrolling table removes recursive observed resize layout and provides local-only ID/SHA/state/location filters.",
+  "bounds": {
+    "native_original_evidence_bytes_max": 3186688,
+    "export_bundle_bytes_max": 5242880,
+    "export_reply_bytes_max": 7340032,
+    "existing_global_rpc_bytes_max": 16777216,
+    "rpc_limit_relaxed": false,
+    "original_file_count": 5,
+    "arbitrary_path_allowed": false,
+    "automatic_retry": false,
+    "automatic_purge": false,
+    "signature_validation_relaxed": false
+  },
+  "actual_original_key_normal_qa_upgrade": {
+    "ok": true,
+    "proof_sha256": "f5fa568ad09f2ae88daedebb390cac911322ff8cb49f361f063d8df6a41f7832",
+    "protected_tables": 96,
+    "protected_paths": 21,
+    "original_data_job_archive_and_site_preserved": true,
+    "nginx_master_pid": 725
+  },
+  "frozen_native_root_tests": {
+    "ok": true,
+    "log_sha256": "942c164afe4729025a4a1118cb6bb7cfedf75efa899a4b3af1b9dab1c52c027f",
+    "test_binary_sha256": "0e9c05e267d70811aed180950bd27715c1e4aa29bc0df4107dcf924127da23b5",
+    "scope": "Actual Linux ARM64 Root executes frozen-input archive/export synthetic filesystem fixtures. Preserves original bytes/inodes and rejects pending, locked, changed fingerprint, foreign owner, links, final byte/inode changes, duplicate original ID and cancellation. Not provider or physical power-loss acceptance."
+  },
+  "actual_original_job_http_export": {
+    "ok": true,
+    "proof_sha256": "edcf477d97f0996ec87a417a8869bac8fdeb836f6f7e5d422230b282182906a7",
+    "original_file_count": 5,
+    "original_bytes": 74476,
+    "complete_original_sha256": "903289d12500b64d3d5eb7bc0f04f1df69182ddbbf53c6a190c0c43f89a0787d",
+    "export_bundle_sha256": "bfae3ccaebdffcfe486d361569b3f869ade667f164066a99a984ae3672d47783",
+    "protected_business_projections": 10,
+    "protected_paths": 17,
+    "expected_audit_events": 5,
+    "repeat_export_byte_identical": true,
+    "original_tasks_data_config_and_source_unchanged": true,
+    "scope": "Real archived original signed-provider job, normal authenticated HTTP on actual original-key installed BEXH QA, successful repeated byte-exact exports and arbitrary path/wrong-SHA rejection. No provider/response substitution, new jobs, app/data install or Main mutation."
+  },
+  "actual_original_job_browser_export": {
+    "ok": true,
+    "proof_sha256": "be6ff1326c296293687d9c5b6446dce19f4d2307133400e0581f42e412a90690",
+    "export_posts": 1,
+    "download_sha256": "bfae3ccaebdffcfe486d361569b3f869ade667f164066a99a984ae3672d47783",
+    "protected_business_projections": 10,
+    "protected_paths": 17,
+    "expected_audit_events": 2,
+    "intercepted_or_synthetic_api": false,
+    "window_errors": 0,
+    "unexpected_console_errors": 0,
+    "expected_initial_anonymous_me401": true,
+    "document_overflow_at_390px": false,
+    "scope": "Actual normal browser account/origin over SSH SOCKS to owned QA, real download saved and compared with every original Root leaf; original files/inodes/jobs/config/source retained. Only one export POST plus normal login; exact expected initial anonymous /api/me401 recorded, no authenticated request failure. No source/DOM/Host/response adaptation or Main/all50 claim."
+  },
+  "retained_observation_failures": {
+    "isolated_resize_observer_proof_sha256": "60b3014425506e037f894811fefd12a4b13962bfdee3011b3e73bf023c6e672c",
+    "isolated_corrected_table_proof_sha256": "3d803632107a0011f9c3552f8a6e793e469c415388a01b8868843db7ea8f7611",
+    "initial_actual_browser_proof_sha256": "6cea31f304a4d6dd7cca1da42b60338321579cd964970826a6240e6d51994a1c",
+    "scope": "First isolated table emitted ResizeObserver error, retained then source table corrected and rerun with zero window errors. First actual browser failed on expected initial anonymous /api/me401; retained, followed by observer that explicitly verifies exact endpoint/status/request-before-auth/console source, rejects every unexpected error and changes no production authorization."
+  },
+  "remaining": [
+    "Normal Main delivery after CI and fresh compatibility/protection checks; Main remains original-key BEVK and absent apps must not be auto installed.",
+    "Actual native AMD64 and wider supported Linux/physical failure/long-run acceptance; both archive builds do not prove all runtime architectures.",
+    "Complete legal original-key historical3-month positive data archive/restore/rollback, dataset evidence export, controlled purge/download acknowledgement and Core-only failed-job/native-failed-unit recovery without rewriting failures.",
+    "All remaining apps actual business/security/UI/recovery, AndroidAPK and iOSsource/unsigned build, real-device and production commercial acceptance; all50 remains incomplete."
+  ]
+}

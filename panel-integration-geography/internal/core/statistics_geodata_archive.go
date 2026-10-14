@@ -153,6 +153,71 @@ func (a *Server) statisticsGeoArchiveRoutes(m *http.ServeMux) {
 		return true
 	}
 	endpoint := "/api/software/website-statistics-v2/geodata-job-records"
+	m.HandleFunc("POST "+endpoint+"/export", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if !admin(w, u) {
+			return
+		}
+		if r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "导出不接受查询路径或过滤条件")
+			return
+		}
+		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 512))
+		in, de := DecodeStatisticsGeoExport(raw)
+		if err != nil || de != nil {
+			fail(w, 400, "原证据导出绑定无效")
+			return
+		}
+		state, err := statisticsGeoArchiveCoreJob(a.Store.DB, in.JobID)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		request, err := a.Store.DB.Exec("INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'statistics.geodata.export.request',?,?,?)", u.ID, in.JobID, in.SHA, Now())
+		if err != nil {
+			fail(w, 503, "导出请求审计未保存；未派发")
+			return
+		}
+		audit, err := request.LastInsertId()
+		if err != nil {
+			fail(w, 503, "导出审计标识不可核对；未派发")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
+		defer cancel()
+		var response json.RawMessage
+		if a.Executor.Call(ctx, "POST", "/v1/statistics/geodata-job-records/export", in, &response) != nil {
+			fail(w, 503, "原证据导出未核对；没有删除、归档或重跑任务")
+			return
+		}
+		out, err := DecodeStatisticsGeoExportResult(response, in)
+		if err != nil || out.Record.State != state {
+			fail(w, 503, "导出原证据或两侧终态不同；未交付")
+			return
+		}
+		tx, err := a.Store.DB.BeginTx(ctx, nil)
+		if err != nil {
+			fail(w, 503, "导出审计不可提交；未交付")
+			return
+		}
+		defer tx.Rollback()
+		finalState, err := statisticsGeoArchiveCoreJob(tx, in.JobID)
+		var actor, target, action, sha string
+		if err != nil || finalState != state || tx.QueryRow("SELECT actor,target,action,result FROM audit_logs WHERE id=?", audit).Scan(&actor, &target, &action, &sha) != nil || actor != u.ID || target != in.JobID || action != "statistics.geodata.export.request" || sha != in.SHA {
+			fail(w, 503, "原导出请求或终态在交付前变化；未交付")
+			return
+		}
+		if _, err = tx.Exec("INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'statistics.geodata.export.complete',?,?,?)", u.ID, in.JobID, out.BundleSHA, Now()); err != nil {
+			fail(w, 503, "导出完成审计未保存；未交付")
+			return
+		}
+		if err = tx.Commit(); err != nil {
+			fail(w, 503, "导出完成审计未提交；未交付")
+			return
+		}
+		send(w, 200, out)
+	}))
 	m.HandleFunc("GET "+endpoint, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		w.Header().Set("Cache-Control", "no-store")
 		if !admin(w, u) {
