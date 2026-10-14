@@ -82,6 +82,9 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 	return SoftwareAppCatalogItem{}, false
 }
 
+// DiskAnalysisAppVersion identifies the implemented bounded inode-usage handler.
+const DiskAnalysisAppVersion = "1.3.0"
+
 // Module implementations ship in the signed panel executor, not arbitrary
 // GitHub scripts. A newer catalog cannot claim code this executor lacks.
 func SoftwareImplementationVersion(id string) string {
@@ -90,6 +93,12 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "disk-analysis" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, DiskAnalysisAppVersion); valid && comparison >= 0 && version != DiskAnalysisAppVersion {
+			return errors.New("磁盘分析新版本仅允许固定完整版本1.3.0，拒绝别名或未审核修订")
+		}
+	}
 	if id == "platform-ops" {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && version != PlatformMaintenanceAppVersion {

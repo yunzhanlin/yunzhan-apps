@@ -1,0 +1,47 @@
+{
+  "ok": true,
+  "program": "0.1.0-dev.proapps24sitefitbfhp",
+  "arch": "arm64",
+  "installed_app_version": "1.2.0",
+  "scope": "Actual original signed BFHP program and original already-installed disk app, normal owner browser, one native metadata-only site scan; not new1.3 signed application update/full commercial acceptance. No ResizeObserver replacement, error suppression, runtime prop changes, route interception or injected application source.",
+  "original_private_proof_sha256": "8b20d6c194cdf8e00523d5fdb10878c87d3e876f64e605d61f022c5425f3e205",
+  "checks": [
+    "normal installed management has dedicated disk fields, not another application template",
+    "actual authenticated run matches independently read native inode/block metadata and filesystem capacity",
+    "actual installed native report and390px document remain usable without script/resize errors",
+    "actual390px filtered popup stays in modal bounds, selection works and closed popup is destroyed after its real transition",
+    "actual mobile clear and filtered reselection submit original site ID and return unchanged native counters",
+    "actual loaded application chunk exactly matches original signed BFHP archive; no unexpected browser or HTTP failure",
+    "original installed modules/site configuration/credentials/native receipts and Nginx PID preserved; no application installation/update"
+  ],
+  "geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "window_errors": []
+  },
+  "open_popup_geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "popup": {
+      "left": 32,
+      "right": 358,
+      "width": 326
+    },
+    "inside_module_dialog": true,
+    "window_errors": []
+  },
+  "popup_close_observation_ms": 795.9850829999996,
+  "assets": [
+    {
+      "file": "AppModuleManager-Bj6Qhshj.js",
+      "sha256": "4496218ea5535821413fc79d376b8e987cf0e7376b02e7cc735cb52f9f6dd462"
+    }
+  ],
+  "expected_asset": {
+    "file": "AppModuleManager-Bj6Qhshj.js",
+    "sha256": "4496218ea5535821413fc79d376b8e987cf0e7376b02e7cc735cb52f9f6dd462"
+  },
+  "original_protected_data_unchanged": true,
+  "application_installs_updates": 0,
+  "commercial_all50": false
+}

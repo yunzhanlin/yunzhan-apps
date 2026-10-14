@@ -1,0 +1,29 @@
+{
+  "ok": false,
+  "program": "0.1.0-dev.proapps24sitefitbfhp",
+  "original_private_proof_sha256": "c89e58a7e06b5c9321730bb4e600f88e66a60a0dc53debfa925a2f8e3799a454",
+  "failure": "Expected values to be strictly equal:\n\n1 !== 0\n",
+  "checks": [
+    "normal installed management has dedicated disk fields, not another application template",
+    "actual authenticated run matches independently read native inode/block metadata and filesystem capacity",
+    "actual installed native report and390px document remain usable without script/resize errors"
+  ],
+  "geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "window_errors": []
+  },
+  "open_popup_geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "popup": {
+      "left": 32,
+      "right": 358,
+      "width": 326
+    },
+    "inside_module_dialog": true,
+    "window_errors": []
+  },
+  "errors": [],
+  "scope": "Retained original observer failure; later positive checks use actual transition/dedicated component, not source or response/error overrides."
+}

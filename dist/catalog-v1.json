@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-14T05:52:34Z",
+  "generated_at": "2026-10-14T16:57:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -103,25 +103,25 @@
       "id": "disk-analysis",
       "name": "Disk analysis",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "真实目录、扩展名和大文件空间分析，可选目录下钻；有界只读扫描，拒绝越界和链接。",
+      "version": "1.3.0",
+      "summary": "网站 public 范围只读空间分析：逻辑大小、inode 去重分配块、硬链接和稀疏/压缩候选，真实容量与 inode；最多100000项/128层、目录下钻和执行历史。需新版签名面板的固定1.3处理器；不含全盘分析，商用多系统资格仍在验收。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "disk-analysis",
       "manage_route": "app-modules",
       "capabilities": [
-        "目录体积",
-        "大文件排行",
-        "文件数量",
-        "有界扫描",
-        "目录下钻",
-        "扩展名分布",
-        "专用操作流程",
-        "执行历史"
+        "网站范围目录/扩展名逻辑分布和大文件排行，不含全盘分析",
+        "按设备和 inode 去重的 st_blocks*512 分配块及硬链接计数",
+        "稀疏或压缩候选，不宣称 COW 共享块或独占物理空间",
+        "所在文件系统真实容量、保留块与 inode；未知不显示为零",
+        "64项分批读取、100000项/128层上限；边界明确标记不完整",
+        "目录描述符不跟随链接，不打开 FIFO/设备，不读取文件内容或删除",
+        "非法 UTF8 路径只计量不可点击，活动目录不是原子快照",
+        "网站内目录下钻、只读执行历史与实际中断失败记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.2.0/manifest.json",
-      "sha256": "5aa327690e407b489c6e23b6366232bdb24fd0abb15a25528338142e9495bb09"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/disk-analysis/1.3.0/manifest.json",
+      "sha256": "4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38"
     },
     {
       "id": "docker-manager",

@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24siteselectbfhe",
+  "scope": "Actual configured-origin installed API client disconnect after independent root /proc FD observation. No injected app logic, no UI cancellation-button claim, no new app update/full commercial qualification.",
+  "original_private_proof_sha256": "daed76b0f14e409d48d712ef05fd2a3e55d492cd6d9016905235dc2d54476d6d",
+  "checks": [
+    "client abort issued only after observing actual executor directory FD for this owned100003-file scan",
+    "actual executor records context-canceled failure and does not publish interrupted report over previous successful report",
+    "interrupted scan releases its directory FD/mutex and following genuine native scan matches original inode accounting",
+    "same original fixture metadata remains unchanged and exact inode is recoverably returned to private evidence without deletion"
+  ],
+  "actual_active_executor_directory_fd": {
+    "actual_executor_pid": "22258",
+    "owned_wide_directory_open": true,
+    "observed_seconds": 0.00013554100041801576
+  },
+  "client_abort": {
+    "error": "AbortError"
+  },
+  "released_directory_fd": {
+    "actual_executor_pid": "22258",
+    "owned_wide_directory_open": false,
+    "observed_seconds": 0.0001225830001203576
+  },
+  "native_context_canceled_failure_recorded": true,
+  "previous_successful_report_sha256": "309b3dcebeda995f57ae10cfcee445c9d2e888f4e0c6c3492636c296769da5d9",
+  "recovery_accounting": {
+    "files": 3,
+    "unique_files": 2,
+    "total_bytes": 134217745,
+    "allocated_bytes": 8192
+  },
+  "same_original_fixture_metadata_unchanged": true,
+  "fixture_retired_by_exact_inode_rename": true,
+  "deleted_files": 0,
+  "ui_cancel_button_proven": false,
+  "commercial_all50": false
+}

@@ -4,6 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir,lstat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {catalogBeforeDisk130Bytes} from './previous-disk-catalog.mjs';
 const directory=new URL('../registry/reviewed-maintenance/24bfce/',import.meta.url);
 const read=name=>readFile(new URL(name,directory));
 const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -46,7 +47,7 @@ test('actual selected original-key1.3 updates and temporary cleanup cannot rewri
  const update=JSON.parse(await read('amd-original-signed-app-update.json')),u=index.genuine_signature_update;
  assert.equal(update.ok,true);assert.equal(update.old_version,'1.0');assert.equal(update.new_version,'1.3.0');assert.equal(update.original_job_id,u.amd.job);assert.equal(update.installation_id,u.amd.instance);assert.equal(update.manifest_sha256,u.manifest_sha256);
  assert.notEqual(u.arm.instance,u.amd.instance);assert.equal(update.actual_update_hint_cleared,true);assert.equal(update.original_job_receipt_verified,true);assert.equal(update.other19_records_unchanged,true);assert.equal(update.settings_install_time_preserved,true);assert.equal(update.app_installs,0);assert.equal(update.native_commands,0);assert.equal(update.previous_failure_rewritten,false);
- const catalog=await readFile(new URL('../dist/catalog-v1.json',import.meta.url)),pub=await readFile(new URL('../signatures/catalog-v1.pub.pem',import.meta.url));assert.equal(sha(catalog),u.catalog_sha256);assert.equal(sha(pub),u.publisher_public_key_sha256);
+ const latest=JSON.parse(await readFile(new URL('../dist/catalog-v1.json',import.meta.url))),catalog=await catalogBeforeDisk130Bytes(latest),pub=await readFile(new URL('../signatures/catalog-v1.pub.pem',import.meta.url));assert.equal(sha(catalog),u.catalog_sha256);assert.equal(sha(pub),u.publisher_public_key_sha256);
  assert.equal(sha(await readFile(new URL('../dist/apps/platform-ops/1.3.0/manifest.json',import.meta.url))),u.manifest_sha256);
  const publication=JSON.parse(await readFile(new URL('../registry/platform-maintenance-app-release.json',import.meta.url)));assert.equal(publication.installed_app_update_verified_at_publication,false);assert.equal(u.publication_snapshot_rewritten,false);
  for(const name of ['arm','amd']){

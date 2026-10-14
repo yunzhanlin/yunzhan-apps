@@ -1,12 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash,createPublicKey,verify} from 'node:crypto';
+import {catalogBeforeDisk130} from './previous-disk-catalog.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url));
 const sha=b=>createHash('sha256').update(b).digest('hex');
 
 // Older release proofs keep their complete original signed catalog. Never
 // change a historical other49 digest to include a later maintenance release.
 export async function catalogBeforeMaintenance130(current){
+ current=await catalogBeforeDisk130(current);
  const prefix='registry/reviewed-catalogs/20261013-201440/';
  const raw=await read(prefix+'catalog-v1.json');
  assert.equal(sha(raw),'e968c4fb656cad429cb7921a0277d4f83ca221130a8e78a2d19868a15c3c830d');
