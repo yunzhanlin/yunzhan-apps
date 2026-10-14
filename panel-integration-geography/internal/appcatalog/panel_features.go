@@ -22,11 +22,26 @@ const StatisticsGeographyFeature = "statistics-geodata-v2"
 // handlers and the unversioned prototype must not authorize the1.3 package.
 const PlatformMaintenanceFeature = "platform-maintenance-v1"
 
+// Includes bounded FD-relative nofollow traversal, inode-deduplicated block
+// accounting and truthful unknown/partial reporting. Logical-only handlers do
+// not authorize the 1.3 package merely by accepting a newer version string.
+const DiskInodeUsageFeature = "disk-inode-usage-v1"
+
 func panelFeatureAvailable(feature string) bool {
-	return runtime.GOOS == "linux" && (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature)
+	return runtime.GOOS == "linux" && (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature || feature == DiskInodeUsageFeature)
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if manifest.ID == "disk-analysis" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, "1.3.0")
+		if !valid {
+			return errors.New("磁盘分析版本无法核对")
+		}
+		if comparison >= 0 && (manifest.Version != "1.3.0" || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != DiskInodeUsageFeature) {
+			return errors.New("磁盘分析1.3仅接受固定完整版本及 inode 分配块、有界不跟随链接处理器声明")
+		}
+	}
 	if manifest.ID == "platform-ops" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
 		comparison, valid := CompareVersions(base, "1.3.0")
@@ -97,6 +112,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == DiskInodeUsageFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.3.0" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("inode 空间处理器要求仅属于disk-analysis1.3.0")
+		}
 		if feature == PlatformMaintenanceFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.0" || manifest.Delivery.Target != manifest.ID) {
 			return errors.New("独立维护处理器要求仅属于platform-ops1.3.0")
 		}
