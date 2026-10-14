@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
@@ -30,6 +30,7 @@ type API = <T>(
   method?: string,
   body?: unknown,
   idempotencyKey?: string,
+  signal?: AbortSignal,
 ) => Promise<T>;
 interface Field {
   key: string;
@@ -79,6 +80,16 @@ const visible = ref(false),
   busy = ref(false),
   error = ref("");
 const idsOperationID = ref(""), idsOperationPending = ref(false);
+const diskScanRequest = shallowRef<{controller: AbortController}>();
+const diskCancellationRequested = ref(false), diskScanNotice = ref("");
+function cancelDiskScan() {
+  const request = diskScanRequest.value;
+  if (!request || request.controller.signal.aborted) return;
+  diskCancellationRequested.value = true;
+  diskScanNotice.value = "已请求中断扫描并停止等待，本页保留原报告。取消可能与完成同时发生，不能据此确认服务器未完成；请只读核对保存报告和执行历史，不会自动重新扫描。";
+  request.controller.abort();
+}
+onBeforeUnmount(cancelDiskScan);
 let idsPendingSubmission: {identity:string;key:string}|undefined, idsAccessGeneration=0;
 const pendingRemoteRequests=ref<RemoteRequestTicket[]>([]);
 const remoteRequestIdentity=new RemoteRequestIdentity({
@@ -158,8 +169,9 @@ function clearWriteOnlyFields() {
   for (const field of definition.value?.fields || [])
     if (["password", "secret-json", "secret-text"].includes(field.kind)) form.value[field.key] = "";
 }
-watch(() => props.access, () => { idsAccessGeneration++;idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
-watch(visible, value => { if (!value) clearWriteOnlyFields(); });
+watch(() => props.access, () => { idsAccessGeneration++;cancelDiskScan();diskScanNotice.value="";idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
+watch(visible, value => { if (!value) { cancelDiskScan(); clearWriteOnlyFields(); } });
+watch(() => definition.value?.id, () => { cancelDiskScan(); diskScanNotice.value=""; });
 onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
 function roleDefaultMenus() { form.value.menu_ids = menuCatalog.value.filter(menu => (form.value.role === "admin" || !menu.admin_only) && (props.access === undefined || props.access?.menu_ids.includes(menu.id))).map(menu => menu.id); }
@@ -532,8 +544,46 @@ function createNewRemoteTask() {
   form.value.remote_request_id="";report.value=undefined;activeTab.value="remote-transfer";
   ElMessage.info("已清空旧任务标识；请先核对源网站、排除项和连接修订号，再预览和提交新任务");
 }
+async function executeDiskScan() {
+  if (definition.value?.id !== 'disk-analysis' || !installed.value || installedUnknown.value || busy.value || !visible.value) return;
+  const accessGeneration = idsAccessGeneration, request = {controller: new AbortController()};
+  diskScanRequest.value = request;
+  diskCancellationRequested.value = false;
+  diskScanNotice.value = "";
+  busy.value = true; error.value = "";
+  try {
+    const result = await props.api('/app-modules/disk-analysis/run', 'POST', inputBody('run'), undefined, request.controller.signal);
+    if (accessGeneration !== idsAccessGeneration || !visible.value || request.controller.signal.aborted || diskScanRequest.value !== request) return;
+    setReport(result);
+    reportStateUnknown.value = false;
+  } catch (e) {
+    if (accessGeneration !== idsAccessGeneration || !visible.value || diskScanRequest.value !== request) return;
+    // An abort is only a client observation, never a confirmed server outcome.
+    // Other failures remain failures, and never replace the previous report.
+    if (!request.controller.signal.aborted) error.value = e instanceof Error ? e.message : String(e);
+  } finally {
+    if (diskScanRequest.value === request) { diskScanRequest.value = undefined; busy.value = false; }
+  }
+}
+async function readDiskScanReport() {
+  if (definition.value?.id !== 'disk-analysis' || !installed.value || installedUnknown.value || busy.value || !visible.value) return;
+  const accessGeneration = idsAccessGeneration;
+  busy.value = true; error.value = "";
+  try {
+    const page = await props.api<{definition: Definition; status: {id: string; installed: boolean; healthy: boolean; state_unknown?: boolean}; report: unknown; report_state_unknown?: boolean}>('/app-modules/disk-analysis');
+    if (accessGeneration !== idsAccessGeneration || !visible.value || definition.value?.id !== 'disk-analysis') return;
+    if (page.definition?.id !== 'disk-analysis' || page.status?.id !== 'disk-analysis' || page.status.installed !== true || typeof page.status.healthy !== 'boolean' || page.status.state_unknown !== undefined && page.status.state_unknown !== false || page.report_state_unknown !== undefined && page.report_state_unknown !== false || !Object.prototype.hasOwnProperty.call(page, 'report')) throw Error('保存报告的应用身份或读取状态无法核对；未将旧报告当作本次完成结果');
+    if (page.report === null || page.report === undefined) report.value = undefined;
+    else setReport(page.report);
+    reportStateUnknown.value = false;
+    diskScanNotice.value = '已只读核对当前保存报告，未重新扫描。保存报告不单独证明上次请求已取消，执行结果请核对执行历史。';
+  } catch (e) {
+    if (accessGeneration === idsAccessGeneration && visible.value) error.value = e instanceof Error ? e.message : String(e);
+  } finally { busy.value = false; }
+}
 async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   if (!definition.value || installedUnknown.value || busy.value || !canExecutePHP(action)) return;
+  if (definition.value.id === 'disk-analysis' && action === 'run') { await executeDiskScan(); return; }
   const userMutation = definition.value.id === 'user-manager' && isUserMutation(action);
   if (userMutation && userMutationNeedsRead(userMutationObservation.value, action)) return;
   const platformMutation = definition.value.id === 'platform-ops' && isPlatformMutation(action);
@@ -850,6 +900,7 @@ defineExpose({ show });
   >
     <div v-loading="busy">
       <div v-if="error" ref="userErrorAnchor" tabindex="-1" class="module-error-anchor"><el-alert :title="error" type="error" :closable="false" /></div>
+      <el-alert v-if="definition?.id==='disk-analysis' && diskScanNotice" :title="diskScanNotice" type="warning" :closable="false" />
       <el-alert v-if="definition?.id==='user-manager' && userMutationObservation?.state !== 'acknowledged' && userMutationObservation" type="warning" :closable="false" title="账户操作或后续刷新未完全核对。已暂停重复写入；请在账户列表手动刷新核对，不能将断网或刷新失败当作未执行。" />
       <el-alert v-if="definition?.id==='platform-ops' && platformMutationObservation && platformMutationObservation.state!=='acknowledged'" type="warning" :closable="false" :title="`多主机操作或后续刷新未完全核对，已暂停重复写入。请手动${platformMutationObservation.requiredRead==='token-list'?'只读刷新授权清单（可按标识撤销丢失回执的授权）':'刷新主机健康清单'}；断网不等于未执行。`" />
       <template v-if="definition">
@@ -1235,6 +1286,8 @@ defineExpose({ show });
       </template>
     </div>
     <template #footer>
+      <el-button v-if="definition?.id==='disk-analysis' && diskScanRequest" type="warning" :disabled="diskCancellationRequested" @click="cancelDiskScan">{{ diskCancellationRequested ? '已请求中断，正在结束等待' : '取消扫描' }}</el-button>
+      <el-button v-if="definition?.id==='disk-analysis' && installed" :disabled="busy || installedUnknown" @click="readDiskScanReport">只读核对保存报告</el-button>
       <span v-if="definition?.id==='load-balance' && exportableReport" class="report-export-note">{{ nativeReportExportHref ? '下载快照最长保留 5 分钟；过期、账户切换或面板重启后请重新查询本页。' : '本次下载快照未能核对或已失效，请重新查询本页。单份最多 1 MiB；不导出凭据或其他页面的缓存结果。' }}</span>
       <el-button v-if="nativeReportExportHref" tag="a" :href="busy ? undefined : nativeReportExportHref" target="_blank" rel="noopener noreferrer" :disabled="busy" :aria-disabled="busy" @click="busy && $event.preventDefault()">导出真实报告</el-button>
       <el-button

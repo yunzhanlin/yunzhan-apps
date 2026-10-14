@@ -75,6 +75,8 @@ jobs:
         run: node --test panel-integration-geography/scripts/test-platform-maintenance-secrets.mjs
       - name: Disk inode usage selectors, actual compiled handlers and bounded UI source (not installed application acceptance)
         run: node --test panel-integration-geography/scripts/test-disk-usage.mjs
+      - name: Actual compiled disk cancellation and remote identity-before-submit fixtures (not installed UI or native cancellation proof)
+        run: node --test panel-integration-geography/scripts/test-disk-scan-lifecycle.mjs panel-integration-geography/scripts/test-remote-sync.mjs
       - name: Ordinary-user Linux disk usage and actual 100003-entry temporary filesystem fixture (not installed app or OS matrix acceptance)
         working-directory: panel-integration-geography
         run: go test -race ./internal/executor -run '^Test(DiskUsage|ModuleDisk)' -count=1 -v

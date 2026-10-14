@@ -1297,6 +1297,7 @@ async function api<T>(
   method = "GET",
   body?: unknown,
   idempotencyKey?: string,
+  signal?: AbortSignal,
 ): Promise<T> {
   const requestCSRF = csrf.value;
   const requestEpoch = accessEpoch;
@@ -1314,6 +1315,7 @@ async function api<T>(
       ...(method === "POST" ? { "Idempotency-Key": idempotencyKey || registryTicket?.key || randomId() } : {}),
     },
     body: wire,
+    ...(signal ? { signal } : {}),
   });
   const data = await r.json();
   if (registryTicket && (requestEpoch !== accessEpoch || requestCSRF !== csrf.value)) throw new Error("账户会话已改变，未复用旧账户的任务结果");

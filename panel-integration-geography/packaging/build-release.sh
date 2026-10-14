@@ -71,6 +71,7 @@ mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$N
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-apply-recovery.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-task-manager.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-disk-usage.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-disk-scan-lifecycle.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-user-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-maintenance-secrets.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
