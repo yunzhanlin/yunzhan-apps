@@ -1,0 +1,34 @@
+{
+  "actual_programs": {
+    "panel": {
+      "pid": "8586",
+      "sha256": "da28fa3ff1bdfc4b81a2948380914c53f51cafe629e0d4d74d20130174405ae5"
+    },
+    "panel-executor": {
+      "pid": "8570",
+      "sha256": "62684066b2308389bb3d6b84db268089b7289c153b4b7328c3b5a7eb6275bcc9"
+    }
+  },
+  "all50_commercial": false,
+  "app_records": 20,
+  "application_installs_updates": 0,
+  "arch": "amd64",
+  "archive_sha256": "257aceaf8f167ee12fee348e1465ec10087fc3f514e1a8a6fc8ed86c150e381c",
+  "disk_analysis_version": "1.0",
+  "format": 1,
+  "installation_id": "6d3f87adb39023595268eee0fd598b8f",
+  "journal_sha256": "487e6b9594338c045ce9e7e54a7c09584b3896ae95bcddf95f105c99d97c1e13",
+  "main_mutated": false,
+  "mode": "run",
+  "native_commands": 0,
+  "nginx_master_pid": "1085",
+  "ok": true,
+  "platform_ops_version": "1.3.0",
+  "preserved_native_operations": 3,
+  "protected_files_unchanged": 451,
+  "protected_table_projections_unchanged": 94,
+  "scope": "Normal independently original-key verified BFHP production-layout program upgrade on owned QA, preserving original completed native operations, revoked grants, failed jobs and20 application records. Disk-analysis remains its original observed version. No app update/install or maintenance dispatch.",
+  "sites": 96,
+  "source_inputs_sha256": "d2bf613ae28d6f4d8d9ac436887889ecfcc4f3941341fe3f34d1a02e5d4faa60",
+  "version": "0.1.0-dev.proapps24sitefitbfhp"
+}

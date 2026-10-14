@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "previous_program": "0.1.0-dev.proapps24sitefitbfhp",
+  "source_inputs_sha256": "dc68c6d2f089dc94c4680b6799cee6cde736cebd6ee70c73fdb27a0dde15cb05",
+  "frozen_files": 16974,
+  "source_overrides": 0,
+  "normal_original_key_archives": {
+    "arm64": "33c11f1c795e721623bb02c4eb747fa1d00004e02249f70fbb2582bed1868a91",
+    "amd64": "659c43c5d3cc664710d8aabb97757018523ada24091b5482d742293a96852f15"
+  },
+  "normal_build_logs": {
+    "arm64": "fa7bad8c8e136420ba30d65403de8cb325c2239e0fbabc873624d812e1c177e6",
+    "amd64": "7d193c2049b983968404a883db63c7e1dcab787f277923bb7805f18e5a6875d4"
+  },
+  "only_source_changes": [
+    "internal/core/app_modules.go",
+    "internal/core/disk_usage_update_linux_test.go",
+    "internal/core/disk_usage_version_test.go",
+    "internal/core/software_apps.go"
+  ],
+  "previous_indexes": {
+    "source_sha256": "017a9ded828ea2c70ebb575f32fe0230293ad8102057374e99babaad1a11ebd0",
+    "release_inputs_sha256": "d74fb3d70c56e8e24ebd6307fb7d311e43204b576cc839755a9e573d45a4c258"
+  },
+  "evidence_sha256": {
+    "program-arm64.json": "e9293ac6c1895f1c39834b33781d9a6f7a47b4e5483d914cf9f97916a17816d4",
+    "program-amd64.json": "c5e84a366998f150c98583e8926b6c028aa33a7cde0f7fcb1db9a3ecfe58e184",
+    "program-main.json": "d77d069f47b807cb642defc3086ecc7f69d678e3ee0a8f589d707d4b39de6c2c",
+    "ui-arm64.json": "f669e0227d54b4df0f95c7430d39a73f39a0b6d846ab87723cef64466493589c",
+    "ui-amd64.json": "7e97f4264508b654986b7e0a6c15ba1079c3e2995362f25be4a0f717035f84d4",
+    "ui-main.json": "ec86d99c5bafca2608eec148ca3fe9aece138a6312fa387220705f2ce15c23c0",
+    "native-api-arm64.json": "abbb754d15b8b7f16200edd42c855b8cc04fdb0de0a04a337df4bdd0f431f6c9",
+    "native-api-amd64.json": "dd906b6330a72d5089af0625a82d5d23e860a341fa3bf9420444bd496b38035f",
+    "cancellation-arm64.json": "13a2c1ad3c2d6f541a2561f1b05dc24dfe2f445bae80c6e31d58d14babfa1138",
+    "cancellation-amd64.json": "3db351f0f0362a5ab2756eb198dc0ee9fe2883dbe0d87d4ac4e494e9ea891f54",
+    "retained-fixed-delay-observer.json": "e81c134288551b61397cfc12b397937060c66d62ec9bea5d9280f61c348f0474",
+    "retained-generic-analytics-observer.json": "139ab0dab31c5fea4057fbdbd2854394934288a8728076752ab8518b575056f4",
+    "previous-ci.json": "9ba6e51937a2f134da78f6a9b0a411ec90a12857f0f689973d29e9c16189176e"
+  },
+  "version_gate_reason": "Actual inode handler already exists but previous SoftwareImplementationVersion remained1.2, so real registrySupportOn and ValidateSoftwareUpdate still refused1.3. New central exact1.3 declaration plus alias/future-revision refusal changes no disk scanner, UI, app data or other application implementation ceilings.",
+  "previous_program_delivered_main": true,
+  "previous_program_qa_both_arches_verified": true,
+  "previous_native_api_and_poststart_cancellation_both_arches_verified": true,
+  "application_version": "1.3.0",
+  "application_manifest_sha256": "4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38",
+  "original_1_2_manifest_sha256": "5aa327690e407b489c6e23b6366232bdb24fd0abb15a25528338142e9495bb09",
+  "new_catalog_sha256": "fccca3c9e925e21b298d38a56c2bee9af15c6896ab514e931eb6d977aaa79ad3",
+  "previous_catalog_sha256": "702427e776b2f8983c281abad619cdf0eb7562209632fec3cebd618f52528c73",
+  "original_publisher_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "normal_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "new_program_deployed": false,
+  "new_application_signed_update_executed": false,
+  "main_absent_disk_app_installed": false,
+  "commercial_all50": false,
+  "disk_whole_host_capability_completed": false,
+  "scope": "Website public inode usage only. Native evidence is on existing legacy apps with independently signed BFHE/BFHP programs; UI/Main/OS fixtures are precisely separated. Ready app manifest means package availability, not all50 commercial certification.",
+  "remaining": [
+    "Exact-head CI including actual Linux status-builder fixtures, then normal new signed BFIN program QA upgrades. No same-version hotpatch or fake installed version.",
+    "Actual signed GitHub1.3 update prompt, original data/history/config/credential/site preservation, original job reconciliation and native re-scan on both QA hosts. Main disk app remains absent, never force-installed.",
+    "Normal Main program delivery only after QA. Additional OS/filesystem/native/mobile/device qualification and remaining50 commercial capabilities, including full-host disk analysis, remain incomplete."
+  ]
+}

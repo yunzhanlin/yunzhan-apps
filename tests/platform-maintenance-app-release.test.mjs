@@ -4,10 +4,11 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {validateManifest} from '../tools/lib.mjs';
 import {catalogBeforeMaintenance130} from './previous-maintenance-catalog.mjs';
+import {catalogBeforeDisk130,catalogBeforeDisk130Bytes} from './previous-disk-catalog.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const sha=b=>createHash('sha256').update(b).digest('hex');
 test('independent1.3 installable package changes exactly one app and retains original publisher, signed catalog and immutable1.2 bytes',async()=>{
- const catalog=JSON.parse(await read('dist/catalog-v1.json'));
+ const catalog=await catalogBeforeDisk130(JSON.parse(await read('dist/catalog-v1.json')));
  const old=await catalogBeforeMaintenance130(catalog);
  assert.deepEqual(catalog.apps.filter(a=>a.id!=='platform-ops'),old.apps.filter(a=>a.id!=='platform-ops'));
  const raw=await read('dist/apps/platform-ops/1.3.0/manifest.json'),m=JSON.parse(raw);
@@ -17,7 +18,7 @@ test('independent1.3 installable package changes exactly one app and retains ori
  assert.equal(sha(raw),'6d433842fb11880283548bcc739d47b17c46c3d3d7242fefa1494faf9da0b346');
  assert.equal(sha(await read('dist/apps/platform-ops/1.2.0/manifest.json')),'2962907ca319b6266c369df203f46886609073651b2aa7f6baa316a95b885de9');
  const r=JSON.parse(await read('registry/platform-maintenance-app-release.json'));
- assert.equal(r.manifest_sha256,sha(raw));assert.equal(r.catalog_sha256,sha(await read('dist/catalog-v1.json')));
+ assert.equal(r.manifest_sha256,sha(raw));assert.equal(r.catalog_sha256,sha(await catalogBeforeDisk130Bytes(catalog)));
  for(const key of ['commercial_all50','platform_ops_commercial','main_program_delivered','installed_app_update_verified_at_publication','publisher_key_changed'])assert.equal(r[key],false,key);
  assert.equal(r.retained_ci_failure.original_failure_rewritten,false);
  const ci=await read('.github/workflows/verify.yml');

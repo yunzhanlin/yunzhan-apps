@@ -1,0 +1,13 @@
+{
+  "ok": false,
+  "program": "0.1.0-dev.proapps24sitefitbfhp",
+  "original_private_proof_sha256": "8ea7c1756388b1b8e6cf4d0c236848793b9f6bed2b3db5d91df17aff3991bffe",
+  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.app-module-dialog').getByRole('tab', { name: '访问统计', exact: true })\u001b[22m\n",
+  "checks": [
+    "genuine original-key signed50 catalog on current official main; new maintenance handler available but absent app not installed",
+    "actual Chinese网站分析 search returns corresponding signed app, not empty result",
+    "normal UI opens original4 installed versioned modules and complete array workspace collections without page crash or fake result"
+  ],
+  "errors": [],
+  "scope": "Retained original observer failure; later positive checks use actual transition/dedicated component, not source or response/error overrides."
+}

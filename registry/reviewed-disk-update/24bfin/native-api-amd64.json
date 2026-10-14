@@ -1,0 +1,74 @@
+{
+  "ok": true,
+  "arch": "amd64",
+  "program": "0.1.0-dev.proapps24siteselectbfhe",
+  "installed_app_version": "1.0",
+  "scope": "Actual native root executor via authenticated installed app API, controlled metadata fixture created as ordinary website UID. Not new1.3 application update, whole-host analysis or full commercial acceptance.",
+  "original_private_proof_sha256": "fc2a84f1169a62c18b87e80c4783be19e3b2c452148af300a9eece971cab7159",
+  "checks": [
+    "actual native sparse/hardlink dedup and per-path logical counts match independent inode/block metadata; symlinks/FIFO ignored",
+    "actual invalid UTF8 fixture is accounted but not exposed as an actionable path",
+    "actual130-level tree is explicitly incomplete at128-depth boundary",
+    "actual installed100003-file fixture stops at100000 entries and top100 within bounded response",
+    "actual traversal/absolute/private-prefix/link/file paths refused without overwriting last successful report",
+    "actual missing CSRF and anonymous requests denied",
+    "actual site-scoped viewer cannot invoke disk system-tool API; owned temporary account revoked and deleted",
+    "actual installed history retains successful scans and refused path attempts",
+    "ordinary-UID fixture inode/modes/size/block counts and regular-file atimes unchanged, supporting metadata-only access",
+    "only own fixture moved to private recovery evidence; original sites/modules/accounts/credentials/native receipts and Nginx PID unchanged"
+  ],
+  "ordinary_fixture_uid": 986,
+  "fixture_metadata": {
+    "entries": 100146,
+    "metadata_sha256": "ce2c588423f0e4bb5fea1f1b3070d2a6aae975be5ab42e98506fd412d59d3efd"
+  },
+  "accounting": {
+    "allocated_bytes": 8192,
+    "files": 3,
+    "hardlink_entries": 1,
+    "ignored_links": 2,
+    "ignored_special": 1,
+    "sparse_candidates": 1,
+    "total_bytes": 134217745,
+    "unique_files": 2,
+    "unique_logical_bytes": 67108881
+  },
+  "wide": {
+    "fixture_files": 100003,
+    "files": 99999,
+    "entries_scanned": 100000,
+    "entry_limited": true,
+    "partial": true,
+    "scan_complete": false,
+    "largest_rows": 100,
+    "response_bytes": 42349,
+    "elapsed_api_ms": 3061.766917000001
+  },
+  "invalid_utf8": {
+    "files": 1,
+    "classification_limited": true,
+    "can_drill": false
+  },
+  "deep": {
+    "depth_limited": true,
+    "scan_complete": false
+  },
+  "path_refusal_statuses": [
+    409,
+    409,
+    409,
+    409,
+    409,
+    409,
+    409
+  ],
+  "actual_success_and_failure_history": true,
+  "protected_original_files": 418,
+  "protected_sql_projections": 6,
+  "original_data_unchanged": true,
+  "fixture_metadata_unchanged": true,
+  "fixture_retired_by_exact_inode_rename": true,
+  "deleted_files": 0,
+  "application_installs_updates": 0,
+  "commercial_all50": false
+}
