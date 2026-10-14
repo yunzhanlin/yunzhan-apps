@@ -24,6 +24,7 @@ import {dailyWorkerMessage} from "./dailyReportView";
 import { taskSelection, taskTerminationNotice } from "./taskManager";
 import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, type UserMutationObservation } from "./userManagementReceipt";
 import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
+import PlatformMaintenance from './PlatformMaintenance.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -902,6 +903,7 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />
+        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed" />
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-backups'" :disabled="busy || !/^[0-9a-f]{32}$/.test(form.resource_id || '')" @click="reviewSelectedRemoteBackup">核对所选备份完整摘要（不归档）</el-button>
         <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />

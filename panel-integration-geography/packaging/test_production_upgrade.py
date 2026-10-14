@@ -106,6 +106,37 @@ class UpgradePolicyTests(unittest.TestCase):
             with self.assertRaises(sqlite3.OperationalError):
                 transaction.queue_check()
 
+    def test_platform_maintenance_queue_is_optional_for_legacy_but_never_ignores_unknown_work(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            calls = []
+            transaction = upgrade.Upgrade(root, runner=lambda *args, **kwargs: calls.append((args, kwargs)))
+            transaction.database = root/'panel.db'
+            transaction.db_owner = os.geteuid()
+            with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                for table in upgrade.QUEUES:
+                    db.execute(f'CREATE TABLE {table}(id TEXT PRIMARY KEY,state TEXT)')
+            transaction.database.chmod(0o600)
+            transaction.queue_check()
+            self.assertEqual(len(calls), 1)
+            with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                db.execute('CREATE TABLE platform_maintenance_operations(request_id TEXT PRIMARY KEY,state TEXT)')
+            for state in ('dispatched', 'needs_attention', 'completed', 'failed', 'unknown', '', None):
+                with self.subTest(state=state):
+                    with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                        db.execute('DELETE FROM platform_maintenance_operations')
+                        db.execute('INSERT INTO platform_maintenance_operations VALUES (?,?)', ('original-id', state))
+                    calls.clear()
+                    before = transaction.database.read_bytes()
+                    if state in ('completed', 'failed'):
+                        transaction.queue_check()
+                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 10})])
+                    else:
+                        with self.assertRaises(ValueError):
+                            transaction.queue_check()
+                        self.assertEqual(calls, [])
+                    self.assertEqual(transaction.database.read_bytes(), before)
+
     def test_unsafe_wal_never_reaches_sqlite(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary).resolve()

@@ -612,6 +612,11 @@ class Upgrade:
             for table in QUEUES:
                 if connection.execute(f"SELECT count(*) FROM {table} WHERE state IN ('queued','running')").fetchone() != (0,):
                     raise ValueError('wait for active panel, runtime, database or certificate jobs before upgrading')
+            if connection.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='platform_maintenance_operations'").fetchone() == (1,):
+                if connection.execute("SELECT count(*) FROM platform_maintenance_operations WHERE state IS NULL OR state NOT IN ('dispatched','needs_attention','completed','failed')").fetchone() != (0,):
+                    raise ValueError('platform maintenance state is invalid; upgrade must not treat unknown work as complete')
+                if connection.execute("SELECT count(*) FROM platform_maintenance_operations WHERE state IN ('dispatched','needs_attention')").fetchone() != (0,):
+                    raise ValueError('reconcile original platform maintenance commands before upgrading; no automatic replay')
         # Execute only the already verified root-controlled candidate. This
         # fixed-path reader starts no Service or worker and edits no records.
         # Repeated at preflight, under the leases, after strict writer stop,

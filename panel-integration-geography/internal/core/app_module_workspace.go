@@ -10,10 +10,15 @@ type AppModuleSection struct {
 	Actions []string `json:"actions"`
 }
 
-func ModuleWorkspace(id string) []AppModuleSection {
+func ModuleWorkspace(id string) (out []AppModuleSection) {
 	section := func(id, label, help string, fields, actions []string) AppModuleSection {
 		return AppModuleSection{id, label, help, fields, actions}
 	}
+	defer func() {
+		if id == "platform-ops" {
+			out = append(out, section("maintenance", "受限跨主机维护", "独立限时授权与原任务回执；检查和主机级重载为固定命令，不执行自由脚本。只读健康令牌不会升级为维护授权。响应未知时只核对原请求，升级前拒绝未核对任务。", nil, nil))
+		}
+	}()
 	site := []string{"site_id"}
 	integrity := []string{"site_id", "excludes", "interval", "realtime"}
 	switch id {

@@ -120,6 +120,8 @@ func NewServer(s *Store, c Config) (*Server, error) {
 	a.softwareAppRoutes(m)
 	a.appRegistryRoutes(m)
 	a.appModuleRoutes(m)
+	a.platformMaintenanceRoutes(m)
+	a.platformMaintenanceRemoteRoutes(m)
 	a.analyticsRoutes(m)
 	m.HandleFunc("GET /api/platform/agent", a.platformAgent)
 	m.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) {
