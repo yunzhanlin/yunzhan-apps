@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "original_proof_sha256": "b6b113e044e966a3835d76d9942e92d0d569f0b57bdc1b2842eb72828ba848d4",
+  "pull_request": "https://github.com/yunzhanlin/yunzhan-apps/pull/34",
+  "head": "025f619f337b3406ca48dd33944a89b71d1e4147",
+  "merge_commit": "18c4983ab261dd4e4d7272ec185b5afe90310474",
+  "merged_at": "2026-10-14T17:29:28Z",
+  "run_id": 38604498997,
+  "job_id": 115991787504,
+  "job_status": "completed",
+  "conclusion": "success",
+  "diagnostics_source": "mcp__code_review__pull_requests_checks",
+  "provider_full_job_log_truncated": true,
+  "retained_provider_log_sha256": "9383903d2abef257aa3473bed50d5345d4398f51bffc5e01a759603b384b6791",
+  "complete_disk_gate_section_sha256": "5fd593b7bf6a04c87a36f73b11698f08dceee576379d6141b58abb022a01418c",
+  "actual_linux_race_disk_version_status_top_level_cases_passed": 4,
+  "actual_legacy_latest_missing_status_subcases_passed": 4,
+  "actual_disk_gate_cases_skipped": 0,
+  "gate_scope": "Ordinary-user Linux actual implementation/HTTP decoder fixtures, not installed1.3 application update proof",
+  "annotations_nonblocking": [
+    "Old action Node20 targets forced onto Node24",
+    "ubuntu-latest migrates to Ubuntu26 from October19"
+  ],
+  "signed_source_inputs_sha256": "dc68c6d2f089dc94c4680b6799cee6cde736cebd6ee70c73fdb27a0dde15cb05",
+  "commercial_all50": false
+}

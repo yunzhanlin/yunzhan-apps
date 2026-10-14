@@ -1,0 +1,42 @@
+{
+  "format": 1,
+  "original_proof_sha256": "2ed1bdeb10af2c2a4cbb1b0d9e5bfdd9f918228f5dcf224f5b04dd1b3dd36ba3",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "arch": "arm64",
+  "legacy_app_version": "1.2.0",
+  "checks": [
+    "normal installed management has dedicated disk fields, not another application template",
+    "actual authenticated run matches independently read native inode/block metadata and filesystem capacity",
+    "actual installed native report and390px document remain usable without script/resize errors",
+    "actual390px filtered popup stays in modal bounds, selection works and closed popup is destroyed after its real transition",
+    "actual mobile clear and filtered reselection submit original site ID and return unchanged native counters",
+    "actual loaded application chunk exactly matches original signed BFIN archive; no unexpected browser or HTTP failure",
+    "original installed modules/site configuration/credentials/native receipts and Nginx PID preserved; no application installation/update"
+  ],
+  "expected_asset": {
+    "file": "AppModuleManager-DxBTFGnD.js",
+    "sha256": "fb52e726930c8a450c7603134179da1eb45319e28a5185898b08531e9a0f934b"
+  },
+  "assets": [
+    {
+      "file": "AppModuleManager-DxBTFGnD.js",
+      "sha256": "fb52e726930c8a450c7603134179da1eb45319e28a5185898b08531e9a0f934b"
+    }
+  ],
+  "open_popup_geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "popup": {
+      "left": 32,
+      "right": 358,
+      "width": 326
+    },
+    "inside_module_dialog": true,
+    "window_errors": []
+  },
+  "popup_close_observation_ms": 794.3088340000013,
+  "original_protected_data_unchanged": true,
+  "application_installs_updates": 0,
+  "commercial_all50": false
+}
