@@ -1,0 +1,19 @@
+{
+  "ok": true,
+  "scope": "DIAGNOSTIC supported select-prop experiment on actual browser only; no server/source/response change, not unmodified installed UI acceptance",
+  "unmodified_application_ui_acceptance": false,
+  "diagnostic_props": "local-destroy",
+  "patched_selects": [
+    {
+      "name": "ElSelect",
+      "persistent": false,
+      "teleported": false
+    }
+  ],
+  "geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "window_errors": []
+  },
+  "original_private_proof_sha256": "fe41927dabe26a53ceb56f97ead0b144feff093dd321a1268a10b5fed3a9f950"
+}

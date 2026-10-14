@@ -1,0 +1,68 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24siteselectbfhe",
+  "previous_program": "0.1.0-dev.proapps24diskinodebffr",
+  "source_inputs_sha256": "c2dfd1183f3a0ed68935e98b93d20aa26c15b278622f9ac7e3c824d990555b77",
+  "frozen_files": 16972,
+  "source_overrides": 0,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": "e21869314eeaedde23dbc3e7100bff04bead3963399dc6ccebda932b2be19079",
+    "amd64": "45ae760373b03509677215aa49751a6b26a6df8d88ba8ea9b263affc46740d0c"
+  },
+  "normal_build_logs": {
+    "arm64": "74a26360155ba7218f709daa3e3ee3f05447f3c99ef0ee5ef5ab33cca22d715e",
+    "amd64": "0122bf150b59d8530d6132088ba7b46dbe3ec3a53b0b30ec69114d43efda2823"
+  },
+  "only_source_changes": ["scripts/test-deferred-workspace.mjs", "web/src/AppModuleManager.vue"],
+  "behavior": "Shared module site fields retain the same filtered/clearable ElementPlus selector, current site ID bindings and labels. Supported teleported=false and persistent=false keep its popup inside the control hierarchy and destroy it on close. No global ResizeObserver replacement, callback delay, exception suppression, dependency mutation, backend change or data-source adaptation is shipped.",
+  "reviewed_previous_program_qa": {
+    "program": "0.1.0-dev.proapps24diskinodebffr",
+    "source_inputs_sha256": "ad93a99b0455bea7db1f8c14fe200a1433b3370ab48133dd8184a324628aa228",
+    "arm64_sites": 82,
+    "amd64_sites": 96,
+    "apps_per_host": 20,
+    "protected_original_table_projections_per_host": 94,
+    "arm64_protected_files": 708,
+    "amd64_protected_files": 451,
+    "arm64_nginx_pid": "990",
+    "amd64_nginx_pid": "1085",
+    "arm64_original_disk_app_version": "1.2.0",
+    "amd64_original_disk_app_version": "1.0",
+    "application_installs_updates": 0,
+    "program_upgrade_actual_committed_both_arches": true,
+    "native_metadata_scan_matched_independent_filesystem_counters_both_arches": true,
+    "full_ui_acceptance_passed": false,
+    "observed_failure": "Original unmodified installed BFFR UI on both hosts emitted ResizeObserver loop completed with undelivered notifications at390px. Native data matched, but that is not full UI acceptance."
+  },
+  "evidence_sha256": {
+    "program-arm64.json": "6d43149f6e079a60e25988da46b84a44605b31d8f6f58e3e625ad0f79b2451ae",
+    "program-amd64.json": "4cc3e19792b651ad8f160b463f509060a1eedb8cbddd4e0b5a955513fbd969e9",
+    "installed-ui-failure-arm64.json": "b8bcfd3cd625e00e640d3e79e7574ec0eaa3b5c81dc1eaf6df9f12bf87d0e199",
+    "installed-ui-failure-amd64.json": "4f91a3601a2f11fd4b7a719b97f43c3f9bf1f012b835cedc7d5a857003c1acaa",
+    "select-props-diagnostic.json": "e536a59e5fa91844da2bdbd9892126c22f042e0ea8abbf63ae701d758e9ef40e",
+    "source-ui.json": "c8e81c058706ee20052366d98e0be9bf968346277334e6d3a7852c6103f411d0"
+  },
+  "verification": {
+    "normal_both_arch_builds_and_original_key_signatures": true,
+    "deferred_workspace_tests": 27,
+    "deferred_plus_disk_tests": 34,
+    "isolated_original_open_popup_document_width": 449,
+    "isolated_fixed_closed_and_open_document_width": 390,
+    "synthetic_select_options": 82,
+    "source_ui_is_not_native_acceptance": true,
+    "runtime_prop_experiment_is_not_unmodified_acceptance": true,
+    "installed_new_fixed_release_ui_verified": false
+  },
+  "historical_bffr_evidence_and_failures_rewritten": false,
+  "catalog_and_all50_packages_changed": false,
+  "application_installs_updates": 0,
+  "main_delivered": false,
+  "commercial_all50": false,
+  "remaining": [
+    "Exact-head source CI before normal signed BFHE program delivery; BFFR actual signed upgrade is recorded separately and does not prove this new fixed UI is installed.",
+    "Actual unmodified BFHE browser workflow on both existing QA apps, filtering/selection, desktop and mobile popup bounds, scans and no unexpected ResizeObserver errors. Supported runtime-prop diagnostics and isolated source props are not that proof.",
+    "Controlled sparse/hardlink/nofollow/limit/cancellation/security/history operations through the actual installed application, then the original signed application update preserving data. Do not install the absent Main app.",
+    "Additional supported OS/architecture/filesystem and per-application commercial qualification, full-host disk-analysis scope and remaining50 functionality; current scan scope remains website public only and is explicitly not complete commercial certification."
+  ]
+}

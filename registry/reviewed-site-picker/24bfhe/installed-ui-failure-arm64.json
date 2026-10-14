@@ -1,0 +1,28 @@
+{
+  "ok": false,
+  "program": "0.1.0-dev.proapps24diskinodebffr",
+  "arch": "arm64",
+  "installed_app_version": "1.2.0",
+  "scope": "Reduced original installed UI observation; genuine backend matches but full UI acceptance failed, not a new1.3 app update",
+  "original_private_proof_sha256": "9f59536e891efbcf993da0b12cb621d6774e18d7d07fbe6da6461149a89423ac",
+  "native_metadata_checks": [
+    "normal installed management has dedicated disk fields, not another application template",
+    "actual authenticated run matches independently read native inode/block metadata and filesystem capacity"
+  ],
+  "geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "window_errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ]
+  },
+  "assets": [
+    {
+      "file": "AppModuleManager-OUJl2QBu.js",
+      "sha256": "0d3039878dae0eee52683ac475613eac8912019dc77e61056313fce518349420"
+    }
+  ],
+  "reference_files": 1,
+  "application_installs_updates": 0,
+  "failure": "Expected values to be strictly deep-equal:\n+ actual - expected\n\n+ [\n+   'ResizeObserver loop completed with undelivered notifications.'\n+ ]\n- []\n"
+}

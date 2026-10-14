@@ -927,6 +927,8 @@ defineExpose({ show });
             />
             <el-select
               v-else-if="field.kind === 'site'"
+              :teleported="false"
+              :persistent="false"
               v-model="form[field.key]"
               placeholder="选择网站"
               clearable
