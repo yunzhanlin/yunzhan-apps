@@ -18,7 +18,8 @@ func TestStatisticsGeoWorkerOriginalIDNoLostReplyRedispatch(t *testing.T) {
 			s := testStore(t)
 			in := statisticsGeoSelectionFixture()
 			in.Action = "rollback" // No provider or repository network in this fixture.
-			id, err := s.QueueStatisticsGeo(in, "original-worker", strings.Repeat("d", 32))
+			u := accessUser(t, s, "original-worker", "admin", nil)
+			id, err := s.QueueStatisticsGeo(in, "original-worker", u.ID)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -91,7 +92,8 @@ func TestStatisticsGeoMaintenanceWorkerSendsOnlyEmptyOriginalSelection(t *testin
 			s := testStore(t)
 			in := statisticsGeoSelectionFixture()
 			in.Action = action
-			id, err := s.QueueStatisticsGeo(in, "maintenance-original-"+action, strings.Repeat("d", 32))
+			u := accessUser(t, s, "maintenance-worker", "admin", nil)
+			id, err := s.QueueStatisticsGeo(in, "maintenance-original-"+action, u.ID)
 			if err != nil {
 				t.Fatal(err)
 			}

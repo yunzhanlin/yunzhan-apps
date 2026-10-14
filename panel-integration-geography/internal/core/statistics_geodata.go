@@ -147,6 +147,9 @@ func (s *Store) QueueStatisticsGeo(in StatisticsGeoSelection, key, actor string)
 		return "", err
 	}
 	defer tx.Rollback()
+	if err = statisticsGeoCurrentAuthority(context.Background(), tx, actor); err != nil {
+		return "", err
+	}
 	if id, found, err := statisticsGeoReplay(tx, in, key, actor); err != nil || found {
 		return id, err
 	}
@@ -288,8 +291,13 @@ func runStatisticsGeoJob(parent context.Context, s *Store, e *ExecutorClient, j 
 		finish("统计地域任务身份无效", false)
 		return
 	}
+	observeOnly, err := s.statisticsGeoDispatchBoundary(ctx, j, false)
+	if err != nil {
+		finish(err.Error(), true)
+		return
+	}
 	var envelope appcatalog.GeoDataEnvelope
-	if in.Action == "install" {
+	if !observeOnly && in.Action == "install" {
 		var a appcatalog.GeoDataAuthority
 		envelope, a, err = repo.FetchGeoDataEnvelope(ctx, in.DataManifestSHA, time.Now())
 		if err != nil || a.AppVersion() != in.AppVersion || a.AppSHA256() != in.AppManifestSHA || a.Data().Manifest().Release != in.Release {
@@ -300,16 +308,25 @@ func runStatisticsGeoJob(parent context.Context, s *Store, e *ExecutorClient, j 
 	query := rfcGeoQuery(in)
 	endpoint := "/v1/statistics/geodata/jobs/" + j.ID
 	var out StatisticsGeoOperation
-	submit, stop := context.WithTimeout(ctx, 20*time.Second)
-	var payload any = envelope
-	if in.Action != "install" {
-		payload = map[string]any{}
-	}
-	err = e.Call(submit, "POST", endpoint+"?"+query, payload, &out)
-	stop()
-	if err != nil {
-		out = StatisticsGeoOperation{}
-		steps = append(steps, Step{Time: Now(), Message: "提交回执未收到，只观察原任务，不重发或重新下载"})
+	if !observeOnly {
+		observeOnly, err = s.statisticsGeoDispatchBoundary(ctx, j, true)
+		if err != nil {
+			finish(err.Error(), true)
+			return
+		}
+		if !observeOnly {
+			submit, stop := context.WithTimeout(ctx, 20*time.Second)
+			var payload any = envelope
+			if in.Action != "install" {
+				payload = map[string]any{}
+			}
+			err = e.Call(submit, "POST", endpoint+"?"+query, payload, &out)
+			stop()
+			if err != nil {
+				out = StatisticsGeoOperation{}
+				steps = append(steps, Step{Time: Now(), Message: "提交回执未收到，只观察原任务，不重发或重新下载"})
+			}
+		}
 	}
 	for {
 		if out.JobID != "" {

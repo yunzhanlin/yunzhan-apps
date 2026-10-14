@@ -1,0 +1,14 @@
+{
+  "actual_module_install_update": 0,
+  "exit_code": 0,
+  "format": 1,
+  "installed_app_records_unchanged": 1,
+  "nginx_pid_unchanged": "763",
+  "ok": true,
+  "program_unchanged": "PANEL_FORMAT=1\nPANEL_VERSION=0.1.0-dev.proapps24maintbeyo\nPANEL_OS=linux\nPANEL_ARCH=arm64\n",
+  "scope": "Actual Debian13 ARM64 Linux root executes frozen Core SQLite/session/HTTP fixtures. No native provider download, systemd data job, installed-app acceptance, Main mutation or all50 qualification.",
+  "source_inputs_sha256": "194de29fb46e4eff97c754cd78b091a94638b5ae2353a6e8a9f971e16f582c67",
+  "test_binary_sha256": "01f6629661dc7a0ccec29035a3b424f824eafbaed5dd43b3cc5f9a835dc1b675",
+  "test_log_sha256": "75d77794e05ac422608f4ac5a43e76b1acf916d3fbd679551f4f3e7c2c9619f5",
+  "unchanged": true
+}

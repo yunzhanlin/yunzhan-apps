@@ -1,0 +1,19 @@
+{
+  "app_installs_updates": 0,
+  "cache_available": true,
+  "data_release": "2026-10",
+  "format": 1,
+  "invalid_csrf_status": 403,
+  "invalid_selection_status": 400,
+  "new_native_posts": 0,
+  "nginx_master_pid": "763",
+  "ok": true,
+  "original_business_and_native_evidence_unchanged": true,
+  "original_job_id": "e75f3495164822609f3071beab41616b",
+  "original_replays": 2,
+  "protected_paths": 12,
+  "protected_sql_projections": 9,
+  "scope": "Actual original-key installed Debian13 ARM64 program, normal original admin login/CSRF, genuine retained October data/cache and replay of original archived job. No actor revocation race, new native dispatch, app/data install, Main mutation or all50 qualification.",
+  "selected": "dbip-city-lite-v1-2026-10-072848fd40e0a17eaf4fb95ba7f7370e9dcde9b2841ac58412ac11512461e1e7",
+  "version": "0.1.0-dev.proapps24geoauthbfdv"
+}

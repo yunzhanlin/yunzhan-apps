@@ -62,7 +62,7 @@ func TestStatisticsGeoArchiveEvidenceBudgetMatchesEveryNativeLeaf(t *testing.T) 
 }
 func TestStatisticsGeoArchiveFreesOnlyVerifiedTerminalCapacityAndKeepsReplay(t *testing.T) {
 	s := testStore(t)
-	actor := strings.Repeat("b", 32)
+	actor := accessUser(t, s, "geo-archive-capacity-admin", "admin", nil).ID
 	selection := statisticsGeoSelectionFixture()
 	for i := 0; i < 128; i++ {
 		id := fmt.Sprintf("%032x", i+1)

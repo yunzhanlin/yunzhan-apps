@@ -1,0 +1,84 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24geoauthbfdv",
+  "previous_program": "0.1.0-dev.proapps24maintsecretbfcr",
+  "source_inputs_sha256": "194de29fb46e4eff97c754cd78b091a94638b5ae2353a6e8a9f971e16f582c67",
+  "frozen_files": 16967,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": "abd80e70f946f836d983523e900293afb0a6e679a278b1a7cbaa4d059784f6bd",
+    "amd64": "de91e16bc5da99571ef5f0deb4995bae96cc36c075e58c347178ddbe21aa6844"
+  },
+  "only_source_changes": [
+    "internal/core/statistics_geodata.go",
+    "internal/core/statistics_geodata_archive_test.go",
+    "internal/core/statistics_geodata_authorization.go",
+    "internal/core/statistics_geodata_authorization_test.go",
+    "internal/core/statistics_geodata_test.go",
+    "internal/core/statistics_geodata_worker_test.go"
+  ],
+  "behavior": "Queue creation rechecks current original-account admin plus sites/runtimes authority in the same SQLite transaction. Worker checks claimed original payload, unique original queue actor and current authority before catalogue preparation and again at durable dispatch. A unique actor/payload-bound dispatch intent commits before one Root POST. Lost responses and normal startup recovery only GET the same original Root ID without refetching authority, sending another POST, resetting a failure or adopting a different account. The intent is not proof of native execution. Revocation after that durable boundary cannot undo a submitted native operation.",
+  "verification": {
+    "original_red_regression_log_sha256": "8f7c69b875c808fdd92f34b971087da35c1062ed9806b7fb4b31fa36d8d0358a",
+    "original_red_failing_cases": 29,
+    "final_full_geography_race_log_sha256": "58500e46f45f81b475b8bfbf0115582fca9fc34e12bf33ae8e7931ef2f7e0f08",
+    "new_authorization_scenarios": 51,
+    "normal_both_arch_builds_passed": true,
+    "arm64_normal_build_log_sha256": "676a8a4ba20b90903b60d11d714693045b6064de1b733cb1a000e371e22fca1c",
+    "amd64_normal_build_log_sha256": "dac05bdd5e75eae4a825a10754b251dce7a6b8ac4ce921566e2cf1bb2a1554a3",
+    "native_debian13_arm64_core_fixtures": {
+      "ok": true,
+      "proof_sha256": "7b7596c41b707f0c294abc01f4f336dad5da7b7ee3ab64bf51cecd9de338cc9a",
+      "binary_sha256": "01f6629661dc7a0ccec29035a3b424f824eafbaed5dd43b3cc5f9a835dc1b675",
+      "log_sha256": "75d77794e05ac422608f4ac5a43e76b1acf916d3fbd679551f4f3e7c2c9619f5",
+      "original_sites_jobs_receipts_and_app_records_unchanged": true,
+      "nginx_pid_unchanged": "763",
+      "scope": "Frozen Core tests run as actual Linux root, using declared executor HTTP/transport fixtures and genuine temporary SQLite stores. Not installed app, provider download or systemd operation acceptance."
+    }
+  },
+  "retained_environment_failures": [
+    {"stage": "statistics-authority24bfdw.p0tx4thl", "reason": "Ubuntu24 root disk full; transfer failed before execution", "tests_executed": false, "only_own_incomplete_binary_removed": true},
+    {"stage": "statistics-authority24bfdx.g350n23c", "reason": "Ubuntu24 RAM-backed /run noexec; execution denied before tests", "tests_executed": false, "security_mount_not_changed": true, "only_own_test_binary_removed": true}
+  ],
+  "source_overrides": 0,
+  "actual_signed_program_upgrade": {
+    "ok": true,
+    "proof_sha256": "730a445f07fc6bb87a427e67e4f4d64c76a3df3f21ea6e0fbb695f1d78751a19",
+    "journal_sha256": "011391267fbf5225c34e69ade6e8e741ebd718a896411cc77f083e2d05438322",
+    "original_table_projections_unchanged": 98,
+    "original_paths_unchanged": 21,
+    "site_count": 1,
+    "nginx_master_pid": 763,
+    "app_installs_updates": 0
+  },
+  "actual_installed_http": {
+    "ok": true,
+    "proof_sha256": "702105a2f45ffc3c1e0ac8667ed142cb012655cbe399c22eb8f906750c6cebc6",
+    "protected_sql_projections": 9,
+    "protected_paths": 12,
+    "original_job_replays": 2,
+    "invalid_csrf_status": 403,
+    "invalid_selection_status": 400,
+    "genuine_original_october_data_available": true,
+    "live_actor_revocation_race_tested": false,
+    "new_native_dispatches": 0,
+    "scope": "Normal original account/Origin/CSRF on the actual original-key installed BFDV program. Live account revocation during a queued data job remains separate; that boundary is tested by the frozen Core SQLite/HTTP fixtures, not claimed from this smoke test."
+  },
+  "retained_initial_http_observer": {
+    "proof_sha256": "82c51e102d20c886b63c570f06181ae0ce95b7b98c5cb7b2a53b9c2b444fc502",
+    "ok": false,
+    "reason": "Observer wrongly assumed state.selected was a month. Actual native source binds it to the full dataset ID; metadata.release is the month. Subsequent observer checks full original dataset ID plus original manifest/data SHA and release, without changing production source or data.",
+    "original_failure_rewritten": false
+  },
+  "app_version_unchanged": "2.6.0",
+  "catalog_and_all50_packages_changed": false,
+  "app_installs_updates": 0,
+  "main_delivered_at_publication": false,
+  "commercial_all50": false,
+  "remaining": [
+    "Exact-head CI and fresh Main protection checks before Main program delivery; actual signed QA program upgrade and normal HTTP smoke are now recorded separately above.",
+    "Actual queued-job live account revocation/recovery acceptance without installing absent user-manager or changing the original owner's access. Isolated genuine Core SQLite/HTTP tests are not this installed operational scenario.",
+    "Core-only failed-job capacity maintenance and native failed-unit recovery preserving original failures; historical signed dataset positive retention and controlled purge/download acknowledgement.",
+    "Other applications' full real business/security/recovery/UI and supported OS/architecture/device commercial qualification."
+  ]
+}

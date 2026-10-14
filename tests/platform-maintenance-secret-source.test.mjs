@@ -6,9 +6,11 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('secret lifetime fix exports exact new signed BFCR inputs while retaining immutable BFAW and failed BFCL identities',async()=>{
+test('historical secret lifetime fix retains exact signed BFCR inputs and immutable BFAW and failed BFCL identities',async()=>{
  const r=JSON.parse(await read('registry/platform-maintenance-secret-release.json'));
- const current=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
+ const current=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintsecretbfcr/source-sha256.json'));
+ assert.equal(sha(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintsecretbfcr/source-sha256.json')),'faa56c16d142eb5a10a25e728ede59cdeecea43e601a6710265237cf2219b9cc');
+ assert.equal(sha(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintsecretbfcr/release-source-inputs.json')),'97c10c489ccca6bee828f4e147fd0c1b7fa76ea305333ea44c9fedb16411f628');
  const oldRaw=await read('registry/reviewed-sources/0.1.0-dev.proapps24maintuibfaw/source-sha256.json'),old=JSON.parse(oldRaw);
  assert.equal(sha(oldRaw),'17400c7188cbe3e9b9506d17279a9430ec687a462fe5899d04acef91fe0e5517');
  assert.equal(sha(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintuibfaw/release-source-inputs.json')),'678ac3a5b0b8ce68f5d7c6fbba543b128e3a28dd75208f98a4477c5598d5e7a3');
