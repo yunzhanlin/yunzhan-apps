@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24sitefitbfhp",
+  "previous_program": "0.1.0-dev.proapps24siteselectbfhe",
+  "source_inputs_sha256": "d2bf613ae28d6f4d8d9ac436887889ecfcc4f3941341fe3f34d1a02e5d4faa60",
+  "frozen_files": 16972,
+  "source_overrides": 0,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": "8ec81e838bdf85bd67cc7ca290124529f01e7365f4bf988d4bbef920e30c586f",
+    "amd64": "257aceaf8f167ee12fee348e1465ec10087fc3f514e1a8a6fc8ed86c150e381c"
+  },
+  "normal_build_logs": {
+    "arm64": "966f1dc83ae0a581e568f6f17e1efc3876e29acbf269e50d8e16e097635ffa5f",
+    "amd64": "b53373098423ad36bdb34f58579e8b4734b957ecaa54d1406c2752d7dc7e431b"
+  },
+  "only_source_changes": [
+    "scripts/test-deferred-workspace.mjs",
+    "web/src/AppModuleManager.vue"
+  ],
+  "previous_indexes": {
+    "source_sha256": "8460b19bce554247e4d4c5d8d26334d1c52388d070fcc6a98c72f84c78815868",
+    "release_inputs_sha256": "67856ff5ef2c2c8615da20900969a723f16b334a9e0779326ffd7730263e3fd9"
+  },
+  "behavior": "Supported fit-input-width=true bounds the shared site-picker popup to its existing input. The previous supported local/transient popup fix, searchable original site IDs, labels and clearable behavior remain. No global ResizeObserver replacement, error suppression, dependency change, backend or app lifecycle change.",
+  "evidence_sha256": {
+    "program-arm64.json": "e2c7cc9c201eeeb4af4379149cd0bf2deae227d8d21d9c32d49b9da377afd050",
+    "installed-popup-failure-arm64.json": "87d01235c468647a82e43af70950233761b4ab6034957ff5089bc30b38fe0837",
+    "program-amd64.json": "d7c1fd8a50cfba640abe4382661bda735d9be1dedd3ec8b3a762a11092d32a63",
+    "installed-popup-failure-amd64.json": "0a3d9f3ba7929bf0f9ed0c2d1423b1df6c8bf3b94d2ff4d477f176b792f9a00e",
+    "source-popup.json": "34c63254867ad1a2532f6233cb7c72b0d30cc53f11ceb36ab9f0d0c052a23267",
+    "previous-ci.json": "5760b963dd4528183ff14782000efd17aaf4a3b905711a4b4842f60875064f1a"
+  },
+  "previous_signed_program_upgraded_both_arches": true,
+  "previous_full_installed_ui_acceptance": false,
+  "previous_native_scans_matched_both_arches": true,
+  "previous_resize_errors_removed_both_arches": true,
+  "new_full_installed_ui_acceptance": false,
+  "historical_bffr_and_bfhe_evidence_rewritten": false,
+  "application_installs_updates": 0,
+  "catalog_and_all50_packages_changed": false,
+  "main_delivered": false,
+  "commercial_all50": false,
+  "remaining": [
+    "Exact-head CI then normal signed BFHP program upgrade and unmodified desktop/mobile popup/filter/selection/native scan acceptance on both QA architectures. No diagnostic runtime prop mutation counts as installed acceptance.",
+    "Controlled installed sparse/hardlink/nofollow/limits/cancellation/security/history checks, then genuine normal signed1.3 application update retaining data. Main disk app is absent and must not be forced installed.",
+    "Full-host disk analysis remains unfinished; current scan scope is website public only. Remaining50 per-application capability/security/recovery/OS/architecture/filesystem/native/mobile commercial qualification remains incomplete."
+  ]
+}

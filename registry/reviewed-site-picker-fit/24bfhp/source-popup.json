@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "scope": "Actual source manager and unchanged ElementPlus with synthetic props, no runtime replacement or error filtering. Not installed/native acceptance.",
+  "source_inputs_sha256": "d2bf613ae28d6f4d8d9ac436887889ecfcc4f3941341fe3f34d1a02e5d4faa60",
+  "sources": {
+    "web/src/AppModuleManager.vue": "89d1cb7d55963bb6ae879c07ec8626f3bf2740b918819044decb98afb5d46133",
+    "scripts/test-deferred-workspace.mjs": "9e82ca1d4931766983bb52ad2826a866a25993a15e9dd465e5ac381ae1e02a72"
+  },
+  "viewport": 390,
+  "closed_document_width": 390,
+  "open_document_width": 390,
+  "popup": {
+    "left": 32,
+    "right": 358,
+    "width": 326
+  },
+  "visible_options": 82,
+  "window_errors": [],
+  "original_private_proof_sha256": "85132bde684621afdfb1cd5b974c6fd88bbe5b156c5257c827abd6b0be63cd64",
+  "installed_acceptance": false
+}

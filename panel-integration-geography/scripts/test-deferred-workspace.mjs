@@ -294,6 +294,6 @@ test('module site picker keeps filtering and current IDs while its popup stays l
  const manager=read('web/src/AppModuleManager.vue');
  const start=manager.indexOf('v-else-if="field.kind === \'site\'"');assert(start>=0);
  const select=manager.slice(start,manager.indexOf('</el-select>',start));
- for(const text of [':teleported="false"',':persistent="false"','v-model="form[field.key]"','filterable','clearable',':key="site.id"',':value="site.id"','`${site.name} · ${site.domain}`'])assert(select.includes(text),text);
+ for(const text of [':teleported="false"',':persistent="false"',':fit-input-width="true"','v-model="form[field.key]"','filterable','clearable',':key="site.id"',':value="site.id"','`${site.name} · ${site.domain}`'])assert(select.includes(text),text);
  assert.doesNotMatch(manager,/window\.ResizeObserver\s*=|ResizeObserver\.prototype|ResizeObserver loop|preventDefault\(\).*error/);
 });

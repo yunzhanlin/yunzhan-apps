@@ -929,6 +929,7 @@ defineExpose({ show });
               v-else-if="field.kind === 'site'"
               :teleported="false"
               :persistent="false"
+              :fit-input-width="true"
               v-model="form[field.key]"
               placeholder="选择网站"
               clearable
