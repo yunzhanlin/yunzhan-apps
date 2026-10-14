@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "scope": "Actual source SFC with synthetic props, no backend or installed UI acceptance; no runtime callback/error override",
+  "source_inputs_sha256": "c2dfd1183f3a0ed68935e98b93d20aa26c15b278622f9ac7e3c824d990555b77",
+  "sources": {
+    "web/src/AppModuleManager.vue": "404bdba0bcdf448ac0885b57a97ce7b664fb0190dfefe324faf615951b6e857f",
+    "scripts/test-deferred-workspace.mjs": "a471d8d362403c593762d038a3f25b729e48cbd635a1551cd06614c1d676673a"
+  },
+  "original_open_dropdown_document_width": 449,
+  "fixed_closed_dropdown_document_width": 390,
+  "fixed_open_dropdown_document_width": 390,
+  "viewport": 390,
+  "visible_options": 82,
+  "filter_and_selection_interacted": true,
+  "window_errors": [],
+  "isolated_original_manager_did_not_reproduce_installed_ro_error": true,
+  "installed_fixed_release_acceptance": false
+}

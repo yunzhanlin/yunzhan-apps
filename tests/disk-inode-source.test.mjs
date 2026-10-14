@@ -6,10 +6,10 @@ import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('disk source export binds exact new frozen inputs while preserving original signed BFDV source authority',async()=>{
+test('historical disk source export binds exact frozen BFFR inputs while preserving original signed BFDV source authority',async()=>{
  const r=JSON.parse(await read('registry/disk-inode-release.json'));
- const i=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
- const f=JSON.parse(await read('panel-integration-geography/release-source-inputs.json'));
+ const i=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24diskinodebffr/source-sha256.json'));
+ const f=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24diskinodebffr/release-source-inputs.json'));
  const oldRaw=await read('registry/reviewed-sources/0.1.0-dev.proapps24geoauthbfdv/source-sha256.json'),old=JSON.parse(oldRaw);
  assert.equal(sha(oldRaw),'2c7ab96cec0d532387b06c169c4a4d1f256c17571351ca8f2684a54899117ccc');
  assert.equal(sha(await read('registry/reviewed-sources/0.1.0-dev.proapps24geoauthbfdv/release-source-inputs.json')),'832971985c43377f0e561eaa73aff199e77213d4d9a57d01c95b5090de089c5b');
