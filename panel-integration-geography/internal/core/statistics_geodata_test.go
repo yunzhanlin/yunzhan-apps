@@ -40,7 +40,7 @@ func TestStatisticsGeoClosedSelectionInstanceAndQueryBindings(t *testing.T) {
 func TestStatisticsGeoQueueStableActorAndImmutableFailedEvidence(t *testing.T) {
 	s := testStore(t)
 	in := statisticsGeoSelectionFixture()
-	actor := strings.Repeat("d", 32)
+	actor := accessUser(t, s, "geo-submit-admin", "admin", nil).ID
 	id, err := s.QueueStatisticsGeo(in, "geo-submit", actor)
 	if err != nil {
 		t.Fatal(err)
