@@ -29,6 +29,7 @@ import uuid
 PROGRAMS = ('panel-terminal.service', 'panel-terminal-root.service', 'panel-executor.service', 'panel.service')
 TIMER = 'panel-mysql-overwrite-recovery.timer'
 QUEUES = ('jobs', 'runtime_jobs', 'mysql_jobs', 'acme_orders')
+NATIVE_PREREQUISITES = ('waf-state-directory.py', 'native-build-directories.py')
 VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+([.-][a-z0-9]+)*\Z')
 UNIT = re.compile(r'(?:panel-[a-z0-9@.-]+|panel|var-cache-panel\\x2dapache\\x2dbody)\.(?:service|timer|mount)\Z')
 
@@ -612,6 +613,11 @@ class Upgrade:
             for table in QUEUES:
                 if connection.execute(f"SELECT count(*) FROM {table} WHERE state IN ('queued','running')").fetchone() != (0,):
                     raise ValueError('wait for active panel, runtime, database or certificate jobs before upgrading')
+            if connection.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='platform_maintenance_operations'").fetchone() == (1,):
+                if connection.execute("SELECT count(*) FROM platform_maintenance_operations WHERE state IS NULL OR state NOT IN ('dispatched','needs_attention','completed','failed')").fetchone() != (0,):
+                    raise ValueError('platform maintenance state is invalid; upgrade must not treat unknown work as complete')
+                if connection.execute("SELECT count(*) FROM platform_maintenance_operations WHERE state IN ('dispatched','needs_attention')").fetchone() != (0,):
+                    raise ValueError('reconcile original platform maintenance commands before upgrading; no automatic replay')
         # Execute only the already verified root-controlled candidate. This
         # fixed-path reader starts no Service or worker and edits no records.
         # Repeated at preflight, under the leases, after strict writer stop,
@@ -633,6 +639,36 @@ class Upgrade:
         else:
             guard.inventory(self)
 
+    def native_prerequisite_record(self, source):
+        return {'format':1, 'version':self.version,
+                'policy':'create-missing-retain-on-rollback',
+                'helpers':{name:hashlib.sha256(self.file(source/name,mode=0o644,limit=128*1024)[0]).hexdigest()
+                           for name in NATIVE_PREREQUISITES}}
+
+    def native_prerequisites(self, *, create=False):
+        # Only the production transaction provisions these fixed namespaces.
+        # No application, account, rule feed, config or service is installed.
+        # Recovery never removes them: another valid job may have used them.
+        source = self.release
+        if create:
+            if (self.layout!='production' or len(self.locks)!=2 or self.backup is None
+                    or getattr(self,'last_phase',None)!='prepared' or self.stopping or self.changed):
+                raise ValueError('native prerequisites require the prepared production transaction')
+            source = self.private_candidate
+        record = self.native_prerequisite_record(source)
+        # Check every helper before creating anything. Each create also checks
+        # existing paths and refuses to repair foreign ownership/mode/links.
+        for name in NATIVE_PREREQUISITES:
+            self.run_command('/usr/bin/python3',str(source/name),'check','--root',str(self.root))
+        if not create:
+            return
+        target = self.backup/'native-prerequisites.json'
+        if self.exists(target):
+            raise ValueError('native prerequisite intent must not be overwritten')
+        self.atomic(target,(json.dumps(record,sort_keys=True)+'\n').encode(),0o600)
+        for name in NATIVE_PREREQUISITES:
+            self.run_command('/usr/bin/python3',str(source/name),'create','--root',str(self.root))
+
     def preflight(self):
         self.parents(self.release)
         self.directory(self.release)
@@ -645,6 +681,7 @@ class Upgrade:
         self.version = fields['PANEL_VERSION']
         if fields['PANEL_ARCH'] != self.run_command('/usr/bin/dpkg', '--print-architecture'):
             raise ValueError('upgrade architecture mismatch')
+        self.native_prerequisites()
         self.current = self.path('/opt/panel/current')
         self.marker = self.path('/etc/panel-release')
         self.releases = self.path('/opt/panel/releases')
@@ -1321,6 +1358,14 @@ class Upgrade:
         arch = self.run_command('/usr/bin/dpkg','--print-architecture')
         if fields!={'PANEL_FORMAT':'1','PANEL_VERSION':version,'PANEL_OS':'linux','PANEL_ARCH':arch} or arch not in ('amd64','arm64'):
             raise ValueError('recovery candidate version or architecture mismatch')
+        prerequisites = backup/'native-prerequisites.json'
+        if self.exists(prerequisites):
+            # This is an immutable intent, not a completion claim or deletion
+            # authority. A crash at any helper step leaves the dirs untouched.
+            record = self.read_record(prerequisites,limit=4096)
+            if (self.layout!='production' or type(record.get('format'))is not int
+                    or record!=self.native_prerequisite_record(self.release)):
+                raise ValueError('native prerequisite intent differs from retained candidate')
         self.recover_layout_plan(plan,arch)
         units = plan['original_units']
         self.units = sorted((self.release/'systemd').iterdir())
@@ -1626,6 +1671,7 @@ class Upgrade:
         # protects the original retained binaries before the pending marker
         # or the first code/unit mutation exists, including cold boot.
         self.start_guard(install=True)
+        self.native_prerequisites(create=True)
         stage = self.destination.with_name(self.version+'.tmp')
         shutil.copytree(self.release, stage)
         self.run_command(str(stage/'verify-release.sh'), str(stage))

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {catalogBeforeMaintenance130} from './previous-maintenance-catalog.mjs';
 
 // This is the exact reviewed pre-2.4.1 catalog entry, not a replacement for an
 // installed-update proof. Historical cohort hashes must retain their own version.
@@ -35,6 +36,7 @@ const previousStatistics = {
 const sha=b=>createHash('sha256').update(b).digest('hex');
 
 export async function catalogBeforeStatistics241(catalog) {
+ catalog=await catalogBeforeMaintenance130(catalog);
  assert.equal(catalog.apps.length,50);
  const actual=catalog.apps.find(a=>a.id==='website-statistics-v2');
  assert.equal(actual.version,'2.6.0');

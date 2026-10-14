@@ -560,6 +560,9 @@ func checkProgramUpgradeQueues(ctx context.Context, root string) error {
 	if err := r.statisticsGeoJobs(); err != nil {
 		return err
 	}
+	if err := r.platformMaintenanceJobs(); err != nil {
+		return err
+	}
 	return r.unchanged()
 }
 

@@ -61,7 +61,11 @@ func TestRegistryInstallReplayAllModulesAtomicIdentity(t *testing.T) {
 			actor := ID()
 			item := appcatalog.CatalogItem{ID: app.ID, Target: app.ID, Provider: "panel-module", Version: app.Version, SHA256: strings.Repeat("a", 64)}
 			in := registryInstallInput{ExpectedVersion: item.Version, ExpectedSHA256: item.SHA256}
-			job, err := s.queueSoftwareActionBound(item.Target, "install", nil, "", "module-install", "admin", s.bindRegistryInstall(item, item.Target, "module-install", actor, in))
+			selectedVersion := ""
+			if item.Target == "platform-ops" || item.Target == "website-statistics-v2" {
+				selectedVersion = item.Version
+			}
+			job, err := s.queueSoftwareActionBound(item.Target, "install", nil, selectedVersion, "module-install", "admin", s.bindRegistryInstall(item, item.Target, "module-install", actor, in))
 			if err != nil {
 				t.Fatal(err)
 			}

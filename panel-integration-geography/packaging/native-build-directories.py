@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Provision fixed root native directories before systemd confinement."""
 import argparse
+import grp
 import os
 import pathlib
 import stat
@@ -85,7 +86,16 @@ def prepare_build_lock(root, create):
         finally:
             os.close(parent)
         info = path.lstat()
-    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != 0 or info.st_gid != 0 or info.st_nlink != 1 or info.st_size > 1024:
+    # The fixed executor runs User=root, Group=panel. Its legitimate existing
+    # 0600 lock therefore has the named panel GID on older installations.
+    # Accept only root or that fixed NSS identity; never infer authority from
+    # the parent GID, caller's group, a numeric CLI option or arbitrary groups.
+    groups = {0}
+    try:
+        groups.add(grp.getgrnam('panel').gr_gid)
+    except KeyError:
+        pass  # Fresh preflight may precede creation of the panel account.
+    if not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600 or info.st_uid != 0 or info.st_gid not in groups or info.st_nlink != 1 or info.st_size > 1024:
         raise ValueError("existing native build lock is foreign, linked or invalid; not repaired")
 
 

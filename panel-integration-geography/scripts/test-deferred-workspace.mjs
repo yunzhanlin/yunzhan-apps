@@ -63,7 +63,8 @@ test('the real compiled show function refuses automatic actions after page, site
  const source=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
  const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
-  const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation'].map(key=>[key,{value:undefined}]));
+  const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation'].map(key=>[key,{value:undefined}]));
+  refs.installedVersion.value='old-version';refs.installedInstance.value='a'.repeat(32);
   refs.userMutationObservation.value={action:'update',username:'old-account',state:'unverified'};
   refs.platformMutationObservation.value={action:'issue-token',state:'unverified',requiredRead:'token-list'};
   const requests=[],executed=[];
@@ -75,15 +76,22 @@ test('the real compiled show function refuses automatic actions after page, site
   await new Function(...Object.keys(bindings),js+'\nreturn show;')(...Object.values(bindings))(id);
   assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
   assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
-  return {requests,executed,error:refs.error.value,installed:refs.installed.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
+  return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
  }
  for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){
   const out=await open(id,path);assert.equal(out.requests.at(-1),path);assert.deepEqual(out.executed,[]);assert.match(out.error,/retained read failure/);
+  assert.equal(out.version,'');assert.equal(out.instance,'','failed read adopted previous installation authority');
   if(path==='/sites'||path==='/certificates')assert.equal(out.installed,true,'partial installation state must not authorize an action');
  }
  assert.deepEqual((await open('apache-waf')).executed,[]);
  assert.deepEqual((await open('daily-report')).executed,[],'real show function does not rewrite or regenerate a daily report');
  assert.deepEqual((await open('task-manager')).executed,['run']);
+ for(const version of ['1.2.0','1.3.0']){
+  const instance=version==='1.3.0'?'d'.repeat(32):undefined;
+  const out=await open('platform-ops',undefined,['run'],null,false,false,{status:{id:'platform-ops',installed:true,healthy:true,version,installation_id:instance},workspace:[{id:'maintenance',label:'受限跨主机维护',fields:null,actions:null}]});
+  assert.equal(out.version,version);assert.equal(out.instance,instance??'');assert.deepEqual(out.executed,[],'opening maintenance must never issue a command');
+  assert.deepEqual(out.workspace[0].fields,[]);assert.deepEqual(out.workspace[0].actions.filter(action=>action!=='ids-rules'),[],'legacy null must become an empty collection, never a generic run action');
+ }
  for(const status of [undefined,{}, {id:'other',installed:true,healthy:true},{id:'task-manager',installed:'true',healthy:true},{id:'task-manager',installed:true,healthy:'true'},{id:'task-manager',installed:true,healthy:true,state_unknown:'false'}]){
   const out=await open('task-manager',undefined,['run'],null,false,false,{status,report:{untrusted:'not-current'}});
   assert.equal(out.unknown,true);assert.equal(out.installed,false);assert.equal(out.report,undefined);assert.deepEqual(out.executed,[]);assert.match(out.error,/安装身份或状态无法核对/);

@@ -24,6 +24,7 @@ import {dailyWorkerMessage} from "./dailyReportView";
 import { taskSelection, taskTerminationNotice } from "./taskManager";
 import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, type UserMutationObservation } from "./userManagementReceipt";
 import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
+import PlatformMaintenance from './PlatformMaintenance.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -88,6 +89,8 @@ const remoteRequestIdentity=new RemoteRequestIdentity({
 const definition = ref<Definition>(),
   guidance = ref<Guidance>(),
   installed = ref(false),
+  installedVersion = ref(''),
+  installedInstance = ref(''),
   installedUnknown = ref(true),
   healthy = ref(false),
   report = ref<Record<string, any>>();
@@ -333,6 +336,8 @@ async function show(id: string) {
   guidance.value = undefined;
   dailyWorker.value = undefined;
   installed.value = false;
+  installedVersion.value = '';
+  installedInstance.value = '';
   installedUnknown.value = true;
   healthy.value = false;
   form.value = {};
@@ -348,7 +353,7 @@ async function show(id: string) {
     const page = await props.api<{
       definition: Definition;
       guidance: Guidance;
-      status: { id: string; installed: boolean; healthy: boolean; state_unknown?: boolean };
+      status: { id: string; installed: boolean; healthy: boolean; state_unknown?: boolean; version?: string; installation_id?: string };
       report: unknown;
       report_state_unknown?: boolean;
       daily_worker?: unknown;
@@ -356,12 +361,14 @@ async function show(id: string) {
     }>(`/app-modules/${id}`);
     if (page.definition?.id !== id) throw new Error("应用页面身份无法核对；未展示其他应用的管理操作");
     definition.value = page.definition;
-    workspace.value = page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }];
+    workspace.value = (page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }]).map(section => ({ ...section, fields: section.fields ?? [], actions: section.actions ?? [] }));
     activeTab.value = workspace.value[0]?.id || "overview";
     guidance.value = page.guidance;
     if(id==='daily-report')dailyWorker.value = page.daily_worker;
     installedUnknown.value = !page.status || page.status.id !== id || typeof page.status.installed !== 'boolean' || typeof page.status.healthy !== 'boolean' || page.status.state_unknown === true || page.status.state_unknown !== undefined && typeof page.status.state_unknown !== 'boolean';
     installed.value = !installedUnknown.value && page.status.installed === true;
+    installedVersion.value = installed.value && typeof page.status.version==='string' ? page.status.version : '';
+    installedInstance.value = installed.value && typeof page.status.installation_id==='string' && /^[a-f0-9]{32}$/.test(page.status.installation_id) ? page.status.installation_id : '';
     healthy.value = installed.value && page.status.healthy === true;
     if (installedUnknown.value) error.value = "应用安装身份或状态无法核对；未自动运行、安装或展示原报告";
     reportStateUnknown.value = page.report_state_unknown === true;
@@ -902,6 +909,7 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />
+        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-backups'" :disabled="busy || !/^[0-9a-f]{32}$/.test(form.resource_id || '')" @click="reviewSelectedRemoteBackup">核对所选备份完整摘要（不归档）</el-button>
         <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />

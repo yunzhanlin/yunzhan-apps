@@ -10,10 +10,23 @@ type AppModuleSection struct {
 	Actions []string `json:"actions"`
 }
 
-func ModuleWorkspace(id string) []AppModuleSection {
+func ModuleWorkspace(id string) (out []AppModuleSection) {
 	section := func(id, label, help string, fields, actions []string) AppModuleSection {
+		// These are collection fields on the HTTP wire, including read-only
+		// sections. nil would encode as null and break the management renderer.
+		if fields == nil {
+			fields = []string{}
+		}
+		if actions == nil {
+			actions = []string{}
+		}
 		return AppModuleSection{id, label, help, fields, actions}
 	}
+	defer func() {
+		if id == "platform-ops" {
+			out = append(out, section("maintenance", "受限跨主机维护", "独立限时授权与原任务回执；检查和主机级重载为固定命令，不执行自由脚本。只读健康令牌不会升级为维护授权。响应未知时只核对原请求，升级前拒绝未核对任务。", nil, nil))
+		}
+	}()
 	site := []string{"site_id"}
 	integrity := []string{"site_id", "excludes", "interval", "realtime"}
 	switch id {
@@ -70,7 +83,7 @@ func ModuleWorkspace(id string) []AppModuleSection {
 	case "disk-analysis":
 		return []AppModuleSection{section("disk", "目录空间分析", "查看目录、扩展名和大文件分布；单击目录下钻。只读，不删除文件，不跟随符号链接。", []string{"site_id", "path"}, []string{"run"})}
 	case "platform-ops":
-		return []AppModuleSection{section("hosts", "主机健康", "最多 12 台，只读验证 HTTPS 证书、单次 5 秒期限、256 KiB 完整协议和样本时间（允许过去 2 分钟、未来 30 秒的时差）。健康表示通信协议通过，不等于网站、告警或全部指标正常；指标不可用保持 null。拒绝跳转、错误页面、重复字段与部分响应，不支持远程命令。", nil, []string{"run"}), section("host", "登记主机", "只读令牌加密保存。更新或移除既有主机须从当前清单选择其配置摘要；更改标识即为另一主机，不沿用旧摘要。满 12 台仍可更新既有主机，新增须先明确移除；不自动删除记录。登记、移除与成功摘要及审计共同提交。移除仅删除登记，不操作远端软件；断网请刷新核对，不盲重复提交。", []string{"resource_id", "url", "token", "expected_sha"}, []string{"add", "remove"}), section("tokens", "本机只读授权", "最多保留 128 个令牌，只存摘要，生成与审计共同提交后显示一次。只读刷新清单可选择公开授权标识撤销，标识不是访问令牌；也可仅填写原令牌撤销，两者不可同时填写。回执丢失不能恢复令牌原文，但可按清单标识撤销；不自动删除旧授权。撤销阻止后续认证，不中止已通过认证的在途读取。", []string{"token", "token_id"}, []string{"token-list", "issue-token", "revoke-token"})}
+		return []AppModuleSection{section("hosts", "主机健康", "最多 12 台，只读验证 HTTPS 证书、单次 5 秒期限、256 KiB 完整协议和样本时间（允许过去 2 分钟、未来 30 秒的时差）。健康表示通信协议通过，不等于网站、告警或全部指标正常；指标不可用保持 null。拒绝跳转、错误页面、重复字段与部分响应；本健康通道不执行维护命令，维护1.3需单独授权。", nil, []string{"run"}), section("host", "登记主机", "只读令牌加密保存。更新或移除既有主机须从当前清单选择其配置摘要；更改标识即为另一主机，不沿用旧摘要。满 12 台仍可更新既有主机，新增须先明确移除；不自动删除记录。登记、移除与成功摘要及审计共同提交。移除仅删除登记，不操作远端软件；断网请刷新核对，不盲重复提交。", []string{"resource_id", "url", "token", "expected_sha"}, []string{"add", "remove"}), section("tokens", "本机只读授权", "最多保留 128 个令牌，只存摘要，生成与审计共同提交后显示一次。只读刷新清单可选择公开授权标识撤销，标识不是访问令牌；也可仅填写原令牌撤销，两者不可同时填写。回执丢失不能恢复令牌原文，但可按清单标识撤销；不自动删除旧授权。撤销阻止后续认证，不中止已通过认证的在途读取。", []string{"token", "token_id"}, []string{"token-list", "issue-token", "revoke-token"})}
 	case "nfs-manager":
 		return []AppModuleSection{
 			section("server", "共享服务状态", "独立 NFSv4 用户态服务，只导出受管网站目录。AUTH_SYS 不加密，仅用于可信网络或 VPN；不修改防火墙、系统 NFS 配置或 RPC 映射。启停保留网站文件。", nil, []string{"server-report", "server-probe", "server-start", "server-stop", "server-recover"}),

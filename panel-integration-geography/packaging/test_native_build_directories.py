@@ -4,6 +4,7 @@ import pathlib
 import stat
 import sys
 import tempfile
+import types
 import unittest
 from unittest import mock
 
@@ -36,6 +37,13 @@ class NativeBuildPackagingTests(unittest.TestCase):
         self.assertIn("str(self.release/helper), 'check'", transaction)
         self.assertNotIn("str(self.release/helper), 'create'", transaction)
         self.assertLess(transaction.index('self.preflight()\n'), transaction.index('self.backup.mkdir(mode=0o700)'))
+        production = (root / 'packaging/upgrade-release.py').read_text()
+        run = production[production.index('    def run(self):'):production.index('    def rollback(self):')]
+        self.assertLess(run.index("self.journal('prepared')"),run.index('self.native_prerequisites(create=True)'))
+        self.assertLess(run.index('self.start_guard(install=True)'),run.index('self.native_prerequisites(create=True)'))
+        self.assertLess(run.index('self.native_prerequisites(create=True)'),run.index('self.stop_writers()'))
+        self.assertLess(run.index('self.native_prerequisites(create=True)'),run.index('self.switch('))
+        self.assertIn("'policy':'create-missing-retain-on-rollback'",production)
 
     def test_non_root_cannot_initialize_any_directory(self):
         with tempfile.TemporaryDirectory(prefix="panel-native-cache-refusal-") as directory:
@@ -98,6 +106,30 @@ class NativeBuildPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux" and os.geteuid() == 0, "actual root Linux private fixture required")
 class NativeBuildDirectoryTests(unittest.TestCase):
+    def test_legacy_root_panel_private_lock_preserves_inode_group_and_content_without_repairs(self):
+        with tempfile.TemporaryDirectory(prefix='panel-fixed-runtime-group-') as directory:
+            root=pathlib.Path(directory)
+            module.prepare(root,True)
+            lock=root/'var/lib/panel-executor/build.lock'
+            lock.write_bytes(b'original runtime lock');lock.chmod(0o600)
+            os.chown(lock,0,34567)
+            original=lock.lstat()
+            with mock.patch.object(module.grp,'getgrnam',return_value=types.SimpleNamespace(gr_gid=34567)) as lookup:
+                for create in (False,True):
+                    module.prepare(root,create)
+                    after=lock.lstat()
+                    self.assertEqual((after.st_ino,after.st_mode,after.st_uid,after.st_gid),(original.st_ino,original.st_mode,0,34567))
+                    self.assertEqual(lock.read_bytes(),b'original runtime lock')
+                self.assertTrue(all(call==mock.call('panel') for call in lookup.call_args_list))
+            for missing in (True,False):
+                value=mock.Mock(side_effect=KeyError('panel')) if missing else mock.Mock(return_value=types.SimpleNamespace(gr_gid=34568))
+                with mock.patch.object(module.grp,'getgrnam',value):
+                    for create in (False,True):
+                        with self.assertRaises(ValueError):module.prepare(root,create)
+                        self.assertEqual(lock.stat().st_gid,34567)
+                        self.assertEqual(lock.stat().st_ino,original.st_ino)
+                        self.assertEqual(lock.read_bytes(),b'original runtime lock')
+
     def test_runtime_root_refuses_foreign_paths_and_preserves_legacy_and_completed_work(self):
         for kind in ("valid", "symlink", "foreign-owner", "foreign-group", "writable", "private-mode"):
             with self.subTest(kind=kind), tempfile.TemporaryDirectory(prefix="panel-runtime-native-provision-") as directory:

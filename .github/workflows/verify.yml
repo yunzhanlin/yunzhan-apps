@@ -58,6 +58,26 @@ jobs:
       - name: Read-only native upgrade inventory identity and typed JSON race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1
+      - name: Separate maintenance authority, HTTPS peer identity and original receipt race regression (not installed remote command acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^TestPlatformMaintenance' -count=1
+      - name: Every module workspace emits array collections including read-only maintenance
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/core -run '^TestModuleWorkspace' -count=1
+      - name: Install locked management regression dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geography/web --ignore-scripts
+      - name: Compiled management opener handles legacy null collections without inventing operations
+        run: node --test panel-integration-geography/scripts/test-deferred-workspace.mjs
+      - name: Root maintenance original journal and no-replay crash fixtures (not real Nginx business or power-loss acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenance(Root|Native)' -count=1
+      - name: Latest maintenance upgrade SQL and transaction fixtures (not installed command acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_production_upgrade.py'
+      - name: Previous-release integrity policy and fixed native prerequisites (Root filesystem fixtures only)
+        run: |
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_verify_previous_release.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_native_build_directories.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_waf_state_directory.py'
       - name: Statistics expired-cursor ownership and one-transaction retirement race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatisticsHistory(ExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs|RetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary|RetirementAndRowsAreOneTransaction)$' -count=1

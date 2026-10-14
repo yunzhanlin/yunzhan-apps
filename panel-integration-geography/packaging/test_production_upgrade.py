@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import signal
+import shutil
 import sqlite3
 import stat
 import sys
@@ -106,6 +107,37 @@ class UpgradePolicyTests(unittest.TestCase):
             with self.assertRaises(sqlite3.OperationalError):
                 transaction.queue_check()
 
+    def test_platform_maintenance_queue_is_optional_for_legacy_but_never_ignores_unknown_work(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary).resolve()
+            calls = []
+            transaction = upgrade.Upgrade(root, runner=lambda *args, **kwargs: calls.append((args, kwargs)))
+            transaction.database = root/'panel.db'
+            transaction.db_owner = os.geteuid()
+            with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                for table in upgrade.QUEUES:
+                    db.execute(f'CREATE TABLE {table}(id TEXT PRIMARY KEY,state TEXT)')
+            transaction.database.chmod(0o600)
+            transaction.queue_check()
+            self.assertEqual(len(calls), 1)
+            with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                db.execute('CREATE TABLE platform_maintenance_operations(request_id TEXT PRIMARY KEY,state TEXT)')
+            for state in ('dispatched', 'needs_attention', 'completed', 'failed', 'unknown', '', None):
+                with self.subTest(state=state):
+                    with contextlib.closing(sqlite3.connect(transaction.database)) as db, db:
+                        db.execute('DELETE FROM platform_maintenance_operations')
+                        db.execute('INSERT INTO platform_maintenance_operations VALUES (?,?)', ('original-id', state))
+                    calls.clear()
+                    before = transaction.database.read_bytes()
+                    if state in ('completed', 'failed'):
+                        transaction.queue_check()
+                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 10})])
+                    else:
+                        with self.assertRaises(ValueError):
+                            transaction.queue_check()
+                        self.assertEqual(calls, [])
+                    self.assertEqual(transaction.database.read_bytes(), before)
+
     def test_unsafe_wal_never_reaches_sqlite(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary).resolve()
@@ -177,6 +209,9 @@ class Runner:
         self.calls.append(args)
         if pathlib.Path(args[0]).name == 'verify-release.sh':
             return 'checksums verified by fixture; not a signature acceptance'
+        if (args[0]=='/usr/bin/python3' and pathlib.Path(args[1]).name in upgrade.NATIVE_PREREQUISITES
+                and args[2] in ('check','create') and args[3:]==('--root',str(self.root))):
+            return upgrade.command(*args,**kwargs)  # Actual Root filesystem helper, never host root.
         if args in ((str(self.root/'candidate/bin/panel-executor'), '--check-program-upgrade-queues'),
                     (str(self.root/'var/backups/panel/system/production-0.1.0-dev.fixture2/candidate/bin/panel-executor'), '--check-program-upgrade-queues'),
                     (str(self.root/'var/backups/panel/system/development-0.1.0-dev.fixture2/candidate/bin/panel-executor'), '--check-program-upgrade-queues')):
@@ -243,6 +278,131 @@ class Runner:
 
 @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid()==0, 'actual root Linux ordinary ownership fixture required')
 class UpgradeTransactionTests(unittest.TestCase):
+    def test_native_prerequisite_preflight_is_read_only_and_missing_directories_are_prepared_in_transaction(self):
+        with self.fixture() as (transaction,runner,root):
+            def inventory():
+                return {str(p.relative_to(root)):(p.lstat().st_ino,p.lstat().st_mode,p.lstat().st_uid,
+                        p.lstat().st_gid,p.lstat().st_mtime_ns,p.lstat().st_ctime_ns)
+                        for p in (root,*root.rglob('*'))}
+            before=inventory()
+            transaction.preflight()
+            self.assertEqual(inventory(),before)
+            transaction.run()
+            target=root/'var/cache/panel-apache-body'
+            self.assertEqual(stat.S_IMODE(target.stat().st_mode),0o755)
+            self.assertEqual((target.stat().st_uid,target.stat().st_gid),(0,0))
+            intent=transaction.backup/'native-prerequisites.json'
+            self.assertEqual(json.loads(intent.read_bytes()),transaction.native_prerequisite_record(transaction.private_candidate))
+            self.assertEqual(stat.S_IMODE(intent.stat().st_mode),0o600)
+            commands=[call for call in runner.calls if call[0]=='/usr/bin/python3']
+            creates=[call for call in commands if call[2]=='create']
+            self.assertEqual(len(creates),2)
+            self.assertTrue(all(pathlib.Path(call[1]).parent==transaction.private_candidate for call in creates))
+
+    def test_native_prerequisite_foreign_identity_refuses_before_backup_and_never_repairs(self):
+        for kind in ('symlink','owner','group','mode','hardlinked-lock'):
+            with self.subTest(kind=kind),self.fixture() as (transaction,runner,root):
+                target=root/'var/cache/panel-apache-body'
+                target.mkdir(parents=True,mode=0o755)
+                if kind=='symlink':
+                    retained=target.with_name('retained');target.rename(retained);target.symlink_to(retained)
+                elif kind=='owner':os.chown(target,65534,0)
+                elif kind=='group':os.chown(target,0,65534)
+                elif kind=='mode':target.chmod(0o777)
+                else:
+                    target=root/'var/lib/panel-executor/build.lock'
+                    target.write_bytes(b'preserve native lock');target.chmod(0o600)
+                    os.link(target,target.with_name('retained-build-lock'))
+                before=target.lstat()
+                with self.assertRaises(RuntimeError):transaction.run()
+                after=target.lstat()
+                self.assertEqual((after.st_ino,after.st_mode,after.st_uid,after.st_gid,after.st_nlink),
+                                 (before.st_ino,before.st_mode,before.st_uid,before.st_gid,before.st_nlink))
+                self.assertEqual(list((root/'var/backups/panel/system').iterdir()),[])
+                self.assertFalse(any(call[0]=='/usr/bin/python3' and call[2]=='create' for call in runner.calls))
+
+    def test_native_prerequisite_partial_failure_preserves_original_program_database_and_new_state(self):
+        with self.fixture() as (transaction,runner,root):
+            original=transaction.run_command
+            database=root/'var/lib/panel/panel.db'
+            before=(database.stat().st_ino,database.read_bytes(),os.readlink(root/'opt/panel/current'))
+            states=json.loads(json.dumps(runner.states))
+            def fail(*args,**kwargs):
+                if args[0]=='/usr/bin/python3' and pathlib.Path(args[1]).name=='native-build-directories.py' and args[2]=='create':
+                    marker=root/'var/lib/panel-waf/accepted-before-helper-failure'
+                    marker.write_bytes(b'retain valid state');marker.chmod(0o600)
+                    raise RuntimeError('owned native prerequisite interruption')
+                return original(*args,**kwargs)
+            transaction.run_command=fail
+            with self.assertRaisesRegex(RuntimeError,'prerequisite interruption'):transaction.run()
+            intent=(transaction.backup/'native-prerequisites.json').read_bytes()
+            transaction.rollback()
+            self.assertEqual((database.stat().st_ino,database.read_bytes(),os.readlink(root/'opt/panel/current')),before)
+            self.assertEqual(runner.states,states)
+            self.assertEqual((root/'var/lib/panel-waf/accepted-before-helper-failure').read_bytes(),b'retain valid state')
+            self.assertEqual((transaction.backup/'native-prerequisites.json').read_bytes(),intent)
+            self.assertFalse(transaction.pending_created)
+
+    def test_native_prerequisite_sigkill_recovery_does_not_recreate_or_remove_partial_state(self):
+        with self.fixture() as (transaction,runner,root):
+            database=root/'var/lib/panel/panel.db'
+            before=(database.stat().st_ino,database.read_bytes())
+            def hook(current,suspend):
+                original=current.run_command
+                def interrupted(*args,**kwargs):
+                    result=original(*args,**kwargs)
+                    if args[0]=='/usr/bin/python3' and pathlib.Path(args[1]).name=='waf-state-directory.py' and args[2]=='create':
+                        marker=root/'var/lib/panel-waf/retained-after-crash'
+                        marker.write_bytes(b'valid state survives recovery');marker.chmod(0o600)
+                        suspend()
+                    return result
+                current.run_command=interrupted
+            backup=self.kill_transaction_at(transaction,runner,root,None,hook=hook)
+            marker=root/'var/lib/panel-waf/retained-after-crash'
+            identity=(marker.stat().st_ino,marker.read_bytes())
+            runner.calls.clear()
+            recovered=upgrade.Upgrade(backup,root,runner)
+            try:
+                self.assertEqual(recovered.recover(backup)['phase'],'prepared')
+                self.assertEqual((marker.stat().st_ino,marker.read_bytes()),identity)
+                self.assertEqual((database.stat().st_ino,database.read_bytes()),before)
+                self.assertFalse((root/'var/cache/panel-apache-body').exists())
+                self.assertFalse(any(call[0]=='/usr/bin/python3' for call in runner.calls))
+            finally:recovered.close()
+
+    def test_native_prerequisite_existing_lock_and_application_data_survive_program_rollback(self):
+        with self.fixture() as (transaction,runner,root):
+            for name in upgrade.NATIVE_PREREQUISITES:
+                upgrade.command('/usr/bin/python3',str(transaction.release/name),'create','--root',str(root))
+            paths=(root/'var/lib/panel-executor/build.lock',root/'var/lib/panel-apache-body/retained-body',
+                   root/'var/lib/panel-waf/retained-rule')
+            for path in paths:
+                path.write_bytes(('original '+path.name).encode());path.chmod(0o600)
+            original={str(p):(p.stat().st_ino,p.read_bytes(),p.stat().st_mode) for p in paths}
+            runner.fail_start_once=True
+            with self.assertRaises(RuntimeError):transaction.run()
+            transaction.rollback()
+            self.assertEqual({str(p):(p.stat().st_ino,p.read_bytes(),p.stat().st_mode) for p in paths},original)
+            self.assertTrue((transaction.backup/'native-prerequisites.json').exists())
+
+    def test_native_prerequisite_recovery_intent_is_closed_and_binds_retained_candidate(self):
+        for kind in ('format-bool','unknown','helper-digest','policy'):
+            with self.subTest(kind=kind),self.fixture() as (transaction,runner,root):
+                backup=self.kill_transaction_at(transaction,runner,root,'writers-stopped')
+                receipt=backup/'native-prerequisites.json'
+                value=json.loads(receipt.read_bytes())
+                if kind=='format-bool':value['format']=True
+                elif kind=='unknown':value['delete_paths']=['/var/lib/panel-waf']
+                elif kind=='helper-digest':value['helpers']['native-build-directories.py']='0'*64
+                else:value['policy']='delete-on-rollback'
+                receipt.write_text(json.dumps(value))
+                runner.calls.clear()
+                recovered=upgrade.Upgrade(backup,root,runner)
+                try:
+                    with self.assertRaisesRegex(ValueError,'prerequisite intent'):recovered.recover(backup)
+                    self.assertFalse(any(call[0]=='/usr/bin/python3' or len(call)>1 and call[1] in ('stop','start','daemon-reload') for call in runner.calls))
+                finally:recovered.close()
+
     def assert_markerless_timer_gaps(self,fixture,factory):
         for checkpoint in ('prepared','committed','rolled-back'):
             with self.subTest(checkpoint=checkpoint),fixture()as(transaction,runner,root):
@@ -408,6 +568,9 @@ class UpgradeTransactionTests(unittest.TestCase):
             (release/'verify-release.sh').write_text('#!/bin/sh\nexit 0\n')
             (release/'verify-release.sh').chmod(0o755)
             (release/'RELEASE').write_text('PANEL_FORMAT=1\nPANEL_VERSION=0.1.0-dev.fixture2\nPANEL_OS=linux\nPANEL_ARCH=arm64\n')
+            for name in upgrade.NATIVE_PREREQUISITES:
+                shutil.copyfile(ROOT/'packaging'/name,release/name)
+                (release/name).chmod(0o644)
             for unit in upgrade.PROGRAMS+('panel-firewall.service',):
                 (release/'systemd'/unit).write_text('[Service]\nExecStart=/opt/panel/bin/panel-executor\n')
                 (root/'etc/systemd/system'/unit).write_text('# original root unit '+unit+'\n')

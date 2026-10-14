@@ -1,0 +1,29 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+test('actual installed empty-tab fix is exactly four new signed source changes, not rewritten BFAH failure evidence',async()=>{
+ const r=JSON.parse(await read('registry/platform-maintenance-workspace-release.json'));
+ const now=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
+ const old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24mainttxnbfah/source-sha256.json'));
+ assert.equal(now.release.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(now.release.archive_sha256,r.normal_original_key_archives.amd64);
+ assert.deepEqual(Object.keys(now.files).filter(k=>now.files[k]!==old.files[k]),r.only_source_changes_from_bfah);
+ assert.deepEqual(Object.keys(old.files).filter(k=>!(k in now.files)),[]);assert.deepEqual(now.test_overrides??{},{});
+ assert.equal(r.retained_original_browser_failure.rewritten_as_success,false);
+ assert.deepEqual([r.actual_qa_program_upgrade.preflight_passed,r.actual_qa_program_upgrade.upgrade_passed,r.actual_installed_browser.passed],[true,true,true]);
+ assert.deepEqual([r.actual_installed_browser.checks,r.actual_installed_browser.unexpected_errors],[6,0]);
+ assert.equal(r.actual_installed_browser.installed_app_version,'1.2.0');assert.equal(r.actual_installed_browser.new_maintenance_authority_disabled,true);
+ for(const key of ['commercial_all50','platform_ops_commercial','main_delivered'])assert.equal(r[key],false,key);
+ assert.equal(r.actual_qa_program_upgrade.new_app_installs_or_updates,0);assert.equal(r.actual_qa_program_upgrade.native_maintenance_commands,0);
+});
+test('all module wire collections stay arrays and legacy null becomes no fields or operations, never run',async()=>{
+ const core=await read('panel-integration-geography/internal/core/app_module_workspace.go');
+ assert.match(core,/if fields == nil \{\s*fields = \[\]string\{\}/);assert.match(core,/if actions == nil \{\s*actions = \[\]string\{\}/);
+ const tests=await read('panel-integration-geography/internal/core/app_module_workspace_test.go');
+ assert(tests.includes('TestModuleWorkspaceWireCollectionsNeverBecomeNullOrInventReadOnlyActions'));
+ const ui=await read('panel-integration-geography/web/src/AppModuleManager.vue');
+ assert(ui.includes('fields: section.fields ?? [], actions: section.actions ?? []'));
+ const opener=await read('panel-integration-geography/scripts/test-deferred-workspace.mjs');
+ assert(opener.includes("fields:null,actions:null"));assert(opener.includes('never a generic run action'));
+ const ci=await read('.github/workflows/verify.yml');assert(ci.includes("'^TestModuleWorkspace'"));assert(ci.includes('node --test panel-integration-geography/scripts/test-deferred-workspace.mjs'));
+});

@@ -23,7 +23,10 @@ func (s *Store) migrateAppModules() error {
  CREATE INDEX IF NOT EXISTS app_module_events_module ON app_module_events(module_id);
  INSERT OR IGNORE INTO schema_migrations VALUES(38,strftime('%Y-%m-%dT%H:%M:%SZ','now'));
  INSERT OR IGNORE INTO schema_migrations VALUES(40,strftime('%Y-%m-%dT%H:%M:%SZ','now'));`)
-	return e
+	if e != nil {
+		return e
+	}
+	return s.migratePlatformMaintenance()
 }
 func (s *Store) appUserRole(id string) (string, []string, error) {
 	access, e := s.UserAccess(id)

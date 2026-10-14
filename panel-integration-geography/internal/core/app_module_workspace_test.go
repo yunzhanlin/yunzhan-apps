@@ -47,6 +47,31 @@ func TestModuleWorkspacesCoverActualOperations(t *testing.T) {
 	}
 }
 
+func TestModuleWorkspaceWireCollectionsNeverBecomeNullOrInventReadOnlyActions(t *testing.T) {
+	for _, def := range AppModules() {
+		sections := ModuleWorkspace(def.ID)
+		raw, err := json.Marshal(sections)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var wire []map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &wire); err != nil {
+			t.Fatal(err)
+		}
+		for i, section := range sections {
+			for _, name := range []string{"fields", "actions"} {
+				var values []string
+				if err := json.Unmarshal(wire[i][name], &values); err != nil || values == nil {
+					t.Fatalf("%s/%s %s must be an explicit array: %s", def.ID, section.ID, name, raw)
+				}
+			}
+			if def.ID == "platform-ops" && section.ID == "maintenance" && (len(section.Fields) != 0 || len(section.Actions) != 0) {
+				t.Fatal("special maintenance view must not inherit generic fields or a run action")
+			}
+		}
+	}
+}
+
 func TestModuleInstallationNeverPersistsBusinessCredentials(t *testing.T) {
 	for _, value := range []map[string]any{{"password": "secret"}, {"token": "secret"}, {"remote_private_key": "secret"}, {"remote_target": map[string]any{"password": "secret"}}, {"environment_patch": map[string]any{"API_KEY": "secret"}}} {
 		if _, err := validateModuleSettings(value); err == nil {

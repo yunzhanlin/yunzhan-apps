@@ -649,6 +649,7 @@ func (s *Service) Handler() http.Handler {
 	s.phpWorkerRoutes(m)
 	s.softwareRoutes(m)
 	s.appModuleRoutes(m)
+	s.platformMaintenanceRoutes(m)
 	m.HandleFunc("POST /v1/sites/apply", func(w http.ResponseWriter, r *http.Request) {
 		var in core.ApplyRequest
 		if !readJSON(w, r, &in) {

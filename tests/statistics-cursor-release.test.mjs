@@ -2,10 +2,11 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {catalogBeforeMaintenance130} from './previous-maintenance-catalog.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
 
 test('2.5 changes only statistics and retains immutable2.4.1 packages and their historical review',async()=>{
- const catalog=JSON.parse(await read('dist/catalog-v1.json')),app=catalog.apps.find(a=>a.id==='website-statistics-v2');
+ const catalog=await catalogBeforeMaintenance130(JSON.parse(await read('dist/catalog-v1.json'))),app=catalog.apps.find(a=>a.id==='website-statistics-v2');
  assert.equal(sha(JSON.stringify(catalog.apps.filter(a=>a.id!=='website-statistics-v2').sort((a,b)=>a.id.localeCompare(b.id)))),'bffecb66de76955218323de30d9eee1c7312ba4ac27089e788d6f5b3b6df5a89');
  assert.equal(app.version,'2.6.0');assert.equal(app.sha256,sha(await read('dist/apps/website-statistics-v2/2.6.0/manifest.json')));
  assert.equal(sha(await read('dist/apps/website-statistics-v2/2.5.0/manifest.json')),'7a2d358fbb5f5a3bf0718b72ccc7401ae83df4d10596da837d1ed259a2ce2d13');

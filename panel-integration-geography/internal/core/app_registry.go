@@ -450,7 +450,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			}
 		}
 		selectedVersion := ""
-		if manifest.Delivery.Target == "website-statistics-v2" {
+		if manifest.Delivery.Target == "website-statistics-v2" || manifest.Delivery.Target == "platform-ops" {
 			// A newer statistics handler must not treat an older signed package
 			// as an opt-in to a new data schema or native request-ID logging.
 			selectedVersion = manifest.Version
