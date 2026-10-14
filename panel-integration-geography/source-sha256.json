@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24maintuibfaw-linux-amd64.tar.gz",
-    "archive_sha256": "f4fe7b045069454e43bfaa518dcc9891b560cf7f3301ab9f2cf564c60ad692c9",
-    "frozen_inputs_sha256": "65cb34b24ed5ddd14e3e504669d0c39835d5caa1f269eb908ca24d187ac4608e"
+    "archive": "panel-0.1.0-dev.proapps24maintsecretbfcr-linux-amd64.tar.gz",
+    "archive_sha256": "53b771bec0624c9cff5b7ea79e77a50d2a5eff0ceff918c653ae81f5d1db79f0",
+    "frozen_inputs_sha256": "fb2f09ce560b486152be85d0157b24834e87ad6372a4cb3d8e994beb43a9700d"
   },
   "files": {
     "go.mod": "698294c2dbd7f3ff6dee08357e50ccd627e713e42a83b79be38da9f7b3aa89cc",
@@ -1073,7 +1073,7 @@
     "dev/provision-build-deps.sh": "6192f7f8e310b1c6fb076dfce47d3647dd8eb4224b2328819a194b9d10b8f66b",
     "dev/qa-pm2-deployment-delay.conf": "b25b18947977eccc222a6e71ed7e3afe4567f23421ee60013b09c80168832d50",
     "dev/var-cache-panel\\x2dapache\\x2dbody.mount": "bc085b3907119c3bbc79c112aef9d4e033ccbf802d1a9a8c4e24a3dbdb24c570",
-    "packaging/build-release.sh": "7a772f4662e581a7b371d22e485cc118673a9a45c185edcf6c27c2dfd08eb748",
+    "packaging/build-release.sh": "926a5f8087ed41ebe38be76ba64f3506061bc93511be6bfbc31a5d944b5952ef",
     "packaging/development-upgrade.py": "94ebc15a19ed60c78603dc5d8d42e28ba96a64dde6f66cdc0b0edc8383dcb5ff",
     "packaging/first-install.py": "88cc028bc716d4ad676c976776a4c4f78eb5d6884939faa0e84efd023c2ea33d",
     "packaging/freeze-source.py": "5aba3c7886c8b9196b56101b8c544b9c240d5f9fd1719d90e0bb6ee12a9bb3a2",
@@ -1140,7 +1140,7 @@
     "web/src/PHPWorkerManager.vue": "377ca08d95755c19ddeb259b5199a945458c673268dc3f3f1139e7890c276a71",
     "web/src/PanelAccessManager.vue": "d24a2758d5755b39c7af15f5479fab32e34d79dd9f15ccaa71eeb560a5f0084e",
     "web/src/PanelIcon.vue": "c314773e6e985051550bfe95510f53d875fe2bb9c0ebf01e02dfea1bc35ed74b",
-    "web/src/PlatformMaintenance.vue": "24147dced724db8ba6f2193b2b39ceebb5a9eb387daffa5995e30226fbae794c",
+    "web/src/PlatformMaintenance.vue": "c1699bedb2599925ef5c883454286d7191b0745d52d1182a5c8d9e96514ae24c",
     "web/src/RedisManager.vue": "0bb420902baf2093b888cf80ca059f21a7c518ee43cf1580585de034b7ad637a",
     "web/src/RuntimeLifecycleManager.vue": "d7bd898cfe21f2b90de4b647e40e1e75c062e18e2b9528d4f0ba40196bcac947",
     "web/src/ScheduleManager.vue": "756d460596e40875bed7a1cd5e23871d9056dd91e56c8e0213b51bcc2a20e2a7",
@@ -1298,6 +1298,7 @@
     "scripts/test-apache-body-report.mjs": "5869167eacdffb950f6db4a14490254e2e4821be9ea183204ac1fe9d0e51f34e",
     "scripts/test-load-balance-alerts.mjs": "afb81e54c8177c02c1871ea9093f6aac4b13294fe1bd4bedd5d0aded4280d854",
     "scripts/test-statistics-history.mjs": "3a42c4e968fda4ebfa960e292511f1c2dd74ae1aeda67060dfd89e6862c74e48",
+    "scripts/test-platform-maintenance-secrets.mjs": "e73918fd38f0fd7180d97ecfef028b0e4de3f3864204273cdc0d3c743c2d6d23",
     "scripts/test-app-completion.py": "a674026f37f69ba264a7a32fc5b1baa3368975b8a1133bc80ac2acfc9c26a391",
     "scripts/test-app-nfs-completion.py": "7b1b0bf215f73f7e1f9da0a59cccb3192ecf37a6754fa4bb970ef5454d9859e0",
     "scripts/test_pma_sql_common.py": "5a262c2ade5bcd3155e88dad9f2b8c0673c0c8ce196cd51ddae1223f22837a0c",

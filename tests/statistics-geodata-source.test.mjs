@@ -8,10 +8,14 @@ import {validateManifest} from '../tools/lib.mjs';
 const root=fileURLToPath(new URL('../panel-integration-geography/',import.meta.url));
 const read=p=>readFile(path.join(root,p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('current geography and maintenance workspace is exact signed BFAW source; BFAH and earlier source indexes are retained',async()=>{
+test('current geography and maintenance workspace is exact signed BFCR source; original BFAW and earlier indexes are retained',async()=>{
  const index=JSON.parse(await read('source-sha256.json')),release=JSON.parse(await read('release-source-inputs.json'));
- assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24maintuibfaw-linux-amd64.tar.gz',archive_sha256:'f4fe7b045069454e43bfaa518dcc9891b560cf7f3301ab9f2cf564c60ad692c9',frozen_inputs_sha256:'65cb34b24ed5ddd14e3e504669d0c39835d5caa1f269eb908ca24d187ac4608e'});
- assert.equal(Object.keys(index.files).length,1308);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ const bfaw=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24maintuibfaw/source-sha256.json',import.meta.url));
+ assert.equal(sha(bfaw),'17400c7188cbe3e9b9506d17279a9430ec687a462fe5899d04acef91fe0e5517');
+ assert.deepEqual(JSON.parse(bfaw).release,{archive:'panel-0.1.0-dev.proapps24maintuibfaw-linux-amd64.tar.gz',archive_sha256:'f4fe7b045069454e43bfaa518dcc9891b560cf7f3301ab9f2cf564c60ad692c9',frozen_inputs_sha256:'65cb34b24ed5ddd14e3e504669d0c39835d5caa1f269eb908ca24d187ac4608e'});
+ assert.equal(Object.keys(JSON.parse(bfaw).files).length,1308);
+ assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24maintsecretbfcr-linux-amd64.tar.gz',archive_sha256:'53b771bec0624c9cff5b7ea79e77a50d2a5eff0ceff918c653ae81f5d1db79f0',frozen_inputs_sha256:'fb2f09ce560b486152be85d0157b24834e87ad6372a4cb3d8e994beb43a9700d'});
+ assert.equal(Object.keys(index.files).length,1309);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const beyo=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24maintbeyo/source-sha256.json',import.meta.url));
  assert.equal(sha(beyo),'2df6555628ea82b362019db4979d0e6d7b534d5ad9659592c676900de9579e84');
  const bfah=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24mainttxnbfah/source-sha256.json',import.meta.url));

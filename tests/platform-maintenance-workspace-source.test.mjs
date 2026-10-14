@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('actual installed empty-tab fix is exactly four new signed source changes, not rewritten BFAH failure evidence',async()=>{
+test('historical installed BFAW empty-tab fix retains its exact four original signed changes, not rewritten later evidence',async()=>{
  const r=JSON.parse(await read('registry/platform-maintenance-workspace-release.json'));
- const now=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
+ const now=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintuibfaw/source-sha256.json'));
  const old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24mainttxnbfah/source-sha256.json'));
  assert.equal(now.release.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(now.release.archive_sha256,r.normal_original_key_archives.amd64);
  assert.deepEqual(Object.keys(now.files).filter(k=>now.files[k]!==old.files[k]),r.only_source_changes_from_bfah);
