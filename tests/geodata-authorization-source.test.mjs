@@ -32,4 +32,18 @@ test('geography dispatch security exports exact new frozen inputs without rewrit
  assert.equal(proof.actual_module_install_update,0);assert.equal(proof.unchanged,true);
  assert.equal(r.catalog_and_all50_packages_changed,false);assert.equal(r.app_installs_updates,0);
  assert.equal(r.main_delivered_at_publication,false);assert.equal(r.commercial_all50,false);
+ for(const [file,record]of [['installed-program-upgrade.json',r.actual_signed_program_upgrade],['installed-http.json',r.actual_installed_http]]){
+  const raw=await read('registry/reviewed-statistics-authorization/24bfdv/'+file),p=JSON.parse(raw);
+  assert.equal(createHash('sha256').update(raw).digest('hex'),record.proof_sha256);
+  assert.equal(p.ok,true);assert.equal(p.version,r.program);assert.equal(p.app_installs_updates,0);
+ }
+ const upgraded=JSON.parse(await read('registry/reviewed-statistics-authorization/24bfdv/installed-program-upgrade.json'));
+ assert.equal(upgraded.source_inputs_sha256,r.source_inputs_sha256);assert.equal(upgraded.archive_sha256,r.normal_original_key_archives.arm64);
+ assert.equal(upgraded.protected_tables,98);assert.equal(upgraded.protected_paths,21);assert.equal(upgraded.committed_journal_sha256,r.actual_signed_program_upgrade.journal_sha256);
+ const http=JSON.parse(await read('registry/reviewed-statistics-authorization/24bfdv/installed-http.json'));
+ assert.equal(http.original_replays,2);assert.equal(http.new_native_posts,0);assert.equal(http.cache_available,true);
+ assert.equal(http.invalid_csrf_status,403);assert.equal(http.invalid_selection_status,400);assert.equal(http.data_release,'2026-10');
+ const failed=await read('registry/reviewed-statistics-authorization/24bfdv/retained-first-http-observer.json');
+ assert.equal(createHash('sha256').update(failed).digest('hex'),r.retained_initial_http_observer.proof_sha256);assert.equal(JSON.parse(failed).ok,false);
+ assert.equal(r.actual_installed_http.live_actor_revocation_race_tested,false);
 });

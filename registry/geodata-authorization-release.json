@@ -41,13 +41,43 @@
     {"stage": "statistics-authority24bfdx.g350n23c", "reason": "Ubuntu24 RAM-backed /run noexec; execution denied before tests", "tests_executed": false, "security_mount_not_changed": true, "only_own_test_binary_removed": true}
   ],
   "source_overrides": 0,
+  "actual_signed_program_upgrade": {
+    "ok": true,
+    "proof_sha256": "730a445f07fc6bb87a427e67e4f4d64c76a3df3f21ea6e0fbb695f1d78751a19",
+    "journal_sha256": "011391267fbf5225c34e69ade6e8e741ebd718a896411cc77f083e2d05438322",
+    "original_table_projections_unchanged": 98,
+    "original_paths_unchanged": 21,
+    "site_count": 1,
+    "nginx_master_pid": 763,
+    "app_installs_updates": 0
+  },
+  "actual_installed_http": {
+    "ok": true,
+    "proof_sha256": "702105a2f45ffc3c1e0ac8667ed142cb012655cbe399c22eb8f906750c6cebc6",
+    "protected_sql_projections": 9,
+    "protected_paths": 12,
+    "original_job_replays": 2,
+    "invalid_csrf_status": 403,
+    "invalid_selection_status": 400,
+    "genuine_original_october_data_available": true,
+    "live_actor_revocation_race_tested": false,
+    "new_native_dispatches": 0,
+    "scope": "Normal original account/Origin/CSRF on the actual original-key installed BFDV program. Live account revocation during a queued data job remains separate; that boundary is tested by the frozen Core SQLite/HTTP fixtures, not claimed from this smoke test."
+  },
+  "retained_initial_http_observer": {
+    "proof_sha256": "82c51e102d20c886b63c570f06181ae0ce95b7b98c5cb7b2a53b9c2b444fc502",
+    "ok": false,
+    "reason": "Observer wrongly assumed state.selected was a month. Actual native source binds it to the full dataset ID; metadata.release is the month. Subsequent observer checks full original dataset ID plus original manifest/data SHA and release, without changing production source or data.",
+    "original_failure_rewritten": false
+  },
   "app_version_unchanged": "2.6.0",
   "catalog_and_all50_packages_changed": false,
   "app_installs_updates": 0,
   "main_delivered_at_publication": false,
   "commercial_all50": false,
   "remaining": [
-    "Exact-head CI and actual signed installed-program authorization/recovery acceptance before Main program delivery.",
+    "Exact-head CI and fresh Main protection checks before Main program delivery; actual signed QA program upgrade and normal HTTP smoke are now recorded separately above.",
+    "Actual queued-job live account revocation/recovery acceptance without installing absent user-manager or changing the original owner's access. Isolated genuine Core SQLite/HTTP tests are not this installed operational scenario.",
     "Core-only failed-job capacity maintenance and native failed-unit recovery preserving original failures; historical signed dataset positive retention and controlled purge/download acknowledgement.",
     "Other applications' full real business/security/recovery/UI and supported OS/architecture/device commercial qualification."
   ]

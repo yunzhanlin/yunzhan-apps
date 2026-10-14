@@ -1,0 +1,26 @@
+{
+  "actual_loaded_programs": {
+    "panel": {
+      "pid": "1808",
+      "sha256": "55503ba7fbfd4c8b4fa710ee8421fddf7b58cbf01972d858d468898cfde3fa1b"
+    },
+    "panel-executor": {
+      "pid": "1792",
+      "sha256": "45356833e38e40c634050ba59f58c6e86837c27d681b4fece5ad42881486e423"
+    }
+  },
+  "app_installs_updates": 0,
+  "archive_sha256": "abd80e70f946f836d983523e900293afb0a6e679a278b1a7cbaa4d059784f6bd",
+  "committed_journal_sha256": "011391267fbf5225c34e69ade6e8e741ebd718a896411cc77f083e2d05438322",
+  "existing_archive_table_and_original_job_unchanged": true,
+  "format": 1,
+  "nginx_master_pid": 763,
+  "ok": true,
+  "protected_paths": 21,
+  "protected_tables": 98,
+  "scope": "Actual original-key normal PROGRAM upgrade on retained owned QA, including existing genuine archived job and current geodata. No dataset management submitted, Main mutation or commercial completion claim.",
+  "site_count": 1,
+  "source_file_count": 16967,
+  "source_inputs_sha256": "194de29fb46e4eff97c754cd78b091a94638b5ae2353a6e8a9f971e16f582c67",
+  "version": "0.1.0-dev.proapps24geoauthbfdv"
+}
