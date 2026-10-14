@@ -1,0 +1,248 @@
+{
+  "ok": false,
+  "scope": "Actual compiled Vue UI in isolated Vite server, synthetic report props, no API response adaptation or actual panel/native/application acceptance",
+  "checks": [
+    "actual compiled labels distinguish per-path logical and inode-deduplicated allocated bytes",
+    "invalid/private directory names visibly non-actionable; valid drill keeps current selected root",
+    "actual largest-file row navigation validates complete file/parent binding and disabled eligibility",
+    "actual unknown filesystem and partial result UI never claims zero available capacity"
+  ],
+  "errors": [],
+  "failures": [],
+  "geometry": {
+    "viewport": 390,
+    "document_width": 609,
+    "report_width": 374,
+    "overflow": [
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "el-tabs__nav is-top",
+        "left": 28,
+        "right": 474,
+        "width": 446,
+        "text": "目录逻辑大小（含硬链接路径）扩展名逻辑大小（含硬链接路径）"
+      },
+      {
+        "tag": "DIV",
+        "id": "tab-1",
+        "cls": "el-tabs__item is-top",
+        "left": 244,
+        "right": 474,
+        "width": 230,
+        "text": "扩展名逻辑大小（含硬链接路径）"
+      },
+      {
+        "tag": "TABLE",
+        "id": "",
+        "cls": "el-table__header",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "路径流量 / 大小该 inode 已分配块大小inode 硬链接总数分配块少于逻辑大小（不单独证明稀疏区）选择操作"
+      },
+      {
+        "tag": "COLGROUP",
+        "id": "",
+        "cls": "",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 328,
+        "right": 428,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 428,
+        "right": 528,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 528,
+        "right": 628,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 628,
+        "right": 738,
+        "width": 110,
+        "text": ""
+      },
+      {
+        "tag": "THEAD",
+        "id": "",
+        "cls": "",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "路径流量 / 大小该 inode 已分配块大小inode 硬链接总数分配块少于逻辑大小（不单独证明稀疏区）选择操作"
+      },
+      {
+        "tag": "TR",
+        "id": "",
+        "cls": "",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "路径流量 / 大小该 inode 已分配块大小inode 硬链接总数分配块少于逻辑大小（不单独证明稀疏区）选择操作"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "el-table_3_column_7 is-leaf el-table__cell",
+        "left": 328,
+        "right": 428,
+        "width": 100,
+        "text": "该 inode 已分配块大小"
+      },
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "cell",
+        "left": 328,
+        "right": 428,
+        "width": 100,
+        "text": "该 inode 已分配块大小"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "el-table_3_column_8 is-leaf el-table__cell",
+        "left": 428,
+        "right": 528,
+        "width": 100,
+        "text": "inode 硬链接总数"
+      },
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "cell",
+        "left": 428,
+        "right": 528,
+        "width": 100,
+        "text": "inode 硬链接总数"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "el-table_3_column_9 is-leaf el-table__cell",
+        "left": 528,
+        "right": 628,
+        "width": 100,
+        "text": "分配块少于逻辑大小（不单独证明稀疏区）"
+      },
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "cell",
+        "left": 528,
+        "right": 628,
+        "width": 100,
+        "text": "分配块少于逻辑大小（不单独证明稀疏区）"
+      },
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "el-scrollbar__view",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2是查看目录assets/broken\nname.bin64.00 MiB4.00 Ki"
+      },
+      {
+        "tag": "TABLE",
+        "id": "",
+        "cls": "el-table__body",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2是查看目录assets/broken\nname.bin64.00 MiB4.00 Ki"
+      },
+      {
+        "tag": "COLGROUP",
+        "id": "",
+        "cls": "",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 328,
+        "right": 428,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 428,
+        "right": 528,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 528,
+        "right": 628,
+        "width": 100,
+        "text": ""
+      },
+      {
+        "tag": "COL",
+        "id": "",
+        "cls": "",
+        "left": 628,
+        "right": 738,
+        "width": 110,
+        "text": ""
+      },
+      {
+        "tag": "TBODY",
+        "id": "",
+        "cls": "",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2是查看目录assets/broken\nname.bin64.00 MiB4.00 Ki"
+      },
+      {
+        "tag": "TR",
+        "id": "",
+        "cls": "el-table__row",
+        "left": 8,
+        "right": 738,
+        "width": 730,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2是查看目录"
+      }
+    ],
+    "window_errors": [
+      "ResizeObserver loop completed with undelivered notifications."
+    ]
+  },
+  "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(proof.geometry.document_width<=390)\n\n    at file:///Volumes/MacSSD/MacData/Projects/ChatGPT/%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E5%85%A8/panel/.local/commercial-development-transaction24beho.ygohS1/source/.local/qa-disk-report-browser24bffk.mjs:31:2"
+}

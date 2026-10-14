@@ -70,6 +70,11 @@ jobs:
         run: node --test panel-integration-geography/scripts/test-deferred-workspace.mjs
       - name: Issued maintenance secret lifetime and complete read-only inventory regression (not installed or elapsed-time proof)
         run: node --test panel-integration-geography/scripts/test-platform-maintenance-secrets.mjs
+      - name: Disk inode usage selectors, actual compiled handlers and bounded UI source (not installed application acceptance)
+        run: node --test panel-integration-geography/scripts/test-disk-usage.mjs
+      - name: Ordinary-user Linux disk usage and actual 100003-entry temporary filesystem fixture (not installed app or OS matrix acceptance)
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/executor -run '^Test(DiskUsage|ModuleDisk)' -count=1 -v
       - name: Root maintenance original journal and no-replay crash fixtures (not real Nginx business or power-loss acceptance)
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenance(Root|Native)' -count=1

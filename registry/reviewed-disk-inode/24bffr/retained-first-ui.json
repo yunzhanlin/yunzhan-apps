@@ -1,0 +1,13 @@
+{
+  "ok": false,
+  "scope": "Actual compiled Vue UI in isolated Vite server, synthetic report props, no API response adaptation or actual panel/native/application acceptance",
+  "checks": [
+    "actual compiled labels distinguish per-path logical and inode-deduplicated allocated bytes",
+    "invalid/private directory names visibly non-actionable; valid drill keeps current selected root",
+    "actual largest-file row navigation validates complete file/parent binding and disabled eligibility",
+    "actual unknown filesystem and partial result UI never claims zero available capacity"
+  ],
+  "errors": [],
+  "failures": [],
+  "failure": "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:\n\n  assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth))\n\n    at file:///Volumes/MacSSD/MacData/Projects/ChatGPT/%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E5%85%A8/panel/.local/commercial-development-transaction24beho.ygohS1/source/.local/qa-disk-report-browser24bffh.mjs:27:84"
+}

@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24diskinodebffr",
+  "previous_program": "0.1.0-dev.proapps24geoauthbfdv",
+  "source_inputs_sha256": "ad93a99b0455bea7db1f8c14fe200a1433b3370ab48133dd8184a324628aa228",
+  "frozen_files": 16972,
+  "source_overrides": 0,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": "929d4811dd4edf1270c6a864e7dc60a22ff5027de7cb6a822af7cfbb79c0a642",
+    "amd64": "43d82ba61bd6bc8b294a0d73bbdf404f2ba17be7bfaf0d8b74826de5bde8ee51"
+  },
+  "normal_build_logs": {
+    "arm64": "8aa009ae195de6aacd05200072296f69e0562edb3e10fe5c99b11d31db26a561",
+    "amd64": "1ae48e79b7c7ca98d48575f36e079904d781f7ee7119188d0d205ca49d7db638"
+  },
+  "only_source_changes": [
+    "internal/appcatalog/disk_usage_features_test.go",
+    "internal/appcatalog/panel_features.go",
+    "internal/core/app_module_guidance.go",
+    "internal/core/app_module_workspace.go",
+    "internal/executor/app_disk_usage_linux.go",
+    "internal/executor/app_disk_usage_linux_test.go",
+    "internal/executor/app_modules_linux.go",
+    "packaging/build-release.sh",
+    "scripts/test-disk-usage.mjs",
+    "web/src/AppModuleReport.vue",
+    "web/src/diskUsage.ts"
+  ],
+  "behavior": "FD-relative O_NOFOLLOW directory traversal and identity checks, metadata-only reads, same-filesystem scope, bounded64-entry reader/100000-entry/128-depth limits, bounded classifications and top100. Logical sizes include hardlink paths; allocated512-byte blocks and unique logical sizes are deduplicated only by device/inode within the selected scan. Lower allocated size is only a sparse/compression candidate, not verified sparse extents or exclusive COW/snapshot physical ownership. Unknown capacity and inode statistics stay unknown. Active directories are not an atomic snapshot. No content reads, deletion, shell, arbitrary host paths or new cleanup commands.",
+  "feature_gate": {
+    "app": "disk-analysis",
+    "version": "1.3.0",
+    "feature": "disk-inode-usage-v1",
+    "candidate_stage": "integration",
+    "published_version_unchanged": "1.2.0",
+    "published_manifest_sha256": "5aa327690e407b489c6e23b6366232bdb24fd0abb15a25528338142e9495bb09"
+  },
+  "evidence_sha256": {
+    "native-arm64.json": "f9b38920bd90bb13a0751962800137f8618e51a12308df089839ed90bb9aef10",
+    "feature-arm64.json": "cf3a23f1c4a0c2da5ae30e815fbb8b84c1f0e18dbd543f5b28b0034bfe8baa65",
+    "isolated-ui.json": "e15979785466f20cb741fc9492538ef8cd152dc78ed974cedf388f9956fdac60",
+    "retained-first-ui.json": "f9d394085252fc42c2a701bcb74aa49794fcdedcfdf46205df4ca24e0b3f2702",
+    "retained-diagnostic-ui.json": "4dfa1b7b546c8fd1d86ae9b8bea8b4a478d694c0baf0bcf7ced913946b4e7a3e"
+  },
+  "verification": {
+    "normal_both_arch_builds_and_original_key_signature_verification": true,
+    "linux_arm64_ordinary_user_tests": 13,
+    "linux_arm64_manifest_feature_tests": 3,
+    "fixture_filesystem": "tmpfs",
+    "actual_private_fixture_files": 100003,
+    "maximum_visited_entries": 100000,
+    "maximum_returned_largest_files": 100,
+    "scan_elapsed_seconds": 1.271662995,
+    "whole_test_process_maxrss_kib": 31320,
+    "process_high_water_is_not_scan_exclusive": true,
+    "original_main_sql_sites_modules_programs_and_nginx_pid_unchanged": true,
+    "private_preservation_proof_sha256": "693c093885339063ab8bc49ec251a2d91266b0e8fbeaf693b51297774cb57637",
+    "isolated_actual_vue_browser_checks": 7,
+    "synthetic_props_are_not_installed_application_evidence": true,
+    "document_viewport_width": 390,
+    "document_scroll_width": 390,
+    "unexpected_window_errors": 0,
+    "compiled_selectors_and_actual_handlers_tests": 7
+  },
+  "retained_failures": [
+    "The original in-root public symlink prototype failure was retained. Raw kernel openat/O_NOFOLLOW now guards literal public and selected components, with a permanent native regression.",
+    "The first isolated UI observer failed document overflow. Its retained diagnostic successor identified an unwrapped harness pre plus an actual ResizeObserver notification loop. The harness alone received wrapping; disk-only native scroll tables remove the component loop. No browser error suppression or failure rewriting was used.",
+    "The AMD64 Debian QA VM presented an SSH key different from its original pin. Strict verification refused it; no new key was trusted, no test or guest command ran, and the temporarily started VM was normally returned to Stopped. Native installed AMD64 acceptance remains unproven."
+  ],
+  "catalog_and_all50_packages_changed": false,
+  "application_installs_updates": 0,
+  "main_delivered": false,
+  "disk_analysis_commercial": false,
+  "commercial_all50": false,
+  "remaining": [
+    "Exact-head CI source review, followed by approved normal signed program delivery; neither archive creation nor source fixtures establish an installed business flow.",
+    "Safely re-establish the original QA VM identity out of band before native installed amd64 testing; do not accept replacement SSH keys or reset accounts to get a green result.",
+    "Already-installed disk-analysis actual authenticated scan, permission denial, cancellation, directory navigation and original signed application update preserving sites and data. Do not install the absent app on Main.",
+    "Additional supported Linux distributions, disk-backed ext4/XFS/Btrfs behavior and installed Root service resource limits. Current full-capacity evidence is ordinary-user tmpfs only, not this matrix.",
+    "Individually complete the remaining applications' real business, security, recovery, signed update and UI/device commercial acceptance."
+  ]
+}

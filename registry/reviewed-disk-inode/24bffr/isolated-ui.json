@@ -1,0 +1,192 @@
+{
+  "ok": true,
+  "scope": "Actual compiled Vue UI in isolated Vite server, synthetic report props, no API response adaptation or actual panel/native/application acceptance",
+  "checks": [
+    "actual compiled labels distinguish per-path logical and inode-deduplicated allocated bytes",
+    "invalid/private directory names visibly non-actionable; valid drill keeps current selected root",
+    "actual largest-file row navigation validates complete file/parent binding and disabled eligibility",
+    "native path controls support keyboard selection and actual distribution tabs switch",
+    "actual unknown filesystem and partial result UI never claims zero available capacity",
+    "mobile large-file table scrolls internally with the keyboard after repeated viewport changes",
+    "actual390px component document remains within viewport; table can scroll internally"
+  ],
+  "errors": [],
+  "failures": [],
+  "source_inputs_sha256": "ad93a99b0455bea7db1f8c14fe200a1433b3370ab48133dd8184a324628aa228",
+  "sources": {
+    "web/src/AppModuleReport.vue": "30df1a245a8737e937ee84be69935b9365188b9dfd91af61b778bc602b793acb",
+    "web/src/diskUsage.ts": "32faf8b56a40aedb70df6c502382e568efa4b797df1e6e2ac7a2f33ed1107260",
+    "web/package-lock.json": "00c76335176b6fe147f47cec890ee40217c04f57be5a169e87298198ff1b7db6"
+  },
+  "synthetic_harness_sha256": "19080a8e9a1610688d790e1fca5c4579f59610f086a358c14b44efce9564bd9a",
+  "geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "report_width": 374,
+    "overflow": [
+      {
+        "tag": "DIV",
+        "id": "",
+        "cls": "el-tabs__nav is-top",
+        "left": 28,
+        "right": 474,
+        "width": 446,
+        "text": "目录逻辑大小（含硬链接路径）扩展名逻辑大小（含硬链接路径）"
+      },
+      {
+        "tag": "DIV",
+        "id": "tab-1",
+        "cls": "el-tabs__item is-top",
+        "left": 244,
+        "right": 474,
+        "width": 230,
+        "text": "扩展名逻辑大小（含硬链接路径）"
+      },
+      {
+        "tag": "TABLE",
+        "id": "",
+        "cls": "disk-report-table disk-files-table",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "大文件分析结果（仅扫描范围内）文件路径 / 查看目录逻辑大小该文件已分配块硬链接数assets/nested/a.bin64.00 MiB4.00 KiB2as"
+      },
+      {
+        "tag": "CAPTION",
+        "id": "",
+        "cls": "disk-table-caption",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "大文件分析结果（仅扫描范围内）"
+      },
+      {
+        "tag": "THEAD",
+        "id": "",
+        "cls": "",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "文件路径 / 查看目录逻辑大小该文件已分配块硬链接数"
+      },
+      {
+        "tag": "TR",
+        "id": "",
+        "cls": "",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "文件路径 / 查看目录逻辑大小该文件已分配块硬链接数"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "",
+        "left": 331.640625,
+        "right": 436.515625,
+        "width": 104.875,
+        "text": "逻辑大小"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "",
+        "left": 436.515625,
+        "right": 577.515625,
+        "width": 141,
+        "text": "该文件已分配块"
+      },
+      {
+        "tag": "TH",
+        "id": "",
+        "cls": "",
+        "left": 577.515625,
+        "right": 669,
+        "width": 91.484375,
+        "text": "硬链接数"
+      },
+      {
+        "tag": "TBODY",
+        "id": "",
+        "cls": "",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2assets/broken\nname.bin仅统计，不能下钻64.00 MiB4.00"
+      },
+      {
+        "tag": "TR",
+        "id": "",
+        "cls": "",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "assets/nested/a.bin64.00 MiB4.00 KiB2"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 331.640625,
+        "right": 436.515625,
+        "width": 104.875,
+        "text": "64.00 MiB"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 436.515625,
+        "right": 577.515625,
+        "width": 141,
+        "text": "4.00 KiB"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 577.515625,
+        "right": 669,
+        "width": 91.484375,
+        "text": "2"
+      },
+      {
+        "tag": "TR",
+        "id": "",
+        "cls": "",
+        "left": -31,
+        "right": 669,
+        "width": 700,
+        "text": "assets/broken\nname.bin仅统计，不能下钻64.00 MiB4.00 KiB2"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 331.640625,
+        "right": 436.515625,
+        "width": 104.875,
+        "text": "64.00 MiB"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 436.515625,
+        "right": 577.515625,
+        "width": 141,
+        "text": "4.00 KiB"
+      },
+      {
+        "tag": "TD",
+        "id": "",
+        "cls": "",
+        "left": 577.515625,
+        "right": 669,
+        "width": 91.484375,
+        "text": "2"
+      }
+    ],
+    "window_errors": []
+  }
+}

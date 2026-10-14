@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "disk-analysis",
+  "name": "Disk analysis",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "开发候选：区分逻辑大小与 inode 去重分配块、硬链接和稀疏/压缩候选，分批只读遍历与真实容量；商用兼容性与安装验收仍未完成。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {"provider":"panel-module","target":"disk-analysis","manage_route":"app-modules"},
+  "required_panel_features": ["disk-inode-usage-v1"],
+  "compatibility": {"os":["debian-12","debian-13","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"architectures":["amd64","arm64"]},
+  "capabilities": ["目录逻辑分布","大文件排行","inode 去重分配块","硬链接路径识别","稀疏或压缩候选","文件系统容量与 inode","64项分批读取","有界扫描与不完整提示","目录描述符不跟随链接","目录下钻","未知容量不显示为零","执行历史"],
+  "health": {"probe":"panel-api","target":"/api/app-modules/disk-analysis"},
+  "uninstall": {"preserve_data":true,"reference_check":false}
+}

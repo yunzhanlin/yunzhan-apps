@@ -9,6 +9,7 @@ import {dailySnapshot} from "./dailyReportView";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
 import {taskProcessColumns,taskProcessRows} from './taskManager';
 import {statisticsHistoryNotice} from './statisticsHistory';
+import {diskDirectorySelection,diskFileSelection,diskValueNotice} from './diskUsage';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
@@ -84,6 +85,36 @@ const names: Record<string, string> = {
   max_seconds: "最大响应（秒）",
   qps_last_minute: "最近一分钟 QPS",
   total_bytes: "总占用",
+  unique_logical_bytes: "去重后的逻辑大小",
+  allocated_bytes: "已分配块大小（范围内 inode 去重）",
+  allocated_file_bytes: "该 inode 已分配块大小",
+  unique_files: "唯一普通文件数",
+  hardlink_entries: "重复硬链接路径数",
+  sparse_candidates: "稀疏或压缩候选数（inode 去重）",
+  ignored_links: "跳过的符号链接",
+  ignored_special: "跳过的特殊文件",
+  foreign_filesystems_skipped: "跳过的其他文件系统入口",
+  directory_cycles_skipped: "跳过的重复目录身份",
+  entries_scanned: "已检查目录项",
+  entry_limited: "目录项达到上限",
+  depth_limited: "目录深度达到上限",
+  classification_limited: "分类或路径展示已达上限",
+  scan_complete: "扫描范围已遍历完整",
+  read_batch_size: "每批读取目录项数",
+  allocation_basis: "分配块计算方式",
+  snapshot_consistent: "原子一致性快照",
+  filesystem_available: "文件系统容量可核对",
+  filesystem_inodes_available: "文件系统 inode 容量可核对",
+  filesystem_error: "文件系统容量读取错误",
+  filesystem_capacity_bytes: "所在文件系统总容量（非本站占用）",
+  filesystem_used_bytes: "所在文件系统已使用",
+  filesystem_available_bytes: "所在文件系统普通用户可用",
+  filesystem_reserved_bytes: "文件系统保留空间",
+  filesystem_total_inodes: "所在文件系统 inode 总数",
+  filesystem_free_inodes: "所在文件系统可用 inode",
+  filesystem_used_inodes: "所在文件系统已用 inode",
+  link_count: "inode 硬链接总数",
+  allocation_below_logical: "分配块少于逻辑大小（不单独证明稀疏区）",
   files: "文件数",
   scanned_php: "扫描 PHP 文件",
   pid: "PID",
@@ -410,6 +441,9 @@ const analytics = computed(() =>
   ["website-analytics", "website-statistics-v2"].includes(props.id),
 );
 function reportLabel(key:string):string {
+  if(props.id==='disk-analysis'&&key==='total_bytes')return '逻辑大小（按路径累计）';
+  if(props.id==='disk-analysis'&&key==='directories')return '目录逻辑大小（含硬链接路径）';
+  if(props.id==='disk-analysis'&&key==='extensions')return '扩展名逻辑大小（含硬链接路径）';
   if(props.id==='platform-ops'&&key==='healthy')return 'HTTPS 与健康协议通过';
   if(props.id==='platform-ops'&&key==='expected_sha')return '主机配置摘要（只读）';
   if(props.id==="files-sync" && props.report.preview===true) {
@@ -432,6 +466,11 @@ const metrics = computed(() =>
         "average_seconds",
         "qps_last_minute",
         "total_bytes",
+        "unique_logical_bytes",
+        "allocated_bytes",
+        "unique_files",
+        "hardlink_entries",
+        "sparse_candidates",
         "files",
         "scanned_php",
         "findings_count",
@@ -478,6 +517,8 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown, row?:Record<string,unknown>): string {
+  if(props.id==='disk-analysis'){const notice=diskValueNotice(props.report,key,value);if(notice)return notice;}
+  if(props.id==='disk-analysis'&&key==='allocation_basis')return value==='st_blocks_512_inode_deduplicated'?'Linux 已分配块，按本次扫描范围内 inode 去重':'未知计算方式';
   if(props.id==='website-statistics-v2' && key==='history_request_receipt_limit' && props.report.history_request_ids_enabled!==true)return '未启用（旧版历史模式）';
   if(props.id==='website-statistics-v2' && key==='history_gzip_scan_limit_per_pass' && props.report.history_gzip_import_enabled!==true)return '未启用';
   if(props.id==='task-manager') {
@@ -566,11 +607,10 @@ function columns(values: any[]) {
     .slice(0, 14);
 }
 function choose(row: Record<string, any>) {
+  if(!row||typeof row!=='object'||Array.isArray(row))return;
   if ("can_terminate" in row && !row.can_terminate) return;
   if (props.id === "disk-analysis") {
-    if (row.can_drill === false) return;
-    const path = row.directory === "." ? "" : row.directory;
-    emit("select", { path, drill: true });
+    const selected=diskFileSelection(row);if(selected)emit("select",selected);
     return;
   }
   emit("select", { ...row, resource_id: row.resource_id || row.id, site_ids: row.site_ids });
@@ -586,9 +626,8 @@ function chartRows(values: any, key: string) {
     .slice(0, 100);
 }
 function directory(name: string) {
-  if (name === ".") name = "";
-  const base = props.report.path;
-  emit("select", { path: [base, name].filter(Boolean).join("/"), drill: true });
+  if(props.id!=='disk-analysis')return;
+  const selected=diskDirectorySelection(props.report.path,name);if(selected)emit("select",selected);
 }
 function mobileDownloadURL(value: unknown): string | undefined {
   if (typeof value !== "string") return;
@@ -633,7 +672,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
     </section>
     <div v-if="metrics.length" class="report-metrics">
       <div v-for="[key, value] in metrics" :key="key">
-        <span>{{ names[key] || key }}</span
+        <span>{{ reportLabel(key) }}</span
         ><strong>{{ format(key, value) }}</strong>
       </div>
     </div>
@@ -671,9 +710,24 @@ function mobileDownloadURL(value: unknown): string | undefined {
       <el-tab-pane
         v-for="[key, values] in distributions"
         :key="key"
-        :label="names[key] || key"
+        :label="reportLabel(key)"
       >
+        <div v-if="id === 'disk-analysis'" class="disk-table-scroll" role="region" :aria-label="reportLabel(key)" tabindex="0">
+          <table class="disk-report-table">
+            <caption class="disk-table-caption">{{ reportLabel(key) }}（逻辑大小，按路径累计）</caption>
+            <thead><tr><th scope="col">{{ key === 'directories' ? '目录（点击下钻）' : '项目' }}</th><th scope="col">逻辑大小</th></tr></thead>
+            <tbody><tr v-for="row in chartRows(values, key)" :key="row.name">
+              <td>
+                <button v-if="key === 'directories' && diskDirectorySelection(report.path, row.name)" type="button" class="disk-path-button" @click="directory(row.name)">{{ row.name }}</button>
+                <span v-else>{{ row.name }}</span>
+                <el-tag v-if="key === 'directories' && !diskDirectorySelection(report.path, row.name)" type="info" size="small">仅统计，不能下钻</el-tag>
+              </td>
+              <td>{{ format('bytes', row.value) }}</td>
+            </tr></tbody>
+          </table>
+        </div>
         <el-table
+          v-else
           :data="chartRows(values, key)"
           max-height="340"
           stripe
@@ -687,7 +741,7 @@ function mobileDownloadURL(value: unknown): string | undefined {
             prop="name"
             :label="key === 'directories' ? '目录（点击下钻）' : '项目'"
             min-width="230"
-          /><el-table-column label="数量 / 大小" width="150"
+          ><template #default="{row}"><span>{{row.name}}</span><el-tag v-if="id==='disk-analysis'&&key==='directories'&&!diskDirectorySelection(report.path,row.name)" type="info" size="small">仅统计，不能下钻</el-tag></template></el-table-column><el-table-column label="数量 / 大小" width="150"
             ><template #default="{ row }">{{
               format(id === "disk-analysis" ? "bytes" : "count", row.value)
             }}</template></el-table-column
@@ -728,6 +782,18 @@ function mobileDownloadURL(value: unknown): string | undefined {
             @select="(row) => emit('select', { ...row, site_id: site.site_id })"
           /></section
       ></template>
+      <div v-else-if="id === 'disk-analysis' && key === 'largest_files'" class="disk-table-scroll" role="region" aria-label="大文件分析结果，可横向滚动" tabindex="0">
+        <table class="disk-report-table disk-files-table">
+          <caption class="disk-table-caption">大文件分析结果（仅扫描范围内）</caption>
+          <thead><tr><th scope="col">文件路径 / 查看目录</th><th scope="col">逻辑大小</th><th scope="col">该文件已分配块</th><th scope="col">硬链接数</th></tr></thead>
+          <tbody><tr v-for="(row, rowIndex) in rows(values, key)" :key="rowIndex" @click="choose(row)">
+            <td><button v-if="diskFileSelection(row)" type="button" class="disk-path-button" @click.stop="choose(row)">{{ row.path }}</button><span v-else>{{ row.path }}</span><el-tag v-if="!diskFileSelection(row)" type="info" size="small">仅统计，不能下钻</el-tag></td>
+            <td>{{ format('bytes', row.bytes, row) }}</td>
+            <td>{{ format('allocated_file_bytes', row.allocated_file_bytes, row) }}</td>
+            <td>{{ format('link_count', row.link_count, row) }}</td>
+          </tr></tbody>
+        </table>
+      </div>
       <el-table
         v-else
         :data="rows(values,key)"
@@ -827,6 +893,31 @@ function mobileDownloadURL(value: unknown): string | undefined {
   </div>
 </template>
 <style scoped>
+.disk-table-scroll {
+  max-width: 100%;
+  max-height: 370px;
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.disk-report-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+  color: #243247;
+}
+.disk-files-table { min-width: 700px; }
+.disk-table-caption { padding: 10px; text-align: left; color: #657181; font-size: 12px; }
+.disk-report-table th, .disk-report-table td { padding: 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }
+.disk-report-table th { background: #f8fafc; }
+.disk-report-table tbody tr:nth-child(even) { background: #f8fafc; }
+.disk-report-table td:first-child { min-width: 180px; overflow-wrap: anywhere; }
+.disk-report-table td:not(:first-child) { white-space: nowrap; }
+.disk-report-table .el-tag { margin: 4px; }
+.disk-path-button { border: 0; background: none; padding: 0; color: #087f5b; text-align: left; overflow-wrap: anywhere; cursor: pointer; font: inherit; }
+.disk-path-button:hover { text-decoration: underline; }
+.disk-path-button:focus-visible, .disk-table-scroll:focus-visible { outline: 2px solid #087f5b; outline-offset: 2px; }
 .report-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
