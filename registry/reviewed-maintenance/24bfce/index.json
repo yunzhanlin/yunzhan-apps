@@ -1,0 +1,196 @@
+{
+  "format": 1,
+  "scope": "Copied exact original Root native request/result bytes, transport trace, signed app update and cleanup. Test code verifies integrity/contracts; CI does not rerun these installed operations.",
+  "passed": true,
+  "program": "0.1.0-dev.proapps24maintuibfaw",
+  "app_version": "1.3.0",
+  "commercial_all50": false,
+  "platform_ops_commercial": false,
+  "main_delivered": false,
+  "original_local_browser_proof_sha256": "6cc949ddbff30ae6e95d6978ace599c4ef104b40a52f0c66bfcf65e29873ac7f",
+  "original_local_browser_script_sha256": "57ba66491c5fea4174a85812ec142d53338f501f4846966b6902fd95a253e271",
+  "genuine_signature_update": {
+    "manifest_sha256": "6d433842fb11880283548bcc739d47b17c46c3d3d7242fefa1494faf9da0b346",
+    "catalog_sha256": "702427e776b2f8983c281abad619cdf0eb7562209632fec3cebd618f52528c73",
+    "publisher_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "reviewed_main": "042aea764b24a0557cff98ef4d07800a0e7a7666",
+    "publication_snapshot_rewritten": false,
+    "arm": {
+      "from": "1.2.0",
+      "to": "1.3.0",
+      "job": "479c1eb26e9927f986bb3895f96834df",
+      "instance": "8133bc82c2550c067c2323568b33c6e2",
+      "original_proof_sha256": "565db2bdccf54895ed0b8126c4419334f575b51de04eea8e6d5e48401567593c"
+    },
+    "amd": {
+      "from": "1.0",
+      "to": "1.3.0",
+      "job": "a68359dc248573e71de71282cb551327",
+      "instance": "6d3f87adb39023595268eee0fd598b8f",
+      "original_proof_sha256": "bda72823f1cbec42b401633870b3908a351f7b93bb52fb79b4aa57716c0952ed"
+    },
+    "both_original_receipts_verified": true,
+    "both_update_hints_cleared": true,
+    "settings_install_time_and_other19_preserved": true,
+    "absent_apps_installed": 0
+  },
+  "native_commands": 4,
+  "remote_command_posts": 4,
+  "status_inspections": 1,
+  "grants_issued_and_revoked": 2,
+  "operations": [
+    {
+      "target": "amd",
+      "request_id": "4fa133af37eff8fcc27a6c9171f8f1ab",
+      "command": "nginx-check",
+      "plan_sha256": "5f999f2edad1616d2c8064149cbcad08d85842c34d361a4b85b739b771ca320f",
+      "request_sha256": "fa34db9eb8798291fc9c1aed603143d83d4b23ddf100b66fd423803bff4e8abc",
+      "response_lost": false,
+      "submit_http": 200,
+      "outcome": "config_valid",
+      "receipt_verified": true
+    },
+    {
+      "target": "amd",
+      "request_id": "4d82cb2dd856c38e5255c283c3f983ae",
+      "command": "nginx-reload",
+      "plan_sha256": "5f999f2edad1616d2c8064149cbcad08d85842c34d361a4b85b739b771ca320f",
+      "request_sha256": "ba9f13d8b83d89bd339e1bc77bf9651bc35b9297d4c205d5d56404b31c53d50f",
+      "response_lost": false,
+      "submit_http": 200,
+      "outcome": "reload_signal_submitted",
+      "receipt_verified": true
+    },
+    {
+      "target": "amd",
+      "request_id": "375a4c8beadbe2332daedeb5835f6057",
+      "command": "nginx-reload",
+      "plan_sha256": "5f999f2edad1616d2c8064149cbcad08d85842c34d361a4b85b739b771ca320f",
+      "request_sha256": "b1f77f5bf919576010e8dbdd97f706317ceeb399372b171d59947a6b2a86c5c2",
+      "response_lost": true,
+      "submit_http": 503,
+      "status_inspections": 1,
+      "outcome": "reload_signal_submitted",
+      "receipt_verified": true
+    },
+    {
+      "target": "arm",
+      "request_id": "99774327f5d2e6386e148c765d1cd2ba",
+      "command": "nginx-check",
+      "plan_sha256": "ee9696e0826d8ecf3abbdd93fa4367d20fdcb0de7325e75e7bf0c9de66eb96aa",
+      "request_sha256": "44f39dbf610fc5b3e183325ed52eac6ff87cc53cb420a0b16b6b75c4ebfc464e",
+      "response_lost": false,
+      "submit_http": 200,
+      "outcome": "config_valid",
+      "receipt_verified": true
+    }
+  ],
+  "artifacts": {
+    "4fa133af37eff8fcc27a6c9171f8f1ab.request.json": {
+      "sha256": "dff966494ca31ec302c93629c1db651d6382bc949c605630fb42ff7ca8e02f83",
+      "target": "amd",
+      "state": "started",
+      "outcome": "unknown"
+    },
+    "4fa133af37eff8fcc27a6c9171f8f1ab.result.json": {
+      "sha256": "9da0813b696fbdace70709e839fe3d3c035bd11c60e8b58837817b2e8415617c",
+      "target": "amd",
+      "state": "completed",
+      "outcome": "config_valid"
+    },
+    "4d82cb2dd856c38e5255c283c3f983ae.request.json": {
+      "sha256": "317c4b753e304a8f4a5f052e49cadeceb699cb528d2d1313f8059ceb7a108d43",
+      "target": "amd",
+      "state": "started",
+      "outcome": "unknown"
+    },
+    "4d82cb2dd856c38e5255c283c3f983ae.result.json": {
+      "sha256": "464bdcfd4635cbdc02ebed0f27489558302ccfcf5f818639e4dd270dad24ab67",
+      "target": "amd",
+      "state": "completed",
+      "outcome": "reload_signal_submitted"
+    },
+    "375a4c8beadbe2332daedeb5835f6057.request.json": {
+      "sha256": "c3993e47322c4e0257e96ed0b4881bcc6a9ff2d91af5d7def7a2fafc0791baf7",
+      "target": "amd",
+      "state": "started",
+      "outcome": "unknown"
+    },
+    "375a4c8beadbe2332daedeb5835f6057.result.json": {
+      "sha256": "8cbea3a834932299f70ff8783908acb51ab9cb280c77fe6932fc66caa8e1d142",
+      "target": "amd",
+      "state": "completed",
+      "outcome": "reload_signal_submitted"
+    },
+    "99774327f5d2e6386e148c765d1cd2ba.request.json": {
+      "sha256": "1085af9463d7e96e60d176ab54761ba78a9d9f178d9378c16a90e1f795593887",
+      "target": "arm",
+      "state": "started",
+      "outcome": "unknown"
+    },
+    "99774327f5d2e6386e148c765d1cd2ba.result.json": {
+      "sha256": "3ffc3120d40ae34572d799f4baf3392c8287a408b056e6fe885aeae63884fce8",
+      "target": "arm",
+      "state": "completed",
+      "outcome": "config_valid"
+    },
+    "amd-cleanup.json": {
+      "sha256": "29c2f4e7f23d127df034cf9d62312515ff1d6a23a9048271c3aed1651bb73cf3",
+      "target": "amd"
+    },
+    "arm-cleanup.json": {
+      "sha256": "41ec974cfbc75be5904f49f36feb76f32f8cb1382713d5e222c10730810672ab",
+      "target": "arm"
+    },
+    "original-transport-loss.jsonl": {
+      "sha256": "adb3e269ddd9f7d9bad1756b512f436322c9737c2d541266d39659c21ed4d218",
+      "target": "amd"
+    },
+    "amd-original-signed-app-update.json": {
+      "sha256": "bda72823f1cbec42b401633870b3908a351f7b93bb52fb79b4aa57716c0952ed",
+      "target": "amd"
+    }
+  },
+  "authority": {
+    "current_admin_on_both_sides": true,
+    "hostname_and_system_ca_tls_verification": true,
+    "private_keys_transferred": false,
+    "production_test_override": false,
+    "fake_api_results": false,
+    "automatic_mutation_retry": false,
+    "original_id_changed_after_loss": false,
+    "root_receipts_deleted": false
+  },
+  "preserved": {
+    "sql_sites": 178,
+    "app_records": 40,
+    "nginx_master_pids": [
+      981,
+      1039
+    ],
+    "existing_site_files_and_programs": true,
+    "main_and_feifeicms_untouched": true
+  },
+  "cleanup": {
+    "temporary_vhosts_removed": 2,
+    "temporary_peer_ca_entries_removed": 2,
+    "original_system_ca_bundles_byte_restored": true,
+    "temporary_tls_relay_stopped": true,
+    "pinned_ssh_tunnels_stopped": true
+  },
+  "installed_ui": {
+    "desktop": true,
+    "mobile390_no_document_overflow": true,
+    "visual_inspection": true,
+    "arm_desktop_png_sha256": "725dfab382fde20b2ac3d18fa8fd9a4548b402b39e1cd7e3718726682750ac2c",
+    "amd_mobile_png_sha256": "cdd5ff6226c4c8f9f00546fb9bf66b42d6224d3c82e4675e4971817e05d0f89b",
+    "post_acceptance_display_lifetime_gap_found": true,
+    "display_gap_fix_installed_at_this_snapshot": false
+  },
+  "boundaries": [
+    "Local pinned-SSH forwarding carries genuine system-trusted HTTPS; not public-network acceptance.",
+    "AMD64 is a real Linux x86_64 executable in QEMU on ARM macOS, not native bare-metal x86 performance.",
+    "Reload receipt proves fixed check/reload submission, not all sites or new workers healthy.",
+    "Broader maintenance workflows, new secret-display lifetime fix, Main reconciliation, native OS/mobile and full50 commercial qualification remain incomplete."
+  ]
+}
