@@ -1,0 +1,19 @@
+{
+  "pull_request": "https://github.com/yunzhanlin/yunzhan-apps/pull/32",
+  "head": "a7f2e45af641c22d9835063e6779429a5467d122",
+  "merge_commit": "9e39691f075b11606ef1d0e558f5f74ceaffdf08",
+  "merged_at": "2026-10-14T16:14:46Z",
+  "run_id": 38594108148,
+  "job_id": 115956267644,
+  "job_status": "completed",
+  "conclusion": "success",
+  "diagnostics_source": "mcp__code_review__pull_requests_checks",
+  "provider_full_job_log_truncated": true,
+  "retained_provider_log_sha256": "256540f38cc9ac09cdc40415b1c63c3ab281fd27d3cbee25503ec070ca8006b1",
+  "annotations_nonblocking": [
+    "Old action Node20 targets forced onto Node24",
+    "ubuntu-latest migrates to Ubuntu26 from October19"
+  ],
+  "commercial_all50": false,
+  "signed_source_inputs_sha256": "c2dfd1183f3a0ed68935e98b93d20aa26c15b278622f9ac7e3c824d990555b77"
+}

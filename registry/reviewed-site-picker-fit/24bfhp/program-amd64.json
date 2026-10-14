@@ -1,0 +1,34 @@
+{
+  "actual_programs": {
+    "panel": {
+      "pid": "6591",
+      "sha256": "da28fa3ff1bdfc4b81a2948380914c53f51cafe629e0d4d74d20130174405ae5"
+    },
+    "panel-executor": {
+      "pid": "6576",
+      "sha256": "62684066b2308389bb3d6b84db268089b7289c153b4b7328c3b5a7eb6275bcc9"
+    }
+  },
+  "all50_commercial": false,
+  "app_records": 20,
+  "application_installs_updates": 0,
+  "arch": "amd64",
+  "archive_sha256": "45ae760373b03509677215aa49751a6b26a6df8d88ba8ea9b263affc46740d0c",
+  "disk_analysis_version": "1.0",
+  "format": 1,
+  "installation_id": "6d3f87adb39023595268eee0fd598b8f",
+  "journal_sha256": "24c1e1145b196add8d9c4ec4e2373f284f55c25ab16cbb2054fcb89dcf81b56e",
+  "main_mutated": false,
+  "mode": "run",
+  "native_commands": 0,
+  "nginx_master_pid": "1085",
+  "ok": true,
+  "platform_ops_version": "1.3.0",
+  "preserved_native_operations": 3,
+  "protected_files_unchanged": 451,
+  "protected_table_projections_unchanged": 94,
+  "scope": "Normal independently original-key verified BFHE production-layout program upgrade on owned QA, preserving original completed native operations, revoked grants, failed jobs and20 application records. Disk-analysis remains its original observed version. No app update/install or maintenance dispatch.",
+  "sites": 96,
+  "source_inputs_sha256": "c2dfd1183f3a0ed68935e98b93d20aa26c15b278622f9ac7e3c824d990555b77",
+  "version": "0.1.0-dev.proapps24siteselectbfhe"
+}

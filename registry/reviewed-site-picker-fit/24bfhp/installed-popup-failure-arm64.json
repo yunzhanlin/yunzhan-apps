@@ -1,0 +1,41 @@
+{
+  "ok": false,
+  "program": "0.1.0-dev.proapps24siteselectbfhe",
+  "arch": "arm64",
+  "installed_app_version": "1.2.0",
+  "scope": "Actual unmodified installed BFHE: native metadata matched and no resize error, but long-name390px popup exceeded viewport; not full UI acceptance or new1.3 app update",
+  "original_private_proof_sha256": "e3851b21733cb62e0d419cfe0bdb1ecf9a5e2bf0c62073efb43e4e31fc093a52",
+  "checks": [
+    "normal installed management has dedicated disk fields, not another application template",
+    "actual authenticated run matches independently read native inode/block metadata and filesystem capacity",
+    "actual installed native report and390px document remain usable without script/resize errors"
+  ],
+  "closed_geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "window_errors": []
+  },
+  "open_popup_geometry": {
+    "viewport": 390,
+    "document_width": 390,
+    "popup": {
+      "left": 32,
+      "right": 480.828125,
+      "width": 448.828125
+    },
+    "inside_module_dialog": true,
+    "window_errors": []
+  },
+  "assets": [
+    {
+      "file": "AppModuleManager-CRmbEGDr.js",
+      "sha256": "c9953c9f1200752a3caf8d178417e180a5e2204a1546332e6f0b3e7333bd5289"
+    }
+  ],
+  "expected_asset": {
+    "file": "AppModuleManager-CRmbEGDr.js",
+    "sha256": "c9953c9f1200752a3caf8d178417e180a5e2204a1546332e6f0b3e7333bd5289"
+  },
+  "application_installs_updates": 0,
+  "failure": "The expression evaluated to a falsy value:\n\n  assert(proof.open_popup_geometry.popup.left>=-1&&proof.open_popup_geometry.popup.right<=391)\n"
+}
