@@ -11,7 +11,7 @@ test('instance-bound candidate source and actual program evidence cannot become 
  for(const key of ['commercial_all50','platform_ops_commercial','main_delivered'])assert.equal(r[key],false);
  const candidate=JSON.parse(await read('registry/candidates/platform-ops-1.3.0.json'));
  assert.equal(candidate.stage,r.app_stage);assert.equal(candidate.version,r.app_version);
- const catalog=JSON.parse(await read('dist/catalog-v1.json'));
+ const catalog=JSON.parse(await read('registry/reviewed-catalogs/20261013-201440/catalog-v1.json'));
  assert.equal(catalog.apps.find(a=>a.id==='platform-ops').version,r.official_app_version);
  const a=r.authority;for(const key of ['explicit_selected_signed_app_version_required','grant_bound_to_installation_instance','same_version_repair_preserves_instance'])assert.equal(a[key],true,key);
  for(const key of ['legacy_unbound_grants_activated','reinstall_preserves_old_authority','limited_admin_can_revoke_higher_admin_grant','old_1_2_0_enables_maintenance','previous_original_request_receipts_rewritten'])assert.equal(a[key],false,key);

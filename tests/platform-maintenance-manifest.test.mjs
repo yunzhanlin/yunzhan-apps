@@ -5,9 +5,9 @@ import {createHash} from 'node:crypto';
 import {validateManifest} from '../tools/lib.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 const original=JSON.parse(await read('registry/candidates/platform-ops-1.3.0.json'));
-test('maintenance candidate keeps independent handler requirement out of official signed catalogue',async()=>{
+test('original maintenance candidate and historical signed1.2 package stay immutable after independent1.3 publication',async()=>{
  assert.deepEqual(validateManifest(original),[]);assert.equal(original.stage,'integration');assert.deepEqual(original.required_panel_features,['platform-maintenance-v1']);
- const catalogue=JSON.parse(await read('dist/catalog-v1.json'));const app=catalogue.apps.find(x=>x.id==='platform-ops');assert.equal(app.version,'1.2.0');
+ const catalogue=JSON.parse(await read('registry/reviewed-catalogs/20261013-201440/catalog-v1.json'));const app=catalogue.apps.find(x=>x.id==='platform-ops');assert.equal(app.version,'1.2.0');
  assert.equal(createHash('sha256').update(await read('dist/apps/platform-ops/1.2.0/manifest.json')).digest('hex'),app.sha256);
 });
 test('new maintenance manifests cannot omit, borrow, alias or widen handler authority',()=>{

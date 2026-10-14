@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "app_id": "platform-ops",
+  "previous_version": "1.2.0",
+  "version": "1.3.0",
+  "stage": "ready",
+  "release_meaning": "Installable acceptance version, not complete commercial capability or a signed installed-update proof.",
+  "commercial_all50": false,
+  "platform_ops_commercial": false,
+  "main_program_delivered": false,
+  "installed_app_update_verified_at_publication": false,
+  "requires_panel_feature": "platform-maintenance-v1",
+  "reviewed_program_source": "0.1.0-dev.proapps24maintuibfaw",
+  "reviewed_program_inputs_sha256": "65cb34b24ed5ddd14e3e504669d0c39835d5caa1f269eb908ca24d187ac4608e",
+  "manifest_sha256": "6d433842fb11880283548bcc739d47b17c46c3d3d7242fefa1494faf9da0b346",
+  "previous_immutable_manifest_sha256": "2962907ca319b6266c369df203f46886609073651b2aa7f6baa316a95b885de9",
+  "catalog_sha256": "702427e776b2f8983c281abad619cdf0eb7562209632fec3cebd618f52528c73",
+  "publisher_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "publisher_key_changed": false,
+  "other_49_catalog_identities_unchanged": true,
+  "previous_complete_signed_catalog": {
+    "path": "registry/reviewed-catalogs/20261013-201440",
+    "catalog_sha256": "e968c4fb656cad429cb7921a0277d4f83ca221130a8e78a2d19868a15c3c830d",
+    "signature_sha256": "4a072873098b422795e524992d69f11ea605d2ac419f46531c90e4986adb4abd",
+    "bundle_sha256": "046391cd64cecb93fb004c5363aa946eb3fb2032fff9c137724943f5f216058d",
+    "scope": "Historical statistics, task and load-balance proofs retain their exact original other49 hashes; no old expected digest was changed to include the later1.3 release."
+  },
+  "retained_ci_failure": {
+    "head": "4f7f930066830549f86c7e34b0113f6759a8667a",
+    "actions_run_id": 38517829121,
+    "job_id": 115700521815,
+    "original_log_sha256": "0e09ac1ad6082ecefaee775d694e85bf796763afd926a9bcd6375c3d3fda0b3e",
+    "cause": "New compiled management regression ran before npm ci in its own geography/web directory; TypeScript module missing. Go maintenance and JSON wire regression passed before this failure.",
+    "fix": "Install exact existing lockfile with npm ci --prefix panel-integration-geography/web --ignore-scripts before the unchanged test. No runtime/source override or skipped assertion.",
+    "local_locked_dependency_and_26_test_log_sha256": "aa549ac6577d4bc990ac59a2bb1177bcab84e9a07ca38f71233acef508a932a2",
+    "original_failure_rewritten": false
+  },
+  "remaining": [
+    "Latest complete CI must pass before normal main publication; original failed CI is not restarted or relabelled.",
+    "After main publication, update only the genuinely already-installed1.2 app through normal signed repository API/UI, retaining settings/install time, recording the original manifest receipt and a new verified installation instance. No manual installed.json or fake catalog responses.",
+    "Installed HTTPS cross-panel command, original native receipt, response-loss/reconciliation and broader operation capability acceptance remain unproven; do not install an absent app solely to bypass that constraint.",
+    "Main source reconciliation, supported native platforms/mobile and remaining full50 commercial business/security/recovery/UI verification remain incomplete."
+  ]
+}

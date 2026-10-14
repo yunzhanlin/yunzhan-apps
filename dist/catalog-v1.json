@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-13T20:14:40Z",
+  "generated_at": "2026-10-14T05:52:34Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -884,8 +884,8 @@
       "id": "platform-ops",
       "name": "Platform Ops",
       "category": "professional",
-      "version": "1.2.0",
-      "summary": "两个 HTTPS 验收主机的真实健康聚合、可信 TLS、加密保存令牌及撤销后拒绝访问通过",
+      "version": "1.3.0",
+      "summary": "可安装验收版：保留真实多主机健康读取，新增安装实例绑定的独立限时授权、固定 Nginx 检查、受控重载提交与原请求回执核对。需要签名面板 platform-maintenance-v1 处理器；完整跨主机、批量运维及商用能力仍在验收，不执行自由脚本或补丁发布。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -893,14 +893,20 @@
       "manage_route": "app-modules",
       "capabilities": [
         "多主机 HTTPS 健康聚合",
-        "只读令牌",
-        "加密凭据",
-        "令牌撤销",
-        "专用操作流程",
+        "旧只读令牌不升级权限",
+        "加密凭据与令牌撤销",
+        "独立限时可撤销维护授权",
+        "安装实例绑定及重装旧授权失效",
+        "两端管理员与计划摘要核对",
+        "固定 Nginx 配置检查",
+        "主机级受控重载提交",
+        "原任务原生回执核对",
+        "响应未知不重发及升级拦截",
+        "不执行自由脚本或补丁发布",
         "执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.2.0/manifest.json",
-      "sha256": "2962907ca319b6266c369df203f46886609073651b2aa7f6baa316a95b885de9"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/platform-ops/1.3.0/manifest.json",
+      "sha256": "6d433842fb11880283548bcc739d47b17c46c3d3d7242fefa1494faf9da0b346"
     },
     {
       "id": "pm2-manager",
