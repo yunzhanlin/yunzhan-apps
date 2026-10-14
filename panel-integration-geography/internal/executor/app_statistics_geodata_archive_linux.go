@@ -405,6 +405,37 @@ func (store statisticsGeoJobArchiveStore) archiveJob(ctx context.Context, in cor
 	return out, nil
 }
 func (s *Service) statisticsGeoArchiveRoutes(m *http.ServeMux) {
+	m.HandleFunc("POST /v1/statistics/geodata-job-records/export", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		if r.URL.RawQuery != "" || r.URL.ForceQuery {
+			respond(w, 400, map[string]string{"error": "原证据导出不接受查询字段"})
+			return
+		}
+		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 512))
+		in, de := core.DecodeStatisticsGeoExport(raw)
+		if err != nil || de != nil {
+			respond(w, 400, map[string]string{"error": "原证据导出绑定无效"})
+			return
+		}
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if err = upgradeguard.CheckStartup(); err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		lease, err := statisticsGeoInstanceLease(true)
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		defer lease.Close()
+		out, err := productionStatisticsGeoJobArchiveStore().exportJob(r.Context(), in)
+		if err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
+		respond(w, 200, out)
+	})
 	m.HandleFunc("GET /v1/statistics/geodata-job-records", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.RawQuery != "" || r.URL.ForceQuery {
 			respond(w, 400, map[string]string{"error": "原库存不接受查询字段"})

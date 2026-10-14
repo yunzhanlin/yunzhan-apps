@@ -8,10 +8,10 @@ import {validateManifest} from '../tools/lib.mjs';
 const root=fileURLToPath(new URL('../panel-integration-geography/',import.meta.url));
 const read=p=>readFile(path.join(root,p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('current geography/WAF/retention/repository implementation is exact signed BEVK source; earlier source indexes are retained',async()=>{
+test('current geography/WAF/retention/repository/export implementation is exact signed BEXH source; earlier source indexes are retained',async()=>{
  const index=JSON.parse(await read('source-sha256.json')),release=JSON.parse(await read('release-source-inputs.json'));
- assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24repositoryretrybevk-linux-amd64.tar.gz',archive_sha256:'5a35db5582b151587e88ede031d8ad14cef28af154085b5c2ff170004bf2403b',frozen_inputs_sha256:'00bee33af5d4feb6e15300e4ace2ac673edae0aa784c23f4d1728d6671ac096d'});
- assert.equal(Object.keys(index.files).length,1288);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24geoevidencebexh-linux-amd64.tar.gz',archive_sha256:'cd30cc376ba6c827bccc6f480c0e6c1f805adea30c99c351bd6f0332a2ef9434',frozen_inputs_sha256:'83ff19a32f424744c5d0850460a38ce7e1901aca129ade1a80d4c5d0925055d0'});
+ assert.equal(Object.keys(index.files).length,1292);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  for(const [name,digest]of Object.entries(index.files)){
   assert(!name.startsWith('/')&&!name.split('/').includes('..'));
   const s=await lstat(path.join(root,name));assert(s.isFile()&&!s.isSymbolicLink());
@@ -19,7 +19,7 @@ test('current geography/WAF/retention/repository implementation is exact signed 
  }
  assert.deepEqual(index.release,{archive:release.archive,archive_sha256:release.archive_sha256,frozen_inputs_sha256:release.frozen_inputs_sha256});
  for(const [name,digest]of Object.entries(release.files))assert.equal(index.files[name],digest,name);
- for(const p of ['internal/geodata/geodata.go','internal/geodata/structure_stream.go','internal/executor/app_statistics_geodata_cache.go','internal/executor/app_statistics_geodata_store_linux.go','internal/executor/app_statistics_geodata_verify_linux.go','internal/appcatalog/panel_features.go'])assert(Object.hasOwn(release.files,p),p);
+ for(const p of ['internal/geodata/geodata.go','internal/geodata/structure_stream.go','internal/executor/app_statistics_geodata_cache.go','internal/executor/app_statistics_geodata_store_linux.go','internal/executor/app_statistics_geodata_verify_linux.go','internal/appcatalog/panel_features.go','internal/core/statistics_geodata_export.go','internal/executor/app_statistics_geodata_export_linux.go'])assert(Object.hasOwn(release.files,p),p);
 });
 test('candidate history remains integration and signed2.6 delivery keeps commercial qualification unproven',async()=>{
  const candidate=JSON.parse(await readFile(new URL('../registry/candidates/website-statistics-v2-2.6.0.json',import.meta.url)));
