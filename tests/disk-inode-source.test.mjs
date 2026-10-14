@@ -17,7 +17,7 @@ test('historical disk source export binds exact frozen BFFR inputs while preserv
  assert.equal(f.frozen_inputs_sha256,r.source_inputs_sha256);assert.equal(f.archive_sha256,r.normal_original_key_archives.amd64);
  assert.deepEqual(Object.keys(i.files).filter(k=>i.files[k]!==old.files[k]).sort(),r.only_source_changes);assert.deepEqual(Object.keys(old.files).filter(k=>!(k in i.files)),[]);
  assert.equal(r.source_overrides,0);assert.deepEqual(i.test_overrides??{},{});
- for(const name of r.only_source_changes){assert.equal(i.files[name],f.files[name],name);assert.equal(sha(await read('panel-integration-geography/'+name)),f.files[name],name);}
+ for(const name of r.only_source_changes){assert.equal(i.files[name],f.files[name],name);const root=name==='packaging/build-release.sh'?'registry/reviewed-sources/0.1.0-dev.proapps24diskinodebffr/':'panel-integration-geography/';assert.equal(sha(await read(root+name)),f.files[name],name);}
  const scanner=(await read('panel-integration-geography/internal/executor/app_disk_usage_linux.go')).toString();
  for(const text of ['diskUsageEntriesMax = 100000','diskUsageDepthMax = 128','diskUsageReadBatch = 64','unix.O_NOFOLLOW','unix.AT_SYMLINK_NOFOLLOW','st.Blocks * 512','st.Dev != expected.Dev || st.Ino != expected.Ino','snapshot_consistent','filesystem_inodes_available','classification_limited'])assert(scanner.includes(text),text);
  assert(!scanner.includes('os.Remove')&&!scanner.includes('exec.Command')&&!scanner.includes('ReadFile('));
@@ -33,7 +33,7 @@ test('disk original native and browser observations retain failures and do not c
  }
  const native=proofs['native-arm64.json'];assert.equal(native.proof.binary_sha256,'bed504dfe6f40e529a401a16329ea75a9735efa3a65bdb40a5b8f4af32260978');assert.equal(native.test_summary.filter(s=>s.startsWith('--- PASS:')).length,13);
  assert(native.test_summary.some(s=>s.includes('files=100003 visited_entries=100000 returned_top=100')));
- const ui=proofs['isolated-ui.json'],i=JSON.parse(await read('panel-integration-geography/source-sha256.json'));assert.equal(ui.ok,true);assert.equal(ui.source_inputs_sha256,r.source_inputs_sha256);assert.equal(ui.checks.length,7);assert.deepEqual(ui.errors,[]);assert.deepEqual(ui.failures,[]);assert.deepEqual(ui.geometry.window_errors,[]);assert.equal(ui.geometry.viewport,390);assert.equal(ui.geometry.document_width,390);
+ const ui=proofs['isolated-ui.json'],i=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24diskinodebffr/source-sha256.json'));assert.equal(ui.ok,true);assert.equal(ui.source_inputs_sha256,r.source_inputs_sha256);assert.equal(ui.checks.length,7);assert.deepEqual(ui.errors,[]);assert.deepEqual(ui.failures,[]);assert.deepEqual(ui.geometry.window_errors,[]);assert.equal(ui.geometry.viewport,390);assert.equal(ui.geometry.document_width,390);
  for(const [name,pin]of Object.entries(ui.sources))assert.equal(i.files[name],pin,name);
  assert.equal(proofs['retained-first-ui.json'].ok,false);assert.equal(proofs['retained-diagnostic-ui.json'].ok,false);
  assert(proofs['retained-diagnostic-ui.json'].geometry.window_errors.some(s=>s.includes('ResizeObserver loop')));

@@ -43,12 +43,14 @@ export class DeferredWorkspace<T> {
   }
 }
 
-export type WorkspaceAPI = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
+export type WorkspaceAPI = <T>(path: string, method?: string, body?: unknown, key?: string, signal?: AbortSignal) => Promise<T>;
 const expiredWorkspace = () => new Error("账户或应用上下文已改变，未复用旧结果或继续发送请求；此前已提交的操作须核对原任务，不视为取消或成功");
 export function scopeWorkspaceAPI(api: WorkspaceAPI, current: () => boolean): WorkspaceAPI {
-  return async <T>(path: string, method?: string, body?: unknown, key?: string): Promise<T> => {
+  return async <T>(path: string, method?: string, body?: unknown, key?: string, signal?: AbortSignal): Promise<T> => {
     if (!current()) throw expiredWorkspace();
-    const value = await api<T>(path, method, body, key);
+    // Preserve the original four-argument contract for all other operations.
+    // Aborting a read is not a claim that a previously submitted write stopped.
+    const value = signal === undefined ? await api<T>(path, method, body, key) : await api<T>(path, method, body, key, signal);
     if (!current()) throw expiredWorkspace();
     return value;
   };

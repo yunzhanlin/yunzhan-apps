@@ -19,9 +19,9 @@ test('current geography workspace is exact frozen source; original signed BFDV a
  const bfdv=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24geoauthbfdv/source-sha256.json',import.meta.url));
  assert.equal(sha(bfdv),'2c7ab96cec0d532387b06c169c4a4d1f256c17571351ca8f2684a54899117ccc');
  assert.deepEqual(JSON.parse(bfdv).release,{archive:'panel-0.1.0-dev.proapps24geoauthbfdv-linux-amd64.tar.gz',archive_sha256:'de91e16bc5da99571ef5f0deb4995bae96cc36c075e58c347178ddbe21aa6844',frozen_inputs_sha256:'194de29fb46e4eff97c754cd78b091a94638b5ae2353a6e8a9f971e16f582c67'});
- const disk=JSON.parse(await readFile(new URL('../registry/disk-inode-update-release.json',import.meta.url)));
+ const disk=JSON.parse(await readFile(new URL('../registry/disk-scan-lifecycle-release.json',import.meta.url)));
  assert.deepEqual(index.release,{archive:'panel-'+disk.program+'-linux-amd64.tar.gz',archive_sha256:disk.normal_original_key_archives.amd64,frozen_inputs_sha256:disk.source_inputs_sha256});
- assert.equal(Object.keys(index.files).length,1318);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.equal(Object.keys(index.files).length,1319);assert.equal(Object.keys(index.test_overrides??{}).length,0);
  const beyo=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24maintbeyo/source-sha256.json',import.meta.url));
  assert.equal(sha(beyo),'2df6555628ea82b362019db4979d0e6d7b534d5ad9659592c676900de9579e84');
  const bfah=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24mainttxnbfah/source-sha256.json',import.meta.url));
