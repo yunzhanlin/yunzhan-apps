@@ -8,10 +8,12 @@ import {validateManifest} from '../tools/lib.mjs';
 const root=fileURLToPath(new URL('../panel-integration-geography/',import.meta.url));
 const read=p=>readFile(path.join(root,p));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-test('current geography and fixed maintenance implementation is exact signed BEYO source; BEXH and earlier source indexes are retained',async()=>{
+test('current geography and instance-bound maintenance is exact signed BFAH source; BEYO and earlier source indexes are retained',async()=>{
  const index=JSON.parse(await read('source-sha256.json')),release=JSON.parse(await read('release-source-inputs.json'));
- assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24maintbeyo-linux-amd64.tar.gz',archive_sha256:'2de337673acc87f3f02e69645b0d541f478dbb627f04f048f5d2ec2383d89079',frozen_inputs_sha256:'62ca253edc85a85478927df255dcb665d9bf87367f5aee7f24ce593aea6701db'});
- assert.equal(Object.keys(index.files).length,1304);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ assert.deepEqual(index.release,{archive:'panel-0.1.0-dev.proapps24mainttxnbfah-linux-amd64.tar.gz',archive_sha256:'fe193a4e058c0c3f60211d754d0a78cc67c1a8575f3938cc646d7675ce58ef26',frozen_inputs_sha256:'49b9aaefce868accf304fb3c23314eaaa91ae4df2dbf4a18b68743ee796fb5c0'});
+ assert.equal(Object.keys(index.files).length,1308);assert.equal(Object.keys(index.test_overrides??{}).length,0);
+ const beyo=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24maintbeyo/source-sha256.json',import.meta.url));
+ assert.equal(sha(beyo),'2df6555628ea82b362019db4979d0e6d7b534d5ad9659592c676900de9579e84');
  const historical=await readFile(new URL('../registry/reviewed-sources/0.1.0-dev.proapps24geoevidencebexh/source-sha256.json',import.meta.url));
  assert.equal(sha(historical),'d4f7fa43f5c9e5835d3749cff19b36909fbc4900cab4d8e590fec8bd246cbb1e');
  for(const [name,digest]of Object.entries(index.files)){

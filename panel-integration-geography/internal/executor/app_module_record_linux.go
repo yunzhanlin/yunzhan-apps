@@ -161,8 +161,8 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
 		if !ok || !valid || cmp > 0 {
 			return nil, errors.New("模块安装记录版本不能由当前处理器核对")
 		}
-		if id == "website-statistics-v2" && core.ValidateSoftwareUpdate(id, version) != nil {
-			return nil, errors.New("统计安装版本不是当前处理器可核对的完整固定版本")
+		if (id == "website-statistics-v2" || id == "platform-ops") && core.ValidateSoftwareUpdate(id, version) != nil {
+			return nil, errors.New("应用安装版本不是当前处理器可核对的完整固定版本")
 		}
 	}
 	if value, exists := manifest["settings"]; exists && value != nil {
@@ -171,10 +171,10 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
 		}
 	}
 	epoch, present := manifest["installation_id"]
-	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion {
+	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion || id == "platform-ops" && manifest["version"] == core.PlatformMaintenanceAppVersion {
 		value, ok := epoch.(string)
 		if !present || !ok || !core.ValidID(value) {
-			return nil, errors.New("统计地域安装实例标识缺失或损坏")
+			return nil, errors.New("应用安装实例标识缺失或损坏")
 		}
 	} else if present {
 		return nil, errors.New("旧版或其他应用不能携带统计地域实例标识")

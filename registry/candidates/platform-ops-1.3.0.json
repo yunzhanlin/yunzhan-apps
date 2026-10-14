@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "platform-ops",
+  "name": "Platform Ops",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "候选版：保留多主机健康读取，新增独立限时维护授权、固定 Nginx 检查及受控重载、原请求回执核对。仍在真实跨主机与签名应用更新验收，未进入正式目录，不代表商用能力全部完成。",
+  "stage": "integration",
+  "risk": "privileged",
+  "delivery": {"provider":"panel-module","target":"platform-ops","manage_route":"app-modules"},
+  "compatibility": {"os":["debian-12","debian-13","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"architectures":["amd64","arm64"]},
+  "capabilities": ["多主机 HTTPS 健康读取","旧只读令牌不升级权限","独立限时可撤销维护授权","安装实例绑定及重装旧授权失效","两端管理员与计划摘要核对","固定 Nginx 配置检查","主机级受控重载提交","原任务原生回执核对","响应未知不重发及升级拦截","不执行自由脚本或补丁发布"],
+  "required_panel_features": ["platform-maintenance-v1"],
+  "health": {"probe":"panel-api","target":"/api/app-modules/platform-ops"},
+  "uninstall": {"preserve_data":true,"reference_check":true}
+}

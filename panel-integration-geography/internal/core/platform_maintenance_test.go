@@ -49,8 +49,8 @@ func TestPlatformMaintenanceClosedProtocolAndNoFalseServiceHealth(t *testing.T) 
 	}
 }
 func TestPlatformMaintenanceStoredLifetimeCorruptionNeverAuthenticatesOrDispatches(t *testing.T) {
-	a, actor := platformTransactionFixture(t)
-	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"})
+	a, actor := maintenanceIdentityFixture(t)
+	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"}, maintenanceTestInstallationID)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -91,9 +91,9 @@ func TestPlatformMaintenanceStoredLifetimeCorruptionNeverAuthenticatesOrDispatch
 	}
 }
 func TestPlatformMaintenanceGrantIsolationExpirationRoleAndAuditRollback(t *testing.T) {
-	a, actor := platformTransactionFixture(t)
+	a, actor := maintenanceIdentityFixture(t)
 	input := PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"}
-	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, input)
+	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, input, maintenanceTestInstallationID)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -138,7 +138,7 @@ func TestPlatformMaintenanceGrantIsolationExpirationRoleAndAuditRollback(t *test
 	}
 	var count int
 	a.Store.DB.QueryRow("SELECT count(*) FROM platform_maintenance_grants").Scan(&count)
-	if _, e = a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, input); e == nil {
+	if _, e = a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, input, maintenanceTestInstallationID); e == nil {
 		t.Fatal("grant escaped failed audit")
 	}
 	var after int
@@ -148,8 +148,8 @@ func TestPlatformMaintenanceGrantIsolationExpirationRoleAndAuditRollback(t *test
 	}
 }
 func TestPlatformMaintenanceOriginalCommandBindingNoRetryAndReconciliation(t *testing.T) {
-	a, actor := platformTransactionFixture(t)
-	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"})
+	a, actor := maintenanceIdentityFixture(t)
+	issued, e := a.Store.issuePlatformMaintenanceGrant(context.Background(), actor.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"}, maintenanceTestInstallationID)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -208,11 +208,11 @@ func TestPlatformMaintenanceLimitedAdministratorCannotGrantHostReload(t *testing
 	s := testStore(t)
 	limited := accessUser(t, s, "maint-limited", "admin", []string{"system-tools"})
 	in := PlatformMaintenanceGrantInput{Commands: []string{"nginx-reload"}, Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"}
-	if _, e := s.issuePlatformMaintenanceGrant(context.Background(), limited.ID, in); e == nil {
+	if _, e := s.issuePlatformMaintenanceGrant(context.Background(), limited.ID, in, maintenanceTestInstallationID); e == nil {
 		t.Fatal("limited admin granted host reload")
 	}
 	in.Commands = []string{"nginx-check"}
-	if _, e := s.issuePlatformMaintenanceGrant(context.Background(), limited.ID, in); e != nil {
+	if _, e := s.issuePlatformMaintenanceGrant(context.Background(), limited.ID, in, maintenanceTestInstallationID); e != nil {
 		t.Fatal("allowed config check grant rejected", e)
 	}
 }

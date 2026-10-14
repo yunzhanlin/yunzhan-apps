@@ -388,6 +388,8 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 	for _, d := range AppModules() {
 		version := "1.2.0"
 		switch d.ID {
+		case "platform-ops":
+			version = PlatformMaintenanceAppVersion
 		case "task-manager":
 			version = "1.2.1"
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":

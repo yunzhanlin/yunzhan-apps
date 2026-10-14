@@ -12,16 +12,50 @@ import (
 )
 
 type platformMaintenanceGrant struct {
-	ID, Owner string
-	Commands  []string
-	Expires   int64
-	Revoked   bool
+	ID, Owner, InstallationID string
+	Commands                  []string
+	Expires                   int64
+	Revoked                   bool
 }
 
 func (s *Store) migratePlatformMaintenance() error {
-	_, err := s.DB.Exec(`CREATE TABLE IF NOT EXISTS platform_maintenance_grants(token_hash TEXT PRIMARY KEY,owner_id TEXT NOT NULL,commands TEXT NOT NULL,expires_at INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0,1)),created_at TEXT NOT NULL);
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS platform_maintenance_grants(token_hash TEXT PRIMARY KEY,owner_id TEXT NOT NULL,commands TEXT NOT NULL,expires_at INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0,1)),created_at TEXT NOT NULL,installation_id TEXT NOT NULL DEFAULT '');
 CREATE TABLE IF NOT EXISTS platform_maintenance_operations(request_id TEXT PRIMARY KEY,grant_id TEXT NOT NULL,actor_id TEXT NOT NULL,request TEXT NOT NULL,request_sha TEXT NOT NULL,state TEXT NOT NULL,record TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);`)
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := tx.Query("PRAGMA table_info(platform_maintenance_grants)")
+	if err != nil {
+		return err
+	}
+	found := false
+	for rows.Next() {
+		var cid, notnull, pk int
+		var name, kind string
+		var defaultValue any
+		if err = rows.Scan(&cid, &name, &kind, &notnull, &defaultValue, &pk); err != nil {
+			rows.Close()
+			return err
+		}
+		found = found || name == "installation_id"
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	if !found {
+		// Old unversioned grants remain visible/revocable, never rebound.
+		if _, err = tx.Exec("ALTER TABLE platform_maintenance_grants ADD COLUMN installation_id TEXT NOT NULL DEFAULT ''"); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 func platformMaintenanceAdmin(ctx context.Context, db interface {
 	QueryRowContext(context.Context, string, ...any) *sql.Row
@@ -46,7 +80,16 @@ func platformMaintenanceCommandAllowed(ctx context.Context, db interface {
 	}
 	return nil
 }
-func (s *Store) issuePlatformMaintenanceGrant(ctx context.Context, actor string, in PlatformMaintenanceGrantInput) (any, error) {
+func platformMaintenanceCanRevoke(ctx context.Context, db interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}, actor, owner string) bool {
+	access, e := readUserAccessContext(ctx, db, actor)
+	return e == nil && ValidID(owner) && access.Role == "admin" && containsMenu(access.MenuIDs, "system-tools") && (actor == owner || fullAdministrator(access))
+}
+func (s *Store) issuePlatformMaintenanceGrant(ctx context.Context, actor string, in PlatformMaintenanceGrantInput, installationID string) (any, error) {
+	if !ValidID(installationID) {
+		return nil, errors.New("维护授权必须绑定已核对的原生安装实例")
+	}
 	raw, _ := json.Marshal(in)
 	if _, err := DecodePlatformMaintenanceGrant(raw); err != nil {
 		return nil, err
@@ -73,7 +116,7 @@ func (s *Store) issuePlatformMaintenanceGrant(ctx context.Context, actor string,
 	issuedAt := time.Now().UTC()
 	expires := issuedAt.Unix() + int64(in.Minutes)*60
 	commands, _ := json.Marshal(in.Commands)
-	if _, err = tx.ExecContext(ctx, "INSERT INTO platform_maintenance_grants(token_hash,owner_id,commands,expires_at,created_at) VALUES(?,?,?,?,?)", id, actor, string(commands), expires, issuedAt.Format(time.RFC3339)); err != nil {
+	if _, err = tx.ExecContext(ctx, "INSERT INTO platform_maintenance_grants(token_hash,owner_id,commands,expires_at,created_at,installation_id) VALUES(?,?,?,?,?,?)", id, actor, string(commands), expires, issuedAt.Format(time.RFC3339), installationID); err != nil {
 		return nil, err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,'platform.maintenance.grant.issue',?,'issued',?)", actor, id, Now()); err != nil {
@@ -82,7 +125,7 @@ func (s *Store) issuePlatformMaintenanceGrant(ctx context.Context, actor string,
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
-	return map[string]any{"token": token, "grant_id": id, "commands": in.Commands, "expires_at": expires, "scope": "nginx-maintenance", "one_time_secret": true}, nil
+	return map[string]any{"token": token, "grant_id": id, "commands": in.Commands, "expires_at": expires, "scope": "nginx-maintenance", "one_time_secret": true, "installation_id": installationID}, nil
 }
 func validPlatformMaintenanceLifetime(created string, expires int64) bool {
 	issued, err := time.Parse(time.RFC3339, created)
@@ -95,20 +138,24 @@ func (s *Store) platformMaintenanceGrant(ctx context.Context, id string) (platfo
 	var out platformMaintenanceGrant
 	var commands, created string
 	var revoked int
-	if !platformMaintenanceSHA.MatchString(id) || s.DB.QueryRowContext(ctx, "SELECT token_hash,owner_id,commands,expires_at,revoked,created_at FROM platform_maintenance_grants WHERE token_hash=?", id).Scan(&out.ID, &out.Owner, &commands, &out.Expires, &revoked, &created) != nil || json.Unmarshal([]byte(commands), &out.Commands) != nil || !validatePlatformMaintenanceCommands(out.Commands) || !ValidID(out.Owner) || revoked < 0 || revoked > 1 || !validPlatformMaintenanceLifetime(created, out.Expires) {
+	if !platformMaintenanceSHA.MatchString(id) || s.DB.QueryRowContext(ctx, "SELECT token_hash,owner_id,commands,expires_at,revoked,created_at,installation_id FROM platform_maintenance_grants WHERE token_hash=?", id).Scan(&out.ID, &out.Owner, &commands, &out.Expires, &revoked, &created, &out.InstallationID) != nil || json.Unmarshal([]byte(commands), &out.Commands) != nil || !validatePlatformMaintenanceCommands(out.Commands) || !ValidID(out.Owner) || revoked < 0 || revoked > 1 || !validPlatformMaintenanceLifetime(created, out.Expires) || out.InstallationID != "" && !ValidID(out.InstallationID) {
 		return out, errors.New("维护授权身份或字段不可核对")
 	}
 	out.Revoked = revoked == 1
 	return out, nil
 }
 func (a *Server) platformMaintenanceInstalled(ctx context.Context) error {
+	_, err := a.platformMaintenanceInstallation(ctx)
+	return err
+}
+func (a *Server) platformMaintenanceInstallation(ctx context.Context) (string, error) {
 	var m struct {
 		Status SoftwareAppStatus `json:"status"`
 	}
-	if a.Executor.Call(ctx, "GET", "/v1/app-modules/platform-ops", nil, &m) != nil || !knownInstalledAppModule("platform-ops", m.Status) {
-		return errors.New("平台运维应用身份未核对，未执行维护")
+	if a.Executor.Call(ctx, "GET", "/v1/app-modules/platform-ops", nil, &m) != nil || !knownInstalledAppModule("platform-ops", m.Status) || m.Status.Version != PlatformMaintenanceAppVersion || !ValidID(m.Status.InstallationID) {
+		return "", errors.New("需明确更新并核对平台运维1.3.0及安装实例；旧版仅保留健康读取，不签发或执行维护")
 	}
-	return nil
+	return m.Status.InstallationID, nil
 }
 func (a *Server) platformMaintenanceBearer(r *http.Request) (platformMaintenanceGrant, error) {
 	var out platformMaintenanceGrant
@@ -120,6 +167,10 @@ func (a *Server) platformMaintenanceBearer(r *http.Request) (platformMaintenance
 	out, err = a.Store.platformMaintenanceGrant(r.Context(), Hash(strings.TrimPrefix(auth, "Bearer ")))
 	if err != nil || out.Revoked || out.Expires <= time.Now().Unix() || platformMaintenanceAdmin(r.Context(), a.Store.DB, out.Owner) != nil {
 		return out, errors.New("维护授权不存在、已过期、撤销或主体权限已变化")
+	}
+	instance, e := a.platformMaintenanceInstallation(r.Context())
+	if e != nil || !ValidID(out.InstallationID) || instance != out.InstallationID {
+		return out, errors.New("维护安装实例已变化或原授权未绑定，未恢复旧秘密权限")
 	}
 	return out, nil
 }
@@ -135,10 +186,10 @@ func (s *Store) beginPlatformMaintenance(ctx context.Context, g platformMaintena
 	if err = platformMaintenanceAdmin(ctx, tx, g.Owner); err != nil {
 		return req, "", nil, err
 	}
-	var commands, created string
+	var commands, created, installationID string
 	var expiry int64
 	var revoked int
-	if tx.QueryRowContext(ctx, "SELECT commands,expires_at,revoked,created_at FROM platform_maintenance_grants WHERE token_hash=? AND owner_id=?", g.ID, g.Owner).Scan(&commands, &expiry, &revoked, &created) != nil || expiry <= time.Now().Unix() || revoked != 0 || !validPlatformMaintenanceLifetime(created, expiry) {
+	if tx.QueryRowContext(ctx, "SELECT commands,expires_at,revoked,created_at,installation_id FROM platform_maintenance_grants WHERE token_hash=? AND owner_id=?", g.ID, g.Owner).Scan(&commands, &expiry, &revoked, &created, &installationID) != nil || expiry <= time.Now().Unix() || revoked != 0 || !validPlatformMaintenanceLifetime(created, expiry) || !ValidID(installationID) || installationID != g.InstallationID {
 		return req, "", nil, errors.New("派发前维护授权已失效")
 	}
 	var allowed []string
@@ -327,7 +378,7 @@ func (a *Server) platformMaintenanceRoutes(m *http.ServeMux) {
 				fail(w, 503, "原授权损坏，未提供部分清单")
 				return
 			}
-			entries = append(entries, map[string]any{"grant_id": g.ID, "commands": g.Commands, "expires_at": g.Expires, "revoked": g.Revoked, "owner_id": g.Owner})
+			entries = append(entries, map[string]any{"grant_id": g.ID, "commands": g.Commands, "expires_at": g.Expires, "revoked": g.Revoked, "owner_id": g.Owner, "installation_id": g.InstallationID, "legacy_unbound": g.InstallationID == "", "revocable": platformMaintenanceCanRevoke(r.Context(), a.Store.DB, u.ID, g.Owner)})
 		}
 		send(w, 200, map[string]any{"entries": entries, "limit": 128, "read_only": true})
 	}))
@@ -346,11 +397,12 @@ func (a *Server) platformMaintenanceRoutes(m *http.ServeMux) {
 			fail(w, 400, "维护授权字段或确认无效")
 			return
 		}
-		if a.platformMaintenanceInstalled(r.Context()) != nil {
+		installationID, identityErr := a.platformMaintenanceInstallation(r.Context())
+		if identityErr != nil {
 			fail(w, 409, "维护应用未核对，不自动安装")
 			return
 		}
-		out, e := a.Store.issuePlatformMaintenanceGrant(r.Context(), u.ID, in)
+		out, e := a.Store.issuePlatformMaintenanceGrant(r.Context(), u.ID, in, installationID)
 		if e != nil {
 			fail(w, 409, e.Error())
 			return
@@ -375,6 +427,11 @@ func (a *Server) platformMaintenanceRoutes(m *http.ServeMux) {
 		defer tx.Rollback()
 		if platformMaintenanceAdmin(r.Context(), tx, u.ID) != nil {
 			fail(w, 403, "撤销权限已变化")
+			return
+		}
+		var owner string
+		if e := tx.QueryRowContext(r.Context(), "SELECT owner_id FROM platform_maintenance_grants WHERE token_hash=?", r.PathValue("id")).Scan(&owner); e != nil || !platformMaintenanceCanRevoke(r.Context(), tx, u.ID, owner) {
+			fail(w, 403, "只能撤销自己的维护授权；管理他人授权需当前完整管理员权限")
 			return
 		}
 		result, e := tx.ExecContext(r.Context(), "UPDATE platform_maintenance_grants SET revoked=1 WHERE token_hash=?", r.PathValue("id"))

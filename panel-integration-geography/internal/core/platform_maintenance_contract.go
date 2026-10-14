@@ -8,6 +8,7 @@ import (
 
 const PlatformMaintenanceGrantLimit = 128
 const PlatformMaintenanceOperationLimit = 1024
+const PlatformMaintenanceAppVersion = "1.3.0"
 
 var platformMaintenanceSHA = regexp.MustCompile(`^[a-f0-9]{64}$`)
 

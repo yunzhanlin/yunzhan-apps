@@ -246,8 +246,20 @@ func (s *Service) platformMaintenanceStore() platformMaintenanceStore {
 		return e
 	}}
 }
+func (s *Service) platformMaintenanceInstallation() (string, error) {
+	record, e := s.moduleInstalledRecord("platform-ops")
+	instance, ok := record["installation_id"].(string)
+	if e != nil || record["version"] != core.PlatformMaintenanceAppVersion || !ok || !core.ValidID(instance) {
+		return "", errors.New("维护1.3.0安装实例未核对")
+	}
+	return instance, nil
+}
 func (s *Service) platformMaintenancePlan(ctx context.Context) (core.PlatformMaintenancePlan, error) {
 	var out core.PlatformMaintenancePlan
+	instance, e := s.platformMaintenanceInstallation()
+	if e != nil {
+		return out, e
+	}
 	nginx, e := s.nginxBinary()
 	if e != nil {
 		return out, errors.New("Nginx 程序身份不可核对")
@@ -291,7 +303,11 @@ func (s *Service) platformMaintenancePlan(ctx context.Context) (core.PlatformMai
 	if e != nil || !geoStoreStableInfo(before, after) {
 		return out, errors.New("Nginx 程序在计划读取期间变化")
 	}
-	out = core.PlatformMaintenancePlan{Format: 1, SHA: core.Hash(core.Hash(string(binary)) + "\x00" + s.Config.NginxConf + "\x00" + stdout.String()), Commands: core.PlatformMaintenanceCommands()}
+	finalInstance, e := s.platformMaintenanceInstallation()
+	if e != nil || finalInstance != instance {
+		return out, errors.New("读取计划期间维护安装实例变化")
+	}
+	out = core.PlatformMaintenancePlan{Format: 1, SHA: core.Hash(instance + "\x00" + core.Hash(string(binary)) + "\x00" + s.Config.NginxConf + "\x00" + stdout.String()), Commands: core.PlatformMaintenanceCommands()}
 	return out, nil
 }
 func (s *Service) platformMaintenanceRoutes(m *http.ServeMux) {
@@ -332,8 +348,8 @@ func (s *Service) platformMaintenanceRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "程序维护门禁未通过"})
 			return
 		}
-		if _, e = s.moduleInstalledRecord("platform-ops"); e != nil {
-			respond(w, 409, map[string]string{"error": "维护应用未安装"})
+		if _, ie := s.platformMaintenanceInstallation(); ie != nil {
+			respond(w, 409, map[string]string{"error": "需明确更新并核对维护1.3.0，未执行命令"})
 			return
 		}
 		unlock, e := s.lockRuntimeUse()

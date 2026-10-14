@@ -22,14 +22,15 @@ type SoftwareAppCatalogItem struct {
 }
 
 type SoftwareAppStatus struct {
-	ID           string         `json:"id"`
-	StateUnknown bool           `json:"state_unknown,omitempty"`
-	Installed    bool           `json:"installed"`
-	Enabled      bool           `json:"enabled"`
-	Healthy      bool           `json:"healthy"`
-	Version      string         `json:"version,omitempty"`
-	Detail       string         `json:"detail"`
-	Settings     map[string]any `json:"settings,omitempty"`
+	ID             string         `json:"id"`
+	StateUnknown   bool           `json:"state_unknown,omitempty"`
+	Installed      bool           `json:"installed"`
+	Enabled        bool           `json:"enabled"`
+	Healthy        bool           `json:"healthy"`
+	Version        string         `json:"version,omitempty"`
+	InstallationID string         `json:"installation_id,omitempty"`
+	Detail         string         `json:"detail"`
+	Settings       map[string]any `json:"settings,omitempty"`
 }
 
 type SoftwareAppsPage struct {
@@ -89,6 +90,12 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "platform-ops" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && version != PlatformMaintenanceAppVersion {
+			return errors.New("维护新版本仅允许固定完整版本1.3.0，拒绝别名或未审核修订")
+		}
+	}
 	if id == "website-statistics-v2" {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, "2.5.0"); valid && comparison >= 0 && version != "2.5.0" && version != "2.6.0" {
@@ -206,7 +213,10 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if action != "install" && action != "configure" && action != "uninstall" && action != "update" {
 		return "", errors.New("软件生命周期操作无效")
 	}
-	if action == "install" && id == "website-statistics-v2" && version != "" {
+	if action == "install" && id == "platform-ops" && version == "" {
+		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")
+	}
+	if action == "install" && (id == "website-statistics-v2" || id == "platform-ops") && version != "" {
 		if err := ValidateSoftwareUpdate(id, version); err != nil {
 			return "", err
 		}

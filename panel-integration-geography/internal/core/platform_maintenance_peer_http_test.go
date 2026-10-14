@@ -39,7 +39,7 @@ func TestPlatformMaintenanceTwoHTTPSPeersKeepAuthorityAndOriginalID(t *testing.T
 		var reply any
 		switch r.URL.Path {
 		case "/v1/app-modules/platform-ops":
-			reply = map[string]any{"status": SoftwareAppStatus{ID: "platform-ops", Installed: true, Healthy: true, Version: "1.0"}}
+			reply = map[string]any{"status": SoftwareAppStatus{ID: "platform-ops", Installed: true, Healthy: true, Version: PlatformMaintenanceAppVersion, InstallationID: maintenanceTestInstallationID}}
 		case "/v1/platform-maintenance/plan":
 			reply = PlatformMaintenancePlan{Format: 1, SHA: strings.Repeat("e", 64), Commands: PlatformMaintenanceCommands()}
 		case "/v1/platform-maintenance/commands":
@@ -125,7 +125,7 @@ func TestPlatformMaintenanceTwoHTTPSPeersKeepAuthorityAndOriginalID(t *testing.T
 	}
 	cookie, csrf := login(admin)
 	limitedCookie, limitedCSRF := login(limited)
-	issued, e := target.Store.issuePlatformMaintenanceGrant(context.Background(), owner.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"})
+	issued, e := target.Store.issuePlatformMaintenanceGrant(context.Background(), owner.ID, PlatformMaintenanceGrantInput{Commands: PlatformMaintenanceCommands(), Minutes: 60, Confirm: "GRANT NGINX MAINTENANCE"}, maintenanceTestInstallationID)
 	if e != nil {
 		t.Fatal(e)
 	}

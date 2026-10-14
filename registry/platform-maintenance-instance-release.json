@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24mainttxnbfah",
+  "app_version": "1.3.0",
+  "app_stage": "integration",
+  "official_app_version": "1.2.0",
+  "commercial_all50": false,
+  "platform_ops_commercial": false,
+  "main_delivered": false,
+  "frozen_inputs_sha256": "49b9aaefce868accf304fb3c23314eaaa91ae4df2dbf4a18b68743ee796fb5c0",
+  "frozen_files": 16964,
+  "exported_source_files": 1308,
+  "normal_original_key_archives": {
+    "arm64": "1232674170d44f009e27ba33b4a50090cbed2c3807c8d2aee8296e7262656671",
+    "amd64": "fe193a4e058c0c3f60211d754d0a78cc67c1a8575f3938cc646d7675ce58ef26"
+  },
+  "authority": {
+    "required_panel_feature": "platform-maintenance-v1",
+    "explicit_selected_signed_app_version_required": true,
+    "grant_bound_to_installation_instance": true,
+    "legacy_unbound_grants_activated": false,
+    "same_version_repair_preserves_instance": true,
+    "reinstall_preserves_old_authority": false,
+    "limited_admin_can_revoke_higher_admin_grant": false,
+    "old_1_2_0_enables_maintenance": false,
+    "previous_original_request_receipts_rewritten": false
+  },
+  "upgrade_prerequisites": {
+    "check_creates_paths": false,
+    "prepared_journal_and_start_guard_before_create": true,
+    "verified_retained_candidate_helpers_only": true,
+    "fixed_missing_directories_only": true,
+    "existing_foreign_paths_repaired": false,
+    "existing_private_lock_groups": ["root", "fixed NSS panel identity"],
+    "existing_lock_uid_mode_links": "root / 0600 / one ordinary link / at most 1024 bytes",
+    "rollback_deletes_created_directories_or_application_data": false,
+    "development_upgrade_creates_paths": false
+  },
+  "verification": {
+    "root_linux_python_tests": 101,
+    "root_linux_python_failures": 0,
+    "root_linux_python_skips": 0,
+    "root_linux_python_log_sha256": "8af63eb8f65bb58d05fb3a194f550b82d7d45c834e8daf69e42d6f88f157638b",
+    "local_python_tests": 178,
+    "local_python_skips": 99,
+    "local_python_scope": "Skipped Root Linux tests are not local acceptance; they were separately executed on owned Ubuntu24 QA.",
+    "arm64_normal_build_log_sha256": "b8c83216b2d34f331966b8c82056966a7018b376627c2171b465619f1e2f7e6a",
+    "amd64_normal_build_log_sha256": "5ec00a6753c8d297b0bed9b36ff323f6727e47d9fa3a061fa1ae7342ba89d6c0",
+    "root_scope": "Real Root Linux isolated filesystem/SQLite, private installed-record lifecycle and SIGKILL fixtures; service state uses a deterministic runner, not native systemd or a physical power loss."
+  },
+  "actual_qa_program_upgrade": {
+    "previous_program": "0.1.0-dev.proapps23r26b",
+    "program_transaction_committed": true,
+    "initial_immediate_observer_passed": false,
+    "initial_failed_observer_sha256": "826467e7e1ce8bcba4530e986705af2e32c4191ec9b4767dde26c2a240626033",
+    "initial_failure_rewritten": false,
+    "independent_settled_read_only_acceptance_passed": true,
+    "settled_acceptance_sha256": "25a29a07147d33ab5df807c14232dc347c12ac1ac4818a7f445afbb45719c2f2",
+    "preflight_sha256": "4781f92a8687168a5a8aff50c5ddd2a78216cd782179492bd7a7b7c50904aac4",
+    "committed_journal_sha256": "f32ed9edabc42d231ad1e3789aa8312aefee7993ad4622d9e738745e548f7cc0",
+    "prerequisite_intent_sha256": "1d77585efe52889fca290fecefafd491d202200fddc4dfdc6e61fa2f5f8cd52b",
+    "protected_original_table_projections": 81,
+    "protected_files": 3195,
+    "original_module_records": 20,
+    "existing_platform_ops_version": "1.2.0",
+    "application_installs_or_updates": 0,
+    "native_maintenance_commands": 0,
+    "nginx_master_pid": 981,
+    "scope": "Original-key ARM64 normal production-layout PROGRAM upgrade on existing owned Ubuntu24 QA, no Main mutation. Live monitor clocks/peaks/state are not immutable business columns; alert id, metric, started_at, threshold and explicit acknowledgement remain protected. Initial compound post-observer assertion failed without recording which transient field differed. Subsequent independent settled-state acceptance passed; the original failure remains false, not relabelled."
+  },
+  "retained_failed_cohort": {
+    "program": "0.1.0-dev.proapps24mainttxnbfab",
+    "original_signed_arm64_archive_sha256": "257e418286c8eb37ab41f145881e46474026eec02a218f7b1bb5848bbcec669f",
+    "cause": "Read-only preflight rejected the legitimate old root:panel 0600 build.lock. No program swap. BFAH fixes the named fixed-group compatibility without changing the old lock; BFAB source/archive/proof stay unchanged."
+  },
+  "remaining": [
+    "Genuine original-key signed Platform Ops 1.2.0 to 1.3.0 application update through the normal store; official catalog intentionally still 1.2.0.",
+    "Installed two-panel HTTPS check/reload, actual Root Nginx original receipt and response-loss recovery, with normal account/UI checks.",
+    "Main source reconciliation with independent FileManager/backups changes, fresh protected-state preflight and normal deployment.",
+    "Native amd64 and supported OS matrix, physical interruption, mobile real devices and the other all50 business/security/recovery/UI gaps."
+  ]
+}

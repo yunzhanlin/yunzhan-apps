@@ -13,15 +13,36 @@ import (
 // Both HTTP-side pulls and executor-side offline verification use this gate.
 const StatisticsCursorRetirementFeature = "statistics-cursor-retirement-v1"
 const StatisticsRequestIdentityFeature = "statistics-request-identity-v1"
+
 // v2 requires the fixed resource-bounded cache reader and restart fallback;
 // the unpublished v1 prototype must not authorize the final2.6 package.
 const StatisticsGeographyFeature = "statistics-geodata-v2"
 
+// Separate maintenance grants and original native journals; old health-only
+// handlers and the unversioned prototype must not authorize the1.3 package.
+const PlatformMaintenanceFeature = "platform-maintenance-v1"
+
 func panelFeatureAvailable(feature string) bool {
-	return runtime.GOOS == "linux" && (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature)
+	return runtime.GOOS == "linux" && (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature)
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if manifest.ID == "platform-ops" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, "1.3.0")
+		if !valid {
+			return errors.New("维护应用版本无法核对")
+		}
+		if comparison >= 0 {
+			found := false
+			for _, feature := range manifest.RequiredPanelFeatures {
+				found = found || feature == PlatformMaintenanceFeature
+			}
+			if manifest.Version != "1.3.0" || !found {
+				return errors.New("维护1.3仅接受固定完整版本及独立授权、原生原回执处理器声明")
+			}
+		}
+	}
 	if manifest.ID == "website-statistics-v2" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
 		comparison, valid := CompareVersions(base, "2.4.1")
@@ -76,6 +97,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == PlatformMaintenanceFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.0" || manifest.Delivery.Target != manifest.ID) {
+			return errors.New("独立维护处理器要求仅属于platform-ops1.3.0")
+		}
 		if (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature) && (manifest.ID != "website-statistics-v2" || manifest.Delivery.Target != manifest.ID) {
 			return errors.New("统计历史处理器要求不属于该应用")
 		}

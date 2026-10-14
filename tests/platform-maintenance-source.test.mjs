@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
-test('fixed maintenance source is exactly new signed inputs without mutating historical BEXH or claiming native business acceptance',async()=>{
- const current=JSON.parse(await read('panel-integration-geography/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24geoevidencebexh/source-sha256.json')),r=JSON.parse(await read('registry/platform-maintenance-release.json'));
+test('historical BEYO maintenance proof stays bound to its original signed inputs without claiming newer installed acceptance',async()=>{
+ const current=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24maintbeyo/source-sha256.json')),old=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24geoevidencebexh/source-sha256.json')),r=JSON.parse(await read('registry/platform-maintenance-release.json'));
  assert.equal(current.release.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(current.release.archive_sha256,r.normal_original_key_archives.amd64);assert.deepEqual(Object.keys(current.files).filter(p=>current.files[p]!==old.files[p]),r.only_source_changes_from_bexh);assert.deepEqual(current.test_overrides??{},{});assert.equal(Object.keys(current.files).length,r.exported_source_files);
  for(const key of ['commercial_all50','platform_ops_commercial','main_delivered'])assert.equal(r[key],false,key);
  const a=r.authority;assert.deepEqual(a.commands,['nginx-check','nginx-reload']);for(const key of ['old_health_token_promoted','secret_persisted_in_browser','remote_tls_verification_bypassed','automatic_post_retry','automatic_journal_repair_or_deletion','same_id_rebind_allowed','different_id_bypasses_unknown_reload','free_shell_or_arbitrary_paths_allowed'])assert.equal(a[key],false,key);

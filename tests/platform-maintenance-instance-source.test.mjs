@@ -1,0 +1,35 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
+test('instance-bound candidate source and actual program evidence cannot become a signed application or all50 acceptance claim',async()=>{
+ const r=JSON.parse(await read('registry/platform-maintenance-instance-release.json'));
+ const index=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
+ assert.equal(index.release.frozen_inputs_sha256,r.frozen_inputs_sha256);
+ assert.equal(index.release.archive_sha256,r.normal_original_key_archives.amd64);
+ assert.equal(Object.keys(index.files).length,r.exported_source_files);assert.deepEqual(index.test_overrides??{},{});
+ for(const key of ['commercial_all50','platform_ops_commercial','main_delivered'])assert.equal(r[key],false);
+ const candidate=JSON.parse(await read('registry/candidates/platform-ops-1.3.0.json'));
+ assert.equal(candidate.stage,r.app_stage);assert.equal(candidate.version,r.app_version);
+ const catalog=JSON.parse(await read('dist/catalog-v1.json'));
+ assert.equal(catalog.apps.find(a=>a.id==='platform-ops').version,r.official_app_version);
+ const a=r.authority;for(const key of ['explicit_selected_signed_app_version_required','grant_bound_to_installation_instance','same_version_repair_preserves_instance'])assert.equal(a[key],true,key);
+ for(const key of ['legacy_unbound_grants_activated','reinstall_preserves_old_authority','limited_admin_can_revoke_higher_admin_grant','old_1_2_0_enables_maintenance','previous_original_request_receipts_rewritten'])assert.equal(a[key],false,key);
+ const q=r.actual_qa_program_upgrade;
+ assert.equal(q.program_transaction_committed,true);assert.equal(q.initial_immediate_observer_passed,false);assert.equal(q.initial_failure_rewritten,false);
+ assert.equal(q.independent_settled_read_only_acceptance_passed,true);assert.equal(q.application_installs_or_updates,0);assert.equal(q.native_maintenance_commands,0);assert.equal(q.existing_platform_ops_version,'1.2.0');
+ assert.deepEqual([r.verification.root_linux_python_tests,r.verification.root_linux_python_failures,r.verification.root_linux_python_skips],[101,0,0]);
+});
+test('production prerequisite boundary stays fixed, durable, read-only before run and non-destructive on recovery',async()=>{
+ const code=await read('panel-integration-geography/packaging/upgrade-release.py');
+ const run=code.slice(code.indexOf('    def run(self):'),code.indexOf('    def rollback(self):'));
+ assert(run.indexOf("self.journal('prepared')")<run.indexOf('self.native_prerequisites(create=True)'));
+ assert(run.indexOf('self.start_guard(install=True)')<run.indexOf('self.native_prerequisites(create=True)'));
+ assert(run.indexOf('self.native_prerequisites(create=True)')<run.indexOf('self.stop_writers()'));
+ for(const needle of ['source = self.private_candidate',"'policy':'create-missing-retain-on-rollback'",'native prerequisite intent differs from retained candidate'])assert(code.includes(needle),needle);
+ const helper=await read('panel-integration-geography/packaging/native-build-directories.py');
+ for(const needle of ["groups.add(grp.getgrnam('panel').gr_gid)",'info.st_gid not in groups','info.st_nlink != 1','stat.S_IMODE(info.st_mode) != 0o600'])assert(helper.includes(needle),needle);
+ const verifier=await read('panel-integration-geography/packaging/verify-release.sh');
+ assert(verifier.includes('"$VERIFY_HOME/release-file-modes.py" check "$DIR"'));
+ const ci=await read('.github/workflows/verify.yml');assert(ci.includes('^TestPlatformMaintenance(Root|Native)'));assert(ci.includes('test_verify_previous_release.py'));
+});

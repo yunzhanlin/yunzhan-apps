@@ -63,9 +63,14 @@ jobs:
         run: sudo "$(command -v go)" test -race ./internal/core -run '^TestPlatformMaintenance' -count=1
       - name: Root maintenance original journal and no-replay crash fixtures (not real Nginx business or power-loss acceptance)
         working-directory: panel-integration-geography
-        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenanceRoot' -count=1
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenance(Root|Native)' -count=1
       - name: Latest maintenance upgrade SQL and transaction fixtures (not installed command acceptance)
         run: sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_production_upgrade.py'
+      - name: Previous-release integrity policy and fixed native prerequisites (Root filesystem fixtures only)
+        run: |
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_verify_previous_release.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_native_build_directories.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_waf_state_directory.py'
       - name: Statistics expired-cursor ownership and one-transaction retirement race regression
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatisticsHistory(ExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs|RetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary|RetirementAndRowsAreOneTransaction)$' -count=1

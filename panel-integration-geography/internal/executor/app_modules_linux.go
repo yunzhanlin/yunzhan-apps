@@ -111,6 +111,9 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	out.Installed = true
 	out.Enabled = true
 	out.Version, _ = manifest["version"].(string)
+	if id == "platform-ops" {
+		out.InstallationID, _ = manifest["installation_id"].(string)
+	}
 	if out.Version == "" {
 		out.Version = "1.0"
 	} // pre-versioned modules
@@ -212,13 +215,16 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		return errors.New("未知模块")
 	}
 	if selectedVersion != "" {
-		if id != "website-statistics-v2" || action != "install" {
+		if (id != "website-statistics-v2" && id != "platform-ops") || action != "install" {
 			return errors.New("安装版本选择不适用于该应用或动作；配置保存不能代替版本更新")
 		}
 		if err := core.ValidateSoftwareUpdate(id, selectedVersion); err != nil {
 			return err
 		}
 	} else {
+		if id == "platform-ops" && action == "install" {
+			return errors.New("维护应用安装须使用签名应用的明确版本，未把旧接口升级为新授权")
+		}
 		selectedVersion = core.SoftwareImplementationVersion(id)
 	}
 	if id == "website-statistics-v2" && action == "install" && (selectedVersion == statisticsIdentityVersion || selectedVersion == statisticsGeographyVersion) {
@@ -244,8 +250,8 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 		defer reader.Close()
 	}
-	if id == "website-statistics-v2" && action == "install" && s.moduleInstalled(id) {
-		return errors.New("统计应用已安装；请使用签名更新流程，安装不能覆盖版本或原历史")
+	if (id == "website-statistics-v2" || id == "platform-ops") && action == "install" && s.moduleInstalled(id) {
+		return errors.New("应用已安装；请使用签名更新流程，安装不能覆盖版本、实例或原历史")
 	}
 	if id == "website-statistics-v2" && action == "install" {
 		schema, err := s.statisticsHistorySchemaReadOnly(ctx)
@@ -375,6 +381,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedRecord := map[string]any{"id": id, "version": selectedVersion, "settings": settings, "installed_at": core.Now()}
+	if id == "platform-ops" && selectedVersion == core.PlatformMaintenanceAppVersion {
+		installedRecord["installation_id"] = core.ID()
+	}
 	if action == "configure" {
 		previous, e := s.moduleInstalledRecord(id)
 		if e != nil {
@@ -516,6 +525,15 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			return err
 		}
 		manifest["version"], manifest["updated_at"] = version, core.Now()
+		if id == "platform-ops" && version == core.PlatformMaintenanceAppVersion {
+			// A genuine version transition gets a new installation authority.
+			// Same-version repair preserves a verified existing instance.
+			if status.Version != version {
+				manifest["installation_id"] = core.ID()
+			} else if instance, ok := manifest["installation_id"].(string); !ok || !core.ValidID(instance) {
+				return errors.New("原维护安装实例不可核对，未补写或恢复授权")
+			}
+		}
 		if err := moduleWrite(path, manifest); err != nil {
 			return err
 		}
