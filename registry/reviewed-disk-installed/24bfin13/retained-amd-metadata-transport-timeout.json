@@ -1,0 +1,15 @@
+{
+  "format": 1,
+  "ok": false,
+  "arch": "amd64",
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "original_proof_sha256": "b52f95371c6d5582a3f76a016b5b2e18784eabdd56fe298963e8c1e4142b317d",
+  "checks_completed": 0,
+  "failure": "spawnSync ssh ETIMEDOUT",
+  "phase": "QA observer checking retained fixture metadata, before native app scan",
+  "original_failure_rewritten": false,
+  "original_restoration_completed_and_only_read_observed": true,
+  "original_restoration_replayed": false,
+  "product_scan_deadline_or_entry_limit_changed": false,
+  "commercial_all50": false
+}

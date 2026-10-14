@@ -1,0 +1,24 @@
+{
+  "format": 1,
+  "original_proof_sha256": "a3d7d867ad7a4e59975c7e86f14cb12bf1a105a8d6af8b5e2eb3224cce48cc92",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "arch": "arm64",
+  "source_inputs_sha256": "dc68c6d2f089dc94c4680b6799cee6cde736cebd6ee70c73fdb27a0dde15cb05",
+  "archive_sha256": "33c11f1c795e721623bb02c4eb747fa1d00004e02249f70fbb2582bed1868a91",
+  "original_disk_version": "1.2.0",
+  "sites": 82,
+  "app_records": 20,
+  "protected_files_unchanged": 708,
+  "protected_table_projections_unchanged": 94,
+  "original_programs": {
+    "panel": "629f2484dff6b7ca10a18970d464db0c158460d6feb782a7ddaa94031bd6b141",
+    "panel-executor": "a09006bcbc1dcd9d5b25ce4d230276c6a2b597828d85212ba8e8af0aa1265f65"
+  },
+  "journal_sha256": "f9a2a3a1ec50440c0fe29e2a96bae0591c7f1c229217f849c9cb357b3abc7bbc",
+  "committed": true,
+  "pending": false,
+  "application_installs_updates": 0,
+  "native_commands": 0,
+  "commercial_all50": false
+}

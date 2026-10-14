@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "original_proof_sha256": "ef8b8ebbf866bed23e219b456265a1d4ddb93b6b717634ef3fcf68500df7d47a",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "arch": "arm64",
+  "installed_app_version": "1.3.0",
+  "checks": [
+    "client abort issued only after observing actual executor directory FD for this owned100003-file scan",
+    "actual executor records context-canceled failure and does not publish interrupted report over previous successful report",
+    "interrupted scan releases its directory FD/mutex and following genuine native scan matches original inode accounting",
+    "same original fixture metadata remains unchanged and exact inode is recoverably returned to private evidence without deletion"
+  ],
+  "actual_active_executor_directory_fd": {
+    "actual_executor_pid": "38812",
+    "owned_wide_directory_open": true,
+    "observed_seconds": 0.0021894279998377897
+  },
+  "client_abort": {
+    "error": "AbortError"
+  },
+  "released_directory_fd": {
+    "actual_executor_pid": "38812",
+    "owned_wide_directory_open": false,
+    "observed_seconds": 0.00019025099936698098
+  },
+  "native_context_canceled_failure_recorded": true,
+  "same_original_fixture_metadata_unchanged": true,
+  "old_successful_report_retained": true,
+  "recovery_native_counters": {
+    "total_bytes": 134217745,
+    "unique_logical_bytes": 67108881,
+    "allocated_bytes": 8192,
+    "files": 3,
+    "unique_files": 2,
+    "hardlink_entries": 1,
+    "sparse_candidates": 1,
+    "ignored_links": 2,
+    "ignored_special": 1
+  },
+  "ui_cancel_button_proven": false,
+  "deleted_files": 0,
+  "commercial_all50": false
+}

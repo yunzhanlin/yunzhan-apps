@@ -1,0 +1,72 @@
+{
+  "format": 1,
+  "original_proof_sha256": "73bf373963db3eb593b0e2616cdb9ada4ded328aa4b95224ebb1f4bf7b51a28f",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskgatebfin",
+  "arch": "amd64",
+  "installed_app_version": "1.3.0",
+  "checks": [
+    "actual native sparse/hardlink dedup and per-path logical counts match independent inode/block metadata; symlinks/FIFO ignored",
+    "actual invalid UTF8 fixture is accounted but not exposed as an actionable path",
+    "actual130-level tree is explicitly incomplete at128-depth boundary",
+    "actual installed100003-file fixture stops at100000 entries and top100 within bounded response",
+    "actual traversal/absolute/private-prefix/link/file paths refused without overwriting last successful report",
+    "actual missing CSRF and anonymous requests denied",
+    "actual site-scoped viewer cannot invoke disk system-tool API; owned temporary account revoked and deleted",
+    "actual installed history retains successful scans and refused path attempts",
+    "ordinary-UID fixture inode/modes/size/block counts and regular-file atimes unchanged, supporting metadata-only access",
+    "only own fixture moved to private recovery evidence; original sites/modules/accounts/credentials/native receipts and Nginx PID unchanged"
+  ],
+  "original_data_unchanged": true,
+  "fixture_metadata_unchanged": true,
+  "original_fixture_proof_sha256": "fc2a84f1169a62c18b87e80c4783be19e3b2c452148af300a9eece971cab7159",
+  "ordinary_fixture_uid_nonroot": true,
+  "accounting": {
+    "total_bytes": 134217745,
+    "unique_logical_bytes": 67108881,
+    "allocated_bytes": 8192,
+    "files": 3,
+    "unique_files": 2,
+    "hardlink_entries": 1,
+    "sparse_candidates": 1,
+    "ignored_links": 2,
+    "ignored_special": 1
+  },
+  "wide": {
+    "fixture_files": 100003,
+    "entries_scanned": 100000,
+    "files": 99999,
+    "unique_files": 99999,
+    "largest_rows": 100,
+    "scan_complete": false,
+    "partial": true,
+    "entry_limited": true,
+    "response_bytes": 42349,
+    "elapsed_ms": 4710.791457999992
+  },
+  "invalid_utf8": {
+    "files": 1,
+    "classification_limited": true,
+    "can_drill": false
+  },
+  "deep": {
+    "files": 0,
+    "depth_limited": true,
+    "scan_complete": false
+  },
+  "path_refusal_statuses": [
+    409,
+    409,
+    409,
+    409,
+    409,
+    409,
+    409
+  ],
+  "same_inode_recoverably_retired": true,
+  "deleted_files": 0,
+  "application_installs_updates": 0,
+  "commercial_all50": false,
+  "retained_interrupted_observer_sha256": "b52f95371c6d5582a3f76a016b5b2e18784eabdd56fe298963e8c1e4142b317d",
+  "original_restoration_replayed": false
+}
