@@ -4,7 +4,7 @@ import {readFile} from 'node:fs/promises';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('instance-bound candidate source and actual program evidence cannot become a signed application or all50 acceptance claim',async()=>{
  const r=JSON.parse(await read('registry/platform-maintenance-instance-release.json'));
- const index=JSON.parse(await read('panel-integration-geography/source-sha256.json'));
+ const index=JSON.parse(await read('registry/reviewed-sources/0.1.0-dev.proapps24mainttxnbfah/source-sha256.json'));
  assert.equal(index.release.frozen_inputs_sha256,r.frozen_inputs_sha256);
  assert.equal(index.release.archive_sha256,r.normal_original_key_archives.amd64);
  assert.equal(Object.keys(index.files).length,r.exported_source_files);assert.deepEqual(index.test_overrides??{},{});

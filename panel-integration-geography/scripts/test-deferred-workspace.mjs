@@ -76,7 +76,7 @@ test('the real compiled show function refuses automatic actions after page, site
   await new Function(...Object.keys(bindings),js+'\nreturn show;')(...Object.values(bindings))(id);
   assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
   assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
-  return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
+  return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
  }
  for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){
   const out=await open(id,path);assert.equal(out.requests.at(-1),path);assert.deepEqual(out.executed,[]);assert.match(out.error,/retained read failure/);
@@ -88,8 +88,9 @@ test('the real compiled show function refuses automatic actions after page, site
  assert.deepEqual((await open('task-manager')).executed,['run']);
  for(const version of ['1.2.0','1.3.0']){
   const instance=version==='1.3.0'?'d'.repeat(32):undefined;
-  const out=await open('platform-ops',undefined,['run'],null,false,false,{status:{id:'platform-ops',installed:true,healthy:true,version,installation_id:instance}});
+  const out=await open('platform-ops',undefined,['run'],null,false,false,{status:{id:'platform-ops',installed:true,healthy:true,version,installation_id:instance},workspace:[{id:'maintenance',label:'受限跨主机维护',fields:null,actions:null}]});
   assert.equal(out.version,version);assert.equal(out.instance,instance??'');assert.deepEqual(out.executed,[],'opening maintenance must never issue a command');
+  assert.deepEqual(out.workspace[0].fields,[]);assert.deepEqual(out.workspace[0].actions.filter(action=>action!=='ids-rules'),[],'legacy null must become an empty collection, never a generic run action');
  }
  for(const status of [undefined,{}, {id:'other',installed:true,healthy:true},{id:'task-manager',installed:'true',healthy:true},{id:'task-manager',installed:true,healthy:'true'},{id:'task-manager',installed:true,healthy:true,state_unknown:'false'}]){
   const out=await open('task-manager',undefined,['run'],null,false,false,{status,report:{untrusted:'not-current'}});

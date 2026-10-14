@@ -12,6 +12,14 @@ type AppModuleSection struct {
 
 func ModuleWorkspace(id string) (out []AppModuleSection) {
 	section := func(id, label, help string, fields, actions []string) AppModuleSection {
+		// These are collection fields on the HTTP wire, including read-only
+		// sections. nil would encode as null and break the management renderer.
+		if fields == nil {
+			fields = []string{}
+		}
+		if actions == nil {
+			actions = []string{}
+		}
 		return AppModuleSection{id, label, help, fields, actions}
 	}
 	defer func() {

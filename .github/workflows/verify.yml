@@ -61,6 +61,11 @@ jobs:
       - name: Separate maintenance authority, HTTPS peer identity and original receipt race regression (not installed remote command acceptance)
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/core -run '^TestPlatformMaintenance' -count=1
+      - name: Every module workspace emits array collections including read-only maintenance
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/core -run '^TestModuleWorkspace' -count=1
+      - name: Compiled management opener handles legacy null collections without inventing operations
+        run: node --test panel-integration-geography/scripts/test-deferred-workspace.mjs
       - name: Root maintenance original journal and no-replay crash fixtures (not real Nginx business or power-loss acceptance)
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenance(Root|Native)' -count=1

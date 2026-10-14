@@ -361,7 +361,7 @@ async function show(id: string) {
     }>(`/app-modules/${id}`);
     if (page.definition?.id !== id) throw new Error("应用页面身份无法核对；未展示其他应用的管理操作");
     definition.value = page.definition;
-    workspace.value = page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }];
+    workspace.value = (page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }]).map(section => ({ ...section, fields: section.fields ?? [], actions: section.actions ?? [] }));
     activeTab.value = workspace.value[0]?.id || "overview";
     guidance.value = page.guidance;
     if(id==='daily-report')dailyWorker.value = page.daily_worker;

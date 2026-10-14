@@ -1,0 +1,68 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24maintuibfaw",
+  "previous_program": "0.1.0-dev.proapps24mainttxnbfah",
+  "commercial_all50": false,
+  "platform_ops_commercial": false,
+  "main_delivered": false,
+  "official_app_version": "1.2.0",
+  "candidate_app_version": "1.3.0",
+  "frozen_inputs_sha256": "65cb34b24ed5ddd14e3e504669d0c39835d5caa1f269eb908ca24d187ac4608e",
+  "exported_source_files": 1308,
+  "normal_original_key_archives": {
+    "arm64": "644984e8aab3afe4a7e375c7b5749899ea7e318103c6a411c4eac8cf23db92da",
+    "amd64": "f4fe7b045069454e43bfaa518dcc9891b560cf7f3301ab9f2cf564c60ad692c9"
+  },
+  "only_source_changes_from_bfah": [
+    "internal/core/app_module_workspace.go",
+    "internal/core/app_module_workspace_test.go",
+    "web/src/AppModuleManager.vue",
+    "scripts/test-deferred-workspace.mjs"
+  ],
+  "retained_original_browser_failure": {
+    "program": "0.1.0-dev.proapps24mainttxnbfah",
+    "proof_sha256": "75600de3108a202f45d4a5c3c853018283ba7d7d9382285ca96e52749b0fafd1",
+    "cause": "Real installed normal-account browser selected maintenance and encountered section.actions.filter on JSON null; tab rendered blank. Isolated synthetic component tests had missed the outer management renderer.",
+    "rewritten_as_success": false
+  },
+  "fix": {
+    "server_empty_collection_is_explicit_array": true,
+    "legacy_null_client_collection_is_empty_array": true,
+    "default_run_action_invented": false,
+    "old_installed_app_silently_enabled_for_maintenance": false,
+    "wire_contract_test_covers_every_module_definition": true,
+    "packaging_unchanged_from_bfah": true
+  },
+  "actual_qa_program_upgrade": {
+    "preflight_passed": true,
+    "preflight_sha256": "5cfcef21c37461b604d1c06ff8504cadc23a640a1c62827edac9437b1b549060",
+    "upgrade_passed": true,
+    "upgrade_sha256": "9eb72840e7f6ac360aae3271b698a04b91ae2ca1e394e8bec3b6c94fd01409f4",
+    "committed_journal_sha256": "8c3e30508c383d3cc299d2ab83d39563eea52cc665d95e84f0b43eea2bb7a22c",
+    "protected_original_table_projections": 94,
+    "protected_paths": 3202,
+    "original_module_records": 20,
+    "nginx_master_pid": 981,
+    "new_app_installs_or_updates": 0,
+    "native_maintenance_commands": 0,
+    "actual_core_sha256": "1a41f862aa230a88e3353a68399f16508c8e5a6a6b39644865b178b2af96d081",
+    "actual_executor_sha256": "e2185dad6361e2d621a2831666970dfc7f0ea0c0f046533949c4395e566ada51"
+  },
+  "actual_installed_browser": {
+    "passed": true,
+    "proof_sha256": "b63f265c41c08b67a39c80bf4b77bc9b3114947ec7f61b0b65ae85f2acc9b565",
+    "script_sha256": "51ebf6bbf9d88fa5f002f2f7d5344140b5a3e4308492f67e92ff34c24cae72c7",
+    "checks": 6,
+    "unexpected_errors": 0,
+    "initial_anonymous_me401_expected": true,
+    "installed_app_version": "1.2.0",
+    "new_maintenance_authority_disabled": true,
+    "site_inventory": "Exact 11 nonarchived IDs through real account/API; all82 SQL site records including71 archived stay unchanged.",
+    "scope": "Real signed ARM64 Ubuntu24 production-layout QA on original19220 origin, normal login, software store, real SVG favicon, maintenance tab and explicit old-version refusal;390px no document overflow. No fake API, DOM, response, Host or grant/command; not signed1.3 app update or installed two-panel remote execution acceptance."
+  },
+  "remaining": [
+    "Normal original-key signed1.2 to1.3 application update, installed two-panel HTTPS and native Nginx original receipt/response-loss acceptance.",
+    "Main FM/backups source reconciliation and normal delivery preserving19100/19101 sites.",
+    "Full50 commercial security/business/recovery/UI, supported OS/nativeamd64 and mobile real-device evidence remain incomplete."
+  ]
+}
