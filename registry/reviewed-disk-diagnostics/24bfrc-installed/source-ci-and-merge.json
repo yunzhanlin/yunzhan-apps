@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "original_proof_sha256": "d9625bcd57656d147ad21d2fffbe94b1e09cf50cbb79a6b865bf2d702b59fd95",
+  "program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "head": "e8196a1646f520a8ebaa07af215d0b0f49b0a1eb",
+  "merge_commit": "6081184d7645729dc2501baccdaf093ef94a2903",
+  "merged_at": "2026-10-15T15:41:30Z",
+  "check_run_id": 116501017679,
+  "run_id": 38757872902,
+  "check_status": "completed",
+  "conclusion": "success",
+  "statuses": [],
+  "has_more": false,
+  "matched_head_normal_merge": true,
+  "commercial_all50": false,
+  "scope": "Exact source CI40 and normal matched-head merge, not CI for this later evidence-only publication."
+}

@@ -1,0 +1,43 @@
+{
+  "format": 1,
+  "phase": "signed-installed-diagnostic-native-qa-not-causal-repair",
+  "program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "source_export": "panel-integration-disk-diagnostic",
+  "historical_candidate": "registry/disk-host-diagnostic-candidate.json",
+  "historical_candidate_sha256": "b34fd3994562b50599290471c51b6d3a30bbec15fdfa01dae22c54ed29482496",
+  "historical_candidate_unmodified": true,
+  "source_ci_merged": true,
+  "normal_program_only_signed_upgrade_both": true,
+  "actual_large_amd_scan_passed": true,
+  "same_program_interruption_recovery_both": true,
+  "installed_failure_diagnostic_capture_verified": false,
+  "original_failure_cause_proven": false,
+  "original_failure_fixed": false,
+  "large_arm_scan_verified": false,
+  "main_delivered": false,
+  "main_absent_apps_installed": false,
+  "all_os_verified": false,
+  "physical_host_verified": false,
+  "extended_soak_complete": false,
+  "mobile_devices_verified": false,
+  "commercial_all50": false,
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "evidence_root": "registry/reviewed-disk-diagnostics/24bfrc-installed",
+  "evidence_sha256": {
+    "source-ci-and-merge.json": "1689443cf010c572fb8e5f2b126cb682b284cb25126d1acee6ae6c3fef84e269",
+    "actual-normal-signed-upgrade-arm64.json": "d8057c16e785378621c2b2bc8baa11e516764a8c2e04f7fe04ea5da8eac0761a",
+    "actual-normal-signed-upgrade-amd64.json": "380e8d9b1213eb8897820f924fb20e61811fd01e350e3ac2b8876bd0238d5377",
+    "actual-large-scan-amd64.json": "48a3c17a82587a2d3cdbc8a202c34276ad581ad74d63fe05e947111e83c59a09",
+    "actual-native-interruption-amd64.json": "b07487689f563dff9e45f83626898264bbcf3eb105d4d9f734c658ef271d2fe7",
+    "actual-native-interruption-arm64.json": "a70824eca6b53ba21785e683a47ebe46cec0cf4ae8dd5c598685e5be2a7f305d"
+  },
+  "scope": "Later real installed QA evidence appended separately; immutable source, prior source-stage acceptance/failure snapshots and original signed catalog/app bytes are not rewritten. Actual successful new scan and same-version two-architecture crash closures are not an original cause fix, Main delivery or all50 acceptance.",
+  "remaining": [
+    "Reproduce and explain original progress/authority failure and verify actual installed fixed diagnostic on a genuine failure",
+    "Permission revocation, failed-scope reuse, history limits/globalspool/lowdisk and recoverable cleanup/restore",
+    "Broader Linux/filesystem/physical/soak/mobile-device coverage and all other50 application capabilities",
+    "Safe Main delivery without automatically installing absent apps"
+  ]
+}
