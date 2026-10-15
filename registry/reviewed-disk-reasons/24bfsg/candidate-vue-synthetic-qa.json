@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "original_proof_sha256": "0e7bf269ca8a92b6fdb8d71589fb0121e70fb25045e32a184ed8e739268edd8a",
+  "kind": "actual-vue-component-with-closed-synthetic-api-only",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": true,
+  "checks": 12,
+  "script_sha256": "27f7bb6f516aec6d96213811b3f3b73f694a2c4565b39f64e8056dc9ca632621",
+  "old_duplicate_codes_present_in_fixture": true,
+  "duplicate_warning_display_count": 1,
+  "distinct_reasons_preserved": true,
+  "failed_incomplete_and_unflushed_warnings_preserved": true,
+  "exact_json_export_original_duplicates_and_counters_preserved": true,
+  "decimal_precision_preserved": true,
+  "narrow390_viewport_verified": true,
+  "late_reply_permission_revocation_verified": true,
+  "installed_new_program_proof": false,
+  "native_scans": 0,
+  "application_installs_updates": 0,
+  "scope": "Real Vue interaction against closed synthetic data, including exact export; not an installed/native scan, physical device or production proof.",
+  "commercial_all50": false
+}

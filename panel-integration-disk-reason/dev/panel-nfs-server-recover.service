@@ -1,0 +1,15 @@
+[Unit]
+Description=CloudStack unfinished NFS export configuration recovery
+Before=panel-nfs-server.service
+[Service]
+Type=oneshot
+User=root
+ExecStart=/opt/panel/bin/panel-executor --recover-nfs-server
+RemainAfterExit=yes
+TimeoutStartSec=20
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/etc/panel/security-apps
