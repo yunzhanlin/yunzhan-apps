@@ -1,0 +1,91 @@
+{
+  "format": 1,
+  "phase": "normal-signed-reason-fix-source-before-installed-acceptance",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "frozen_files": 17035,
+  "source_overrides": 0,
+  "source_export": "panel-integration-disk-reason",
+  "previous_source_export": "panel-integration-disk-diagnostic",
+  "previous_program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "previous_source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "source_export_files": 1379,
+  "release_bound_export_files": 1338,
+  "only_added_source": [
+    "internal/executor/app_disk_host_result.go",
+    "internal/executor/app_disk_host_result_test.go"
+  ],
+  "only_changed_source": [
+    "internal/executor/app_disk_host_worker_linux.go",
+    "scripts/qa-host-disk-workspace.mjs",
+    "scripts/test-host-disk.mjs",
+    "web/src/HostDiskWorkspace.vue",
+    "web/src/hostDisk.ts"
+  ],
+  "removed_source": [],
+  "normal_builds_both_architectures": true,
+  "original_key_signatures_verified_both": true,
+  "native_candidate_source_tests_passed_each": 15,
+  "source_vue_synthetic_checks": 12,
+  "previous_workflow_sha256": "3b86094a1975f98c992536e3e1a173768ef83e6e50d4b3ae912f1f73d3b8a8bb",
+  "actual_baseline_permission_revocation_verified_both": true,
+  "actual_baseline_installed_failure_diagnostic_capture_verified_both": true,
+  "actual_baseline_terminal_idempotency_verified_amd64": true,
+  "source_duplicate_reason_fix_verified": true,
+  "legacy_receipt_decoder_unchanged": true,
+  "legacy_export_data_unchanged": true,
+  "authority_deadline_seconds_unchanged": 2,
+  "worker_cpu_percent_unchanged": 20,
+  "worker_memory_bytes_unchanged": 536870912,
+  "app14_installation_epochs_unchanged": true,
+  "new_program_deployed": false,
+  "installed_new_worker_reason_fix_verified": false,
+  "installed_new_ui_reason_fix_verified": false,
+  "original_large_failure_cause_proven": false,
+  "original_large_failure_fixed": false,
+  "main_delivered": false,
+  "main_absent_apps_installed": false,
+  "commercial_all50": false,
+  "normal_archives": {
+    "arm64": "11e394ac00ac3cb2f5ce2212feff8df0b79b3803b6adc06073d0141a7b048610",
+    "amd64": "a1f7a4e1fe0af606712b844d675df8f7602fa4b2c383dba05e81b54a9e25d148"
+  },
+  "normal_build_logs": {
+    "arm64": "edd19f9d1fd9d26a0cb073fd86b878b23e54bc0271c514f4869fd71bb95e79ad",
+    "amd64": "7f66199b439408a23e925f62d9a4b71a83d138e4554a7cc9c0632dbd2e6db131"
+  },
+  "candidate_manager_asset": {
+    "file": "AppModuleManager-Cz7_lVuz.js",
+    "bytes": 258312,
+    "sha256": "06734883ca5752ae3ea35ea783224b610b085db7edf7a93b8c03400f296638f6"
+  },
+  "baseline_manager_asset": {
+    "file": "AppModuleManager-Hca6S3hl.js",
+    "sha256": "ada1bb95b6156e6175d69d01f55aeec66ca3be78fcf7cae094129a8d8a26fe48"
+  },
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "retained_original_failure_result_sha256": "da6afef0660f5a8522ce3011247e57392b4f90b6c843e822ed46e6b552d4c295",
+  "historical_registry_sha256": {
+    "registry/disk-host-diagnostic-candidate.json": "b34fd3994562b50599290471c51b6d3a30bbec15fdfa01dae22c54ed29482496",
+    "registry/disk-host-installed-diagnostic-acceptance.json": "1ff1e212ebf5f69ddf336cb3ae5ff9013d468f732e2e675f071e3c5aa60214be",
+    "registry/reviewed-disk-diagnostics/24bfrc/retained-real-larger-scan-failure-amd64.json": "d4bdbb239042c290f31568db6d87f602f8740534d44085cc6599b49247e1a65f"
+  },
+  "evidence_root": "registry/reviewed-disk-reasons/24bfsg",
+  "evidence_sha256": {
+    "actual-baseline-permission-revocation-amd64.json": "4566c88e87e10715a059bee4cd424234d9e0b618e221715e18cce614bad98004",
+    "actual-baseline-permission-revocation-arm64.json": "d3435ec5213a20faca6c84f2f2d994b58f9594d93bcd17e198162db6a9dae79f",
+    "actual-baseline-terminal-idempotency-amd64.json": "2d7f9bb73d17a11050ea87947386d17e03c15231277fb5ca7efb7c0b5ca7592e",
+    "native-candidate-source-tests-arm64.json": "af74d240dcf76f116b488b1f81d28d6ee339f04ae2244c0189dfbdeec45a78c4",
+    "native-candidate-source-tests-amd64.json": "401e1f2e8440185acb2ff2e267f9970d37b3c13abd572c39d476dafd13ab8577",
+    "candidate-vue-synthetic-qa.json": "c2d3869460f39ea209b5b8d83ace01e77d6ec75db347a225db83c86fc0180d9a",
+    "normal-builds-and-original-key-signatures.json": "777d263a0c6e07a9f6dbe859435958a0d8e7e795d9778ff58bd6622e7c54df0c"
+  },
+  "scope": "New immutable candidate avoids adding an already-present failure code and deduplicates only legacy warning presentation; no stored receipt, exact JSON export, authority, resource, identity, schema, dispatch or idempotency policy is relaxed. Real predecessor revocation/privacy/enum-capture and terminal-boundary acceptance are distinct from candidate source-only/native-test/synthetic-UI evidence. Original11904-entry AMD failure remains FAILED with unknown cause.",
+  "remaining": [
+    "Exact-source CI and matched-head normal merge before program-only QA upgrade",
+    "Actual installed new UI must display original legacy warning once while preserving exact raw export and Root/Core hashes",
+    "Actual newly generated worker failure must not add duplicate reasons; preserve failure/unflushed and authority guards",
+    "Original large AMD cause, history/globalspool/lowdisk/recoverable cleanup and restore, wider OS/filesystem/physical/soak/mobile devices and all50 commercial capability plus safe Main delivery"
+  ]
+}

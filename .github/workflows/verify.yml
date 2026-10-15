@@ -174,3 +174,21 @@ jobs:
           node --experimental-strip-types --test panel-integration-disk-diagnostic/scripts/test-host-disk.mjs
           npm run build --prefix panel-integration-disk-diagnostic/web
           node panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs panel-integration-disk-diagnostic/web/dist
+      - name: Reason candidate complete Root Linux contracts, not installed reason-fix acceptance
+        working-directory: panel-integration-disk-reason
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Reason finalization and inherited bounded diagnostic race regression
+        working-directory: panel-integration-disk-reason
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHost(Diagnostic|FailureReport)' -count=1 -v
+      - name: Locked reason candidate UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-reason/web --ignore-scripts
+      - name: Legacy receipt compatibility, presentation and exact export data regression
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-reason/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-reason/web
+          node panel-integration-disk-reason/scripts/web-entry-budget.mjs panel-integration-disk-reason/web/dist
+      - name: Actual Vue deduplicates only legacy warning presentation (closed synthetic API, not installed acceptance)
+        run: |
+          node panel-integration-disk-reason/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_reason_ui_out="$(mktemp -d)"
+          node panel-integration-disk-reason/scripts/qa-host-disk-workspace.mjs "$disk_reason_ui_out"

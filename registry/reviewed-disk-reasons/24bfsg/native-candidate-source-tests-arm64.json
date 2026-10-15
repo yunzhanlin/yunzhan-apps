@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "original_proof_sha256": "02236b070691631dbe68768d4d35706fee57c8f6323bce0e588a05e0a0cd2bb6",
+  "kind": "actual-root-native-test-binary-source-only",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": true,
+  "source_only": true,
+  "signed_installed_proof": false,
+  "source_delta": {
+    "internal/executor/app_disk_host_result.go": "aa6d1fa6ba754dcc0d22a8d1014e9d1e984aff524b4606b8ece96eff42b91ad2",
+    "internal/executor/app_disk_host_result_test.go": "d493049185cf6456fd3825633f293f43e0e1b96e60a74e40f918a8604b67c338",
+    "internal/executor/app_disk_host_worker_linux.go": "d70b60caaa5fdc162752c156779dbb2d2ae4eaa6681ef297440da89f29824015",
+    "scripts/qa-host-disk-workspace.mjs": "27f7bb6f516aec6d96213811b3f3b73f694a2c4565b39f64e8056dc9ca632621",
+    "scripts/test-host-disk.mjs": "6911b92aca0f1f800ea41a4dd9d06e0421d59a149a4125fe11d391c11bad8ff1",
+    "web/src/HostDiskWorkspace.vue": "3edb88126613c2bfac91b9ac2dc6af8760515ca8976c5a6076512ceeb2f23683",
+    "web/src/hostDisk.ts": "eda6062d78f34baed9765cd9a5448dfff7770c06684c53d6f38c0a8c030fb009"
+  },
+  "binary_sha256": "07590aa2f4e5798a299ef2b97b718f22c56f3e1051208943249d13a619bf9f21",
+  "original_log_sha256": "0285424093f92e199c74666b0d1e15f1027d8458c2cdb1c822f54ef300dc7588",
+  "passes": 15,
+  "failures": 0,
+  "skips": 0,
+  "exit": 0,
+  "protected_state_unchanged": true,
+  "host_scans": 0,
+  "service_restarts": 0,
+  "application_installs_updates": 0,
+  "files_deleted": 0,
+  "scope": "Native Linux test binary from the normal immutable candidate build: six failure-report and nine bounded diagnostic regressions. Existing signed predecessor programs, apps, sites, users and every Root job record remain unchanged. Not installation or new-worker runtime acceptance.",
+  "commercial_all50": false
+}

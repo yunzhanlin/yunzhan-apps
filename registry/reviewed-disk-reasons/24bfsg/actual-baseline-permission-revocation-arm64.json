@@ -1,0 +1,74 @@
+{
+  "format": 1,
+  "original_proof_sha256": "1045fb9e5211d5fa73134f98b066d5cd654e357065f313166b2d9d66cc763bf0",
+  "kind": "actual-signed-installed-predecessor-native-revocation-not-new-candidate",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "app_version": "1.4.0",
+  "app_manifest_sha256": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "ok": true,
+  "original_scan_posts": 1,
+  "account_mutations": 4,
+  "existing_accounts_mutated": 0,
+  "original_request_sha256": "a66fb70d4ef00200a02d5de6d7f76bb54365818475b442820d8ca56d6258d981",
+  "original_result_sha256": "fe83b2a1b5adea0371aa56c03686546ee3605bd0d74d50715956f68814e098a6",
+  "state": "failed",
+  "error_code": "progress_or_authority_rejected",
+  "metadata_entries_read": "8192",
+  "enumeration_complete": false,
+  "index_flushed": false,
+  "original_partial_reasons": [
+    "progress_or_authority_rejected",
+    "progress_or_authority_rejected"
+  ],
+  "original_request_access_revision": "1",
+  "revoked_revision": 2,
+  "restored_revision": 3,
+  "old_session_denied_http": 401,
+  "other_administrator_private_report_denied_http": 403,
+  "other_administrator_recovery_metadata_only": true,
+  "cancels_or_signals": 0,
+  "worker_exited": true,
+  "scope_empty": true,
+  "both_leases_free": true,
+  "database_original_result_exact": true,
+  "result_audits": 1,
+  "matched_diagnostics": [
+    {
+      "phase": "authority_core",
+      "reason": "unverified"
+    }
+  ],
+  "bounded_journal_read": true,
+  "raw_journal_exported": false,
+  "installed_failure_diagnostic_capture_verified": true,
+  "same_original_result_after_restore_and_delete": true,
+  "temporary_actor_deleted": true,
+  "temporary_secret_removed": true,
+  "original_users_apps_sites_programs_fixtures_and_older_root_receipts_unchanged": true,
+  "actual_ui_failed_incomplete_and_exact_export": true,
+  "manager_asset": {
+    "file": "AppModuleManager-Hca6S3hl.js",
+    "sha256": "ada1bb95b6156e6175d69d01f55aeec66ca3be78fcf7cae094129a8d8a26fe48"
+  },
+  "policy": {
+    "cpu_max": "20000 100000",
+    "memory_max": "536870912",
+    "memory_swap_max": "0",
+    "pids_max": "32",
+    "capabilities": "CAP_DAC_READ_SEARCH",
+    "no_new_privileges": true
+  },
+  "current_account_mutation_history_audits_verified": true,
+  "current_account_mutation_history_audit_deltas": {
+    "create": 1,
+    "update": 2,
+    "delete": 1
+  },
+  "new_candidate_installed": false,
+  "original_large_failure_cause_proven": false,
+  "original_large_failure_fixed": false,
+  "scope": "Actual predecessor program only. One new QA actor was downgraded through normal user-manager revision checks and native authority stopped its task; only after Root terminal was proven was that same actor restored for same-ID readonly reconciliation, then deleted normally. Old raw duplicated reasons remain unchanged. Additional before/after account mutation audit counts were recorded on ARM only.",
+  "commercial_all50": false
+}

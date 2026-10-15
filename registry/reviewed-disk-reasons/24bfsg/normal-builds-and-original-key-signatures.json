@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "original_proof_sha256": "6a436526b7dc152ffbeb40670dd030f91c86f3668b5359fc004c27d5d410c0f0",
+  "kind": "normal-immutable-program-builds-and-signatures-not-deployment",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": true,
+  "frozen_files": 17035,
+  "source_overrides": 0,
+  "normal_build_both_architectures": true,
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "archives": {
+    "arm64": {
+      "archive_sha256": "11e394ac00ac3cb2f5ce2212feff8df0b79b3803b6adc06073d0141a7b048610",
+      "manifest_sha256": "45fc9622937475a764feb3c70d2260126c10eef7249abb691814f02cfbadff7f",
+      "signature_sha256": "cd6b44afee1ff03a319260915c8fc33035b2457ffe8462ab59327cd9ab1ff127",
+      "normal_build_log_sha256": "edd19f9d1fd9d26a0cb073fd86b878b23e54bc0271c514f4869fd71bb95e79ad",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "a1f7a4e1fe0af606712b844d675df8f7602fa4b2c383dba05e81b54a9e25d148",
+      "manifest_sha256": "e022b1bdaed6e58a8a8935dcf759530fcdc0a1d73cbc279668e031f99eaeac81",
+      "signature_sha256": "4c3ead6c85c2c626bc05aa93990e4e755a6d58f6a5738bad28adab733618072a",
+      "normal_build_log_sha256": "7f66199b439408a23e925f62d9a4b71a83d138e4554a7cc9c0632dbd2e6db131",
+      "original_key_signature_verified": true
+    }
+  },
+  "normal_program_deployed": false,
+  "scope": "Original signing key used in place; archive/manifest/signature bytes independently verified. Normal checks include Go/vet/Python/locked Vue/Node gates/entry budget and checksums. Signature/build success is not CI approval, installation, device or commercial-all50 proof.",
+  "commercial_all50": false
+}
