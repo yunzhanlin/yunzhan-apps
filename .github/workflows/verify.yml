@@ -206,3 +206,19 @@ jobs:
         run: |
           VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetbftj npm run build --prefix panel-integration-platform-fleet/web
           node panel-integration-platform-fleet/scripts/web-entry-budget.mjs panel-integration-platform-fleet/web/dist
+      - name: Fleet report and pinned Memcached candidate complete Root Linux contracts (source only)
+        working-directory: panel-integration-platform-health-view
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Locked fleet report UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-platform-health-view/web --ignore-scripts
+      - name: Fleet report availability, original identity and explicit read cancellation (synthetic transport only)
+        run: |
+          node --experimental-strip-types --test panel-integration-platform-health-view/scripts/test-platform-health-view.mjs panel-integration-platform-health-view/scripts/test-platform-health-lifecycle.mjs panel-integration-platform-health-view/scripts/test-platform-management-receipt.mjs panel-integration-platform-health-view/scripts/test-disk-scan-lifecycle.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetviewbfva npm run build --prefix panel-integration-platform-health-view/web
+          node panel-integration-platform-health-view/scripts/web-entry-budget.mjs panel-integration-platform-health-view/web/dist
+      - name: Actual Vue fleet cards and close/unmount cancellation at 1440 390 320 (synthetic API, not installed acceptance)
+        run: |
+          node panel-integration-platform-health-view/web/node_modules/playwright/cli.js install --with-deps chromium
+          node panel-integration-platform-health-view/scripts/test-platform-health-ui.mjs

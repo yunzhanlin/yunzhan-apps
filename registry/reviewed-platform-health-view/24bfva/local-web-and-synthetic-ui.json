@@ -1,0 +1,21 @@
+{
+  "program": "0.1.0-dev.proapps24fleetviewbfva",
+  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "commercial_all50": false,
+  "ok": true,
+  "unit_proof_sha256": "92ef2d2403099958c5ca01576f43364bd80768304ecb761f931f705761036c66",
+  "unit_passes": 313,
+  "unit_failures": 0,
+  "unit_skips": 0,
+  "synthetic_UI_proof_sha256": "4d35400565aa0ecb10d4e6751ef78bc8165e178f49e3f36e395eebee4a00d122",
+  "synthetic_UI_cases": 3,
+  "synthetic_UI_browser": "153.0.8010.12",
+  "synthetic_UI_widths": [
+    1440,
+    390,
+    320
+  ],
+  "synthetic_UI_only": true,
+  "new_program_installed": false,
+  "scope": "Actual compiled handlers and Vue/Chromium with explicit synthetic data and transport. Availability/zero/old snapshot, original ID/SHA selection, responsive cards, cancel/close/unmount, late and malformed replies. Not installed or live agent acceptance."
+}

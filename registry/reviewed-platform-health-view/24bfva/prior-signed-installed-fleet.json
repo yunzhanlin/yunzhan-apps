@@ -1,0 +1,29 @@
+{
+  "program": "0.1.0-dev.proapps24fleetviewbfva",
+  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "commercial_all50": false,
+  "prior_program": "0.1.0-dev.proapps24fleetbftj",
+  "prior_inputs": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
+  "new_program_installed": false,
+  "arch_cases": {
+    "amd64": {
+      "ok": true,
+      "original_proof_sha256": "e948af2b1eb8df0be4a038c8ffb6fc42606c4fa774fc172cac16d42047a26214",
+      "sites": 96,
+      "protected_files": 527
+    },
+    "arm64": {
+      "original_strict_guard_ok": false,
+      "original_false_proof_sha256": "3bbc535cfc526c2c483a391e52304686bbeebdac8b80f86a31a619faaf1ccb78",
+      "independent_original_case_guard_ok": true,
+      "independent_guard_receipt_sha256": "4a0ad1c1e3454ec056e54a19cf1dc313e7ccbd78a4559997ad1a08ead94addc6",
+      "sites": 82,
+      "protected_files": 770
+    }
+  },
+  "scope": "Historical actual signed BFTJ: each architecture used twelve controlled HTTPS endpoints on one owned VM, genuine Core responses, three simultaneous readers, stable order, explicit caller abort, wrong hostname rejection, revocation to401 and exact own record removal. Not twelve physical machines and not the new UI close-cancellation.",
+  "module_events_each": 37,
+  "audits_each": 39,
+  "own_relays_stopped_and_CA_anchors_removed": true,
+  "original_false_ARM_guard_retained": true
+}
