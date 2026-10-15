@@ -2,6 +2,7 @@
 // do NOT rerun the installed panels or elevate VM evidence to commercial proof.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {catalogBeforeDisk140Bytes,disk130Archive} from './previous-disk-host-catalog.mjs';
 import {readFile,readdir,lstat} from 'node:fs/promises';
 import {createHash,createPublicKey,verify} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
@@ -10,7 +11,7 @@ const evidence={};for(const [name,pin]of Object.entries(index.evidence_sha256)){
 const program='0.1.0-dev.proapps24diskgatebfin',manifest='4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38';
 test('new evidence binds original signed disk1.3 and deployed BFIN without rewriting publication or exporting private snapshots',async()=>{
  assert.equal(index.program,program);assert.equal(index.source_inputs_sha256,'dc68c6d2f089dc94c4680b6799cee6cde736cebd6ee70c73fdb27a0dde15cb05');assert.equal(index.application_version,'1.3.0');assert.equal(index.application_manifest_sha256,manifest);
- assert.equal(sha(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),manifest);const catalog=await read('dist/catalog-v1.json'),key=await read('signatures/catalog-v1.pub.pem'),bundle=JSON.parse(await read('signatures/catalog-v1.bundle.json'));
+ assert.equal(sha(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),manifest);const catalog=await catalogBeforeDisk140Bytes(),key=await read('signatures/catalog-v1.pub.pem'),bundle=JSON.parse(await read(disk130Archive+'catalog-v1.bundle.json'));
  assert.equal(sha(catalog),index.catalog_sha256);assert.equal(sha(key),index.original_publisher_public_key_sha256);assert.equal(bundle.catalog,catalog.toString());assert(verify(null,catalog,createPublicKey(key),Buffer.from(bundle.signature,'base64')));assert.equal(JSON.parse(catalog).apps.length,50);
  const publicationBytes=await read('registry/disk-inode-update-release.json'),publication=JSON.parse(publicationBytes);assert.equal(sha(publicationBytes),index.previous_publication_sha256);assert.equal(publication.new_program_deployed,false);assert.equal(publication.new_application_signed_update_executed,false);assert.equal(index.publication_snapshot_rewritten,false);
  assert.equal(Object.keys(evidence).length,14);assert.deepEqual((await readdir(new URL('../'+index.evidence_root+'/',import.meta.url))).sort(),Object.keys(evidence).sort());

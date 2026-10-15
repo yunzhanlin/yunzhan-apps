@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {catalogBeforeDisk140Bytes} from './previous-disk-host-catalog.mjs';
 import {readFile} from 'node:fs/promises';
 import {validateManifest,sha256} from '../tools/lib.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url));
@@ -23,6 +24,6 @@ test('host candidate is integration-only and exact two capability requirements c
   else m.delivery.provider=kind;
   assert(validateManifest(m).length>0,kind);
  }
- assert.equal(sha256(await read('dist/catalog-v1.json')),'fccca3c9e925e21b298d38a56c2bee9af15c6896ab514e931eb6d977aaa79ad3');
+ assert.equal(sha256(await catalogBeforeDisk140Bytes()),'fccca3c9e925e21b298d38a56c2bee9af15c6896ab514e931eb6d977aaa79ad3');
  assert.equal(sha256(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),'4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38');
 });

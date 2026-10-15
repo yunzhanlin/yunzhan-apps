@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {catalogBeforeDisk140Bytes} from './previous-disk-host-catalog.mjs';
 import {readFile,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -27,7 +28,7 @@ test('independent host candidate source is exactly bound to the new normal signe
 });
 test('candidate delivery never rewrites stable signatures, installed receipts or all50 claims',async()=>{
  const r=JSON.parse(await read('registry/disk-host-candidate-release.json'));
- assert.equal(sha256(await read('dist/catalog-v1.json')),r.published_catalog_sha256_unchanged);
+ assert.equal(sha256(await catalogBeforeDisk140Bytes()),r.published_catalog_sha256_unchanged);
  assert.equal(sha256(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),r.published_disk_manifest_sha256_unchanged);
  for(const k of ['new_program_deployed','new_app_manifest_published','new_signed_app_installed','new_full_host_job_accepted','main_delivered','main_absent_disk_app_installed','commercial_all50'])assert.equal(r[k],false,k);
  assert.equal(r.candidate_stage,'integration');assert(r.scope.includes('No signed installed1.4'));

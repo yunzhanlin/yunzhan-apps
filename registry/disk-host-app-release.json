@@ -1,0 +1,44 @@
+{
+  "format": 1,
+  "phase": "locally-signed-development-distribution-candidate",
+  "application": "disk-analysis",
+  "application_version": "1.4.0",
+  "application_manifest_sha256": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "previous_manifest_version": "1.3.0",
+  "previous_manifest_sha256": "4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38",
+  "previous_catalog_archive": "registry/reviewed-catalogs/before-disk1.4-24bfod",
+  "previous_catalog_sha256": "fccca3c9e925e21b298d38a56c2bee9af15c6896ab514e931eb6d977aaa79ad3",
+  "new_catalog_sha256": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "original_publisher_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "required_panel_features": [
+    "disk-inode-usage-v1",
+    "disk-host-jobs-v1"
+  ],
+  "program": "0.1.0-dev.proapps24diskhostbfns",
+  "source_inputs_sha256": "f887a29c68b85bbf31150fa204503ecad2d291bb0e2203e752307e5a36eaac32",
+  "source_pr": {
+    "number": 37,
+    "head": "bc6c078e360af74e2de2b98f794fe113ec78bfd6",
+    "merge": "9ded3c24d16790c1fec0fd7482574032732a375c",
+    "ci_run": 38726318936,
+    "check": 116392947351,
+    "conclusion": "success"
+  },
+  "normal_program_upgraded_both_qa": true,
+  "old13_real_ui_checks_each": 8,
+  "normal_signed_app14_installed": false,
+  "positive_native_full_host_job_accepted": false,
+  "main_program_updated": false,
+  "main_absent_disk_app_installed": false,
+  "commercial_all50": false,
+  "other49_unchanged": true,
+  "previous_receipts_rewritten": false,
+  "scope": "New immutable manifest and original-key signed catalog for explicit development-candidate distribution. ready means the fixed installer handler is integrated, NOT commercial acceptance. Older panels lacking either reviewed capability refuse14. No absent app is auto-installed and no legacy installation opts in without an explicit normal update. This snapshot does not claim its own future PR/merge or installed14 workflow.",
+  "remaining": [
+    "Exact-head release CI and normal repository merge",
+    "Real original signed14 app update/receipt/epoch and producer-worker-Core-UI acceptance on both QA architectures",
+    "Cancellation, revocation, crash/restart and failed native scope recovery",
+    "History archives, global spool/low-disk controls, recoverable cleanup and restore",
+    "Broader OS/filesystems/physical hardware/soak/device and other50 apps; safe Main delivery"
+  ]
+}
