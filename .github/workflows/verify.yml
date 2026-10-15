@@ -116,3 +116,25 @@ jobs:
       - name: WAF legacy settings cannot acknowledge and discard advanced intent
         working-directory: panel-integration-geography
         run: sudo "$(command -v go)" test -race ./internal/core -run '^Test(WAFLegacySettingsNeverSilentlyDiscardAdvancedPolicyFields|SoftwareActionQueueValidationAndIdempotency|SoftwareSettingsAreClosedSchemas|WAFTrustedProxy)' -count=1
+      - name: Candidate host disk Core, native primitive and manifest contracts (not installed full-host job proof)
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test -p 1 ./internal/core ./internal/diskjob ./internal/diskusage ./internal/appcatalog -count=1
+      - name: Candidate host job authority and typed receipts race regression
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/diskjob -run '^Test(HostDisk|.*Closure|.*Original|.*Receipt)' -count=1
+      - name: Candidate fixed original program admission and native upgrade barriers (not actual installed dispatch)
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test ./internal/executor -run '^TestHostProducer|^TestProgramUpgradeQueues' -count=1 -v
+      - name: Candidate production and development drain contracts (trusted-root fixtures only)
+        run: sudo python3 -B -m unittest discover -s panel-integration-disk/packaging -p 'test_*upgrade*.py'
+      - name: Locked candidate disk UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk/web --ignore-scripts
+      - name: Candidate host disk selectors and actual component build (not installed UI)
+        run: |
+          node --experimental-strip-types --test panel-integration-disk/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk/web
+      - name: Candidate host disk real Vue browser fault flows (synthetic API, not installed app acceptance)
+        run: |
+          node panel-integration-disk/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_ui_out="$(mktemp -d)"
+          node panel-integration-disk/scripts/qa-host-disk-workspace.mjs "$disk_ui_out"
