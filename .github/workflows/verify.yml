@@ -192,3 +192,17 @@ jobs:
           node panel-integration-disk-reason/web/node_modules/playwright/cli.js install --with-deps chromium
           disk_reason_ui_out="$(mktemp -d)"
           node panel-integration-disk-reason/scripts/qa-host-disk-workspace.mjs "$disk_reason_ui_out"
+      - name: Fleet candidate complete Root Linux contracts (source fixtures, not installed fleet acceptance)
+        working-directory: panel-integration-platform-fleet
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Fleet bounded overlap cancellation protocol identity and existing authority races
+        working-directory: panel-integration-platform-fleet
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^Test(Platform|AppPlatform)' -count=1 -v
+      - name: Locked fleet candidate UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-platform-fleet/web --ignore-scripts
+      - name: Complete fleet candidate management build and unchanged entry budget (not installed UI)
+        run: |
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetbftj npm run build --prefix panel-integration-platform-fleet/web
+          node panel-integration-platform-fleet/scripts/web-entry-budget.mjs panel-integration-platform-fleet/web/dist

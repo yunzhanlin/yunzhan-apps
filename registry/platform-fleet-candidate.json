@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "phase": "new-normal-signed-fleet-source-before-installed-acceptance",
+  "program": "0.1.0-dev.proapps24fleetbftj",
+  "source_inputs_sha256": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
+  "frozen_files": 17037,
+  "source_overrides": 0,
+  "source_export": "panel-integration-platform-fleet",
+  "source_export_files": 1381,
+  "release_bound_export_files": 1340,
+  "previous_program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "previous_source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "previous_source_export": "panel-integration-disk-reason",
+  "only_added_source": [
+    "internal/core/platform_health_fleet.go",
+    "internal/core/platform_health_fleet_test.go"
+  ],
+  "only_changed_source": [
+    "internal/core/app_module_accounts.go"
+  ],
+  "removed_source": [],
+  "max_registered_hosts_unchanged": 12,
+  "max_concurrent_reads": 3,
+  "concurrency_scope": "per aggregation request, not a process-wide quota",
+  "per_host_timeout_milliseconds_unchanged": 5000,
+  "strict_system_root_tls_and_no_redirects_unchanged": true,
+  "response_bytes_limit_unchanged": 262144,
+  "stable_registered_order": true,
+  "canceled_aggregate_never_returns_partial_inventory": true,
+  "cancellation_joins_all_readers": true,
+  "missing_per_host_status_fails_closed": true,
+  "empty_inventory_is_array": true,
+  "no_credential_or_registration_mutation_from_read": true,
+  "source_full_go_passes": 1887,
+  "source_full_go_skips": 10,
+  "source_platform_race_passes": 95,
+  "source_native_auxiliary_tests_passed_each": 5,
+  "normal_builds_and_original_signatures_both": true,
+  "candidate_manager_asset": {
+    "file": "AppModuleManager-D8U8HpX3.js",
+    "bytes": 258312,
+    "sha256": "47fbfebca81664ee850aa5c5987a04f30cf2cb63fdfe637f69907dcf92084e27"
+  },
+  "normal_archives": {
+    "arm64": "de23313656f873b860a6311903bab3f9a785ee872fb1afed57fd9aae4a397326",
+    "amd64": "dcc749aaf2eb8a5f9f8df86bcfec85adbf1e7537dda3341bda99a399f47ade60"
+  },
+  "previous_ci_full_prefix_sha256": "7ac5fccd364a7082bb09b17b48e05de914214a4f04a66cbdc3b742328d83f9ad",
+  "previous_registry_test_sha256": "7531bebf066909404e389c66cf9f4ceb01e143e933b4b791a2e1ca868360ba89",
+  "previous_exporter_sha256": "9106bc38d4af0c0af999336f1283c81f2c45e6dfdaaa4c63837e6ed045c495b6",
+  "registry_test_compatibility_change": "Exactly the previous complete workflow bytes remain hashed as a prefix when new source gates are appended; no prior gate is removed/edited and all old assertions remain.",
+  "evidence_root": "registry/reviewed-platform-fleet/24bftj",
+  "evidence_sha256": {
+    "local-full-source-and-authority-race-regression.json": "21ce6f2310e90f2a93a8a583a82ea30bcfe5c8bf6eb5d829cf4e06cc96ec6d9b",
+    "native-auxiliary-core-source-tests-arm64.json": "990447e3a8d3fd5949b7d678fde720675d019335fa4c05649be932cfcb07faaa",
+    "native-auxiliary-core-source-tests-amd64.json": "6cb2e50d6b52076c71c0fa28316eb290f7dae97b96bb0159c8f21b5a115b4788",
+    "normal-builds-and-original-key-signatures.json": "3786561817a6134d9e0a9bc40cf31c78974b02c38eb0e1dcb32bd2f59abd99fe"
+  },
+  "historical_registry_sha256": {
+    "registry/disk-host-reason-candidate.json": "8a433398d2f86ef0c88b4903ac497c31f934c4f5b4ee6274480eac92c682f650",
+    "registry/disk-host-reason-installed-acceptance.json": "db7eef8287a9b87ab1732ff71ba9da9287d831707728438363d0d2c93879661f",
+    "registry/reviewed-disk-diagnostics/24bfrc/retained-real-larger-scan-failure-amd64.json": "d4bdbb239042c290f31568db6d87f602f8740534d44085cc6599b49247e1a65f"
+  },
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "platform13_manifest_sha256_unchanged": "6d433842fb11880283548bcc739d47b17c46c3d3d7242fefa1494faf9da0b346",
+  "new_program_deployed": false,
+  "installed_fleet_concurrency_verified": false,
+  "installed_fleet_ui_verified": false,
+  "app_package_versions_changed": false,
+  "main_delivered": false,
+  "main_absent_apps_installed": false,
+  "commercial_all50": false,
+  "original_11904_failure_cause_or_fix_proven": false,
+  "original_preflight_refusal_cause_or_fix_proven": false,
+  "scope": "New three-input normal source candidate. Local/native auxiliary fixtures, signed builds and actual prior BFSG evidence are distinct. Concurrent reads preserve the strict existing client/authority/identity and transactional registration contracts; source tests do not prove real installed twelve-peer fleet or production timing.",
+  "remaining": [
+    "Exact source CI and normal matched-head merge before any new program upgrade",
+    "Actual normal signed QA program upgrade preserving current20apps82/96sites97projections/genuine14epochs and all6ARM/8AMD native histories",
+    "Actual installed normal HTTPS health aggregation, bounded overlap/cancellation, failure/privacy and desktop/narrow report flows with only new own fixture records cleaned up",
+    "Safe Main development-gateway delivery preserving current58sites4apps/19101 and absent applications; wider OS/filesystem/physical/soak/mobile and all50 commercial acceptance"
+  ]
+}
