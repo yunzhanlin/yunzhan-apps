@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "disk-analysis",
+  "name": "Disk analysis",
+  "category": "professional",
+  "version": "1.4.0",
+  "summary": "开发候选：本地挂载子树后台只读分析、inode 去重分配块、原任务进度与取消、权限隔离和中断收尾；签名安装及商用验收尚未完成，不自动启用旧安装。",
+  "stage": "integration",
+  "risk": "maintained",
+  "delivery": {"provider":"panel-module","target":"disk-analysis","manage_route":"app-modules"},
+  "required_panel_features": ["disk-inode-usage-v1", "disk-host-jobs-v1"],
+  "compatibility": {"os":["debian-12","debian-13","ubuntu-22.04","ubuntu-24.04","ubuntu-26.04"],"architectures":["amd64","arm64"]},
+  "capabilities": ["网站目录分析保留", "本地挂载子树后台扫描", "不跨子挂载或跟随符号链接", "有界 CPU 内存时间和元数据预算", "inode 去重分配块与逻辑大小区分", "可核对的原任务进度", "原请求标识只读找回", "当前完整管理员权限隔离", "原进程身份绑定取消", "中断任务显式核对收尾", "未知与不完整结果明确标注", "精确整数报告导出"],
+  "health": {"probe":"panel-api","target":"/api/app-modules/disk-analysis"},
+  "uninstall": {"preserve_data":true,"reference_check":false}
+}

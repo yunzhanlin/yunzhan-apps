@@ -1,0 +1,55 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24diskhostbfns",
+  "source_inputs_sha256": "f887a29c68b85bbf31150fa204503ecad2d291bb0e2203e752307e5a36eaac32",
+  "frozen_files": 17030,
+  "source_export": "panel-integration-disk",
+  "exported_files": 1374,
+  "exported_release_bound_files": 1333,
+  "source_overrides": 0,
+  "normal_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": "a74934e8cb6075c93c672ca53f44eaa27d13c9c2fcba9dd8488ce4d891d908fb",
+    "amd64": "1bb9de8e1b4943f6caa56440d060076f6f3820a3e0fda12830b31823cb3ae023"
+  },
+  "normal_build_logs": {
+    "arm64": "d4e04a7b7e53efd34271ddde54cfa249dff0ab31dfef9ae1f88695982bde6582",
+    "amd64": "9aa7a8c7c84b7c25a7cf078f25c3dc85c8166cef3b2bb47c48d32562e9e63fb7"
+  },
+  "normal_build_both_arches_passed": true,
+  "original_key_signature_both_arches_verified": true,
+  "candidate_application": "disk-analysis",
+  "candidate_app_version": "1.4.0",
+  "candidate_stage": "integration",
+  "candidate_required_features": [
+    "disk-inode-usage-v1",
+    "disk-host-jobs-v1"
+  ],
+  "published_catalog_sha256_unchanged": "fccca3c9e925e21b298d38a56c2bee9af15c6896ab514e931eb6d977aaa79ad3",
+  "published_disk_manifest_sha256_unchanged": "4c971c1c079efb3b5b453d3906371284893ac6e06e5b4a4aa4359c680afd2a38",
+  "new_program_deployed": false,
+  "new_app_manifest_published": false,
+  "new_signed_app_installed": false,
+  "new_full_host_job_accepted": false,
+  "main_delivered": false,
+  "main_absent_disk_app_installed": false,
+  "commercial_all50": false,
+  "scope": "Exact normal original-key signed candidate program source and source/native-primitive/isolated-UI regression only. App1.4 remains integration; stable catalog and old1.3 package stay immutable. No signed installed1.4 full Root producer-worker-Core-UI task, production, physical amd64, device or complete commercial acceptance claim.",
+  "completed_source_capabilities": [
+    "current full administrator, original request and installation-bound dispatch",
+    "original-key read-only submission recovery without second POST",
+    "fixed isolated bounded worker with mount and inode accounting",
+    "private atomic progress, original process identity and typed terminal proof",
+    "durable cancellation and explicit metadata-only orphan closure",
+    "original admission sealing and lifecycle/upgrade queue barriers",
+    "independent signed1.4 capability declaration and exact version gates",
+    "full-host UI with original mount selection, progress, top rows, cancel, recovery and exact JSON export"
+  ],
+  "remaining": [
+    "Exact-head CI of this independent frozen source export.",
+    "Normal verified candidate program upgrade on existing QA hosts preserving installed1.3 and all original data.",
+    "Genuine signed1.4 registry install/update and real approved producer-worker-progress-Core/API/UI full task, cancellation, revocation, crash and failure recovery on both QA architectures.",
+    "Evidence-preserving history archive and global spool/low-disk controls; explicit recoverable cleanup and restoration for complete commercial disk capabilities.",
+    "Broader Linux/filesystem/physical amd64/soak/device and all other50-app requirements; safe Main19100 delivery with58sites and FeiFei19101 retained, no absent app auto-install."
+  ]
+}
