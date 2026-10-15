@@ -138,3 +138,26 @@ jobs:
           node panel-integration-disk/web/node_modules/playwright/cli.js install --with-deps chromium
           disk_ui_out="$(mktemp -d)"
           node panel-integration-disk/scripts/qa-host-disk-workspace.mjs "$disk_ui_out"
+      - name: Fixed runtime journal-to-index and strict root identity regression (not installed worker acceptance)
+        working-directory: panel-integration-disk-fix
+        run: sudo "$(command -v go)" test -p 1 ./internal/diskjob ./internal/diskusage ./internal/appcatalog -count=1 -v
+      - name: Fixed original spool handoff and replaced inode/base refusal race regression
+        working-directory: panel-integration-disk-fix
+        run: sudo "$(command -v go)" test -race ./internal/diskjob -run '^TestHostJournalNativeSpool' -count=1 -v
+      - name: Fixed runtime preserves original Core authority and existing native admission/upgrade barriers
+        working-directory: panel-integration-disk-fix
+        run: |
+          sudo "$(command -v go)" test -p 1 ./internal/core -count=1
+          sudo "$(command -v go)" test ./internal/executor -run '^TestHostProducer|^TestProgramUpgradeQueues' -count=1 -v
+      - name: Locked fixed runtime UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-fix/web --ignore-scripts
+      - name: Fixed Docker nsfs display inventory and complete real component build
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-fix/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-fix/web
+          node panel-integration-disk-fix/scripts/web-entry-budget.mjs panel-integration-disk-fix/web/dist
+      - name: Fixed actual Vue nsfs display-only and prior fault flow regression (synthetic API, not installed proof)
+        run: |
+          node panel-integration-disk-fix/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_fix_ui_out="$(mktemp -d)"
+          node panel-integration-disk-fix/scripts/qa-host-disk-workspace.mjs "$disk_fix_ui_out"

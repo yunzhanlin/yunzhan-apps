@@ -1,0 +1,18 @@
+{
+  "format": 1,
+  "original_proof_sha256": "e1ed8a41ea5d521878e6db5b9dbcebcd6b431eb14222866721c5149794ac14f8",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskfixbfpe",
+  "source_inputs_sha256": "bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a",
+  "normal_compiled_artifact_sha256": "5b203ae1857d2a9dc2795f653afad7cf99bfa660446462c0d1a3b19b92caf41f",
+  "original_log_sha256": "dbb3be220922cae1c00943dcffa2b04db70ba4df2c656898ab4782cf0936bfc4",
+  "exit": 0,
+  "passes": 5,
+  "failures": 0,
+  "skips": 0,
+  "protected_state_unchanged": true,
+  "scope": "Normal frozen diskjob test ELF: fresh original journal-to-ledger and public-mode/replaced-job/replaced-base refusal; not the signed installed program worker",
+  "app_installs_updates": 0,
+  "host_scans": 0,
+  "commercial_all50": false
+}

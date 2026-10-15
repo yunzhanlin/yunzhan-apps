@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "phase": "normal-signed-runtime-fix-source-before-installed-acceptance",
+  "program": "0.1.0-dev.proapps24diskfixbfpe",
+  "source_inputs_sha256": "bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a",
+  "frozen_files": 17031,
+  "source_overrides": 0,
+  "source_export": "panel-integration-disk-fix",
+  "exported_files": 1375,
+  "exported_release_bound_files": 1334,
+  "previous_source_export": "panel-integration-disk",
+  "previous_program": "0.1.0-dev.proapps24diskhostbfns",
+  "previous_source_inputs_sha256": "f887a29c68b85bbf31150fa204503ecad2d291bb0e2203e752307e5a36eaac32",
+  "only_added_source": [
+    "internal/diskjob/spool_ledger_linux_test.go"
+  ],
+  "only_changed_source": [
+    "internal/diskjob/journal_linux.go",
+    "packaging/build-release.sh",
+    "scripts/host-disk-fixture.mjs",
+    "scripts/qa-host-disk-workspace.mjs",
+    "scripts/test-host-disk.mjs",
+    "web/src/hostDisk.ts"
+  ],
+  "removed_source": [],
+  "normal_original_key_archives": {
+    "arm64": "f99cfe26898acaa06d8c2c71f217b03ecd211761d72a7f0104d1b34a5837d609",
+    "amd64": "4d6ec87369334c2361a104009497d9477c045ace69bfe097f1d7c943f6b21ff1"
+  },
+  "normal_build_logs": {
+    "arm64": "d5f4241b068da1c6077a6724539bcfc97ac808d1ba33fdd739e9e29cefcf6125",
+    "amd64": "596b350b57cd66fe0170e84152b3db0035f7e040fc8afc5f0a4578d18653f13a"
+  },
+  "normal_build_both_arches_passed": true,
+  "original_key_signature_both_arches_verified": true,
+  "app14_signed_normal_updates_verified_both_qa": true,
+  "actual_previous_host_scan_failed_and_retained": true,
+  "actual_positive_host_scan_accepted": false,
+  "new_program_deployed": false,
+  "main_delivered": false,
+  "main_absent_disk_app_installed": false,
+  "commercial_all50": false,
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "evidence_root": "registry/reviewed-disk-runtime-fix/24bfpe",
+  "evidence_sha256": {
+    "signed14-update-arm64.json": "c3ecd966a88f59f1f2dfb9e8c111051285a943e17f1d2cd27cc098cbf99cb6a7",
+    "normal-spool-native-arm64.json": "e67c3db1b298ba90e50a452976cb170bddd23b0a39016217960fc6164060e6de",
+    "signed14-update-amd64.json": "fb74afa2da473c730a8b0c2b96634f327e8ffa857e2f632658165bf8467ecbaf",
+    "normal-spool-native-amd64.json": "4931dcbd89f0fbfbb94fc5ff6243794a9a562564e36d6a640ec57c58902999a9",
+    "retained-original-host-failure.json": "18dc928899df0e664a87c5cedd5c7228b6211ca2629593a8ed48ed83bc10173c",
+    "retained-spool-red-regression.json": "68263fef9d9336b1582f0022374349fe5616a267f2de6448d9b25824c958cae2",
+    "fixed-vue-synthetic.json": "28982454e0d8edbf50fd899c6c02584d70ce576b6839717db6eaf02c57cc95ce"
+  },
+  "scope": "New exact normal signed program fixes two real installed14 defects. Original catalog/app manifests, source exports and all prior failure/acceptance snapshots remain immutable. Real normal14 updates are proven separately from the FAILED host scan. Fresh native source regressions and synthetic Vue are NOT fixed installed-worker success.",
+  "remaining": [
+    "Exact source CI and normal signed candidate program upgrade preserving genuine14 epochs and original failed job",
+    "Actual successful Root producer-worker-Core-UI accounting on both QA architectures",
+    "Native cancellation/revocation/crash and failed-scope recovery integration",
+    "History archives/global spool/low-disk guards/recoverable cleanup/restore",
+    "Broader OS/filesystems/physical hardware/soak/device/all50 and safe Main delivery"
+  ]
+}

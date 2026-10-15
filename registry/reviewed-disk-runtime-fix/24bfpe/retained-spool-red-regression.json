@@ -1,0 +1,13 @@
+{
+  "format": 1,
+  "original_proof_sha256": "e307cdf2673ea816810bfcc136980087bb65e45d096baaf1890900dd34e57218",
+  "arch": "arm64",
+  "exit": 1,
+  "failures": 1,
+  "skips": 0,
+  "original_log_sha256": "d6f599f30b376b5981bf49066b58fe2ecfe64a8ee57fd945b14b582453cd3d3e",
+  "reason": "production SpoolRoot.Name retained literal /. and failed the strict canonical directory check",
+  "original_failure_rewritten": false,
+  "protected_state_unchanged": true,
+  "commercial_all50": false
+}
