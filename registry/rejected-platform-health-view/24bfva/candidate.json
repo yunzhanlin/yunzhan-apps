@@ -1,0 +1,65 @@
+{
+  "program": "0.1.0-dev.proapps24fleetviewbfva",
+  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "commercial_all50": false,
+  "format": 1,
+  "phase": "signed-source-candidate-not-installed",
+  "frozen_files": 17046,
+  "source_overrides": 0,
+  "source_export": "panel-integration-platform-health-view",
+  "source_export_files": 1390,
+  "release_bound_export_files": 1350,
+  "previous_source_export": "panel-integration-platform-fleet",
+  "previous_source_inputs_sha256": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
+  "only_added_source": [
+    "internal/appcatalog/memcached_features.go",
+    "internal/appcatalog/memcached_features_test.go",
+    "scripts/test-platform-health-lifecycle.mjs",
+    "scripts/test-platform-health-ui-fixture.html",
+    "scripts/test-platform-health-ui-fixture.mjs",
+    "scripts/test-platform-health-ui.mjs",
+    "scripts/test-platform-health-view.mjs",
+    "web/src/PlatformHealthReport.vue",
+    "web/src/platformHealthView.ts"
+  ],
+  "only_changed_source": [
+    "internal/appcatalog/panel_features.go",
+    "internal/core/docker.go",
+    "internal/core/docker_templates_test.go",
+    "packaging/build-release.sh",
+    "scripts/test-platform-management-receipt.mjs",
+    "scripts/test-software-routing-install-browser.mjs",
+    "web/src/AppModuleManager.vue",
+    "web/src/AppModuleReport.vue"
+  ],
+  "removed_source": [],
+  "normal_archives": {
+    "arm64": "9998af85c5bf58bd4dd6043f8d57b3393202a553cad1a5f1d193e9c0aae89c13",
+    "amd64": "4d6799219dd2d3c672716ad42f404f748528a785a360742691ecf82429a8fbf3"
+  },
+  "manager": {
+    "name": "AppModuleManager-DQQF3jeK.js",
+    "bytes": 267528,
+    "sha256": "216fc5d6663fed2fc1bde299cd092d6a29a548a06847ed97ec9d228fd0e0fef6"
+  },
+  "evidence_root": "registry/reviewed-platform-health-view/24bfva",
+  "evidence_sha256": {
+    "normal-builds-and-signatures.json": "71be327b386fc1e74e963c5d1ba16a27039ba39ae2d754c4ad5b5092a7a9539f",
+    "local-web-and-synthetic-ui.json": "a4daea1f0953914e0c58346a7f889f72ccb7c005578468325f12dab5a716364b",
+    "prior-signed-installed-fleet.json": "3cdc11587b3b429f279ad0257a5831a197756d0659cd467b4b3ce1f160cd5b1f",
+    "retained-legacy-test-failure.json": "72f042cfaed64f39005c8de91a619b87eb43148113a0739122fc8c306905c13a"
+  },
+  "previous_ci_full_prefix_sha256": "32bd51a944ec25cb5c9d3564f6cc365fef1d2de5e7035b849c1274ab9ba71fcc",
+  "previous_exporter_sha256": "a8cac786038570ab21231f39c6f0ba6816eed728802ad56c4dfbc4b78268228b",
+  "previous_fleet_test_sha256": "56e76036c7b3b91357ea6b3639146ce6dbfb8b9e5e3bc1d01b3f8592985019af",
+  "new_program_installed": false,
+  "new_UI_live_agent_verified": false,
+  "main_delivered": false,
+  "app_packages_updated": false,
+  "remaining": [
+    "Exact source CI and normal matched-head merge",
+    "Normal signed QA upgrade with a fresh true baseline including the retained legacy QA uninstall task and audit",
+    "Actual installed new cards and UI close cancellation over genuine HTTPS; isolated synthetic UI is not that proof",
+    "Safe Main development gateway delivery preserving sites, user assets and FeiFei19101; all50 commercial OS/device/soak and broader feature acceptance remain"
+  ]
+}

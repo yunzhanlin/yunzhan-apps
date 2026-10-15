@@ -1,0 +1,22 @@
+{
+  "program": "0.1.0-dev.proapps24fleetviewbfva",
+  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "commercial_all50": false,
+  "legacy_test_passed": false,
+  "original_test_failure_sha256": "717e483d2aad6eeae69adb12b6fa4114eba1d16620fcbf7304bc092f96eda3c7",
+  "readonly_reconciliation_sha256": "834aa79ee19ad971285df479273f8060915416cbc2c002486f7a4abf78f7ea22",
+  "accidental_scope": "Owned ARM QA only, after the original fleet acceptance and transport cleanup. An incorrectly broad unit command selected a historical lifecycle browser test.",
+  "actual_uninstall_job_id": "841b7843f9728267c86750d2a6c3d8b6",
+  "actual_uninstall_state": "succeeded",
+  "old_script_restored_original_marker": true,
+  "restored_marker_sha256": "23c840b69a9730f343b65ec182e4a909d835a39d998aad38769f88992f089620",
+  "old_jobs_and_native_histories_preserved": true,
+  "protected_files_and_site_collection_configuration_unchanged": true,
+  "audit_records_added_and_retained": 4,
+  "login_records_added_and_retained": 1,
+  "entry_now_retired_before_credential_reads_or_SSH": true,
+  "normal_gate_uses_explicit_unit_allowlist": true,
+  "source_negative_entry_test_included": true,
+  "main_changed": false,
+  "scope": "This failure is not relabeled passed and no task/audit rows were deleted. Readonly comparisons preserve the genuine successful uninstall and original marker restoration separately. Source regression closes the unsafe historical entry; not commercial readiness."
+}

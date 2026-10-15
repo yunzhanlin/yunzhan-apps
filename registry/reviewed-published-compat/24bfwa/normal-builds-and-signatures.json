@@ -1,0 +1,38 @@
+{
+  "program": "0.1.0-dev.proapps24memcompatbfwa",
+  "source_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
+  "commercial_all50": false,
+  "ok": true,
+  "normal_builds_both": true,
+  "frozen_files": 17049,
+  "source_overrides": 0,
+  "original_proof_sha256": "8acc61a1621847c72180054217b5bb33729c1f54553a0653c45030ddf93707ea",
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "archives": {
+    "arm64": {
+      "archive_sha256": "53779dbd89f840f3313746f3b2a28e85b2543ff17fff0653cceffb79332866c1",
+      "manifest_sha256": "837ce1a08a763de0a3fc02ed8f8cce0557a3d022ed0815a93bfb58524a245064",
+      "signature_sha256": "3d0bdbca8bc97e0c9ef718d0a0e7ef87eb098845be35354222b1440f711308e1",
+      "normal_build_log_sha256": "9e9509a72bca5170596b06724c2cb2c06c4d7782944232300c68739725fe3156",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158764,
+      "eager_limit_bytes": 1200000
+    },
+    "amd64": {
+      "archive_sha256": "c18d0abc28a6740fd60b6bf671da455caab47a327c847878810706f4730d1a0e",
+      "manifest_sha256": "9881221d3a43fbf494c9afd692e4a69b45657c058f0f509a6ebe40118c555e1e",
+      "signature_sha256": "ad4e52cdaa0cdc4fb759bebe0d2680ea034118274e4c6b8aa085c2e2410b8004",
+      "normal_build_log_sha256": "1c4cb5fea793df2abc7ad0ec5b5e6c5dabbeff8b1c7f6c0c579d7b262c1d165f",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158764,
+      "eager_limit_bytes": 1200000
+    }
+  },
+  "manager": {
+    "name": "AppModuleManager-DeroTsb7.js",
+    "bytes": 267528,
+    "sha256": "cd2144e8cdf17b1648fc2e0c283c2aa2c6f51bcf89efda9821cdcbf2d30645e1"
+  },
+  "new_program_installed": false
+}
