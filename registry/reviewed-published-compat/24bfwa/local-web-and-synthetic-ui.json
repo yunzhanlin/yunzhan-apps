@@ -1,0 +1,23 @@
+{
+  "program": "0.1.0-dev.proapps24memcompatbfwa",
+  "source_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
+  "commercial_all50": false,
+  "ok": true,
+  "unit_batches_each": 41,
+  "unit_passes": 326,
+  "unit_failures": 0,
+  "unit_skips": 0,
+  "unit_scope": "Explicit normal build allowlist, actual counts read from both original build logs; no wildcard or lifecycle browser entry.",
+  "synthetic_UI_proof_sha256": "19539450f0d715f127aed6e260bbebab9f19b1b05b33f6d726b2fc28cf791f92",
+  "synthetic_UI_cases": 3,
+  "synthetic_UI_browser": "153.0.8010.12",
+  "synthetic_UI_widths": [
+    1440,
+    390,
+    320
+  ],
+  "synthetic_UI_only": true,
+  "new_program_installed": false,
+  "earlier_output_parent_preflight_failure_retained": true,
+  "scope": "Actual Vue/Chromium with explicit synthetic API and telemetry only. Not live agent, installed package or Main delivery."
+}

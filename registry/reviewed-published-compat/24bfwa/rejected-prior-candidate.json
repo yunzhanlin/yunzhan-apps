@@ -1,0 +1,30 @@
+{
+  "program": "0.1.0-dev.proapps24memcompatbfwa",
+  "source_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
+  "commercial_all50": false,
+  "rejected_format": 1,
+  "rejected_program": "0.1.0-dev.proapps24fleetviewbfva",
+  "rejected_source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "rejected_not_eligible_for_merge_or_install": true,
+  "rejected_prior_head": "5a13173151f1083b777774db65c265f16a0a52b9",
+  "rejected_candidate_sha256": "be2a3f9f4899cd36cfa66e50b3ed9066ccfdb178d67fc5140bbcd4d3a65ab754",
+  "rejected_candidate_test_sha256": "f1bcbebd5e5d84ca1b9d80f268f42de1d27a9da02354eabeed6991d703b47b63",
+  "rejected_reason": "Actual currently signed Memcached1.6.45-compat1 was rejected by the hypothetical1.1 threshold; despite other source gates, this candidate is not eligible for deployment.",
+  "rejected_original_red_proof_sha256": "6d27b8e964eb5713351941e112fcfcd5d0b40cc80452dabc9cac437bfba4a357",
+  "rejected_original_red_log_sha256": "65830ed6e32f80c797f36d0876ae71d8baec55a57f582833026c1c2db240bfea",
+  "rejected_actual_failed_app": "memcached",
+  "rejected_actual_published_version": "1.6.45-compat1",
+  "rejected_actual_manifest_sha256": "02125cb1b5ce301c33683f6e4b2d088e399c72aeb5445e1b709c9cbe472c19b8",
+  "rejected_new_program_installed": false,
+  "rejected_commercial_all50": false,
+  "rejected_snapshot_root": "registry/rejected-platform-health-view/24bfva",
+  "rejected_original_evidence_root": "registry/reviewed-platform-health-view/24bfva",
+  "rejected_original_evidence_sha256": {
+    "normal-builds-and-signatures.json": "71be327b386fc1e74e963c5d1ba16a27039ba39ae2d754c4ad5b5092a7a9539f",
+    "local-web-and-synthetic-ui.json": "a4daea1f0953914e0c58346a7f889f72ccb7c005578468325f12dab5a716364b",
+    "prior-signed-installed-fleet.json": "3cdc11587b3b429f279ad0257a5831a197756d0659cd467b4b3ce1f160cd5b1f",
+    "retained-legacy-test-failure.json": "72f042cfaed64f39005c8de91a619b87eb43148113a0739122fc8c306905c13a"
+  },
+  "old_archives_and_input_snapshots_untouched": true,
+  "new_program_installed": false
+}

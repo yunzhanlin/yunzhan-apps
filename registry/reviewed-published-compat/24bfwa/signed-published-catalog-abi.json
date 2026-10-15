@@ -1,0 +1,64 @@
+{
+  "program": "0.1.0-dev.proapps24memcompatbfwa",
+  "source_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
+  "commercial_all50": false,
+  "ok": true,
+  "fixed_original_key_signed_catalog_sha256": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "fixed_public_fixture_sha256": "2cbeb9f396ec1e3f62b03d2deeec76dac6937272fca3afc467afc6d4eb89cf98",
+  "original_red_proof_sha256": "6d27b8e964eb5713351941e112fcfcd5d0b40cc80452dabc9cac437bfba4a357",
+  "original_red_log_sha256": "65830ed6e32f80c797f36d0876ae71d8baec55a57f582833026c1c2db240bfea",
+  "original_red_passes": 49,
+  "original_red_failed_application": "memcached",
+  "original_green_proof_sha256": "a31da747b79138f8f0917eff89052123a0015a83035063d47edbeb2153e414a5",
+  "original_green_log_sha256": "306fd2a8924f2f78f5841379d86cd47a8b03acff6ecd5881e31b2ff159f864b9",
+  "original_green_passes": 51,
+  "original_green_failures": 0,
+  "original_green_skips": 0,
+  "local_go_proof_sha256": "2e2c5ab5ad4864f87c40a73a2bfffef1b8e95b7c864230b88814cb4be456b812",
+  "local_go_steps": [
+    {
+      "name": "full-go",
+      "code": 0,
+      "passed": 1958,
+      "skipped": [
+        "TestPublishedRepositoryCurrentSignedManifestABI",
+        "TestOfficialCityLiteOctober2026",
+        "TestAnalyticsHTMLHeaderPatchActualPinnedSource",
+        "TestAnalyticsLiveINPBrowserQA",
+        "TestRegistryRequestLiveBrowserQA",
+        "TestSQLImportMigrationExistingSnapshot",
+        "TestValidateMariaDBInstanceBoundaries",
+        "TestOutboundLiveExecutorDailyReport",
+        "TestOutboundLivePHPCodeSecurity",
+        "TestOutboundLiveExecutorSMTPDailyReport",
+        "TestSessionCookieLiveBrowserQA"
+      ],
+      "failed": [],
+      "original_log_sha256": "3825c880125d4587986c7a58d8cb303913fea8a0e2927fd6a6ff3d43f409fdb1"
+    },
+    {
+      "name": "full-vet",
+      "code": 0,
+      "passed": 0,
+      "skipped": [],
+      "failed": [],
+      "original_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "memcached-race",
+      "code": 0,
+      "passed": 404,
+      "skipped": [
+        "TestPublishedRepositoryCurrentSignedManifestABI"
+      ],
+      "failed": [],
+      "original_log_sha256": "54d11ac01c30d7136631f6004ac2a46474c5d203ec52c3962ab6896758dc4f7c"
+    }
+  ],
+  "actual_current_memcached_version": "1.6.45-compat1",
+  "future_memcached_version": "1.6.45-compat2",
+  "future_memcached_published": false,
+  "current_repository_Linux_gate_required": true,
+  "current_repository_Linux_gate_passed": false,
+  "scope": "Actual original-key signed data and checksum-bound offline ABI regression. Darwin has no compiled Linux-only features; complete real Linux acceptance is a separate mandatory current-repository gate. Not installation or commercial all50 acceptance."
+}

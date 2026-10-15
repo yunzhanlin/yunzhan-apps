@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24fleetviewbfva-linux-amd64.tar.gz",
-    "archive_sha256": "4d6799219dd2d3c672716ad42f404f748528a785a360742691ecf82429a8fbf3",
-    "frozen_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c"
+    "archive": "panel-0.1.0-dev.proapps24memcompatbfwa-linux-amd64.tar.gz",
+    "archive_sha256": "c18d0abc28a6740fd60b6bf671da455caab47a327c847878810706f4730d1a0e",
+    "frozen_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd"
   },
   "files": {
     "go.mod": "698294c2dbd7f3ff6dee08357e50ccd627e713e42a83b79be38da9f7b3aa89cc",
@@ -32,11 +32,13 @@
     "internal/appcatalog/manifest_cache_other.go": "b72f78a1e3014cd4c5db1ee467a9c3d24fb578a875b91615496c14a9be9de9f9",
     "internal/appcatalog/manifest_cache_test.go": "55f6d2438682a6e644ee94f7e8637d82a5b77c557f129aa3d9c876d9aa0e87a9",
     "internal/appcatalog/manifest_cache_unix.go": "6c833c298f1020cebd836ca653f5137ccb89f875730ad07ebf609472038291f8",
-    "internal/appcatalog/memcached_features.go": "e683a0867706d7fc03ada497a4583e06691ec1105efb64223210d2f3adb0bbba",
-    "internal/appcatalog/memcached_features_test.go": "34f30cea6863bb43c5ed6192eb49849545b5aed2086433914df3f4d628a5c32e",
+    "internal/appcatalog/memcached_features.go": "854a7c3063053da6d95cebd9a392d822ec95adcbbaccfaef00df9340a5aab4d5",
+    "internal/appcatalog/memcached_features_test.go": "be8c51301366bdad7359cdeb2332f85b3fe3046fe19cb8d364bbefa63fa43929",
     "internal/appcatalog/panel_features.go": "abbc4eb8e4e6c5855cc624e5398797211892d75b1f71d9bfc3fa8f5a43429e95",
     "internal/appcatalog/panel_features_test.go": "814d4024de892cb8e3dc5ec719b53dbb535c242ff7526f8523989a1db39e1322",
     "internal/appcatalog/platform_maintenance_features_test.go": "3ae551dcc3f6b6497d92f27b2f5b240b16d05b30fef1296f9bd1ce046b408406",
+    "internal/appcatalog/published_catalog_test.go": "92e39576d5b612cda2292b533ded28b1a907614dc6f042f5cacb5f4409378402",
+    "internal/appcatalog/published_repository_test.go": "d374a5f5f715b36a6144025db46130de31dee6c98cfaadfc350b3706c758299c",
     "internal/appcatalog/repository_read_retry_test.go": "4fecb053b2594d27f42471a3fc1460c1ce4819e06659c70716f5a6ac60d6cae9",
     "internal/appcatalog/ruledata_channel.go": "146cce1465f6d568f8c5070a41d9c44db5c1e72680f6c05ce3b35a66693357c9",
     "internal/appcatalog/ruledata_channel_test.go": "c633a107d94ab1204d88477694f3a320708ec03d83c5ed6210c8435063621293",
@@ -44,6 +46,7 @@
     "internal/appcatalog/rulefeed_envelope.go": "0ce0039c83e659fdb26d60c0bf1b712a6c11159dbe26b962a4a0e4632993efc0",
     "internal/appcatalog/rulefeed_envelope_test.go": "6c7dcc5c8bf7cc8c4fcb233399d0ffaf09e583ba6c4284855428c007582e3181",
     "internal/appcatalog/rulefeed_test.go": "4477233ae3959df92a15a8e671d1a5a41f8a7d00937fdd20b166e531040f57e7",
+    "internal/appcatalog/testdata/published-catalog-20261015.json": "2cbeb9f396ec1e3f62b03d2deeec76dac6937272fca3afc467afc6d4eb89cf98",
     "internal/appcatalog/update_test.go": "dc5fd23ef306896ad6d19654e0215ab89b637d82e684837b08f17524ab19f37d",
     "internal/appcatalog/version.go": "de1d5148156d8768e095472b85b455e811aa3884a771451dbbbe4b590d50261c",
     "internal/core/account.go": "7df889ae748dccf1fe5d12531d647c31a5101ae55992aceff80408d2a9cef10d",

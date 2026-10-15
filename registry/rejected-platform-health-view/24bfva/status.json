@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "program": "0.1.0-dev.proapps24fleetviewbfva",
+  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "not_eligible_for_merge_or_install": true,
+  "prior_head": "5a13173151f1083b777774db65c265f16a0a52b9",
+  "candidate_sha256": "be2a3f9f4899cd36cfa66e50b3ed9066ccfdb178d67fc5140bbcd4d3a65ab754",
+  "candidate_test_sha256": "f1bcbebd5e5d84ca1b9d80f268f42de1d27a9da02354eabeed6991d703b47b63",
+  "reason": "Actual currently signed Memcached1.6.45-compat1 was rejected by the hypothetical1.1 threshold; despite other source gates, this candidate is not eligible for deployment.",
+  "original_red_proof_sha256": "6d27b8e964eb5713351941e112fcfcd5d0b40cc80452dabc9cac437bfba4a357",
+  "original_red_log_sha256": "65830ed6e32f80c797f36d0876ae71d8baec55a57f582833026c1c2db240bfea",
+  "actual_failed_app": "memcached",
+  "actual_published_version": "1.6.45-compat1",
+  "actual_manifest_sha256": "02125cb1b5ce301c33683f6e4b2d088e399c72aeb5445e1b709c9cbe472c19b8",
+  "new_program_installed": false,
+  "commercial_all50": false
+}

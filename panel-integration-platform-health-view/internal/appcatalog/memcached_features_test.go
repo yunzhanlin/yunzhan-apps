@@ -11,7 +11,7 @@ import (
 
 func memcachedDigestFixture() Manifest {
 	m := panelRequirementFixture()
-	m.ID, m.Name, m.Version, m.Category = "memcached", "Memcached", "1.1.0", "deployment"
+	m.ID, m.Name, m.Version, m.Category = "memcached", "Memcached", MemcachedDigestVersion, "deployment"
 	m.Delivery = Delivery{Provider: "compose", Target: "memcached-cache", Image: MemcachedDigestImage, ManageRoute: "docker"}
 	m.RequiredPanelFeatures = []string{MemcachedDigestFeature}
 	return m
@@ -55,11 +55,11 @@ func TestMemcachedDigestRequirementBindsExactImageAndClosedComposeABI(t *testing
 			case "different-tag":
 				m.Delivery.Image = strings.Replace(MemcachedDigestImage, "1.6.45-alpine", "latest", 1)
 			case "alias":
-				m.Version = "1.1.0-compat1"
+				m.Version = "1.6.45.0-compat2"
 			case "future":
-				m.Version = "1.2.0"
+				m.Version = "1.6.45-compat3"
 			case "old-version":
-				m.Version = "1.0.0"
+				m.Version = "1.6.45-compat1"
 			}
 			if validatePanelRequirements(m, func(string) bool { return true }) == nil {
 				t.Fatal("unbound digest capability admitted")
@@ -70,7 +70,7 @@ func TestMemcachedDigestRequirementBindsExactImageAndClosedComposeABI(t *testing
 
 func TestMemcachedDigestRequirementDoesNotBroadenOtherProvidersOrOldPackage(t *testing.T) {
 	m := memcachedDigestFixture()
-	m.Version, m.RequiredPanelFeatures, m.Delivery.Image = "1.0.0", nil, "memcached:1.6.45-alpine"
+	m.Version, m.RequiredPanelFeatures, m.Delivery.Image = "1.6.45-compat1", nil, "memcached:1.6.45-alpine"
 	if err := validatePanelRequirements(m, nil); err != nil {
 		t.Fatal("historical immutable package rejected", err)
 	}
@@ -87,7 +87,7 @@ func TestMemcachedDigestManifestBytesCannotBorrowNewHandlerClaim(t *testing.T) {
 	m := memcachedDigestFixture()
 	raw, _ := json.Marshal(m)
 	digest := sha256.Sum256(raw)
-	item := CatalogItem{ID: m.ID, Name: m.Name, Category: m.Category, Version: m.Version, Summary: m.Summary, Stage: m.Stage, Risk: m.Risk, Provider: m.Delivery.Provider, Target: m.Delivery.Target, ManageRoute: m.Delivery.ManageRoute, Capabilities: m.Capabilities, PackageURL: "https://example.invalid/dist/apps/memcached/1.1.0/manifest.json", SHA256: hex.EncodeToString(digest[:])}
+	item := CatalogItem{ID: m.ID, Name: m.Name, Category: m.Category, Version: m.Version, Summary: m.Summary, Stage: m.Stage, Risk: m.Risk, Provider: m.Delivery.Provider, Target: m.Delivery.Target, ManageRoute: m.Delivery.ManageRoute, Capabilities: m.Capabilities, PackageURL: "https://example.invalid/dist/apps/memcached/" + MemcachedDigestVersion + "/manifest.json", SHA256: hex.EncodeToString(digest[:])}
 	c := &Client{BaseURL: "https://example.invalid"}
 	if _, err := c.verifyManifestData(item, raw); (err == nil) != (runtime.GOOS == "linux") {
 		t.Fatal("actual compiled OS feature availability ignored", err)
@@ -101,5 +101,23 @@ func TestMemcachedDigestManifestBytesCannotBorrowNewHandlerClaim(t *testing.T) {
 	item.SHA256 = hex.EncodeToString(digest[:])
 	if _, err := c.verifyManifestData(item, changed); err == nil {
 		t.Fatal("new package omitted mandatory digest handler")
+	}
+}
+
+func TestMemcachedDigestRevisionAdvancesActualPublishedPackageAndKeepsFutureClosed(t *testing.T) {
+	if comparison, valid := CompareVersions(MemcachedDigestVersion, "1.6.45-compat1"); !valid || comparison != 1 {
+		t.Fatal("digest package must be a real forward update, not a1.1 downgrade", comparison, valid)
+	}
+	for _, version := range []string{"1.6.45-compat3", "1.6.45-compat10", "1.6.46-compat1", "1.6.45", "1.6.45-compat02", "1.6.45-compat18446744073709551616"} {
+		for _, omitFeature := range []bool{true, false} {
+			m := memcachedDigestFixture()
+			m.Version = version
+			if omitFeature {
+				m.RequiredPanelFeatures = nil
+			}
+			if validatePanelRequirements(m, func(string) bool { return true }) == nil {
+				t.Fatal("unreviewed future or alias borrowed digest authorization", version, omitFeature)
+			}
+		}
 	}
 }

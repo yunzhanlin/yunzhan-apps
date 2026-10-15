@@ -1,19 +1,22 @@
 {
-  "program": "0.1.0-dev.proapps24fleetviewbfva",
-  "source_inputs_sha256": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "program": "0.1.0-dev.proapps24memcompatbfwa",
+  "source_inputs_sha256": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
   "commercial_all50": false,
   "format": 1,
-  "phase": "signed-source-candidate-not-installed",
-  "frozen_files": 17046,
+  "phase": "corrected-signed-source-candidate-not-installed",
+  "frozen_files": 17049,
   "source_overrides": 0,
   "source_export": "panel-integration-platform-health-view",
-  "source_export_files": 1390,
-  "release_bound_export_files": 1350,
+  "source_export_files": 1393,
+  "release_bound_export_files": 1353,
   "previous_source_export": "panel-integration-platform-fleet",
   "previous_source_inputs_sha256": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
   "only_added_source": [
     "internal/appcatalog/memcached_features.go",
     "internal/appcatalog/memcached_features_test.go",
+    "internal/appcatalog/published_catalog_test.go",
+    "internal/appcatalog/published_repository_test.go",
+    "internal/appcatalog/testdata/published-catalog-20261015.json",
     "scripts/test-platform-health-lifecycle.mjs",
     "scripts/test-platform-health-ui-fixture.html",
     "scripts/test-platform-health-ui-fixture.mjs",
@@ -33,17 +36,36 @@
     "web/src/AppModuleReport.vue"
   ],
   "removed_source": [],
+  "corrected_from_rejected_program": "0.1.0-dev.proapps24fleetviewbfva",
+  "corrected_from_rejected_inputs": "094aa924f9f5304c9b543499483a0d0b11f78a3a45115e3f4c0fef182878872c",
+  "corrected_source_delta": [
+    "internal/appcatalog/memcached_features.go",
+    "internal/appcatalog/memcached_features_test.go",
+    "internal/appcatalog/published_catalog_test.go",
+    "internal/appcatalog/published_repository_test.go",
+    "internal/appcatalog/testdata/published-catalog-20261015.json"
+  ],
   "normal_archives": {
-    "arm64": "9998af85c5bf58bd4dd6043f8d57b3393202a553cad1a5f1d193e9c0aae89c13",
-    "amd64": "4d6799219dd2d3c672716ad42f404f748528a785a360742691ecf82429a8fbf3"
+    "arm64": "53779dbd89f840f3313746f3b2a28e85b2543ff17fff0653cceffb79332866c1",
+    "amd64": "c18d0abc28a6740fd60b6bf671da455caab47a327c847878810706f4730d1a0e"
   },
   "manager": {
-    "name": "AppModuleManager-DQQF3jeK.js",
+    "name": "AppModuleManager-DeroTsb7.js",
     "bytes": 267528,
-    "sha256": "216fc5d6663fed2fc1bde299cd092d6a29a548a06847ed97ec9d228fd0e0fef6"
+    "sha256": "cd2144e8cdf17b1648fc2e0c283c2aa2c6f51bcf89efda9821cdcbf2d30645e1"
   },
-  "evidence_root": "registry/reviewed-platform-health-view/24bfva",
+  "evidence_root": "registry/reviewed-published-compat/24bfwa",
   "evidence_sha256": {
+    "normal-builds-and-signatures.json": "b25e0796e74e7448744a65af621bcf75bf698deac7f3cb3efb36241afca47489",
+    "signed-published-catalog-abi.json": "b60a9a017878c30f45666ae0e77e7319b501e327a351ae469c3eb2eb39d420c9",
+    "local-web-and-synthetic-ui.json": "00e978918f74dcaa73481dbcc2b51f614ff59a97fb40232f45fdafaf014d298e",
+    "rejected-prior-candidate.json": "9e4b0e6b62ba213f504912d6e0315c0c97dfa886d1f5c719dc95dbe439189da9"
+  },
+  "rejected_snapshot_root": "registry/rejected-platform-health-view/24bfva",
+  "rejected_candidate_sha256": "be2a3f9f4899cd36cfa66e50b3ed9066ccfdb178d67fc5140bbcd4d3a65ab754",
+  "rejected_candidate_test_sha256": "f1bcbebd5e5d84ca1b9d80f268f42de1d27a9da02354eabeed6991d703b47b63",
+  "historical_evidence_root": "registry/reviewed-platform-health-view/24bfva",
+  "historical_evidence_sha256": {
     "normal-builds-and-signatures.json": "71be327b386fc1e74e963c5d1ba16a27039ba39ae2d754c4ad5b5092a7a9539f",
     "local-web-and-synthetic-ui.json": "a4daea1f0953914e0c58346a7f889f72ccb7c005578468325f12dab5a716364b",
     "prior-signed-installed-fleet.json": "3cdc11587b3b429f279ad0257a5831a197756d0659cd467b4b3ce1f160cd5b1f",
@@ -57,9 +79,10 @@
   "main_delivered": false,
   "app_packages_updated": false,
   "remaining": [
-    "Exact source CI and normal matched-head merge",
-    "Normal signed QA upgrade with a fresh true baseline including the retained legacy QA uninstall task and audit",
-    "Actual installed new cards and UI close cancellation over genuine HTTPS; isolated synthetic UI is not that proof",
-    "Safe Main development gateway delivery preserving sites, user assets and FeiFei19101; all50 commercial OS/device/soak and broader feature acceptance remain"
+    "Exact corrected-head source CI including mandatory real Linux current signed50manifest gate, then normal matched-head merge",
+    "Normal signed QA upgrade with fresh true baseline preserving retained lifecycle failure and audit",
+    "Actual installed new cards, genuine HTTPS and stop/close cancellation; synthetic UI is not that evidence",
+    "Safe Main development gateway delivery preserving sites, user assets and FeiFei19101; all50 commercial OS/device/soak and broader feature acceptance remain",
+    "Memcached compat2 application has not been published; safe existing-compose update workflow and actual native migration remain"
   ]
 }
