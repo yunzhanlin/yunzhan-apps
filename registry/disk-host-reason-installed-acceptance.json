@@ -1,0 +1,60 @@
+{
+  "format": 1,
+  "phase": "actual-normal-signed-program-and-new-worker-reason-acceptance-owned-two-qa-architectures",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "source_export": "panel-integration-disk-reason",
+  "source_overrides": 0,
+  "source_ci": {
+    "head": "41bcd92779e68021d8b6cebd9291b314fe75c14a",
+    "check_run_id": 116553171692,
+    "run_id": 38772937364,
+    "conclusion": "success",
+    "has_more": false,
+    "statuses": [],
+    "normal_matched_head_merge": "d92070412a291e1f27125bf2bc84faa41d857450",
+    "pr": "https://github.com/yunzhanlin/yunzhan-apps/pull/42"
+  },
+  "new_program_deployed_both_qa": true,
+  "installed_new_ui_reason_fix_verified_both": true,
+  "installed_new_worker_reason_fix_verified_both": true,
+  "original_failed_check_and_readonly_harness_failures_retained": true,
+  "original_preflight_refusal_cause_proven": false,
+  "original_preflight_refusal_cause_fixed": false,
+  "legacy_raw_receipts_and_exact_exports_unchanged": true,
+  "existing_disk14_epochs_unchanged": true,
+  "original_program_guards_deadlines_and_resource_limits_unchanged": true,
+  "original_large_failure_cause_proven": false,
+  "original_large_failure_fixed": false,
+  "retained_original_large_failure_result_sha256": "da6afef0660f5a8522ce3011247e57392b4f90b6c843e822ed46e6b552d4c295",
+  "main_delivered": false,
+  "main_absent_apps_installed": false,
+  "commercial_all50": false,
+  "evidence_root": "registry/reviewed-disk-reasons/24bfsg-installed",
+  "evidence_sha256": {
+    "normal-signed-program-upgrade-arm64.json": "7e0c30e3bdb16231c04f6e3e38b63169d0d120fc0328a969d922bbeca50710c4",
+    "normal-signed-program-upgrade-amd64.json": "06e41b165eb8d8ebb6cae99b7539e944cd3499bb86494de90d2f9aa04bac9527",
+    "retained-first-normal-check-refusal-arm64.json": "84658291ce7498ffaa0a6329f34e600da56fa53c8fdb2055289f866426ab7754",
+    "independent-readonly-refusal-inspection-arm64.json": "0f6961889d7462964a44b72b5419e764d9e207b665924e196381e614557626c8",
+    "actual-installed-legacy-report-ui-arm64.json": "1e677ceaa37615d3da2d0ca8b62422e53520752952bab9bd09bc3de7d98b0ba8",
+    "actual-installed-legacy-report-ui-amd64.json": "7ceaa51fb20a46c954d49994cc7ba5e6070762324d064925a455b3dc4734c4c5",
+    "retained-first-readonly-ui-harness-failure-arm64.json": "fa517f71d325fe1efb06e25eaafa0f61f6b9ccdf73497da609999d2e524a55de",
+    "retained-first-readonly-ui-harness-failure-amd64.json": "95dcd91f607a0240f1c8583f443173e8371705b8382bda643cfa4fc0dd79bfdd",
+    "actual-installed-single-reason-native-revocation-arm64.json": "9b7d4347f75c80b082f4b9c39ce57d37f672daba454f614b5a480f007985eecc",
+    "actual-installed-single-reason-native-revocation-amd64.json": "5c5ea0086c4f4f0ca4eb069392f72b02243cf81cb56ba0403c137c5b0702d5a4"
+  },
+  "historical_registry_sha256": {
+    "registry/disk-host-reason-candidate.json": "8a433398d2f86ef0c88b4903ac497c31f934c4f5b4ee6274480eac92c682f650",
+    "registry/disk-host-installed-diagnostic-acceptance.json": "1ff1e212ebf5f69ddf336cb3ae5ff9013d468f732e2e675f071e3c5aa60214be",
+    "registry/reviewed-disk-diagnostics/24bfrc/retained-real-larger-scan-failure-amd64.json": "d4bdbb239042c290f31568db6d87f602f8740534d44085cc6599b49247e1a65f"
+  },
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "scope": "Actual signed program upgrade, existing-report UI and newly generated native worker evidence are now separate from historical source-only tests. Preserve all first false proofs and exact failed/canceled old receipts. This is two owned QA systems, not Main, physical devices, complete OS/filesystem matrix, original intermittent failure cause, long soak or all50 commercial acceptance.",
+  "remaining": [
+    "Investigate retained first preflight refusal without relaxing or bypassing guards; original transient cause remains unproven",
+    "Original11904-entry AMD cause, disk history/global spool/low-disk/recoverable cleanup/restore and wider OS/filesystem/soak/device acceptance",
+    "Safe Main development-gateway delivery preserving current58sites4apps and absent disk application",
+    "Continue actual remaining functionality and acceptance across all50 apps; no full-commercial declaration from this batch"
+  ]
+}

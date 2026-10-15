@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "original_proof_sha256": "315495199cdc8dcab9c46a5ae3a4404d432b0e2816e73d7bca8c23eef0ed6cb5",
+  "kind": "actual-retained-ui-harness-failure-not-production-pass",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": false,
+  "reason": "final assertion omitted expected unauthenticated bootstrap401",
+  "native_scans": 0,
+  "application_installs_updates": 0,
+  "production_authentication_or_runtime_checks_changed": false,
+  "password_reset_or_throttle_reset": false,
+  "failed_login_evidence_retained": false,
+  "scope": "Original false proof remains false. A separate readonly run uses request-phase-bound assertions and, on AMD, the established current private credential. No native job replay, account password change, authentication bypass or original-evidence repair.",
+  "commercial_all50": false
+}

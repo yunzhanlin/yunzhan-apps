@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "original_proof_sha256": "3e9ea1591228bed19cc5002023e0a0d44bc2b226ad24a046fe93dba5cd5aad0b",
+  "kind": "readonly-same-stage-inspection-not-normal-upgrade-replay",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": true,
+  "original_failure_retained": true,
+  "original_programs_unchanged": true,
+  "all97_business_projections_and_original_files_unchanged": true,
+  "all_original_host_history_unchanged": true,
+  "readonly_candidate_guard_exit": 0,
+  "normal_upgrade_run_submitted": false,
+  "guard_checks_relaxed": false,
+  "remote_writes": 0,
+  "original_refusal_cause_proven": false,
+  "original_refusal_cause_fixed": false,
+  "commercial_all50": false
+}
