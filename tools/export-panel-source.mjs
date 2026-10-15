@@ -8,7 +8,7 @@ const sourceArg=process.argv.indexOf('--panel-root');
 const panel=sourceArg>=0?path.resolve(process.argv[sourceArg+1]):path.resolve(root,'../panel');
 const outputArg=process.argv.indexOf('--output-name');
 const outputName=outputArg>=0?process.argv[outputArg+1]:'panel-integration';
-if(!['panel-integration','panel-integration-geography','panel-integration-disk','panel-integration-disk-fix'].includes(outputName))throw Error('Unknown fixed source export scope');
+if(!['panel-integration','panel-integration-geography','panel-integration-disk','panel-integration-disk-fix','panel-integration-disk-diagnostic'].includes(outputName))throw Error('Unknown fixed source export scope');
 const output=path.join(root,outputName);
 const releaseArg=process.argv.indexOf('--release');
 let releaseInputs,releaseInfo;

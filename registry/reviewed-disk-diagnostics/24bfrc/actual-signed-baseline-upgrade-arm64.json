@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "original_proof_sha256": "492551bb0fc3ecb57e1f6b6d65fcd11b3fa758fadf1bace4443ee161b5dd3d5b",
+  "kind": "actual-normal-original-key-program-upgrade",
+  "arch": "arm64",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskfixbfpe",
+  "source_inputs_sha256": "bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a",
+  "archive_sha256": "f99cfe26898acaa06d8c2c71f217b03ecd211761d72a7f0104d1b34a5837d609",
+  "check_run_launcher_verified": true,
+  "journal_phase": "committed",
+  "protected_file_count": 712,
+  "protected_table_projections": 97,
+  "sites": 82,
+  "apps": 20,
+  "application_installs_updates": 0,
+  "main_updated": false,
+  "scope": "Actual BFPE program-only QA upgrade; NOT deployment of this new diagnostic candidate.",
+  "commercial_all50": false
+}

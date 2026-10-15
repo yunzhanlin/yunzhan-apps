@@ -1,0 +1,75 @@
+{
+  "format": 1,
+  "phase": "normal-signed-diagnostic-source-before-installed-reproduction",
+  "program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "frozen_files": 17033,
+  "source_overrides": 0,
+  "source_export": "panel-integration-disk-diagnostic",
+  "previous_source_export": "panel-integration-disk-fix",
+  "previous_program": "0.1.0-dev.proapps24diskfixbfpe",
+  "previous_source_inputs_sha256": "bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a",
+  "only_added_source": [
+    "internal/executor/app_disk_host_diagnostic.go",
+    "internal/executor/app_disk_host_diagnostic_test.go"
+  ],
+  "only_changed_source": [
+    "internal/executor/app_disk_host_producer_linux.go",
+    "internal/executor/app_disk_host_worker_linux.go"
+  ],
+  "removed_source": [],
+  "normal_original_key_archives": {
+    "arm64": "07ac75f28823e7d2bcc6fe0bec9af67c587f40f37e5098d59d2e4c2649892e47",
+    "amd64": "3a18210f15dce39f91c6decfd14280a87d8567e3e96b1358d547be2daca2532b"
+  },
+  "normal_build_logs": {
+    "arm64": "d26022fa68d487ab3fb1119127f64bff4e874fe2f934db57e08b8d633ac9483d",
+    "amd64": "37cb1f747963a2f4f3fdf9a3ec71ff28bb5961afb9491cb03a90d181f816ca51"
+  },
+  "normal_build_both_arches_passed": true,
+  "original_key_signature_both_arches_verified": true,
+  "previous_baseline_signed_qa_upgrades_and_small_native_scans_both": true,
+  "previous_baseline_running_cancel_verified_both": true,
+  "previous_baseline_fault_recovery_verified_arm64_only": true,
+  "actual_larger_amd_scan_failed_and_retained": true,
+  "diagnostic_native_source_tests_passed_both": true,
+  "candidate_program_deployed": false,
+  "actual_failure_cause_proven": false,
+  "actual_larger_amd_scan_fixed": false,
+  "amd_fault_recovery_proven": false,
+  "main_delivered": false,
+  "main_absent_disk_app_installed": false,
+  "commercial_all50": false,
+  "diagnostic_stream_line_bound_bytes": 2048,
+  "diagnostic_max_emissions_per_job": 1,
+  "diagnostic_mailbox_capacity": 128,
+  "diagnostic_mailbox_nonblocking": true,
+  "retired_pre_ci_candidate_retained": true,
+  "public_result_error_chain_unchanged": true,
+  "authority_deadline_seconds_unchanged": 2,
+  "worker_cpu_percent_unchanged": 20,
+  "worker_memory_bytes_unchanged": 536870912,
+  "catalog_sha256_unchanged": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "disk14_manifest_sha256_unchanged": "0378158248d4be3a9920680131853250419bf0823336c481aa6b04bfe2293950",
+  "evidence_root": "registry/reviewed-disk-diagnostics/24bfrc",
+  "evidence_sha256": {
+    "actual-signed-baseline-upgrade-arm64.json": "30a4a1d95e4ed6f32b825b8831613c24533df92af496b80de47c32b677b72018",
+    "actual-baseline-native-scan-arm64.json": "4a8ff6278485499f7d71de7e7c4427034bf6ad756092d3d1ab82c14f7fe10ad0",
+    "actual-baseline-native-cancel-arm64.json": "47b167adae9477997c820882698c3472514839baf106f2134c934427b1f12e28",
+    "native-diagnostic-source-tests-arm64.json": "b420ff993b6c84a96050ad81eebc4e0062cd3f9d9c8d0d7641994e17cce0eef7",
+    "actual-signed-baseline-upgrade-amd64.json": "858db618798c578748e530a0b94efc59f58d664e75d149243d02d0df64efd305",
+    "actual-baseline-native-scan-amd64.json": "e8cc1c1694678a883b4ad662f8d89e4fe5d05a391bcaf73bd68d33344335aec9",
+    "actual-baseline-native-cancel-amd64.json": "a7d23ff8e0927a522c4c6da08b573e598f7cbaf1ebdc070e1aaf941120ea62fb",
+    "native-diagnostic-source-tests-amd64.json": "b0ed84bf0309c7eafcb875f847add92185a0474a59e2a2ed94dc37e3c739613b",
+    "actual-baseline-interruption-arm64.json": "51f768e4f1a91d38c1280be85dcdf3422408f31b1f95a1e5785494266bfece6b",
+    "retained-real-larger-scan-failure-amd64.json": "d4bdbb239042c290f31568db6d87f602f8740534d44085cc6599b49247e1a65f"
+  },
+  "scope": "Separate exact normal signed diagnostic program, not a causal fix or installed-worker success. Preserves every old source/catalog/app/failure snapshot. Adds only bounded fixed stage/reason diagnostics through a128-entry nonblocking mailbox to executor management logs, no private raw text, no authorization/cache/timeout/resource/receipt/idempotency changes. Previous real baseline upgrades/scans/cancel and ARM-only interruption are distinct from retained larger AMD failure and source-only diagnostics.",
+  "remaining": [
+    "Exact source CI, approved original-key program-only QA upgrade and installed diagnostic stream verification",
+    "Reproduce and identify the original larger AMD progress/authority failure without widening runtime checks",
+    "Actual post-repair larger scan and AMD native interruption/recovery, permission revocation and failed-scope reuse",
+    "History archives/globalspool/lowdisk/recoverable cleanup and restore",
+    "Broader OS/filesystem/physical/soak/device/all50 and safe Main delivery"
+  ]
+}

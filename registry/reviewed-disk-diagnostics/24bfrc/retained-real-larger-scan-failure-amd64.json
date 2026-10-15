@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "original_proof_sha256": "8b6a2227583958a8710de56dd8d24a39f41c98b1dbeb85ba17cf33647c5cf354",
+  "kind": "retained-genuine-signed-installed-failure",
+  "arch": "amd64",
+  "state": "failed",
+  "error_code": "progress_or_authority_rejected",
+  "metadata_entries_read": "11904",
+  "enumeration_complete": false,
+  "index_flushed": false,
+  "partial_reasons": [
+    "progress_or_authority_rejected",
+    "progress_or_authority_rejected"
+  ],
+  "original_result_sha256": "da6afef0660f5a8522ce3011247e57392b4f90b6c843e822ed46e6b552d4c295",
+  "worker_exited": true,
+  "scope_empty": true,
+  "both_leases_free": true,
+  "database_exact_failed_result": true,
+  "result_audits": 1,
+  "active_host_jobs": 0,
+  "fault_injected": false,
+  "rewritten": false,
+  "success_claimed": false,
+  "causal_fix_proven": false,
+  "scope": "Actual larger AMD scanner failed before planned fault injection; retained as FAILED, never relabeled as crash recovery or complete enumeration.",
+  "commercial_all50": false
+}

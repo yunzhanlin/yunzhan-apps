@@ -161,3 +161,16 @@ jobs:
           node panel-integration-disk-fix/web/node_modules/playwright/cli.js install --with-deps chromium
           disk_fix_ui_out="$(mktemp -d)"
           node panel-integration-disk-fix/scripts/qa-host-disk-workspace.mjs "$disk_fix_ui_out"
+      - name: Diagnostic candidate complete Root Linux contracts, not installed failure-fix acceptance
+        working-directory: panel-integration-disk-diagnostic
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Diagnostic fixed enum filtering, bounded stderr and unchanged native exit race regression
+        working-directory: panel-integration-disk-diagnostic
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHostDiagnostic' -count=1 -v
+      - name: Locked diagnostic candidate UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-diagnostic/web --ignore-scripts
+      - name: Diagnostic candidate complete UI and unchanged entry budget, not actual installed workflow
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-diagnostic/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-diagnostic/web
+          node panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs panel-integration-disk-diagnostic/web/dist

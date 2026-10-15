@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "original_proof_sha256": "700b49105fce988f676af21cfd027631b83a75bdf35fc759f59e3de0ca2a826c",
+  "kind": "actual-normal-original-key-program-upgrade",
+  "arch": "amd64",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskfixbfpe",
+  "source_inputs_sha256": "bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a",
+  "archive_sha256": "4d6ec87369334c2361a104009497d9477c045ace69bfe097f1d7c943f6b21ff1",
+  "check_run_launcher_verified": true,
+  "journal_phase": "committed",
+  "protected_file_count": 463,
+  "protected_table_projections": 97,
+  "sites": 96,
+  "apps": 20,
+  "application_installs_updates": 0,
+  "main_updated": false,
+  "scope": "Actual BFPE program-only QA upgrade; NOT deployment of this new diagnostic candidate.",
+  "commercial_all50": false
+}
