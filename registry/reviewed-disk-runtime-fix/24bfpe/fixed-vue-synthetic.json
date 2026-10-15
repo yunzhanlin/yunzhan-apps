@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "original_proof_sha256": "2998c50793116198fca77e658be0fd4462fc20aa8810171196af0108690d4952",
+  "ok": true,
+  "checks": [
+    "open only reads complete inventory, own history and metadata-only maintenance",
+    "non-path Docker nsfs root remains display-only while complete local inventory stays selectable",
+    "lost reply resolved by GET original key, never duplicate POST",
+    "drill selects literal original-mount directory without scan or file mutation",
+    "cancel sends original ID once and final state comes from separate read",
+    "partial not complete; exact decimal export and unknown inode preserved",
+    "390px layout stays in viewport; tables scroll independently",
+    "permission revision clears private paths and drops late reply, no denied polling",
+    "legacy 1.3 not silently activated or installed",
+    "explicit orphan close uses metadata-only current operator route, no private report adoption",
+    "no browser exceptions"
+  ],
+  "scope": "actual Vue with synthetic closed API, NOT installed native or all50 acceptance",
+  "commercial_all50": false
+}

@@ -1,0 +1,33 @@
+{
+  "format": 1,
+  "original_proof_sha256": "fa4d68df82fcad3060a6966d37c2ccd3af57ad915386728c15aab7e6ebe01310",
+  "arch": "amd64",
+  "program": "0.1.0-dev.proapps24diskhostbfns",
+  "application_version": "1.4.0",
+  "original_job_id_sha256": "7fcb0a6b7ec9abb74553c3ecb9a25b76c1c98a3632b376d72bdf92fac277708b",
+  "original_result_sha256": "52b87406ed6313242d2c673809400e8e62c6f4085ada76a8a3f4f7c1b61a24c1",
+  "original_request_sha256": "6368ab65c55fb98e9c6c8219a4b1914259d2009cb67f21ddddb5ce259086e01e",
+  "state": "failed",
+  "error_code": "index_unavailable_or_full",
+  "report": null,
+  "no_index_file_created": true,
+  "original_process_gone": true,
+  "original_scope_empty": true,
+  "both_leases_free": true,
+  "database_exact_failed_result": true,
+  "result_audits": 1,
+  "original_failure_rewritten": false,
+  "success_claimed": false,
+  "policy": {
+    "threads_checked": 7,
+    "capabilities": "CAP_DAC_READ_SEARCH",
+    "no_new_privileges": true,
+    "cpu_max": "20000 100000",
+    "memory_max": "536870912",
+    "memory_high": "402653184",
+    "memory_swap_max": "0",
+    "pids_max": "32",
+    "io_weight": "default 10"
+  },
+  "commercial_all50": false
+}
