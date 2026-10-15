@@ -226,3 +226,23 @@ jobs:
           node panel-integration-platform-health-view/web/node_modules/playwright/cli.js install --with-deps chromium
           mkdir -p panel-integration-platform-health-view/.local
           node panel-integration-platform-health-view/scripts/test-platform-health-ui.mjs
+      - name: Fleet reopen complete Root Linux contracts (source only)
+        working-directory: panel-integration-fleet-reopen
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Reopen candidate against actual current original-key signed 50 manifests (no install)
+        working-directory: panel-integration-fleet-reopen
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Locked fleet reopen dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-fleet-reopen/web --ignore-scripts
+      - name: Reopen snapshot authority and unchanged deferred entry budgets (not installed UI)
+        run: |
+          node --experimental-strip-types --test panel-integration-fleet-reopen/scripts/test-platform-health-view.mjs panel-integration-fleet-reopen/scripts/test-platform-health-lifecycle.mjs panel-integration-fleet-reopen/scripts/test-module-state.mjs panel-integration-fleet-reopen/scripts/test-deferred-workspace.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetreopenbfxr npm run build --prefix panel-integration-fleet-reopen/web
+          node panel-integration-fleet-reopen/scripts/web-entry-budget.mjs panel-integration-fleet-reopen/web/dist
+      - name: Actual Vue null-report reopening and authority invalidation (synthetic API only)
+        run: |
+          node panel-integration-fleet-reopen/web/node_modules/playwright/cli.js install --with-deps chromium
+          mkdir -p panel-integration-fleet-reopen/.local
+          node panel-integration-fleet-reopen/scripts/test-platform-health-ui.mjs

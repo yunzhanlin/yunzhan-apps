@@ -1,0 +1,26 @@
+{
+  "program": "0.1.0-dev.proapps24fleetreopenbfxr",
+  "source_inputs_sha256": "d43742b5543567d4e19cc70407e6eb013be9f631732b767f557cbb7fd0364fbf",
+  "commercial_all50": false,
+  "ok": true,
+  "node_test_commands": 43,
+  "node_test_passes": 328,
+  "node_test_failures": 0,
+  "node_test_skips": 0,
+  "node_preflight_proof_sha256": "6ebc25346b21d94471d436a04b67a7a1b34e7b7d93e34a3fcd95652af6b1fa8e",
+  "synthetic_UI_proof_sha256": "7f55ad79d45180e4fe777ca7848bdf876241683f053185c09278a1a4b71e7d1b",
+  "synthetic_UI_browser": "153.0.8010.12",
+  "synthetic_UI_cases": 5,
+  "synthetic_UI_widths": [
+    1440,
+    390,
+    320
+  ],
+  "synthetic_UI_only": true,
+  "explicit_null_generic_report_reopen_case": true,
+  "explicit_account_installation_unknown_report_invalidation_case": true,
+  "late_abort_close_unmount_regressions": true,
+  "only_component_memory_no_browser_storage": true,
+  "no_automatic_health_network_check": true,
+  "new_program_installed": false
+}

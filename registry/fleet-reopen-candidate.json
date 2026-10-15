@@ -1,0 +1,56 @@
+{
+  "program": "0.1.0-dev.proapps24fleetreopenbfxr",
+  "source_inputs_sha256": "d43742b5543567d4e19cc70407e6eb013be9f631732b767f557cbb7fd0364fbf",
+  "commercial_all50": false,
+  "format": 1,
+  "phase": "signed-reopen-source-candidate-not-installed",
+  "frozen_files": 17050,
+  "source_overrides": 0,
+  "source_export": "panel-integration-fleet-reopen",
+  "source_export_files": 1394,
+  "release_bound_files": 1354,
+  "previous_source_export": "panel-integration-platform-health-view",
+  "previous_source_inputs": "e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd",
+  "only_added_source": [
+    "web/src/platformHealthSnapshot.ts"
+  ],
+  "only_changed_source": [
+    "scripts/test-deferred-workspace.mjs",
+    "scripts/test-module-state.mjs",
+    "scripts/test-platform-health-ui-fixture.mjs",
+    "scripts/test-platform-health-ui.mjs",
+    "scripts/test-platform-health-view.mjs",
+    "web/src/AppModuleManager.vue"
+  ],
+  "removed_source": [],
+  "normal_archives": {
+    "arm64": "460e4684c174d4172eaca83e0e88e9271dfefd90e082f6ea1ea08af8bf940574",
+    "amd64": "2e7b858fae0d4be776786cda8986e0c190f336806c2762ba82c684157297d2fb"
+  },
+  "manager": {
+    "name": "AppModuleManager-D0vCzaZO.js",
+    "bytes": 268901,
+    "sha256": "3f1f7ff4e9b6e3491ce38f3055a2f253f9acecb1307b4c3e875019326339fe4f"
+  },
+  "evidence_root": "registry/reviewed-fleet-reopen/24bfxr",
+  "evidence_sha256": {
+    "normal-builds-and-signatures.json": "2ec9e984443b06c6ade8fbeeb47cf374f3600f460b3e275a98d68e6dc0f69976",
+    "retained-installed-failure-and-retirement.json": "cc97b601e8046c8eb05f40bfaac1712e43f04ef49ccd09075bf6fa512012cddf",
+    "local-web-and-synthetic-ui.json": "b2eda74b55683051f926472d15fdca59a5c83b37ddebe62c2ef5edc82731e916",
+    "source-and-published-catalog-boundary.json": "87b7cb6bb079773836d059a06273dedc8430b799b90cb4dcbc626f97fc2025aa"
+  },
+  "previous_workflow_sha256": "cc013c2ecb5d136c873238cb31f4077404a1853018c407f8b8a42ada9f3c79b1",
+  "previous_exporter_sha256": "89168fbc72035d0378669a5aa9f5b99ee9ff2da375740903dcf10fb7730f0096",
+  "previous_fleet_test_sha256": "0c01959fe4f7ca61415c094b3c6847bd6d30342bbe694163e6a62b915aaecd8c",
+  "previous_health_test_sha256": "495ed5495b45c4e785e6a3ddf3e646c6271470b8ebb29381eb11d32b245a2828",
+  "new_program_installed": false,
+  "new_UI_live_agent_verified": false,
+  "main_delivered": false,
+  "application_packages_updated": false,
+  "remaining": [
+    "Exact-head CI including full Root Linux and actual current signed50manifest ABI, then normal matched-head merge",
+    "Normal signed QA upgrade with fresh complete current BFWA baselines including33ARM/34AMDowned events,36audits and one retained ARM owned lost session",
+    "Actual installed close/reopen snapshot retention, genuine HTTPS stop/close, hostname refusal, revocation and exact own cleanup; synthetic5cases are not installed proof",
+    "Normal Main development layout delivery preserving58sites4markers6receipts, FileManager and FeiFei19101, then complete actual per-project application migration/rollback and the remaining50commercial OS/device/soak requirements"
+  ]
+}

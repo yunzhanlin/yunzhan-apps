@@ -1,0 +1,42 @@
+{
+  "program": "0.1.0-dev.proapps24fleetreopenbfxr",
+  "source_inputs_sha256": "d43742b5543567d4e19cc70407e6eb013be9f631732b767f557cbb7fd0364fbf",
+  "commercial_all50": false,
+  "ok": true,
+  "frozen_files": 17050,
+  "source_overrides": 0,
+  "normal_builds_both": true,
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "signed_receipt_sha256": "0978a002c7d955a61913511fd893edb7a6335d107378b42386596fbf55bbcd2a",
+  "packaging_test_passes_each": 179,
+  "node_test_passes_each": 328,
+  "node_failures_each": 0,
+  "node_skips_each": 0,
+  "node_batches_each": 41,
+  "eager_limit_bytes": 1200000,
+  "archives": {
+    "arm64": {
+      "archive_sha256": "460e4684c174d4172eaca83e0e88e9271dfefd90e082f6ea1ea08af8bf940574",
+      "manifest_sha256": "6fa8775cec9009794656c98acd049e4a7d4823e041c35830fc65d163ceeefa6c",
+      "signature_sha256": "5a62a445e975b5e88907aecd936c5d0215cb3181c1bcce9d6c286cb1ac70dfd3",
+      "normal_build_log_sha256": "c233b39bcef20e60939d4a6a389d1d3be73f86cb4de5e756feed836470241e42",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158774
+    },
+    "amd64": {
+      "archive_sha256": "2e7b858fae0d4be776786cda8986e0c190f336806c2762ba82c684157297d2fb",
+      "manifest_sha256": "804233acc28218fb4fe9b1a1a3acd5cdc13e9056f4d12dd29a9f96d18e470cea",
+      "signature_sha256": "193fa3e59f3bfeb443f31d28c098de63be405bad57e17aace195edeec4c38204",
+      "normal_build_log_sha256": "11a54f56dcad91c0e958735cfe61414d1b59ac9e831d671cd578ea5ecd5ebd99",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158774
+    }
+  },
+  "manager": {
+    "name": "AppModuleManager-D0vCzaZO.js",
+    "bytes": 268901,
+    "sha256": "3f1f7ff4e9b6e3491ce38f3055a2f253f9acecb1307b4c3e875019326339fe4f"
+  },
+  "new_program_installed": false
+}
