@@ -1,6 +1,7 @@
 // Exact source/evidence contracts only; no CI test invents installed acceptance.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {catalogBeforeDisk140Bytes,disk130Archive} from './previous-disk-host-catalog.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash,createPublicKey,verify} from 'node:crypto';
 import {validateManifest} from '../tools/lib.mjs';
@@ -18,11 +19,11 @@ test('new disk update ceiling is backed by exact independently signed frozen inp
  const ci=(await read('.github/workflows/verify.yml')).toString();assert(ci.includes("go test -race ./internal/core -run '^TestDiskUsage' -count=1 -v"));
 });
 test('only signed disk package advances, original1.2 and previous signed catalog remain immutable',async()=>{
- const r=JSON.parse(await read('registry/disk-inode-update-release.json')),manifestRaw=await read('dist/apps/disk-analysis/1.3.0/manifest.json'),manifest=JSON.parse(manifestRaw),catalogRaw=await read('dist/catalog-v1.json'),catalog=JSON.parse(catalogRaw),oldRaw=await read('registry/reviewed-catalogs/before-disk1.3-24bfin/catalog-v1.json'),old=JSON.parse(oldRaw),publicRaw=await read('signatures/catalog-v1.pub.pem');
+ const r=JSON.parse(await read('registry/disk-inode-update-release.json')),manifestRaw=await read('dist/apps/disk-analysis/1.3.0/manifest.json'),manifest=JSON.parse(manifestRaw),catalogRaw=await catalogBeforeDisk140Bytes(),catalog=JSON.parse(catalogRaw),oldRaw=await read('registry/reviewed-catalogs/before-disk1.3-24bfin/catalog-v1.json'),old=JSON.parse(oldRaw),publicRaw=await read('signatures/catalog-v1.pub.pem');
  assert.equal(sha(manifestRaw),r.application_manifest_sha256);assert.equal(sha(await read('dist/apps/disk-analysis/1.2.0/manifest.json')),r.original_1_2_manifest_sha256);assert.equal(sha(catalogRaw),r.new_catalog_sha256);assert.equal(sha(oldRaw),r.previous_catalog_sha256);assert.equal(sha(publicRaw),r.original_publisher_public_key_sha256);
  assert.deepEqual(validateManifest(manifest),[]);assert.equal(manifest.version,'1.3.0');assert.equal(manifest.stage,'ready');assert.deepEqual(manifest.required_panel_features,['disk-inode-usage-v1']);assert.match(manifest.summary,/不含全盘分析/);assert.match(manifest.summary,/商用.*仍在验收/);
  assert.equal(catalog.apps.length,50);assert.deepEqual(catalog.apps.map(p=>p.id),old.apps.map(p=>p.id));for(const app of old.apps){const now=catalog.apps.find(a=>a.id===app.id);if(app.id==='disk-analysis'){assert.equal(now.version,'1.3.0');assert.equal(now.sha256,r.application_manifest_sha256);}else assert.deepEqual(now,app,'unrelated app changed: '+app.id);}
- for(const [root,bytes]of [['signatures/',catalogRaw],['registry/reviewed-catalogs/before-disk1.3-24bfin/',oldRaw]]){const b=JSON.parse(await read(root+'catalog-v1.bundle.json'));assert.equal(b.catalog,bytes.toString());assert(verify(null,bytes,createPublicKey(publicRaw),Buffer.from(b.signature,'base64')));}
+ for(const [root,bytes]of [[disk130Archive,catalogRaw],['registry/reviewed-catalogs/before-disk1.3-24bfin/',oldRaw]]){const b=JSON.parse(await read(root+'catalog-v1.bundle.json'));assert.equal(b.catalog,bytes.toString());assert(verify(null,bytes,createPublicKey(publicRaw),Buffer.from(b.signature,'base64')));}
  assert.deepEqual(await catalogBeforeDisk130(catalog),old);for(const mutate of [c=>{c.apps.find(a=>a.id==='redis').summary+=' altered';},c=>{c.apps.find(a=>a.id==='disk-analysis').sha256='0'.repeat(64);},c=>{c.generated_at='2026-10-01T00:00:00Z';}]){const bad=structuredClone(catalog);mutate(bad);await assert.rejects(()=>catalogBeforeDisk130(bad));}
 });
 test('real legacy-app native accounting and cancellation are retained separately from the proposed1.3 upgrade',async()=>{

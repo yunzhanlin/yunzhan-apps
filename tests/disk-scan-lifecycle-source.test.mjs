@@ -2,6 +2,7 @@
 // installed UI acceptance; old API-client proof must never become button proof.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {catalogBeforeDisk140Bytes} from './previous-disk-host-catalog.mjs';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
@@ -36,7 +37,7 @@ test('retained remote source-order failure is not bypassed: exact AST and compil
  const source=(await read('panel-integration-geography/scripts/test-remote-sync.mjs')).toString();assert(source.includes("managerFunction(source,'execute')"));assert(source.includes('ts.isFunctionDeclaration(node)'));assert(source.includes('persist>=0&&submit>persist'));assert(source.includes('actual compiled remote queue persists before its one fetch'));assert(source.includes('const independent=new RemoteRequestIdentity(store)'));assert(source.includes('persisted ticket must already exist at network boundary'));assert(source.includes("不能保存待核对任务标识，未提交；请允许本站会话存储"));assert.doesNotMatch(source,/test\.skip|test\.todo/);
 });
 test('previous signed1.3 installed receipts and catalog remain immutable; new source delivery is not installed button or all50 acceptance',async()=>{
- const r=JSON.parse(await read('registry/disk-scan-lifecycle-release.json'));assert.equal(sha(await read('registry/disk-inode-installed-acceptance.json')),r.previous_installed_acceptance_sha256);assert.equal(sha(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),r.application_manifest_sha256_unchanged);assert.equal(sha(await read('dist/catalog-v1.json')),r.catalog_sha256_unchanged);assert.equal(r.application_version_unchanged,'1.3.0');assert.equal(r.previous_installed_acceptance_is_ui_cancel_button_proof,false);
+ const r=JSON.parse(await read('registry/disk-scan-lifecycle-release.json'));assert.equal(sha(await read('registry/disk-inode-installed-acceptance.json')),r.previous_installed_acceptance_sha256);assert.equal(sha(await read('dist/apps/disk-analysis/1.3.0/manifest.json')),r.application_manifest_sha256_unchanged);assert.equal(sha(await catalogBeforeDisk140Bytes()),r.catalog_sha256_unchanged);assert.equal(r.application_version_unchanged,'1.3.0');assert.equal(r.previous_installed_acceptance_is_ui_cancel_button_proof,false);
  for(const p of ['new_program_deployed','new_installed_ui_cancellation_verified','main_delivered','main_absent_disk_app_installed','disk_whole_host_capability_completed','commercial_all50'])assert.equal(r[p],false,p);assert.equal(r.application_installs_updates,0);
  assert(r.scope.includes('NOT relabeled'));assert(r.remaining.some(s=>s.includes('Real UI cancel')));
 });
