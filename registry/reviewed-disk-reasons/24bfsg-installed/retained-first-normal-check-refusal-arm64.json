@@ -1,0 +1,17 @@
+{
+  "format": 1,
+  "original_proof_sha256": "08b34e7855d9a216d9a281786cf8a005812375a6d129028cf798747502dd21e1",
+  "kind": "actual-failed-readonly-normal-preflight-not-upgrade-run",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": false,
+  "normal_check_exit": 1,
+  "normal_run_submitted": false,
+  "launcher_proof_sha256": "23e34c26afaea4840e8bd726d89df9d5447b590039b8dc1216f7598e07609311",
+  "check_proof_sha256": "fe41300030984fd219be6ae49f893144e75540a1943f28a2d063762653d368d6",
+  "original_program_marker_unchanged": true,
+  "upgrade_pending": false,
+  "scope": "Normal gateway intentionally reported only panel-executor exit1. That original refusal is retained; its precise transient cause was not captured and is not claimed fixed.",
+  "commercial_all50": false
+}

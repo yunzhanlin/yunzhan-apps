@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "original_proof_sha256": "cbbe652eeb39796ff8f0b96410875393f03fc603eddf6039bf40359f7cf05183",
+  "kind": "actual-installed-signed-program-existing-report-ui",
+  "arch": "arm64",
+  "program": "0.1.0-dev.proapps24diskreasonbfsg",
+  "source_inputs_sha256": "2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700",
+  "ok": true,
+  "legacy_state": "canceled",
+  "original_legacy_result_sha256": "fe8a51e9c93aa6416a82cf5514be8b90b84ed5e8e721c8b3ea1a5c400b103338",
+  "legacy_warning_display_count": 1,
+  "original_duplicate_reasons_and_exact_export_preserved": true,
+  "complete_report_and_original_counters_preserved": true,
+  "no_result_task_still_failed_no_fabricated_report_or_export": true,
+  "desktop1440_and_narrow390_dom_verified": true,
+  "all_original_root_receipt_inode_times_hashes_and_native_core_tables_audits_unchanged": true,
+  "all_native_scopes_empty": true,
+  "all_native_leases_free": true,
+  "foreign_report_denied_http": 403,
+  "bootstrap401_bound_to_prelogin_request_phase_and_order": true,
+  "authenticated_unexpected_failures": 0,
+  "manager_asset": {
+    "file": "AppModuleManager-Cz7_lVuz.js",
+    "sha256": "06734883ca5752ae3ea35ea783224b610b085db7edf7a93b8c03400f296638f6"
+  },
+  "native_scans_created": 0,
+  "application_installs_updates": 0,
+  "original_large_failure_cause_proven": false,
+  "original_large_failure_fixed": false,
+  "scope": "Actual installed UI and original JSON export against existing own complete/canceled/failed/sealed-no-report history. A bootstrap401 is verified before the login request, not excused after authentication. This presentation fix does not rewrite duplicate-bearing original receipts or cure their original failure.",
+  "commercial_all50": false
+}
