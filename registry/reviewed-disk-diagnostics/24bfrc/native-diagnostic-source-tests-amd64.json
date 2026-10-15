@@ -1,0 +1,29 @@
+{
+  "format": 1,
+  "original_proof_sha256": "5c7fa98af103a59f93e7264ef3f49edd925e62c7f833937252c74cb0da0b9800",
+  "kind": "native-source-only-fixed-diagnostic-regression",
+  "arch": "amd64",
+  "ok": true,
+  "program": "0.1.0-dev.proapps24diskdiagbfrc",
+  "source_inputs_sha256": "d5f48fbfbe9ebae8054b28468276beca28d9b5de8870e362a65cc46e4f528c68",
+  "source_delta": {
+    "internal/executor/app_disk_host_diagnostic.go": "97753b433057e909de45d20ce2bdac944623a840529eec34fcb10326647dce4c",
+    "internal/executor/app_disk_host_diagnostic_test.go": "8722ad6d4e8fc4b90a45bfc37320cda4df9cb3f70ced86c3af22b853aeab9bfd",
+    "internal/executor/app_disk_host_worker_linux.go": "bb389fcf28daa15f19604f2390d59c0ba6d7efc0000977acffb1f81f5a4be462",
+    "internal/executor/app_disk_host_producer_linux.go": "efaa0a3aa4267929306c2ef5279b46f22edba041355d23b02a024842e58e8b27"
+  },
+  "binary_sha256": "7f266aa87ca1aedf2bc4b23385eb51c762fbb968afbbff83a1ee25dd30774a36",
+  "original_log_sha256": "5aac76bc85004f0b8bde580b035276b8d11743d2dc46c90a80eddc931b3d25fc",
+  "passes": 9,
+  "failures": 0,
+  "skips": 0,
+  "exit": 0,
+  "protected_state_unchanged": true,
+  "application_installs_updates": 0,
+  "service_restarts": 0,
+  "host_scans": 0,
+  "files_deleted": 0,
+  "signed_installed_proof": false,
+  "scope": "Actual native Root execution of the diagnostic source tests, including real child stderr and original exit19, fixed enum filtering, one-line cap, bounded2KiB input, full128-entry nonblocking queue, blocked logger cannot hold original child exit, and no raw error exposure. NOT current signed installed worker or causal fix proof.",
+  "commercial_all50": false
+}
