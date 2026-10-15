@@ -1,0 +1,18 @@
+[Unit]
+Description=Recover interrupted Panel Docker Compose operations
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --recover-compose
+TimeoutStartSec=5min
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /etc/panel/compose
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

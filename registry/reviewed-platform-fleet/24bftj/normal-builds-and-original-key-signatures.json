@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "original_proof_sha256": "4384aff4abd205c0d92767e1f94247b5b02fbaba98ac9560983616799c744b41",
+  "kind": "normal-two-architecture-immutable-build-and-signature-not-deployment",
+  "program": "0.1.0-dev.proapps24fleetbftj",
+  "source_inputs_sha256": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
+  "ok": true,
+  "frozen_files": 17037,
+  "source_overrides": 0,
+  "normal_builds_both": true,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "archives": {
+    "arm64": {
+      "archive_sha256": "de23313656f873b860a6311903bab3f9a785ee872fb1afed57fd9aae4a397326",
+      "manifest_sha256": "67bc5aad31e7096b4c084775ec48497993f1b7b1c91666868c5ef25dff28bdb7",
+      "signature_sha256": "64068e3277e17bf958d2fecd768e8a033acaed481557660129430ea8951c0f9c",
+      "normal_build_log_sha256": "48e63577297106d3e0ef822288851bade669e8e2ada84ab759c7edaca99098d4",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158760,
+      "eager_limit_bytes": 1200000
+    },
+    "amd64": {
+      "archive_sha256": "dcc749aaf2eb8a5f9f8df86bcfec85adbf1e7537dda3341bda99a399f47ade60",
+      "manifest_sha256": "49f0bb29bcc7ec2ea14134c5458a32c3fa0d5e5ae6d8f9ee42220e843da03e64",
+      "signature_sha256": "6162e35847f818f2b3d9a060078632da4dc2cd98253d59081c55475eca979e41",
+      "normal_build_log_sha256": "6aed5df6c3b119cbd1a21714a455c341509c77a3b7df6cdfd236e7a4c3a2d2aa",
+      "original_key_signature_verified": true,
+      "eager_javascript_bytes": 1158760,
+      "eager_limit_bytes": 1200000
+    }
+  },
+  "candidate_manager_asset": {
+    "file": "AppModuleManager-D8U8HpX3.js",
+    "bytes": 258312,
+    "sha256": "47fbfebca81664ee850aa5c5987a04f30cf2cb63fdfe637f69907dcf92084e27"
+  },
+  "new_program_deployed": false,
+  "scope": "Original private signing key stayed in place, both signatures and exact archive inputs verified independently. Full normal Go/vet/Python/Node/Vue/type/entry-budget/checksum gates passed. A signed build is not source CI approval, installed fleet behavior, Main or device acceptance.",
+  "commercial_all50": false
+}

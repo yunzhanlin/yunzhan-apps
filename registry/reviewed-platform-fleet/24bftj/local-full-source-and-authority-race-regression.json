@@ -1,0 +1,35 @@
+{
+  "format": 1,
+  "original_proof_sha256": "87761fa8aacd9896ab8382e1139ada7a59f8cd15ead1b98e67ca044fa001273a",
+  "kind": "local-darwin-source-fixtures-before-independent-freeze",
+  "program": "0.1.0-dev.proapps24fleetbftj",
+  "source_inputs_sha256": "6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8",
+  "ok": true,
+  "source_only": true,
+  "source_matches_later_frozen_inputs": true,
+  "source_overrides": 0,
+  "source_input_count": 17037,
+  "source_delta": {
+    "internal/core/platform_health_fleet.go": "0c1dc2e95e72bdc2a758e9a6a0fd9f457b8986ccebc4b14dd6aba30d86559b3c",
+    "internal/core/platform_health_fleet_test.go": "45498c232987b6610520ff4dbcd6256ca5ba93f6433310fddf571a1d905c7b85",
+    "internal/core/app_module_accounts.go": "4c3afcdc0304115e965d21c2378afb1c2a835f96668f22dad772842aad201976"
+  },
+  "full_go": {
+    "passes": 1887,
+    "failures": 0,
+    "skips": 10,
+    "packages": 10,
+    "log_sha256": "3b2e63ae4d2d5e3c0c100901233a0e091ee6b946d6625c8fdb9aac9d401206f4"
+  },
+  "platform_race": {
+    "passes": 95,
+    "failures": 0,
+    "skips": 0,
+    "log_sha256": "31f1d9a005f489105ba47f342909779ebaa9e3ea72186f1b726ab4422d09a44a"
+  },
+  "vet_exit": 0,
+  "source_inputs_unchanged_during_tests": true,
+  "installed_program_proof": false,
+  "scope": "Mutable source was described before and after full local checks and subsequently frozen byte-identically. Local source tests and ten skips are not Linux installation, physical fleet, device or commercial acceptance.",
+  "commercial_all50": false
+}
