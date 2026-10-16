@@ -1,0 +1,26 @@
+{
+  "program": "0.1.0-dev.proapps24fleetreopenbfxr",
+  "source_inputs_sha256": "d43742b5543567d4e19cc70407e6eb013be9f631732b767f557cbb7fd0364fbf",
+  "commercial_all50": false,
+  "ok": true,
+  "exact_source_changes": [
+    "scripts/test-deferred-workspace.mjs",
+    "scripts/test-module-state.mjs",
+    "scripts/test-platform-health-ui-fixture.mjs",
+    "scripts/test-platform-health-ui.mjs",
+    "scripts/test-platform-health-view.mjs",
+    "web/src/AppModuleManager.vue",
+    "web/src/platformHealthSnapshot.ts"
+  ],
+  "unpublished_Memcached_preview_absent": true,
+  "current_Memcached_compat1_still_accepted": true,
+  "future_Memcached_compat2_published": false,
+  "published_catalog_sha256": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+  "published_registry_sha256": "30946365aa16792818903c413c06fe0dbd53daa5162dac8c67d0d894f37cfabe",
+  "source_export_files": 1394,
+  "release_bound_files": 1354,
+  "original_BFWA_source_export_and_review_unchanged": true,
+  "all_old_native_receipts_and_accidental_QA_uninstall_preserved": true,
+  "no_main_change": true,
+  "no_missing_application_installs": true
+}
