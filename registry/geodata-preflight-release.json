@@ -1,0 +1,177 @@
+{
+  "program": "0.1.0-dev.proapps24geoflightbgjp",
+  "source_inputs_sha256": "b183917a52ff1dedeb370e8b30eba1bc057fdade6d5543bfd0c69512326c6b07",
+  "source_files": 17113,
+  "source_overrides": 0,
+  "exported_source_files": 1470,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_signatures_verified": true,
+  "normal_archives": {
+    "arm64": "1b1f7a901204cc8e81fb13b46f15ec628ec989471066342ea06274dea47df7ca",
+    "amd64": "75c3e298944c43a7d3dd9532ca3a41b283e253ff86946db1da33ed197d46e3bf"
+  },
+  "immutable_scopes": {
+    "firstuse": {
+      "index_sha256": "0f92ce9a55b78e128b8f5fb13916239b96a6dd1691f99c885b7c69f2e665ce46",
+      "files": 1462,
+      "archive": "panel-0.1.0-dev.proapps24geofirstbghg-linux-amd64.tar.gz",
+      "archive_sha256": "9325a7e820705c8a1d3e8e9ba93d72dbb291a3452bbd076119a10a84ccc7e25a",
+      "frozen_inputs_sha256": "cb807ed5c4e0b27ec3537850da252c0124a6dfb337ffa9ab1a22d26d20633732"
+    },
+    "ranges": {
+      "index_sha256": "bb72ec40d4e1c4b32cad5f963fe24eb1f6aba6546a9334db73c32954b8aab26c",
+      "files": 1465,
+      "archive": "panel-0.1.0-dev.proapps24georangebgia-linux-amd64.tar.gz",
+      "archive_sha256": "ee8c9f15fc64964f9769386b9e2e63e8c7705db317e59946cc7cbb694a5abc9a",
+      "frozen_inputs_sha256": "bc5ac19fb87fae38e2f05af1fe71bca073fd89303a8d5e103246335a09c4ba02"
+    },
+    "terminal": {
+      "index_sha256": "23b54d643b3c720c524d1892fa2feda2972e3d0b66a149550e33d88c3f6c6fc4",
+      "files": 1470,
+      "archive": "panel-0.1.0-dev.proapps24geotermbgja-linux-amd64.tar.gz",
+      "archive_sha256": "15e6f6381d125cdee7eba88ac1efa29d5f89db562c83e3da59361d6e6927664a",
+      "frozen_inputs_sha256": "7edb449b503f531778dc4bb0191510edbc2c2b91468fdd20dc33b2f81ac060af"
+    },
+    "preflight": {
+      "index_sha256": "d733416fab89e4ce6151c9b7052b3ffdfb4a7aa12845a644b0c9241d22d77f72",
+      "files": 1470,
+      "archive": "panel-0.1.0-dev.proapps24geoflightbgjp-linux-amd64.tar.gz",
+      "archive_sha256": "75c3e298944c43a7d3dd9532ca3a41b283e253ff86946db1da33ed197d46e3bf",
+      "frozen_inputs_sha256": "b183917a52ff1dedeb370e8b30eba1bc057fdade6d5543bfd0c69512326c6b07"
+    }
+  },
+  "source_tests": {
+    "passed": 2552,
+    "failed": 0,
+    "explicit_environment_skips_NOT_acceptance": 11
+  },
+  "native_source_tests_each": {
+    "Core": 494,
+    "terminal_export_and_upgrade": 36,
+    "failed": 0,
+    "skipped": 0
+  },
+  "Core_race": {
+    "passed": 494,
+    "failed": 0,
+    "skipped": 0
+  },
+  "actual_original_key_signed50_compiled_ABI_each": {
+    "arm64": 51,
+    "amd64": 51,
+    "failed": 0,
+    "skipped": 0,
+    "application_installs": 0
+  },
+  "normal_release_eager_JS_bytes": 1160848,
+  "unchanged_eager_JS_limit": 1200000,
+  "previous_workflow_sha256": "e45fc3207c5e15a87dbf514654e2edbf273d30362e2540340b62231bafe26f25",
+  "current_original_key_app_catalog_sha256": "e4ae8de3564ae2e0c3a11adc970001cecaf4933fd041e8cd970903b261049e69",
+  "normal_program_upgrades": {
+    "arm64": {
+      "accepted": true,
+      "proof_sha256": "747bc2376bab500c30f38de0929c9df1f68af9627996be2898bc73b8927459ea",
+      "transaction_sha256": "a439cf9d843d0cb1cd1d633d7ea67fd4c14d382676c9ebd79de1aa742b35f966",
+      "original_business_projections_preserved": 99,
+      "protected_entries_preserved": 4534,
+      "original_statistics_history_preserved": true,
+      "original_geodata_files_preserved": true,
+      "application_operations": 0,
+      "programs": {
+        "nginx": {
+          "pid": "1079",
+          "sha256": "4ee482fc6ae62657bc80e1ef52a3b6c9c4d553f40e066e48a1b119fb2a97fc37"
+        },
+        "panel": {
+          "pid": "267387",
+          "sha256": "46835f75d1b61089faae9e4301245a709c2b8330d5f9445ad501ede58c5e37b8"
+        },
+        "panel-executor": {
+          "pid": "267374",
+          "sha256": "74d4b4d415a8d9fd027fb36bf7eb0837ca2acee3a83c7ea19e645b8f85f57a58"
+        }
+      }
+    },
+    "amd64": {
+      "accepted": true,
+      "proof_sha256": "4c0da9aa9a691ae84c16fc22a50f71d1c7d83d12f9b8199a7e217bc13fdda5db",
+      "transaction_sha256": "b01fb09fd958be50c0dc9e90b7e4f389df21c16dbe43142961dc14f9eb6d9c68",
+      "original_business_projections_preserved": 99,
+      "protected_entries_preserved": 3387,
+      "original_statistics_history_preserved": true,
+      "original_geodata_files_preserved": true,
+      "application_operations": 0,
+      "programs": {
+        "nginx": {
+          "pid": "958",
+          "sha256": "254fac73e79add393fef33f514bc91b8a98ad1966c2b43c77a98c9359580a6d8"
+        },
+        "panel": {
+          "pid": "70344",
+          "sha256": "e1e430d5d3a2886ae9c44101938e5292fde5d78b117c12a81d978468dd27d730"
+        },
+        "panel-executor": {
+          "pid": "70329",
+          "sha256": "b7680aca56b44ac1b4bdf75b24d7d63222b04f930509416d3edef954d921e52a"
+        }
+      }
+    }
+  },
+  "commercial_all50": false,
+  "Main_program_delivered": false,
+  "actual_Memcached_rollback_proven": false,
+  "browser_saved_evidence_file_proven": false,
+  "physical_device_or_power_loss_proven": false,
+  "separate_original_AMD_city_install": {
+    "accepted": true,
+    "job": "927223f65f2802f78e18bd2b77ce8a48",
+    "proof_sha256": "ee2bffe4b7ce14ad71ca1d461911c1873c90c7ee2d526d03f94d860ef34166eb",
+    "release": "2026-10",
+    "app_and_data_signatures_verified": true,
+    "full_data_and_tree_verified": true,
+    "offline_IP_probes": 5,
+    "NOT_spoofed_public_visitors": true
+  },
+  "separate_original_ARM_failed_job_export": {
+    "accepted_readonly_bytes_and_UI": true,
+    "proof_sha256": "a174c37bab364985b39acadf5c842ed8b1d89b22c5fa5abaef747884e01e7113",
+    "job": "d8fb0c4542aa28ab6b52379278675267",
+    "evidence_sha256": "ea2d10fe5badbec75d069256edd60e613520c590330b519c4efb0e6aa06c9d56",
+    "bundle_sha256": "283bfd55999252a40908d6b28906eec79bfdae56852523375fd67cbfbe5d9408",
+    "bytes": 102195,
+    "all99_preserved": true,
+    "no_native_job_dispatch": true,
+    "original_failure_retained": true,
+    "browser_saved_file_proven": false
+  },
+  "preserved_failures": {
+    "ARM_original_city_install": {
+      "accepted": false,
+      "job": "d8fb0c4542aa28ab6b52379278675267",
+      "partial_bytes": 55451630,
+      "partial_sha256": "78e77a0b4db6a2c3cc4e4e336af55dc8f23b20a0ebe4940de92f5d1305c5b209",
+      "original_evidence_sha256": "ea2d10fe5badbec75d069256edd60e613520c590330b519c4efb0e6aa06c9d56",
+      "never_replayed": true
+    },
+    "AMD_prior_terminal_program_install": {
+      "accepted": false,
+      "proof_sha256": "710cdf63cd7a2feefdcf44ab1d6133815e77ee70399cc4ed7bd79697558917bf",
+      "current_state_preserved": true,
+      "temporal_cause_NOT_established": true,
+      "never_replayed": true
+    },
+    "ARM_cross_midnight_export_preservation": {
+      "accepted": false,
+      "legitimate_daily_report_and_notifications_changed": true,
+      "original_failed_receipt_retained": true,
+      "new_independent_window_does_not_relabel_original": true
+    },
+    "first_terminal_native_fixture": {
+      "accepted": false,
+      "original_failure_sha256": "e96e4f006eaf3eb41a60cad9bc11cbb944c7ce3f2e737f4420e8213ee4a068c4",
+      "never_replayed": true
+    }
+  },
+  "upgrade_guard": "Exact stopped exit-code failure is admitted only after original private Root files, original signatures, held original lock, and matching readonly Core queue/dispatch/result are checked twice. Other failed/busy units remain blockers. Native inventory includes independent verifier workers. No reset, stop, repair, marker, allowlist or alternate-root CLI.",
+  "export_guard": "Shared existing instance lease composes with background readonly verification; original job EX lease, complete file identity checks, lifecycle and archive EX barriers remain. Missing/unsafe instance locks are not created or repaired."
+}

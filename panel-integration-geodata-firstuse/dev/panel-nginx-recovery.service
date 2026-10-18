@@ -1,0 +1,10 @@
+[Unit]
+Description=Recover unfinished Nginx change before boot
+Before=nginx.service
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --recover-nginx
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
