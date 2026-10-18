@@ -213,7 +213,7 @@ jobs:
           go vet ./...
       - name: Current original-key signed 50 manifests against actual compiled Linux handlers (read-only, no install)
         working-directory: panel-integration-platform-health-view
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Locked fleet report UI dependencies without lifecycle scripts
         run: npm ci --prefix panel-integration-platform-health-view/web --ignore-scripts
       - name: Fleet report availability, original identity and explicit read cancellation (synthetic transport only)
@@ -233,7 +233,7 @@ jobs:
           go vet ./...
       - name: Reopen candidate against actual current original-key signed 50 manifests (no install)
         working-directory: panel-integration-fleet-reopen
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Locked fleet reopen dependencies without lifecycle scripts
         run: npm ci --prefix panel-integration-fleet-reopen/web --ignore-scripts
       - name: Reopen snapshot authority and unchanged deferred entry budgets (not installed UI)
@@ -253,7 +253,7 @@ jobs:
           go vet ./...
       - name: Current signed50 handler ABI including exact pinned Memcached compat2 (read-only)
         working-directory: panel-integration-memcached-update
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Memcached original-key producer observer journal retention and authority race regressions
         working-directory: panel-integration-memcached-update
         run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
@@ -272,7 +272,7 @@ jobs:
           go vet ./...
       - name: Revision candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-memcached-revision
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Original close reservation current-authority and package provenance race regressions
         working-directory: panel-integration-memcached-revision
         run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
@@ -291,7 +291,7 @@ jobs:
           go vet ./...
       - name: Identity candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-geodata-identity
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Original actor request history durable identity and retained container guard races
         working-directory: panel-integration-geodata-identity
         run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|Memcached|DockerRetention)' -count=1
@@ -316,7 +316,7 @@ jobs:
           go vet ./...
       - name: Preflight candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-geodata-preflight
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Original authority terminal locks concurrent export and verifier inventory races
         working-directory: panel-integration-geodata-preflight
         run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueues|Memcached|DockerRetention)' -count=1
@@ -341,7 +341,7 @@ jobs:
           go vet ./...
       - name: Original-key current signed50 compiled handler ABI (no application install)
         working-directory: panel-integration-file-manager
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
       - name: Development dispatch original queue diagnostics and both transaction layouts (Root fixtures not native rollback)
         working-directory: panel-integration-file-manager/packaging
         run: sudo python3 -B -m unittest -v test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch test_install_dependency_policy test_install_gateway_policy
@@ -355,4 +355,26 @@ jobs:
         run: |
           node --experimental-strip-types --test scripts/test-file-manager-scope.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24devdispatchbgmu npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Analytics session complete Root Linux contracts (source only)
+        working-directory: panel-integration-analytics-session
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Analytics session current original-key signed50 compiled handler ABI (no app update)
+        working-directory: panel-integration-analytics-session
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Old compiled handler must refuse only the new session manifest and accept the other49 (no install)
+        run: node tools/verify-analytics-handler-boundary.mjs
+      - name: Session lifecycle auth and passive-performance report race regressions (not installed journey proof)
+        working-directory: panel-integration-analytics-session
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^TestAnalytics' -count=1
+      - name: Locked session management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-analytics-session/web --ignore-scripts
+      - name: Actual tracker activity idle and HTML opt-in scope plus preserved standard document INP
+        working-directory: panel-integration-analytics-session
+        run: |
+          node --test scripts/test-analytics-session.mjs scripts/test-analytics-html-state.mjs
+          node scripts/test-analytics-tracker.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24analyticsessionbgnm npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist

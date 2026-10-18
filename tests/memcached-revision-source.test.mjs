@@ -1,3 +1,5 @@
+import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
+import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +8,7 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const sha=b=>createHash('sha256').update(b).digest('hex');
-const read=p=>fs.readFileSync(path.join(root,p));
+const read=p=>preAnalyticsWorkflowRead(p,preAnalyticsRead(p,fs.readFileSync(path.join(root,p))));
 const release=JSON.parse(read('registry/memcached-revision-release.json'));
 const scope='panel-integration-memcached-revision';
 const index=JSON.parse(read(scope+'/source-sha256.json'));

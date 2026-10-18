@@ -1,0 +1,141 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24analyticsessionbgnm",
+  "frozen_inputs_sha256": "221086c5c2d28f752a1f51d8f9bb0433c33eddc841e63297eef9cfb373ad2bf7",
+  "original_source_files": 17151,
+  "exported_source_files": 1508,
+  "source_overrides": 0,
+  "exact_source_delta": [
+    "internal/appcatalog/analytics_session_features_test.go",
+    "internal/appcatalog/panel_features.go",
+    "internal/core/analytics.go",
+    "internal/core/analytics_auto_http_test.go",
+    "internal/core/analytics_proxy.go",
+    "internal/core/analytics_session.go",
+    "internal/core/analytics_session_browser_qa_test.go",
+    "internal/core/analytics_session_test.go",
+    "internal/core/analytics_tracker.js",
+    "internal/core/app_modules.go",
+    "internal/core/software_apps.go",
+    "internal/executor/analytics_html_activate_linux.go",
+    "packaging/build-release.sh",
+    "scripts/test-analytics-session.mjs",
+    "web/src/AnalyticsWorkspace.vue"
+  ],
+  "application_candidate_version": "2.3.1",
+  "required_panel_feature": "analytics-session-lifecycle-v1",
+  "normal_original_key_archives": {
+    "arm64": "94b61ffd56b1049a337c0c9eb994c881f1e7b1e390b1f04f45a92ec9a4e60b10",
+    "amd64": "af2c99c330d74d6dacfb9305a0506d63605b683ecafd149f29e7378c7fcba5da"
+  },
+  "local_go": {
+    "passed": 2580,
+    "failed": 0,
+    "explicit_skips": 12
+  },
+  "normal_build_Node_gates_each": 47,
+  "Root_Linux_source_fixtures": {
+    "arm64": {
+      "core": {
+        "passed": 56,
+        "explicit_skips": [
+          "TestAnalyticsLiveINPBrowserQA",
+          "TestAnalyticsSessionLiveBrowserSourceQA"
+        ],
+        "events_sha256": "f33018271a8f1d5306177100384779358922167743da8f3540b37966ebef5fce"
+      },
+      "catalog": {
+        "passed": 14,
+        "explicit_skips": [],
+        "events_sha256": "6e0cf065e474775c04323a492eb4090745ad3c6340abd75a51d68eec9ccd3264"
+      },
+      "executor": {
+        "passed": 57,
+        "explicit_skips": [
+          "TestAnalyticsHTMLActualCLIWorkerReadyRecord",
+          "TestAnalyticsHTMLCanonicalHandoffDiagnosis",
+          "TestAnalyticsHTMLCompilerNativeCollectionRetainsStableReapingWitness",
+          "TestAnalyticsHTMLHeaderPatchActualPinnedSource",
+          "TestAnalyticsHTMLNativeModuleAndActualResponses",
+          "TestAnalyticsHTMLNativeProducedModuleActualResponses",
+          "TestAnalyticsHTMLNativeProducedStaticLifecycle",
+          "TestAnalyticsHTMLTransactionCrashChild"
+        ],
+        "events_sha256": "bd5ba66facfd9fdd6b5d3984ead3578f7e9ab418fdef2ba7ee7767a46ca42e87"
+      },
+      "complete_original_business_projections_preserved": 101,
+      "installed_program_or_module_changed": false
+    },
+    "amd64": {
+      "core": {
+        "passed": 56,
+        "explicit_skips": [
+          "TestAnalyticsLiveINPBrowserQA",
+          "TestAnalyticsSessionLiveBrowserSourceQA"
+        ],
+        "events_sha256": "a2cde8bdc1cf53f5383793a11320c6059142afe859f47b48f3769ca5dcff7861"
+      },
+      "catalog": {
+        "passed": 14,
+        "explicit_skips": [],
+        "events_sha256": "f5ae9766e5196f302ebf0614097e4ae9ed89c954690eaab455fb5ce7377a1763"
+      },
+      "executor": {
+        "passed": 57,
+        "explicit_skips": [
+          "TestAnalyticsHTMLActualCLIWorkerReadyRecord",
+          "TestAnalyticsHTMLCanonicalHandoffDiagnosis",
+          "TestAnalyticsHTMLCompilerNativeCollectionRetainsStableReapingWitness",
+          "TestAnalyticsHTMLHeaderPatchActualPinnedSource",
+          "TestAnalyticsHTMLNativeModuleAndActualResponses",
+          "TestAnalyticsHTMLNativeProducedModuleActualResponses",
+          "TestAnalyticsHTMLNativeProducedStaticLifecycle",
+          "TestAnalyticsHTMLTransactionCrashChild"
+        ],
+        "events_sha256": "77bc163946bfd7fb10d9593a99eacb00a1a663d7bbf8e81686c8dc233902761f"
+      },
+      "complete_original_business_projections_preserved": 101,
+      "installed_program_or_module_changed": false
+    }
+  },
+  "real_browser_source": {
+    "passed": true,
+    "wall_idle_seconds": 1839.789147337,
+    "required_idle_seconds": 1805,
+    "actual_received_gap_seconds": 1860,
+    "original_visitor_preserved": true,
+    "new_session_and_page": true,
+    "browser_clock_or_storage_overridden": false,
+    "result_sha256": "6b65ec6b3f23efd0ff2d6cbd5714dbfbf3d87f853e255187677ed974780ba34a",
+    "log_sha256": "2ab32decaef08fa24238fa7fc349de1b801026bdd97924a993429d237f149b0b",
+    "signed_installed_collector_acceptance": false
+  },
+  "actual_Main_program_delivery": {
+    "ok": true,
+    "normal_original_key_signed_installer": true,
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "proof_sha256": "ae4b0919090c8204264fa76d8c940e540260f74c527723cba00ffac916ea94e6",
+    "transaction_sha256": "7341405c5058332abf69cd24909f26e9e4fda87a8667fa308fec142938051151",
+    "original_business_projections": 101,
+    "schema_or_migration_rows_changed": false,
+    "sites": 58,
+    "modules": 4,
+    "non_program_protected_entries": 43010,
+    "nginx_process_unchanged": true,
+    "HTTP19100": 200,
+    "HTTP19101": 200,
+    "actual_existing_account_browser_login": true,
+    "browser_screenshot_sha256": "0cdb52317863e134c4ef36b396ba08d8ae213e4047d357a5697d53c0f37812fb"
+  },
+  "original_failed_executor_fixture_retained": true,
+  "original_failed_fixture_relabelled": false,
+  "current_catalog_sha256_unchanged": "e4ae8de3564ae2e0c3a11adc970001cecaf4933fd041e8cd970903b261049e69",
+  "new_app_manifest_published": false,
+  "new_signed_application_updated": false,
+  "QA_programs_upgraded_to_this_source": false,
+  "physical_mobile_acceptance": false,
+  "actual_power_loss_acceptance": false,
+  "commercial_all50": false,
+  "scope": "Backward-compatible collector maintenance and exact closed session handler source. Actual Main normal program upgrade is separate from unpublished2.3.1 app package and source-browser fixture, not all50 commercial or signed installed collector journey acceptance."
+}

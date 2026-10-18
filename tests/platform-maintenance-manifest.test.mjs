@@ -17,7 +17,11 @@ test('new maintenance manifests cannot omit, borrow, alias or widen handler auth
 });
 test('schema keeps original module scopes and one separate exact pinned Memcached scope',async()=>{
  const schema=JSON.parse(await read('schema/app.schema.json'));assert.equal(schema.additionalProperties,false);
- const scope=schema.allOf.find(x=>x.if?.required?.includes('required_panel_features')).then.oneOf;assert.equal(scope.length,5);
+ const allScopes=schema.allOf.find(x=>x.if?.required?.includes('required_panel_features')).then.oneOf;
+ const sessionScopes=allScopes.filter(x=>x.properties.id.const==='website-analytics');assert.equal(sessionScopes.length,1);
+ const session=sessionScopes[0].properties;assert.equal(session.version.const,'2.3.1');assert.equal(session.delivery.properties.provider.const,'panel-module');assert.equal(session.delivery.properties.target.const,'website-analytics');assert.equal(session.delivery.properties.manage_route.const,'app-modules');assert.deepEqual(session.required_panel_features,{minItems:1,maxItems:1,items:{const:'analytics-session-lifecycle-v1'}});
+ // Preserve all five original authority scopes and their exact assertions.
+ const scope=allScopes.filter(x=>x.properties.id.const!=='website-analytics');assert.equal(scope.length,5);assert.equal(allScopes.length,6);
  assert.deepEqual(scope.filter(x=>x.properties.id.const!=='memcached').map(x=>x.properties.id.const).sort(),['disk-analysis','disk-analysis','platform-ops','website-statistics-v2']);
  const mc=scope.find(x=>x.properties.id.const==='memcached').properties;assert.equal(mc.version.const,'1.6.45-compat2');assert.equal(mc.delivery.properties.provider.const,'compose');assert.equal(mc.delivery.properties.target.const,'memcached-cache');assert.equal(mc.required_panel_features.maxItems,1);assert.equal(mc.required_panel_features.items.const,'compose-memcached-digest-v1');
  const stats=scope.find(x=>x.properties.id.const==='website-statistics-v2'),maintenance=scope.find(x=>x.properties.id.const==='platform-ops');

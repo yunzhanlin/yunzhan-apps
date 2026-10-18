@@ -1,3 +1,5 @@
+import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
+import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('..',import.meta.url)),scope='panel-integration-geodata-identity';
-const read=p=>fs.readFileSync(path.join(root,p)),sha=b=>createHash('sha256').update(b).digest('hex');
+const read=p=>preAnalyticsWorkflowRead(p,preAnalyticsRead(p,fs.readFileSync(path.join(root,p)))),sha=b=>createHash('sha256').update(b).digest('hex');
 const release=JSON.parse(read('registry/geodata-identity-release.json')),index=JSON.parse(read(scope+'/source-sha256.json'));
 test('new identity source exactly binds every normal original-key signed release input without overrides',()=>{
  assert.equal(sha(read(scope+'/source-sha256.json')),'07aa0d8283038ed3de4a38292a2560a5017b1d0be1ed1b626e691069eb3151b2');

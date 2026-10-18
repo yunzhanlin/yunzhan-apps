@@ -1,5 +1,7 @@
+import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
+import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),sha=b=>createHash('sha256').update(b).digest('hex'),json=p=>JSON.parse(read(p));
+const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>preAnalyticsWorkflowRead(p,preAnalyticsRead(p,fs.readFileSync(path.join(root,p)))),sha=b=>createHash('sha256').update(b).digest('hex'),json=p=>JSON.parse(read(p));
 const release=json('registry/geodata-preflight-release.json'),scope='panel-integration-geodata-preflight';
 test('four immutable original-key verified cohorts retain every source byte without fixture overrides',()=>{
  const expected={firstuse:'0f92ce9a55b78e128b8f5fb13916239b96a6dd1691f99c885b7c69f2e665ce46',ranges:'bb72ec40d4e1c4b32cad5f963fe24eb1f6aba6546a9334db73c32954b8aab26c',terminal:'23b54d643b3c720c524d1892fa2feda2972e3d0b66a149550e33d88c3f6c6fc4',preflight:'d733416fab89e4ce6151c9b7052b3ffdfb4a7aa12845a644b0c9241d22d77f72'};
