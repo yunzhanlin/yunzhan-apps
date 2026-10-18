@@ -1,0 +1,40 @@
+{
+  "program": "0.1.0-dev.proapps24geoidentitybggr",
+  "source_inputs_sha256": "0e61edac147866bd64fc97c9c5dd515797d752d8337a58722a311853c33feebc",
+  "source_files": 17105,
+  "exported_source_files": 1462,
+  "source_overrides": 0,
+  "normal_original_key_signatures_verified": true,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_archives": {
+    "arm64": "f79653d4d0b8f8259228a3438363984580beed8f3049439577930a3947d50dc4",
+    "amd64": "b4b8d06290e0e5b9deefbcb21d33c1a45b41ea90564958b14993afce19422e73"
+  },
+  "previous_workflow_sha256": "0d6edef6426603390c6b1c808d667d950127b54c0678dece1f3be363243f821d",
+  "current_original_key_app_catalog_sha256": "e4ae8de3564ae2e0c3a11adc970001cecaf4933fd041e8cd970903b261049e69",
+  "source_tests": {"passed": 2494, "failed": 0, "explicit_environment_skips_NOT_acceptance": 11},
+  "native_source_tests_each": {"Core": 465, "Docker_retention": 30, "failed": 0, "skipped": 0},
+  "Core_race": {"passed": 465, "failed": 0, "skipped": 0},
+  "actual_original_key_signed50_compiled_ABI_each": {"arm64": 51, "amd64": 51, "failed": 0, "skipped": 0, "application_installs": 0},
+  "normal_release_eager_JS_bytes": 1159781,
+  "unchanged_eager_JS_limit": 1200000,
+  "browser_source_fixture": {
+    "actual_two_independent_IndexedDB_connections": true,
+    "concurrent_same_actor_selection_generated_keys": 1,
+    "lost_reply_reload_second_tab_synthetic_POSTs": 1,
+    "synthetic_jobs": 1,
+    "matching_known_terminal_required_before_release": true,
+    "cross_tab_stale_outcome_regression_fixed": true,
+    "original_false_case_retained": true,
+    "real_panel_or_provider_calls": 0,
+    "NOT_installed_dataset_acceptance": true,
+    "NOT_power_loss_acceptance": true
+  },
+  "native_Docker_guard": "Inside the same lease, inspect actual full64 container identity, reject reserved retention name/owner/marker including malformed protection evidence, pin ordinary mutations to the full inspected ID. Existing retained image verifier is unchanged.",
+  "Memcached_history": "Always accessible actor-bound GET-only list, instance preview and original job observation. No key creation, installation, image pull, container reconstruction or replacement receipt.",
+  "geodata_recovery": "Actor-scoped IndexedDB readwrite write-ahead commit before POST; no localStorage fallback. Original same-key SQL-only GET recovery, unknown evidence retained, damaged queue audits fail closed, needs_attention fences new keys.",
+  "actual_city_dataset_install_proven_in_this_release_record": false,
+  "actual_Memcached_rollback_proven": false,
+  "Main_program_delivered": false,
+  "commercial_all50": false
+}

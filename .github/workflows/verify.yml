@@ -284,3 +284,28 @@ jobs:
           node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24memrevisionbgex npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Durable geodata identity and protected Docker complete Root Linux contracts
+        working-directory: panel-integration-geodata-identity
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Identity candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-geodata-identity
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Original actor request history durable identity and retained container guard races
+        working-directory: panel-integration-geodata-identity
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|Memcached|DockerRetention)' -count=1
+      - name: Locked identity management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geodata-identity/web --ignore-scripts
+      - name: Actual component identity functions and complete management build under unchanged budget
+        working-directory: panel-integration-geodata-identity
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs scripts/test-statistics-history.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24geoidentitybggr npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Actual Vue same-original geodata recovery (closed synthetic API, not native dataset acceptance)
+        working-directory: panel-integration-geodata-identity
+        run: |
+          node web/node_modules/playwright/cli.js install --with-deps chromium
+          geodata_identity_ui_out="$(mktemp -d)"
+          node scripts/qa-statistics-geodata-workspace.mjs "$geodata_identity_ui_out"
