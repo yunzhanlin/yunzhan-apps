@@ -4,7 +4,8 @@ import {readFile,readdir,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>readFile(path.join(root,p)),json=async p=>JSON.parse(await read(p));
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preMemcachedRead(p,readFile(path.join(root,p))),json=async p=>JSON.parse(await read(p));
 const program='0.1.0-dev.proapps24fleetbftj',inputs='6446833936f9bc43e06d5d5ec8266bacf18c36d62d145d7033eb9349e0ed15b8',previous='2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700';
 async function evidence(){
  const r=await json('registry/platform-fleet-candidate.json'),e={};assert.equal(r.evidence_root,'registry/reviewed-platform-fleet/24bftj');assert.equal(Object.keys(r.evidence_sha256).length,4);assert.deepEqual((await readdir(path.join(root,r.evidence_root))).sort(),Object.keys(r.evidence_sha256).sort());

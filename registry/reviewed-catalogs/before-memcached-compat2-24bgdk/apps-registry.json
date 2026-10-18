@@ -1,0 +1,2324 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-10-15T12:35:00Z",
+  "repository": "https://github.com/yunzhanlin/yunzhan-apps",
+  "apps": [
+    {
+      "schema_version": 1,
+      "id": "nginx",
+      "name": "Nginx",
+      "category": "deployment",
+      "version": "1.30.4-compat1",
+      "summary": "安装可并存的 Nginx 运行时，支持站点绑定、配置校验和安全回滚。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "nginx-1.30.4",
+        "manage_route": "sites"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "源码校验",
+        "站点配置",
+        "热重载",
+        "失败回滚"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "nginx -t"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "apache",
+      "name": "Apache HTTP Server",
+      "category": "deployment",
+      "version": "2.4.68-compat1",
+      "summary": "独立安装 Apache HTTP Server，支持模块检测、站点绑定和配置校验。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "apache-2.4.68",
+        "manage_route": "sites"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "官方源码",
+        "模块检测",
+        "站点绑定",
+        "引用保护"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "httpd -t"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mysql",
+      "name": "MySQL",
+      "category": "deployment",
+      "version": "8.4.11-compat1",
+      "summary": "安装官方 MySQL LTS 二进制并创建回环监听的受管数据库实例。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "mysql-8.4.11",
+        "manage_route": "databases"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多实例",
+        "独立账号",
+        "备份恢复",
+        "导入导出"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "mysql --version"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "redis",
+      "name": "Redis",
+      "category": "deployment",
+      "version": "8.2.10-compat1",
+      "summary": "安装固定版本 Redis，管理独立实例、AOF、内存上限与键浏览。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "redis-8.2.10",
+        "manage_route": "databases"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多实例",
+        "AOF",
+        "内存限额",
+        "键浏览"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "redis-server --version"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "pure-ftpd",
+      "name": "Pure-FTPd",
+      "category": "deployment",
+      "version": "1.0.54-compat6",
+      "summary": "独立 Pure-FTPd 1.0.54，网站 chroot 与双通道 FTPS；实际账户限速、FTP 软配额、客户端 IPv4/CIDR 和会话限制，支持原子计数、账户事务、配置及运行时失败恢复；不替换系统 FTP 或自动开放防火墙。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "pure-ftpd",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "双通道 FTPS 与 chroot",
+        "虚拟账户与密码轮换",
+        "账户上传下载限速",
+        "上传下载",
+        "FTP 容量与数量软配额",
+        "客户端 IPv4/CIDR 访问控制",
+        "双文件失败恢复",
+        "被动端口与 NAT 通告",
+        "系统信任的域名证书",
+        "账户会话与服务连接限额",
+        "真实 TLS、在线事务验证与配置回滚",
+        "独立运行时校验与重启恢复"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/pure-ftpd"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "phpmyadmin",
+      "name": "phpMyAdmin",
+      "category": "deployment",
+      "version": "5.2.2-compat1",
+      "summary": "固定摘要部署原版 phpMyAdmin，回环端口访问，并管理网络可达的已授权 MySQL 数据库。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "phpmyadmin",
+        "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
+        "manage_route": "databases"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "MySQL 管理",
+        "数据库管理界面",
+        "回环绑定",
+        "访问审计"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/"
+      },
+      "uninstall": {
+        "preserve_data": false,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-85",
+      "name": "PHP 8.5",
+      "category": "deployment",
+      "version": "8.5.10-compat1",
+      "summary": "编译安装 PHP 8.5 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "php-8.5.10",
+        "manage_route": "runtimes"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "php -v"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-84",
+      "name": "PHP 8.4",
+      "category": "deployment",
+      "version": "8.4.25-compat1",
+      "summary": "编译安装 PHP 8.4 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "php-8.4.25",
+        "manage_route": "runtimes"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "php -v"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-83",
+      "name": "PHP 8.3",
+      "category": "deployment",
+      "version": "8.3.33-compat1",
+      "summary": "编译安装 PHP 8.3 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "stage": "ready",
+      "risk": "maintenance",
+      "delivery": {
+        "provider": "runtime",
+        "target": "php-8.3.33",
+        "manage_route": "runtimes"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "php -v"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-82",
+      "name": "PHP 8.2",
+      "category": "deployment",
+      "version": "8.2.33-compat1",
+      "summary": "编译安装 PHP 8.2 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "stage": "ready",
+      "risk": "maintenance",
+      "delivery": {
+        "provider": "runtime",
+        "target": "php-8.2.33",
+        "manage_route": "runtimes"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "多版本并存",
+        "站点独立池"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "php -v"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-81",
+      "name": "PHP 8.1",
+      "category": "deployment",
+      "version": "8.1.15-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-81",
+        "image": "devilbox/php-fpm:8.1-mods@sha256:30ed5320f8003e5dde008dfdffa5d3647f0cc41a7004cea6cb40dda005583320",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-80",
+      "name": "PHP 8.0",
+      "category": "deployment",
+      "version": "8.0.27-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-80",
+        "image": "devilbox/php-fpm:8.0-mods@sha256:95cdcafdc30064ff49a7456c8fccf65ff2fd39301ff2244a93e3c9f0ac2a3c10",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-74",
+      "name": "PHP 7.4",
+      "category": "deployment",
+      "version": "7.4.33-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-74",
+        "image": "devilbox/php-fpm:7.4-mods@sha256:f672e26b354d5c50271f01aaa1cb646e5769aca340be193a6faafa43b0501896",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-73",
+      "name": "PHP 7.3",
+      "category": "deployment",
+      "version": "7.3.33-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-73",
+        "image": "devilbox/php-fpm:7.3-mods@sha256:f4a7983a8f0da0f883038d8e7414532608ee80e0da11be17567caf539e22194d",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-72",
+      "name": "PHP 7.2",
+      "category": "deployment",
+      "version": "7.2.34-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-72",
+        "image": "devilbox/php-fpm:7.2-mods@sha256:f0d61ef2490243a4ab25a5d620567995449a5318683e8eb277e2cd9c232bced6",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-71",
+      "name": "PHP 7.1",
+      "category": "deployment",
+      "version": "7.1.33-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-71",
+        "image": "devilbox/php-fpm:7.1-mods@sha256:09fa041ccf308ca9f694e4812a7e2a315ddba988901f96f646f2923a29ba88aa",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-70",
+      "name": "PHP 7.0",
+      "category": "deployment",
+      "version": "7.0.33-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-70",
+        "image": "devilbox/php-fpm:7.0-mods@sha256:b2ded3e0a1ee36da20c79ec8f3461026559b85c27126015dd46bf04e4793c961",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-56",
+      "name": "PHP 5.6",
+      "category": "deployment",
+      "version": "5.6.40-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-56",
+        "image": "devilbox/php-fpm:5.6-mods@sha256:29b317b07fe5473f774cbdc05c6ee7f31b1af647b72785107bbfe31aa0d80426",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-55",
+      "name": "PHP 5.5",
+      "category": "deployment",
+      "version": "5.5.38-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-55",
+        "image": "devilbox/php-fpm:5.5-mods@sha256:35adf2d78687d90eeac58e486d38fa6a4dd370fd930bbf237fa277e90dd45fbc",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-54",
+      "name": "PHP 5.4",
+      "category": "deployment",
+      "version": "5.4.45-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-54",
+        "image": "devilbox/php-fpm:5.4-mods@sha256:8ef285267bd5474f66bab025db05b61099e3b49d3f4ce2114354f6d96b94f226",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-53",
+      "name": "PHP 5.3",
+      "category": "deployment",
+      "version": "5.3.29-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-53",
+        "image": "devilbox/php-fpm:5.3-mods@sha256:0970426b4057797c199c0fbc20644c68cdd1b2d536d6444bbc7b428680c5353d",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-52",
+      "name": "PHP 5.2",
+      "category": "deployment",
+      "version": "5.2.17-compat1",
+      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-52",
+        "image": "devilbox/php-fpm:5.2-mods@sha256:828b23fa58707af737868450ce54322f663dfdbac659142eb89f20d04a347804",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mongodb",
+      "name": "MongoDB",
+      "category": "deployment",
+      "version": "8.0-compat1",
+      "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "mongodb",
+        "image": "mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "认证",
+        "持久卷",
+        "回环端口",
+        "备份导出"
+      ],
+      "health": {
+        "probe": "tcp",
+        "target": "127.0.0.1:27017"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "memcached",
+      "name": "Memcached",
+      "category": "deployment",
+      "version": "1.6.45-compat1",
+      "summary": "创建 128 MB 上限、仅回环访问的 Memcached 受管实例。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "memcached-cache",
+        "image": "memcached:1.6.45-alpine",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "回环端口",
+        "内存限额",
+        "启停重启",
+        "状态探针"
+      ],
+      "health": {
+        "probe": "tcp",
+        "target": "version"
+      },
+      "uninstall": {
+        "preserve_data": false,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "elasticsearch",
+      "name": "Elasticsearch",
+      "category": "deployment",
+      "version": "9-compat1",
+      "summary": "部署单节点 Elasticsearch，限制内存并仅通过回环端口提供服务。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "elasticsearch",
+        "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "单节点",
+        "内存限额",
+        "持久卷",
+        "HTTP 健康检查"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/_cluster/health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "openlitespeed",
+      "name": "OpenLiteSpeed",
+      "category": "deployment",
+      "version": "1.8-compat1",
+      "summary": "部署仅回环端口访问的 OpenLiteSpeed，管理入口须经面板代理。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "openlitespeed",
+        "image": "litespeedtech/openlitespeed:1.8.4-lsphp83@sha256:6f50ba204e66f1c746dd183f3022340ca912124c414669755db7f4701167f268",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "HTTP 网站",
+        "LSAPI",
+        "随机管理密码",
+        "回环 HTTPS 管理",
+        "持久配置"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "deployment",
+      "version": "4.1-compat1",
+      "summary": "部署带管理界面、随机凭据和持久卷的 RabbitMQ 单节点。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "rabbitmq",
+        "image": "rabbitmq:4.1.4-management-alpine@sha256:5cbd7145b0306399ad68422c3350b6cbd1bb95704b39f5896480e5b6d4238a04",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "AMQP",
+        "管理界面",
+        "随机凭据",
+        "持久卷"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/api/health/checks/alarms"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "pm2-manager",
+      "name": "PM2 Manager",
+      "category": "deployment",
+      "version": "7.0.4-compat4",
+      "summary": "非 root PM2 集群、加密且仅写入的环境变量、锁定 npm 后台部署；默认禁用安装脚本，可受控启用网站用户构建，失败恢复旧依赖，中断可取消并恢复。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "pm2-manager",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "非 root PM2 集群与启停",
+        "日志与执行历史",
+        "开机恢复",
+        "内存重启阈值",
+        "配置修订检查",
+        "加密仅写入环境变量增量管理",
+        "锁定 npm 依赖后台部署",
+        "网站用户受控安装脚本",
+        "依赖失败回滚",
+        "中断部署恢复与取消",
+        "旧部署可恢复归档",
+        "启动就绪与配置失败回滚"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/pm2-manager"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "docker-manager",
+      "name": "Docker Manager",
+      "category": "deployment",
+      "version": "1-compat1",
+      "summary": "安装固定 Docker Engine/CLI/Compose 并管理受限容器、镜像、网络、卷与 Compose。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "runtime",
+        "target": "docker-auto",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "容器",
+        "镜像",
+        "Compose",
+        "非特权约束"
+      ],
+      "health": {
+        "probe": "systemd",
+        "target": "docker.service"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "site-diagnosis",
+      "name": "Site Diagnosis",
+      "category": "professional",
+      "version": "1.2.0",
+      "summary": "真实 DNS、HTTP、TLS 和 Nginx 检查，提供健康评分、失败原因和处置建议；评分不是安全认证。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "site-diagnosis",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "DNS 检查",
+        "HTTP 检查",
+        "TLS 检查",
+        "Nginx 配置检查",
+        "健康评分",
+        "失败处置建议",
+        "专用操作流程",
+        "执行历史"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/site-diagnosis"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "network-threat-detection",
+      "name": "Network Threat Detection",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "监听基线与独立非 root 被动 IDS；双签名 BSD ET Web 子集显式下载、选择，数据保存不启用采集；配置损坏仍可核对停止，中断恢复保留后续停止选择；需支持 1.3 的面板，不解密 HTTPS、不自动封禁。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "network-threat-detection",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "监听端口基线",
+        "新增监听告警",
+        "公网暴露分类",
+        "独立非 root 被动 IDS",
+        "双签名开源规则数据",
+        "显式规则选择与原创回退",
+        "新鲜采集计数核对",
+        "有界私有告警历史",
+        "损坏配置可信停止",
+        "修订与幂等后台任务",
+        "中断恢复不重放",
+        "停止选择优先于恢复"
+      ],
+      "rule_data_channel": {
+        "id": "et-open-web-bsd-v1",
+        "format": 1,
+        "engine": "suricata-8.0"
+      },
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/network-threat-detection"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "website-analytics",
+      "name": "网站分析 · Website Analytics",
+      "category": "professional",
+      "version": "2.3.0",
+      "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；可选固定来源、实际 Nginx ABI 核验的 HTML 自动接入引擎，显式构建加载后逐站启用，默认关闭；保留模板和 CSP，启停配置失败回滚；需支持 2.3 的面板",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "website-analytics",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "浏览器 JS 采集、PV 与浏览器 UV",
+        "可选有界 HTML 自动接入，默认关闭",
+        "固定源码构建与实际 Nginx ABI 核验",
+        "实际工作进程确认后逐站启用同源代理",
+        "保留模板及 CSP，不适用响应原样通过",
+        "会话与访问旅程、入口/离开和页面来源分布",
+        "点击坐标热图",
+        "页面性能 p75 与官方标准 INP",
+        "SPA 路由页面访问",
+        "2–8 步有界顺序转化漏斗",
+        "保留期和容量上限",
+        "站点隔离与报告导出"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/website-analytics"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "files-sync",
+      "name": "Files Sync",
+      "category": "professional",
+      "version": "1.9.0",
+      "summary": "本机和跨服务器实时与定时增量同步，固定 IP、公钥核对和加密凭据；非 root SFTP，不执行远端命令。变化合并、持久序号、降级补查；冲突、中断或存储异常暂停并保留原任务。实际备份事务和逻辑容量只读核对；完整摘要与精确确认后受控迁移原备份至保留归档，释放活动名额，保留字节、权限及原身份。中断只显式恢复，不删除或自动清理；硬链接不是独立不可变快照，每连接归档上限 512 份、1 GiB 逻辑字节，需对应版本面板。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "files-sync",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "本机增量、本机定时与 Linux 实时补查",
+        "固定 IP、SSH 公钥核对与密码或私钥本机加密保存",
+        "非 root SFTP 子系统，不执行远端命令",
+        "私有旧文件备份、无覆盖交接、外部修改保留、取消与显式恢复",
+        "持久任务、刷新保留、同标识重放及空来源绑定与修订拒绝",
+        "终态任务完整摘要归档，不删除远端备份、凭据或检查点",
+        "跨服务器 Linux 实时合并与 60–86400 秒定时补查，降级可见",
+        "独立连接与计划修订号，冲突暂停后显式核对恢复",
+        "持久变化序号不误确认执行中的新变化；暂停移除保留原任务，最多 16 个计划",
+        "只读实际备份事务与逻辑容量，正好满额仍可查询，未知条目、异主或符号链接拒绝不完整统计",
+        "专用整数分页 1–32 条、起点 0–512；选择事务只回填身份，完整核对不触发迁移",
+        "原摘要与精确确认的备份归档、保留库存和显式中断恢复；不删除，硬链接非不可变快照"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/files-sync"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "daily-report",
+      "name": "aaPanel Daily Report",
+      "category": "professional",
+      "version": "1.4.0",
+      "summary": "持久化每日资源、任务、安全、流量和证书摘要，按日期读取历史日报。支持签名 Webhook 与强制 TLS/STARTTLS 的 SMTP 脱敏通知、加密凭据、持久队列和失败重试；SMTP 250 仅代表中继接收，不保证进入收件箱。新邮件通道默认关闭，须管理员配置合法服务。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "daily-report",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "资源摘要",
+        "任务故障摘要",
+        "流量与安全摘要",
+        "证书到期检查",
+        "每日持久化",
+        "按日期历史日报",
+        "专用操作流程",
+        "执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "接收端确认与投递记录",
+        "TLS/STARTTLS SMTP 与测试日报"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/daily-report"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "website-statistics-v2",
+      "name": "Website statistics-v2",
+      "category": "professional",
+      "version": "2.6.0",
+      "summary": "真实日志后台 SQLite 历史、30 天/25 万行保留、原生请求标识、私有去重及精确耗时分布。新增独立签名离线国家/地区/城市库，管理员显式安装和回滚；受限后台完整核对与旧库回退。需支持三项必需能力的新版面板。最多8份库、128份任务；清理与完整商用流程仍在验收，不自动下载数据，不等于50项商用验收完成。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "website-statistics-v2",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "小时趋势与独立 IP",
+        "爬虫识别及错误数",
+        "路径排行与来源统计",
+        "时间、状态、路径/IP 筛选",
+        "慢请求明细",
+        "30 天有界历史、进度/请求同事务与安全退役",
+        "原生请求标识、私有去重回执、CRC 压缩续读及实际加载恢复保护",
+        "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警",
+        "离线 IPv4/IPv6 国家、地区、城市与未定位分区",
+        "独立签名月份显式安装及数据回滚",
+        "受限后台完整核对与重启旧库回退",
+        "8份库/128任务容量保护；不自动删除证据"
+      ],
+      "required_panel_features": ["statistics-cursor-retirement-v1", "statistics-request-identity-v1", "statistics-geodata-v2"],
+      "geo_data_channel": { "id": "dbip-city-lite-v1", "format": 1 },
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/website-statistics-v2"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "nginx-waf",
+      "name": "Nginx 请求防火墙 · Nginx WAF",
+      "category": "professional",
+      "version": "2.5.1",
+      "summary": "站点规则、名单与 CC；显式可信反代与原始网络对端审计；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，隐私数值日志、大小/时间自动轮转及中断恢复；显式启用已完成快照保留期、保留最新份数与删除确认。修正已保留未知计划被新计划重复选中的风险，原快照或索引尚存时继续暂停清理；升级保留策略、引擎和 UID/GID。引擎与自动清理默认不启用，需要面板提供 2.5.1 执行能力。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "nginx-waf",
+        "manage_route": "security"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "站点独立分类规则、启停与观察模式；观察模式拒绝接管外部限速",
+        "IPv4/IPv6 与 URL/UA 名单",
+        "每站点 IP 与 URL CC 限速；原生 CC 观察计数、超限放行及模拟拒绝日志",
+        "自定义字面匹配规则、安全配置导入与预览",
+        "真实日志筛选、排行与导出；同 inode 的数值日志手动及显式大小/时间自动轮转",
+        "配置备份、修订冲突、失败回滚、重载探针及旧工作进程监听关闭核对",
+        "固定开源 CRS 独立请求体引擎；表单、嵌套 JSON 与上传检测，迁移保留策略与引擎",
+        "未提交索引与缺失快照显式恢复；可信来源模块与安装版本核对，旧客户端保留配置",
+        "受管站点的显式可信代理 CIDR、限定来源头与风险确认；名单与 CC 使用核验 IP，审计另记原始对端",
+        "显式确认的已完成快照保留期与最新份数保护，持久删除计划及进度，不处理当前日志",
+        "中断或未知删除结果阻止后续清理，按完整摘要保留后原快照或索引仍存在时继续暂停，当前与历史计划均不重试",
+        "配置迁移、事务回滚与原文件 UID/GID 保全；旧事务缺少所有权证据时拒绝猜测恢复"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/software/nginx-waf/config"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "enterprise-tamper-proof",
+      "name": "Tamper-proof for Enterprise",
+      "category": "professional",
+      "version": "1.4.1",
+      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "enterprise-tamper-proof",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "HMAC 签名基线",
+        "内容备份",
+        "变更检测与监控降级",
+        "分钟级自动恢复",
+        "实时事件后恢复",
+        "策略修订保护",
+        "365 天有界历史分页",
+        "恢复前留存",
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/enterprise-tamper-proof"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "load-balance",
+      "name": "负载均衡 · Load Balance",
+      "category": "professional",
+      "version": "1.8.5",
+      "summary": "回环入口加权分流、IP 粘滞、备用节点与严格 HTTPS；逐入口明确启用连续健康阈值摘除和恢复，完整事务与私有归档、会话绑定报告下载。需支持 1.8.5 的签名面板；健康、切流/后台和告警来源三个范围分别订阅 HMAC 或 TLS SMTP，旧通道不扩范围。发送记录重建脱敏摘要，损坏身份保留并报错；来源重新可核对不代表业务恢复，当前采样不补全故障历史。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "load-balance",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "加权轮询、备用节点与 IP 粘滞；删除重建保留递增修订身份",
+        "TCP 建连探测与入口指纹；配置漂移、未知修改及损坏记录拒绝覆盖",
+        "HTTP/HTTPS 持久事务与无覆盖私有归档；当前页报告会话绑定和 SHA-256，5 分钟过期，不导出凭据",
+        "签名更新请求与任务原子绑定、完成不重复；1.8.5 需对应新版签名面板",
+        "持续 HTTP/HTTPS 状态码与内容检查，默认只观测；连续失败/恢复阈值、过期和后台异常明确展示",
+        "固定 IP、独立 HTTPS 检查端口、入口专用 CA 与严格证书验证；禁止跳转及环境代理，有界并发/响应",
+        "显式 HTTPS 后端转发、固定 SNI/Host 和专用公共 CA；TLS 1.2/1.3，失败不降级 HTTP",
+        "逐入口明确确认启用健康驱动流量，连续失败摘除、连续恢复重新加入，全故障不放行；初始未知允许流量",
+        "未知保留摘除、编辑保留策略、停用恢复登记节点；自动切流持久事务与中断恢复",
+        "健康、切流/后台、来源三范围分别订阅 HMAC 或 TLS SMTP；旧通道不扩大，同标识重试",
+        "健康首次/新修订建基线、跨32次单报缺口；切流历史建基线、当前未完成报警，归档不重发",
+        "发送记录重建脱敏事件摘要，损坏身份拒绝部分页；来源可核对非业务恢复；满额保全原证据"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/load-balance"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mobile",
+      "name": "云栈移动端",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "Android 签名 APK、iOS SwiftUI 源码和未签名 arm64 设备构建；原生 TLS、精确来源验证与后台锁屏，复用真实面板业务页。iOS 安装仍需自己的开发者签名。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "mobile-pwa",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "PWA",
+        "Android APK",
+        "iOS 源码与未签名设备构建",
+        "可信 HTTPS 与精确来源验证",
+        "后台锁屏与设备认证",
+        "本地会话清除",
+        "SHA-256 交付校验",
+        "响应式界面",
+        "现有 TOTP 登录",
+        "不缓存 API 或凭据",
+        "专用操作流程",
+        "执行历史"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/mobile-pwa"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "apache-waf",
+      "name": "Apache WAF",
+      "category": "professional",
+      "version": "2.3.0",
+      "summary": "独立 Apache 防护工作台：站点规则、名单、观察模式、默认关闭的可信代理与双 IP 日志；三文件持久恢复、完整事务库存和无覆盖归档；不提供 CC 或完整请求体检测。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "apache-waf",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "分类规则、站点独立策略与观察模式",
+        "IP/URL/UA 名单与字面自定义规则",
+        "真实事件筛选与排行",
+        "安全配置导入与预览",
+        "完整三文件持久备份、修订检查、SHA-256 / UID/GID 与原生重载探针；未确认恢复不清除事务",
+        "默认关闭的可信代理 CIDR 与 X-Forwarded-For 右向左地址链",
+        "有效客户端 IP 与原始连接 IP 双身份日志",
+        "所有受管站点挂载、精确规则和指纹核验，外部 RemoteIP/include 冲突拒绝",
+        "独立签名升级门禁，普通保存不隐式升级应用版本",
+        "完整事务分页库存；活动最多 100 份 / 128 MiB，归档最多 512 份 / 256 MiB，不返回备份内容",
+        "执行器及 Apache 原生启动前恢复，外部改动拒绝覆盖；网站修改、归档与待恢复事务互斥",
+        "按原标识和完整摘要无覆盖归档与回执核对，不删除备份或重载业务；旧 config-backups 原样保留"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/software/apache-waf/config"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-code-security",
+      "name": "PHP code security",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "真实 PHP 风险扫描；精确摘要确认后原子隔离、私有独立备份与无覆盖恢复；中断事务修复和可选签名告警。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "php-code-security",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "真实静态扫描与证据行号",
+        "高风险函数与编码混淆特征",
+        "路径、规则、风险级别及排除筛选",
+        "SHA-256 精确审查与确认",
+        "单文件原子隔离",
+        "站点外 root 私有独立备份",
+        "无覆盖内容与权限恢复",
+        "中断事务显式修复",
+        "分页隔离箱与备份验证",
+        "签名 Webhook 可选告警",
+        "卸载与网站归档引用保护",
+        "专用工作台与私有执行历史"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/php-code-security"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "task-manager",
+      "name": "Task manager",
+      "category": "professional",
+      "version": "1.2.1",
+      "summary": "真实进程身份优先表格、当前快照名称/PID 筛选和受管过滤；CPU/I/O 未取得显示未知。只读原 PID/启动身份，只允许受管非 root 进程 SIGTERM，不自动重发或宣称退出；需要支持 1.2.1 的签名面板。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "task-manager",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "实时进程",
+        "CPU 与内存",
+        "网络连接",
+        "受管非 root 进程终止",
+        "专用操作流程",
+        "执行历史",
+        "名称/PID 快照筛选，不重新采样或改变权限",
+        "身份优先列和真实未知速率，最多显示 500 条",
+        "信号接受不等于退出；原 PID/启动身份只读"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/task-manager"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "website-tamper-proof",
+      "name": "Website Tamper-proof",
+      "category": "professional",
+      "version": "1.4.1",
+      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "website-tamper-proof",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "签名文件基线",
+        "变更事件",
+        "备份恢复",
+        "网站级策略",
+        "Linux 实时文件事件",
+        "动态目录与溢出补查",
+        "策略修订保护",
+        "365 天有界历史分页",
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/website-tamper-proof"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "user-manager",
+      "name": "aaPanel user Manager",
+      "category": "professional",
+      "version": "1.3.1",
+      "summary": "真实角色、网站与菜单隔离；只读界面与后端授权一致，撤销旧会话、修订冲突和完整管理员保护",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "user-manager",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多用户",
+        "三种角色",
+        "网站权限范围",
+        "会话撤销",
+        "保留完整权限管理员",
+        "独立菜单授权",
+        "后端权限校验",
+        "授权修订保护",
+        "只读文件界面",
+        "专用操作流程",
+        "执行历史"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/user-manager"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "system-hardening",
+      "name": "System hardening",
+      "category": "professional",
+      "version": "1.0-compat1",
+      "summary": "固化链接、ptrace、内核日志与网络重定向等安全基线，支持偏差检测和恢复。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "system-hardening",
+        "manage_route": "security"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "内核参数基线",
+        "偏差检测",
+        "安全回滚",
+        "审计"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/software"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "file-monitor",
+      "name": "File monitor",
+      "category": "professional",
+      "version": "1.4.1",
+      "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "file-monitor",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "哈希检查点",
+        "变更检测",
+        "权限变化",
+        "排除规则",
+        "Linux inotify 实时监控",
+        "动态目录与溢出补查",
+        "监听状态与资源降级",
+        "365 天有界历史分页",
+        "专用流程与执行历史",
+        "签名 Webhook 脱敏推送",
+        "持久队列与退避重试",
+        "实际送达记录"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/file-monitor"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "disk-analysis",
+      "name": "Disk analysis",
+      "category": "professional",
+      "version": "1.4.0",
+      "summary": "开发候选：保留网站分析，新增本地挂载子树后台只读扫描、inode 去重分配块、进度、原任务取消与中断收尾。需同时具备两项固定处理能力的新版签名面板，并明确更新才启用；不含文件清理删除，实装全流程与商用多系统验收尚未完成。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "disk-analysis",
+        "manage_route": "app-modules"
+      },
+      "required_panel_features": [
+        "disk-inode-usage-v1",
+        "disk-host-jobs-v1"
+      ],
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "保留网站范围分析与目录下钻，本地挂载子树后台扫描",
+        "按设备与 inode 去重的分配块、硬链接、逻辑大小和稀疏候选",
+        "不跨子挂载、不跟随链接、不打开特殊文件或读取文件内容",
+        "文件系统真实容量、保留块、inode 与挂载身份核对",
+        "独立受限 worker：CPU20%、内存512MiB、最多1000万项/512层",
+        "最长30分钟与有界结果，未知和不完整不冒充零或成功",
+        "当前完整管理员及明确安装版本/实例/签名清单绑定",
+        "独立原任务进度、只读找回原请求，不自动重发扫描",
+        "原进程身份绑定取消及原结果/租约/cgroup 空闲核验",
+        "中断任务显式元数据收尾，保留失败证据和原操作者",
+        "大文件排行、目录分布及精确整数 JSON 导出",
+        "只读开发候选，不含清理删除或完整商用资格声明"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/disk-analysis"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "anti-intrusion",
+      "name": "Anti-intrusion",
+      "category": "professional",
+      "version": "1.0-compat1",
+      "summary": "使用 Fail2ban systemd 日志后端保护 SSH，并提供封禁查询与审计解封。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "intrusion-prevention",
+        "manage_route": "security"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "SSHD Jail",
+        "封禁策略",
+        "服务状态",
+        "审计解封"
+      ],
+      "health": {
+        "probe": "systemd",
+        "target": "fail2ban.service"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "platform-ops",
+      "name": "Platform Ops",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "可安装验收版：保留真实多主机健康读取，新增安装实例绑定的独立限时授权、固定 Nginx 检查、受控重载提交与原请求回执核对。需要签名面板 platform-maintenance-v1 处理器；完整跨主机、批量运维及商用能力仍在验收，不执行自由脚本或补丁发布。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "platform-ops",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多主机 HTTPS 健康聚合",
+        "旧只读令牌不升级权限",
+        "加密凭据与令牌撤销",
+        "独立限时可撤销维护授权",
+        "安装实例绑定及重装旧授权失效",
+        "两端管理员与计划摘要核对",
+        "固定 Nginx 配置检查",
+        "主机级受控重载提交",
+        "原任务原生回执核对",
+        "响应未知不重发及升级拦截",
+        "不执行自由脚本或补丁发布",
+        "执行历史"
+      ],
+      "required_panel_features": [
+        "platform-maintenance-v1"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/platform-ops"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "nfs-manager",
+      "name": "NFS Manager",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "独立 NFSv4 服务端与持久客户端、网站用户映射、CIDR 权限、双栈自定义端口和事务恢复",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "nfs-manager",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "NFSv4",
+        "独立服务端与网站导出",
+        "只读与确认后的读写共享",
+        "客户端 CIDR 与网站身份映射",
+        "IPv4/IPv6 自定义端口",
+        "安全挂载选项",
+        "开机恢复",
+        "修订保护与失败回滚",
+        "系统 NFS 与 RPC 映射隔离",
+        "活跃挂载卸载保护",
+        "专用操作流程",
+        "执行历史"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/nfs-manager"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    }
+  ]
+}

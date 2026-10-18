@@ -246,3 +246,22 @@ jobs:
           node panel-integration-fleet-reopen/web/node_modules/playwright/cli.js install --with-deps chromium
           mkdir -p panel-integration-fleet-reopen/.local
           node panel-integration-fleet-reopen/scripts/test-platform-health-ui.mjs
+      - name: Original-key bound Memcached worker complete Root Linux contracts (not installed update acceptance)
+        working-directory: panel-integration-memcached-update
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Current signed50 handler ABI including exact pinned Memcached compat2 (read-only)
+        working-directory: panel-integration-memcached-update
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Memcached original-key producer observer journal retention and authority race regressions
+        working-directory: panel-integration-memcached-update
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
+      - name: Locked native Memcached management UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-memcached-update/web --ignore-scripts
+      - name: Real shared identity and actual component functions with unchanged local resource and entry budgets
+        working-directory: panel-integration-memcached-update
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24memcachedbgcy npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

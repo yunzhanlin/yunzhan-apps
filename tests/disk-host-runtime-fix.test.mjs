@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFile,lstat,readdir} from 'node:fs/promises';import path from 'node:path';import {fileURLToPath} from 'node:url';import {sha256} from '../tools/lib.mjs';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>readFile(path.join(root,p)),json=async p=>JSON.parse(await read(p));
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preMemcachedRead(p,readFile(path.join(root,p))),json=async p=>JSON.parse(await read(p));
 test('runtime fix is a separate exact signed source with only seven reviewed inputs and no historical source rewrites',async()=>{
  const r=await json('registry/disk-host-runtime-fix.json'),i=await json(r.source_export+'/source-sha256.json'),f=await json(r.source_export+'/release-source-inputs.json'),old=await json(r.previous_source_export+'/source-sha256.json');
  assert.equal(r.program,'0.1.0-dev.proapps24diskfixbfpe');assert.equal(r.source_inputs_sha256,'bef1b0bef34dda63cda24a996c76d8585eeafc6b715ed0c6b851be2e7e06121a');assert.equal(r.frozen_files,17031);assert.equal(r.source_overrides,0);assert.deepEqual(i.test_overrides??{},{});assert.equal(r.source_export,'panel-integration-disk-fix');assert.equal(old.release.frozen_inputs_sha256,r.previous_source_inputs_sha256);assert.equal(r.previous_source_inputs_sha256,'f887a29c68b85bbf31150fa204503ecad2d291bb0e2203e752307e5a36eaac32');

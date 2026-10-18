@@ -4,9 +4,10 @@ import {readFile,lstat,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url));
-const read=p=>readFile(path.join(root,p));
+const read=p=>preMemcachedRead(p,readFile(path.join(root,p)));
 const json=async p=>JSON.parse(await read(p));
 const candidate='registry/disk-host-reason-candidate.json';
 const program='0.1.0-dev.proapps24diskreasonbfsg',inputs='2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700';

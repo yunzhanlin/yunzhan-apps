@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-15T12:35:00Z",
+  "generated_at": "2026-10-18T10:44:22Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -283,7 +283,7 @@
       "id": "memcached",
       "name": "Memcached",
       "category": "deployment",
-      "version": "1.6.45-compat1",
+      "version": "1.6.45-compat2",
       "summary": "创建 128 MB 上限、仅回环访问的 Memcached 受管实例。",
       "stage": "ready",
       "risk": "maintained",
@@ -291,13 +291,14 @@
       "target": "memcached-cache",
       "manage_route": "docker",
       "capabilities": [
+        "固定镜像摘要",
         "回环端口",
         "内存限额",
         "启停重启",
         "状态探针"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45-compat1/manifest.json",
-      "sha256": "02125cb1b5ce301c33683f6e4b2d088e399c72aeb5445e1b709c9cbe472c19b8"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45-compat2/manifest.json",
+      "sha256": "72f10849c748254794b899c9b9787342dd4c70b66861a9ecdf6963b6e1a1f0e1"
     },
     {
       "id": "mobile",

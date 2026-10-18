@@ -5,7 +5,8 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {verify} from 'node:crypto';
 import {sha256} from '../tools/lib.mjs';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>readFile(path.join(root,p)),json=async p=>JSON.parse(await read(p));
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preMemcachedRead(p,readFile(path.join(root,p))),json=async p=>JSON.parse(await read(p));
 const program='0.1.0-dev.proapps24memcompatbfwa',inputs='e21db5066c47f52372e5a52617f0a47223d8b6a198b57fe0e5a9706dfc1be9dd';
 const gates="normalBuildGates.add('scripts/test-platform-health-view.mjs');\nnormalBuildGates.add('scripts/test-platform-health-lifecycle.mjs');\nnormalBuildGates.add('scripts/test-platform-health-ui.mjs');\nnormalBuildGates.add('scripts/test-platform-health-ui-fixture.mjs');\nnormalBuildGates.add('scripts/test-platform-health-ui-fixture.html');\nnormalBuildGates.add('scripts/test-software-routing-install-browser.mjs');\n";
 async function evidence(){
