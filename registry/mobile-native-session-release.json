@@ -1,0 +1,33 @@
+{
+  "client_version": "1.3.1",
+  "server_application_version_unchanged": "1.3.0",
+  "source_scope": "native-client-1.3.1",
+  "source_inputs_sha256": "31dedb397add6bb2d3d1a7d2fed0b68520a230db78bcc038ad706d57245801e0",
+  "source_index_sha256": "8898f6cb791deef09c5969cf8d3fe3db877745185af3328a8d835aed7ab53d6a",
+  "source_files": 24,
+  "source_overrides": 0,
+  "android_tests": {"debug": 10, "release": 10, "failed": 0, "skipped": 0},
+  "swift_tests": {"passed": 9, "failed": 0},
+  "android_lint_issues": 0,
+  "frozen_build_logs_sha256": {
+    "android": "0a0ce8abce9da1f5296e108a8d0db4363213f89e378caabd89aeaa68a4dcfecb",
+    "swift": "6e00b9959d8bd377de5f472d5a15d123eb99d65ad47b174a94c5febd73d7afe8",
+    "ios_unsigned_device": "31e4ef5d60161de4cf15de9e4a5a87f9c7f8f0a13133e30d3ec654253a4f0fa2"
+  },
+  "local_unsigned_android_apk_sha256": "c3c42c6af86cb98c22318d61969cd8f409369fb97e0cbc84850eace8e75e1803",
+  "local_QA_only_debug_apk_sha256": "ff519a1bc5eb6d0adcbdc5493c2a29b3c2514834ded3cd851ed9437a0b8abf14",
+  "local_unsigned_ios_executable_sha256": "d02aa3a95028e81ed651a9c31a1e9a407d86a3ad49fb53aa4ad9e1eeab13da49",
+  "local_actual_signature_inspection": {"Android_release_unsigned": true, "iOS_device_app_unsigned": true},
+  "native_session_scope": "One connection generation owns authentication and file selection. Old callbacks cannot unlock or upload into a replacement connection. Background-returned file selection waits for original current-session foreground unlock. Android request codes are not reused; iOS also checks the original picker instance and distinguishes authentication inactive from real background.",
+  "not_proven": {
+    "physical_Android_and_iOS_devices": true,
+    "actual_biometric_and_document_provider_flows": true,
+    "production_publisher_signing": true,
+    "app_store_release": true,
+    "secure_native_management_downloads": true,
+    "offline_operations_and_system_push": true
+  },
+  "program_or_server_application_operation": false,
+  "private_key_access_or_rotation": false,
+  "commercial_all50": false
+}

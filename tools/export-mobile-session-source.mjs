@@ -1,0 +1,14 @@
+// Export only the separately qualified unsigned native client. No keys/signing.
+import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';import assert from 'node:assert/strict';
+const args=process.argv.slice(2);assert(args.length===4&&args[0]==='--source'&&args[2]==='--qualification');
+const [source,proofPath]=[args[1],args[3]],root=fileURLToPath(new URL('..',import.meta.url)),output=path.join(root,'native-client-1.3.1'),sha=b=>createHash('sha256').update(b).digest('hex');
+for(const p of [source,proofPath])assert(path.isAbsolute(p)&&path.normalize(p)===p&&fs.realpathSync(p)===p);
+const raw=fs.readFileSync(path.join(source,'SOURCE_INPUTS.json')),input=JSON.parse(raw),proof=JSON.parse(fs.readFileSync(proofPath));
+assert(input.version==='1.3.1'&&input.inputs_sha256==='31dedb397add6bb2d3d1a7d2fed0b68520a230db78bcc038ad706d57245801e0'&&sha(JSON.stringify(input.files))===input.inputs_sha256&&Object.keys(input.files).length===24);
+assert(proof.ok&&proof.source_inputs_sha256===input.inputs_sha256&&proof.commands.length===3&&proof.commands.every(c=>c.exit===0&&!c.error)&&proof.no_signer_or_private_key_access&&proof.no_panel_or_device_operation&&!proof.physical_device_acceptance&&!proof.commercial_all50);
+assert.deepEqual(proof.android_tests,{debug:{passed:10,failed:0,skipped:0},release:{passed:10,failed:0,skipped:0}});assert.deepEqual(proof.swift_tests,{passed:9,failed:0});assert.equal(proof.android_lint.issues,0);
+const validate=()=>{for(const [p,d] of Object.entries(input.files)){assert(p.startsWith('mobile/')&&path.posix.normalize(p)===p&&!p.split('/').some(c=>['..','.local','build','.gradle','.build','local.properties','node_modules'].includes(c)));const f=path.join(source,p),s=fs.lstatSync(f);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&s.size===d.bytes&&fs.realpathSync(f)===f);assert.equal(sha(fs.readFileSync(f)),d.sha256,p);}};
+validate();assert(!fs.existsSync(output));fs.mkdirSync(output,{mode:0o755});
+for(const [p,d] of Object.entries(input.files)){const target=path.join(output,p);fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o755});fs.writeFileSync(target,fs.readFileSync(path.join(source,p)),{flag:'wx',mode:d.mode&0o111?0o755:0o644});}
+fs.writeFileSync(path.join(output,'SOURCE_INPUTS.json'),raw,{flag:'wx',mode:0o644});fs.writeFileSync(path.join(output,'source-sha256.json'),JSON.stringify({format:1,source_inputs_sha256:input.inputs_sha256,files:input.files,test_overrides:{}},null,2)+'\n',{flag:'wx',mode:0o644});
+validate();console.log(JSON.stringify({ok:true,scope:'native-client-1.3.1',files:24,source_inputs_sha256:input.inputs_sha256,index_sha256:sha(fs.readFileSync(path.join(output,'source-sha256.json'))),normal_program_or_app_signature_NOT_claimed:true,all50_commercial:false}));
