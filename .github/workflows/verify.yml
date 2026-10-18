@@ -309,3 +309,28 @@ jobs:
           node web/node_modules/playwright/cli.js install --with-deps chromium
           geodata_identity_ui_out="$(mktemp -d)"
           node scripts/qa-statistics-geodata-workspace.mjs "$geodata_identity_ui_out"
+      - name: Original failed geodata terminal and verifier inventory complete Root Linux contracts
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Preflight candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-geodata-preflight
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Original authority terminal locks concurrent export and verifier inventory races
+        working-directory: panel-integration-geodata-preflight
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueues|Memcached|DockerRetention)' -count=1
+      - name: Locked preflight management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geodata-preflight/web --ignore-scripts
+      - name: Actual immutable job identity functions and unchanged entry budget
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs scripts/test-statistics-history.mjs scripts/test-job-presentation.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24geoflightbgjp npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Actual Vue original geodata recovery (synthetic API, not native dataset or power-loss proof)
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          node web/node_modules/playwright/cli.js install --with-deps chromium
+          geodata_preflight_ui_out="$(mktemp -d)"
+          node scripts/qa-statistics-geodata-workspace.mjs "$geodata_preflight_ui_out"
