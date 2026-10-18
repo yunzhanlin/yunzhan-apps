@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "scope": "builtin file-management foundation and ordinary signed DEVELOPMENT-layout program dispatch; not new app-install acceptance",
+  "version": "0.1.0-dev.proapps24devdispatchbgmu",
+  "frozen_inputs_sha256": "5d879e399b73ed741c39ac8551c8a2f0b2acd2e67e1eeb52aec954ec1b6fc864",
+  "exported_source_files": 1503,
+  "source_overrides": 0,
+  "normal_original_key_archives": {
+    "arm64": "a81de5524a5b9ff205b43a32df8e7dc9bcd8b374a67f8372c81b4f9815db60c5",
+    "amd64": "88b828a609ebc5b8603182e3893d5b39ecda13590e5978a5637ca12441aab164"
+  },
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "local_complete_go_regression": {
+    "passed": 2564,
+    "failed": 0,
+    "explicit_skips": 11
+  },
+  "Root_Linux_source_fixtures": {
+    "arm64": {
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0,
+      "events_sha256": "3b66e773c68aa11bc6dbc28929af7002077cc1dd7c041f134d1d1cc911e5550e",
+      "all101_original_business_projections_preserved": true,
+      "original_statistics_history_preserved": true
+    },
+    "amd64": {
+      "passed": 119,
+      "failed": 0,
+      "skipped": 0,
+      "events_sha256": "3b66e773c68aa11bc6dbc28929af7002077cc1dd7c041f134d1d1cc911e5550e",
+      "all101_original_business_projections_preserved": true,
+      "original_statistics_history_preserved": true
+    }
+  },
+  "native_rollback_or_reboot_claim_from_source_fixtures": false,
+  "original_failed_QA_receipts_relabelled": false,
+  "actual_Main_delivery": {
+    "ok": true,
+    "ordinary_signed_installer": true,
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "proof_sha256": "1eb7d530f5b1dfb8949f35f6ac823e659ad54df06bbc3f24faa3b3227e3eca3c",
+    "transaction_sha256": "83320a08ffee56d5cddb19c824f3da500517719bb168a2bf1b048b8f589e8dfa",
+    "original_sites": 58,
+    "original_modules": 4,
+    "original_business_projections": 97,
+    "exact_new_empty_tables": 4,
+    "exact_new_migrations": [
+      50,
+      51
+    ],
+    "non_program_protected_entries_preserved": 43009,
+    "nginx_master_unchanged": true,
+    "panel_ready_HTTP": 200,
+    "Feifei_site_HTTP": 200,
+    "application_operations": 0,
+    "site_probe_performed_after_exact_file_and_DB_acceptance": true
+  },
+  "actual_Main_read_only_CUA_UI": {
+    "direct_origin": "http://127.0.0.1:19100/",
+    "mocked_transport": false,
+    "existing_account_login": true,
+    "actual_directory_tree_and_site_files": true,
+    "share_dialog_read_only": true,
+    "public_link_created": false,
+    "cloud_or_SMTP_configuration_written": false,
+    "screenshot_sha256": "1c0908c7cd0f24ab9f65ca928ea0399063952e9965a888355dc28bbe9a91be45"
+  },
+  "bounded_private_original_queue_refusal_evidence": true,
+  "ordinary_production_and_fresh_install_paths_retained": true,
+  "website_probe_marker_from_original_false_QA_retained": true,
+  "external_WebDAV_or_mail_provider_acceptance": false,
+  "actual_power_loss_acceptance": false,
+  "physical_mobile_acceptance": false,
+  "commercial_all50": false,
+  "boundaries": [
+    "File cloud transport is WebDAV; no S3/provider or public mailbox delivery acceptance is inferred.",
+    "Native Linux source fixtures are not real installed rollback, reboot or power-loss acceptance.",
+    "Only the already installed4 Main modules were retained; no absent application was installed.",
+    "Root Linux fixtures and normal program delivery do not establish all50 commercial feature parity or full OS/architecture/device coverage.",
+    "Original failed QA and preflight receipts remain false and retained; original installed program operations were never replayed."
+  ]
+}
