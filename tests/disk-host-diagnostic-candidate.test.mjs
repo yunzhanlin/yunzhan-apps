@@ -4,7 +4,8 @@ import {readFile,lstat,readdir} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>readFile(path.join(root,p)),json=async p=>JSON.parse(await read(p));
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preMemcachedRead(p,readFile(path.join(root,p))),json=async p=>JSON.parse(await read(p));
 
 test('diagnostic source is a separate exact normal signed freeze with four inputs and no historical rewrites',async()=>{
  const r=await json('registry/disk-host-diagnostic-candidate.json'),i=await json(r.source_export+'/source-sha256.json'),f=await json(r.source_export+'/release-source-inputs.json'),old=await json(r.previous_source_export+'/source-sha256.json');

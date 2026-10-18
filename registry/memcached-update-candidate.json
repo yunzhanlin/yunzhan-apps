@@ -1,0 +1,44 @@
+{
+  "program": "0.1.0-dev.proapps24memcachedbgcy",
+  "source_export": "panel-integration-memcached-update",
+  "source_inputs_sha256": "2cd670cdd044e584c0769df212e727922ca8d9634e4f5d9f0dd416c70d462014",
+  "frozen_files": 17095,
+  "exported_files": 1452,
+  "source_overrides": 0,
+  "normal_archives": {
+    "arm64": "7ccc2c63c4a3425f24fb928d8e5b4c0a6b261eed62b49ce9002bcbe76a69d854",
+    "amd64": "c507974ebbc6e8d2b74c6050a19e23ddc7e6f67c23b797936c1e7748e6978c90"
+  },
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_builds_and_original_key_signatures_verified": true,
+  "packaging_each": { "total": 180, "passed": 81, "explicit_Darwin_environment_skips_NOT_acceptance": 99 },
+  "native_source_tests": {
+    "arm64": { "passed": 217, "failed": 0, "skipped": 0 },
+    "amd64": { "passed": 215, "failed": 0, "explicit_missing_Memcached_skips_NOT_acceptance": 2 }
+  },
+  "actual_installed_program_QA_VM_architectures": ["arm64", "amd64"],
+  "original_business_projections_preserved_each": 97,
+  "statistics_original_history_and_streams_preserved_each": true,
+  "original_failed_upgrade_QA_receipts_preserved": true,
+  "Main_program_delivered": false,
+  "actual_signed_Memcached_update_apply_or_rollback_proven": false,
+  "absent_apps_automatically_installed": false,
+  "commercial_all50": false,
+  "application": {
+    "id": "memcached",
+    "version": "1.6.45-compat2",
+    "manifest_sha256": "72f10849c748254794b899c9b9787342dd4c70b66861a9ecdf6963b6e1a1f0e1",
+    "previous_catalog_sha256": "53a3fa58943042b91709571904d4274f4af11639ef31560806d2a3c3dc7a57ad",
+    "catalog_sha256": "e4ae8de3564ae2e0c3a11adc970001cecaf4933fd041e8cd970903b261049e69",
+    "original_application_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "old_catalog_and_package_unchanged": true,
+    "other49_current_manifests_unchanged": true
+  },
+  "previous_workflow_sha256": "76a7e165a60dcc80a50318a834a91dace376ad8451a5426b8382f2b8140d4745",
+  "remaining": [
+    "Actual original signed catalog producer to native worker update, protocol health, retained old image and bounded rollback acceptance",
+    "Unknown browser submission with no Core row needs a safe durable close protocol; never clear or rotate unknown keys",
+    "Full supported OS/architecture business matrix, real device, real provider, reboot, power-loss and soak acceptance",
+    "All50 commercial readiness remains unproven; source fixtures and two owned QA VMs are not full qualification"
+  ]
+}

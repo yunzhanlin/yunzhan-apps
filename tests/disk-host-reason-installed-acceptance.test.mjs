@@ -4,7 +4,8 @@ import {readFile,readdir,lstat} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>readFile(path.join(root,p)),json=async p=>JSON.parse(await read(p));
+import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preMemcachedRead(p,readFile(path.join(root,p))),json=async p=>JSON.parse(await read(p));
 const program='0.1.0-dev.proapps24diskreasonbfsg',inputs='2db86c401e5eda94b303c89027748ccb645e45f950aadc5196803d2bdf2bf700';
 const policy={cpu_max:'20000 100000',memory_max:'536870912',memory_swap_max:'0',pids_max:'32',no_new_privileges:true,capabilities:'CAP_DAC_READ_SEARCH'};
 async function evidence(){
