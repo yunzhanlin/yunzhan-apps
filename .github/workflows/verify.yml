@@ -265,3 +265,22 @@ jobs:
           node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24memcachedbgcy npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Exact legacy Memcached package revision complete Root Linux contracts
+        working-directory: panel-integration-memcached-revision
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Revision candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-memcached-revision
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Original close reservation current-authority and package provenance race regressions
+        working-directory: panel-integration-memcached-revision
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
+      - name: Locked revision management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-memcached-revision/web --ignore-scripts
+      - name: Actual identity functions and complete management build with unchanged entry budget
+        working-directory: panel-integration-memcached-revision
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24memrevisionbgex npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

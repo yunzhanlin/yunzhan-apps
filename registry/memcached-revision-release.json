@@ -1,0 +1,59 @@
+{
+  "program": "0.1.0-dev.proapps24memrevisionbgex",
+  "source_export": "panel-integration-memcached-revision",
+  "source_inputs_sha256": "874d92562e8f39b4b9eabe1b83e13cc2ff5fcaca39d900034a9a86977d72c97a",
+  "frozen_files": 17098,
+  "exported_files": 1455,
+  "source_overrides": 0,
+  "normal_archives": {
+    "arm64": "763f5ed50b708fcc47857a68b73f8f0c606fdd774431435406763c840a501042",
+    "amd64": "cc3401250fd934f0dafca999e43256f1fc3b1cbeb50369f75eb2e2b1618d92a6"
+  },
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_signatures_verified": true,
+  "source_tests": {"passed":2470,"failed":0,"explicit_environment_skips_NOT_acceptance":11},
+  "native_source_tests_each": {"arm64":347,"amd64":347,"failed":0,"skipped":0},
+  "new_source_Core_race": {"passed":347,"failed":0,"skipped":0},
+  "actual_original_key_signed50_compiled_ABI_each": {"arm64":51,"amd64":51,"failed":0,"skipped":0,"application_installs":0},
+  "normal_packaging_each": {"total":180,"passed":81,"explicit_Darwin_environment_skips_NOT_acceptance":99},
+  "normal_release_eager_JS_bytes": 1159198,
+  "unchanged_eager_JS_limit": 1200000,
+  "normal_QA_program_upgrade": {
+    "architectures":["arm64","amd64"],
+    "source_inputs_sha256":"874d92562e8f39b4b9eabe1b83e13cc2ff5fcaca39d900034a9a86977d72c97a",
+    "original_business_projections_preserved_each":99,
+    "original_statistics_history_and_streams_preserved_each":true,
+    "original_ARM_closure_preserved":true,
+    "application_updates_installs_uninstalls":0,
+    "Main_changed":false
+  },
+  "installed_close_protocol": {
+    "program_inputs_sha256":"72b47ea9298e7d688b07cded2fa338843ad2ea7aff9b3b1843991598eac4edf8",
+    "scope":"Actual installed ARM64 API, not browser or native update proof; this close implementation is byte-identical in the new source.",
+    "proof_sha256":"6e4bb115ec9e6d739d9b21b2920b142866ad3fc1a05e5a23422ea65f1ab5d328",
+    "initial_close_repeat_GET_and_planned_late_POST_keep_one_closure_one_audit":true,
+    "new_Core_or_native_update_jobs_or_receipts":0,
+    "original_pre_auth_Origin_refusal_retained_NOT_relabelled":true
+  },
+  "actual_store_revision_indicator": {
+    "program_inputs_sha256":"874d92562e8f39b4b9eabe1b83e13cc2ff5fcaca39d900034a9a86977d72c97a",
+    "scope":"Normal signed installed Ubuntu24 ARM64 program; real official main catalog d137bd6; existing legacy instance without this project's package receipt.",
+    "update_button_and_new_version_visible":true,
+    "upstream_image_not_relabelled_as_package_receipt":true,
+    "native_readonly_preview_visible":true,
+    "maintenance_update_submitted_in_this_evidence":false
+  },
+  "current_original_key_app_catalog_sha256":"e4ae8de3564ae2e0c3a11adc970001cecaf4933fd041e8cd970903b261049e69",
+  "application_version":"1.6.45-compat2",
+  "current_signed50_catalog_and_packages_unchanged":true,
+  "historical_source_exports_and_failed_receipts_unchanged":true,
+  "previous_workflow_sha256":"a27bbf181d13ab0d2a58eab0bc4053c01c0f575be8661eb601208cde67d9853f",
+  "Main_program_delivered":false,
+  "actual_signed_Memcached_update_apply_or_rollback_proven":false,
+  "commercial_all50":false,
+  "remaining":[
+    "Actual normal owned-instance native apply, retained opaque original image, loopback protocol health and bounded rollback business acceptance",
+    "Installed browser loss/reload/closed-request lifecycle, complete supported OS/architecture matrix, reboot, power-loss and soak",
+    "Native mobile devices and real external providers are separate evidence; source tests, signatures and two owned QA machines do not establish all50 commercial qualification"
+  ]
+}
