@@ -334,3 +334,25 @@ jobs:
           node web/node_modules/playwright/cli.js install --with-deps chromium
           geodata_preflight_ui_out="$(mktemp -d)"
           node scripts/qa-statistics-geodata-workspace.mjs "$geodata_preflight_ui_out"
+      - name: File manager and development dispatch complete Root Linux contracts (source only)
+        working-directory: panel-integration-file-manager
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Original-key current signed50 compiled handler ABI (no application install)
+        working-directory: panel-integration-file-manager
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Development dispatch original queue diagnostics and both transaction layouts (Root fixtures not native rollback)
+        working-directory: panel-integration-file-manager/packaging
+        run: sudo python3 -B -m unittest -v test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch test_install_dependency_policy test_install_gateway_policy
+      - name: File share authorization immutable snapshot SMTP and cloud authority race regressions
+        working-directory: panel-integration-file-manager
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(File|Share|SMTP|SystemFiles|ModuleFile)' -count=1
+      - name: Locked file management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-file-manager/web --ignore-scripts
+      - name: Actual Vue scope callbacks and complete management build under unchanged budget
+        working-directory: panel-integration-file-manager
+        run: |
+          node --experimental-strip-types --test scripts/test-file-manager-scope.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24devdispatchbgmu npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
