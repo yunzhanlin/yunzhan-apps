@@ -1,0 +1,25 @@
+--- a/apache2/Makefile.am
++++ b/apache2/Makefile.am
+@@ -122,4 +122,7 @@
+ if LINUX
+-mod_security2_la_LDFLAGS = -no-undefined -module -avoid-version -R @PCRE_LD_PATH@ \
++# Yunzhan modification 2026-10-11: pcre2-config --libs8 may be only
++# -lpcre2-8. Do not turn it into an absolute runtime library search path.
++# Use the distribution linker/default loader paths, never a DSO RPATH.
++mod_security2_la_LDFLAGS = -no-undefined -module -avoid-version \
+     @APR_LDFLAGS@ \
+     @APU_LDFLAGS@ \
+--- a/apache2/Makefile.in
++++ b/apache2/Makefile.in
+@@ -577,7 +577,10 @@
+ @HPUX_TRUE@    @YAJL_LDFLAGS@ \
+ @HPUX_TRUE@    @SSDEEP_LDFLAGS@
+ 
+-@LINUX_TRUE@mod_security2_la_LDFLAGS = -no-undefined -module -avoid-version -R @PCRE_LD_PATH@ \
++# Yunzhan modification 2026-10-11: keep the reviewed generated Makefile
++# consistent with Makefile.am; no caller or pcre2-config runtime search path.
++# System PCRE2 remains linked through the distribution's normal loader.
++@LINUX_TRUE@mod_security2_la_LDFLAGS = -no-undefined -module -avoid-version \
+ @LINUX_TRUE@    @APR_LDFLAGS@ \
+ @LINUX_TRUE@    @APU_LDFLAGS@ \
+ @LINUX_TRUE@    @APXS_LDFLAGS@ \

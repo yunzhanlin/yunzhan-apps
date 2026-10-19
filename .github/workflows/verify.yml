@@ -491,3 +491,29 @@ jobs:
           node --test scripts/test-docker-create-requests.mjs scripts/test-docker-scope.mjs scripts/test-browser-sha256.mjs scripts/test-platform-management-receipt.mjs scripts/test-platform-health-lifecycle.mjs scripts/test-docker-site-binding.mjs scripts/test-frontend-release.mjs scripts/test-store-updates.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24dockerobservebhbu npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  apache-preservation-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-apache-preservation/go.mod
+          cache-dependency-path: panel-integration-apache-preservation/go.sum
+      - name: Exact signed source and scoped installed preservation evidence
+        run: node --test tests/apache-preservation-source.test.mjs
+      - name: Original bounded full Root Linux packaging contracts
+        working-directory: panel-integration-apache-preservation
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts and vet
+        working-directory: panel-integration-apache-preservation
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Exact Apache metadata preservation and refusal race fixtures
+        working-directory: panel-integration-apache-preservation
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestApacheMetadataSite' -count=1

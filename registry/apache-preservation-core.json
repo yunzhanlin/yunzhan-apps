@@ -1,0 +1,403 @@
+{
+  "version": "0.1.0-dev.proapps24apachemodulebhct",
+  "frozen_inputs_sha256": "80f419e1d9f86b0a9d8feb6c5ce0c070e6f7f99c02103f421311a65c584d7eca",
+  "frozen_files": 17247,
+  "exported_files": 1544,
+  "source_overrides": 0,
+  "scope": "panel-integration-apache-preservation",
+  "prior_scope": "panel-integration-docker-observation",
+  "changed_from_prior": [
+    "internal/executor/apache_waf_site_edit_linux.go",
+    "internal/executor/apache_waf_site_edit_linux_test.go"
+  ],
+  "prior_workflow_whole_sha256": "313cfb5cce0a4840b6e74b0a4a3f4a2250af61f6db7d47755c19c504835a50e9",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "20d686f36d1f53ee17dc6ca57931adc8fd082612a3d23e920a7ba447ac3ad4b7",
+      "normal_build_log_sha256": "1cae8a65d730c676ccf0e0b21e97fef1540b70933348da8af31ba9979bb9ccb9",
+      "manifest_sha256": "3b3e8d6f841e979f1114fc2f5ec819fff5f2fc0ff46492bdf04fb4b519ca5b5c",
+      "signature_sha256": "272e1b1edc5650e5237270f6188e7f1f680e6c34b77c08cfc7f0473c57b8e847",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "864f4164fc6423445fd9cc2d289b8a61aded77e10a9a5b4696cabfed5b556655",
+      "normal_build_log_sha256": "2c5d27ffeece321c6841a6edd3214c00b677b48f6fd2cf4a3248f5d6e111856b",
+      "manifest_sha256": "dc4c6afd539710b88d6c853f64b002c1101a21bab74b0f79766482be954212ac",
+      "signature_sha256": "b70e9aae86eaa7bd724704f7e06c9487dd5e3206df03e9fe07cf2b382fd1b327",
+      "original_key_signature_verified": true
+    }
+  },
+  "native76_each": {
+    "arm64": {
+      "proof_sha256": "acb7df13e615f5a7c34d56fe762470f572d63a132f53fe69cd69e1da2a31c447",
+      "source_inputs_sha256": "80f419e1d9f86b0a9d8feb6c5ce0c070e6f7f99c02103f421311a65c584d7eca",
+      "tests": {
+        "core": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "a83ce35dc2f5374cdeddf3268021f3d4b523777d0345a2586bc8c0c9bce9fc51",
+          "passed": [
+            "TestAppProxySiteBindingIsAtomicAndIdempotent",
+            "TestDockerCreateCanonicalUUIDHTTPMatchesActualFrontendContract",
+            "TestDockerCreateIdentityBindsStableActorKeyAndChangedPayload",
+            "TestDockerCreateRequestHTTPActorScopeAndOneOriginalIdentity",
+            "TestDockerCreateStatusRejectsForeignUnknownAndFalseSuccess",
+            "TestDockerJobObservationHTTPIsAuthenticatedReadOnlyAndNeverReconciles",
+            "TestDockerJobObservationRejectsForeignAndImpossibleStates",
+            "TestDockerNginxBindingHTTPReReadsHealthAndQueuesExactlyOneSite",
+            "TestDockerSiteBindingOnlyRecognizedFullyHealthyTemplates",
+            "TestNginxStaticTemplatePinsOfficialIndexHealthAndNamedVolume"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "daemon": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "ad04c72c0398392c834a79e5e46da5bbc3f764c5bab1f0dd88898df09da02658",
+          "passed": [
+            "TestExecutorShutdownWaitsForHTTPAndWorkerCleanup",
+            "TestExecutorUnexpectedListenerFailureCancelsDelayedStartupAndPreservesFailure"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "executor": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "b621ab7f556b34f187949f18d8e62117675f23559751b9ac01fe1ea6b1936ec2",
+          "passed": [
+            "TestApacheMetadataSiteBackupComparisonCannotNormalizeTamper",
+            "TestApacheMetadataSitePolicyRefusesCapabilityPromotionAndForeignSource",
+            "TestApacheMetadataSitePolicyRetainsVersionProxyAndLiteralRules",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/bad-identity",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/duplicate-manifest",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/last-protected-site",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/missing-rules",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/native-version",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/not-installed",
+            "TestApacheMetadataSiteRemoteIPRelocationKeepsOriginalBytesAndPolicy",
+            "TestComposeCreateReceiptConcurrentClaimsNeverEnqueueTwice",
+            "TestComposeCreateReceiptLookupIsReadOnlyAndNeverInventsQueueSuccess",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/directory",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/duplicate-key",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/hardlinked",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/linked",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/oversized",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/partial",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/unknown-field",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/writable",
+            "TestDockerJobObservationReadsOriginalWhileWorkerHoldsMutationLease",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/duplicate",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/foreign",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/hardlinked",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/linked",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/missing",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/oversized",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/partial",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/unknown-field",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/writable",
+            "TestModuleWorkerRealSIGTERMPreservesCommittedSQLiteAndClosesJournal",
+            "TestModuleWorkerSignalRollbackHelper",
+            "TestModuleWorkersCanceledStartupDoesNotCreateOrRestart",
+            "TestStatisticsRecoveryActualHotJournalBacksUpThenNativeRollbackWithoutTaskReplay",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/canceled",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/foreign-schema",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/linked-database",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/wal",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/wrong-hash",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/checksum",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/duplicate-page",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/embedded-super-journal-tail",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/empty-records",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/external-super-journal",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/extra-segment",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/magic",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/open-ended-records",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/outside-original",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/padding",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/sector",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/short-record",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/wrong-page-size",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/zero-page",
+            "TestStatisticsRecoveryRealKilledWriterHelper",
+            "TestWorkerLifecycleCancelJoinsCleanupAndNeverRestarts",
+            "TestWorkerLifecycleConcurrentStartStopHasNoLateAdmission",
+            "TestWorkerLifecycleDeadlineReportsIncompleteThenWaitsWithoutReplay",
+            "TestWorkerLifecycleServiceStopDoesNotHoldModuleMutex",
+            "TestWorkerLifecycleStopBeforeDelayedStartAndCanceledParent"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "all101_preserved": 101,
+      "history_preserved": true,
+      "no_service_or_app_operation": true
+    },
+    "amd64": {
+      "proof_sha256": "827616b14dcba122a4855db68c945052e794ca6a87ab89f649a04ca1b8fc1a66",
+      "source_inputs_sha256": "80f419e1d9f86b0a9d8feb6c5ce0c070e6f7f99c02103f421311a65c584d7eca",
+      "tests": {
+        "core": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "9393d1441a37300f7dd917d30e3ad9d76eb34119128001de5338a6bbac189e7a",
+          "passed": [
+            "TestAppProxySiteBindingIsAtomicAndIdempotent",
+            "TestDockerCreateCanonicalUUIDHTTPMatchesActualFrontendContract",
+            "TestDockerCreateIdentityBindsStableActorKeyAndChangedPayload",
+            "TestDockerCreateRequestHTTPActorScopeAndOneOriginalIdentity",
+            "TestDockerCreateStatusRejectsForeignUnknownAndFalseSuccess",
+            "TestDockerJobObservationHTTPIsAuthenticatedReadOnlyAndNeverReconciles",
+            "TestDockerJobObservationRejectsForeignAndImpossibleStates",
+            "TestDockerNginxBindingHTTPReReadsHealthAndQueuesExactlyOneSite",
+            "TestDockerSiteBindingOnlyRecognizedFullyHealthyTemplates",
+            "TestNginxStaticTemplatePinsOfficialIndexHealthAndNamedVolume"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "daemon": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "decb52ad1e2fd29b8b5c2c2320df7fd9f5fc87eb8569427e03f916684aabb926",
+          "passed": [
+            "TestExecutorShutdownWaitsForHTTPAndWorkerCleanup",
+            "TestExecutorUnexpectedListenerFailureCancelsDelayedStartupAndPreservesFailure"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "executor": {
+          "exact_original_test_ids": true,
+          "exit": 0,
+          "failed": [],
+          "jsonl_sha256": "eaae566258c91facf57f63d23b8048f0a9d921f5a347ac9f397b675c15a936fe",
+          "passed": [
+            "TestApacheMetadataSiteBackupComparisonCannotNormalizeTamper",
+            "TestApacheMetadataSitePolicyRefusesCapabilityPromotionAndForeignSource",
+            "TestApacheMetadataSitePolicyRetainsVersionProxyAndLiteralRules",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/bad-identity",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/duplicate-manifest",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/last-protected-site",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/missing-rules",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/native-version",
+            "TestApacheMetadataSiteRefusalHasNoCommandOrFileMutation/not-installed",
+            "TestApacheMetadataSiteRemoteIPRelocationKeepsOriginalBytesAndPolicy",
+            "TestComposeCreateReceiptConcurrentClaimsNeverEnqueueTwice",
+            "TestComposeCreateReceiptLookupIsReadOnlyAndNeverInventsQueueSuccess",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/directory",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/duplicate-key",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/hardlinked",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/linked",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/oversized",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/partial",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/unknown-field",
+            "TestComposeCreateReceiptRefusesUnsafeOriginalsWithoutRepair/writable",
+            "TestDockerJobObservationReadsOriginalWhileWorkerHoldsMutationLease",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/duplicate",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/foreign",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/hardlinked",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/linked",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/missing",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/oversized",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/partial",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/unknown-field",
+            "TestDockerJobObservationRefusesUnsafeOriginalsWithoutRepair/writable",
+            "TestModuleWorkerRealSIGTERMPreservesCommittedSQLiteAndClosesJournal",
+            "TestModuleWorkerSignalRollbackHelper",
+            "TestModuleWorkersCanceledStartupDoesNotCreateOrRestart",
+            "TestStatisticsRecoveryActualHotJournalBacksUpThenNativeRollbackWithoutTaskReplay",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/canceled",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/foreign-schema",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/linked-database",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/wal",
+            "TestStatisticsRecoveryInvalidAuthorityAndForeignSchemaDoNotTouchOriginals/wrong-hash",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/checksum",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/duplicate-page",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/embedded-super-journal-tail",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/empty-records",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/external-super-journal",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/extra-segment",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/magic",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/open-ended-records",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/outside-original",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/padding",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/sector",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/short-record",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/wrong-page-size",
+            "TestStatisticsRecoveryJournalClosedFormatAndChecksums/zero-page",
+            "TestStatisticsRecoveryRealKilledWriterHelper",
+            "TestWorkerLifecycleCancelJoinsCleanupAndNeverRestarts",
+            "TestWorkerLifecycleConcurrentStartStopHasNoLateAdmission",
+            "TestWorkerLifecycleDeadlineReportsIncompleteThenWaitsWithoutReplay",
+            "TestWorkerLifecycleServiceStopDoesNotHoldModuleMutex",
+            "TestWorkerLifecycleStopBeforeDelayedStartAndCanceledParent"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      },
+      "all101_preserved": 101,
+      "history_preserved": true,
+      "no_service_or_app_operation": true
+    }
+  },
+  "normal_QA_installs": {
+    "arm64": {
+      "raw_proof_sha256": "ff3a5f38fa391649d30afe9537b7d582819daac2492228bec68459c2a53b5934",
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "cb1030ceb915c78b50e9565545a8e87b142cb1ab92f591c37a253042374c7af6"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "08be96a39aa623513d4161d456b1e312b8ef84aa9239f09f158607dc5631394c"
+        }
+      ],
+      "all101_preserved": 101,
+      "old_files_preserved": 4599,
+      "history_preserved": true,
+      "complete_clock_identities_preserved": true,
+      "app_operations": 0,
+      "Main_mutated": false,
+      "first_mutating_install_after_writefree_refusal": false
+    },
+    "amd64": {
+      "raw_proof_sha256": "5911a096b5f0562644ef31218d87329ea663f2d5ef94e49f19c9f861d340fa47",
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "cb1030ceb915c78b50e9565545a8e87b142cb1ab92f591c37a253042374c7af6"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "08be96a39aa623513d4161d456b1e312b8ef84aa9239f09f158607dc5631394c"
+        }
+      ],
+      "all101_preserved": 101,
+      "old_files_preserved": 3693,
+      "history_preserved": true,
+      "complete_clock_identities_preserved": true,
+      "app_operations": 0,
+      "Main_mutated": false,
+      "first_mutating_install_after_writefree_refusal": true
+    }
+  },
+  "actual_Nginx_site_preservation": {
+    "arm64": {
+      "qualified_sha256": "77b7d62058b348f0ef814f4ce76fddd054dea749ffd3d34d8cb3c2ce141c1d4c",
+      "site": "2e3777b9c2dd5604786f10f3628e8811",
+      "job": "e49fc39e1d5087b9620e7c7a27019326",
+      "HTTP": 200,
+      "apache_program": {
+        "pid": "587946",
+        "sha256": "51707dbe7f172fdb52945c99f47eab7b2faae9d9424443a527eec88ac0403d68"
+      },
+      "old_files_preserved": 4536,
+      "exact6_new_paths": true,
+      "exact_owned_appends": true,
+      "history": [
+        {
+          "complete_original_history_and_cursor_fields_preserved": true,
+          "discovery_counts": [
+            13,
+            14
+          ],
+          "ok": true,
+          "owned_site_rows_appended": 0,
+          "owned_site_streams_appended": 0,
+          "source_snapshots_NOT_filtered_or_replaced": true
+        },
+        {
+          "complete_original_history_and_cursor_fields_preserved": true,
+          "discovery_counts": [
+            14,
+            14
+          ],
+          "ok": true,
+          "owned_site_rows_appended": 1,
+          "owned_site_streams_appended": 1,
+          "source_snapshots_NOT_filtered_or_replaced": true
+        }
+      ],
+      "browser_receipt_sha256": "862e261773d1c63101af327cdf1ae259b4b9750fc6f6f257682b2f8323ce527a"
+    },
+    "amd64": {
+      "qualified_sha256": "e0103ab31c6bd3d39f701ad2565317bf6db0757db24f5767825a816095a8e2ae",
+      "site": "572e9acf544c33b7a859a65a4fa325e8",
+      "job": "9e79fbfb99e566566485bba6e828f5d2",
+      "HTTP": 200,
+      "apache_program": {
+        "pid": "918",
+        "sha256": "9e70cfc2f642bd5beb3cbf88b2386fdbd770fbb5c6c7471a99cd7edb4234c42f"
+      },
+      "old_files_preserved": 3633,
+      "exact6_new_paths": true,
+      "exact_owned_appends": true,
+      "history": [
+        {
+          "complete_original_history_and_cursor_fields_preserved": true,
+          "discovery_counts": [
+            9,
+            10
+          ],
+          "ok": true,
+          "owned_site_rows_appended": 1,
+          "owned_site_streams_appended": 1,
+          "source_snapshots_NOT_filtered_or_replaced": true
+        },
+        {
+          "complete_original_history_and_cursor_fields_preserved": true,
+          "discovery_counts": [
+            10,
+            10
+          ],
+          "ok": true,
+          "owned_site_rows_appended": 0,
+          "owned_site_streams_appended": 0,
+          "source_snapshots_NOT_filtered_or_replaced": true
+        }
+      ],
+      "browser_receipt_sha256": "75c081b5bc97e508c9b88a84be220d027d55f38cb305c2ceaf51411ff525b5b2"
+    }
+  },
+  "original_failures": {
+    "amd214_binding_preservation": false,
+    "amd214_binding_proof_sha256": "1e3c8257af696df5d366ca4d4815582d752ccd41fb78f703230cc89488317ccb",
+    "amd80F_original_preflight_only": false,
+    "amd80F_original_preflight_proof_sha256": "c63a5a7b0a21f42ab454b5473602511550770065ae820ab90217faed61605aa1",
+    "all_original_receipts_unmodified": true,
+    "no_original_task_replay": true
+  },
+  "Main19100_updated_to80F": false,
+  "commercial_all50": false,
+  "limitations": [
+    "Native Linux fixture reproduces old trusted remoteip relocation; actual new Nginx sites prove preservation of current installed Apache layout, not a fresh live legacy-line2 case.",
+    "This is scoped configuration isolation, not complete Docker or all50 commercial acceptance. Main delivery, power loss, soak and broad platform matrix remain separate.",
+    "Original upgrade-only history comparator refused legitimate new site rows/discovery; separate site-append comparator preserves every old row and checks only owned additions, without modifying source snapshots."
+  ]
+}
