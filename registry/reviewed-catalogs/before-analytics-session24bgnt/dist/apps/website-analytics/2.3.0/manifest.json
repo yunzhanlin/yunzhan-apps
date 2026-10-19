@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "网站分析 · Website Analytics",
+  "category": "professional",
+  "version": "2.3.0",
+  "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；可选固定来源、实际 Nginx ABI 核验的 HTML 自动接入引擎，显式构建加载后逐站启用，默认关闭；保留模板和 CSP，启停配置失败回滚；需支持 2.3 的面板",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集、PV 与浏览器 UV",
+    "可选有界 HTML 自动接入，默认关闭",
+    "固定源码构建与实际 Nginx ABI 核验",
+    "实际工作进程确认后逐站启用同源代理",
+    "保留模板及 CSP，不适用响应原样通过",
+    "会话与访问旅程、入口/离开和页面来源分布",
+    "点击坐标热图",
+    "页面性能 p75 与官方标准 INP",
+    "SPA 路由页面访问",
+    "2–8 步有界顺序转化漏斗",
+    "保留期和容量上限",
+    "站点隔离与报告导出"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

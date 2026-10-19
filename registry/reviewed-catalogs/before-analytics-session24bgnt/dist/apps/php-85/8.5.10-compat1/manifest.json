@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "php-85",
+  "name": "PHP 8.5",
+  "category": "deployment",
+  "version": "8.5.10-compat1",
+  "summary": "编译安装 PHP 8.5 CLI/FPM 与常用扩展，可与其他版本并存。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "php-8.5.10",
+    "manage_route": "runtimes"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "CLI",
+    "FPM",
+    "多版本并存",
+    "站点独立池"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "php -v"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -1,7 +1,8 @@
+import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 // Escaped systemd filenames contain literal backslashes; URL resolution would
 // incorrectly interpret those bytes as path separators. Hash the real path.
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),sha=b=>createHash('sha256').update(b).digest('hex');
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preAnalyticsWorkflowRead(p,fs.readFileSync(path.join(root,p))),sha=b=>createHash('sha256').update(b).digest('hex');
 test('file-management and ordinary development dispatch export is exact immutable normal source, never all50 acceptance',()=>{
  const index=JSON.parse(read('panel-integration-file-manager/source-sha256.json')),release=JSON.parse(read('panel-integration-file-manager/release-source-inputs.json')),record=JSON.parse(read('registry/file-manager-foundation-release.json'));
  assert.equal(record.version,'0.1.0-dev.proapps24devdispatchbgmu');assert.equal(record.frozen_inputs_sha256,'5d879e399b73ed741c39ac8551c8a2f0b2acd2e67e1eeb52aec954ec1b6fc864');

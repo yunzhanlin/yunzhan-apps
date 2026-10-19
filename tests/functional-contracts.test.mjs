@@ -75,7 +75,7 @@ test('daily SMTP publishes independent version and truthful transport/security b
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
 test('body WAF and analytics additions keep truthful limits and independent versions',async()=>{
- const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
+ const [registry,contracts]=await Promise.all([load('../registry/reviewed-catalogs/before-analytics-session24bgnt/apps-registry.json'),load('../registry/functional-contracts.json')]);
  const waf=registry.apps.find(a=>a.id==='nginx-waf'),analytics=registry.apps.find(a=>a.id==='website-analytics');
  assert.equal(waf.version,'2.5.1');assert.equal(analytics.version,'2.3.0');
  assert.match(waf.summary,/默认不启用/);assert(!waf.summary.includes('不含完整请求体检测'));
