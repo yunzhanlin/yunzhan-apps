@@ -1,0 +1,239 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24tlslistenerbgsy",
+  "frozen_inputs_sha256": "fbd6c7ed729735a58bbce3ef552eaa281327afd859b9466c7d17c28c7f1d2130",
+  "frozen_files": 17157,
+  "exported_files": 1514,
+  "source_overrides": 0,
+  "exact_delta_from_redis_scope": [
+    "internal/core/analytics_session_test.go",
+    "internal/executor/site_tls_test.go",
+    "packaging/build-release.sh",
+    "packaging/development-upgrade.py",
+    "packaging/test_program_queue_diagnostics.py",
+    "packaging/upgrade-release.py",
+    "scripts/test-docker-site-binding.mjs",
+    "scripts/test-module-report-provenance.mjs",
+    "scripts/test-module-state.mjs",
+    "scripts/test-module-version-scope.mjs",
+    "scripts/test-store-updates.mjs",
+    "web/src/App.vue",
+    "web/src/AppModuleManager.vue",
+    "web/src/DockerManager.vue",
+    "web/src/moduleReportProvenance.ts"
+  ],
+  "normal_original_key_archives": {
+    "arm64": {
+      "archive_sha256": "145c1cb651ad14e9ed931e6c304d4beef425d384acece188cf085d0e4678cc41",
+      "manifest_sha256": "3aa4d35e86943a7006f5fa7b7d5fb6801e6b5e6b50816cdb4857c23dfd2a6573",
+      "signature_sha256": "46dcf3c6e2c9bc719e299a444d9e1100d7f23d343aff34887ca55099231940c3",
+      "signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "ac7b88aa7c2531ca219860a55e364b02260b6aeefa25861cacbeeddf1531a43f",
+      "manifest_sha256": "9673375e0d0d0b4179b9366531ed3721acc433797364c96fb6b417dbc857d0d2",
+      "signature_sha256": "2480a977269cae5d93771fc0087dfb5554d1762bccbc3c789bdd16f4daeb229e",
+      "signature_verified": true
+    }
+  },
+  "local_Go": {
+    "passed": 2596,
+    "failed": 0,
+    "explicit_environment_skips_NOT_acceptance": 12
+  },
+  "source_checks": [
+    {
+      "name": "full-go",
+      "exit": 0,
+      "stdout_sha256": "89ad1deb3c6d8bab2653852d6867e34fb6ef39d0ba522c97a8506c8192ba8016",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "full-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-arm64-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-amd64-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "full-packaging-policy",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "ada43b6a630d72d0c48833a8f9a8c2b95b522f59a499031a463e45f487587428"
+    },
+    {
+      "name": "original-service-refusal-metadata",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "322fb1357930298d2c4ba6bc60646d717db98f11e8d4cb13e4830711ab825752"
+    },
+    {
+      "name": "actual-module-version-read-scope",
+      "exit": 0,
+      "stdout_sha256": "b8ec11bc87696a1c47affc1ad649d2fb9ba2c5e38c2b4b1369bdd339eb4e1d27",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "actual-Docker-site-binding",
+      "exit": 0,
+      "stdout_sha256": "b10de313eba8f4c05f47c986be5b428155e86c2dcb555626bc123143fc97f4ae",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "deterministic-TLS-listener-boundary",
+      "exit": 0,
+      "stdout_sha256": "0dcdf62cda7d538fb705b391ff2ad1be7dabe251343eab4b3bf7108fe1bfc075",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "redis-actual-component-scope",
+      "exit": 0,
+      "stdout_sha256": "110571922e987068a75150152b483f70060ecc614e835182d151d9100cf54924",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "saved-report-and-existing-scopes",
+      "exit": 0,
+      "stdout_sha256": "5740051dbf1019e78be2e942fdbdba1b20d65d69995ba8d14faea9a7129b0ac3",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "actual-store-update-filters",
+      "exit": 0,
+      "stdout_sha256": "6f09d8860e649d8d8714272c2b131bc2d121aa940c3240553ca7a3aa54fedbf4",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "identity-ui",
+      "exit": 0,
+      "stdout_sha256": "da61a3a9f2cda1ce00d5e2cdc3ce057b99984d8d4f100a3500979181aa5cb42d",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "session-and-HTML-scope",
+      "exit": 0,
+      "stdout_sha256": "5f4025298b3d27d9d4e29797f82c501dff574733395b4285485f32854ebe35c0",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-standard-INP",
+      "exit": 0,
+      "stdout_sha256": "6846420c24f831e750bfa5e83964bf23b419d47813e398b93d47c8029f98c794",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "frontend",
+      "exit": 0,
+      "stdout_sha256": "a68e319c0bc478d8e20c13b371c19ed1b8ed2356f28c9a2c55cbdc4517b53a00",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "selected_Linux_TLS_fixtures": {
+    "arm64": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "jsonl_sha256": "21dd8f8f2512aad904e614ba67492620605c15f9285d8451f2944539bf2d05a6",
+      "full_executor_native_acceptance": false
+    },
+    "amd64": {
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "jsonl_sha256": "c7496ed34bfb49b8d7f57f5805b8e1f343c506d22826455aabf2d2d2ae604f51",
+      "full_executor_native_acceptance": false
+    }
+  },
+  "Linux_Root_service_metadata_fixtures": {
+    "per_architecture_passed": 14,
+    "per_architecture_failed": 0,
+    "per_architecture_skipped": 0,
+    "actual_host_service_transition_cause_NOT_proven": true
+  },
+  "QA_normal_program_upgrades": {
+    "arm64": {
+      "passed": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "proof_sha256": "b227e193309eccfc65d1663666126858ed849a92ccf41c29d37906844bf261b6",
+      "transaction_sha256": "289a0cd6e9fae1d63b07e5edbc962aea6d5fc807bc3b2342bdce2e4b9f0e3a9f",
+      "normal_original_key_installer_only": true,
+      "original_business_projections": 101,
+      "app_count_preserved": 20,
+      "application_operations": 0,
+      "statistics_history_and_streams_preserved": true,
+      "original_failed_and_partial_receipts_preserved": true,
+      "other_protected_entries_preserved": 4545,
+      "nginx_master_unchanged": true,
+      "ready": 200
+    },
+    "amd64": {
+      "passed": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "proof_sha256": "70b9ab2cb708d8e4f4cf3772d4cc5db44586192bfed77aee80bfd857460f8702",
+      "transaction_sha256": "289a0cd6e9fae1d63b07e5edbc962aea6d5fc807bc3b2342bdce2e4b9f0e3a9f",
+      "normal_original_key_installer_only": true,
+      "original_business_projections": 101,
+      "app_count_preserved": 20,
+      "application_operations": 0,
+      "statistics_history_and_streams_preserved": true,
+      "original_failed_and_partial_receipts_preserved": true,
+      "other_protected_entries_preserved": 3387,
+      "nginx_master_unchanged": true,
+      "ready": 200
+    }
+  },
+  "Main": {
+    "passed": true,
+    "proof_sha256": "5681813d0b80eeb3e59f5a1e39107a51359403124d6e4f581c9eae7f0c3ce642",
+    "transaction_sha256": "cfaee221954b4dd194d62c1b38e9ce54656cd5c2f2c7884cec5df19126ee0d1d",
+    "normal_signed_development_upgrade": true,
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "original_business_projections": 101,
+    "original_schema_and_migration_rows_preserved": true,
+    "sites_preserved": 58,
+    "modules_preserved": 4,
+    "analytics_installed_version_preserved": "2.3.1",
+    "other_protected_entries_preserved": 43012,
+    "application_operations": 0,
+    "http": {
+      "19100": 200,
+      "19101": 200
+    },
+    "nginx_master_unchanged": true,
+    "actual_store_screenshot_sha256": "46cf7d5c8ac8e965e25518fff857e396bd7a7151cb6b46aaf7489726b2c12b8e"
+  },
+  "earlier_Main_EAD_refusal": {
+    "still_failed": true,
+    "preflight_exit": 0,
+    "install_exit": 1,
+    "original_proof_sha256": "6fcd2df0c344e71f18abd088ce23a1113a5c86ce436e7c16220270fde200696e",
+    "preservation_qualification_sha256": "f0676a320611a38cba03ea2ba7c358a8c44f2956f01db250b784694e3cc4030a",
+    "exact_rejected_service_not_recorded": true,
+    "installer_replayed": false
+  },
+  "original_4f_ARM_build_failure": {
+    "still_failed": true,
+    "log_sha256": "047927a36f20f04badadb29d6706eca8897fddf6af59538320075eeb2ed5ab4d",
+    "no_archive_or_signature": true
+  },
+  "installed_analytics_real30minute_browser_journey_proven": false,
+  "installed_Docker_site_binding_business_acceptance": false,
+  "current_analytics_catalog_sha256_unchanged": "ac150c30f7d83cc0dc25218386831878d9b8deb45396e6e803fde88e6982dfd6",
+  "Root_user_FileManager_changed": false,
+  "commercial_all50": false,
+  "scope": "Saved report provenance, recommended/update plugin filters, account-scoped version reads, original Docker site-job identity and terminal state, original service-state refusal metadata and deterministic real TLS-listener test. This normal program delivery is not fifty installed application business or OS-matrix acceptance. No commercial rules, copied paid plugin code or private credentials included."
+}
