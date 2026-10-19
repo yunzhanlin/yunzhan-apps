@@ -386,3 +386,19 @@ jobs:
           node --test scripts/test-redis-scope.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24redisscopebgpj npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Service-state exact source Root policy fixtures (not native transition acceptance)
+        working-directory: panel-integration-service-state/packaging
+        run: sudo python3 -B -m unittest -v test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch
+      - name: Current report windows and deterministic TLS directives (not installed browser business acceptance)
+        working-directory: panel-integration-service-state
+        run: |
+          sudo "$(command -v go)" test -p 1 ./internal/core -run '^TestAnalytics' -count=1
+          sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestPlainSiteHealthBody443PrefixIsNotAListener$|^TestRenderedTLSListenerDetectorRequiresAnActualDirective$|^TestStandardPortsRequireExplicitWebsiteIngress$' -count=5
+      - name: Locked service-state frontend dependencies
+        run: npm ci --prefix panel-integration-service-state/web --ignore-scripts
+      - name: Actual version request, report provenance, filters and Docker binding regressions
+        working-directory: panel-integration-service-state
+        run: |
+          node --test scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs scripts/test-docker-site-binding.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24tlslistenerbgsy npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
