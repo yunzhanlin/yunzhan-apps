@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "source_inputs_sha256": "3508a91003fd71ec4b8e79297f2d68eb8c3caffef3be070b8e5785905da6255a",
+  "original_PR60_head": "0b10fa1da83a7e81f82cdcf3f22b36e40c100b56",
+  "original_failing_run": 39274447616,
+  "original_failing_job": 118134972712,
+  "original_full_linux_suite_passed": false,
+  "original_failure": "TestSecurityManifestKnownAbsenceAndLegacyPrivateMode/system-hardening/{0600,0640}: separate temporary SecurityDir was outside declared SystemRoot; the new actual inspection correctly refused that undeclared path.",
+  "repair_boundary": "One exact original _test.go overlay reuses newHardeningFixture with its explicit private roots and in-memory sysctl adapter; creates only missing isolated etc/sysctl.d. All original assertions, untrusted-mode cases and production bytes remain intact.",
+  "immutable_export_changed": false,
+  "production_source_overrides": 0,
+  "native140_or_actual_kernel_roundtrip_receipts_relabelled": false,
+  "new_full_suite_success_claimed_at_creation": false,
+  "all50_commercial": false
+}

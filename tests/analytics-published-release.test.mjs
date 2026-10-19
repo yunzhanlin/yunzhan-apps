@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
-import {catalogBeforeAnalyticsBytes} from './previous-analytics-catalog.mjs';
+import {catalogBeforeAnalyticsBytes,analyticsSignedCatalogBytes} from './previous-analytics-catalog.mjs';
 import {originalAnalyticsWorkflow,scopedPredecessorWorkflow} from './pre-analytics-workflow.mjs';
 import {verifyOldHandlerRefusal} from '../tools/verify-analytics-handler-boundary.mjs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url));
 test('the actual new original-key signed package changes only analytics and pins the compiled session handler',()=>{
- const before=JSON.parse(catalogBeforeAnalyticsBytes()),now=JSON.parse(read('dist/catalog-v1.json')),manifest=JSON.parse(read('dist/apps/website-analytics/2.3.1/manifest.json'));
+ const before=JSON.parse(catalogBeforeAnalyticsBytes()),now=JSON.parse(analyticsSignedCatalogBytes()),manifest=JSON.parse(read('dist/apps/website-analytics/2.3.1/manifest.json'));
  assert.equal(before.apps.find(a=>a.id==='website-analytics').version,'2.3.0');assert.equal(now.apps.find(a=>a.id==='website-analytics').version,'2.3.1');assert.deepEqual(manifest.required_panel_features,['analytics-session-lifecycle-v1']);
  assert(manifest.capabilities.some(s=>s.includes('30 分钟')));assert(manifest.capabilities.some(s=>s.includes('不刷新旅程')));assert(manifest.summary.includes('默认关闭'));assert.equal(manifest.delivery.provider,'panel-module');
 });

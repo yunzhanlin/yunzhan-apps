@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
+import{preHardeningRead}from'./pre-hardening-workflow.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preHardeningRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('service-state scope exports every exact signed source member without dependency or source overrides',()=>{
  const scope='panel-integration-service-state/',i=json(scope+'source-sha256.json'),b=json(scope+'release-source-inputs.json'),old=json('panel-integration-redis-scope/source-sha256.json'),r=json('registry/service-state-core-release.json');
  assert.equal(i.release.frozen_inputs_sha256,'fbd6c7ed729735a58bbce3ef552eaa281327afd859b9466c7d17c28c7f1d2130');assert.equal(i.release.archive_sha256,'ac7b88aa7c2531ca219860a55e364b02260b6aeefa25861cacbeeddf1531a43f');assert.deepEqual(i.files,b.files);assert.deepEqual(i.test_overrides,{});assert.equal(Object.keys(i.files).length,1514);

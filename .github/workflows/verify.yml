@@ -363,7 +363,7 @@ jobs:
           go vet ./...
       - name: Analytics session current original-key signed50 compiled handler ABI (no app update)
         working-directory: panel-integration-analytics-session
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-hardening24bhhp"
       - name: Old compiled handler must refuse only the new session manifest and accept the other49 (no install)
         run: node tools/verify-analytics-handler-boundary.mjs
       - name: Session lifecycle auth and passive-performance report race regressions (not installed journey proof)
@@ -517,3 +517,42 @@ jobs:
       - name: Exact Apache metadata preservation and refusal race fixtures
         working-directory: panel-integration-apache-preservation
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestApacheMetadataSite' -count=1
+
+  hardening-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-hardening/go.mod
+          cache-dependency-path: panel-integration-hardening/go.sum
+      - name: Immutable signed input and honest native versus installed boundaries
+        run: node --test tests/hardening-source.test.mjs tests/hardening-manifest.test.mjs
+      - name: Unchanged full Root Linux packaging contracts and controller budget
+        working-directory: panel-integration-hardening
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts and vet
+        working-directory: panel-integration-hardening
+        run: |
+          sudo "$(command -v node)" ../tools/run-hardening-ci.mjs "$(command -v go)"
+          go vet ./...
+      - name: Original-job journal, actual child SIGKILL and read-only inspection race fixtures
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestHardening' -count=1
+      - name: Locked management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-hardening/web --ignore-scripts
+      - name: Actual application routing, update provenance and management build
+        working-directory: panel-integration-hardening
+        run: |
+          node --test scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24hardeninganchorbhgp npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Current original-key signed50 requires the actual reversible journal handler
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Prior compiled handler refuses only hardening1.1 and accepts the other49
+        run: node tools/verify-hardening-handler-boundary.mjs

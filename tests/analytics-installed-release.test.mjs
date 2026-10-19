@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash,createPublicKey,verify} from 'node:crypto';
+import {beforeHardening} from './pre-hardening-workflow.mjs';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url)),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('completed actual19100 update has a new receipt without rewriting historical signing boundaries',()=>{
  const r=json('registry/analytics-2.3.1-installed-release.json'),old=json(r.historical_at_signing_record_preserved),m=r.Main19100_actual_store;
@@ -8,7 +9,7 @@ test('completed actual19100 update has a new receipt without rewriting historica
  assert.equal(m.program_or_Nginx_master_changed_by_app_update,false);assert.equal(m.automatically_enabled_collection_or_HTML_engine,false);assert.equal(r.installed_collector_end_to_end_browser_journey_proven,false);assert.equal(r.all50_commercial,false);
 });
 test('actual-update receipt pins the unchanged original Ed25519 catalog and immutable2.3.1 package',()=>{
- const r=json('registry/analytics-2.3.1-installed-release.json'),catalog=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem');
- assert.equal(sha(catalog),r.catalog_sha256);assert.equal(sha(pub),r.public_key_sha256);assert(verify(null,catalog,createPublicKey(pub),Buffer.from(read('signatures/catalog-v1.sig').toString().trim(),'base64')));
+ const r=json('registry/analytics-2.3.1-installed-release.json'),catalog=read(beforeHardening+'catalog-v1.json'),pub=read(beforeHardening+'catalog-v1.pub.pem');
+ assert.equal(sha(catalog),r.catalog_sha256);assert.equal(sha(pub),r.public_key_sha256);assert(verify(null,catalog,createPublicKey(pub),Buffer.from(read(beforeHardening+'catalog-v1.sig').toString().trim(),'base64')));
  const item=JSON.parse(catalog).apps.find(v=>v.id===r.application);assert.equal(item.version,r.version);assert.equal(item.sha256,r.manifest_sha256);assert.equal(sha(read('dist/apps/website-analytics/2.3.1/manifest.json')),r.manifest_sha256);
 });

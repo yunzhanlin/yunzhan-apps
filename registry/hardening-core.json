@@ -1,0 +1,606 @@
+{
+  "version": "0.1.0-dev.proapps24hardeninganchorbhgp",
+  "app_capability": "1.1.0",
+  "feature": "hardening-reversible-journal-v1",
+  "frozen_inputs_sha256": "3508a91003fd71ec4b8e79297f2d68eb8c3caffef3be070b8e5785905da6255a",
+  "frozen_files": 17270,
+  "scope": "panel-integration-hardening",
+  "exported_files": 1567,
+  "source_overrides": 0,
+  "prior_scope": "panel-integration-apache-preservation",
+  "changed_from_prior": [
+    "internal/appcatalog/hardening_journal_features_test.go",
+    "internal/appcatalog/panel_features.go",
+    "internal/core/hardening_http.go",
+    "internal/core/hardening_jobs.go",
+    "internal/core/hardening_jobs_test.go",
+    "internal/core/hardening_recovery.go",
+    "internal/core/hardening_recovery_test.go",
+    "internal/core/hardening_version_test.go",
+    "internal/core/software_apps.go",
+    "internal/core/worker.go",
+    "internal/executor/app_modules_linux.go",
+    "internal/executor/hardening_inspection_linux.go",
+    "internal/executor/hardening_inspection_linux_test.go",
+    "internal/executor/hardening_journal_linux.go",
+    "internal/executor/hardening_journal_linux_test.go",
+    "internal/executor/hardening_journal_process_linux_test.go",
+    "internal/executor/hardening_journal_recovery_linux.go",
+    "internal/executor/hardening_journal_recovery_linux_test.go",
+    "internal/executor/hardening_journal_runtime_linux.go",
+    "internal/executor/hardening_journal_state_linux.go",
+    "internal/executor/hardening_journal_store_linux.go",
+    "internal/executor/hardening_journal_store_linux_test.go",
+    "internal/executor/hardening_program_queue_linux_test.go",
+    "internal/executor/hardening_transition_linux.go",
+    "internal/executor/hardening_transition_linux_test.go",
+    "internal/executor/hardening_version_linux_test.go",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "internal/executor/software_linux.go",
+    "internal/executor/software_linux_test.go",
+    "web/src/HardeningWorkspace.vue",
+    "web/src/SecurityAppManager.vue"
+  ],
+  "prior_workflow_whole_sha256": "ebb43d2833a18d68b0a43d7537efa2d656e9fa41e9dc2452ab339f60a5fc9165",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "e4fb378e72faca36d73438f5c31d9a7dff2a35a94eb646303a52f3cc4892d0a3",
+      "normal_build_log_sha256": "cce9e54fec494697ac773a61823dfe2ecc0a64b5bc28ad920717f73188e0ab94",
+      "manifest_sha256": "a4428b14d2413e4cab6e3d470409cde9e0fca083e7f7d27fcfbe334a10c73bb1",
+      "signature_sha256": "965a9278b7dafcab355480809395c71a65f5b229f4f68293c3c66f360c34e8e3",
+      "original_key_signature_verified": true,
+      "archive": "panel-0.1.0-dev.proapps24hardeninganchorbhgp-linux-arm64.tar.gz"
+    },
+    "amd64": {
+      "archive_sha256": "e0bfc211b4a0df1e0beb67a8770a8a5517ba2ec1b219cda2fc7d467dfd8e4b59",
+      "normal_build_log_sha256": "58a027d338142d484745248e84789de77e904b231bb1181a57eabfe2e0ac15d6",
+      "manifest_sha256": "f078bd87557fcf4f7f40609c7c25355ac7e99034001b178eaf95f1f58b4b28ef",
+      "signature_sha256": "0f253d74b01c9ccaacb35fe6d2b5a9647759d5e841ca5c77c05df6d92c261831",
+      "original_key_signature_verified": true,
+      "archive": "panel-0.1.0-dev.proapps24hardeninganchorbhgp-linux-amd64.tar.gz"
+    }
+  },
+  "native140_each": {
+    "arm64": {
+      "proof_sha256": "6d56cd9677887c83b4f0007c322048dd82f81309fb8d47b0df637fd242c93148",
+      "qualified_sha256": "b6939814e120e4064d288264426ed7fcbe23eb7b917b3c646492c5e3ca4176ab",
+      "source_inputs_sha256": "3508a91003fd71ec4b8e79297f2d68eb8c3caffef3be070b8e5785905da6255a",
+      "tests": {
+        "appcatalog": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningJournalLegacyManifestIsUnchangedAndAvailabilityIsLinuxOnly",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/alias",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/compose",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/duplicate",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/extra",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/future",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/legacy",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/missing",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/other-app",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/route",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/runtime",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/target",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/wrong-handler"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "269ac4d1b7418f542bbe1d4134c1d725a5db648e59308d7a7c91a275921f2c36"
+        },
+        "core": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningExecutorPayloadBindsOriginalQueueWithoutChangingOtherApps",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/case-fold",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/duplicate-outer",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/duplicate-source",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/extra-script",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/null",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/trailing",
+            "TestHardeningRecoveryQueueBindsExactPlanAndOneOriginalAuditedJob",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/bad-id",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/missing",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/unknown-script",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/uppercase-digest",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/wrong-confirm",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/1.1.0-unreviewed",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/1.1.1",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/2.0.0"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "c9de822cb2b1e0955319cb752296440a3710c3b709d123e0ed9996451b56b4a6"
+        },
+        "executor": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/changed",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/duplicate-legacy",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/hardlink",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/oversize",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/symlink",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/writable",
+            "TestHardeningFailedConfigureRestoresImmediatePriorValuesAndExactFiles",
+            "TestHardeningFailedRemovalRestoresActualPriorProfile",
+            "TestHardeningInspectionIsReadOnlyAndShowsOriginalsDriftAndHistory",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/linked",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/partial",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/public",
+            "TestHardeningInspectionMissingOriginalsIsNotHealthyAndDoesNotGuessDefaults",
+            "TestHardeningInspectionPendingBlocksHealthyWithoutPerformingRecovery",
+            "TestHardeningIrreversibleCurrentBPFRefusesBeforeAnyWrites",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/config",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/kernel",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/manifest",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/prepared",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/terminal",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/-to-baseline",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/-to-strict",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/baseline-to-",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/baseline-to-strict",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/strict-to-",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/strict-to-baseline",
+            "TestHardeningJournalCommittedBeforePendingRemovalOnlyFinalizesMetadata",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/casefold",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/duplicate",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/unknown",
+            "TestHardeningJournalExclusivePrepareKeepsCompleteOriginalAuthority",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/config",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/kernel",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/manifest",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/prepared",
+            "TestHardeningJournalIncompleteAtomicTemporaryIsNotSuccessAndNotDeleted",
+            "TestHardeningJournalKilledProcessHelper",
+            "TestHardeningJournalLegacyVersionAuthorityRemainsStableAndCannotDowngradeNewInstall",
+            "TestHardeningJournalOriginalJobReceiptNeverReplaysCommittedMutationOrChangedPayload",
+            "TestHardeningJournalPartialCompensationRetainsOriginalPlanAndContinuesWithoutNewIdentity",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/directory",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/partial",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/public",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/symlink",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/foreign-config",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/foreign-kernel",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/wrong-confirm",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/wrong-digest",
+            "TestHardeningJournalRolledBackArchivePreservesOriginalPlanAndBlocksIDReuse",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/before-owner",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/before-public-write",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/extra-kernel-key",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/foreign-file",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/future-format",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/missing-before",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/permanent-latch",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-config",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-manifest",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-map",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-mode",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-owner",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/unknown-action",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/wrong-from",
+            "TestHardeningJournalTerminalCannotInventSuccessOrLoseOriginalPlanDigest",
+            "TestHardeningJournalUnappliedPlanCannotPublishCommittedSuccess",
+            "TestHardeningJournalUnknownArchiveEntryBlocksNewAuthorityWithoutDeletion",
+            "TestHardeningLegacyMissingOriginalRefusesReleaseWithoutMutation",
+            "TestHardeningManifestCompensationOnlyRevertsExactOwnCandidate",
+            "TestHardeningManifestFailureRestoresKernelAndDoesNotDeleteForeignObject",
+            "TestHardeningMutationLockRefusesBusyAndUnsafeWithoutRepair",
+            "TestHardeningOrdinaryConfigurationPreservesLegacyVersionUntilGenuineUpdate",
+            "TestHardeningProfileTransitionCapturesNewOriginalsAndReleasesRemovedKeys",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/directory",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/empty",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/hardlink",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/partial",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/public",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/symlink",
+            "TestHardeningProgramQueueClosedMissingMarkerIsPureObservation",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/foreign-owner",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/group-writable",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/private-queue0750",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0750-closed",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0750-pending",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0755-closed",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0755-pending",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/symlink",
+            "TestHardeningReleasedParametersAndUnrelatedConfigRemainOutsideRemoval",
+            "TestHardeningRollbackFailureCannotClaimRestored",
+            "TestHardeningStrictNeverRequestsPermanentKernelLatch",
+            "TestHardeningUnknownProfileRefusesWithoutKernelOrFiles",
+            "TestHardeningVerificationFailureRestoresImmediateProfile",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/alias",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/drift",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/originals"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "ea9744f1ba2a847fe62712ae5d30d051544a46658cc283eec5f80b93ce496eb7"
+        }
+      },
+      "all101_preserved": 101,
+      "history_and_clock_preserved": true,
+      "private_model_not_installed_kernel_acceptance": true,
+      "CLI_formatting_only": []
+    },
+    "amd64": {
+      "proof_sha256": "fff8f46c767400e1886e0961f08de44ef312395ebe21b98e8815b96f646b2d0b",
+      "qualified_sha256": "512e44a54d83fc4e374d19e804e4f74e1f58ef8069463de7e1c6d7f9ef4dc92f",
+      "source_inputs_sha256": "3508a91003fd71ec4b8e79297f2d68eb8c3caffef3be070b8e5785905da6255a",
+      "tests": {
+        "appcatalog": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningJournalLegacyManifestIsUnchangedAndAvailabilityIsLinuxOnly",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/alias",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/compose",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/duplicate",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/extra",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/future",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/legacy",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/missing",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/other-app",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/route",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/runtime",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/target",
+            "TestHardeningJournalManifestRequiresExactCompiledHandlerAndCannotBorrowAuthority/wrong-handler"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "f68441d74eb25aa6e4a27f3dc06105d12ef6e9f518569ac6cddf94efa8abde8f"
+        },
+        "core": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningExecutorPayloadBindsOriginalQueueWithoutChangingOtherApps",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/case-fold",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/duplicate-outer",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/duplicate-source",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/extra-script",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/null",
+            "TestHardeningRecoveryHTTPBodyRefusesDuplicateCaseFoldAndTrailingAuthority/trailing",
+            "TestHardeningRecoveryQueueBindsExactPlanAndOneOriginalAuditedJob",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/bad-id",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/missing",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/unknown-script",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/uppercase-digest",
+            "TestHardeningRecoverySchemaRejectsUnknownOrAmbiguousAuthority/wrong-confirm",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/1.1.0-unreviewed",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/1.1.1",
+            "TestHardeningUpdateCapabilityIsFixedAndCannotBeInventedByCatalog/2.0.0"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "97efba1844acff412e19071d4882fba6bf316051ef1c585150d0f576f43882d7"
+        },
+        "executor": {
+          "exact_original_test_IDs": true,
+          "exit": 0,
+          "failed": [],
+          "passed": [
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/changed",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/duplicate-legacy",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/hardlink",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/oversize",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/symlink",
+            "TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair/writable",
+            "TestHardeningFailedConfigureRestoresImmediatePriorValuesAndExactFiles",
+            "TestHardeningFailedRemovalRestoresActualPriorProfile",
+            "TestHardeningInspectionIsReadOnlyAndShowsOriginalsDriftAndHistory",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/linked",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/partial",
+            "TestHardeningInspectionMalformedEvidenceRefusesWithoutRepairOrLockCreation/public",
+            "TestHardeningInspectionMissingOriginalsIsNotHealthyAndDoesNotGuessDefaults",
+            "TestHardeningInspectionPendingBlocksHealthyWithoutPerformingRecovery",
+            "TestHardeningIrreversibleCurrentBPFRefusesBeforeAnyWrites",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/config",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/kernel",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/manifest",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/prepared",
+            "TestHardeningJournalActualSIGKILLPreservesOriginalPlanAndRequiresExplicitRecovery/terminal",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/-to-baseline",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/-to-strict",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/baseline-to-",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/baseline-to-strict",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/strict-to-",
+            "TestHardeningJournalClosedPlansDeriveActualCapturedProfileTransitions/strict-to-baseline",
+            "TestHardeningJournalCommittedBeforePendingRemovalOnlyFinalizesMetadata",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/casefold",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/duplicate",
+            "TestHardeningJournalDecoderHasIndependentClosedGrammarWithoutChangingApache/unknown",
+            "TestHardeningJournalExclusivePrepareKeepsCompleteOriginalAuthority",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/config",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/kernel",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/manifest",
+            "TestHardeningJournalExplicitRecoveryRestoresOnlyCapturedOriginalMixedState/prepared",
+            "TestHardeningJournalIncompleteAtomicTemporaryIsNotSuccessAndNotDeleted",
+            "TestHardeningJournalKilledProcessHelper",
+            "TestHardeningJournalLegacyVersionAuthorityRemainsStableAndCannotDowngradeNewInstall",
+            "TestHardeningJournalOriginalJobReceiptNeverReplaysCommittedMutationOrChangedPayload",
+            "TestHardeningJournalPartialCompensationRetainsOriginalPlanAndContinuesWithoutNewIdentity",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/directory",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/partial",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/public",
+            "TestHardeningJournalPartialOrLinkedPrimaryRefusesWithoutRepair/symlink",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/foreign-config",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/foreign-kernel",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/wrong-confirm",
+            "TestHardeningJournalRecoveryForeignAuthorityRefusesBeforeWrites/wrong-digest",
+            "TestHardeningJournalRolledBackArchivePreservesOriginalPlanAndBlocksIDReuse",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/before-owner",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/before-public-write",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/extra-kernel-key",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/foreign-file",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/future-format",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/missing-before",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/permanent-latch",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-config",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-manifest",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-map",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-mode",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/target-owner",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/unknown-action",
+            "TestHardeningJournalTamperCannotChoosePathsKeysTargetsOrRewriteAuthority/wrong-from",
+            "TestHardeningJournalTerminalCannotInventSuccessOrLoseOriginalPlanDigest",
+            "TestHardeningJournalUnappliedPlanCannotPublishCommittedSuccess",
+            "TestHardeningJournalUnknownArchiveEntryBlocksNewAuthorityWithoutDeletion",
+            "TestHardeningLegacyMissingOriginalRefusesReleaseWithoutMutation",
+            "TestHardeningManifestCompensationOnlyRevertsExactOwnCandidate",
+            "TestHardeningManifestFailureRestoresKernelAndDoesNotDeleteForeignObject",
+            "TestHardeningMutationLockRefusesBusyAndUnsafeWithoutRepair",
+            "TestHardeningOrdinaryConfigurationPreservesLegacyVersionUntilGenuineUpdate",
+            "TestHardeningProfileTransitionCapturesNewOriginalsAndReleasesRemovedKeys",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/directory",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/empty",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/hardlink",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/partial",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/public",
+            "TestHardeningProgramQueueAnyPendingAuthorityRefusesWithoutRepair/symlink",
+            "TestHardeningProgramQueueClosedMissingMarkerIsPureObservation",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/foreign-owner",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/group-writable",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/private-queue0750",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0750-closed",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0750-pending",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0755-closed",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/shared0755-pending",
+            "TestHardeningProgramQueueSharedAnchorUsesExistingTrustContractWithoutRelaxingPrivateQueues/symlink",
+            "TestHardeningReleasedParametersAndUnrelatedConfigRemainOutsideRemoval",
+            "TestHardeningRollbackFailureCannotClaimRestored",
+            "TestHardeningStrictNeverRequestsPermanentKernelLatch",
+            "TestHardeningUnknownProfileRefusesWithoutKernelOrFiles",
+            "TestHardeningVerificationFailureRestoresImmediateProfile",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/alias",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/drift",
+            "TestHardeningVersionUpdateRefusesUnverifiedOriginalsDriftOrAlias/originals"
+          ],
+          "skipped": [],
+          "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "stdout_sha256": "015ed98467ff7cb984dfda7544b57cb46e4654dbb31b6e8aabe891497494d228"
+        }
+      },
+      "all101_preserved": 101,
+      "history_and_clock_preserved": true,
+      "private_model_not_installed_kernel_acceptance": true,
+      "CLI_formatting_only": [
+        {
+          "network": "7bc41baf5625e407cbef5a9f2be19386a74900e582df7f5a22caaead111d142b",
+          "only_unordered_CLI_label_map_rendering": true
+        },
+        {
+          "only_unordered_CLI_label_map_rendering": true,
+          "volume": "panel_ee252513504f_site-data"
+        }
+      ]
+    }
+  },
+  "normal_QA_program_installs": {
+    "arm64": {
+      "proof_sha256": "bd8d9878af76d3d2d4e0813ac46395ff6848a320f29a8f019789231ac99f452f",
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "215611d3428ff6a3e907a00b171389e6b0f7395e7582b0b0f86a24a4ac9f5614"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "2a582d0bfa070b515b93612410fca721804a7ad15e99f87974d28d26e2bdcc55"
+        }
+      ],
+      "all101_preserved": 101,
+      "protected_entries": 4605,
+      "history_preserved": true,
+      "all15_actual_kernel_values_unchanged": true,
+      "application_operations": 0,
+      "Main_mutated": false,
+      "programs": {
+        "nginx": {
+          "pid": "1079",
+          "sha256": "4ee482fc6ae62657bc80e1ef52a3b6c9c4d553f40e066e48a1b119fb2a97fc37"
+        },
+        "panel": {
+          "pid": "1083490",
+          "sha256": "0e32113e63fddc80c329cdcdd26ed7e17fd0851f9f1ac3addbf827dc89b0d93f"
+        },
+        "panel-executor": {
+          "pid": "1083474",
+          "sha256": "3a6324f103b0a9a701492f7fde5a15c0f0fb61088e9295cd83cc9f510c97a33d"
+        }
+      }
+    },
+    "amd64": {
+      "proof_sha256": "a8fb50f4e3b6438ce7491d626e0528cf25ec72657d54296afe026c21ad23495a",
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "215611d3428ff6a3e907a00b171389e6b0f7395e7582b0b0f86a24a4ac9f5614"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "2a582d0bfa070b515b93612410fca721804a7ad15e99f87974d28d26e2bdcc55"
+        }
+      ],
+      "all101_preserved": 101,
+      "protected_entries": 3699,
+      "history_preserved": true,
+      "all15_actual_kernel_values_unchanged": true,
+      "application_operations": 0,
+      "Main_mutated": false,
+      "programs": {
+        "nginx": {
+          "pid": "958",
+          "sha256": "254fac73e79add393fef33f514bc91b8a98ad1966c2b43c77a98c9359580a6d8"
+        },
+        "panel": {
+          "pid": "278916",
+          "sha256": "e162c1c8a5631a728566b855cd3ea5f8a6e6353f80ed502be0b55c1d172a1492"
+        },
+        "panel-executor": {
+          "pid": "278898",
+          "sha256": "9f664f6c09cde079bd66535d18c0c7134b1f4ef5e78734996a4b2f0dcf6a63f5"
+        }
+      }
+    }
+  },
+  "actual_installed_baseline_roundtrip": {
+    "arm64": {
+      "strict": {
+        "qualified_sha256": "9f5169a2d9c7167e4f8d34588a496453b7c6a19d0139479ee0c2f75cffd12b95",
+        "original_job": "ac872a7d40543f5526e47cf4912d7f39",
+        "original_version_preserved": "1.0",
+        "actual_browser_confirm_submissions": 1,
+        "original_baseline_kernel_fully_restored": false,
+        "exact_owned_file_changes": [
+          "/etc/panel/security-apps/hardening-configuration.lock",
+          "/etc/panel/security-apps/hardening-transactions",
+          "/etc/panel/security-apps/hardening-transactions/ac872a7d40543f5526e47cf4912d7f39.json",
+          "/etc/panel/security-apps/system-hardening.json",
+          "/etc/sysctl.d/99-zz-panel-hardening.conf"
+        ],
+        "exact_owned_appends": {
+          "audit_logs": 2,
+          "runtime_jobs": 1
+        }
+      },
+      "restored": {
+        "qualified_sha256": "34d13c64abad836ca6bd7b69d7f27d1b87129bdf1f44474327110ebaa6e11167",
+        "original_job": "04f5e2c206d31dbea2cfda1870136e6a",
+        "original_version_preserved": "1.0",
+        "actual_browser_confirm_submissions": 1,
+        "original_baseline_kernel_fully_restored": true,
+        "exact_owned_file_changes": [
+          "/etc/panel/security-apps/hardening-transactions/04f5e2c206d31dbea2cfda1870136e6a.json",
+          "/etc/panel/security-apps/system-hardening.json",
+          "/etc/sysctl.d/99-zz-panel-hardening.conf"
+        ],
+        "exact_owned_appends": {
+          "audit_logs": 2,
+          "runtime_jobs": 1
+        }
+      }
+    },
+    "amd64": {
+      "strict": {
+        "qualified_sha256": "3e06ea0373afc1b7628b958cc6c7300eb2165458fc4ae9823162c68d49d8bb0d",
+        "original_job": "64fda27cd7e830d061ce21f6ec1e285d",
+        "original_version_preserved": "1.0",
+        "actual_browser_confirm_submissions": 1,
+        "original_baseline_kernel_fully_restored": false,
+        "exact_owned_file_changes": [
+          "/etc/panel/security-apps/hardening-configuration.lock",
+          "/etc/panel/security-apps/hardening-transactions",
+          "/etc/panel/security-apps/hardening-transactions/64fda27cd7e830d061ce21f6ec1e285d.json",
+          "/etc/panel/security-apps/system-hardening.json",
+          "/etc/sysctl.d/99-zz-panel-hardening.conf"
+        ],
+        "exact_owned_appends": {
+          "audit_logs": 2,
+          "runtime_jobs": 1
+        }
+      },
+      "restored": {
+        "qualified_sha256": "e6e8e5f29a71826414bf28603f8a022f72b3b66511f2b0ac90038a8d00f0ccae",
+        "original_job": "4b94c59408c44c148eb0911be2aee19f",
+        "original_version_preserved": "1.0",
+        "actual_browser_confirm_submissions": 1,
+        "original_baseline_kernel_fully_restored": true,
+        "exact_owned_file_changes": [
+          "/etc/panel/security-apps/hardening-transactions/4b94c59408c44c148eb0911be2aee19f.json",
+          "/etc/panel/security-apps/system-hardening.json",
+          "/etc/sysctl.d/99-zz-panel-hardening.conf"
+        ],
+        "exact_owned_appends": {
+          "audit_logs": 2,
+          "runtime_jobs": 1
+        }
+      }
+    }
+  },
+  "component_browser_fixture": {
+    "source_inputs_sha256": "f031159c26aa889b8a09729d9279db772f038939d09c5b06d5b125fbe6ef848a",
+    "cases": 6,
+    "all_exported_frontend_members_identical": true,
+    "not_installed_browser_or_kernel_acceptance": true
+  },
+  "original_failed_native_cohorts": {
+    "journal_1E905_both_still_failed": true,
+    "decoder3D6_child_fixture_both_still_failed": true,
+    "no_original_receipt_or_snapshot_relabelled": true,
+    "process3B9_AMD_exact_file_preservation_still_unaccepted": true
+  },
+  "Main19100_program_updated": false,
+  "application1_1_signed_store_update_accepted": false,
+  "commercial_all50": false,
+  "limitations": [
+    "Native SIGKILL fixtures use a persistent private kernel model; actual installed daemon interruption and power loss are not accepted.",
+    "The actual installed configure roundtrip preserves legacy application1.0; it is not a signed store update to1.1.0.",
+    "Frontend unknown-reply ticket remains workspace-scoped and requires the original identity to be retained before closing.",
+    "Bounded128 terminal inventory refuses when full; no automatic evidence deletion or unlimited-history claim.",
+    "Only scoped Ubuntu24ARM64 and Debian13AMD64 installed cases are covered; not the full declared OS matrix or all50 commercial acceptance."
+  ]
+}
