@@ -1,0 +1,121 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24statstopbgwr",
+  "frozen_inputs_sha256": "73d37ae9b8ddecbb02d9d2c1adf1995b997ac60d25f32b4f43f551caefada078",
+  "frozen_files": 17168,
+  "exported_files": 1525,
+  "source_overrides": 0,
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_original_key_archives": {
+    "arm64": {
+      "archive_sha256": "ffbcacb93ae03ac170fb13f1b84c55e850ad823041954a379612b6cee1dc1ed7",
+      "manifest_sha256": "bb6ba5787a43829bb680c95b715b92b723d6a70da05078e4369953d0b5502387",
+      "signature_sha256": "bc7c834937d0c72bae2376c2113ff75092cf70f5f0e461294d50e5b379e03557",
+      "complete_normal_build_log_sha256": "c4e08f5dda3932666570e399daf167be2580dd6c28cb0a5335e4ac8987dcf111",
+      "signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "034ae08107909cc81e34f2d780c28a21b0b10d9022ccb5e2f5d8afeec6284676",
+      "manifest_sha256": "e5daf289f34320018c815ffe6a20795ac92acbd5b899fa01da89d9aeef6b5130",
+      "signature_sha256": "66c7700563afed93d53a36c70d96b5757edb0f640b7756ac0e263c6a4da5cedc",
+      "complete_normal_build_log_sha256": "e8abc906c67d8a9d6ee10f74c167164d7c375901c3cdc798d3bebcec1316944a",
+      "signature_verified": true
+    }
+  },
+  "source_features": [
+    "Executor daemon SIGTERM/SIGINT cancellation and bounded HTTP/module-worker drain; delayed startup cannot admit a stopped module group",
+    "Legacy executor stop barrier takes the existing strict WAF/statistics lease before any program stop and releases it only after all fixed writers are stopped; failed pre-acquisition never restarts services in compensation",
+    "Fixed-root explicit history recovery binds the original database, rollback journal and installed record hashes; retains immutable private originals before native SQLite rollback; no health/startup/normal-install implicit repair",
+    "Bounded closed rollback-journal format and checksum validation refuses foreign paths, mixed flags, sidecars, schemas and changed identities; readonly status never opens a recognized hot journal for recovery"
+  ],
+  "native_source_fixtures": {
+    "scope": "Source functional coverage only. Complete immutable successful process records; incomplete stderr successes never counted. Not signed installed business or full capacity/OS acceptance.",
+    "go_functional_each_arch": 33,
+    "arm64_root_packaging_passed": 208,
+    "arm64_whole_case_passed": true,
+    "arm64_proof_sha256": "86be2350ad889470294811b8ee487e8efeb883edee829efc8f6b29a33cb672ed",
+    "amd64_root_packaging_unique_complete_passed": 208,
+    "amd64_prior_complete_process_union_passed": 202,
+    "amd64_new_missing_tests_passed": 6,
+    "amd64_exact_source_coverage_sha256": "9ed0b2cdf38ce43565c5de5c8493732808572b15275ccb76166485431f22c754",
+    "amd64_completion_proof_sha256": "9bba09032db2c3cbed8a65199ca5c55b0a94d197c001cf950692b2734c111568",
+    "source_or_test_overrides": 0,
+    "original_240_second_aggregate_cases_still_failed": true,
+    "all_original_test_assertions_and_240_second_controller_limit_retained": true
+  },
+  "actual_QA_normal_signed_upgrades": {
+    "arm64": {
+      "proof_sha256": "2ae5603f948dc9b07f9de5b60e74be9521532bb66ed6f7f98c245847ed8c2f55",
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "original_business_projections_preserved": 101,
+      "original_history_and_streams_preserved": true,
+      "protected_non_program_entries_preserved": 4546,
+      "installed_app_records_preserved": 20,
+      "fresh_healthy_statistics_worker": true,
+      "sites_discovered": 11,
+      "no_live_history_recovery_invoked": true,
+      "nginx_process_not_restarted": true,
+      "original_failed_upgrade_still_false": true
+    },
+    "amd64": {
+      "proof_sha256": "0ed5832feb7e1170a37b66b53e789acc0e625c98fe948609c24e5067c3cc408f",
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "original_business_projections_preserved": 101,
+      "original_history_and_streams_preserved": true,
+      "protected_non_program_entries_preserved": 3398,
+      "installed_app_records_preserved": 20,
+      "fresh_healthy_statistics_worker": true,
+      "sites_discovered": 8,
+      "no_live_history_recovery_invoked": true,
+      "nginx_process_not_restarted": true,
+      "original_failed_upgrade_still_false": true
+    }
+  },
+  "actual_AMD_explicit_maintenance": {
+    "scope": "Separate single explicit maintenance handler from the original signed AC2 source, not a replay or success relabel of the failed 86f normal upgrade.",
+    "handler_source_inputs_sha256": "ac2bbaa38c83c9239977ae2571a61dc99286e528c953802939b52e01c89cb9ca",
+    "proof_sha256": "37fcde59e76e94f376eb9b7288bbe22bc80475d4d5b3c260263d2b91f77191da",
+    "original_failed_upgrade_proof_sha256": "aa0f5ced302d3901fc6260cdd7d9e3b2becd0c29308c338e5f7a990336c06288",
+    "original_failed_upgrade_still_false": true,
+    "original_hot_database_journal_and_installed_record_immutably_backed_up": true,
+    "native_SQLite_rollback_only": true,
+    "original_pre_upgrade_committed_history_preserved": true,
+    "history_counts": {
+      "access_archives": 0,
+      "access_receipts": 2,
+      "access_retention": 0,
+      "access_rows": 292,
+      "access_streams": 10
+    },
+    "core_business_projections_preserved": 101,
+    "no_installer_service_stop_restart_or_program_replacement": true
+  },
+  "Main19100_normal_signed_development_upgrade": {
+    "proof_sha256": "f2c995d4e6e679c595258745c361f5bf739ad3ef487c830ad6f549b0747c2654",
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "original_101_schema_migration_rows_and_business_projections_unchanged": true,
+    "original_sites_preserved": 58,
+    "original_installed_apps_preserved": 4,
+    "analytics_version_preserved": "2.3.1",
+    "protected_non_program_entries_preserved": 43013,
+    "nginx_process_not_restarted": true,
+    "ready_HTTP200": true,
+    "website19101_HTTP200": true,
+    "website_probe_after_exact_preservation": true,
+    "no_app_operations": true
+  },
+  "previous_workflow_full_prefix_sha256": "14e8e68972be5c21357bb714ffd1f277f2417b7115824bbc8fe06f65cf96f45e",
+  "mandatory_additional_CI_job": "statistics-stop-native-amd64",
+  "installed_Docker_business_acceptance": false,
+  "PHP_and_IDS_accepted_background_queues_fully_drained": false,
+  "commercial_all50": false,
+  "remaining": [
+    "Real installed Docker project create/domain binding/restart/data-preservation business acceptance; source-only UI tests are separate.",
+    "All50 per-application supported OS/architecture/business/security/recovery/soak and mobile-device qualification remain incomplete.",
+    "No public-provider, physical power-loss, full automatic-HTML-engine or native app-store release acceptance is inferred."
+  ]
+}

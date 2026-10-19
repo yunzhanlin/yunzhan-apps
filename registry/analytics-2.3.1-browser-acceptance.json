@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "application": "website-analytics",
+  "version": "2.3.1",
+  "original_Main19100_update_record_preserved": "registry/analytics-2.3.1-installed-release.json",
+  "original_Main19100_update_not_replayed": true,
+  "additional_scope": "Owned Ubuntu24.04 ARM64 QA, actual installed collector and original signed core, same-origin Nginx proxy, real Chromium browser; not a Main19100 traffic test or full50 commercial acceptance.",
+  "QA_core_source_inputs_sha256": "86f0c4792f7e0b81955d568179147dfe746949d0aaa06f2dea976b842663e8b2",
+  "QA_original_app_update_job": "c0eebafa04ac3c1a9c122ca740f74290",
+  "QA_original_app_update_state": "succeeded",
+  "browser_journey": {
+    "qualified_receipt_sha256": "6281ebd06063c2b1cb676226349fbdcac94f7b5d4c5d71eb6ab3d8d53399b230",
+    "original_snapshot_sha256": {
+      "start": "23058dc780f4c48bd560ac95fdde0f93e84ef3952f66c3325aeaa79430df7eb9",
+      "idle": "525f1a3e8c2b51d0b871dd18551833fa8ae2226eec0fc7cf54868dc50fdbb3fd",
+      "return": "b18b7e3b72e7e57acea67d078a76ecd9338d28d917da5a1cd893bed63bfb79ab"
+    },
+    "natural_idle_seconds": 1850.344249010086,
+    "last_original_event_to_return_seconds": 1868,
+    "pv": 2,
+    "browser_uv": 1,
+    "sessions": 2,
+    "same_visitor_new_session_after_real_idle": true,
+    "original_events_preserved": 8,
+    "original_page_hashes_preserved": 4,
+    "original_program_identities_preserved": 3,
+    "standard_INP_ms": 336,
+    "performance_events_with_measured_INP": 3,
+    "private_input_or_click_coordinates_collected": false,
+    "browser_clock_storage_or_database_events_modified": false
+  },
+  "normal_site_proxy_tasks": {
+    "qualified_receipt_sha256": "9642d42825dd351cc6227eccd100b0da81325c165e1586a8a12e4523e7e9e7cb",
+    "enable_job": "4d0143cb1708af13e0f08adfca9fbb62",
+    "disable_job": "5f512f5d9cf7d69729b5ae68dab64347",
+    "both_original_jobs_succeeded": true,
+    "nginx_test_reload_and_real_HTTP200_proven": true,
+    "site_nginx_bytes_restored_exactly_on_disable": true,
+    "all20_installed_app_records_equal_between_enable_and_disable": true,
+    "Apache_three_files_process_version_and_loaded_fingerprint_preserved": true,
+    "retention_click_privacy_and_original_public_key_preserved": true,
+    "historical_events_retained_after_disable": 13,
+    "original_failed_configuration_job": "3b57955be15be3f71a2f61c353c2af11",
+    "original_failed_configuration_job_still_failed": true
+  },
+  "collector_integration": "Original manual tags, automatically managed same-origin per-site proxy; no page/template edits during this acceptance.",
+  "automatic_HTML_engine_acceptance": false,
+  "Main19100_browser_journey_acceptance": false,
+  "all50_commercial": false
+}
