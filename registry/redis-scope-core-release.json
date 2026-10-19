@@ -1,0 +1,154 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24redisscopebgpj",
+  "frozen_inputs_sha256": "30963cb52a1cdf3ebd1630f24fca373c5f283b38ec142ead368d0fa0e3c97060",
+  "frozen_files": 17152,
+  "exported_files": 1509,
+  "source_overrides": 0,
+  "exact_delta": [
+    "packaging/build-release.sh",
+    "scripts/test-redis-scope.mjs",
+    "web/src/App.vue",
+    "web/src/RedisManager.vue"
+  ],
+  "normal_original_key_archives": {
+    "arm64": {
+      "archive_sha256": "ada602b82c3c1c5500b4b0b9dd528907f4041d91e43e2006eac73da8cc3c580b",
+      "manifest_sha256": "1d81aebce344eeb516f3281b5627c08f7a81f954f628d78e2b18ddfc59d992f0",
+      "signature_sha256": "e3538afdb2d8f5e4f2aeeae081a7d5f021875e04d99e5bb600c2617e7489e003"
+    },
+    "amd64": {
+      "archive_sha256": "9313476581abe0f12e8d1693506729eb65a8b52219e0df75f946f737f5660b10",
+      "manifest_sha256": "26b1f1cdca8de61a61c5a6ae22661601d12de6ad8f5c7fac9af3281b8bc4fb73",
+      "signature_sha256": "fac79009f494a9cc5c93b48482002b38a502a9ff9c978f4abdb5a53bacc3d97f"
+    }
+  },
+  "local_Go": {
+    "passed": 2580,
+    "failed": 0,
+    "explicit_environment_skips_NOT_acceptance": 12
+  },
+  "source_checks": [
+    {
+      "name": "full-go",
+      "exit": 0,
+      "stdout_sha256": "9b9136269e4ab883b26daa3178a75d493340899f643f78652b82edaaac99c387",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "full-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-arm64-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "linux-amd64-vet",
+      "exit": 0,
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "redis-actual-component-scope",
+      "exit": 0,
+      "stdout_sha256": "a962a44a84788d2860afa1c586cbc9ab6e5d35f8b66bdd25f860cbc1b2f81234",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "identity-ui",
+      "exit": 0,
+      "stdout_sha256": "0e86dcf19351b8c4d92c0e64c93142e922aab473242929d78ba0873b8095bd7a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "session-and-HTML-scope",
+      "exit": 0,
+      "stdout_sha256": "7f7888f0e45be0c6d9bc44fe2aecf9411dc2d8af7f0d2e9c97d6b848a9a6e636",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "original-standard-INP",
+      "exit": 0,
+      "stdout_sha256": "6846420c24f831e750bfa5e83964bf23b419d47813e398b93d47c8029f98c794",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "frontend",
+      "exit": 0,
+      "stdout_sha256": "c91823addc78a9ce0304b59b490b2904ec0d912e09fb26b87d3db0db029d361c",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "actual_component_logic_tests": 10,
+  "pure_native_comparison_tests": 4,
+  "QA_normal_program_upgrades": {
+    "arm64": {
+      "passed": true,
+      "normal_original_key_installer_only": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "proof_sha256": "403ab85e542ee5c4ad213b036d12636b909b71d7cce49f9c4d5039ac9ecd21ca",
+      "transaction_sha256": "6432516d6d8ab5114b22589fb4932f00b26b9eb7423067643cfca4ac7c979139",
+      "original_business_projections": 101,
+      "schema_or_migration_rows_changed": false,
+      "app_count_preserved": 20,
+      "application_operations": 0,
+      "other_protected_entries_preserved": 4545,
+      "exact_source_transformed_bundled_units": 45,
+      "statistics_rows": 392,
+      "statistics_streams": 27,
+      "normal_worker_fresh_and_healthy": true,
+      "sites_discovered": 11,
+      "nginx_master_unchanged": true,
+      "ready": 200
+    },
+    "amd64": {
+      "passed": true,
+      "normal_original_key_installer_only": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "proof_sha256": "e84adddb6aa4198d3ec37b3a698733297e6d4fa37785ca90c6602bbf97221157",
+      "transaction_sha256": "6432516d6d8ab5114b22589fb4932f00b26b9eb7423067643cfca4ac7c979139",
+      "original_business_projections": 101,
+      "schema_or_migration_rows_changed": false,
+      "app_count_preserved": 20,
+      "application_operations": 0,
+      "other_protected_entries_preserved": 3387,
+      "exact_source_transformed_bundled_units": 45,
+      "statistics_rows": 292,
+      "statistics_streams": 10,
+      "normal_worker_fresh_and_healthy": true,
+      "sites_discovered": 8,
+      "nginx_master_unchanged": true,
+      "ready": 200
+    }
+  },
+  "synthetic_browser": {
+    "actual_unchanged_frozen_Vue_component": true,
+    "in_memory_API_only": true,
+    "real20s_fixture_account_replacement_then_old_TTL_confirmation_sent_zero_writes": true,
+    "real5s_fixture_value_read_closed_before_reply_no_repopulation": true,
+    "screenshot_sha256": {
+      "prompt24bgpn": "6c4ba2d182809ca4d91e0df46071a2fe69076b9244d14a28d54323de53fe9637",
+      "no-write24bgpn": "9df3b58e1ad6ec0346b91a7a3abadf9dec5271c8edf97e3295363847ea3c0925",
+      "late-read24bgps": "a2ee6130174938c0fcc30b0f642acd9f5585a46ea5a8e2d4843c7c98e3c43ad6"
+    },
+    "installed_Redis_backend_acceptance": false
+  },
+  "Main_program_changed": false,
+  "Main_analytics_app_updated": false,
+  "Root_user_FileManager_changed": false,
+  "current_analytics_catalog_sha256_unchanged": "ac150c30f7d83cc0dc25218386831878d9b8deb45396e6e803fde88e6982dfd6",
+  "existing_failed_component_reproduction_retained": true,
+  "earlier_failed_or_unknown_native_receipts_relabelled": false,
+  "actual_Redis_instance_mutation_acceptance": false,
+  "physical_mobile_acceptance": false,
+  "real_power_loss_acceptance": false,
+  "commercial_all50": false,
+  "scope": "Redis manager session/menu/close/DB/key lifecycle, in-memory private values/drafts, stale confirmations and late asynchronous replies. Core/executor Go sources are unchanged from the independently delivered analytics-session cohort. Normal signed QA program delivery preserves actual existing data; synthetic component interaction is not installed Redis command acceptance."
+}

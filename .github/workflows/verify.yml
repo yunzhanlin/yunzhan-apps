@@ -378,3 +378,11 @@ jobs:
           node scripts/test-analytics-tracker.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24analyticsessionbgnm npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Locked Redis scope management dependencies
+        run: npm ci --prefix panel-integration-redis-scope/web --ignore-scripts
+      - name: Actual Redis Vue scope functions and complete management build (not installed Redis acceptance)
+        working-directory: panel-integration-redis-scope
+        run: |
+          node --test scripts/test-redis-scope.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24redisscopebgpj npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
