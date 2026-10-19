@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p));
+import {preHardeningWorkflowRead}from'./pre-hardening-workflow.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preHardeningWorkflowRead(p,fs.readFileSync(path.join(root,p)));
 const json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
 const r=json('registry/frontend-release-core.json'),scope='panel-integration-ui-release/';
 test('new immutable frontend scope binds all 1528 normal archive input bytes and preserves every runtime input',()=>{

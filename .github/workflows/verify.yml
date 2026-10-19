@@ -363,7 +363,7 @@ jobs:
           go vet ./...
       - name: Analytics session current original-key signed50 compiled handler ABI (no app update)
         working-directory: panel-integration-analytics-session
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-hardening24bhhp"
       - name: Old compiled handler must refuse only the new session manifest and accept the other49 (no install)
         run: node tools/verify-analytics-handler-boundary.mjs
       - name: Session lifecycle auth and passive-performance report race regressions (not installed journey proof)
@@ -538,7 +538,7 @@ jobs:
       - name: Complete current Root Linux Go contracts and vet
         working-directory: panel-integration-hardening
         run: |
-          sudo "$(command -v go)" test -p 1 ./... -count=1
+          sudo "$(command -v node)" ../tools/run-hardening-ci.mjs "$(command -v go)"
           go vet ./...
       - name: Original-job journal, actual child SIGKILL and read-only inspection race fixtures
         working-directory: panel-integration-hardening
@@ -551,3 +551,8 @@ jobs:
           node --test scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24hardeninganchorbhgp npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Current original-key signed50 requires the actual reversible journal handler
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Prior compiled handler refuses only hardening1.1 and accepts the other49
+        run: node tools/verify-hardening-handler-boundary.mjs

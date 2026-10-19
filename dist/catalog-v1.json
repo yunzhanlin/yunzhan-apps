@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-18T23:14:09Z",
+  "generated_at": "2026-10-19T15:10:24Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1037,21 +1037,24 @@
       "id": "system-hardening",
       "name": "System hardening",
       "category": "professional",
-      "version": "1.0-compat1",
-      "summary": "固化链接、ptrace、内核日志与网络重定向等安全基线，支持偏差检测和恢复。",
+      "version": "1.1.0",
+      "summary": "15 项内核参数实测、基线与严格策略切换；原始值和配置持久留档，中断后须显式核验原任务摘要再恢复。BPF 使用可逆禁用值，拒绝覆盖外部改动。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
       "target": "system-hardening",
       "manage_route": "security",
       "capabilities": [
-        "内核参数基线",
-        "偏差检测",
-        "安全回滚",
-        "审计"
+        "15 项实际值、目标值、原始值和偏差明细",
+        "基线与严格策略可逆切换",
+        "原任务绑定的持久事务日志",
+        "中断恢复预检与完整摘要人工确认",
+        "拒绝覆盖外部文件及内核改动",
+        "有界终态记录和配置核验",
+        "BPF 可逆禁用而非不可逆锁定"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/system-hardening/1.0-compat1/manifest.json",
-      "sha256": "6104277bd6812ca9aafe679ebc8bea3da7077a2fd76bd00d5442d2393274004e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/system-hardening/1.1.0/manifest.json",
+      "sha256": "1947b0c49328180f5ce4a846c1b376e4b20fba9db76ef7f681c2c9a777c6a9cc"
     },
     {
       "id": "task-manager",

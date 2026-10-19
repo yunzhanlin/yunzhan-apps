@@ -1,7 +1,8 @@
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash}from'node:crypto';
 import path from'node:path';import{fileURLToPath}from'node:url';
+import {preHardeningWorkflowRead}from'./pre-hardening-workflow.mjs';
 // systemd escaped mount names contain literal backslashes, not URL separators.
-const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-hardening/';
+const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>preHardeningWorkflowRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-hardening/';
 test('hardening export is exact immutable normal signed input, not a rewrite or source overlay',()=>{
  const r=json('registry/hardening-core.json'),index=json(scope+'source-sha256.json'),old=json('panel-integration-apache-preservation/source-sha256.json');assert.equal(r.frozen_inputs_sha256,'3508a91003fd71ec4b8e79297f2d68eb8c3caffef3be070b8e5785905da6255a');assert.equal(r.frozen_files,17270);assert.equal(r.exported_files,1567);assert.deepEqual(index.test_overrides,{});assert.equal(Object.keys(index.files).length,1567);assert.equal(index.release.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(index.release.archive_sha256,r.normal_archives.amd64.archive_sha256);assert(Object.keys(old.files).every(n=>Object.hasOwn(index.files,n)));assert.deepEqual(Object.keys(index.files).filter(n=>old.files[n]!==index.files[n]).sort(),r.changed_from_prior);for(const[n,pin]of Object.entries(index.files))assert.equal(sha(read(scope+n)),pin,n);
 });

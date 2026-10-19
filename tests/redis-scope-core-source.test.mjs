@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
+import{preHardeningRead}from'./pre-hardening-workflow.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preHardeningRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('Redis scope export is exact signed archive input and changes only four frontend/build members',()=>{
  const i=json('panel-integration-redis-scope/source-sha256.json'),old=json('panel-integration-analytics-session/source-sha256.json'),bound=json('panel-integration-redis-scope/release-source-inputs.json'),r=json('registry/redis-scope-core-release.json');
  assert.equal(i.release.frozen_inputs_sha256,'30963cb52a1cdf3ebd1630f24fca373c5f283b38ec142ead368d0fa0e3c97060');assert.equal(i.release.archive_sha256,'9313476581abe0f12e8d1693506729eb65a8b52219e0df75f946f737f5660b10');assert.deepEqual(i.files,bound.files);assert.deepEqual(i.test_overrides,{});assert.equal(Object.keys(i.files).length,1509);

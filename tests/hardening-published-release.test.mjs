@@ -1,0 +1,27 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash,createPublicKey,verify}from'node:crypto';
+import{beforeHardening,originalHardeningWorkflow,scopedAnalyticsABIline}from'./pre-hardening-workflow.mjs';
+import{verifyOldHardeningRefusal}from'../tools/verify-hardening-handler-boundary.mjs';
+import{hardeningManifestFixtureOverlay,manifestFixtureOriginalSHA}from'../tools/run-hardening-ci.mjs';
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
+test('new original-key signed50 changes only hardening and preserves the exact installed analytics release',()=>{
+ const old=read(beforeHardening+'catalog-v1.json'),now=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem');
+ assert.equal(sha(old),'ac150c30f7d83cc0dc25218386831878d9b8deb45396e6e803fde88e6982dfd6');assert.equal(sha(pub),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');
+ for(const[prefix,body]of [[beforeHardening,old],['signatures/',now]]){assert(verify(null,body,createPublicKey(pub),Buffer.from(read(prefix+'catalog-v1.sig').toString().trim(),'base64')));const bundle=JSON.parse(read(prefix+'catalog-v1.bundle.json'));assert.equal(bundle.catalog,body.toString());assert.equal(bundle.signature,read(prefix+'catalog-v1.sig').toString().trim());}
+ const a=JSON.parse(old),b=JSON.parse(now);assert.equal(a.apps.length,50);assert.equal(b.apps.length,50);assert(Date.parse(b.generated_at)>Date.parse(a.generated_at));assert.deepEqual(b.apps.filter(a=>a.id!=='system-hardening'),a.apps.filter(a=>a.id!=='system-hardening'));
+ const oldRegistry=JSON.parse(read(beforeHardening+'apps-registry.json')),registry=JSON.parse(read('registry/apps.json'));assert.deepEqual(registry.apps.filter(a=>a.id!=='system-hardening'),oldRegistry.apps.filter(a=>a.id!=='system-hardening'));
+ const m=JSON.parse(read('dist/apps/system-hardening/1.1.0/manifest.json')),item=b.apps.find(a=>a.id===m.id);assert.equal(m.version,'1.1.0');assert.equal(sha(read('dist/apps/system-hardening/1.1.0/manifest.json')),item.sha256);assert.deepEqual(m.required_panel_features,['hardening-reversible-journal-v1']);assert.equal(sha(read('dist/apps/system-hardening/1.0-compat1/manifest.json')),'6104277bd6812ca9aafe679ebc8bea3da7077a2fd76bd00d5442d2393274004e');assert.equal(sha(read('dist/apps/website-analytics/2.3.1/manifest.json')),'c33f6f987ea318dfff42c5a9a225aa4e8d123d8334f74c207dbf93e475cbb157');
+});
+test('all original CI bytes reconstruct exactly; both new current50 gates are mandatory',()=>{
+ const raw=read('.github/workflows/verify.yml'),old=read(beforeHardening+'verify-pr60.yml'),restored=originalHardeningWorkflow(raw);assert(restored.toString().startsWith(old.toString()));assert.equal(raw.toString().split(scopedAnalyticsABIline).length-1,1);
+ for(const value of['working-directory: panel-integration-hardening','-published-app-registry-root "$GITHUB_WORKSPACE"','node tools/verify-hardening-handler-boundary.mjs'])assert(raw.toString().slice(raw.toString().lastIndexOf('      - name: Current original-key signed50')).includes(value));assert(!raw.toString().includes('continue-on-error'));
+ for(const mutate of[s=>s.replace('go vet ./...','true'),s=>s.replace(scopedAnalyticsABIline,scopedAnalyticsABIline+'\n'+scopedAnalyticsABIline)])assert.throws(()=>originalHardeningWorkflow(Buffer.from(mutate(raw.toString()))));
+});
+test('fixture overlay changes only the declared setup and never original assertions or runtime bytes',()=>{
+ const raw=read('panel-integration-hardening/internal/executor/software_manifest_record_linux_test.go');assert.equal(sha(raw),manifestFixtureOriginalSHA);const changed=hardeningManifestFixtureOverlay(raw).toString(),insert=changed.slice(changed.indexOf('\n\tif id == "system-hardening" {'),changed.indexOf('\n\tmanifest := softwareManifest'));
+ assert(insert.includes('s = newHardeningFixture(t).s'));assert(insert.includes('os.MkdirAll(s.systemPath("/etc/sysctl.d"), 0755)'));assert.equal(changed.replace(insert,''),raw.toString());assert.throws(()=>hardeningManifestFixtureOverlay(Buffer.from(raw.toString().replace('0600, 0640','0600'))));
+ const receipt=JSON.parse(read('registry/hardening-ci-fixture24bhhr.json'));assert.equal(receipt.original_full_linux_suite_passed,false);assert.equal(receipt.production_source_overrides,0);assert.equal(receipt.immutable_export_changed,false);
+});
+test('old hardening ABI must refuse precisely one application with all other49 passing',()=>{
+ const ids=['system-hardening',...Array.from({length:49},(_,i)=>'app-'+i)],p='TestPublishedRepositoryCurrentSignedManifestABI',events=[...ids.slice(1).map(id=>({Action:'pass',Test:p+'/'+id})),{Action:'output',Test:p+'/system-hardening',Output:'面板处理器不支持 hardening-reversible-journal-v1'},{Action:'fail',Test:p+'/system-hardening'},{Action:'fail',Test:p},{Action:'fail'}],result={status:1,stdout:events.map(e=>JSON.stringify(e)).join('\n')};assert(verifyOldHardeningRefusal(result,ids).old_compiled_runtime_unchanged);
+ for(const mutate of[x=>x.status=0,x=>x.stdout=x.stdout.replace('hardening-reversible-journal-v1','other'),x=>x.stdout=x.stdout.split('\n').slice(1).join('\n'),x=>x.stdout+='\n'+JSON.stringify({Action:'skip',Test:p+'/other'}),x=>x.stdout+='\n'+JSON.stringify({Action:'fail',Test:p+'/other'})]){const bad=structuredClone(result);mutate(bad);assert.throws(()=>verifyOldHardeningRefusal(bad,ids));}
+});

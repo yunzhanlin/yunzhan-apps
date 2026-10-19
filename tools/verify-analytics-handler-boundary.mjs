@@ -9,7 +9,7 @@ export function verifyOldHandlerRefusal(result,ids){
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux','Actual Linux handlers required');const root=fileURLToPath(new URL('../',import.meta.url));
- const {readFileSync}=await import('node:fs');const ids=JSON.parse(readFileSync(root+'dist/catalog-v1.json')).apps.map(a=>a.id);
- const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',root],{cwd:root+'panel-integration-file-manager',encoding:'utf8',timeout:180000,maxBuffer:4<<20});
+ const {readFileSync}=await import('node:fs');const predecessor=root+'registry/reviewed-catalogs/before-hardening24bhhp/';const ids=JSON.parse(readFileSync(predecessor+'dist/catalog-v1.json')).apps.map(a=>a.id);
+ const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',predecessor],{cwd:root+'panel-integration-file-manager',encoding:'utf8',timeout:180000,maxBuffer:4<<20});
  process.stdout.write(result.stdout??'');process.stderr.write(result.stderr??'');console.log(JSON.stringify(verifyOldHandlerRefusal(result,ids)));
 }
