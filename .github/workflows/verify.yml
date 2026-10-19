@@ -517,3 +517,37 @@ jobs:
       - name: Exact Apache metadata preservation and refusal race fixtures
         working-directory: panel-integration-apache-preservation
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestApacheMetadataSite' -count=1
+
+  hardening-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-hardening/go.mod
+          cache-dependency-path: panel-integration-hardening/go.sum
+      - name: Immutable signed input and honest native versus installed boundaries
+        run: node --test tests/hardening-source.test.mjs tests/hardening-manifest.test.mjs
+      - name: Unchanged full Root Linux packaging contracts and controller budget
+        working-directory: panel-integration-hardening
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts and vet
+        working-directory: panel-integration-hardening
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Original-job journal, actual child SIGKILL and read-only inspection race fixtures
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestHardening' -count=1
+      - name: Locked management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-hardening/web --ignore-scripts
+      - name: Actual application routing, update provenance and management build
+        working-directory: panel-integration-hardening
+        run: |
+          node --test scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24hardeninganchorbhgp npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

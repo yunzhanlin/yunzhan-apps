@@ -21,7 +21,8 @@ test('schema keeps original module scopes and one separate exact pinned Memcache
  const sessionScopes=allScopes.filter(x=>x.properties.id.const==='website-analytics');assert.equal(sessionScopes.length,1);
  const session=sessionScopes[0].properties;assert.equal(session.version.const,'2.3.1');assert.equal(session.delivery.properties.provider.const,'panel-module');assert.equal(session.delivery.properties.target.const,'website-analytics');assert.equal(session.delivery.properties.manage_route.const,'app-modules');assert.deepEqual(session.required_panel_features,{minItems:1,maxItems:1,items:{const:'analytics-session-lifecycle-v1'}});
  // Preserve all five original authority scopes and their exact assertions.
- const scope=allScopes.filter(x=>x.properties.id.const!=='website-analytics');assert.equal(scope.length,5);assert.equal(allScopes.length,6);
+ const scope=allScopes.filter(x=>!['website-analytics','system-hardening'].includes(x.properties.id.const));assert.equal(scope.length,5);assert.equal(allScopes.length,7);
+ assert.equal(allScopes.filter(x=>x.properties.id.const==='system-hardening').length,1);
  assert.deepEqual(scope.filter(x=>x.properties.id.const!=='memcached').map(x=>x.properties.id.const).sort(),['disk-analysis','disk-analysis','platform-ops','website-statistics-v2']);
  const mc=scope.find(x=>x.properties.id.const==='memcached').properties;assert.equal(mc.version.const,'1.6.45-compat2');assert.equal(mc.delivery.properties.provider.const,'compose');assert.equal(mc.delivery.properties.target.const,'memcached-cache');assert.equal(mc.required_panel_features.maxItems,1);assert.equal(mc.required_panel_features.items.const,'compose-memcached-digest-v1');
  const stats=scope.find(x=>x.properties.id.const==='website-statistics-v2'),maintenance=scope.find(x=>x.properties.id.const==='platform-ops');
