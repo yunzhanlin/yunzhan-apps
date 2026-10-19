@@ -402,3 +402,39 @@ jobs:
           node --test scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs scripts/test-docker-site-binding.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24tlslistenerbgsy npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  statistics-stop-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-statistics-stop/go.mod
+          cache-dependency-path: panel-integration-statistics-stop/go.sum
+      - name: Exact normal-release source and retained failure boundaries
+        run: node --test tests/statistics-stop-source-export.test.mjs tests/statistics-stop-release.test.mjs tests/analytics-browser-acceptance.test.mjs
+      - name: All 208 Root Linux packaging fixtures within the unchanged 240-second controller budget
+        working-directory: panel-integration-statistics-stop
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts (not installed or power-loss acceptance)
+        working-directory: panel-integration-statistics-stop
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Worker lifetime and exact rollback-journal race regression
+        working-directory: panel-integration-statistics-stop
+        run: |
+          sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsRecovery|ModuleWorker|WorkerLifecycle)' -count=1
+          sudo "$(command -v go)" test -race ./cmd/executor -run '^TestExecutor' -count=1
+      - name: Locked current management dependencies
+        run: npm ci --prefix panel-integration-statistics-stop/web --ignore-scripts
+      - name: Actual Apache Docker analytics and application-scope management regressions
+        working-directory: panel-integration-statistics-stop
+        run: |
+          node --test scripts/test-docker-scope.mjs scripts/test-docker-site-binding.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24statstopbgwr npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
