@@ -438,3 +438,22 @@ jobs:
           node --test scripts/test-docker-scope.mjs scripts/test-docker-site-binding.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24statstopbgwr npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  frontend-release-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exact normal-release frontend source and installed acceptance boundaries
+        run: node --test tests/ui-release-source-export.test.mjs tests/frontend-release-core.test.mjs
+      - name: Locked current frontend dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-ui-release/web --ignore-scripts
+      - name: Actual compiled freshness gate and application version provenance regressions
+        working-directory: panel-integration-ui-release
+        run: |
+          node --test scripts/test-frontend-release.mjs scripts/test-store-updates.mjs scripts/test-disk-scan-lifecycle.mjs scripts/test-docker-scope.mjs scripts/test-docker-site-binding.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24pkglabelbgzc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

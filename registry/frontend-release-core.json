@@ -1,0 +1,103 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24pkglabelbgzc",
+  "frozen_inputs_sha256": "ce24c87e8583dc7412c7b3cd3d48745feeafe5773627549bd7df47d66cb05fb7",
+  "frozen_files": 17171,
+  "exported_files": 1528,
+  "source_overrides": 0,
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "8e0ace20cf7375a20e7fc4e23b4bd1c39e916d25dc74ae569ad72bac396a1202",
+      "manifest_sha256": "2848097e4a95a11496a28ec17ed64763ea96dde78677e6b148b98c8744975c29",
+      "signature_sha256": "1aefcaafba95f2a90920c32b8263fc7fe1f6a0385e16f89c0b07d2094190a794",
+      "complete_normal_build_log_sha256": "8026dd8ea40bf1ca9731116c0abf71dda96d30e4658e8b979d439dabd9559cab",
+      "signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "84072fba5ce32fcd59aae31f1f62dea0772a46884cf093404b4267488a038ad9",
+      "manifest_sha256": "9faa813f7466575557a020432b09216e99de5dae179ebd374d317208ad51a5c2",
+      "signature_sha256": "2d0b5f5f184f55c6fdd3f0ae165ec7299f7347c790fef25b9097bdbca56aad07",
+      "complete_normal_build_log_sha256": "a00ab7741b0f86980935a0e920cc3bed17d023b447e2005b0ae8943c8875e959",
+      "signature_verified": true
+    }
+  },
+  "features": [
+    "Known updated interface shows a persistent explicit-refresh notice; canonical same-origin no-store GET only, redirect refusal, single-flight 60s throttle, 16KiB and 3s budgets.",
+    "Known stale interface blocks new writes through the shared HTTP API wrapper, while job GET and logout remain usable; no automatic reload, operation replay or request-key changes.",
+    "Runtime install record, upstream image and repository application/package revisions are distinct presentation fields; original backend update flag remains authoritative."
+  ],
+  "normal_QA_upgrades": {
+    "arm64": {
+      "proof_sha256": "99c6b13ee67766f9028c08e53a791b84916ad82b8a0ca917f345133f88ecc9b8",
+      "normal_original_key_installer": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "core_projections_preserved": 101,
+      "protected_other_files": 4571,
+      "statistics_history_preserved": true,
+      "complete_observation_identity_preserved": true,
+      "no_live_history_recovery": true,
+      "app_operations": 0
+    },
+    "amd64": {
+      "proof_sha256": "bcf656989a3b08bc4bb5f601df4d8667dc12802942c3822420d99de700531d37",
+      "normal_original_key_installer": true,
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "core_projections_preserved": 101,
+      "protected_other_files": 3680,
+      "statistics_history_preserved": true,
+      "complete_observation_identity_preserved": true,
+      "no_live_history_recovery": true,
+      "app_operations": 0
+    }
+  },
+  "real_ARM_browser_transition": {
+    "proof_sha256": "72268a84990287176d331ee1a4b1b96d4d1f4f4dffd4bbe25576b364b8c76b03",
+    "old_entry": "./assets/index-C4ZRdQPc.js",
+    "new_entry": "./assets/index-Cvl9QUkY.js",
+    "actual_old_UI_stop_blocked": true,
+    "no_new_native_job_or_receipt_overwrite": true,
+    "same_original_container_identity_and_HTTP200": true,
+    "explicit_notice_button_reload": true,
+    "raw_watcher_source_identical": true,
+    "AMD_same_browser_transition_executed": false
+  },
+  "Main19100_delivery": {
+    "raw_native_proof_sha256": "a5fdfd070598d4044cc0e2f76b7321a49977b7faa6731819f7804057f1c4c88a",
+    "retained_observer_sha256": "ecd6e47436bbabc5cc546e28e2cee0c01462d9631bcdcbc7bd71fbe590b356ff",
+    "browser_proof_sha256": "e20c51bc887a83021cc9cf7da5fad6016ae86fb012f810aaa692b9d5c74453ba",
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "complete_101_schema_migrations_and_business_preserved": true,
+    "sites_preserved": 58,
+    "app_records_preserved": 4,
+    "analytics_version": "2.3.1",
+    "protected_other_files": 43022,
+    "nginx_process_preserved": true,
+    "ready_http": 200,
+    "website_http": 200,
+    "same_signed_new_frontend_entry": "./assets/index-Cvl9QUkY.js",
+    "no_app_operations": true,
+    "website_probe_after_exact_preservation": true
+  },
+  "retained_native_runtime_evidence": {
+    "source_inputs_sha256": "73d37ae9b8ddecbb02d9d2c1adf1995b997ac60d25f32b4f43f551caefada078",
+    "Go_Python_installers_and_runtime_assets_byte_identical": true,
+    "CI_head": "734c81285089ef82dbc019253976cfba4a124177",
+    "CI_receipt_sha256": "eaaa798e5ec462dfc3ca862b817ce63e94ba96217d7e0e07414153adc54c5aea",
+    "new_frontend_not_relabelled_as_native_fixture_or_business_coverage": true
+  },
+  "prior_workflow_whole_sha256": "56cbca761cba10b72822757a7995b28e9e3a2402401bb3530e518f0629cab842",
+  "mandatory_additional_CI_job": "frontend-release-native-amd64",
+  "limitations": [
+    "This shared frontend HTTP gate is not a global server permission interlock or protection for already-connected terminal WebSockets.",
+    "No automatic application operation or bootstrap-key change.",
+    "Docker template domain binding, persistent volume lifecycle and all supported server business matrices remain incomplete.",
+    "PHP and IDS accepted background queues are not claimed fully drained.",
+    "No second AMD browser transition, mobile physical-device, full automatic HTML engine or all50 commercial acceptance."
+  ],
+  "commercial_all50": false
+}
