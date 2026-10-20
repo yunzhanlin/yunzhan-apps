@@ -1,0 +1,46 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash,createPublicKey,verify} from 'node:crypto';
+import {beforeIntrusion,originalIntrusionWorkflow} from './pre-intrusion-release.mjs';
+import {verifyOldIntrusionRefusal} from '../tools/verify-intrusion-handler-boundary.mjs';
+import path from 'node:path';import {fileURLToPath} from 'node:url';
+const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),json=p=>JSON.parse(read(p)),sha=x=>createHash('sha256').update(x).digest('hex'),scope='panel-integration-intrusion/';
+test('intrusion export binds every byte to its immutable normal signed source without overlays',()=>{
+ const r=json('registry/intrusion-core.json'),i=json(scope+'source-sha256.json'),old=json('panel-integration-hardening/source-sha256.json');
+ assert.equal(r.frozen_inputs_sha256,'e1bfb1c02c721a45628d999f8d8dea9a6646d73742899b99ac022e3023c224a3');assert.equal(r.version,'0.1.0-dev.proapps24intrusionlifetimebhyv');assert.equal(r.feature,'intrusion-preserving-journal-v2');assert.equal(r.frozen_files,17392);assert.equal(r.exported_files,1689);assert.equal(r.source_overrides,0);assert.deepEqual(i.test_overrides,{});
+ assert.equal(i.release.frozen_inputs_sha256,r.frozen_inputs_sha256);assert.equal(i.release.archive_sha256,r.normal_archives.amd64.archive_sha256);assert.equal(Object.keys(i.files).length,1689);
+ assert.deepEqual(r.removed_from_prior,[]);assert(Object.keys(old.files).every(n=>Object.hasOwn(i.files,n)));assert.deepEqual(Object.keys(i.files).filter(n=>i.files[n]!==old.files[n]).sort(),r.changed_from_prior);
+ for(const[n,pin]of Object.entries(i.files))assert.equal(sha(read(scope+n)),pin,n);
+ for(const n of ['intrusion_process_identity.py','intrusion_process_identity_linux.go','intrusion_process_identity_linux_test.go','intrusion_scalar_mutation.py','intrusion_port_template_mutation.py','intrusion_readonly_batch.py'])assert(i.files['internal/executor/'+n]);
+ const feature=read(scope+'internal/appcatalog/panel_features.go').toString();assert(feature.includes('const IntrusionJournalFeature = "intrusion-preserving-journal-v2"'));
+ const original=read(scope+'internal/executor/intrusion_journal_linux.go').toString();assert(original.includes('ProcessStartBefore'));assert(original.includes('intrusionProcessTicksValid(plan.ProcessStartBefore)'));
+ const scalar=read(scope+'internal/executor/intrusion_scalar_plan_linux.go').toString();assert(scalar.includes('current.ProcessStart != original.ProcessStartBefore'));
+ for(const n of ['intrusion_scalar_mutation.py','intrusion_port_template_mutation.py'])assert(read(scope+'internal/executor/'+n).toString().includes('process_start_ticks(wanted) != wanted_start'));
+});
+test('ordinary native SSH and independent readonly results never rewrite the failed raw-hash case or claim app installation',()=>{
+ const r=json('registry/intrusion-core.json');assert.equal(r.original_public_key_sha256,'4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339');assert.equal(r.original_signer_sha256,'fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5');
+ for(const arch of ['arm64','amd64']){
+  const n=r.native_and_ordinary[arch];assert.equal(n.passed,940);assert.equal(n.top_level_tests,190);assert.deepEqual(n.failed,[]);assert.deepEqual(n.skipped,[]);assert(n.every_top_level_once&&n.not_normal_companion_or_app_installation_acceptance);
+  assert(n.filter.receipt.foreign_start_fixed_actuator_refused&&n.filter.receipt.kernel_process_start_ticks_independently_verified&&n.filter.receipt.real_PID_reuse_NOT_simulated);assert.equal(n.filter.receipt.unchanged_production_probe_budget_seconds,8);
+  assert(n.unban.receipt.actual_normal_inspection_route&&n.unban.receipt.actual_normal_unban_route);assert.equal(n.unban.receipt.exact_actual_setters,1);assert(n.unban.receipt.duplicate_unban_not_retried);
+  const z=r.normal_upgrade_ZB_cases_retained_false[arch],q=r.independent_readonly_qualification[arch];assert.equal(z.ok,false);assert.deepEqual(z.actions.map(v=>[v.action,v.exit]),[['preflight',0],['install',0]]);
+  assert.equal(q.original_failed_ZB_sha256,z.proof_sha256);assert(q.all102_preserved&&q.statistics_history_preserved&&q.all15_kernel_unchanged&&q.SSH_Fail2ban_journald_processes_and_configs_preserved&&q.normal_installer_transaction_committed&&q.static_nft_policy_preserved&&q.nft_anchor_NOT_ZB_before_hash);assert.equal(q.installer_replayed,false);assert.equal(q.application_operations,0);assert.equal(q.all50_commercial,false);
+  for(const c of q.explicit_uint64_rule_counter_increases){assert.equal(c.path.at(-1),'counter');assert.deepEqual(Object.keys(c.before).sort(),['bytes','packets']);assert.deepEqual(Object.keys(c.after).sort(),['bytes','packets']);for(const k of ['bytes','packets'])assert(Number.isSafeInteger(c.before[k])&&Number.isSafeInteger(c.after[k])&&c.after[k]>=c.before[k]);}
+ }
+ assert.equal(r.application1_1_signed_store_update_accepted,false);assert.equal(r.GitHub_publication_proven,false);assert.equal(r.Main19100_program_updated,false);assert.equal(r.commercial_all50,false);assert(r.limitations.some(s=>s.includes('0.11.2')));assert(r.limitations.some(s=>s.includes('NOT a reconstructed')));
+});
+test('new original-key signed50 changes only intrusion while every prior application version remains immutable',()=>{
+ const a=json(beforeIntrusion+'catalog-v1.json'),b=json('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem');assert.equal(sha(pub),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');
+ assert.equal(a.apps.length,50);assert.equal(b.apps.length,50);assert.deepEqual(b.apps.filter(v=>v.id!=='anti-intrusion'),a.apps.filter(v=>v.id!=='anti-intrusion'));assert(Date.parse(b.generated_at)>Date.parse(a.generated_at));
+ assert.deepEqual(json('registry/apps.json').apps.filter(v=>v.id!=='anti-intrusion'),json(beforeIntrusion+'apps-registry.json').apps.filter(v=>v.id!=='anti-intrusion'));
+ const item=b.apps.find(v=>v.id==='anti-intrusion'),m=json('dist/apps/anti-intrusion/1.1.0/manifest.json');assert.equal(item.version,'1.1.0');assert.equal(item.sha256,sha(read('dist/apps/anti-intrusion/1.1.0/manifest.json')));assert.deepEqual(m.required_panel_features,['intrusion-preserving-journal-v2']);assert.deepEqual(m.compatibility.os,['debian-13','ubuntu-24.04']);assert.equal(m.delivery.target,'intrusion-prevention');
+ assert.equal(sha(read('dist/apps/anti-intrusion/1.0-compat1/manifest.json')),a.apps.find(v=>v.id==='anti-intrusion').sha256);
+ for(const[root,body]of [[beforeIntrusion,read(beforeIntrusion+'catalog-v1.json')],['signatures/',read('dist/catalog-v1.json')]]){assert(verify(null,body,createPublicKey(pub),Buffer.from(read(root+'catalog-v1.sig').toString().trim(),'base64')));assert.equal(json(root+'catalog-v1.bundle.json').catalog,body.toString());}
+});
+test('all historical CI bytes are preserved apart from the exact predecessor ABI root; new complete gates cannot be skipped',()=>{
+ const raw=read('.github/workflows/verify.yml'),restored=originalIntrusionWorkflow(raw).toString(),at=restored.indexOf('\n  intrusion-native-amd64:\n');assert(at>0);assert.equal(restored.slice(0,at),read(beforeIntrusion+'verify-pr61.yml').toString());
+ const fresh=raw.toString().slice(raw.toString().indexOf('\n  intrusion-native-amd64:\n'));for(const s of ['test -p 1 ./... -count=1','go vet ./...','test -race ./internal/executor ./internal/core ./internal/appcatalog','timeout 240s sudo python3','npm ci --prefix panel-integration-intrusion/web --ignore-scripts','scripts/test-intrusion-workspace.mjs','-published-app-registry-root "$GITHUB_WORKSPACE"','node tools/verify-intrusion-handler-boundary.mjs'])assert(fresh.includes(s),s);assert(!raw.toString().includes('continue-on-error'));
+ assert.throws(()=>originalIntrusionWorkflow(Buffer.from(raw.toString().replace('go vet ./...','true'))));
+});
+test('historical hardening handler must refuse only the final intrusion capability and pass the other49',()=>{
+ const ids=['anti-intrusion',...Array.from({length:49},(_,i)=>'app-'+i)],p='TestPublishedRepositoryCurrentSignedManifestABI',events=[...ids.slice(1).map(id=>({Action:'pass',Test:p+'/'+id})),{Action:'output',Test:p+'/anti-intrusion',Output:'面板处理器不支持 intrusion-preserving-journal-v2'},{Action:'fail',Test:p+'/anti-intrusion'},{Action:'fail',Test:p},{Action:'fail'}],result={status:1,stdout:events.map(e=>JSON.stringify(e)).join('\n')};assert(verifyOldIntrusionRefusal(result,ids).old_compiled_runtime_unchanged);
+ for(const fn of [x=>x.status=0,x=>x.stdout=x.stdout.replace('intrusion-preserving-journal-v2','intrusion-preserving-journal-v1'),x=>x.stdout=x.stdout.split('\n').slice(1).join('\n'),x=>x.stdout+='\n'+JSON.stringify({Action:'skip',Test:p+'/other'})]){const v=structuredClone(result);fn(v);assert.throws(()=>verifyOldIntrusionRefusal(v,ids));}
+});

@@ -1,3 +1,4 @@
+import {originalIntrusionWorkflow} from './pre-intrusion-release.mjs';
 // Restore only the one test-only ABI root moved to its exact signed predecessor.
 // All original workflow hashes and native jobs still run unchanged.
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash}from'node:crypto';
@@ -7,7 +8,7 @@ export const scopedAnalyticsABIline=analyticsABIline.replace('$GITHUB_WORKSPACE"
 const original=fs.readFileSync(new URL('../'+beforeHardening+'verify-pr60.yml',import.meta.url));
 assert.equal(createHash('sha256').update(original).digest('hex'),'62dc2b95b991ead4112f349252ae4ee2b5b0205c07427b04bf8a3549734e33ab');
 export function originalHardeningWorkflow(bytes){
- const current=bytes.toString();assert.equal(current.split(scopedAnalyticsABIline).length-1,1,'Exactly one analytics predecessor root');
+ const current=originalIntrusionWorkflow(bytes).toString();assert.equal(current.split(scopedAnalyticsABIline).length-1,1,'Exactly one analytics predecessor root');
  const oldBlock='      - name: Complete current Root Linux Go contracts and vet\n        working-directory: panel-integration-hardening\n        run: |\n          sudo "$(command -v go)" test -p 1 ./... -count=1\n          go vet ./...';
  const fixedBlock=oldBlock.replace('sudo "$(command -v go)" test -p 1 ./... -count=1','sudo "$(command -v node)" ../tools/run-hardening-ci.mjs "$(command -v go)"');
  assert.equal(current.split(fixedBlock).length-1,1,'Exactly one declared test-only full-suite fixture overlay');

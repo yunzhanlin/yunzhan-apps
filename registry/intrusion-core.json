@@ -1,0 +1,507 @@
+{
+  "version": "0.1.0-dev.proapps24intrusionlifetimebhyv",
+  "app_capability": "1.1.0",
+  "feature": "intrusion-preserving-journal-v2",
+  "scope": "panel-integration-intrusion",
+  "frozen_inputs_sha256": "e1bfb1c02c721a45628d999f8d8dea9a6646d73742899b99ac022e3023c224a3",
+  "frozen_files": 17392,
+  "exported_files": 1689,
+  "source_overrides": 0,
+  "prior_scope": "panel-integration-hardening",
+  "changed_from_prior": [
+    "internal/appcatalog/intrusion_journal_features_test.go",
+    "internal/appcatalog/panel_features.go",
+    "internal/core/app_registry.go",
+    "internal/core/app_registry_install_replay_test.go",
+    "internal/core/fail2ban_http_test.go",
+    "internal/core/hardening_jobs.go",
+    "internal/core/hardening_jobs_test.go",
+    "internal/core/intrusion_inspection.go",
+    "internal/core/intrusion_recovery.go",
+    "internal/core/intrusion_recovery_test.go",
+    "internal/core/intrusion_requests.go",
+    "internal/core/intrusion_requests_test.go",
+    "internal/core/menu_permissions_test.go",
+    "internal/core/software_apps.go",
+    "internal/core/store.go",
+    "internal/executor/app_modules_linux.go",
+    "internal/executor/executor.go",
+    "internal/executor/fail2ban_linux.go",
+    "internal/executor/intrusion_action_recipe_linux.go",
+    "internal/executor/intrusion_action_recipe_linux_test.go",
+    "internal/executor/intrusion_configuration_child_linux_test.go",
+    "internal/executor/intrusion_configuration_dump.py",
+    "internal/executor/intrusion_configuration_linux.go",
+    "internal/executor/intrusion_configuration_linux_test.go",
+    "internal/executor/intrusion_configuration_tree_linux.go",
+    "internal/executor/intrusion_configuration_tree_linux_test.go",
+    "internal/executor/intrusion_current_family_plan_linux.go",
+    "internal/executor/intrusion_current_family_plan_linux_test.go",
+    "internal/executor/intrusion_filter_agreement_owned_native_linux_test.go",
+    "internal/executor/intrusion_filter_metadata.py",
+    "internal/executor/intrusion_filter_metadata_linux.go",
+    "internal/executor/intrusion_filter_metadata_linux_test.go",
+    "internal/executor/intrusion_filter_projection.py",
+    "internal/executor/intrusion_inspection_linux.go",
+    "internal/executor/intrusion_inspection_linux_test.go",
+    "internal/executor/intrusion_inspection_owned_native_linux_test.go",
+    "internal/executor/intrusion_install_before_linux.go",
+    "internal/executor/intrusion_install_before_linux_test.go",
+    "internal/executor/intrusion_journal_absence_linux_test.go",
+    "internal/executor/intrusion_journal_advance_linux.go",
+    "internal/executor/intrusion_journal_advance_linux_test.go",
+    "internal/executor/intrusion_journal_file_mutation_linux.go",
+    "internal/executor/intrusion_journal_files_linux.go",
+    "internal/executor/intrusion_journal_files_linux_test.go",
+    "internal/executor/intrusion_journal_kernel_linux.go",
+    "internal/executor/intrusion_journal_kernel_linux_test.go",
+    "internal/executor/intrusion_journal_linux.go",
+    "internal/executor/intrusion_journal_linux_test.go",
+    "internal/executor/intrusion_journal_live_linux.go",
+    "internal/executor/intrusion_journal_live_linux_test.go",
+    "internal/executor/intrusion_journal_prepare_linux.go",
+    "internal/executor/intrusion_journal_recovery_linux.go",
+    "internal/executor/intrusion_journal_store_linux.go",
+    "internal/executor/intrusion_journal_store_linux_test.go",
+    "internal/executor/intrusion_journal_temporary_linux.go",
+    "internal/executor/intrusion_journal_terminal_linux.go",
+    "internal/executor/intrusion_journal_terminal_linux_test.go",
+    "internal/executor/intrusion_journal_verify_linux.go",
+    "internal/executor/intrusion_kernel_observation_linux.go",
+    "internal/executor/intrusion_kernel_observation_linux_test.go",
+    "internal/executor/intrusion_kernel_port_projection_linux.go",
+    "internal/executor/intrusion_kernel_port_projection_linux_test.go",
+    "internal/executor/intrusion_lifecycle_linux.go",
+    "internal/executor/intrusion_lifecycle_linux_test.go",
+    "internal/executor/intrusion_managed_inspection_owned_native_linux_test.go",
+    "internal/executor/intrusion_nft_absence_linux.go",
+    "internal/executor/intrusion_nft_absence_linux_test.go",
+    "internal/executor/intrusion_nft_identity_linux.go",
+    "internal/executor/intrusion_nft_identity_linux_test.go",
+    "internal/executor/intrusion_nft_lazy_chain_linux.go",
+    "internal/executor/intrusion_nft_lazy_chain_linux_test.go",
+    "internal/executor/intrusion_nft_owned_native_linux_test.go",
+    "internal/executor/intrusion_nft_port_plan_linux.go",
+    "internal/executor/intrusion_nft_port_plan_linux_test.go",
+    "internal/executor/intrusion_nft_scope_linux.go",
+    "internal/executor/intrusion_nft_scope_linux_test.go",
+    "internal/executor/intrusion_normal_lifecycle_linux_test.go",
+    "internal/executor/intrusion_pending_workspace_owned_native_linux_test.go",
+    "internal/executor/intrusion_port_recipe_linux.go",
+    "internal/executor/intrusion_port_recipe_linux_test.go",
+    "internal/executor/intrusion_port_template_mutation.py",
+    "internal/executor/intrusion_port_template_mutation_linux.go",
+    "internal/executor/intrusion_port_template_mutation_linux_test.go",
+    "internal/executor/intrusion_ports_linux.go",
+    "internal/executor/intrusion_ports_linux_test.go",
+    "internal/executor/intrusion_process_identity.py",
+    "internal/executor/intrusion_process_identity_linux.go",
+    "internal/executor/intrusion_process_identity_linux_test.go",
+    "internal/executor/intrusion_readonly_batch.py",
+    "internal/executor/intrusion_readonly_batch_linux.go",
+    "internal/executor/intrusion_readonly_batch_linux_test.go",
+    "internal/executor/intrusion_removal_candidate_linux.go",
+    "internal/executor/intrusion_removal_candidate_linux_test.go",
+    "internal/executor/intrusion_removal_copy_linux.go",
+    "internal/executor/intrusion_removal_copy_linux_test.go",
+    "internal/executor/intrusion_removal_evidence_linux.go",
+    "internal/executor/intrusion_removal_evidence_linux_test.go",
+    "internal/executor/intrusion_removal_memo_linux.go",
+    "internal/executor/intrusion_removal_memo_linux_test.go",
+    "internal/executor/intrusion_removal_observation_linux.go",
+    "internal/executor/intrusion_removal_observation_linux_test.go",
+    "internal/executor/intrusion_removal_owned_native_linux_test.go",
+    "internal/executor/intrusion_removal_transaction_owned_native_linux_test.go",
+    "internal/executor/intrusion_runtime_kernel_linux.go",
+    "internal/executor/intrusion_runtime_linux.go",
+    "internal/executor/intrusion_runtime_linux_test.go",
+    "internal/executor/intrusion_scalar_mutation.py",
+    "internal/executor/intrusion_scalar_mutation_linux.go",
+    "internal/executor/intrusion_scalar_mutation_linux_test.go",
+    "internal/executor/intrusion_scalar_owned_native_linux_test.go",
+    "internal/executor/intrusion_scalar_plan_linux.go",
+    "internal/executor/intrusion_scalar_plan_linux_test.go",
+    "internal/executor/intrusion_ssh_unban_owned_native_linux_test.go",
+    "internal/executor/intrusion_status_linux.go",
+    "internal/executor/intrusion_transaction_observation_linux.go",
+    "internal/executor/intrusion_transaction_observation_linux_test.go",
+    "internal/executor/intrusion_transaction_owned_native_linux_test.go",
+    "internal/executor/intrusion_upgrade_barrier_linux_test.go",
+    "internal/executor/intrusion_workspace_linux.go",
+    "internal/executor/intrusion_workspace_linux_test.go",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "internal/executor/software_linux.go",
+    "internal/executor/software_manifest_record_linux_test.go",
+    "internal/executor/testdata/FAIL2BAN-COPYING",
+    "internal/executor/testdata/FAIL2BAN-NOTICE.txt",
+    "internal/executor/testdata/intrusion-action-stock-amd64.json",
+    "internal/executor/testdata/intrusion-action-stock-arm64.json",
+    "internal/executor/testdata/intrusion-effective-stock-amd64.json",
+    "internal/executor/testdata/intrusion-effective-stock-arm64.json",
+    "internal/executor/testdata/intrusion-nft-reload-1.0.2.json",
+    "packaging/build-release.sh",
+    "scripts/test-intrusion-ui-fixture.html",
+    "scripts/test-intrusion-ui-fixture.mjs",
+    "scripts/test-intrusion-ui.mjs",
+    "scripts/test-intrusion-workspace.mjs",
+    "web/src/IntrusionWorkspace.vue",
+    "web/src/SecurityAppManager.vue",
+    "web/src/intrusionWorkspace.ts"
+  ],
+  "removed_from_prior": [],
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24intrusionlifetimebhyv-linux-arm64.tar.gz",
+      "archive_sha256": "41d87e4301cba3a8f2b37de12a4c39fd41a4ec8806ba1496e7161f132f1bd4d2",
+      "normal_build_log_sha256": "2fa01489895a9a78b2040c7773b9bf895c391fb93d6bf1882f0e5d8fcc16461c",
+      "manifest_sha256": "c74fe7b1ce24803c74b4635cded82444358b0007c7a3bc8c60f06cacad869ffc",
+      "signature_sha256": "07da140624149fee6ba2730a6af4eb7ddb0099d99a960ced98167c21ece1a9b2",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24intrusionlifetimebhyv-linux-amd64.tar.gz",
+      "archive_sha256": "61b675d19250a2ce581f564b28afc9badecb26df35c8934ff412f6f2c10dfb9e",
+      "normal_build_log_sha256": "43233a7425f52b96b7221b54c367cf969844467b22285170a2d9e53e32350764",
+      "manifest_sha256": "0f39f63a7084734546125aa52efc426a651137ae227132cd9e43745a5673e2b4",
+      "signature_sha256": "13dbc183236481b94944cf5044f42a22139147b8373bbe63fe9274a05b45ca77",
+      "original_key_signature_verified": true
+    }
+  },
+  "native_and_ordinary": {
+    "arm64": {
+      "ordinary_transport_sha256": "665433ae658e9279ff3d225c279b193c3264852484956331a5d9a88f1c57b50f",
+      "passed": 940,
+      "failed": [],
+      "skipped": [],
+      "top_level_tests": 190,
+      "every_top_level_once": true,
+      "partial_test_binary_sha256": "76371056b527506ec78fb22e72860a765c6061e59fa2d626a6fbaf4d4fbe5d62",
+      "not_normal_companion_or_app_installation_acceptance": true,
+      "filter": {
+        "transport_sha256": "c857586d1831c956c8d7ea50eb919a56cb7e66cda8dbb394b9268196f364d0d6",
+        "receipt": {
+          "actual_SSH_ports": [
+            2882
+          ],
+          "actual_bans": 2,
+          "actual_filter_getters_and_offline_projection_agree": true,
+          "actual_filter_version": "1.0.2",
+          "declared_isolated_unit_pid_adapter": true,
+          "dump_ms": 321,
+          "foreign_start_fixed_actuator_refused": true,
+          "kernel_process_start_ticks_independently_verified": true,
+          "ok": true,
+          "owned_files_tree_authority_and_runtime_unchanged": true,
+          "readable_metadata_only_not_hidden_matcher_attestation": true,
+          "real_PID_reuse_NOT_simulated": true,
+          "real_observations": [
+            "batch",
+            "kernel",
+            "batch",
+            "kernel",
+            "dump"
+          ],
+          "runtime_ms": 161,
+          "signed_store_or_core_authorization_acceptance": false,
+          "unchanged_production_probe_budget_seconds": 8
+        },
+        "actual_external_dualstack_SSH_autobans": true,
+        "host_policy_preserved": true
+      },
+      "unban": {
+        "transport_sha256": "c861c3f86e6ebe79bbf728c41aca76a4c2a345e89ef4c431a657ad460905592f",
+        "receipt": {
+          "actual_bans_after": 1,
+          "actual_bans_before": 2,
+          "actual_normal_inspection_route": true,
+          "actual_normal_unban_route": true,
+          "configuration_and_tree_preserved": true,
+          "declared_isolated_unit_pid_adapter": true,
+          "duplicate_unban_not_retried": true,
+          "exact_actual_setters": 1,
+          "exclusive_lock_blocks_other_family": true,
+          "inspection_elapsed_ms": [
+            135,
+            121
+          ],
+          "ok": true,
+          "private_metadata_not_exposed": true,
+          "real_read_batches_per_inspection": [
+            "batch",
+            "kernel",
+            "batch"
+          ],
+          "signed_store_or_core_authorization_acceptance": false,
+          "unchanged_production_probe_budget_seconds": 8
+        },
+        "actual_external_dualstack_SSH_autobans": true,
+        "host_policy_preserved": true
+      }
+    },
+    "amd64": {
+      "ordinary_transport_sha256": "841aacd22865be2f9468637669ef42887721338a99c5b26d2751f4a0d51234ba",
+      "passed": 940,
+      "failed": [],
+      "skipped": [],
+      "top_level_tests": 190,
+      "every_top_level_once": true,
+      "partial_test_binary_sha256": "df966fc82222768d92c8729d83cd1a487cb8be21bdb644428385652cbe166125",
+      "not_normal_companion_or_app_installation_acceptance": true,
+      "filter": {
+        "transport_sha256": "4fe07ca69de372aad45ef09d1c7153a9531f07b9a6e176d3e7d94dab7ae5f3fa",
+        "receipt": {
+          "actual_SSH_ports": [
+            2882
+          ],
+          "actual_bans": 2,
+          "actual_filter_getters_and_offline_projection_agree": true,
+          "actual_filter_version": "1.1.0",
+          "declared_isolated_unit_pid_adapter": true,
+          "dump_ms": 987,
+          "foreign_start_fixed_actuator_refused": true,
+          "kernel_process_start_ticks_independently_verified": true,
+          "ok": true,
+          "owned_files_tree_authority_and_runtime_unchanged": true,
+          "readable_metadata_only_not_hidden_matcher_attestation": true,
+          "real_PID_reuse_NOT_simulated": true,
+          "real_observations": [
+            "batch",
+            "kernel",
+            "batch",
+            "kernel",
+            "dump"
+          ],
+          "runtime_ms": 1914,
+          "signed_store_or_core_authorization_acceptance": false,
+          "unchanged_production_probe_budget_seconds": 8
+        },
+        "actual_external_dualstack_SSH_autobans": true,
+        "host_policy_preserved": true
+      },
+      "unban": {
+        "transport_sha256": "b4484e76b0d2cc6f6ef6fa59f1fcf75755a85088bbf6e76821b541051e3dc03c",
+        "receipt": {
+          "actual_bans_after": 1,
+          "actual_bans_before": 2,
+          "actual_normal_inspection_route": true,
+          "actual_normal_unban_route": true,
+          "configuration_and_tree_preserved": true,
+          "declared_isolated_unit_pid_adapter": true,
+          "duplicate_unban_not_retried": true,
+          "exact_actual_setters": 1,
+          "exclusive_lock_blocks_other_family": true,
+          "inspection_elapsed_ms": [
+            1360,
+            799
+          ],
+          "ok": true,
+          "private_metadata_not_exposed": true,
+          "real_read_batches_per_inspection": [
+            "batch",
+            "kernel",
+            "batch"
+          ],
+          "signed_store_or_core_authorization_acceptance": false,
+          "unchanged_production_probe_budget_seconds": 8
+        },
+        "actual_external_dualstack_SSH_autobans": true,
+        "host_policy_preserved": true
+      }
+    }
+  },
+  "normal_upgrade_ZB_cases_retained_false": {
+    "arm64": {
+      "proof_sha256": "0e8ea6e4e0b1c7eb3c9f405662c691e1db0431b9122fa1196c43d2ad2f88b47b",
+      "ok": false,
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "485fa8434d5c38d9cfa1c14f4833cb4823806d044cf09d9540c80dd4dab47ee8"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "49a94c6c25f4427fd56119c18c73aaf0680f4e20cc1e727d07f946a93e254c50"
+        }
+      ],
+      "reason": "Exact nft raw hashes differ; no before document retained. Original failure not rewritten or installer replayed."
+    },
+    "amd64": {
+      "proof_sha256": "f3e025752f63565c127ee0e40a2b345ceedb62cae78ae976bbde921d798593a5",
+      "ok": false,
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 0,
+          "log_sha256": "485fa8434d5c38d9cfa1c14f4833cb4823806d044cf09d9540c80dd4dab47ee8"
+        },
+        {
+          "action": "install",
+          "exit": 0,
+          "log_sha256": "49a94c6c25f4427fd56119c18c73aaf0680f4e20cc1e727d07f946a93e254c50"
+        }
+      ],
+      "reason": "Exact nft raw hashes differ; no before document retained. Original failure not rewritten or installer replayed."
+    }
+  },
+  "independent_readonly_qualification": {
+    "arm64": {
+      "transport_sha256": "c9101ef04eba79bfbe36fc00443eb7ce6603fa653b5415400824d26b3a741306",
+      "all102_preserved": true,
+      "statistics_history_preserved": true,
+      "all15_kernel_unchanged": true,
+      "SSH_Fail2ban_journald_processes_and_configs_preserved": true,
+      "other_protected_files": 4610,
+      "normal_installer_transaction_committed": true,
+      "static_nft_policy_preserved": true,
+      "nft_anchor_NOT_ZB_before_hash": true,
+      "explicit_uint64_rule_counter_increases": [
+        {
+          "after": {
+            "bytes": 77340,
+            "packets": 1289
+          },
+          "before": {
+            "bytes": 75900,
+            "packets": 1265
+          },
+          "path": [
+            "nftables",
+            18,
+            "rule",
+            "expr",
+            0,
+            "counter"
+          ]
+        },
+        {
+          "after": {
+            "bytes": 77340,
+            "packets": 1289
+          },
+          "before": {
+            "bytes": 75900,
+            "packets": 1265
+          },
+          "path": [
+            "nftables",
+            19,
+            "rule",
+            "expr",
+            1,
+            "counter"
+          ]
+        },
+        {
+          "after": {
+            "bytes": 443243,
+            "packets": 6079
+          },
+          "before": {
+            "bytes": 440744,
+            "packets": 6051
+          },
+          "path": [
+            "nftables",
+            20,
+            "rule",
+            "expr",
+            0,
+            "counter"
+          ]
+        }
+      ],
+      "original_failed_ZB_sha256": "0e8ea6e4e0b1c7eb3c9f405662c691e1db0431b9122fa1196c43d2ad2f88b47b",
+      "installer_replayed": false,
+      "application_operations": 0,
+      "all50_commercial": false
+    },
+    "amd64": {
+      "transport_sha256": "a8af766da528dc6ec9c75e7345af8ce94ed886a4ada160cfa1333a78ac512a6f",
+      "all102_preserved": true,
+      "statistics_history_preserved": true,
+      "all15_kernel_unchanged": true,
+      "SSH_Fail2ban_journald_processes_and_configs_preserved": true,
+      "other_protected_files": 3704,
+      "normal_installer_transaction_committed": true,
+      "static_nft_policy_preserved": true,
+      "nft_anchor_NOT_ZB_before_hash": true,
+      "explicit_uint64_rule_counter_increases": [
+        {
+          "after": {
+            "bytes": 65912,
+            "packets": 1232
+          },
+          "before": {
+            "bytes": 64900,
+            "packets": 1209
+          },
+          "path": [
+            "nftables",
+            19,
+            "rule",
+            "expr",
+            0,
+            "counter"
+          ]
+        },
+        {
+          "after": {
+            "bytes": 53284,
+            "packets": 1211
+          },
+          "before": {
+            "bytes": 52272,
+            "packets": 1188
+          },
+          "path": [
+            "nftables",
+            20,
+            "rule",
+            "expr",
+            1,
+            "counter"
+          ]
+        },
+        {
+          "after": {
+            "bytes": 158167,
+            "packets": 2370
+          },
+          "before": {
+            "bytes": 157911,
+            "packets": 2366
+          },
+          "path": [
+            "nftables",
+            21,
+            "rule",
+            "expr",
+            0,
+            "counter"
+          ]
+        }
+      ],
+      "original_failed_ZB_sha256": "f3e025752f63565c127ee0e40a2b345ceedb62cae78ae976bbde921d798593a5",
+      "installer_replayed": false,
+      "application_operations": 0,
+      "all50_commercial": false
+    }
+  },
+  "application1_1_signed_store_update_accepted": false,
+  "GitHub_publication_proven": false,
+  "Main19100_program_updated": false,
+  "commercial_all50": false,
+  "limitations": [
+    "Only complete stock Fail2ban1.0.2/1.1.0 nftables/systemd grammar is qualified; Ubuntu22 stock0.11.2 is unsupported for1.1.",
+    "Actual paired native SSH tests: Ubuntu24 ARM64 and Debian13 AMD64; not the complete OS/architecture matrix.",
+    "Process start ticks are not a cryptographic generation; real native PID reuse was not forced.",
+    "Unknown outcomes retain original pending evidence. Explicit full-ID/digest recovery across a changed boot or process lifetime is refused, not adopted.",
+    "Filter fingerprint covers readable metadata, not hidden compiled flags or general HIDS/malware isolation.",
+    "Default bantime changes may alter current default-backed expiry without resetting creation time; historical IPs are never re-banned.",
+    "ZB stored only nft raw hashes. Independent readonly qualification uses the earlier retained YL full policy anchor, NOT a reconstructed ZB before document."
+  ]
+}

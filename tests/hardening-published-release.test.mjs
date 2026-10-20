@@ -1,8 +1,9 @@
+import {preIntrusionRead} from './pre-intrusion-release.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash,createPublicKey,verify}from'node:crypto';
 import{beforeHardening,originalHardeningWorkflow,scopedAnalyticsABIline}from'./pre-hardening-workflow.mjs';
 import{verifyOldHardeningRefusal}from'../tools/verify-hardening-handler-boundary.mjs';
 import{hardeningManifestFixtureOverlay,manifestFixtureOriginalSHA}from'../tools/run-hardening-ci.mjs';
-const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
+const read=p=>preIntrusionRead(p,fs.readFileSync(new URL('../'+p,import.meta.url))),sha=b=>createHash('sha256').update(b).digest('hex');
 test('new original-key signed50 changes only hardening and preserves the exact installed analytics release',()=>{
  const old=read(beforeHardening+'catalog-v1.json'),now=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem');
  assert.equal(sha(old),'ac150c30f7d83cc0dc25218386831878d9b8deb45396e6e803fde88e6982dfd6');assert.equal(sha(pub),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');
