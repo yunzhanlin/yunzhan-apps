@@ -553,6 +553,45 @@ jobs:
           node scripts/web-entry-budget.mjs web/dist
       - name: Current original-key signed50 requires the actual reversible journal handler
         working-directory: panel-integration-hardening
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-intrusion1.1-24bhyz"
       - name: Prior compiled handler refuses only hardening1.1 and accepts the other49
         run: node tools/verify-hardening-handler-boundary.mjs
+
+  intrusion-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-intrusion/go.mod
+          cache-dependency-path: panel-integration-intrusion/go.sum
+      - name: Immutable final lifetime source, original failed receipts and exact signed manifests
+        run: node --test tests/intrusion-source.test.mjs tests/intrusion-manifest.test.mjs
+      - name: Original complete Root packaging fixtures, not installed acceptance
+        working-directory: panel-integration-intrusion
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete Root Linux Go contracts with one declared test-only capability fixture and unchanged production
+        working-directory: panel-integration-intrusion
+        run: |
+          sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)"
+          go vet ./...
+      - name: Intrusion original account queue, journal, process lifetime and concurrent lock races
+        working-directory: panel-integration-intrusion
+        run: sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)" race
+      - name: Locked management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-intrusion/web --ignore-scripts
+      - name: Actual intrusion workspace routing, availability and management build
+        working-directory: panel-integration-intrusion
+        run: |
+          node --test scripts/test-intrusion-workspace.mjs scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24intrusionlifetimebhyv npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Original-key current signed50 requires the final lifetime-bound intrusion handler
+        working-directory: panel-integration-intrusion
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Historical compiled hardening handler refuses only intrusion1.1 and accepts the other49
+        run: node tools/verify-intrusion-handler-boundary.mjs

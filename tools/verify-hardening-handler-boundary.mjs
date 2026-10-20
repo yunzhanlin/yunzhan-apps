@@ -8,7 +8,7 @@ export function verifyOldHardeningRefusal(result,ids){
  return {other49_passed:49,only_hardening1_1_refused:true,old_compiled_runtime_unchanged:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- assert.equal(process.platform,'linux');const root=fileURLToPath(new URL('../',import.meta.url)),ids=JSON.parse(fs.readFileSync(root+'dist/catalog-v1.json')).apps.map(a=>a.id);
- const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',root],{cwd:root+'panel-integration-apache-preservation',encoding:'utf8',timeout:180000,maxBuffer:4<<20});
+ assert.equal(process.platform,'linux');const root=fileURLToPath(new URL('../',import.meta.url)),ids=JSON.parse(fs.readFileSync(root+'registry/reviewed-catalogs/before-intrusion1.1-24bhyz/catalog-v1.json')).apps.map(a=>a.id);
+ const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',root+'registry/reviewed-catalogs/before-intrusion1.1-24bhyz'],{cwd:root+'panel-integration-apache-preservation',encoding:'utf8',timeout:180000,maxBuffer:4<<20});
  process.stdout.write(result.stdout??'');process.stderr.write(result.stderr??'');console.log(JSON.stringify(verifyOldHardeningRefusal(result,ids)));
 }

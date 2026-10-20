@@ -1,0 +1,38 @@
+{
+  "original_full_root_Linux_suite_passed": false,
+  "original_failed_head": "6c37e845f151a009b815ae6b0f0ce603f241eeb8",
+  "original_check_run": 118697685327,
+  "exact_failed_test": "TestIntrusionJournalKeepsLegacyManifestAndRejectsFutureAvailability",
+  "reason": "Stale test asserted literal v2 unavailable after the final production feature became v2; Darwin did not expose this Linux availability assertion.",
+  "original_core_Linux_passed": true,
+  "original_executor_Linux_passed": true,
+  "immutable_export_changed": false,
+  "production_source_overrides": 0,
+  "only_overlay_member": "internal/appcatalog/intrusion_journal_features_test.go",
+  "original_test_sha256": "200f47bd949d0f7d4ad5a91c8014613d816226e122922c72b7fb1c5b1b3f277f",
+  "corrected_test_sha256": "34e259a6e8740d19b652358fca99e2f448f05ec3337e19d9496c304bd41b9011",
+  "preserved_platform_gate": true,
+  "added_old_v1_and_future_v3_refusals": true,
+  "corrected_full_CI_acceptance_not_yet_proven": true,
+  "all50_commercial": false,
+  "corrected_native_fixture_tests": {
+    "arm64": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "transport_sha256": "382ebfbc350922cf7203f57d40c8612f08afbba12b852685055b3a1c4525f3ad"
+    },
+    "amd64": {
+      "passed": 17,
+      "failed": 0,
+      "skipped": 0,
+      "transport_sha256": "89bc4d21d00a9f32cdf0fe4074a2a5dc7db90734a848c22a4ec1f6bba99a2d94"
+    },
+    "normal_signed_companion_or_app_acceptance": false
+  },
+  "original_hardening_ABI_fixture_failure": {
+    "head": "6c37e845f151a009b815ae6b0f0ce603f241eeb8",
+    "check_run": 118697685338,
+    "reason": "Historical reader requires signatures/ bundle and dist/apps/ layout; the preserved flat public archive lacked those paths. Materialize exact old original-key signed catalog and all50 digest-bound historical manifests. No runtime or reader exemption."
+  }
+}
