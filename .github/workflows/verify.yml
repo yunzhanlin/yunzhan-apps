@@ -634,3 +634,31 @@ jobs:
       - name: Same original-key signed50 ABI with corrected normal source
         working-directory: panel-integration-intrusion-ui
         run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+
+  intrusion-admission-native-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-intrusion-admission/go.mod
+          cache-dependency-path: panel-integration-intrusion-admission/go.sum
+      - name: Exact signed observer-admission export, real receipts and unchanged prior workflows
+        run: node --test tests/intrusion-admission-source.test.mjs
+      - name: Full native Linux implementation with all original capacity and deadline fixtures
+        working-directory: panel-integration-intrusion-admission
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Static analysis of the same unmodified signed-source implementation
+        working-directory: panel-integration-intrusion-admission
+        run: go vet ./...
+      - name: Actual FLOCK admission, cancellation, identity and original no-replay controller races
+        working-directory: panel-integration-intrusion-admission
+        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestIntrusion' -count=1
+      - name: Download only original-key authenticated public DB-IP bytes for a native CPU test
+        run: node tools/prepare-country-native-provider.mjs >> "$GITHUB_ENV"
+      - name: Full original provider structure and country traversal with unchanged two-minute context
+        working-directory: panel-integration-intrusion-admission
+        run: sudo env YUNZHAN_COUNTRY_PREFIX_PROVIDER="$YUNZHAN_COUNTRY_PREFIX_PROVIDER" GOMEMLIMIT=512MiB GOMAXPROCS=2 "$(command -v go)" test ./internal/geodata -run '^TestOfficialCountryPrefixesOctober2026$' -count=1 -v -timeout=150s
