@@ -574,14 +574,14 @@ jobs:
       - name: Original complete Root packaging fixtures, not installed acceptance
         working-directory: panel-integration-intrusion
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
-      - name: Complete Root Linux Go contracts and vet with original source and no overlays
+      - name: Complete Root Linux Go contracts with one declared test-only capability fixture and unchanged production
         working-directory: panel-integration-intrusion
         run: |
-          sudo "$(command -v go)" test -p 1 ./... -count=1
+          sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)"
           go vet ./...
       - name: Intrusion original account queue, journal, process lifetime and concurrent lock races
         working-directory: panel-integration-intrusion
-        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestIntrusion' -count=1
+        run: sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)" race
       - name: Locked management dependencies without lifecycle scripts
         run: npm ci --prefix panel-integration-intrusion/web --ignore-scripts
       - name: Actual intrusion workspace routing, availability and management build

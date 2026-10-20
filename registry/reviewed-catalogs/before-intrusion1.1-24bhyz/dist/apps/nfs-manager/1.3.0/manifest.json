@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "nfs-manager",
+  "name": "NFS Manager",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "独立 NFSv4 服务端与持久客户端、网站用户映射、CIDR 权限、双栈自定义端口和事务恢复",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nfs-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "NFSv4",
+    "独立服务端与网站导出",
+    "只读与确认后的读写共享",
+    "客户端 CIDR 与网站身份映射",
+    "IPv4/IPv6 自定义端口",
+    "安全挂载选项",
+    "开机恢复",
+    "修订保护与失败回滚",
+    "系统 NFS 与 RPC 映射隔离",
+    "活跃挂载卸载保护",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/nfs-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
