@@ -1,0 +1,306 @@
+{
+  "version": "0.1.0-dev.proapps24intrusionuibibn",
+  "scope": "panel-integration-intrusion-ui",
+  "prior_scope": "panel-integration-intrusion",
+  "frozen_inputs_sha256": "fa4042ceadf0dbb97613e5f4524f21e47fb009578f953c73a7b0786a60da350a",
+  "prior_frozen_inputs_sha256": "e1bfb1c02c721a45628d999f8d8dea9a6646d73742899b99ac022e3023c224a3",
+  "frozen_files": 17392,
+  "exported_files": 1689,
+  "source_overrides": 0,
+  "changed_from_prior": [
+    "internal/appcatalog/intrusion_journal_features_test.go",
+    "scripts/test-intrusion-ui-fixture.mjs",
+    "scripts/test-intrusion-ui.mjs",
+    "scripts/test-intrusion-workspace.mjs",
+    "web/src/SecurityAppManager.vue"
+  ],
+  "added_from_prior": [],
+  "removed_from_prior": [],
+  "production_backend_unchanged_from_prior": true,
+  "feature": "intrusion-preserving-journal-v2",
+  "app_version": "1.1.0",
+  "app_manifest_sha256": "63df83f7a31237cfdf810d3374b379032f609d9c97b2c77eaa5fde174b31a112",
+  "original_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24intrusionuibibn-linux-arm64.tar.gz",
+      "archive_sha256": "a98df480b0b7933be7596104a60ec1b33a4e9c4393cd94af6d835b1b8fad7790",
+      "manifest_sha256": "5049690c95a6a9f73a2e89dc79e36a5c8d710a0ed00b5c6dc7125202bf317cdd",
+      "signature_sha256": "04904f2ec2e6b2de6d4f576a7fd8686a07c496563c5feca3a9a0104835c140ae",
+      "normal_build_log_sha256": "7c3758ded636d93f0505cb7d12f9e4997d3437cf0bcd04eb999d922e0364b273",
+      "original_key_signature_verified": true,
+      "upgrade": {
+        "proof_sha256": "92f53034eec3cc2e1b3490cdd99083945a205ede0432bddc5aae0d6004b47902",
+        "source_inputs_sha256": "fa4042ceadf0dbb97613e5f4524f21e47fb009578f953c73a7b0786a60da350a",
+        "original_signed_installer_only": true,
+        "preflight_and_install_exit": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_actual_schema_and_business_preserved": true,
+        "all15_kernel_values_unchanged": true,
+        "SSH_Fail2ban_journald_processes_and_configs_preserved": true,
+        "statistics_history_and_streams_preserved": true,
+        "nft_complete_static_policy_handles_objects_preserved": true,
+        "nft_comparisons": [
+          {
+            "explicit_uint64_counters": [],
+            "phase": "preflight",
+            "raw_bytes_equal": true
+          },
+          {
+            "explicit_uint64_counters": [
+              {
+                "after": {
+                  "bytes": 451735,
+                  "packets": 6190
+                },
+                "before": {
+                  "bytes": 450364,
+                  "packets": 6170
+                },
+                "path": [
+                  "nftables",
+                  20,
+                  "rule",
+                  "expr",
+                  0,
+                  "counter"
+                ]
+              }
+            ],
+            "phase": "installed",
+            "raw_bytes_equal": false
+          }
+        ],
+        "original_ZB_still_false": true,
+        "application_operations": 0,
+        "Main_mutated": false,
+        "all50_commercial": false
+      },
+      "actual_normal_GUI": {
+        "proof_sha256": "d6d442fddbecd6fa084e68619182af848e99c738fbba638c8abd5200bccaeea4",
+        "dedicated_parent_footer_correction_verified": true,
+        "outer_footer_buttons": [
+          "关闭"
+        ],
+        "page_errors": [],
+        "application_update_submissions": 0,
+        "application_lifecycle_acceptance": false
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24intrusionuibibn-linux-amd64.tar.gz",
+      "archive_sha256": "167e897d57047c77acde7fd26e5f9ef7f62fa010beb487bef2eff8dddf67f536",
+      "manifest_sha256": "f30ac30522b3f475e1ced607104bc1b84e03ae3659830e1f739c41c64f11d1cc",
+      "signature_sha256": "2189a73df847e2e265a56558423d737db882d159ad715be42dccff1f4f43e55e",
+      "normal_build_log_sha256": "04420517f28268ff6369d939afaba2946311e994c7da9e2d3d0e97bb7bcc1886",
+      "original_key_signature_verified": true,
+      "upgrade": {
+        "proof_sha256": "669b8470238111e03cdf0bb844a046193a617f5d24aa44721b9dc79fa347d658",
+        "source_inputs_sha256": "fa4042ceadf0dbb97613e5f4524f21e47fb009578f953c73a7b0786a60da350a",
+        "original_signed_installer_only": true,
+        "preflight_and_install_exit": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_actual_schema_and_business_preserved": true,
+        "all15_kernel_values_unchanged": true,
+        "SSH_Fail2ban_journald_processes_and_configs_preserved": true,
+        "statistics_history_and_streams_preserved": true,
+        "nft_complete_static_policy_handles_objects_preserved": true,
+        "nft_comparisons": [
+          {
+            "explicit_uint64_counters": [
+              {
+                "after": {
+                  "bytes": 67764,
+                  "packets": 1262
+                },
+                "before": {
+                  "bytes": 67720,
+                  "packets": 1261
+                },
+                "path": [
+                  "nftables",
+                  19,
+                  "rule",
+                  "expr",
+                  0,
+                  "counter"
+                ]
+              },
+              {
+                "after": {
+                  "bytes": 54560,
+                  "packets": 1240
+                },
+                "before": {
+                  "bytes": 54516,
+                  "packets": 1239
+                },
+                "path": [
+                  "nftables",
+                  20,
+                  "rule",
+                  "expr",
+                  1,
+                  "counter"
+                ]
+              }
+            ],
+            "phase": "preflight",
+            "raw_bytes_equal": false
+          },
+          {
+            "explicit_uint64_counters": [
+              {
+                "after": {
+                  "bytes": 67808,
+                  "packets": 1263
+                },
+                "before": {
+                  "bytes": 67720,
+                  "packets": 1261
+                },
+                "path": [
+                  "nftables",
+                  19,
+                  "rule",
+                  "expr",
+                  0,
+                  "counter"
+                ]
+              },
+              {
+                "after": {
+                  "bytes": 54604,
+                  "packets": 1241
+                },
+                "before": {
+                  "bytes": 54516,
+                  "packets": 1239
+                },
+                "path": [
+                  "nftables",
+                  20,
+                  "rule",
+                  "expr",
+                  1,
+                  "counter"
+                ]
+              },
+              {
+                "after": {
+                  "bytes": 160920,
+                  "packets": 2409
+                },
+                "before": {
+                  "bytes": 160740,
+                  "packets": 2406
+                },
+                "path": [
+                  "nftables",
+                  21,
+                  "rule",
+                  "expr",
+                  0,
+                  "counter"
+                ]
+              }
+            ],
+            "phase": "installed",
+            "raw_bytes_equal": false
+          }
+        ],
+        "original_ZB_still_false": true,
+        "application_operations": 0,
+        "Main_mutated": false,
+        "all50_commercial": false
+      },
+      "actual_normal_GUI": {
+        "proof_sha256": "627efd147a5ad1757ab0c71cf1ff8581ca45856813dae0eb7ebaf81f56fe87be",
+        "dedicated_parent_footer_correction_verified": true,
+        "outer_footer_buttons": [
+          "关闭"
+        ],
+        "page_errors": [],
+        "application_update_submissions": 0,
+        "application_lifecycle_acceptance": false
+      }
+    }
+  },
+  "synthetic_UI": {
+    "proof_sha256": "4720c5d1532583058eb0ed6eb46d08c584e6d6123a7e2bca7c0db3dc52c01137",
+    "scope": "Actual Vue/Chromium synthetic UI only; not installed, signed, SSH, or native acceptance",
+    "cases": [
+      "Read-only first open; real numeric SSH 2882, deferred kernel and configured-vs-runtime table, no automatic mutation",
+      "Pending view has no current installed/healthy object; explicit confirm submits full exact original once with account and independent key",
+      "Lost reply after simulated queue retains ticket, disables resubmit, refresh retrieves same-account original and GET-style task view never resends POST",
+      "Account changes between display and confirmation refuse stale draft before POST; server envelope also binds actor ID",
+      "Legacy cannot silently configure into new version; signed store update required",
+      "Malformed/extra-field response clears old view, blocks mutation rather than showing absent/healthy",
+      "Installation uses existing signed-store coordinator, never claims local component nonce is the store original identity",
+      "A read-only account keeps verified status visible while inaccessible original directory keeps ALL mutations closed",
+      "Closed component discards late snapshot and reopening cannot inherit its data or create a POST",
+      "Actual 390px Chromium pending identity and settings stay inside viewport; no document-level horizontal overflow",
+      "Actual parent dialog mounts the dedicated workspace for installed, legacy, absent, pending, corrupt and read-only states; outer footer has close only and makes no mutation",
+      "Parent job hand-off closes the dialog after exactly one dedicated account-bound configure, never using the generic settings-only envelope",
+      "Actual parent dialog at 390px retains original recovery identity without legacy actions or document overflow"
+    ],
+    "tested_input_sha256": {
+      "web/src/IntrusionWorkspace.vue": "0306f0ff20bbe4ac53a147d2f3f57effb13475847d82ff6b28e5c17fe4e25864",
+      "web/src/intrusionWorkspace.ts": "5bca71162c93338559c2210cfd02aae5228a43009dadee27ac5e4c8af0c79e6f",
+      "web/src/SecurityAppManager.vue": "a5d2ff94237759ad4ba46d46de95396eb9aea0ce3f95251b23907fff0c8d1497",
+      "web/src/softwareRouting.ts": "177d5d3ecbba3095dfe84bba5979d9d25b4e85593e0621c2d305c8d766c0da1b",
+      "web/src/softwareState.ts": "682077c194773a4a5b87506e91f837463b3845c3934a4b6ff0a0cba4faec053f",
+      "web/src/WafWorkspace.vue": "6415f9743a186e999adf03eabf1e00df2432f67d2d19e8409b7554dd3a8a950e",
+      "web/src/HardeningWorkspace.vue": "2f42f7cbf334753ec2c36878028e25819c95749dc5cc6407e1360a9de21eae3a",
+      "web/src/panelTime.ts": "faf257b63ce95ea5b662a4866e0dae0d6c47c9af735a5607367ef7d2af9a6fc7",
+      "scripts/test-intrusion-ui.mjs": "c80a6ec00fbc24aa93e5ca450941b5a236e0721f5065b7b8556bcf71867568f1",
+      "scripts/test-intrusion-ui-fixture.mjs": "39924cd30dfebacf0605bbd2c189e2412efae75253ead3dcd11c39d0ad16af21",
+      "scripts/test-intrusion-ui-fixture.html": "8c3324cc6c1ceab98a217a47b3e2cbe5b9d46dff32399b08dab1fd0402d9c003",
+      "web/package.json": "47f693f87e5be1e55342d5d332de27bc6ec43c9a2d84798a86d082fcaa2ef9ab",
+      "web/package-lock.json": "328ec5b79aca7cbf9e85ebac9505466dd12154a1b9f7d36d306a3c84944252bb"
+    },
+    "errors": [],
+    "window_errors": [],
+    "browser": "153.0.8010.12",
+    "not_installed_lifecycle_acceptance": true
+  },
+  "before_actual_GUI_diagnostic": {
+    "proof_sha256": "8551fa4e6cbbc5cb2566aefc6eee3f5d1ba782cc33598c02296f7c8119df9650",
+    "issue": "Dedicated intrusion workspace still exposed legacy outer uninstall/save settings-only controls",
+    "no_legacy_action_clicked": true
+  },
+  "prior_unsigned_build_failure": {
+    "source_inputs_sha256": "c96777df5753e70e5161a70474f2ba96ef265d3b963795ce003db5ac051c330b",
+    "proof_sha256": "b212569c6843ce6000f7d691d0ce6a50e765f915fd6fb5dc916a7c356a9ba3c5",
+    "ok": false,
+    "archive_produced": false,
+    "signing_or_installation": false,
+    "not_relabelled": true
+  },
+  "application1_1_signed_store_update_accepted_at_UI_receipt": false,
+  "Main19100_program_updated_at_UI_receipt": false,
+  "commercial_all50": false,
+  "limitations": [
+    "Normal GUI observations still use installed legacy application1.0. Signed GitHub app1.1 update, installed configure/recovery and actual API lifecycle require separate later evidence.",
+    "Synthetic parent UI fixtures are not installed SSH or application lifecycle proof.",
+    "Original YV/ZB raw-byte NFT comparison failures remain false; this new UI upgrade used its OWN fresh full before/after documents and only fixed-location uint64 counters may increase.",
+    "Ubuntu22 Fail2ban0.11.2, cross-daemon-lifetime handoff and full OS/architecture matrix remain unaccepted."
+  ]
+}
