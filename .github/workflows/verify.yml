@@ -863,3 +863,38 @@ jobs:
           node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24wafdescriptorbivq npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  runtime-package-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-package/go.mod
+          cache-dependency-path: panel-integration-runtime-package/go.sum
+      - name: Immutable original-key source, actual dual-architecture programme upgrades and retained refusal boundaries
+        run: node --test tests/runtime-package-source.test.mjs
+      - name: Full Root source plus real HTTP status, receipt and compiled feature races
+        working-directory: panel-integration-runtime-package
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1
+      - name: Original-key current signed50 manifest handler ABI
+        working-directory: panel-integration-runtime-package
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Full unchanged packaging, private Root and recovery contracts
+        working-directory: panel-integration-runtime-package
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked frontend and actual selected version, update and WAF handlers
+        run: |
+          npm ci --prefix panel-integration-runtime-package/web --ignore-scripts
+          cd panel-integration-runtime-package
+          node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24runtimepackagebixd npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

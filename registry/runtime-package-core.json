@@ -1,0 +1,293 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24runtimepackagebixd",
+  "frozen_inputs_sha256": "043bedf20512c8a860d3f38be081985918b9e8bfe7f83233c5da0bdfb212c343",
+  "frozen_files": 17431,
+  "exported_files": 1728,
+  "source_overrides": 0,
+  "prior_frozen_inputs_sha256": "c6be45e1eb6cee6a8893ba3570c0d6147fd9282a107f7d3d1d8c8824e0529ba0",
+  "added_from_prior": [
+    "internal/appcatalog/runtime_package_features.go",
+    "internal/appcatalog/runtime_package_features_test.go",
+    "internal/core/app_registry_runtime_versions.go",
+    "internal/core/runtime_package_review_test.go",
+    "scripts/test-runtime-package-labels.mjs",
+    "web/src/registryUpdateLabel.ts"
+  ],
+  "changed_from_prior": [
+    "internal/appcatalog/panel_features.go",
+    "internal/core/app_registry.go",
+    "internal/core/app_registry_request_browser_qa_test.go",
+    "packaging/build-release.sh",
+    "web/src/App.vue",
+    "web/src/registryVersionLabel.ts"
+  ],
+  "application_manifests_changed": 0,
+  "database_migration_added": false,
+  "country_activation_included": false,
+  "Main19100_program_deployed_at_recording": false,
+  "Nginx_original_key_store_update_accepted": false,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "original_key_public_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "handler_contract": {
+    "feature": "runtime-package-version-v1",
+    "app": "nginx",
+    "version": "1.30.6-compat1",
+    "provider": "runtime",
+    "target": "nginx-1.30.6",
+    "manage_route": "sites",
+    "receipt_only_after_normal_success": true,
+    "higher_upstream_not_downgraded": true,
+    "host_Docker_automatic_update": false
+  },
+  "retained_refusals": {
+    "arm64_original_preflight": {
+      "ok": false,
+      "proof_sha256": "db8ef83c608e6e8959c6383e826bfcb7bc253fed2c4ec936804048172406caff",
+      "reason_code": "native-operation-not-closed",
+      "actions": [
+        {
+          "action": "preflight",
+          "exit": 1
+        }
+      ],
+      "installer_invoked": false,
+      "original_unit_or_cause_captured": false,
+      "original_stderr_sha256": "4dfcdc7ed398a6017c2352e3ab970b74e7fd1fb22c9117d62b35b445a839b8f6",
+      "target_release_backup_pending_created": false
+    },
+    "arm64_overlong_observation": {
+      "ok": false,
+      "proof_sha256": "a5d96e7a67c99bf5b1d4f9ec2cd0e1b5056b008258027574428a2639e453b897",
+      "original_before_sha256": "df429aa6bc6a4db007bb16f7fb6c54129a60191d7d7bcaa671a25ff56eda7cb5",
+      "maximum_interval_seconds": 600,
+      "window_widened": false,
+      "original_dynamic_gap_accepted": false,
+      "installer_invoked": false
+    },
+    "old_cases_replayed_or_relabelled": false
+  },
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24runtimepackagebixd-linux-arm64.tar.gz",
+      "archive_sha256": "affe880f5b897501c47c2717b4e1ed1757ca459af1efa8387c9b196aa197add7",
+      "normal_build_log_sha256": "768fac66ba0389a4d35210b5faa9e419589c27db4a8276495a5de36433cb54eb",
+      "manifest_sha256": "d9b2728d75ce087d3ce1fe89d0da24f041d30d379bf3f4f0867c18c635e23669",
+      "signature_sha256": "4c8829659e3bbeb53f221daec74adf7a7cd34e658068c550b316f17cb6ae3c13",
+      "original_key_signature_verified": true,
+      "native_models": {
+        "proof_sha256": "09ff7a629476c63e97fc3e1fd2fa904f21935a0e03cc39a78e2be70b827b6923",
+        "compiled_artifacts": {
+          "core.test": {
+            "bytes": 19267744,
+            "sha256": "d3cddf4dedbedf1b9309a1c30d4be0258a44aea7efc2b12dec5efe9a2f3f6a8c"
+          },
+          "appcatalog.test": {
+            "bytes": 9044128,
+            "sha256": "d54d5bf1ca171e923b9daec284a1655d3be726f5ba7df35d3baedf1bdf5dad70"
+          },
+          "run-models.py": {
+            "bytes": 664,
+            "sha256": "f7ba78913801bf919952a149e5e2db706419938ba1cd2e4b4fec1d272eba0511"
+          }
+        },
+        "top_level": 10,
+        "skipped": 0,
+        "all102_runtime_bytes_NFT_gateway_security_and_history_preserved": true,
+        "application_installed": false,
+        "programme_upgraded": false
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "253c756919cb742d26501314d1f81aef6fd89bb250f9cbb6ccea67342b3cf988",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0,
+            "log_sha256": "ca92f1e74eedb78ed0b5a070405d07acf0c88823f2230b5a1e0043603c14c0b6"
+          },
+          {
+            "action": "install",
+            "exit": 0,
+            "log_sha256": "97645da8db781925c521eb4c63628b23d7941f9c6c082e77c53eccca392ac9cd"
+          }
+        ],
+        "installed_programs": {
+          "nginx": {
+            "pid": "1079",
+            "sha256": "4ee482fc6ae62657bc80e1ef52a3b6c9c4d553f40e066e48a1b119fb2a97fc37"
+          },
+          "panel": {
+            "pid": "2545299",
+            "sha256": "19db3710ab210c76759f4d068665cfb09d660c7879e48c2d8b68e1adeeac2b72"
+          },
+          "panel-executor": {
+            "pid": "2545283",
+            "sha256": "b93fd4a23e5cfe39aab60fa92e60df0bf23bd9d63de734f7d4610fd760a00276"
+          }
+        },
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_and_runtime_files_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "full_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "all_original_failed_cases_retained_as_failed": true,
+        "application_operations": 0,
+        "Main_mutated": false,
+        "first_actual_install_after_known_readonly_refusal": true,
+        "old_readonly_refusal_and_overlong_observation_still_false": true,
+        "old_dynamic_observation_gap_not_relabelled_or_accepted": true
+      },
+      "actual_authenticated_UI": {
+        "ok": true,
+        "arch": "arm64",
+        "normal_upgrade_proof_sha256": "253c756919cb742d26501314d1f81aef6fd89bb250f9cbb6ccea67342b3cf988",
+        "actual_new_index_sha256": "16727e7b4dc6a5e63b41c7ae54d60c6b4d3f1ca0e0979dbfe722af94293f0621",
+        "actual_catalog_apps": 50,
+        "actual_nginx_status": {
+          "installed": true,
+          "version_source": "upstream-runtime",
+          "installed_version": "1.30.6",
+          "latest_version": "1.30.4-compat1",
+          "update_available": false
+        },
+        "visible_nginx_version_line": "运行时程序 1.30.6 · 仓库安装包 1.30.4-compat1（应用包修订待核对）",
+        "real_review_UI": {
+          "id": "apache",
+          "version_source": "upstream-runtime",
+          "button": "核对应用包",
+          "badge": "应用包待核对"
+        },
+        "host_docker_review": {
+          "update_kind": "runtime-host-review",
+          "update_supported": false
+        },
+        "application_or_runtime_POSTs": 0,
+        "mutations": [
+          {
+            "method": "POST",
+            "path": "/api/login",
+            "authentication_only": true
+          }
+        ],
+        "screenshot": ".local/runtime-package-live-ui24bixo-arm64.png",
+        "screenshot_sha256": "141c01a5234a66935f35064f68d1b61a249eb07369ce20649aacb9b93d13e6be",
+        "no_receipt_or_gateway_or_configuration_writes": true,
+        "not_original_key_Nginx_store_update_acceptance": true,
+        "Main19100_mutated": false,
+        "all50_commercial": false
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24runtimepackagebixd-linux-amd64.tar.gz",
+      "archive_sha256": "424362a99f7290211b807af0fea8e23cb69223126d9547b15d1aed7963913152",
+      "normal_build_log_sha256": "e747936d945575844ab45bd8c466d23ad21fd24e73f17c06a5a94b307f2f2145",
+      "manifest_sha256": "deae45a3c23998e4cd2c93f146485183cc994671cd074562d39c7197ec6e4913",
+      "signature_sha256": "39a07df49bd8d1f10a28b5964560022f49084604c77b5fcdcea0526a4a05da3b",
+      "original_key_signature_verified": true,
+      "native_models": {
+        "proof_sha256": "6130335ecfde38616c5a62d8ed20a3dcead2308cdcb53fb72fbdb501abfdac1c",
+        "compiled_artifacts": {
+          "core.test": {
+            "bytes": 21049504,
+            "sha256": "aa01f8a03e3286402a4797a948275004b2766d3b6bd81a286107b62f600c3487"
+          },
+          "appcatalog.test": {
+            "bytes": 9801888,
+            "sha256": "d0ba1febdd1ccc0f6db396faf997d035a6d5f0153271a1bd3aa6d6254773a571"
+          },
+          "run-models.py": {
+            "bytes": 664,
+            "sha256": "f7ba78913801bf919952a149e5e2db706419938ba1cd2e4b4fec1d272eba0511"
+          }
+        },
+        "top_level": 10,
+        "skipped": 0,
+        "all102_runtime_bytes_NFT_gateway_security_and_history_preserved": true,
+        "application_installed": false,
+        "programme_upgraded": false
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "41f03c6c93e04c5ee7d22cb5f6748e1ed0b84d0189ee3f96f40658dfad300410",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0,
+            "log_sha256": "ca92f1e74eedb78ed0b5a070405d07acf0c88823f2230b5a1e0043603c14c0b6"
+          },
+          {
+            "action": "install",
+            "exit": 0,
+            "log_sha256": "97645da8db781925c521eb4c63628b23d7941f9c6c082e77c53eccca392ac9cd"
+          }
+        ],
+        "installed_programs": {
+          "nginx": {
+            "pid": "958",
+            "sha256": "254fac73e79add393fef33f514bc91b8a98ad1966c2b43c77a98c9359580a6d8"
+          },
+          "panel": {
+            "pid": "802421",
+            "sha256": "365dfb718399205318d54a4cd465f1f92f6911ed5041e007c97c41007455ae33"
+          },
+          "panel-executor": {
+            "pid": "802401",
+            "sha256": "87b6a1275e74ff66ab059b71866c6639f438f332d2251ed83ee133d6c7574e3b"
+          }
+        },
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_and_runtime_files_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "full_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "all_original_failed_cases_retained_as_failed": true,
+        "application_operations": 0,
+        "Main_mutated": false
+      },
+      "actual_authenticated_UI": {
+        "ok": true,
+        "arch": "amd64",
+        "normal_upgrade_proof_sha256": "41f03c6c93e04c5ee7d22cb5f6748e1ed0b84d0189ee3f96f40658dfad300410",
+        "actual_new_index_sha256": "16727e7b4dc6a5e63b41c7ae54d60c6b4d3f1ca0e0979dbfe722af94293f0621",
+        "actual_catalog_apps": 50,
+        "actual_nginx_status": {
+          "installed": true,
+          "version_source": "upstream-runtime",
+          "installed_version": "1.30.6",
+          "latest_version": "1.30.4-compat1",
+          "update_available": false
+        },
+        "visible_nginx_version_line": "运行时程序 1.30.6 · 仓库安装包 1.30.4-compat1（应用包修订待核对）",
+        "real_review_UI": {
+          "id": "apache",
+          "version_source": "upstream-runtime",
+          "button": "核对应用包",
+          "badge": "应用包待核对"
+        },
+        "host_docker_review": {
+          "update_kind": "runtime-host-review",
+          "update_supported": false
+        },
+        "application_or_runtime_POSTs": 0,
+        "mutations": [
+          {
+            "method": "POST",
+            "path": "/api/login",
+            "authentication_only": true
+          }
+        ],
+        "screenshot": ".local/runtime-package-live-ui24bixo-amd64.png",
+        "screenshot_sha256": "65a8b3218ae6d302fff3010a9be602900df7234670f0c2b1eba009b6ab590220",
+        "no_receipt_or_gateway_or_configuration_writes": true,
+        "not_original_key_Nginx_store_update_acceptance": true,
+        "Main19100_mutated": false,
+        "all50_commercial": false
+      }
+    }
+  }
+}
