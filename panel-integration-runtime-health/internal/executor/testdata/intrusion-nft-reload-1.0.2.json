@@ -1,0 +1,272 @@
+{
+  "source_proof_sha256": "45383d506fcf10da1be31c865c8f0bb0d13cd8c2e2dc5875c12be60cbca8ff34",
+  "isolated_file_backend_NOT_installed_journald": true,
+  "before": {
+    "nftables": [
+      {
+        "metainfo": {
+          "json_schema_version": 1,
+          "release_name": "Old Doc Yak #3",
+          "version": "1.0.9"
+        }
+      },
+      {
+        "table": {
+          "family": "inet",
+          "handle": 1,
+          "name": "f2b-table"
+        }
+      },
+      {
+        "set": {
+          "elem": [
+            "127.0.0.2"
+          ],
+          "family": "inet",
+          "handle": 2,
+          "name": "addr-set-probe_sshd",
+          "table": "f2b-table",
+          "type": "ipv4_addr"
+        }
+      },
+      {
+        "set": {
+          "elem": [
+            "127.0.0.3"
+          ],
+          "family": "inet",
+          "handle": 4,
+          "name": "addr-set-probe_other",
+          "table": "f2b-table",
+          "type": "ipv4_addr"
+        }
+      },
+      {
+        "chain": {
+          "family": "inet",
+          "handle": 1,
+          "hook": "input",
+          "name": "f2b-chain",
+          "policy": "accept",
+          "prio": -1,
+          "table": "f2b-table",
+          "type": "filter"
+        }
+      },
+      {
+        "rule": {
+          "chain": "f2b-chain",
+          "expr": [
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "dport",
+                    "protocol": "tcp"
+                  }
+                },
+                "op": "==",
+                "right": 2882
+              }
+            },
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "saddr",
+                    "protocol": "ip"
+                  }
+                },
+                "op": "==",
+                "right": "@addr-set-probe_sshd"
+              }
+            },
+            {
+              "reject": {
+                "expr": "port-unreachable",
+                "type": "icmp"
+              }
+            }
+          ],
+          "family": "inet",
+          "handle": 3,
+          "table": "f2b-table"
+        }
+      },
+      {
+        "rule": {
+          "chain": "f2b-chain",
+          "expr": [
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "dport",
+                    "protocol": "tcp"
+                  }
+                },
+                "op": "==",
+                "right": 29999
+              }
+            },
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "saddr",
+                    "protocol": "ip"
+                  }
+                },
+                "op": "==",
+                "right": "@addr-set-probe_other"
+              }
+            },
+            {
+              "reject": {
+                "expr": "port-unreachable",
+                "type": "icmp"
+              }
+            }
+          ],
+          "family": "inet",
+          "handle": 5,
+          "table": "f2b-table"
+        }
+      }
+    ]
+  },
+  "after": {
+    "nftables": [
+      {
+        "metainfo": {
+          "json_schema_version": 1,
+          "release_name": "Old Doc Yak #3",
+          "version": "1.0.9"
+        }
+      },
+      {
+        "table": {
+          "family": "inet",
+          "handle": 1,
+          "name": "f2b-table"
+        }
+      },
+      {
+        "set": {
+          "elem": [
+            "127.0.0.2"
+          ],
+          "family": "inet",
+          "handle": 2,
+          "name": "addr-set-probe_sshd",
+          "table": "f2b-table",
+          "type": "ipv4_addr"
+        }
+      },
+      {
+        "set": {
+          "elem": [
+            "127.0.0.3"
+          ],
+          "family": "inet",
+          "handle": 4,
+          "name": "addr-set-probe_other",
+          "table": "f2b-table",
+          "type": "ipv4_addr"
+        }
+      },
+      {
+        "chain": {
+          "family": "inet",
+          "handle": 1,
+          "hook": "input",
+          "name": "f2b-chain",
+          "policy": "accept",
+          "prio": -1,
+          "table": "f2b-table",
+          "type": "filter"
+        }
+      },
+      {
+        "rule": {
+          "chain": "f2b-chain",
+          "expr": [
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "dport",
+                    "protocol": "tcp"
+                  }
+                },
+                "op": "==",
+                "right": 2882
+              }
+            },
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "saddr",
+                    "protocol": "ip"
+                  }
+                },
+                "op": "==",
+                "right": "@addr-set-probe_sshd"
+              }
+            },
+            {
+              "reject": {
+                "expr": "port-unreachable",
+                "type": "icmp"
+              }
+            }
+          ],
+          "family": "inet",
+          "handle": 3,
+          "table": "f2b-table"
+        }
+      },
+      {
+        "rule": {
+          "chain": "f2b-chain",
+          "expr": [
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "dport",
+                    "protocol": "tcp"
+                  }
+                },
+                "op": "==",
+                "right": 29999
+              }
+            },
+            {
+              "match": {
+                "left": {
+                  "payload": {
+                    "field": "saddr",
+                    "protocol": "ip"
+                  }
+                },
+                "op": "==",
+                "right": "@addr-set-probe_other"
+              }
+            },
+            {
+              "reject": {
+                "expr": "port-unreachable",
+                "type": "icmp"
+              }
+            }
+          ],
+          "family": "inet",
+          "handle": 5,
+          "table": "f2b-table"
+        }
+      }
+    ]
+  }
+}
