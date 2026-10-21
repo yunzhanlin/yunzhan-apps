@@ -1,0 +1,242 @@
+--- a/apache2/modsecurity.c
++++ b/apache2/modsecurity.c
+@@ -35,6 +35,65 @@
+ 
+ int DSOLOCAL *unicode_map_table = NULL;
+ 
++/* Yunzhan modification 2026-10-11. No request bytes, rule messages, URI,
++ * hostname, client address, headers or debug text enter this metadata sink.
++ * Fixed path, fixed schema, 32 MiB physical ceiling and nonblocking lock.
++ * A saturated/unavailable sink never changes the detection decision. */
++#include <sys/file.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++
++static void panel_body_metadata(modsec_rec *msr, int level, msre_actionset *as)
++{
++    const char *site;
++    unsigned int id = 0;
++    size_t i, id_len;
++    int fd, length;
++    struct stat st;
++    char event[256];
++    ssize_t written;
++    if (level > 3 || msr == NULL || msr->r == NULL || msr->txcfg == NULL
++            || as == NULL || as->id == NULL || msr->phase < 1 || msr->phase > 5
++            || msr->txcfg->is_enabled == MODSEC_DISABLED) return;
++    site = get_env_var(msr->r, "PANEL_AW_SITE");
++    if (site == NULL || strnlen(site, 33) != 32) return;
++    for (i = 0; i < 32; i++) {
++        if (!((site[i] >= '0' && site[i] <= '9')
++                || (site[i] >= 'a' && site[i] <= 'f'))) return;
++    }
++    id_len = strnlen(as->id, 9);
++    if (id_len == 0 || id_len > 8) return;
++    for (i = 0; i < id_len; i++) {
++        if (as->id[i] < '0' || as->id[i] > '9') return;
++        id = id * 10 + (unsigned int)(as->id[i] - '0');
++    }
++    if (id == 0 || id > 99999999) return;
++    length = apr_snprintf(event, sizeof(event),
++        "{\"time_us\":%" APR_TIME_T_FMT ",\"engine\":\"2.9.15-yz5\","
++        "\"site_id\":\"%s\",\"rule_id\":%u,\"phase\":%u,\"severity\":%d,"
++        "\"mode\":\"%s\",\"blocked\":%s}\n",
++        apr_time_now(), site, id, msr->phase,
++        (as->severity >= 0 && as->severity <= 7) ? as->severity : 7,
++        msr->txcfg->is_enabled == MODSEC_DETECTION_ONLY ? "observe" : "block",
++        msr->txcfg->is_enabled == MODSEC_ENABLED && msr->was_intercepted
++                && as == msr->intercept_actionset ? "true" : "false");
++    if (length <= 0 || length >= (int)sizeof(event)) return;
++    fd = open("/var/lib/panel-apache-body/events.log",
++        O_WRONLY | O_APPEND | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
++    if (fd < 0) return;
++    if (flock(fd, LOCK_EX | LOCK_NB) == 0) {
++        if (fstat(fd, &st) == 0 && S_ISREG(st.st_mode) && st.st_nlink == 1
++                && st.st_uid == geteuid() && (st.st_mode & 07777) == 0600
++                && st.st_size >= 0 && st.st_size <= 32 * 1024 * 1024 - length) {
++            written = write(fd, event, (size_t)length);
++            if (written >= 0 && written != length) (void)ftruncate(fd, st.st_size);
++        }
++        (void)flock(fd, LOCK_UN);
++    }
++    (void)close(fd);
++}
++
+ /**
+  * Format an alert message.
+  */
+@@ -45,18 +104,11 @@
+     assert(actionset != NULL);
+     const char *message = NULL;
+ 
+-    if (rule_message == NULL) rule_message = "Unknown error.";
+-
+-    if (action_message == NULL) {
+-        message = apr_psprintf(msr->mp, "%s%s",
+-            rule_message, msre_format_metadata(msr, actionset));
+-    }
+-    else {
+-        message = apr_psprintf(msr->mp, "%s %s%s", action_message,
+-            rule_message, msre_format_metadata(msr, actionset));
+-    }
+-
+-    return message;
++    /* Yunzhan modification: audit memory is metadata-only as well. */
++    (void)message;
++    (void)action_message;
++    (void)rule_message;
++    return "Reviewed rule matched; request data omitted.";
+ }
+ 
+ /**
+@@ -67,6 +119,7 @@
+ {
+     assert(msr != NULL);
+     assert(actionset != NULL);
++    panel_body_metadata(msr, level, actionset);
+     const char *message = msc_alert_message(msr, actionset, action_message, rule_message);
+ 
+     msr_log(msr, level, "%s", message);
+--- a/apache2/apache2_util.c
++++ b/apache2/apache2_util.c
+@@ -209,109 +209,19 @@
+ static void internal_log_ex(request_rec *r, directory_config *dcfg, modsec_rec *msr,
+     int level, int fixup, const char *text, va_list ap)
+ {
+-    assert(r != NULL);
+-    assert(msr != NULL);
+-    assert(text != NULL);
+-    apr_size_t nbytes, nbytes_written;
+-    apr_file_t *debuglog_fd = NULL;
+-    int filter_debug_level = 0;
+-    char str1[1024] = "";
+-    char str2[1256] = "";
+-
+-    /* Find the logging FD and determine the logging level from configuration. */
+-    if (dcfg != NULL) {
+-        if ((dcfg->debuglog_fd != NULL)&&(dcfg->debuglog_fd != NOT_SET_P)) {
+-            debuglog_fd = dcfg->debuglog_fd;
+-        }
+-
+-        if (dcfg->debuglog_level != NOT_SET) {
+-            filter_debug_level = dcfg->debuglog_level;
+-        }
+-    }
+-
+-    /* Return immediately if we don't have where to write
+-     * or if the log level of the message is higher than
+-     * wanted in the log.
+-     */
+-    if ((level > 3)&&( (debuglog_fd == NULL) || (level > filter_debug_level) )) return;
+-
+-    /* Construct the message. */
+-    apr_vsnprintf(str1, sizeof(str1), text, ap);
+-    if (fixup) {
+-        int len = strlen(str1);
+-
+-        /* Strip line ending. */
+-        if (len && str1[len - 1] == '\n') {
+-            str1[len - 1] = '\0';
+-        }
+-        if (len > 1 && str1[len - 2] == '\r') {
+-            str1[len - 2] = '\0';
+-        }
+-    }
+-
+-    /* Construct the log entry. */
+-    apr_snprintf(str2, sizeof(str2), 
+-        "[%s] [%s/sid#%pp][rid#%pp][%s][%d] %s\n",
+-        current_logtime(msr->mp), ap_get_server_name(r), (r->server),
+-        r, ((r->uri == NULL) ? "" : log_escape_nq(msr->mp, r->uri)),
+-        level, (fixup ? log_escape_nq(msr->mp, str1) : str1));
+-
+-    /* Write to the debug log. */
+-    if ((debuglog_fd != NULL)&&(level <= filter_debug_level)) {
+-        nbytes = strlen(str2);
+-        apr_file_write_full(debuglog_fd, str2, nbytes, &nbytes_written);
+-    }
+-
+-    /* Send message levels 1-3 to the Apache error log and 
+-     * add it to the message list in the audit log. */
+-    if (level <= 3) {
+-        char *unique_id = (char *)get_env_var(r, "UNIQUE_ID");
+-        char *hostname = (char *)msr->hostname;
+-
+-        if (unique_id != NULL) {
+-            unique_id = apr_psprintf(msr->mp, " [unique_id \"%s\"]",
+-                log_escape(msr->mp, unique_id));
+-        }
+-        else unique_id = "";
+-
+-        if (hostname != NULL) {
+-            hostname = apr_psprintf(msr->mp, " [hostname \"%s\"]",
+-                log_escape(msr->mp, hostname));
+-        }
+-        else hostname = "";
+-
+-/* Non-standalone modules use amended format string for logging */
+-#if !(defined(VERSION_STANDALONE))
+-  #if AP_SERVER_MAJORVERSION_NUMBER > 1 && AP_SERVER_MINORVERSION_NUMBER > 2
+-	ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r,
+-            "ModSecurity: %s%s [uri \"%s\"]%s", str1, hostname, log_escape(msr->mp, r->uri), unique_id);
+-  #else
+-        ap_log_error(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r->server,
+-            "ModSecurity: %s%s [uri \"%s\"]%s", str1, hostname, log_escape(msr->mp, r->uri), unique_id);
+-  #endif
+-/* Standalone module must use original format string for logging with explicit
+- * "[client %s]" to log client IP address (no Apache to implicitly add this) */
+-#else
+-  #if AP_SERVER_MAJORVERSION_NUMBER > 1 && AP_SERVER_MINORVERSION_NUMBER > 2
+-	ap_log_rerror(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r,
+-            "[client %s] ModSecurity: %s%s [uri \"%s\"]%s", r->useragent_ip ? r->useragent_ip : r->connection->client_ip, str1,
+-            hostname, log_escape(msr->mp, r->uri), unique_id);
+-  #else
+-        ap_log_error(APLOG_MARK, APLOG_ERR | APLOG_NOERRNO, 0, r->server,
+-            "[client %s] ModSecurity: %s%s [uri \"%s\"]%s", msr->remote_addr ? msr->remote_addr : r->connection->remote_ip, str1,
+-            hostname, log_escape(msr->mp, r->uri), unique_id);
+-  #endif
+-#endif
+-
+-        /* Add this message to the list. */
+-        if (msr != NULL) {
+-            /* Force relevency if this is an alert */
+-            msr->is_relevant++;
+-            *(const char **)apr_array_push(msr->alerts) = apr_pstrdup(msr->mp, str1);
+-        }
++    /* Yunzhan modification 2026-10-11: debug and Apache error logs must
++     * not receive request-derived variadic text, URI or rule logdata.
++     * Explicit numeric alert metadata uses the separately capped sink. */
++    (void)r;
++    (void)dcfg;
++    (void)fixup;
++    (void)text;
++    (void)ap;
++    if (level <= 3 && msr != NULL) {
++        msr->is_relevant++;
++        *(const char **)apr_array_push(msr->alerts) =
++            "Reviewed engine alert; request data omitted.";
+     }
+-
+-    return;
+ }
+ 
+ /**
+--- a/apache2/apache2_io.c
++++ b/apache2/apache2_io.c
+@@ -328,8 +328,13 @@
+                     }
+ 
+-                    if((msr->txcfg->is_enabled == MODSEC_ENABLED) && (msr->txcfg->if_limit_action == REQUEST_BODY_LIMIT_ACTION_REJECT))
+-                        return HTTP_INTERNAL_SERVER_ERROR;
++                    /* Yunzhan modification 2026-10-11: resource failures
++                     * such as byte/inode exhaustion cannot safely replay a
++                     * partially buffered body, including DetectionOnly.
++                     * Preserve the existing -5 body-size policy handling.
++                     */
++                    if (rcbs != -5)
++                        return HTTP_SERVICE_UNAVAILABLE;
+                 }
+ 
+             }
+ 
