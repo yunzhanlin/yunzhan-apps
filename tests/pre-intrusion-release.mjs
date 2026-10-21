@@ -1,12 +1,13 @@
 // Historical readers preserve their exact signed catalog and CI prefix.
 // Only the hardening ABI test's published root is scoped to that snapshot.
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
+import {originalWAFHealthWorkflow} from './pre-waf-health-release.mjs';
 export const beforeIntrusion='registry/reviewed-catalogs/before-intrusion1.1-24bhyz/';
 const sha=x=>createHash('sha256').update(x).digest('hex'),read=n=>fs.readFileSync(new URL('../'+beforeIntrusion+n,import.meta.url));
 const original=read('verify-pr61.yml');assert.equal(sha(original),'f2b177332b86eeacdd510f5fed8636f0384dc338d5e90ec73abe9624e683a9f6');
 const oldLine="        run: sudo \"$(command -v go)\" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root \"$GITHUB_WORKSPACE\"",scopedLine="        run: sudo \"$(command -v go)\" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root \"$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-intrusion1.1-24bhyz\"";
 export function originalIntrusionWorkflow(bytes){
- const s=bytes.toString();if(s.startsWith(original.toString()))return bytes;
+ bytes=originalWAFHealthWorkflow(bytes);const s=bytes.toString();if(s.startsWith(original.toString()))return bytes;
  assert.equal(s.split(scopedLine).length-1,1,'Only one hardening ABI predecessor root may be scoped');const restored=s.replace(scopedLine,()=>oldLine);assert(restored.startsWith(original.toString()),'Every other prior CI byte is immutable');return Buffer.from(restored);
 }
 export function preIntrusionRead(p,bytes){
