@@ -1,0 +1,141 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24wafinspectionbjdr",
+  "frozen_inputs_sha256": "015d86fe39916ff3f0fc3521be8111d2ed4eba8ce21eb0e98fef58845d9c793b",
+  "frozen_files": 17443,
+  "exported_files": 1740,
+  "source_overrides": 0,
+  "prior_public_inputs_sha256": "057ba6e3ad56cb050718cde7b2a4ef8a4c7016e5e4526e75c3baecc76c061c0a",
+  "added_from_prior_public": [
+    "internal/core/waf_configuration_inspection.go",
+    "internal/core/waf_configuration_inspection_test.go",
+    "internal/executor/waf_configuration_inspection_linux.go",
+    "internal/executor/waf_configuration_inspection_linux_test.go",
+    "scripts/test-waf-configuration-inspection.mjs",
+    "web/src/WafConfigurationInspection.vue",
+    "web/src/wafConfigurationInspection.ts"
+  ],
+  "changed_from_prior_public": [
+    "internal/core/waf_workspace.go",
+    "internal/executor/waf_workspace_linux.go",
+    "web/src/WafWorkspace.vue"
+  ],
+  "original_programme_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "88480b8d812439246ed76cb20d8d7a3ea1a74c22f1ed8b02a1749aee47235f7e",
+      "manifest_sha256": "6f5b16431800e5f3f45c0dc33b38e260acdda7e60a2887bfefb9757f7dced43d",
+      "signature_sha256": "a562ffda0c0997566c9514e9ce30c323c013d119626690b5d6253f23eb8d5c91",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "1b407c7f5f71a01e181a9dad3656649ffaf9fb340597480cfb127e634e65b8b8",
+      "manifest_sha256": "0b54f9e0263dfc4f689dd632f70471bf25f09ae8187e5024cf1fb5b778fd222a",
+      "signature_sha256": "dd345cc8d17979c910f32826c6f2f0930ba9c8b14c2aa71c5fa0bec81943a7f7",
+      "original_key_signature_verified": true
+    }
+  },
+  "actual_Linux_native_models": {
+    "arm64": {
+      "accepted_sets": [
+        {
+          "top_level": 9,
+          "skipped": 0,
+          "proof_sha256": "c2e5a78039eb2e230d17ba801d777522a179cf76f7cc905c0b821dc624aa3bc2"
+        }
+      ],
+      "unique_tests": 9,
+      "all_actual102_schema_migrations_business_preserved": true,
+      "complete_runtime_bytes_NFT_kernel_security_lifetimes_preserved": true,
+      "capabilities_empty_and_NNP": true,
+      "actual_installed_WAF_inspection": false
+    },
+    "amd64": {
+      "accepted_sets": [
+        {
+          "top_level": 5,
+          "skipped": 0,
+          "proof_sha256": "8f9e553376b712de057f2dd3330eba3e1f903467a0d1717134b6808fab912a51"
+        },
+        {
+          "top_level": 4,
+          "skipped": 0,
+          "proof_sha256": "de818cd495012b4f0965c8582eb2501ad061edbd0d2c75a3e3d894148a445abb"
+        }
+      ],
+      "unique_tests": 9,
+      "all_actual102_schema_migrations_business_preserved": true,
+      "complete_runtime_bytes_NFT_kernel_security_lifetimes_preserved": true,
+      "capabilities_empty_and_NNP": true,
+      "actual_installed_WAF_inspection": false,
+      "same_exact_current_Core_binary_both_sets": true,
+      "original_F19_four_test_runner_and_50_second_budget": true,
+      "original_compound_failure_retained_and_not_replayed": true
+    }
+  },
+  "Root_packaging_models": {
+    "arm64": {
+      "proof_sha256": "a4966b6ec43f0e7a09cd4eeca5c42f48fedb72f6638677c0a542d39fea86fa13",
+      "tests": 236,
+      "skipped": 0,
+      "batches": 1,
+      "protected_state_preserved": true,
+      "native_systemd_commands_are_model_runners": true,
+      "installed_acceptance": false
+    },
+    "amd64": {
+      "proof_sha256": "ea29d8c40026ef9e69345687b98be03fede01e552d9cc8f2cbd8ec4f0c0f904c",
+      "tests": 236,
+      "skipped": 0,
+      "batches": 6,
+      "protected_state_preserved": true,
+      "native_systemd_commands_are_model_runners": true,
+      "installed_acceptance": false
+    }
+  },
+  "retained_rejected_fixture_source": {
+    "frozen_inputs_sha256": "f1aa58350869fbf89bcf4c8932e444731becca147df8f1c7978a69e4d8c53063",
+    "ARM_native_proof_sha256": "185e86dc6c4594295a6dcbcb6aa8d01288e3f71709eaa1c5e0b944bc4381018e",
+    "ok": false,
+    "passed_top_level": 4,
+    "correction_only_file": "internal/executor/waf_configuration_inspection_linux_test.go",
+    "reason": "Negative pending-transaction fixture ignored a failed setup write into an absent private transaction directory. Corrected only fixture directory preparation and checked every negative setup result. Original source, builds and false receipt retained.",
+    "signed": false,
+    "deployed": false
+  },
+  "retained_AMD_compound_model_timeout": {
+    "ok": false,
+    "proof_sha256": "b5f701f8bebb3b90f8c1a06d986391da5ebd80760762733046825ff4988ae582",
+    "stderr_sha256": "4db38d69bf1f55e42741e10aac407e3f28b3ad3d878dd95d3e73fa7728351baa",
+    "observed_passed_top_level": 0,
+    "which_subtests_completed_known": false,
+    "actual_cause": "Combined Core package exceeded its QA-only twenty-second runner budget; original stderr verified. Protected actual host state preserved.",
+    "original_case_replayed_or_relabelled": false,
+    "original_budget_expanded": false,
+    "acceptance": "Independent original five-model success plus the original four-Core-model fifty-second protocol against the same current binary cover nine unique tests; neither receipt claims the failed compound case succeeded."
+  },
+  "canonical_frontend": {
+    "index_sha256": "6ecc70722eddb71efaac5dfb57e38154c0224ae11d8503553fd543bcbc7f2af2",
+    "entry": "index-DtLCvT3T.js",
+    "entry_sha256": "8cfa024a25cd1543fbee88cc29c1670641a8583530b46e4b7a0bdd7e07519cfb",
+    "actual_selected_WAF_and_update_Node_tests": 57,
+    "skipped": 0,
+    "installed_UI_acceptance": false
+  },
+  "programme_deployed_at_recording": false,
+  "application_manifests_changed": 0,
+  "database_migration_added": false,
+  "country_activation_included": false,
+  "actual_WAF_configuration_repaired": false,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "boundaries": [
+    "Fixed administrator-only GET renders the original installed WAF version; it never installs, saves, repairs, reloads, migrates or grants update authority.",
+    "Two complete bounded plans under the existing read-only-opened configuration lock must agree. Missing, busy, foreign or pending state fails closed; no directory/lock is created.",
+    "Only closed logical resource identifiers, hashes, sizes and modes reach the browser. Raw configuration, paths, private fields and partial success are not relayed.",
+    "Policy revision is an exact canonical int64 decimal string, not an imprecise JavaScript number.",
+    "Matching files are not proof of active Nginx enforcement. The result always says enforcement_verified=false.",
+    "Actual native and Root filesystem models are not installed programme, live WAF inspection, physical AMD64 performance or all-50 commercial acceptance."
+  ]
+}

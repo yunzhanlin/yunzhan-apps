@@ -994,3 +994,38 @@ jobs:
           node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24wafreviewbjcj npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  waf-configuration-inspection-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-inspection/go.mod
+          cache-dependency-path: panel-integration-waf-inspection/go.sum
+      - name: Exact normal signed source and eighteen original unchanged jobs
+        run: node --test tests/waf-inspection-source.test.mjs
+      - name: Full native Root implementation and existing-version inspection and admission races
+        working-directory: panel-integration-waf-inspection
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race ./internal/core -run '^Test(Registry|WAFConfigurationInspection)' -count=1
+          sudo "$(command -v go)" test -race ./internal/executor -run '^TestWAFConfigurationInspection' -count=1
+      - name: Actual compiled original-key current fifty-app handler ABI
+        working-directory: panel-integration-waf-inspection
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: All Root packaging and recovery fixtures
+        working-directory: panel-integration-waf-inspection
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Closed actual inspection handler and all retained WAF and update regressions
+        run: |
+          npm ci --prefix panel-integration-waf-inspection/web --ignore-scripts
+          cd panel-integration-waf-inspection
+          node --test scripts/test-waf-configuration-inspection.mjs scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24wafinspectionbjdr npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
