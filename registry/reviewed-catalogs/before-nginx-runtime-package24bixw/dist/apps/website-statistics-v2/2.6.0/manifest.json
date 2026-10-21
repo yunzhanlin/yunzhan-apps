@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "id": "website-statistics-v2",
+  "name": "Website statistics-v2",
+  "category": "professional",
+  "version": "2.6.0",
+  "summary": "真实日志后台 SQLite 历史、30 天/25 万行保留、原生请求标识、私有去重及精确耗时分布。新增独立签名离线国家/地区/城市库，管理员显式安装和回滚；受限后台完整核对与旧库回退。需支持三项必需能力的新版面板。最多8份库、128份任务；清理与完整商用流程仍在验收，不自动下载数据，不等于50项商用验收完成。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-statistics-v2",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "小时趋势与独立 IP",
+    "爬虫识别及错误数",
+    "路径排行与来源统计",
+    "时间、状态、路径/IP 筛选",
+    "慢请求明细",
+    "30 天有界历史、进度/请求同事务与安全退役",
+    "原生请求标识、私有去重回执、CRC 压缩续读及实际加载恢复保护",
+    "精确 P50/P90/P95/P99、九段耗时分布及空样本/超限告警",
+    "离线 IPv4/IPv6 国家、地区、城市与未定位分区",
+    "独立签名月份显式安装及数据回滚",
+    "受限后台完整核对与重启旧库回退",
+    "8份库/128任务容量保护；不自动删除证据"
+  ],
+  "required_panel_features": [
+    "statistics-cursor-retirement-v1",
+    "statistics-request-identity-v1",
+    "statistics-geodata-v2"
+  ],
+  "geo_data_channel": {
+    "id": "dbip-city-lite-v1",
+    "format": 1
+  },
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-statistics-v2"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}
