@@ -1,0 +1,103 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24wafreviewbjcj",
+  "frozen_inputs_sha256": "057ba6e3ad56cb050718cde7b2a4ef8a4c7016e5e4526e75c3baecc76c061c0a",
+  "frozen_files": 17436,
+  "exported_files": 1733,
+  "source_overrides": 0,
+  "prior_public_inputs_sha256": "fcaf4c10d038b82eaf6d021c002de0e558845f0f31eeb8eef70c4ac823050c1f",
+  "changed_from_prior_public": [
+    "internal/core/app_registry.go",
+    "scripts/test-runtime-package-labels.mjs",
+    "web/src/App.vue",
+    "web/src/registryUpdateLabel.ts"
+  ],
+  "added_from_prior_public": [
+    "internal/core/app_registry_waf_admission.go",
+    "internal/core/app_registry_waf_admission_test.go"
+  ],
+  "original_programme_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "1a28f2c24898cf3f250afe173c386734d1eaf2a593ac0ac7f3af20f5d5415afd",
+      "manifest_sha256": "09b78cf5e753dde068701f69fa44df021dbb2a18ba1712a52fcd9e630df596f5",
+      "signature_sha256": "cfce752f900e066b9257f4c51fb565dea89b3df2439975ca615071e74ad2a928",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "da8f834b9dad08a6dc8759dab28923737b5e806feb829dea00b0217c0ad75854",
+      "manifest_sha256": "aa795a9596af561c65bcbb5fc2349670363ce567924be198483c08ff5b0a26fc",
+      "signature_sha256": "8a0c7fa837e3486005b8943116553b0458aeabd794aaa4688fab1de99339afa5",
+      "original_key_signature_verified": true
+    }
+  },
+  "actual_Linux_Core_models": {
+    "arm64": {
+      "proof_sha256": "ecfa923bde59d6e9fc7a7f63463e497d14ad2d83381916888c1594619dcbeb45",
+      "top_level": 4,
+      "skipped": 0,
+      "temporary_private_SQLite_and_signed_HTTP_fixture": true,
+      "all102_actual_schema_migrations_business_preserved": true,
+      "all_actual_runtime_bytes_NFT_kernel_security_lifetimes_preserved": true,
+      "installed_UI_acceptance": false
+    },
+    "amd64": {
+      "proof_sha256": "f3a361f6421913eee38c8dea496cebb09cd69e0ec2f79d82333abcee44ceeaaf",
+      "top_level": 4,
+      "skipped": 0,
+      "temporary_private_SQLite_and_signed_HTTP_fixture": true,
+      "all102_actual_schema_migrations_business_preserved": true,
+      "all_actual_runtime_bytes_NFT_kernel_security_lifetimes_preserved": true,
+      "installed_UI_acceptance": false
+    }
+  },
+  "Root_packaging_models": {
+    "arm64": {
+      "proof_sha256": "7cba88de4fe728e722de9217d1ca9067b8f0cd5f6e8b1f63ee735c34763842b4",
+      "tests": 236,
+      "skipped": 0,
+      "batches": 1,
+      "protected_state_preserved": true,
+      "native_systemd_commands_are_model_runners": true,
+      "installed_acceptance": false
+    },
+    "amd64": {
+      "proof_sha256": "0d321ca9396a5cb3ade3e572eef48c211a0361c86f6424db7e2247fdea014953",
+      "tests": 236,
+      "skipped": 0,
+      "batches": 6,
+      "protected_state_preserved": true,
+      "native_systemd_commands_are_model_runners": true,
+      "installed_acceptance": false
+    }
+  },
+  "retained_first_AMD_before_capture_refusal": {
+    "execution_started": false,
+    "tests_executed": false,
+    "Root_proof_exists": false,
+    "original_intent_sha256": "6c289b5a3bdeeca5c9f152ff35ede9ceb2bd74e8917c7fdba3e9a998146f77ec",
+    "case_replayed_or_relabelled": false,
+    "maximum_existing_F18_capture_lease_seconds": 3,
+    "independent_later_protocol": "Only complete /etc/panel and original statistics history are captured atomically under the same original writer lease. All other original snapshot checks remain complete outside that lease."
+  },
+  "canonical_frontend": {
+    "index_sha256": "1076800e7eb359cb52b26b02beff70812ef8c9c8dc6a41e0278c42f872c2ab5d",
+    "entry": "index-DCPbINDp.js",
+    "entry_sha256": "120d53c5aa932f366ade901b0c4e1ba1f554a440a3fb47d3d77c910f297c84a4"
+  },
+  "programme_deployed_at_recording": false,
+  "application_manifests_changed": 0,
+  "database_migration_added": false,
+  "country_activation_included": false,
+  "actual_WAF_configuration_repaired": false,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "boundaries": [
+    "Exact supported, known, installed, unhealthy older WAF versions show configuration review without granting migration authority.",
+    "The real HTTP update is rejected before manifest pulls, native queue, binding, receipt or audit writes in private signed fixtures.",
+    "Unknown/current/invalid versions, unsupported hosts, other modules and healthy legacy versions preserve their existing semantics.",
+    "No automatic rule/configuration overwrite, gateway reload, WAF uninstall, queue reset or installed-version change.",
+    "Native Core and Root filesystem models are not programme upgrade or installed application UI acceptance."
+  ]
+}
