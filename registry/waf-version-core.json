@@ -1,0 +1,159 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24wafversionbipv",
+  "prior_version": "0.1.0-dev.proapps24periodicadmissionbimg",
+  "frozen_inputs_sha256": "ed18e662e887605482462ee64d11d448b0de692f81e022044cd1f097dc526dcf",
+  "prior_frozen_inputs_sha256": "1229eb75c583d7c3cfc9380f5e0030a8b5da14650e37188c4db51be23f5a4640",
+  "frozen_files": 17413,
+  "exported_files": 1710,
+  "source_overrides": 0,
+  "added_from_prior": [
+    "internal/core/app_compose_legacy_architecture_test.go",
+    "internal/core/app_compose_legacy_containers_linux_test.go",
+    "internal/core/app_compose_legacy_native_linux_test.go",
+    "internal/core/app_compose_legacy_routing_test.go",
+    "internal/core/waf_registry_install_version_linux_test.go",
+    "internal/executor/waf_configuration_version_linux_test.go",
+    "scripts/test-waf-configuration-version.mjs",
+    "web/src/wafConfigurationVersion.ts"
+  ],
+  "changed_from_prior": [
+    "internal/core/app_compose_templates.go",
+    "internal/core/app_compose_templates_test.go",
+    "internal/core/app_registry.go",
+    "internal/core/docker.go",
+    "internal/core/waf_apply_recovery.go",
+    "internal/core/waf_apply_requests.go",
+    "internal/core/waf_apply_requests_test.go",
+    "internal/executor/software_linux.go",
+    "internal/executor/waf_workspace_linux.go",
+    "packaging/build-release.sh",
+    "scripts/test-waf-apply-task.mjs",
+    "web/src/WafWorkspace.vue"
+  ],
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24wafversionbipv-linux-arm64.tar.gz",
+      "archive_sha256": "35693a069250298f1eb7d4077ec8764a00ffafaeb95642687cb4a81115b2e043",
+      "normal_build_log_sha256": "88ac04c6900f29a33dfbf0c9d12a01dab20deec39d9fe62dae519dd4b9a26a09",
+      "manifest_sha256": "980a8bb82769d6758343e24133747b458ea02b14f6cbe5fb7b8557f95e910454",
+      "signature_sha256": "396eef941ac9bdd6f3ab59fb82c3aa6e4fb680b63fa2b61b9e33d31ab9577387",
+      "original_key_signature_verified": true,
+      "Core_signed_install_contract": {
+        "proof_sha256": "5643ec6390cc02fa55413f9f1120a363c6c713b0088555cd2a755c5d18757f6b",
+        "binary_sha256": "3ce9b9c4ac824ddaa08adb333524a94d4dc50d94315b91eb18a33d64a976a0d3",
+        "temporary_fixture_key_only": true,
+        "actual_original_key_app_installation": false,
+        "passed": [
+          "TestWAFRegistrySignedInstallBindsExactImplementationAndOriginalReplay"
+        ]
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "89be4e7195ec8fa35f1637b9639e7837d979151809e9e86d36e16ef5617ddb5a",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24wafversionbipv-linux-amd64.tar.gz",
+      "archive_sha256": "9ce250cab0b72dc4118466bf1d40279fd19686ebc05b2dccadc058cfb1b06b45",
+      "normal_build_log_sha256": "b4e0cc1faef36fde7622f2753a7dbde5739eabc052e0b810aa3596809cf90d92",
+      "manifest_sha256": "52c36fe9c348c5db1ba04dfcf070c912eaacd7d8f502235cc253d53df8b211a7",
+      "signature_sha256": "2d860bd8eeb7250440d14624a20b53bf036ab2656f083bdd2f582f95530fa098",
+      "original_key_signature_verified": true,
+      "Core_signed_install_contract": {
+        "proof_sha256": "18cdedd7d5479c122c2257c0c910151495bf845ba8c3e57e9da24d99faf014ef",
+        "binary_sha256": "d5921049eae330ad820417c12a2da7b553076ac70b6178a41afa2cbdda09b3a6",
+        "temporary_fixture_key_only": true,
+        "actual_original_key_app_installation": false,
+        "passed": [
+          "TestWAFRegistrySignedInstallBindsExactImplementationAndOriginalReplay"
+        ]
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "4abc4071fb5292d1f180603d9618c41f9b42e988686b0fec7cd41aaaa9cd5580",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      }
+    }
+  },
+  "country_activation_included": false,
+  "database_migration_added": false,
+  "application_manifests_changed": 0,
+  "Main19100_program_deployed_at_recording": false,
+  "commercial_all50": false,
+  "original_AMD_readonly_refusals": [
+    {
+      "proof_sha256": "3a395520789be8725fed81596dcdabdc7c3d999ff0f1c647f0bd2c4823d248ed",
+      "ok": false,
+      "installer_dispatched": false,
+      "preflight_only": true
+    },
+    {
+      "proof_sha256": "66079fead0da7f3f0cf1c88e07a9d851ca50312a4888d9b947c4fb4a25c4d258",
+      "ok": false,
+      "installer_dispatched": false,
+      "updater_dispatched": false
+    }
+  ],
+  "actual_ARM_UI": {
+    "proof_sha256": "5640bd692320f77bbe12f13e4509ae680d9818ad8ed7cd4d20cd8e9b0677c7da",
+    "installed_version": "2.0.1",
+    "implementation_version": "2.5.2",
+    "visible_mismatch_warning": true,
+    "preview_and_save_disabled": true,
+    "application_mutations": 0
+  },
+  "legacy_PHP_boundary": {
+    "new_template_hidden_paths_blocked_before_PHP": true,
+    "new_template_AMD64_only": true,
+    "old_projects_rewritten": false,
+    "functional_real_images": 12,
+    "functional_evidence_sha256": "f146e502e4401d0266d473fc5ee33e111cc4c783521c4ec098cc52534f424f17",
+    "original_strict_NFT_receipts_still_false": true,
+    "real_image_test_is_store_installation": false,
+    "legacy_runtime_security_support": false,
+    "existing_project_migration_accepted": false
+  },
+  "actual_AMD_UI": {
+    "proof_sha256": "62b566a37409ac120cf1f5f5acca5bb2f66ffeb738a56c7c813b14a94a604be4",
+    "installed_version": "2.0.1",
+    "implementation_version": "2.5.2",
+    "visible_mismatch_warning": true,
+    "preview_and_save_disabled": true,
+    "application_mutations": 0,
+    "initial_local_forward_refusal_retained_not_application_failure": true
+  }
+}
