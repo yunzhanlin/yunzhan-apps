@@ -1,0 +1,20 @@
+[Unit]
+Description=Read-only guard against hiding Apache request-body cache evidence
+Before=var-cache-panel\x2dapache\x2dbody.mount
+RequiresMountsFor=/var/cache
+
+[Service]
+Type=oneshot
+User=root
+Group=panel
+ExecStart=/opt/panel/bin/panel-executor --check-apache-body-cache-mount
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+PrivateNetwork=true
+RestrictAddressFamilies=AF_UNIX
+TimeoutStartSec=10

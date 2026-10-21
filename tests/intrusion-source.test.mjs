@@ -1,9 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash,createPublicKey,verify} from 'node:crypto';
 import {beforeIntrusion,originalIntrusionWorkflow} from './pre-intrusion-release.mjs';
+import {preWAFHealthRead} from './pre-waf-health-release.mjs';
 import {verifyOldIntrusionRefusal} from '../tools/verify-intrusion-handler-boundary.mjs';
 import {intrusionFeatureFixtureOverlay,originalIntrusionFeatureFixtureSHA,correctedIntrusionFeatureFixtureSHA} from '../tools/run-intrusion-ci.mjs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';
-const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>fs.readFileSync(path.join(root,p)),json=p=>JSON.parse(read(p)),sha=x=>createHash('sha256').update(x).digest('hex'),scope='panel-integration-intrusion/';
+const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>preWAFHealthRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=x=>createHash('sha256').update(x).digest('hex'),scope='panel-integration-intrusion/';
 test('intrusion export binds every byte to its immutable normal signed source without overlays',()=>{
  const r=json('registry/intrusion-core.json'),i=json(scope+'source-sha256.json'),old=json('panel-integration-hardening/source-sha256.json');
  assert.equal(r.frozen_inputs_sha256,'e1bfb1c02c721a45628d999f8d8dea9a6646d73742899b99ac022e3023c224a3');assert.equal(r.version,'0.1.0-dev.proapps24intrusionlifetimebhyv');assert.equal(r.feature,'intrusion-preserving-journal-v2');assert.equal(r.frozen_files,17392);assert.equal(r.exported_files,1689);assert.equal(r.source_overrides,0);assert.deepEqual(i.test_overrides,{});

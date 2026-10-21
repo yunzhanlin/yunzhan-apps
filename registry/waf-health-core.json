@@ -1,0 +1,173 @@
+{
+  "version": "0.1.0-dev.proapps24periodicadmissionbimg",
+  "scope": "panel-integration-waf-health",
+  "prior_scope": "panel-integration-intrusion-admission",
+  "frozen_inputs_sha256": "1229eb75c583d7c3cfc9380f5e0030a8b5da14650e37188c4db51be23f5a4640",
+  "prior_frozen_inputs_sha256": "ab53ffc22757a5787540af54b4e0b5bf1ff176ae3950e0d47bacae674d19fd00",
+  "frozen_files": 17405,
+  "exported_files": 1702,
+  "source_overrides": 0,
+  "added_from_prior": [
+    "internal/appcatalog/waf_health_features_test.go",
+    "internal/executor/program_queue_actual_capture_linux_test.go",
+    "internal/executor/program_queue_refusal.go",
+    "internal/executor/program_queue_refusal_linux_test.go",
+    "internal/executor/program_queue_refusal_test.go",
+    "internal/executor/waf_health_binding_test.go",
+    "internal/executor/waf_health_native_linux_test.go",
+    "internal/executor/waf_health_upgrade_linux_test.go",
+    "scripts/test-waf-health-version.mjs"
+  ],
+  "changed_from_prior": [
+    "cmd/executor/main.go",
+    "internal/appcatalog/panel_features.go",
+    "internal/core/waf_policy.go",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "internal/executor/waf_render.go",
+    "internal/executor/waf_upgrade_linux.go",
+    "internal/executor/waf_versions.go",
+    "internal/executor/waf_versions_test.go",
+    "packaging/build-release.sh",
+    "packaging/development-upgrade.py",
+    "packaging/test_development_upgrade_safety.py",
+    "packaging/test_production_upgrade.py",
+    "packaging/test_program_queue_diagnostics.py",
+    "packaging/upgrade-release.py",
+    "web/src/WafWorkspace.vue"
+  ],
+  "app_version": "2.5.2",
+  "feature": "waf-bound-health-v1",
+  "app_manifest_sha256": "c4388333250b15a5ce68f7e7b36454b32b71bd652531e3d474e41c66f70e4ac1",
+  "catalog_sha256": "18c83c0e2ef31d6cb81cb2230fffb30648bebe957adb4f3518dd9a39b11264cf",
+  "country_activation_included": false,
+  "database_migration_added": false,
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24periodicadmissionbimg-linux-arm64.tar.gz",
+      "archive_sha256": "badae7d0612c73697e332e0b406b7ded3c5d577231d1bbb3025000f60d2930f2",
+      "normal_build_log_sha256": "15b8358fcdb2a980a922da7726ce96ad25ebe35f75c16bbbea69bf5d363a23d9",
+      "manifest_sha256": "98bee1ff725e91f696182b4903b9f5870de57eaad8e5836062c1eabefc87afaf",
+      "signature_sha256": "472610846d722cde1686f6cb59b7e4b9651182bd400204c35a4c6f188af5cf88",
+      "original_key_signature_verified": true,
+      "actual_isolated_HTTP": {
+        "proof_sha256": "44e6836a83e356c74e4f78ee6c0e9b20053ad44ad5cd9eaeb054d86589785f27",
+        "requests": 6,
+        "old_2_5_1_bypass_reproduced": true,
+        "new_2_5_2_binding_verified": true,
+        "installed_app_acceptance": false
+      },
+      "native_queue_models": {
+        "proof_sha256": "a3dfb556eaa384b7e576d0963f6ae0cc1f9b4da3cda00805cb56af985b3d087c",
+        "top_level": 24,
+        "skipped": 0
+      },
+      "upgrade": {
+        "proof_sha256": "254e4dc815be909dfc4c6bf939fa51899d2a0d0e70efc4caa4fb2de014298f93",
+        "transaction_sha256": "8dd5f93e0eecceb83ddfd565e1d2248c861da784042e221d0e289589dac5d5a2",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "application_operations": 0,
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "original_failed_requests_not_replayed": true
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24periodicadmissionbimg-linux-amd64.tar.gz",
+      "archive_sha256": "24a7acbd087a16e61a877950265f03667aaeec9d68f77312e3bb838c0930d681",
+      "normal_build_log_sha256": "9d2de39e72199adfb62c534ef16e971333ffa384bf0c76381e2e337b423de404",
+      "manifest_sha256": "e5aa88ea07ecd309e7fa9765a047b4190ee6bb49bac124141e948ea1160f89c9",
+      "signature_sha256": "a1dfe5f1e371aca5596bb12da1ffbfbda783034d48f78813b7d31c9b7f27c3ca",
+      "original_key_signature_verified": true,
+      "actual_isolated_HTTP": {
+        "proof_sha256": "4f26a05a5a87f3b756618df285f5d957b9512d3bd66a179af2036c80e9344fc0",
+        "requests": 6,
+        "old_2_5_1_bypass_reproduced": true,
+        "new_2_5_2_binding_verified": true,
+        "installed_app_acceptance": false
+      },
+      "native_queue_models": {
+        "proof_sha256": "d3f329d747a1b5bf6f7614f4445824fcbed7731c52a496ee95d130c94ee723a8",
+        "top_level": 24,
+        "skipped": 0
+      },
+      "upgrade": {
+        "proof_sha256": "97e2c7c0f7ce6654bfe5fcae4e90e714c41180781e3f207142f21403567b0be9",
+        "transaction_sha256": "39dce41ce08a4a490c3dde0b48c0da528bbe4b66be2879f095fca6b736a0e6e8",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "application_operations": 0,
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "original_failed_requests_not_replayed": true
+      }
+    }
+  },
+  "Root_packaging_models": {
+    "arm64": {
+      "passed": 224,
+      "skipped": 0,
+      "proof_sha256": "2de79c7ea886927bacaadcf2043df9ad4306d18753ab594d0f2d428fd3edd512"
+    },
+    "amd64": {
+      "critical_passed": 91,
+      "separately_bounded_groups": 4,
+      "skipped": 0,
+      "proof_sha256": "4e54f26db94497afa53d09c745aea7605592dc818bb67d9c40459bd51a200813",
+      "aggregate214_240_second_timeout_retained": true,
+      "aggregate83_240_second_timeout_retained": true,
+      "physical_AMD64_full_224_CI_still_required": true
+    }
+  },
+  "original_AMD_failed_health_upgrades": [
+    {
+      "proof_sha256": "d61b8f8829177e1f80c2d651d769447725945735df0d6ff3f5867f194e460011",
+      "ok": false,
+      "replayed": false
+    },
+    {
+      "proof_sha256": "a5621168a300c2b5789ed24958738b9b24cafb72dc6309a1692ae8664ce9bbde",
+      "ok": false,
+      "replayed": false
+    },
+    {
+      "proof_sha256": "97edb2f9d6e615e710def82b8a2ddb123d2a3d8bf8c1e4b531326016417607be",
+      "ok": false,
+      "replayed": false
+    }
+  ],
+  "signed_WAF_app_installed_acceptance_at_recording": false,
+  "Main19100_program_deployed_at_recording": false,
+  "commercial_all50": false,
+  "remaining_boundaries": [
+    "Normal default-GitHub WAF2.5.2 app update after publication",
+    "Main19100 matching program and app deployment, authenticated browser and native request verification",
+    "Country activation is not included",
+    "Complete mainstream OS/architecture and application business matrices, power-loss and long-duration acceptance remain incomplete"
+  ]
+}
+

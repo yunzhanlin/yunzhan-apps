@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-20T14:45:56.038Z",
+  "generated_at": "2026-10-20T22:30:16Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1595,8 +1595,8 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.5.1",
-      "summary": "站点规则、名单与 CC；显式可信反代与原始网络对端审计；固定源码的独立 ModSecurity/开源 CRS 请求体引擎，隐私数值日志、大小/时间自动轮转及中断恢复；显式启用已完成快照保留期、保留最新份数与删除确认。修正已保留未知计划被新计划重复选中的风险，原快照或索引尚存时继续暂停清理；升级保留策略、引擎和 UID/GID。引擎与自动清理默认不启用，需要面板提供 2.5.1 执行能力。",
+      "version": "2.5.2",
+      "summary": "修复跨站点健康检查形状路径获得元数据 WAF 豁免的问题：健康检查必须与当前受管站点身份精确绑定。保留站点规则、名单、CC、可信代理、独立开源请求体引擎、日志轮转与快照保留策略及安装时间；引擎和清理仍默认不启用。须先升级到提供 waf-bound-health-v1 的面板。国家策略不在此版本中，完整发行版与交叉架构实装矩阵仍待验收。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -1606,11 +1606,8 @@
       },
       "compatibility": {
         "os": [
-          "debian-12",
           "debian-13",
-          "ubuntu-22.04",
-          "ubuntu-24.04",
-          "ubuntu-26.04"
+          "ubuntu-24.04"
         ],
         "architectures": [
           "amd64",
@@ -1618,7 +1615,7 @@
         ]
       },
       "capabilities": [
-        "站点独立分类规则、启停与观察模式；观察模式拒绝接管外部限速",
+        "站点独立分类规则、启停与观察模式；观察模式拒绝接管外部限速；健康检查仅豁免同一受管站点的精确路径",
         "IPv4/IPv6 与 URL/UA 名单",
         "每站点 IP 与 URL CC 限速；原生 CC 观察计数、超限放行及模拟拒绝日志",
         "自定义字面匹配规则、安全配置导入与预览",
@@ -1638,7 +1635,10 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": true
-      }
+      },
+      "required_panel_features": [
+        "waf-bound-health-v1"
+      ]
     },
     {
       "schema_version": 1,

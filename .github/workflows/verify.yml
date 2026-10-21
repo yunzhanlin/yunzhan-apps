@@ -592,7 +592,7 @@ jobs:
           node scripts/web-entry-budget.mjs web/dist
       - name: Original-key current signed50 requires the final lifetime-bound intrusion handler
         working-directory: panel-integration-intrusion
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-waf-health24bijk"
       - name: Historical compiled hardening handler refuses only intrusion1.1 and accepts the other49
         run: node tools/verify-intrusion-handler-boundary.mjs
 
@@ -633,7 +633,7 @@ jobs:
           node scripts/web-entry-budget.mjs web/dist
       - name: Same original-key signed50 ABI with corrected normal source
         working-directory: panel-integration-intrusion-ui
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-waf-health24bijk"
 
   intrusion-admission-native-amd64:
     runs-on: ubuntu-latest
@@ -662,3 +662,51 @@ jobs:
       - name: Full original provider structure and country traversal with unchanged two-minute context
         working-directory: panel-integration-intrusion-admission
         run: sudo env YUNZHAN_COUNTRY_PREFIX_PROVIDER="$YUNZHAN_COUNTRY_PREFIX_PROVIDER" GOMEMLIMIT=512MiB GOMAXPROCS=2 "$(command -v go)" test ./internal/geodata -run '^TestOfficialCountryPrefixesOctober2026$' -count=1 -v -timeout=150s
+
+  waf-health-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-health/go.mod
+          cache-dependency-path: panel-integration-waf-health/go.sum
+      - name: Exact signed health hotfix source, predecessor and full receipt inventory
+        run: node --test tests/waf-health-manifest.test.mjs tests/waf-health-source.test.mjs
+      - name: Complete Root Linux source without production or test overlays
+        working-directory: panel-integration-waf-health
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
+      - name: WAF hotfix current signed50 all pass only on the actual new handler
+        working-directory: panel-integration-waf-health
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Complete Root upgrade, diagnostic and rollback evidence contracts
+        working-directory: panel-integration-waf-health
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Unmodified prior panel refuses only WAF2.5.2 and accepts the other49
+        run: node tools/verify-waf-health-handler-boundary.mjs
+      - name: Locked UI retains all existing WAF versioned capabilities
+        run: |
+          npm ci --prefix panel-integration-waf-health/web --ignore-scripts
+          cd panel-integration-waf-health
+          node --test scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24periodicadmissionbimg npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Install the distribution Nginx for isolated actual HTTP verification
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx
+          sudo systemctl start nginx.service
+          sudo systemctl is-active nginx.service
+      - name: Reproduce old health exemption and verify new site binding with actual Nginx requests
+        working-directory: panel-integration-waf-health
+        run: |
+          native_scope="/var/lib/panel-executor/waf-traffic24biij-amd64.$(openssl rand -hex 16)"
+          sudo install -d -m 700 /var/lib/panel-executor "$native_scope"
+          sudo env PANEL_QA_WAF_TRAFFIC_NATIVE="$native_scope" "$(command -v go)" test ./internal/executor -run '^TestWAFBoundHealthNativeTraffic$' -count=1 -v -timeout=80s
