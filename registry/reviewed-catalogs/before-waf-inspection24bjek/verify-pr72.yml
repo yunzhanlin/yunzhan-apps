@@ -1,0 +1,996 @@
+name: verify application registry
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Root development transaction and startup binding fixtures (service runner is not native systemd acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'
+      - name: Immutable external startup interlock filesystem fixtures (not native boot acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_start_guard_install.py'
+      - name: Ordinary upgrade gateway policy fixtures (not native traffic acceptance)
+        run: python3 -m unittest discover -s panel-integration/packaging -p 'test_install_gateway_policy.py'
+      - name: Production upgrade trusted-root filesystem and SQLite fixtures (service runner is not native systemd acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_production_upgrade.py'
+      - name: Rollback-referenced cleanup fixtures and own bind mount (never prunes an installation)
+        run: sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_prune_releases.py'
+      - name: Read-only WAF rotation and inventory UI regression
+        run: node --experimental-strip-types --test panel-integration/scripts/test-waf-rotation-refresh.mjs panel-integration/scripts/test-waf-body-inventory.mjs
+      - name: Locked frontend dependencies for actual notification editor regression
+        run: npm ci --prefix panel-integration/web --ignore-scripts
+      - name: Load-balance alert scope and actual save handler (not installed business proof)
+        run: node --test panel-integration/scripts/test-load-balance-alerts.mjs
+      - name: Closed readable delivery summaries and actual history handlers
+        run: node --experimental-strip-types --test panel-integration/scripts/test-outbound-source-view.mjs
+      - run: git diff --exit-code -- dist
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration/go.mod
+          cache-dependency-path: panel-integration/go.sum
+      - name: Native Linux implementation regression
+        working-directory: panel-integration
+        # Do not run the 384 MiB/2s source-read capacity test concurrently
+        # with other packages' CPU/I/O-heavy fixtures on a shared runner.
+        # Keep every test, original capacity and original deadline intact.
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: Unchanged maximum source-read capacity repeated in an isolated package process
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=3
+      - name: Bounded history reader race regression (not capacity timing acceptance)
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHistoryParallelReadersRemainBoundedAndFailClosed$' -count=1
+      - name: Candidate maintenance gate, actual root FLOCK and nobody startup race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/upgradeguard -count=1
+      - name: Read-only native upgrade inventory identity and typed JSON race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1
+      - name: Separate maintenance authority, HTTPS peer identity and original receipt race regression (not installed remote command acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^TestPlatformMaintenance' -count=1
+      - name: Every module workspace emits array collections including read-only maintenance
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/core -run '^TestModuleWorkspace' -count=1
+      - name: Exact disk version and real status-builder update policy (fixtures, not installed upgrade acceptance)
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/core -run '^TestDiskUsage' -count=1 -v
+      - name: Install locked management regression dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geography/web --ignore-scripts
+      - name: Compiled management opener handles legacy null collections without inventing operations
+        run: node --test panel-integration-geography/scripts/test-deferred-workspace.mjs
+      - name: Issued maintenance secret lifetime and complete read-only inventory regression (not installed or elapsed-time proof)
+        run: node --test panel-integration-geography/scripts/test-platform-maintenance-secrets.mjs
+      - name: Disk inode usage selectors, actual compiled handlers and bounded UI source (not installed application acceptance)
+        run: node --test panel-integration-geography/scripts/test-disk-usage.mjs
+      - name: Actual compiled disk cancellation and remote identity-before-submit fixtures (not installed UI or native cancellation proof)
+        run: node --test panel-integration-geography/scripts/test-disk-scan-lifecycle.mjs panel-integration-geography/scripts/test-remote-sync.mjs
+      - name: Ordinary-user Linux disk usage and actual 100003-entry temporary filesystem fixture (not installed app or OS matrix acceptance)
+        working-directory: panel-integration-geography
+        run: go test -race ./internal/executor -run '^Test(DiskUsage|ModuleDisk)' -count=1 -v
+      - name: Root maintenance original journal and no-replay crash fixtures (not real Nginx business or power-loss acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestPlatformMaintenance(Root|Native)' -count=1
+      - name: Latest maintenance upgrade SQL and transaction fixtures (not installed command acceptance)
+        run: sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_production_upgrade.py'
+      - name: Previous-release integrity policy and fixed native prerequisites (Root filesystem fixtures only)
+        run: |
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_verify_previous_release.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_native_build_directories.py'
+          sudo python3 -B -m unittest discover -s panel-integration-geography/packaging -p 'test_waf_state_directory.py'
+      - name: Statistics expired-cursor ownership and one-transaction retirement race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatisticsHistory(ExpiredConsumedMissingCursorsReleaseCapacityWithoutChangingLogs|RetirementPreservesLiveUnreadConflictingOtherSiteAndFutureBoundary|RetirementAndRowsAreOneTransaction)$' -count=1
+      - name: Checksum-bound panel handler requirements and strict legacy refusal race regression
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^Test(PanelRequirements|LegacyStrictDecoderRefusesRequiredHandlerField|NewStatisticsVersionsCannotOmitMandatoryHandlerRequirement|StatisticsIdentityVersionRequiresBothBoundHandlersAndRejectsOldAvailability)' -count=1
+      - name: Statistics2.5 exact schema and closed lifecycle race regression (not installed native Nginx acceptance)
+        working-directory: panel-integration
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestStatistics(SchemaExact|IdentityLifecycle|RequestReceipt|RequestIdentity|RequestProgramUpgrade|RequestSelectedInstall|Gzip|ArchiveRuntime|LogTransaction)' -count=1
+      - name: Statistics history UI and bounded report regression
+        run: node --test panel-integration/scripts/test-statistics-history.mjs
+      - name: Geography candidate authority and complete database reader race regression (not app installation acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/geodata ./internal/appcatalog -count=1
+      - name: Same-commit repository partial-read recovery and unchanged authority boundaries
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/appcatalog -run '^TestRepository' -count=1
+      - name: Geography candidate root storage, epoch, bounded cache and verifier contract regression (not native systemd acceptance)
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueuesGeo)' -count=1
+      - name: Geography authenticated API, permissions and worker regression
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^TestStatisticsGeo' -count=1
+      - name: WAF legacy settings cannot acknowledge and discard advanced intent
+        working-directory: panel-integration-geography
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^Test(WAFLegacySettingsNeverSilentlyDiscardAdvancedPolicyFields|SoftwareActionQueueValidationAndIdempotency|SoftwareSettingsAreClosedSchemas|WAFTrustedProxy)' -count=1
+      - name: Candidate host disk Core, native primitive and manifest contracts (not installed full-host job proof)
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test -p 1 ./internal/core ./internal/diskjob ./internal/diskusage ./internal/appcatalog -count=1
+      - name: Candidate host job authority and typed receipts race regression
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/diskjob -run '^Test(HostDisk|.*Closure|.*Original|.*Receipt)' -count=1
+      - name: Candidate fixed original program admission and native upgrade barriers (not actual installed dispatch)
+        working-directory: panel-integration-disk
+        run: sudo "$(command -v go)" test ./internal/executor -run '^TestHostProducer|^TestProgramUpgradeQueues' -count=1 -v
+      - name: Candidate production and development drain contracts (trusted-root fixtures only)
+        run: sudo python3 -B -m unittest discover -s panel-integration-disk/packaging -p 'test_*upgrade*.py'
+      - name: Locked candidate disk UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk/web --ignore-scripts
+      - name: Candidate host disk selectors and actual component build (not installed UI)
+        run: |
+          node --experimental-strip-types --test panel-integration-disk/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk/web
+      - name: Candidate host disk real Vue browser fault flows (synthetic API, not installed app acceptance)
+        run: |
+          node panel-integration-disk/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_ui_out="$(mktemp -d)"
+          node panel-integration-disk/scripts/qa-host-disk-workspace.mjs "$disk_ui_out"
+      - name: Fixed runtime journal-to-index and strict root identity regression (not installed worker acceptance)
+        working-directory: panel-integration-disk-fix
+        run: sudo "$(command -v go)" test -p 1 ./internal/diskjob ./internal/diskusage ./internal/appcatalog -count=1 -v
+      - name: Fixed original spool handoff and replaced inode/base refusal race regression
+        working-directory: panel-integration-disk-fix
+        run: sudo "$(command -v go)" test -race ./internal/diskjob -run '^TestHostJournalNativeSpool' -count=1 -v
+      - name: Fixed runtime preserves original Core authority and existing native admission/upgrade barriers
+        working-directory: panel-integration-disk-fix
+        run: |
+          sudo "$(command -v go)" test -p 1 ./internal/core -count=1
+          sudo "$(command -v go)" test ./internal/executor -run '^TestHostProducer|^TestProgramUpgradeQueues' -count=1 -v
+      - name: Locked fixed runtime UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-fix/web --ignore-scripts
+      - name: Fixed Docker nsfs display inventory and complete real component build
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-fix/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-fix/web
+          node panel-integration-disk-fix/scripts/web-entry-budget.mjs panel-integration-disk-fix/web/dist
+      - name: Fixed actual Vue nsfs display-only and prior fault flow regression (synthetic API, not installed proof)
+        run: |
+          node panel-integration-disk-fix/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_fix_ui_out="$(mktemp -d)"
+          node panel-integration-disk-fix/scripts/qa-host-disk-workspace.mjs "$disk_fix_ui_out"
+      - name: Diagnostic candidate complete Root Linux contracts, not installed failure-fix acceptance
+        working-directory: panel-integration-disk-diagnostic
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Diagnostic fixed enum filtering, bounded stderr and unchanged native exit race regression
+        working-directory: panel-integration-disk-diagnostic
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHostDiagnostic' -count=1 -v
+      - name: Locked diagnostic candidate UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-diagnostic/web --ignore-scripts
+      - name: Diagnostic candidate complete UI and unchanged entry budget, not actual installed workflow
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-diagnostic/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-diagnostic/web
+          node panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs panel-integration-disk-diagnostic/web/dist
+      - name: Reason candidate complete Root Linux contracts, not installed reason-fix acceptance
+        working-directory: panel-integration-disk-reason
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Reason finalization and inherited bounded diagnostic race regression
+        working-directory: panel-integration-disk-reason
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHost(Diagnostic|FailureReport)' -count=1 -v
+      - name: Locked reason candidate UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-disk-reason/web --ignore-scripts
+      - name: Legacy receipt compatibility, presentation and exact export data regression
+        run: |
+          node --experimental-strip-types --test panel-integration-disk-reason/scripts/test-host-disk.mjs
+          npm run build --prefix panel-integration-disk-reason/web
+          node panel-integration-disk-reason/scripts/web-entry-budget.mjs panel-integration-disk-reason/web/dist
+      - name: Actual Vue deduplicates only legacy warning presentation (closed synthetic API, not installed acceptance)
+        run: |
+          node panel-integration-disk-reason/web/node_modules/playwright/cli.js install --with-deps chromium
+          disk_reason_ui_out="$(mktemp -d)"
+          node panel-integration-disk-reason/scripts/qa-host-disk-workspace.mjs "$disk_reason_ui_out"
+      - name: Fleet candidate complete Root Linux contracts (source fixtures, not installed fleet acceptance)
+        working-directory: panel-integration-platform-fleet
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Fleet bounded overlap cancellation protocol identity and existing authority races
+        working-directory: panel-integration-platform-fleet
+        run: sudo "$(command -v go)" test -race ./internal/core -run '^Test(Platform|AppPlatform)' -count=1 -v
+      - name: Locked fleet candidate UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-platform-fleet/web --ignore-scripts
+      - name: Complete fleet candidate management build and unchanged entry budget (not installed UI)
+        run: |
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetbftj npm run build --prefix panel-integration-platform-fleet/web
+          node panel-integration-platform-fleet/scripts/web-entry-budget.mjs panel-integration-platform-fleet/web/dist
+      - name: Fleet report and pinned Memcached candidate complete Root Linux contracts (source only)
+        working-directory: panel-integration-platform-health-view
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Current original-key signed 50 manifests against actual compiled Linux handlers (read-only, no install)
+        working-directory: panel-integration-platform-health-view
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Locked fleet report UI dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-platform-health-view/web --ignore-scripts
+      - name: Fleet report availability, original identity and explicit read cancellation (synthetic transport only)
+        run: |
+          node --experimental-strip-types --test panel-integration-platform-health-view/scripts/test-platform-health-view.mjs panel-integration-platform-health-view/scripts/test-platform-health-lifecycle.mjs panel-integration-platform-health-view/scripts/test-platform-management-receipt.mjs panel-integration-platform-health-view/scripts/test-disk-scan-lifecycle.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24memcompatbfwa npm run build --prefix panel-integration-platform-health-view/web
+          node panel-integration-platform-health-view/scripts/web-entry-budget.mjs panel-integration-platform-health-view/web/dist
+      - name: Actual Vue fleet cards and close/unmount cancellation at 1440 390 320 (synthetic API, not installed acceptance)
+        run: |
+          node panel-integration-platform-health-view/web/node_modules/playwright/cli.js install --with-deps chromium
+          mkdir -p panel-integration-platform-health-view/.local
+          node panel-integration-platform-health-view/scripts/test-platform-health-ui.mjs
+      - name: Fleet reopen complete Root Linux contracts (source only)
+        working-directory: panel-integration-fleet-reopen
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Reopen candidate against actual current original-key signed 50 manifests (no install)
+        working-directory: panel-integration-fleet-reopen
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Locked fleet reopen dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-fleet-reopen/web --ignore-scripts
+      - name: Reopen snapshot authority and unchanged deferred entry budgets (not installed UI)
+        run: |
+          node --experimental-strip-types --test panel-integration-fleet-reopen/scripts/test-platform-health-view.mjs panel-integration-fleet-reopen/scripts/test-platform-health-lifecycle.mjs panel-integration-fleet-reopen/scripts/test-module-state.mjs panel-integration-fleet-reopen/scripts/test-deferred-workspace.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24fleetreopenbfxr npm run build --prefix panel-integration-fleet-reopen/web
+          node panel-integration-fleet-reopen/scripts/web-entry-budget.mjs panel-integration-fleet-reopen/web/dist
+      - name: Actual Vue null-report reopening and authority invalidation (synthetic API only)
+        run: |
+          node panel-integration-fleet-reopen/web/node_modules/playwright/cli.js install --with-deps chromium
+          mkdir -p panel-integration-fleet-reopen/.local
+          node panel-integration-fleet-reopen/scripts/test-platform-health-ui.mjs
+      - name: Original-key bound Memcached worker complete Root Linux contracts (not installed update acceptance)
+        working-directory: panel-integration-memcached-update
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Current signed50 handler ABI including exact pinned Memcached compat2 (read-only)
+        working-directory: panel-integration-memcached-update
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Memcached original-key producer observer journal retention and authority race regressions
+        working-directory: panel-integration-memcached-update
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
+      - name: Locked native Memcached management UI without lifecycle scripts
+        run: npm ci --prefix panel-integration-memcached-update/web --ignore-scripts
+      - name: Real shared identity and actual component functions with unchanged local resource and entry budgets
+        working-directory: panel-integration-memcached-update
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24memcachedbgcy npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Exact legacy Memcached package revision complete Root Linux contracts
+        working-directory: panel-integration-memcached-revision
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Revision candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-memcached-revision
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Original close reservation current-authority and package provenance race regressions
+        working-directory: panel-integration-memcached-revision
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^TestMemcached' -count=1
+      - name: Locked revision management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-memcached-revision/web --ignore-scripts
+      - name: Actual identity functions and complete management build with unchanged entry budget
+        working-directory: panel-integration-memcached-revision
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24memrevisionbgex npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Durable geodata identity and protected Docker complete Root Linux contracts
+        working-directory: panel-integration-geodata-identity
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Identity candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-geodata-identity
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Original actor request history durable identity and retained container guard races
+        working-directory: panel-integration-geodata-identity
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|Memcached|DockerRetention)' -count=1
+      - name: Locked identity management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geodata-identity/web --ignore-scripts
+      - name: Actual component identity functions and complete management build under unchanged budget
+        working-directory: panel-integration-geodata-identity
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs scripts/test-statistics-history.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24geoidentitybggr npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Actual Vue same-original geodata recovery (closed synthetic API, not native dataset acceptance)
+        working-directory: panel-integration-geodata-identity
+        run: |
+          node web/node_modules/playwright/cli.js install --with-deps chromium
+          geodata_identity_ui_out="$(mktemp -d)"
+          node scripts/qa-statistics-geodata-workspace.mjs "$geodata_identity_ui_out"
+      - name: Original failed geodata terminal and verifier inventory complete Root Linux contracts
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Preflight candidate current original-key signed50 compiled handler ABI (read-only)
+        working-directory: panel-integration-geodata-preflight
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Original authority terminal locks concurrent export and verifier inventory races
+        working-directory: panel-integration-geodata-preflight
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(StatisticsGeo|ProgramUpgradeQueues|Memcached|DockerRetention)' -count=1
+      - name: Locked preflight management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-geodata-preflight/web --ignore-scripts
+      - name: Actual immutable job identity functions and unchanged entry budget
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          node --experimental-strip-types --test scripts/test-memcached-update-identity.mjs scripts/test-statistics-history.mjs scripts/test-job-presentation.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24geoflightbgjp npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Actual Vue original geodata recovery (synthetic API, not native dataset or power-loss proof)
+        working-directory: panel-integration-geodata-preflight
+        run: |
+          node web/node_modules/playwright/cli.js install --with-deps chromium
+          geodata_preflight_ui_out="$(mktemp -d)"
+          node scripts/qa-statistics-geodata-workspace.mjs "$geodata_preflight_ui_out"
+      - name: File manager and development dispatch complete Root Linux contracts (source only)
+        working-directory: panel-integration-file-manager
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Original-key current signed50 compiled handler ABI (no application install)
+        working-directory: panel-integration-file-manager
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-analytics-session24bgnt"
+      - name: Development dispatch original queue diagnostics and both transaction layouts (Root fixtures not native rollback)
+        working-directory: panel-integration-file-manager/packaging
+        run: sudo python3 -B -m unittest -v test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch test_install_dependency_policy test_install_gateway_policy
+      - name: File share authorization immutable snapshot SMTP and cloud authority race regressions
+        working-directory: panel-integration-file-manager
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(File|Share|SMTP|SystemFiles|ModuleFile)' -count=1
+      - name: Locked file management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-file-manager/web --ignore-scripts
+      - name: Actual Vue scope callbacks and complete management build under unchanged budget
+        working-directory: panel-integration-file-manager
+        run: |
+          node --experimental-strip-types --test scripts/test-file-manager-scope.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24devdispatchbgmu npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Analytics session complete Root Linux contracts (source only)
+        working-directory: panel-integration-analytics-session
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Analytics session current original-key signed50 compiled handler ABI (no app update)
+        working-directory: panel-integration-analytics-session
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-hardening24bhhp"
+      - name: Old compiled handler must refuse only the new session manifest and accept the other49 (no install)
+        run: node tools/verify-analytics-handler-boundary.mjs
+      - name: Session lifecycle auth and passive-performance report race regressions (not installed journey proof)
+        working-directory: panel-integration-analytics-session
+        run: sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^TestAnalytics' -count=1
+      - name: Locked session management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-analytics-session/web --ignore-scripts
+      - name: Actual tracker activity idle and HTML opt-in scope plus preserved standard document INP
+        working-directory: panel-integration-analytics-session
+        run: |
+          node --test scripts/test-analytics-session.mjs scripts/test-analytics-html-state.mjs
+          node scripts/test-analytics-tracker.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24analyticsessionbgnm npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Locked Redis scope management dependencies
+        run: npm ci --prefix panel-integration-redis-scope/web --ignore-scripts
+      - name: Actual Redis Vue scope functions and complete management build (not installed Redis acceptance)
+        working-directory: panel-integration-redis-scope
+        run: |
+          node --test scripts/test-redis-scope.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24redisscopebgpj npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Service-state exact source Root policy fixtures (not native transition acceptance)
+        working-directory: panel-integration-service-state/packaging
+        run: sudo python3 -B -m unittest -v test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch
+      - name: Current report windows and deterministic TLS directives (not installed browser business acceptance)
+        working-directory: panel-integration-service-state
+        run: |
+          sudo "$(command -v go)" test -p 1 ./internal/core -run '^TestAnalytics' -count=1
+          sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestPlainSiteHealthBody443PrefixIsNotAListener$|^TestRenderedTLSListenerDetectorRequiresAnActualDirective$|^TestStandardPortsRequireExplicitWebsiteIngress$' -count=5
+      - name: Locked service-state frontend dependencies
+        run: npm ci --prefix panel-integration-service-state/web --ignore-scripts
+      - name: Actual version request, report provenance, filters and Docker binding regressions
+        working-directory: panel-integration-service-state
+        run: |
+          node --test scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs scripts/test-docker-site-binding.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24tlslistenerbgsy npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  statistics-stop-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-statistics-stop/go.mod
+          cache-dependency-path: panel-integration-statistics-stop/go.sum
+      - name: Exact normal-release source and retained failure boundaries
+        run: node --test tests/statistics-stop-source-export.test.mjs tests/statistics-stop-release.test.mjs tests/analytics-browser-acceptance.test.mjs
+      - name: All 208 Root Linux packaging fixtures within the unchanged 240-second controller budget
+        working-directory: panel-integration-statistics-stop
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts (not installed or power-loss acceptance)
+        working-directory: panel-integration-statistics-stop
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Worker lifetime and exact rollback-journal race regression
+        working-directory: panel-integration-statistics-stop
+        run: |
+          sudo "$(command -v go)" test -race ./internal/executor -run '^Test(StatisticsRecovery|ModuleWorker|WorkerLifecycle)' -count=1
+          sudo "$(command -v go)" test -race ./cmd/executor -run '^TestExecutor' -count=1
+      - name: Locked current management dependencies
+        run: npm ci --prefix panel-integration-statistics-stop/web --ignore-scripts
+      - name: Actual Apache Docker analytics and application-scope management regressions
+        working-directory: panel-integration-statistics-stop
+        run: |
+          node --test scripts/test-docker-scope.mjs scripts/test-docker-site-binding.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-store-updates.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24statstopbgwr npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  frontend-release-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exact normal-release frontend source and installed acceptance boundaries
+        run: node --test tests/ui-release-source-export.test.mjs tests/frontend-release-core.test.mjs
+      - name: Locked current frontend dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-ui-release/web --ignore-scripts
+      - name: Actual compiled freshness gate and application version provenance regressions
+        working-directory: panel-integration-ui-release
+        run: |
+          node --test scripts/test-frontend-release.mjs scripts/test-store-updates.mjs scripts/test-disk-scan-lifecycle.mjs scripts/test-docker-scope.mjs scripts/test-docker-site-binding.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24pkglabelbgzc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  docker-observation-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-docker-observation/go.mod
+          cache-dependency-path: panel-integration-docker-observation/go.sum
+      - name: Exact immutable signed-source scope and honest acceptance boundaries
+        run: node --test tests/docker-observation-source.test.mjs
+      - name: Original full Root Linux packaging contracts without changing their 240-second budget
+        working-directory: panel-integration-docker-observation
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts, not installed or power-loss proof
+        working-directory: panel-integration-docker-observation
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Actual native creation receipt and read-only polling race regressions
+        working-directory: panel-integration-docker-observation
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^Test(ComposeCreateReceipt|DockerJobObservation)' -count=1
+      - name: Locked management dependencies, no lifecycle scripts
+        run: npm ci --prefix panel-integration-docker-observation/web --ignore-scripts
+      - name: Actual UUID, no-SubtleCrypto, scope and existing management regressions
+        working-directory: panel-integration-docker-observation
+        run: |
+          node --test scripts/test-docker-create-requests.mjs scripts/test-docker-scope.mjs scripts/test-browser-sha256.mjs scripts/test-platform-management-receipt.mjs scripts/test-platform-health-lifecycle.mjs scripts/test-docker-site-binding.mjs scripts/test-frontend-release.mjs scripts/test-store-updates.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24dockerobservebhbu npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  apache-preservation-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-apache-preservation/go.mod
+          cache-dependency-path: panel-integration-apache-preservation/go.sum
+      - name: Exact signed source and scoped installed preservation evidence
+        run: node --test tests/apache-preservation-source.test.mjs
+      - name: Original bounded full Root Linux packaging contracts
+        working-directory: panel-integration-apache-preservation
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts and vet
+        working-directory: panel-integration-apache-preservation
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Exact Apache metadata preservation and refusal race fixtures
+        working-directory: panel-integration-apache-preservation
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestApacheMetadataSite' -count=1
+
+  hardening-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-hardening/go.mod
+          cache-dependency-path: panel-integration-hardening/go.sum
+      - name: Immutable signed input and honest native versus installed boundaries
+        run: node --test tests/hardening-source.test.mjs tests/hardening-manifest.test.mjs
+      - name: Unchanged full Root Linux packaging contracts and controller budget
+        working-directory: panel-integration-hardening
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete current Root Linux Go contracts and vet
+        working-directory: panel-integration-hardening
+        run: |
+          sudo "$(command -v node)" ../tools/run-hardening-ci.mjs "$(command -v go)"
+          go vet ./...
+      - name: Original-job journal, actual child SIGKILL and read-only inspection race fixtures
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestHardening' -count=1
+      - name: Locked management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-hardening/web --ignore-scripts
+      - name: Actual application routing, update provenance and management build
+        working-directory: panel-integration-hardening
+        run: |
+          node --test scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24hardeninganchorbhgp npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Current original-key signed50 requires the actual reversible journal handler
+        working-directory: panel-integration-hardening
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-intrusion1.1-24bhyz"
+      - name: Prior compiled handler refuses only hardening1.1 and accepts the other49
+        run: node tools/verify-hardening-handler-boundary.mjs
+
+  intrusion-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-intrusion/go.mod
+          cache-dependency-path: panel-integration-intrusion/go.sum
+      - name: Immutable final lifetime source, original failed receipts and exact signed manifests
+        run: node --test tests/intrusion-source.test.mjs tests/intrusion-manifest.test.mjs
+      - name: Original complete Root packaging fixtures, not installed acceptance
+        working-directory: panel-integration-intrusion
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Complete Root Linux Go contracts with one declared test-only capability fixture and unchanged production
+        working-directory: panel-integration-intrusion
+        run: |
+          sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)"
+          go vet ./...
+      - name: Intrusion original account queue, journal, process lifetime and concurrent lock races
+        working-directory: panel-integration-intrusion
+        run: sudo "$(command -v node)" ../tools/run-intrusion-ci.mjs "$(command -v go)" race
+      - name: Locked management dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-intrusion/web --ignore-scripts
+      - name: Actual intrusion workspace routing, availability and management build
+        working-directory: panel-integration-intrusion
+        run: |
+          node --test scripts/test-intrusion-workspace.mjs scripts/test-software-routing.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs scripts/test-frontend-release.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24intrusionlifetimebhyv npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Original-key current signed50 requires the final lifetime-bound intrusion handler
+        working-directory: panel-integration-intrusion
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-waf-health24bijk"
+      - name: Historical compiled hardening handler refuses only intrusion1.1 and accepts the other49
+        run: node tools/verify-intrusion-handler-boundary.mjs
+
+  intrusion-ui-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-intrusion-ui/go.mod
+          cache-dependency-path: panel-integration-intrusion-ui/go.sum
+      - name: Immutable UI-corrected source and retained historical failures
+        run: node --test tests/intrusion-ui-source.test.mjs
+      - name: Complete Root Linux source without any production or test overlays
+        working-directory: panel-integration-intrusion-ui
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestIntrusion' -count=1
+      - name: Complete original Root packaging contracts
+        working-directory: panel-integration-intrusion-ui
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked UI dependencies and matching Chromium
+        run: |
+          npm ci --prefix panel-integration-intrusion-ui/web --ignore-scripts
+          node panel-integration-intrusion-ui/web/node_modules/playwright/cli.js install --with-deps chromium
+          install -d -m 700 panel-integration-intrusion-ui/.local
+      - name: Actual parent dialog, confirmations, unknown outcomes and narrow viewport
+        working-directory: panel-integration-intrusion-ui
+        run: |
+          node --test scripts/test-intrusion-workspace.mjs scripts/test-software-state.mjs
+          node scripts/test-intrusion-ui.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24intrusionuibibn npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Same original-key signed50 ABI with corrected normal source
+        working-directory: panel-integration-intrusion-ui
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-waf-health24bijk"
+
+  intrusion-admission-native-amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-intrusion-admission/go.mod
+          cache-dependency-path: panel-integration-intrusion-admission/go.sum
+      - name: Exact signed observer-admission export, real receipts and unchanged prior workflows
+        run: node --test tests/intrusion-admission-source.test.mjs
+      - name: Full native Linux implementation with all original capacity and deadline fixtures
+        working-directory: panel-integration-intrusion-admission
+        run: sudo "$(command -v go)" test -p 1 ./... -count=1
+      - name: Static analysis of the same unmodified signed-source implementation
+        working-directory: panel-integration-intrusion-admission
+        run: go vet ./...
+      - name: Actual FLOCK admission, cancellation, identity and original no-replay controller races
+        working-directory: panel-integration-intrusion-admission
+        run: sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestIntrusion' -count=1
+      - name: Download only original-key authenticated public DB-IP bytes for a native CPU test
+        run: node tools/prepare-country-native-provider.mjs >> "$GITHUB_ENV"
+      - name: Full original provider structure and country traversal with unchanged two-minute context
+        working-directory: panel-integration-intrusion-admission
+        run: sudo env YUNZHAN_COUNTRY_PREFIX_PROVIDER="$YUNZHAN_COUNTRY_PREFIX_PROVIDER" GOMEMLIMIT=512MiB GOMAXPROCS=2 "$(command -v go)" test ./internal/geodata -run '^TestOfficialCountryPrefixesOctober2026$' -count=1 -v -timeout=150s
+
+  waf-health-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-health/go.mod
+          cache-dependency-path: panel-integration-waf-health/go.sum
+      - name: Exact signed health hotfix source, predecessor and full receipt inventory
+        run: node --test tests/waf-health-manifest.test.mjs tests/waf-health-source.test.mjs
+      - name: Complete Root Linux source without production or test overlays
+        working-directory: panel-integration-waf-health
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
+      - name: WAF hotfix current signed50 all pass only on the actual new handler
+        working-directory: panel-integration-waf-health
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
+      - name: Complete Root upgrade, diagnostic and rollback evidence contracts
+        working-directory: panel-integration-waf-health
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Unmodified prior panel refuses only WAF2.5.2 and accepts the other49
+        run: node tools/verify-waf-health-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-nginx-runtime-package24bixw
+      - name: Locked UI retains all existing WAF versioned capabilities
+        run: |
+          npm ci --prefix panel-integration-waf-health/web --ignore-scripts
+          cd panel-integration-waf-health
+          node --test scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24periodicadmissionbimg npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Install the distribution Nginx for isolated actual HTTP verification
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx
+          sudo systemctl start nginx.service
+          sudo systemctl is-active nginx.service
+      - name: Reproduce old health exemption and verify new site binding with actual Nginx requests
+        working-directory: panel-integration-waf-health
+        run: |
+          native_scope="/var/lib/panel-executor/waf-traffic24biij-amd64.$(openssl rand -hex 16)"
+          sudo install -d -m 700 /var/lib/panel-executor "$native_scope"
+          sudo env PANEL_QA_WAF_TRAFFIC_NATIVE="$native_scope" "$(command -v go)" test ./internal/executor -run '^TestWAFBoundHealthNativeTraffic$' -count=1 -v -timeout=80s
+
+  waf-version-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-version/go.mod
+          cache-dependency-path: panel-integration-waf-version/go.sum
+      - name: Immutable signed source and explicit acceptance boundaries
+        run: node --test tests/waf-version-source.test.mjs
+      - name: Complete Root Linux source without production or test overlays
+        working-directory: panel-integration-waf-version
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(WAF|IsolatedLegacyPHP)' -count=1
+      - name: Original-key current signed50 ABI
+        working-directory: panel-integration-waf-version
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
+      - name: Complete original Root packaging contracts
+        working-directory: panel-integration-waf-version
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked UI dependencies and all version-bound WAF contracts
+        run: |
+          npm ci --prefix panel-integration-waf-version/web --ignore-scripts
+          cd panel-integration-waf-version
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24wafversionbipv npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Distribution Nginx for isolated actual HTTP verification
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends nginx
+          sudo systemctl start nginx.service
+          sudo systemctl is-active nginx.service
+      - name: Actual health binding and hidden PHP non-dispatch, not real PHP-image acceptance
+        working-directory: panel-integration-waf-version
+        run: |
+          native_scope="/var/lib/panel-executor/waf-traffic24biij-amd64.$(openssl rand -hex 16)"
+          legacy_scope="/var/lib/panel-executor/legacy-php-traffic24bioa-amd64.$(openssl rand -hex 16)"
+          sudo install -d -m 700 /var/lib/panel-executor "$native_scope" "$legacy_scope"
+          sudo env PANEL_QA_WAF_TRAFFIC_NATIVE="$native_scope" "$(command -v go)" test ./internal/executor -run '^TestWAFBoundHealthNativeTraffic$' -count=1 -v -timeout=80s
+          sudo env PANEL_QA_LEGACY_PHP_TRAFFIC="$legacy_scope" "$(command -v go)" test ./internal/core -run '^TestIsolatedLegacyPHPHiddenRoutingNativeTraffic$' -count=1 -v -timeout=80s
+
+  legacy-sync-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-legacy-sync/go.mod
+          cache-dependency-path: panel-integration-legacy-sync/go.sum
+      - name: Immutable signed source, actual component and upgrade evidence boundaries
+        run: node --test tests/legacy-sync-source.test.mjs
+      - name: Complete Root source with real trusted filesystem fixtures, not cached-image installation
+        working-directory: panel-integration-legacy-sync
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/executor -run '^TestLegacySync' -count=1
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(LegacySync|IsolatedLegacyPHP|WAF)' -count=1
+      - name: Original-key current signed50 ABI
+        working-directory: panel-integration-legacy-sync
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
+      - name: Complete original Root packaging and recovery contracts
+        working-directory: panel-integration-legacy-sync
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and complete version-bound WAF checks
+        run: |
+          npm ci --prefix panel-integration-legacy-sync/web --ignore-scripts
+          cd panel-integration-legacy-sync
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24legacysyncbirs npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  runtime-failed-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-failed/go.mod
+          cache-dependency-path: panel-integration-runtime-failed/go.sum
+      - name: Exact immutable signed source, real native upgrades and retained failures
+        run: node --test tests/runtime-failed-source.test.mjs
+      - name: Complete Root source and original filesystem models, no live request substituted in CI
+        working-directory: panel-integration-runtime-failed
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/core ./internal/executor -run '^TestRuntimeFailedUpgrade' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(RuntimeFailedUpgrade|RuntimeCompiler|NativeCompiler)' -count=1
+      - name: Original-key current signed50 manifest ABI
+        working-directory: panel-integration-runtime-failed
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
+      - name: Full original packaging, private Root and recovery contracts
+        working-directory: panel-integration-runtime-failed
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and version-bound WAF regression
+        run: |
+          npm ci --prefix panel-integration-runtime-failed/web --ignore-scripts
+          cd panel-integration-runtime-failed
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24runtimefailedbiuc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  waf-descriptor-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-descriptor/go.mod
+          cache-dependency-path: panel-integration-waf-descriptor/go.sum
+      - name: Immutable original-key descriptor source and explicit historical scheduling delta
+        run: node --test tests/waf-descriptor-source.test.mjs tests/waf-descriptor-historical-ci.test.mjs
+      - name: Full Root source plus parallel-package WAF races on the actual descriptor fix
+        working-directory: panel-integration-waf-descriptor
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/executor -run '^Test(WAFHealthLock|WAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion$)' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
+      - name: Original-key current signed50 handler ABI
+        working-directory: panel-integration-waf-descriptor
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
+      - name: Full original packaging, private Root and recovery contracts
+        working-directory: panel-integration-waf-descriptor
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and version-bound WAF regressions
+        run: |
+          npm ci --prefix panel-integration-waf-descriptor/web --ignore-scripts
+          cd panel-integration-waf-descriptor
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24wafdescriptorbivq npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  runtime-package-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-package/go.mod
+          cache-dependency-path: panel-integration-runtime-package/go.sum
+      - name: Immutable original-key source, actual dual-architecture programme upgrades and retained refusal boundaries
+        run: node --test tests/runtime-package-source.test.mjs
+      - name: Full Root source plus real HTTP status, receipt and compiled feature races
+        working-directory: panel-integration-runtime-package
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1
+      - name: Original-key current signed50 manifest handler ABI
+        working-directory: panel-integration-runtime-package
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Full unchanged packaging, private Root and recovery contracts
+        working-directory: panel-integration-runtime-package
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked frontend and actual selected version, update and WAF handlers
+        run: |
+          npm ci --prefix panel-integration-runtime-package/web --ignore-scripts
+          cd panel-integration-runtime-package
+          node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24runtimepackagebixd npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  runtime-health-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-health/go.mod
+          cache-dependency-path: panel-integration-runtime-health/go.sum
+      - name: Exact normal signed source, dual-architecture transactions and retained original census refusal
+        run: node --test tests/runtime-health-source.test.mjs
+      - name: Full Root source, actual child programme probes and cached install admission
+        working-directory: panel-integration-runtime-health
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/executor -run '^TestRuntime(Version(Output|Process|Absolute)|ExistingCache)' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/executor -run '^TestRuntime(Version(Output|Process|Absolute)|ExistingCache)' -count=1
+      - name: Original-key current signed50 manifest handler ABI
+        working-directory: panel-integration-runtime-health
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Complete Root packaging, recovery and bounded read-only census fixtures
+        working-directory: panel-integration-runtime-health
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and version-bound update and WAF regressions
+        run: |
+          npm ci --prefix panel-integration-runtime-health/web --ignore-scripts
+          cd panel-integration-runtime-health
+          node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24periodiccensusbizz npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  nginx-runtime-signed-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-health/go.mod
+          cache-dependency-path: panel-integration-runtime-health/go.sum
+      - name: Exact signed predecessor and closed historical workflow changes
+        run: |
+          npm run verify:signature
+          node --test tests/nginx-runtime-package-manifest.test.mjs tests/nginx-runtime-history.test.mjs
+      - name: Both actual current compiled handlers accept the current original-key signed fifty manifests
+        run: |
+          cd panel-integration-runtime-package
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          cd ../panel-integration-runtime-health
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Unmodified pre-runtime-package handler refuses only new Nginx and accepts the other forty-nine
+        run: node tools/verify-nginx-runtime-handler-boundary.mjs
+      - name: The original WAF-only refusal still uses its own genuine signed catalog
+        run: node tools/verify-waf-health-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-nginx-runtime-package24bixw
+
+  waf-configuration-review-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-review/go.mod
+          cache-dependency-path: panel-integration-waf-review/go.sum
+      - name: Exact independent normal signed source and original seventeen unchanged gates
+        run: node --test tests/waf-review-source.test.mjs
+      - name: Complete native Root source and read-only registry admission regressions
+        working-directory: panel-integration-waf-review
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -race ./internal/core -run '^TestRegistry' -count=1
+      - name: Original-key current signed fifty-app manifest handler ABI
+        working-directory: panel-integration-waf-review
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Complete Root packaging and recovery models without source overrides
+        working-directory: panel-integration-waf-review
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Actual selected frontend handler rejects configuration-review submissions
+        run: |
+          npm ci --prefix panel-integration-waf-review/web --ignore-scripts
+          cd panel-integration-waf-review
+          node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24wafreviewbjcj npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
