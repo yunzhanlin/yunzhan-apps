@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-20T22:30:16Z",
+  "generated_at": "2026-10-21T15:28:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -432,12 +432,12 @@
       "id": "nginx",
       "name": "Nginx",
       "category": "deployment",
-      "version": "1.30.4-compat1",
+      "version": "1.30.6-compat1",
       "summary": "安装可并存的 Nginx 运行时，支持站点绑定、配置校验和安全回滚。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "nginx-1.30.4",
+      "target": "nginx-1.30.6",
       "manage_route": "sites",
       "capabilities": [
         "源码校验",
@@ -445,8 +445,8 @@
         "热重载",
         "失败回滚"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx/1.30.4-compat1/manifest.json",
-      "sha256": "7c0a4e018dd7f22ff063c56a5260e8cccd45b2b67d2b3dea953dd6f2b7d2bbea"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/nginx/1.30.6-compat1/manifest.json",
+      "sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8"
     },
     {
       "id": "nginx-waf",

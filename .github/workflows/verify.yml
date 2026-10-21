@@ -685,12 +685,12 @@ jobs:
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
       - name: WAF hotfix current signed50 all pass only on the actual new handler
         working-directory: panel-integration-waf-health
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
       - name: Complete Root upgrade, diagnostic and rollback evidence contracts
         working-directory: panel-integration-waf-health
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
       - name: Unmodified prior panel refuses only WAF2.5.2 and accepts the other49
-        run: node tools/verify-waf-health-handler-boundary.mjs
+        run: node tools/verify-waf-health-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-nginx-runtime-package24bixw
       - name: Locked UI retains all existing WAF versioned capabilities
         run: |
           npm ci --prefix panel-integration-waf-health/web --ignore-scripts
@@ -733,7 +733,7 @@ jobs:
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(WAF|IsolatedLegacyPHP)' -count=1
       - name: Original-key current signed50 ABI
         working-directory: panel-integration-waf-version
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
       - name: Complete original Root packaging contracts
         working-directory: panel-integration-waf-version
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -782,7 +782,7 @@ jobs:
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(LegacySync|IsolatedLegacyPHP|WAF)' -count=1
       - name: Original-key current signed50 ABI
         working-directory: panel-integration-legacy-sync
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
       - name: Complete original Root packaging and recovery contracts
         working-directory: panel-integration-legacy-sync
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -817,7 +817,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(RuntimeFailedUpgrade|RuntimeCompiler|NativeCompiler)' -count=1
       - name: Original-key current signed50 manifest ABI
         working-directory: panel-integration-runtime-failed
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
       - name: Full original packaging, private Root and recovery contracts
         working-directory: panel-integration-runtime-failed
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -852,7 +852,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
       - name: Original-key current signed50 handler ABI
         working-directory: panel-integration-waf-descriptor
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-nginx-runtime-package24bixw"
       - name: Full original packaging, private Root and recovery contracts
         working-directory: panel-integration-waf-descriptor
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -933,3 +933,30 @@ jobs:
           node --test scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24periodiccensusbizz npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  nginx-runtime-signed-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-health/go.mod
+          cache-dependency-path: panel-integration-runtime-health/go.sum
+      - name: Exact signed predecessor and closed historical workflow changes
+        run: |
+          npm run verify:signature
+          node --test tests/nginx-runtime-package-manifest.test.mjs tests/nginx-runtime-history.test.mjs
+      - name: Both actual current compiled handlers accept the current original-key signed fifty manifests
+        run: |
+          cd panel-integration-runtime-package
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          cd ../panel-integration-runtime-health
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Unmodified pre-runtime-package handler refuses only new Nginx and accepts the other forty-nine
+        run: node tools/verify-nginx-runtime-handler-boundary.mjs
+      - name: The original WAF-only refusal still uses its own genuine signed catalog
+        run: node tools/verify-waf-health-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-nginx-runtime-package24bixw

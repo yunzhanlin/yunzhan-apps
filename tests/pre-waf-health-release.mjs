@@ -1,12 +1,14 @@
 // Two historical ABI invocations use their own signed catalog; all other
 // original workflow bytes and executable/test sources remain unchanged.
 import fs from 'node:fs';import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
+import {originalNginxRuntimeWorkflow} from './pre-nginx-runtime-release.mjs';
 export const beforeWAFHealth='registry/reviewed-catalogs/before-waf-health24bijk/';
 const sha=b=>createHash('sha256').update(b).digest('hex'),read=n=>fs.readFileSync(new URL('../'+beforeWAFHealth+n,import.meta.url));
 const original=read('verify-pr64.yml');assert.equal(sha(original),'69b215c701922af629899e66df38b599d74fe0699a10b2b5b6f4f2fdffc1c33d');
 export const oldWAFABIline="        run: sudo \"$(command -v go)\" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root \"$GITHUB_WORKSPACE\"";
 export const scopedWAFABIline=oldWAFABIline.replace('$GITHUB_WORKSPACE"','$GITHUB_WORKSPACE/'+beforeWAFHealth.slice(0,-1)+'"');
 export function originalWAFHealthWorkflow(bytes){
+ bytes=originalNginxRuntimeWorkflow(bytes);
  // Older restoration layers call each other with already-restored prefixes.
  // With no health substitution, leave their own exact hash checks in charge.
  const text=bytes.toString();if(text.startsWith(original.toString())||!text.includes(scopedWAFABIline))return bytes;
