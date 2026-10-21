@@ -1,0 +1,226 @@
+{
+  "format": 1,
+  "programme_version": "0.1.0-dev.proapps24wafdescriptorbivq",
+  "frozen_inputs_sha256": "c6be45e1eb6cee6a8893ba3570c0d6147fd9282a107f7d3d1d8c8824e0529ba0",
+  "prior_Main_programme": "0.1.0-dev.proapps24periodicadmissionbimg",
+  "merged_PR": 68,
+  "CI_head": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+  "CI_checks": [
+    {
+      "id": 119173221306,
+      "name": "hardening-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221244,
+      "name": "waf-health-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221234,
+      "name": "intrusion-admission-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221226,
+      "name": "runtime-failed-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221216,
+      "name": "intrusion-ui-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221201,
+      "name": "waf-version-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221181,
+      "name": "apache-preservation-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221097,
+      "name": "waf-descriptor-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221051,
+      "name": "docker-observation-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221041,
+      "name": "statistics-stop-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173221039,
+      "name": "intrusion-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173220999,
+      "name": "legacy-sync-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173220987,
+      "name": "verify",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    },
+    {
+      "id": 119173220770,
+      "name": "frontend-release-native-amd64",
+      "head_sha": "14a90457e87cf07c31bedaaa3aab7a27b4bc30d2",
+      "status": "completed",
+      "conclusion": "success"
+    }
+  ],
+  "merge_commit": "f7e75c8bd6dd811540a2dd735df8b4fb93a0bdb6",
+  "original_key_normal_ARM_archive_sha256": "5d16155b8d18716ca82559bd6b30671c753d026638bdc06f0609e08894e09f88",
+  "Main_upgrade": {
+    "ok": true,
+    "proof_sha256": "6e0e6841af659913c14dd14d73f67e4adba28a7a86cc9af030c4e8d6d82c373f",
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "transaction_sha256": "95c4ad84a988967fa8ec887dabb5f96a48d2dce72121141278d2977908a08920",
+    "sites_preserved": 58,
+    "generic_modules_preserved": {
+      "mobile-pwa": "1.3.0",
+      "task-manager": "1.2.1",
+      "user-manager": "1.3.1",
+      "website-analytics": "2.3.1"
+    },
+    "actual_WAF_record": "/etc/panel/security-apps/nginx-waf.json",
+    "WAF_record_identity_preserved": {
+      "id": "nginx-waf",
+      "sha256": "b6f45382f5c7bfab4576c0bdb802248ea2d993a662f5edf45997a12e76e4f7ad",
+      "version": "2.5.2"
+    },
+    "all102_schema_migration_rows_and_data_checked": true,
+    "all_native_install_ledger_and_runtime_files_preserved": true,
+    "complete_NFT_policy_handles_and_objects_preserved": true,
+    "all15_kernel_values_preserved": true,
+    "SSH_journald_process_lifetimes_and_configs_preserved": true,
+    "Fail2ban_remained_known_absent": true,
+    "statistics_app_and_database_remained_known_absent": true,
+    "not_a_live_Main_statistics_stream_acceptance": true,
+    "protected_non_program_entries": 45532,
+    "application_operations": 0,
+    "Nginx_gateway_process_unchanged": true,
+    "Nginx_gateway_pid": 1072,
+    "Nginx_gateway_binary_sha256": "11e29378299879e4b3f8894c3f89d04385974f0c96823346f01a8161e34c0b09",
+    "program_binary_sha256": "e5cd79d96fa521ac98dabf8a1b18a6dab22c7d39c0a5efb8bf5ac1afe70141e7",
+    "executor_binary_sha256": "e069b3cc482bd124f5f19cec1f29668eef904b6d384d29332a26f3d7275b32cc",
+    "http": {
+      "19100": 200,
+      "19101": 200
+    }
+  },
+  "runtime_tree_guard": {
+    "source_sha256": "a26dafb465a4b20674fb92a593db7702c67197f348d87e5adfecc92729c158d1",
+    "independent_native_guard_test_proof_sha256": "79091f11fc09370996e74a8816de93d83e41f689bfb620bd6d714d8e942c671e",
+    "complete_observations": [
+      {
+        "counts": {
+          "bytes": 2337722382,
+          "entries": 2377,
+          "large_files": 2,
+          "regular_files": 2041
+        },
+        "tree_sha256": "d83678e32a61f996e4541e2bc18283194220ae634cce972f02b7389a73a19746"
+      },
+      {
+        "counts": {
+          "bytes": 2337722382,
+          "entries": 2377,
+          "large_files": 2,
+          "regular_files": 2041
+        },
+        "tree_sha256": "d83678e32a61f996e4541e2bc18283194220ae634cce972f02b7389a73a19746"
+      },
+      {
+        "counts": {
+          "bytes": 2337722382,
+          "entries": 2377,
+          "large_files": 2,
+          "regular_files": 2041
+        },
+        "tree_sha256": "d83678e32a61f996e4541e2bc18283194220ae634cce972f02b7389a73a19746"
+      }
+    ],
+    "skipped_entries": 0,
+    "stream_chunk_bytes": 1048576,
+    "file_limit_bytes": 536870912,
+    "tree_limit_bytes": 4294967296,
+    "entry_limit": 50000,
+    "deadline_seconds": 120,
+    "original_observation_function_unchanged": true,
+    "production_runtime_or_upgrade_security_guards_changed": false,
+    "old_failed_BEFORE_proof_sha256": "10e622eb9b23c2e582cd0af282fac06bee64eef70669a367e60418a4a50ec91f",
+    "old_failed_BEFORE_stays_false": true,
+    "old_failed_BEFORE_invoked_installer": false,
+    "old_partial_snapshot_not_accepted_or_replayed": true,
+    "reason": "Existing reviewed MySQL programme448384456 bytes exceeded the historical diagnostic256MiB single-file limit; use a separately tested full FD-bound streaming tree observation with all2377 entries and2337722382 bytes, never skip or modify that programme."
+  },
+  "actual_authenticated_store_UI": {
+    "ok": true,
+    "Main_normal_upgrade_proof_sha256": "6e0e6841af659913c14dd14d73f67e4adba28a7a86cc9af030c4e8d6d82c373f",
+    "actual_Main_port": 19100,
+    "actual_index_sha256": "2f8ea15158b5383d95d1c59ad9d6ff2a9746ac67a0721e0751283aa331b375f9",
+    "actual_catalog_apps": 50,
+    "WAF": {
+      "version": "2.5.2",
+      "manifest_sha256": "c4388333250b15a5ce68f7e7b36454b32b71bd652531e3d474e41c66f70e4ac1",
+      "installed_version": "2.5.2",
+      "healthy": true,
+      "state_known": true,
+      "update_available": false
+    },
+    "application_or_programme_mutations": 0,
+    "authentication_requests": [
+      {
+        "method": "POST",
+        "path": "/api/login",
+        "authentication_only": true
+      }
+    ],
+    "screenshot_sha256": "4ab0ace74c165746c14739ba20c2bf660eefc5f8e28e04bae9035c3ba026b0c8",
+    "not_a_new_store_update_or_F14_deployment": true,
+    "all50_commercial": false
+  },
+  "not_a_new_WAF_application_update": true,
+  "not_Nginx1306_original_key_store_update": true,
+  "not_F14_or_F15_Main_deployment": true,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false
+}
