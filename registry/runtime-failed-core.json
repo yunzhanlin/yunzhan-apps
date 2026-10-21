@@ -1,0 +1,235 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24runtimefailedbiuc",
+  "frozen_inputs_sha256": "dd0e0fe12b33a1e1393bc7860dc2be428198b58622a81582b375a7d40c745fcb",
+  "prior_version": "0.1.0-dev.proapps24legacysyncbirs",
+  "prior_frozen_inputs_sha256": "0c1f782ade8234a4546985eeade2a01da3629de1e46f3e2bfe9e613139c273d6",
+  "frozen_files": 17423,
+  "exported_files": 1720,
+  "source_overrides": 0,
+  "added_from_prior": [
+    "internal/core/runtime_failed_upgrade.go",
+    "internal/core/runtime_failed_upgrade_test.go",
+    "internal/executor/nginx_security_source_native_linux_test.go",
+    "internal/executor/program_upgrade_runtime_failed_linux.go",
+    "internal/executor/program_upgrade_runtime_failed_linux_test.go",
+    "internal/runtimecatalog/nginx_security_release_test.go",
+    "packaging/test_native_compiler_slices.py"
+  ],
+  "changed_from_prior": [
+    "dev/panel-analytics-html-build@.service",
+    "dev/panel-apache-body-build@.service",
+    "dev/panel-app-dependencies@.service",
+    "dev/panel-install@.service",
+    "dev/panel-waf-engine-build@.service",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "internal/runtimecatalog/catalog.go",
+    "packaging/test_app_dependency_budget.py"
+  ],
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24runtimefailedbiuc-linux-arm64.tar.gz",
+      "archive_sha256": "7b52e0d906f40f7ba2d0a3bb22960eb7348ee1f7071299918818af6a9d72070b",
+      "normal_build_log_sha256": "efce44973c6752599340e9dddeb010bc8c12280e454b97e00ecf406e4ed9229e",
+      "manifest_sha256": "fe2dd12275ef7ed28cbd65d27717c2e3a7c57c978ebaa82e6b65b3e2d28b1c29",
+      "signature_sha256": "28e8ba66ec341e996d34c9eb43168f911adf75174da35c47e186f4885326b492",
+      "original_key_signature_verified": true,
+      "native_closed_failure": {
+        "ok": true,
+        "proof_sha256": "a6dd702e0d6d474821e0e8a9db980305a80bb85e4f0cfbfa4984420be6bf93dc",
+        "top_level": 3,
+        "actual_original_Core_Root_systemd_failure": true,
+        "all102_preserved": true
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "da94511bab6409bb26c0424498a4933e9cd334b83e2b0316cc57f40ed5436226",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      },
+      "normal_Nginx_runtime_install": {
+        "ok": true,
+        "original_job": "9b234a9abf0539b5655410635706bb84",
+        "proof_sha256": "e92bdd3f35551100aff336b3ef924ae61b3d1c9269546f85a5ff5cc791ea0119",
+        "original_before_sha256": "dd3ca43a1962483362ae46956085b0d6be5ea8934f7774f0d83575418e674e3d",
+        "manifest_sha256": "c162b9021cbf8f89c87f40216af6cf4d09d31a61423c07e28a0d0f3b07caa33e",
+        "binary_sha256": "6089e06e6128de8d03649bb64898c5d878d9bf085c1a00345937831ed056cecf",
+        "all102_checked_with_exact_owned_rows_only": true,
+        "complete_original_native_ledger_preserved": true,
+        "all_original_gateway_and_security_state_preserved": true,
+        "full_NFT_and_statistics_preserved": true,
+        "normal_API_not_signed_store_update": true,
+        "gateway_switched": false
+      },
+      "installed_Nginx_HTTP": {
+        "ok": true,
+        "proof_sha256": "0280c756a29e19e776942fcc27b796ea7e3f7da70ef4b45f113e7fb41da7c338",
+        "binary_sha256": "6089e06e6128de8d03649bb64898c5d878d9bf085c1a00345937831ed056cecf",
+        "actual_nonroot_processes": 2,
+        "all_active_and_bounding_capabilities_zero": true,
+        "NoNewPrivileges": true,
+        "actual_nonce_HTTP_200": true,
+        "hidden_path_403": true,
+        "missing_path_404": true,
+        "configuration_test_as_nonroot": true,
+        "only_own_unit_stopped_and_stable_pidfds_reaped": true,
+        "all102_and_native_ledger_host_NFT_statistics_preserved": true,
+        "gateway_switched": false
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24runtimefailedbiuc-linux-amd64.tar.gz",
+      "archive_sha256": "2b708012e7b26549af92f33424d2f38c58270d6faf40c95c22440364dddd6a11",
+      "normal_build_log_sha256": "458459d0c037fac65fe82720abc1d4c95040c5f00e0d7181dbde2851c92a49ee",
+      "manifest_sha256": "35c8e46b0525ec703b7a5284e4f9073074a4c30717e5febf32077ecbce76403f",
+      "signature_sha256": "84b5f812325fbdad6cc81d8e583e1403ede3518d2c03cfe7c7c3b7a1b3b08ba3",
+      "original_key_signature_verified": true,
+      "native_closed_failure": {
+        "ok": true,
+        "proof_sha256": "1c0c2bef23b64101254da4246437fa68c278f3d937531f8c9eadc69c04dbc57a",
+        "top_level": 3,
+        "actual_original_Core_Root_systemd_failure": true,
+        "all102_preserved": true
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "a9dd8457b0a9bc0fb4d0fc7562ca6e6f0958899193df8304af0e480b3fb4a107",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      },
+      "normal_Nginx_runtime_install": {
+        "ok": true,
+        "original_job": "c642fa366ab2ea597947a77ee1068798",
+        "proof_sha256": "fd4aec23cbf1a70bf826f25871166dd0d9a9861bba3fea8294b5e4620245d561",
+        "original_before_sha256": "187c11fde75fecdc3933cba736fda79c90d9b31cce85be5907750cff68e7a6b8",
+        "manifest_sha256": "3b20a056645d963257a9a8948946314f1ec2b23d244951ee744b7621ae9e4260",
+        "binary_sha256": "3996208d6fff7b762c83f122c286e72588d6ca66b60f579b3043f75a941b701a",
+        "all102_checked_with_exact_owned_rows_only": true,
+        "complete_original_native_ledger_preserved": true,
+        "all_original_gateway_and_security_state_preserved": true,
+        "full_NFT_and_statistics_preserved": true,
+        "normal_API_not_signed_store_update": true,
+        "gateway_switched": false
+      },
+      "installed_Nginx_HTTP": {
+        "ok": true,
+        "proof_sha256": "b70260733778118134ec868ac761e1717caedf6ad7c5a4be746b9e38b360cbe6",
+        "binary_sha256": "3996208d6fff7b762c83f122c286e72588d6ca66b60f579b3043f75a941b701a",
+        "actual_nonroot_processes": 2,
+        "all_active_and_bounding_capabilities_zero": true,
+        "NoNewPrivileges": true,
+        "actual_nonce_HTTP_200": true,
+        "hidden_path_403": true,
+        "missing_path_404": true,
+        "configuration_test_as_nonroot": true,
+        "only_own_unit_stopped_and_stable_pidfds_reaped": true,
+        "all102_and_native_ledger_host_NFT_statistics_preserved": true,
+        "gateway_switched": false
+      }
+    }
+  },
+  "original_failures_preserved": {
+    "native_install": {
+      "arm64": {
+        "job": "b8d3c4107bbd5b77522c021a6e94975a",
+        "state": "failed",
+        "proof_sha256": "df700c58f6748e66bc224aa402cea4409b3a1ac5f7513a6e986db2fcf869b031"
+      },
+      "amd64": {
+        "job": "f22b1de0af351e3346e48d94af39ba6b",
+        "state": "failed",
+        "proof_sha256": "ca974ba7b8c919388c453680d3f07ce4e147f3013edacf65ee4ea3f4f3c21213"
+      }
+    },
+    "slice_only_upgrade": {
+      "arm64": {
+        "ok": false,
+        "proof_sha256": "a021710d1f9c7285a9d76a1a6c051fd2f642983d8f4b76d2ea29e1ec5d7e9f16"
+      },
+      "amd64": {
+        "ok": false,
+        "proof_sha256": "d747836244e2d87afda94d153477c1f53ec4353d5664f6c43e775938d493c8e2"
+      }
+    },
+    "schema_observer": {
+      "initial_ARM_readonly_observer_asserted_runtime_versions": true,
+      "new_installation_requests_sent_to_work_around_observer": 0,
+      "actual_original_job_observed_without_replay": true,
+      "original_before_hashes_retained": true,
+      "correction": "Check original full runtime_versions digest after removing only the exact new immutable row; runtime_installations binds that ID and exact binary path. This is not a whole-table exemption or reconstructed baseline.",
+      "AMD_initial_schema_failure_claimed": false,
+      "scope_note": "The common observer correction receipts retain the global ARM observation failure; the old AMD observer was only observed before new rows appeared, not claimed to have failed."
+    },
+    "initial_HTTP_fixtures": {
+      "both_prestart_config_permission_failures_retained": true,
+      "Root_only_test_parent_umask_0700": true,
+      "old_cases_replayed_or_relabelled": false,
+      "new_own_test_parent_explicit_0711_with_private_0700_UID_builder_leaves": true,
+      "production_directory_or_guard_permissions_changed": false
+    }
+  },
+  "compiler_authority": {
+    "five_templates_explicit_system_slice": true,
+    "compiler_decoders_capability_budgets_pidfd_collection_unchanged": true,
+    "normal_installer_existing_capability_budget_not_claimed_minimized": true
+  },
+  "closed_failure_authority": {
+    "SELECT_only_Core_original_row_and_unique_audits": true,
+    "Root_private_canonical_native_record_and_inode_CAS": true,
+    "existing_native_start_shared_lock_required": true,
+    "exact_failed_exit_1_and_empty_group_PIDs_pending_job": true,
+    "original_monotonic_generation_bound_twice": true,
+    "unknown_timeout_signal_oom_or_unconsumed_retry_refused": true,
+    "no_marker_or_new_acknowledgment_receipt": true,
+    "no_reset_stop_retry_dispatch_or_status_relabel": true
+  },
+  "nginx_source": {
+    "version": "1.30.6",
+    "url": "https://nginx.org/download/nginx-1.30.6.tar.gz",
+    "sha256": "3cf46f5ed7504d460125866b7bea99fb357f31d887e2e63b35503310e9b8b6c8",
+    "detached_PGP_verified": true,
+    "full_primary_fingerprint": "D6786CE303D9A9022998DC6CC8464D549AF75C0A",
+    "source_review_proof_sha256": "eba4192fade4e2760d9b14a570e1baec592dfdf54bbd2392cb3bb64d43b73c68",
+    "historical_runtime_IDs_and_source_pins_unchanged": true
+  },
+  "application_manifests_changed": 0,
+  "Main19100_program_deployed_at_recording": false,
+  "country_activation_included": false,
+  "database_migration_added": false,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "active_gateway_switch_accepted": false,
+  "signed_store_Nginx_update_accepted": false
+}
