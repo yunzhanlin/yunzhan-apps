@@ -1029,3 +1029,28 @@ jobs:
           node --test scripts/test-waf-configuration-inspection.mjs scripts/test-runtime-package-labels.mjs scripts/test-store-updates.mjs scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24wafinspectionbjdr npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  files-sync-opening-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-sync-opening/go.mod
+          cache-dependency-path: panel-integration-sync-opening/go.sum
+      - name: Exact UI-only signed source, retained actual installation proofs and nineteen unchanged jobs
+        run: node --test tests/files-sync-opening-source.test.mjs
+      - name: Actual compiled unchanged native handler accepts current original-key signed fifty manifests
+        working-directory: panel-integration-sync-opening
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Actual opening, readonly state and update, remote sync, archive and permission regressions
+        run: |
+          npm ci --prefix panel-integration-sync-opening/web --ignore-scripts
+          cd panel-integration-sync-opening
+          node --test scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-software-routing.mjs scripts/test-remote-sync.mjs scripts/test-remote-sync-plans.mjs scripts/test-remote-sync-backups.mjs scripts/test-remote-backup-archive.mjs scripts/test-menu-permissions.mjs scripts/test-module-state.mjs scripts/test-deferred-workspace.mjs scripts/test-module-report-provenance.mjs scripts/test-module-version-scope.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24syncopenbjfq npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
