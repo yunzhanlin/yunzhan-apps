@@ -1,0 +1,171 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24wafdescriptorbivq",
+  "frozen_inputs_sha256": "c6be45e1eb6cee6a8893ba3570c0d6147fd9282a107f7d3d1d8c8824e0529ba0",
+  "frozen_files": 17425,
+  "exported_files": 1722,
+  "source_overrides": 0,
+  "prior_frozen_inputs_sha256": "dd0e0fe12b33a1e1393bc7860dc2be428198b58622a81582b375a7d40c745fcb",
+  "added_from_prior": [
+    "internal/executor/waf_lock_descriptor_linux.go",
+    "internal/executor/waf_lock_descriptor_linux_test.go"
+  ],
+  "changed_from_prior": [
+    "internal/executor/waf_body_log_health_linux.go"
+  ],
+  "application_manifests_changed": 0,
+  "database_migration_added": false,
+  "country_activation_included": false,
+  "Main19100_program_deployed_at_recording": false,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "original_key_public_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_CI_failure": {
+    "pull_request": 68,
+    "head": "0df37d706999acd07e4b231f0e489ecc940d0a0d",
+    "run": 39579752449,
+    "job": 119154142118,
+    "name": "waf-health-native-amd64",
+    "conclusion": "failure",
+    "phase": "parallel-package race",
+    "test": "TestWAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion",
+    "original_log_sha256": "91216c6480127177d956e91f5116522d906497ec5bf9771a7c4e91795e4c385c",
+    "exact_original_kernel_snapshot_retained": false,
+    "exact_original_CI_cause_retroactively_proven": false,
+    "rerun_or_relabelled": false
+  },
+  "original_kernel_diagnostics": {
+    "arm64": {
+      "iterations": 2000,
+      "global_missing": 386,
+      "descriptor_missing": 0,
+      "old_verifier_accepts_independently_reopened_unlocked_descriptor": true,
+      "original_observer_false_proof_sha256": "16635031dfc0207f334ff9fd0d2ad7d2a5a7c4835f9bb44927952dd32b0ee53b",
+      "stdout_sha256": "6cc3a5533567cee1c52dd5540a36e721f53826c9cb5ccc0fd63a9cbb876582ec",
+      "original_parser_only_observer_failure_retained_without_test_replay": true,
+      "exact_original_CI_cause_retroactively_proven": false
+    },
+    "amd64": {
+      "iterations": 2000,
+      "global_missing": 0,
+      "descriptor_missing": 0,
+      "old_verifier_accepts_independently_reopened_unlocked_descriptor": true,
+      "original_observer_false_proof_sha256": "acfc12e96bde7810a3f92ad511ff00699a3fab5cfca0e8a91d6d98a8644427e6",
+      "stdout_sha256": "0f0ab5f8b400d0508740acc31f490d9a120bdcf2d8bf524f74e181d10f548d7a",
+      "original_parser_only_observer_failure_retained_without_test_replay": true,
+      "exact_original_CI_cause_retroactively_proven": false
+    }
+  },
+  "old_native_red_regression": {
+    "arch": "arm64",
+    "proof_sha256": "291a7a71a06647c193a57d14c9a36b3580bebed625ca8853158b88cd5ad2879b",
+    "source_binary_sha256": "37ebd06bbc0af0eb99caaa5770903241069c67050eaedcd00c76484968328e6f",
+    "exit": 1,
+    "test_failed_as_expected": [
+      "TestWAFHealthLockRequiresExactOpenDescription"
+    ],
+    "fixed_code_acceptance": false
+  },
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24wafdescriptorbivq-linux-arm64.tar.gz",
+      "archive_sha256": "5d16155b8d18716ca82559bd6b30671c753d026638bdc06f0609e08894e09f88",
+      "normal_build_log_sha256": "204f199c370d0fb0282884c66c1b341dfc1b3bf0c34fe7fb3fd07d49195247f1",
+      "manifest_sha256": "ab89c3f2d4501c52b72de05942278378022ced80af90bb4d05725b50acc39470",
+      "signature_sha256": "8fe09549ac3645e7c0c53008b67e7bad4ec59770762c396136214576bb11286f",
+      "original_key_signature_verified": true,
+      "native_models": {
+        "proof_sha256": "54d9eb0858e87eb965d86414a6d310f637f8cf2128c99a85994082b8c30d62e5",
+        "source_binary_sha256": "be45ef255313b9b37b0b18973a30f8a4576c903c09d0359997d5f18ea636183a",
+        "top_level": 6,
+        "skipped": 0,
+        "churn_iterations": 2000,
+        "held_descriptor_missing": 0,
+        "original_capacity_regression_passed": true,
+        "original_limited_proc_fixture_denial_retained_as_failure": true,
+        "proc_read_capability_bounded_with_proc_readonly_and_ptrace_memory_syscalls_denied": true,
+        "production_capabilities_or_permissions_changed": false,
+        "all102_host_NFT_processes_kernel_and_statistics_preserved": true,
+        "not_application_installation": true
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "8bee56fb9d424186493b5c1028762c581c6d2feb48d19353f72243d362d95190",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_and_all_installed_runtime_files_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "full_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "all_original_failed_cases_retained_as_failed": true,
+        "application_operations": 0,
+        "Main_mutated": false
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24wafdescriptorbivq-linux-amd64.tar.gz",
+      "archive_sha256": "314ae6d3d6e071bcfa223eff987b56ba19c2d0a9bac7a20c8e0e7ab92f8f74a8",
+      "normal_build_log_sha256": "f044b72820a2d1a9262790e4bd7f7f46ece19934e2eaafb797b64703fc0d6315",
+      "manifest_sha256": "6d0036c7cdbe7935442c59a33a0d01e02e1f928d45b74f3d4be103cafc63933d",
+      "signature_sha256": "a82fcb30d8dea27fbe4774e0db5ada63631cfb7504a449ba6badaf2e198851e6",
+      "original_key_signature_verified": true,
+      "native_models": {
+        "proof_sha256": "9181ac70931e3c541271b221ebb13b04fe4c5aafed4e3a28972240e4b3b009aa",
+        "source_binary_sha256": "eabc109bfa48976f8915c549706bb41f0def7d1843d08f6d145a152514be7443",
+        "top_level": 6,
+        "skipped": 0,
+        "churn_iterations": 2000,
+        "held_descriptor_missing": 0,
+        "original_capacity_regression_passed": true,
+        "original_limited_proc_fixture_denial_retained_as_failure": true,
+        "proc_read_capability_bounded_with_proc_readonly_and_ptrace_memory_syscalls_denied": true,
+        "production_capabilities_or_permissions_changed": false,
+        "all102_host_NFT_processes_kernel_and_statistics_preserved": true,
+        "not_application_installation": true
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "53bc4dd20abe9448db19b0e39b179dc9968e5f8e0f5f8d9b5a93ba528d93e57c",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_migrations_and_data_preserved": true,
+        "complete_native_install_ledger_and_all_installed_runtime_files_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "full_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "all_original_failed_cases_retained_as_failed": true,
+        "application_operations": 0,
+        "Main_mutated": false
+      }
+    }
+  },
+  "historical_CI_change": {
+    "original_complete13_workflow_sha256": "c93c334516132dda6d754108238e55b381a661b14ce8921afc3a70ef5869651c",
+    "changed_commands": 3,
+    "change": "Explicit -p 1 for three immutable historical WAF multi-package race phases only; all race flags, selectors, counts, timeouts, source bytes, signatures and failure policy remain unchanged",
+    "source_exports_or_test_overlays_changed": 0,
+    "tests_dropped": 0,
+    "new_descriptor_gate_keeps_parallel_package_WAF_races": true,
+    "original_failed_head_stays_failed": true
+  }
+}

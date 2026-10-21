@@ -1,0 +1,14 @@
+[Unit]
+Description=Fixed bounded temporary Apache request-body cache
+Requires=panel-apache-body-cache-check.service
+After=panel-apache-body-cache-check.service
+Before=panel-apache.service
+
+[Mount]
+What=tmpfs
+Where=/var/cache/panel-apache-body
+Type=tmpfs
+Options=rw,nodev,nosuid,noexec,size=128M,nr_inodes=4096,mode=0755,uid=0,gid=0
+DirectoryMode=0755
+ReadWriteOnly=yes
+TimeoutSec=10

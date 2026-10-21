@@ -682,7 +682,7 @@ jobs:
         run: |
           sudo "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
-          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
       - name: WAF hotfix current signed50 all pass only on the actual new handler
         working-directory: panel-integration-waf-health
         run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
@@ -730,7 +730,7 @@ jobs:
         run: |
           sudo "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
-          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(WAF|IsolatedLegacyPHP)' -count=1
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(WAF|IsolatedLegacyPHP)' -count=1
       - name: Original-key current signed50 ABI
         working-directory: panel-integration-waf-version
         run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
@@ -779,7 +779,7 @@ jobs:
           sudo "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/executor -run '^TestLegacySync' -count=1
-          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(LegacySync|IsolatedLegacyPHP|WAF)' -count=1
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(LegacySync|IsolatedLegacyPHP|WAF)' -count=1
       - name: Original-key current signed50 ABI
         working-directory: panel-integration-legacy-sync
         run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
@@ -792,4 +792,74 @@ jobs:
           cd panel-integration-legacy-sync
           node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24legacysyncbirs npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  runtime-failed-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-failed/go.mod
+          cache-dependency-path: panel-integration-runtime-failed/go.sum
+      - name: Exact immutable signed source, real native upgrades and retained failures
+        run: node --test tests/runtime-failed-source.test.mjs
+      - name: Complete Root source and original filesystem models, no live request substituted in CI
+        working-directory: panel-integration-runtime-failed
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/core ./internal/executor -run '^TestRuntimeFailedUpgrade' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(RuntimeFailedUpgrade|RuntimeCompiler|NativeCompiler)' -count=1
+      - name: Original-key current signed50 manifest ABI
+        working-directory: panel-integration-runtime-failed
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Full original packaging, private Root and recovery contracts
+        working-directory: panel-integration-runtime-failed
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and version-bound WAF regression
+        run: |
+          npm ci --prefix panel-integration-runtime-failed/web --ignore-scripts
+          cd panel-integration-runtime-failed
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24runtimefailedbiuc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  waf-descriptor-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-waf-descriptor/go.mod
+          cache-dependency-path: panel-integration-waf-descriptor/go.sum
+      - name: Immutable original-key descriptor source and explicit historical scheduling delta
+        run: node --test tests/waf-descriptor-source.test.mjs tests/waf-descriptor-historical-ci.test.mjs
+      - name: Full Root source plus parallel-package WAF races on the actual descriptor fix
+        working-directory: panel-integration-waf-descriptor
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test ./internal/executor -run '^Test(WAFHealthLock|WAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion$)' -count=1 -v
+          sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
+      - name: Original-key current signed50 handler ABI
+        working-directory: panel-integration-waf-descriptor
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Full original packaging, private Root and recovery contracts
+        working-directory: panel-integration-waf-descriptor
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Locked unchanged frontend and version-bound WAF regressions
+        run: |
+          npm ci --prefix panel-integration-waf-descriptor/web --ignore-scripts
+          cd panel-integration-waf-descriptor
+          node --test scripts/test-waf-configuration-version.mjs scripts/test-waf-apply-task.mjs scripts/test-waf-health-version.mjs scripts/test-waf-sites.mjs scripts/test-waf-rotation-refresh.mjs scripts/test-waf-body-inventory.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24wafdescriptorbivq npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
