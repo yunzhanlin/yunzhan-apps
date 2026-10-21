@@ -1,0 +1,6 @@
+[Unit]
+Description=Panel firewall confirmation deadline %i
+[Timer]
+OnActiveSec=45s
+AccuracySec=1s
+Unit=panel-firewall-rollback@%i.service

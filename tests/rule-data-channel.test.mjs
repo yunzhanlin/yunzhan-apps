@@ -6,7 +6,7 @@ import {validateManifest} from '../tools/lib.mjs';
 const registry=JSON.parse(await readFile(new URL('../registry/apps.json',import.meta.url),'utf8'));
 const app=registry.apps.find(row=>row.id==='network-threat-detection');
 test('new rule ABI uses a new immutable app version and closed data-only channel',()=>{
- assert.equal(app.version,'1.3.0');assert.equal(validateManifest(app).length,0);
+ assert.equal(app.version,'1.3.1');assert.equal(validateManifest(app).length,0);
  assert.deepEqual(app.rule_data_channel,{id:'et-open-web-bsd-v1',format:1,engine:'suricata-8.0'});
  assert.equal(app.delivery.provider,'panel-module');assert.equal(app.delivery.target,app.id);
 });

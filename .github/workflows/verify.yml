@@ -1054,3 +1054,41 @@ jobs:
           node --test scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-software-routing.mjs scripts/test-remote-sync.mjs scripts/test-remote-sync-plans.mjs scripts/test-remote-sync-backups.mjs scripts/test-remote-backup-archive.mjs scripts/test-menu-permissions.mjs scripts/test-module-state.mjs scripts/test-deferred-workspace.mjs scripts/test-module-report-provenance.mjs scripts/test-module-version-scope.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24syncopenbjfq npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  ids-capture-recovery-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-ids-capture/go.mod
+          cache-dependency-path: panel-integration-ids-capture/go.sum
+      - name: Exact signed source, independent data signature and all twenty original CI jobs
+        run: node --test tests/ids-capture-source.test.mjs
+      - name: Complete native Root implementation and retained original queue guards
+        working-directory: panel-integration-ids-capture
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: All137 selected closed Root regressions with zero skip and no native preparation or capture
+        run: sudo "$(command -v node)" tools/run-ids-capture-ci.mjs "$(command -v go)"
+      - name: Actual compiled original-key current fifty-app ABI
+        working-directory: panel-integration-ids-capture
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Actual frozen consumer verifies both real signatures and1510 rules, rejecting corruption and expiry
+        working-directory: tests/ids-data-verifier
+        run: go test -race ./... -count=1
+      - name: Every Root packaging and recovery fixture without policy substitutions
+        working-directory: panel-integration-ids-capture
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Actual management, capture generation, update and unchanged WAF handlers
+        run: |
+          npm ci --prefix panel-integration-ids-capture/web --ignore-scripts
+          cd panel-integration-ids-capture
+          node --test scripts/test-network-ids-operations.mjs scripts/test-deferred-workspace.mjs scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-runtime-package-labels.mjs scripts/test-waf-configuration-inspection.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24idsclosurebjia npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
