@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>fs.readFileSync(path.join(root,n)),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
+import {preNginxRuntimeRead} from './pre-nginx-runtime-release.mjs';
+const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>preNginxRuntimeRead(n,fs.readFileSync(path.join(root,n))),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 const scope='panel-integration-waf-version/',prior='panel-integration-waf-health/';
 test('version-bound WAF and new legacy-template source is exactly the immutable signed release',()=>{
  const r=json('registry/waf-version-core.json'),a=json(prior+'source-sha256.json'),b=json(scope+'source-sha256.json');

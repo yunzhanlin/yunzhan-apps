@@ -1,0 +1,71 @@
+{
+  "format": 1,
+  "application": "nginx",
+  "version": "1.30.6-compat1",
+  "feature": "runtime-package-version-v1",
+  "signed_catalog_sha256": "da32614759342fc76140484566f38056ed7f80018726a55a5529c94b487816fa",
+  "app_manifest_sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8",
+  "original_APP_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "signed_catalog_signature_sha256": "45c95f2e09debfb5608261bf3fe7edf964c4e9148852346c177bdc9e25499663",
+  "signed_bundle_sha256": "07050e0e2130efa2d4e16153419779c39081bb573304d5e2c9c0b4a92afe9ad6",
+  "genuine_signed_predecessor": "registry/reviewed-catalogs/before-nginx-runtime-package24bixw",
+  "Main19100_handler_delivery": {
+    "version": "0.1.0-dev.proapps24periodiccensusbizz",
+    "source_inputs_sha256": "fcaf4c10d038b82eaf6d021c002de0e558845f0f31eeb8eef70c4ac823050c1f",
+    "source_head": "c5cd7e924fa34746a099dd37d4da314f6475d2dd",
+    "source_merge": "d67e273bd043664a092998585be41fb947f6d6fc",
+    "source_CI_checks": 16,
+    "source_CI_all_success": true,
+    "original_normal_upgrade_proof_sha256": "c69964314bbe717e6ace56968dbac467a0dcfa060b959c4f31917d3c046b2c8e",
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "all102_complete_schema_migrations_and_business_preserved": true,
+    "all2337722382_runtime_bytes_streamed_three_times": true,
+    "all58_sites_and_original4_modules_preserved": true,
+    "actual_WAF252_record_preserved": true,
+    "all15_kernel_and_complete_NFT_policy_preserved": true,
+    "SSH_journald_and_Fail2ban_known_absence_preserved": true,
+    "actual_authenticated_store_verified": true,
+    "actual_index_sha256": "57a094f0a155775a0091539ee752a15b630c5e5f42239dc2b69e48ef154d26f8",
+    "actual_WAF252_healthy": true,
+    "actual_WAF252_update_available": false,
+    "actual_store_screenshot_sha256": "bed98580c5e3ff9f17db87338f20fc42b3294e81e836249cca27e5049dac6f1a",
+    "application_operations": 0,
+    "not_a_new_WAF_store_update": true
+  },
+  "previously_verified_native_programme": {
+    "arm64": {
+      "real_runtime_API_install": true,
+      "real_isolated_HTTP200_403_404": true,
+      "programme_install_proof_sha256": "e92bdd3f35551100aff336b3ef924ae61b3d1c9269546f85a5ff5cc791ea0119",
+      "real_HTTP_proof_sha256": "0280c756a29e19e776942fcc27b796ea7e3f7da70ef4b45f113e7fb41da7c338",
+      "signed_store_application_update": false,
+      "active_gateway_changed": false
+    },
+    "amd64": {
+      "real_runtime_API_install": true,
+      "real_isolated_HTTP200_403_404": true,
+      "programme_install_proof_sha256": "fd4aec23cbf1a70bf826f25871166dd0d9a9861bba3fea8294b5e4620245d561",
+      "real_HTTP_proof_sha256": "b70260733778118134ec868ac761e1717caedf6ad7c5a4be746b9e38b360cbe6",
+      "signed_store_application_update": false,
+      "active_gateway_changed": false
+    }
+  },
+  "historical_CI_change": {
+    "old_positive_ABI_scopes": 5,
+    "old_WAF_only_negative_scopes": 1,
+    "old_source_or_test_overrides": 0,
+    "original_tests_dropped": 0,
+    "current_handlers_keep_current_signed50": true,
+    "new_unmodified_old_F13_only_Nginx_refusal_gate": true
+  },
+  "signed_Nginx_store_update_accepted_at_recording": false,
+  "active_gateway_switch_accepted": false,
+  "commercial_all50": false,
+  "boundaries": [
+    "Package installation/revision is separate from upstream programme version and active gateway version.",
+    "No gateway, site runtime, WAF-module ABI or database migration is performed implicitly.",
+    "Root/compiled fixture and isolated HTTP evidence is not a signed-store installation receipt.",
+    "Broader OS/architecture matrix, sudden power loss and extended soak are not claimed complete."
+  ]
+}

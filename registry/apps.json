@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-20T22:30:16Z",
+  "generated_at": "2026-10-21T15:28:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -8,13 +8,13 @@
       "id": "nginx",
       "name": "Nginx",
       "category": "deployment",
-      "version": "1.30.4-compat1",
+      "version": "1.30.6-compat1",
       "summary": "安装可并存的 Nginx 运行时，支持站点绑定、配置校验和安全回滚。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
         "provider": "runtime",
-        "target": "nginx-1.30.4",
+        "target": "nginx-1.30.6",
         "manage_route": "sites"
       },
       "compatibility": {
@@ -43,7 +43,10 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": true
-      }
+      },
+      "required_panel_features": [
+        "runtime-package-version-v1"
+      ]
     },
     {
       "schema_version": 1,
