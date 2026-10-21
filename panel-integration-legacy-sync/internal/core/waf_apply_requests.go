@@ -1,0 +1,140 @@
+package core
+
+import (
+	"bytes"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"time"
+)
+
+const wafApplyRequestMax = 100000            // Immutable metadata bound, not physical disk quota.
+const wafApplyPayloadMax = (128 << 10) + 128 // Existing normalized configuration plus the fixed job envelope.
+
+func wafApplyApp(app string) bool { return app == "nginx-waf" || app == "apache-waf" }
+
+// Validate only retained JSON. Do not preview/reload a website, consult an
+// executor, renormalize against current sites, or turn this into an install
+// receipt. The original payload hash remains part of the request identity.
+func wafApplyOriginalSettings(app, payload string) (map[string]any, error) {
+	return wafApplyOriginalSettingsForRequest(app, "", payload, "")
+}
+
+func wafApplyOriginalSettingsForRequest(app, kind, payload, signedVersion string) (map[string]any, error) {
+	bad := errors.New("原防火墙任务配置不可核对；不修复、替换或重发原请求")
+	if !wafApplyApp(app) || len(payload) > wafApplyPayloadMax || !wafInventoryJSONShape([]byte(payload), []string{"settings", "version"}) {
+		return nil, bad
+	}
+	var in struct {
+		Settings map[string]any `json:"settings"`
+		Version  string         `json:"version"`
+	}
+	d := json.NewDecoder(bytes.NewReader([]byte(payload)))
+	d.DisallowUnknownFields()
+	if d.Decode(&in) != nil || in.Settings == nil {
+		return nil, bad
+	}
+	// Legacy originals keep their empty version unchanged. An explicitly
+	// versioned original requires the exact signed install binding, never a
+	// configure, another app or an unbound version assertion. Keep this closed
+	// historical list independent of future programme version constants.
+	if in.Version != "" && (app != "nginx-waf" || kind != "software_install" || in.Version != "2.5.2" || signedVersion != in.Version) {
+		return nil, bad
+	}
+	canonical, marshalErr := json.Marshal(map[string]any{"settings": in.Settings, "version": in.Version})
+	if marshalErr != nil || !bytes.Equal(canonical, []byte(payload)) {
+		return nil, bad
+	}
+	var err error
+	if app == "nginx-waf" {
+		_, err = DecodeWAFConfig(in.Settings)
+	} else {
+		_, err = DecodeApacheWAFConfig(in.Settings)
+	}
+	if err != nil {
+		return nil, bad
+	}
+	return in.Settings, nil
+}
+
+type wafApplyRowQueryer interface {
+	QueryRow(string, ...any) *sql.Row
+}
+
+// This works inside the SAME queue transaction and during a read-only original
+// lookup. Never grant version authority from an app/version label alone. All
+// rows for the original job must be the single actor/key/payload-bound record.
+func wafApplySignedInstallVersion(q wafApplyRowQueryer, app, actor, key, job, payload string) (string, error) {
+	var total, matching int
+	var version string
+	err := q.QueryRow(`SELECT count(*),coalesce(sum(CASE WHEN actor_id=? AND app_id=? AND scope=? AND target=? AND provider='panel-module' AND idempotency_key=? AND job_payload_sha256=? AND typeof(version)='text' AND length(CAST(version AS BLOB)) BETWEEN 1 AND 64 AND typeof(sha256)='text' AND length(CAST(sha256 AS BLOB))=64 AND sha256 NOT GLOB '*[^a-f0-9]*' THEN 1 ELSE 0 END),0),coalesce(min(CASE WHEN typeof(version)='text' AND length(CAST(version AS BLOB)) BETWEEN 1 AND 64 THEN version ELSE '' END),'') FROM app_registry_install_requests WHERE job_id=?`, actor, app, app, app, key, registryInstallDigest([]byte(payload)), job).Scan(&total, &matching, &version)
+	if err != nil {
+		return "", err
+	}
+	if total == 0 {
+		return "", nil // Only old empty-version originals can use this absence.
+	}
+	if total != 1 || matching != 1 {
+		return "", errors.New("原防火墙签名安装绑定不唯一或账户、原请求摘要不匹配")
+	}
+	return version, nil
+}
+
+// This binding is in the SAME queue transaction as the immutable original job
+// and its requested audit. It is neither a succeeded outcome nor an automatic
+// retry, and a new/recreated same-name account cannot inherit it.
+func (s *Store) bindWAFApplyRequest(app, key string, u identity) func(*sql.Tx, string, bool) error {
+	return func(tx *sql.Tx, job string, existing bool) error {
+		bad := errors.New("原防火墙请求账户、任务或内容不可核对；未采用或重新提交")
+		if !wafApplyApp(app) || !ValidID(u.ID) || !ValidID(job) || key == "" || len(key) > 128 {
+			return bad
+		}
+		access, err := readUserAccess(tx, u.ID)
+		if err != nil || access.Role != "admin" || !menuSubset([]string{"runtimes", "security"}, access.MenuIDs) {
+			return bad
+		}
+		var target, kind, payload, jobKey, created string
+		if err = tx.QueryRow(`SELECT target_id,kind,payload,idempotency_key,created_at FROM runtime_jobs WHERE id=?`, job).Scan(&target, &kind, &payload, &jobKey, &created); err != nil || target != app || (kind != "software_install" && kind != "software_configure") || jobKey != key {
+			return bad
+		}
+		stamp, err := time.Parse(time.RFC3339, created)
+		if err != nil || stamp.UTC().Format(time.RFC3339) != created {
+			return bad
+		}
+		signedVersion := ""
+		if kind == "software_install" {
+			signedVersion, err = wafApplySignedInstallVersion(tx, app, u.ID, key, job, payload)
+			if err != nil {
+				return bad
+			}
+		}
+		if _, err = wafApplyOriginalSettingsForRequest(app, kind, payload, signedVersion); err != nil {
+			return bad
+		}
+		digest := registryInstallDigest([]byte(payload))
+		var actor, storedApp, storedKind, storedKey, storedHash, storedCreated string
+		err = tx.QueryRow(`SELECT actor_id,app_id,kind,idempotency_key,payload_sha256,created_at FROM waf_apply_requests WHERE job_id=?`, job).Scan(&actor, &storedApp, &storedKind, &storedKey, &storedHash, &storedCreated)
+		if err == nil {
+			if actor != u.ID || storedApp != app || storedKind != kind || storedKey != key || storedHash != digest || storedCreated != created {
+				return bad
+			}
+			return nil
+		}
+		if !errors.Is(err, sql.ErrNoRows) || existing {
+			return bad
+		} // Never adopt an unbound legacy job by guessing a key.
+		var count int
+		if err = tx.QueryRow(`SELECT count(*) FROM waf_apply_requests`).Scan(&count); err != nil || count >= wafApplyRequestMax {
+			return errors.New("原防火墙请求记录不可读取或已达逻辑上限；保留旧记录，未提交")
+		}
+		_, err = tx.Exec(`INSERT INTO waf_apply_requests(job_id,actor_id,app_id,kind,idempotency_key,payload_sha256,created_at) VALUES(?,?,?,?,?,?,?)`, job, u.ID, app, kind, key, digest, created)
+		return err
+	}
+}
+
+func (s *Store) queueWAFApplyRequest(app, action string, settings map[string]any, key string, u identity) (string, error) {
+	if !wafApplyApp(app) || (action != "configure" && action != "install") {
+		return "", errors.New("原防火墙请求类型无效")
+	}
+	return s.queueSoftwareActionBound(app, action, settings, "", key, u.Username, s.bindWAFApplyRequest(app, key, u))
+}

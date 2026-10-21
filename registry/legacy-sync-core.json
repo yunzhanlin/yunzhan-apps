@@ -1,0 +1,155 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24legacysyncbirs",
+  "frozen_inputs_sha256": "0c1f782ade8234a4546985eeade2a01da3629de1e46f3e2bfe9e613139c273d6",
+  "prior_version": "0.1.0-dev.proapps24wafversionbipv",
+  "prior_frozen_inputs_sha256": "ed18e662e887605482462ee64d11d448b0de692f81e022044cd1f097dc526dcf",
+  "frozen_files": 17416,
+  "exported_files": 1713,
+  "source_overrides": 0,
+  "added_from_prior": [
+    "internal/executor/app_legacy_sync_authority_linux.go",
+    "internal/executor/app_legacy_sync_authority_linux_test.go",
+    "internal/executor/app_legacy_sync_containers_linux_test.go"
+  ],
+  "changed_from_prior": [
+    "internal/core/app_compose_templates.go",
+    "internal/executor/app_legacy_sync_linux.go"
+  ],
+  "original_program_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24legacysyncbirs-linux-arm64.tar.gz",
+      "archive_sha256": "485b41bb1af182a061c9f2ee644da4453be37b590b87316eeeb51ed284c994be",
+      "normal_build_log_sha256": "7339dc21624c7fb025fec3592e5b63ec95e86cf6802169b2e7e9d1f4ae23c9d5",
+      "manifest_sha256": "dfcda34fb629be7f21a849682b78d881fb4ec055b9f1ffc2898053f492db2f40",
+      "signature_sha256": "9d04559b7873927cb5f418f11d114ec6ca61d47ddb29877cd902530b2dc2e38d",
+      "original_key_signature_verified": true,
+      "native_closed_authority_models": {
+        "proof_sha256": "823594d8248efa30a491d4b9eef14067e579bc90ff1e99e4d21e063728b5caae",
+        "top_level": 3,
+        "real_Docker": false,
+        "real_trusted_root_filesystem": false,
+        "foreign_architecture_factory_refused": true
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "e6a96cb0b824f045f4ac9d677494d044f1a52471da1f5d055431581b2cd855e6",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24legacysyncbirs-linux-amd64.tar.gz",
+      "archive_sha256": "8ce7e8d067c62dafb0eac859ee502042a39e462208bf8fb9f5401143f2c49097",
+      "normal_build_log_sha256": "98c0f0668063af88564a35258afdd6b61e29979ed3bb454e400e1d1ce145bdfe",
+      "manifest_sha256": "2bd2f945168db520b8a2a8ebf858bbcb9a79fe42ce5f461429cb2d18b98e14b0",
+      "signature_sha256": "b06c57f780d3daee4c9ef497812ebf42a4d2fee9e4880878cf8833c67291bc4b",
+      "original_key_signature_verified": true,
+      "native_closed_authority_models": {
+        "proof_sha256": "50d78715879a40c7430c97e989ef1c8e19230affdd204b573a97ce148dfe6754",
+        "top_level": 3,
+        "real_Docker": false,
+        "real_trusted_root_filesystem": true,
+        "foreign_architecture_factory_refused": false
+      },
+      "upgrade": {
+        "ok": true,
+        "proof_sha256": "4e88d72cfdc3bbd658221dc0454fe4f6565128c8c9890840d2ee390ed75406b1",
+        "actions": [
+          {
+            "action": "preflight",
+            "exit": 0
+          },
+          {
+            "action": "install",
+            "exit": 0
+          }
+        ],
+        "all102_schema_and_business_preserved": true,
+        "all15_kernel_values_preserved": true,
+        "complete_NFT_policy_handles_objects_preserved": true,
+        "SSH_Fail2ban_journald_lifetimes_and_configs_preserved": true,
+        "complete_statistics_history_and_cursors_preserved": true,
+        "application_operations": 0
+      }
+    }
+  },
+  "country_activation_included": false,
+  "database_migration_added": false,
+  "application_manifests_changed": 0,
+  "Main19100_program_deployed_at_recording": false,
+  "commercial_all50": false,
+  "actual_cached_AMD64_sync_components": {
+    "proof_sha256": "caca55e07f188d2f0ee54bc6131c86467172f15729471e8a2705ba3db4c3e192",
+    "binary_sha256": "44ba921e6bf683e7060ca74fdbdd5c15062e86fa6a8a4efb29780199520c2459",
+    "real_PHP_images": 12,
+    "loopback_HTTP_and_UID1000_copy": true,
+    "stale_copy_CAS_refused": true,
+    "own_resource_drift_refused": true,
+    "existing_Docker_daemon_and_containers_preserved": true,
+    "complete_statistics_history_preserved": true,
+    "nginx_image": "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5",
+    "strict_all_NFT_handles_preserved": false,
+    "all_non_Docker_security_policy_handles_objects_preserved": true,
+    "exact_recreated_Docker_dispatches": [
+      {
+        "after_handle": 576,
+        "before_handle": 408,
+        "exact_target": "DOCKER-USER",
+        "new_rule_counters": {
+          "bytes": 2448,
+          "packets": 20
+        },
+        "original_counters": {
+          "bytes": 2448,
+          "packets": 20
+        },
+        "position": 38
+      },
+      {
+        "after_handle": 575,
+        "before_handle": 405,
+        "exact_target": "DOCKER-ISOLATION-STAGE-1",
+        "new_rule_counters": {
+          "bytes": 2448,
+          "packets": 20
+        },
+        "original_counters": {
+          "bytes": 2448,
+          "packets": 20
+        },
+        "position": 39
+      }
+    ],
+    "full_module_Core_HTTP_workflow": false,
+    "signed_store_installation": false,
+    "existing_projects_migrated": false,
+    "EOL_security_support": false
+  },
+  "original_parser_false_receipt_retained": {
+    "proof_sha256": "3a837900694797194e822342974bf4fbabb3e09c97cd71407c33614de79ff97b",
+    "ok": false,
+    "native_test_exit": 0,
+    "relabelled": false
+  },
+  "old_image_matrix_not_new_image_acceptance": {
+    "proof_sha256": "f5c83bb4aeb7118b80e752cfd5ea8023877492e596073ae778652f3733c89c92",
+    "nginx_version": "1.30.5"
+  }
+}
