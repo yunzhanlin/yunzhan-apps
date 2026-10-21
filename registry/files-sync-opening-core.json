@@ -1,0 +1,191 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24syncopenbjfq",
+  "frozen_inputs_sha256": "5d88e638ffc1bd8315869b85aa2638b14d13d700cdf3d202cd461af91edb73fd",
+  "prior_public_inputs_sha256": "015d86fe39916ff3f0fc3521be8111d2ed4eba8ce21eb0e98fef58845d9c793b",
+  "frozen_files": 17443,
+  "exported_files": 1740,
+  "source_overrides": 0,
+  "changed_from_prior_public": [
+    "scripts/test-deferred-workspace.mjs",
+    "web/src/moduleInitialInspection.ts"
+  ],
+  "added_from_prior_public": [],
+  "all1297_Go_members_and_all_packaging_unchanged": true,
+  "original_programme_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive_sha256": "65e1416f64c33a4df551466a5409a4bcda28e0bc7be572356532524fd633f633",
+      "manifest_sha256": "de1abed213040f33f63e0e380389adbf8de35f366ef2ae2fada9e5f72565c78f",
+      "signature_sha256": "1bacb32a28fe7586287171ad916d39381c4dab553ccaf6ec2eba6f74d9fac57e",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive_sha256": "6c58e4166c722c1bc8927b3e3d7ce7f0e063af51d8a8048b99d8a0f49a0cefc6",
+      "manifest_sha256": "a53f72ee8b5f221aab5615b768c52b8e609b122ca0ed27232fad9b78eb67fba6",
+      "signature_sha256": "7d2f4a4a9a81cf3b8f072b6a3acaed495b4688db1d913b5e915c6f0a8842f6b2",
+      "original_key_signature_verified": true
+    }
+  },
+  "normal_production_bytes": {
+    "arm64": {
+      "panel": {
+        "sha256": "1dc5c5787aa35155b8231e97d3739a7d83af5f6926a77392ebe867b8f3987c43",
+        "identical_to_actual_accepted_F21_programme": true
+      },
+      "panel-executor": {
+        "sha256": "04688b2c724a4354b3826b4d434a248eb0338c1409d1593f51023091bf9bda73",
+        "identical_to_actual_accepted_F21_programme": true
+      },
+      "index_sha256": "6541ff55ed279d8b609d41c855cff14f68756359359c8d7f0e77b1fab3b854e7"
+    },
+    "amd64": {
+      "panel": {
+        "sha256": "0ce9c3ad462df6ccdb4925d22f7f3668b6d1c7e01135f9e447ef12fd160bf9e7",
+        "identical_to_actual_accepted_F21_programme": true
+      },
+      "panel-executor": {
+        "sha256": "60ff0a3f7268a0130699d280dd32aa800a6993eedff2f6c1747574335dc45d69",
+        "identical_to_actual_accepted_F21_programme": true
+      },
+      "index_sha256": "6541ff55ed279d8b609d41c855cff14f68756359359c8d7f0e77b1fab3b854e7"
+    }
+  },
+  "new_native_Go_tests_claimed": false,
+  "canonical_frontend": {
+    "selected_Node_tests": 112,
+    "skipped": 0,
+    "index_sha256": "6541ff55ed279d8b609d41c855cff14f68756359359c8d7f0e77b1fab3b854e7",
+    "source_red_regression_sha256": "ae39b17251c1711535b202ce8f9d0221ea57daf1074ec8eeaad8c44cabb8b764",
+    "frozen_UI_log_sha256": "e710d29b736021b1b19c5450f93e96bd92e005a7b379f302317265ae31245e09"
+  },
+  "actual_normal_QA_upgrades": {
+    "arm64": {
+      "ok": true,
+      "proof_sha256": "9322c81d4bbb10700775067a9fd8c39dc16ae7ada12509323d6d3f5f6317b567",
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "all102_actual_schema_migrations_business_preserved": true,
+      "complete_runtime_ledger_files_history_NFT_kernel_and_security_lifetimes_preserved": true,
+      "previous_successful_store_jobs_and_receipts_preserved": true,
+      "application_operations": 0
+    },
+    "amd64": {
+      "ok": true,
+      "proof_sha256": "ca2cb7d41665e6c7b45815b71092b63f0dd844a1fce49f7a55215b37fa28d333",
+      "preflight_exit": 0,
+      "install_exit": 0,
+      "all102_actual_schema_migrations_business_preserved": true,
+      "complete_runtime_ledger_files_history_NFT_kernel_and_security_lifetimes_preserved": true,
+      "previous_successful_store_jobs_and_receipts_preserved": true,
+      "application_operations": 0
+    }
+  },
+  "actual_installed_opening": {
+    "arm64": {
+      "ok": true,
+      "proof_sha256": "6ec88cd2aa55199cd2ed9bc11dc1f5abf09069c35ce47997e7a9967512ae44af",
+      "actual_index_sha256": "6541ff55ed279d8b609d41c855cff14f68756359359c8d7f0e77b1fab3b854e7",
+      "stored_app_version": "1.4.1",
+      "opening_business_POSTs": 0,
+      "all_module_bytes_identities_permissions_and_directories_preserved": true,
+      "module_files": 11,
+      "module_bytes": 80875,
+      "screenshot_sha256": "7de894710111686911cc6c9c8780e4c3288f84c83723ae375dbbdb2b4fab1425",
+      "original_update_observed_without_replay": false
+    },
+    "amd64": {
+      "ok": true,
+      "proof_sha256": "4c383bced8c4f3abc983ce4937a11ed92aedcf737ec0ce3e39cab7c170736646",
+      "actual_index_sha256": "6541ff55ed279d8b609d41c855cff14f68756359359c8d7f0e77b1fab3b854e7",
+      "stored_app_version": "1.9.0",
+      "opening_business_POSTs": 0,
+      "all_module_bytes_identities_permissions_and_directories_preserved": true,
+      "module_files": 49,
+      "module_bytes": 75620,
+      "screenshot_sha256": "e63116f8e65cb81dd7b0c8add13460a1f414fe07c17e4a95d3ad3f63267aedb4",
+      "original_update_observed_without_replay": true
+    }
+  },
+  "application_manifests_changed": 0,
+  "database_migration_added": false,
+  "country_activation_included": false,
+  "Main_programme_deployed_at_recording": false,
+  "QA_before_publication": true,
+  "commercial_all50": false,
+  "full_OS_architecture_matrix": false,
+  "actual_cross_server_business": {
+    "ok": true,
+    "client": "installed AMD64 F21 Core",
+    "receiver": "independent ARM64 Ubuntu24 OpenSSH9.6p1 jailed internal-sftp",
+    "transport": "two loopback-only strict independently pinned SSH tunnels through the owned host; not direct public Internet",
+    "nonroot_UID": 501,
+    "original_programme_inputs": "015d86fe39916ff3f0fc3521be8111d2ed4eba8ce21eb0e98fef58845d9c793b",
+    "proof_sha256": "2cf6666c853824d4ad4c2d04921a6a617ca735a69c13469f3482bbd26d2f05ee",
+    "real_probe_with_pinned_public_hostkey": true,
+    "read_only_preview": true,
+    "first_job_copies": 3,
+    "second_job_copies": 1,
+    "second_job_skips": 2,
+    "exact_original_file_backup_SHA256_verified": true,
+    "remote_extra_preserved": true,
+    "atomic_external_conflict_not_overwritten": true,
+    "original_three_task_ids_retained_not_requeued": true,
+    "connection_disabled_before_own_daemon_and_forward_stop": true,
+    "not_independent_immutable_backup": true,
+    "not_powerloss_or_whole_matrix_acceptance": true
+  },
+  "retained_original_signed_store_update": {
+    "old_version": "1.4.1",
+    "target_version": "1.9.0",
+    "original_job_id": "c2be726e94bc09465920d291bb80c007",
+    "submissions": 1,
+    "backend_outcome": "succeeded",
+    "module_file_members_before_and_after": 49,
+    "all48_nonmanifest_files_bytes_and_identities_preserved_during_update": true,
+    "installed_record_only_version_and_updated_at_changed": true,
+    "original_overall_UI_result_ok": false,
+    "original_failure_not_relabelled": true,
+    "automatic_POST_run_on_open_observed": true,
+    "independent_F22_opening_reconciles_original_job_without_update_or_transfer_replay": true
+  },
+  "actual_ARM_signed_store_update_after_UI_fix": {
+    "original_job": "06f6d723b0a748a95aef09646ccb6dfa",
+    "submissions": 1,
+    "original_state": "succeeded",
+    "old_version": "1.4.1",
+    "new_version": "1.9.0",
+    "normal_UI_hint_offered_and_removed": true,
+    "actual_original_module_preservation": {
+      "ok": true,
+      "all_original_module_data_credentials_jobs_checkpoints_and_history_bytes_and_identity_preserved": true,
+      "all_original_module_directory_identities_and_permissions_preserved": true,
+      "installed_record_only_version_and_update_timestamp_changed": true,
+      "programme_gateway_SSH_lifetimes_and_original_WAF_bytes_preserved": true,
+      "private_module_files": 11,
+      "private_module_bytes_before": 80875,
+      "private_module_bytes_after": 80875
+    },
+    "source_inputs": "5d88e638ffc1bd8315869b85aa2638b14d13d700cdf3d202cd461af91edb73fd",
+    "proof_sha256": "c010a59edf3bbf21553f212ce12cd29a83f103cf8b72dba149d8959019d5b6d2",
+    "independent_installed_UI": {
+      "ok": true,
+      "stored_app_version": "1.9.0",
+      "original_update_observed_without_replay": true,
+      "no_business_POST": true,
+      "module_files": 11,
+      "module_bytes": 80875,
+      "all_bytes_identities_permissions_preserved": true,
+      "proof_sha256": "f4d7ce10a4f7982c58e2031a8c1486993055a454890f1ca5c2d2091589b54555",
+      "screenshot_sha256": "ef6a39ddf724e4d919b5db0cd229ff964878debfa6d0dfc2f41bbd2bd7820283"
+    }
+  },
+  "boundaries": [
+    "QA source and actual installed UI; Main remains its separately accepted F18 programme and WAF2.5.2.",
+    "No WAF configuration repair, app reinstall or forced Nginx downgrade.",
+    "Unchanged native Go/packaging proofs and identical actual production binaries are explicit reuse, not new native model execution.",
+    "Remote backups use retained hardlinks, not independent immutable snapshots or disk hard quotas; full OS matrix and powerloss remain unaccepted.",
+    "Original setup/read-only admission failures and original overall UI failure remain historical; no replay or reclassification."
+  ]
+}

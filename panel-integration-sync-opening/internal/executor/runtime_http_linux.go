@@ -1,0 +1,183 @@
+//go:build linux
+
+package executor
+
+import (
+	"context"
+	"errors"
+	"io"
+	"local/panel/internal/core"
+	"local/panel/internal/runtimecatalog"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"syscall"
+	"time"
+)
+
+func runtimeRoutes(m *http.ServeMux) {
+	m.HandleFunc("GET /v1/runtimes/jobs/{id}/log", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if _, e := readInstall(id); e != nil {
+			respond(w, 404, map[string]string{"error": "安装任务不存在"})
+			return
+		}
+		path := filepath.Join(runtimeBuildCache, id, "build.log")
+		cache, err := runtimeBuildCacheRoot()
+		if err != nil {
+			respond(w, 503, map[string]string{"error": "构建缓存身份不可核实；旧日志保留，不读取可变旧路径"})
+			return
+		}
+		defer cache.Close()
+		if err := verifyRuntimeBuildDirectory(filepath.Dir(path)); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				respond(w, 200, map[string]string{"content": "新构建日志尚未生成；旧日志保留在原缓存，不自动迁移或读取"})
+			} else {
+				respond(w, 503, map[string]string{"error": "构建任务目录身份异常，未读取或修复"})
+			}
+			return
+		}
+		if e := ordinary(path, false); e != nil {
+			if errors.Is(e, os.ErrNotExist) {
+				respond(w, 200, map[string]string{"content": "构建日志尚未生成"})
+			} else {
+				respond(w, 503, map[string]string{"error": "构建日志类型异常，未读取或修复"})
+			}
+			return
+		}
+		f, e := cache.OpenFile(filepath.Join(id, "build.log"), os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
+		if e != nil {
+			respond(w, 500, map[string]string{"error": "读取构建日志失败"})
+			return
+		}
+		defer f.Close()
+		st, e := f.Stat()
+		if e != nil || !runtimeInstallPrivateFile(st) || st.Size() > 64*1024*1024 {
+			respond(w, 500, map[string]string{"error": "读取构建日志失败"})
+			return
+		}
+		if st.Size() > 49152 {
+			_, e = f.Seek(-49152, io.SeekEnd)
+			if e != nil {
+				respond(w, 500, map[string]string{"error": "读取构建日志失败"})
+				return
+			}
+		}
+		b, e := io.ReadAll(io.LimitReader(f, 49152))
+		if e != nil {
+			respond(w, 500, map[string]string{"error": "读取构建日志失败"})
+			return
+		}
+		respond(w, 200, map[string]string{"content": string(b), "path": path})
+	})
+
+	m.HandleFunc("POST /v1/runtimes/install", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			JobID     string `json:"job_id"`
+			ReleaseID string `json:"release_id"`
+			Retry     bool   `json:"retry"`
+		}
+		if !readJSON(w, r, &in) {
+			return
+		}
+		st, e := startInstall(r.Context(), in.JobID, in.ReleaseID, in.Retry)
+		if e != nil {
+			respond(w, 409, map[string]string{"error": e.Error()})
+			return
+		}
+		respond(w, 202, st)
+	})
+	m.HandleFunc("GET /v1/runtimes/jobs/{id}", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		if !core.ValidID(id) {
+			respond(w, 400, map[string]string{"error": "无效任务"})
+			return
+		}
+		st, e := readRuntimeInstallStatus(r.Context(), id, RunCommand)
+		if e != nil {
+			code := 503
+			if errors.Is(e, os.ErrNotExist) {
+				code = 404
+			}
+			respond(w, code, map[string]string{"error": e.Error()})
+			return
+		}
+		respond(w, 200, map[string]any{"job_id": st.JobID, "release_id": st.ReleaseID, "state": st.State, "error": st.Error, "steps": st.Steps, "architecture": runtime.GOARCH})
+	})
+}
+func phpInventory(ctx context.Context) []map[string]any {
+	out := []map[string]any{}
+	for _, r := range runtimecatalog.All() {
+		m, e := LoadRuntime(r.ID)
+		if e != nil {
+			continue
+		}
+		status := "installed"
+		if e := verifyRuntimeVersion(ctx, r); e != nil {
+			status = "needs_attention"
+		}
+		item := map[string]any{"id": r.ID, "family": r.Family, "version": r.Version, "source": r.Source, "source_url": r.URL, "sha256": r.SHA256, "binary": r.CLI(), "status": status, "architecture": m.Architecture, "extensions": m.Extensions, "installed_at": m.InstalledAt}
+		if r.Family == "php" {
+			item["fpm_binary"] = r.FPM()
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func verifyRuntimeVersion(ctx context.Context, r runtimecatalog.Release) error {
+	if _, e := LoadRuntime(r.ID); e != nil {
+		return e
+	}
+	return verifyRuntimeProgramVersion(ctx, r, r.CLI())
+}
+
+// The production caller above supplies only the reviewed release's fixed CLI.
+// A separate private native fixture may exercise process output and timeouts
+// without writing or executing any installed programme or changing services.
+func verifyRuntimeProgramVersion(ctx context.Context, r runtimecatalog.Release, binary string) error {
+	c, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	// Preserve the original default-configuration probe: bypassing php.ini
+	// would hide configuration/extension errors from inventory health status.
+	args := []string{"-r", "echo PHP_VERSION;"}
+	if r.Family == "nginx" {
+		args = []string{"-v"}
+	}
+	if r.Family == "apache" {
+		args = []string{"-v"}
+	}
+	if r.Family == "mysql" {
+		args = []string{"--no-defaults", "--version"}
+	}
+	if r.Family == "mariadb" {
+		args = []string{"--no-defaults", "--version"}
+	}
+	if r.Family == "docker" {
+		args = []string{"version", "--format", "{{.Server.Version}}"}
+	}
+	if r.Family == "redis" {
+		args = []string{"--version"}
+	}
+	if r.Family == "node" {
+		args = []string{"--version"}
+	}
+	cmd := exec.CommandContext(c, binary, args...)
+	cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C"}
+	if r.Family == "mysql" {
+		cmd.Env = mysqlEnv(r)
+	}
+	out := &boundedBuffer{max: 32768}
+	cmd.Stdout = out
+	cmd.Stderr = out
+	cmd.WaitDelay = time.Second
+	if e := cmd.Run(); e != nil {
+		return e
+	}
+	if out.truncated || !runtimeVersionOutputMatches(r, out.String()) {
+		return errors.New("实际程序版本与精确版本目录不匹配")
+	}
+	return nil
+}
