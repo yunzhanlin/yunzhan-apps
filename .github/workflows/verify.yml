@@ -1092,3 +1092,38 @@ jobs:
           node --test scripts/test-network-ids-operations.mjs scripts/test-deferred-workspace.mjs scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-runtime-package-labels.mjs scripts/test-waf-configuration-inspection.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24idsclosurebjia npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  pm2-readiness-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-pm2-readiness/go.mod
+          cache-dependency-path: panel-integration-pm2-readiness/go.sum
+      - name: Exact normal signed source, genuine historical catalogs and all twenty-one original jobs
+        run: node --test tests/pm2-readiness-source.test.mjs
+      - name: Complete native Root implementation without source or policy overlays
+        working-directory: panel-integration-pm2-readiness
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: All154 closed Root PM2 Task IDS and queue regressions with zero skip
+        run: sudo "$(command -v node)" tools/run-pm2-readiness-ci.mjs "$(command -v go)"
+      - name: Original-key current signed fifty manifests against the actual new compiled consumer
+        working-directory: panel-integration-pm2-readiness
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Full original packaging and real flock lease recovery contracts
+        working-directory: panel-integration-pm2-readiness
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Existing actual Task selectors, application update provenance and deferred management handlers
+        run: |
+          npm ci --prefix panel-integration-pm2-readiness/web --ignore-scripts
+          cd panel-integration-pm2-readiness
+          node --test scripts/test-task-manager.mjs scripts/test-network-ids-operations.mjs scripts/test-deferred-workspace.mjs scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-runtime-package-labels.mjs scripts/test-waf-configuration-inspection.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24geodataleasebjkc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
