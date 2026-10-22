@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-21T15:28:00Z",
+  "generated_at": "2026-10-21T21:50:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -376,16 +376,15 @@
       "id": "network-threat-detection",
       "name": "Network Threat Detection",
       "category": "professional",
-      "version": "1.3.0",
-      "summary": "监听基线与独立非 root 被动 IDS；双签名 BSD ET Web 子集显式下载、选择，数据保存不启用采集；配置损坏仍可核对停止，中断恢复保留后续停止选择；需支持 1.3 的面板，不解密 HTTPS、不自动封禁。",
+      "version": "1.3.1",
+      "summary": "监听基线与独立非 root 被动 IDS；显式多块缓冲迁移与原生 MTU 核对，保留旧日志和拒绝回执；双签名 BSD ET Web 数据独立更新、明确选择，保存不启用采集；需支持 1.3.1 的面板，不解密 HTTPS、不自动封禁。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
       "target": "network-threat-detection",
       "manage_route": "app-modules",
       "capabilities": [
-        "监听端口基线",
-        "新增监听告警",
+        "端口基线与新增监听告警",
         "公网暴露分类",
         "独立非 root 被动 IDS",
         "双签名开源规则数据",
@@ -393,12 +392,13 @@
         "新鲜采集计数核对",
         "有界私有告警历史",
         "损坏配置可信停止",
-        "修订与幂等后台任务",
-        "中断恢复不重放",
-        "停止选择优先于恢复"
+        "修订幂等与中断不重放",
+        "停止选择优先于恢复",
+        "显式多块缓冲与原生 MTU 核对",
+        "旧版拒绝恢复后的完整升级核验"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.3.0/manifest.json",
-      "sha256": "32428871b014a6e598a35994cce01de3492c43fd9002e8169cec971adfb28dc9"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/network-threat-detection/1.3.1/manifest.json",
+      "sha256": "2a49e71578193d1e2af1af9364559dda0b8f8ac524f01117cb69de89aea18ebe"
     },
     {
       "id": "nfs-manager",

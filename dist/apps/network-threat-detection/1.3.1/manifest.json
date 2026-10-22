@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "id": "network-threat-detection",
+  "name": "Network Threat Detection",
+  "category": "professional",
+  "version": "1.3.1",
+  "summary": "监听基线与独立非 root 被动 IDS；显式多块缓冲迁移与原生 MTU 核对，保留旧日志和拒绝回执；双签名 BSD ET Web 数据独立更新、明确选择，保存不启用采集；需支持 1.3.1 的面板，不解密 HTTPS、不自动封禁。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "network-threat-detection",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "端口基线与新增监听告警",
+    "公网暴露分类",
+    "独立非 root 被动 IDS",
+    "双签名开源规则数据",
+    "显式规则选择与原创回退",
+    "新鲜采集计数核对",
+    "有界私有告警历史",
+    "损坏配置可信停止",
+    "修订幂等与中断不重放",
+    "停止选择优先于恢复",
+    "显式多块缓冲与原生 MTU 核对",
+    "旧版拒绝恢复后的完整升级核验"
+  ],
+  "rule_data_channel": {
+    "id": "et-open-web-bsd-v1",
+    "format": 1,
+    "engine": "suricata-8.0"
+  },
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/network-threat-detection"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

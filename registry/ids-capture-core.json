@@ -1,0 +1,153 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24idsclosurebjia",
+  "frozen_inputs_sha256": "ecc426bf3163291dfc1b5df8f658519fe449d802b9f3e5c6238f15fdc3b0d518",
+  "frozen_files": 17447,
+  "exported_files": 1744,
+  "Go_members": 1301,
+  "source_overrides": 0,
+  "prior_public_inputs_sha256": "5d88e638ffc1bd8315869b85aa2638b14d13d700cdf3d202cd461af91edb73fd",
+  "added": [
+    "internal/executor/app_threat_capture_profile_linux_test.go",
+    "internal/executor/app_threat_capture_profile_test.go",
+    "internal/executor/program_upgrade_ids_linux.go",
+    "internal/executor/program_upgrade_ids_linux_test.go"
+  ],
+  "changed": [
+    "internal/core/app_modules.go",
+    "internal/core/network_ids_operations_test.go",
+    "internal/core/network_ids_ruleprofile_test.go",
+    "internal/executor/app_threat_config.go",
+    "internal/executor/app_threat_lifecycle_linux.go",
+    "internal/executor/app_threat_observe_linux.go",
+    "internal/executor/app_threat_operations_linux.go",
+    "internal/executor/app_threat_operations_linux_test.go",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "scripts/test-network-ids-operations.mjs",
+    "web/src/ThreatIDSReport.vue"
+  ],
+  "original_programme_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24idsclosurebjia-linux-arm64.tar.gz",
+      "archive_sha256": "769ffa6445725bfb84b48394195f92cd8f2cf96443e03a6e5fbbfcba6fe51cea",
+      "normal_build_log_sha256": "bb33a1036e5ce4567d16255168d6a0407b0a575ce218c10c97712984b11d827d",
+      "root_models_proof_sha256": "0074208f4ebb996bac7c314ae52f004e9be6961fb7347db16a48457a5d702e8f",
+      "root_model_tests": 137,
+      "root_model_skipped": 0,
+      "programmes": {
+        "panel": {
+          "sha256": "5f3d1ded185b7d60b1f473732eb13cd18bb1dc979bb92a1e7028ff8903a63a06"
+        },
+        "panel-executor": {
+          "sha256": "9b5c685f4559a7c7d0674bd2405290fed55809e4a41405d0bdf68957ef6c0e68"
+        }
+      },
+      "manifest_sha256": "c6d5ebb372246222c1a0d7fb852a332fd36eb6013be8a67b04be3d8d880122e5",
+      "signature_sha256": "829159092ff20e6aa66d2151e54f61bd42e6f9dc774d07355e2f5eacf6228879",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24idsclosurebjia-linux-amd64.tar.gz",
+      "archive_sha256": "2c1f215bea236d7f1a31ac5d513399106e9f4db9bfb9bc0f75c91f09ac2944e4",
+      "normal_build_log_sha256": "d15feca35fe0b0f5c762d9edba78a8a9eed2172efe00d15cc0b6240f46b86b96",
+      "root_models_proof_sha256": "979ad7f593ca0328f178388731eabcc0e6dc292f199799ea885daccb71fbf2da",
+      "root_model_tests": 137,
+      "root_model_skipped": 0,
+      "programmes": {
+        "panel": {
+          "sha256": "8a3eb24a3f464e34f3606ca22bc48b73ec5ec1cb106c775157143f647d715ebf"
+        },
+        "panel-executor": {
+          "sha256": "c6f3a0e511275822a0b585c2476ada466e65ca00bd59e12eb19abf7d151976d7"
+        }
+      },
+      "manifest_sha256": "f92ca7a4cbd431a7f062b043492fe9ad604b86a477799a2a454037ede2589f23",
+      "signature_sha256": "9cf1a904cbf83127de9b9cf589d37d18cc95deeb907b97259d804a4caaaa48dd",
+      "original_key_signature_verified": true
+    }
+  },
+  "normal_native_Root_regressions_per_arch": {
+    "core": 15,
+    "executor": 122,
+    "total": 137,
+    "skipped": 0,
+    "failed": 0,
+    "uninstalled_models_only": true,
+    "native_fixture_gated_tests_not_selected": 8
+  },
+  "actual_original_packet_acceptance": {
+    "normal_preceding_source": "7bada87abe97cccc40d184a87fc52086813e33bb5a08cace827a06fa912d1310",
+    "real_isolated_wire": true,
+    "HTTP_requests": 36,
+    "HTTP204": 36,
+    "all_original_SIDs": [
+      9000001,
+      9000002,
+      9000003,
+      9000004,
+      9000005,
+      9000006
+    ],
+    "kernel_packets": 363,
+    "decoded_packets": 363,
+    "kernel_drops": 0,
+    "checksums": 0,
+    "reassembly_gaps": 0,
+    "memcap_drops": 0,
+    "alert_queue_overflows": 0,
+    "synthetic_private_canaries_not_logged": true,
+    "all_original_EVE_prefix_preserved": true,
+    "passive_not_IPS_or_HTTPS_decryption": true,
+    "old_failed_packet_case_retained_false": true,
+    "old_failed_wrapper_EEXIST_retained_false": true
+  },
+  "actual_AMD_normal_upgrade": {
+    "preflight_exit": 0,
+    "install_exit": 0,
+    "original_overall_proof_ok": false,
+    "original_overall_proof_sha256": "97effc96f12697ba3a195b38d76f8b8c10b5ae9f1ff793af27522ee938815460",
+    "original_post_install_refusal": "legitimate_running_geodata_verifier",
+    "preflight_log_sha256": "381c813cf33b9b07a34d3985bcb688984706be4f20bddf96ec55bcb44ff2d133",
+    "install_log_sha256": "dfe590f02188031c6737049a4f69b7e11cc11fcdf9731e9a3f7b0d92232a9ade",
+    "independent_readonly_reconciliation_ok": true,
+    "reconciliation_sha256": "b73fd74cbe45d0a111895951335c4b8fb8897ee48d9ba47f694e4bf19f436e3b",
+    "original_false_proof_and_legacy_decline_not_relabelled": true,
+    "all_original_102_schema_migrations_business_runtime_files_statistics_NFT_kernel_and_security_comparators_reexecuted": true,
+    "fresh_installed_complete_queue_exit": 0,
+    "no_second_installer_recovery_or_capture": true,
+    "transaction_sha256": "1dfe17b30e86473b5a1a367576dceb4f03f2fedf00d5b65e702691eb8811c106"
+  },
+  "legacy_compatibility": {
+    "original_format0_config_and_YAML_exact_bytes_retained": true,
+    "new_format1_only_by_explicit_interface_save": true,
+    "client_cannot_supply_MTU_or_buffers": true,
+    "unknown_and_partially_executed_failures_still_block": true,
+    "legacy_decline_closure_requires_later_explicit_recovery_higher_current_revision_complete_owned_native_scope_existing_read_lock_and_unchanged_queue": true,
+    "no_original_receipt_rewrite_or_unit_reset": true
+  },
+  "actual_AMD_offline_ET_syntax": {
+    "ok": true,
+    "engine": "Suricata 8.0.7",
+    "unprivileged_account": true,
+    "capabilities": [],
+    "MemoryMax_bytes": 402653184,
+    "MemoryPeak_bytes": 52215808,
+    "TasksMax": 32,
+    "rule_count": 1510,
+    "rules_failed": 0,
+    "rules_skipped": 0,
+    "no_capture_or_production_selection": true,
+    "proof_sha256": "730949b6eee2cf106e2bcb47b0d087810b047b7eb154d88e304e6f5fe243b2c9",
+    "manifest_sha256": "37a4214bf8b08dc717215f1afab3da207b9202d0224577beacb3b284e7ab1c03",
+    "own_completed_test_unit_stopped": true,
+    "existing_runtime_EVE_config_operations_programmes_SSH_WAF_security_lifetimes_preserved": true
+  },
+  "ARM_native_runtime_and_F25_programme_installation": false,
+  "ARM_boundary": "official PPA catalog503; original failed unit and partial stages preserved; no TLS/signature bypass or reset",
+  "Main_programme_deployed_at_recording": false,
+  "full_OS_architecture_matrix": false,
+  "powerloss_or_production_throughput_acceptance": false,
+  "all50_commercial": false
+}
