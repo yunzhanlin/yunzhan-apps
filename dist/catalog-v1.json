@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-21T21:50:00Z",
+  "generated_at": "2026-10-22T00:10:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -921,8 +921,8 @@
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4-compat4",
-      "summary": "非 root PM2 集群、加密且仅写入的环境变量、锁定 npm 后台部署；默认禁用安装脚本，可受控启用网站用户构建，失败恢复旧依赖，中断可取消并恢复。",
+      "version": "7.0.4-compat5",
+      "summary": "非 root PM2 集群、加密仅写环境变量和锁定 npm 后台部署；默认禁用安装脚本，可受控启用网站用户构建。冷启动就绪检查最多45秒且受请求期限约束；失败恢复旧配置与依赖，中断可取消恢复。需新版签名面板。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -940,10 +940,10 @@
         "依赖失败回滚",
         "中断部署恢复与取消",
         "旧部署可恢复归档",
-        "启动就绪与配置失败回滚"
+        "最长45秒就绪检查、调用方取消与配置失败回滚"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4-compat4/manifest.json",
-      "sha256": "42dda8d193e77376e18a5656823e6a8c08e1a5c0efea0abe0cf039768c99d1a7"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/pm2-manager/7.0.4-compat5/manifest.json",
+      "sha256": "246ea50006668bcba010e258df8026be06d8e22a4a4bc5b091522bbab0fc11df"
     },
     {
       "id": "pure-ftpd",
