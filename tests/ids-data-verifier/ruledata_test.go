@@ -18,6 +18,13 @@ const ruleSHA = "37a4214bf8b08dc717215f1afab3da207b9202d0224577beacb3b284e7ab1c0
 
 func publishedEnvelope(t *testing.T) (*appcatalog.Client, appcatalog.RuleDataEnvelope, time.Time) {
 	t.Helper()
+	// The original publication remains independently verifiable after another
+	// application advances the current catalog. Never change historical bytes.
+	return publishedEnvelopeFrom(t, "registry/reviewed-catalogs/before-pm2-readiness24bjlj/signatures/catalog-v1.bundle.json", "00aac65cd0405b56b866485a9ee59f62f60c520c8af27ef9a72470ec5ebb40aa")
+}
+
+func publishedEnvelopeFrom(t *testing.T, appBundlePath, appCatalogSHA string) (*appcatalog.Client, appcatalog.RuleDataEnvelope, time.Time) {
+	t.Helper()
 	read := func(n string) []byte {
 		b, err := os.ReadFile(filepath.Join("../..", n))
 		if err != nil {
@@ -35,10 +42,10 @@ func publishedEnvelope(t *testing.T) (*appcatalog.Client, appcatalog.RuleDataEnv
 		}
 		return v.Catalog, v.Signature
 	}
-	app, sig := decode(read("signatures/catalog-v1.bundle.json"))
+	app, sig := decode(read(appBundlePath))
 	prefix := "dist/apps/network-threat-detection/rule-data/et-open-web-bsd-v1/"
 	data, dataSig := decode(read(prefix + "catalog-v1.bundle.json"))
-	for text, want := range map[string]string{app: "00aac65cd0405b56b866485a9ee59f62f60c520c8af27ef9a72470ec5ebb40aa", data: "391843d9da2ece79c61e30c28f5d515f6c5cad8ac0ded64e2cb45bf4feb35d82"} {
+	for text, want := range map[string]string{app: appCatalogSHA, data: "391843d9da2ece79c61e30c28f5d515f6c5cad8ac0ded64e2cb45bf4feb35d82"} {
 		sum := sha256.Sum256([]byte(text))
 		if hex.EncodeToString(sum[:]) != want {
 			t.Fatal("immutable publication bytes changed")
@@ -53,6 +60,20 @@ func publishedEnvelope(t *testing.T) (*appcatalog.Client, appcatalog.RuleDataEnv
 	// 72-hour channel remains fresh forever. Live consumers use their own clock.
 	now := time.Date(2026, 10, 21, 21, 51, 0, 0, time.UTC)
 	return appcatalog.Default(), env, now
+}
+
+func TestCurrentPM2CatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
+	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "0432d210df255b06a1ce258546579f4bfa666d0b661b54fd2572e356549d5f4d")
+	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authority.CatalogSHA256() != "391843d9da2ece79c61e30c28f5d515f6c5cad8ac0ded64e2cb45bf4feb35d82" || authority.Catalog().Sequence != 1 || len(bundle.Rules) != 1510 || bundle.Manifest.DependencyRuleCount != 2 {
+		t.Fatal("current app catalog changed the signed IDS data cohort")
+	}
+	if _, _, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, time.Date(2026, 10, 24, 21, 50, 0, 0, time.UTC), &authority); err == nil {
+		t.Fatal("unrelated PM2 publication renewed IDS rule validity")
+	}
 }
 
 func TestPublishedIDSRuleDataActualFrozenConsumerVerifiesBothOriginalKeySignaturesAndAll1510Rules(t *testing.T) {
