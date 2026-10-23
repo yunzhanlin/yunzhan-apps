@@ -1,0 +1,7 @@
+[Unit]
+Description=Prepare isolated panel site account %i
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --prepare-site %i
+PrivateTmp=true
+ProtectHome=true

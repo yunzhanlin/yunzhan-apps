@@ -1277,3 +1277,36 @@ jobs:
           node --test scripts/test-php-security.mjs scripts/test-store-updates.mjs scripts/test-registry-request-identity.mjs scripts/test-runtime-package-labels.mjs scripts/test-deferred-workspace.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24runtimememorybkko npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  php-bounded-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-php-bounded/go.mod
+          cache-dependency-path: panel-integration-php-bounded/go.sum
+      - name: Exact frozen admission scope and complete unchanged25-job workflow prefix
+        run: node --test tests/php-bounded-*.test.mjs tests/php-security-contract.test.mjs tests/runtime-memory-source.test.mjs
+      - name: Independent Draft202012 -70 valid and236 invalid manifests,all legacy cases retained
+        run: |
+          python3 -m venv .local/php-bounded-schema
+          .local/php-bounded-schema/bin/pip install --disable-pip-version-check jsonschema==4.25.1
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-bounded-schema/bin/python" node tools/check-php-bounded-schema.mjs
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-bounded-schema/bin/python" node tools/check-php-security-schema.mjs
+      - name: Actual native handler,direct and network plus cached full-byte verification,races and vet
+        working-directory: panel-integration-php-bounded
+        run: |
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPHP(Bounded|Security)' -count=1
+          sudo "$(command -v go)" test -race ./internal/appcatalog -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          go vet ./...
+      - name: Original-key current signed50 accepted without changing trust,delivery or install admission
+        working-directory: panel-integration-php-bounded
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Candidate retained-OOM,unchanged explicit-retry and compiler resource race regressions
+        working-directory: panel-integration-php-bounded
+        run: sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor -run '^Test(RuntimeCompileOOM|RuntimeFailedUpgrade|NativeRetry|RuntimeMagic|CompilerCgroup|BuildJobs)' -count=1

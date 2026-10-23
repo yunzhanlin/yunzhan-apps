@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { exactPHPSecurityPackage, phpSecurityErrors, phpSecurityFeature } from './php-security-contract.mjs';
+import { exactPHPBoundedPackage, phpBoundedErrors, phpBoundedFeature } from './php-bounded-contract.mjs';
 
 export function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -54,10 +55,11 @@ export function validateManifest(app) {
   const memcachedScope=app.id==="memcached"&&app.version==="1.6.45-compat2"&&app.delivery?.provider==="compose";
   const runtimePackageScope=app.id==="nginx"&&app.version==="1.30.6-compat1"&&app.delivery?.provider==="runtime";
   const phpSecurityScope=exactPHPSecurityPackage(app);
-  errors.push(...phpSecurityErrors(app));
+  const phpBoundedScope=exactPHPBoundedPackage(app),boundedErrors=phpBoundedErrors(app);
+  errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
-    if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!runtimePackageScope&&!phpSecurityScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature))errors.push("required panel feature has no reviewed implementation");
+    if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.includes(intrusion)&&(app.id!=="anti-intrusion"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="intrusion-prevention"||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("preserving intrusion journal belongs only to exact anti-intrusion1.1.0 and its fixed executor target");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
