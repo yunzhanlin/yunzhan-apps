@@ -1354,6 +1354,7 @@ jobs:
         run: node --test tests/module-version-source.test.mjs tests/apache-noop-source.test.mjs
       - name: Genuine pinned Apache prerequisite,unprivileged768MiB compiler,no service startup
         run: |
+          sudo python3 -I -B tests/test_module_version_apache_parents.py
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
           sudo python3 -I -B tools/prepare-module-version-apache-ci.py

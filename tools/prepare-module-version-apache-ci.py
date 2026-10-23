@@ -3,6 +3,28 @@
 No fake executable, service start, panel installation or source overlays.
 """
 import hashlib,json,os,pathlib,pwd,re,secrets,stat,struct,subprocess,sys,tarfile,urllib.request,urllib.error
+
+def verify_runtime_parents(records):
+ for item in records:
+  parent=pathlib.Path(item['path']);s=parent.lstat()
+  actual={k:str(getattr(s,k))for k in('st_dev','st_ino','st_uid','st_gid','st_mode')}
+  assert stat.S_ISDIR(s.st_mode)and s.st_uid==0 and not s.st_mode&0o022 and actual==item['identity'],{'parent':str(parent),'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'existing_parent_NOT_repaired':True,'captured_parent_identity_changed':actual!=item['identity']}
+
+def prepare_runtime_parents(prefix):
+ records=[]
+ for parent in reversed(prefix.parents):
+  created=False
+  if not os.path.lexists(parent):
+   # Explicit mode on EVERY missing component: pathlib parents=True uses
+   # 0777 for intermediate components. Never adopt a concurrent creator.
+   os.mkdir(parent,0o755);created=True
+  s=parent.lstat()
+  assert stat.S_ISDIR(s.st_mode)and s.st_uid==0 and not s.st_mode&0o022,{'parent':str(parent),'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'created_by_this_task':created,'existing_parent_NOT_repaired':True}
+  if created:assert stat.S_IMODE(s.st_mode)==0o755, 'New component did not retain the explicitly requested0755 mode'
+  records.append({'path':str(parent),'created_by_this_task':created,'identity':{k:str(getattr(s,k))for k in('st_dev','st_ino','st_uid','st_gid','st_mode')}})
+ verify_runtime_parents(records)
+ return records
+
 assert sys.platform=='linux' and os.geteuid()==0
 # Control only this task's creation mask. Never chmod/chown an existing CI
 # parent into acceptance; diagnostics retain its actual owner and mode.
@@ -27,6 +49,10 @@ flags=re.findall(r'"([^"]*)"',block)
 assert flags[0]=='--prefix=' and '--enable-remoteip=shared'in flags and '--with-mpm=event'in flags
 prefix=pathlib.Path('/opt/panel/runtimes/apache/2.4.68')
 assert not os.path.lexists(prefix),'Refuse any existing runtime; never overwrite,adopt or uninstall it'
+# Capture/create before downloading or running an unprivileged compiler. If
+# an existing CI parent is unsafe, decline now and retain its actual metadata.
+destination_parents=prepare_runtime_parents(prefix)
+print(json.dumps({'phase':'destination-parent-admission-before-build','parents':destination_parents,'existing_parent_mutations':0}),flush=True)
 try:account=pwd.getpwnam('panel-ci-apache')
 except KeyError:
  subprocess.run(['/usr/sbin/useradd','--system','--user-group','--no-create-home','--home-dir','/nonexistent','--shell','/usr/sbin/nologin','panel-ci-apache'],check=True,timeout=15)
@@ -69,7 +95,7 @@ for current,dirs,files in os.walk(work,followlinks=False):
  for name in['.',*dirs,*files]:
   path=pathlib.Path(current)/name;s=path.lstat();assert not stat.S_ISLNK(s.st_mode);os.chown(path,account.pw_uid,account.pw_gid)
 stage=work/'stage';stage.mkdir(mode=0o700);os.chown(stage,account.pw_uid,account.pw_gid)
-plan={'format':1,'source':str(work/'httpd-2.4.68'),'stage':str(stage),'flags':['--prefix='+str(prefix),*flags[1:]],'source_sha256':digest,'User':'panel-ci-apache','MemoryMax':'768M','MemorySwapMax':'0','service_start':False}
+plan={'format':1,'source':str(work/'httpd-2.4.68'),'stage':str(stage),'flags':['--prefix='+str(prefix),*flags[1:]],'source_sha256':digest,'User':'panel-ci-apache','MemoryMax':'768M','MemorySwapMax':'0','service_start':False,'destination_parents':destination_parents}
 (base/'plan.json').write_text(json.dumps(plan)+'\n');os.chmod(base/'plan.json',0o644)
 worker=base/'build.py'
 worker.write_text("""import json,pathlib,subprocess,sys
@@ -91,15 +117,13 @@ for current,dirs,files in os.walk(candidate,followlinks=False):
  for name in['.',*dirs,*files]:
   path=pathlib.Path(current)/name;s=path.lstat();assert not stat.S_ISLNK(s.st_mode)
   os.chown(path,0,0);os.chmod(path,0o755 if stat.S_ISDIR(s.st_mode)or s.st_mode&0o111 else 0o644)
-prefix.parent.mkdir(parents=True,exist_ok=True)
-for parent in(prefix.parent,*prefix.parent.parents):
- s=parent.lstat();assert stat.S_ISDIR(s.st_mode)and s.st_uid==0 and not s.st_mode&0o022,{'parent':str(parent),'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'existing_parent_NOT_repaired':True}
+verify_runtime_parents(destination_parents)
 assert not os.path.lexists(prefix)
 # The isolated CI job is the sole owner; destination is absent and no existing
 # runtime is removed or overwritten. Keep all source/build logs for diagnostics.
 os.rename(candidate,prefix)
 actual=subprocess.run([str(prefix/'bin/httpd'),'-v'],capture_output=True,text=True,check=True,timeout=10)
 assert actual.stdout==version.stdout and actual.stderr==''
-out={'ok':True,'scope':'genuine pinned Apache CI prerequisite,not a normal panel/runtime installation receipt','source_url':used,'source_sha256':digest,'prefix':str(prefix),'CLI_version':actual.stdout,'CLI_sha256':hashlib.sha256((prefix/'bin/httpd').read_bytes()).hexdigest(),'original_production_configure_flags':True,'unprivileged_compiler':account.pw_name,'memory_max_configured_bytes':768<<20,'swap_max_configured_bytes':0,'service_started':False,'panel_installed':False,'all50_commercial':False,'retained_build_root':str(base)}
+out={'ok':True,'scope':'genuine pinned Apache CI prerequisite,not a normal panel/runtime installation receipt','source_url':used,'source_sha256':digest,'prefix':str(prefix),'CLI_version':actual.stdout,'CLI_sha256':hashlib.sha256((prefix/'bin/httpd').read_bytes()).hexdigest(),'original_production_configure_flags':True,'unprivileged_compiler':account.pw_name,'memory_max_configured_bytes':768<<20,'swap_max_configured_bytes':0,'service_started':False,'panel_installed':False,'all50_commercial':False,'retained_build_root':str(base),'destination_parents':destination_parents,'existing_parent_mutations':0}
 (base/'proof.json').write_text(json.dumps(out,sort_keys=True)+'\n')
 print(json.dumps(out))
