@@ -1,0 +1,73 @@
+{
+  "client_version": "1.3.2",
+  "server_application_version_unchanged": "1.3.0",
+  "source_scope": "native-client-1.3.2",
+  "source_inputs_sha256": "de6e05974a1b79458b50bb3380cfaa26e28605f9ec96c6eb74cc807119001b5a",
+  "source_index_sha256": "72772c5b2aad69a271cbd138040e2879ee2002a245be6fb7af5b42f9bc42cd49",
+  "source_files": 26,
+  "source_overrides": 0,
+  "android_tests": {
+    "debug": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "release": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "android_lint": {
+    "debug": {
+      "issues": 0
+    },
+    "release": {
+      "issues": 0
+    },
+    "warnings_are_errors": true,
+    "actual_XML_records_checked": true
+  },
+  "swift_tests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "local_build_log_sha256": {
+    "android": "d2c7d9069f9ec260f506ce74328821e4353b1cd925b097eec0a5900e83747219",
+    "swift": "b6f08e4e6abf32d9533f8c2fac14a98d4e62208e54a44aa44a82dbe9c6493df7",
+    "ios_unsigned_device": "ab8416a59807f6557853cf1b72cb8e29878df90b9fa4c41a3a18155f27b93869"
+  },
+  "local_unsigned_android_apk_sha256": "7f1d9e9577495152ccd434d0ce937b5db2a6d64b66859055f5345612162d0e0a",
+  "local_QA_only_debug_apk_sha256": "2859ac725c35b8ee1fe39343e2fe7f65b32c23c63c66e7a8e5a4f832558ae13b",
+  "local_unsigned_ios_executable_sha256": "f126cb499a74e8b7cfb679cdc37297c89b9943b4f9e8a0b731108e2f7023c25f",
+  "scope": "Exact WebView and connection-bound callbacks, one-shot JavaScript confirmations revoked on background/disconnect, renderer-exit local logout, Chinese/English Android resources, strict Debug/Release lint, and actual iOS User-Agent. Required JavaScript has one narrowly reviewed acknowledgement; interception is not represented as an all-traffic firewall and the panel must retain self-only CSP.",
+  "retained_native_131_observation": {
+    "source_inputs_sha256": "31dedb397add6bb2d3d1a7d2fed0b68520a230db78bcc038ad706d57245801e0",
+    "same_unsigned_APK_reproduced": "c3c42c6af86cb98c22318d61969cd8f409369fb97e0cbc84850eace8e75e1803",
+    "actual_debug_lint_issues": 5,
+    "issue_ids": [
+      "SetJavaScriptEnabled",
+      "SetTextI18n",
+      "SetTextI18n",
+      "SetTextI18n",
+      "SetTextI18n"
+    ],
+    "previous_zero_issue_claim_not_supported_by_fresh_XML": true,
+    "old_source_index_not_rewritten": true,
+    "signing_halted_before_private_key_access": true
+  },
+  "not_proven": {
+    "real_Android_Activity_and_iOS_WebView_UI_instrumentation": true,
+    "physical_Android_and_iOS_devices": true,
+    "actual_biometric_and_document_provider_flows": true,
+    "production_publisher_signing": true,
+    "new_GitHub_artifact_release": true,
+    "panel_download_link_upgrade": true,
+    "app_store_release": true,
+    "secure_native_management_downloads": true,
+    "offline_operations_and_system_push": true
+  },
+  "program_or_server_application_operation": false,
+  "private_key_access_or_rotation": false,
+  "commercial_all50": false
+}

@@ -1,0 +1,111 @@
+{
+  "format": 1,
+  "version": "1.3.2",
+  "source_scope": "native-client-1.3.2",
+  "source_inputs_sha256": "2b963086f95fdc30787c7d27ad5680b9fb5802e1dec28f5d824e3670f211a052",
+  "source_index_sha256": "dec975bc937f4033cf0e9270b207e7f9accbbee804d47b682ea70d1f7b729b54",
+  "source_files": 26,
+  "source_overrides": 0,
+  "android_min_sdk": 30,
+  "android_target_sdk": 37,
+  "agp": "9.1.1",
+  "gradle": "9.3.1",
+  "android_tests": {
+    "Debug": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "Release": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "android_lint": {
+    "debug": {
+      "issues": 0
+    },
+    "release": {
+      "issues": 0
+    }
+  },
+  "swift_tests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "iOS_unsigned_architecture": "arm64",
+  "build_proof_sha256": "c0f3fac04157dd9adc026140bc7c2a8df3cac67df4b5118f121fa455e9389822",
+  "package_proof_sha256": "fc8d26488703bc8140731ef521e6c08c8ea6a04acfbf69195960fdcc2ebd0165",
+  "artifacts": {
+    "android_apk": "a76d4a9a04b4d46c35332b36e04590078a27e25885fd5abe6ede611be55b09e3",
+    "source_archive": "6fcbbaa8d18ba1cb22aa050b849dd8d3e1488e8f845b32c1930cb0eea2cc313f",
+    "iOS_unsigned": "ef86e336b7334bb29cad8570cc29eea0af0f9f26217b77bd914a94c429d4f365"
+  },
+  "publisher_certificate_sha256": "0ba923afca85db94f4bdabd6d235fcf1c7088bb167ace661bf21781d1c7f0bd5",
+  "original_publisher_preserved": true,
+  "private_key_rotation": false,
+  "packaging_private_key_access": false,
+  "android_actual_ui": {
+    "platform": "Android17 API37 AOSP arm64 emulator",
+    "inspection_method": "UIAutomator accessibility hierarchy, actual SystemUI/document picker interaction and real HTTP file hashes; not pixel or physical-device acceptance",
+    "software_renderer_warnings_observed": true,
+    "webview": "145.0.7632.218",
+    "fresh_AVD": true,
+    "existing_AVD_data_modified": false,
+    "synthetic_fixture_not_business_panel": true,
+    "QA_APK_sha256": "29ce87a1b77972be29a62fbd6763f9e431a6bbacad1facce26bd0a4b7992187d",
+    "release_APK_installed_sha256": "a76d4a9a04b4d46c35332b36e04590078a27e25885fd5abe6ede611be55b09e3",
+    "first_install_time_preserved_from130": "2026-10-23 08:48:48",
+    "upgrade_chain_includes_unreleased132_candidate": true,
+    "locked_native_web_and_accessibility_hidden": true,
+    "system_PIN_unlock_and_foreground_restore": true,
+    "document_picker_package": "com.android.documentsui",
+    "upload_counts_before_selection_while_locked_after_auth": [
+      1,
+      1,
+      2
+    ],
+    "uploaded_bytes": 65,
+    "uploaded_sha256": "446bc9b9983f7f1596750704c34bc4ad20fdf555fff5b21a1b1c87f9ee4d9cec",
+    "discarded_second_file_not_uploaded": true,
+    "background_confirmation_cancelled": true,
+    "new_confirmation_succeeds": true,
+    "foreign_origin_requests": 0,
+    "native_cross_origin_block_alert": true,
+    "background_during_authentication_stays_locked": true,
+    "release_HTTP_rejected": true,
+    "release_native_LAN_permission_dialog_and_manual_grant": true,
+    "grant_does_not_auto_connect": true,
+    "reconnect_entries_without_cookie": 4,
+    "synthetic_PINs_cleared": true,
+    "receipt_sha256": {
+      "ui-control24bkdx.json": "3e2709091d3218f10b5dc59968f18093737803c37f78056eff44b89342d947cf",
+      "ui-control24bkdy.json": "4e1518e2f89fd89c10727e4ab534d6cbc21e1f71b580a8da7657b7c2c86f0b17",
+      "ui-control24bkei.json": "c7c87aaf190307b4c435e6cf80129709aa29bcdcd7df960149fc34ba0c6b3e3e",
+      "ui-control24bkel.json": "5aa59b4a9518ba144357ec87fd8560441ab37459dab04145cb9fb8943d41cbdf"
+    }
+  },
+  "retained_failure": {
+    "previous_candidate_inputs": "2a318d9b40bbef36964ebdd12f4c31152bd1f626b14cdfa56f89c1805900b6cd",
+    "locked_overlay_exposed_web_accessibility": true,
+    "old_receipt_preserved": true,
+    "test_harness_QA_component_short_name_failure_retained": true
+  },
+  "not_proven": {
+    "pixel_visual_rendering": true,
+    "physical_Android": true,
+    "biometric_hardware": true,
+    "Android11_through16_UI_matrix": true,
+    "external_document_providers": true,
+    "production_HTTPS_business_flow": true,
+    "iOS_VoiceOver_and_native_UI": true,
+    "iOS_physical_device_and_signing": true,
+    "push_offline_and_native_management_download": true,
+    "current_GitHub_head_CI": true,
+    "GitHub_release_download": true,
+    "panel_store_install": true
+  },
+  "commercial_all50": false
+}
+

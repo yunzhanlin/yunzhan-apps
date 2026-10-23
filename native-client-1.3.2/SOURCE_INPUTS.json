@@ -1,0 +1,137 @@
+{
+  "format": 1,
+  "version": "1.3.2",
+  "files": {
+    "mobile/.gitignore": {
+      "sha256": "7917ac246bedcb202cadea58e7f8b9a30b418894a6d80904b838ca71c83a794c",
+      "bytes": 132,
+      "mode": 420
+    },
+    "mobile/README.md": {
+      "sha256": "5028e20bad5f2e915cce57c624e6ee43cc6ca57fafc0e3ff0bdd7cc48e1808b7",
+      "bytes": 6063,
+      "mode": 420
+    },
+    "mobile/android/app/build.gradle": {
+      "sha256": "4cde776956d81af36dc30e230e9c7aa5dc2be854b61d9ac3a38df17bbd826abc",
+      "bytes": 756,
+      "mode": 420
+    },
+    "mobile/android/app/src/debug/AndroidManifest.xml": {
+      "sha256": "b35978d816016d6b31abef9dfcee4bbea6532a0d6576c81630febd3f78811fab",
+      "bytes": 313,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/AndroidManifest.xml": {
+      "sha256": "635d40b157dfbeba6c8a9cef4d3456e95c3d6aa9033dd45b843510e55ba0f49b",
+      "bytes": 993,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelActivity.java": {
+      "sha256": "065df58b614dd2bc7cb56564c152c3e34c77d2799ca0845d6f421a5c69ecac93",
+      "bytes": 21333,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelAddress.java": {
+      "sha256": "b4f6d8456bb07852ab89b59a46e987b5f2146c84db70fd995032fb78a0614855",
+      "bytes": 2639,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/SessionCallbacks.java": {
+      "sha256": "b9def4fcfda096306857fd50891a611f9ae1927bb1b06eff23b7a54f7a4618ce",
+      "bytes": 3228,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/res/drawable/panel_icon.xml": {
+      "sha256": "77d4a317abd30298ac2984338043602118bea3e80ae949ae8b6acea93be44b6c",
+      "bytes": 449,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/res/values-en/strings.xml": {
+      "sha256": "ff9a2ce2633b15138a3de90fe731f8f336d493a5f8861f303a8ec206ccccc8a1",
+      "bytes": 3237,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/res/values/strings.xml": {
+      "sha256": "962eb10121ab0628af40735eeca5154642c508b162a6e2770910657a47736267",
+      "bytes": 3060,
+      "mode": 420
+    },
+    "mobile/android/app/src/main/res/xml/no_backup.xml": {
+      "sha256": "8be827692b21716f2b24280ccf1970ed9bb9768bc8fd7b59ab30c7e4a37ef489",
+      "bytes": 560,
+      "mode": 420
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/PanelAddressTest.java": {
+      "sha256": "cb8ed2b0096b7ba1cd744034d9f757ddf2d90a97cd016cdbf3706566bbd7010a",
+      "bytes": 1974,
+      "mode": 420
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/SessionCallbacksTest.java": {
+      "sha256": "e42e01f47d59ff32d6f94f394efeeb0c9ba94a745dca1753e3c0500ba6fd2fc3",
+      "bytes": 7151,
+      "mode": 420
+    },
+    "mobile/android/build.gradle": {
+      "sha256": "9de6b514b57274d512554110fdec0d334ffd819cb7d5fe3229d039b4c7de655c",
+      "bytes": 69,
+      "mode": 420
+    },
+    "mobile/android/gradle.properties": {
+      "sha256": "5593b34f494283ff920536da99b21bfcdf1aec00d6e337b2186bcfe330c99a5e",
+      "bytes": 206,
+      "mode": 420
+    },
+    "mobile/android/settings.gradle": {
+      "sha256": "f16ebf82cb327054e8bc8b8861445a4a7628dbc04508f100b7d993a10c678287",
+      "bytes": 274,
+      "mode": 420
+    },
+    "mobile/ios/Info.plist": {
+      "sha256": "f7699a736e302905bfb0162290d3945b94c89eed3d9ac0f75859f3067f79c6be",
+      "bytes": 1591,
+      "mode": 420
+    },
+    "mobile/ios/Package.swift": {
+      "sha256": "59367cd04167d598eef65be18dc731cd38fec91aad3c3cf1fa7b659f7d33e234",
+      "bytes": 463,
+      "mode": 420
+    },
+    "mobile/ios/PanelAddress.swift": {
+      "sha256": "0ac2dc167b8d8771ac2ecbc9bec21e813de84e2438782bc90e1ed6a9eb4d3b17",
+      "bytes": 2040,
+      "mode": 420
+    },
+    "mobile/ios/SessionCallbacks.swift": {
+      "sha256": "db1ac44b02f96af490e0322010ae01c32e66baaa883a1b62ca115a2330db3774",
+      "bytes": 3524,
+      "mode": 420
+    },
+    "mobile/ios/Tests/PanelAddressTests.swift": {
+      "sha256": "826e2384e4ee35791e13b91816616eae298f85ce9a6e1698ab335b9e0aaa42f5",
+      "bytes": 1490,
+      "mode": 420
+    },
+    "mobile/ios/Tests/SessionCallbacksTests.swift": {
+      "sha256": "81a38c8aff0554c5a2d91b0a0df6b42150d0258292c94e0c3a05aaa3f40162ce",
+      "bytes": 7299,
+      "mode": 420
+    },
+    "mobile/ios/YunzhanMobile.swift": {
+      "sha256": "5955d695393218f7bb129b9f18af1ff375334909eb07da9eebcf8e014b6d592e",
+      "bytes": 15801,
+      "mode": 420
+    },
+    "mobile/ios/YunzhanMobile.xcodeproj/project.pbxproj": {
+      "sha256": "24440d26bcc16c7711ba0abc033b1a6043a6ffe7b23f792ab4eea670d944e7ce",
+      "bytes": 4383,
+      "mode": 420
+    },
+    "mobile/ios/YunzhanMobile.xcodeproj/xcshareddata/xcschemes/YunzhanMobile.xcscheme": {
+      "sha256": "a4f1382451cc6c5f8dcb261037330d72afef7f42abdbac727ab4b8129ac2422a",
+      "bytes": 1342,
+      "mode": 420
+    }
+  },
+  "inputs_sha256": "2b963086f95fdc30787c7d27ad5680b9fb5802e1dec28f5d824e3670f211a052"
+}
