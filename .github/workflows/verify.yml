@@ -1183,10 +1183,10 @@ jobs:
           node-version: 22
       - uses: actions/setup-go@v5
         with:
-          go-version-file: panel-integration-ids-upgrade-lineage/go.mod
-          cache-dependency-path: panel-integration-ids-upgrade-lineage/go.sum
+          go-version-file: panel-integration-compiler-exit/go.mod
+          cache-dependency-path: panel-integration-compiler-exit/go.sum
       - name: Exact frozen PHP source, retained original identities and honest qualification boundaries
-        run: node --test tests/php-security-*.test.mjs tests/ids-upgrade-lineage-*.test.mjs
+        run: node --test tests/php-security-*.test.mjs tests/ids-upgrade-lineage-*.test.mjs tests/compiler-exit-source.test.mjs
       - name: Independent Draft202012 exact4 PHP, historical8, current50 and136 rejection cases
         run: |
           python3 -m venv .local/php-security-schema
@@ -1194,32 +1194,41 @@ jobs:
           YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-security-schema/bin/python" node tools/check-php-security-schema.mjs
           YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-security-schema/bin/python" node tools/check-mobile-delivery-schema.mjs
       - name: Complete ordinary Linux Root source contracts and vet, not installed PHP acceptance
-        working-directory: panel-integration-ids-upgrade-lineage
+        working-directory: panel-integration-compiler-exit
         run: |
           sudo "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Retained immutable panel-integration-php-security source - 175 selected Root models and66 feature cases
         run: sudo "$(command -v node)" tools/run-php-security-ci.mjs "$(command -v go)"
-      - name: Actual Linux178 current Root models,66 feature cases and all9 strict original/new lineage cases
+      - name: Retained F30 panel-integration-ids-upgrade-lineage 178 Root models,66 feature cases and all9 lineage cases
         run: |
           sudo "$(command -v node)" tools/run-ids-upgrade-lineage-ci.mjs "$(command -v go)"
-          cd panel-integration-ids-upgrade-lineage
+          cd panel-integration-compiler-exit
           sudo "$(command -v go)" test -json ./internal/executor -run '^Test(ProgramUpgradeIDS|RuntimeSourceDownloadNoUntrustedFallback|PHPSecuritySourceGuard)' -count=1
       - name: Current original-key F28 signed50 accepted by the new PHP-aware consumer
-        working-directory: panel-integration-ids-upgrade-lineage
+        working-directory: panel-integration-compiler-exit
         run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
       - name: Security admission, original ticket identity, exact feature and old-source retention races
-        working-directory: panel-integration-ids-upgrade-lineage
+        working-directory: panel-integration-compiler-exit
         run: |
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/appcatalog ./internal/runtimecatalog -run '^Test(PHP|NativeMobile|RegistryUnreviewed|RegistryRuntime|RuntimeBundle)' -count=1
           sudo "$(command -v go)" test -race ./internal/executor -run '^Test(PHPSecurity|ProgramUpgradeIDS|RuntimeSourceDownloadNoUntrustedFallback)' -count=1
       - name: Complete original packaging and real flock recovery fixtures, not an installed upgrade
-        working-directory: panel-integration-ids-upgrade-lineage
+        working-directory: panel-integration-compiler-exit
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
       - name: Actual compiled security selectors and unchanged responsive management build budget
         run: |
-          npm ci --prefix panel-integration-ids-upgrade-lineage/web --ignore-scripts
-          cd panel-integration-ids-upgrade-lineage
+          npm ci --prefix panel-integration-compiler-exit/web --ignore-scripts
+          cd panel-integration-compiler-exit
           node --test scripts/test-php-security.mjs scripts/test-mobile-navigation.mjs scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-runtime-package-labels.mjs scripts/test-frontend-release.mjs scripts/test-deferred-workspace.mjs scripts/test-registry-request-identity.mjs scripts/test-registry-freshness.mjs scripts/test-menu-permissions.mjs scripts/test-task-manager.mjs
-          VITE_PANEL_VERSION=0.1.0-dev.proapps24idslineagebkhq npm run build --prefix web
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24compilerexitbkiu npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+      - name: Native configure dependencies and a distinct unprivileged builder; no installed panel or runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config autoconf bison re2c libxml2-dev libssl-dev libcurl4-openssl-dev libonig-dev libzip-dev libicu-dev libpng-dev libjpeg-dev libfreetype-dev libsqlite3-dev zlib1g-dev
+          if ! getent passwd panel-build >/dev/null; then
+            sudo useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin panel-build
+          fi
+      - name: Actual four E5/NNP compiler authorities,256 background and128 exited probe witnesses,original refusal cases and genuine official PHP configure
+        run: sudo "$(command -v node)" tools/run-compiler-exit-native-ci.mjs "$(command -v go)"

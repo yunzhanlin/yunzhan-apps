@@ -1,0 +1,34 @@
+[Unit]
+Description=Panel pinned Apache request-body engine build %i (not site activation)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Slice=system.slice
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --build-apache-body %i
+TimeoutStartSec=245min
+TimeoutStopSec=15s
+KillMode=control-group
+SendSIGKILL=true
+UMask=0077
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/panel-executor/build.lock /var/lib/panel-executor/apache-body-builds /var/cache/panel-apache-body-build /opt/panel/app-modules/apache-waf/engines
+ReadOnlyPaths=/var/lib/panel-executor/apache-body-requests /var/lib/panel-executor/apache-body-cancellations /opt/panel/runtimes/apache
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+# No DAC_OVERRIDE, SYS_PTRACE, NET_ADMIN or package/service mutation capability.
+# CAP_KILL is required to collect compiler descendants after their UID change.
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_SETUID CAP_SETGID CAP_KILL
+# RestrictSUIDSGID + NNP can remove CAP_SETUID from the initial effective set.
+# Preserve exactly the same closed set for the root supervisor; runuser and
+# the fixed setpriv guard clear all active/inherited/ambient compiler grants.
+AmbientCapabilities=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_SETUID CAP_SETGID CAP_KILL
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryHigh=576M
+MemoryMax=640M
+TasksMax=128
+CPUQuota=85%
