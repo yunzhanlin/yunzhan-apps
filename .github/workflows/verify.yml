@@ -1352,6 +1352,11 @@ jobs:
           cache-dependency-path: panel-integration-module-version/go.sum
       - name: Exact normal frozen source and all27 original jobs remain immutable
         run: node --test tests/module-version-source.test.mjs tests/apache-noop-source.test.mjs
+      - name: Genuine pinned Apache prerequisite,unprivileged768MiB compiler,no service startup
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
+          sudo python3 -I -B tools/prepare-module-version-apache-ci.py
       - name: Actual authenticated signed Core to Unix executor and original request preservation,no skipped models
         run: sudo "$(command -v node)" tools/run-module-version-native-ci.mjs "$(command -v go)"
       - name: Same exact171 integration models under the race detector

@@ -31,7 +31,13 @@ test('real authenticated signed package integration exercises the private Unix s
 });
 test('new28th native gate preserves every byte of original27 jobs and requires no-skip exact integration counts',()=>{
  const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  module-version-native-amd64:\n');assert(at>0);assert.equal(sha(raw.subarray(0,at)),"3414b7c87adb612993b6b2073cbff540784ab501f94de4662bca5283c99b4b23");
- const gate=raw.subarray(at).toString();for(const x of['panel-integration-module-version','run-module-version-native-ci.mjs','--race','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI'])assert(gate.includes(x),x);
+ const gate=raw.subarray(at).toString();for(const x of['panel-integration-module-version','prepare-module-version-apache-ci.py','run-module-version-native-ci.mjs','--race','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI'])assert(gate.includes(x),x);
  for(const x of['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(x),x);
  const runner=read('tools/run-module-version-native-ci.mjs').toString();for(const x of['expectedPasses:78','expectedPasses:93',"e.Action==='skip'",'private_integration_not_host_app_installation:true','all50_commercial:false'])assert(runner.includes(x),x);
+});
+test('native prerequisite is a genuine exact pinned Apache build,never a fabricated executable or existing runtime replacement',()=>{
+ const p=read('tools/prepare-module-version-apache-ci.py').toString();
+ for(const x of['ed9a9d4500fb48bb28eaffb3ba71d06ccf86d498fa13ab9f781da010cc488498','read_source(\'internal/executor/install_linux.go\')','assert len(blocks)==1','not os.path.lexists(prefix)','--property=User=panel-ci-apache','--property=MemoryMax=768M','--property=MemorySwapMax=0',"['/usr/bin/make','-j1']",'Server version: Apache/2.4.68 (Unix)',"'service_started':False"])assert(p.includes(x),x);
+ assert(!p.includes('shutil.rmtree')&&!p.includes('cp /bin/true')&&!p.includes('touch('));
+ const runner=read('tools/run-module-version-native-ci.mjs').toString();assert(runner.includes('fs.writeSync(1,z.stdout'));assert(runner.indexOf("stem+'.process.json'")<runner.indexOf('assert.equal(z.status,0)'));
 });
