@@ -4,6 +4,9 @@ No fake executable, service start, panel installation or source overlays.
 """
 import hashlib,json,os,pathlib,pwd,re,secrets,stat,struct,subprocess,sys,tarfile,urllib.request,urllib.error
 assert sys.platform=='linux' and os.geteuid()==0
+# Control only this task's creation mask. Never chmod/chown an existing CI
+# parent into acceptance; diagnostics retain its actual owner and mode.
+os.umask(0o022)
 repo=pathlib.Path(__file__).resolve().parents[1]
 source=repo/'panel-integration-module-version'
 index_raw=(source/'source-sha256.json').read_bytes()
@@ -90,7 +93,7 @@ for current,dirs,files in os.walk(candidate,followlinks=False):
   os.chown(path,0,0);os.chmod(path,0o755 if stat.S_ISDIR(s.st_mode)or s.st_mode&0o111 else 0o644)
 prefix.parent.mkdir(parents=True,exist_ok=True)
 for parent in(prefix.parent,*prefix.parent.parents):
- s=parent.lstat();assert stat.S_ISDIR(s.st_mode)and s.st_uid==0 and not s.st_mode&0o022
+ s=parent.lstat();assert stat.S_ISDIR(s.st_mode)and s.st_uid==0 and not s.st_mode&0o022,{'parent':str(parent),'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'existing_parent_NOT_repaired':True}
 assert not os.path.lexists(prefix)
 # The isolated CI job is the sole owner; destination is absent and no existing
 # runtime is removed or overwritten. Keep all source/build logs for diagnostics.

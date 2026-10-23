@@ -38,6 +38,7 @@ test('new28th native gate preserves every byte of original27 jobs and requires n
 test('native prerequisite is a genuine exact pinned Apache build,never a fabricated executable or existing runtime replacement',()=>{
  const p=read('tools/prepare-module-version-apache-ci.py').toString();
  for(const x of['ed9a9d4500fb48bb28eaffb3ba71d06ccf86d498fa13ab9f781da010cc488498','read_source(\'internal/executor/install_linux.go\')','assert len(blocks)==1','not os.path.lexists(prefix)','--property=User=panel-ci-apache','--property=MemoryMax=768M','--property=MemorySwapMax=0',"['/usr/bin/make','-j1']",'Server version: Apache/2.4.68 (Unix)',"'service_started':False"])assert(p.includes(x),x);
+ assert(p.includes('os.umask(0o022)')&&p.includes('existing_parent_NOT_repaired'));
  assert(!p.includes('shutil.rmtree')&&!p.includes('cp /bin/true')&&!p.includes('touch('));
  const runner=read('tools/run-module-version-native-ci.mjs').toString();assert(runner.includes('fs.writeSync(1,z.stdout'));assert(runner.indexOf("stem+'.process.json'")<runner.indexOf('assert.equal(z.status,0)'));
 });
