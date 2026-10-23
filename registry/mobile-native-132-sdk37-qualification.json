@@ -1,0 +1,81 @@
+{
+  "client_version": "1.3.2",
+  "server_application_version_unchanged": "1.3.0",
+  "source_scope": "native-client-1.3.2",
+  "source_inputs_sha256": "2a318d9b40bbef36964ebdd12f4c31152bd1f626b14cdfa56f89c1805900b6cd",
+  "source_index_sha256": "277026caffdc199e9f6791c344cfef9304239b7a8174e99a6a301c3818c53762",
+  "source_files": 26,
+  "source_overrides": 0,
+  "android_target_sdk": 37,
+  "android_min_sdk": 30,
+  "agp": "9.1.1",
+  "gradle": "9.3.1",
+  "java_only_no_Kotlin_runtime": true,
+  "android_tests": {
+    "debug": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    },
+    "release": {
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "android_lint": {
+    "debug": {
+      "issues": 0
+    },
+    "release": {
+      "issues": 0
+    },
+    "warnings_are_errors": true,
+    "actual_XML_records_checked": true
+  },
+  "swift_tests": {
+    "passed": 16,
+    "failed": 0
+  },
+  "local_build_log_sha256": {
+    "android": "7d813fa97603d6dc2c9f4a236b4839218d2c5da7b4d49fdb656f04a75167f497",
+    "swift": "be1904b172ebca14cf8dff52581391063e0b5f6bb3452fcad0c3a04be43e988b",
+    "ios-device-unsigned": "ba5d28b4d9dd35c913ae03194c21525b44e2c0ac05494c493dd9964177713e62"
+  },
+  "local_unsigned_android_apk_sha256": "e9408d1821ccd0541bac2abcdbe70264eb0134399d0b54932dd14bab65800ca6",
+  "local_QA_only_debug_apk_sha256": "d9e9dbf7ea27aa2966216c7eeec1169c66329e898b9dac01579120744b7fb505",
+  "local_unsigned_ios_executable_sha256": "2800a77eae19f997bfde789ef5113fb61aba93232c7652c331633fe39835a6e5",
+  "scope": "API37 with supportedAGP9.1.1/Gradle9.3.1; Android17 explicit native local-network permission button without scanning, automatic connection or result callback; both actual Debug/Release model tests retained and strict lint0. Java-only module disables unnecessary Kotlin compilation/runtime, no global legacy DSL opt-out. Existing view/session/prompt guards and all iOS sources unchanged.",
+  "previous_CI_failure": {
+    "candidate_head": "c91a9ab0b7c8d52eed6e357eae114af746cb9fb9",
+    "reason": "OldTargetApi",
+    "targetSDK": 36,
+    "check_run_ids": [
+      120162159127,
+      120162074221
+    ],
+    "old_source_inputs_sha256": "de6e05974a1b79458b50bb3380cfaa26e28605f9ec96c6eb74cc807119001b5a",
+    "old_qualification_file_retained": "registry/mobile-native-132-qualification.json",
+    "old_candidate_not_released": true
+  },
+  "SDK37_qualification_failures_retained": [
+    "FirstSDK37 builds exited0 but AGP9's default omitted Release unit tests; qualification rejected missing XML.",
+    "Explicit Release task initially absent; enabled both variants through android.onlyEnableUnitTestForTheTestedBuildType=false; final actualDebug16+Release16 verified."
+  ],
+  "not_proven": {
+    "real_Android_Activity_and_iOS_WebView_UI_instrumentation": true,
+    "Android17_real_local_network_permission_dialog": true,
+    "physical_Android_and_iOS_devices": true,
+    "actual_biometric_and_document_provider_flows": true,
+    "current_candidate_production_publisher_signing": true,
+    "new_GitHub_artifact_release": true,
+    "current_candidate_remote_CI": true,
+    "panel_download_link_upgrade": true,
+    "app_store_release": true,
+    "secure_native_management_downloads": true,
+    "offline_operations_and_system_push": true
+  },
+  "program_or_server_application_operation": false,
+  "private_key_access_for_this_candidate": false,
+  "commercial_all50": false
+}

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "source_inputs_sha256": "de6e05974a1b79458b50bb3380cfaa26e28605f9ec96c6eb74cc807119001b5a",
+  "source_inputs_sha256": "2a318d9b40bbef36964ebdd12f4c31152bd1f626b14cdfa56f89c1805900b6cd",
   "files": {
     "mobile/.gitignore": {
       "sha256": "7917ac246bedcb202cadea58e7f8b9a30b418894a6d80904b838ca71c83a794c",
@@ -8,13 +8,13 @@
       "mode": 420
     },
     "mobile/README.md": {
-      "sha256": "e1e4b2619a49d46b234e70aefd7d5def116acf7744c3ec27cbb7ef9835f03b55",
-      "bytes": 4750,
+      "sha256": "1009f11352908c9046b8162fe7a53609a730330c3b656c3532007c023e9cf2cf",
+      "bytes": 5526,
       "mode": 420
     },
     "mobile/android/app/build.gradle": {
-      "sha256": "d3b09d2de439e74bcacd0f52b6e297c4aba8595c6f0a1b6de3f43f7311f623de",
-      "bytes": 731,
+      "sha256": "4cde776956d81af36dc30e230e9c7aa5dc2be854b61d9ac3a38df17bbd826abc",
+      "bytes": 756,
       "mode": 420
     },
     "mobile/android/app/src/debug/AndroidManifest.xml": {
@@ -23,13 +23,13 @@
       "mode": 420
     },
     "mobile/android/app/src/main/AndroidManifest.xml": {
-      "sha256": "e074dc0893db70c762d927ae7cdf11d5369d592d8f2dc3ef17b78f638d760c2e",
-      "bytes": 914,
+      "sha256": "635d40b157dfbeba6c8a9cef4d3456e95c3d6aa9033dd45b843510e55ba0f49b",
+      "bytes": 993,
       "mode": 420
     },
     "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelActivity.java": {
-      "sha256": "960c69bc3402c3905f9f7903665bfe06483c52023eb7be835ca6c44bd58e8a81",
-      "bytes": 20006,
+      "sha256": "86dabfb3e233fd5bde2592e76c5d761642c16297c524b6a10e180089313547c0",
+      "bytes": 20841,
       "mode": 420
     },
     "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelAddress.java": {
@@ -48,13 +48,13 @@
       "mode": 420
     },
     "mobile/android/app/src/main/res/values-en/strings.xml": {
-      "sha256": "cabde68734b1efda82f357c13901fa9468757a5f8b218977a2d98a6d66e2141c",
-      "bytes": 2947,
+      "sha256": "ff9a2ce2633b15138a3de90fe731f8f336d493a5f8861f303a8ec206ccccc8a1",
+      "bytes": 3237,
       "mode": 420
     },
     "mobile/android/app/src/main/res/values/strings.xml": {
-      "sha256": "0852318fa1a22850c79cd7f7b77f7225393aca95cdb4f8b12284097b06a4ec14",
-      "bytes": 2783,
+      "sha256": "962eb10121ab0628af40735eeca5154642c508b162a6e2770910657a47736267",
+      "bytes": 3060,
       "mode": 420
     },
     "mobile/android/app/src/main/res/xml/no_backup.xml": {
@@ -73,13 +73,13 @@
       "mode": 420
     },
     "mobile/android/build.gradle": {
-      "sha256": "96a33edb21d173da2c36f5312f50cdfb9f71d9f5078c081c81f2d029547f6cb9",
-      "bytes": 70,
+      "sha256": "9de6b514b57274d512554110fdec0d334ffd819cb7d5fe3229d039b4c7de655c",
+      "bytes": 69,
       "mode": 420
     },
     "mobile/android/gradle.properties": {
-      "sha256": "435fa690b31ad9e41c9edf5c6a4677a8fb46850411fc4f496cee890b1b97e193",
-      "bytes": 103,
+      "sha256": "5593b34f494283ff920536da99b21bfcdf1aec00d6e337b2186bcfe330c99a5e",
+      "bytes": 206,
       "mode": 420
     },
     "mobile/android/settings.gradle": {

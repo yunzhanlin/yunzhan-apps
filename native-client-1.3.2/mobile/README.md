@@ -4,14 +4,18 @@
 
 正式构建只接受 HTTPS；安全入口路径可以随地址填写，但不能带临时令牌、查询参数或 URL 用户名密码。不能忽略证书错误。QA 构建只放行模拟器或 adb 回环 HTTP，不能分发为正式包。手机的 `127.0.0.1` 指手机自身，不是电脑；连接实际服务器需要该服务器可达的 HTTPS 面板地址或安全隧道。
 
-Android 最低 API 30（Android 11），构建使用 JDK 17、Gradle 8.13、Android Gradle Plugin 8.13.2、SDK 36：
+Android 最低 API 30（Android 11），构建使用 JDK 17、Gradle 9.3.1、Android Gradle Plugin 9.1.1、SDK 37.0，目标 API 37：
+
+Android 模块是纯 Java，使用模块级 `enableKotlin = false` 避免自动加入无用的 Kotlin 运行库；仍保留现代构建 DSL、Debug/Release 两套单元测试及严格 lint。
 
 ```sh
 cd android
-gradle test assembleRelease lintDebug lintRelease
+gradle testDebugUnitTest testReleaseUnitTest assembleRelease lintDebug lintRelease
 ```
 
 生成的 `app-release-unsigned.apk` 须由发布者使用独立保管的稳定私钥签名后安装。签名密码和私钥不放入源码、APK、CI 日志或面板安装包；使用 `apksigner sign --ks ... --ks-pass file:...` 并再执行 `apksigner verify`。仓库没有任何生产签名密钥。
+
+Android 17 的目标 API 37 要求局域网访问授权。仅在 Android 17+ 显示可选的原生「本地网络权限」按钮，由用户点击后交给系统授权；公网面板不要求这项授权。授权结束不会自动连接、重新加载或上传文件，也没有能够操作新会话的授权结果回调。拒绝授权不会降低 HTTPS、证书或来源检查。连接局域网服务器前请先授权，再手动连接；权限由系统设置撤销。这不代表已完成 Android 17 真机权限弹窗验收。
 
 iOS 最低 18.4：
 

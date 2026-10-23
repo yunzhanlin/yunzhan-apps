@@ -31,4 +31,6 @@
     <string name="clearing_data">正在清除 Cookie、网页存储与缓存…</string>
     <string name="session_cleared">会话已清除；再次连接需要面板登录。服务器旧会话仍按原有效期过期。</string>
     <string name="renderer_failed">网页进程已退出，本地登录状态已清除。请重新连接并登录，不会自动恢复旧会话。</string>
+    <string name="local_network_permission">可选：连接局域网面板，授予本地网络权限</string>
+    <string name="local_network_granted">已获得系统本地网络权限。请手动连接你的 HTTPS 面板；应用不会扫描网络或自动重连。</string>
 </resources>

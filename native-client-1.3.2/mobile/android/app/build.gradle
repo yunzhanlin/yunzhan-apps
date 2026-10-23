@@ -1,11 +1,12 @@
 plugins { id 'com.android.application' }
 android {
     namespace 'icu.yunzhan.panel'
-    compileSdk 36
+    enableKotlin = false
+    compileSdk 37
     defaultConfig {
         applicationId 'icu.yunzhan.panel'
         minSdk 30
-        targetSdk 36
+        targetSdk 37
         versionCode 132
         versionName '1.3.2'
         testInstrumentationRunner 'android.test.InstrumentationTestRunner'

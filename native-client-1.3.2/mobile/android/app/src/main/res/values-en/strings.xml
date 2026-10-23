@@ -31,4 +31,6 @@
     <string name="clearing_data">Clearing cookies, web storage and cache…</string>
     <string name="session_cleared">Local session cleared. Reconnecting requires panel login. Previous server sessions retain their original expiry.</string>
     <string name="renderer_failed">The web process exited and local login state was cleared. Reconnect and sign in; the previous session is not automatically restored.</string>
+    <string name="local_network_permission">Optional: allow local network access for a LAN panel</string>
+    <string name="local_network_granted">Local network access is granted. Connect to your HTTPS panel manually; this app does not scan the network or reconnect automatically.</string>
 </resources>

@@ -72,6 +72,10 @@ public final class PanelActivity extends Activity {
         Button clear = button(R.string.clear_session, this::disconnect);
         Button refresh = button(R.string.refresh, () -> { if (web != null && session.interactive()) web.reload(); });
         buttons.addView(connect); buttons.addView(refresh); buttons.addView(clear); controls.addView(buttons); root.addView(controls);
+        // Android17 requires a separate OS grant for LAN endpoints. This is an
+        // explicit native action, not a webpage permission or auto-reconnect.
+        // There is no permission-result callback that could act on a new session.
+        if (android.os.Build.VERSION.SDK_INT >= 37) controls.addView(button(R.string.local_network_permission, this::allowLocalNetwork));
         state = new TextView(this); state.setText(R.string.privacy_status); state.setPadding(20, 0, 20, 10); root.addView(state);
         progress = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal); progress.setMax(100); progress.setVisibility(View.GONE); root.addView(progress);
         frame = new FrameLayout(this); root.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1));
@@ -89,6 +93,12 @@ public final class PanelActivity extends Activity {
     @Override public void onBackPressed() { goBack(); }
     private Button button(int text, Runnable action) { Button b = new Button(this); b.setText(text); b.setOnClickListener(v -> action.run()); return b; }
     private void tell(int text) { new AlertDialog.Builder(this).setTitle(R.string.app_name).setMessage(text).setPositiveButton(R.string.understood, null).show(); }
+    private void allowLocalNetwork() {
+        if (closed || isFinishing() || android.os.Build.VERSION.SDK_INT < 37 || (web != null && !session.interactive())) return;
+        String permission = "android.permission.ACCESS_LOCAL_NETWORK";
+        if (checkSelfPermission(permission) == android.content.pm.PackageManager.PERMISSION_GRANTED) { tell(R.string.local_network_granted); return; }
+        requestPermissions(new String[]{permission}, 512);
+    }
     // UI-thread callbacks must belong to this exact WebView and connection,
     // not merely an equal URL or a new session at the same origin.
     private boolean currentView(WebView view, SessionCallbacks.Ticket ticket) { return view == web && session.ownsView(ticket); }
