@@ -1310,3 +1310,30 @@ jobs:
       - name: Candidate retained-OOM,unchanged explicit-retry and compiler resource race regressions
         working-directory: panel-integration-php-bounded
         run: sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor -run '^Test(RuntimeCompileOOM|RuntimeFailedUpgrade|NativeRetry|RuntimeMagic|CompilerCgroup|BuildJobs)' -count=1
+
+  apache-noop-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-apache-noop/go.mod
+          cache-dependency-path: panel-integration-apache-noop/go.sum
+      - name: Exact ordinary source, unchanged26-job prefix and retained full guard deadlines
+        run: node --test tests/apache-noop-source.test.mjs tests/php-bounded-source.test.mjs
+      - name: Root Linux metadata pure and fail-closed models with original caller and policy contracts
+        working-directory: panel-integration-apache-noop
+        run: |
+          sudo "$(command -v go)" test -json ./internal/executor -run '^Test(ApacheMetadataSite(Policy|Backup|RemoteIP|Refusal)|LoadBalanceJSONWhitespace)' -count=1
+          sudo "$(command -v go)" test -race ./internal/executor -run '^Test(ApacheMetadataSite(Policy|Backup|RemoteIP|Refusal)|LoadBalanceJSONWhitespace)' -count=1
+          go vet ./...
+      - name: Actual native full2560-record384MiB inventory under unchanged2-second request deadline
+        working-directory: panel-integration-apache-noop
+        run: sudo "$(command -v go)" test -json ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=1
+      - name: Byte-identical F33 PHP feature admission and original-key signed50 ABI
+        working-directory: panel-integration-apache-noop
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^Test(PHP(Bounded|Security)|PublishedRepositoryCurrentSignedManifestABI)' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"

@@ -1,0 +1,26 @@
+[Unit]
+Description=Panel verified runtime installer %i
+After=network-online.target
+Wants=network-online.target
+[Service]
+Slice=system.slice
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --install-job %i
+TimeoutStartSec=300min
+KillMode=control-group
+NoNewPrivileges=true
+ProtectControlGroups=true
+TasksMax=512
+MemoryAccounting=true
+MemoryHigh=640M
+MemoryMax=768M
+MemorySwapMax=0
+OOMPolicy=stop
+OOMScoreAdjust=500
+Environment=GOMEMLIMIT=128MiB
+UMask=0022
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /var/cache/panel-runtime-build /opt/panel/runtimes /opt/panel/php-extensions
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
