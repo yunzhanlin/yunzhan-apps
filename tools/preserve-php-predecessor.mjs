@@ -18,7 +18,11 @@ assert(ci.checks.every(c=>c.head_sha===head&&c.status==='completed'&&c.conclusio
 assert(ci.statuses.every(c=>c.state==='success'));
 assert(merge.merged===true&&merge.expected_head===head&&/^[a-f0-9]{40}$/.test(merge.merge_commit_sha));
 assert.deepEqual(execFileSync('git',['ls-remote','--exit-code','origin','refs/heads/main'],{cwd:root,encoding:'utf8',timeout:20000}).trim().split(/\s+/),[merge.merge_commit_sha,'refs/heads/main']);
-const read=name=>{assert(!path.isAbsolute(name)&&path.posix.normalize(name)===name&&!name.split('/').includes('..'));const p=path.join(root,name),s=fs.lstatSync(p);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&fs.realpathSync(p)===p&&s.size<1048576);return fs.readFileSync(p);};
+// The current branch may already append the next unaccepted source/CI gate.
+// Read the actual reviewed merge tree, never that mutable working tree or a
+// reconstructed predecessor. The exact CI head, remote main and all original
+// hashes/signatures below are still independently mandatory.
+const read=name=>{assert(!path.isAbsolute(name)&&path.posix.normalize(name)===name&&!name.split('/').includes('..'));const value=execFileSync('git',['show',merge.merge_commit_sha+':'+name],{cwd:root,maxBuffer:1048576,timeout:10000});assert(value.length<1048576);return value;};
 const catalog=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem'),signature=read('signatures/catalog-v1.sig'),bundle=read('signatures/catalog-v1.bundle.json');
 assert.equal(sha(catalog),'bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f');
 assert.equal(sha(pub),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');
