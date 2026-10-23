@@ -1,7 +1,39 @@
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 const root=fileURLToPath(new URL('../',import.meta.url)),base=root+'native-client-1.3.2/',sha=b=>createHash('sha256').update(b).digest('hex'),read=n=>fs.readFileSync(base+n,'utf8');
+test('native132 privacy qualification keeps actual Android UI proof separate from business physical and iOS acceptance',()=>{
+ const q=JSON.parse(fs.readFileSync(root+'registry/mobile-native-132-privacy-qualification.json')),input=JSON.parse(read('SOURCE_INPUTS.json'));
+ assert.equal(q.source_inputs_sha256,input.inputs_sha256);assert.equal(q.source_index_sha256,sha(fs.readFileSync(base+'source-sha256.json')));assert.equal(q.source_files,26);assert.equal(q.source_overrides,0);assert.equal(q.android_target_sdk,37);
+ assert.equal(q.android_tests.Debug.passed,16);assert.equal(q.android_tests.Release.passed,16);assert.equal(q.swift_tests.passed,16);assert.equal(q.android_lint.debug.issues,0);assert.equal(q.android_lint.release.issues,0);
+ const ui=q.android_actual_ui;for(const key of ['fresh_AVD','synthetic_fixture_not_business_panel','locked_native_web_and_accessibility_hidden','system_PIN_unlock_and_foreground_restore','discarded_second_file_not_uploaded','background_confirmation_cancelled','new_confirmation_succeeds','native_cross_origin_block_alert','background_during_authentication_stays_locked','release_HTTP_rejected','release_native_LAN_permission_dialog_and_manual_grant','grant_does_not_auto_connect','synthetic_PINs_cleared'])assert.equal(ui[key],true,key);
+ assert.equal(ui.existing_AVD_data_modified,false);assert.deepEqual(ui.upload_counts_before_selection_while_locked_after_auth,[1,1,2]);assert.equal(ui.uploaded_bytes,65);assert.equal(ui.foreign_origin_requests,0);assert.equal(ui.reconnect_entries_without_cookie,4);assert.equal(Object.keys(ui.receipt_sha256).length,4);for(const h of Object.values(ui.receipt_sha256))assert.match(h,/^[a-f0-9]{64}$/);
+ assert.equal(ui.QA_APK_sha256,'29ce87a1b77972be29a62fbd6763f9e431a6bbacad1facce26bd0a4b7992187d');assert.equal(ui.release_APK_installed_sha256,q.artifacts.android_apk);
+ assert.equal(q.original_publisher_preserved,true);assert.equal(q.private_key_rotation,false);assert.equal(q.packaging_private_key_access,false);assert.equal(q.retained_failure.locked_overlay_exposed_web_accessibility,true);assert(Object.values(q.not_proven).every(v=>v===true));assert.equal(q.commercial_all50,false);
+});
+test('native132 iOS synchronously conceals UIKit and SwiftUI accessibility for the exact privacy state',()=>{
+ const s=read('mobile/ios/YunzhanMobile.swift'),sync=s.slice(s.indexOf('func syncPrivacy()'),s.indexOf('func activate()'));
+ for(const gate of ['locked = callbacks.locked','privacyCover = web != nil && !callbacks.interactive','let concealed = locked || privacyCover','web?.isHidden = concealed','web?.accessibilityElementsHidden = concealed'])assert(sync.includes(gate),gate);
+ assert(s.includes('.accessibilityHidden(session.locked || session.privacyCover)'));
+ const disconnect=s.slice(s.indexOf('func disconnect()'),s.indexOf('func cover(background: Bool)'));assert(disconnect.includes('previous?.isHidden = true; previous?.accessibilityElementsHidden = true'));
+ const activate=s.slice(s.indexOf('func activate()'),s.indexOf('private func currentWeb'));assert(activate.includes('callbacks.activate(); syncPrivacy(); deliverUpload()'));
+ const auth=s.slice(s.indexOf('func unlock()'),s.indexOf('func webView(_ webView: WKWebView, decidePolicyFor action'));assert(auth.includes('self.authAttempt == attempt')&&auth.includes('self.callbacks.finishAuthentication(attempt, success: success)')&&auth.includes('self.syncPrivacy(); self.deliverUpload()'));
+});
+test('native132 locked Android hides the real WebView and restores only inside original authentication success',()=>{
+ const a=read('mobile/android/app/src/main/java/icu/yunzhan/panel/PanelActivity.java');
+ const cover=a.slice(a.indexOf('private void coverWeb()'),a.indexOf('private void restoreAuthenticatedWeb()'));
+ for(const gate of ['if (web == null) return','IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS','web.setVisibility(View.INVISIBLE)','web.onPause()','web.pauseTimers()','frame.addView(lock','controls.setVisibility(View.GONE)'])assert(cover.includes(gate),gate);
+ assert(cover.indexOf('web.setVisibility(View.INVISIBLE)')<cover.indexOf('frame.addView(lock'));
+ const pause=a.slice(a.indexOf('@Override protected void onPause()'),a.indexOf('private void coverWeb()'));
+ assert(pause.includes('session.foreground(false)')&&pause.includes('cancelPageDialog()')&&pause.includes('authentication.cancel()')&&pause.includes('coverWeb()'));assert(a.includes('if (session.locked()) coverWeb()'));
+ const restore=a.slice(a.indexOf('private void restoreAuthenticatedWeb()'),a.indexOf('private void unlock()'));
+ for(const gate of ['web == null || closed || isFinishing() || !session.interactive()','web.setVisibility(View.VISIBLE)','IMPORTANT_FOR_ACCESSIBILITY_AUTO','web.onResume()','deliverFiles()'])assert(restore.includes(gate),gate);
+ assert.equal([...a.matchAll(/restoreAuthenticatedWeb\(\);/g)].length,1);
+ const success=a.slice(a.indexOf('@Override public void onAuthenticationSucceeded'),a.indexOf('@Override public void onAuthenticationError'));
+ assert(success.includes('authentication != signal')&&success.includes('!session.finishAuthentication(ticket, true)')&&success.includes('restoreAuthenticatedWeb()'));
+ const resume=a.slice(a.indexOf('@Override protected void onResume()'),a.indexOf('@Override protected void onPause()'));
+ assert(!resume.includes('restoreAuthenticatedWeb')&&!resume.includes('setVisibility(View.VISIBLE)'));
+});
 test('native132 exact 26-file source is independent and preserves published131',()=>{
- const index=JSON.parse(read('source-sha256.json')),input=JSON.parse(read('SOURCE_INPUTS.json'));assert.equal(sha(fs.readFileSync(base+'source-sha256.json')),'277026caffdc199e9f6791c344cfef9304239b7a8174e99a6a301c3818c53762');assert.equal(input.version,'1.3.2');assert.equal(input.inputs_sha256,'2a318d9b40bbef36964ebdd12f4c31152bd1f626b14cdfa56f89c1805900b6cd');assert.equal(sha(JSON.stringify(input.files)),input.inputs_sha256);assert.deepEqual(index.files,input.files);assert.deepEqual(index.test_overrides,{});assert.equal(Object.keys(input.files).length,26);
+ const index=JSON.parse(read('source-sha256.json')),input=JSON.parse(read('SOURCE_INPUTS.json'));assert.equal(sha(fs.readFileSync(base+'source-sha256.json')),'dec975bc937f4033cf0e9270b207e7f9accbbee804d47b682ea70d1f7b729b54');assert.equal(input.version,'1.3.2');assert.equal(input.inputs_sha256,'2b963086f95fdc30787c7d27ad5680b9fb5802e1dec28f5d824e3670f211a052');assert.equal(sha(JSON.stringify(input.files)),input.inputs_sha256);assert.deepEqual(index.files,input.files);assert.deepEqual(index.test_overrides,{});assert.equal(Object.keys(input.files).length,26);
  for(const[n,r]of Object.entries(input.files)){assert(n.startsWith('mobile/')&&path.posix.normalize(n)===n&&!n.split('/').some(v=>['..','.local','build','.gradle','.build','local.properties'].includes(v)));const f=base+n,s=fs.lstatSync(f);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&s.size===r.bytes);assert.equal(sha(fs.readFileSync(f)),r.sha256,n);assert(!/\.(?:p12|pass|jks|keystore|key)$/.test(n));}
  assert.equal(sha(fs.readFileSync(root+'native-client-1.3.1/SOURCE_INPUTS.json')),'d04651ffee9c21bc8590c5dffeb2090e7c7034e070bd222f5a670f19d0c67312');assert.equal(sha(fs.readFileSync(root+'native-client-1.3.1/source-sha256.json')),'8898f6cb791deef09c5969cf8d3fe3db877745185af3328a8d835aed7ab53d6a');
 });

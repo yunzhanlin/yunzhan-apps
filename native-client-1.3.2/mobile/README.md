@@ -33,6 +33,8 @@ xcodebuild -project YunzhanMobile.xcodeproj -scheme YunzhanMobile \
 
 1.3.2 为 Android 与 iOS 的网页事件增加原 WebView 与连接凭据绑定。旧连接的进度、网络错误、弹窗、文件选择及下载回调不能操作新连接；网页确认弹窗使用一次性凭据，进入后台、断开、销毁或更换连接时撤销，确认按钮在点击时再次核对归属。网页进程退出后清除本地登录状态，不自动恢复旧页面或会话。Android 原生界面文本使用中英文资源，Debug 与 Release lint 均将警告视为失败。iOS 保留系统真实设备 User-Agent 并附加客户端版本，不再伪装固定 iPhone/iOS 版本。
 
+锁定时不仅绘制遮罩：Android 将 WebView 设为不可见并从辅助功能树隐藏其后代；iOS 在同一次隐私状态同步中隐藏原生 WKWebView 及其辅助功能元素，并同步 SwiftUI 辅助功能隐藏。断开时立即隐藏旧原生视图。恢复必须在原连接的一次性认证成功、当前会话已解锁且回到前台后进行。文件选择返回不自动恢复网页。两个平台都需要各自的真实平台交互验收，Android 模拟器结果不能代替 iOS VoiceOver 或真机验收。
+
 面板是需要 JavaScript 的 Vue 业务页面。Android 仅在固定 WebSettings 配置方法中确认这一条必需的 lint 提示，不全局关闭安全检查；正式包仍要求 HTTPS、证书错误取消连接，不提供 JavaScript/原生桥，禁用文件和 content URL 访问、混合内容及第三方 Cookie。面板服务端必须继续发送自身的严格 CSP（包括 `default-src 'self'`、`script-src 'self'` 和 `connect-src 'self'`），不能加载不受信任的外站脚本。Android 官方明确说明，资源回调只收到重定向的初始 URL，且不覆盖 `blob:` 和 `javascript:`；因此原生回调不能被表述为覆盖全部流量的网络防火墙。参见 [WebViewClient 资源回调](https://developer.android.com/reference/android/webkit/WebViewClient) 和 [WebView 原生桥安全指南](https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges)。
 
 边界：业务页使用当前面板的响应式 UI，不是独立重写的所有原生业务表单；无离线管理、系统推送和自动后台运维。管理文件下载暂由可信浏览器登录后完成；移动端不自动导出敏感管理会话。Android 使用 FLAG_SECURE 隐藏截图和最近任务；iOS 遮挡后台快照，但不能承诺阻止系统截图。清除会话删除本地凭据，不替代服务器管理员的会话撤销。设备未设锁屏时，返回已锁定会话需要退出重登或先设置系统锁屏。以上边界不能标记为商业移动端全能力完成。

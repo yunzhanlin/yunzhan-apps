@@ -177,7 +177,7 @@ public final class PanelActivity extends Activity {
             });
             web.setDownloadListener((url, userAgent, contentDisposition, mimeType, bytes) -> { if (currentView(connected, viewTicket) && session.interactive()) tell(R.string.download_notice); });
             frame.removeAllViews(); frame.addView(web, new FrameLayout.LayoutParams(-1, -1));
-            if (session.locked()) { frame.addView(lock, new FrameLayout.LayoutParams(-1, -1)); controls.setVisibility(View.GONE); web.onPause(); web.pauseTimers(); }
+            if (session.locked()) coverWeb();
             web.loadUrl(target.uri.toString());
         });
     }
@@ -239,10 +239,24 @@ public final class PanelActivity extends Activity {
         session.foreground(false);
         cancelPageDialog();
         if (authentication != null) authentication.cancel(); authentication = null;
+        coverWeb();
+    }
+    private void coverWeb() {
         if (web == null) return;
+        // An opaque overlay alone still exposes the page to accessibility.
+        // Hide the actual view and its descendants before displaying the lock.
+        web.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
+        web.setVisibility(View.INVISIBLE);
         web.onPause(); web.pauseTimers();
         if (lock.getParent() == null) frame.addView(lock, new FrameLayout.LayoutParams(-1, -1));
         controls.setVisibility(View.GONE);
+    }
+    private void restoreAuthenticatedWeb() {
+        if (web == null || closed || isFinishing() || !session.interactive()) return;
+        web.setVisibility(View.VISIBLE);
+        web.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_AUTO);
+        frame.removeView(lock); controls.setVisibility(View.VISIBLE);
+        web.onResume(); web.resumeTimers(); deliverFiles();
     }
     private void unlock() {
         if (!session.locked() || web == null || authentication != null) return;
@@ -257,8 +271,7 @@ public final class PanelActivity extends Activity {
             @Override public void onAuthenticationSucceeded(BiometricPrompt.AuthenticationResult result) {
                 if (authentication != signal || closed || isFinishing() || !session.finishAuthentication(ticket, true)) return;
                 authentication = null;
-                if (web == null) return;
-                frame.removeView(lock); controls.setVisibility(View.VISIBLE); web.onResume(); web.resumeTimers(); deliverFiles();
+                restoreAuthenticatedWeb();
             }
             @Override public void onAuthenticationError(int code, CharSequence text) {
                 if (authentication != signal) return;

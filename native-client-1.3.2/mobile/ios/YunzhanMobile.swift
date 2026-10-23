@@ -50,6 +50,7 @@ import UniformTypeIdentifiers
         callbacks.end()
         connectionTicket = nil
         let previous = web; web = nil; address = nil
+        previous?.isHidden = true; previous?.accessibilityElementsHidden = true
         previous?.stopLoading(); previous?.navigationDelegate = nil; previous?.uiDelegate = nil
         cancelPageDialog()
         auth?.invalidate(); auth = nil; authAttempt = nil
@@ -65,7 +66,12 @@ import UniformTypeIdentifiers
         if background { auth?.invalidate(); auth = nil; authAttempt = nil }
         syncPrivacy()
     }
-    func syncPrivacy() { locked = callbacks.locked; privacyCover = web != nil && !callbacks.interactive }
+    func syncPrivacy() {
+        locked = callbacks.locked; privacyCover = web != nil && !callbacks.interactive
+        // Cover the actual UIKit view synchronously, not only its SwiftUI overlay.
+        let concealed = locked || privacyCover
+        web?.isHidden = concealed; web?.accessibilityElementsHidden = concealed
+    }
     func activate() { callbacks.activate(); syncPrivacy(); deliverUpload() }
     private func currentWeb(_ view: WKWebView) -> Bool {
         guard view === web, let ticket = connectionTicket else { return false }
@@ -220,7 +226,7 @@ struct PanelHome: View {
             }
             Text(session.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             ZStack {
-                if let web = session.web { PanelWebView(web: web).allowsHitTesting(!session.locked && !session.privacyCover) }
+                if let web = session.web { PanelWebView(web: web).allowsHitTesting(!session.locked && !session.privacyCover).accessibilityHidden(session.locked || session.privacyCover) }
                 else { ContentUnavailableView("连接你的云栈服务器", systemImage: "server.rack", description: Text("沿用面板登录、双重验证、网站范围和角色权限。正式包仅连接可信 HTTPS。")) }
                 if session.locked || session.privacyCover {
                     VStack(spacing: 20) {
