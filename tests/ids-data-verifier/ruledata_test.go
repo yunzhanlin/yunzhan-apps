@@ -63,7 +63,10 @@ func publishedEnvelopeFrom(t *testing.T, appBundlePath, appCatalogSHA string) (*
 }
 
 func TestCurrentPM2CatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
-	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "0432d210df255b06a1ce258546579f4bfa666d0b661b54fd2572e356549d5f4d")
+	// Keep the genuine PM2 publication and every original assertion. An
+	// unrelated mobile publication is tested independently below, never used
+	// as a hash alias or a reason to renew the signed rule cohort.
+	c, in, now := publishedEnvelopeFrom(t, "registry/reviewed-catalogs/before-native-mobile132-24bkep/signatures/catalog-v1.bundle.json", "0432d210df255b06a1ce258546579f4bfa666d0b661b54fd2572e356549d5f4d")
 	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -73,6 +76,20 @@ func TestCurrentPM2CatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rul
 	}
 	if _, _, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, time.Date(2026, 10, 24, 21, 50, 0, 0, time.UTC), &authority); err == nil {
 		t.Fatal("unrelated PM2 publication renewed IDS rule validity")
+	}
+}
+
+func TestCurrentMobileCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
+	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f")
+	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authority.CatalogSHA256() != "391843d9da2ece79c61e30c28f5d515f6c5cad8ac0ded64e2cb45bf4feb35d82" || authority.Catalog().Sequence != 1 || len(bundle.Rules) != 1510 || bundle.Manifest.EnabledRuleCount != 1510 || bundle.Manifest.DependencyRuleCount != 2 {
+		t.Fatal("mobile publication changed the independently signed IDS data cohort")
+	}
+	if _, _, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, time.Date(2026, 10, 24, 21, 50, 0, 0, time.UTC), &authority); err == nil {
+		t.Fatal("unrelated mobile publication renewed IDS rule validity")
 	}
 }
 
