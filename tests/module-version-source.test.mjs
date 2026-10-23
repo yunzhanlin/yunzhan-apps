@@ -50,8 +50,15 @@ test('native prerequisite is a genuine exact pinned Apache build,never a fabrica
 test('hosted0777 opt remains refused while real private mounts and kernel no-replace isolate the unchanged native gates',()=>{
  const isolated=read('tools/run-module-version-isolated-ci.py').toString(),prepare=read('tools/prepare-module-version-apache-ci.py').toString(),models=read('tests/test_module_version_opt_namespace.py').toString();
  for(const x of["os.readlink('/proc/self/ns/mnt')!=host_mount_namespace","assert not os.path.lexists('/opt/panel')","target.mkdir(mode=0o755)","mount('--bind',str(cache),str(target))","'remount,bind,ro'",'host_opt_identity_unchanged'])assert(isolated.includes(x),x);
- assert(!isolated.includes('os.chmod')&&!isolated.includes('.chmod(')&&!isolated.includes('rmtree')&&!isolated.includes('umount'));
+ const mountOnly=isolated.slice(isolated.indexOf('def enter_private_opt('),isolated.indexOf('def main('));assert(!mountOnly.includes('os.chmod')&&!mountOnly.includes('os.chown')&&!mountOnly.includes('.chmod('));
+ assert(!isolated.includes('rmtree')&&!isolated.includes('umount'));
  for(const x of['shutil.copytree(candidate,temporary,symlinks=False)','sealed_ci_tree(temporary)==expected','rename(-100,os.fsencode(temporary),-100,os.fsencode(prefix),1)','sealed_ci_tree(prefix)==expected'])assert(prepare.includes(x),x);
  for(const x of["os.geteuid()==0","'--mount','--propagation','private'",'even UID0 cannot write readonly tool-cache mount','kernel NOREPLACE rejects concurrent destination','no fabricated Apache executable exists','host_original_opt_and_all_existing_data_unchanged'])assert(models.includes(x),x);
  const workflow=read('.github/workflows/verify.yml').toString();assert(workflow.includes('sudo python3 -I -B tests/test_module_version_opt_namespace.py'));
+});
+test('privileged tools execute only from verified NEW Root-owned sealed copies,never chmodding or trusting a writable input cache',()=>{
+ const p=read('tools/run-module-version-isolated-ci.py').toString();
+ for(const x of['source_data_only_NOT_execution_admission','seal_ci_tool_tree(original.parent.parent,destination)',"assert copied['entries']==before['entries']","assert tool_content_tree(source)==before",'only_new_copies_chmodded_or_chowned',"s.st_uid==0 and not s.st_mode&0o022", "'GOROOT':str(pathlib.Path(go).parent.parent)"])assert(p.includes(x),x);
+ const models=read('tests/test_module_version_tool_seals.py').toString();for(const x of['os.geteuid()==0','test_writable_source_data_sealed_without_source_metadata_changes','test_source_mutation_during_copy_refused','test_copied_data_tampering_refused','no_tool_or_Apache_executable_fabricated'])assert(models.includes(x),x);
+ assert(read('.github/workflows/verify.yml').toString().includes('sudo python3 -I -B tests/test_module_version_tool_seals.py'));
 });

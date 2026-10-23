@@ -1356,6 +1356,7 @@ jobs:
         run: |
           sudo python3 -I -B tests/test_module_version_apache_parents.py
           sudo python3 -I -B tests/test_module_version_opt_namespace.py
+          sudo python3 -I -B tests/test_module_version_tool_seals.py
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
       - name: Private mount namespace,genuine Apache and both exact171 integration cohorts,no host opt repair
