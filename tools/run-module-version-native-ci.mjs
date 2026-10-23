@@ -11,7 +11,14 @@ const groups=[
 for(const g of groups){
  const args=['test','-json','-count=1','-timeout=180s',...(race?['-race']:[]),'./internal/'+g.pkg,'-run=^('+g.names.join('|')+')$'];
  const z=spawnSync(go,args,{cwd:source,env:{...process.env,PANEL_QA_APACHE_METADATA_NOOP:'1',PANEL_QA_APACHE_BODY_NOOP:'1'},encoding:'utf8',timeout:240000,maxBuffer:8<<20});
- process.stdout.write(z.stdout??'');process.stderr.write(z.stderr??'');
+ // Preserve the complete child evidence even when it fails. Asynchronous
+ // stdout followed by an assertion can lose the actual failure tail in CI.
+ const logs=path.join(root,'.local');fs.mkdirSync(logs,{recursive:true});
+ const stem=path.join(logs,'module-version-native-ci-'+g.pkg+(race?'-race':''));
+ fs.writeFileSync(stem+'.stdout.jsonl',z.stdout??'',{flag:'wx',mode:0o600});
+ fs.writeFileSync(stem+'.stderr.log',z.stderr??'',{flag:'wx',mode:0o600});
+ fs.writeFileSync(stem+'.process.json',JSON.stringify({status:z.status,signal:z.signal,error:z.error?.message,stdout_sha256:sha(z.stdout??''),stderr_sha256:sha(z.stderr??'')})+'\n',{flag:'wx',mode:0o600});
+ fs.writeSync(1,z.stdout??'');fs.writeSync(2,z.stderr??'');
  assert.equal(z.error,undefined);assert.equal(z.status,0);
  const events=z.stdout.trim().split('\n').map(s=>JSON.parse(s));assert(!events.some(e=>e.Action==='fail'||e.Action==='skip'));
  const passed=events.filter(e=>e.Action==='pass'&&e.Test).map(e=>e.Test);assert.deepEqual(passed.filter(n=>!n.includes('/')).sort(),g.names.toSorted());assert.equal(passed.length,g.expectedPasses);
