@@ -40,6 +40,7 @@ normalBuildGates.add('scripts/test-platform-health-ui.mjs');
 normalBuildGates.add('scripts/test-platform-health-ui-fixture.mjs');
 normalBuildGates.add('scripts/test-platform-health-ui-fixture.html');
 normalBuildGates.add('scripts/test-software-routing-install-browser.mjs');
+normalBuildGates.add('scripts/test-mobile-navigation.mjs');
 const qaOnly=relative=>relative.startsWith('scripts/test')&&!normalBuildGates.has(relative)||['scripts/panel_client.py','scripts/cache-app-qa-images.mjs','scripts/check-app-registry-compat-browser.mjs'].includes(relative);
 // Explicit source allowlist: no release binaries, QA state, credentials or signing keys.
 const entries=['go.mod','go.sum','cmd','internal','dev','packaging','web/src','web/public','web/index.html','web/package.json','web/package-lock.json','web/tsconfig.json','web/tsconfig.node.json','web/vite.config.ts','scripts/env.sh','scripts/test-app-modules.py','scripts/test-app-native.py','scripts/test-app-compose-matrix.py','scripts/test-app-modules-extended.py','scripts/test-app-module-lifecycle.py','scripts/test-app-base-refresh.py','scripts/test-app-security-refresh.py','scripts/test-app-memcached-refresh.py','scripts/test-app-registry-compose.py','scripts/test-app-registry-phpmyadmin.py','scripts/test-app-store-50-browser.mjs','scripts/test-app-reboot.py','scripts/test-app-registry-fifty.py','scripts/cache-app-qa-images.mjs','scripts/test_app_registry_common.py','scripts/panel_client.py'];

@@ -1,0 +1,210 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24mobile132bkft",
+  "frozen_inputs_sha256": "52600b31573e32d1e84a70e76126ab3e45f2008b6b08a57fd0b2727d0c08ac0f",
+  "frozen_files": 17455,
+  "source_export": "panel-integration-mobile-delivery",
+  "exported_files": 1752,
+  "Go_members": 1304,
+  "source_index_sha256": "429d02554ff86b79f6a1309c2de39efe015f70e8009a5c05cd9772b741580bb4",
+  "source_overrides": 0,
+  "prior_public_inputs_sha256": "02986f8a9964702029a10a5283ebdf9a57b212adaa2de0ccd1fac9f388b3e978",
+  "added": [
+    "internal/appcatalog/mobile_features.go",
+    "internal/appcatalog/mobile_features_test.go",
+    "internal/core/app_registry_unreviewed_notice_test.go",
+    "mobile/android/app/src/main/res/values-en/strings.xml",
+    "mobile/android/app/src/main/res/values/strings.xml",
+    "scripts/test-mobile-navigation.mjs",
+    "web/src/mobileNavigation.ts"
+  ],
+  "changed": [
+    "internal/appcatalog/panel_features.go",
+    "internal/core/app_mobile.go",
+    "internal/core/app_mobile_test.go",
+    "internal/core/app_modules.go",
+    "internal/core/app_registry_runtime_versions.go",
+    "internal/core/software_apps.go",
+    "mobile/README.md",
+    "mobile/android/app/build.gradle",
+    "mobile/android/app/src/main/AndroidManifest.xml",
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelActivity.java",
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/SessionCallbacks.java",
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/SessionCallbacksTest.java",
+    "mobile/android/build.gradle",
+    "mobile/android/gradle.properties",
+    "mobile/ios/Info.plist",
+    "mobile/ios/SessionCallbacks.swift",
+    "mobile/ios/Tests/SessionCallbacksTests.swift",
+    "mobile/ios/YunzhanMobile.swift",
+    "packaging/build-release.sh",
+    "scripts/test-store-search.mjs",
+    "scripts/test-store-updates.mjs",
+    "web/src/App.vue",
+    "web/src/storeSearch.ts",
+    "web/src/style.css"
+  ],
+  "original_PROGRAMME_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_PROGRAMME_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24mobile132bkft-linux-arm64.tar.gz",
+      "archive_sha256": "0ca2f7a868c2aad6ff6d7618801a59f41a1bee86f5d11e2189b68b889991dd67",
+      "normal_build_log_sha256": "1421bc2e624c32fffd6102f71b22ef7991969cea7dbfd55b3015d43cdd0bae25",
+      "root_native_model_proof_sha256": "3ee4ec851e0a2613c0b901cdb463b1b7b23e887d9b6d9ac7c8126ce13f36d47f",
+      "root_native_models": 165,
+      "root_packaging_proof_sha256": "159e9eabebcb00bf35bb461e6f4be6f0b5f4b5b3d0dc485f63eb04653ff9402d",
+      "root_packaging_models": 112,
+      "model_skipped": 0,
+      "actual_signed50_and_old49_refusal_proof_sha256": "dfe9103f5127c30588ca515578c1684285bb29eb2c7c39d6e08a23072074796f",
+      "current_signed50_accepted": true,
+      "old_mobile_only_refused": true,
+      "programmes": {
+        "panel": {
+          "sha256": "24fab86850577719a1596bed00f7f01c137792db8349bd3ba3a737fab2c8a61d"
+        },
+        "panel-executor": {
+          "sha256": "19af2bc0833394554a46f7d9d8574a3d552523b4bd3b385abcc5efd12119f22e"
+        },
+        "panel-start-guard": {
+          "sha256": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+        }
+      },
+      "manifest_sha256": "5f29a4f07dceed88273a4e9590f85ee7fbb9c30a7e67d0226688bc1f399ef75e",
+      "signature_sha256": "e4ebb191b5b329c412c9a3b11d6fab2dd8a16d06a4727703616360c82a1f8100",
+      "original_key_signature_verified": true
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24mobile132bkft-linux-amd64.tar.gz",
+      "archive_sha256": "8e4bdfa1f9d8fd5b7f1ac09cc5c0aaaf055b0f77cc61f3e1eecbb079e29959e6",
+      "normal_build_log_sha256": "ba8d7643dba29cdfd00562c891e8113a69aa587333b9dce8f7ac14c02202dbfd",
+      "root_native_model_proof_sha256": "9ac978e76d68d85c5bbb8c3b3ac8995c6755f937b11a50bed999778790bdf70b",
+      "root_native_models": 165,
+      "root_packaging_proof_sha256": "1f042ac02c4bc9d2762e82fb2bdf4c70a421dd7fe6986062f955eceaaa57ee26",
+      "root_packaging_models": 112,
+      "model_skipped": 0,
+      "actual_signed50_and_old49_refusal_proof_sha256": "ecf6d5d40db71ed66576cacd187465f9e2675a729cd37e6030369a34f1030e40",
+      "current_signed50_accepted": true,
+      "old_mobile_only_refused": true,
+      "programmes": {
+        "panel": {
+          "sha256": "9a841183ccd81a8290713e7785707ba088b696ece89c3a4c3997c3c8e13e79d6"
+        },
+        "panel-executor": {
+          "sha256": "93890b2d4fd81eff8e5ce5351e859980e684de7531face5864058af67f2616d7"
+        },
+        "panel-start-guard": {
+          "sha256": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+        }
+      },
+      "manifest_sha256": "b1c3f237f55ddfd603b29b620230b73ab7d86db495cd26651ae8b4f661652be2",
+      "signature_sha256": "59e1a16fe2d273942b180816020da92524546c0466bbcbc1e37c0267fae44ee8",
+      "original_key_signature_verified": true
+    }
+  },
+  "native_release_readback": {
+    "release": {
+      "tag": "mobile-v1.3.2",
+      "url": "https://github.com/yunzhanlin/yunzhan-apps/releases/tag/mobile-v1.3.2",
+      "commit": "2520c4ac5f7e4ae0adb6a7ba7be0197f4cdf338f",
+      "prerelease": true
+    },
+    "downloads": [
+      {
+        "name": "yunzhan-mobile-1.3.2-android.apk",
+        "bytes": 53951,
+        "sha256": "a76d4a9a04b4d46c35332b36e04590078a27e25885fd5abe6ede611be55b09e3"
+      },
+      {
+        "name": "yunzhan-mobile-1.3.2-source.tar.gz",
+        "bytes": 29007,
+        "sha256": "6fcbbaa8d18ba1cb22aa050b849dd8d3e1488e8f845b32c1930cb0eea2cc313f"
+      },
+      {
+        "name": "yunzhan-mobile-1.3.2-ios-unsigned.tar.gz",
+        "bytes": 87717,
+        "sha256": "ef86e336b7334bb29cad8570cc29eea0af0f9f26217b77bd914a94c429d4f365"
+      }
+    ],
+    "Android": {
+      "application_id": "icu.yunzhan.panel",
+      "version": "1.3.2",
+      "version_code": 132,
+      "min_sdk": 30,
+      "target_sdk": 37,
+      "certificate_sha256": "0ba923afca85db94f4bdabd6d235fcf1c7088bb167ace661bf21781d1c7f0bd5",
+      "v3_signature_verified": true,
+      "zip_alignment_verified": true
+    },
+    "iOS": {
+      "architecture": "arm64",
+      "version": "1.3.2",
+      "build": "132",
+      "bundle_id": "icu.yunzhan.panel",
+      "minimum_os": "18.4",
+      "unsigned_confirmed": true,
+      "developer_signing_required": true
+    },
+    "source_inputs_sha256": "2b963086f95fdc30787c7d27ad5680b9fb5802e1dec28f5d824e3670f211a052",
+    "source_members": 26,
+    "actual_GitHub_download_bytes_verified": true,
+    "latest_channel_preserved": true,
+    "new_APK_signatures_performed_for_this_panel_revision": 0
+  },
+  "selected_Linux_root_models_per_architecture": {
+    "core": 32,
+    "executor": 133,
+    "packaging": 112,
+    "total": 277,
+    "skipped": 0,
+    "explicit_optional_IDS_and_Task_native_prerequisite_cases_not_selected": 9,
+    "not_application_installation": true
+  },
+  "actual_Linux_current_signed50_and_unchanged_old_only_mobile_refusal": {
+    "architectures": [
+      "arm64",
+      "amd64"
+    ],
+    "current_passed": 50,
+    "old_other_passed": 49,
+    "old_only_mobile132_refused": true,
+    "UID": 65534,
+    "source_or_runtime_overlays": 0,
+    "all_own_public_VM_fixtures_removed": true,
+    "existing_native_service_lifetimes_preserved": true,
+    "not_application_installation": true
+  },
+  "application_catalog": {
+    "sha256": "bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f",
+    "mobile132_manifest_sha256": "df8ba687cbd68c991f4dd676d8bb7e867fd2d99e908b9d42614add4861a1175d",
+    "APP_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "required_panel_feature": "mobile-native-delivery-v132",
+    "other49_current_apps_unchanged": true,
+    "all_original50_manifests_retained": true
+  },
+  "normal_frontend": {
+    "eager_limit_bytes": 1200000,
+    "eager_javascript_bytes": 1171074,
+    "index_sha256": "04ad68b32a8b79ef264d35bcda81df1361bce55ba0493f0279e64730cf16aa5d",
+    "closed_mobile_navigation_inert_and_focus_return": true,
+    "identity_first_comprehensive_search_only": true,
+    "unreviewed_future_runtime_notice_is_not_install_approval": true
+  },
+  "recording_boundaries": {
+    "programme_installed_on_QA_or_Main": false,
+    "Main19100_store132_update_accepted": false,
+    "physical_mobile_device_acceptance": false,
+    "iOS_accessibility_UI_acceptance": false,
+    "new_PHP_upstream_security_patch_included": false,
+    "website_runtime_bindings_migrated": false,
+    "full_OS_architecture_matrix": false,
+    "production_soak": false,
+    "all50_commercial": false
+  },
+  "limitations": [
+    "Native privacy and one-shot document workflows have Android17 emulator evidence, not physical-device or iOS UI acceptance.",
+    "iOS device app is intentionally unsigned and requires legitimate developer signing.",
+    "Future runtime notices never approve unknown source URLs or silently migrate websites.",
+    "This programme preserves existing PHP sources; urgent upstream PHP patches are a separate in-progress release, not remediated by this mobile package."
+  ]
+}

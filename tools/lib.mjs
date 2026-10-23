@@ -48,12 +48,13 @@ export function validateManifest(app) {
   const intrusion="intrusion-preserving-journal-v2";
   const wafHealth="waf-bound-health-v1";
   const runtimePackage="runtime-package-version-v1";
+  const mobileNative="mobile-native-delivery-v132";
   const memcachedImage="memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf";
   const memcachedScope=app.id==="memcached"&&app.version==="1.6.45-compat2"&&app.delivery?.provider==="compose";
   const runtimePackageScope=app.id==="nginx"&&app.version==="1.30.6-compat1"&&app.delivery?.provider==="runtime";
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!runtimePackageScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.includes(intrusion)&&(app.id!=="anti-intrusion"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="intrusion-prevention"||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("preserving intrusion journal belongs only to exact anti-intrusion1.1.0 and its fixed executor target");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -62,6 +63,13 @@ export function validateManifest(app) {
     if(Array.isArray(requirements)&&requirements.includes(maintenance)&&(app.id!=="platform-ops"||app.version!=="1.3.0"||app.delivery?.target!==app.id))errors.push("maintenance handler belongs only to exact platform-ops1.3.0");
     if(Array.isArray(requirements)&&requirements.includes(disk)&&(app.id!=="disk-analysis"||!["1.3.0","1.4.0"].includes(app.version)||app.delivery?.target!==app.id||app.delivery?.manage_route!=="app-modules"))errors.push("inode usage handler belongs only to exact disk-analysis1.3.0 or1.4.0");
     if(Array.isArray(requirements)&&requirements.includes(hostDisk)&&(app.id!=="disk-analysis"||app.version!=="1.4.0"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="app-modules"))errors.push("host disk handler belongs only to exact disk-analysis1.4.0");
+  }
+  // Only exact published mobile identities are legacy-compatible. A new label
+  // cannot borrow old delivery metadata or a foreign fixed executor target.
+  const mobileScope=app.id==="mobile"||app.delivery?.target==="mobile-pwa";
+  const legacyMobile=["1.0","1.0-compat1","1.1.0","1.2.0","1.3.0"];
+  if(mobileScope&&!legacyMobile.includes(app.version)||Array.isArray(requirements)&&requirements.includes(mobileNative)){
+    if(app.id!=="mobile"||app.version!=="1.3.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="mobile-pwa"||app.delivery?.manage_route!=="app-modules"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==mobileNative)errors.push("native mobile1.3.2 requires its exact fixed delivery metadata handler");
   }
   // An exact native target cannot borrow an old/foreign package label to evade
   // the compiled handler. Keep historical Nginx endpoints immutable, while new
