@@ -2,7 +2,39 @@
 """Build a genuine pinned Apache prerequisite on an empty disposable CI runner.
 No fake executable, service start, panel installation or source overlays.
 """
-import hashlib,json,os,pathlib,pwd,re,secrets,stat,struct,subprocess,sys,tarfile,urllib.request,urllib.error
+import ctypes,hashlib,json,os,pathlib,pwd,re,secrets,shutil,stat,struct,subprocess,sys,tarfile,urllib.request,urllib.error
+
+def sealed_ci_tree(root):
+ entries={};total=0
+ for current,dirs,files in os.walk(root,followlinks=False):
+  for name in ['.',*files]:
+   path=pathlib.Path(current)/name;s=path.lstat();rel=path.relative_to(root).as_posix()
+   assert not stat.S_ISLNK(s.st_mode)and s.st_uid==0 and s.st_gid==0
+   mode=stat.S_IMODE(s.st_mode)
+   if name=='.':assert stat.S_ISDIR(s.st_mode)and mode==0o755;item={'kind':'directory','mode':mode}
+   else:
+    assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and mode in(0o644,0o755)
+    total+=s.st_size;assert total<=512<<20
+    item={'kind':'file','mode':mode,'bytes':s.st_size,'sha256':hashlib.sha256(path.read_bytes()).hexdigest()}
+   assert rel not in entries;entries[rel]=item;assert len(entries)<=50000
+  for name in dirs:assert stat.S_ISDIR((pathlib.Path(current)/name).lstat().st_mode)
+ return hashlib.sha256(json.dumps(entries,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+
+def promote_private_ci_tree(candidate,prefix):
+ # Source/build logs and the genuine sealed candidate remain retained. Copy
+ # into the private /opt mount, verify ALL bytes/types/modes, then atomically
+ # publish there with Linux NOREPLACE. Never overwrite an existing runtime.
+ expected=sealed_ci_tree(candidate)
+ temporary=prefix.parent/('.'+prefix.name+'-sealed-ci-'+secrets.token_hex(16))
+ assert not os.path.lexists(temporary)and not os.path.lexists(prefix)
+ shutil.copytree(candidate,temporary,symlinks=False)
+ assert sealed_ci_tree(temporary)==expected
+ libc=ctypes.CDLL(None,use_errno=True);rename=libc.renameat2
+ rename.argtypes=[ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint];rename.restype=ctypes.c_int
+ if rename(-100,os.fsencode(temporary),-100,os.fsencode(prefix),1)!=0:
+  number=ctypes.get_errno();raise OSError(number,os.strerror(number),str(prefix))
+ assert sealed_ci_tree(prefix)==expected
+ return expected
 
 def verify_runtime_parents(records):
  for item in records:
@@ -121,9 +153,10 @@ verify_runtime_parents(destination_parents)
 assert not os.path.lexists(prefix)
 # The isolated CI job is the sole owner; destination is absent and no existing
 # runtime is removed or overwritten. Keep all source/build logs for diagnostics.
-os.rename(candidate,prefix)
+sealed_tree_sha256=promote_private_ci_tree(candidate,prefix)
 actual=subprocess.run([str(prefix/'bin/httpd'),'-v'],capture_output=True,text=True,check=True,timeout=10)
 assert actual.stdout==version.stdout and actual.stderr==''
 out={'ok':True,'scope':'genuine pinned Apache CI prerequisite,not a normal panel/runtime installation receipt','source_url':used,'source_sha256':digest,'prefix':str(prefix),'CLI_version':actual.stdout,'CLI_sha256':hashlib.sha256((prefix/'bin/httpd').read_bytes()).hexdigest(),'original_production_configure_flags':True,'unprivileged_compiler':account.pw_name,'memory_max_configured_bytes':768<<20,'swap_max_configured_bytes':0,'service_started':False,'panel_installed':False,'all50_commercial':False,'retained_build_root':str(base),'destination_parents':destination_parents,'existing_parent_mutations':0}
+out['sealed_tree_sha256']=sealed_tree_sha256
 (base/'proof.json').write_text(json.dumps(out,sort_keys=True)+'\n')
 print(json.dumps(out))

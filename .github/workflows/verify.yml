@@ -1355,13 +1355,11 @@ jobs:
       - name: Genuine pinned Apache prerequisite,unprivileged768MiB compiler,no service startup
         run: |
           sudo python3 -I -B tests/test_module_version_apache_parents.py
+          sudo python3 -I -B tests/test_module_version_opt_namespace.py
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
-          sudo python3 -I -B tools/prepare-module-version-apache-ci.py
-      - name: Actual authenticated signed Core to Unix executor and original request preservation,no skipped models
-        run: sudo "$(command -v node)" tools/run-module-version-native-ci.mjs "$(command -v go)"
-      - name: Same exact171 integration models under the race detector
-        run: sudo "$(command -v node)" tools/run-module-version-native-ci.mjs "$(command -v go)" --race
+      - name: Private mount namespace,genuine Apache and both exact171 integration cohorts,no host opt repair
+        run: sudo python3 -I -B tools/run-module-version-isolated-ci.py "$(command -v go)" "$(command -v node)"
       - name: Complete ordinary Linux contracts,original signatures and vet without overlays
         working-directory: panel-integration-module-version
         run: |
