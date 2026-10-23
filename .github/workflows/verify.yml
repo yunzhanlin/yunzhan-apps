@@ -1172,3 +1172,49 @@ jobs:
           node --test scripts/test-mobile-navigation.mjs scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-runtime-package-labels.mjs scripts/test-frontend-release.mjs scripts/test-deferred-workspace.mjs scripts/test-registry-request-identity.mjs scripts/test-registry-freshness.mjs scripts/test-menu-permissions.mjs scripts/test-task-manager.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24mobile132bkft npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  php-security-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-php-security/go.mod
+          cache-dependency-path: panel-integration-php-security/go.sum
+      - name: Exact frozen PHP source, retained original identities and honest qualification boundaries
+        run: node --test tests/php-security-*.test.mjs
+      - name: Independent Draft202012 exact4 PHP, historical8, current50 and136 rejection cases
+        run: |
+          python3 -m venv .local/php-security-schema
+          .local/php-security-schema/bin/pip install --disable-pip-version-check jsonschema==4.26.0
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-security-schema/bin/python" node tools/check-php-security-schema.mjs
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-security-schema/bin/python" node tools/check-mobile-delivery-schema.mjs
+      - name: Complete ordinary Linux Root source contracts and vet, not installed PHP acceptance
+        working-directory: panel-integration-php-security
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Actual Linux175 selected Root models and66 feature cases without source overlays or hidden skips
+        run: sudo "$(command -v node)" tools/run-php-security-ci.mjs "$(command -v go)"
+      - name: Current original-key F28 signed50 accepted by the new PHP-aware consumer
+        working-directory: panel-integration-php-security
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Security admission, original ticket identity, exact feature and old-source retention races
+        working-directory: panel-integration-php-security
+        run: |
+          sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/appcatalog ./internal/runtimecatalog -run '^Test(PHP|NativeMobile|RegistryUnreviewed|RegistryRuntime|RuntimeBundle)' -count=1
+          sudo "$(command -v go)" test -race ./internal/executor -run '^TestPHPSecurity' -count=1
+      - name: Complete original packaging and real flock recovery fixtures, not an installed upgrade
+        working-directory: panel-integration-php-security
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Actual compiled security selectors and unchanged responsive management build budget
+        run: |
+          npm ci --prefix panel-integration-php-security/web --ignore-scripts
+          cd panel-integration-php-security
+          node --test scripts/test-php-security.mjs scripts/test-mobile-navigation.mjs scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-runtime-package-labels.mjs scripts/test-frontend-release.mjs scripts/test-deferred-workspace.mjs scripts/test-registry-request-identity.mjs scripts/test-registry-freshness.mjs scripts/test-menu-permissions.mjs scripts/test-task-manager.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24phpsecuritybkgf npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist

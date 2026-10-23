@@ -1,0 +1,6 @@
+[Unit]
+Description=Nginx change recovery deadline %i
+[Timer]
+OnActiveSec=45s
+AccuracySec=1s
+Unit=panel-nginx-rollback@%i.service
