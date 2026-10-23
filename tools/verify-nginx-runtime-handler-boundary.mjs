@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
+import {historicalMobileRepository} from './historical-mobile-repository.mjs';
 export function verifyOldNginxRuntimeRefusal(result,ids){
  assert.equal(result.status,1);assert(!result.error&&!result.signal);
  assert.equal(ids.length,50);assert.equal(new Set(ids).size,50);assert(ids.includes('nginx'));
@@ -17,8 +18,9 @@ export function verifyOldNginxRuntimeRefusal(result,ids){
  return {other49_passed:49,only_Nginx1_30_6_refused:true,old_compiled_source_unchanged:true,not_application_installation:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
- assert.equal(process.platform,'linux');assert.equal(process.argv.length,2);
- const root=fileURLToPath(new URL('../',import.meta.url)),ids=JSON.parse(fs.readFileSync(path.join(root,'dist/catalog-v1.json'))).apps.map(a=>a.id);
- const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',root],{cwd:path.join(root,'panel-integration-waf-descriptor'),encoding:'utf8',timeout:180000,maxBuffer:4<<20});
+ assert.equal(process.platform,'linux');
+ const root=fileURLToPath(new URL('../',import.meta.url)),repository=historicalMobileRepository(process.argv.slice(2),root);
+ const ids=JSON.parse(fs.readFileSync(path.join(repository,'dist/catalog-v1.json'))).apps.map(a=>a.id);
+ const result=spawnSync('go',['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',repository],{cwd:path.join(root,'panel-integration-waf-descriptor'),encoding:'utf8',timeout:180000,maxBuffer:4<<20});
  process.stdout.write(result.stdout??'');process.stderr.write(result.stderr??'');console.log(JSON.stringify(verifyOldNginxRuntimeRefusal(result,ids)));
 }

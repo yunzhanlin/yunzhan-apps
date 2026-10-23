@@ -1,3 +1,4 @@
+import {preNativeMobileRead} from './pre-native-mobile-release.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -6,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {originalNginxRuntimeWorkflow,beforeNginxRuntime} from './pre-nginx-runtime-release.mjs';
 import {oldWAFRepositoryRoot} from '../tools/verify-waf-health-handler-boundary.mjs';
 import {verifyOldNginxRuntimeRefusal} from '../tools/verify-nginx-runtime-handler-boundary.mjs';
-const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>fs.readFileSync(new URL('../'+n,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
+const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>preNativeMobileRead(n,fs.readFileSync(new URL('../'+n,import.meta.url))),sha=b=>createHash('sha256').update(b).digest('hex');
 test('only five named historical positive roots and one historical WAF negative argument change; all sixteen original jobs survive',()=>{
  const raw=read('.github/workflows/verify.yml'),old=originalNginxRuntimeWorkflow(raw);
  const previous=read('registry/reviewed-catalogs/before-nginx-runtime-workflow24bjbl/verify-pr70.yml');

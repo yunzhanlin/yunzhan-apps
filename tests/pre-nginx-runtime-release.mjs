@@ -2,6 +2,7 @@
 // the five compiled handlers predating runtime-package-version-v1 move to it;
 // the two current handlers keep reading the current signed fifty-app catalog.
 import fs from 'node:fs';
+import {originalNativeMobileWorkflow} from './pre-native-mobile-release.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 export const beforeNginxRuntime='registry/reviewed-catalogs/before-nginx-runtime-package24bixw/';
@@ -14,6 +15,7 @@ const scopedABI='-published-app-registry-root "$GITHUB_WORKSPACE/'+beforeNginxRu
 const oldNegative='        run: node tools/verify-waf-health-handler-boundary.mjs';
 const scopedNegative=oldNegative+' --repo-root '+beforeNginxRuntime.slice(0,-1);
 export function originalNginxRuntimeWorkflow(bytes){
+ bytes=originalNativeMobileWorkflow(bytes);
  let text=bytes.toString();
  const appended=text.indexOf('\n  nginx-runtime-signed-native-amd64:\n');
  const suffix=appended<0?'':text.slice(appended);

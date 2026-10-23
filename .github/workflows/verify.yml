@@ -887,7 +887,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1
       - name: Original-key current signed50 manifest handler ABI
         working-directory: panel-integration-runtime-package
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Full unchanged packaging, private Root and recovery contracts
         working-directory: panel-integration-runtime-package
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -922,7 +922,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/executor -run '^TestRuntime(Version(Output|Process|Absolute)|ExistingCache)' -count=1
       - name: Original-key current signed50 manifest handler ABI
         working-directory: panel-integration-runtime-health
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Complete Root packaging, recovery and bounded read-only census fixtures
         working-directory: panel-integration-runtime-health
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -953,11 +953,11 @@ jobs:
       - name: Both actual current compiled handlers accept the current original-key signed fifty manifests
         run: |
           cd panel-integration-runtime-package
-          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
           cd ../panel-integration-runtime-health
-          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Unmodified pre-runtime-package handler refuses only new Nginx and accepts the other forty-nine
-        run: node tools/verify-nginx-runtime-handler-boundary.mjs
+        run: node tools/verify-nginx-runtime-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-native-mobile132-24bkep
       - name: The original WAF-only refusal still uses its own genuine signed catalog
         run: node tools/verify-waf-health-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-nginx-runtime-package24bixw
 
@@ -983,7 +983,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/core -run '^TestRegistry' -count=1
       - name: Original-key current signed fifty-app manifest handler ABI
         working-directory: panel-integration-waf-review
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Complete Root packaging and recovery models without source overrides
         working-directory: panel-integration-waf-review
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -1018,7 +1018,7 @@ jobs:
           sudo "$(command -v go)" test -race ./internal/executor -run '^TestWAFConfigurationInspection' -count=1
       - name: Actual compiled original-key current fifty-app handler ABI
         working-directory: panel-integration-waf-inspection
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: All Root packaging and recovery fixtures
         working-directory: panel-integration-waf-inspection
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -1046,7 +1046,7 @@ jobs:
         run: node --test tests/files-sync-opening-source.test.mjs
       - name: Actual compiled unchanged native handler accepts current original-key signed fifty manifests
         working-directory: panel-integration-sync-opening
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Actual opening, readonly state and update, remote sync, archive and permission regressions
         run: |
           npm ci --prefix panel-integration-sync-opening/web --ignore-scripts
@@ -1078,7 +1078,7 @@ jobs:
         run: sudo "$(command -v node)" tools/run-ids-capture-ci.mjs "$(command -v go)"
       - name: Actual compiled original-key current fifty-app ABI
         working-directory: panel-integration-ids-capture
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Actual frozen consumer verifies both real signatures and1510 rules, rejecting corruption and expiry
         working-directory: tests/ids-data-verifier
         run: go test -race ./... -count=1
@@ -1116,7 +1116,7 @@ jobs:
         run: sudo "$(command -v node)" tools/run-pm2-readiness-ci.mjs "$(command -v go)"
       - name: Original-key current signed fifty manifests against the actual new compiled consumer
         working-directory: panel-integration-pm2-readiness
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-mobile132-24bkep"
       - name: Full original packaging and real flock lease recovery contracts
         working-directory: panel-integration-pm2-readiness
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -1126,4 +1126,49 @@ jobs:
           cd panel-integration-pm2-readiness
           node --test scripts/test-task-manager.mjs scripts/test-network-ids-operations.mjs scripts/test-deferred-workspace.mjs scripts/test-store-updates.mjs scripts/test-registry-freshness.mjs scripts/test-registry-request-identity.mjs scripts/test-runtime-package-labels.mjs scripts/test-waf-configuration-inspection.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24geodataleasebjkc npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+
+  mobile-delivery-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-mobile-delivery/go.mod
+          cache-dependency-path: panel-integration-mobile-delivery/go.sum
+      - name: Exact frozen source, native release downloads and immutable previous workflow
+        run: node --test tests/mobile-delivery-*.test.mjs tests/mobile-workflow-history.test.mjs tests/mobile-historical-repository.test.mjs tests/mobile-nginx-observer-preservation.test.mjs
+      - name: Independent Draft202012 schema, current50, historical5 and37 rejection cases
+        run: |
+          python3 -m venv .local/mobile-schema
+          .local/mobile-schema/bin/pip install --disable-pip-version-check jsonschema==4.26.0
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/mobile-schema/bin/python" node tools/check-mobile-delivery-schema.mjs
+      - name: Complete Linux Root contracts and vet from the new immutable export
+        working-directory: panel-integration-mobile-delivery
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: All181 selected actual Linux closed models with zero skips
+        run: sudo "$(command -v node)" tools/run-mobile-delivery-ci.mjs "$(command -v go)"
+      - name: Current signed50 accepted by new compiled consumer
+        working-directory: panel-integration-mobile-delivery
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Unmodified F27 must refuse only mobile132 and pass every other49
+        run: node tools/verify-mobile-delivery-handler-boundary.mjs
+      - name: Race models preserve pure update notices and exact native feature admission
+        working-directory: panel-integration-mobile-delivery
+        run: sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/appcatalog -run '^Test(NativeMobile|RegistryUnreviewed|RegistryRuntime)' -count=1
+      - name: Every original packaging and lease recovery fixture
+        working-directory: panel-integration-mobile-delivery
+        run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+      - name: Actual responsive navigation search update and unchanged management selectors
+        run: |
+          npm ci --prefix panel-integration-mobile-delivery/web --ignore-scripts
+          cd panel-integration-mobile-delivery
+          node --test scripts/test-mobile-navigation.mjs scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-runtime-package-labels.mjs scripts/test-frontend-release.mjs scripts/test-deferred-workspace.mjs scripts/test-registry-request-identity.mjs scripts/test-registry-freshness.mjs scripts/test-menu-permissions.mjs scripts/test-task-manager.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24mobile132bkft npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
