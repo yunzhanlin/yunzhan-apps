@@ -1,0 +1,31 @@
+[Unit]
+Description=Panel isolated Redis instance %i
+After=network.target
+
+[Service]
+Type=simple
+User=root
+Group=panel-redis
+ExecStart=/opt/panel/bin/panel-executor --serve-redis %i
+RuntimeDirectory=panel-redis-%i
+RuntimeDirectoryMode=0770
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=60
+UMask=0077
+NoNewPrivileges=true
+# systemd 255's seccomp setup otherwise removes CAP_SETUID even for User=root.
+# Only the bootstrap may switch identity. The locked-thread launcher clears
+# every active and inheritable capability before exec'ing the Redis daemon.
+CapabilityBoundingSet=CAP_CHOWN CAP_SETGID CAP_SETUID
+AmbientCapabilities=CAP_SETUID
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/panel/redis/%i /run/panel-redis-%i
+ReadOnlyPaths=/etc/panel/redis/%i /opt/panel/runtimes/redis
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitNOFILE=10032
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,43 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -3021,6 +3021,20 @@
+             dlhandler->default_chunk_size = DL_DEFAULT_CHUNK_SIZE;
+         }
+     }
++    /* Bound a limited account's burst/pause to at most one second, including
++     * small downloads. Never let socket buffer defaults dictate latency. */
++    if (bandwidth > 0UL) {
++        if (bandwidth < (unsigned long) dlhandler->max_chunk_size) {
++            dlhandler->max_chunk_size = (off_t) bandwidth;
++        }
++        dlhandler->default_chunk_size = dlhandler->max_chunk_size / 4;
++        if (dlhandler->default_chunk_size < 1) {
++            dlhandler->default_chunk_size = 1;
++        }
++        if (dlhandler->min_chunk_size > dlhandler->default_chunk_size) {
++            dlhandler->min_chunk_size = dlhandler->default_chunk_size;
++        }
++    }
+     dlhandler->chunk_size = dlhandler->default_chunk_size;
+     dlhandler->dlmap_size =
+         (DL_DLMAP_SIZE + page_size - (size_t) 1U) & ~(page_size - (size_t) 1U);
+@@ -3852,6 +3866,19 @@
+             ulhandler->default_chunk_size = UL_DEFAULT_CHUNK_SIZE;
+         }
+     }
++    /* Keep low-rate uploads responsive without changing unlimited users. */
++    if (bandwidth > 0UL) {
++        if (bandwidth < (unsigned long) ulhandler->max_chunk_size) {
++            ulhandler->max_chunk_size = (off_t) bandwidth;
++        }
++        ulhandler->default_chunk_size = ulhandler->max_chunk_size / 4;
++        if (ulhandler->default_chunk_size < 1) {
++            ulhandler->default_chunk_size = 1;
++        }
++        if (ulhandler->min_chunk_size > ulhandler->default_chunk_size) {
++            ulhandler->min_chunk_size = ulhandler->default_chunk_size;
++        }
++    }
+     ulhandler->chunk_size = ulhandler->default_chunk_size;
+     ulhandler->cur_pos = restartat;
+     ulhandler->sizeof_buf = ulhandler->max_chunk_size;

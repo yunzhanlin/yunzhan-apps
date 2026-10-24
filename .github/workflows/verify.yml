@@ -1486,3 +1486,32 @@ jobs:
           (cd panel-integration-memcached-review/web && npx --no-install vue-tsc -b)
       - name: Recheck frozen candidate and preserved original31 job bytes
         run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs
+
+  memcached-retirement-models-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-memcached-retirement/go.mod
+          cache-dependency-path: panel-integration-memcached-retirement/go.sum
+      - name: Exact retirement source and all original32 jobs
+        run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs tests/memcached-retirement-source.test.mjs
+      - name: Actual Root closed ownership retirement and cache models, zero skips (not installed application acceptance)
+        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-retirement-models-ci.mjs "$(command -v go)"
+      - name: Entire candidate Linux Root regression
+        working-directory: panel-integration-memcached-retirement
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: All264 original packaging checks on this candidate, zero Root skips
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-packaging-ci.py
+      - name: Actual Vue logic and type checking, mock writes not native acceptance
+        run: |
+          npm ci --prefix panel-integration-memcached-retirement/web --ignore-scripts
+          node --test panel-integration-memcached-retirement/scripts/test-memcached-unix-workspace.mjs panel-integration-memcached-retirement/scripts/test-runtime-package-labels.mjs
+          (cd panel-integration-memcached-retirement/web && npx --no-install vue-tsc -b)
+      - name: Recheck frozen source and original32 workflow bytes
+        run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs tests/memcached-retirement-source.test.mjs
