@@ -10,7 +10,7 @@ import (
 
 func TestRedisACLAuthenticationModeValidation(t *testing.T) {
 	v := RedisInstance{ID: ID(), Name: "ACL auth", ReleaseID: "redis-8.2.10", Port: 16379, MaxMemoryMB: 128, CreatedAt: Now()}
-	for _, mode := range []string{"", RedisACLAuthMode} {
+	for _, mode := range []string{"", RedisACLAuthMode, RedisLegacyACLAuthMode} {
 		v.AuthMode = mode
 		if err := ValidateRedisInstance(v); err != nil {
 			t.Fatal("valid existing/new mode refused", err)

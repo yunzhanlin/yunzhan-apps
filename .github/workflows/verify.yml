@@ -1390,7 +1390,7 @@ jobs:
         with:
           go-version-file: panel-integration-redis-cli/go.mod
           cache-dependency-path: panel-integration-redis-cli/go.sum
-      - name: Exact F41 source and unchanged original28 jobs
+      - name: Exact F42 verified-peer source and unchanged original28 jobs
         run: node --test tests/redis-cli-source.test.mjs tests/module-version-source.test.mjs
       - name: Genuine pinned Apache prerequisite without host runtime adoption
         run: |
@@ -1399,7 +1399,7 @@ jobs:
           sudo python3 -I -B tests/test_module_version_tool_seals.py
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
-      - name: Sealed tools and private opt with exact203 normal and203 race native checks
+      - name: Sealed tools and private opt with exact235 normal and235 race native checks
         run: sudo python3 -I -B tools/run-redis-cli-isolated-ci.py "$(command -v go)" "$(command -v node)"
       - name: Complete ordinary Linux contracts and all50 current original signatures
         working-directory: panel-integration-redis-cli
@@ -1413,5 +1413,5 @@ jobs:
           timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
           npm ci --prefix web --ignore-scripts
           node --test scripts/test-redis-credentials.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-store-updates.mjs
-          VITE_PANEL_VERSION=0.1.0-dev.proapps24composeclibksv npm run build --prefix web
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24redispeerbkug npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist

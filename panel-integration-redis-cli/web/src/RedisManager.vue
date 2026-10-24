@@ -66,14 +66,14 @@ function clearCredentials() {
 }
 const canReadCredentials = () => props.access?.role === "admin" && props.access.menu_ids.includes("databases") && Boolean(props.csrf);
 async function showCredentials(item: Instance) {
-  if (!canReadCredentials() || !drawer.value || item.auth_mode !== "acl-password-v1") return;
+  if (!canReadCredentials() || !drawer.value || item.auth_mode !== "acl-password-v2") return;
   clearCredentials();
   const token = managerToken(), sequence = ++credentialsSequence;
   credentialsLoading.value = true;
   try {
     const out = await props.api<RedisCredentials>(`/redis/instances/${item.id}/credentials`, "POST", {});
     if (!managerCurrent(token) || !drawer.value || sequence !== credentialsSequence || !canReadCredentials()) { out.password = ""; return; }
-    if (out.host !== "127.0.0.1" || out.port !== item.port || out.username !== `app-${item.id.slice(0, 12)}` || out.auth_mode !== "acl-password-v1" || !/^[a-f0-9]{64}$/.test(out.password)) { out.password = ""; throw new Error("Redis 应用凭据格式无效"); }
+    if (out.host !== "127.0.0.1" || out.port !== item.port || out.username !== `app-${item.id.slice(0, 12)}` || out.auth_mode !== "acl-password-v2" || !/^[a-f0-9]{64}$/.test(out.password)) { out.password = ""; throw new Error("Redis 应用凭据格式无效"); }
     credentials.value = out; credentialsName.value = item.name; credentialsOpen.value = true;
     credentialsTimer = setTimeout(clearCredentials, 60_000);
   } catch (error) {
@@ -577,7 +577,7 @@ defineExpose({ open, refresh });
         ></el-table-column
       >
       <el-table-column label="连接" width="75" prop="clients" />
-      <el-table-column label="认证" min-width="125"><template #default="{ row }"><el-tag :type="row.auth_mode === 'acl-password-v1' ? 'success' : 'warning'">{{ row.auth_mode === 'acl-password-v1' ? 'ACL 已启用' : '旧实例 · 未认证' }}</el-tag></template></el-table-column>
+      <el-table-column label="认证" min-width="155"><template #default="{ row }"><el-tag :type="row.auth_mode === 'acl-password-v2' ? 'success' : 'warning'">{{ row.auth_mode === 'acl-password-v2' ? 'ACL · 管理对端验真' : row.auth_mode === 'acl-password-v1' ? '旧 ACL · 需安全迁移' : '旧实例 · 未认证' }}</el-tag></template></el-table-column>
       <el-table-column label="状态" width="95"
         ><template #default="{ row }"
           ><el-tag
@@ -612,7 +612,7 @@ defineExpose({ open, refresh });
             @click="action(row, 'restart')"
             >重启</el-button
           ><el-button link type="primary" @click="showLogs(row)">日志</el-button
-          ><el-button link type="primary" :disabled="!canReadCredentials() || row.auth_mode !== 'acl-password-v1'" :loading="credentialsLoading" @click="showCredentials(row)">应用凭据</el-button
+          ><el-button link type="primary" :disabled="!canReadCredentials() || row.auth_mode !== 'acl-password-v2'" :loading="credentialsLoading" @click="showCredentials(row)">应用凭据</el-button
           ><el-button link type="primary" :disabled="row.status !== 'running'" @click="showKeys(row)">查看键</el-button
           ><el-button link type="danger" @click="remove(row)"
             >删除</el-button

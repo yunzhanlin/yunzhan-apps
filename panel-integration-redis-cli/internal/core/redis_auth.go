@@ -6,7 +6,10 @@ import (
 	"reflect"
 )
 
-const RedisACLAuthMode = "acl-password-v1"
+// V2 never transmits the management credential to a TCP listener. V1 is
+// recognized only to preserve old records and require explicit migration.
+const RedisACLAuthMode = "acl-password-v2"
+const RedisLegacyACLAuthMode = "acl-password-v1"
 
 // RedisCredentials deliberately has no panel-management credential. Only the
 // least-privilege application identity may cross the authenticated Core API.

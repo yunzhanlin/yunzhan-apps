@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Own mount namespace for a genuine Apache prerequisite and exact203 models.
+"""Own mount namespace for a genuine Apache prerequisite and exact235 models.
 
 Hosted CI may expose a world-writable /opt. Never chmod/adopt that parent or
 mask the production refusal. An empty private /opt is used only by this job;
@@ -116,7 +116,7 @@ def main():
   with(base/'intent.json').open('x')as out:json.dump(intent,out,sort_keys=True)
   result=subprocess.run(['/usr/bin/unshare','--mount','--propagation','private','/usr/bin/python3','-I','-B',str(pathlib.Path(__file__).resolve()),'--inside',str(base)],stdin=subprocess.DEVNULL,timeout=1800)
   unchanged=opt_identity(pathlib.Path('/opt'))==intent['host_opt_identity']
-  proof={'ok':result.returncode==0 and unchanged,'exit':result.returncode,'host_opt_identity_unchanged':unchanged,'scope':'isolated CI prerequisite and203 integration models,not installed panel/application acceptance','base':str(base),'all50_commercial':False}
+  proof={'ok':result.returncode==0 and unchanged,'exit':result.returncode,'host_opt_identity_unchanged':unchanged,'scope':'isolated CI prerequisite and235 integration models,not installed panel/application acceptance','base':str(base),'all50_commercial':False}
   with(base/'outer-proof.json').open('x')as out:json.dump(proof,out,sort_keys=True)
   print(json.dumps(proof),flush=True);return 0 if proof['ok']else 1
  assert len(sys.argv)==3 and sys.argv[1]=='--inside','Only two explicit tool paths or one original private case'

@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 var redisACLNativeCase = flag.String("redis-acl-native-case", "", "exact newly owned Redis ACL engine QA case")
@@ -36,7 +38,7 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 		t.Fatal("actual engine acceptance requires Root sandbox")
 	}
 	root := *redisACLNativeCase
-	if !regexp.MustCompile("^/var/lib/panel-executor/redis-acl-engine24bkqh-amd64[.][a-f0-9]{32}$").MatchString(root) {
+	if !regexp.MustCompile("^/var/lib/panel-executor/redis-peer-engine24bktu-amd64[.][a-f0-9]{32}$").MatchString(root) {
 		t.Fatal("unbound private native case")
 	}
 	info, err := os.Lstat(root)
@@ -49,7 +51,7 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 	}
 	alias := *redisACLNativeRuntimeAlias
 	visible, aliasErr := os.Stat(alias)
-	if alias != "/run/panel-qa-redis-acl-engine24bkqh-amd64" || aliasErr != nil || !os.SameFile(info, visible) {
+	if alias != "/run/panel-qa-redis-peer-engine24bktu-amd64" || aliasErr != nil || !os.SameFile(info, visible) {
 		t.Fatal("private runtime alias is not the exact owned case bind mount")
 	}
 	if !regexp.MustCompile("^[a-f0-9]{64}$").MatchString(*redisACLNativeBinarySHA) {
@@ -91,6 +93,11 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 	if err = os.Chown(data, uid, gid); err != nil {
 		t.Fatal(err)
 	}
+	management := filepath.Join(root, "run")
+	visibleManagement := filepath.Join(alias, "run")
+	if os.Mkdir(management, 0700) != nil || os.Chown(management, 0, gid) != nil || os.Chmod(management, 0770) != nil {
+		t.Fatal("NEW private Root-owned management directory")
+	}
 	instance := core.RedisInstance{ID: core.ID(), Name: "private native ACL engine", ReleaseID: "redis-8.2.10", Port: 16379, MaxMemoryMB: 32, CreatedAt: core.Now(), AuthMode: core.RedisACLAuthMode}
 	secret, err := newRedisAuthSecret(instance)
 	if err != nil {
@@ -101,9 +108,9 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 		t.Fatal(err)
 	}
 	config := redisInstanceConfig(instance, secret)
-	// ONLY the private data/pid/log paths differ from the production renderer;
+	// ONLY the private data/pid/socket paths differ from the production renderer;
 	// the three actual ACL definitions, hashes and closed command roles do not.
-	for _, pair := range [][2]string{{"dir " + redisData(instance.ID) + "\n", "dir " + visibleData + "\n"}, {"pidfile /run/panel-redis-" + instance.ID + "/redis.pid\n", "pidfile " + filepath.Join(visibleData, "redis.pid") + "\n"}} {
+	for _, pair := range [][2]string{{"dir " + redisData(instance.ID) + "\n", "dir " + visibleData + "\n"}, {"pidfile /run/panel-redis-" + instance.ID + "/redis.pid\n", "pidfile " + filepath.Join(visibleManagement, "redis.pid") + "\n"}, {"unixsocket " + redisRunDirectory(instance.ID) + "/admin.sock\n", "unixsocket " + filepath.Join(visibleManagement, "admin.sock") + "\n"}} {
 		if strings.Count(config, pair[0]) != 1 {
 			t.Fatal("production configuration binding drift")
 		}
@@ -180,7 +187,7 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 		}
 		running = exec.CommandContext(ctx, binary, filepath.Join(alias, "redis.conf"))
 		running.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: uint32(uid), Gid: uint32(gid), Groups: []uint32{uint32(gid)}}}
-		running.Env = []string{"PATH=/usr/bin:/bin", "LANG=C"}
+		running.Env = []string{"PATH=/usr/bin:/bin", "LANG=C", "HOME=/nonexistent"}
 		running.Stdout = log
 		running.Stderr = log
 		if err = running.Start(); err != nil {
@@ -218,6 +225,40 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 			if err != nil || strings.Contains(string(value), secret.AdminPassword) || strings.Contains(string(value), secret.AppPassword) {
 				t.Fatal("private credential entered actual process arguments/environment", err)
 			}
+		}
+		// Exercise the production descriptor/proc verifier against this genuine
+		// unprivileged Redis ELF and real kernel cgroup/argv/environment. The
+		// enclosing unit belongs to this private fixture, not a normal managed
+		// instance: this is deliberately NOT default PID1/API acceptance.
+		groupRaw, err := os.ReadFile("/proc/" + strconv.Itoa(running.Process.Pid) + "/cgroup")
+		if err != nil {
+			t.Fatal("actual private engine cgroup", err)
+		}
+		group := ""
+		for _, line := range strings.Split(string(groupRaw), "\n") {
+			parts := strings.SplitN(line, ":", 3)
+			if len(parts) == 3 && (parts[1] == "name=systemd" || parts[0] == "0" && group == "") {
+				group = parts[2]
+			}
+		}
+		if group == "" {
+			t.Fatal("actual private systemd domain missing")
+		}
+		unit := redisPeerUnit{PID: running.Process.Pid, Cgroup: group, Invocation: strings.Repeat("a", 32), Started: "1"}
+		serviceAccount := redisServiceAccount{UID: uint32(uid), GID: uint32(gid)}
+		observe := func(ctx context.Context) (redisPeerIdentity, error) {
+			return redisPeerProcessAt(ctx, "/proc", binary, filepath.Join(alias, "redis.conf"), serviceAccount, unit)
+		}
+		conn, directory, pidfd, err := dialRedisVerifiedAt(ctx, management, serviceAccount, observe)
+		if err != nil {
+			t.Fatal("actual engine kernel identity was not verified before AUTH", err)
+		}
+		value, authErr := redisAuthenticatedCommand(ctx, conn, "panel-admin", secret.AdminPassword, 0, "PING")
+		conn.Close()
+		directory.Close()
+		unix.Close(pidfd)
+		if authErr != nil || value != "PONG" {
+			t.Fatal("genuine verified Unix peer AUTH/PING", authErr)
 		}
 	}
 	start(1)
@@ -278,7 +319,7 @@ func TestRedisACLNativeEngineAuthenticationAndPersistence(t *testing.T) {
 	if err = stop(); err != nil {
 		t.Fatal(err)
 	}
-	result := map[string]any{"ok": true, "scope": "real private unprivileged Redis engine,not normal panel instance API or programme installation", "redis_server_sha256": *redisACLNativeBinarySHA, "version": "8.2.10", "default_anonymous_refused": true, "wrong_password_refused": true, "app_admin_and_dangerous_commands_refused": true, "production_ACL_render_and_RESP_AUTH_used": true, "real_app_utf8mb4_writes_and_stale_CAS_refusal": true, "AOF_stop_restart_READONLY_original_values_retained": true, "only_owned_private_engine_stopped_data_retained": true, "credentials_not_in_argv_environment_or_logs": true, "all50_commercial": false}
+	result := map[string]any{"ok": true, "scope": "real private unprivileged Redis engine,not normal panel instance API or programme installation", "redis_server_sha256": *redisACLNativeBinarySHA, "version": "8.2.10", "default_anonymous_refused": true, "wrong_password_refused": true, "app_admin_and_dangerous_commands_refused": true, "production_ACL_render_and_RESP_AUTH_used": true, "real_proc_ELF_argv_environment_and_Unix_peer_verified_before_AUTH_both_starts": true, "real_app_utf8mb4_writes_and_stale_CAS_refusal": true, "AOF_stop_restart_READONLY_original_values_retained": true, "only_owned_private_engine_stopped_data_retained": true, "credentials_not_in_argv_environment_or_logs": true, "all50_commercial": false}
 	for _, name := range []string{"engine-1.log", "engine-2.log"} {
 		value, err := os.ReadFile(filepath.Join(root, name))
 		if err != nil || strings.Contains(string(value), secret.AdminPassword) || strings.Contains(string(value), secret.AppPassword) {

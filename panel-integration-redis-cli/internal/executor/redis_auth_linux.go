@@ -74,7 +74,7 @@ func redisAuthConfig(s redisAuthSecret) string {
 }
 
 func redisInstanceConfig(instance core.RedisInstance, secret redisAuthSecret) string {
-	return fmt.Sprintf("bind 127.0.0.1\nprotected-mode yes\nport %d\ntcp-backlog 128\ntimeout 0\ntcp-keepalive 300\ndaemonize no\nsupervised no\npidfile /run/panel-redis-%s/redis.pid\nloglevel notice\nlogfile \"\"\ndatabases 16\nalways-show-logo no\ndir %s\ndbfilename dump.rdb\nappendonly yes\nappenddirname appendonlydir\nmaxmemory %dmb\nmaxmemory-policy allkeys-lru\nrename-command CONFIG \"\"\n", instance.Port, instance.ID, redisData(instance.ID), instance.MaxMemoryMB) + redisAuthConfig(secret)
+	return fmt.Sprintf("bind 127.0.0.1\nprotected-mode yes\nport %d\ntcp-backlog 128\ntimeout 0\ntcp-keepalive 300\ndaemonize no\nsupervised no\nset-proc-title no\npidfile /run/panel-redis-%s/redis.pid\nunixsocket /run/panel-redis-%s/admin.sock\nunixsocketperm 666\nloglevel notice\nlogfile \"\"\ndatabases 16\nalways-show-logo no\ndir %s\ndbfilename dump.rdb\nappendonly yes\nappenddirname appendonlydir\nmaxmemory %dmb\nmaxmemory-policy allkeys-lru\nrename-command CONFIG \"\"\n", instance.Port, instance.ID, instance.ID, redisData(instance.ID), instance.MaxMemoryMB) + redisAuthConfig(secret)
 }
 
 func validateRedisServingAuth(instance core.RedisInstance) error {
@@ -218,6 +218,9 @@ func validateRedisAuthMode(instance core.RedisInstance) error {
 	if instance.AuthMode == core.RedisACLAuthMode {
 		_, err := readRedisAuth(instance)
 		return err
+	}
+	if instance.AuthMode == core.RedisLegacyACLAuthMode {
+		return errors.New("旧 ACL 实例需要明确安全迁移；未发送凭据、未改密或回退 TCP")
 	}
 	if instance.AuthMode != "" {
 		return errors.New("Redis 认证模式无效")

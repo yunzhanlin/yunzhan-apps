@@ -34,7 +34,7 @@ type RedisLogicalDB struct {
 }
 
 func ValidateRedisInstance(v RedisInstance) error {
-	if v.AuthMode != "" && v.AuthMode != RedisACLAuthMode {
+	if v.AuthMode != "" && v.AuthMode != RedisACLAuthMode && v.AuthMode != RedisLegacyACLAuthMode {
 		return errors.New("Redis 认证模式无效")
 	}
 	if !ValidID(v.ID) || !redisInstanceName.MatchString(v.Name) || v.Port < 16379 || v.Port > 16999 || v.MaxMemoryMB < 32 || v.MaxMemoryMB > 16384 {

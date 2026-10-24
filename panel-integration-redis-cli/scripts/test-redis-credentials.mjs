@@ -8,8 +8,8 @@ const ast=ts.createSourceFile('RedisManager.ts',source,ts.ScriptTarget.Latest,tr
 const statements=ast.statements.filter(n=>!ts.isImportDeclaration(n)&&!(ts.isExpressionStatement(n)&&n.expression.expression?.getText(ast)==='defineExpose'));
 const js=ts.transpileModule(statements.map(n=>n.getText(ast)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const names=['drawer','credentialsOpen','credentialsLoading','credentials','credentialsName','showCredentials','clearCredentials'];
-const id='a'.repeat(32),password='bc'.repeat(32),item={id,name:'owned Redis fixture',port:16379,status:'running',auth_mode:'acl-password-v1'};
-const response=()=>({host:'127.0.0.1',port:16379,username:'app-'+id.slice(0,12),password,auth_mode:'acl-password-v1'});
+const id='a'.repeat(32),password='bc'.repeat(32),item={id,name:'owned Redis fixture',port:16379,status:'running',auth_mode:'acl-password-v2'};
+const response=()=>({host:'127.0.0.1',port:16379,username:'app-'+id.slice(0,12),password,auth_mode:'acl-password-v2'});
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject};};
 function fixture(api=async()=>response()){
  const scope=effectScope(),calls=[],messages=[],timers=new Map(),windowEvents=new Map(),documentEvents=new Map();
@@ -46,7 +46,7 @@ test('actual credential opener never contacts backend without database-admin gra
   try{change(f);await f.x.showCredentials(item);assert.equal(f.calls.length,0);}finally{f.close();}
  }
  const f=fixture(async()=>assert.fail('old instance migrated or secret requested'));
- try{await f.x.showCredentials({...item,auth_mode:undefined});assert.equal(f.calls.length,0);}finally{f.close();}
+ try{for(const mode of [undefined,'acl-password-v1','unknown'])await f.x.showCredentials({...item,auth_mode:mode});assert.equal(f.calls.length,0);}finally{f.close();}
 });
 test('closing manager,replacing account,revoking grant,explicit close and unmount clear actual secret object and timer',async()=>{
  for(const change of [

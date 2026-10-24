@@ -191,14 +191,16 @@ func redisAuthenticatedCommand(ctx context.Context, conn net.Conn, username, pas
 }
 
 func redisSecureValue(ctx context.Context, instance core.RedisInstance, db int, command ...string) (any, error) {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
 	secret, err := readRedisAuth(instance)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { secret.AdminPassword = ""; secret.AppPassword = "" }()
-	conn, err := (&net.Dialer{Timeout: time.Second}).DialContext(ctx, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(instance.Port)))
+	conn, err := dialRedisManagement(ctx, instance)
 	if err != nil {
-		return nil, errors.New("Redis 本机认证连接失败")
+		return nil, errRedisPeer
 	}
 	defer conn.Close()
 	return redisAuthenticatedCommand(ctx, conn, "panel-admin", secret.AdminPassword, db, command...)

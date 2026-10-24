@@ -6,25 +6,25 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-redis-cli/';
 const read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
-const inputs='943aaf12007348b29857d0865f7635f55beaf8fbc0e1279c97e9da6a2d9b9f74',indexSHA='cdde3866712e222a3f87ca7e4dfa38c2aa7a269574ed959e4848fcf8781e1c71';
-test('Redis and Compose candidate is exactly1805 normal frozen members with1351 Go sources and zero overlays',()=>{
+const inputs='5ddc86484adc44a7f89d23a5b2c76cc52dc57bc02dd4b39ab85049fedaf883fe',indexSHA='e3a905357c346b266607ce3debc804a429727d390db624413c283c2a81d8717f';
+test('Redis and Compose candidate is exactly1809 normal frozen members with1355 Go sources and zero overlays',()=>{
  const raw=read(scope+'source-sha256.json'),index=JSON.parse(raw);assert.equal(sha(raw),indexSHA);
- assert.equal(index.release.frozen_inputs_sha256,inputs);assert.equal(index.release.archive_sha256,'b2f00cc540b575ba84965b7cfb4e6bd6749880dda935879a96443e875df12c2f');
- assert.equal(index.release.archive,'panel-0.1.0-dev.proapps24composeclibksv-linux-amd64.tar.gz');
- assert.equal(Object.keys(index.files).length,1805);assert.equal(Object.keys(index.files).filter(n=>n.endsWith('.go')).length,1351);
+ assert.equal(index.release.frozen_inputs_sha256,inputs);assert.equal(index.release.archive_sha256,'7982f0dc6d605b16f3665df21f958bd549deafe7dc8cc37acaa31c27bfc20157');
+ assert.equal(index.release.archive,'panel-0.1.0-dev.proapps24redispeerbkug-linux-amd64.tar.gz');
+ assert.equal(Object.keys(index.files).length,1809);assert.equal(Object.keys(index.files).filter(n=>n.endsWith('.go')).length,1355);
  assert.deepEqual(index.test_overrides,{});assert.deepEqual(json(scope+'release-source-inputs.json'),{...index.release,files:index.files});
  for(const[n,h]of Object.entries(index.files)){
   assert.equal(path.posix.normalize(n),n);assert(!path.isAbsolute(n)&&!n.split('/').some(v=>['..','.git','.local','node_modules'].includes(v)));
   const s=fs.lstatSync(root+scope+n);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1);assert.equal(sha(read(scope+n)),h,n);
  }
 });
-test('F39 remains byte-exact and only six reviewed members and nine additions differ,without unfinished Memcached profiles',()=>{
+test('F39 remains byte-exact and only seven reviewed members and thirteen additions differ,without unfinished Memcached profiles',()=>{
  const oldRaw=read('panel-integration-module-version/source-sha256.json'),old=JSON.parse(oldRaw),now=json(scope+'source-sha256.json');
  assert.equal(sha(oldRaw),'37b5a6885fc685204ca8b15f2bc2d873013749a25987973d39bd8386dcbff491');
  assert.equal(old.release.frozen_inputs_sha256,'41c4295d400488bc6d69faa6a36a3a9556fc50b0b7e14d2011b083b964113cb4');
  assert(Object.keys(old.files).every(n=>Object.hasOwn(now.files,n)));
- assert.deepEqual(Object.keys(old.files).filter(n=>old.files[n]!==now.files[n]).sort(),["internal/core/redis.go","internal/executor/docker_compose_linux.go","internal/executor/redis_keys_linux.go","internal/executor/redis_linux.go","packaging/build-release.sh","web/src/RedisManager.vue"]);
- assert.deepEqual(Object.keys(now.files).filter(n=>!Object.hasOwn(old.files,n)).sort(),["internal/core/redis_auth.go","internal/core/redis_auth_test.go","internal/executor/docker_compose_cli_linux.go","internal/executor/docker_compose_cli_linux_test.go","internal/executor/redis_auth_linux.go","internal/executor/redis_auth_linux_test.go","internal/executor/redis_auth_native_qa_linux_test.go","internal/executor/redis_resp_linux.go","scripts/test-redis-credentials.mjs"]);
+ assert.deepEqual(Object.keys(old.files).filter(n=>old.files[n]!==now.files[n]).sort(),["dev/panel-redis@.service","internal/core/redis.go","internal/executor/docker_compose_linux.go","internal/executor/redis_keys_linux.go","internal/executor/redis_linux.go","packaging/build-release.sh","web/src/RedisManager.vue"]);
+ assert.deepEqual(Object.keys(now.files).filter(n=>!Object.hasOwn(old.files,n)).sort(),["internal/core/redis_auth.go","internal/core/redis_auth_test.go","internal/executor/docker_compose_cli_linux.go","internal/executor/docker_compose_cli_linux_test.go","internal/executor/redis_auth_linux.go","internal/executor/redis_auth_linux_test.go","internal/executor/redis_auth_native_qa_linux_test.go","internal/executor/redis_peer_kernel_linux_test.go","internal/executor/redis_peer_linux_test.go","internal/executor/redis_peer_state_linux.go","internal/executor/redis_peer_transport_linux.go","internal/executor/redis_resp_linux.go","scripts/test-redis-credentials.mjs"]);
  for(const n of ['internal/executor/program_upgrade_queues_linux.go','internal/executor/runtime_install_resources_linux.go','internal/executor/install_linux.go','internal/runtimecatalog/catalog.go','web/src/FileManager.vue'])assert.equal(now.files[n],old.files[n],n);
  assert.equal(now.files['web/src/FileManager.vue'],'f4ae7a99782e0705d9e7cc34b2b6df130fee5fdf5546afc3cad4d9b1370f92bc');
  assert(!Object.keys(now.files).some(n=>n.includes('memcached_unix')||n.includes('memcached_sandbox')));
@@ -43,7 +43,7 @@ test('new privileged CI reuses exact Root tool-sealing and private mount guards 
  for(const x of ['prepare-module-version-apache-ci.py','run-redis-cli-native-ci.mjs',"go,'--race'",'host_opt_identity_unchanged','existing_host_parent_permission_changes'])assert(now.includes(x),x);
  const runner=read('tools/run-redis-cli-native-ci.mjs').toString();
  const groupStart=runner.indexOf('const groups='),groupEnd=runner.indexOf('],out={',groupStart);assert(groupStart>0&&groupEnd>groupStart);
- const groups=JSON.parse(runner.slice(groupStart+'const groups='.length,groupEnd+1));assert.deepEqual(groups.map(g=>g.expectedPasses),[90,93,13,7]);assert.deepEqual(groups.map(g=>g.names.length),[11,16,2,7]);
+ const groups=JSON.parse(runner.slice(groupStart+'const groups='.length,groupEnd+1));assert.deepEqual(groups.map(g=>g.expectedPasses),[90,93,13,7,32]);assert.deepEqual(groups.map(g=>g.names.length),[11,16,2,7,10]);
  for(const x of [inputs,"e.Action==='skip'",'private_integration_not_host_app_installation:true','all50_commercial:false'])assert(runner.includes(x),x);
  assert(runner.includes("out.groups[g.name]")&&runner.includes("'redis-cli-native-ci-'+g.name"));
 });
@@ -61,4 +61,35 @@ test('Redis app-only no-store authority and executable masked-memory UI regressi
  assert(ui.includes('type="password" show-password readonly autocomplete="new-password"'));assert(!ui.includes('localStorage')&&!ui.includes('sessionStorage')&&!ui.includes('navigator.clipboard'));
  assert(build.includes('node --test scripts/test-redis-credentials.mjs'));
  assert(Object.hasOwn(json(scope+'source-sha256.json').files,'scripts/test-redis-credentials.mjs'));
+});
+test('Redis V2 management authenticates the actual Unix server peer before AUTH,never a loopback listener',()=>{
+ const state=read(scope+'internal/executor/redis_peer_state_linux.go').toString();
+ const transport=read(scope+'internal/executor/redis_peer_transport_linux.go').toString();
+ const resp=read(scope+'internal/executor/redis_resp_linux.go').toString();
+ const core=read(scope+'internal/core/redis_auth.go').toString();
+ const config=read(scope+'internal/executor/redis_auth_linux.go').toString();
+ const secure=resp.slice(resp.indexOf('func redisSecureValue('),resp.indexOf('func redisInfoText('));
+ assert(secure.indexOf('dialRedisManagement(ctx, instance)')>=0&&secure.indexOf('dialRedisManagement(ctx, instance)')<secure.indexOf('redisAuthenticatedCommand('));
+ assert(!secure.includes('"tcp"')&&!secure.includes('net.Dial'));
+ for(const x of ['unix.SO_PEERCRED','unix.PidfdOpen','redisPeerPIDAlive','after != before','credential.Uid != account.UID','credential.Gid != account.GID','int(credential.Pid) != before.Unit.PID','redisManagementSocketInfo','syscall.O_NOFOLLOW','unix.LOCK_SH|unix.LOCK_NB'])assert(transport.includes(x),x);
+ for(const x of ['InvocationID','ExecMainStartTimestampMonotonic','redisPeerCgroup','taskSafeProcessStatus','redisPeerProcRead(directory, "environ"','os.SameFile(expected, actual)'])assert(state.includes(x),x);
+ for(const x of ['acl-password-v2','acl-password-v1'])assert(core.includes(x),x);
+ assert(config.includes('set-proc-title no')&&config.includes('unixsocketperm 666'));
+ for(const x of ['os.Chmod(','os.Chown(','os.WriteFile(','os.Setenv('])assert(!transport.includes(x)&&!state.includes(x),x);
+ const unit=read(scope+'dev/panel-redis@.service').toString();
+ for(const x of ['User=root\n','Group=panel-redis\n','RuntimeDirectoryMode=0770\n','NoNewPrivileges=true\n'])assert(unit.includes(x),x);
+});
+test('genuine Linux same-UID foreign-PID,positive AUTH,and zero-byte lifetime controls run in both exact CI cohorts',()=>{
+ const runner=read('tools/run-redis-cli-native-ci.mjs').toString();
+ const start=runner.indexOf('const groups=')+'const groups='.length,end=runner.indexOf('],out={',start)+1;
+ const groups=JSON.parse(runner.slice(start,end)),peer=groups.find(g=>g.name==='Redis_verified_kernel_peers');
+ assert(peer&&peer.expectedPasses===32&&peer.names.length===10);
+ assert(!peer.names.includes('TestRedisPeerKernelChild'));
+ for(const n of ['TestRedisPeerKernelSameUIDForeignPIDReceivesNoAUTHBytes','TestRedisPeerKernelMatchingIdentityUsesTheSameConnectionForAUTH','TestRedisPeerKernelGenerationChangeAndCancellationSendNoAUTH','TestRedisPeerKernelWrongOwnerAndUnknownDirectoryNeverRepairOrConnect','TestRedisPeerLegacyACLNeverDialsOrFallsBack'])assert(peer.names.includes(n),n);
+ const kernel=read(scope+'internal/executor/redis_peer_kernel_linux_test.go').toString();
+ for(const x of ['Uid: 65534','Gid: 65534','server.count(t) != 0','strings.Repeat("ab", 32)','h.stop.Close()','io.EOF','NOT actual PID1/Redis instance'])assert(kernel.includes(x),x);
+ assert(!kernel.includes('CAP_KILL')||kernel.includes('need not gain CAP_KILL'));
+ const native=read(scope+'internal/executor/redis_auth_native_qa_linux_test.go').toString();
+ assert(native.includes('redisPeerProcessAt(ctx, "/proc"')&&native.includes('dialRedisVerifiedAt(ctx, management'));
+ assert(native.includes('real_proc_ELF_argv_environment_and_Unix_peer_verified_before_AUTH_both_starts'));
 });

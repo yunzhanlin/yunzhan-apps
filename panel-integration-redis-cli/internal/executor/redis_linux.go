@@ -74,8 +74,14 @@ func ServeRedis(id string) error {
 	if e != nil {
 		return e
 	}
-	if e = os.Chown("/run/panel-redis-"+id, uid, gid); e != nil {
-		return e
+	if instance.AuthMode == core.RedisACLAuthMode {
+		if uid <= 0 || gid <= 0 || validateRedisNewRuntimeDirectory(id, uint32(gid)) != nil {
+			return errRedisPeer
+		}
+	} else {
+		if e = os.Chown("/run/panel-redis-"+id, uid, gid); e != nil {
+			return e
+		}
 	}
 	if e = syscall.Setgroups([]int{gid}); e != nil {
 		return e

@@ -2,7 +2,7 @@ import fs from'node:fs';import path from'node:path';import assert from'node:asse
 assert(process.platform==='linux'&&process.arch==='x64'&&process.geteuid()===0,'Actual Linux Root AMD64 CI fixture only');
 const go=process.argv[2],race=process.argv[3]==='--race';assert(process.argv.length===(race?4:3)&&path.isAbsolute(go));
 const root=fileURLToPath(new URL('../',import.meta.url)),source=path.join(root,'panel-integration-redis-cli'),sha=b=>createHash('sha256').update(b).digest('hex'),index=JSON.parse(fs.readFileSync(source+'/source-sha256.json'));
-assert(index.release.frozen_inputs_sha256==="943aaf12007348b29857d0865f7635f55beaf8fbc0e1279c97e9da6a2d9b9f74"&&Object.keys(index.files).length===1805&&Object.keys(index.test_overrides).length===0);
+assert(index.release.frozen_inputs_sha256==="5ddc86484adc44a7f89d23a5b2c76cc52dc57bc02dd4b39ab85049fedaf883fe"&&Object.keys(index.files).length===1809&&Object.keys(index.test_overrides).length===0);
 const verify=()=>{for(const[n,h]of Object.entries(index.files)){const s=fs.lstatSync(source+'/'+n);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1);assert.equal(sha(fs.readFileSync(source+'/'+n)),h,n);}};verify();
 const groups=[
   {
@@ -67,6 +67,23 @@ const groups=[
       "TestRedisACLRESPAuthenticationFailureNeverExecutesOrEchoes",
       "TestRedisACLRESPCancellationClosesPrivateConnection",
       "TestRedisACLRESPFixedCommandsAndNoLegacyFallback"
+    ]
+  },
+  {
+    "name": "Redis_verified_kernel_peers",
+    "pkg": "executor",
+    "expectedPasses": 32,
+    "names": [
+      "TestRedisPeerUnitIdentityClosedAndInstanceBound",
+      "TestRedisPeerCgroupV1V2AndHybridUseActualSystemdDomain",
+      "TestRedisPeerKernelStatusRequiresAllNonRootIDsNoSavedCapabilities",
+      "TestRedisPeerDirectoryIsRootOwnedGroupPrivateNotAWorldSocketClaim",
+      "TestRedisPeerRootAccountRejectedBeforeAnyFileOrConnection",
+      "TestRedisPeerLegacyACLNeverDialsOrFallsBack",
+      "TestRedisPeerKernelMatchingIdentityUsesTheSameConnectionForAUTH",
+      "TestRedisPeerKernelSameUIDForeignPIDReceivesNoAUTHBytes",
+      "TestRedisPeerKernelGenerationChangeAndCancellationSendNoAUTH",
+      "TestRedisPeerKernelWrongOwnerAndUnknownDirectoryNeverRepairOrConnect"
     ]
   }
 ],out={ok:false,race,source_inputs:index.release.frozen_inputs_sha256,source_overlays:0,private_integration_not_host_app_installation:true,all50_commercial:false,groups:{}};
