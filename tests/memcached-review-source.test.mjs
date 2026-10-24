@@ -1,3 +1,4 @@
+import{historicalMemcachedUnixInput}from'./reviewed-memcached-unix-inputs.mjs';
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,7 +7,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {fileURLToPath} from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-memcached-review/',prior='panel-integration-memcached-unix/';
-const read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
+const read=n=>historicalMemcachedUnixInput(root,n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 const delta={"changed":["internal/core/memcached_unix_control.go","internal/core/memcached_unix_control_http.go","internal/core/runtime_bundles.go","internal/core/runtimes.go","internal/executor/docker_mutation_linux.go","internal/executor/docker_mutation_linux_test.go","internal/executor/memcached_unix_control_close_linux.go","internal/executor/memcached_unix_control_journal_linux.go","internal/executor/memcached_unix_control_linux.go","scripts/test-memcached-unix-ui-fixture.mjs","scripts/test-memcached-unix-ui.mjs","scripts/test-memcached-unix-workspace.mjs","web/src/MemcachedUnixManager.vue","web/src/memcachedUnix.ts"],"added":["internal/core/memcached_unix_control_observation_test.go","internal/core/memcached_unix_control_review.go","internal/core/memcached_unix_control_review_http.go","internal/core/memcached_unix_control_review_test.go","internal/core/runtime_audit_timestamp_test.go","internal/executor/memcached_unix_control_observation_linux.go","internal/executor/memcached_unix_control_observation_linux_test.go","internal/executor/memcached_unix_control_review_linux.go","internal/executor/memcached_unix_control_review_linux_test.go"],"removed":[]};
 test('recorded real Root models and genuine builds are not signed programme, native application or commercial50 acceptance',()=>{
  const r=json('registry/memcached-review-core.json');assert.equal(r.frozen_inputs_sha256,'2477f8c1450679ff5711cb887cdfee2b485e8833eb64a0014c5369192710a8f7');assert.equal(r.exported_files,1907);assert.equal(r.source_overlays,0);

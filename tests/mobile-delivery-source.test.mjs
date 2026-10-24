@@ -1,8 +1,9 @@
+import{historicalMemcachedUnixInput}from'./reviewed-memcached-unix-inputs.mjs';
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash,createPublicKey,verify}from'node:crypto';
 import{fileURLToPath}from'node:url';
 import{beforeNativeMobile,originalNativeMobileWorkflow}from'./pre-native-mobile-release.mjs';
-const base=fileURLToPath(new URL('../',import.meta.url)),read=n=>fs.readFileSync(path.join(base,n)),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-mobile-delivery/';
+const base=fileURLToPath(new URL('../',import.meta.url)),read=n=>historicalMemcachedUnixInput(base,n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-mobile-delivery/';
 test('normal signatures and real Linux model receipts keep publication deployment device and PHP patch boundaries explicit',()=>{
  const r=json('registry/mobile-delivery-core.json');assert.equal(r.frozen_inputs_sha256,json(scope+'source-sha256.json').release.frozen_inputs_sha256);assert.equal(r.source_overrides,0);assert.equal(r.exported_files,1752);assert.equal(r.selected_Linux_root_models_per_architecture.total,277);assert.equal(r.selected_Linux_root_models_per_architecture.skipped,0);
  for(const a of Object.values(r.normal_archives)){assert(a.original_key_signature_verified&&a.current_signed50_accepted&&a.old_mobile_only_refused);assert.equal(a.root_native_models,165);assert.equal(a.root_packaging_models,112);assert.equal(a.model_skipped,0);for(const n of ['archive_sha256','manifest_sha256','signature_sha256','root_native_model_proof_sha256','root_packaging_proof_sha256'])assert.match(a[n],/^[a-f0-9]{64}$/);}

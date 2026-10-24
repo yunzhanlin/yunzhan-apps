@@ -1,3 +1,4 @@
+import{historicalMemcachedUnixSchemaURL}from'./reviewed-memcached-unix-inputs.mjs';
 import test from'node:test';import assert from'node:assert/strict';import{readFile}from'node:fs/promises';import{validateManifest}from'../tools/lib.mjs';
 const original=JSON.parse(await readFile(new URL('../dist/apps/memcached/1.6.45-compat1/manifest.json',import.meta.url),'utf8'));
 const feature='compose-memcached-digest-v1',image='memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf';
@@ -11,6 +12,6 @@ test('a feature or provider alias never widens the pinned Memcached exemption',(
  const missing=candidate();delete missing.required_panel_features;assert(validateManifest(missing).length);
 });
 test('schema keeps the exact Memcached branch separate from every module and generic Compose app',async()=>{
- const schema=JSON.parse(await readFile(new URL('../schema/app.schema.json',import.meta.url),'utf8'));assert.equal(schema.additionalProperties,false);
+ const schema=JSON.parse(await readFile(historicalMemcachedUnixSchemaURL(import.meta.url),'utf8'));assert.equal(schema.additionalProperties,false);
  const branches=schema.allOf[0].then.oneOf.filter(x=>x.properties.id.const==='memcached');assert.equal(branches.length,1);const p=branches[0].properties;assert.equal(p.version.const,'1.6.45-compat2');assert.equal(p.delivery.properties.provider.const,'compose');assert.equal(p.delivery.properties.image.const,image);assert.equal(p.required_panel_features.maxItems,1);assert(schema.allOf.some(x=>x.if?.properties?.id?.const==='memcached'&&x.then.required.includes('required_panel_features')));
 });

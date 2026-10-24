@@ -1,0 +1,63 @@
+{
+  "format": 1,
+  "prepared_at": "2026-10-24T22:31:43Z",
+  "catalog_sha256": "247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813",
+  "registry_sha256": "714370789357280e0557a84d50a158ddd2a8d7a3b6344adcb7d7d6d30e55adc4",
+  "original_APP_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "changed_apps": [
+    "memcached",
+    "php-82",
+    "php-83",
+    "php-84",
+    "php-85"
+  ],
+  "unchanged_apps": 45,
+  "all50_original_version_endpoints_retained": true,
+  "source_consumer": {
+    "head": "11c58cdfa56e86b8c3047f1917528e3ce6e158ab",
+    "merge": "36ee251579b23de456a18e698427cee6463d7902",
+    "all34_original_head_checks_terminal_success": true,
+    "programme": "0.1.0-dev.proapps24memretirehandlerblcu",
+    "frozen_inputs": "f7d38cf4498342a12e59ec57c1a7ce404ac1a2b3daaab3c093f51e54b95e409b",
+    "source_overlays": 0,
+    "actual_Root_models_per_architecture": {
+      "top_level": 129,
+      "including_subtests": 855,
+      "failures": 0,
+      "skips": 0
+    }
+  },
+  "normal_QA_upgrade_proofs": {
+    "amd64": "dd6035b1ad469987ed75bb9041e7b6110f40572cde8a87d98454d193ce4cbacd",
+    "arm64": "7d160c025785d81ef0248b568ca47384b33edd5471ff38ba71a6087d7a7e35dc"
+  },
+  "normal_Main_development_upgrade": {
+    "proof_sha256": "b0f92232cc000c81930f61f65fd0c0c71d1177dbcd9f314d4e241ff6ec053bbc",
+    "original102_business_projections_and58_sites_preserved": true,
+    "only_exact_empty_control_store_plus_indexes_added": true,
+    "actual_user_tables": 109,
+    "actual_nonvolatile_business_columns": 103
+  },
+  "old_compiled_consumer_scope": {
+    "historical_catalog": "registry/reviewed-catalogs/before-php-security24bkhe",
+    "original_key_catalog_sha256": "bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f",
+    "earlier_ABI_calls": 8,
+    "earlier_jobs": 7,
+    "latest_F48_gate_uses_actual_new50": true,
+    "F47_negative_gate_requires_only_one_exact_contract_refusal": true
+  },
+  "actual_current_JSONSchema_checks": {
+    "engine": "Draft202012Validator",
+    "positive": 54,
+    "negative": 26,
+    "external_schema_fetches": 0
+  },
+  "recording_boundaries": {
+    "app_metadata_head_CI_accepted": false,
+    "public_main_catalog_activated": false,
+    "actual_default_store_account_cache_lifecycle_retirement_accepted": false,
+    "actual_19100_new5_store_update_accepted": false,
+    "all50_commercial": false
+  },
+  "future_private_L4_source_included": false
+}

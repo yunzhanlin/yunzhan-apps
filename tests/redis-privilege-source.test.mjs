@@ -1,3 +1,4 @@
+import{historicalMemcachedUnixInput}from'./reviewed-memcached-unix-inputs.mjs';
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';
 import fs from'node:fs';
@@ -5,7 +6,7 @@ import path from'node:path';
 import assert from'node:assert/strict';
 import{createHash}from'node:crypto';
 import{fileURLToPath}from'node:url';
-const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-redis-privilege/',read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
+const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-redis-privilege/',read=n=>historicalMemcachedUnixInput(root,n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('F44 exports the exact ordinary1358-Go-source candidate with zero overrides and only the reviewed Redis delta',()=>{
  const raw=read(scope+'source-sha256.json'),index=JSON.parse(raw),oldRaw=read('panel-integration-geodata-admission/source-sha256.json'),old=JSON.parse(oldRaw);
  assert.equal(sha(raw),'808d7eb3a5d913e186808d7913dc98acdd53cb0754330b009c0a9652ceb93d9e');

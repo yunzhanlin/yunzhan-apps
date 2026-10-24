@@ -1156,9 +1156,9 @@ jobs:
         run: sudo "$(command -v node)" tools/run-mobile-delivery-ci.mjs "$(command -v go)"
       - name: Current signed50 accepted by new compiled consumer
         working-directory: panel-integration-mobile-delivery
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Unmodified F27 must refuse only mobile132 and pass every other49
-        run: node tools/verify-mobile-delivery-handler-boundary.mjs
+        run: node tools/verify-mobile-delivery-handler-boundary.mjs --repo-root registry/reviewed-catalogs/before-php-security24bkhe
       - name: Race models preserve pure update notices and exact native feature admission
         working-directory: panel-integration-mobile-delivery
         run: sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/appcatalog -run '^Test(NativeMobile|RegistryUnreviewed|RegistryRuntime)' -count=1
@@ -1207,7 +1207,7 @@ jobs:
           sudo "$(command -v go)" test -json ./internal/executor -run '^Test(ProgramUpgradeIDS|RuntimeSourceDownloadNoUntrustedFallback|PHPSecuritySourceGuard)' -count=1
       - name: Current original-key F28 signed50 accepted by the new PHP-aware consumer
         working-directory: panel-integration-compiler-exit
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Security admission, original ticket identity, exact feature and old-source retention races
         working-directory: panel-integration-compiler-exit
         run: |
@@ -1260,7 +1260,7 @@ jobs:
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
       - name: Original-key current signed50 accepted by the actual new compiled consumer
         working-directory: panel-integration-runtime-memory
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Native compiler prerequisites and a distinct unprivileged builder
         run: |
           sudo apt-get update
@@ -1298,15 +1298,16 @@ jobs:
           .local/php-bounded-schema/bin/pip install --disable-pip-version-check jsonschema==4.25.1
           YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-bounded-schema/bin/python" node tools/check-php-bounded-schema.mjs
           YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-bounded-schema/bin/python" node tools/check-php-security-schema.mjs
+          YUNZHAN_SCHEMA_PYTHON="$GITHUB_WORKSPACE/.local/php-bounded-schema/bin/python" node tools/check-memcached-unix-schema.mjs
       - name: Actual native handler,direct and network plus cached full-byte verification,races and vet
         working-directory: panel-integration-php-bounded
         run: |
           sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPHP(Bounded|Security)' -count=1
-          sudo "$(command -v go)" test -race ./internal/appcatalog -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -race ./internal/appcatalog -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
           go vet ./...
       - name: Original-key current signed50 accepted without changing trust,delivery or install admission
         working-directory: panel-integration-php-bounded
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Candidate retained-OOM,unchanged explicit-retry and compiler resource race regressions
         working-directory: panel-integration-php-bounded
         run: sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor -run '^Test(RuntimeCompileOOM|RuntimeFailedUpgrade|NativeRetry|RuntimeMagic|CompilerCgroup|BuildJobs)' -count=1
@@ -1336,7 +1337,7 @@ jobs:
         run: sudo "$(command -v go)" test -json ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=1
       - name: Byte-identical F33 PHP feature admission and original-key signed50 ABI
         working-directory: panel-integration-apache-noop
-        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^Test(PHP(Bounded|Security)|PublishedRepositoryCurrentSignedManifestABI)' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+        run: sudo "$(command -v go)" test -json ./internal/appcatalog -run '^Test(PHP(Bounded|Security)|PublishedRepositoryCurrentSignedManifestABI)' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
 
   module-version-native-amd64:
     runs-on: ubuntu-24.04
@@ -1366,7 +1367,7 @@ jobs:
         run: |
           sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
-          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Original packaging contracts and finite Apache compiler unit
         working-directory: panel-integration-module-version
         run: timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
@@ -1406,7 +1407,7 @@ jobs:
         run: |
           sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
-          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-php-security24bkhe"
       - name: Original packaging checks and bounded credential interface
         run: |
           cd panel-integration-redis-cli
@@ -1537,6 +1538,7 @@ jobs:
         run: |
           sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
           sudo "$(command -v go)" test -p 1 ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/verify-memcached-retirement-handler-boundary.mjs" "$(command -v go)"
       - name: All264 original packaging checks, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-handler-packaging-ci.py
       - name: Recheck frozen source and original33 workflow bytes

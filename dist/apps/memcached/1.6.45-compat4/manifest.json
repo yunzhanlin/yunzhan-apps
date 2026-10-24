@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "id": "memcached",
+  "name": "Memcached",
+  "category": "deployment",
+  "version": "1.6.45-compat4",
+  "summary": "独立 Unix Socket 缓存实例：非 root、无网络暴露，提供真实统计、二进制 CAS 编辑、审计启停和停机后非强制移除；旧 TCP 实例只提示手动迁移，不覆盖或卸载原实例。商用实装验收尚未完成。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "memcached-cache",
+    "image": "memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "独立 Unix Socket",
+    "固定镜像摘要",
+    "网站账户隔离",
+    "非 root 进程",
+    "内存与 CPU 限额",
+    "运行统计",
+    "二进制键值与 CAS",
+    "TTL 与 flags",
+    "审计启停",
+    "未知结果独立复核",
+    "无 TCP/UDP 端口",
+    "停机后非强制移除与归属留存"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "memcached-unix-workspace"
+  },
+  "required_panel_features": [
+    "compose-memcached-digest-v1",
+    "compose-memcached-unix-v1",
+    "compose-memcached-retirement-v1"
+  ],
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
