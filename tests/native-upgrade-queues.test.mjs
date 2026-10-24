@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -36,7 +37,7 @@ test('native upgrade drain binds exact normal source, closed inventories and ind
  assert(helper.includes("'--check-program-upgrade-queues', timeout=10"));assert(main.indexOf('if *programQueuePreflight')<main.indexOf('executor.New('));assert(main.indexOf('os.Geteuid() != 0')<main.indexOf('if *programQueuePreflight'));
  const fixtureSource=await read('panel-integration/internal/executor/program_upgrade_queues_linux_test.go'),recordFixture=await read('panel-integration/internal/executor/program_upgrade_native_records_linux_test.go');
  assert(fixtureSource.includes('TestProgramUpgradeQueuesJSONStructUnicodeFoldingDoesNotFoldDynamicPaths'));assert(fixtureSource.includes('Page.php'));assert(fixtureSource.includes('page.php'));assert(recordFixture.includes('TestProgramUpgradeQueuesNativeControlsNeverTruncateCompleteInventory'));assert(recordFixture.includes('TestProgramUpgradeQueuesRuleFeedStreamingHonorsOriginalEnvelopeLimitAndDeadline'));
- const workflow=await read('.github/workflows/verify.yml');assert(workflow.includes("test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1"));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(workflow.includes("test -race ./internal/executor -run '^TestProgramUpgradeQueues' -count=1"));
  assert.equal(r.original_public_key_sha256,'4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339');assert.equal(r.original_signed_verifier_sha256,sha(await read('panel-integration/packaging/signed-release.py')));
  assert.equal(r.main_release_delivered,false);assert.equal(r.actual_main_release,c.reviewed_normal_release.release);assert.equal(r.actual_qa_program_release,c.reviewed_upgrade_transaction_release.release);assert.equal(r.main_auto_installed_new_apps,0);assert.equal(r.all_50_commercial,false);assert.equal(r.universal_native_drain_complete,false);assert.equal(c.commercial_feature_parity_complete,false);
  assert(r.remaining_gaps.some(s=>s.includes('kill9')));assert(r.remaining_gaps.some(s=>s.includes('development')));assert(r.remaining_gaps.some(s=>s.includes('post-stop')));

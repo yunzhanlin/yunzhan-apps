@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preNativeMobileRead} from './pre-native-mobile-release.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,7 +10,7 @@ import {oldWAFRepositoryRoot} from '../tools/verify-waf-health-handler-boundary.
 import {verifyOldNginxRuntimeRefusal} from '../tools/verify-nginx-runtime-handler-boundary.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>preNativeMobileRead(n,fs.readFileSync(new URL('../'+n,import.meta.url))),sha=b=>createHash('sha256').update(b).digest('hex');
 test('only five named historical positive roots and one historical WAF negative argument change; all sixteen original jobs survive',()=>{
- const raw=read('.github/workflows/verify.yml'),old=originalNginxRuntimeWorkflow(raw);
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),old=originalNginxRuntimeWorkflow(raw);
  const previous=read('registry/reviewed-catalogs/before-nginx-runtime-workflow24bjbl/verify-pr70.yml');
  assert.equal(sha(previous),'b230a6bf4f6b990461ded7d0270d8fea1603807551dec6e205f1ec9dac47253f');assert(old.subarray(0,previous.length).equals(previous));
  const line='-published-app-registry-root "$GITHUB_WORKSPACE/'+beforeNginxRuntime.slice(0,-1)+'"';assert.equal(raw.toString().split(line).length-1,5);

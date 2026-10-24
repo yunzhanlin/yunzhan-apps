@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -31,5 +32,5 @@ test('production prerequisite boundary stays fixed, durable, read-only before ru
  for(const needle of ["groups.add(grp.getgrnam('panel').gr_gid)",'info.st_gid not in groups','info.st_nlink != 1','stat.S_IMODE(info.st_mode) != 0o600'])assert(helper.includes(needle),needle);
  const verifier=await read('panel-integration-geography/packaging/verify-release.sh');
  assert(verifier.includes('"$VERIFY_HOME/release-file-modes.py" check "$DIR"'));
- const ci=await read('.github/workflows/verify.yml');assert(ci.includes('^TestPlatformMaintenance(Root|Native)'));assert(ci.includes('test_verify_previous_release.py'));
+ const ci=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(ci.includes('^TestPlatformMaintenance(Root|Native)'));assert(ci.includes('test_verify_previous_release.py'));
 });

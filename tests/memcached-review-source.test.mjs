@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -52,7 +53,7 @@ test('actual Vue recovery distinguishes historical observation from original suc
  assert(browser.includes('mobileButton.y+mobileButton.height<=mobileFooter.y'));assert(!/localStorage|sessionStorage|console\.log/.test(ui));
 });
 test('current independent Root gate requires all109 models and709 subcases, while preserving every original31 workflow job',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  memcached-unix-models-amd64:\n');assert.equal(at,102422);assert.equal(sha(raw.subarray(0,at)),'42c8126b32067a6bafbbcb5054bde803fecf9a548e7865fbb62785b39d493d61');
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  memcached-unix-models-amd64:\n');assert.equal(at,102422);assert.equal(sha(raw.subarray(0,at)),'42c8126b32067a6bafbbcb5054bde803fecf9a548e7865fbb62785b39d493d61');
  const gate=raw.subarray(at).toString(),ci=read('tools/run-memcached-review-models-ci.mjs').toString();
  for(const text of ['panel-integration-memcached-review','tools/run-memcached-review-models-ci.mjs','tools/run-memcached-review-packaging-ci.py','tests/memcached-review-source.test.mjs'])assert(gate.includes(text),text);
  for(const text of ['total===109&&subtests===709','2477f8c1450679ff5711cb887cdfee2b485e8833eb64a0014c5369192710a8f7','TestRuntimeAuditTimestampSurvivesSQLSecondBoundary','TestMemcachedUnixControlReviewNeverCreatesOrRepairsTheOriginalDockerLock','actual_default_install_or_account_creation:false','all50_commercial:false'])assert(ci.includes(text),text);

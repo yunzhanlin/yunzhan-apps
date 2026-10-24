@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
 import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
@@ -34,7 +35,7 @@ test('evidence read shares only existing instance lease and still holds original
  const fixture=read(scope+'/internal/executor/app_statistics_geodata_export_lease_linux_test.go').toString();assert(fixture.includes('func Test'));assert(!code.includes('os.WriteFile('));assert(!code.includes('os.Remove('));
 });
 test('new complete Root race ABI and locked frontend gates append without altering historical checks',()=>{
- const workflow=read('.github/workflows/verify.yml').toString(),marker='      - name: Original failed geodata terminal and verifier inventory complete Root Linux contracts',boundary=workflow.indexOf(marker);assert(boundary>0);assert.equal(sha(Buffer.from(workflow.slice(0,boundary))),release.previous_workflow_sha256);
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),marker='      - name: Original failed geodata terminal and verifier inventory complete Root Linux contracts',boundary=workflow.indexOf(marker);assert(boundary>0);assert.equal(sha(Buffer.from(workflow.slice(0,boundary))),release.previous_workflow_sha256);
  for(const phrase of [scope,'sudo "$(command -v go)" test -p 1 ./... -count=1','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','-published-app-registry-root "$GITHUB_WORKSPACE"','test -race ./internal/core ./internal/executor','npm ci --prefix '+scope+'/web --ignore-scripts','scripts/test-job-presentation.mjs','scripts/web-entry-budget.mjs web/dist','scripts/qa-statistics-geodata-workspace.mjs'])assert(workflow.slice(boundary).includes(phrase),phrase);
 });
 test('actual normal program upgrades preserve 99 projections but are not application install acceptance',()=>{

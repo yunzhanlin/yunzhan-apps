@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -36,7 +37,7 @@ test('security selectors and independent exact-package feature are part of the o
  assert.equal(sha(read(scope+'scripts/web-entry-budget.mjs')),json('panel-integration-mobile-delivery/source-sha256.json').files['scripts/web-entry-budget.mjs']);
 });
 test('all23 original workflow jobs stay byte-exact before the separately compiled new PHP security gate',()=>{
- const workflow=read('.github/workflows/verify.yml'),marker='\n  php-security-native-amd64:\n',at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'d4f4c1f77641e83d1895de4dad70b5844628a63b57fcbd59c1258bdb75964dc7');
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),marker='\n  php-security-native-amd64:\n',at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'d4f4c1f77641e83d1895de4dad70b5844628a63b57fcbd59c1258bdb75964dc7');
  const gate=workflow.subarray(at).toString();for(const text of ['timeout-minutes: 45','panel-integration-php-security','test -p 1 ./... -count=1','go vet ./...','tools/run-php-security-ci.mjs','tools/check-php-security-schema.mjs','TestPublishedRepositoryCurrentSignedManifestABI','scripts/test-php-security.mjs','test_*.py','scripts/web-entry-budget.mjs'])assert(gate.includes(text),text);assert(!gate.includes('continue-on-error')&&!gate.includes('-overlay='));
  const runner=read('tools/run-php-security-ci.mjs').toString();assert(runner.includes("length,66)"));assert(runner.includes("RuntimeInstallShutdown)',41"));assert(runner.includes("Task|PHPSecurity)',134"));assert(runner.includes("names.filter(n=>gated.has(n)).length,9"));assert(!runner.includes('length,16)'));
 });

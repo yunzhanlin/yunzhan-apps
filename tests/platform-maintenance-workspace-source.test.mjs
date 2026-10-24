@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -25,5 +26,5 @@ test('all module wire collections stay arrays and legacy null becomes no fields 
  assert(ui.includes('fields: section.fields ?? [], actions: section.actions ?? []'));
  const opener=await read('panel-integration-geography/scripts/test-deferred-workspace.mjs');
  assert(opener.includes("fields:null,actions:null"));assert(opener.includes('never a generic run action'));
- const ci=await read('.github/workflows/verify.yml');assert(ci.includes("'^TestModuleWorkspace'"));assert(ci.includes('node --test panel-integration-geography/scripts/test-deferred-workspace.mjs'));
+ const ci=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(ci.includes("'^TestModuleWorkspace'"));assert(ci.includes('node --test panel-integration-geography/scripts/test-deferred-workspace.mjs'));
 });

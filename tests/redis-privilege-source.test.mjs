@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';
 import fs from'node:fs';
 import path from'node:path';
@@ -36,7 +37,7 @@ test('the default Redis entry uses the locked-thread zero-capability handover an
  assert(!unit.includes('CAP_SYS_ADMIN')&&!unit.includes('CAP_DAC_OVERRIDE')&&!helper.includes('os.Getenv'));
 });
 test('all30 original workflow jobs remain byte-exact before the bounded independent Root product-helper gate',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  redis-privilege-native-amd64:\n');assert.equal(at,100752);
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  redis-privilege-native-amd64:\n');assert.equal(at,100752);
  assert.equal(sha(raw.subarray(0,at)),'7c2822a1682818f1af51ed820f40ec192c48084cf54c302a27d86b52c7a932a4');
  const gate=raw.subarray(at).toString();
  for(const text of ['timeout-minutes: 20','panel_redis_privilege_native_qa','tools/run-redis-privilege-native-ci.py','tools/run-redis-privilege-packaging-ci.py','sudo "$(command -v go)" test -p 1 ./...','tests/redis-privilege-source.test.mjs'])assert(gate.includes(text),text);

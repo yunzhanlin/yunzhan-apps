@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -19,6 +20,6 @@ test('four compat2 packages require both independently available Linux handlers,
  for(const s of ['TestPHPBoundedBuildManifestBytesBindOfflineNetworkAndCachedVerification','FetchManifest','verifyManifestData','SHA-256','stripped handler borrowed signed original bytes','rehash replaced required bounded builder'])assert(tests.includes(s),s);
 });
 test('additional26th gate retains every byte of previous25-job workflow and all ordinary production deadlines',()=>{
- const workflow=read('.github/workflows/verify.yml'),at=workflow.indexOf('\n  php-bounded-native-amd64:\n');assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'da9365ee70442710017474652ad14ee186c03f8ad87620e5e8cf4f5011590269');const gate=workflow.subarray(at).toString();for(const s of ['panel-integration-php-bounded','tools/check-php-bounded-schema.mjs','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','-race','jsonschema==4.25.1'])assert(gate.includes(s),s);for(const s of ['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(s),s);
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=workflow.indexOf('\n  php-bounded-native-amd64:\n');assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'da9365ee70442710017474652ad14ee186c03f8ad87620e5e8cf4f5011590269');const gate=workflow.subarray(at).toString();for(const s of ['panel-integration-php-bounded','tools/check-php-bounded-schema.mjs','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','-race','jsonschema==4.25.1'])assert(gate.includes(s),s);for(const s of ['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(s),s);
  assert(read(scope+'internal/executor/program_upgrade_queues_linux.go').toString().includes('5*time.Second'));
 });

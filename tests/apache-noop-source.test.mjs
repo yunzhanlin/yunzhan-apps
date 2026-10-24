@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';
 import assert from'node:assert/strict';
 import fs from'node:fs';
@@ -30,7 +31,7 @@ test('unchanged metadata triplet is validated before no-op; real Apache edits re
  assert(!src.slice(d,e).includes('实际加载指纹未变化'));
 });
 test('27th source gate preserves every byte of all26 earlier jobs and original limits',()=>{
- const bytes=read('.github/workflows/verify.yml'),at=bytes.indexOf('\n  apache-noop-native-amd64:\n');assert(at>0);assert.equal(sha(bytes.subarray(0,at)),"2e19460667e5b4c459b5ae117379d0c46ace55f8e602f3a7bd3e952420094957");
+ const bytes=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=bytes.indexOf('\n  apache-noop-native-amd64:\n');assert(at>0);assert.equal(sha(bytes.subarray(0,at)),"2e19460667e5b4c459b5ae117379d0c46ace55f8e602f3a7bd3e952420094957");
  const gate=bytes.subarray(at).toString();for(const s of ['panel-integration-apache-noop','go vet ./...','-race','TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands'])assert(gate.includes(s),s);
  for(const s of ['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(s),s);
  assert(read(scope+'internal/executor/program_upgrade_queues_linux.go').toString().includes('5*time.Second'));

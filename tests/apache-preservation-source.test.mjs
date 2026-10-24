@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 import {preHardeningWorkflowRead}from'./pre-hardening-workflow.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url)),read=p=>preHardeningWorkflowRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex'),r=json('registry/apache-preservation-core.json'),scope='panel-integration-apache-preservation/';
@@ -12,5 +13,5 @@ test('normal original-key delivery, native76 and real installed UI isolation ret
  assert.equal(r.original_failures.amd214_binding_preservation,false);assert.equal(r.original_failures.amd80F_original_preflight_only,false);assert(r.original_failures.all_original_receipts_unmodified&&r.original_failures.no_original_task_replay);assert.equal(r.Main19100_updated_to80F,false);assert.equal(r.commercial_all50,false);assert(r.limitations.some(s=>s.includes('legacy-line2')));
 });
 test('new Apache full Linux gate appends without rewriting any prior workflow gate',()=>{
- const c=read('.github/workflows/verify.yml').toString(),at=c.indexOf('\n  apache-preservation-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(c.slice(0,at))),r.prior_workflow_whole_sha256);for(const s of['test -p 1 ./... -count=1','go vet ./...','test -race ./internal/executor','timeout 240s sudo python3'])assert(c.slice(at).includes(s),s);assert.doesNotMatch(c.slice(at),/continue-on-error/);
+ const c=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=c.indexOf('\n  apache-preservation-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(c.slice(0,at))),r.prior_workflow_whole_sha256);for(const s of['test -p 1 ./... -count=1','go vet ./...','test -race ./internal/executor','timeout 240s sudo python3'])assert(c.slice(at).includes(s),s);assert.doesNotMatch(c.slice(at),/continue-on-error/);
 });

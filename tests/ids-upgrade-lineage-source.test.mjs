@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-ids-upgrade-lineage/',read=n=>fs.readFileSync(path.join(root,n)),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('new ordinary IDS lineage release has exact1763 source files,1313 Go members and only four reviewed differences from immutable PHP candidate',()=>{
@@ -23,7 +24,7 @@ test('lineage remains a read-only exact-action transaction proof with both curre
  const models=read(scope+'internal/executor/program_upgrade_ids_lineage_linux_test.go').toString();assert(models.includes('func TestProgramUpgradeIDS'));assert(models.includes('same'));assert(models.includes('transaction'));assert(models.includes('operation'));
 });
 test('all23 accepted jobs remain byte-exact and the revised unaccepted PHP gate tests the new normal source instead of overlaying its failed parent',()=>{
- const workflow=read('.github/workflows/verify.yml'),marker='\n  php-security-native-amd64:\n',at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'d4f4c1f77641e83d1895de4dad70b5844628a63b57fcbd59c1258bdb75964dc7');
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),marker='\n  php-security-native-amd64:\n',at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'d4f4c1f77641e83d1895de4dad70b5844628a63b57fcbd59c1258bdb75964dc7');
  const gate=workflow.subarray(at).toString();for(const text of ['panel-integration-ids-upgrade-lineage','tools/run-ids-upgrade-lineage-ci.mjs','tools/run-php-security-ci.mjs','test -p 1 ./... -count=1','go vet ./...','test -race',"-run '^Test(ProgramUpgradeIDS|RuntimeSourceDownloadNoUntrustedFallback|PHPSecuritySourceGuard)'"])assert(gate.includes(text),text);
  assert(!gate.includes('continue-on-error')&&!gate.includes('-overlay=')&&!gate.includes('git checkout --'));
  const runner=read('tools/run-ids-upgrade-lineage-ci.mjs').toString();assert(runner.includes("Task|PHPSecurity)',137"));assert(runner.includes("RuntimeInstallShutdown)',41"));assert(runner.includes('length,66)'));

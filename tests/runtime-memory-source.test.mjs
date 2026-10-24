@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -38,7 +39,7 @@ test('genuine constrained fixture validates actual ELF symbol size,bytes,O2,coll
  const code=read(scope+'internal/executor/runtime_php_magic_native_linux_test.go').toString();for(const text of['00000000000000e5','805306368','128MiB','spec.archiveSHA','prepareRuntimePHPBuildSource','"/usr/bin/make", "-j1", "ext/fileinfo/libmagic/apprentice.lo"','symbol.Size != uint64(spec.dataBytes)','hex.EncodeToString(sum[:]) != spec.dataSHA','compilerHasNoChildren()','"runtime_or_application_installed": false'])assert(code.includes(text),text);
 });
 test('new CI preserves the complete original24-job byte prefix and forbids overlays or softened failure handling',()=>{
- const workflow=read('.github/workflows/verify.yml'),at=workflow.indexOf('\n  runtime-memory-native-amd64:\n');assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'e2739695c90060d367ba0690b1448b802fef629d9f8e295dba7f40a27aec899a');const gate=workflow.subarray(at).toString();assert(gate.includes('panel-integration-runtime-memory')&&gate.includes('tools/run-runtime-memory-native-ci.mjs'));for(const bad of['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(bad),bad);
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=workflow.indexOf('\n  runtime-memory-native-amd64:\n');assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'e2739695c90060d367ba0690b1448b802fef629d9f8e295dba7f40a27aec899a');const gate=workflow.subarray(at).toString();assert(gate.includes('panel-integration-runtime-memory')&&gate.includes('tools/run-runtime-memory-native-ci.mjs'));for(const bad of['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(bad),bad);
 });
 test('the new exclusive exporter and actual native CI collector parse before dispatch',()=>{
  for(const file of ['tools/export-runtime-memory-source.mjs','tools/run-runtime-memory-native-ci.mjs']){

@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -31,7 +32,7 @@ test('F39 remains byte-exact and only seven reviewed members and thirteen additi
  const feature=read(scope+'internal/appcatalog/panel_features.go').toString();assert(!feature.includes('MemcachedSandboxFeature')&&!feature.includes('MemcachedUnixFeature'));
 });
 test('all28 original verification jobs remain byte-identical before an independent29th full native gate',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  redis-cli-native-amd64:\n');assert.equal(at,97793);
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  redis-cli-native-amd64:\n');assert.equal(at,97793);
  assert.equal(sha(raw.subarray(0,at)),'67af85a872488ab748a1128b2e1cf72b11797e90b94639945c996d3b06694e65');
  const gate=raw.subarray(at).toString();
  for(const x of ['panel-integration-redis-cli','tools/run-redis-cli-isolated-ci.py','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','scripts/test-redis-credentials.mjs','test_*.py'])assert(gate.includes(x),x);

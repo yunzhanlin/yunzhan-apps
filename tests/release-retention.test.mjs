@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -45,7 +46,7 @@ test('release cleanup uses exact normal source and keeps native fixtures, real p
  assert(wrapper.includes('exec python3 "$HERE/prune-releases.py" "$@"'));assert(!wrapper.includes('rm -rf'));assert(!helper.includes('os.chmod'));assert(!helper.includes('O_CREAT'));
  assert(helper.indexOf('self.acquire(apply)')<helper.indexOf('version, current, protected, evidence, candidates = self.plan()'));assert(helper.indexOf('latest_evidence != evidence')<helper.indexOf('shutil.rmtree(self.releases/name)'));
  for(const text of ['test_actual_private_bind_mount_refuses_all_deletion',"['/usr/bin/mount','--bind'", "['/usr/bin/umount'",'not a passing mount proof','test_legacy_backup_without_previous_program_reference_retains_every_release','test_replaced_lock_path_after_plan_never_uses_old_descriptor_as_new_lease'])assert(fixture.includes(text),text);
- const workflow=await read('.github/workflows/verify.yml');assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_prune_releases.py'"));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_prune_releases.py'"));
  assert.equal(r.original_public_key_sha256,'4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339');assert.equal(r.original_signed_verifier_sha256,sha(await read('panel-integration/packaging/signed-release.py')));
  assert.equal(r.main_release_delivered,false);assert.equal(r.actual_main_release,c.reviewed_normal_release.release);assert.equal(r.actual_qa_program_release,c.reviewed_upgrade_transaction_release.release);assert.equal(r.main_auto_installed_new_apps,0);assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
  assert(r.remaining_gaps.some(s=>s.includes('kill9')));assert(r.remaining_gaps.some(s=>s.includes('file-backed')));assert(r.remaining_gaps.some(s=>s.includes('schema-changing')));

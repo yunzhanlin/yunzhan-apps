@@ -1,0 +1,105 @@
+{
+  "format": 1,
+  "recorded_utc": "2026-10-24 20:02:45 UTC",
+  "scope": "CI-only HTTPS fixture collision correction; not a runtime or application release",
+  "frozen_programme_inputs": "f7d38cf4498342a12e59ec57c1a7ce404ac1a2b3daaab3c093f51e54b95e409b",
+  "member": "internal/executor/app_load_balance_https_linux_test.go",
+  "original_test_sha256": "925948fe06fab1787f28f08b33fa302e2ff64428ce2cd347fa7ed6e0d02dcf65",
+  "corrected_test_sha256": "026dce1a592366561eecba2ba4e7eb1c16828285f226c3fd9140e79be8e98ff3",
+  "original_CI_failure": {
+    "head": "1061104bc6d6896ff6f711dfa379b47bebd40429",
+    "run": 40124398928,
+    "job": 120962618075,
+    "job_name": "intrusion-admission-native-amd64",
+    "conclusion": "failure",
+    "test": "TestLoadBalanceHTTPSNeverFollowsDowngradeAndKeepsThresholds",
+    "actual_original_port_not_logged": true,
+    "not_retried_or_relabelled": true
+  },
+  "deterministic_collision_ports": [
+    42791,
+    41001,
+    41002
+  ],
+  "noncolliding_control_port": 41003,
+  "original_runtime_port_TLS_CA_redirect_threshold_and_timeout_checks_unchanged": true,
+  "immutable_source_indexes_and_members_changed": 0,
+  "production_source_overrides": 0,
+  "CI_test_fixture_replacement_only": true,
+  "approved_source_scopes": 56,
+  "workflow": {
+    "jobs": 34,
+    "whole_source_invocations": 37,
+    "original_arguments_unchanged": true,
+    "original_budgets_and_exec_isolation_unchanged": true,
+    "original_workflow_bytes": 107862,
+    "original_workflow_sha256": "520481e456a2b926927d193614bd8090f79b174f3ad579d2948c6490eb6be0c8",
+    "only_whole_suite_command_substitution": true
+  },
+  "actual_Root_models": {
+    "amd64": {
+      "root": "/var/lib/panel-executor/lb-tls-fixture24bldv-amd64.18ba65c9cf1b21e090fe3348dbd6b7fd",
+      "proof_sha256": "b14404567c8daab8330fad93f6fbe41207a896b6ff5ead2a97b83d5c490c29c6",
+      "original_red_colliding_subcases_failed": 3,
+      "green_top_level": 6,
+      "green_including_subtests": 13,
+      "green_failures": 0,
+      "green_skips": 0,
+      "green_log_sha256": "716037baa6bd2faccb02180232d0865d2cd1b327c8646151004e691f58ee6004",
+      "red_log_sha256": "5783e45e831c854ae0f515265a55081e3b1aaadc1866ba581e43deb00189cafe",
+      "all_original103_business_and_hosts_preserved": true,
+      "reused_only_unchanged_closed_original_test_binaries": true,
+      "retained_original_false": {
+        "root": "/var/lib/panel-executor/lb-tls-fixture24blds-amd64.cdae6a790eddef9b77bdd12ad29f7984",
+        "proof_sha256": "0a4cb2daaa0221ed4d1d9d0865ffc4f9d2b3673e2fefcdd7dccdfe29246ad7fb",
+        "ok": false,
+        "relabeled": false
+      }
+    },
+    "arm64": {
+      "root": "/var/lib/panel-executor/lb-tls-fixture24blds-arm64.e6c1b681d9cf237dbbc4c9563c135933",
+      "original_aggregate_ok": false,
+      "original_false_proof_sha256": "72a60ee677bcc7c5a0e19d0707605c22c336d4b3880035ad448f63afcb131cd1",
+      "original_false_relabelled": false,
+      "original_red_colliding_subcases_failed": 3,
+      "green_top_level": 6,
+      "green_including_subtests": 13,
+      "green_failures": 0,
+      "green_skips": 0,
+      "green_log_sha256": "19fb46ef9120656eb157f4a58872eda83f0b7917a9c7bfe3ddb74168c35dde61",
+      "red_log_sha256": "5adf23561f3d06e535a9695111a97dae44c136667168852968d3db628f2e9c67",
+      "independent_preservation_review": {
+        "root": "/var/lib/panel-executor/lb-tls-fixture-review24bldt-arm64.921edc977f456931841b93555020cac2",
+        "proof_sha256": "dde7b62174a1e56a9dc0d7c40b4eaf7a6c6c58d673c1f40876ef39398ebdeb0e",
+        "ok": true,
+        "Go_tests_reexecuted": 0,
+        "independent_after_not_original_after": true,
+        "elapsed_seconds": 230.9349331855774,
+        "bound_seconds": 600,
+        "all_original103_business_and_hosts_preserved": true
+      }
+    }
+  },
+  "known_readonly_model_context": {
+    "host_programme_guard_runs_in_host_context": true,
+    "private_mount_namespace_can_refuse_O_RDWR_on_original_run_lock": true,
+    "private_model_refusal_is_not_native_upgrade_admission": true,
+    "runtime_guard_not_relaxed": true
+  },
+  "retained_ARM_pretest_model_refusals": [
+    {
+      "proof_sha256": "e0fbee2bf0345d266a7eafc020ad54b766ca98294edef9b9b124dd3dd50ec9ec",
+      "ok": false
+    },
+    {
+      "proof_sha256": "6b14c8e737e8c828d86085f3e07634ad66a8998eaf59c10339eecf07a57df2cd",
+      "ok": false
+    }
+  ],
+  "fresh_CI_acceptance": false,
+  "programme_signed": false,
+  "programme_upgraded": false,
+  "applications_installed_or_deleted": 0,
+  "Main19100_mutated": false,
+  "all50_commercial": false
+}

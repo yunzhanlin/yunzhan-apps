@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 import{preHardeningRead}from'./pre-hardening-workflow.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preHardeningRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
@@ -15,6 +16,6 @@ test('both normal QA upgrades and Main preserve actual business data without tre
  assert(r.earlier_Main_EAD_refusal.still_failed&&r.earlier_Main_EAD_refusal.exact_rejected_service_not_recorded);assert.equal(r.earlier_Main_EAD_refusal.install_exit,1);assert.equal(r.earlier_Main_EAD_refusal.installer_replayed,false);assert(r.original_4f_ARM_build_failure.still_failed&&r.original_4f_ARM_build_failure.no_archive_or_signature);assert.equal(r.commercial_all50,false);assert.equal(r.installed_analytics_real30minute_browser_journey_proven,false);assert.equal(r.installed_Docker_site_binding_business_acceptance,false);assert.equal(r.Root_user_FileManager_changed,false);assert.equal(sha(read('dist/catalog-v1.json')),r.current_analytics_catalog_sha256_unchanged);
 });
 test('new source checks append without changing any previous workflow byte',()=>{
- const w=read('.github/workflows/verify.yml').toString(),at=w.indexOf('      - name: Service-state exact source Root policy fixtures');assert(at>0);assert.equal(sha(Buffer.from(w.slice(0,at))),'1d5bf51b76b0dac73e9c99023d2839e2bf821c3a5c750a2a0f6c2c2ac0721bba');
+ const w=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=w.indexOf('      - name: Service-state exact source Root policy fixtures');assert(at>0);assert.equal(sha(Buffer.from(w.slice(0,at))),'1d5bf51b76b0dac73e9c99023d2839e2bf821c3a5c750a2a0f6c2c2ac0721bba');
  for(const p of ['panel-integration-service-state/packaging','test_program_queue_diagnostics','test-docker-site-binding.mjs','test-module-version-scope.mjs','test-module-report-provenance.mjs','test-store-updates.mjs','TestPlainSiteHealthBody443PrefixIsNotAListener','VITE_PANEL_VERSION=0.1.0-dev.proapps24tlslistenerbgsy','scripts/web-entry-budget.mjs'])assert(w.slice(at).includes(p),p);
 });

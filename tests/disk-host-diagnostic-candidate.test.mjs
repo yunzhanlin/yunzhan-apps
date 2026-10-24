@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,lstat,readdir} from 'node:fs/promises';
@@ -59,5 +60,5 @@ test('real prior upgrades, scans, cancellation and ARM-only interruption remain 
 });
 
 test('diagnostic CI retains every prior source scope and runs Root native, races and full locked UI without bypasses',async()=>{
- const w=(await read('.github/workflows/verify.yml')).toString();for(const name of ['panel-integration','panel-integration-geography','panel-integration-disk','panel-integration-disk-fix','panel-integration-disk-diagnostic'])assert(w.includes('working-directory: '+name));assert(w.includes("test -race ./internal/executor -run '^TestDiskHostDiagnostic'"));assert(w.includes('npm ci --prefix panel-integration-disk-diagnostic/web --ignore-scripts'));assert(w.includes('panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs'));assert.doesNotMatch(w,/continue-on-error/);
+ const w=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString();for(const name of ['panel-integration','panel-integration-geography','panel-integration-disk','panel-integration-disk-fix','panel-integration-disk-diagnostic'])assert(w.includes('working-directory: '+name));assert(w.includes("test -race ./internal/executor -run '^TestDiskHostDiagnostic'"));assert(w.includes('npm ci --prefix panel-integration-disk-diagnostic/web --ignore-scripts'));assert(w.includes('panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs'));assert.doesNotMatch(w,/continue-on-error/);
 });

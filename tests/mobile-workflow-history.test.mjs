@@ -1,9 +1,10 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 import { beforeNativeMobile, scopeHistoricalMobileConsumers, originalNativeMobileWorkflow, preNativeMobileRead } from "./pre-native-mobile-release.mjs";
-const original = fs.readFileSync(new URL("../" + beforeNativeMobile + ".github/workflows/verify.yml", import.meta.url));
+const original = originalReviewedHTTPSFixtureWorkflow(fs.readFileSync(new URL("../" + beforeNativeMobile + ".github/workflows/verify.yml", import.meta.url)));
 const scoped = scopeHistoricalMobileConsumers(original);
 const scopedRoot = '-published-app-registry-root "$GITHUB_WORKSPACE/' + beforeNativeMobile.slice(0, -1) + '"';
 test("only nine exact historical positive roots and one Nginx negative root change, preserving all old jobs", () => {

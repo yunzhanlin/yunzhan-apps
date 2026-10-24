@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 import{preHardeningRead}from'./pre-hardening-workflow.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)),read=p=>preHardeningRead(p,fs.readFileSync(path.join(root,p))),json=p=>JSON.parse(read(p)),sha=b=>createHash('sha256').update(b).digest('hex');
@@ -14,6 +15,6 @@ test('both normal original-key QA upgrades preserve101 projections and20 apps, n
  assert.equal(sha(read('dist/catalog-v1.json')),r.current_analytics_catalog_sha256_unchanged);
 });
 test('Redis gates append without changing any previous PR53 workflow byte or the new session handler boundary',()=>{
- const w=read('.github/workflows/verify.yml').toString(),at=w.indexOf('      - name: Locked Redis scope management dependencies');assert(at>0);assert.equal(sha(Buffer.from(w.slice(0,at))),'27b2ed943da9a7a96133c4ecff9d0843b3cdeb247f25b30af1e0627da3af87c2');
+ const w=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=w.indexOf('      - name: Locked Redis scope management dependencies');assert(at>0);assert.equal(sha(Buffer.from(w.slice(0,at))),'27b2ed943da9a7a96133c4ecff9d0843b3cdeb247f25b30af1e0627da3af87c2');
  for(const s of ['npm ci --prefix panel-integration-redis-scope/web --ignore-scripts','scripts/test-redis-scope.mjs','VITE_PANEL_VERSION=0.1.0-dev.proapps24redisscopebgpj','scripts/web-entry-budget.mjs'])assert(w.slice(at).includes(s),s);
 });

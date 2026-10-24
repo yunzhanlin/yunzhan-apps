@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 // Integrity and scope assertions about separately captured evidence, not a new
 // native/installed acceptance run and never a replacement for the original log.
 import test from 'node:test';
@@ -22,7 +23,7 @@ test('historical disk source export binds exact frozen BFFR inputs while preserv
  for(const text of ['diskUsageEntriesMax = 100000','diskUsageDepthMax = 128','diskUsageReadBatch = 64','unix.O_NOFOLLOW','unix.AT_SYMLINK_NOFOLLOW','st.Blocks * 512','st.Dev != expected.Dev || st.Ino != expected.Ino','snapshot_consistent','filesystem_inodes_available','classification_limited'])assert(scanner.includes(text),text);
  assert(!scanner.includes('os.Remove')&&!scanner.includes('exec.Command')&&!scanner.includes('ReadFile('));
  const build=(await read('panel-integration-geography/packaging/build-release.sh')).toString();assert(build.includes('node --test scripts/test-disk-usage.mjs'));
- const ci=(await read('.github/workflows/verify.yml')).toString();assert(ci.includes("go test -race ./internal/executor -run '^Test(DiskUsage|ModuleDisk)' -count=1 -v"));assert(ci.includes('node --test panel-integration-geography/scripts/test-disk-usage.mjs'));
+ const ci=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString();assert(ci.includes("go test -race ./internal/executor -run '^Test(DiskUsage|ModuleDisk)' -count=1 -v"));assert(ci.includes('node --test panel-integration-geography/scripts/test-disk-usage.mjs'));
 });
 test('disk original native and browser observations retain failures and do not certify installation or commercial qualification',async()=>{
  const r=JSON.parse(await read('registry/disk-inode-release.json')),proofs={};

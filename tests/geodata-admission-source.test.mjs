@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';
 import assert from'node:assert/strict';
 import fs from'node:fs';
@@ -39,7 +40,7 @@ test('new read-only admission waits only exact original typed cache observations
  assert(read(scope+'packaging/build-release.sh').toString().includes("unittest discover -s packaging -p 'test_*.py'"));
 });
 test('all29 original workflow jobs remain byte-exact before an independent bounded Root264-test gate',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  geodata-admission-native-amd64:\n');assert.equal(at,100016);
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  geodata-admission-native-amd64:\n');assert.equal(at,100016);
  assert.equal(sha(raw.subarray(0,at)),'02f4edf5a95458b985e54955a82f14fe0aba5d8736d69267c5e1054f448f5d61');
  const gate=raw.subarray(at).toString();
  for(const x of ['tools/run-geodata-admission-packaging-ci.py','tests/geodata-admission-source.test.mjs','timeout 240s','timeout-minutes: 10'])assert(gate.includes(x),x);

@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-module-version/',read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 test('module version correction is an exclusive normal1796-file1343-Go frozen export,never overlays',()=>{
@@ -30,7 +31,7 @@ test('real authenticated signed package integration exercises the private Unix s
  assert(!unit.includes('t.Skip('));
 });
 test('new28th native gate preserves every byte of original27 jobs and requires no-skip exact integration counts',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  module-version-native-amd64:\n');assert(at>0);assert.equal(sha(raw.subarray(0,at)),"3414b7c87adb612993b6b2073cbff540784ab501f94de4662bca5283c99b4b23");
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  module-version-native-amd64:\n');assert(at>0);assert.equal(sha(raw.subarray(0,at)),"3414b7c87adb612993b6b2073cbff540784ab501f94de4662bca5283c99b4b23");
  const gate=raw.subarray(at).toString();for(const x of['panel-integration-module-version','run-module-version-isolated-ci.py','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI'])assert(gate.includes(x),x);
  const isolated=read('tools/run-module-version-isolated-ci.py').toString();for(const x of['prepare-module-version-apache-ci.py','run-module-version-native-ci.mjs',"go,'--race'",'host_opt_identity_unchanged',"'--mount','--propagation','private'","'remount,bind,ro'",'existing_host_parent_permission_changes'])assert(isolated.includes(x),x);
  for(const x of['continue-on-error','-overlay=','reset-failed','killall','pkill'])assert(!gate.includes(x),x);
@@ -54,11 +55,11 @@ test('hosted0777 opt remains refused while real private mounts and kernel no-rep
  assert(!isolated.includes('rmtree')&&!isolated.includes('umount'));
  for(const x of['shutil.copytree(candidate,temporary,symlinks=False)','sealed_ci_tree(temporary)==expected','rename(-100,os.fsencode(temporary),-100,os.fsencode(prefix),1)','sealed_ci_tree(prefix)==expected'])assert(prepare.includes(x),x);
  for(const x of["os.geteuid()==0","'--mount','--propagation','private'",'even UID0 cannot write readonly tool-cache mount','kernel NOREPLACE rejects concurrent destination','no fabricated Apache executable exists','host_original_opt_and_all_existing_data_unchanged'])assert(models.includes(x),x);
- const workflow=read('.github/workflows/verify.yml').toString();assert(workflow.includes('sudo python3 -I -B tests/test_module_version_opt_namespace.py'));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString();assert(workflow.includes('sudo python3 -I -B tests/test_module_version_opt_namespace.py'));
 });
 test('privileged tools execute only from verified NEW Root-owned sealed copies,never chmodding or trusting a writable input cache',()=>{
  const p=read('tools/run-module-version-isolated-ci.py').toString();
  for(const x of['source_data_only_NOT_execution_admission','seal_ci_tool_tree(original.parent.parent,destination)',"assert copied['entries']==before['entries']","assert tool_content_tree(source)==before",'only_new_copies_chmodded_or_chowned',"s.st_uid==0 and not s.st_mode&0o022", "'GOROOT':str(pathlib.Path(go).parent.parent)"])assert(p.includes(x),x);
  const models=read('tests/test_module_version_tool_seals.py').toString();for(const x of['os.geteuid()==0','test_writable_source_data_sealed_without_source_metadata_changes','test_source_mutation_during_copy_refused','test_copied_data_tampering_refused','no_tool_or_Apache_executable_fabricated'])assert(models.includes(x),x);
- assert(read('.github/workflows/verify.yml').toString().includes('sudo python3 -I -B tests/test_module_version_tool_seals.py'));
+ assert(originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString().includes('sudo python3 -I -B tests/test_module_version_tool_seals.py'));
 });

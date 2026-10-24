@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-memcached-retirement-handler/',prior='panel-integration-memcached-retirement/',read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 const changed=["internal/appcatalog/memcached_unix_features.go","internal/appcatalog/memcached_unix_features_test.go","internal/appcatalog/memcached_unix_release_envelope_test.go","internal/appcatalog/memcached_unix_release_fetch.go","internal/appcatalog/memcached_unix_release_fetch_test.go","internal/appcatalog/panel_features.go","internal/core/memcached_unix_authority_test.go"],added=['internal/appcatalog/memcached_unix_retirement_requirement_test.go'];
@@ -25,7 +26,7 @@ test('both actual Root model cohorts preserve all103 tables and original true an
  assert.equal(r.original_cache_only_candidate_signed_or_installed,false);
 });
 test('the independent34th gate preserves every original33 workflow byte and all129 test names with zero skips',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf('\n  memcached-retirement-handler-models-amd64:\n');assert.equal(at,106151);assert.equal(sha(raw.subarray(0,at)),'06d443341205928924799f430f94a6bd96520518cec501e90b34fd7c53dd914c');
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf('\n  memcached-retirement-handler-models-amd64:\n');assert.equal(at,106151);assert.equal(sha(raw.subarray(0,at)),'06d443341205928924799f430f94a6bd96520518cec501e90b34fd7c53dd914c');
  const gate=raw.subarray(at).toString(),ci=read('tools/run-memcached-retirement-handler-models-ci.mjs').toString();
  for(const s of['panel-integration-memcached-retirement-handler','tools/run-memcached-retirement-handler-models-ci.mjs','tools/run-memcached-retirement-handler-packaging-ci.py','tests/memcached-retirement-handler-source.test.mjs','TestPublishedRepositoryCurrentSignedManifestABI'])assert(gate.includes(s),s);
  for(const s of['total===129&&subtests===855','three_independently_compiled_Memcached_handlers_required:true','core-control','core-install-workspace','core-runtime-audit','actual_default_install_or_account_creation:false','all50_commercial:false'])assert(ci.includes(s),s);

@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -28,7 +29,7 @@ test('original history is not rewritten and model/container evidence is not sign
  const l=r.legacy_PHP_boundary;assert.equal(l.functional_real_images,12);assert.equal(l.original_strict_NFT_receipts_still_false,true);for(const k of ['old_projects_rewritten','real_image_test_is_store_installation','legacy_runtime_security_support','existing_project_migration_accepted'])assert.equal(l[k],false,k);
 });
 test('ten original gates retain their tests with explicit historical WAF package serialization',()=>{
- const raw=read('.github/workflows/verify.yml'),at=raw.indexOf(Buffer.from('\n  waf-version-native-amd64:\n'));assert(at>0);assert.equal(sha(raw.subarray(0,at)),'8698a70f9401b3727fef3b3e0e2645bc0cb7b4bda687dc6a37aa595d84a9ec6a');
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf(Buffer.from('\n  waf-version-native-amd64:\n'));assert(at>0);assert.equal(sha(raw.subarray(0,at)),'8698a70f9401b3727fef3b3e0e2645bc0cb7b4bda687dc6a37aa595d84a9ec6a');
  const gate=raw.subarray(at).toString();for(const part of ['panel-integration-waf-version','sudo "$(command -v go)" test -p 1 ./... -count=1','go vet ./...','test -race','timeout 240s sudo python3','test-waf-configuration-version.mjs','TestWAFBoundHealthNativeTraffic','TestIsolatedLegacyPHPHiddenRoutingNativeTraffic','proapps24wafversionbipv'])assert(gate.includes(part),part);
  assert(!gate.includes('continue-on-error'));assert(!gate.includes('-overlay='));assert(!gate.includes('TestIsolatedLegacyPHPActualContainers'));
 });

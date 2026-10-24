@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {catalogBeforeDisk140Bytes} from './previous-disk-host-catalog.mjs';
@@ -33,6 +34,6 @@ test('candidate delivery never rewrites stable signatures, installed receipts or
  for(const k of ['new_program_deployed','new_app_manifest_published','new_signed_app_installed','new_full_host_job_accepted','main_delivered','main_absent_disk_app_installed','commercial_all50'])assert.equal(r[k],false,k);
  assert.equal(r.candidate_stage,'integration');assert(r.scope.includes('No signed installed1.4'));
  assert(r.remaining.some(s=>s.includes('Genuine signed1.4')));assert(r.remaining.some(s=>s.includes('all other50')));
- const workflow=(await read('.github/workflows/verify.yml')).toString();assert(workflow.includes('working-directory: panel-integration-disk'));assert(workflow.includes('panel-integration-disk/scripts/qa-host-disk-workspace.mjs'));
+ const workflow=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString();assert(workflow.includes('working-directory: panel-integration-disk'));assert(workflow.includes('panel-integration-disk/scripts/qa-host-disk-workspace.mjs'));
  const historical=JSON.parse(await read('panel-integration-geography/source-sha256.json'));assert.equal(historical.release.frozen_inputs_sha256,'87c6326b2a711ab4d1d9b83db6342c341ce9cfe75369d6d8f536fb680406fa2e');
 });

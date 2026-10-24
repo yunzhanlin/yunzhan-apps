@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
 import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';
@@ -40,7 +41,7 @@ test('publisher verifies the original public program key before any exclusive ne
  assert.equal(release.source_overrides,0);assert.equal(release.normal_original_key_signatures_verified,true);
 });
 test('all prior mandatory workflow bytes survive before the new complete Root and management gates',()=>{
- const source=read('.github/workflows/verify.yml').toString(),marker='      - name: Exact legacy Memcached package revision complete Root Linux contracts';
+ const source=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),marker='      - name: Exact legacy Memcached package revision complete Root Linux contracts';
  const boundary=source.indexOf(marker);assert(boundary>0);assert.equal(sha(Buffer.from(source.slice(0,boundary))),release.previous_workflow_sha256);
  const appended=source.slice(boundary);
  for(const phrase of ['panel-integration-memcached-revision','sudo "$(command -v go)" test -p 1 ./... -count=1','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','-published-app-registry-root "$GITHUB_WORKSPACE"','test -race ./internal/core ./internal/executor','npm ci --prefix panel-integration-memcached-revision/web --ignore-scripts','test-memcached-update-identity.mjs','scripts/web-entry-budget.mjs web/dist'])assert(appended.includes(phrase),phrase);
