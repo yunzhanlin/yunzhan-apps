@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "packages": {
+    "parse5": {
+      "version": "8.0.1",
+      "integrity": "sha512-z1e/HMG90obSGeidlli3hj7cbocou0/wa5HacvI3ASx34PecNjNQeaHNo5WIZpWofN9kgkqV1q5YvXe3F0FoPw==",
+      "license": "MIT"
+    },
+    "entities": {
+      "version": "8.1.0",
+      "integrity": "sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA==",
+      "license": "BSD-2-Clause"
+    },
+    "esbuild": {
+      "version": "0.28.2",
+      "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==",
+      "license": "MIT"
+    }
+  },
+  "entry": "internal/executor/analytics_html_source.mjs",
+  "inputs": {
+    "npm/entities/dist/decode-codepoint.js": "dddf76e72987697316e647f046b2755dafe16308fe83159969b3155e0ebf3beb",
+    "npm/entities/dist/decode.js": "6ce0048039ae0f9dab6e21dd1309661bcfe7e3beabfab1f15cdd61adb91e20b7",
+    "npm/entities/dist/escape.js": "880426162e6e6a1c65cb67cca4824c529c37192b51b0571927a81d33074f7302",
+    "npm/entities/dist/generated/decode-data-html.js": "1ff1226550125bb8976dd032b2dcfc37ba311863dbf9ae69b4b16922f5a38ead",
+    "npm/entities/dist/generated/decode-data-xml.js": "e549a5fd573d540a4652c81fab6655f3418c34c1613a30ed245ca017d9a5b730",
+    "npm/entities/dist/internal/bin-trie-flags.js": "8bb285f9ab41b9fd2525c83902c99b36e7c36da7cb7fa3be574d68f328183de5",
+    "npm/entities/dist/internal/decode-shared.js": "cd26388e8ec3fdc2c4b212883e9ae460a4fe6dd37d80d0dacffd6b0087171b6b",
+    "npm/parse5/dist/common/doctype.js": "855d8cd764782cdc73003a9847d03ed261c5158f6a6901e563ccd4d3b92c8b16",
+    "npm/parse5/dist/common/error-codes.js": "b38ae5ac4f2a31ce2e1cfeca35cf7b89cc66736cd5be068cc433a3ccaca78be2",
+    "npm/parse5/dist/common/foreign-content.js": "129a84a9d04b6050b6896de45a70e1ee468434e19bdd6486e3aef3405d137cac",
+    "npm/parse5/dist/common/html.js": "e6cf93f387be70ddcd4f2bec67fbeb53161094f6306d834de461ec888a9dab76",
+    "npm/parse5/dist/common/token.js": "52dac9efba3a637771818d633a5cf1df30c7913d05ff23235150c88319ea035a",
+    "npm/parse5/dist/common/unicode.js": "69a0a52be895d2bcf88850beead4a098c5305c0b5669d1e8a0fe26f621ea25c6",
+    "npm/parse5/dist/index.js": "b825162aced2e79be8d68d45efb1f89ec34ed4189467195a071a0d7b694a19d4",
+    "npm/parse5/dist/parser/formatting-element-list.js": "a6e04b000b228a0bf7eba4e5462b343ec1e13dbfbe40bce913ade646bbde4461",
+    "npm/parse5/dist/parser/index.js": "23eb8e0f6b45abc36132c08f067899e0e615acbe9069762ba7780a66db78e65d",
+    "npm/parse5/dist/parser/open-element-stack.js": "fe4b609a572c9aa06fbd45ac53632b3ad565168903f4126a6f98d5a9d1f42999",
+    "npm/parse5/dist/serializer/index.js": "bb11a62d05d463bf756814d89227ea889733d3808fe7ebe27cb4f607ed85a4c7",
+    "npm/parse5/dist/tokenizer/index.js": "810ebc73056d41c9ed5e4718d0973b87bc90306ca010d0c8533ed81669f58a58",
+    "npm/parse5/dist/tokenizer/preprocessor.js": "12199175a31eb461dcecefa10ce2536c69ab92cdd2a1f67da3ea20b214599ac1",
+    "npm/parse5/dist/tree-adapters/default.js": "14b6408b0abb1c041e645644f977db34da280239be8a59a2eb3c9e282e89b7c4",
+    "internal/executor/analytics_html_source.mjs": "3df411feff198d006dca62f328bd9b8f68e596d591acee6a1caf94b32a32bfa7"
+  },
+  "files": {
+    "analytics-html.js": "8e7fa5f7b02576de78f893037f02fd1d493241dd043a543fe98b8113a7b220f9",
+    "parse5-LICENSE": "8c535800331e1e4439835555b3f9edc7fe9dee2fab0d8bbbd5a982e8b8343d4d",
+    "entities-LICENSE": "cb992345949ccd6e8394b2cd6c465f7b897c864f845937dbf64e8997f389e164"
+  },
+  "scope": "bounded UTF-8 explicit-head insertion; no compressed body rewrite or CSP changes"
+}

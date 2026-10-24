@@ -16,7 +16,7 @@ test('published app versions are immutable and historical endpoints retained',as
  const temporary=await mkdtemp(path.join(os.tmpdir(),'yunzhan-version-test-'));
  try{
   await mkdir(path.join(temporary,'tools'));await mkdir(path.join(temporary,'registry'));
-  for(const name of ['build.mjs','lib.mjs'])await copyFile(new URL('../tools/'+name,import.meta.url),path.join(temporary,'tools',name));
+  for(const name of ['build.mjs','lib.mjs','php-security-contract.mjs','php-bounded-contract.mjs'])await copyFile(new URL('../tools/'+name,import.meta.url),path.join(temporary,'tools',name));
   const source=JSON.parse(await readFile(new URL('../registry/apps.json',import.meta.url),'utf8'));
   // This exercises the generic immutable archive contract, not permission for
   // an unreviewed Nginx handler/version. Use an explicit unscoped runtime.

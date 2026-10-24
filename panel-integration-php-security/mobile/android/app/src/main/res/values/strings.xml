@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">云栈面板</string>
+    <string name="title">云栈面板 · 安全移动端</string>
+    <string name="endpoint_hint">https://你的面板地址/安全入口/</string>
+    <string name="connect">连接</string>
+    <string name="clear_session">清除会话</string>
+    <string name="refresh">刷新</string>
+    <string name="privacy_status">正式包仅支持 HTTPS。密码由面板登录页处理，不写入原生存储。</string>
+    <string name="locked_message">面板已锁定\n使用设备锁屏或生物识别解锁</string>
+    <string name="unlock">解锁面板</string>
+    <string name="logout">退出并重新登录</string>
+    <string name="understood">知道了</string>
+    <string name="invalid_panel_address">请输入完整 HTTPS 面板地址，不含账号、临时令牌、查询参数或片段。QA 仅允许回环 HTTP。</string>
+    <string name="clearing_old_session">正在清除旧会话，请稍后重试。</string>
+    <string name="connection_status">%1$s · %2$s</string>
+    <string name="connection_qa">QA 测试包</string>
+    <string name="connection_system_tls">系统 TLS 验证</string>
+    <string name="navigation_blocked">已阻止跳转到其他地址。请在外部浏览器单独访问，面板会话不会传给外站。</string>
+    <string name="tls_failed">证书校验失败，未继续连接。请为面板配置可信 HTTPS 证书。</string>
+    <string name="connection_failed">连接失败。检查面板地址、网络和证书后重试。</string>
+    <string name="file_picker_unavailable">文件选择器不可用。</string>
+    <string name="download_notice">暂不自动下载管理数据。请在可信浏览器登录该面板后下载，应用不会向系统下载服务传递会话。</string>
+    <string name="page_dialog_title">来自 %1$s</string>
+    <string name="confirm">确认</string>
+    <string name="cancel">取消</string>
+    <string name="device_security_required">设备未设置安全锁屏。请退出当前会话，或先在系统设置中启用锁屏后解锁。</string>
+    <string name="unlock_title">解锁云栈面板</string>
+    <string name="unlock_subtitle">使用设备生物识别或锁屏凭据</string>
+    <string name="still_locked">仍处于锁定状态，请解锁或退出会话。</string>
+    <string name="clearing_data">正在清除 Cookie、网页存储与缓存…</string>
+    <string name="session_cleared">会话已清除；再次连接需要面板登录。服务器旧会话仍按原有效期过期。</string>
+    <string name="renderer_failed">网页进程已退出，本地登录状态已清除。请重新连接并登录，不会自动恢复旧会话。</string>
+    <string name="local_network_permission">可选：连接局域网面板，授予本地网络权限</string>
+    <string name="local_network_granted">已获得系统本地网络权限。请手动连接你的 HTTPS 面板；应用不会扫描网络或自动重连。</string>
+</resources>
