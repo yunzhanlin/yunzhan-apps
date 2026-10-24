@@ -15,14 +15,7 @@ func TestRuntimeFailedUpgradeRequiresOriginalMatchingClosedFailure(t *testing.T)
 	for _, mutation := range []string{"original", "running", "queued", "uncertain", "success", "wrong-kind", "wrong-target", "changed-error", "changed-steps", "empty-error", "pending-retry", "missing-audit", "duplicate-audit", "missing-result-audit", "duplicate-result-audit", "future", "reversed", "before-create", "missing-job", "cancelled", "unknown-release", "docker", "invalid-id"} {
 		t.Run(mutation, func(t *testing.T) {
 			s := testStore(t)
-			id, err := s.QueueInstall(runtimecatalog.Nginx[0].ID, ID(), "fixture-admin")
-			if err != nil {
-				t.Fatal(err)
-			}
-			in := RuntimeFailedInstallEvidence{JobID: id, ReleaseID: runtimecatalog.Nginx[0].ID, Error: "synthetic retained compile failure", Steps: []Step{{Time: Now(), Message: "synthetic retained compile failure"}}}
-			if err := s.FinishRuntime(Job{ID: id, TargetID: in.ReleaseID, Kind: "install_runtime"}, in.Error, in.Steps); err != nil {
-				t.Fatal(err)
-			}
+			id, in := runtimeFailedValidatorFixture(t, s)
 			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			exec := func(query string, args ...any) {
@@ -101,4 +94,40 @@ func TestRuntimeFailedUpgradeRequiresOriginalMatchingClosedFailure(t *testing.T)
 			}
 		})
 	}
+}
+
+// This legacy export predates the producer timestamp fix. These rows are a
+// synthetic SELECT-only validator fixture, NOT producer/native acceptance.
+// Do not call the defective historical multi-Now producers to create it.
+// The current candidate independently exercises the real producers across
+// forced SQL second boundaries in runtime_audit_timestamp_test.go.
+func runtimeFailedValidatorFixture(t *testing.T, s *Store) (string, RuntimeFailedInstallEvidence) {
+	t.Helper()
+	id, stamp := ID(), Now()
+	in := RuntimeFailedInstallEvidence{JobID: id, ReleaseID: runtimecatalog.Nginx[0].ID, Error: "synthetic retained compile failure", Steps: []Step{{Time: stamp, Message: "synthetic retained compile failure"}}}
+	steps, err := json.Marshal(in.Steps)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := s.DB.BeginTx(t.Context(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	for _, row := range []struct {
+		query string
+		args  []any
+	}{
+		{"INSERT INTO runtime_jobs(id,target_id,kind,state,idempotency_key,error,steps,created_at,updated_at) VALUES(?,?,'install_runtime','failed',?,?,?,?,?)", []any{id, in.ReleaseID, ID(), in.Error, string(steps), stamp, stamp}},
+		{"INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES('fixture-admin','runtime.install',?,'queued',?)", []any{in.ReleaseID, stamp}},
+		{"INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES('executor','install_runtime',?,'failed',?)", []any{in.ReleaseID, stamp}},
+	} {
+		if _, err := tx.ExecContext(t.Context(), row.query, row.args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	return id, in
 }

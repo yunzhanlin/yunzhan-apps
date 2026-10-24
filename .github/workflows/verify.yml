@@ -1468,21 +1468,21 @@ jobs:
           node-version: 22
       - uses: actions/setup-go@v5
         with:
-          go-version-file: panel-integration-memcached-unix/go.mod
-          cache-dependency-path: panel-integration-memcached-unix/go.sum
+          go-version-file: panel-integration-memcached-review/go.mod
+          cache-dependency-path: panel-integration-memcached-review/go.sum
       - name: Exact frozen Unix source and all original31 jobs
-        run: node --test tests/memcached-unix-source.test.mjs tests/redis-privilege-source.test.mjs
+        run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs tests/redis-privilege-source.test.mjs
       - name: Independent actual Root closed NSS journal authority and cache models, zero skips (not installed application acceptance)
-        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-unix-models-ci.mjs "$(command -v go)"
+        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-review-models-ci.mjs "$(command -v go)"
       - name: Entire candidate Linux Root regression
-        working-directory: panel-integration-memcached-unix
+        working-directory: panel-integration-memcached-review
         run: sudo "$(command -v go)" test -p 1 ./...
       - name: All264 original packaging checks on this candidate, zero Root skips
-        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-unix-packaging-ci.py
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-review-packaging-ci.py
       - name: Actual Vue logic and type checking, no simulated result counted as native
         run: |
-          npm ci --prefix panel-integration-memcached-unix/web --ignore-scripts
-          node --test panel-integration-memcached-unix/scripts/test-memcached-unix-workspace.mjs
-          (cd panel-integration-memcached-unix/web && npx --no-install vue-tsc -b)
+          npm ci --prefix panel-integration-memcached-review/web --ignore-scripts
+          node --test panel-integration-memcached-review/scripts/test-memcached-unix-workspace.mjs
+          (cd panel-integration-memcached-review/web && npx --no-install vue-tsc -b)
       - name: Recheck frozen candidate and preserved original31 job bytes
-        run: node --test tests/memcached-unix-source.test.mjs
+        run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs

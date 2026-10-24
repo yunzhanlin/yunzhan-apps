@@ -1,0 +1,108 @@
+{
+  "format": 1,
+  "recorded_utc": "2026-10-24 14:03:09 UTC",
+  "version": "0.1.0-dev.proapps24memreviewblaa",
+  "frozen_inputs_sha256": "2477f8c1450679ff5711cb887cdfee2b485e8833eb64a0014c5369192710a8f7",
+  "frozen_files": 17610,
+  "Go_files": 1446,
+  "source_scope": "panel-integration-memcached-review",
+  "source_index_sha256": "92f45bca09edc338dad7b1abb27b0c9bda9a1ddfcb7bf5f478ef06caca1b3d63",
+  "exported_files": 1907,
+  "source_overlays": 0,
+  "parent_frozen_inputs": "d27329f978471752d152dd4077ec3bca5dd44e83f7554e16edbe2a9874a248ac",
+  "normal_programme_builds": {
+    "amd64": {
+      "archive": "/Volumes/MacSSD/MacData/Projects/ChatGPT/服务器安全/panel/.local/commercial-memcached-review24blaa.nXihRb/source/.local/releases/panel-0.1.0-dev.proapps24memreviewblaa-linux-amd64.tar.gz",
+      "archive_sha256": "07f3e2c9dc2321f35bf8945b6aae3c04af525c3c1de63f476c95b50cd2450435",
+      "bytes": 21979409,
+      "programmes": {
+        "panel": "127f4ef68b9ca7c381ae7e2faa4ad4a861121e272e9ebb4b26787d9fc543a6c4",
+        "panel-executor": "42c5ea23297d7557182b06758fcd33510dd823e31ce03c6847c422c57dea34f5",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "build_checks_sha256": "bbad08ea8dcfeb4f3cece743bc458729d3fda84d32b4d3d267daf872ee37d590",
+      "portable_build_completed": true,
+      "mac_packaging_Root_Linux_skips_not_claimed_as_acceptance": true
+    },
+    "arm64": {
+      "archive": "/Volumes/MacSSD/MacData/Projects/ChatGPT/服务器安全/panel/.local/commercial-memcached-review24blaa.nXihRb/source/.local/releases/panel-0.1.0-dev.proapps24memreviewblaa-linux-arm64.tar.gz",
+      "archive_sha256": "62e6fb800d8995a94647d1aa0f97ed25e0c71c7dc72bd8ce5d428cf5c193f80b",
+      "bytes": 20357176,
+      "programmes": {
+        "panel": "c2d1102a93a5ad021989b4dca5d3cafa047f8c072e62b7478bc1bb8073a62ca3",
+        "panel-executor": "f2ab94d700c0ee387805760b081a2e4e0f30e72438a66c41ad487f1c9ee1d7f1",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "build_checks_sha256": "0ef532d58f744633ef45f26aee3454f0ba4490129777472090fe8b17d311a1d5",
+      "portable_build_completed": true,
+      "mac_packaging_Root_Linux_skips_not_claimed_as_acceptance": true
+    }
+  },
+  "actual_Root_models": {
+    "amd64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blac-amd64.e06c1f5a33977e4d52fd2bd56eead9ff",
+      "proof_sha256": "12dcd96b94f66951c652e19b107569674f4821e01872a0fc61f416e56f8efed8",
+      "top_level": 109,
+      "including_subtests": 709,
+      "skips": 0,
+      "failures": 0,
+      "all_original102_business_schema_rows_and20modules_preserved": true,
+      "all_original_containers_NSS_and_installed_programme_lifetimes_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false
+    },
+    "arm64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blab-arm64.80103aaae9def466cc636931a4b3d435",
+      "proof_sha256": "3ad049142fb788055b9209f934132834018c7ec1d98b67b27e8968abc47d317e",
+      "top_level": 109,
+      "including_subtests": 709,
+      "skips": 0,
+      "failures": 0,
+      "all_original102_business_schema_rows_and20modules_preserved": true,
+      "all_original_containers_NSS_and_installed_programme_lifetimes_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false
+    }
+  },
+  "producer_timestamp_regression": {
+    "old_code_red_tests": 2,
+    "fixed_code_green_tests": 2,
+    "queue_and_finish_and_bundle_real_producers_exercised": true,
+    "strict_original_validator_unchanged": true,
+    "original_job_or_audit_rows_rewritten": false,
+    "read_only_validation_negatives": 22
+  },
+  "legacy_validator_fixture": {
+    "scope": "panel-integration-runtime-failed",
+    "test_overrides": 1,
+    "production_overrides": 0,
+    "canonical_synthetic_SQL_fixture_only": true,
+    "original_test_digest": "d223cf622fc7baf13e3f05ceaf5032cc80a902b82407f29d649d1073f8fd98bc",
+    "current_test_digest": "5012a5bb24ed411b6398ffc89a66bd3c7ab817e24bdba66a807e772ee546ac02",
+    "old_test_retained": "registry/reviewed-fixtures/runtime-failed-before-timestamp24blad/runtime_failed_upgrade_test.go",
+    "original_CI": {
+      "head": "a05cba99bb6e3274957775652ed15ae4669dc33b",
+      "run": 40095794888,
+      "job": 120877671681,
+      "conclusion": "failure",
+      "log_retained": true,
+      "exact_original_SQL_timestamps_captured": false,
+      "exact_original_CI_cause_retrospectively_proven": false,
+      "rerun_to_obtain_green": false
+    }
+  },
+  "ui": {
+    "node_logic_tests": 17,
+    "actual_Chromium_mock_transport_scenarios": 10,
+    "widths": [
+      1280,
+      390
+    ],
+    "real_native_or_public_API_acceptance": false
+  },
+  "signed": false,
+  "normal_upgrade_accepted": false,
+  "application_manifests_changed": 0,
+  "Main19100_mutated": false,
+  "all50_commercial": false
+}

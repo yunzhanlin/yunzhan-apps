@@ -387,7 +387,7 @@
     "internal/core/remote_backups.go": "9ebd29ee871c0f0d953d82eaae0b8657a13b72873ca6c105e89d5bf9444cd102",
     "internal/core/runtime_bundles_test.go": "8688d7c185ac7d9b3bf642fc9e48ad0da9b37a67e771d1a822d2339f8a700a6e",
     "internal/core/runtime_bundles.go": "f483552a597db837198059a693ce2aa2e83244c49bfdfb69f2f4c0026cc5b75d",
-    "internal/core/runtime_failed_upgrade_test.go": "d223cf622fc7baf13e3f05ceaf5032cc80a902b82407f29d649d1073f8fd98bc",
+    "internal/core/runtime_failed_upgrade_test.go": "5012a5bb24ed411b6398ffc89a66bd3c7ab817e24bdba66a807e772ee546ac02",
     "internal/core/runtime_failed_upgrade.go": "9587021a77ee210f413561554aa8d9c2e36a51ceb8034eab644654abf100bc34",
     "internal/core/runtime_install_observation_test.go": "8ed06663b4849bcf61444b45ce7ed32ccf25f4fd9da61ac49baf3c973ed34c87",
     "internal/core/runtime_lifecycle_test.go": "9347189b5e7a1c5fe219ab4b0ad8fd80b8f042bd782819f14ec769773b237e76",
@@ -1727,5 +1727,10 @@
     "web/tsconfig.json": "e13faf84bf17b23e9f640bfea37be7642cc6f9abf3ec9671257869a7083ddb35",
     "web/vite.config.ts": "76425dd0bcdfcf9f05036af56ef0c189ed575bd5bfa4f7397f340bbc94b0bfd1"
   },
-  "test_overrides": {}
+  "test_overrides": {
+    "internal/core/runtime_failed_upgrade_test.go": {
+      "release_sha256": "d223cf622fc7baf13e3f05ceaf5032cc80a902b82407f29d649d1073f8fd98bc",
+      "reason": "Legacy SELECT-only validator fixture now creates canonical synthetic rows in one transaction; the historical production timestamp bug remains untouched and the current F46 producers have independent forced-second-boundary regression coverage."
+    }
+  }
 }

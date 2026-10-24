@@ -30,7 +30,7 @@ test('cache UI and native protocol keep loss acknowledgements, binary/CAS bounda
 });
 test('all original31 workflow jobs remain byte-identical before an independent bounded actual-Root model gate, never a commercial acceptance claim',()=>{
  const b=read('.github/workflows/verify.yml'),at=b.indexOf('\n  memcached-unix-models-amd64:\n');assert.equal(at,102422);assert.equal(sha(b.subarray(0,at)),'42c8126b32067a6bafbbcb5054bde803fecf9a548e7865fbb62785b39d493d61');
- const gate=b.subarray(at).toString();for(const text of ['timeout-minutes: 25','tools/run-memcached-unix-models-ci.mjs','sudo "$(command -v go)" test -p 1 ./...','tools/run-memcached-unix-packaging-ci.py','vue-tsc -b'])assert(gate.includes(text),text);
+ const gate=b.subarray(at).toString();for(const text of ['timeout-minutes: 25','tools/run-memcached-review-models-ci.mjs','sudo "$(command -v go)" test -p 1 ./...','tools/run-memcached-review-packaging-ci.py','vue-tsc -b'])assert(gate.includes(text),text);
  for(const text of ['continue-on-error','reset-failed','pkill','killall','--overlay'])assert(!gate.includes(text),text);
  const models=read('tools/run-memcached-unix-models-ci.mjs').toString();for(const text of ['process.getuid()===0','total===98&&subtests===615','actual_default_install_or_account_creation:false','store_or_native_container_acceptance:false','all50_commercial:false'])assert(models.includes(text),text);
  assert(models.includes("state+'/memcached-unix-account-models-ci-'")&&models.includes('PANEL_MEMCACHED_UNIX_ACCOUNT_QA_ROOT:target')&&models.includes("TMPDIR:target+'/tmp'"));
