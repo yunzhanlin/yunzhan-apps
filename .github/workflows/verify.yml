@@ -1515,3 +1515,29 @@ jobs:
           (cd panel-integration-memcached-retirement/web && npx --no-install vue-tsc -b)
       - name: Recheck frozen source and original32 workflow bytes
         run: node --test tests/memcached-unix-source.test.mjs tests/memcached-review-source.test.mjs tests/memcached-retirement-source.test.mjs
+
+  memcached-retirement-handler-models-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-memcached-retirement-handler/go.mod
+          cache-dependency-path: panel-integration-memcached-retirement-handler/go.sum
+      - name: Exact three-handler source, both original false receipts and original33 workflow jobs
+        run: node --test tests/memcached-retirement-handler-source.test.mjs tests/memcached-retirement-source.test.mjs
+      - name: Actual Root independent-handler and retirement models, all129 top-level and855 subcases, zero skips
+        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-retirement-handler-models-ci.mjs "$(command -v go)"
+      - name: Entire candidate Linux Root regression and original signed50-app ABI
+        working-directory: panel-integration-memcached-retirement-handler
+        run: |
+          sudo "$(command -v go)" test -p 1 ./...
+          sudo "$(command -v go)" test -p 1 ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: All264 original packaging checks, zero Root skips
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-handler-packaging-ci.py
+      - name: Recheck frozen source and original33 workflow bytes
+        run: node --test tests/memcached-retirement-handler-source.test.mjs tests/memcached-retirement-source.test.mjs
