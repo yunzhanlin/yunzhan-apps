@@ -1,0 +1,26 @@
+import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import ts from'../web/node_modules/typescript/lib/typescript.js';
+const read=n=>fs.readFileSync(new URL('../'+n,import.meta.url),'utf8'),source=read('web/src/wafConfigurationInspection.ts'),compiled=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText,{decodeWafConfigurationInspection,readWafConfigurationInspection}=await import('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64'));
+const fixture=()=>({format:1,read_only:true,installed_version:'2.0.1',policy_revision:'9223372036854775807',semantic_record_sha256:'a'.repeat(64),filesystem_matches:false,enforcement_verified:false,differences:[{scope:'http-rules',site_id:'',actual_exists:true,expected_exists:true,actual_sha256:'b'.repeat(64),expected_sha256:'c'.repeat(64),actual_mode:416,expected_mode:416,actual_bytes:10,expected_bytes:20}]});
+test('closed readonly metadata never implies enforcement; original full int64 revision stays exact',()=>{
+ const v=fixture();assert.deepEqual(decodeWafConfigurationInspection(v),v);
+ for(const alter of [v=>v.extra='private',v=>v.policy_revision=9007199254740992,v=>v.policy_revision='9223372036854775808',v=>v.policy_revision='01',v=>v.policy_revision='-1',v=>v.read_only=false,v=>v.enforcement_verified=true,v=>v.filesystem_matches=true,v=>v.differences=null,v=>v.differences.push({...v.differences[0]}),v=>v.differences[0].content='secret',v=>v.differences[0].scope='/etc/shadow',v=>v.differences[0].actual_mode=2048,v=>v.differences[0].actual_bytes=8*1048576,v=>v.differences[0].actual_exists=false,v=>v.differences[0].site_id='untrusted',v=>v.differences[0].expected_sha256=v.differences[0].actual_sha256]){const v=fixture();alter(v);assert.throws(()=>decodeWafConfigurationInspection(v));}
+ const same={...fixture(),filesystem_matches:true,differences:[]};assert(decodeWafConfigurationInspection(same).filesystem_matches);assert.equal(same.enforcement_verified,false);
+});
+test('reader is exactly one fixed GET without body, version selector or mutation; expired and mismatched replies are rejected',async()=>{
+ const calls=[],api=async(...args)=>{calls.push(args);return fixture();};assert.deepEqual(await readWafConfigurationInspection(api,()=>true,'2.0.1'),fixture());assert.deepEqual(calls,[['/software/nginx-waf/config-inspection','GET']]);await assert.rejects(readWafConfigurationInspection(api,()=>false,'2.0.1'));assert.equal(calls.length,1);await assert.rejects(readWafConfigurationInspection(api,()=>true,'2.5.2'));
+ let current=true;await assert.rejects(readWafConfigurationInspection(async()=>{current=false;return fixture();},()=>current,'2.0.1'));
+});
+function actualInspect(api){
+ const code=read('web/src/WafConfigurationInspection.vue').split('<script setup lang="ts">')[1].split('</script>')[0],ast=ts.createSourceFile('Inspection.ts',code,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),fn=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='inspect');assert(fn);const executable=ts.transpileModule(fn.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,b={props:{version:'2.0.1',api},busy:{value:false},result:{value:undefined},error:{value:''},generation:0,disposed:false,readWafConfigurationInspection};return{b,fn:new Function('b','with(b){'+executable+';return inspect;}')(b)};
+}
+test('actual selected component shows original-version differences without any mutation call or automatic repair',async()=>{
+ const calls=[],f=actualInspect(async(...args)=>{calls.push(args);return fixture();});await f.fn();assert.deepEqual(calls,[['/software/nginx-waf/config-inspection','GET']]);assert.deepEqual(f.b.result.value,fixture());assert.equal(f.b.busy.value,false);assert.equal(f.b.error.value,'');const template=read('web/src/WafConfigurationInspection.vue');assert(template.includes('本次未检查 Nginx 语法或实际加载'));assert(template.includes('没有自动修复'));assert(!template.includes('v-html'));assert(!template.includes('window.open'));
+});
+test('actual selected component does not duplicate an in-flight read, keep stale success or overwrite a newer result',async()=>{
+ let resolve,calls=0;const f=actualInspect(async()=>{calls++;return new Promise(r=>resolve=r);});const first=f.fn();assert(f.b.busy.value);await f.fn();assert.equal(calls,1);f.b.generation++;f.b.props.version='2.5.2';f.b.result.value={newer:true};resolve(fixture());await first;assert.deepEqual(f.b.result.value,{newer:true});assert.equal(f.b.error.value,'');
+ const g=actualInspect(async()=>{throw Error('original lock unavailable');});g.b.result.value=fixture();await g.fn();assert.equal(g.b.result.value,undefined);assert.equal(g.b.error.value,'original lock unavailable');assert.equal(g.b.busy.value,false);
+});
+test('workspace exposes independent readonly inspection without granting old-version save or preview',()=>{
+ const app=read('web/src/WafWorkspace.vue');assert(app.includes('<WafConfigurationInspection v-if="!apache && installState === \'installed\'"'));assert(app.includes('存在偏差时先只读核对原版本配置差异'));assert(app.includes(':disabled="busy || !configurationVersionMatches" @click="showPreview"'));assert(app.includes('!pendingApply?.job && !configurationVersionMatches'));assert(!source.includes('"POST"'));
+});
+

@@ -1377,3 +1377,41 @@ jobs:
           node --test scripts/test-apache-body-policy.mjs scripts/test-apache-body-build.mjs scripts/test-waf-configuration-version.mjs scripts/test-module-version-scope.mjs scripts/test-registry-request-identity.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24moduleversionbknx npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  redis-cli-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-redis-cli/go.mod
+          cache-dependency-path: panel-integration-redis-cli/go.sum
+      - name: Exact F41 source and unchanged original28 jobs
+        run: node --test tests/redis-cli-source.test.mjs tests/module-version-source.test.mjs
+      - name: Genuine pinned Apache prerequisite without host runtime adoption
+        run: |
+          sudo python3 -I -B tests/test_module_version_apache_parents.py
+          sudo python3 -I -B tests/test_module_version_opt_namespace.py
+          sudo python3 -I -B tests/test_module_version_tool_seals.py
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential pkg-config libapr1-dev libaprutil1-dev libpcre2-dev libssl-dev libnghttp2-dev
+      - name: Sealed tools and private opt with exact203 normal and203 race native checks
+        run: sudo python3 -I -B tools/run-redis-cli-isolated-ci.py "$(command -v go)" "$(command -v node)"
+      - name: Complete ordinary Linux contracts and all50 current original signatures
+        working-directory: panel-integration-redis-cli
+        run: |
+          sudo "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
+      - name: Original packaging checks and bounded credential interface
+        run: |
+          cd panel-integration-redis-cli
+          timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v
+          npm ci --prefix web --ignore-scripts
+          node --test scripts/test-redis-credentials.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-store-updates.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24composeclibksv npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
