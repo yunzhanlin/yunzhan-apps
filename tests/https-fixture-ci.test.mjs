@@ -3,6 +3,23 @@ import{correctHTTPSFixture,httpsFixtureMember,originalHTTPSFixtureSHA,correctedH
 import{originalReviewedHTTPSFixtureWorkflow,originalHTTPSWorkflow,originalHTTPSWholeCommand,reviewedHTTPSWholeCommand,originalReviewedHTTPSFixtureTest}from'./reviewed-https-fixture-workflow.mjs';
 import{hardeningManifestFixtureOverlay}from'../tools/run-hardening-ci.mjs';import{intrusionFeatureFixtureOverlay}from'../tools/run-intrusion-ci.mjs';
 const repo=fileURLToPath(new URL('../',import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex'),raw=fs.readFileSync(repo+'panel-integration-memcached-retirement-handler/'+httpsFixtureMember);
+
+test('Root CI admission receives only the two explicit nonsecret GitHub markers and original sudo failures remain failures',()=>{
+ const r=JSON.parse(fs.readFileSync(repo+'registry/https-fixture-sudo-ci.json'));
+ assert.equal(r.previous_head,'8e68688e8c7bb553c65805337a463cad4542905c');
+ assert(r.original_failures_preserved.every(v=>v.conclusion==='failure'));
+ assert(r.native_sudo_proof.read_only&&r.native_sudo_proof.remote_files_written===0&&r.native_sudo_proof.programme_or_application_mutations===0);
+ assert.deepEqual(r.native_sudo_proof.architectures.map(v=>v.arch).sort(),['amd64','arm64']);
+ for(const proof of r.native_sudo_proof.architectures){
+  assert.deepEqual(proof.original_plain_sudo,{uid:0,GITHUB_ACTIONS:null,GITHUB_REPOSITORY:null});
+  assert.deepEqual(proof.explicit_allowlist,{uid:0,GITHUB_ACTIONS:'true',GITHUB_REPOSITORY:'yunzhanlin/yunzhan-apps'});
+ }
+ assert.deepEqual(r.correction.allowlist,['GITHUB_ACTIONS','GITHUB_REPOSITORY']);
+ assert.equal(reviewedHTTPSWholeCommand,'sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...');
+ const driver=fs.readFileSync(repo+'tools/run-https-fixture-ci.mjs','utf8');
+ assert(driver.includes("assert(process.getuid()===0&&process.platform==='linux'&&process.env.GITHUB_ACTIONS==='true'&&process.env.GITHUB_REPOSITORY==='yunzhanlin/yunzhan-apps')"));
+ for(const k of['old_failures_relabelled','old_jobs_retried','fresh_CI_acceptance','programme_signed','programme_installed','Main19100_mutated','all50_commercial'])assert.equal(r[k],false);
+});
 test('actual both-architecture Root fixture results preserve original CI and collector failures and do not claim installation',()=>{
  const r=JSON.parse(fs.readFileSync(repo+'registry/https-fixture-ci.json'));assert.equal(r.original_CI_failure.job,120962618075);assert.equal(r.original_CI_failure.conclusion,'failure');assert(r.original_CI_failure.actual_original_port_not_logged&&r.original_CI_failure.not_retried_or_relabelled);assert.equal(r.member,httpsFixtureMember);assert.equal(r.original_test_sha256,originalHTTPSFixtureSHA);assert.equal(r.corrected_test_sha256,correctedHTTPSFixtureSHA);
  for(const a of Object.values(r.actual_Root_models)){assert.equal(a.original_red_colliding_subcases_failed,3);assert.equal(a.green_top_level,6);assert.equal(a.green_including_subtests,13);assert.equal(a.green_failures,0);assert.equal(a.green_skips,0);}

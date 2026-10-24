@@ -45,7 +45,7 @@ jobs:
         # Do not run the 384 MiB/2s source-read capacity test concurrently
         # with other packages' CPU/I/O-heavy fixtures on a shared runner.
         # Keep every test, original capacity and original deadline intact.
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
       - name: Unchanged maximum source-read capacity repeated in an isolated package process
         working-directory: panel-integration
         run: sudo "$(command -v go)" test -p 1 ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$' -count=3
@@ -163,7 +163,7 @@ jobs:
           node panel-integration-disk-fix/scripts/qa-host-disk-workspace.mjs "$disk_fix_ui_out"
       - name: Diagnostic candidate complete Root Linux contracts, not installed failure-fix acceptance
         working-directory: panel-integration-disk-diagnostic
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
       - name: Diagnostic fixed enum filtering, bounded stderr and unchanged native exit race regression
         working-directory: panel-integration-disk-diagnostic
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHostDiagnostic' -count=1 -v
@@ -176,7 +176,7 @@ jobs:
           node panel-integration-disk-diagnostic/scripts/web-entry-budget.mjs panel-integration-disk-diagnostic/web/dist
       - name: Reason candidate complete Root Linux contracts, not installed reason-fix acceptance
         working-directory: panel-integration-disk-reason
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
       - name: Reason finalization and inherited bounded diagnostic race regression
         working-directory: panel-integration-disk-reason
         run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestDiskHost(Diagnostic|FailureReport)' -count=1 -v
@@ -195,7 +195,7 @@ jobs:
       - name: Fleet candidate complete Root Linux contracts (source fixtures, not installed fleet acceptance)
         working-directory: panel-integration-platform-fleet
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Fleet bounded overlap cancellation protocol identity and existing authority races
         working-directory: panel-integration-platform-fleet
@@ -209,7 +209,7 @@ jobs:
       - name: Fleet report and pinned Memcached candidate complete Root Linux contracts (source only)
         working-directory: panel-integration-platform-health-view
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Current original-key signed 50 manifests against actual compiled Linux handlers (read-only, no install)
         working-directory: panel-integration-platform-health-view
@@ -229,7 +229,7 @@ jobs:
       - name: Fleet reopen complete Root Linux contracts (source only)
         working-directory: panel-integration-fleet-reopen
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Reopen candidate against actual current original-key signed 50 manifests (no install)
         working-directory: panel-integration-fleet-reopen
@@ -249,7 +249,7 @@ jobs:
       - name: Original-key bound Memcached worker complete Root Linux contracts (not installed update acceptance)
         working-directory: panel-integration-memcached-update
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Current signed50 handler ABI including exact pinned Memcached compat2 (read-only)
         working-directory: panel-integration-memcached-update
@@ -268,7 +268,7 @@ jobs:
       - name: Exact legacy Memcached package revision complete Root Linux contracts
         working-directory: panel-integration-memcached-revision
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Revision candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-memcached-revision
@@ -287,7 +287,7 @@ jobs:
       - name: Durable geodata identity and protected Docker complete Root Linux contracts
         working-directory: panel-integration-geodata-identity
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Identity candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-geodata-identity
@@ -312,7 +312,7 @@ jobs:
       - name: Original failed geodata terminal and verifier inventory complete Root Linux contracts
         working-directory: panel-integration-geodata-preflight
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Preflight candidate current original-key signed50 compiled handler ABI (read-only)
         working-directory: panel-integration-geodata-preflight
@@ -337,7 +337,7 @@ jobs:
       - name: File manager and development dispatch complete Root Linux contracts (source only)
         working-directory: panel-integration-file-manager
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Original-key current signed50 compiled handler ABI (no application install)
         working-directory: panel-integration-file-manager
@@ -359,7 +359,7 @@ jobs:
       - name: Analytics session complete Root Linux contracts (source only)
         working-directory: panel-integration-analytics-session
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Analytics session current original-key signed50 compiled handler ABI (no app update)
         working-directory: panel-integration-analytics-session
@@ -423,7 +423,7 @@ jobs:
       - name: Complete current Root Linux Go contracts (not installed or power-loss acceptance)
         working-directory: panel-integration-statistics-stop
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Worker lifetime and exact rollback-journal race regression
         working-directory: panel-integration-statistics-stop
@@ -478,7 +478,7 @@ jobs:
       - name: Complete current Root Linux Go contracts, not installed or power-loss proof
         working-directory: panel-integration-docker-observation
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Actual native creation receipt and read-only polling race regressions
         working-directory: panel-integration-docker-observation
@@ -512,7 +512,7 @@ jobs:
       - name: Complete current Root Linux Go contracts and vet
         working-directory: panel-integration-apache-preservation
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Exact Apache metadata preservation and refusal race fixtures
         working-directory: panel-integration-apache-preservation
@@ -613,7 +613,7 @@ jobs:
       - name: Complete Root Linux source without any production or test overlays
         working-directory: panel-integration-intrusion-ui
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -race ./internal/executor ./internal/core ./internal/appcatalog -run '^TestIntrusion' -count=1
       - name: Complete original Root packaging contracts
@@ -650,7 +650,7 @@ jobs:
         run: node --test tests/intrusion-admission-source.test.mjs
       - name: Full native Linux implementation with all original capacity and deadline fixtures
         working-directory: panel-integration-intrusion-admission
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
       - name: Static analysis of the same unmodified signed-source implementation
         working-directory: panel-integration-intrusion-admission
         run: go vet ./...
@@ -680,7 +680,7 @@ jobs:
       - name: Complete Root Linux source without production or test overlays
         working-directory: panel-integration-waf-health
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
       - name: WAF hotfix current signed50 all pass only on the actual new handler
@@ -728,7 +728,7 @@ jobs:
       - name: Complete Root Linux source without production or test overlays
         working-directory: panel-integration-waf-version
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(WAF|IsolatedLegacyPHP)' -count=1
       - name: Original-key current signed50 ABI
@@ -776,7 +776,7 @@ jobs:
       - name: Complete Root source with real trusted filesystem fixtures, not cached-image installation
         working-directory: panel-integration-legacy-sync
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/executor -run '^TestLegacySync' -count=1
           sudo "$(command -v go)" test -race -p 1 ./internal/core ./internal/executor ./internal/appcatalog -run '^Test(LegacySync|IsolatedLegacyPHP|WAF)' -count=1
@@ -811,7 +811,7 @@ jobs:
       - name: Complete Root source and original filesystem models, no live request substituted in CI
         working-directory: panel-integration-runtime-failed
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/core ./internal/executor -run '^TestRuntimeFailedUpgrade' -count=1 -v
           sudo "$(command -v go)" test -race ./internal/core ./internal/executor -run '^Test(RuntimeFailedUpgrade|RuntimeCompiler|NativeCompiler)' -count=1
@@ -846,7 +846,7 @@ jobs:
       - name: Full Root source plus parallel-package WAF races on the actual descriptor fix
         working-directory: panel-integration-waf-descriptor
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/executor -run '^Test(WAFHealthLock|WAFBodyRetentionUnknownHistoryCapacityStopsBeforeAnyNewDeletion$)' -count=1 -v
           sudo "$(command -v go)" test -race ./internal/core ./internal/executor ./internal/appcatalog -run '^TestWAF' -count=1
@@ -881,7 +881,7 @@ jobs:
       - name: Full Root source plus real HTTP status, receipt and compiled feature races
         working-directory: panel-integration-runtime-package
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1 -v
           sudo "$(command -v go)" test -race ./internal/core ./internal/appcatalog -run '^Test(Registry|RuntimePackage)' -count=1
@@ -916,7 +916,7 @@ jobs:
       - name: Full Root source, actual child programme probes and cached install admission
         working-directory: panel-integration-runtime-health
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test ./internal/executor -run '^TestRuntime(Version(Output|Process|Absolute)|ExistingCache)' -count=1 -v
           sudo "$(command -v go)" test -race ./internal/executor -run '^TestRuntime(Version(Output|Process|Absolute)|ExistingCache)' -count=1
@@ -978,7 +978,7 @@ jobs:
       - name: Complete native Root source and read-only registry admission regressions
         working-directory: panel-integration-waf-review
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -race ./internal/core -run '^TestRegistry' -count=1
       - name: Original-key current signed fifty-app manifest handler ABI
@@ -1012,7 +1012,7 @@ jobs:
       - name: Full native Root implementation and existing-version inspection and admission races
         working-directory: panel-integration-waf-inspection
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -race ./internal/core -run '^Test(Registry|WAFConfigurationInspection)' -count=1
           sudo "$(command -v go)" test -race ./internal/executor -run '^TestWAFConfigurationInspection' -count=1
@@ -1072,7 +1072,7 @@ jobs:
       - name: Complete native Root implementation and retained original queue guards
         working-directory: panel-integration-ids-capture
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: All137 selected closed Root regressions with zero skip and no native preparation or capture
         run: sudo "$(command -v node)" tools/run-ids-capture-ci.mjs "$(command -v go)"
@@ -1110,7 +1110,7 @@ jobs:
       - name: Complete native Root implementation without source or policy overlays
         working-directory: panel-integration-pm2-readiness
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: All154 closed Root PM2 Task IDS and queue regressions with zero skip
         run: sudo "$(command -v node)" tools/run-pm2-readiness-ci.mjs "$(command -v go)"
@@ -1150,7 +1150,7 @@ jobs:
       - name: Complete Linux Root contracts and vet from the new immutable export
         working-directory: panel-integration-mobile-delivery
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: All181 selected actual Linux closed models with zero skips
         run: sudo "$(command -v node)" tools/run-mobile-delivery-ci.mjs "$(command -v go)"
@@ -1196,7 +1196,7 @@ jobs:
       - name: Complete ordinary Linux Root source contracts and vet, not installed PHP acceptance
         working-directory: panel-integration-compiler-exit
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Retained immutable panel-integration-php-security source - 175 selected Root models and66 feature cases
         run: sudo "$(command -v node)" tools/run-php-security-ci.mjs "$(command -v go)"
@@ -1250,7 +1250,7 @@ jobs:
       - name: Complete ordinary Linux Root contracts and vet without source overlays
         working-directory: panel-integration-runtime-memory
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
       - name: Original retained-failure,explicit retry,resource and byte-representation race models
         working-directory: panel-integration-runtime-memory
@@ -1364,7 +1364,7 @@ jobs:
       - name: Complete ordinary Linux contracts,original signatures and vet without overlays
         working-directory: panel-integration-module-version
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
       - name: Original packaging contracts and finite Apache compiler unit
@@ -1404,7 +1404,7 @@ jobs:
       - name: Complete ordinary Linux contracts and all50 current original signatures
         working-directory: panel-integration-redis-cli
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
           go vet ./...
           sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root "$GITHUB_WORKSPACE"
       - name: Original packaging checks and bounded credential interface
@@ -1452,7 +1452,7 @@ jobs:
           timeout 180s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB /usr/bin/python3 -I -B tools/run-redis-privilege-native-ci.py "$redis_privilege_ci/executor.test"
       - name: Entire current candidate default Linux Root implementation regression, serial package capacity unchanged
         working-directory: panel-integration-redis-privilege
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
       - name: All264 original packaging checks on the current candidate, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-redis-privilege-packaging-ci.py
       - name: Recheck frozen identity after native tests
@@ -1476,7 +1476,7 @@ jobs:
         run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-review-models-ci.mjs "$(command -v go)"
       - name: Entire candidate Linux Root regression
         working-directory: panel-integration-memcached-review
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
       - name: All264 original packaging checks on this candidate, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-review-packaging-ci.py
       - name: Actual Vue logic and type checking, no simulated result counted as native
@@ -1505,7 +1505,7 @@ jobs:
         run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-retirement-models-ci.mjs "$(command -v go)"
       - name: Entire candidate Linux Root regression
         working-directory: panel-integration-memcached-retirement
-        run: sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
       - name: All264 original packaging checks on this candidate, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-packaging-ci.py
       - name: Actual Vue logic and type checking, mock writes not native acceptance
@@ -1535,7 +1535,7 @@ jobs:
       - name: Entire candidate Linux Root regression and original signed50-app ABI
         working-directory: panel-integration-memcached-retirement-handler
         run: |
-          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
           sudo "$(command -v go)" test -p 1 ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE"
       - name: All264 original packaging checks, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-handler-packaging-ci.py

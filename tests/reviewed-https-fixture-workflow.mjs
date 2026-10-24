@@ -3,7 +3,7 @@
 import assert from'node:assert/strict';
 import{createHash}from'node:crypto';
 export const originalHTTPSWholeCommand='sudo "$(command -v go)" test -p 1 ./...';
-export const reviewedHTTPSWholeCommand='sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...';
+export const reviewedHTTPSWholeCommand='sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...';
 export const originalHTTPSWorkflow={head:'1061104bc6d6896ff6f711dfa379b47bebd40429',bytes:107862,sha256:'520481e456a2b926927d193614bd8090f79b174f3ad579d2948c6490eb6be0c8',complete_invocations:37};
 export function originalReviewedHTTPSFixtureWorkflow(bytes){
  const text=bytes.toString(),count=text.split(reviewedHTTPSWholeCommand).length-1;
