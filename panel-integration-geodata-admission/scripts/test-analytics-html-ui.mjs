@@ -1,0 +1,71 @@
+// Real Chromium/Vue interaction and viewport proof with an explicit mock API.
+// Does not install an application, touch a VM, or claim a native/API acceptance.
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {createServer} from '../web/node_modules/vite/dist/node/index.js';
+import vue from '../web/node_modules/@vitejs/plugin-vue/dist/index.mjs';
+import {chromium} from '../web/node_modules/playwright/index.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const stage=await fs.mkdtemp(path.join(root,'.local/analytics-html-ui-private-'));await fs.chmod(stage,0o700);
+const proof={passed:false,scope:'real Chromium/Vue interactions with isolated mock transport; NOT signed/native/live API acceptance',cases:[],console_diagnostics:[],private_root:stage};
+let browser,server;
+try {
+  server=await createServer({configFile:false,root,plugins:[vue()],server:{host:'127.0.0.1',port:0,strictPort:false},logLevel:'error'});await server.listen();
+  const port=server.httpServer.address().port;
+  browser=await chromium.launch({headless:true});
+  const page=await browser.newPage({viewport:{width:1280,height:900}});
+  page.setDefaultTimeout(10000);
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));
+  page.on('console',message=>{if(['error','warning'].includes(message.type())&&proof.console_diagnostics.length<32)proof.console_diagnostics.push({type:message.type(),text:message.text().slice(0,1024)});});
+  const toggle=name=>page.locator('.el-switch').filter({has:page.getByRole('switch',{name,exact:true})});
+  const open=async mode=>{
+    await page.goto(`http://127.0.0.1:${port}/scripts/test-analytics-html-ui-fixture.html?case=${mode}`);
+    await page.getByRole('tab',{name:'采集设置',exact:true}).click();
+    await page.getByRole('combobox',{name:'统计网站'}).click();
+    await page.getByRole('option',{name:'仅用于隔离界面验收 · private.example.test',exact:true}).click();
+    await toggle('启用浏览器采集').waitFor();
+  };
+  const postCount=()=>page.evaluate(()=>window.privateRequests.filter(item=>item.method==='POST').length);
+  await open('idle');assert.equal(await postCount(),0);assert.equal(await page.getByRole('switch',{name:'HTML 自动接入',exact:true}).isDisabled(),true);
+  proof.cases.push('opening a verified 2.3 UI does not automatically create/load an engine or alter a website');
+  await page.getByRole('button',{name:'新建隔离构建',exact:true}).click();
+  await page.getByText('当前任务：'+ 'b'.repeat(32)+' · 已排队',{exact:true}).waitFor();
+  assert.equal(await postCount(),1);assert.equal(await page.getByRole('button',{name:'新建隔离构建',exact:true}).isDisabled(),true);
+  await page.getByRole('button',{name:'销毁测试组件',exact:true}).click();
+  const reads=await page.evaluate(()=>window.privateRequests.length);await new Promise(resolve=>setTimeout(resolve,3500));assert.equal(await page.evaluate(()=>window.privateRequests.length),reads);
+  proof.cases.push('one explicit build and component teardown stops polling; no duplicate start or automatic retry');
+  await open('unhealthy');assert.equal(await page.getByRole('switch',{name:'HTML 自动接入',exact:true}).isDisabled(),false);
+  await toggle('启用浏览器采集').click();
+  await page.getByText('已停用：对应网站的采集代理和 HTML 自动接入均已移除，Nginx 校验和应用成功；历史报告保留。',{exact:true}).waitFor();
+  const stopped=await page.evaluate(()=>window.privateRequests.find(item=>item.method==='POST'&&item.path.includes('/analytics/sites/')).body);
+  assert.equal(stopped.enabled,false);assert.equal(stopped.auto_inject_html,false);
+  proof.cases.push('unhealthy engine still permits immediate site opt-out; disable sends both flags false');
+  await open('bad-ack');await page.getByRole('button',{name:'加载引擎并核对工作进程',exact:true}).click();
+  await page.getByText('加载响应未确认实际工作进程；请刷新核对，不会自动重复加载。',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('switch',{name:'HTML 自动接入',exact:true}).isDisabled(),true);
+  assert.equal(await postCount(),1);proof.cases.push('forged command-only acknowledgment never unlocks automatic injection or causes an automatic load retry');
+  await open('ready');await page.getByRole('button',{name:'加载引擎并核对工作进程',exact:true}).click();
+  await page.getByText('引擎已加载，实际 Nginx 工作进程身份已核对。网站仍需逐站主动开启自动接入，不会批量改动现有网站。',{exact:true}).waitFor();
+  assert.equal(await page.getByRole('switch',{name:'HTML 自动接入',exact:true}).isDisabled(),false);
+  assert.equal(await postCount(),1);
+  await toggle('HTML 自动接入').click();
+  await page.getByText('已启用：采集代理与 HTML 自动接入已写入对应网站，Nginx 校验和应用成功。',{exact:true}).waitFor();
+  assert.equal(await postCount(),2);proof.cases.push('loading and site opt-in are separate explicit operations; applied config is reread before displaying success');
+  await page.screenshot({path:path.join(stage,'wide.jpg'),type:'jpeg',fullPage:true});await fs.chmod(path.join(stage,'wide.jpg'),0o600);
+  await page.setViewportSize({width:390,height:844});
+  assert.deepEqual(await page.evaluate(()=>({width:innerWidth,height:innerHeight})),{width:390,height:844});
+  const overflow=await page.evaluate(()=>({body:document.documentElement.scrollWidth,width:innerWidth}));assert.ok(overflow.body<=overflow.width+1,JSON.stringify(overflow));
+  const navigation=await page.locator('.analytics-workspace .el-tabs__nav').evaluate(element=>({direction:getComputedStyle(element).flexDirection,height:element.getBoundingClientRect().height,items:[...element.querySelectorAll('[role="tab"]')].map(item=>({x:item.getBoundingClientRect().x,y:item.getBoundingClientRect().y}))}));
+  assert.equal(navigation.direction,'row');assert.ok(navigation.height<=130,JSON.stringify(navigation));assert.ok(navigation.items.some((item,index)=>index>0&&item.y===navigation.items[index-1].y&&item.x>navigation.items[index-1].x),JSON.stringify(navigation));
+  proof.mobile_navigation=navigation;
+  await page.screenshot({path:path.join(stage,'narrow390.jpg'),type:'jpeg',fullPage:true});await fs.chmod(path.join(stage,'narrow390.jpg'),0o600);
+  proof.cases.push('real viewport 390 x 844 has no document horizontal overflow; screenshots are actual JPEG');
+  await open('legacy');assert.equal(await page.getByRole('button',{name:'新建隔离构建',exact:true}).count(),0);assert.equal(await postCount(),0);
+  proof.cases.push('older 2.2 application cannot expose native load/build controls before a signed update');
+  assert.deepEqual(errors,[]);proof.passed=true;proof.browser=browser.version();proof.widths=[1280,390];proof.console_diagnostics_are_not_server_acceptance=true;
+} catch(error) {proof.error=error.stack;throw error;} finally {
+  await fs.writeFile(path.join(stage,'proof.json'),JSON.stringify(proof,null,2)+'\n',{flag:'wx',mode:0o600});
+  await browser?.close();await server?.close();console.log(JSON.stringify({passed:proof.passed,scope:proof.scope,private_root:stage,cases:proof.cases,error:proof.error}));
+}

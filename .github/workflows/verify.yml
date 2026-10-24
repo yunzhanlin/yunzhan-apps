@@ -1415,3 +1415,18 @@ jobs:
           node --test scripts/test-redis-credentials.mjs scripts/test-redis-scope.mjs scripts/test-module-version-scope.mjs scripts/test-store-updates.mjs
           VITE_PANEL_VERSION=0.1.0-dev.proapps24redispeerbkug npm run build --prefix web
           node scripts/web-entry-budget.mjs web/dist
+
+  geodata-admission-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exact frozen pre-write admission correction and byte-identical original29 jobs
+        run: node --test tests/geodata-admission-source.test.mjs tests/redis-cli-source.test.mjs
+      - name: Actual Root Linux filesystem SQLite and flock fixtures with264 mandatory checks and zero skips
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-geodata-admission-packaging-ci.py
+      - name: Recheck original source identity after Root fixtures
+        run: node --test tests/geodata-admission-source.test.mjs
