@@ -6,11 +6,15 @@ const repo=fileURLToPath(new URL('..',import.meta.url)),source=repo+'panel-integ
 assert.equal(sha(raw),'8f634df31a884b3169971df8242dbf948cb045df13aa5a9786873e5e3c8bab10');assert(index.release.frozen_inputs_sha256==='d27329f978471752d152dd4077ec3bca5dd44e83f7554e16edbe2a9874a248ac'&&!Object.keys(index.test_overrides).length&&Object.keys(index.files).length===1898);
 function sources(){for(const[n,h]of Object.entries(index.files)){const p=source+'/'+n,s=fs.lstatSync(p);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&sha(fs.readFileSync(p))===h,n);}}
 sources();process.umask(0o022);
-const target=fs.mkdtempSync(path.join(os.tmpdir(),'memcached-unix-ci-'));fs.chmodSync(target,0o700);
+const state='/var/lib/panel-executor';
+if(!fs.existsSync(state))fs.mkdirSync(state,{mode:0o700});
+for(let p=state;;p=path.dirname(p)){const s=fs.lstatSync(p);assert(s.isDirectory()&&!s.isSymbolicLink()&&s.uid===0&&!(s.mode&0o022),'Never repair or borrow an unsafe existing parent');if(p==='/')break;}
+const target=fs.mkdtempSync(state+'/memcached-unix-account-models-ci-');fs.chmodSync(target,0o700);fs.mkdirSync(target+'/tmp',{mode:0o700});
+const environment={...process.env,TMPDIR:target+'/tmp',PANEL_MEMCACHED_UNIX_ACCOUNT_QA_ROOT:target};
 const results={};let total=0,subtests=0;
 for(const[pkg,names]of Object.entries(groups)){
  assert(names.length&&new Set(names).size===names.length&&names.every(n=>/^Test(?:Memcached|RedisPrivilege)[A-Za-z0-9_]+$/.test(n)));
- const pattern='^('+names.join('|')+')$',bytes=execFileSync(go,['test','-json','-p','1','./internal/'+pkg,'-run='+pattern,'-count=1','-timeout=180s'],{cwd:source,encoding:'utf8',timeout:240000,maxBuffer:4<<20});
+ const pattern='^('+names.join('|')+')$',bytes=execFileSync(go,['test','-json','-p','1','./internal/'+pkg,'-run='+pattern,'-count=1','-timeout=180s'],{cwd:source,env:environment,encoding:'utf8',timeout:240000,maxBuffer:4<<20});
  const events=bytes.trim().split('\n').map(s=>JSON.parse(s)),tests=events.filter(v=>v.Action==='pass'&&v.Test&&!v.Test.includes('/')).map(v=>v.Test);
  assert.deepEqual(tests.sort(),[...names].sort());assert(!events.some(v=>['skip','fail'].includes(v.Action)));assert(events.at(-1).Action==='pass'&&!events.at(-1).Test);
  const passed=events.filter(v=>v.Action==='pass'&&v.Test).length;total+=tests.length;subtests+=passed;results[pkg]={top_level:tests.length,including_subtests:passed,skips:0,failures:0};
