@@ -1,0 +1,69 @@
+// Real Chromium/Vue rendering; mock transport ONLY, no native/API acceptance.
+import assert from'node:assert/strict';import fs from'node:fs/promises';import path from'node:path';import{fileURLToPath}from'node:url';
+import{createServer}from'../web/node_modules/vite/dist/node/index.js';import vue from'../web/node_modules/@vitejs/plugin-vue/dist/index.mjs';import{chromium}from'../web/node_modules/playwright/index.mjs';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+await fs.mkdir(path.join(root,'.local'),{recursive:true,mode:0o700});
+const stage=await fs.mkdtemp(path.join(root,'.local/memcached-unix-ui-private-'));
+await fs.chmod(stage,0o700);
+const proof={passed:false,scope:'real Chromium Vue render/interactions with isolated mock transport ONLY; NOT signed default installation or real API acceptance',private_root:stage,cases:[],diagnostics:[]};
+let browser,server;
+try{
+ server=await createServer({configFile:false,root,plugins:[vue()],resolve:{alias:{vue:path.join(root,'web/node_modules/vue/dist/vue.esm-bundler.js'),'element-plus':path.join(root,'web/node_modules/element-plus/es/index.mjs')}},optimizeDeps:{entries:['scripts/test-memcached-unix-ui-fixture.html'],include:['vue','element-plus']},server:{host:'127.0.0.1',port:0,strictPort:false},logLevel:'error'});await server.listen();
+ const port=server.httpServer.address().port;browser=await chromium.launch({headless:true});
+ const page=await browser.newPage({viewport:{width:1280,height:900}});page.setDefaultTimeout(12000);
+ const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(['error','warning'].includes(m.type())&&proof.diagnostics.length<32)proof.diagnostics.push({type:m.type(),text:m.text().slice(0,1000)});});
+ await page.exposeFunction('captureFixtureBrowserError',message=>errors.push(message));
+ await page.addInitScript(()=>window.addEventListener('error',event=>window.captureFixtureBrowserError(event.message)));
+ async function open(mode='normal',install=false){
+  await page.goto('http://127.0.0.1:'+port+'/scripts/test-memcached-unix-ui-fixture.html?case='+mode);
+  await page.getByRole('button',{name:install?'打开隔离安装':'打开隔离工作区',exact:true}).click();
+  await page.getByRole('dialog',{name:'Memcached · 缓存管理',exact:true}).waitFor();
+  await page.getByText('运行中 · 已核对真实进程与 Socket',{exact:true}).waitFor().catch(e=>{if(!install)throw e;});
+  await page.waitForFunction(()=>!Array.from(document.querySelectorAll('.el-overlay,.el-dialog')).some(element=>element.getAnimations().some(animation=>animation.playState==='running')));
+ }
+ const commands=()=>page.evaluate(()=>window.privateRequests.filter(v=>v.method==='POST'&&v.path.endsWith('/controls')).length);
+ await open();assert.equal(await commands(),0);assert.equal(await page.getByText('none · 无 TCP/UDP 端口',{exact:true}).count(),1);
+ await page.screenshot({path:path.join(stage,'state-desktop.png'),fullPage:true,animations:'disabled'});
+ proof.cases.push('opening Socket workspace only discovers and inspects; no control command or installation');
+ await page.getByRole('tab',{name:'运行统计',exact:true}).click();await page.getByRole('button',{name:'读取真实统计',exact:true}).click();await page.getByText('134217728',{exact:true}).waitFor();
+ proof.cases.push('statistics render fixed native-compatible groups; no invented series or reset action');
+ await page.getByRole('tab',{name:'缓存读写',exact:true}).click();
+ await page.getByRole('textbox',{name:'缓存键',exact:true}).fill('二进制键');await page.getByRole('button',{name:'读取当前值 / CAS',exact:true}).click();
+ await page.getByText('18446744073709551615',{exact:true}).waitFor();
+ assert.equal(await page.getByRole('textbox',{name:'缓存值',exact:true}).inputValue(),'/wANCoA=');
+ await page.getByRole('button',{name:'按原 CAS 保存',exact:true}).click();
+ const update=await page.evaluate(()=>window.privateRequests.find(v=>v.body?.cache?.action==='cas').body.cache);
+ assert.equal(update.cas,'18446744073709551615');assert.equal(update.value_base64,'/wANCoA=');assert.equal(update.flags,4294967295);assert.equal(update.ttl_seconds,42);
+ assert.equal(await page.getByRole('button',{name:'按原 CAS 保存',exact:true}).isDisabled(),true);
+ await page.screenshot({path:path.join(stage,'cache-desktop.png'),fullPage:true,animations:'disabled'});
+ proof.cases.push('binary values remain Base64, uint64 CAS stays text, flags/TTL round trip, next edit requires reread');
+ await page.getByRole('tab',{name:'实例状态',exact:true}).click();await page.getByRole('button',{name:'重启（清空缓存）',exact:true}).click();
+ await page.getByRole('button',{name:'确认缓存丢失并继续',exact:true}).click();
+ await page.getByText('原启停请求已完成真实状态核对',{exact:true}).waitFor();assert.equal(await commands(),1);
+ proof.cases.push('explicit volatile-loss confirmation sends exactly one original control request');
+ await open('unknown');await page.getByRole('button',{name:'停止（清空缓存）',exact:true}).click();await page.getByRole('button',{name:'确认缓存丢失并继续',exact:true}).click();
+ await page.getByText('原结果待核对',{exact:true}).waitFor();assert.equal(await commands(),1);
+ await page.getByRole('button',{name:'只核对原请求',exact:true}).click();assert.equal(await commands(),1);
+ await page.getByRole('button',{name:'关闭未执行请求',exact:true}).click();await page.getByRole('button',{name:'核对并关闭未执行请求',exact:true}).click();
+ await page.getByText('未执行 / 已关闭',{exact:true}).waitFor();assert.equal(await commands(),1);
+ proof.cases.push('unknown result only reads same original request; explicit non-issued closure never repeats control POST');
+ await open('normal',true);
+ assert.equal(await page.getByText('此安装不要求端口',{exact:false}).count(),1);
+ await page.getByRole('button',{name:'验签并安装 Socket 实例',exact:true}).click();await page.getByRole('button',{name:'验签并安装',exact:true}).click();
+ await page.getByText('2'.repeat(32),{exact:true}).waitFor();
+ const installation=await page.evaluate(()=>window.privateRequests.find(v=>v.path==='/app-registry/memcached/install').body);
+ assert.deepEqual(installation.settings,{site_id:''});assert(!('host_port'in installation));assert(!('uid'in installation));
+ await page.getByRole('button',{name:'只核对原安装任务',exact:true}).click();await page.getByText('原安装已完成；请刷新核对当前真实健康状态',{exact:true}).waitFor();
+ proof.cases.push('Socket install has no TCP port/UID/image override and polls original actor-bound installation endpoint only');
+ await page.setViewportSize({width:390,height:844});await open();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+ await page.screenshot({path:path.join(stage,'state-mobile.png'),fullPage:true,animations:'disabled'});
+ await page.getByRole('tab',{name:'缓存读写',exact:true}).click();
+ assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+ await page.screenshot({path:path.join(stage,'cache-mobile.png'),fullPage:true,animations:'disabled'});
+ proof.cases.push('390px and desktop render without page-wide overflow; tables retain their own scroll');
+ await page.evaluate(()=>window.revokePrivateFixture());await page.getByRole('dialog',{name:'Memcached · 缓存管理',exact:true}).waitFor({state:'hidden'});
+ proof.cases.push('revoked full-admin capability immediately closes and clears workspace');
+ assert.deepEqual(errors,[]);proof.passed=true;proof.browser=browser.version();proof.widths=[1280,390];
+}catch(error){proof.error=error.stack;throw error;}
+finally{await fs.writeFile(path.join(stage,'proof.json'),JSON.stringify(proof,null,2)+'\n',{flag:'wx',mode:0o600});await browser?.close();await server?.close();console.log(JSON.stringify({passed:proof.passed,scope:proof.scope,private_root:stage,cases:proof.cases,error:proof.error}));}

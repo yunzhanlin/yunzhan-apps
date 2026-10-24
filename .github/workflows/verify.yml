@@ -1457,3 +1457,32 @@ jobs:
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-redis-privilege-packaging-ci.py
       - name: Recheck frozen identity after native tests
         run: node --test tests/redis-privilege-source.test.mjs
+
+  memcached-unix-models-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-memcached-unix/go.mod
+          cache-dependency-path: panel-integration-memcached-unix/go.sum
+      - name: Exact frozen Unix source and all original31 jobs
+        run: node --test tests/memcached-unix-source.test.mjs tests/redis-privilege-source.test.mjs
+      - name: Independent actual Root closed NSS journal authority and cache models, zero skips (not installed application acceptance)
+        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-unix-models-ci.mjs "$(command -v go)"
+      - name: Entire candidate Linux Root regression
+        working-directory: panel-integration-memcached-unix
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: All264 original packaging checks on this candidate, zero Root skips
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-unix-packaging-ci.py
+      - name: Actual Vue logic and type checking, no simulated result counted as native
+        run: |
+          npm ci --prefix panel-integration-memcached-unix/web --ignore-scripts
+          node --test panel-integration-memcached-unix/scripts/test-memcached-unix-workspace.mjs
+          (cd panel-integration-memcached-unix/web && npx --no-install vue-tsc -b)
+      - name: Recheck frozen candidate and preserved original31 job bytes
+        run: node --test tests/memcached-unix-source.test.mjs
