@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 // Historical consumers keep their genuine signed fifty-app catalog. The new
 // current catalog is tested by a separately compiled native-mobile handler.
 import fs from "node:fs";
@@ -6,7 +7,7 @@ import { createHash, createPublicKey, verify } from "node:crypto";
 export const beforeNativeMobile = "registry/reviewed-catalogs/before-native-mobile132-24bkep/";
 const read = name => fs.readFileSync(new URL("../" + beforeNativeMobile + name, import.meta.url));
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
-const original = read(".github/workflows/verify.yml");
+const original = originalReviewedHTTPSFixtureWorkflow(read(".github/workflows/verify.yml"));
 assert.equal(sha(original), "a596ab3db875fdbf2214e411462b12d029e4af1ada6c7c0f51878c59d8abcac5");
 const catalog = read("dist/catalog-v1.json"), pub = read("signatures/catalog-v1.pub.pem");
 assert.equal(sha(catalog), "0432d210df255b06a1ce258546579f4bfa666d0b661b54fd2572e356549d5f4d");
@@ -45,6 +46,7 @@ export function scopeHistoricalMobileConsumers(bytes) {
   return Buffer.from(text.replace(oldNegative, () => scopedNegative));
 }
 export function originalNativeMobileWorkflow(bytes) {
+  bytes = originalReviewedHTTPSFixtureWorkflow(bytes);
   if (bytes.equals(original)) return bytes;
   let text = bytes.toString();
   // Older normalization layers may call us again on an already restored

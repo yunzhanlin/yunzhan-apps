@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -17,7 +18,7 @@ test('ordinary upgrade gateway policy is frozen, CI-checked and scoped actual ac
  const previous=installer.slice(installer.indexOf('restart_previous_services(){'),installer.indexOf('\nsystemctl daemon-reload'));
  assert(previous.includes('systemctl restart panel-terminal panel-terminal-root panel-executor panel'));
  assert(!previous.includes('systemctl restart panel-terminal panel-terminal-root panel-executor panel nginx'));
- const workflow=await read('.github/workflows/verify.yml');
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));
  assert(workflow.includes("-p 'test_install_gateway_policy.py'"));assert(workflow.includes('--experimental-strip-types --test panel-integration/scripts/test-outbound-source-view.mjs'));
  const c=JSON.parse(await read('registry/functional-contracts.json')),r=c.previous_gateway_release,old=c.previous_source_release;
  assert.equal(r.release,'0.1.0-dev.proapps24gatewaybefa');assert.equal(r.normal_build_python_tests,56);assert.equal(r.exported_normal_source_files,1202);

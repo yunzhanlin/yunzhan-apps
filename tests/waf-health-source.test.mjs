@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -45,6 +46,6 @@ test('native receipts distinguish actual isolated HTTP, filesystem models and no
  assert.deepEqual(r.original_AMD_failed_health_upgrades.map(v=>v.proof_sha256),['d61b8f8829177e1f80c2d651d769447725945735df0d6ff3f5867f194e460011','a5621168a300c2b5789ed24958738b9b24cafb72dc6309a1692ae8664ce9bbde','97edb2f9d6e615e710def82b8a2ddb123d2a3d8bf8c1e4b531326016417607be']);assert(r.original_AMD_failed_health_upgrades.every(v=>v.ok===false&&v.replayed===false));
 });
 test('historical nine-job workflow is preserved and new native gate exercises full original budgets',()=>{
- const raw=originalWAFHealthWorkflow(read('.github/workflows/verify.yml')),at=raw.indexOf(Buffer.from('\n  waf-health-native-amd64:\n'));assert(at>0);assert.equal(sha(raw.subarray(0,at)),'69b215c701922af629899e66df38b599d74fe0699a10b2b5b6f4f2fdffc1c33d');
+ const raw=originalWAFHealthWorkflow(originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml'))),at=raw.indexOf(Buffer.from('\n  waf-health-native-amd64:\n'));assert(at>0);assert.equal(sha(raw.subarray(0,at)),'69b215c701922af629899e66df38b599d74fe0699a10b2b5b6f4f2fdffc1c33d');
  const gate=raw.subarray(at).toString();for(const item of ['sudo "$(command -v go)" test -p 1 ./... -count=1','go vet ./...','test -race','timeout 240s sudo python3','verify-waf-health-handler-boundary.mjs','TestWAFBoundHealthNativeTraffic','-timeout=80s','proapps24periodicadmissionbimg'])assert(gate.includes(item),item);assert(!gate.includes('continue-on-error'));assert(!gate.includes('-overlay='));
 });

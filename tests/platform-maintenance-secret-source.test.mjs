@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 // Source/evidence integrity; native/installed observations were performed
 // separately and are not manufactured or rerun by these metadata assertions.
 import test from 'node:test';
@@ -22,7 +23,7 @@ test('historical secret lifetime fix retains exact signed BFCR inputs and immuta
  for(const needle of ['function hideSecret()','function displaySecret(','clearTimeout(secretTimer)','if(secretGrantID===id)hideSecret()','current.revoked','current.legacy_unbound','current.expires_at*1000<=Date.now()','current.installation_id!==props.installationId','current.owner_id!==props.access?.user_id','hideSecret();error.value='])assert(code.includes(needle),needle);
  assert(!code.includes('localStorage')&&!code.includes('sessionStorage'));
  const build=(await read('panel-integration-geography/packaging/build-release.sh')).toString();assert(build.includes('node --test scripts/test-platform-maintenance-secrets.mjs'));assert(build.includes('npm run build) 2>&1 | tee'));assert(!build.includes('npm run build >/dev/null'));
- const ci=(await read('.github/workflows/verify.yml')).toString();assert(ci.indexOf('npm ci --prefix panel-integration-geography/web --ignore-scripts')<ci.indexOf('node --test panel-integration-geography/scripts/test-platform-maintenance-secrets.mjs'));
+ const ci=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString();assert(ci.indexOf('npm ci --prefix panel-integration-geography/web --ignore-scripts')<ci.indexOf('node --test panel-integration-geography/scripts/test-platform-maintenance-secrets.mjs'));
 });
 test('new original program transaction and installed external-revocation UI acceptance remain separate from old native commands and full commercial qualification',async()=>{
  const r=JSON.parse(await read('registry/platform-maintenance-secret-release.json'));

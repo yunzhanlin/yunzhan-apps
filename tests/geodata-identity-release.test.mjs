@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preAnalyticsRead} from './previous-analytics-catalog.mjs';
 import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';
@@ -31,7 +32,7 @@ test('exclusive source publisher verifies original public key before writing and
  assert.equal(release.source_overrides,0);assert.equal(release.normal_original_key_signatures_verified,true);
 });
 test('all old workflow bytes remain before new complete Root, races, ABI, locked UI and original-key gates',()=>{
- const workflow=read('.github/workflows/verify.yml').toString(),marker='      - name: Durable geodata identity and protected Docker complete Root Linux contracts';
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),marker='      - name: Durable geodata identity and protected Docker complete Root Linux contracts';
  const boundary=workflow.indexOf(marker);assert(boundary>0);assert.equal(sha(Buffer.from(workflow.slice(0,boundary))),release.previous_workflow_sha256);
  for(const phrase of ['panel-integration-geodata-identity','sudo "$(command -v go)" test -p 1 ./... -count=1','go vet ./...','TestPublishedRepositoryCurrentSignedManifestABI','-published-app-registry-root "$GITHUB_WORKSPACE"','test -race ./internal/core ./internal/executor','npm ci --prefix panel-integration-geodata-identity/web --ignore-scripts','test-memcached-update-identity.mjs','test-statistics-history.mjs','qa-statistics-geodata-workspace.mjs','scripts/web-entry-budget.mjs web/dist'])assert(workflow.slice(boundary).includes(phrase),phrase);
 });

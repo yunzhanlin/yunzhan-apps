@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "release": "0.1.0-dev.proapps24phpsecuritybkgf",
+  "feature": "php-security-20261021-v1",
+  "source_scope": "panel-integration-php-security",
+  "frozen_inputs_sha256": "16c4e3158adc0a83376b72dbfb022b580283cb091d415e0bda97a258cceab579",
+  "source_index_sha256": "9150b22af9befecceaf39e1366a6a3d42bebae29d0745d5d2d3ad3476506ebe2",
+  "source_overrides": 0,
+  "exported_files": 1761,
+  "Go_members": 1311,
+  "advisory": {
+    "source": "https://www.php.net/archive/2026.php",
+    "published": "2026-10-21",
+    "identities": [
+      "CVE-2026-109618",
+      "CVE-2026-109619"
+    ],
+    "scope": "Only these advisories; not a global security clearance or proof of website worker migration",
+    "patched_versions": {
+      "php-82": "8.2.35",
+      "php-83": "8.3.36",
+      "php-84": "8.4.27",
+      "php-85": "8.5.12"
+    },
+    "old_source_identities_retained": true
+  },
+  "source_authenticity": {
+    "actual_detached_PGP_verification": true,
+    "verification_process_UID": 65534,
+    "corrupted_archive_and_cross_version_signature_refused": true,
+    "original_public_trust_key_changed": false,
+    "receipt_sha256": "583a5080eb24a02286786e7499b2e87a248b5cfe6b9d91b15d9310aa5a95b659"
+  },
+  "normal_archives": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpsecuritybkgf-linux-arm64.tar.gz",
+      "archive_sha256": "d9c19800f9f1e839706cc149c61abc1e13c9d0bb9a06df02004b6630ece0b1a4",
+      "manifest_sha256": "7a20fda3e011219643e776a1ada8ec7ebd13f49495e47cdc55939df577dc2e13",
+      "signature_sha256": "623eed20cde540b1d043f21085c00af6eed18080944150b8399ad17b87ea63bb",
+      "original_programme_key_signature_verified": true,
+      "normal_build_log_sha256": "fed0137d57ebdeb5f3014b34fbe29fb1c2de4ab10a3077ea8b489882df226305",
+      "root_native_model_tests": 175,
+      "root_native_proof_sha256": "422a044b13d0ddf2b67948b3e932e62f2692366781708e497e3876733d17cb18",
+      "root_packaging_tests": 112,
+      "root_packaging_proof_sha256": "16f9d53041722d1c73dcc78b17a279db5627ee3b21e5559f0b082d61f1d105af",
+      "skipped": 0,
+      "actual_Linux_UID65534_feature_cases": 66,
+      "feature_model_proof_sha256": "3621667de13036742e07280a7bc5e9ba232bf1d9674e4dce4313c0c8078b0106",
+      "current_F28_original_signed50_accepted": true,
+      "current_F28_signed50_proof_sha256": "b289c4d72e561f0ec9e2547446e889f2387ba19a59cee3b147d353b9589a35bb",
+      "programme_sha256": {
+        "panel": "6e0c4a353233f12eb37700b6c85115ff0e6243ce1d055e1934b6a143f10c6689",
+        "panel-executor": "bab3030e3f2c573ec871f111243786b81a0745426fbccc95f72b3ccafaebd8bf",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      }
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpsecuritybkgf-linux-amd64.tar.gz",
+      "archive_sha256": "de12fb3815bc5617502c2494e1f95db9d813e948e913c825e024477408e9d900",
+      "manifest_sha256": "18f0f98c90b74185520bfe1742f0239a25373e7fccc62bdc749bf46ab7bf9b43",
+      "signature_sha256": "4e64043f54f3e72bcf60243f112e465713e0adb61dde7c4d1c5951cc889ddb68",
+      "original_programme_key_signature_verified": true,
+      "normal_build_log_sha256": "d3624521bc4f7a32428ed2b4874d794d56a39082d58a732697b277923771a712",
+      "root_native_model_tests": 175,
+      "root_native_proof_sha256": "2ad0e73211d627df24c7fe6fd7ad880a867e68b4b6862f9e5856ac2827ad8cd9",
+      "root_packaging_tests": 112,
+      "root_packaging_proof_sha256": "3c927eb348e077e6e1abf11ed77781415a8541e2e18088b494923aeb5910b7be",
+      "skipped": 0,
+      "actual_Linux_UID65534_feature_cases": 66,
+      "feature_model_proof_sha256": "3621667de13036742e07280a7bc5e9ba232bf1d9674e4dce4313c0c8078b0106",
+      "current_F28_original_signed50_accepted": true,
+      "current_F28_signed50_proof_sha256": "0b5971930358c42cb847d0fd267b080fe2a351b708b9481b83f0f3475f7a15b4",
+      "programme_sha256": {
+        "panel": "6e76869c45af4a865353bd0ed302b0c6f429814e8f3a21ba6232fdd10e43eb85",
+        "panel-executor": "42bb0ceddd65797284ee542740069cb5a43158c8c23b76f6d00cd09139b3cf70",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      }
+    }
+  },
+  "prepublication_models": {
+    "new_PHP_manifest_contract_cases": 198,
+    "positive": 62,
+    "negative": 136,
+    "independent_json_schema_draft": "2020-12",
+    "original_mobile_schema93_still_passed": true,
+    "complete_repository_node_regression": true,
+    "temporary_fixture_dependency_copies_include_new_validator_module": true,
+    "all_preexisting_invariants_and_tests_retained": true,
+    "only_original_successful_native_outputs_reprocessed": true,
+    "original_ABI_driver_parser_failed_after_VM_success": true,
+    "original_VM_runs_exit": 0,
+    "local_driver_original_exit": 1,
+    "original_failures_and_raw_outputs_retained": true,
+    "no_test_or_installer_replay_to_relabel_original_driver": true
+  },
+  "delivered_source_contract": {
+    "fixed_official_source_hashes": true,
+    "advisory_specific_status_not_generic_healthy": true,
+    "affected_new_installs_and_bundles_refused_before_new_jobs": true,
+    "original_ticket_replay_does_not_grant_rebuild": true,
+    "verified_old_installation_can_be_reviewed_without_rebuild": true,
+    "executor_independently_rechecks_source_and_existing_binary": true,
+    "existing_sites_and_FPM_workers_never_implicitly_migrated": true,
+    "new_exact4_package_feature_required": true
+  },
+  "recording_boundaries": {
+    "GitHub_parent_PR78_merged": false,
+    "GitHub_this_source_CI_accepted": false,
+    "new4_APP_manifests_published": false,
+    "new4_APP_catalog_signature_created": false,
+    "actual_patched_PHP_built_or_installed": false,
+    "actual_existing_websites_migrated": false,
+    "actual_Main_programme_upgraded": false,
+    "actual_application_store_update_acceptance": false,
+    "all50_commercial_acceptance": false
+  }
+}

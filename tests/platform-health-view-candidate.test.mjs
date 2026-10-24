@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,readdir,lstat} from 'node:fs/promises';
@@ -54,7 +55,7 @@ test('genuine previous fleet and accidentally selected old lifecycle failure rem
  for(const k of ['new_program_installed','new_UI_live_agent_verified','main_delivered','app_packages_updated','commercial_all50'])assert.equal(r[k],false);assert(r.remaining.some(s=>s.includes('all50')));
 });
 test('source exporter and all previous gates remain byte-identical after removing only exact reviewed additions',async()=>{
- const{r}=await evidence(),workflow=(await read('.github/workflows/verify.yml')).toString(),at=workflow.indexOf('      - name: Fleet report and pinned Memcached candidate complete Root Linux contracts');assert(at>0);assert.equal(sha256(Buffer.from(workflow.slice(0,at))),r.previous_ci_full_prefix_sha256);assert.equal(r.previous_ci_full_prefix_sha256,'32bd51a944ec25cb5c9d3564f6cc365fef1d2de5e7035b849c1274ab9ba71fcc');assert.doesNotMatch(workflow,/continue-on-error/);
+ const{r}=await evidence(),workflow=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString(),at=workflow.indexOf('      - name: Fleet report and pinned Memcached candidate complete Root Linux contracts');assert(at>0);assert.equal(sha256(Buffer.from(workflow.slice(0,at))),r.previous_ci_full_prefix_sha256);assert.equal(r.previous_ci_full_prefix_sha256,'32bd51a944ec25cb5c9d3564f6cc365fef1d2de5e7035b849c1274ab9ba71fcc');assert.doesNotMatch(workflow,/continue-on-error/);
  for(const text of ['working-directory: panel-integration-platform-health-view','test -p 1 ./... -count=1','go vet ./...','npm ci --prefix panel-integration-platform-health-view/web --ignore-scripts','scripts/test-platform-health-lifecycle.mjs','scripts/test-platform-health-ui.mjs'])assert(workflow.slice(at).includes(text));
  assert(workflow.slice(at).includes("-run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -args -published-app-registry-root \"$GITHUB_WORKSPACE\""));assert(workflow.slice(at).includes('VITE_PANEL_VERSION='+program+' npm run build'));assert(workflow.slice(at).includes('mkdir -p panel-integration-platform-health-view/.local'));
  let exporter=(await read('tools/export-panel-source.mjs')).toString();

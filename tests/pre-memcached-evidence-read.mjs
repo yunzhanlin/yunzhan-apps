@@ -4,6 +4,7 @@
 import assert from'node:assert/strict';import{createHash}from'node:crypto';import{catalogBeforeMemcachedCompat2Bytes}from'./previous-memcached-catalog.mjs';
 import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import {preNativeMobileRead} from './pre-native-mobile-release.mjs';
+import {originalReviewedHTTPSFixtureTest} from './reviewed-https-fixture-workflow.mjs';
 export const historicalTestSHA={
  'tests/disk-host-diagnostic-candidate.test.mjs':'18073b3e23c09e40c8ff4790776e4a893f423a6db869d9474340f92e9ccd7560',
  'tests/disk-host-installed-diagnostic-acceptance.test.mjs':'6de05360bb89aaacf94e01fa016df0520fc369fbd7d237b3e3311f24f921b29c',
@@ -14,6 +15,7 @@ export const historicalTestSHA={
  'tests/platform-health-view-candidate.test.mjs':'630f59a3839dbc30f51d9b4db5a36f199c9d1fd71b10db9887ff5507370daf11'
 };
 export function originalPreMemcachedTest(path,bytes){
+ bytes=originalReviewedHTTPSFixtureTest(path,bytes);
  const pin=historicalTestSHA[path];assert(pin,'not an explicitly reviewed historical test');let text=bytes.toString();
  const added="import {preMemcachedRead} from './pre-memcached-evidence-read.mjs';\n",current='read=p=>preMemcachedRead(p,readFile(path.join(root,p)))';
  assert.equal(text.split(added).length,2);assert.equal(text.split(current).length,2);text=text.replace(added,'').replace(current,'read=p=>readFile(path.join(root,p))');

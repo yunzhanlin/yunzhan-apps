@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash}from'node:crypto';
 import path from'node:path';import{fileURLToPath}from'node:url';
 import {preHardeningWorkflowRead}from'./pre-hardening-workflow.mjs';
@@ -20,5 +21,5 @@ test('native140, installed program upgrades and real kernel roundtrips remain di
  assert.equal(r.application1_1_signed_store_update_accepted,false);assert.equal(r.Main19100_program_updated,false);assert.equal(r.commercial_all50,false);assert(r.original_failed_native_cohorts.no_original_receipt_or_snapshot_relabelled);assert.equal(r.component_browser_fixture.cases,6);assert(r.limitations.some(s=>s.includes('installed daemon interruption')));
 });
 test('hardening full Linux and race gates append without weakening any existing CI byte',()=>{
- const r=json('registry/hardening-core.json'),c=read('.github/workflows/verify.yml').toString(),at=c.indexOf('\n  hardening-native-amd64:\n');assert(at>0);assert.equal(sha(c.slice(0,at)),r.prior_workflow_whole_sha256);for(const s of['test -p 1 ./... -count=1','go vet ./...','test -race ./internal/executor ./internal/core ./internal/appcatalog','timeout 240s sudo python3','npm ci --prefix panel-integration-hardening/web --ignore-scripts'])assert(c.slice(at).includes(s),s);assert(!c.slice(at).includes('continue-on-error'));
+ const r=json('registry/hardening-core.json'),c=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=c.indexOf('\n  hardening-native-amd64:\n');assert(at>0);assert.equal(sha(c.slice(0,at)),r.prior_workflow_whole_sha256);for(const s of['test -p 1 ./... -count=1','go vet ./...','test -race ./internal/executor ./internal/core ./internal/appcatalog','timeout 240s sudo python3','npm ci --prefix panel-integration-hardening/web --ignore-scripts'])assert(c.slice(at).includes(s),s);assert(!c.slice(at).includes('continue-on-error'));
 });

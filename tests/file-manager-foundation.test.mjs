@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preAnalyticsWorkflowRead} from './pre-analytics-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 // Escaped systemd filenames contain literal backslashes; URL resolution would
@@ -24,6 +25,6 @@ test('actual exported Vue scope reset and original installed data boundaries are
  assert.equal(record.actual_Main_delivery.ok,true);assert.equal(record.actual_Main_delivery.original_sites,58);assert.equal(record.actual_Main_delivery.original_modules,4);assert.equal(record.actual_Main_delivery.original_business_projections,97);assert.equal(record.actual_Main_delivery.exact_new_empty_tables,4);assert.equal(record.actual_Main_delivery.application_operations,0);
 });
 test('all historical CI bytes and original assertions remain before appended exact-source gates',()=>{
- const workflow=read('.github/workflows/verify.yml'),marker=Buffer.from('      - name: File manager and development dispatch complete Root Linux contracts (source only)'),at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'97b9d24d9536efcf92331c8e1ad26e99a49416c6085f26d65df53ff03076bd12');
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),marker=Buffer.from('      - name: File manager and development dispatch complete Root Linux contracts (source only)'),at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'97b9d24d9536efcf92331c8e1ad26e99a49416c6085f26d65df53ff03076bd12');
  const appended=workflow.subarray(at).toString();for(const gate of['sudo "$(command -v go)" test -p 1 ./... -count=1','test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch test_install_dependency_policy test_install_gateway_policy','scripts/test-file-manager-scope.mjs','scripts/web-entry-budget.mjs'])assert(appended.includes(gate),gate);
 });

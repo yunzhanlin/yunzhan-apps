@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 // Exact source/evidence contracts only; no CI test invents installed acceptance.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -16,7 +17,7 @@ test('new disk update ceiling is backed by exact independently signed frozen inp
  for(const p of r.only_source_changes){assert.equal(i.files[p],f.files[p]);assert.equal(sha(await read(retained+p)),i.files[p]);if(old.files[p])assert.equal(sha(await read(previousRoot+p)),old.files[p]);}
  for(const p of ['internal/executor/app_disk_usage_linux.go','internal/executor/app_modules_linux.go','web/src/AppModuleManager.vue','web/src/AppModuleReport.vue','web/src/diskUsage.ts'])assert.equal(i.files[p],old.files[p],'native scanner/lifecycle/UI must not be silently rewritten: '+p);
  const core=(await read(retained+'internal/core/software_apps.go')).toString(),modules=(await read(retained+'internal/core/app_modules.go')).toString();assert(core.includes('const DiskAnalysisAppVersion = "1.3.0"'));assert.match(core,/if id == "disk-analysis"[\s\S]+version != DiskAnalysisAppVersion/);assert.match(modules,/case "disk-analysis":\s*version = DiskAnalysisAppVersion/);
- const ci=(await read('.github/workflows/verify.yml')).toString();assert(ci.includes("go test -race ./internal/core -run '^TestDiskUsage' -count=1 -v"));
+ const ci=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString();assert(ci.includes("go test -race ./internal/core -run '^TestDiskUsage' -count=1 -v"));
 });
 test('only signed disk package advances, original1.2 and previous signed catalog remain immutable',async()=>{
  const r=JSON.parse(await read('registry/disk-inode-update-release.json')),manifestRaw=await read('dist/apps/disk-analysis/1.3.0/manifest.json'),manifest=JSON.parse(manifestRaw),catalogRaw=await catalogBeforeDisk140Bytes(),catalog=JSON.parse(catalogRaw),oldRaw=await read('registry/reviewed-catalogs/before-disk1.3-24bfin/catalog-v1.json'),old=JSON.parse(oldRaw),publicRaw=await read('signatures/catalog-v1.pub.pem');

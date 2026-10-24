@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash,createPublicKey,verify}from'node:crypto';
 import{fileURLToPath}from'node:url';
 import{beforeNativeMobile,originalNativeMobileWorkflow}from'./pre-native-mobile-release.mjs';
@@ -37,7 +38,7 @@ test('actual responsive navigation and informational future-version fixes are no
  assert.equal(sha(read(scope+'scripts/web-entry-budget.mjs')),json('panel-integration-pm2-readiness/source-sha256.json').files['scripts/web-entry-budget.mjs']);
 });
 test('all22 historical jobs remain exact and the new native gate tests current50 and old-only-mobile refusal without skips or policy overlays',()=>{
- const workflow=read('.github/workflows/verify.yml'),original=read(beforeNativeMobile+'.github/workflows/verify.yml'),marker='\n  mobile-delivery-native-amd64:\n',at=workflow.indexOf(marker),restored=originalNativeMobileWorkflow(workflow);assert(at>0);assert(restored.subarray(0,restored.indexOf(marker)).equals(original));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),original=originalReviewedHTTPSFixtureWorkflow(read(beforeNativeMobile+'.github/workflows/verify.yml')),marker='\n  mobile-delivery-native-amd64:\n',at=workflow.indexOf(marker),restored=originalNativeMobileWorkflow(workflow);assert(at>0);assert(restored.subarray(0,restored.indexOf(marker)).equals(original));
  const gate=workflow.subarray(at).toString();for(const text of ['timeout-minutes: 45','panel-integration-mobile-delivery','test -p 1 ./... -count=1','go vet ./...','tools/run-mobile-delivery-ci.mjs','tools/verify-mobile-delivery-handler-boundary.mjs','TestPublishedRepositoryCurrentSignedManifestABI','test_*.py','scripts/test-mobile-navigation.mjs','scripts/test-store-search.mjs','scripts/web-entry-budget.mjs'])assert(gate.includes(text),text);
  assert(!gate.includes('continue-on-error')&&!gate.includes('-overlay='));assert.equal([...original.toString().split('\njobs:\n')[1].matchAll(/^  [a-z][a-z0-9-]*:\s*$/gm)].length,22);
 });

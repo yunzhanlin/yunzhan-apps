@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash,createPublicKey,verify} from 'node:crypto';
 import {beforeIntrusion,originalIntrusionWorkflow} from './pre-intrusion-release.mjs';
 import {preWAFHealthRead} from './pre-waf-health-release.mjs';
@@ -40,7 +41,7 @@ test('new original-key signed50 changes only intrusion while every prior applica
  for(const item of a.apps){const p='dist/apps/'+item.id+'/'+item.version+'/manifest.json';assert.equal(sha(read(beforeIntrusion+p)),item.sha256);assert.equal(sha(read(p)),item.sha256);assert.equal(read(beforeIntrusion+p+'.sha256').toString(),item.sha256+'  manifest.json\n');}
 });
 test('all historical CI bytes are preserved apart from the exact predecessor ABI root; new complete gates cannot be skipped',()=>{
- const raw=read('.github/workflows/verify.yml'),restored=originalIntrusionWorkflow(raw).toString(),at=restored.indexOf('\n  intrusion-native-amd64:\n');assert(at>0);assert.equal(restored.slice(0,at),read(beforeIntrusion+'verify-pr61.yml').toString());
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),restored=originalIntrusionWorkflow(raw).toString(),at=restored.indexOf('\n  intrusion-native-amd64:\n');assert(at>0);assert.equal(restored.slice(0,at),read(beforeIntrusion+'verify-pr61.yml').toString());
  const fresh=raw.toString().slice(raw.toString().indexOf('\n  intrusion-native-amd64:\n'));for(const s of ['../tools/run-intrusion-ci.mjs "$(command -v go)"\n','go vet ./...','../tools/run-intrusion-ci.mjs "$(command -v go)" race','timeout 240s sudo python3','npm ci --prefix panel-integration-intrusion/web --ignore-scripts','scripts/test-intrusion-workspace.mjs','-published-app-registry-root "$GITHUB_WORKSPACE"','node tools/verify-intrusion-handler-boundary.mjs'])assert(fresh.includes(s),s);assert(!raw.toString().includes('continue-on-error'));
  assert.throws(()=>originalIntrusionWorkflow(Buffer.from(raw.toString().replace('go vet ./...','true'))));
 });

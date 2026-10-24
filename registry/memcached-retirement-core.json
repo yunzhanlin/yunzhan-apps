@@ -1,0 +1,139 @@
+{
+  "format": 1,
+  "recorded_utc": "2026-10-24 17:42:55 UTC",
+  "version": "0.1.0-dev.proapps24memretireblbq",
+  "frozen_inputs_sha256": "324e66f7d7f4a9686bfb32ab2ff966538ae26955dc1a567bc6ee746679702495",
+  "frozen_files": 17622,
+  "Go_files": 1458,
+  "source_scope": "panel-integration-memcached-retirement",
+  "source_index_sha256": "1c0ff2ce9e52521e0ea559c0556c4b7ecf1996bce9b2e278ec5dfd0bd054b282",
+  "release_index_sha256": "cd0b08f7a6d72a3c3cab051cfa701e0f7d1bcb9866a8e9af925ffd2c261970b5",
+  "exported_files": 1919,
+  "source_overlays": 0,
+  "parent_frozen_inputs": "2477f8c1450679ff5711cb887cdfee2b485e8833eb64a0014c5369192710a8f7",
+  "normal_programme_builds": {
+    "amd64": {
+      "portable_build_completed": true,
+      "archive": "/Volumes/MacSSD/MacData/Projects/ChatGPT/服务器安全/panel/.local/commercial-memcached-retirement24blbq.4Q5kuL/source/.local/releases/panel-0.1.0-dev.proapps24memretireblbq-linux-amd64.tar.gz",
+      "archive_sha256": "90771dee441a8c9800045d9d615f1bde4665817e4daa3c2ebb1371b7b2422018",
+      "archive_bytes": 22004310,
+      "source_inputs_sha256": "324e66f7d7f4a9686bfb32ab2ff966538ae26955dc1a567bc6ee746679702495",
+      "source_overrides": 0,
+      "programmes": {
+        "panel": "d792b5d1bf194b825a1cff3fda634fc4a56950ab6c301544803e81bbc1979833",
+        "panel-executor": "ac337aa046af29b16c750bbf2854ccc4244ece287300f7a5d33382d118711953",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "build_checks_sha256": "ab75a099f6203562abcd286808336939fb5f3457d0de1e177647d98696967ba4",
+      "host_platform": "darwin",
+      "host_checks_not_native_Root_packaging_acceptance": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "portable_build_completed": true,
+      "archive": "/Volumes/MacSSD/MacData/Projects/ChatGPT/服务器安全/panel/.local/commercial-memcached-retirement24blbq.4Q5kuL/source/.local/releases/panel-0.1.0-dev.proapps24memretireblbq-linux-arm64.tar.gz",
+      "archive_sha256": "066f05e56adffe1c5c5c5dea6af04107bc795841e37e4ecdc55f99b1b91697ce",
+      "archive_bytes": 20378476,
+      "source_inputs_sha256": "324e66f7d7f4a9686bfb32ab2ff966538ae26955dc1a567bc6ee746679702495",
+      "source_overrides": 0,
+      "programmes": {
+        "panel": "c504890f80bc929fb0d0de59ce1ab39ef9f60f722aa6d8e5676c98e063366024",
+        "panel-executor": "88ff870b97cdb64befed915a56108231e5d1e7a0690aa6a221ca81e0eb9bef8c",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "build_checks_sha256": "fdf1a0ed1e69e051efb2757b081761e62d6edd0589656cd582bb13f3fa4a7f22",
+      "host_platform": "darwin",
+      "host_checks_not_native_Root_packaging_acceptance": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "actual_Root_models": {
+    "amd64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blcc-amd64.01436cf16d23519a5af68207fed77504",
+      "proof_sha256": "8192a6926b52f0265ef3e40f6c75258de4522304de5b8e6d67e9dd6e13aafd9b",
+      "top_level": 122,
+      "including_subtests": 848,
+      "skips": 0,
+      "failures": 0,
+      "all_current103_tables_and_empty_control_ABI_preserved": true,
+      "all_original_containers_NSS_20modules_and_programme_lifetimes_preserved": true,
+      "original_false_case_entire_inventory_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false,
+      "cohorts": [
+        {
+          "name": "appcatalog",
+          "top_level": 20
+        },
+        {
+          "name": "core-control",
+          "top_level": 13
+        },
+        {
+          "name": "core-install-workspace",
+          "top_level": 29
+        },
+        {
+          "name": "core-runtime-audit",
+          "top_level": 3
+        },
+        {
+          "name": "executor",
+          "top_level": 57
+        }
+      ],
+      "model_group_timeout_seconds": 180,
+      "model_unit_timeout_seconds": 900
+    },
+    "arm64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blbw-arm64.165a607101cf03d9c570d9656d78d80e",
+      "proof_sha256": "115692aab8f277eead4567fed8e293138721692bd3c537180353babd59c7555b",
+      "top_level": 122,
+      "including_subtests": 848,
+      "skips": 0,
+      "failures": 0,
+      "all_current103_tables_and_empty_control_ABI_preserved": true,
+      "all_original_containers_NSS_20modules_and_programme_lifetimes_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false
+    }
+  },
+  "retained_AMD_original_false": {
+    "root": "/var/lib/panel-executor/memcached-unix-account-models24blbw-amd64.31fad1d7fc20502c5587f8ca42012759",
+    "proof_sha256": "02b53e76c7e017be3d00e97c9db498bae2e1d16134c842d49125fe2247421fd2",
+    "log_sha256": "7d5d0cfc53d81a3b1ab1b38f3ea53cab4a55ca26ef7ae83a120cda7cabfce2ce",
+    "original_ok": false,
+    "reason": "Original whole-Core Go test process timed out at180s while creating a temporary SQLite test store. No functional assertion failure was reported before the alarm. Original proof and entire case preserved; new complete partitioned model qualification is separate.",
+    "relabeled": false,
+    "product_native_deadlines_changed": false
+  },
+  "ui": {
+    "actual_Vue_logic": 22,
+    "package_label_models": 7,
+    "real_Chromium_mock_cases": 16,
+    "widths": [
+      1280,
+      390
+    ],
+    "visual_screenshots_reviewed": true,
+    "real_native_or_public_API_acceptance": false
+  },
+  "candidate_scope": {
+    "stopped_instance_exact_typed_name_retirement": true,
+    "one_bound_nonforced_CID_DELETE_only": true,
+    "retains_images_accounts_configuration_socket_directories_and_history": true,
+    "unknown_or_lost_result_never_replayed": true,
+    "current_absence_needs_four_complete_engine_reads_and_original_receipt": true,
+    "retired_state_never_claims_healthy_or_live_install": true,
+    "legacy_TCP_migration_is_manual_only": true
+  },
+  "application_manifests_changed": 0,
+  "signed": false,
+  "normal_upgrade_accepted": false,
+  "Main19100_mutated": false,
+  "all50_commercial": false
+}

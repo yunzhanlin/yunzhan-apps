@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -21,7 +22,7 @@ test('independent1.3 installable package changes exactly one app and retains ori
  assert.equal(r.manifest_sha256,sha(raw));assert.equal(r.catalog_sha256,sha(await catalogBeforeDisk130Bytes(catalog)));
  for(const key of ['commercial_all50','platform_ops_commercial','main_program_delivered','installed_app_update_verified_at_publication','publisher_key_changed'])assert.equal(r[key],false,key);
  assert.equal(r.retained_ci_failure.original_failure_rewritten,false);
- const ci=await read('.github/workflows/verify.yml');
+ const ci=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));
  const install=ci.indexOf('npm ci --prefix panel-integration-geography/web --ignore-scripts');
  assert(install>=0&&install<ci.indexOf('node --test panel-integration-geography/scripts/test-deferred-workspace.mjs'));
 });

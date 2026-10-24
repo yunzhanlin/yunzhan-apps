@@ -1,0 +1,31 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
+const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-ids-upgrade-lineage/',read=n=>fs.readFileSync(path.join(root,n)),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
+test('new ordinary IDS lineage release has exact1763 source files,1313 Go members and only four reviewed differences from immutable PHP candidate',()=>{
+ const i=json(scope+'source-sha256.json'),parent=json('panel-integration-php-security/source-sha256.json'),bound=json(scope+'release-source-inputs.json');
+ assert.equal(sha(read(scope+'source-sha256.json')),'12aa82f2353a5c718da14a1a0fd05ce7b285b9900c948d307bcbd18054474f97');assert.equal(i.release.frozen_inputs_sha256,'816a1de3f82661cde7903ed0b31b328a6549de751dbc69d85020945f64a32856');assert.equal(i.release.archive_sha256,'4aa4d48609cd10e421a65462328d39409a1e95ef3042b50e4b8b83352171b8b3');assert.deepEqual(bound.files,i.files);assert.deepEqual(i.test_overrides,{});
+ assert.equal(Object.keys(i.files).length,1763);assert.equal(Object.keys(i.files).filter(n=>n.endsWith('.go')).length,1313);assert(Object.keys(parent.files).every(n=>Object.hasOwn(i.files,n)));
+ assert.deepEqual(Object.keys(i.files).filter(n=>!Object.hasOwn(parent.files,n)).sort(),['internal/executor/program_upgrade_ids_lineage_linux.go','internal/executor/program_upgrade_ids_lineage_linux_test.go']);
+ assert.deepEqual(Object.keys(i.files).filter(n=>Object.hasOwn(parent.files,n)&&i.files[n]!==parent.files[n]).sort(),['internal/executor/program_upgrade_ids_linux.go','internal/executor/runtime_source_download_linux_test.go']);
+ for(const[n,h]of Object.entries(i.files)){assert(path.posix.normalize(n)===n&&!path.isAbsolute(n)&&!n.split('/').some(p=>['..','.local','.git','node_modules'].includes(p)));const s=fs.lstatSync(path.join(root,scope,n));assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1);assert.equal(sha(read(scope+n)),h,n);}
+ for(const n of ['web/src/FileManager.vue','internal/runtimecatalog/catalog.go','internal/runtimecatalog/php_security.go','packaging/upgrade-release.py','packaging/development-upgrade.py','internal/executor/program_upgrade_queues_linux.go'])assert.equal(i.files[n],parent.files[n],n);
+});
+test('original failed PHP source stays immutable; current fixture uses an approved source while retaining every no-untrusted-fallback assertion',()=>{
+ const old=read('panel-integration-php-security/internal/executor/runtime_source_download_linux_test.go').toString(),current=read(scope+'internal/executor/runtime_source_download_linux_test.go').toString();
+ assert(old.includes('php := runtimecatalog.PHP[0]'));assert(current.includes('php := runtimecatalog.PHPReleases()[0]'));assert(current.includes('Apache archive policy escaped into PHP'));
+ assert(current.includes('TestRuntimeSourceDownloadNoUntrustedFallback'));const parent=json('panel-integration-php-security/source-sha256.json');assert.equal(sha(Buffer.from(old)),parent.files['internal/executor/runtime_source_download_linux_test.go']);
+ for(const text of ['case 403:','case 429:','TLS','context.Canceled'])if(old.includes(text))assert(current.includes(text),text);
+ const source=read(scope+'internal/executor/program_upgrade_ids_linux.go').toString();assert(source.includes('programQueueIDSRecoveryRevision(records, time.Now())'));assert(source.includes('idsTransactionHistoryCollect(&configurations)'));assert(source.includes('idsRecoveryCurrentConfiguration(*tip)'));assert(source.includes('r.readLeases = append(r.readLeases, lease)'));assert(source.includes('return r.unchanged()'));
+});
+test('lineage remains a read-only exact-action transaction proof with both current file identities and unchanged native serialization',()=>{
+ const code=read(scope+'internal/executor/program_upgrade_ids_lineage_linux.go').toString();
+ for(const text of ['programQueueIDSRecoveryRevision(records, now)','o.State == "succeeded"','tx.State != "committed"','validateThreatIDSJournal(tx)','programQueueIDSLineageAction(o, old, next)','e.next.Revision != revision+1','visited != len(edges)','bytes.Equal(previous.Changes[i].NextData, e.tx.Changes[i].OldData)','bytes.Equal(raw, tip.config)','bytes.Equal(data, tip.yaml)','syscall.O_NOFOLLOW','identity.Nlink != 1','r.snapshots = append','r.ctx.Err()'])assert(code.includes(text),text);
+ for(const forbidden of ['os.WriteFile(','.Chmod(','.Chown(','exec.Command(','ids-recover --','systemctl start','systemctl stop','systemctl reset-failed'])assert(!code.includes(forbidden),forbidden);
+ const models=read(scope+'internal/executor/program_upgrade_ids_lineage_linux_test.go').toString();assert(models.includes('func TestProgramUpgradeIDS'));assert(models.includes('same'));assert(models.includes('transaction'));assert(models.includes('operation'));
+});
+test('all23 accepted jobs remain byte-exact and the revised unaccepted PHP gate tests the new normal source instead of overlaying its failed parent',()=>{
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),marker='\n  php-security-native-amd64:\n',at=workflow.indexOf(marker);assert(at>0);assert.equal(sha(workflow.subarray(0,at)),'d4f4c1f77641e83d1895de4dad70b5844628a63b57fcbd59c1258bdb75964dc7');
+ const gate=workflow.subarray(at).toString();for(const text of ['panel-integration-ids-upgrade-lineage','tools/run-ids-upgrade-lineage-ci.mjs','tools/run-php-security-ci.mjs','test -p 1 ./... -count=1','go vet ./...','test -race',"-run '^Test(ProgramUpgradeIDS|RuntimeSourceDownloadNoUntrustedFallback|PHPSecuritySourceGuard)'"])assert(gate.includes(text),text);
+ assert(!gate.includes('continue-on-error')&&!gate.includes('-overlay=')&&!gate.includes('git checkout --'));
+ const runner=read('tools/run-ids-upgrade-lineage-ci.mjs').toString();assert(runner.includes("Task|PHPSecurity)',137"));assert(runner.includes("RuntimeInstallShutdown)',41"));assert(runner.includes('length,66)'));
+});

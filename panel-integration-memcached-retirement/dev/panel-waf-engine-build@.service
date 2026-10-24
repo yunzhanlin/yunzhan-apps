@@ -1,0 +1,32 @@
+[Unit]
+Description=Panel pinned request-body WAF engine build %i (not site activation)
+After=network-online.target
+Wants=network-online.target
+[Service]
+Slice=system.slice
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --build-waf-engine %i
+TimeoutStartSec=300min
+KillMode=control-group
+UMask=0077
+PrivateTmp=true
+PrivateDevices=true
+ProtectHome=true
+ProtectSystem=strict
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/panel-executor /var/cache/panel-waf-build /opt/panel/app-modules
+ReadOnlyPaths=/etc/nginx /etc/panel
+NoNewPrivileges=true
+RestrictSUIDSGID=true
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
+# Preserve exactly the existing supervisor budget across RestrictSUIDSGID/NNP.
+# The fixed setpriv guard clears all grants before any source compiler runs.
+AmbientCapabilities=CAP_CHOWN CAP_DAC_OVERRIDE CAP_SETUID CAP_SETGID CAP_FOWNER CAP_KILL
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+# Fixed single-job builds reserve headroom for live services on a 1 GiB host.
+# Exhaustion must fail this isolated build, not evict the panel or websites.
+MemoryHigh=576M
+MemoryMax=640M
+MemorySwapMax=0
+TasksMax=256
+CPUQuota=100%

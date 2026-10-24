@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -41,7 +42,7 @@ test('normal startup authorization binds real root FLOCK and signed native proof
  assert.equal(r.actual_linux_root_transaction_fixtures.python_tests,36);assert.equal(r.actual_linux_root_transaction_fixtures.python_skips,0);assert.equal(r.actual_linux_root_transaction_fixtures.passed,true);
  assert.equal(history.actual_signed_start_failure_rollback.passed,false);assert.equal(r.retained_previous_start_failure.passed,false);assert.equal(r.retained_previous_start_failure.exact_owned_recovery.automatic_recovery,false);assert.equal(r.retained_non_targeted_failure.passed,false);assert.equal(r.retained_non_targeted_failure.scope_accepted,false);assert.equal(r.retained_non_targeted_failure.post_cleanup_audit.automatic_normal_rollback_verified,true);assert.equal(r.retained_non_targeted_failure.post_cleanup_audit.stopped_failed_normalization_case_verified,false);
  const prior=r.previous_native_queue_github_pr;assert.equal(prior.head,'2a99812bd0943015a385095e96b23a8ce412626a');assert.equal(prior.merge,'1bf8084f86c6ef2d1ef6fed8405cba50aa73d8ee');assert.equal(prior.main_ci_pending,false);
- const workflow=await read('.github/workflows/verify.yml');assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'"));assert(workflow.includes('test -race ./internal/upgradeguard -count=1'));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_development_upgrade_safety.py'"));assert(workflow.includes('test -race ./internal/upgradeguard -count=1'));
  assert.equal(r.native_development_layout_upgrade_verified,false);assert.equal(r.durable_interrupted_journal_recovery_complete,false);assert.equal(r.installer_death_during_constructor_verified,false);assert.equal(r.main_release_delivered,false);assert.equal(r.main_auto_installed_new_apps,0);assert.equal(r.all_50_commercial,false);assert.equal(c.commercial_feature_parity_complete,false);
  assert(r.remaining_gaps.some(s=>s.includes('kill9')));assert(r.remaining_gaps.some(s=>s.includes('retrofit')));assert(r.remaining_gaps.some(s=>/cold[ -]boot\/soak/.test(s)));
 });

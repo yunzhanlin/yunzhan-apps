@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "previous_head": "8e68688e8c7bb553c65805337a463cad4542905c",
+  "run": 40128267036,
+  "original_failures_preserved": [
+    {
+      "job": "memcached-retirement-handler-models-amd64",
+      "id": 120974254022,
+      "conclusion": "failure",
+      "models_129_and_subtests_855_passed_before_CLI_context_failure": true
+    },
+    {
+      "job": "intrusion-admission-native-amd64",
+      "id": 120974253893,
+      "conclusion": "failure"
+    },
+    {
+      "job": "verify",
+      "id": 120974253915,
+      "conclusion": "failure"
+    }
+  ],
+  "diagnostic": "sudo removed the two GitHub CI context markers required by the unchanged Root Linux CLI admission; complete Go suites never started in the three diagnosed failing steps",
+  "native_sudo_proof": {
+    "read_only": true,
+    "remote_files_written": 0,
+    "programme_or_application_mutations": 0,
+    "architectures": [
+      {
+        "arch": "amd64",
+        "original_plain_sudo": {
+          "uid": 0,
+          "GITHUB_ACTIONS": null,
+          "GITHUB_REPOSITORY": null
+        },
+        "explicit_allowlist": {
+          "uid": 0,
+          "GITHUB_ACTIONS": "true",
+          "GITHUB_REPOSITORY": "yunzhanlin/yunzhan-apps"
+        }
+      },
+      {
+        "arch": "arm64",
+        "original_plain_sudo": {
+          "uid": 0,
+          "GITHUB_ACTIONS": null,
+          "GITHUB_REPOSITORY": null
+        },
+        "explicit_allowlist": {
+          "uid": 0,
+          "GITHUB_ACTIONS": "true",
+          "GITHUB_REPOSITORY": "yunzhanlin/yunzhan-apps"
+        }
+      }
+    ]
+  },
+  "correction": {
+    "allowlist": [
+      "GITHUB_ACTIONS",
+      "GITHUB_REPOSITORY"
+    ],
+    "workflow_invocations": 37,
+    "job_count": 34,
+    "original_arguments_and_deadlines_unchanged": true,
+    "CLI_admission_guard_unchanged": true,
+    "production_source_overrides": 0,
+    "frozen_source_changes": 0
+  },
+  "old_failures_relabelled": false,
+  "old_jobs_retried": false,
+  "fresh_CI_acceptance": false,
+  "programme_signed": false,
+  "programme_installed": false,
+  "Main19100_mutated": false,
+  "all50_commercial": false
+}
+

@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -29,5 +30,5 @@ test('independent immutable service interlock has exact normal source, separate 
  assert.equal(r.normal_build_python_tests,113);assert.equal(r.normal_build_python_skips,41);assert.equal(r.normal_build_node_gates,36);
  for(const field of ['normal_fresh_install_verified','current_interlock_native_failure_rollback_verified','older_main_binary_native_retrofit_verified','cold_boot_orphan_interlock_verified','durable_interrupted_journal_recovery_complete','installer_death_during_constructor_verified','main_release_delivered','all_50_commercial'])assert.equal(r[field],false,field);
  assert.equal(c.commercial_feature_parity_complete,false);assert.equal(c.apps.length,50);assert.equal(r.main_auto_installed_new_apps,0);assert(r.remaining_gaps.some(s=>s.includes('kill9/power-loss')));
- const workflow=await read('.github/workflows/verify.yml');assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_start_guard_install.py'"));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_start_guard_install.py'"));
 });

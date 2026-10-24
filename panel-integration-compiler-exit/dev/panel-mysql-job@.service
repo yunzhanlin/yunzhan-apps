@@ -1,0 +1,14 @@
+[Unit]
+Description=Panel MySQL operation %i
+After=network.target
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --database-job %i
+TimeoutStartSec=60min
+KillMode=control-group
+UMask=0077
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc/panel/mysql /srv/panel/mysql /var/lib/panel-executor /var/backups/panel/mysql
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

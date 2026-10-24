@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -33,7 +34,7 @@ test('ordinary production transaction is exact normal source and maintains indep
  const gate=await read('panel-integration/internal/upgradeguard/guard.go');
  for(const text of ['/.program-upgrade.pending','r.Method == http.MethodGet','r.URL.Path == path','http.StatusServiceUnavailable','Retry-After','no-store','ctx.Err() != nil'])assert(gate.includes(text),text);
  assert((await read('panel-integration/cmd/panel/main.go')).includes('upgradeguard.Handler(app, "/api/ready")'));assert((await read('panel-integration/cmd/executor/main.go')).includes('upgradeguard.Handler(handler, "/v1/overview", "/v1/health")'));
- const workflow=await read('.github/workflows/verify.yml');assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_production_upgrade.py'"));assert(workflow.includes('test -race ./internal/upgradeguard -count=1'));
+ const workflow=originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'));assert(workflow.includes("sudo python3 -B -m unittest discover -s panel-integration/packaging -p 'test_production_upgrade.py'"));assert(workflow.includes('test -race ./internal/upgradeguard -count=1'));
  assert.equal(r.original_public_key_sha256,'4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339');assert.equal(r.original_signed_verifier_sha256,'fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5');
  assert.equal(r.main_release_delivered,false);assert.equal(r.actual_main_release,c.reviewed_normal_release.release);assert.equal(c.reviewed_normal_release.main_release_delivered,true);assert.equal(r.main_auto_installed_new_apps,0);assert.equal(c.commercial_feature_parity_complete,false);assert.equal(r.all_50_commercial,false);
  assert(r.remaining_gaps.some(s=>s.includes('kill9')));assert(r.remaining_gaps.some(s=>s.includes('two-architecture')));assert(r.remaining_gaps.some(s=>s.includes('file-backed')));

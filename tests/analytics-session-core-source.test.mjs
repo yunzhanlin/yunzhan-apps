@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
 import path from 'node:path';import {fileURLToPath} from 'node:url';import {createHash} from 'node:crypto';
 import {originalAnalyticsWorkflow} from './pre-analytics-workflow.mjs';
@@ -21,7 +22,7 @@ test('actual elapsed-time browser and signed Main program proofs remain distinct
  assert(r.original_failed_executor_fixture_retained);assert.equal(r.original_failed_fixture_relabelled,false);assert.equal(r.physical_mobile_acceptance,false);assert.equal(r.actual_power_loss_acceptance,false);
 });
 test('all earlier workflow bytes stay intact before appended new-source positive handler and actual tracker gates',()=>{
- const workflow=originalAnalyticsWorkflow(read('.github/workflows/verify.yml')).toString(),marker='      - name: Analytics session complete Root Linux contracts (source only)',at=workflow.indexOf(marker);assert(at>0);
+ const workflow=originalAnalyticsWorkflow(originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml'))).toString(),marker='      - name: Analytics session complete Root Linux contracts (source only)',at=workflow.indexOf(marker);assert(at>0);
  const original=workflow.slice(0,at);assert.equal(sha(Buffer.from(original)),'fd925cd2e8aa81fb871077615778ee79decbae65942b9cec7412a79f3886eb63');assert(original.includes('working-directory: panel-integration-file-manager'));assert(original.includes("test_program_queue_diagnostics test_production_upgrade test_development_upgrade_safety test_install_development_dispatch test_install_dependency_policy test_install_gateway_policy"));
  const current=workflow.slice(at);for(const s of ['working-directory: panel-integration-analytics-session','sudo "$(command -v go)" test -p 1 ./... -count=1','TestPublishedRepositoryCurrentSignedManifestABI','scripts/test-analytics-session.mjs','scripts/test-analytics-html-state.mjs','scripts/test-analytics-tracker.mjs','scripts/web-entry-budget.mjs'])assert(current.includes(s),s);
 });

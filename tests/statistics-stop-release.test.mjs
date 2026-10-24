@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -33,6 +34,6 @@ test('both original-key QA upgrades and Main delivery retain explicit data and a
  assert.equal(r.original_signer_sha256,'fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5');assert.equal(r.original_public_key_sha256,'4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339');
 });
 test('new native AMD64 CI job appends without removing or weakening one byte of previous gates',()=>{
- const workflow=read('.github/workflows/verify.yml').toString(),at=workflow.indexOf('\n  statistics-stop-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(workflow.slice(0,at))),r.previous_workflow_full_prefix_sha256);assert.equal(r.previous_workflow_full_prefix_sha256,'14e8e68972be5c21357bb714ffd1f277f2417b7115824bbc8fe06f65cf96f45e');assert.doesNotMatch(workflow,/continue-on-error/);
+ const workflow=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=workflow.indexOf('\n  statistics-stop-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(workflow.slice(0,at))),r.previous_workflow_full_prefix_sha256);assert.equal(r.previous_workflow_full_prefix_sha256,'14e8e68972be5c21357bb714ffd1f277f2417b7115824bbc8fe06f65cf96f45e');assert.doesNotMatch(workflow,/continue-on-error/);
  for(const value of ['runs-on: ubuntu-24.04',"timeout 240s sudo python3 -B -m unittest discover -s packaging -p 'test_*.py' -v",'test -p 1 ./... -count=1','go vet ./...',"-race ./internal/executor -run '^Test(StatisticsRecovery|ModuleWorker|WorkerLifecycle)'",'-race ./cmd/executor',"npm ci --prefix panel-integration-statistics-stop/web --ignore-scripts",'scripts/test-docker-scope.mjs','scripts/test-docker-site-binding.mjs','scripts/web-entry-budget.mjs'])assert(workflow.slice(at).includes(value),value);
 });

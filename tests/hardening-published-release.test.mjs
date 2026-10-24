@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preIntrusionRead} from './pre-intrusion-release.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash,createPublicKey,verify}from'node:crypto';
 import{beforeHardening,originalHardeningWorkflow,scopedAnalyticsABIline}from'./pre-hardening-workflow.mjs';
@@ -13,7 +14,7 @@ test('new original-key signed50 changes only hardening and preserves the exact i
  const m=JSON.parse(read('dist/apps/system-hardening/1.1.0/manifest.json')),item=b.apps.find(a=>a.id===m.id);assert.equal(m.version,'1.1.0');assert.equal(sha(read('dist/apps/system-hardening/1.1.0/manifest.json')),item.sha256);assert.deepEqual(m.required_panel_features,['hardening-reversible-journal-v1']);assert.equal(sha(read('dist/apps/system-hardening/1.0-compat1/manifest.json')),'6104277bd6812ca9aafe679ebc8bea3da7077a2fd76bd00d5442d2393274004e');assert.equal(sha(read('dist/apps/website-analytics/2.3.1/manifest.json')),'c33f6f987ea318dfff42c5a9a225aa4e8d123d8334f74c207dbf93e475cbb157');
 });
 test('all original CI bytes reconstruct exactly; both new current50 gates are mandatory',()=>{
- const raw=read('.github/workflows/verify.yml'),old=read(beforeHardening+'verify-pr60.yml'),restored=originalHardeningWorkflow(raw);assert(restored.toString().startsWith(old.toString()));assert.equal(raw.toString().split(scopedAnalyticsABIline).length-1,1);
+ const raw=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')),old=read(beforeHardening+'verify-pr60.yml'),restored=originalHardeningWorkflow(raw);assert(restored.toString().startsWith(old.toString()));assert.equal(raw.toString().split(scopedAnalyticsABIline).length-1,1);
  for(const value of['working-directory: panel-integration-hardening','-published-app-registry-root "$GITHUB_WORKSPACE"','node tools/verify-hardening-handler-boundary.mjs'])assert(raw.toString().slice(raw.toString().lastIndexOf('      - name: Current original-key signed50')).includes(value));assert(!raw.toString().includes('continue-on-error'));
  for(const mutate of[s=>s.replace('go vet ./...','true'),s=>s.replace(scopedAnalyticsABIline,scopedAnalyticsABIline+'\n'+scopedAnalyticsABIline)])assert.throws(()=>originalHardeningWorkflow(Buffer.from(mutate(raw.toString()))));
 });

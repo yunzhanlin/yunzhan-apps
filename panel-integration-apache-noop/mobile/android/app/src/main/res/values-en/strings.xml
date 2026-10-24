@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Yunzhan Panel</string>
+    <string name="title">Yunzhan Panel · Secure Mobile</string>
+    <string name="endpoint_hint">https://your-panel.example/security-entry/</string>
+    <string name="connect">Connect</string>
+    <string name="clear_session">Clear session</string>
+    <string name="refresh">Refresh</string>
+    <string name="privacy_status">Release builds require HTTPS. The panel handles passwords; native storage never saves them.</string>
+    <string name="locked_message">Panel locked\nUnlock with device credentials or biometrics</string>
+    <string name="unlock">Unlock panel</string>
+    <string name="logout">Sign out and reconnect</string>
+    <string name="understood">OK</string>
+    <string name="invalid_panel_address">Enter a complete HTTPS panel URL without credentials, temporary tokens, query parameters or fragments. QA builds allow loopback HTTP only.</string>
+    <string name="clearing_old_session">Clearing the previous session. Please try again shortly.</string>
+    <string name="connection_status">%1$s · %2$s</string>
+    <string name="connection_qa">QA test build</string>
+    <string name="connection_system_tls">System TLS verification</string>
+    <string name="navigation_blocked">Navigation to another origin was blocked. Open it separately in a browser; the panel session is not forwarded.</string>
+    <string name="tls_failed">Certificate verification failed. Configure a trusted HTTPS certificate for the panel before reconnecting.</string>
+    <string name="connection_failed">Connection failed. Check the panel URL, network and certificate before trying again.</string>
+    <string name="file_picker_unavailable">The document picker is unavailable.</string>
+    <string name="download_notice">Management downloads are not automated. Sign in with a trusted browser to download; this app never forwards the session to a system download service.</string>
+    <string name="page_dialog_title">From %1$s</string>
+    <string name="confirm">Confirm</string>
+    <string name="cancel">Cancel</string>
+    <string name="device_security_required">Device security is not configured. Sign out, or enable a secure device lock before unlocking.</string>
+    <string name="unlock_title">Unlock Yunzhan Panel</string>
+    <string name="unlock_subtitle">Use device biometrics or lock-screen credentials</string>
+    <string name="still_locked">The panel remains locked. Unlock it or sign out.</string>
+    <string name="clearing_data">Clearing cookies, web storage and cache…</string>
+    <string name="session_cleared">Local session cleared. Reconnecting requires panel login. Previous server sessions retain their original expiry.</string>
+    <string name="renderer_failed">The web process exited and local login state was cleared. Reconnect and sign in; the previous session is not automatically restored.</string>
+    <string name="local_network_permission">Optional: allow local network access for a LAN panel</string>
+    <string name="local_network_granted">Local network access is granted. Connect to your HTTPS panel manually; this app does not scan the network or reconnect automatically.</string>
+</resources>

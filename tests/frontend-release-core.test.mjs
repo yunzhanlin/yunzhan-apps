@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -29,7 +30,7 @@ test('real ARM old-tab write refusal and explicit reload never claim a second AM
  const p=r.real_ARM_browser_transition;assert(p.actual_old_UI_stop_blocked&&p.no_new_native_job_or_receipt_overwrite&&p.same_original_container_identity_and_HTTP200&&p.explicit_notice_button_reload&&p.raw_watcher_source_identical);assert.equal(p.old_entry,'./assets/index-C4ZRdQPc.js');assert.equal(p.new_entry,'./assets/index-Cvl9QUkY.js');assert.equal(r.Main19100_delivery.same_signed_new_frontend_entry,p.new_entry);assert.equal(p.AMD_same_browser_transition_executed,false);assert.equal(r.commercial_all50,false);assert(r.limitations.some(s=>s.includes('WebSockets'))&&r.limitations.some(s=>s.includes('PHP and IDS')));
 });
 test('new frontend CI appends to the complete old workflow without weakening original gates',()=>{
- const c=read('.github/workflows/verify.yml').toString(),at=c.indexOf('\n  frontend-release-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(c.slice(0,at))),r.prior_workflow_whole_sha256);assert.equal(r.prior_workflow_whole_sha256,'56cbca761cba10b72822757a7995b28e9e3a2402401bb3530e518f0629cab842');assert.doesNotMatch(c,/continue-on-error/);assert.equal(r.mandatory_additional_CI_job,'frontend-release-native-amd64');
+ const c=originalReviewedHTTPSFixtureWorkflow(read('.github/workflows/verify.yml')).toString(),at=c.indexOf('\n  frontend-release-native-amd64:\n');assert(at>0);assert.equal(sha(Buffer.from(c.slice(0,at))),r.prior_workflow_whole_sha256);assert.equal(r.prior_workflow_whole_sha256,'56cbca761cba10b72822757a7995b28e9e3a2402401bb3530e518f0629cab842');assert.doesNotMatch(c,/continue-on-error/);assert.equal(r.mandatory_additional_CI_job,'frontend-release-native-amd64');
  for(const s of ['runs-on: ubuntu-24.04','scripts/test-frontend-release.mjs','scripts/test-store-updates.mjs','scripts/test-disk-scan-lifecycle.mjs','scripts/test-docker-site-binding.mjs','npm ci --prefix panel-integration-ui-release/web --ignore-scripts','npm run build --prefix web','scripts/web-entry-budget.mjs web/dist'])assert(c.slice(at).includes(s),s);
  assert(read(scope+'packaging/build-release.sh').toString().includes('scripts/test-frontend-release.mjs'));
 });

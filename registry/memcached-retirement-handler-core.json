@@ -1,0 +1,196 @@
+{
+  "format": 1,
+  "recorded_utc": "2026-10-24 19:13:07 UTC",
+  "version": "0.1.0-dev.proapps24memretirehandlerblcu",
+  "frozen_inputs_sha256": "f7d38cf4498342a12e59ec57c1a7ce404ac1a2b3daaab3c093f51e54b95e409b",
+  "frozen_files": 17623,
+  "Go_files": 1459,
+  "source_scope": "panel-integration-memcached-retirement-handler",
+  "source_index_sha256": "a1c1909d3a33c6abaf613e9feaf50af2c846d1db7055f4d1b4cb87e918bc1467",
+  "release_index_sha256": "ebdd97d7a834332c2c237f2e08891967b49ecb84b886301da38342dc279c995b",
+  "exported_files": 1920,
+  "source_overlays": 0,
+  "parent_frozen_inputs": "324e66f7d7f4a9686bfb32ab2ff966538ae26955dc1a567bc6ee746679702495",
+  "installed_upgrade_base_inputs": "2477f8c1450679ff5711cb887cdfee2b485e8833eb64a0014c5369192710a8f7",
+  "normal_programme_builds": {
+    "amd64": {
+      "portable_build_artifacts_complete_and_verified": true,
+      "archive": "panel-0.1.0-dev.proapps24memretirehandlerblcu-linux-amd64.tar.gz",
+      "archive_sha256": "6ecb06bda585506dbd4b4846f1b2666f03d569ddac20fd20d3797a6f6968ae6a",
+      "archive_bytes": 22000567,
+      "source_inputs_sha256": "f7d38cf4498342a12e59ec57c1a7ce404ac1a2b3daaab3c093f51e54b95e409b",
+      "source_overrides": 0,
+      "programmes": {
+        "panel": "83a03cfe2bf7a2b5c375a9422342e8b1c2e65890097360573134cf12b850d111",
+        "panel-executor": "c2c4ce973cb8c5336f7e51e7ee44e8fd0e6db996bf41c9fc8cd7470209578401",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "packaging_test_binaries": {
+        "executor": {
+          "bytes": 39346336,
+          "sha256": "47f3f00d9568ea7ad4fb5a59446105d08a627f0e60f0206e15921ccec183bc48"
+        },
+        "upgradeguard": {
+          "bytes": 5902496,
+          "sha256": "b5d1d96e53bf4062803e60a083383f1bf0b2915086be655600aaf165020588f2"
+        },
+        "diskjob": {
+          "bytes": 8482976,
+          "sha256": "6fa2dbf6b7f2293cd2f607b687b64712130aebd6253d760758527187dd0a4055"
+        }
+      },
+      "build_checks_sha256": "d92e0e9829de23de3c02380c0f4f263d5cf9ffd71291de69d547d809d50065b0",
+      "host_platform": "darwin",
+      "host_checks_not_native_Root_packaging_acceptance": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "portable_build_artifacts_complete_and_verified": true,
+      "archive": "panel-0.1.0-dev.proapps24memretirehandlerblcu-linux-arm64.tar.gz",
+      "archive_sha256": "856b42be65a1edc4c2a36feed440541f5bdb12a0216a6a669d3a8289b9ed1ac7",
+      "archive_bytes": 20371718,
+      "source_inputs_sha256": "f7d38cf4498342a12e59ec57c1a7ce404ac1a2b3daaab3c093f51e54b95e409b",
+      "source_overrides": 0,
+      "programmes": {
+        "panel": "567ac9d2b3b20e4077e2869820a9958fb55111594428089ae517c1e0ed8cc16c",
+        "panel-executor": "504cee456edbd000d97090cfb4b03cb8f8a1dae4d1f17822ccf28663e7d4fa08",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "packaging_test_binaries": {
+        "executor": {
+          "bytes": 35389600,
+          "sha256": "0a57c4357d0963c5cda624ad74a57381594775d773396b63dc395fc775069f05"
+        },
+        "upgradeguard": {
+          "bytes": 5505184,
+          "sha256": "22ab2f0a75ba92abf7fee2c939980ba88ec28220924b151d46173bdda0e3a760"
+        },
+        "diskjob": {
+          "bytes": 8126624,
+          "sha256": "79f3e02542e3fcba5585adb1609a2c1566d98b106acfde2a200a67aa170cb6ce"
+        }
+      },
+      "build_checks_sha256": "3b7def548c3933372d032498bf3c39979c22191119a9af3b958a40c8d3aa933f",
+      "host_platform": "darwin",
+      "host_checks_not_native_Root_packaging_acceptance": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "actual_Root_models": {
+    "amd64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blcw-amd64.470a54b55c2d03b65045eae5e4af1640",
+      "proof_sha256": "f54f97e8f590b155cd315b70345119c3ee895f21d2f6f53c600fab95404f5b97",
+      "top_level": 129,
+      "including_subtests": 855,
+      "skips": 0,
+      "failures": 0,
+      "model_group_timeout_seconds": 180,
+      "model_unit_timeout_seconds": 900,
+      "cohorts": [
+        {
+          "name": "appcatalog",
+          "top_level": 27,
+          "including_subtests": 144,
+          "log_sha256": "7b4ad53cf8132755db5b84fad4553bf43a8a384874e81d352f006839f3805095"
+        },
+        {
+          "name": "core-control",
+          "top_level": 13,
+          "including_subtests": 99,
+          "log_sha256": "2e9bbf2cfb844156467e41e9cd22c7a53af4b716dfa4e132abd291b9370d2328"
+        },
+        {
+          "name": "core-install-workspace",
+          "top_level": 29,
+          "including_subtests": 141,
+          "log_sha256": "18771548bd82f5b1d297557f9b45e81a63e8df0f946b296b9c2a81e478c07f64"
+        },
+        {
+          "name": "core-runtime-audit",
+          "top_level": 3,
+          "including_subtests": 26,
+          "log_sha256": "836796db7059712ee48510c2ed0fb7c3e24d7751b33379cceade1be262baf633"
+        },
+        {
+          "name": "executor",
+          "top_level": 57,
+          "including_subtests": 445,
+          "log_sha256": "935d315d3a09a63758d6e41b45890a0479b9923ddcab6b082aa9b4605fd9b14c"
+        }
+      ],
+      "all_current103_tables_and_empty_control_ABI_preserved": true,
+      "all_original_containers_NSS_20modules_and_programme_lifetimes_preserved": true,
+      "original_F47_true_and_false_model_receipts_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false
+    },
+    "arm64": {
+      "root": "/var/lib/panel-executor/memcached-unix-account-models24blcw-arm64.ad2ca8b679bb3e21b62da2830f5ca7eb",
+      "proof_sha256": "44b7678a7511df7ee0d3bfa54ed35c537a4e62f860ce62072b4c4f225dcf47f3",
+      "top_level": 129,
+      "including_subtests": 855,
+      "skips": 0,
+      "failures": 0,
+      "model_group_timeout_seconds": 180,
+      "model_unit_timeout_seconds": 900,
+      "cohorts": [
+        {
+          "name": "appcatalog",
+          "top_level": 27,
+          "including_subtests": 144,
+          "log_sha256": "4060fe24f36726bf9682329f5a9b9b63e77ba206803db735fd38634b382335a9"
+        },
+        {
+          "name": "core-control",
+          "top_level": 13,
+          "including_subtests": 99,
+          "log_sha256": "6743378dced45b15437a2ef9d998615928d7c696e009acb1764e7a3d5e55ce68"
+        },
+        {
+          "name": "core-install-workspace",
+          "top_level": 29,
+          "including_subtests": 141,
+          "log_sha256": "5171c203570a9bda61faebd2275ebed434fc6c50e1f4101d6c99ab2dcc69755b"
+        },
+        {
+          "name": "core-runtime-audit",
+          "top_level": 3,
+          "including_subtests": 26,
+          "log_sha256": "3ab7720763fd4668cb5e5288dc122f872a5040295c536a337fd2f01660a390cf"
+        },
+        {
+          "name": "executor",
+          "top_level": 57,
+          "including_subtests": 445,
+          "log_sha256": "a44c7d1152cd91a458057d199e990d5e3d97a48a4a8973d99f1bb77c66c32fb6"
+        }
+      ],
+      "all_current103_tables_and_empty_control_ABI_preserved": true,
+      "all_original_containers_NSS_20modules_and_programme_lifetimes_preserved": true,
+      "original_F47_true_and_false_model_receipts_preserved": true,
+      "default_account_created": false,
+      "default_application_installed": false
+    }
+  },
+  "required_handlers": [
+    "compose-memcached-digest-v1",
+    "compose-memcached-unix-v1",
+    "compose-memcached-retirement-v1"
+  ],
+  "retained_F47_AMD_original_false": {
+    "root": "/var/lib/panel-executor/memcached-unix-account-models24blbw-amd64.31fad1d7fc20502c5587f8ca42012759",
+    "proof_sha256": "02b53e76c7e017be3d00e97c9db498bae2e1d16134c842d49125fe2247421fd2",
+    "original_ok": false,
+    "relabeled": false
+  },
+  "original_cache_only_candidate_signed_or_installed": false,
+  "application_manifests_changed": 0,
+  "signed": false,
+  "normal_upgrade_accepted": false,
+  "Main19100_mutated": false,
+  "all50_commercial": false
+}

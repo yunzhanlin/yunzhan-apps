@@ -1,0 +1,14 @@
+[Unit]
+Description=Panel verified Docker installer %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --install-job %i
+TimeoutStartSec=30min
+KillMode=control-group
+UMask=0022
+PrivateTmp=true
+ProtectHome=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6 AF_NETLINK

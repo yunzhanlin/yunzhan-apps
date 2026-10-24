@@ -1,0 +1,24 @@
+[Unit]
+Description=Panel isolated MariaDB instance %i
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/panel/bin/panel-executor --serve-mariadb %i
+RuntimeDirectory=panel-mariadb-%i
+RuntimeDirectoryMode=0755
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=90
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/panel/mariadb/%i /run/panel-mariadb-%i
+ReadOnlyPaths=/etc/panel/mariadb/%i /opt/panel/runtimes/mariadb
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LimitNOFILE=32768
+
+[Install]
+WantedBy=multi-user.target

@@ -1,3 +1,4 @@
+import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,lstat,readdir} from 'node:fs/promises';
@@ -68,7 +69,7 @@ test('candidate signed builds, native15 source regressions and Vue12 closed-API 
 });
 
 test('new complete source CI preserves all previous gates and never treats a reason fix as original failure, Main or all50 completion',async()=>{
- const r=await json(candidate),w=(await read('.github/workflows/verify.yml')).toString(),exporter=(await read('tools/export-panel-source.mjs')).toString();
+ const r=await json(candidate),w=(originalReviewedHTTPSFixtureWorkflow(await read('.github/workflows/verify.yml'))).toString(),exporter=(await read('tools/export-panel-source.mjs')).toString();
  for(const name of ['panel-integration','panel-integration-geography','panel-integration-disk','panel-integration-disk-fix','panel-integration-disk-diagnostic','panel-integration-disk-reason']){assert(w.includes('working-directory: '+name+'\n'));assert(exporter.includes("'"+name+"'"));}
  const boundary=w.indexOf('      - name: Reason candidate complete Root Linux contracts');assert(boundary>0);assert.equal(r.previous_workflow_sha256,'3b86094a1975f98c992536e3e1a173768ef83e6e50d4b3ae912f1f73d3b8a8bb');assert.equal(sha256(Buffer.from(w.slice(0,boundary))),r.previous_workflow_sha256,'a previous gate was altered or removed');
  const added=w.slice(boundary);assert(added.includes('working-directory: panel-integration-disk-reason\n        run: sudo "$(command -v go)" test -p 1 ./... -count=1'));assert(added.includes("test -race ./internal/executor -run '^TestDiskHost(Diagnostic|FailureReport)'"));assert(added.includes('npm ci --prefix panel-integration-disk-reason/web --ignore-scripts'));assert(added.includes('panel-integration-disk-reason/scripts/test-host-disk.mjs'));assert(added.includes('panel-integration-disk-reason/scripts/qa-host-disk-workspace.mjs'));assert(added.includes('panel-integration-disk-reason/scripts/web-entry-budget.mjs'));assert.doesNotMatch(w,/continue-on-error/);
