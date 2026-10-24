@@ -1430,3 +1430,30 @@ jobs:
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-geodata-admission-packaging-ci.py
       - name: Recheck original source identity after Root fixtures
         run: node --test tests/geodata-admission-source.test.mjs
+
+  redis-privilege-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-redis-privilege/go.mod
+          cache-dependency-path: panel-integration-redis-privilege/go.sum
+      - name: Exact ordinary frozen source and unchanged original30 jobs
+        run: node --test tests/redis-privilege-source.test.mjs tests/geodata-admission-source.test.mjs
+      - name: Actual product-helper privilege drop and zero-capability exec on disposable PID1 sandbox (not a normal Redis instance)
+        run: |
+          redis_privilege_ci="$(mktemp -d)"
+          (cd panel-integration-redis-privilege && CGO_ENABLED=0 go test -c -trimpath -tags panel_redis_privilege_native_qa -o "$redis_privilege_ci/executor.test" ./internal/executor)
+          timeout 180s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB /usr/bin/python3 -I -B tools/run-redis-privilege-native-ci.py "$redis_privilege_ci/executor.test"
+      - name: Entire current candidate default Linux Root implementation regression, serial package capacity unchanged
+        working-directory: panel-integration-redis-privilege
+        run: sudo "$(command -v go)" test -p 1 ./...
+      - name: All264 original packaging checks on the current candidate, zero Root skips
+        run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-redis-privilege-packaging-ci.py
+      - name: Recheck frozen identity after native tests
+        run: node --test tests/redis-privilege-source.test.mjs
