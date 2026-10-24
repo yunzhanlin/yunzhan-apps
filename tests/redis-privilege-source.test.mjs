@@ -42,6 +42,7 @@ test('all30 original workflow jobs remain byte-exact before the bounded independ
  for(const text of ['timeout-minutes: 20','panel_redis_privilege_native_qa','tools/run-redis-privilege-native-ci.py','tools/run-redis-privilege-packaging-ci.py','sudo "$(command -v go)" test -p 1 ./...','tests/redis-privilege-source.test.mjs'])assert(gate.includes(text),text);
  for(const text of ['continue-on-error','reset-failed','pkill','killall','--overlay'])assert(!gate.includes(text),text);
  const runner=read('tools/run-redis-privilege-native-ci.py').toString();
+ assert(runner.includes("'--property=WorkingDirectory=/'")&&!runner.includes("'--property=WorkingDirectory='+str(source"),'ProtectHome may not be waived to reach a hosted checkout');
  for(const text of ["os.geteuid()==0","Never adopts an existing host account","-test.run=^TestRedisPrivilegeNativeExecHandover$","CapabilityBoundingSet=CAP_CHOWN CAP_SETGID CAP_SETUID","AmbientCapabilities=CAP_SETUID","'models':3","'installed_Redis_or_store_API_acceptance':False","'all50_commercial':False"])assert(runner.includes(text),text);
  assert.equal(sha(read('tools/redis-privilege-ci-probe.py')),'f802291a311263384a57c6bab1440335ae92e85ca6d57fbe90644f5b748dd85d');
  const packaging=read('tools/run-redis-privilege-packaging-ci.py').toString();assert(packaging.includes('result.testsRun==264')&&packaging.includes('not result.skipped'));
