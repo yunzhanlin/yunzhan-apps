@@ -80,7 +80,7 @@ func TestCurrentPM2CatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rul
 }
 
 func TestCurrentMobileCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
-	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f")
+	c, in, now := publishedEnvelopeFrom(t, "registry/reviewed-catalogs/before-php-security24bkhe/signatures/catalog-v1.bundle.json", "bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f")
 	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -90,6 +90,21 @@ func TestCurrentMobileCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510
 	}
 	if _, _, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, time.Date(2026, 10, 24, 21, 50, 0, 0, time.UTC), &authority); err == nil {
 		t.Fatal("unrelated mobile publication renewed IDS rule validity")
+	}
+}
+
+// A five-application release cannot renew or replace the separately signed IDS cohort.
+func TestCurrentMemcachedCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
+	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813")
+	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if authority.CatalogSHA256() != "391843d9da2ece79c61e30c28f5d515f6c5cad8ac0ded64e2cb45bf4feb35d82" || authority.Catalog().Sequence != 1 || len(bundle.Rules) != 1510 || bundle.Manifest.EnabledRuleCount != 1510 || bundle.Manifest.DependencyRuleCount != 2 {
+		t.Fatal("Memcached publication changed the independently signed IDS data cohort")
+	}
+	if _, _, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, time.Date(2026, 10, 24, 21, 50, 0, 0, time.UTC), &authority); err == nil {
+		t.Fatal("unrelated Memcached publication renewed IDS rule validity")
 	}
 }
 
