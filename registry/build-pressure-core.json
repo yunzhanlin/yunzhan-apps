@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-dev.proapps24buildpressurebmfa",
+  "parent_frozen_inputs_sha256": "482f93d5ae54f5a8e888988a8b2a13065cafdb9a91df643392ae4020f22deb28",
+  "frozen_inputs_sha256": "e0c8323c6147bacc28caeb3dd8b57513170c66209af807104a18ddf6137ea45e",
+  "frozen_files": 17630,
+  "Go_files": 1462,
+  "changed_source_members": [
+    "dev/panel-install@.service",
+    "packaging/build-release.sh",
+    "packaging/test_runtime_install_budget.py",
+    "scripts/test-store-search.mjs",
+    "scripts/test-store-updates.mjs",
+    "web/src/storeSearch.ts"
+  ],
+  "added_source_members": [
+    "scripts/test-runtime-build-pressure.mjs"
+  ],
+  "export": {
+    "scope": "panel-integration-build-pressure",
+    "files": 1927,
+    "Go": 1462,
+    "source_index_sha256": "6db26510bf937b06b8f152bbe4aa151d04ca1280fdf46847a1826dac44d94f6a",
+    "release_index_sha256": "051d0f672005048c1e24fa3229442ea42993b4cf419823be3f90d9e640918c8c",
+    "source_overrides": 0
+  },
+  "policy": {
+    "old_soft_limit_bytes": 671088640,
+    "new_soft_limit_bytes": 805306368,
+    "unchanged_hard_limit_bytes": 805306368,
+    "unchanged_swap_limit_bytes": 0,
+    "unchanged_task_limit": 512,
+    "unchanged_timeout_minutes": 300,
+    "all_original_sandbox_and_writable_paths_preserved": true,
+    "live_existing_resource_limits_not_changed": true
+  },
+  "original_Main_compiler_observation": {
+    "source_inputs_sha256": "482f93d5ae54f5a8e888988a8b2a13065cafdb9a91df643392ae4020f22deb28",
+    "application_result": false,
+    "working_set_bytes": 681811968,
+    "anonymous_bytes": 670130176,
+    "high_events": 949929,
+    "oom_kills": 0,
+    "original_one_new_unpublished_compiler_ended_by_stable_pidfd": true,
+    "original_native_and_Core_failure_preserved": true,
+    "original_application_job_not_replayed": true,
+    "new_runtime_never_published": true,
+    "old_sites_bindings_NSS_configs_runtime_bytes_and_programme_lifetimes_unchanged": true,
+    "original600_second_SQL_window_not_extended_or_bridged": true,
+    "original103_full_field_frames_are_diagnostic_not_commercial_acceptance": true
+  },
+  "original_failed_candidate": {
+    "version": "0.1.0-dev.proapps24buildpressurebmes",
+    "inputs": "272f96993a1eef6c3fc925f318b1f4fb0e67bdad5c20f716ff5ae119e3e2a7d8",
+    "both_normal_build_exits": 1,
+    "reason": "Old packaging fixture still expected640MiB soft limit; the immutable failed snapshot and build logs remain retained. New snapshot updates that single policy expectation and adds working-set assertions.",
+    "signed": false,
+    "installed": false,
+    "original_result_not_relabelled": true
+  },
+  "normal_programme_builds": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24buildpressurebmfa-linux-amd64.tar.gz",
+      "archive_bytes": 22001174,
+      "archive_sha256": "55528fca0d99e50f3f297c073378e538dae5205b225871eb1066ecbf2924c82b",
+      "original_build_exit": 0,
+      "programmes": {
+        "panel": "83a03cfe2bf7a2b5c375a9422342e8b1c2e65890097360573134cf12b850d111",
+        "panel-executor": "496e64356104dc4239599d46ec60dbd3c3a8de0c0d9c71518570bc2da22008c1",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "all_three_programmes_byte_identical_to_F51": true,
+      "unit_sha256": "cfd04fca2d44050e3ee8a8de9b3a0d5d74f6f8ab9dd1120e4c8c20da540d2266",
+      "source_inputs_verified": true,
+      "web_entry": "index-BdY1pSJo.js",
+      "eager_javascript_bytes": 1174558,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24buildpressurebmfa-linux-arm64.tar.gz",
+      "archive_bytes": 20378528,
+      "archive_sha256": "21f832aa8605da0835c11ff5613373165852c44ea74b23081f7207558d34ea5f",
+      "original_build_exit": 0,
+      "programmes": {
+        "panel": "567ac9d2b3b20e4077e2869820a9958fb55111594428089ae517c1e0ed8cc16c",
+        "panel-executor": "ad320dbe85c7da6a9c3fe064e8efaed8e38ddc71eda35922fc3023e3994215eb",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "all_three_programmes_byte_identical_to_F51": true,
+      "unit_sha256": "cfd04fca2d44050e3ee8a8de9b3a0d5d74f6f8ab9dd1120e4c8c20da540d2266",
+      "source_inputs_verified": true,
+      "web_entry": "index-BdY1pSJo.js",
+      "eager_javascript_bytes": 1174558,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "all_original_F51_Go_and_mods_byte_identical": true,
+  "source_overrides": 0,
+  "production_Go_changes": 0,
+  "original36_workflow_files": {
+    "verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3",
+    "mobile-delivery-links.yml": "b05aef913dd591767afda55b4c7d08dc5b205ef7c01db58028a36fda917320c6",
+    "native-queue-observation.yml": "72709c50f08fe00967e0a7616e088bda18743ef2d413726b4680a77a3a663655"
+  },
+  "kernel_resource_control_sources": {
+    "kernel": "https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html",
+    "systemd": "https://www.freedesktop.org/software/systemd/man/latest/systemd.resource-control.html"
+  },
+  "application_manifests_changed": 0,
+  "programme_signed": false,
+  "normal_upgrade_accepted": false,
+  "new_Main_PHP_install_accepted": false,
+  "all50_commercial": false,
+  "scope": "Immutable portable build/source and static contract evidence only. Normal original-key signatures, native upgrades and fresh PHP store jobs remain separate acceptance work."
+}

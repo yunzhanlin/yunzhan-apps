@@ -1,0 +1,32 @@
+name: verify bounded runtime build pressure and software search
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-build-pressure-contracts-linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exact archive-bound source and unchanged original36 workflows
+        run: node --test tests/build-pressure-source.test.mjs
+      - name: Fixed hard limit and original sandbox contract, not installed-server acceptance
+        working-directory: panel-integration-build-pressure
+        run: python3 -B -m unittest discover -s packaging -p 'test_runtime_install_budget.py' -v
+      - name: Mandatory release policy gate with the unchanged768MiB hard ceiling
+        working-directory: panel-integration-build-pressure
+        run: node --test scripts/test-runtime-build-pressure.mjs
+      - name: Exact locked frontend dependencies without install hooks
+        run: npm ci --prefix panel-integration-build-pressure/web --ignore-scripts
+      - name: Actual search selectors, update policies and adjacent state regressions
+        working-directory: panel-integration-build-pressure
+        run: node --test scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-software-state.mjs

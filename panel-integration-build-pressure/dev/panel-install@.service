@@ -1,0 +1,29 @@
+[Unit]
+Description=Panel verified runtime installer %i
+After=network-online.target
+Wants=network-online.target
+[Service]
+Slice=system.slice
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --install-job %i
+TimeoutStartSec=300min
+KillMode=control-group
+NoNewPrivileges=true
+ProtectControlGroups=true
+TasksMax=512
+MemoryAccounting=true
+# PHP's single compiler can need more than 640 MiB of anonymous working memory.
+# Early high-limit reclaim with zero swap can stall it below the hard ceiling.
+# Keep the SAME finite 768 MiB hard cap, swap policy and all sandbox boundaries.
+MemoryHigh=768M
+MemoryMax=768M
+MemorySwapMax=0
+OOMPolicy=stop
+OOMScoreAdjust=500
+Environment=GOMEMLIMIT=128MiB
+UMask=0022
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /var/cache/panel-runtime-build /opt/panel/runtimes /opt/panel/php-extensions
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
