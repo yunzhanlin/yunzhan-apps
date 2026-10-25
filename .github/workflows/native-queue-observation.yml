@@ -1,0 +1,34 @@
+name: verify complete native queue observation programme
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native-queue-unit-contracts-linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exact new archive-bound source and unchanged original35 workflow bytes
+        run: node --test tests/native-queue-observation-source.test.mjs
+      - name: Mandatory static release gate with unchanged full5s guard and original13-property predicates
+        working-directory: panel-integration-native-queue-observation
+        run: node --test scripts/test-native-queue-unit-snapshot.mjs
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-native-queue-observation/go.mod
+          cache-dependency-path: panel-integration-native-queue-observation/go.sum
+      - name: Linux Root fixtures and race checks, not an installed-server native acceptance claim
+        working-directory: panel-integration-native-queue-observation
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^(TestProgramUpgradeIDS.*|TestProgramQueueIDS(CompleteThreeUnitSnapshotPreservesAllOldPredicates|FreshSnapshotUsesOneReadAndNeverCachesOrExtendsDeadline|ObservationCommandIsStillClosed))$' -count=1
+      - name: Complete current Linux executor vet
+        working-directory: panel-integration-native-queue-observation
+        run: go vet ./internal/executor
