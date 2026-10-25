@@ -5,3 +5,4 @@ node_modules/
 panel-integration/.build/
 panel-integration/.local/
 panel-integration/web/dist/
+panel-integration-mobile-delivery-links/web/dist/
