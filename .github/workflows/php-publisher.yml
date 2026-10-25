@@ -1,0 +1,44 @@
+name: verify source-bound PHP publisher provenance
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php-publisher-contracts-linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-php-publisher/go.mod
+          cache-dependency-path: panel-integration-php-publisher/go.sum
+      - name: Exact archive-bound1940 source members and every original38 workflow
+        run: node --test tests/php-publisher-source.test.mjs
+      - name: Independent original-failure and publisher SQL models with unchanged legacy OOM negatives
+        working-directory: panel-integration-php-publisher
+        run: go test -race ./internal/core -run '^TestRuntime(PHPPublication|SupersededCompileOOM|CompileOOM)' -count=1
+      - name: Actual Linux Root descriptor, same-size overwrite, identity and lock races without skips
+        working-directory: panel-integration-php-publisher
+        run: sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-php-publisher-native-ci.mjs" "$(command -v go)"
+      - name: Complete current Root regression, unchanged full arguments and fixed capacity budgets
+        working-directory: panel-integration-php-publisher
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-php-publisher-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          python3 -B -m unittest discover -s packaging -p 'test_runtime_install_budget.py' -v
+          node --test scripts/test-runtime-build-pressure.mjs scripts/test-native-queue-unit-snapshot.mjs
+      - name: Locked frontend without lifecycle scripts and current store contracts
+        run: |
+          npm ci --prefix panel-integration-php-publisher/web --ignore-scripts
+          (cd panel-integration-php-publisher && node --test scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-software-state.mjs)
+      - name: Recheck exact current source, all old workflows and signed fifty after fixtures
+        run: node --test tests/php-publisher-source.test.mjs tests/compiler-memory-source.test.mjs

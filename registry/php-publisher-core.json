@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-dev.proapps24phppublisherbmnc",
+  "parent_frozen_inputs_sha256": "1976023758cc006612e897538cad1af1b5d57332fa8a32a1d130fc546b223d15",
+  "frozen_inputs_sha256": "dba4ca826b5c2d37cb4c348a9f20a51f1093b2f4b59223ce31366ddd453abd70",
+  "frozen_files": 17643,
+  "Go_files": 1475,
+  "changed_source_members": [
+    "internal/executor/install_linux.go",
+    "internal/executor/program_upgrade_queues_linux.go",
+    "scripts/test-native-queue-unit-snapshot.mjs"
+  ],
+  "added_source_members": [
+    "internal/core/runtime_php_publication.go",
+    "internal/core/runtime_php_publication_test.go",
+    "internal/executor/program_upgrade_runtime_successor_linux.go",
+    "internal/executor/program_upgrade_runtime_successor_linux_test.go",
+    "internal/executor/runtime_php_publication_linux.go",
+    "internal/executor/runtime_php_publication_linux_test.go"
+  ],
+  "production_Go_existing_changes": 2,
+  "production_Go_added": 3,
+  "added_Go_tests": 3,
+  "export": {
+    "scope": "panel-integration-php-publisher",
+    "files": 1940,
+    "Go": 1475,
+    "source_index_sha256": "286b57d0a6c181ab4010fe97966d46ad52db532cd0f99e265914a7873080c49e",
+    "release_index_sha256": "35cdabd02a5acf9ed0e44eb84bdca620ca6ee04fac9e1bce8ddc5a12376920f5",
+    "source_overrides": 0
+  },
+  "policy": {
+    "legacy_manifests_remain_inventory_compatible": true,
+    "existing_prefixes_never_adopted_as_new_publishers": true,
+    "actual_InstallJob_identity_only": true,
+    "official_source_and_exact_native_architecture": true,
+    "source_bound_CLI_and_FPM_bytes_and_sha256": true,
+    "new_FPM_version_check_before_publication": true,
+    "final_streaming_held_descriptor_rehash_required": true,
+    "existing_readonly_start_and_build_leases_required": true,
+    "original_stopped_OOM_generation_required": true,
+    "original_failed_Core_and_raw_native_ledgers_never_relabelled": true,
+    "distinct_successful_publisher_and_audits_required": true,
+    "canonical_manifest_and_native_ledger_bytes_required": true,
+    "unknown_pending_jobs_and_unconsumed_retry_grants_refuse": true,
+    "upgrade_Core_validator_SELECT_only": true,
+    "original_unpublished_OOM_protocols_byte_identical": true,
+    "native_budget_seconds": 5,
+    "installer_unit_unchanged_from_parent": true,
+    "memory_max_bytes": 1073741824,
+    "swap_limit_bytes": 0,
+    "task_limit": 512,
+    "timeout_minutes": 300
+  },
+  "native_component": {
+    "architecture": "arm64",
+    "source_binding": "e4684250ea67546d095021e631b71304da5fb80248d82144407d2127083f5888",
+    "exact_Go_files": {
+      "internal/core/runtime_php_publication.go": "b999d7b74dc3c76009c4cb72c34fbd7b83dd2e5938db46cf398e83783402cc7e",
+      "internal/core/runtime_php_publication_test.go": "df1318d038fac0519835ac945b0cbf2aab17fc5d50b6a5af65ac032c06473d8a",
+      "internal/executor/install_linux.go": "103a96d8e164515ffb8c950ca12ce54048c3ac422cf666bd1a5655fd4ce50f51",
+      "internal/executor/program_upgrade_queues_linux.go": "bcf8ef698c5d3cdd3482ea219ad1a336735a1f80dcee2461aee19d8b707c4ed3",
+      "internal/executor/program_upgrade_runtime_successor_linux.go": "aa5634545ffeabd103f5ff3b6c4bdac85bb96cca0c40668c1c962d09a25d9119",
+      "internal/executor/program_upgrade_runtime_successor_linux_test.go": "52dfc338295525d0f7cf169e3f1d24741f093e531502afa8b4f9dce9fd18be04",
+      "internal/executor/runtime_php_publication_linux.go": "fad6dcbec353d82a74d637cf15ca0b888eead8d19a1cbf195c4999646e6bd139",
+      "internal/executor/runtime_php_publication_linux_test.go": "1256155c8117a6b7af7dde460d7c07cf00b53cc121e2452576ac3bc16b0afe76"
+    },
+    "top_level": 6,
+    "including_subtests": 120,
+    "failures": 0,
+    "skips": 0,
+    "proof_sha256": "3538cd9170c83e847157ba1882e941b34e7c3cc21eacfe62eb6fc290a951ecf5",
+    "synthetic_private_Root_model_not_new_installation": true,
+    "original_same_size_write_refusal_retained": true,
+    "full_original109_schema103_business_runtime_NSS_programmes_preserved": true,
+    "original_statistics_window_seconds": 600,
+    "original_full_upgrade_guard_before_and_after": 0
+  },
+  "normal_programme_builds": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phppublisherbmnc-linux-amd64.tar.gz",
+      "archive_sha256": "1dbbaf9345667cfc5a3bb5ad9ab5d451c97fbaddd6b7070cc06ed3513ba171cf",
+      "archive_bytes": 22038922,
+      "programmes": {
+        "panel": "284edfaffee8c72fd0d18661c32bf562cfdf1db5f32f8bbe154f16dd8ff2ff03",
+        "panel-executor": "71a66725851aac5eab93d2a0eb032f1fbc1d7774e118923ed58bad969e757e7d",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "unit_sha256": "bf2432e1084dce9629be620dfab2ed47995c9bbfa86a70285990f4d6fb1cd947",
+      "original_build_exit": 0,
+      "start_guard_byte_identical_to_parent": true,
+      "installer_unit_byte_identical_to_parent": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phppublisherbmnc-linux-arm64.tar.gz",
+      "archive_sha256": "87654b84f477acff12c2045a23e029148be7bf085930deec64d9048d8871fd23",
+      "archive_bytes": 20403774,
+      "programmes": {
+        "panel": "d4319f52bebd5b14f9d85c8f78f4371dd4c189abcfd9c14df66ab3888c65f5c4",
+        "panel-executor": "0d1c9daa2d32434fc08087230fe3865069df5a027f382c509fe5c37dae3146bb",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "unit_sha256": "bf2432e1084dce9629be620dfab2ed47995c9bbfa86a70285990f4d6fb1cd947",
+      "original_build_exit": 0,
+      "start_guard_byte_identical_to_parent": true,
+      "installer_unit_byte_identical_to_parent": true,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "original38_workflow_files": {
+    "build-pressure.yml": "a569af4df7039f41f7c20b16ac924315857da67ac652732f72376f1b23433f3a",
+    "compiler-memory.yml": "eac50e36e35d8ad2d54f7bba85fd1bb98af8cb21162fe6563e8f632943476c3e",
+    "mobile-132.yml": "db9049fd18a5444f95cb34746485ec64260293a33b046651d06a2b3c47d09dae",
+    "mobile-delivery-links.yml": "b05aef913dd591767afda55b4c7d08dc5b205ef7c01db58028a36fda917320c6",
+    "mobile.yml": "53d6b7ef8afd77274c7c5faada39f4049c3a1717dc4e2c03bea776969768e51f",
+    "native-queue-observation.yml": "72709c50f08fe00967e0a7616e088bda18743ef2d413726b4680a77a3a663655",
+    "verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3"
+  },
+  "original_failed_native_and_unpublished_candidates_preserved": true,
+  "programme_signed": false,
+  "normal_upgrade_accepted": false,
+  "new_Main_PHP_install_accepted": false,
+  "all50_commercial": false
+}
