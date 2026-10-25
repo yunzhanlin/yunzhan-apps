@@ -1,0 +1,223 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-dev.proapps24compilermemorybmku",
+  "parent_frozen_inputs_sha256": "e0c8323c6147bacc28caeb3dd8b57513170c66209af807104a18ddf6137ea45e",
+  "frozen_inputs_sha256": "1976023758cc006612e897538cad1af1b5d57332fa8a32a1d130fc546b223d15",
+  "frozen_files": 17637,
+  "Go_files": 1469,
+  "changed_source_members": [
+    "dev/panel-install@.service",
+    "internal/executor/install_linux.go",
+    "packaging/test_runtime_install_budget.py",
+    "scripts/test-runtime-build-pressure.mjs"
+  ],
+  "added_source_members": [
+    "internal/executor/runtime_php_compiler_gc.go",
+    "internal/executor/runtime_php_compiler_gc_native_linux_test.go",
+    "internal/executor/runtime_php_compiler_gc_test.go",
+    "internal/executor/runtime_php_compiler_memory_native_linux_test.go",
+    "internal/executor/runtime_php_memory_admission.go",
+    "internal/executor/runtime_php_memory_admission_linux.go",
+    "internal/executor/runtime_php_memory_admission_test.go"
+  ],
+  "export": {
+    "scope": "panel-integration-compiler-memory",
+    "files": 1934,
+    "Go": 1469,
+    "source_index_sha256": "911b5d13f3e1e62ba4d040e5916baeb68624435b4cc71bef7dbff33f7b802ac4",
+    "release_index_sha256": "f25f283d3e4e99915b5b5347aac16bc90afc99977b185573201bc2f4cdf72504",
+    "source_overrides": 0
+  },
+  "policy": {
+    "previous_installer_memory_bytes": 805306368,
+    "new_finite_installer_memory_bytes": 1073741824,
+    "new_memory_high_bytes": 1073741824,
+    "swap_limit_bytes": 0,
+    "task_limit": 512,
+    "timeout_minutes": 300,
+    "Go_memory_limit": "128MiB",
+    "new_large_build_request_minimum_available_bytes": 1610612736,
+    "existing_service_reserve_bytes": 536870912,
+    "inside_worker_host_credit_only_independent_anon_plus_shmem": true,
+    "parent_budget_credits_only_already_counted_own_child_charge": true,
+    "no_host_file_cache_or_slab_credit": true,
+    "no_controlgroup_limit_or_counter_writes": true,
+    "no_optimization_downgrade": true,
+    "source_bound_releases": [
+      "php-8.2.35",
+      "php-8.3.36"
+    ],
+    "fixed_CFLAGS": "-O2 -ftrack-macro-expansion=0 --param=ggc-min-expand=10 --param=ggc-min-heapsize=32768",
+    "every_other_original_sandbox_command_and_writable_path_preserved": true,
+    "live_existing_units_not_modified": true
+  },
+  "native_compiler_components": {
+    "php82": {
+      "official_source_sha256": "9db4204f0a2d1911277ae832185e07bb4c3b3559772753a70d2968ca346d6910",
+      "actual_native_peak_bytes": 1019891712,
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0
+      },
+      "memory_events_after": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0
+      },
+      "exact_original_O2_and_all_extensions": true,
+      "native_Zend_objects": [
+        {
+          "bytes": 1057896,
+          "original_execution_functions_verified": true,
+          "path": "Zend/zend_execute.o",
+          "sha256": "8899baaae07202edf45767cc2ac36c56fdd03139131ed046a580ab12c74b8717"
+        },
+        {
+          "bytes": 1057624,
+          "original_execution_functions_verified": true,
+          "path": "Zend/.libs/zend_execute.o",
+          "sha256": "8d98c09965e1f804a8ddbff884b5653bdcd9e1066e09e95f775d4efac7e7c85f"
+        }
+      ],
+      "actual_OOM_counters_all_zero": true,
+      "all_owned_children_reaped": true,
+      "normal_runtime_install_or_application_acceptance": false,
+      "original_proof_sha256": "680c4fcddb4887a0d660aaf81654bf4adec45c0b214885b232366dfee6964022"
+    },
+    "php83": {
+      "official_source_sha256": "c93f3441f87f6ab156bef4432db215d7e61ca2c0183bb3a2aa28d9886ab59f53",
+      "actual_native_peak_bytes": 1073741824,
+      "memory_events_before": {
+        "high": 0,
+        "low": 0,
+        "max": 0,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0
+      },
+      "memory_events_after": {
+        "high": 0,
+        "low": 0,
+        "max": 461,
+        "oom": 0,
+        "oom_group_kill": 0,
+        "oom_kill": 0
+      },
+      "exact_original_O2_and_all_extensions": true,
+      "native_Zend_objects": [
+        {
+          "bytes": 1074296,
+          "original_execution_functions_verified": true,
+          "path": "Zend/zend_execute.o",
+          "sha256": "f918302002234037c064cc87142b579f3a0864f6c4142316d1eb393a4411c5f5"
+        },
+        {
+          "bytes": 1072640,
+          "original_execution_functions_verified": true,
+          "path": "Zend/.libs/zend_execute.o",
+          "sha256": "e846c1e8115530a8b700e127cb145e33a6022f02f62066cde60d65bc09a36555"
+        }
+      ],
+      "actual_OOM_counters_all_zero": true,
+      "all_owned_children_reaped": true,
+      "normal_runtime_install_or_application_acceptance": false,
+      "original_proof_sha256": "49292182815783934cbea6370a0e78c9a1786c10d4ba23656232491ffe3ac6db"
+    }
+  },
+  "obsolete768MiB_native_negative": {
+    "passed": true,
+    "compiler_or_source_script_invoked": false,
+    "build_log_created": false,
+    "normal_application_accepted": false
+  },
+  "original_failed_cases": {
+    "original_Main_PHP82_application_job_stays_failed": true,
+    "original_4_private_768MiB_compiler_OOMs_preserved": true,
+    "original_strict_total_peak_refusal_preserved": true,
+    "original_PHP83_1535MiB_inventory_refusal_preserved": true,
+    "original_application_or_native_case_replays": 0,
+    "one_archived_closed_QA_transient_failure_state_retirement_not_an_application_retry": true
+  },
+  "portable_memory_models": {
+    "top_level_race_tests_passed": 12,
+    "unknown_inventory_budget_context_source_parent_and_counter_cases_fail_closed": true
+  },
+  "business_preservation": {
+    "original109_schema_and103_full_business_fields_captured": true,
+    "original600_second_windows_not_extended_or_bridged": true,
+    "all_old_runtime_bytes_NSS_sites_configs_and_programme_lifetimes_checked": true,
+    "php83_two_preexisting_MySQL_backup_ticks_source_bound_and_native_rehashed": true,
+    "generic_SQL_refusal_preserved": true,
+    "neither_table_projection_nor_generic_audit_or_scheduler_exemption": true,
+    "closed_tick_models": {
+      "positive": 1,
+      "rejected_field_mutations": 162,
+      "rejected_old_row_removals": 54,
+      "rejected_extra_appends": 6,
+      "rejected_time_bridges": 4
+    }
+  },
+  "normal_programme_builds": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24compilermemorybmku-linux-amd64.tar.gz",
+      "archive_bytes": 22012346,
+      "archive_sha256": "fb79fc85ba2c3c7bf392d77276e68056e2f6443de285313bbc7d784ef6c71b04",
+      "unit_sha256": "bf2432e1084dce9629be620dfab2ed47995c9bbfa86a70285990f4d6fb1cd947",
+      "programmes": {
+        "panel": "83a03cfe2bf7a2b5c375a9422342e8b1c2e65890097360573134cf12b850d111",
+        "panel-executor": "33dadf959b84808c913fca2c239d7a4b5901c7d982cffc6c8b056b5de600bea8",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "core_panel_and_start_guard_byte_identical_to_F52": true,
+      "only_executor_programme_changed": true,
+      "original_build_exit": 0,
+      "web_entry": "index-DZsfju83.js",
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24compilermemorybmku-linux-arm64.tar.gz",
+      "archive_bytes": 20390782,
+      "archive_sha256": "a06a8c3c66c58ac9e2cbc52930dc1a447140e6f3116ae5a7953ed7d8d071dad7",
+      "unit_sha256": "bf2432e1084dce9629be620dfab2ed47995c9bbfa86a70285990f4d6fb1cd947",
+      "programmes": {
+        "panel": "567ac9d2b3b20e4077e2869820a9958fb55111594428089ae517c1e0ed8cc16c",
+        "panel-executor": "fb04f5098cbfa8ed26ef301006ef2b2bd12798e541e11655eec71cc1f30a1878",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "core_panel_and_start_guard_byte_identical_to_F52": true,
+      "only_executor_programme_changed": true,
+      "original_build_exit": 0,
+      "web_entry": "index-DZsfju83.js",
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "original37_workflow_files": {
+    "build-pressure.yml": "a569af4df7039f41f7c20b16ac924315857da67ac652732f72376f1b23433f3a",
+    "mobile-132.yml": "db9049fd18a5444f95cb34746485ec64260293a33b046651d06a2b3c47d09dae",
+    "mobile-delivery-links.yml": "b05aef913dd591767afda55b4c7d08dc5b205ef7c01db58028a36fda917320c6",
+    "mobile.yml": "53d6b7ef8afd77274c7c5faada39f4049c3a1717dc4e2c03bea776969768e51f",
+    "native-queue-observation.yml": "72709c50f08fe00967e0a7616e088bda18743ef2d413726b4680a77a3a663655",
+    "verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3"
+  },
+  "source_overrides": 0,
+  "production_Go_existing_changes": 1,
+  "production_Go_added": 3,
+  "added_Go_tests": 4,
+  "application_manifests_changed": 0,
+  "programme_signed": false,
+  "normal_upgrade_accepted": false,
+  "new_Main_PHP_install_accepted": false,
+  "all50_commercial": false,
+  "scope": "Frozen source, ordinary dual portable builds, source/kernel compiler components only. Actual normal signed upgrades, complete PHP installation and real site/FPM traffic remain separate acceptance work."
+}
