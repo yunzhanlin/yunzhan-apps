@@ -1,0 +1,45 @@
+name: verify fixed-source bounded compiler memory
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  compiler-memory-contracts-linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-compiler-memory/go.mod
+          cache-dependency-path: panel-integration-compiler-memory/go.sum
+      - name: Exact archive-bound source and all original37 workflows
+        run: node --test tests/compiler-memory-source.test.mjs
+      - name: Source binding, physical/parent/own-charge budgets, kernel counters and original context races (not installed acceptance)
+        working-directory: panel-integration-compiler-memory
+        run: go test -race ./internal/executor -run '^TestRuntimePHPCompiler(GC|Memory)' -count=1
+      - name: Entire current Linux Root implementation regression; original capacity budgets and package serialization unchanged
+        working-directory: panel-integration-compiler-memory
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+      - name: Original native directory safety and new finite policy packaging fixtures
+        working-directory: panel-integration-compiler-memory
+        run: |
+          python3 -B -m unittest discover -s packaging -p 'test_runtime_install_budget.py' -v
+          sudo python3 -B -m unittest discover -s packaging -p 'test_native_build_directories.py' -v
+          node --test scripts/test-runtime-build-pressure.mjs
+      - name: Locked frontend without lifecycle scripts and original adjacent search/update contracts
+        run: |
+          npm ci --prefix panel-integration-compiler-memory/web --ignore-scripts
+          (cd panel-integration-compiler-memory && node --test scripts/test-store-search.mjs scripts/test-store-updates.mjs scripts/test-software-state.mjs)
+      - name: Recheck exact source and all original37 workflows after fixtures
+        run: node --test tests/compiler-memory-source.test.mjs tests/build-pressure-source.test.mjs
