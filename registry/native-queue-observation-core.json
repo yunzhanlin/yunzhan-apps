@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-dev.proapps24nativequeuebmbm",
+  "parent_frozen_inputs_sha256": "3858db5be263ebb85537a695cd9fdf16c14b32df696aa289bf1cc5e383801255",
+  "frozen_inputs_sha256": "482f93d5ae54f5a8e888988a8b2a13065cafdb9a91df643392ae4020f22deb28",
+  "frozen_files": 17629,
+  "Go_files": 1462,
+  "production_Go_existing_changes": [
+    "internal/executor/program_upgrade_ids_linux.go"
+  ],
+  "production_Go_added": [
+    "internal/executor/program_upgrade_ids_units_linux.go"
+  ],
+  "changed_source_members": [
+    "internal/executor/program_upgrade_ids_linux.go",
+    "packaging/build-release.sh"
+  ],
+  "added_source_members": [
+    "internal/executor/program_upgrade_ids_units_linux.go",
+    "internal/executor/program_upgrade_ids_units_linux_test.go",
+    "internal/executor/program_upgrade_ids_units_native_qa_linux_test.go",
+    "scripts/test-native-queue-unit-snapshot.mjs"
+  ],
+  "export": {
+    "ok": true,
+    "scope": "panel-integration-native-queue-observation",
+    "files": 1926,
+    "Go": 1462,
+    "source_index_sha256": "c5f1a42bf64fe595397fe06a6ad9524e3eab076388e3e9e8a0cb01e57d2e0de0",
+    "release_index_sha256": "80f0dd98b2f326244cbc49bfcc6aff20922f08e43e931e1c0f2e2bf0d94100d2",
+    "source_overrides": 0,
+    "programme_signed": false,
+    "programme_installed": false,
+    "all50_commercial": false
+  },
+  "normal_programme_builds": {
+    "amd64": {
+      "portable_build_artifacts_complete_and_verified": true,
+      "arch": "amd64",
+      "version": "0.1.0-dev.proapps24nativequeuebmbm",
+      "source_inputs_sha256": "482f93d5ae54f5a8e888988a8b2a13065cafdb9a91df643392ae4020f22deb28",
+      "source_overrides": 0,
+      "archive": "panel-0.1.0-dev.proapps24nativequeuebmbm-linux-amd64.tar.gz",
+      "archive_bytes": 22000162,
+      "archive_sha256": "e7d11263765fc3ceff649d3d1880ed67b109b84e6d34028ca10e52981b81b70f",
+      "build_checks_sha256": "9fca92645ef809285658c6b73e00a108a7a744efae9c4b06e8f386eea3321d9a",
+      "programmes": {
+        "panel": "83a03cfe2bf7a2b5c375a9422342e8b1c2e65890097360573134cf12b850d111",
+        "panel-executor": "496e64356104dc4239599d46ec60dbd3c3a8de0c0d9c71518570bc2da22008c1",
+        "panel-start-guard": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474"
+      },
+      "all_original_build_gates_retained": true,
+      "new_static_contract_tests": 4,
+      "both_arch_actual_source_native_11_top_83_assertions_passed_separately": true,
+      "eager_javascript_bytes": 1174533,
+      "eager_javascript_budget": 1200000,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    },
+    "arm64": {
+      "portable_build_artifacts_complete_and_verified": true,
+      "arch": "arm64",
+      "version": "0.1.0-dev.proapps24nativequeuebmbm",
+      "source_inputs_sha256": "482f93d5ae54f5a8e888988a8b2a13065cafdb9a91df643392ae4020f22deb28",
+      "source_overrides": 0,
+      "archive": "panel-0.1.0-dev.proapps24nativequeuebmbm-linux-arm64.tar.gz",
+      "archive_bytes": 20379280,
+      "archive_sha256": "2d9e73317892124e0894c4b2361a9a5a80924d2f499d027610809cc4be0986d6",
+      "build_checks_sha256": "667041ec4c1cd21de15a488c2c0158a77a675691c45b1042319a13dc1d06356f",
+      "programmes": {
+        "panel": "567ac9d2b3b20e4077e2869820a9958fb55111594428089ae517c1e0ed8cc16c",
+        "panel-executor": "ad320dbe85c7da6a9c3fe064e8efaed8e38ddc71eda35922fc3023e3994215eb",
+        "panel-start-guard": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+      },
+      "all_original_build_gates_retained": true,
+      "new_static_contract_tests": 4,
+      "both_arch_actual_source_native_11_top_83_assertions_passed_separately": true,
+      "eager_javascript_bytes": 1174533,
+      "eager_javascript_budget": 1200000,
+      "signed": false,
+      "installed": false,
+      "all50_commercial": false
+    }
+  },
+  "actual_native_readonly_source_qualification": {
+    "amd64": {
+      "original_root_proof_sha256": "e7aab146bd66aadf524bd8056621d2af7763e7af5bb9dcf3dda829e5271fc683",
+      "source_subset_sha256": "56e43162b51c5537a6498108e35d85ec01f297a52e4c78d9f8f190250d214af5",
+      "top_level": 11,
+      "including_subtests": 83,
+      "failures": 0,
+      "skips": 0,
+      "all103_full_business_and_nine_monitor_columns_preserved": true,
+      "original_NSS_programmes20_modules_and_sites_preserved": true,
+      "zero_byte_original_lock_identities_and_bytes_preserved": true,
+      "previous_false_aggregate_retained": true,
+      "actual_global5s_observations": [
+        "3.318833922s",
+        "2.826828818s",
+        "2.563674157s"
+      ],
+      "application_operations": 0,
+      "scope": "Read-only native source models, not signed or installed programme acceptance"
+    },
+    "arm64": {
+      "original_root_proof_sha256": "34b7ce55eb4a7ec0b75a2722adfc383d423e211bef8a7fc2f732dde77eee1627",
+      "source_subset_sha256": "56e43162b51c5537a6498108e35d85ec01f297a52e4c78d9f8f190250d214af5",
+      "top_level": 11,
+      "including_subtests": 83,
+      "failures": 0,
+      "skips": 0,
+      "all103_full_business_and_nine_monitor_columns_preserved": true,
+      "original_NSS_programmes20_modules_and_sites_preserved": true,
+      "zero_byte_original_lock_identities_and_bytes_preserved": true,
+      "previous_false_aggregate_retained": true,
+      "actual_global5s_observations": [
+        "127.123462ms",
+        "116.121949ms",
+        "111.290459ms"
+      ],
+      "application_operations": 0,
+      "scope": "Read-only native source models, not signed or installed programme acceptance"
+    }
+  },
+  "original35_workflow_files": {
+    "verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3",
+    "mobile-delivery-links.yml": "b05aef913dd591767afda55b4c7d08dc5b205ef7c01db58028a36fda917320c6"
+  },
+  "global_native_queue_deadline_seconds": 5,
+  "original_unit_count": 3,
+  "all_original_properties_per_unit": 13,
+  "original_per_unit_limit_bytes": 4096,
+  "original_failed_F50_AMD_install": {
+    "ok": false,
+    "preflight_exit": 0,
+    "install_exit": 1,
+    "proof_sha256": "93cc3c18656699af76941b20b856661be4b9509262b2f14423b35e1521d7fdb3",
+    "historical_result_unchanged": true,
+    "not_replayed": true
+  },
+  "source_overrides": 0,
+  "application_manifests_changed": 0,
+  "signed": false,
+  "normal_upgrade_accepted": false,
+  "Main19100_download_buttons_fixed": false,
+  "all50_commercial": false
+}
