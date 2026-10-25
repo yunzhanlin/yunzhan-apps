@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { correctAnalyticsSessionFixture, originalAnalyticsSessionFixture, reviewedAnalyticsReplacement, analyticsFixtureMember, originalAnalyticsFixtureSHA, correctedAnalyticsFixtureSHA, alreadyCorrectedAnalyticsFixtureSHA, analyticsFixturePlan } from '../tools/analytics-report-fixture-ci.mjs';
 import { reviewedHTTPSFixtureScopes } from '../tools/run-https-fixture-ci.mjs';
+import { originalSiteTLSCIRunner } from '../tools/site-tls-fixture-ci.mjs';
 
 const repo = fileURLToPath(new URL('../', import.meta.url));
 const sha = value => createHash('sha256').update(value).digest('hex');
@@ -83,7 +84,7 @@ test('index drift, unsafe output directories, links and foreign roots fail befor
 });
 test('CI preserves the entire original workflow, full Go arguments and every other runner byte', () => {
   assert.equal(sha(fs.readFileSync(repo + '.github/workflows/verify.yml')), '3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3');
-  let driver = fs.readFileSync(repo + 'tools/run-https-fixture-ci.mjs', 'utf8');
+  let driver = originalSiteTLSCIRunner(fs.readFileSync(repo + 'tools/run-https-fixture-ci.mjs')).toString();
   const addedImport = "import{reviewedAnalyticsReplacement}from'./analytics-report-fixture-ci.mjs';\n";
   assert.equal(driver.split(addedImport).length, 2); driver = driver.replace(addedImport, '');
   const added = [

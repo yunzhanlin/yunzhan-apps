@@ -76,7 +76,7 @@ test('all50 original signed app manifests, catalogue and application trust remai
 test('new full-suite gate runs the exact already-corrected1934 source members directly and refuses filters, overlays and foreign scopes',()=>{
  const index=json(scope+'source-sha256.json');assert.deepEqual(verifyCompilerMemoryCISource(root+scope.slice(0,-1)),index);
  assert.equal(compilerMemoryCIScope.files,1934);assert.equal(compilerMemoryCIScope.Go,1469);
- assert.equal(sha(read('tools/run-https-fixture-ci.mjs')),'76df04fe88a526c9bc0e0007f76130c08368e203ce8a4fa53f349ac97a243b1e');
+ assert.equal(sha(read('tools/run-https-fixture-ci.mjs')),'948fb862a143078e1428fc9d4a4ca18397a134938bef96f61ea24ae03bc1664e');
  assert.throws(()=>verifyCompilerMemoryCISource(root+parent.slice(0,-1)));assert.throws(()=>verifyCompilerMemoryCISource(root+scope));
  assert.deepEqual(compilerMemoryCIArguments(['test','-p','1','./...','-count=1']),['test','-p','1','./...','-count=1']);
  for(const args of[['test','./internal/executor'],['test','-p','1','./...'],['test','-p','1','./...','-count=1','-run=TestNone'],['test','-overlay=foreign.json','-p','1','./...','-count=1'],['test','-p','1','./...','-count=0']])assert.throws(()=>compilerMemoryCIArguments(args));
