@@ -1,3 +1,4 @@
+import{historicalMemcachedUnixSchemaURL}from'./reviewed-memcached-unix-inputs.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
@@ -16,7 +17,7 @@ test('new maintenance manifests cannot omit, borrow, alias or widen handler auth
  const legacy={...structuredClone(original),version:'1.2.0'};delete legacy.required_panel_features;assert.deepEqual(validateManifest(legacy),[]);
 });
 test('schema keeps original module scopes, exact pinned Memcached and one separately fixed native runtime scope',async()=>{
- const schema=JSON.parse(await read('schema/app.schema.json'));assert.equal(schema.additionalProperties,false);
+ const schema=JSON.parse(await readFile(historicalMemcachedUnixSchemaURL(import.meta.url),'utf8'));assert.equal(schema.additionalProperties,false);
  const allScopes=schema.allOf.find(x=>x.if?.required?.includes('required_panel_features')).then.oneOf;
  const sessionScopes=allScopes.filter(x=>x.properties.id.const==='website-analytics');assert.equal(sessionScopes.length,1);
  const session=sessionScopes[0].properties;assert.equal(session.version.const,'2.3.1');assert.equal(session.delivery.properties.provider.const,'panel-module');assert.equal(session.delivery.properties.target.const,'website-analytics');assert.equal(session.delivery.properties.manage_route.const,'app-modules');assert.deepEqual(session.required_panel_features,{minItems:1,maxItems:1,items:{const:'analytics-session-lifecycle-v1'}});

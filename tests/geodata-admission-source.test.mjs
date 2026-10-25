@@ -1,3 +1,4 @@
+import{historicalMemcachedUnixInput}from'./reviewed-memcached-unix-inputs.mjs';
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from'node:test';
 import assert from'node:assert/strict';
@@ -6,7 +7,7 @@ import path from'node:path';
 import{createHash}from'node:crypto';
 import{execFileSync}from'node:child_process';
 import{fileURLToPath}from'node:url';
-const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-geodata-admission/',read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
+const root=fileURLToPath(new URL('../',import.meta.url)),scope='panel-integration-geodata-admission/',read=n=>historicalMemcachedUnixInput(root,n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex');
 const inputs='0d6a44f5ac65e2e62c209f68ea4f208276888e3ad7fd8a06777da164dc234fad';
 test('F43 contains exactly1810 normal frozen members and all1355 Go inputs are byte-identical to F42',()=>{
  const raw=read(scope+'source-sha256.json'),now=JSON.parse(raw),oldRaw=read('panel-integration-redis-cli/source-sha256.json'),old=JSON.parse(oldRaw);

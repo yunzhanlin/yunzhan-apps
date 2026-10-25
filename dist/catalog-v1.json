@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-23T03:36:54Z",
+  "generated_at": "2026-10-24T22:13:51Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -287,22 +287,29 @@
       "id": "memcached",
       "name": "Memcached",
       "category": "deployment",
-      "version": "1.6.45-compat2",
-      "summary": "创建 128 MB 上限、仅回环访问的 Memcached 受管实例。",
+      "version": "1.6.45-compat4",
+      "summary": "独立 Unix Socket 缓存实例：非 root、无网络暴露，提供真实统计、二进制 CAS 编辑、审计启停和停机后非强制移除；旧 TCP 实例只提示手动迁移，不覆盖或卸载原实例。商用实装验收尚未完成。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
       "target": "memcached-cache",
       "manage_route": "docker",
       "capabilities": [
+        "独立 Unix Socket",
         "固定镜像摘要",
-        "回环端口",
-        "内存限额",
-        "启停重启",
-        "状态探针"
+        "网站账户隔离",
+        "非 root 进程",
+        "内存与 CPU 限额",
+        "运行统计",
+        "二进制键值与 CAS",
+        "TTL 与 flags",
+        "审计启停",
+        "未知结果独立复核",
+        "无 TCP/UDP 端口",
+        "停机后非强制移除与归属留存"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45-compat2/manifest.json",
-      "sha256": "72f10849c748254794b899c9b9787342dd4c70b66861a9ecdf6963b6e1a1f0e1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/memcached/1.6.45-compat4/manifest.json",
+      "sha256": "9c00a4eb75a0996df922b469bbe60bc300ec3b47db09f6b97211e1b4c2bd1a30"
     },
     {
       "id": "mobile",
@@ -765,12 +772,12 @@
       "id": "php-82",
       "name": "PHP 8.2",
       "category": "deployment",
-      "version": "8.2.33-compat1",
-      "summary": "编译安装 PHP 8.2 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "version": "8.2.35-compat2",
+      "summary": "PHP 8.2.35 固定官方源码与安全修订；独立 FPM、多版本切换和引用保护，原生构建按可用内存限制编译并发。完整系统与架构实装矩阵仍在验收。",
       "stage": "ready",
       "risk": "maintenance",
       "provider": "runtime",
-      "target": "php-8.2.33",
+      "target": "php-8.2.35",
       "manage_route": "runtimes",
       "capabilities": [
         "CLI",
@@ -778,19 +785,19 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-82/8.2.33-compat1/manifest.json",
-      "sha256": "35c61b7f89766e9330e3e1cd7888932ef74c43e75a656685bb6b22a4307132bd"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-82/8.2.35-compat2/manifest.json",
+      "sha256": "c709defb2cf4f297fba3eb1e116dcb188e0379498f1753dfd591c23eb185ebcc"
     },
     {
       "id": "php-83",
       "name": "PHP 8.3",
       "category": "deployment",
-      "version": "8.3.33-compat1",
-      "summary": "编译安装 PHP 8.3 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "version": "8.3.36-compat2",
+      "summary": "PHP 8.3.36 固定官方源码与安全修订；独立 FPM、多版本切换和引用保护，原生构建按可用内存限制编译并发。完整系统与架构实装矩阵仍在验收。",
       "stage": "ready",
       "risk": "maintenance",
       "provider": "runtime",
-      "target": "php-8.3.33",
+      "target": "php-8.3.36",
       "manage_route": "runtimes",
       "capabilities": [
         "CLI",
@@ -798,19 +805,19 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-83/8.3.33-compat1/manifest.json",
-      "sha256": "841777fe50b5aedf9f200301cbc590249c2d3e25c5f82534304c041ec59a1dbd"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-83/8.3.36-compat2/manifest.json",
+      "sha256": "2056907ed73fbf67993c12df3bd7cbdf4c425a77ed0878b580f67d2b2146392f"
     },
     {
       "id": "php-84",
       "name": "PHP 8.4",
       "category": "deployment",
-      "version": "8.4.25-compat1",
-      "summary": "编译安装 PHP 8.4 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "version": "8.4.27-compat2",
+      "summary": "PHP 8.4.27 固定官方源码与安全修订；独立 FPM、多版本切换和引用保护，原生构建按可用内存限制编译并发。完整系统与架构实装矩阵仍在验收。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "php-8.4.25",
+      "target": "php-8.4.27",
       "manage_route": "runtimes",
       "capabilities": [
         "CLI",
@@ -818,19 +825,19 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-84/8.4.25-compat1/manifest.json",
-      "sha256": "c7939b1808e37d695a288c40281fa8b60a29d0262f98db2fb08c4611d30c670c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-84/8.4.27-compat2/manifest.json",
+      "sha256": "ceb996fd2e78b85ad827c4cd1e5fac20039ffe784271b495f8d845ebc9789a31"
     },
     {
       "id": "php-85",
       "name": "PHP 8.5",
       "category": "deployment",
-      "version": "8.5.10-compat1",
-      "summary": "编译安装 PHP 8.5 CLI/FPM 与常用扩展，可与其他版本并存。",
+      "version": "8.5.12-compat2",
+      "summary": "PHP 8.5.12 固定官方源码与安全修订；独立 FPM、多版本切换和引用保护，原生构建按可用内存限制编译并发。完整系统与架构实装矩阵仍在验收。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "php-8.5.10",
+      "target": "php-8.5.12",
       "manage_route": "runtimes",
       "capabilities": [
         "CLI",
@@ -838,8 +845,8 @@
         "多版本并存",
         "站点独立池"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-85/8.5.10-compat1/manifest.json",
-      "sha256": "3d0577e35ffccd52e7ddf048ab1636db8f648609bdb404ddde8880fb044f843a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/main/dist/apps/php-85/8.5.12-compat2/manifest.json",
+      "sha256": "1a519772a2f3c86b90c68e797da67aaa8990cc0375895b1b8d659fd8cfb1d2f8"
     },
     {
       "id": "php-code-security",

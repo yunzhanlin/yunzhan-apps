@@ -1,3 +1,4 @@
+import {memcachedUnixErrors,memcachedUnixFeature,memcachedUnixRetirementFeature} from './memcached-unix-contract.mjs';
 import { createHash } from "node:crypto";
 import { exactPHPSecurityPackage, phpSecurityErrors, phpSecurityFeature } from './php-security-contract.mjs';
 import { exactPHPBoundedPackage, phpBoundedErrors, phpBoundedFeature } from './php-bounded-contract.mjs';
@@ -53,13 +54,15 @@ export function validateManifest(app) {
   const mobileNative="mobile-native-delivery-v132";
   const memcachedImage="memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf";
   const memcachedScope=app.id==="memcached"&&app.version==="1.6.45-compat2"&&app.delivery?.provider==="compose";
+  const memcachedUnixScope=app.id==="memcached"&&app.version==="1.6.45-compat4"&&app.delivery?.provider==="compose";
+  const unixErrors=memcachedUnixErrors(app);if(unixErrors!==null)errors.push(...unixErrors);
   const runtimePackageScope=app.id==="nginx"&&app.version==="1.30.6-compat1"&&app.delivery?.provider==="runtime";
   const phpSecurityScope=exactPHPSecurityPackage(app);
   const phpBoundedScope=exactPHPBoundedPackage(app),boundedErrors=phpBoundedErrors(app);
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
-    if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature))errors.push("required panel feature has no reviewed implementation");
+    if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.includes(intrusion)&&(app.id!=="anti-intrusion"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="intrusion-prevention"||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("preserving intrusion journal belongs only to exact anti-intrusion1.1.0 and its fixed executor target");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -118,8 +121,8 @@ export function validateManifest(app) {
   // This is ONE reviewed Compose ABI, not a general provider exemption.
   // Only the immutable published compat1 and exact pinned compat2 are reviewed;
   // aliases/future revisions must get an explicit handler review, not inherit it.
-  if(app.id==="memcached"&&!["1.6.45-compat1","1.6.45-compat2"].includes(app.version))errors.push("Memcached application revision has no reviewed exact handler");
-  if(memcachedScope||app.id==="memcached"&&app.version==="1.6.45-compat2"||Array.isArray(requirements)&&requirements.includes(memcached)){
+  if(app.id==="memcached"&&!["1.6.45-compat1","1.6.45-compat2","1.6.45-compat4"].includes(app.version))errors.push("Memcached application revision has no reviewed exact handler");
+  if(!memcachedUnixScope&&(memcachedScope||app.id==="memcached"&&app.version==="1.6.45-compat2"||Array.isArray(requirements)&&requirements.includes(memcached))){
     if(!memcachedScope||app.delivery?.target!=="memcached-cache"||app.delivery?.manage_route!=="docker"||Object.hasOwn(app.delivery??{},"isolation")||app.delivery?.image!==memcachedImage||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==memcached)errors.push("Memcached compat2 requires its exact fixed OCI index, single handler and Compose template");
   }
   if(app.id==="disk-analysis"&&typeof app.version==="string"&&/^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(app.version)){

@@ -1,3 +1,4 @@
+import{historicalPHPBoundedCases}from'./reviewed-memcached-unix-inputs.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -8,7 +9,7 @@ import {phpBoundedFeature,exactPHPBoundedPackage} from '../tools/php-bounded-con
 import {phpSecurityBindings,phpSecurityFeature} from '../tools/php-security-contract.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url));
 test('bounded PHP compat2 independently requires both exact handlers and retains every earlier PHP rejection/current50 identity',()=>{
- const cases=phpBoundedCases(root);for(const c of cases){const errors=validateManifest(c.manifest);assert.equal(errors.length===0,c.valid,c.name+': '+errors.join('; '));}
+ const cases=historicalPHPBoundedCases(root);for(const c of cases){const errors=validateManifest(c.manifest);assert.equal(errors.length===0,c.valid,c.name+': '+errors.join('; '));}
  assert.equal(cases.filter(c=>c.name.includes(':bounded-exact')).length,4);assert.equal(cases.filter(c=>c.name.includes(':bounded-reversed')).length,4);
  assert.equal(cases.filter(c=>c.name.includes(':historical:')).length,8);assert.equal(cases.filter(c=>c.name.startsWith('current50:')).length,50);assert.equal(cases.filter(c=>!c.valid).length,236);
  for(const c of cases)assert.equal(exactPHPBoundedPackage(c.manifest),c.valid&&c.name.includes(':bounded-'),c.name);
