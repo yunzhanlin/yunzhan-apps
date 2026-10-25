@@ -1,4 +1,5 @@
 // Audited CI-only correction for one exact _test.go fixture. Never a runtime overlay.
+import{reviewedAnalyticsReplacement}from'./analytics-report-fixture-ci.mjs';
 import fs from'node:fs';import path from'node:path';import os from'node:os';import assert from'node:assert/strict';import{createHash}from'node:crypto';import{spawnSync}from'node:child_process';import{fileURLToPath}from'node:url';
 export const httpsFixtureMember='internal/executor/app_load_balance_https_linux_test.go';
 export const originalHTTPSFixtureSHA='925948fe06fab1787f28f08b33fa302e2ff64428ce2cd347fa7ed6e0d02dcf65',correctedHTTPSFixtureSHA='026dce1a592366561eecba2ba4e7eb1c16828285f226c3fd9140e79be8e98ff3';
@@ -48,7 +49,10 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  const source=fs.realpathSync(process.cwd()),index=sourceIndex(source);unchanged(source,index);
  const parent=fs.realpathSync(os.tmpdir()),dir=fs.mkdtempSync(parent+'/yunzhan-https-fixture-');fs.chmodSync(dir,0o700);
  try{
-  const extra=reviewedHTTPSReplacement(source,dir),overlay=dir+'/overlay.json';fs.writeFileSync(overlay,JSON.stringify({Replace:{[extra.target]:extra.replacement}}),{flag:'wx',mode:0o600});
+  const extra=reviewedHTTPSReplacement(source,dir),overlay=dir+'/overlay.json';
+  const analytics=reviewedAnalyticsReplacement(source,dir,index),Replace={[extra.target]:extra.replacement};if(analytics)Replace[analytics.target]=analytics.replacement;
+  fs.writeFileSync(overlay,JSON.stringify({Replace}),{flag:'wx',mode:0o600});
+  if(analytics)console.log(JSON.stringify({scope:path.basename(source),CI_test_fixture_only:'internal/core/analytics_session_test.go',...analytics,production_source_overrides:0,immutable_exports_changed:false,original_assertions_byte_exact:true,all50_commercial:false}));
   console.log(JSON.stringify({scope:path.basename(source),original_arguments:args,CI_test_fixture_only:httpsFixtureMember,original_sha256:extra.original_sha256,corrected_sha256:extra.corrected_sha256,production_source_overrides:0,immutable_exports_changed:false,guard_CA_TLS_threshold_and_timeout_checks_unchanged:true,all50_commercial:false}));
   const result=spawnSync(go,['test','-overlay='+overlay,...args.slice(1)],{cwd:source,stdio:'inherit'});unchanged(source,index);assert(!result.error&&!result.signal);assert.equal(result.status,0);
  }finally{unchanged(source,index);assert(path.dirname(dir)===parent&&path.basename(dir).startsWith('yunzhan-https-fixture-'));privateDirectory(dir);fs.rmSync(dir,{recursive:true});}
