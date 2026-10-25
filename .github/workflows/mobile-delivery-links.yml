@@ -1,0 +1,38 @@
+name: verify mobile delivery link programme
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  mobile-delivery-links-native-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Archive-bound new source, every original34-job byte and unchanged programme implementation
+        run: node --test tests/mobile-delivery-links-source.test.mjs
+      - name: Locked new frontend dependencies without lifecycle scripts
+        run: npm ci --prefix panel-integration-mobile-delivery-links/web --ignore-scripts
+      - name: Current locked production and build dependencies have no known advisories
+        run: npm audit --prefix panel-integration-mobile-delivery-links/web --audit-level=low
+      - name: Actual current and legacy delivery URLs and management regressions
+        working-directory: panel-integration-mobile-delivery-links
+        run: |
+          node --test scripts/test-mobile-delivery-links.mjs scripts/test-mobile-navigation.mjs scripts/test-module-state.mjs scripts/test-module-version-scope.mjs scripts/test-module-report-provenance.mjs scripts/test-frontend-release.mjs scripts/test-software-routing.mjs scripts/test-menu-permissions.mjs scripts/test-load-balance-routing.mjs scripts/test-remote-sync.mjs scripts/test-disk-usage.mjs scripts/test-task-manager.mjs scripts/test-deferred-workspace.mjs scripts/test-software-state.mjs scripts/test-store-updates.mjs
+          VITE_PANEL_VERSION=0.1.0-dev.proapps24mobilelinkblgt npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-mobile-delivery-links/go.mod
+          cache-dependency-path: panel-integration-mobile-delivery-links/go.sum
+      - name: Corrected actual HTTPS fixture, original downgrade rejection and unchanged TLS policy
+        working-directory: panel-integration-mobile-delivery-links
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestLoadBalanceHTTPS(ScopedTrustAndCertificateRejection|NeverFollowsDowngradeAndKeepsThresholds|RequiresCompatibleInstalledModule|RefusesOldTLSWithoutContactingBusiness|FixturePortCollisionsKeepOriginalAdmission)$' -count=1
