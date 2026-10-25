@@ -1,4 +1,5 @@
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';import{spawnSync}from'node:child_process';
+import{compilerMemoryCIScope,verifyCompilerMemoryCISource,compilerMemoryCIArguments}from'../tools/run-compiler-memory-ci.mjs';
 const root=fileURLToPath(new URL('..',import.meta.url)),scope='panel-integration-compiler-memory/',parent='panel-integration-build-pressure/';
 const read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),report=json('registry/compiler-memory-core.json');
 
@@ -71,4 +72,13 @@ test('actual OOM counters and complete native objects are component proof, never
 test('all50 original signed app manifests, catalogue and application trust remain unchanged',()=>{
  for(const[n,h]of Object.entries({'dist/catalog-v1.json':'247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813','signatures/catalog-v1.sig':'4828f4a705f62ca1c8e2380528e0b1d65719e0be37c561790343862c60936727','signatures/catalog-v1.bundle.json':'deb1a606c402933f40b772c920de3396f2b6c8d6c910b581c4acef6b7f6b7f25','signatures/catalog-v1.pub.pem':'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75'}))assert.equal(sha(read(n)),h,n);
  const catalog=json('dist/catalog-v1.json');assert.equal(catalog.apps.length,50);for(const app of catalog.apps)assert.equal(sha(read('dist/apps/'+app.id+'/'+app.version+'/manifest.json')),app.sha256);
+});
+test('new full-suite gate runs the exact already-corrected1934 source members directly and refuses filters, overlays and foreign scopes',()=>{
+ const index=json(scope+'source-sha256.json');assert.deepEqual(verifyCompilerMemoryCISource(root+scope.slice(0,-1)),index);
+ assert.equal(compilerMemoryCIScope.files,1934);assert.equal(compilerMemoryCIScope.Go,1469);
+ assert.equal(sha(read('tools/run-https-fixture-ci.mjs')),'76df04fe88a526c9bc0e0007f76130c08368e203ce8a4fa53f349ac97a243b1e');
+ assert.throws(()=>verifyCompilerMemoryCISource(root+parent.slice(0,-1)));assert.throws(()=>verifyCompilerMemoryCISource(root+scope));
+ assert.deepEqual(compilerMemoryCIArguments(['test','-p','1','./...','-count=1']),['test','-p','1','./...','-count=1']);
+ for(const args of[['test','./internal/executor'],['test','-p','1','./...'],['test','-p','1','./...','-count=1','-run=TestNone'],['test','-overlay=foreign.json','-p','1','./...','-count=1'],['test','-p','1','./...','-count=0']])assert.throws(()=>compilerMemoryCIArguments(args));
+ const workflow=read('.github/workflows/compiler-memory.yml').toString();assert(workflow.includes('$GITHUB_WORKSPACE/tools/run-compiler-memory-ci.mjs'));assert(!workflow.includes('run-https-fixture-ci.mjs'));
 });
