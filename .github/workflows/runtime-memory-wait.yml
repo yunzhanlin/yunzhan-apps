@@ -1,0 +1,41 @@
+name: verify bounded PHP memory wait and actual runtime display
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  runtime-memory-wait-contracts-linux-amd64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: panel-integration-runtime-memory-wait/go.mod
+          cache-dependency-path: panel-integration-runtime-memory-wait/go.sum
+      - name: Exact1948 archive-bound members and all original39 jobs (not installed app acceptance)
+        run: node --test tests/runtime-memory-wait-source.test.mjs
+      - name: Fixed budget, typed transient capacity, cancellation and inherited deadline race contracts
+        working-directory: panel-integration-runtime-memory-wait
+        run: sudo "$(command -v go)" test -race ./internal/executor -run '^TestRuntimePHPCompilerMemory' -count=1
+      - name: Complete current Root Linux regression with unchanged full arguments
+        working-directory: panel-integration-runtime-memory-wait
+        run: |
+          sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-runtime-memory-wait-ci.mjs" "$(command -v go)" test -p 1 ./... -count=1
+          go vet ./...
+          python3 -B -m unittest discover -s packaging -p 'test_runtime_install_budget.py' -v
+      - name: Locked frontend without lifecycle scripts
+        run: npm ci --prefix panel-integration-runtime-memory-wait/web --ignore-scripts
+      - name: Exact previous publisher, installed display selector and unchanged original build gates
+        working-directory: panel-integration-runtime-memory-wait
+        run: |
+          node --experimental-strip-types --test scripts/test-runtime-memory-wait.mjs scripts/test-runtime-selection.mjs scripts/test-native-queue-unit-snapshot.mjs
+          npm run build --prefix web
+          node scripts/web-entry-budget.mjs web/dist
+      - name: Recheck original39 workflows, previous source policies and signed50 catalogue
+        run: node --test tests/runtime-memory-wait-source.test.mjs tests/php-publisher-source.test.mjs tests/compiler-memory-source.test.mjs

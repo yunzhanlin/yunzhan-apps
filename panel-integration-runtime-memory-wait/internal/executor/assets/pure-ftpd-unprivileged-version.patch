@@ -1,0 +1,12 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -6256,9 +6256,6 @@
+ #endif
+         case 'h': {
+-#ifndef NON_ROOT_FTP
+-            if (geteuid() == (uid_t) 0)
+-#endif
+             {
+                 puts(PACKAGE " v" VERSION VERSION_PRIVSEP "\n");
+             }
+ #ifndef NO_GETOPT_LONG
