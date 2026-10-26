@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "version": "0.1.0-dev.proapps24memorywaitbmpw",
+  "frozen_inputs_sha256": "d09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a",
+  "frozen_files": 17651,
+  "Go_files": 1478,
+  "parent_frozen_inputs_sha256": "dba4ca826b5c2d37cb4c348a9f20a51f1093b2f4b59223ce31366ddd453abd70",
+  "changed_source_members": [
+    "internal/executor/install_linux.go",
+    "internal/executor/runtime_php_memory_admission.go",
+    "internal/executor/runtime_php_memory_admission_linux.go",
+    "packaging/build-release.sh",
+    "scripts/test-native-queue-unit-snapshot.mjs",
+    "web/src/App.vue"
+  ],
+  "added_source_members": [
+    "internal/executor/runtime_php_memory_wait.go",
+    "internal/executor/runtime_php_memory_wait_native_linux_test.go",
+    "internal/executor/runtime_php_memory_wait_test.go",
+    "scripts/qualify-runtime-picker-browser-fixture.mjs",
+    "scripts/serve-runtime-picker-fixture.mjs",
+    "scripts/test-runtime-memory-wait.mjs",
+    "scripts/test-runtime-selection.mjs",
+    "web/src/runtimeSelection.ts"
+  ],
+  "export": {
+    "scope": "panel-integration-runtime-memory-wait",
+    "files": 1948,
+    "Go": 1478,
+    "source_index_sha256": "b50fbb4c8d48b49aa962d26335e6045b28f8f5b4f4c2569b170bb6b3abfd5031",
+    "release_index_sha256": "9c024ed3060e99be548f79d6681c43352890182b0272a1ed97d8685bb27ad920",
+    "source_overrides": 0
+  },
+  "policy": {
+    "fixed_1GiB_kernel_limit": true,
+    "zero_swap": true,
+    "existing512MiB_service_reserve_unchanged": true,
+    "initial_admission_immediate_and_unchanged": true,
+    "maximum_memory_wait_seconds": 90,
+    "memory_poll_seconds": 2,
+    "maximum_retries": 45,
+    "original_parent_context_inherited": true,
+    "exact_internal_shortage_only": true,
+    "identity_inventory_kernel_and_unknown_failures_immediate": true,
+    "no_jobs_replayed_or_prefixes_adopted": true,
+    "no_controller_cache_or_NSS_writes": true,
+    "no_file_cache_or_slab_host_credit": true,
+    "original240minute_build_and300minute_unit_unchanged": true,
+    "original_publication_and_failed_OOM_protocols_unchanged": true
+  },
+  "native_component": {
+    "arch": "arm64",
+    "proof_sha256": "07b4deb675a3ceb16ef8abaabd00ab6ab0c69838623b3007544f15ba530f80a1",
+    "top_level_cases": 2,
+    "skips": 0,
+    "failures": 0,
+    "real_original_kernel_host_parent_checks": true,
+    "actual_host_pressure_not_injected": true,
+    "typed_transient_fixture_not_claimed_as_real_pressure": true,
+    "obsolete768MiB_actual_kernel_refused": true,
+    "all109_schema103_full_business_NSS_runtime_programmes_preserved": true,
+    "original600_second_window_seconds": 69.85353183746338,
+    "normal_runtime_or_programme_installation": false
+  },
+  "source_release_archive": {
+    "architecture": "amd64",
+    "archive": "panel-0.1.0-dev.proapps24memorywaitbmpw-linux-amd64.tar.gz",
+    "archive_sha256": "1f59fe8bf992ece637a37faa8c68efef74b51ce5095b462ad6f31492648a2a34",
+    "archive_bytes": 22042915,
+    "ordinary_full_build_exit": 0,
+    "original_readonly_qualifier_refusal_retained": true,
+    "core_panel_and_start_guard_unchanged": true,
+    "only_executor_programme_changed": true,
+    "installer_unit_unchanged": true
+  },
+  "UI": {
+    "automatic_server_and_installed_display_selection_only": true,
+    "manual_preview_survives_poll": true,
+    "original_synthetic_browser_checks": 8,
+    "source_contracts": 23,
+    "installed_UI_acceptance": false,
+    "no_install_activation_or_catalogue_handlers_changed": true
+  },
+  "original39_workflow_files": {
+    "build-pressure.yml": "a569af4df7039f41f7c20b16ac924315857da67ac652732f72376f1b23433f3a",
+    "compiler-memory.yml": "eac50e36e35d8ad2d54f7bba85fd1bb98af8cb21162fe6563e8f632943476c3e",
+    "mobile-132.yml": "db9049fd18a5444f95cb34746485ec64260293a33b046651d06a2b3c47d09dae",
+    "mobile-delivery-links.yml": "b05aef913dd591767afda55b4c7d08dc5b205ef7c01db58028a36fda917320c6",
+    "mobile.yml": "53d6b7ef8afd77274c7c5faada39f4049c3a1717dc4e2c03bea776969768e51f",
+    "native-queue-observation.yml": "72709c50f08fe00967e0a7616e088bda18743ef2d413726b4680a77a3a663655",
+    "php-publisher.yml": "2a7757c67fcf07a326478b6005a6ea9f5d25d33188388cf8c1f2c06849db72f1",
+    "verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3"
+  },
+  "original_failed_native_and_unpublished_candidates_preserved": true,
+  "programme_signed": false,
+  "normal_upgrade_accepted": false,
+  "new_Main_PHP_install_accepted": false,
+  "all50_commercial": false
+}
