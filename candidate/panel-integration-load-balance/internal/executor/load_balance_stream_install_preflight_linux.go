@@ -21,29 +21,29 @@ func preflightLoadBalanceStreamInstall(ctx context.Context, owner *loadBalanceSt
 		return err
 	}
 	if err = loadBalanceStreamInstallMemoryAdmission(raw); err != nil {
-		return err
+		return streamInstallPhaseError("资源余量", err)
 	}
 	configuration, err := holdLoadBalanceStreamNSSConfiguration(ctx)
 	if err != nil {
-		return err
+		return streamInstallPhaseError("系统身份源", err)
 	}
 	defer configuration.close()
 	engine, err := holdLoadBalanceStreamEngine(ctx)
 	if err != nil {
-		return err
+		return streamInstallPhaseError("Nginx 运行时", err)
 	}
 	defer engine.close()
 	// An unrelated identically named account is not adopted. An incomplete
 	// old create intent remains a refusal, not permission to run useradd again.
 	if _, err = os.Lstat(loadBalanceStreamAccountStorePath); errors.Is(err, os.ErrNotExist) {
 		if err = loadBalanceStreamAccountAbsent(ctx); err != nil {
-			return err
+			return streamInstallPhaseError("专用身份预检", err)
 		}
 	} else if err != nil {
-		return err
+		return streamInstallPhaseError("专用身份记录", err)
 	} else {
 		if _, _, err = loadBalanceStreamAccountReceiptHash(ctx); err != nil {
-			return err
+			return streamInstallPhaseError("专用身份历史", err)
 		}
 	}
 	if !configuration.current() || !engine.current() || owner.current(ctx) != nil {

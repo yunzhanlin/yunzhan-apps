@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -32,6 +33,15 @@ type loadBalanceStreamObservedInstallExit struct {
 
 func streamInstallResult(job, state string) core.LoadBalanceStreamInstallResult {
 	return core.LoadBalanceStreamInstallResult{Format: 1, JobID: job, Version: loadbalancestream.AppVersion, State: state}
+}
+
+// A diagnostic stage never changes the unknown result or grants a retry.
+// Keep the original cause available to errors.Is and to the one RPC reply.
+func streamInstallPhaseError(phase string, cause error) error {
+	if cause == nil {
+		cause = errLoadBalanceStreamInstallationGate
+	}
+	return fmt.Errorf("TCP/UDP 安装阶段[%s]: %w", phase, cause)
 }
 
 // Only the original submitter invokes this after its ONE real --wait start
@@ -215,36 +225,36 @@ func observeLoadBalanceStreamInstall(ctx context.Context, job string) (core.Load
 func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.LoadBalanceStreamInstallSubmission) (core.LoadBalanceStreamInstallResult, error) {
 	unknown := streamInstallResult(in.JobID, "unknown")
 	if ctx == nil || ctx.Err() != nil || s == nil || s.Config.SystemRoot != "/" || s.Config.SecurityDir != "/etc/panel/security-apps" || !loadBalanceStreamAccountHash(loadBalanceStreamCompiledProgrammeInputsSHA256) {
-		return unknown, errLoadBalanceStreamInstallationGate
+		return unknown, streamInstallPhaseError("固定主机与签名构建", errLoadBalanceStreamInstallationGate)
 	}
 	if _, err := core.LoadBalanceStreamInstallSubmissionBytes(in); err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("原始请求格式", err)
 	}
 	source, err := openLoadBalanceStreamCoreAuthority(ctx)
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("读取当前授权", err)
 	}
 	defer source.close()
 	grant, err := source.installAuthority(ctx, in.JobID)
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("核对原任务授权", err)
 	}
 	authority, err := appcatalog.VerifyLoadBalanceStreamReleaseEnvelope(ctx, in.Release, grant.AppVersion, grant.ManifestSHA256)
 	if err != nil || !authority.Matches(grant.AppVersion, grant.ManifestSHA256) {
-		return unknown, errLoadBalanceStreamInstallationGate
+		return unknown, streamInstallPhaseError("独立发行签名", errLoadBalanceStreamInstallationGate)
 	}
 	bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
 	lifetime, err := acquireMemcachedUnixRuntime(bounded)
 	cancel()
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("运行时生命周期租约", err)
 	}
 	defer lifetime.Close()
 	bounded, cancel = context.WithTimeout(ctx, 3*time.Second)
 	mutation, err := acquireLoadBalanceStreamMutation(bounded)
 	cancel()
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("TCP/UDP 修改租约", err)
 	}
 	defer mutation.close()
 	authorize := func(c context.Context) error {
@@ -258,34 +268,40 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	if _, err := os.Lstat(filepath.Join(loadBalanceStreamSubmissionsRoot, in.JobID+".json")); err == nil {
 		return observeLoadBalanceStreamInstall(ctx, in.JobID)
 	} else if !errors.Is(err, os.ErrNotExist) {
-		return unknown, errLoadBalanceStreamInstallationJournal
+		return unknown, streamInstallPhaseError("原交接记录", errLoadBalanceStreamInstallationJournal)
 	}
 	if exists, err := loadBalanceStreamOriginalJobEvidence(in.JobID); err != nil || exists {
-		return unknown, errLoadBalanceStreamInstallationJournal
+		return unknown, streamInstallPhaseError("原安装历史", errLoadBalanceStreamInstallationJournal)
 	}
 	owner := &loadBalanceStreamUpgradeOwner{source: source, original: grant, lifetime: lifetime, mutation: mutation}
-	if authorize(ctx) != nil || checkLegacyProgramUpgradeQueues() != nil || checkLoadBalanceStreamUpgrade(ctx, owner) != nil {
-		return unknown, errLoadBalanceStreamInstallationGate
+	if err := authorize(ctx); err != nil {
+		return unknown, streamInstallPhaseError("交接前当前授权", err)
+	}
+	if err := checkLegacyProgramUpgradeQueues(); err != nil {
+		return unknown, streamInstallPhaseError("已有原生任务", err)
+	}
+	if err := checkLoadBalanceStreamUpgrade(ctx, owner); err != nil {
+		return unknown, streamInstallPhaseError("TCP/UDP 完整安装历史", err)
 	}
 	unit, err := loadbalancestream.AccountParentUnit(in.JobID)
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("固定父进程名称", err)
 	}
 	prior, err := streamInstallUnitProperties(ctx, unit)
 	if err != nil || prior["LoadState"] != "loaded" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
-		return unknown, errLoadBalanceStreamInstallationJournal
+		return unknown, streamInstallPhaseError("固定父进程未运行状态", errLoadBalanceStreamInstallationJournal)
 	}
 	if err := preflightLoadBalanceStreamInstall(ctx, owner); err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("系统前置条件", err)
 	}
 	submission, err := writeLoadBalanceStreamSubmission(ctx, in, authorize)
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("持久化原始交接", err)
 	}
 	defer submission.close()
 	owner.submission = submission
 	if authorize(ctx) != nil || !submission.current() || checkLoadBalanceStreamUpgrade(ctx, owner) != nil {
-		return unknown, errLoadBalanceStreamInstallationGate
+		return unknown, streamInstallPhaseError("交接后当前授权与完整历史", errLoadBalanceStreamInstallationGate)
 	}
 	mutation.close()
 	// No mutation-lease callback is used after release; the independently
@@ -294,16 +310,16 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	_, err = programQueueCommand(bounded, "/usr/bin/systemctl", "--wait", "start", unit)
 	cancel()
 	if err != nil || ctx.Err() != nil || !lifetime.current() || !submission.current() {
-		return unknown, errLoadBalanceStreamInstallationJournal
+		return unknown, streamInstallPhaseError("原生父进程启动与退出", errLoadBalanceStreamInstallationJournal)
 	}
 	submission.nativeParentUnit = unit
 	submission.nativeParentExitObserved = true
 	result, err := readLoadBalanceStreamCommittedInstallation(ctx, in.JobID)
 	if err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("完整提交记录", err)
 	}
 	if err = retainLoadBalanceStreamOriginalExit(ctx, submission, result); err != nil {
-		return unknown, err
+		return unknown, streamInstallPhaseError("原始退出回执", err)
 	}
 	return observeLoadBalanceStreamInstall(ctx, in.JobID)
 }

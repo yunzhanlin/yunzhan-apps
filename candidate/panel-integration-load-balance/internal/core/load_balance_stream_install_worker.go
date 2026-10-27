@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/loadbalancestream"
@@ -22,6 +25,32 @@ func loadBalanceStreamInstallJobSelected(j Job) bool {
 }
 
 type loadBalanceStreamMetadataFetch func(context.Context, string, string) (appcatalog.LoadBalanceStreamReleaseEnvelope, error)
+
+func loadBalanceStreamInstallFailureDetail(cause error) string {
+	detail := "TCP/UDP 原安装没有可核对的完整原生完成回执；保留原任务，只允许观察，不重新派发"
+	if cause == nil {
+		return detail
+	}
+	// Preserve the actual one-shot error for diagnosis without accepting its
+	// text as completion, recovery authority or a reason to repeat the POST.
+	reason := strings.Join(strings.Fields(strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return ' '
+		}
+		return r
+	}, cause.Error())), " ")
+	if len(reason) > 512 {
+		reason = reason[:512]
+		for !utf8.ValidString(reason) {
+			reason = reason[:len(reason)-1]
+		}
+		reason += "…"
+	}
+	if reason != "" {
+		detail += "；执行服务：" + reason
+	}
+	return detail
+}
 
 func runLoadBalanceStreamInstallJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 	runLoadBalanceStreamInstallJobWithMetadata(ctx, s, e, j, appcatalog.Default().FetchLoadBalanceStreamReleaseEnvelope)
@@ -67,7 +96,7 @@ func runLoadBalanceStreamInstallJobWithMetadata(ctx context.Context, s *Store, e
 	}
 	result, decodeErr := DecodeLoadBalanceStreamInstallResult(raw, j.ID)
 	if err != nil || decodeErr != nil || result.State != "committed" {
-		fail("TCP/UDP 原安装没有可核对的完整原生完成回执；保留原任务，只允许观察，不重新派发", true)
+		fail(loadBalanceStreamInstallFailureDetail(err), true)
 		return
 	}
 	_ = s.finishRuntime(j, "", []Step{{Time: Now(), Message: "原签名任务、固定父子安装、完整旧记录备份、原子发布及实际退出回执已核对；没有自动启用 TCP/UDP 监听"}}, false)
