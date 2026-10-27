@@ -135,11 +135,15 @@ func (r *loadBalanceStreamCoreAuthority) controlUpgradeHistory(ctx context.Conte
 	s := r.source
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.db == nil || s.blocked == nil || s.blocked() || !s.current() {
+	// Complete history is a read-only prerequisite of the upgrade inventory,
+	// including after its maintenance marker and strict writer stop. It grants
+	// no control, installation or completion authority; those live readers above
+	// must continue consulting the SAME unmodified mutation-admission predicate.
+	if s.db == nil || s.blocked == nil || !s.current() {
 		return nil, errLoadBalanceStreamCoreAuthority
 	}
 	v, err := (&core.Store{DB: s.db}).LoadBalanceStreamControlUpgradeHistory(ctx, original)
-	if err != nil || ctx.Err() != nil || !s.current() || s.blocked() {
+	if err != nil || ctx.Err() != nil || !s.current() {
 		return nil, errLoadBalanceStreamCoreAuthority
 	}
 	return v, nil

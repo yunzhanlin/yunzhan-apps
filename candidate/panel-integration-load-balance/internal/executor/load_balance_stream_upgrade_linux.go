@@ -24,7 +24,11 @@ func (r *loadBalanceStreamCoreAuthority) upgradeJobs(ctx context.Context, origin
 	s := r.source
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.db == nil || s.blocked == nil || s.blocked() || !s.current() {
+	// The upgrader repeats this SELECT-only inventory with its own maintenance
+	// marker present and Core stopped. This is not live installation authority:
+	// owner.current/checkInstall still enforce the mutation fence independently.
+	// Keep the held Core/WAL identity, complete schema and job/history checks.
+	if s.db == nil || s.blocked == nil || !s.current() {
 		return nil, errLoadBalanceStreamCoreAuthority
 	}
 	store := &core.Store{DB: s.db}
@@ -32,7 +36,7 @@ func (r *loadBalanceStreamCoreAuthority) upgradeJobs(ctx context.Context, origin
 		return nil, errLoadBalanceStreamCoreAuthority
 	}
 	jobs, err := store.LoadBalanceStreamInstallUpgradeJobs(ctx, original)
-	if err != nil || ctx.Err() != nil || !s.current() || s.blocked() {
+	if err != nil || ctx.Err() != nil || !s.current() {
 		return nil, errLoadBalanceStreamCoreAuthority
 	}
 	return jobs, nil
