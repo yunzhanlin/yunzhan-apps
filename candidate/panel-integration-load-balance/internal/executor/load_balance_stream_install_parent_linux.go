@@ -19,11 +19,15 @@ const loadBalanceStreamInstallHostReserve = int64(512 << 20)
 // capabilities, so the child can observe its actual parent under Linux's
 // capability/ptrace rules without CAP_SYS_PTRACE. All IDs remain Root solely
 // for the bounded installer; the eventual traffic process has no capabilities.
+// With NNP and seccomp setup, systemd can remove CAP_SETUID from permitted and
+// effective sets unless it is explicitly ambient. Both fixed units request
+// exactly that one inheritable/ambient bit; the five-capability ceiling is
+// unchanged. Verify the actual sets, never just CapabilityBoundingSet.
 func streamInstallRootCapabilities(raw []byte) bool {
 	if !streamAccountParentRootStatus(raw) {
 		return false
 	}
-	want := map[string]uint64{"CapInh": 0, "CapPrm": 0xcd, "CapEff": 0xcd, "CapBnd": 0xcd, "CapAmb": 0}
+	want := map[string]uint64{"CapInh": 0x80, "CapPrm": 0xcd, "CapEff": 0xcd, "CapBnd": 0xcd, "CapAmb": 0x80}
 	seen := map[string]bool{}
 	for _, line := range strings.Split(string(raw), "\n") {
 		key, value, ok := strings.Cut(line, ":")

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24streamcandidate5-linux-amd64.tar.gz",
-    "archive_sha256": "27e2b7520204df4ae2169e68d9db81d7f55e1bd8b6823bc233159cf428209bf0",
-    "frozen_inputs_sha256": "60bd851978766b321868186cf8c2d56f3436d11ae1bf13b8dc101bfbcae3cab5"
+    "archive": "panel-0.1.0-dev.proapps24streamcandidate6-linux-amd64.tar.gz",
+    "archive_sha256": "3de4ecf17cc8e92a1587778873915b9eadf947d5bdc4f5b9fd9297eae91e6b4d",
+    "frozen_inputs_sha256": "16c6ec30a84c78cb6df1881738a4ab84f02f4d1e1a69ff42def91093fdaeea53"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -34,8 +34,8 @@
     "dev/panel-firewall-rollback@.timer": "48686c5afc426ece1a21c1a0ce8ff083cbe3047a0a6d4aa392912e0c4c5dc664",
     "dev/panel-firewall.service": "852966197ee9b03f4c84889effb3618a62194f055e96181ec8f5f441292e6f2f",
     "dev/panel-install@.service": "bf2432e1084dce9629be620dfab2ed47995c9bbfa86a70285990f4d6fb1cd947",
-    "dev/panel-lbstream-account-create@.service": "ca5bb5ab1aca385ce70c495510702ad59fdf429ec9c786e30dab380e457558fd",
-    "dev/panel-lbstream-install@.service": "c8d8a3e56551a4ebf649fda6a316f7f3c8c4183f258c7bcaca2bc41e571955b3",
+    "dev/panel-lbstream-account-create@.service": "71a4b2cf22c912f13706feccbb098b795da0c0a89ae11796fc75f5e61461e418",
+    "dev/panel-lbstream-install@.service": "82dff174d97fb7b7fdefe876c1fd85bce65d7e3c74660708186a341ae19defe1",
     "dev/panel-mariadb-init@.service": "4c77d53115f1bff4266e42ff9990382378c266ba70e7f6b281a310eca162279b",
     "dev/panel-mariadb@.service": "20efc559104c2fcfe75c11511b6fcb9c4f4d4382ec24e1dda6272cd2f771e847",
     "dev/panel-mysql-job@.service": "1ee0a22eec16368f1d7390fa05251c837b321900ccb30db6e9232dcaa09fd4a5",
@@ -1258,8 +1258,8 @@
     "internal/executor/load_balance_stream_install_controller_linux.go": "507f3de0bd32b84dd93615a286a21f14af70488441ef517852a7e8d0c6a88fea",
     "internal/executor/load_balance_stream_install_gate_linux.go": "81f1df8950e45b3e7c4506a303b7ec1846547962fb7e2549daf8bfff8a664a50",
     "internal/executor/load_balance_stream_install_observation_linux.go": "6602125ecde62b44deaa503810f139611f85644016dab5a48b7bf780c5b0f742",
-    "internal/executor/load_balance_stream_install_parent_linux.go": "75687c704098d8f372c29a55c38342cc0508ddcb64c547e4c8abd02d8fbb42da",
-    "internal/executor/load_balance_stream_install_parent_linux_test.go": "c4393abadfff3adcaa9df1296e243a9da401068e2b89d47cef8ff35509ba0b7f",
+    "internal/executor/load_balance_stream_install_parent_linux.go": "7c777ee687514fa102c04892286a55350d3f373b2dffbe8e7b5deb8b73336ce1",
+    "internal/executor/load_balance_stream_install_parent_linux_test.go": "e57fac495df0d56ead1915ff73e4797aec1a3e2003d33bd8e7863e49f0619634",
     "internal/executor/load_balance_stream_install_preflight_linux.go": "95450d61ec359ef6f415eef370de555cab0c79d1d9560caaf32f7de9a53a64a4",
     "internal/executor/load_balance_stream_install_receipt_linux.go": "a92df994d037c0be0eeebb61a70a432fa44fc3e62e2c5f3b2c71c7d11cd917f0",
     "internal/executor/load_balance_stream_install_rpc_linux.go": "6d5167dc9671a7d7d4b7440c16dd2ba71a842242b7ca30deb22c638ad4c5eb1d",

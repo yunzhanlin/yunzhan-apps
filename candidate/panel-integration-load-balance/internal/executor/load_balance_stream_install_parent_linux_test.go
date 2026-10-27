@@ -18,7 +18,7 @@ import (
 )
 
 func TestLoadBalanceStreamInstallParentCapabilitySetIsClosed(t *testing.T) {
-	base := "Name:\tfixture\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nNoNewPrivs:\t1\nCapInh:\t0000000000000000\nCapPrm:\t00000000000000cd\nCapEff:\t00000000000000cd\nCapBnd:\t00000000000000cd\nCapAmb:\t0000000000000000\n"
+	base := "Name:\tfixture\nUid:\t0\t0\t0\t0\nGid:\t0\t0\t0\t0\nNoNewPrivs:\t1\nCapInh:\t0000000000000080\nCapPrm:\t00000000000000cd\nCapEff:\t00000000000000cd\nCapBnd:\t00000000000000cd\nCapAmb:\t0000000000000080\n"
 	if !streamInstallRootCapabilities([]byte(base)) {
 		t.Fatal("exact minimal identity/NNP/capability set refused")
 	}
@@ -54,6 +54,16 @@ func TestLoadBalanceStreamInstallParentCapabilitySetIsClosed(t *testing.T) {
 		if streamInstallRootCapabilities([]byte(bad)) {
 			t.Fatal("wrong identity or missing kernel witness accepted")
 		}
+	}
+	for _, field := range []string{"CapInh", "CapAmb"} {
+		if streamInstallRootCapabilities([]byte(strings.Replace(base, field+":\t0000000000000080", field+":\t0000000000000000", 1))) {
+			t.Fatal("required fixed SETUID inheritance/ambient declaration missing", field)
+		}
+	}
+	missing := strings.ReplaceAll(base, "00000000000000cd", "000000000000004d")
+	missing = strings.Replace(missing, "CapBnd:\t000000000000004d", "CapBnd:\t00000000000000cd", 1)
+	if streamInstallRootCapabilities([]byte(missing)) {
+		t.Fatal("matching bounding set hid a missing actual permitted/effective SETUID bit")
 	}
 }
 
