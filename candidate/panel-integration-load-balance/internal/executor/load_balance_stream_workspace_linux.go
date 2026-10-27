@@ -132,9 +132,15 @@ func observeLoadBalanceStreamWorkspace(ctx context.Context) (loadBalanceStreamWo
 	}
 	out.Generation, out.RequestID, out.ConfigurationSHA256, out.Entries = generation.value.Generation, generation.value.RequestID, generation.value.ConfigurationSHA256, generation.value.Entries
 	out.AvailableMemoryBytes, out.MemoryHighBytes, out.MemoryMaxBytes = facts.AvailableMemoryBytes, plan.MemoryHighBytes, plan.MemoryMaxBytes
+	egress, err := holdLoadBalanceStreamRecordedEgress(ctx, seed, receipt.State, installed.identity.UID, receipt.Egress)
+	if err != nil {
+		out.State, out.Detail = "degraded", "当前防火墙完整规则、原始句柄或启动身份与回执不一致；未验证为运行正常"
+		return out, nil
+	}
+	defer egress.close()
 	if receipt.State == "stopped" {
 		var stopped streamServiceRecordedStopped
-		if json.Unmarshal(receipt.Native, &stopped) != nil || plan.ShouldRun || !streamManagedServiceInactive(ctx, stopped.InvocationID) {
+		if json.Unmarshal(receipt.Native, &stopped) != nil || plan.ShouldRun || !streamManagedServiceInactive(ctx, stopped.InvocationID) || egress.current(ctx) != nil {
 			out.Detail = "原停止记录与实际服务状态不一致"
 			return out, nil
 		}
@@ -147,7 +153,7 @@ func observeLoadBalanceStreamWorkspace(ctx context.Context) (loadBalanceStreamWo
 		return out, nil
 	}
 	defer live.close()
-	if !streamServiceMatchesRecorded(live, receipt) || verifyLoadBalanceStreamConfigurationMarkers(ctx, live, seed.After) != nil || generation.current(ctx) != nil {
+	if !streamServiceMatchesRecorded(live, receipt) || verifyLoadBalanceStreamConfigurationMarkers(ctx, live, seed.After) != nil || generation.current(ctx) != nil || egress.current(ctx) != nil {
 		out.State, out.Detail = "degraded", "当前工作进程、完整配置标记或原始代次不一致；不推断为业务健康"
 		return out, nil
 	}

@@ -176,18 +176,31 @@ func TestLoadBalanceStreamEnvelopeClosedDownloadAndUnavailableBeforeNetwork(t *t
 	u, _ := url.Parse(server.URL)
 	jar.SetCookies(u, []*http.Cookie{{Name: "panel-session", Value: "private-fixture"}})
 	client.HTTP.Jar = jar
-	if _, err := client.FetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest); err == nil || catalogCount.Load() != 0 || manifestCount.Load() != 0 {
-		t.Fatal("unfinished production feature performed a download")
+	var productionCopies int64
+	production, productionErr := client.FetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest)
+	if LoadBalanceStreamAvailable() {
+		productionCopies = 1
+		if productionErr != nil || !bytes.Equal(production.Catalog, in.Catalog) || !bytes.Equal(production.AppManifest, in.AppManifest) || !bytes.Equal(production.Signature, in.Signature) {
+			t.Fatal("compiled candidate transfer refused exact fixture bytes", productionErr)
+		}
+	} else if productionErr == nil {
+		t.Fatal("unavailable production handler accepted a transfer")
+	}
+	if catalogCount.Load() != productionCopies || manifestCount.Load() != productionCopies || unexpected.Load() != 0 {
+		t.Fatal("production channel did not honor its actual availability or leaked credentials")
+	}
+	if _, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest, func(string) bool { return false }); err == nil || catalogCount.Load() != productionCopies || manifestCount.Load() != productionCopies {
+		t.Fatal("unavailable handler performed a network request")
 	}
 	got, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest, streamReleaseFixtureAvailable)
-	if err != nil || !bytes.Equal(got.Catalog, in.Catalog) || !bytes.Equal(got.AppManifest, in.AppManifest) || !bytes.Equal(got.Signature, in.Signature) || catalogCount.Load() != 1 || manifestCount.Load() != 1 || unexpected.Load() != 0 {
+	if err != nil || !bytes.Equal(got.Catalog, in.Catalog) || !bytes.Equal(got.AppManifest, in.AppManifest) || !bytes.Equal(got.Signature, in.Signature) || catalogCount.Load() != productionCopies+1 || manifestCount.Load() != productionCopies+1 || unexpected.Load() != 0 {
 		t.Fatal("private fixture transfer changed bytes, leaked credentials or added requests", err)
 	}
 	redirect.Store(true)
-	if _, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest, streamReleaseFixtureAvailable); err == nil || unexpected.Load() != 0 || catalogCount.Load() != 2 || manifestCount.Load() != 2 {
+	if _, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), loadbalancestream.AppVersion, digest, streamReleaseFixtureAvailable); err == nil || unexpected.Load() != 0 || catalogCount.Load() != productionCopies+2 || manifestCount.Load() != productionCopies+2 {
 		t.Fatal("redirect was followed or retried")
 	}
-	if _, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), "1.8.5", digest, streamReleaseFixtureAvailable); err == nil || catalogCount.Load() != 2 {
+	if _, err := client.fetchLoadBalanceStreamReleaseEnvelope(context.Background(), "1.8.5", digest, streamReleaseFixtureAvailable); err == nil || catalogCount.Load() != productionCopies+2 {
 		t.Fatal("legacy version triggered native package download")
 	}
 }

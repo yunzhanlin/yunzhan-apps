@@ -33,6 +33,7 @@ type loadBalanceStreamHeldEgress struct {
 	issued    bool
 	retired   bool
 	unknown   bool
+	readOnly  bool
 }
 
 func (g *loadBalanceStreamHeldEgress) close() {
@@ -71,7 +72,7 @@ func (g *loadBalanceStreamHeldEgress) identityCurrent(ctx context.Context) bool 
 // Only two fixed read forms and the private pure-policy batch below execute.
 // argv, tool, stdin and output bounds cannot be supplied by Core or browser.
 func (g *loadBalanceStreamHeldEgress) command(ctx context.Context, batch []byte, tables bool) ([]byte, error) {
-	if !g.identityCurrent(ctx) || batch != nil && (len(batch) == 0 || len(batch) > loadbalancestream.MaxEgressObservationBytes || tables) {
+	if !g.identityCurrent(ctx) || batch != nil && (g.readOnly || len(batch) == 0 || len(batch) > loadbalancestream.MaxEgressObservationBytes || tables) {
 		return nil, loadbalancestream.ErrEgressGuard
 	}
 	args := []string{"-s", "-a", "-j", "list", "table", "inet", loadbalancestream.EgressTableName}
@@ -116,6 +117,40 @@ func (g *loadBalanceStreamHeldEgress) current(ctx context.Context) error {
 		return loadbalancestream.ErrEgressGuard
 	}
 	return nil
+}
+
+// Observation only: original verified receipt bytes never authorize a write.
+// Hold the actual current tool/netns descriptors and compare the complete live
+// table including handles. A new boot, replaced tool or missing policy fails.
+func holdLoadBalanceStreamRecordedEgress(ctx context.Context, seed loadbalancestream.ControlSeed, state string, uid uint32, receipt streamEgressReceipt) (*loadBalanceStreamHeldEgress, error) {
+	if ctx == nil || ctx.Err() != nil || os.Geteuid() != 0 {
+		return nil, loadbalancestream.ErrEgressGuard
+	}
+	policy, err := streamReceiptEgressPolicy(seed, state, uid)
+	if err != nil || !receipt.valid(policy) {
+		return nil, loadbalancestream.ErrEgressGuard
+	}
+	receipt.Observation.RuleHandles = append([]uint64(nil), receipt.Observation.RuleHandles...)
+	g := &loadBalanceStreamHeldEgress{policy: policy, receipt: receipt, readOnly: true}
+	fail := func() (*loadBalanceStreamHeldEgress, error) { g.close(); return nil, loadbalancestream.ErrEgressGuard }
+	g.nft, _, err = holdLoadBalanceStreamEngineFile(streamEgressNFT, true)
+	if err != nil {
+		return fail()
+	}
+	g.namespace, err = os.Open("/proc/self/ns/net")
+	if err != nil {
+		return fail()
+	}
+	g.nsBefore, err = g.namespace.Stat()
+	if err != nil {
+		return fail()
+	}
+	boot, err := streamAccountParentProc("/proc/sys/kernel/random/boot_id", 128)
+	g.bootID = strings.TrimSuffix(string(boot), "\n")
+	if err != nil || g.current(ctx) != nil {
+		return fail()
+	}
+	return g, nil
 }
 
 func (s *loadBalanceStreamConfigurationStore) holdEgress(ctx context.Context, facts loadbalancestream.ServiceFacts) error {

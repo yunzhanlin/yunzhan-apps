@@ -107,6 +107,27 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 		return raw
 	}
 	initial := readOwn()
+	originalReceipt := g.receipt
+	originalReceipt.Observation.RuleHandles = append([]uint64(nil), g.receipt.Observation.RuleHandles...)
+	reader, err := holdLoadBalanceStreamRecordedEgress(ctx, seed, "running", 991, originalReceipt)
+	if err != nil || reader == nil || !reader.readOnly || reader.issued || reader.missing || reader.current(ctx) != nil {
+		t.Fatal("actual original receipt must admit only held read-only observation", err)
+	}
+	defer reader.close()
+	t.Run("recorded-observer-does-not-retain-caller-rule-handle-buffer", func(t *testing.T) {
+		original := originalReceipt.Observation.RuleHandles[0]
+		originalReceipt.Observation.RuleHandles[0]++
+		defer func() { originalReceipt.Observation.RuleHandles[0] = original }()
+		if reader.current(ctx) != nil {
+			t.Fatal("caller mutation replaced a held observer's original rule handles")
+		}
+	})
+	t.Run("recorded-observer-cannot-issue-even-a-valid-nft-write", func(t *testing.T) {
+		if raw, err := reader.command(ctx, []byte("flush ruleset\n"), false); err != loadbalancestream.ErrEgressGuard || raw != nil ||
+			!bytes.Equal(initial, readOwn()) || reader.current(ctx) != nil {
+			t.Fatal("read-only observer selected a write or lost its actual original table")
+		}
+	})
 	t.Run("saved-fields-and-phase-claims-do-not-grant-live-ownership", func(t *testing.T) {
 		for name, mutate := range map[string]func(){
 			"receipt-format":  func() { g.receipt.Format = 2 },
@@ -173,6 +194,13 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 		if first.TableHandle != second.TableHandle || first.ChainHandle != second.ChainHandle || reflect.DeepEqual(first.RuleHandles, second.RuleHandles) || first.PolicySHA256 == second.PolicySHA256 {
 			t.Fatal("replacement recreated a table/chain or reused previous rule/receipt data")
 		}
+		if reader.current(ctx) != loadbalancestream.ErrEgressGuard {
+			t.Fatal("a held status/upgrade observation adopted replaced rules")
+		}
+		stale, staleErr := holdLoadBalanceStreamRecordedEgress(ctx, seed, "running", 991, originalReceipt)
+		if stale != nil || staleErr != loadbalancestream.ErrEgressGuard {
+			t.Fatal("reopening a historical receipt adopted another policy")
+		}
 		empty, err := loadbalancestream.PlanEgressGuard(nil, nil, validation, 991)
 		if err != nil || g.replaceOriginal(ctx, empty) != nil || g.current(ctx) != nil || !g.receipt.valid(empty) {
 			t.Fatal("last-stop exact empty permission set failed", err)
@@ -193,6 +221,14 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 			t.Fatal("modified owned table was repaired/adopted or changed on refusal")
 		}
 	})
+	fixture([]string{"delete", "table", "inet", loadbalancestream.EgressTableName}, "", true)
+	if reader.current(ctx) != loadbalancestream.ErrEgressGuard {
+		t.Fatal("a removed firewall table was treated as a verified status")
+	}
+	absent, absentErr := holdLoadBalanceStreamRecordedEgress(ctx, seed, "running", 991, originalReceipt)
+	if absent != nil || absentErr != loadbalancestream.ErrEgressGuard {
+		t.Fatal("a retained receipt hid actual table absence")
+	}
 	if got := fixture([]string{"-s", "-a", "-j", "list", "table", "inet", "qa_l4_egress_foreign"}, "", true); !bytes.Equal(got, foreign) {
 		t.Fatal("unrelated private foreign table changed")
 	}

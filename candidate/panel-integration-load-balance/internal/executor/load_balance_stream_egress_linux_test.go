@@ -12,7 +12,7 @@ import (
 func TestLoadBalanceStreamEgressMissingOriginalCannotExecute(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	for _, g := range []*loadBalanceStreamHeldEgress{nil, {}, {missing: true}, {unknown: true}, {issued: true}, {retired: true}} {
+	for _, g := range []*loadBalanceStreamHeldEgress{nil, {}, {missing: true}, {unknown: true}, {issued: true}, {retired: true}, {readOnly: true}} {
 		for _, parent := range []context.Context{nil, ctx, context.Background()} {
 			if g.identityCurrent(parent) || g.current(parent) != loadbalancestream.ErrEgressGuard || g.replaceOriginal(parent, loadbalancestream.EgressGuard{}) != loadbalancestream.ErrEgressGuard {
 				t.Fatal("missing or released original selected a native nft command")
@@ -37,6 +37,21 @@ func TestLoadBalanceStreamEgressMissingOriginalCannotExecute(t *testing.T) {
 			p.serviceEgressCurrent(context.Background()) || p.receiptEgressCurrent(context.Background(), "running") ||
 			p.receiptEgressCurrent(context.Background(), "stopped") || p.egressPolicyCurrent(context.Background(), "running") {
 			t.Fatal("claim of a previous phase or result selected native egress ownership")
+		}
+	}
+}
+
+func TestLoadBalanceStreamRecordedEgressNeedsCompleteOriginalPolicyBeforeObservation(t *testing.T) {
+	canceled, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, ctx := range []context.Context{nil, canceled, context.Background()} {
+		for _, state := range []string{"", "running", "stopped", "healthy"} {
+			for _, uid := range []uint32{0, 991, 1000} {
+				held, err := holdLoadBalanceStreamRecordedEgress(ctx, loadbalancestream.ControlSeed{}, state, uid, streamEgressReceipt{})
+				if held != nil || err != loadbalancestream.ErrEgressGuard {
+					t.Fatal("missing original seed/receipt selected a native observation")
+				}
+			}
 		}
 	}
 }

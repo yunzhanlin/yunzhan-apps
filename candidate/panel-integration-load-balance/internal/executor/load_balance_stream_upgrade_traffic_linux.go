@@ -29,11 +29,16 @@ type loadBalanceStreamTrafficUpgrade struct {
 	seed       loadbalancestream.ControlSeed
 	receipt    streamServiceReceipt
 	live       *loadBalanceStreamServiceObservation
+	egress     *loadBalanceStreamHeldEgress
 }
 
 func (w *loadBalanceStreamTrafficUpgrade) close() {
 	if w == nil {
 		return
+	}
+	if w.egress != nil {
+		w.egress.close()
+		w.egress = nil
 	}
 	if w.live != nil {
 		w.live.close()
@@ -217,6 +222,15 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 	if err != nil || plan.SHA256 != w.store.generation.value.ServiceUnitSHA256 {
 		return loadbalancestream.ErrService
 	}
+	if w.egress == nil {
+		w.egress, err = holdLoadBalanceStreamRecordedEgress(ctx, w.seed, w.receipt.State, w.installed.identity.UID, w.receipt.Egress)
+		if err != nil {
+			return err
+		}
+	}
+	if w.egress.current(ctx) != nil {
+		return loadbalancestream.ErrEgressGuard
+	}
 	if w.receipt.State == "stopped" {
 		var stopped streamServiceRecordedStopped
 		if json.Unmarshal(w.receipt.Native, &stopped) != nil || plan.ShouldRun ||
@@ -257,6 +271,9 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 			verifyLoadBalanceStreamConfigurationMarkers(ctx, w.live, w.seed.After) != nil {
 			return loadbalancestream.ErrService
 		}
+	}
+	if w.egress.current(ctx) != nil {
+		return loadbalancestream.ErrEgressGuard
 	}
 	return w.namespaces.unchanged()
 }
