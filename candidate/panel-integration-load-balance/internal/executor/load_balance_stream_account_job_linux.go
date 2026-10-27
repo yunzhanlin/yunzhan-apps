@@ -23,28 +23,28 @@ func RunLoadBalanceStreamAccountJob(job string) error {
 	defer stop()
 	record, err := readLoadBalanceStreamAccountPermit(job)
 	if err != nil {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份原始父进程凭据", err)
 	}
 	defer record.close()
 	if !record.current() || !loadBalanceStreamProgrammeInputsMatch(loadBalanceStreamCompiledProgrammeInputsSHA256, record.value.ProgrammeInputsSHA256) {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份凭据与构建核对", errLoadBalanceStreamAccount)
 	}
 	j, err := openLoadBalanceStreamInstallationJournalReadOnlyAt(loadBalanceStreamInstallationJobsRoot, job)
 	if err != nil {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份原始安装记录", err)
 	}
 	defer j.close()
 	parent, err := holdLoadBalanceStreamAccountParent(ctx, record.value, j)
 	if err != nil {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份实际父进程", err)
 	}
 	defer parent.Close()
 	parent.permitRecord = record
 	if !record.current() || checkLoadBalanceStreamAccountChildKernel(ctx, parent) != nil {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份实际子进程", errLoadBalanceStreamAccount)
 	}
 	if _, err := prepareLoadBalanceStreamSystemAccount(ctx, parent); err != nil {
-		return errLoadBalanceStreamAccount
+		return streamInstallPhaseError("专用身份独立创建协议", err)
 	}
 	if !record.current() || parent.current(ctx) != nil || ctx.Err() != nil {
 		return errLoadBalanceStreamAccount

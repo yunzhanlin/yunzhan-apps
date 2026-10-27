@@ -62,7 +62,7 @@ func prepareLoadBalanceStreamSystemAccount(ctx context.Context, parent *loadBala
 	// Use only shared runtime/engine lock ordering. No Docker command, daemon
 	// capability or blanket pending-job exemption is inherited from the parent.
 	bound, stop = context.WithTimeout(ctx, 3*time.Second)
-	engine, err := productionDockerMutationStore().acquire(bound)
+	engine, err := loadBalanceStreamAccountComposeStore().acquire(bound)
 	stop()
 	if err != nil {
 		return empty, errLoadBalanceStreamAccount
@@ -123,6 +123,16 @@ func prepareLoadBalanceStreamSystemAccount(ctx context.Context, parent *loadBala
 		return empty, errLoadBalanceStreamAccount
 	}
 	return identity, nil
+}
+
+// The fixed child has a read-only executor namespace. It only locks an
+// existing original Compose inode: Linux FLOCK permits an exclusive lock on
+// an O_RDONLY descriptor. Never create the lock or grant write access to the
+// Docker ledger merely to coordinate the independent account dependency.
+func loadBalanceStreamAccountComposeStore() dockerMutationStore {
+	store := productionDockerMutationStore()
+	store.existingOnly = true
+	return store
 }
 
 // Only the fixed leaf can be created. Existing modes/contents are never fixed,
