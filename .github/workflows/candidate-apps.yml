@@ -29,9 +29,11 @@ jobs:
         run: npm test
       - name: Candidate build must not modify the stable signed directory
         run: git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures
-      - name: Complete unchanged source tests using the actual compiled candidate channel
+      - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
-        run: go test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+        run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+      - name: Native regression must preserve the exact exported source cohort
+        run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
         working-directory: candidate/panel-integration-load-balance
         run: go test -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate"
