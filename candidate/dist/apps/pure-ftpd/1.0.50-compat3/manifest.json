@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "pure-ftpd",
+  "name": "Pure-FTPd",
+  "category": "deployment",
+  "version": "1.0.50-compat3",
+  "summary": "强制 TLS 的网站虚拟账户；支持密码轮换，失败恢复账户文本和认证数据库。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pure-ftpd",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "强制 TLS",
+    "虚拟账号",
+    "网站 chroot",
+    "上传下载",
+    "回环监听",
+    "密码轮换",
+    "双文件失败恢复",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pure-ftpd"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

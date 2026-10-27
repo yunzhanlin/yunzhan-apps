@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "网站分析 · Website Analytics",
+  "category": "professional",
+  "version": "2.1.0",
+  "summary": "浏览器 PV/UV、会话旅程、来源、热图与性能；启停自动应用对应网站采集代理，备份、校验及失败回滚；需支持 2.1 的面板，HTML 标签仍需模板接入",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集",
+    "启停自动配置同源代理",
+    "PV 与浏览器 UV",
+    "会话与访问旅程",
+    "入口和离开页面",
+    "页面与来源分布",
+    "点击坐标热图",
+    "页面性能 p75",
+    "保留期和容量上限",
+    "站点隔离与报告导出"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

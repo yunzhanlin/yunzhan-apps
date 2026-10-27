@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "id": "pure-ftpd",
+  "name": "Pure-FTPd",
+  "category": "deployment",
+  "version": "1.0.50",
+  "summary": "真实 TLS 登录、上传/下载内容核对、网站 chroot 和账户删除通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pure-ftpd",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64"
+    ]
+  },
+  "capabilities": [
+    "强制 TLS",
+    "虚拟账号",
+    "网站 chroot",
+    "上传下载",
+    "回环监听"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pure-ftpd"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "load-balance",
+  "name": "Load Balance",
+  "category": "professional",
+  "version": "1.0-compat1",
+  "summary": "真实轮询分流、节点故障切换、健康探测和入口移除通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "load-balance",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "加权轮询",
+    "备用节点",
+    "IP 粘滞",
+    "节点探测",
+    "失败转移"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/load-balance"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

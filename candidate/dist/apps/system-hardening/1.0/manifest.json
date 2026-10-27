@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "system-hardening",
+  "name": "System hardening",
+  "category": "professional",
+  "version": "1.0",
+  "summary": "固化链接、ptrace、内核日志与网络重定向等安全基线，支持偏差检测和恢复。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "system-hardening",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "内核参数基线",
+    "偏差检测",
+    "安全回滚",
+    "审计"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "nfs-manager",
+  "name": "NFS Manager",
+  "category": "professional",
+  "version": "1.1.0",
+  "summary": "真实 NFSv4 挂载、远程内容核对、ro/nosuid/nodev/noexec 选项及卸载通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nfs-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "NFSv4",
+    "安全挂载选项",
+    "开机恢复",
+    "活跃挂载卸载保护"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/nfs-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

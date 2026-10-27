@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "pure-ftpd",
+  "name": "Pure-FTPd",
+  "category": "deployment",
+  "version": "1.0.50-compat4",
+  "summary": "网站独立虚拟账户与 chroot，控制和数据通道强制 TLS；支持 IPv4 监听、被动端口、NAT 通告、可信域名证书、连接限额和配置失败恢复，不自动开放防火墙。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pure-ftpd",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "控制与数据通道强制 TLS",
+    "虚拟账号",
+    "网站 chroot",
+    "上传下载",
+    "IPv4 监听与显式暴露确认",
+    "密码轮换",
+    "双文件失败恢复",
+    "被动端口与 NAT 通告",
+    "系统信任的域名证书",
+    "连接及空闲限额",
+    "真实 TLS 探测与配置回滚",
+    "中断恢复与私有备份"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pure-ftpd"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

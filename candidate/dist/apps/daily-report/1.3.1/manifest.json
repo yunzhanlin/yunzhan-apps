@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "daily-report",
+  "name": "aaPanel Daily Report",
+  "category": "professional",
+  "version": "1.3.1",
+  "summary": "持久化每日资源、任务、安全、流量和证书摘要；按日期读取历史日报，保留执行历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "daily-report",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "资源摘要",
+    "任务故障摘要",
+    "流量与安全摘要",
+    "证书到期检查",
+    "每日持久化",
+    "按日期历史日报",
+    "专用操作流程",
+    "执行历史",
+    "签名 Webhook 脱敏推送",
+    "持久队列与退避重试",
+    "实际送达记录"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/daily-report"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

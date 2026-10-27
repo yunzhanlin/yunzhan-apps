@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "php-82",
+  "name": "PHP 8.2",
+  "category": "deployment",
+  "version": "8.2.35-compat2",
+  "summary": "PHP 8.2.35 固定官方源码与安全修订；独立 FPM、多版本切换和引用保护，原生构建按可用内存限制编译并发。完整系统与架构实装矩阵仍在验收。",
+  "stage": "ready",
+  "risk": "maintenance",
+  "delivery": {
+    "provider": "runtime",
+    "target": "php-8.2.35",
+    "manage_route": "runtimes"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "CLI",
+    "FPM",
+    "多版本并存",
+    "站点独立池"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "php -v"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "php-security-20261021-v1",
+    "php-bounded-native-build-v1"
+  ]
+}

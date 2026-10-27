@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "手动及持久化定时增量同步；支持暂停恢复、修订冲突检查、目标冲突保护和后台执行历史。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "增量同步",
+    "SHA-256 校验",
+    "目标冲突保护",
+    "逐文件检查点",
+    "隔离 PHP 网站部署",
+    "定时同步计划",
+    "暂停恢复",
+    "计划修订检查",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/files-sync"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

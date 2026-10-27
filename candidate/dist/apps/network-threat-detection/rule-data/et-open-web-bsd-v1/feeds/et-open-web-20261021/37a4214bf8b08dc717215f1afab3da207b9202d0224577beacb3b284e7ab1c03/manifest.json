@@ -1,0 +1,38 @@
+{
+  "format": 1,
+  "source_url": "https://rules.emergingthreats.net/open/suricata-8.0.7/emerging.rules.tar.gz",
+  "source_sha256": "f426ca360aa435116d37849e6000658b61c09a4925ddc657bbcc4505312d8d7c",
+  "source_bytes": 5638363,
+  "license": "BSD-3-Clause; reviewed ET SID range 2000000-2799999 only",
+  "engine_major": 8,
+  "categories": [
+    "emerging-web_server",
+    "emerging-web_specific_apps"
+  ],
+  "required_variables": [
+    "EXTERNAL_NET",
+    "HOME_NET",
+    "HTTP_PORTS"
+  ],
+  "source_rule_count": 72223,
+  "enabled_rule_count": 1510,
+  "dependency_rule_count": 2,
+  "excluded": {
+    "external-or-active-capability": 8,
+    "retired-category": 3945,
+    "undefined-native-variable": 6671,
+    "unresolved-state-dependency": 3,
+    "unselected-category": 44021,
+    "unsupported-state-dependency": 88,
+    "upstream-disabled": 15977
+  },
+  "files_sha256": {
+    "BSD-License.txt": "2fba5e256c061fd24855c2a46d2ecf9f4eed7869cdf3b5a22d53fc26578ae906",
+    "LICENSE": "03ecce62500a3fbc131dc41b99b3e69632101542e3fc9a303698ef8578c4d4b3",
+    "classification.config": "16e4dc1d59245f26c2c4cd037eb30764266e02fcfb06654387260567b9d31cfe",
+    "et-open.rules": "19aee50fbd0f39f6d8e97a2f539b32519a89a28532dc299abb9969095cd73225",
+    "reference.config": "4b2000f684ef69755c5117da63e85a917ca41085f34f6eed974ff47cb334e65c"
+  },
+  "native_syntax_verified": false,
+  "publisher_signature_verified": false
+}

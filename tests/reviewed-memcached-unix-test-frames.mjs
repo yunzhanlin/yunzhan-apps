@@ -146,8 +146,25 @@ export const reviewedMemcachedUnixReaders={
     "after": "32e687b004e67d826b502216a1ccfe9bcca5f5af078ab67694654df26724ad0a"
   }
 };
+// The later candidate publisher adds only these declared fixture MODULES.
+// Reverse their exact copy-list entries before the existing frozen comparison;
+// every old assertion, predicate and the old before/after digests stay intact.
+function beforeCandidateFixtureDependencies(path,bytes){
+ const changes={
+  'tests/geodata-channel-publisher.test.mjs':[
+   "'tools/php-bounded-contract.mjs','tools/load-balance-stream-contract.mjs','signatures/catalog-v1.pub.pem'",
+   "'tools/php-bounded-contract.mjs','signatures/catalog-v1.pub.pem'"],
+  'tests/versioning.test.mjs':[
+   "'php-bounded-contract.mjs','official-channel.mjs','load-balance-stream-contract.mjs','candidate-source.mjs','candidate-assets.mjs'",
+   "'php-bounded-contract.mjs'"],
+ };
+ const change=changes[path],text=bytes.toString();if(!change||!text.includes(change[0]))return bytes;
+ assert.equal(text.split(change[0]).length,2,'duplicate candidate fixture dependency list');
+ return Buffer.from(text.replace(change[0],()=>change[1]));
+}
 export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
+ bytes=beforeCandidateFixtureDependencies(path,bytes);
  const sha=b=>createHash('sha256').update(b).digest('hex');if(sha(bytes)===plan.before)return bytes;
  assert.equal(sha(bytes),plan.after,'Unknown reader or assertion change is not an input qualification');
  let text=bytes.toString();

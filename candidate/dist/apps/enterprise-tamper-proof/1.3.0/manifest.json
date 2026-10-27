@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "enterprise-tamper-proof",
+  "name": "Tamper-proof for Enterprise",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "enterprise-tamper-proof",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "HMAC 签名基线",
+    "内容备份",
+    "变更检测",
+    "分钟级自动恢复",
+    "实时事件后恢复",
+    "策略修订保护",
+    "监控降级状态",
+    "365 天有界历史分页",
+    "恢复前留存",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/enterprise-tamper-proof"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

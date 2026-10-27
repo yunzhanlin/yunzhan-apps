@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "file-monitor",
+  "name": "File monitor",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "Linux inotify 递归监控、动态目录及溢出补查；监听超限明确降级，暂停恢复带修订保护，私有数据库支持历史筛选分页。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "file-monitor",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "哈希检查点",
+    "变更检测",
+    "权限变化",
+    "排除规则",
+    "Linux inotify 实时监控",
+    "动态目录与溢出补查",
+    "监听状态与资源降级",
+    "365 天有界历史分页",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/file-monitor"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

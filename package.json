@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "node tools/build.mjs",
+    "build:candidate": "node tools/build.mjs --candidate-apps",
     "verify": "node tools/verify.mjs",
     "verify:signature": "node tools/verify-signature.mjs",
+    "verify:candidate": "node tools/verify.mjs --candidate-apps && node tools/verify-signature.mjs --candidate-apps",
     "sign": "node tools/sign.mjs",
-    "test": "npm run build && npm run verify && npm run verify:signature && node --test tests/*.test.mjs"
+    "test": "npm run build && npm run verify && npm run verify:signature && npm run build:candidate && npm run verify:candidate && node --test tests/*.test.mjs"
   },
   "engines": {
     "node": ">=22"

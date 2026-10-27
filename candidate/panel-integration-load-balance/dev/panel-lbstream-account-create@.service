@@ -1,0 +1,47 @@
+[Unit]
+Description=Original TCP UDP dedicated account dependency %i
+BindsTo=panel-lbstream-install@%i.service
+After=panel-lbstream-install@%i.service
+
+[Service]
+Type=exec
+Slice=system.slice
+User=root
+Group=root
+ExecStart=/opt/panel/bin/panel-executor --load-balance-stream-account-job=%i
+Restart=no
+RemainAfterExit=no
+KillMode=control-group
+RuntimeMaxSec=35s
+TimeoutStartSec=5s
+TimeoutStopSec=5s
+UMask=0077
+NoNewPrivileges=yes
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_READ_SEARCH CAP_FOWNER CAP_SETUID CAP_SETGID
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateNetwork=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/etc /var/lib/panel-executor/load-balance-stream-identity
+MemoryAccounting=yes
+MemoryHigh=256M
+MemoryMax=256M
+MemorySwapMax=0
+CPUAccounting=yes
+CPUQuota=100%
+TasksAccounting=yes
+TasksMax=32
+StandardOutput=journal
+StandardError=journal

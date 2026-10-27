@@ -1,0 +1,718 @@
+package core
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"local/panel/internal/appcatalog"
+	"local/panel/internal/runtimecatalog"
+	"net/http"
+	"path/filepath"
+	"runtime"
+	"strings"
+	"sync"
+	"time"
+)
+
+type AppRegistryStatus struct {
+	ID                  string                `json:"id"`
+	StateKnown          bool                  `json:"state_known"`
+	Installed           bool                  `json:"installed"`
+	Healthy             bool                  `json:"healthy"`
+	Detail              string                `json:"detail"`
+	Supported           bool                  `json:"supported"`
+	CompatibilityDetail string                `json:"compatibility_detail,omitempty"`
+	InstalledVersion    string                `json:"installed_version,omitempty"`
+	VersionSource       string                `json:"version_source,omitempty"`
+	LatestVersion       string                `json:"latest_version"`
+	VersionKnown        bool                  `json:"version_known"`
+	UpdateAvailable     bool                  `json:"update_available"`
+	UpdateSupported     bool                  `json:"update_supported"`
+	UpdateKind          string                `json:"update_kind,omitempty"`
+	UpdateDetail        string                `json:"update_detail,omitempty"`
+	Instances           []AppRegistryInstance `json:"instances,omitempty"`
+}
+
+type AppRegistryInstance struct {
+	ID              string `json:"id"`
+	Version         string `json:"version,omitempty"`
+	VersionSource   string `json:"version_source,omitempty"`
+	UpdateAvailable bool   `json:"update_available"`
+}
+
+type AppRegistryPage struct {
+	Catalog appcatalog.Catalog  `json:"catalog"`
+	Status  []AppRegistryStatus `json:"status"`
+	Source  appcatalog.LoadInfo `json:"source"`
+	Host    AppRegistryHost     `json:"host"`
+}
+
+type AppRegistryHost struct {
+	Platform     string `json:"platform"`
+	Architecture string `json:"architecture"`
+}
+
+func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool, string) {
+	supportedOS := platform == "debian-12" || platform == "debian-13" || platform == "ubuntu-22.04" || platform == "ubuntu-24.04" || platform == "ubuntu-26.04"
+	if !supportedOS || (arch != "amd64" && arch != "arm64") {
+		return false, "当前系统不在 Debian 12/13、Ubuntu 22.04/24.04/26.04 的 64 位支持范围内"
+	}
+	if app.Stage != "ready" {
+		return false, "该应用尚未完成安装器接入"
+	}
+	switch app.Provider {
+	case "compose":
+		if !IsDockerTemplate(app.Target) {
+			return false, "当前面板没有该应用的受限安装器"
+		}
+		if arch == "arm64" {
+			if _, legacy := LegacyPHPImages[app.Target]; legacy {
+				return false, "固定应用镜像仅支持 x86_64；ARM64 不启用模拟运行"
+			}
+		}
+	case "runtime":
+		if app.Target == "docker-auto" {
+			_, ok := runtimecatalog.DockerSpecOn(platform)
+			return ok, ""
+		}
+		if _, ok := runtimecatalog.Find(app.Target); !ok {
+			return false, "当前系统或架构没有该运行时的已审核安装源"
+		}
+	case "panel-module":
+		if _, ok := FindAppModule(app.Target); !ok && app.Target != "nginx-waf" && app.Target != "system-hardening" && app.Target != "intrusion-prevention" {
+			return false, "当前面板没有该功能处理器"
+		}
+		if app.Version != "" && ValidateSoftwareUpdate(app.Target, app.Version) != nil {
+			return false, "新版应用需要先升级面板的受限功能处理器"
+		}
+	default:
+		return false, "不支持该应用处理器"
+	}
+	return true, ""
+}
+
+func (a *Server) appRegistryCacheDir() string {
+	return filepath.Join(a.Config.DataDir, "app-registry")
+}
+
+func (a *Server) loadAppCatalog(ctxTimeout time.Duration, r *http.Request) (appcatalog.Catalog, appcatalog.LoadInfo, error) {
+	ctx, cancel := contextWithTimeout(r.Context(), ctxTimeout)
+	defer cancel()
+	maxAge := 5 * time.Minute
+	if r.URL.Query().Get("refresh") == "1" {
+		maxAge = 0
+	}
+	return a.AppCatalog.LoadCatalog(ctx, filepath.Join(a.appRegistryCacheDir(), "catalog"), maxAge)
+}
+
+// contextWithTimeout is a small seam for tests and keeps every GitHub request bounded.
+var contextWithTimeout = func(parent context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(parent, timeout)
+}
+
+func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Catalog) []AppRegistryStatus {
+	var receiptErr error
+	receipts := map[string]registryReceipt{}
+	if a.Store != nil {
+		receiptErr = a.reconcileRegistryReceipts(ctx)
+		var readErr error
+		receipts, readErr = a.Store.registryReceipts()
+		if readErr != nil {
+			receiptErr = readErr
+		}
+	}
+	var runtimes struct {
+		Installed []registryInstalledRuntime `json:"installed"`
+	}
+	software := map[string]SoftwareAppStatus{}
+	var softwareRows []SoftwareAppStatus
+	compose := map[string]bool{}
+	composeHealthy := map[string]bool{}
+	var projects struct {
+		Projects []struct {
+			ID              string   `json:"id"`
+			TemplateID      string   `json:"template_id"`
+			TemplateProfile string   `json:"template_profile,omitempty"`
+			State           string   `json:"state"`
+			StateKnown      *bool    `json:"state_known,omitempty"`
+			Services        int      `json:"services"`
+			Running         int      `json:"running"`
+			Healthy         int      `json:"healthy"`
+			Images          []string `json:"images"`
+		} `json:"projects"`
+	}
+	// Independent probes must not inherit time already spent by a slow earlier probe.
+	var runtimeErr, softwareErr, composeErr error
+	var probes sync.WaitGroup
+	probes.Add(3)
+	go func() {
+		defer probes.Done()
+		runtimeErr = a.Executor.Call(ctx, http.MethodGet, "/v1/runtimes", nil, &runtimes)
+	}()
+	go func() {
+		defer probes.Done()
+		softwareErr = a.Executor.Call(ctx, http.MethodGet, "/v1/software", nil, &softwareRows)
+	}()
+	go func() {
+		defer probes.Done()
+		composeErr = a.Executor.Call(ctx, http.MethodGet, "/v1/docker/projects", nil, &projects)
+	}()
+	probes.Wait()
+	if softwareErr == nil {
+		for _, item := range softwareRows {
+			if _, duplicate := software[item.ID]; duplicate {
+				item.StateUnknown = true
+			}
+			software[item.ID] = item
+		}
+	}
+	if composeErr == nil {
+		for _, project := range projects.Projects {
+			if project.TemplateID != "" {
+				if project.TemplateID == "memcached-cache" && project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
+					continue // Historical receipt stays; no live installation is invented.
+				}
+				compose[project.TemplateID] = true
+				if project.State == "running" && project.Services > 0 && project.Running == project.Services && project.Healthy == project.Services {
+					composeHealthy[project.TemplateID] = true
+				}
+			}
+		}
+	}
+	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
+	for _, app := range catalog.Apps {
+		supported, compatibilityDetail := registrySupportOn(app, runtimecatalog.HostPlatform(), runtime.GOARCH)
+		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail, LatestVersion: app.Version}
+		if app.Stage != "ready" {
+			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
+			out = append(out, status)
+			continue
+		}
+		switch app.Provider {
+		case "runtime":
+			status.StateKnown = runtimeErr == nil
+			if status.StateKnown {
+				applyRegistryRuntimeStatus(&status, app, runtimes.Installed, receipts, runtimecatalog.HostPlatform())
+			}
+		case "panel-module":
+			row, present := software[app.Target]
+			status.StateKnown = softwareErr == nil && present && !row.StateUnknown
+			status.Installed, status.Healthy = row.Installed, row.Healthy
+			status.InstalledVersion = row.Version
+			status.VersionKnown = status.Installed && appcatalog.ValidVersion(row.Version)
+			if row.Detail != "" {
+				status.Detail = row.Detail
+			}
+		case "compose":
+			status.StateKnown = composeErr == nil
+			status.Installed = compose[app.Target]
+			status.Healthy = composeHealthy[app.Target]
+			for _, project := range projects.Projects {
+				if project.TemplateID != app.Target {
+					continue
+				}
+				if project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
+					if project.StateKnown == nil || !*project.StateKnown || project.Services != 0 || project.Running != 0 || project.Healthy != 0 {
+						status.StateKnown = false
+					}
+					continue
+				}
+				if project.StateKnown != nil && !*project.StateKnown {
+					status.StateKnown = false
+					continue
+				}
+				instance := AppRegistryInstance{ID: project.ID}
+				instance.Version = registryImageVersion(app, project.Images)
+				if instance.Version != "" {
+					instance.VersionSource = "upstream-image"
+				}
+				hasPackageReceipt := false
+				if receipt, ok := receipts[app.ID+":"+project.ID]; ok && receipt.Target == app.Target {
+					instance.Version = receipt.Version
+					instance.VersionSource = "application-receipt"
+					hasPackageReceipt = true
+				}
+				cmp, valid := appcatalog.CompareVersions(instance.Version, app.Version)
+				instance.UpdateAvailable = valid && cmp < 0 || registryLegacyMemcachedPackageReview(app, project.Images, hasPackageReceipt) || registryLegacyMemcachedUnixReview(app, project.TemplateProfile, project.Images, hasPackageReceipt)
+				status.Instances = append(status.Instances, instance)
+				status.UpdateAvailable = status.UpdateAvailable || instance.UpdateAvailable
+			}
+			if len(status.Instances) == 1 {
+				status.InstalledVersion = status.Instances[0].Version
+				status.VersionSource = status.Instances[0].VersionSource
+				status.VersionKnown = appcatalog.ValidVersion(status.InstalledVersion)
+			}
+		}
+		if !status.StateKnown {
+			status.Installed, status.Healthy, status.VersionKnown = false, false, false
+			status.InstalledVersion = ""
+			status.VersionSource = ""
+			status.UpdateAvailable = false
+		}
+		if app.Provider != "runtime" && status.Installed && status.VersionKnown {
+			cmp, valid := appcatalog.CompareVersions(status.InstalledVersion, app.Version)
+			status.UpdateAvailable = status.UpdateAvailable || (valid && cmp < 0)
+		}
+		if !status.StateKnown {
+			status.UpdateAvailable = false
+		}
+		if status.UpdateAvailable {
+			switch app.Provider {
+			case "panel-module":
+				status.UpdateKind = "module"
+				status.UpdateSupported = supported && ValidateSoftwareUpdate(app.Target, app.Version) == nil
+				status.UpdateDetail = "新版功能由签名面板提供；更新保留配置、数据、基线和历史报告"
+			case "runtime":
+				if status.UpdateKind != "runtime-package-review" {
+					status.UpdateKind = "runtime"
+				}
+				status.UpdateSupported = supported
+				status.UpdateDetail = "安装或核对已审核的运行时版本；不自动切换网站或迁移数据库"
+				if status.UpdateKind == "runtime-package-review" {
+					status.UpdateDetail = "未记录此应用包修订；核对已安装精确版本，若目标已缺失则安装签名目录固定版本。不自动切换网站或迁移数据库"
+				}
+				if app.ID == "docker-manager" {
+					status.UpdateKind, status.UpdateSupported = "runtime-host-review", false
+					status.UpdateDetail = "Docker 为宿主软件，须先核对固定软件包、容器影响和维护窗口；此处不自动替换 Docker 服务，请打开运行环境核对"
+				}
+			case "compose":
+				status.UpdateKind = "compose-review"
+				status.UpdateDetail = "请在 Docker 管理中逐项目核对镜像和数据迁移；不批量替换容器或重建数据卷"
+				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
+					status.UpdateKind = "memcached-original"
+					status.UpdateSupported = supported
+					status.UpdateDetail = "逐实例预检并明确确认缓存可能清空；保留原镜像，实际健康后才记录新版，未知结果不重发"
+				} else if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedUnixVersion {
+					status.UpdateKind, status.UpdateSupported = "memcached-unix-migration", false
+					status.UpdateDetail = "新版使用独立 Unix Socket，旧 TCP 实例不能原地转换。请先新建 Socket 实例、修改网站连接并核对，再单独停用旧实例；不复制缓存、不自动停用或卸载旧实例"
+				}
+			}
+			if !status.UpdateSupported && app.Provider != "compose" && status.UpdateKind != "runtime-host-review" {
+				status.UpdateKind = "panel-upgrade"
+				status.UpdateDetail = "仓库已有新版，但当前面板缺少已审核处理器，请先升级面板"
+			}
+		} else if status.Installed && !status.VersionKnown {
+			status.UpdateDetail = "旧安装未记录应用包版本，不能据此判定已是最新版；请核对管理页"
+		}
+		if receiptErr != nil {
+			status.UpdateSupported = false
+			status.UpdateDetail = "应用版本记录读取失败，请稍后重试"
+		}
+		applyRegistryWAFConfigurationReview(&status, app)
+		if !status.StateKnown {
+			status.Detail = "状态暂未确认，请刷新；不会据此重复安装"
+		}
+		if status.Installed && status.Detail == "未安装" {
+			if status.Healthy {
+				status.Detail = "已安装且健康探针通过"
+			} else {
+				status.Detail = "已安装，需要核对运行状态"
+			}
+		}
+		out = append(out, status)
+	}
+	return out
+}
+
+func versionBranch(version string) string {
+	parts := strings.Split(strings.SplitN(version, "-", 2)[0], ".")
+	if len(parts) >= 2 {
+		return strings.Join(parts[:2], ".")
+	}
+	return version
+}
+
+func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
+	prefix := map[string]string{"memcached": "memcached:", "phpmyadmin": "phpmyadmin:", "mongodb": "mongo:", "elasticsearch": "docker.elastic.co/elasticsearch/elasticsearch:", "rabbitmq": "rabbitmq:", "openlitespeed": "litespeedtech/openlitespeed:"}[app.ID]
+	if strings.HasPrefix(app.ID, "php-") {
+		prefix = "devilbox/php-fpm:"
+	}
+	if prefix == "" {
+		return ""
+	}
+	for _, image := range images {
+		if !strings.HasPrefix(image, prefix) {
+			continue
+		}
+		version := strings.SplitN(strings.TrimPrefix(image, prefix), "@", 2)[0]
+		version = strings.SplitN(version, "-", 2)[0]
+		// Floating major/minor tags cannot prove an exact installed version.
+		if len(strings.Split(version, ".")) < 3 {
+			return ""
+		}
+		if appcatalog.ValidVersion(version) {
+			return version
+		}
+	}
+	return ""
+}
+
+// An upstream daemon version is not a recorded application package revision.
+// Semver correctly orders 1.6.45 above its prerelease-shaped compat2 suffix,
+// but that must not hide this exact supported legacy-template migration when
+// this instance has NO package receipt. Keep the actual upstream display, do
+// not fabricate compat1/compat2 receipts or weaken global version comparison.
+// This only offers explicit native preflight; it cannot queue or authorize an
+// update. Changed/ambiguous images, other packages, and real newer receipts
+// retain their existing conservative behavior.
+func registryLegacyMemcachedPackageReview(app appcatalog.CatalogItem, images []string, hasPackageReceipt bool) bool {
+	return !hasPackageReceipt && app.ID == "memcached" && app.Provider == "compose" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion && len(images) == 1 && images[0] == "memcached:1.6.45-alpine"
+}
+
+func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
+	var in registryInstallInput
+	if !decode(w, r, &in) {
+		return
+	}
+	requestInput := in // Preserve client identity before Compose defaults/names.
+	key := r.Header.Get("Idempotency-Key")
+	replay := func() bool {
+		prior, found, err := a.Store.registryInstallReplay(r.PathValue("id"), u.ID, key, requestInput)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return true
+		}
+		if found {
+			a.sendRegistryInstallReplay(w, r, prior)
+			return true
+		}
+		return false
+	}
+	if replay() {
+		return
+	}
+	catalog, _, err := a.loadAppCatalog(15*time.Second, r)
+	if err != nil {
+		if replay() {
+			return
+		}
+		fail(w, 503, err.Error())
+		return
+	}
+	item, ok := appcatalog.Find(catalog, strings.TrimSpace(r.PathValue("id")))
+	if !ok {
+		if replay() {
+			return
+		}
+		fail(w, 404, "应用不在已签名目录中")
+		return
+	}
+	if (in.ExpectedVersion != "" && in.ExpectedVersion != item.Version) || (in.ExpectedSHA256 != "" && in.ExpectedSHA256 != item.SHA256) {
+		if replay() {
+			return
+		}
+		fail(w, 409, "应用目录已变化，请刷新后重试")
+		return
+	}
+	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
+	if err != nil {
+		if replay() {
+			return
+		}
+		fail(w, 409, err.Error())
+		return
+	}
+	if err = appCompatible(manifest); err != nil {
+		if replay() {
+			return
+		}
+		fail(w, 409, err.Error())
+		return
+	}
+	_ = a.Store.Audit(u.Username, "app-registry.pull", manifest.ID+"@"+manifest.Version, "verified")
+	switch manifest.Delivery.Provider {
+	case "runtime":
+		releaseID := manifest.Delivery.Target
+		if releaseID == "docker-auto" {
+			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
+			if len(releases) != 1 {
+				fail(w, 409, "当前系统没有已审核的 Docker 安装包")
+				return
+			}
+			releaseID = releases[0].ID
+		}
+		if _, ok := runtimecatalog.Find(releaseID); !ok {
+			fail(w, 409, "应用包引用的运行时未纳入本机允许列表")
+			return
+		}
+		job, err := a.Store.queueInstallBound(releaseID, key, u.Username, a.Store.bindRegistryInstall(item, releaseID, key, u.ID, in))
+		if err != nil {
+			if replay() {
+				return
+			}
+			fail(w, 409, err.Error())
+			return
+		}
+		send(w, 202, map[string]any{"job_id": job, "provider": "runtime", "target": releaseID})
+	case "panel-module":
+		_, moduleOK := FindAppModule(manifest.Delivery.Target)
+		if !moduleOK && manifest.Delivery.Target != "nginx-waf" && manifest.Delivery.Target != "system-hardening" && manifest.Delivery.Target != "intrusion-prevention" {
+			fail(w, 409, "当前面板版本尚未提供该功能处理器")
+			return
+		}
+		if err = ValidateSoftwareInstallVersion(manifest.Delivery.Target, manifest.Version); err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		if manifest.Delivery.Target == "nginx-waf" && manifest.Version != WAFVersion {
+			fail(w, 409, "Nginx WAF 新安装须使用与面板实现匹配的签名版本；请刷新应用商店，未排队或隐式提升旧包")
+			return
+		}
+		bind := a.Store.bindRegistryInstall(item, manifest.Delivery.Target, key, u.ID, in)
+		bind = a.Store.bindLoadBalanceStreamRegistryRequest(u.ID, key, manifest.Delivery.Target, manifest.Version, bind)
+		if wafApplyApp(manifest.Delivery.Target) {
+			registryBind := bind
+			wafBind := a.Store.bindWAFApplyRequest(manifest.Delivery.Target, key, u)
+			bind = func(tx *sql.Tx, job string, existing bool) error {
+				if err := registryBind(tx, job, existing); err != nil {
+					return err
+				}
+				return wafBind(tx, job, existing)
+			}
+		}
+		// Every module keeps the exact verified package identity. An empty
+		// selection lets a newer executor silently substitute its implementation
+		// version (notably mobile1.3.0 ->1.3.2), hiding a genuine store update.
+		job, err := a.Store.queueSoftwareActionBound(manifest.Delivery.Target, "install", in.Settings, manifest.Version, key, u.Username, bind)
+		if err != nil {
+			if replay() {
+				return
+			}
+			fail(w, 409, err.Error())
+			return
+		}
+		send(w, 202, map[string]any{"job_id": job, "provider": "panel-module", "target": manifest.Delivery.Target})
+	case "compose":
+		if !IsDockerTemplate(manifest.Delivery.Target) {
+			fail(w, 409, "当前面板版本尚未提供该 Compose 处理器")
+			return
+		}
+		var op DockerProjectRequest
+		if appcatalog.IsMemcachedUnixManifest(manifest) {
+			// Never feed a socket-only package into the legacy host-port
+			// template. The immutable reservation binds actor, website and
+			// the fixed placeholder payload; only Root resolves Linux IDs.
+			op, err = registryMemcachedUnixRequest(manifest, in, u.ID, ID())
+			if err != nil {
+				fail(w, 409, err.Error())
+				return
+			}
+		} else {
+			if in.HostPort == 0 {
+				in.HostPort = map[string]int{"memcached-cache": 21211, "phpmyadmin": 18080, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, "openlitespeed": 18888}[manifest.Delivery.Target]
+				if in.HostPort == 0 {
+					in.HostPort = 18080
+				}
+			}
+			if strings.TrimSpace(in.Name) == "" {
+				in.Name = manifest.Delivery.Target + "-" + ID()[:8]
+			}
+			compose, err := dockerTemplate(manifest.Delivery.Target, in.HostPort)
+			if err != nil {
+				fail(w, 409, err.Error())
+				return
+			}
+			op = DockerProjectRequest{JobID: ID(), ProjectID: ID(), Action: "create", Name: strings.TrimSpace(in.Name), Compose: compose, TemplateID: manifest.Delivery.Target}
+		}
+		if err = ValidateDockerProject(op); err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		var unixSubmission *MemcachedUnixInstallSubmission
+		if op.TemplateProfile == MemcachedUnixProfile {
+			// Fetch signed catalog/manifest bytes only, before the one atomic
+			// reservation. Root re-verifies its own compiled key independently.
+			envelope, fetchErr := a.AppCatalog.FetchMemcachedUnixReleaseEnvelope(ctx, item.Version, item.SHA256)
+			if fetchErr != nil {
+				fail(w, 409, fetchErr.Error())
+				return
+			}
+			value, bindErr := NewMemcachedUnixInstallSubmission(op, MemcachedUnixBinding{Version: item.Version, ManifestSHA256: item.SHA256}, envelope)
+			if bindErr != nil {
+				fail(w, 409, bindErr.Error())
+				return
+			}
+			unixSubmission = &value
+		}
+		prior, fresh, err := a.Store.reserveRegistryCompose(item, key, u, requestInput, op)
+		if err != nil || !fresh {
+			if replay() {
+				return
+			}
+			fail(w, 409, "无法保留 Compose 安装身份，未提交")
+			return
+		}
+		var result DockerJobResult
+		endpoint := "/v1/docker/projects/jobs"
+		var transfer any = op
+		if unixSubmission != nil {
+			endpoint = "/v1/docker/memcached-unix/installs/" + op.JobID
+			transfer = *unixSubmission
+		}
+		if err = a.Executor.Call(r.Context(), http.MethodPost, endpoint, transfer, &result); err != nil ||
+			result.JobID != op.JobID || result.ProjectID != op.ProjectID || result.Kind != "compose" || !validRegistryComposeJobState(result.State) {
+			// A timeout may hide a successful write. Query the reserved job only;
+			// do not generate another project or resubmit the original POST.
+			a.sendRegistryInstallReplay(w, r, prior)
+			return
+		}
+		send(w, 202, result)
+	default:
+		fail(w, 409, "应用包处理器不受支持")
+	}
+}
+
+func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u identity) {
+	var in registryUpdateInput
+	if !decode(w, r, &in) {
+		return
+	}
+	key := r.Header.Get("Idempotency-Key")
+	replay := func() bool {
+		prior, found, err := a.Store.registryUpdateReplay(r.PathValue("id"), u.ID, key, in)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return true
+		}
+		if found {
+			send(w, 202, map[string]string{"job_id": prior.JobID, "provider": prior.Provider})
+			return true
+		}
+		return false
+	}
+	if replay() {
+		return
+	}
+	q := r.URL.Query()
+	q.Set("refresh", "1")
+	r.URL.RawQuery = q.Encode()
+	catalog, source, err := a.loadAppCatalog(15*time.Second, r)
+	if err != nil || source.Stale {
+		if replay() {
+			return
+		}
+		fail(w, 503, "无法确认仓库最新版本，未执行更新")
+		return
+	}
+	item, ok := appcatalog.Find(catalog, r.PathValue("id"))
+	if !ok {
+		if replay() {
+			return
+		}
+		fail(w, 404, "应用不在签名目录中")
+		return
+	}
+	if in.ExpectedVersion != item.Version || in.ExpectedSHA256 != item.SHA256 {
+		if replay() {
+			return
+		}
+		fail(w, 409, "应用目录已变化，请刷新后重试")
+		return
+	}
+	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+	var status AppRegistryStatus
+	for _, row := range a.appRegistryStatuses(ctx, catalog) {
+		if row.ID == item.ID {
+			status = row
+		}
+	}
+	if !status.StateKnown || !status.Installed || !status.UpdateAvailable || !status.UpdateSupported {
+		// The first request may commit and finish after our initial lookup.
+		if replay() {
+			return
+		}
+		fail(w, 409, "当前应用不能自动更新: "+status.UpdateDetail)
+		return
+	}
+	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
+	if err != nil {
+		if replay() {
+			return
+		}
+		fail(w, 409, err.Error())
+		return
+	}
+	if err = appCompatible(manifest); err != nil {
+		if replay() {
+			return
+		}
+		fail(w, 409, err.Error())
+		return
+	}
+	job, scope := "", manifest.Delivery.Target
+	switch manifest.Delivery.Provider {
+	case "panel-module":
+		bind := a.Store.bindRegistryUpdate(item, scope, key, u.ID)
+		bind = a.Store.bindLoadBalanceStreamRegistryRequest(u.ID, key, scope, manifest.Version, bind)
+		job, err = a.Store.queueSoftwareActionBound(scope, "update", nil, manifest.Version, key, u.Username, bind)
+	case "runtime":
+		if scope == "docker-auto" {
+			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
+			if len(releases) != 1 {
+				fail(w, 409, "没有已审核的 Docker 版本")
+				return
+			}
+			scope = releases[0].ID
+		}
+		job, err = a.Store.queueInstallBound(scope, key, u.Username, a.Store.bindRegistryUpdate(item, scope, key, u.ID))
+	default:
+		fail(w, 409, "该类型暂不允许自动替换，请核对项目与迁移方案")
+		return
+	}
+	if err != nil {
+		fail(w, 409, err.Error())
+		return
+	}
+	_ = a.Store.Audit(u.Username, "app-registry.update", item.ID+"@"+item.Version, "verified-and-queued")
+	send(w, 202, map[string]string{"job_id": job, "provider": item.Provider})
+}
+
+func (a *Server) appRegistryRoutes(m *http.ServeMux) {
+	a.memcachedRegistryPlanRoutes(m)
+	a.memcachedUpdateStatusRoutes(m)
+	a.memcachedUpdateProducerRoutes(m)
+	a.memcachedUnixWorkspaceRoutes(m)
+	a.memcachedUnixControlRoutes(m)
+	a.loadBalanceStreamControlRoutes(m)
+	m.HandleFunc("GET /api/app-registry", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		catalog, source, err := a.loadAppCatalog(15*time.Second, r)
+		if err != nil {
+			fail(w, 503, "加载已签名应用目录失败: "+err.Error())
+			return
+		}
+		ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		send(w, 200, AppRegistryPage{Catalog: catalog, Status: a.appRegistryStatuses(ctx, catalog), Source: source, Host: AppRegistryHost{Platform: runtimecatalog.HostPlatform(), Architecture: runtime.GOARCH}})
+	}))
+	m.HandleFunc("POST /api/app-registry/{id}/install", a.authorize(a.installRegistryApp))
+	m.HandleFunc("POST /api/app-registry/{id}/update", a.authorize(a.updateRegistryApp))
+	m.HandleFunc("GET /api/app-registry/{id}/requests/{key}", a.authorize(a.registryRequestStatus))
+	m.HandleFunc("POST /api/app-registry/{id}/requests/{key}/close", a.authorize(a.closeRegistryRequest))
+}
+
+func appCompatible(manifest appcatalog.Manifest) error {
+	return appCompatibleOn(manifest, runtimecatalog.HostPlatform(), runtime.GOARCH)
+}
+
+func appCompatibleOn(manifest appcatalog.Manifest, osID, architecture string) error {
+	if manifest.Risk == "eol" {
+		image, ok := LegacyPHPImages[manifest.Delivery.Target]
+		if !ok || manifest.ID != strings.Replace(manifest.Delivery.Target, "php-legacy-", "php-", 1) || manifest.Delivery.Provider != "compose" || manifest.Delivery.Isolation != "legacy-container" || manifest.Delivery.Image != image {
+			return errors.New("旧版 PHP 必须使用本机允许列表中的固定摘要隔离环境")
+		}
+	}
+	foundOS, foundArch := false, false
+	for _, item := range manifest.Compatibility.OS {
+		foundOS = foundOS || item == osID
+	}
+	for _, item := range manifest.Compatibility.Architectures {
+		foundArch = foundArch || item == architecture
+	}
+	if !foundOS || !foundArch {
+		return errors.New("该应用包不支持当前系统或 CPU 架构")
+	}
+	return nil
+}

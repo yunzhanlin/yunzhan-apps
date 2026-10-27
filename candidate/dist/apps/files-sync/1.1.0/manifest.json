@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "1.1.0",
+  "summary": "增量同步、逐文件检查点和目标冲突保护通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "增量同步",
+    "SHA-256 校验",
+    "目标冲突保护",
+    "逐文件检查点",
+    "隔离 PHP 网站部署"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/files-sync"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

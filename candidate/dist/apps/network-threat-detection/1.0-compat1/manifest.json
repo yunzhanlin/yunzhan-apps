@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "network-threat-detection",
+  "name": "Network Threat Detection",
+  "category": "professional",
+  "version": "1.0-compat1",
+  "summary": "真实 ss 监听端口/连接基线和 Fail2ban 状态读取通过",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "network-threat-detection",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "监听端口基线",
+    "新增监听告警",
+    "实时连接",
+    "Fail2ban 状态"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/network-threat-detection"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

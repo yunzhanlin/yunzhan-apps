@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "id": "php-56",
+  "name": "PHP 5.6",
+  "category": "deployment",
+  "version": "5.6.40",
+  "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+  "stage": "ready",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-legacy-56",
+    "image": "devilbox/php-fpm:5.6-mods@sha256:29b317b07fe5473f774cbdc05c6ee7f31b1af647b72785107bbfe31aa0d80426",
+    "manage_route": "docker",
+    "isolation": "legacy-container"
+  },
+  "compatibility": {
+    "os": [
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64"
+    ]
+  },
+  "capabilities": [
+    "固定镜像摘要",
+    "独立 PHP-FPM",
+    "独立 Nginx",
+    "网站同步部署",
+    "域名绑定",
+    "数据卷持久化"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/.__cloudstack_health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

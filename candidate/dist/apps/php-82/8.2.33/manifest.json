@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "id": "php-82",
+  "name": "PHP 8.2",
+  "category": "deployment",
+  "version": "8.2.33",
+  "summary": "编译安装 PHP 8.2 CLI/FPM 与常用扩展，可与其他版本并存。",
+  "stage": "ready",
+  "risk": "maintenance",
+  "delivery": {
+    "provider": "runtime",
+    "target": "php-8.2.33",
+    "manage_route": "runtimes"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "CLI",
+    "FPM",
+    "多版本并存",
+    "站点独立池"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "php -v"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

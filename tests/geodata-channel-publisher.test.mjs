@@ -13,7 +13,7 @@ async function fixture(t){
  const root=await mkdtemp(path.join(tmpdir(),'yunzhan-data-publisher-'));
  t.after(()=>rm(root,{recursive:true,force:true}));
  for(const directory of ['tools','signatures'])await mkdir(path.join(root,directory));
- for(const name of ['tools/build-geodata-channel.mjs','tools/lib.mjs','tools/memcached-unix-contract.mjs','tools/php-security-contract.mjs','tools/php-bounded-contract.mjs','signatures/catalog-v1.pub.pem'])await cp(path.join(source,name),path.join(root,name));
+ for(const name of ['tools/build-geodata-channel.mjs','tools/lib.mjs','tools/memcached-unix-contract.mjs','tools/php-security-contract.mjs','tools/php-bounded-contract.mjs','tools/load-balance-stream-contract.mjs','signatures/catalog-v1.pub.pem'])await cp(path.join(source,name),path.join(root,name));
  await writeFile(path.join(root,'input.json'),current.manifest);await writeFile(path.join(root,'input.sig'),current.signature+'\n');
  return root;
 }

@@ -1,0 +1,37 @@
+name: isolated candidate catalogue and native ABI
+
+on:
+  push:
+    branches: [codex/app-candidate]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate-native-abi:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, independently resolved
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version-file: candidate/panel-integration-load-balance/go.mod
+          cache-dependency-path: candidate/panel-integration-load-balance/go.sum
+      - name: Actual stable and candidate catalogues, signatures and historical regressions
+        run: npm test
+      - name: Candidate build must not modify the stable signed directory
+        run: git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures
+      - name: Complete unchanged source tests using the actual compiled candidate channel
+        working-directory: candidate/panel-integration-load-balance
+        run: go test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+      - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
+        working-directory: candidate/panel-integration-load-balance
+        run: go test -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate"

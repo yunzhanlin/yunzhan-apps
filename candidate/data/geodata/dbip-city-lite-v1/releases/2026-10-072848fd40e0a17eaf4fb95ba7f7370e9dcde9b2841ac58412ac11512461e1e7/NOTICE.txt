@@ -1,0 +1,7 @@
+DB-IP City Lite 2026-10
+IP Geolocation by DB-IP
+https://db-ip.com/
+License: CC BY 4.0
+https://creativecommons.org/licenses/by/4.0/
+Source: https://download.db-ip.com/free/dbip-city-lite-2026-10.mmdb.gz
+Unmodified provider database; downloaded only on explicit panel request.

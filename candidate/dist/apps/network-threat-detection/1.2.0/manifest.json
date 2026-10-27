@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "network-threat-detection",
+  "name": "Network Threat Detection",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "结构化 TCP/UDP 监听与连接，区分公网和回环；可信基线对比新增与关闭端口，无基线不误报入侵。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "network-threat-detection",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "监听端口基线",
+    "新增监听告警",
+    "实时连接",
+    "Fail2ban 状态",
+    "公网暴露分类",
+    "端口增减对比",
+    "不完整结果标记",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/network-threat-detection"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

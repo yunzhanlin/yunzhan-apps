@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "disk-analysis",
+  "name": "Disk analysis",
+  "category": "professional",
+  "version": "1.0-compat1",
+  "summary": "实际网站 HTTP/目录/代码检测与结构化报告通过",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "disk-analysis",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "目录体积",
+    "大文件排行",
+    "文件数量",
+    "有界扫描"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/disk-analysis"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

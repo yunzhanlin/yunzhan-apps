@@ -1,0 +1,189 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERSION="${1:-}"
+ARCH="${2:-}"
+APP_CHANNEL="${3:-stable}"
+if (( $# > 3 )) || [[ "$APP_CHANNEL" != stable && "$APP_CHANNEL" != candidate ]]; then echo 'application channel must be stable or candidate; no URL/key override is accepted' >&2; exit 2; fi
+if [[ "$APP_CHANNEL" == candidate && "$VERSION" != *candidate* ]]; then echo 'candidate application channel requires a clearly labelled candidate programme version' >&2; exit 2; fi
+if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][a-z0-9]+)*$ ]]; then echo 'usage: build-release.sh VERSION amd64|arm64' >&2; exit 2; fi
+if [[ "$ARCH" != amd64 && "$ARCH" != arm64 ]]; then echo 'architecture must be amd64 or arm64' >&2; exit 2; fi
+source "$ROOT/scripts/env.sh"
+OUT="$ROOT/.local/releases"
+NAME="panel-${VERSION}-linux-${ARCH}"
+mkdir -p "$OUT"
+for suffix in '' .sha256 .manifest .sig; do
+  [[ ! -e "$OUT/$NAME.tar.gz$suffix" ]] || { echo 'release already exists; choose a new version' >&2; exit 1; }
+done
+[[ ! -e "$OUT/$NAME.executor-tests" && ! -e "$OUT/$NAME.executor-tests.sha256" ]] || { echo 'release test artifact already exists; choose a new version' >&2; exit 1; }
+[[ ! -e "$OUT/$NAME.upgradeguard-tests" && ! -e "$OUT/$NAME.upgradeguard-tests.sha256" ]] || { echo 'release startup test artifact already exists; choose a new version' >&2; exit 1; }
+[[ ! -e "$OUT/$NAME.diskjob-tests" && ! -e "$OUT/$NAME.diskjob-tests.sha256" ]] || { echo 'release disk job test artifact already exists; choose a new version' >&2; exit 1; }
+LOCK="$OUT/.build-$NAME.lock"
+mkdir "$LOCK" 2>/dev/null || { echo 'this release is already building; do not replace its stage' >&2; exit 1; }
+STAGE=''
+cleanup() {
+  local result=$?
+  # Finder may create .DS_Store while the private snapshot is being removed.
+  # Retry only our own stage; never mask a compile/check failure with cleanup.
+  if [[ -n "$STAGE" ]]; then
+    python3 - "$STAGE" <<'PY_CLEANUP'
+import pathlib, shutil, sys, time
+stage = pathlib.Path(sys.argv[1])
+for attempt in range(3):
+    try:
+        shutil.rmtree(stage)
+        break
+    except FileNotFoundError:
+        break
+    except OSError:
+        if attempt == 2:
+            print(f"warning: private build stage retained for cleanup: {stage}", file=sys.stderr)
+        else:
+            time.sleep(0.1)
+PY_CLEANUP
+  fi
+  rmdir "$LOCK" 2>/dev/null || true
+  return "$result"
+}
+trap cleanup EXIT
+STAGE="$(mktemp -d "$OUT/.stage-$NAME.XXXXXX")"
+BUILD_ROOT="$STAGE/.source"
+python3 "$ROOT/packaging/freeze-source.py" "$ROOT" "$BUILD_ROOT"
+PROGRAMME_INPUTS_SHA="$(python3 -I -B - "$BUILD_ROOT/SOURCE_INPUTS.json" <<'PY_PROGRAMME_INPUTS'
+import json, pathlib, re, sys
+value = json.loads(pathlib.Path(sys.argv[1]).read_bytes())
+digest = value['inputs_sha256']
+if value['format'] != 1 or not isinstance(digest, str) or not re.fullmatch('[a-f0-9]{64}', digest) or digest == '0' * 64:
+    raise ValueError('invalid independently frozen programme cohort')
+print(digest)
+PY_PROGRAMME_INPUTS
+)"
+PANEL_LDFLAGS="-s -w -X=local/panel/internal/appcatalog.officialCatalogChannel=$APP_CHANNEL"
+EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStreamCompiledProgrammeInputsSHA256=$PROGRAMME_INPUTS_SHA"
+mkdir -p "$STAGE/$NAME/bin" "$STAGE/$NAME/web" "$STAGE/$NAME/systemd" "$STAGE/$NAME/config"
+(cd "$BUILD_ROOT" && go version && /opt/homebrew/bin/node --version && go test ./... && go vet ./...) 2>&1 | tee "$STAGE/$NAME/BUILD_CHECKS.txt"
+printf 'Official app catalogue channel: %s (same compiled publisher key; no runtime override)\n' "$APP_CHANNEL" | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && python3 -m unittest discover -s packaging -p 'test_*.py' -v) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-software-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-store-search.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-mobile-navigation.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-php-security.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-runtime-build-pressure.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-mobile-navigation.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-store-updates.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-runtime-package-labels.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-frontend-release.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-analytics-tracker.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-session.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-redis-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-redis-credentials.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-latency.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-geography.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-statistics-history.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-panel-health-context.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-analytics-html-filter.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-html-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-menu-permissions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-network-ids-operations.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-registry-request-identity.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-memcached-update-identity.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-memcached-unix-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-job-presentation.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-file-manager-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-registry-freshness.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync-plans.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-sync-backups.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-backup-archive.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-rotation-refresh.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-body-inventory.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-apply-task.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-configuration-version.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-apply-recovery.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-intrusion-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-task-manager.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-disk-usage.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-host-disk.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-disk-scan-lifecycle.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-user-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-health-view.mjs scripts/test-platform-health-lifecycle.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-maintenance-secrets.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-module-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-module-version-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-docker-site-binding.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-docker-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-docker-create-requests.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-browser-sha256.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-module-report-provenance.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-mobile-delivery-links.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-native-queue-unit-snapshot.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-outbound-source-view.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-software-state.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-sites.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-health-version.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-config-backups.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-routing.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-stream.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-alerts.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-report-export.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-waf-transactions.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-build.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-policy.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-report.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-deferred-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-web-entry-budget.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --experimental-strip-types --test scripts/test-runtime-selection.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-runtime-memory-wait.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-stream-account-entry.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/executor-tests" ./internal/executor)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/upgradeguard-tests" ./internal/upgradeguard)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/diskjob-tests" ./internal/diskjob)
+printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/web-entry-budget.mjs "$BUILD_ROOT/web/dist") 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="$PANEL_LDFLAGS" -o "$STAGE/$NAME/bin/panel" ./cmd/panel)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/$NAME/bin/panel-executor" ./cmd/executor)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="-s -w" -o "$STAGE/$NAME/bin/panel-start-guard" ./cmd/startguard)
+cp -R "$BUILD_ROOT/web/dist/." "$STAGE/$NAME/web/"
+cp "$BUILD_ROOT/SOURCE_INPUTS.json" "$STAGE/$NAME/"
+find "$STAGE/$NAME/web/assets" -type f \( -name '*.js' -o -name '*.css' \) -print0 | while IFS= read -r -d '' asset; do
+  gzip -9 -n -c "$asset" > "$asset.gz"
+done
+cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$BUILD_ROOT/dev/"*.mount "$STAGE/$NAME/systemd/"
+rm -f "$STAGE/$NAME/systemd/panel-pebble"*
+cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
+cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/prune-releases.py" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$BUILD_ROOT/packaging/development-upgrade.py" "$BUILD_ROOT/packaging/start-guard-install.py" "$STAGE/$NAME/"
+chmod 0755 "$STAGE/$NAME/install.sh" "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME/prune-releases.sh" "$STAGE/$NAME/bin/"*
+cat > "$STAGE/$NAME/RELEASE" <<EOF
+PANEL_FORMAT=1
+PANEL_VERSION=$VERSION
+PANEL_OS=linux
+PANEL_ARCH=$ARCH
+EOF
+(command -v xattr >/dev/null && xattr -cr "$STAGE/$NAME") || true
+(
+  cd "$STAGE/$NAME"
+  # Escaped systemd mount names contain literal backslashes. Ordinary xargs
+  # interprets those characters and can hash a different nonexistent path.
+  # Keep the complete filename NUL-delimited through sorting and hashing.
+  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh prune-releases.py first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py start-guard-install.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+)
+python3 "$BUILD_ROOT/packaging/release-file-modes.py" normalize "$STAGE/$NAME"
+"$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"
+COPYFILE_DISABLE=1 tar --no-xattrs -C "$STAGE" -czf "$STAGE/$NAME.tar.gz" "$NAME"
+# Exclusive hard links publish on this filesystem without ever overwriting a release.
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/$NAME.tar.gz" | cut -d ' ' -f 1)" "$NAME.tar.gz" > "$STAGE/archive.sha256"
+ln "$STAGE/$NAME.tar.gz" "$OUT/$NAME.tar.gz"
+ln "$STAGE/archive.sha256" "$OUT/$NAME.tar.gz.sha256"
+ln "$STAGE/executor-tests" "$OUT/$NAME.executor-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/executor-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.executor-tests" > "$STAGE/executor-tests.sha256"
+ln "$STAGE/executor-tests.sha256" "$OUT/$NAME.executor-tests.sha256"
+ln "$STAGE/upgradeguard-tests" "$OUT/$NAME.upgradeguard-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/upgradeguard-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.upgradeguard-tests" > "$STAGE/upgradeguard-tests.sha256"
+ln "$STAGE/upgradeguard-tests.sha256" "$OUT/$NAME.upgradeguard-tests.sha256"
+ln "$STAGE/diskjob-tests" "$OUT/$NAME.diskjob-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/diskjob-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.diskjob-tests" > "$STAGE/diskjob-tests.sha256"
+ln "$STAGE/diskjob-tests.sha256" "$OUT/$NAME.diskjob-tests.sha256"
+echo "$OUT/$NAME.tar.gz"
