@@ -1,4 +1,4 @@
-"""Actual signed F59 -> C11 installation in a new, isolated AMD64 KVM guest.
+"""Actual signed F59 -> C12 installation in a new, isolated AMD64 KVM guest.
 
 Every mutation is once-only. A failed/unknown job is retained and stops the
 suite. This is infrastructure acceptance, never an all-app commercial claim.
@@ -36,8 +36,8 @@ for name, expected in pins['files'].items():
 assert sha(base / 'programme.pub') == pins['programme_key_sha256']
 assert sha(base / 'signed-release.py') == pins['verifier_sha256']
 old = '0.1.0-dev.proapps24memorywaitbmpw'
-new = '0.1.0-dev.proapps24streamcandidate11'
-assert pins['source_inputs_sha256'] == '9f30386d7befc7eb6c7b632f5347a5d79029f9a9b6138d26b4a2fd99b50d07cb'
+new = '0.1.0-dev.proapps24streamcandidate12'
+assert pins['source_inputs_sha256'] == 'f9b340535c4232212d2997515789f2c8eb00d32acf0ec19b2253d92ebfaed0e5'
 assert pins['old_source_inputs_sha256'] == 'd09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a'
 proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_changed': False,
          'all50_commercial': False, 'normal_signed_programme_upgrade': False,
@@ -236,10 +236,14 @@ try:
         except FileNotFoundError: prerequisites[name] = {'exists': False}
     save('stream-original-prerequisite-metadata.json', prerequisites)
     proof['original_compose_coordination_lock_present'] = prerequisites['/var/lib/panel-executor/docker-jobs/compose.lock']['exists']
+    assert proof['original_compose_coordination_lock_present'] is False, 'First-install regression must exercise normal missing coordination inode'
     sign_in(); job = store_change('1.9.0', 'update')
     status, workspace = api('/app-registry/load-balance/stream/workspace')
     save('native-workspace.json', workspace); assert status == 200
     sign_out()
+    coordination = pathlib.Path('/var/lib/panel-executor/docker-jobs/compose.lock').lstat()
+    assert stat.S_ISREG(coordination.st_mode) and stat.S_IMODE(coordination.st_mode) == 0o600 and coordination.st_uid == coordination.st_gid == 0 and coordination.st_nlink == 1 and coordination.st_size == 0
+    proof['original_parent_coordination_initialized_then_readonly_child_completed'] = True
     after_nss = nss(); save('NSS-after.json', after_nss)
     assert all(v['dedicated_count'] == 1 for v in after_nss.values())
     assert all(after_nss[k]['without_dedicated_sha256'] == before_nss[k]['sha256'] for k in before_nss)

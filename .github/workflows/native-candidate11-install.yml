@@ -30,11 +30,11 @@ jobs:
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-candidate11-assets"
-          gh release download qa-streamcandidate11-20261028 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-candidate11-assets"
+          gh release download qa-streamcandidate12-20261028 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-candidate11-assets"
           python3 - "$RUNNER_TEMP/native-candidate11-assets" <<'PY'
           import hashlib, json, pathlib, sys
           base = pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '7d8aa2ef4465dcba0d2d12369cad61ebe1b879dc3d6a7097fad3759fae845d7e'
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '1135127397efe707ddac4723ae3c0515d6c9f3b93f271f787217087794507c63'
           manifest = json.loads((base / 'assets.json').read_bytes())
           for name, digest in manifest['files'].items():
               assert pathlib.PurePath(name).name == name
@@ -46,7 +46,7 @@ jobs:
           sudo apt-get update --error-on=any -o Acquire::Retries=0
           sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
           test -c /dev/kvm
-      - name: Actual clean guest signed F59 to C11 programme and one official store update
+      - name: Actual clean guest signed F59 to C12 programme and one official store update
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-candidate11-public"
