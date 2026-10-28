@@ -30,11 +30,11 @@ jobs:
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-candidate11-assets"
-          gh release download qa-streamcandidate22-20261029 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-candidate11-assets"
+          gh release download qa-streamcandidate23-20261029 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-candidate11-assets"
           python3 - "$RUNNER_TEMP/native-candidate11-assets" <<'PY'
           import hashlib, json, pathlib, sys
           base = pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == 'd9d3450167e9dd51b7537bab3551dffde770fc250815b373d5c110363906f857'
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == 'a4b8cbc426dcda8394676b8cd9e50ad39e09c2748d0fe4691bb7cc7605454476'
           manifest = json.loads((base / 'assets.json').read_bytes())
           for name, digest in manifest['files'].items():
               assert pathlib.PurePath(name).name == name
@@ -46,7 +46,7 @@ jobs:
           sudo apt-get update --error-on=any -o Acquire::Retries=0
           sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
           test -c /dev/kvm
-      - name: Actual clean F59 to C15 store install then C22 live programme replace stop and immediate restart
+      - name: Actual clean F59 to C15 store install then C23 live programme replace stop and immediate restart
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-candidate11-public"
