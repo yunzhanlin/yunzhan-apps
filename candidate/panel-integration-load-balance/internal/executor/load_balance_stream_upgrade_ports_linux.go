@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 
 	"local/panel/internal/loadbalancestream"
-	"local/panel/internal/upgradeguard"
+	"local/panel/internal/upgraderead"
 )
 
 var streamProgrammeWriters = [...]string{"panel.service", "panel-executor.service", "panel-terminal.service", "panel-terminal-root.service"}
@@ -97,12 +97,12 @@ func streamProgrammeWritersStopped(ctx context.Context) error {
 // leases. These fixed ports are recorded syntax, never a live listener claim
 // or authority to allocate/start/reload anything. Mutation readers always use
 // observeLoadBalanceStreamControlPorts directly.
-func streamProgrammeReadPorts(ctx context.Context) ([]int, *upgradeguard.MaintenanceRead, error) {
+func streamProgrammeReadPorts(ctx context.Context) ([]int, *upgraderead.MaintenanceRead, error) {
 	ports, liveErr := observeLoadBalanceStreamControlPorts(ctx)
 	if liveErr == nil {
 		return ports, nil, nil
 	}
-	w, err := upgradeguard.HoldMaintenanceRead(ctx)
+	w, err := upgraderead.HoldMaintenanceRead(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("current Core ports or owned stopped maintenance: %w", errors.Join(liveErr, err))
 	}

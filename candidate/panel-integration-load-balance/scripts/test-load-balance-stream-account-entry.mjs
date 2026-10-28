@@ -11,6 +11,9 @@ test('build baseline cannot hide removed gates, missing source binding or unknow
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
  assert.notEqual(digest(beforeLoadBalanceStreamBuild(text.replace('go vet ./...','true'))),digest(baseline));
+ for (const required of ['./internal/upgraderead', '$NAME.upgraderead-tests.sha256', '$STAGE/upgraderead-tests']) {
+  assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
+ }
 });
 test('fixed account CLI rejects aliases and mixed arguments before dispatch',()=>{
  assert(main.includes('flag.String("load-balance-stream-account-job", ""'));

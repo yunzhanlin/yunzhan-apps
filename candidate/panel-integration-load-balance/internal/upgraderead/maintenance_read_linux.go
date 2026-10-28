@@ -1,6 +1,6 @@
 //go:build linux
 
-package upgradeguard
+package upgraderead
 
 import (
 	"bytes"
@@ -23,6 +23,7 @@ type MaintenanceRead struct {
 	info                            unix.Stat_t
 	owners                          [2]startupRecord
 	pidfd                           int
+	held                            bool
 }
 
 func HoldMaintenanceRead(ctx context.Context) (*MaintenanceRead, error) {
@@ -55,7 +56,7 @@ func holdMaintenanceReadAt(ctx context.Context, marker, other, release, runtime 
 		}
 		return nil, errors.New("read-only maintenance parent unavailable")
 	}
-	w := &MaintenanceRead{marker: marker, other: other, release: release, runtime: runtime, raw: raw, info: info, pidfd: fd}
+	w := &MaintenanceRead{marker: marker, other: other, release: release, runtime: runtime, raw: raw, info: info, pidfd: fd, held: true}
 	fail := func(err error) (*MaintenanceRead, error) { w.Close(); return nil, err }
 	boot, err := procRead("/proc/sys/kernel/random/boot_id", 128)
 	if err != nil || !startupBoot.MatchString(strings.TrimSpace(string(boot))) {
@@ -95,7 +96,7 @@ func holdMaintenanceReadAt(ctx context.Context, marker, other, release, runtime 
 }
 
 func (w *MaintenanceRead) Current(ctx context.Context) error {
-	if w == nil || w.pidfd < 0 || ctx == nil || ctx.Err() != nil || os.Getuid() != 0 || os.Geteuid() != 0 || os.Getppid() != w.owners[0].PID || blockedAt(w.other) {
+	if w == nil || !w.held || w.pidfd < 0 || ctx == nil || ctx.Err() != nil || os.Getuid() != 0 || os.Geteuid() != 0 || os.Getppid() != w.owners[0].PID || blockedAt(w.other) {
 		return errors.New("read-only maintenance witness no longer current")
 	}
 	poll := []unix.PollFd{{Fd: int32(w.pidfd), Events: unix.POLLIN}}
@@ -118,10 +119,11 @@ func (w *MaintenanceRead) Close() {
 	if w == nil {
 		return
 	}
-	if w.pidfd >= 0 {
+	if w.held && w.pidfd >= 0 {
 		unix.Close(w.pidfd)
 		w.pidfd = -1
 	}
+	w.held = false
 	clear(w.raw)
 	w.raw = nil
 }

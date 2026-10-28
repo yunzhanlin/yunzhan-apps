@@ -33,5 +33,15 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
     'go test -c -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/executor-tests" ./internal/executor',
     'go build -trimpath -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/$NAME/bin/panel-executor" ./cmd/executor',
   ]) once(command, command.replace('"$EXECUTOR_LDFLAGS"', '"-s -w"'));
+  // Preserve the previous whole-script digest while requiring these exact
+  // additional frozen read-only component artifacts once each. Unknown build
+  // edits and every earlier runtime/authority gate remain in the digest.
+  for (const addition of [
+  "[[ ! -e \"$OUT/$NAME.upgraderead-tests\" && ! -e \"$OUT/$NAME.upgraderead-tests.sha256\" ]] || { echo 'release maintenance reader test artifact already exists; choose a new version' >&2; exit 1; }\n",
+  "(cd \"$BUILD_ROOT\" && CGO_ENABLED=0 GOOS=linux GOARCH=\"$ARCH\" go test -c -ldflags=\"-s -w\" -o \"$STAGE/upgraderead-tests\" ./internal/upgraderead)\n",
+  "ln \"$STAGE/upgraderead-tests\" \"$OUT/$NAME.upgraderead-tests\"\n",
+  "printf '%s  %s\\n' \"$(shasum -a 256 \"$STAGE/upgraderead-tests\" | cut -d ' ' -f 1)\" \"$OUT/$NAME.upgraderead-tests\" > \"$STAGE/upgraderead-tests.sha256\"\n",
+  "ln \"$STAGE/upgraderead-tests.sha256\" \"$OUT/$NAME.upgraderead-tests.sha256\"\n"
+]) once(addition, '');
   return text;
 }

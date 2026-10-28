@@ -17,6 +17,7 @@ for suffix in '' .sha256 .manifest .sig; do
 done
 [[ ! -e "$OUT/$NAME.executor-tests" && ! -e "$OUT/$NAME.executor-tests.sha256" ]] || { echo 'release test artifact already exists; choose a new version' >&2; exit 1; }
 [[ ! -e "$OUT/$NAME.upgradeguard-tests" && ! -e "$OUT/$NAME.upgradeguard-tests.sha256" ]] || { echo 'release startup test artifact already exists; choose a new version' >&2; exit 1; }
+[[ ! -e "$OUT/$NAME.upgraderead-tests" && ! -e "$OUT/$NAME.upgraderead-tests.sha256" ]] || { echo 'release maintenance reader test artifact already exists; choose a new version' >&2; exit 1; }
 [[ ! -e "$OUT/$NAME.diskjob-tests" && ! -e "$OUT/$NAME.diskjob-tests.sha256" ]] || { echo 'release disk job test artifact already exists; choose a new version' >&2; exit 1; }
 LOCK="$OUT/.build-$NAME.lock"
 mkdir "$LOCK" 2>/dev/null || { echo 'this release is already building; do not replace its stage' >&2; exit 1; }
@@ -139,6 +140,7 @@ printf 'Official app catalogue channel: %s (same compiled publisher key; no runt
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-load-balance-stream-account-entry.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/executor-tests" ./internal/executor)
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/upgradeguard-tests" ./internal/upgradeguard)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/upgraderead-tests" ./internal/upgraderead)
 (cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go test -c -ldflags="-s -w" -o "$STAGE/diskjob-tests" ./internal/diskjob)
 printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
@@ -183,6 +185,9 @@ ln "$STAGE/executor-tests.sha256" "$OUT/$NAME.executor-tests.sha256"
 ln "$STAGE/upgradeguard-tests" "$OUT/$NAME.upgradeguard-tests"
 printf '%s  %s\n' "$(shasum -a 256 "$STAGE/upgradeguard-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.upgradeguard-tests" > "$STAGE/upgradeguard-tests.sha256"
 ln "$STAGE/upgradeguard-tests.sha256" "$OUT/$NAME.upgradeguard-tests.sha256"
+ln "$STAGE/upgraderead-tests" "$OUT/$NAME.upgraderead-tests"
+printf '%s  %s\n' "$(shasum -a 256 "$STAGE/upgraderead-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.upgraderead-tests" > "$STAGE/upgraderead-tests.sha256"
+ln "$STAGE/upgraderead-tests.sha256" "$OUT/$NAME.upgraderead-tests.sha256"
 ln "$STAGE/diskjob-tests" "$OUT/$NAME.diskjob-tests"
 printf '%s  %s\n' "$(shasum -a 256 "$STAGE/diskjob-tests" | cut -d ' ' -f 1)" "$OUT/$NAME.diskjob-tests" > "$STAGE/diskjob-tests.sha256"
 ln "$STAGE/diskjob-tests.sha256" "$OUT/$NAME.diskjob-tests.sha256"
