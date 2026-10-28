@@ -34,13 +34,15 @@ jobs:
           python3 - "$RUNNER_TEMP/native-disk-c26-assets" <<'PY'
           import hashlib, json, pathlib, sys
           base = pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '4ae81667e1c59c9484ff2b4ef1b52745035f7a0485a987f28b2e2acaf608279d'
-          manifest = json.loads((base / 'assets.json').read_bytes())
+          assert hashlib.sha256((base / 'assets-v2.json').read_bytes()).hexdigest() == '88cf8c60145f7d6cc152d5eae06714761e9bffcb5ff6232de3ac7983241de0b5'
+          manifest = json.loads((base / 'assets-v2.json').read_bytes())
           for name, digest in manifest['files'].items():
               assert pathlib.PurePath(name).name == name
               assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
           print('Exact original signatures, public trust root and source-bound QA helpers downloaded; no credentials in payload')
           PY
+      - name: Exact source-absence gate rejects hidden authority or unhealthy existing sources
+        run: python3 -I -B scripts/native-disk-c26/test_source_gate.py
       - name: Prepare hardware guest tools without removing existing host software
         run: |
           sudo apt-get update --error-on=any -o Acquire::Retries=0
@@ -50,7 +52,7 @@ jobs:
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-disk-c26-public"
-          sudo -n python3 -I -B scripts/native-disk-c26/kvm.py "$RUNNER_TEMP/native-disk-c26-assets" scripts/native-disk-c26 "$RUNNER_TEMP/native-disk-c26-public"
+          sudo -n python3 -I -B scripts/native-disk-c26/kvm-v2.py "$RUNNER_TEMP/native-disk-c26-assets" scripts/native-disk-c26 "$RUNNER_TEMP/native-disk-c26-public"
       - name: Retain public proof and encrypted full QA evidence only
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
