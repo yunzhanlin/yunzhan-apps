@@ -112,6 +112,7 @@ def install(transaction):
             original = originals[str(target)]
             record['files'].append({'path':str(target),'candidate_sha256':hashlib.sha256(data).hexdigest(),'candidate_mode':mode,'previous_sha256':hashlib.sha256(original[0]).hexdigest() if original is not None else None,'previous_identity':identity(original[1]) if original is not None else None})
         transaction.atomic(proof, (json.dumps(record,sort_keys=True)+'\n').encode(), 0o600)
+    changed = False
     for target, data, mode in targets:
         for legacy, data_before, info_before in retained:
             actual_legacy = transaction.file(legacy, mode=0o755, limit=16*1024*1024)
@@ -134,7 +135,12 @@ def install(transaction):
         if actual is not None and actual[0] == data:
             continue
         transaction.atomic(target, data, mode)
-    transaction.run_command('/usr/bin/systemctl', 'daemon-reload')
+        changed = True
+    # A daemon-reload may replace cgroup IP-filter BPF attachments of running
+    # services even if their unit bytes and processes are unchanged. An exact
+    # immutable guard/condition inventory needs no manager mutation.
+    if changed:
+        transaction.run_command('/usr/bin/systemctl', 'daemon-reload')
 
 
 def main():

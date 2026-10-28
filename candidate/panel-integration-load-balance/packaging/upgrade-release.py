@@ -2192,10 +2192,13 @@ class Upgrade:
             identity = lambda value: None if value is None else (value[0], value[1].st_dev, value[1].st_ino, value[1].st_mtime_ns, value[1].st_ctime_ns)
             if identity(current) != identity(original):
                 raise ValueError('original unit changed during upgrade; refuse to overwrite it')
+            if current is not None and current[0] == data:
+                continue
             self.replaced_units[source.name] = data
             self.atomic(target, data, 0o644)
         self.journal('program-swapped')
-        self.run_command('/usr/bin/systemctl', 'daemon-reload')
+        if self.replaced_units:
+            self.run_command('/usr/bin/systemctl', 'daemon-reload')
         # Release the runtime lock before executor readiness requests, which
         # take shared runtime leases. Release serialization remains held.
         self.release_runtime()

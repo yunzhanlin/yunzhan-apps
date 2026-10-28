@@ -34,6 +34,7 @@ type loadBalanceStreamConfigurationStore struct {
 	priorCaptured      bool
 	priorColdBoot      *loadBalanceStreamColdBootWitness
 	egress             *loadBalanceStreamHeldEgress
+	upgrade            *loadBalanceStreamTrafficUpgrade
 }
 
 func (s *loadBalanceStreamConfigurationStore) close() {
@@ -76,7 +77,7 @@ func streamConfigurationNamedRootCurrent(root *os.Root, gid uint32) bool {
 }
 
 func (s *loadBalanceStreamConfigurationStore) beforeCurrent(ctx context.Context) error {
-	if s == nil || s.released || ctx == nil || ctx.Err() != nil || s.installed == nil || s.installed.current(ctx) != nil || s.source == nil || s.lifetime == nil || !s.lifetime.current() || s.mutation == nil || !s.mutation.current() || !streamControlHeldLease(s.lifetime.file.file, false) || !streamControlHeldLease(s.mutation.file, true) {
+	if s == nil || s.upgrade != nil || s.generation != nil && s.generation.upgrade != nil || s.released || ctx == nil || ctx.Err() != nil || s.installed == nil || s.installed.current(ctx) != nil || s.source == nil || s.lifetime == nil || !s.lifetime.current() || s.mutation == nil || !s.mutation.current() || !streamControlHeldLease(s.lifetime.file.file, false) || !streamControlHeldLease(s.mutation.file, true) {
 		return loadbalancestream.ErrRuntime
 	}
 	actual, err := s.source.controlAuthority(ctx, s.operation)
@@ -215,7 +216,10 @@ func (s *loadBalanceStreamConfigurationStore) holdCompletedConfiguration(ctx con
 	}
 	installed, source, closed := s.installed, s.source, s.closed
 	var err error
-	s.generation, err = holdLoadBalanceStreamRecordedGeneration(ctx, installed, source)
+	if s.upgrade != nil && (s.upgrade.store != s || s.upgrade.source != source || s.upgrade.installed != installed) {
+		return loadbalancestream.ErrRuntime
+	}
+	s.generation, err = holdLoadBalanceStreamRecordedGenerationForUpgrade(ctx, installed, source, s.upgrade)
 	if err != nil || s.generation.value.Generation != int64(len(closed)) {
 		return loadbalancestream.ErrRuntime
 	}

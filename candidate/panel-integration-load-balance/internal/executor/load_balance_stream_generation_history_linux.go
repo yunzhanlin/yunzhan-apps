@@ -83,6 +83,10 @@ func checkStreamGenerationPublication(publication *os.Root, seedRaw, proposal []
 // historical committed Core result. This grants no current actor authority
 // and never treats an incomplete prior generation as recovery permission.
 func checkStreamGenerationHistory(ctx context.Context, raw []byte, installed *loadBalanceStreamInstalledContext, source *loadBalanceStreamCoreAuthority) error {
+	return checkStreamGenerationHistoryForUpgrade(ctx, raw, installed, source, nil)
+}
+
+func checkStreamGenerationHistoryForUpgrade(ctx context.Context, raw []byte, installed *loadBalanceStreamInstalledContext, source *loadBalanceStreamCoreAuthority, upgrade *loadBalanceStreamTrafficUpgrade) error {
 	if ctx == nil || ctx.Err() != nil || installed == nil || source == nil || installed.current(ctx) != nil {
 		return loadbalancestream.ErrGeneration
 	}
@@ -122,7 +126,7 @@ func checkStreamGenerationHistory(ctx context.Context, raw []byte, installed *lo
 			if err != nil || seed.Binding.InstalledSHA256 != core.Hash(string(installed.installed.raw)) {
 				return nil, loadbalancestream.ErrGeneration
 			}
-			completion, err := source.controlCompletion(ctx, seed.Operation)
+			completion, err := streamGenerationRecordedCompletion(ctx, source, upgrade, seed.Operation)
 			if err != nil || completion.OriginalRequestSHA256 != seed.Binding.OriginalRequestSHA256 {
 				return nil, loadbalancestream.ErrGeneration
 			}

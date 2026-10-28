@@ -159,7 +159,7 @@ func holdLoadBalanceStreamTrafficUpgrade(ctx context.Context, source *loadBalanc
 		if err != nil {
 			return fail()
 		}
-		w.store = &loadBalanceStreamConfigurationStore{installed: w.installed, source: source, closed: closed}
+		w.store = &loadBalanceStreamConfigurationStore{installed: w.installed, source: source, closed: closed, upgrade: w}
 		if w.store.holdCompletedConfiguration(ctx) != nil {
 			return fail()
 		}
@@ -180,6 +180,35 @@ func holdLoadBalanceStreamTrafficUpgrade(ctx context.Context, source *loadBalanc
 		return fail()
 	}
 	return w, nil
+}
+
+// A closed completion is data, never live actor/control authority. Re-read the
+// SAME complete canonical SELECT-only inventory and require byte equality
+// with this programme reader's original observation. Do not disable blocked()
+// on the shared authority, synthesize a completion or accept a selected ID.
+func (w *loadBalanceStreamTrafficUpgrade) recordedCompletion(ctx context.Context, op loadbalancestream.Operation) (core.LoadBalanceStreamControlCompletion, error) {
+	var empty core.LoadBalanceStreamControlCompletion
+	if w == nil || ctx == nil || ctx.Err() != nil || w.source == nil || w.namespaces == nil ||
+		len(w.history) == 0 || !w.closed[op.RequestID] || w.namespaces.unchanged() != nil || loadbalancestream.OperationSHA256(op) == "" {
+		return empty, errLoadBalanceStreamCoreAuthority
+	}
+	history, err := w.source.controlUpgradeHistory(ctx, nil)
+	raw, encodeErr := json.Marshal(history)
+	if err != nil || encodeErr != nil || !bytes.Equal(raw, w.history) {
+		return empty, errLoadBalanceStreamCoreAuthority
+	}
+	for _, row := range history {
+		if row.Operation.RequestID != op.RequestID {
+			continue
+		}
+		if row.State != "completed" || row.ResultState != "committed" ||
+			loadbalancestream.OperationSHA256(row.Operation) != loadbalancestream.OperationSHA256(op) ||
+			row.Completion.Format != 1 || row.Completion.RequestID != op.RequestID || ctx.Err() != nil || w.namespaces.unchanged() != nil {
+			return empty, errLoadBalanceStreamCoreAuthority
+		}
+		return row.Completion, nil
+	}
+	return empty, errLoadBalanceStreamCoreAuthority
 }
 
 func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {

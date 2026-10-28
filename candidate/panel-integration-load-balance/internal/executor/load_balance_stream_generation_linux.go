@@ -27,6 +27,7 @@ type loadBalanceStreamHeldGeneration struct {
 	run       *streamHeldJournalFile
 	installed *loadBalanceStreamInstalledContext
 	source    *loadBalanceStreamCoreAuthority
+	upgrade   *loadBalanceStreamTrafficUpgrade
 }
 
 func (r *loadBalanceStreamHeldGeneration) close() {
@@ -56,6 +57,12 @@ func (r *loadBalanceStreamHeldGeneration) close() {
 // No missing file/root is created, no pending operation resumed, and no
 // version/UUID supplied by a caller chooses a host path.
 func holdLoadBalanceStreamRecordedGeneration(ctx context.Context, installed *loadBalanceStreamInstalledContext, source *loadBalanceStreamCoreAuthority) (*loadBalanceStreamHeldGeneration, error) {
+	return holdLoadBalanceStreamRecordedGenerationForUpgrade(ctx, installed, source, nil)
+}
+
+// Only the programme reader can supply a closed historical inventory. The
+// normal control reader still consults the unmodified live maintenance fence.
+func holdLoadBalanceStreamRecordedGenerationForUpgrade(ctx context.Context, installed *loadBalanceStreamInstalledContext, source *loadBalanceStreamCoreAuthority, upgrade *loadBalanceStreamTrafficUpgrade) (*loadBalanceStreamHeldGeneration, error) {
 	if ctx == nil || ctx.Err() != nil || os.Geteuid() != 0 || installed == nil || source == nil || !loadBalanceStreamAccountHash(loadBalanceStreamCompiledProgrammeInputsSHA256) || installed.current(ctx) != nil {
 		return nil, loadbalancestream.ErrGeneration
 	}
@@ -63,7 +70,7 @@ func holdLoadBalanceStreamRecordedGeneration(ctx context.Context, installed *loa
 	if err != nil {
 		return nil, err
 	}
-	r := &loadBalanceStreamHeldGeneration{root: root, installed: installed, source: source}
+	r := &loadBalanceStreamHeldGeneration{root: root, installed: installed, source: source, upgrade: upgrade}
 	fail := func() (*loadBalanceStreamHeldGeneration, error) {
 		r.close()
 		return nil, loadbalancestream.ErrGeneration
@@ -131,12 +138,22 @@ func (r *loadBalanceStreamHeldGeneration) current(ctx context.Context) error {
 	if err != nil || seed.Binding.ManifestSHA256 != installSeed.ManifestSHA256 {
 		return loadbalancestream.ErrGeneration
 	}
-	completion, err := r.source.controlCompletion(ctx, seed.Operation)
+	completion, err := streamGenerationRecordedCompletion(ctx, r.source, r.upgrade, seed.Operation)
 	if err != nil || completion.OriginalRequestSHA256 != seed.Binding.OriginalRequestSHA256 {
 		return loadbalancestream.ErrGeneration
 	}
 	if err != nil || completion.Format != 1 || completion.RequestID != r.value.RequestID || completion.OperationSHA256 != r.value.OperationSHA256 || completion.ManifestSHA256 != seed.Binding.ManifestSHA256 || completion.SeedSHA256 != r.value.SeedSHA256 || completion.FinalEventSHA256 != r.value.FinalEventSHA256 || completion.ConfigurationSHA256 != r.value.ConfigurationSHA256 || completion.ServiceObservationSHA256 != r.value.ServiceObservationSHA256 || !r.journal.current() || !r.run.current() || ctx.Err() != nil {
 		return loadbalancestream.ErrGeneration
 	}
-	return checkStreamGenerationHistory(ctx, r.raw, r.installed, r.source)
+	return checkStreamGenerationHistoryForUpgrade(ctx, r.raw, r.installed, r.source, r.upgrade)
+}
+
+func streamGenerationRecordedCompletion(ctx context.Context, source *loadBalanceStreamCoreAuthority, upgrade *loadBalanceStreamTrafficUpgrade, op loadbalancestream.Operation) (core.LoadBalanceStreamControlCompletion, error) {
+	if upgrade != nil {
+		if source == nil || upgrade.source != source {
+			return core.LoadBalanceStreamControlCompletion{}, errLoadBalanceStreamCoreAuthority
+		}
+		return upgrade.recordedCompletion(ctx, op)
+	}
+	return source.controlCompletion(ctx, op)
 }

@@ -193,7 +193,7 @@ class StartupInterlockFilesystemTests(unittest.TestCase):
                 identities[str(path)] = path.stat().st_ino
             guard.install(transaction)
             self.assertEqual({str(path):path.stat().st_ino for path, _, _ in guard.inventory(transaction)}, identities)
-            self.assertEqual([call for call in runner.calls if call[0] == '/usr/bin/systemctl'], [('/usr/bin/systemctl','daemon-reload')]*2)
+            self.assertEqual([call for call in runner.calls if call[0] == '/usr/bin/systemctl'], [('/usr/bin/systemctl','daemon-reload')])
             self.assertFalse(transaction.stopping)
 
     def test_every_foreign_existing_file_parent_and_link_refuses_whole_scope_before_write(self):

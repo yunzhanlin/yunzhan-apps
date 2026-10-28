@@ -482,11 +482,14 @@ class DevelopmentUpgrade(production.Upgrade):
             identity = lambda value: None if value is None else (value[0], value[1].st_dev, value[1].st_ino, value[1].st_mtime_ns, value[1].st_ctime_ns)
             if identity(current) != identity(original):
                 raise ValueError('original unit changed outside transaction')
+            if current is not None and current[0] == data:
+                continue
             self.replaced_units[source.name] = data
             self.journal('switching-units')
             self.atomic(target, data, 0o644)
         self.journal('program-swapped')
-        self.run_command('/usr/bin/systemctl', 'daemon-reload')
+        if self.replaced_units:
+            self.run_command('/usr/bin/systemctl', 'daemon-reload')
         self.release_runtime()
         self.start_previous_state()
         self.wait_readiness()
