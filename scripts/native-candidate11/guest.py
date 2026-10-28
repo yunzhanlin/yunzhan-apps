@@ -228,6 +228,14 @@ try:
     result = library['compare'](before, after, policy); save('programme-preservation.json', result)
     assert nss() == before_nss
     proof['normal_signed_programme_upgrade'] = True
+    prerequisites = {}
+    for name in ('/var/lib/panel-executor/runtime-lifecycle.lock', '/var/lib/panel-executor/docker-jobs', '/var/lib/panel-executor/docker-jobs/compose.lock'):
+        try:
+            s = pathlib.Path(name).lstat()
+            prerequisites[name] = {'exists': True, 'mode': s.st_mode, 'uid': s.st_uid, 'gid': s.st_gid, 'size': s.st_size, 'inode': s.st_ino, 'nlink': s.st_nlink}
+        except FileNotFoundError: prerequisites[name] = {'exists': False}
+    save('stream-original-prerequisite-metadata.json', prerequisites)
+    proof['original_compose_coordination_lock_present'] = prerequisites['/var/lib/panel-executor/docker-jobs/compose.lock']['exists']
     sign_in(); job = store_change('1.9.0', 'update')
     status, workspace = api('/app-registry/load-balance/stream/workspace')
     save('native-workspace.json', workspace); assert status == 200
