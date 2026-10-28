@@ -105,13 +105,23 @@ func holdLoadBalanceStreamRecordedGenerationForUpgrade(ctx context.Context, inst
 		return fail()
 	}
 	r.run, err = r.journal.read("run.lock", 0)
-	if err != nil || syscall.Flock(int(r.run.file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB) != nil {
+	if err != nil || streamLockRecordedGenerationRun(r.run.file) != nil {
 		return fail()
 	}
 	if r.current(ctx) != nil {
 		return fail()
 	}
 	return r, nil
+}
+
+// A completed journal is immutable recorded data. Its creators still take an
+// exclusive run lock; shared readers exclude those writers while allowing
+// status and programme observers to coexist. This grants no mutation authority.
+func streamLockRecordedGenerationRun(file *os.File) error {
+	if file == nil {
+		return loadbalancestream.ErrGeneration
+	}
+	return syscall.Flock(int(file.Fd()), syscall.LOCK_SH|syscall.LOCK_NB)
 }
 
 func (r *loadBalanceStreamHeldGeneration) current(ctx context.Context) error {

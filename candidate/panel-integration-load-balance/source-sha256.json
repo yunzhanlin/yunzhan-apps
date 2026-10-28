@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24streamcandidate23-linux-amd64.tar.gz",
-    "archive_sha256": "4921852bd1cf7b7d9b4e1ac1854eae1d5f2b418a35bf7aa3e2123a1d22bfbabc",
-    "frozen_inputs_sha256": "e19695a0ab583c88bd2b70933aa645f48ebeb2b63c9e96184e1dba58919f8044"
+    "archive": "panel-0.1.0-dev.proapps24streamcandidate24-linux-amd64.tar.gz",
+    "archive_sha256": "a2fa1e98a6209946fa1ebdabeb5f79d84004e5c9ed35d8213d1e5f62d4d030f4",
+    "frozen_inputs_sha256": "93b1973ed627e8b471d5b7d17c843c6a30f7a92bd68b1f01725f78bd80f57f96"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -1252,10 +1252,11 @@
     "internal/executor/load_balance_stream_engine_linux_test.go": "ca568b965cddf003ea6f98a77d8c4d91b7f7dfcc363eeda9f34c2c759b2ed00a",
     "internal/executor/load_balance_stream_engine_native_qa_linux_test.go": "90ba22fb184b8ab26aeb622976e9a5753707ac89679ec5aef65268c484ca6d10",
     "internal/executor/load_balance_stream_generation_history_linux.go": "37323d6e662e7d81e88a68ff2198a508b4d2732e1d662063f537215090f5137e",
-    "internal/executor/load_balance_stream_generation_linux.go": "b8ee49c979a31d0d4954d27e87b5bc24064f8cd337970b6ad229c81f91237039",
+    "internal/executor/load_balance_stream_generation_linux.go": "d46f5c41dcc2065807ddacc2ef71784f4ce6c0694ed1de9594a7428d7ddc5bed",
     "internal/executor/load_balance_stream_generation_linux_test.go": "294d533493a11e262144d0b4109f791523e6e8fde06fede8342f5e4a5657bd7e",
     "internal/executor/load_balance_stream_generation_publication_linux.go": "2f840a60f4ffa3c7f2a10b542cfb8d9ced9ef347f10c9fa70232842551e5ffb6",
     "internal/executor/load_balance_stream_generation_publication_native_qa_linux_test.go": "a28bf87754e5ab6701ca57a01161764c2329cbcc3d0ca77bd3cee4b7736de325",
+    "internal/executor/load_balance_stream_generation_read_lock_linux_test.go": "7f45274a10fa2a9db37eb28b1b0b544be158ae45920079036ac25167561b1568",
     "internal/executor/load_balance_stream_initial_sockets_test.go": "81b91219f38d490ac3c5294f4fdc049c06d829e0c56b4054e248815b7cfe5aeb",
     "internal/executor/load_balance_stream_install_authority_native_qa_linux_test.go": "c10c632c00d6e1626e655e2021d0039efea5b245e53198ab25026192c83c05b0",
     "internal/executor/load_balance_stream_install_binding.go": "80ec99ab289146e9158f403d4e282163e020752fd112a45804a04382219fe30e",
