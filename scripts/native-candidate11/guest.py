@@ -102,7 +102,8 @@ def install_nginx_prerequisite():
     # stream engine additionally requires a recorded runtime with stream flags.
     # Obtain it through the same signed store and original runtime worker as UI.
     target = 'nginx-1.30.6'
-    assert not os.path.lexists('/opt/panel/runtimes/' + target)
+    prefix = '/opt/panel/runtimes/nginx/1.30.6'
+    assert not os.path.lexists(prefix)
     status, page = api('/app-registry?refresh=1')
     assert status == 200 and page['source']['stale'] is False
     item = next(v for v in page['catalog']['apps'] if v['id'] == 'nginx')
@@ -125,7 +126,7 @@ def install_nginx_prerequisite():
         time.sleep(2)
     save('nginx-original-job.json', observed)
     assert value['state'] == 'succeeded' and value['error'] == '', 'Original Nginx build did not succeed; not replayed'
-    command('nginx-prerequisite-version', ['/opt/panel/runtimes/' + target + '/sbin/nginx', '-V'], 10)
+    command('nginx-prerequisite-version', [prefix + '/sbin/nginx', '-V'], 10)
     text = (evidence / 'nginx-prerequisite-version.log').read_text()
     assert 'nginx version: nginx/1.30.6\n' in text and '--with-stream' in text.split() and '--with-stream_ssl_module' in text.split()
     proof['normal_store_Nginx_stream_runtime_installed'] = True
