@@ -1,0 +1,49 @@
+name: read-only native systemd host profile
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  profile:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            arch: amd64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - name: Observe native host without installing or changing services
+        shell: python
+        run: |
+          import json, os, pathlib, platform, shutil, stat, subprocess
+          def command(args):
+              p = subprocess.run(args, capture_output=True, text=True, timeout=10)
+              assert len(p.stdout) + len(p.stderr) < 65536
+              return {'exit': p.returncode, 'stdout': p.stdout, 'stderr': p.stderr}
+          paths = ['/etc/nginx/nginx.conf', '/etc/panel-release', '/opt/panel', '/var/lib/panel', '/var/lib/panel-executor', '/dev/kvm']
+          nodes = {}
+          for name in paths:
+              try:
+                  s = pathlib.Path(name).lstat()
+                  nodes[name] = {'exists': True, 'mode': oct(stat.S_IMODE(s.st_mode)), 'uid': s.st_uid, 'gid': s.st_gid, 'is_symlink': stat.S_ISLNK(s.st_mode)}
+              except FileNotFoundError:
+                  nodes[name] = {'exists': False}
+          proof = {'read_only': True, 'software_or_service_or_account_changes': 0, 'platform': platform.machine(), 'PID1': pathlib.Path('/proc/1/comm').read_text().strip(), 'os_release': pathlib.Path('/etc/os-release').read_text(), 'nodes': nodes, 'memory_total': os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES'), 'disk_free': shutil.disk_usage('/').free, 'systemd': command(['systemctl', '--version']), 'native_virtualization': command(['systemd-detect-virt']), 'listeners': command(['ss', '-H', '-ltn']), 'package_inventory': command(['dpkg-query', '-W', '-f=${Package} ${db:Status-Status}\n', 'nginx', 'apache2', 'nftables', 'openssh-server'])}
+          output = pathlib.Path(os.environ['RUNNER_TEMP']) / 'yunzhan-native-host.json'
+          with os.fdopen(os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), 'w') as f:
+              json.dump(proof, f, indent=2); f.write('\n')
+          print(json.dumps(proof))
+      - name: Retain public host capability evidence only
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-host-${{ matrix.arch }}
+          path: ${{ runner.temp }}/yunzhan-native-host.json
+          retention-days: 3
