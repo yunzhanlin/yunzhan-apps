@@ -4,7 +4,7 @@ Every mutation is once-only. A failed/unknown job is retained and stops the
 suite. This is infrastructure acceptance, never an all-app commercial claim.
 Private snapshots and diagnostics are encrypted by the host before upload.
 """
-import contextlib, gc, hashlib, http.cookiejar, json, os, pathlib, platform
+import calendar, contextlib, gc, hashlib, http.cookiejar, json, os, pathlib, platform
 import re, runpy, secrets, shutil, sqlite3, stat, subprocess, sys, time
 import traceback, urllib.error, urllib.request
 
@@ -43,14 +43,14 @@ proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_c
          'all50_commercial': False, 'normal_signed_programme_upgrade': False,
          'normal_store_update': False, 'actions': [], 'base': str(base)}
 http = None; csrf = ''; origin = 'http://127.0.0.1:19100'
-def command(label, argv, timeout=30):
+def command(label, argv, timeout=30, require_success=True):
     started = time.monotonic()
     with (evidence / (label + '.log')).open('xb') as output:
         result = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
     record = {'label': label, 'exit': result.returncode, 'seconds': time.monotonic() - started,
               'log_sha256': sha(evidence / (label + '.log'))}
     save(label + '-result.json', record)
-    assert result.returncode == 0, label + ' failed; original log retained'
+    if require_success: assert result.returncode == 0, label + ' failed; original log retained'
     return record
 def programme(version, action):
     archive = base / ('panel-' + version + '-linux-amd64.tar.gz')
@@ -140,6 +140,35 @@ def nss():
         result[name] = {'sha256': hashlib.sha256(raw).hexdigest(), 'dedicated_count': len(selected),
                         'without_dedicated_sha256': hashlib.sha256(rest).hexdigest()}
     return result
+def observed_business(library, policy, label, original=None):
+    # A genuinely new installation has no previous source sample yet. Wait
+    # for its ordinary worker to establish an actual healthy source before
+    # taking either full snapshot. Never insert/reset a row or invoke a worker.
+    deadline = time.monotonic() + 65
+    for attempt in range(13):
+        assert time.monotonic() < deadline
+        with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
+            db.execute('PRAGMA query_only=ON'); db.execute('BEGIN')
+            rows = db.execute('SELECT id,worker_state,worker_sequence,worker_checked_at FROM load_balance_traffic_source').fetchmany(2)
+            assert len(rows) <= 1
+            now = time.time(); healthy = False
+            if rows:
+                identity, state, sequence, clock = rows[0]
+                assert identity == 1 and state in ('clear', 'error', 'stale', 'unknown')
+                assert type(sequence) is int and 0 <= sequence < 1 << 60 and type(clock) is str
+                match = re.fullmatch(r'(\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d)(?:\.(\d{1,9}))?Z', clock)
+                if match:
+                    stamp = calendar.timegm(time.strptime(match[1], '%Y-%m-%dT%H:%M:%S')) + int((match[2] or '').ljust(9, '0')) / 1e9
+                    healthy = state == 'clear' and now - 16 <= stamp <= now + 1
+            save(label + '-source-' + str(attempt) + '.json', {'observed': rows, 'at': now, 'healthy': healthy, 'same_snapshot_transaction': True})
+            if healthy:
+                if original is None:
+                    record = library['original']['capture'](db); library['original']['validate'](record)
+                else: record = library['capture_installed'](db, original, policy)
+                return record
+        assert attempt < 12 and time.monotonic() + 5 < deadline
+        time.sleep(5)
+    raise AssertionError('No real healthy source within the original bounded observation window')
 try:
     for path in ('/etc/panel-release', '/opt/panel', '/var/lib/panel', '/var/lib/panel-executor', '/etc/nginx/nginx.conf'):
         assert not os.path.lexists(path), 'New guest already has protected installation state: ' + path
@@ -151,8 +180,7 @@ try:
     sign_in(); store_change('1.8.5', 'install'); sign_out()
     library = runpy.run_path(str(base / 'candidate8-programme-business.py'))
     policy = json.loads((base / 'policy.json').read_bytes()); library['contract'](policy)
-    with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
-        before = library['original']['capture'](db); library['original']['validate'](before)
+    before = observed_business(library, policy, 'before')
     save('programme-before-full.json', before)
     before_nss = nss(); save('NSS-before.json', before_nss)
     assert all(v['dedicated_count'] == 0 for v in before_nss.values())
@@ -162,8 +190,7 @@ try:
         except FileNotFoundError: continue
         assert not target.startswith('/var/lib/panel/panel.db'), 'QA kept a Core reader across installer'
     programme(new, 'install')
-    with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
-        after = library['capture_installed'](db, before, policy)
+    after = observed_business(library, policy, 'after', before)
     save('programme-after-full.json', after)
     result = library['compare'](before, after, policy); save('programme-preservation.json', result)
     assert nss() == before_nss
@@ -189,9 +216,13 @@ finally:
         except BaseException: proof['own_session_logout_failed'] = True
     try:
         command('native-unit-diagnostics', ['systemctl', 'show', 'panel-lbstream-install@*.service', 'panel-lbstream-account-create@*.service',
-                    '-p', 'Id,LoadState,ActiveState,SubState,Result,MainPID,ControlPID,ExecMainStatus,InvocationID'], 10)
-        command('native-journal', ['journalctl', '-b', '--no-pager', '-o', 'short-precise', '-u', 'panel-lbstream-install@*', '-u', 'panel-lbstream-account-create@*'], 10)
-        command('panel-journal', ['journalctl', '-b', '--no-pager', '-n', '150', '-u', 'panel', '-u', 'panel-executor'], 10)
+                    '-p', 'Id,LoadState,ActiveState,SubState,Result,MainPID,ControlPID,ExecMainStatus,InvocationID'], 10, False)
+        journal = command('native-journal', ['journalctl', '-b', '--no-pager', '-o', 'short-precise', '-u', 'panel-lbstream-install@*', '-u', 'panel-lbstream-account-create@*'], 10, False)
+        command('panel-journal', ['journalctl', '-b', '--no-pager', '-n', '150', '-u', 'panel', '-u', 'panel-executor'], 10, False)
+        if proof['normal_store_update']: assert journal['exit'] == 0, 'A successful native update requires actual native journal evidence'
+    except BaseException:
+        proof['ok'] = False; proof['journal_diagnostic_failure'] = traceback.format_exc()
+    try:
         if pathlib.Path('/var/lib/panel/panel.db').exists():
             with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
                 with contextlib.closing(sqlite3.connect(evidence / 'final-Core-private.sqlite')) as output: db.backup(output)
@@ -201,7 +232,8 @@ finally:
             assert len(roots) <= 32
             command('original-native-ledgers', ['tar', '-czf', str(evidence / 'original-native-ledgers.tar.gz'), '--', *sorted(roots)], 30)
         save('NSS-final-public.json', nss())
-    except BaseException: proof['diagnostic_failure'] = traceback.format_exc()
+    except BaseException:
+        proof['ok'] = False; proof['diagnostic_failure'] = traceback.format_exc()
     save('proof.json', proof)
     # Only this public, credential-free summary crosses stdout. Full typed rows,
     # logs and DB are in a separate encrypted evidence artifact, never plaintext.
