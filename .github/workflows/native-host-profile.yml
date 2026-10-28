@@ -1,6 +1,9 @@
 name: read-only native systemd host profile
 
 on:
+  push:
+    branches: [codex/app-candidate]
+    paths: [.github/workflows/native-host-profile.yml]
   workflow_dispatch:
 
 permissions:
