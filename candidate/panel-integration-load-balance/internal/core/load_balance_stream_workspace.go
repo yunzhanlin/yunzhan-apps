@@ -42,7 +42,7 @@ func ValidateLoadBalanceStreamWorkspace(v LoadBalanceStreamWorkspace) error {
 		return bad
 	}
 	switch v.State {
-	case "unavailable", "empty", "busy-or-unknown", "unknown", "degraded":
+	case "unavailable", "empty", "busy-or-unknown", "unknown", "degraded", "cold-boot-ready":
 		if v.ConfigurationVerified {
 			return bad
 		}
@@ -56,7 +56,8 @@ func ValidateLoadBalanceStreamWorkspace(v LoadBalanceStreamWorkspace) error {
 	if v.State != "unavailable" && !v.Available {
 		return bad
 	}
-	if (v.State == "unavailable" || v.State == "empty" || v.State == "busy-or-unknown") && v.Generation != 0 || v.State == "degraded" && v.Generation == 0 || v.State != "running" && v.RetiringWorkers != 0 {
+	if (v.State == "unavailable" || v.State == "empty" || v.State == "busy-or-unknown") && v.Generation != 0 ||
+		(v.State == "degraded" || v.State == "cold-boot-ready") && v.Generation == 0 || v.State != "running" && v.RetiringWorkers != 0 {
 		return bad
 	}
 	if v.Generation == 0 {

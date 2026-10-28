@@ -32,7 +32,39 @@ func streamColdUnitAbsent(state map[string]string) bool {
 		}
 	}
 	return state["LoadState"] == "not-found" && state["ActiveState"] == "inactive" && state["SubState"] == "dead" &&
-		state["MainPID"] == "0" && state["ControlPID"] == "0" && state["InvocationID"] == ""
+		state["MainPID"] == "0" && state["ControlPID"] == "0" && state["InvocationID"] == "" &&
+		state["ExecMainStatus"] == "0" && state["Result"] == "success"
+}
+
+// This is only a read-side eligibility observation. It cannot create a grant,
+// replay a request or recover anything. A subsequent normal mutation still
+// needs the original controller's fresh actor, lease and cold-boot witnesses.
+func streamColdBootWorkspaceCurrent(ctx context.Context, installed *loadBalanceStreamInstalledContext, generation *loadBalanceStreamHeldGeneration, previousBoot string) error {
+	if ctx == nil || ctx.Err() != nil || installed == nil || generation == nil || !streamEgressBootID(previousBoot) ||
+		installed.current(ctx) != nil || generation.current(ctx) != nil {
+		return loadbalancestream.ErrService
+	}
+	boot, err := streamAccountParentProc("/proc/sys/kernel/random/boot_id", 128)
+	currentBoot := strings.TrimSuffix(string(boot), "\n")
+	if err != nil || !streamEgressBootID(currentBoot) || currentBoot == previousBoot {
+		return loadbalancestream.ErrService
+	}
+	absent, err := holdLoadBalanceStreamAbsentEgressReadOnly(ctx)
+	if err != nil {
+		return loadbalancestream.ErrService
+	}
+	defer absent.close()
+	if absent.bootID != currentBoot {
+		return loadbalancestream.ErrService
+	}
+	for n := 0; n < 2; n++ {
+		unit, err := streamInstallUnitProperties(ctx, loadbalancestream.ServiceUnitName)
+		if err != nil || !streamColdUnitAbsent(unit) || streamColdUIDAbsent(ctx, installed.identity.UID) != nil ||
+			absent.current(ctx) != nil || generation.current(ctx) != nil || installed.current(ctx) != nil {
+			return loadbalancestream.ErrService
+		}
+	}
+	return nil
 }
 
 // Check every credential, including saved/fs UID. A partial/malformed status is

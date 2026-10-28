@@ -225,6 +225,12 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 	if w.egress == nil {
 		w.egress, err = holdLoadBalanceStreamRecordedEgress(ctx, w.seed, w.receipt.State, w.installed.identity.UID, w.receipt.Egress)
 		if err != nil {
+			// A new boot with no unit, no service-UID process and no native
+			// table is a separate read-only upgrade state. Do not invent live
+			// policy handles, start a service or recover an old transaction.
+			if streamColdBootWorkspaceCurrent(ctx, w.installed, w.store.generation, w.receipt.Egress.BootID) == nil {
+				return w.namespaces.unchanged()
+			}
 			return err
 		}
 	}

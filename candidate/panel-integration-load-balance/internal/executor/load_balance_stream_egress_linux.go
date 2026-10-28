@@ -153,6 +153,41 @@ func holdLoadBalanceStreamRecordedEgress(ctx context.Context, seed loadbalancest
 	return g, nil
 }
 
+// Hold the current fixed tool and network namespace only to read table
+// absence. In particular readOnly forbids even a caller with this pointer
+// from issuing a batch. This observation is never a publication receipt.
+func holdLoadBalanceStreamAbsentEgressReadOnly(ctx context.Context) (*loadBalanceStreamHeldEgress, error) {
+	if ctx == nil || ctx.Err() != nil || os.Geteuid() != 0 {
+		return nil, loadbalancestream.ErrEgressGuard
+	}
+	g := &loadBalanceStreamHeldEgress{missing: true, readOnly: true}
+	fail := func() (*loadBalanceStreamHeldEgress, error) { g.close(); return nil, loadbalancestream.ErrEgressGuard }
+	var err error
+	g.nft, _, err = holdLoadBalanceStreamEngineFile(streamEgressNFT, true)
+	if err != nil {
+		return fail()
+	}
+	g.namespace, err = os.Open("/proc/self/ns/net")
+	if err != nil {
+		return fail()
+	}
+	g.nsBefore, err = g.namespace.Stat()
+	if err != nil {
+		return fail()
+	}
+	st, ok := g.nsBefore.Sys().(*syscall.Stat_t)
+	boot, err := streamAccountParentProc("/proc/sys/kernel/random/boot_id", 128)
+	g.bootID = strings.TrimSuffix(string(boot), "\n")
+	if !ok || st.Dev == 0 || st.Ino == 0 || err != nil || !streamEgressBootID(g.bootID) {
+		return fail()
+	}
+	g.receipt = streamEgressReceipt{Format: 1, BootID: g.bootID, NetnsDevice: uint64(st.Dev), NetnsInode: st.Ino, NftSHA256: g.nft.sha}
+	if g.current(ctx) != nil {
+		return fail()
+	}
+	return g, nil
+}
+
 func (s *loadBalanceStreamConfigurationStore) holdEgress(ctx context.Context, facts loadbalancestream.ServiceFacts) error {
 	if s == nil || s.egress != nil || !s.priorCaptured || s.beforeCurrent(ctx) != nil || facts.AccountUID != s.installed.identity.UID {
 		return loadbalancestream.ErrEgressGuard

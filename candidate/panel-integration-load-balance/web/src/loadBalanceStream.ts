@@ -18,7 +18,7 @@ export type StreamRow = { created_at: string; operation: StreamOperation; access
 export type StreamHistory = { format: number; actor_id: string; offset: number; total: number; next_offset: number | null; rows: StreamRow[] };
 export type StreamWorkspace = {
   format: number; version: string; available: boolean;
-  state: "unavailable" | "empty" | "busy-or-unknown" | "unknown" | "degraded" | "running" | "stopped";
+  state: "unavailable" | "empty" | "busy-or-unknown" | "unknown" | "degraded" | "cold-boot-ready" | "running" | "stopped";
   detail: string; bind_address: string; configuration_verified: boolean; generation: number;
   request_id: string; configuration_sha256: string; entries: StreamEntry[];
   available_memory_bytes: number; memory_high_bytes: number; memory_max_bytes: number; retiring_workers: number;
@@ -161,13 +161,13 @@ export function streamHistory(value: unknown, actor: string, offset: number): St
 }
 export function streamWorkspace(value: unknown): StreamWorkspace {
   const v = keys(value, ["format", "version", "available", "state", "detail", "bind_address", "configuration_verified", "generation", "request_id", "configuration_sha256", "entries", "available_memory_bytes", "memory_high_bytes", "memory_max_bytes", "retiring_workers"]);
-  if (v.format !== 1 || v.version !== streamVersion || typeof v.available !== "boolean" || typeof v.configuration_verified !== "boolean" || v.bind_address !== "127.0.0.1" || !["unavailable", "empty", "busy-or-unknown", "unknown", "degraded", "running", "stopped"].includes(String(v.state)) || !Array.isArray(v.entries) || v.entries.length > 128) throw bad();
+  if (v.format !== 1 || v.version !== streamVersion || typeof v.available !== "boolean" || typeof v.configuration_verified !== "boolean" || v.bind_address !== "127.0.0.1" || !["unavailable", "empty", "busy-or-unknown", "unknown", "degraded", "cold-boot-ready", "running", "stopped"].includes(String(v.state)) || !Array.isArray(v.entries) || v.entries.length > 128) throw bad();
   text(v.detail);
   const generation = integer(v.generation, 0, 128), retiring = integer(v.retiring_workers, 0, 1), entries = v.entries.map(streamEntry);
   integer(v.available_memory_bytes, 0, Number.MAX_SAFE_INTEGER);
   integer(v.memory_high_bytes, 0, Number.MAX_SAFE_INTEGER);
   integer(v.memory_max_bytes, 0, 1476395008);
-  if (!v.available && v.state !== "unavailable" || v.state !== "unavailable" && !v.available || v.configuration_verified !== ["running", "stopped"].includes(String(v.state)) || ["unavailable", "empty", "busy-or-unknown"].includes(String(v.state)) && generation !== 0 || ["degraded", "running", "stopped"].includes(String(v.state)) && generation === 0 || v.state !== "running" && retiring !== 0) throw bad();
+  if (!v.available && v.state !== "unavailable" || v.state !== "unavailable" && !v.available || v.configuration_verified !== ["running", "stopped"].includes(String(v.state)) || ["unavailable", "empty", "busy-or-unknown"].includes(String(v.state)) && generation !== 0 || ["degraded", "cold-boot-ready", "running", "stopped"].includes(String(v.state)) && generation === 0 || v.state !== "running" && retiring !== 0) throw bad();
   if (generation === 0) {
     if (entries.length || v.request_id !== "" || v.configuration_sha256 !== "" || v.memory_high_bytes !== 0 || v.memory_max_bytes !== 0 || retiring !== 0) throw bad();
   } else if (!streamID(v.request_id) || !digest(v.configuration_sha256) || Number(v.memory_high_bytes) < 128 * 1024 * 1024 || Number(v.memory_max_bytes) < Number(v.memory_high_bytes) || new Set(entries.map(e => e.name)).size !== entries.length || v.state === "running" && !entries.some(e => !e.removed) || v.state === "stopped" && entries.some(e => !e.removed)) throw bad();

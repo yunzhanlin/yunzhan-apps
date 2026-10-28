@@ -89,6 +89,13 @@ test('workspace has exact bounded current facts, no public bind or invented heal
   for(const change of [{state:'running'},{entries:[entry]},{request_id:requestID},{configuration_sha256:'1'.repeat(64)},{memory_high_bytes:1}])reject({...workspace(),...change},m.streamWorkspace);
   assert.equal(m.streamWorkspace(workspace([{...entry,removed:true}],2)).state,'stopped');
 });
+test('cold-boot eligibility is a distinct unverified full-lineage state, never generic degraded authority',()=>{
+  const cold={...workspace([entry],1),state:'cold-boot-ready',configuration_verified:false};
+  assert.equal(m.streamWorkspace(cold).state,'cold-boot-ready');
+  assert.equal(m.streamWorkspace(cold).configuration_verified,false);
+  for(const change of [{generation:0},{available:false},{configuration_verified:true},{retiring_workers:1},{request_id:''}])reject({...cold,...change},m.streamWorkspace);
+  assert.equal(m.streamWorkspace({...cold,state:'degraded'}).state,'degraded');
+});
 test('host policy requires exact current full admin identity/revision; manager uses independent pane',()=>{
   assert(m.streamFullAdmin(access,actor));
   for(const change of [{user_id:other},{role:'viewer'},{permission_revision:0},{permission_revision:'1'},{menu_ids:['runtimes','system-tools']},{menu_ids:access.menu_ids.map(()=> 'runtimes')}])assert.equal(m.streamFullAdmin({...access,...change},actor),false);

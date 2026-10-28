@@ -134,6 +134,10 @@ func observeLoadBalanceStreamWorkspace(ctx context.Context) (loadBalanceStreamWo
 	out.AvailableMemoryBytes, out.MemoryHighBytes, out.MemoryMaxBytes = facts.AvailableMemoryBytes, plan.MemoryHighBytes, plan.MemoryMaxBytes
 	egress, err := holdLoadBalanceStreamRecordedEgress(ctx, seed, receipt.State, installed.identity.UID, receipt.Egress)
 	if err != nil {
+		if streamColdBootWorkspaceCurrent(ctx, installed, generation, receipt.Egress.BootID) == nil {
+			out.State, out.Detail = "cold-boot-ready", "服务器已重启；原生服务未运行，专用身份没有存活进程，隔离表尚未恢复。提交新配置后将恢复原有未移除入口并应用本次变更；不会重放旧请求"
+			return out, nil
+		}
 		out.State, out.Detail = "degraded", "当前防火墙完整规则、原始句柄或启动身份与回执不一致；未验证为运行正常"
 		return out, nil
 	}

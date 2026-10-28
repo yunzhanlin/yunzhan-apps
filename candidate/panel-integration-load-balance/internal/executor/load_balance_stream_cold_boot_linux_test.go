@@ -36,6 +36,14 @@ func TestLoadBalanceStreamColdBootAbsenceRejectsPartialOrAnyServiceCredential(t 
 	if !streamColdUnitAbsent(unit) {
 		t.Fatal("complete absent unit refused")
 	}
+	for _, key := range []string{"Result", "ExecMainStatus"} {
+		old := unit[key]
+		unit[key] = "failed"
+		if streamColdUnitAbsent(unit) {
+			t.Fatal("abnormal manager metadata became cold-boot absence", key)
+		}
+		unit[key] = old
+	}
 	delete(unit, "InvocationID")
 	if streamColdUnitAbsent(unit) {
 		t.Fatal("missing field became empty original invocation")
@@ -60,6 +68,14 @@ func TestLoadBalanceStreamColdBootMissingOriginalCannotRecover(t *testing.T) {
 	}
 	if streamColdUIDAbsent(nil, 991) != loadbalancestream.ErrService || streamColdUIDAbsent(ctx, 0) != loadbalancestream.ErrService {
 		t.Fatal("missing context or root identity acquired service absence")
+	}
+	for _, boot := range []string{"", "invalid", "00000000-0000-0000-0000-000000000000"} {
+		if streamColdBootWorkspaceCurrent(ctx, nil, nil, boot) != loadbalancestream.ErrService {
+			t.Fatal("claimed cold-boot state acquired eligibility without originals")
+		}
+	}
+	if absent, err := holdLoadBalanceStreamAbsentEgressReadOnly(nil); absent != nil || err != loadbalancestream.ErrEgressGuard {
+		t.Fatal("missing context acquired a native namespace observer")
 	}
 }
 

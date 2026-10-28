@@ -56,6 +56,23 @@ func TestLoadBalanceStreamWorkspaceDoesNotConflateRecordedConfigurationWithBusin
 	if ValidateLoadBalanceStreamWorkspace(v) != nil {
 		t.Fatal("actual complete configuration shape rejected")
 	}
+	cold := v
+	cold.State, cold.ConfigurationVerified = "cold-boot-ready", false
+	if ValidateLoadBalanceStreamWorkspace(cold) != nil {
+		t.Fatal("separate unverified cold-boot eligibility shape rejected")
+	}
+	for _, change := range []func(*LoadBalanceStreamWorkspace){
+		func(v *LoadBalanceStreamWorkspace) { v.ConfigurationVerified = true },
+		func(v *LoadBalanceStreamWorkspace) { v.Generation = 0 },
+		func(v *LoadBalanceStreamWorkspace) { v.Available = false },
+		func(v *LoadBalanceStreamWorkspace) { v.RetiringWorkers = 1 },
+	} {
+		bad := cold
+		change(&bad)
+		if ValidateLoadBalanceStreamWorkspace(bad) == nil {
+			t.Fatal("cold-boot eligibility claimed healthy config, missing lineage or live workers")
+		}
+	}
 	for _, change := range []func(*LoadBalanceStreamWorkspace){
 		func(v *LoadBalanceStreamWorkspace) { v.RetiringWorkers = 2 },
 		func(v *LoadBalanceStreamWorkspace) { v.MemoryMaxBytes = v.MemoryHighBytes - 1 },
