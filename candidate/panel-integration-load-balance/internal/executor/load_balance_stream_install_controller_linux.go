@@ -178,13 +178,26 @@ func (w *loadBalanceStreamInstallController) accountChild(ctx context.Context) e
 	_, err = programQueueCommand(bounded, "/usr/bin/systemctl", "--wait", "start", unit)
 	cancel()
 	if err != nil {
-		return err
+		return streamInstallPhaseError("专用身份完成等待", err)
 	}
 	state, err := streamInstallUnitProperties(ctx, unit)
-	if err != nil || state["LoadState"] != "loaded" || state["ActiveState"] != "inactive" || state["SubState"] != "dead" || state["MainPID"] != "0" || state["ControlPID"] != "0" || state["ExecMainStatus"] != "0" || state["Result"] != "success" || !core.ValidID(state["InvocationID"]) || state["InvocationID"] == strings.Repeat("0", 32) {
-		return errLoadBalanceStreamAccount
+	if err != nil || !streamInstallAccountChildTerminated(state) {
+		return streamInstallPhaseError("专用身份完成状态", errLoadBalanceStreamAccount)
 	}
 	return w.current(ctx)
+}
+
+// An observation after the original successful --wait, never start authority.
+// systemd may garbage-collect a successfully terminated unit before show loads
+// its static template again, losing InvocationID and other runtime statistics.
+// The caller still requires its original live grant, complete owned account
+// receipt and fresh NSS, then the durable installation journal before commit.
+func streamInstallAccountChildTerminated(state map[string]string) bool {
+	if len(state) != 8 || state["LoadState"] != "loaded" || state["ActiveState"] != "inactive" || state["SubState"] != "dead" || state["MainPID"] != "0" || state["ControlPID"] != "0" || state["ExecMainStatus"] != "0" || state["Result"] != "success" {
+		return false
+	}
+	id, present := state["InvocationID"]
+	return present && (id == "" || core.ValidID(id) && id != strings.Repeat("0", 32))
 }
 
 // Fixed original parent only. Availability remains false until the separate
