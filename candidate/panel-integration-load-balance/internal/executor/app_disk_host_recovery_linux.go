@@ -83,6 +83,13 @@ func (s *Service) diskHostRecover(ctx context.Context, in diskjob.RecoveryReques
 	if err := guard(); err != nil {
 		return ack, err
 	}
+	// A confirmed cancellation can precede the original launcher's exit.
+	// Observe its leases within this request's existing deadline, rechecking
+	// current authority throughout. Seal only once; never retry a write whose
+	// outcome is unknown, and never start or replay a worker while waiting.
+	if err := j.WaitForAdmissionIdle(ctx, func() bool { return guard() == nil }); err != nil {
+		return ack, err
+	}
 	closed, err := j.SealClosure(in.Request)
 	if err != nil {
 		return ack, err

@@ -36,7 +36,7 @@ func TestDiskUsageRegistryStatusDistinguishesLegacyLatestAndMissingVersions(t *t
 				t.Fatal("actual software version probe lost or replaced", rows)
 			}
 			row := rows[0]
-			wantUpdate := version == "1.0" || version == "1.2.0" || version == "1.3.0"
+			wantUpdate := version == "1.0" || version == "1.2.0" || version == "1.3.0" || version == "1.4.0"
 			if row.UpdateAvailable != wantUpdate || row.VersionKnown != (version != "") {
 				t.Fatal("legacy, latest and missing versions conflated", row)
 			}
