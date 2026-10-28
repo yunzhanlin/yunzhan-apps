@@ -70,12 +70,17 @@ func prepareLoadBalanceStreamSystemAccount(ctx context.Context, parent *loadBala
 	defer engine.Close()
 	var identity loadBalanceStreamIdentity
 	err = engine.use(ctx, func(active context.Context) error {
-		authorize := func(check context.Context) error {
+		current := func(check context.Context) error {
 			if check == nil || check.Err() != nil || !lifetime.current() || !engine.currentLocked() || !configuration.current() ||
 				parent.permitRecord == nil || parent.permitRecord.value != parent.permit || !parent.permitRecord.current() ||
 				!loadBalanceStreamProgrammeInputsMatch(loadBalanceStreamCompiledProgrammeInputsSHA256, parent.permit.ProgrammeInputsSHA256) ||
-				checkLoadBalanceStreamAccountChildKernel(check, parent) != nil || source.checkInstall(check, grant) != nil ||
-				checkLegacyProgramUpgradeQueues() != nil {
+				checkLoadBalanceStreamAccountChildKernel(check, parent) != nil || source.checkInstall(check, grant) != nil {
+				return errLoadBalanceStreamAccount
+			}
+			return nil
+		}
+		authorize := func(check context.Context) error {
+			if current(check) != nil || observeLoadBalanceStreamLegacyQueues(check, current) != nil {
 				return errLoadBalanceStreamAccount
 			}
 			if checkLoadBalanceStreamUpgrade(check, &loadBalanceStreamUpgradeOwner{source: source, original: grant, lifetime: lifetime, child: parent, compose: engine}) != nil {

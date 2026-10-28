@@ -277,7 +277,7 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	if err := authorize(ctx); err != nil {
 		return unknown, streamInstallPhaseError("交接前当前授权", err)
 	}
-	if err := checkLegacyProgramUpgradeQueues(); err != nil {
+	if err := observeLoadBalanceStreamLegacyQueues(ctx, authorize); err != nil {
 		return unknown, streamInstallPhaseError("已有原生任务", err)
 	}
 	if err := checkLoadBalanceStreamUpgrade(ctx, owner); err != nil {

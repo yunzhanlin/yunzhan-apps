@@ -50,10 +50,11 @@ func (w *loadBalanceStreamInstallController) checkQueues(ctx context.Context) er
 	if w == nil {
 		return errLoadBalanceStreamInstallationGate
 	}
-	if err := checkLegacyProgramUpgradeQueues(); err != nil {
+	owner := &loadBalanceStreamUpgradeOwner{source: w.source, original: w.grant, lifetime: w.lifetime, mutation: w.mutation, parent: w}
+	if err := observeLoadBalanceStreamLegacyQueues(ctx, owner.current); err != nil {
 		return err
 	}
-	return checkLoadBalanceStreamUpgrade(ctx, &loadBalanceStreamUpgradeOwner{source: w.source, original: w.grant, lifetime: w.lifetime, mutation: w.mutation, parent: w})
+	return checkLoadBalanceStreamUpgrade(ctx, owner)
 }
 
 func ensureLoadBalanceStreamModuleDirectory(ctx context.Context, authorize func(context.Context) error) (*modulePrivateDirectory, error) {

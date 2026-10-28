@@ -3,13 +3,19 @@
 package executor
 
 import (
+	"bufio"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 	"testing"
+	"time"
 )
 
 func TestLoadBalanceStreamAccountExecutablePinsFullHashAndRechecksWithoutDataReads(t *testing.T) {
@@ -62,8 +68,100 @@ func TestLoadBalanceStreamAccountExecutablePinsFullHashAndRechecksWithoutDataRea
 	}
 }
 
+// Linux protects the ACTUAL mapped executable against writes, independently of
+// the filesystem's ctime clock granularity. Test a private writable copy, never
+// the installed ELF; after its reader exits, the same write-open must succeed.
+func TestLoadBalanceStreamAccountExecutableKernelDeniesWritesWhileRunning(t *testing.T) {
+	const mode = "PANEL_PRIVATE_EXECUTABLE_WRITE_DENY_TEST"
+	if os.Getenv(mode) == "child" {
+		fmt.Fprintln(os.Stdout, "private-executable-ready")
+		if _, err := io.Copy(io.Discard, os.Stdin); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	source, err := os.Open("/proc/self/exe")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer source.Close()
+	path := filepath.Join(t.TempDir(), "private-executable.test")
+	copy, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0700)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := io.Copy(copy, source); err != nil {
+		copy.Close()
+		t.Fatal(err)
+	}
+	if err := copy.Close(); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, path, "-test.run=^TestLoadBalanceStreamAccountExecutableKernelDeniesWritesWhileRunning$", "-test.v=true")
+	cmd.Env = append(os.Environ(), mode+"=child")
+	input, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	output, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	waited := false
+	defer func() {
+		input.Close()
+		if !waited {
+			cmd.Wait()
+		}
+	}()
+	scanner := bufio.NewScanner(output)
+	ready := false
+	for scanner.Scan() {
+		if scanner.Text() == "private-executable-ready" {
+			ready = true
+			break
+		}
+	}
+	if !ready {
+		t.Fatal("private executable never entered its bounded child role", scanner.Err())
+	}
+	for i := 0; i < 8; i++ {
+		file, err := os.OpenFile(path, os.O_WRONLY|syscall.O_NOFOLLOW, 0)
+		if file != nil {
+			file.Close()
+		}
+		if !errors.Is(err, syscall.ETXTBSY) {
+			t.Fatal("actual running private ELF permitted a write-open", err)
+		}
+	}
+	if err := input.Close(); err != nil {
+		t.Fatal(err)
+	}
+	// Drain the child's normal test epilogue before Wait closes its pipe.
+	for scanner.Scan() {
+	}
+	waitErr := cmd.Wait()
+	waited = true
+	if scanner.Err() != nil || waitErr != nil {
+		t.Fatal("private executable did not exit normally", scanner.Err(), waitErr)
+	}
+	writable, err := os.OpenFile(path, os.O_WRONLY|syscall.O_NOFOLLOW, 0)
+	if err != nil {
+		t.Fatal("positive control: stopped private ELF should allow an ordinary write-open", err)
+	}
+	writable.Close()
+}
+
 // Real private filesystem metadata, not a fabricated FileInfo or a host ELF
-// mutation. Even same-length content changes with restored mtime change ctime.
+// mutation. A same-size write with restored mtime must be checked across an
+// actual timestamp tick: two ordinary writes in one coarse kernel tick can
+// legitimately have identical ctime. The running-ELF invariant is tested above.
 func TestLoadBalanceStreamAccountExecutableRejectsEveryOriginalMetadataDrift(t *testing.T) {
 	for _, scenario := range []string{"content-and-restored-mtime", "mode", "hardlink", "replacement", "missing"} {
 		t.Run(scenario, func(t *testing.T) {
@@ -82,6 +180,25 @@ func TestLoadBalanceStreamAccountExecutableRejectsEveryOriginalMetadataDrift(t *
 			}
 			switch scenario {
 			case "content-and-restored-mtime":
+				probe := filepath.Join(t.TempDir(), "private-timestamp-probe")
+				original := before.Sys().(*syscall.Stat_t).Ctim
+				deadline := time.Now().Add(2 * time.Second)
+				for {
+					if err := os.WriteFile(probe, []byte("clock"), 0600); err != nil {
+						t.Fatal(err)
+					}
+					clock, err := os.Stat(probe)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if clock.Sys().(*syscall.Stat_t).Ctim != original {
+						break
+					}
+					if time.Now().After(deadline) {
+						t.Fatal("kernel timestamp did not advance within private metadata model budget")
+					}
+					time.Sleep(time.Millisecond)
+				}
 				if err := os.WriteFile(path, []byte("changed!"), 0600); err != nil {
 					t.Fatal(err)
 				}
