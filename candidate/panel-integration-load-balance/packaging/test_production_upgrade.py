@@ -235,6 +235,7 @@ class Runner:
         self.failed_stopped_unit = None
         self.stopped_overrides = {}
         self.program_jobs = ''
+        self.loaded_guard_dropins = {}
     def __call__(self, *args, **kwargs):
         self.calls.append(args)
         if pathlib.Path(args[0]).name == 'verify-release.sh':
@@ -258,6 +259,16 @@ class Runner:
         if args[0] != '/usr/bin/systemctl':
             raise AssertionError('unknown fixture command')
         if args[1] == 'show':
+            if args[3] == '--property=Id,LoadState,NeedDaemonReload,ExecCondition,DropInPaths':
+                unit=args[2]
+                path=self.root/'etc/systemd/system'/(unit+'.d')/'00-panel-program-start-guard.conf'
+                disk=path.read_text()if path.is_file()else None
+                cached=self.loaded_guard_dropins.get(unit)
+                command=cached.split('ExecCondition=',1)[1].strip().removeprefix('+')if cached else ''
+                executable=command.split()[0]if command else ''
+                return '\n'.join(['Id='+unit,'LoadState=loaded','NeedDaemonReload='+('no'if disk==cached else'yes'),
+                                  'ExecCondition='+('{ path='+executable+' ; argv[]='+command+' ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }'if command else''),
+                                  'DropInPaths='+('/etc/systemd/system/'+unit+'.d/00-panel-program-start-guard.conf'if cached else'')])
             if args[3] == '--property=LoadState,ActiveState,SubState,UnitFileState,MainPID,ControlPID,ControlGroup,Result':
                 value = dict(self.states[args[2]], MainPID='0',ControlPID='0',ControlGroup='',Result='success')
                 value.update(self.stopped_overrides.get(args[2], {}))
@@ -268,6 +279,10 @@ class Runner:
                 return '1234' if self.states['nginx.service']['ActiveState'] == 'active' else '0'
             return '\n'.join(k+'='+v for k,v in self.states[args[2]].items())
         if args[1] == 'daemon-reload':
+            for unit in upgrade.PROGRAMS+('panel-mysql-overwrite-recovery.service',):
+                path=self.root/'etc/systemd/system'/(unit+'.d')/'00-panel-program-start-guard.conf'
+                if path.is_file():self.loaded_guard_dropins[unit]=path.read_text()
+                else:self.loaded_guard_dropins.pop(unit,None)
             return ''
         if args[1] == 'list-jobs':
             return self.program_jobs
@@ -671,7 +686,7 @@ class UpgradeTransactionTests(unittest.TestCase):
             def suspend():
                 descriptor = os.open(state,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
                 with os.fdopen(descriptor,'w') as stream:
-                    json.dump({'services':runner.states,'fail_start_once':runner.fail_start_once},stream,sort_keys=True)
+                    json.dump({'services':runner.states,'fail_start_once':runner.fail_start_once,'loaded_guard_dropins':runner.loaded_guard_dropins},stream,sort_keys=True)
                     stream.flush()
                     os.fsync(stream.fileno())
                 os.kill(os.getpid(),signal.SIGSTOP)
@@ -715,6 +730,7 @@ class UpgradeTransactionTests(unittest.TestCase):
         record = json.loads(state.read_bytes())
         runner.states = record['services']
         runner.fail_start_once = record['fail_start_once']
+        runner.loaded_guard_dropins = record['loaded_guard_dropins']
         return root/'var/backups/panel/system'/(transaction.layout+'-0.1.0-dev.fixture2')
 
     @contextlib.contextmanager

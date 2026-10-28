@@ -971,7 +971,7 @@ class Upgrade:
                 records.append({'path':str(path),'sha256':hashlib.sha256(data).hexdigest(),'mode':mode,'device':info.st_dev,'inode':info.st_ino})
             self.atomic(self.backup/'startup-interlock.json', (json.dumps({'format':1,'retained_on_rollback':True,'files':records}, sort_keys=True)+'\n').encode(), 0o600)
         else:
-            guard.inventory(self)
+            guard.check(self)
 
     def native_prerequisite_record(self, source):
         return {'format':1, 'version':self.version,

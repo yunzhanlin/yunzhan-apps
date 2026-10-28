@@ -37,6 +37,7 @@ LEGACY_SHA = {
 }
 SERVICES = production.PROGRAMS+('panel-mysql-overwrite-recovery.service',)
 DROPIN = '00-panel-program-start-guard.conf'
+LOADED_PROPERTIES = 'Id,LoadState,NeedDaemonReload,ExecCondition,DropInPaths'
 
 def retained_guards(transaction):
     retained = []
@@ -83,6 +84,63 @@ def inventory(transaction):
             reviewed_condition = mode == 0o644 and any(actual == data.replace(GUARD.encode(), ('/'+path.relative_to(transaction.root).as_posix()).encode('ascii')) for path, _, _ in retained)
             if actual != data and not reviewed_condition:
                 raise ValueError('existing startup interlock differs; immutable v4 cannot overwrite it')
+    return targets
+
+
+def loaded_condition(unit, raw):
+    """Verify the manager's actual cached command, not only the disk drop-in."""
+    if unit not in SERVICES or not isinstance(raw, str) or len(raw) > 32768 or '\x00' in raw:
+        raise ValueError('invalid fixed startup interlock manager observation')
+    fields = {}
+    for line in raw.splitlines():
+        key, separator, value = line.partition('=')
+        if not separator or key not in LOADED_PROPERTIES.split(',') or key in fields:
+            raise ValueError('incomplete or ambiguous startup interlock manager observation')
+        fields[key] = value
+    if (set(fields) != set(LOADED_PROPERTIES.split(',')) or fields['Id'] != unit
+            or fields['LoadState'] != 'loaded' or fields['NeedDaemonReload'] != 'no'):
+        raise ValueError('startup interlock manager cache is not current; upgrade refused without daemon-reload')
+    condition = fields['ExecCondition']
+    prefix = '{ path='+GUARD+' ; argv[]='+GUARD+' '+unit+' ; ignore_errors=no ;'
+    # Runtime timestamps/status may change after a legitimate invocation. No
+    # additional command, argument, ignored failure or alternate path is allowed.
+    if (not condition.startswith(prefix) or not condition.endswith(' }')
+            or condition.count('{') != 1 or condition.count('}') != 1):
+        raise ValueError('fixed startup interlock is not loaded by the service manager')
+    paths = fields['DropInPaths'].split()
+    expected = '/etc/systemd/system/'+unit+'.d/'+DROPIN
+    if expected not in paths or len(paths) != len(set(paths)) or any(not p.startswith('/') for p in paths):
+        raise ValueError('fixed startup interlock drop-in is not loaded by the service manager')
+    return fields
+
+
+def loaded(transaction, targets):
+    # Disk identity must remain stable across the bounded read-only manager
+    # observation. A stale cache is never repaired by a global reload here: that
+    # can replace live application cgroup BPF attachments under a different owner.
+    identity = lambda info:(info.st_dev,info.st_ino,info.st_mode,info.st_uid,info.st_gid,info.st_nlink,info.st_size,info.st_mtime_ns,info.st_ctime_ns)
+    originals = {}
+    for target, data, mode in targets:
+        actual, info = transaction.file(target, mode=mode, limit=16*1024*1024)
+        if actual != data:
+            raise ValueError('fixed startup interlock disk bytes changed before manager observation')
+        originals[str(target)] = identity(info)
+    for unit in SERVICES:
+        raw = transaction.run_command('/usr/bin/systemctl', 'show', unit, '--property='+LOADED_PROPERTIES, timeout=10)
+        loaded_condition(unit, raw)
+    for target, data, mode in targets:
+        actual, info = transaction.file(target, mode=mode, limit=16*1024*1024)
+        if actual != data or identity(info) != originals[str(target)]:
+            raise ValueError('startup interlock changed during manager observation')
+
+
+def check(transaction):
+    targets = inventory(transaction)
+    # A first installation or a reviewed legacy transition still needs its
+    # normal explicit publication/reload. An exact already-published v4 scope
+    # must also be actually loaded, including after an interrupted first install.
+    if all(transaction.exists(target) and transaction.file(target,mode=mode,limit=16*1024*1024)[0] == data for target,data,mode in targets):
+        loaded(transaction, targets)
     return targets
 
 
@@ -138,9 +196,11 @@ def install(transaction):
         changed = True
     # A daemon-reload may replace cgroup IP-filter BPF attachments of running
     # services even if their unit bytes and processes are unchanged. An exact
-    # immutable guard/condition inventory needs no manager mutation.
+    # immutable guard/condition inventory needs no manager mutation, but only
+    # when the service manager confirms the same loaded condition and cache.
     if changed:
         transaction.run_command('/usr/bin/systemctl', 'daemon-reload')
+    loaded(transaction, targets)
 
 
 def main():
@@ -157,7 +217,7 @@ def main():
         transaction.file(args.release/'verify-release.sh', mode=0o755, limit=65536)
         transaction.run_command(str(args.release/'verify-release.sh'), str(args.release))
         if args.action == 'check':
-            inventory(transaction)
+            check(transaction)
         else:
             install(transaction)
         print('fixed program startup interlock '+args.action+' passed')

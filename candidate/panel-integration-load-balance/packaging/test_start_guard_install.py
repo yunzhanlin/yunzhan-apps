@@ -20,6 +20,23 @@ SPEC.loader.exec_module(support)
 
 
 class StartupInterlockPackagingTests(unittest.TestCase):
+    def test_loaded_manager_observation_requires_exact_command_and_current_cache(self):
+        unit='panel.service'
+        valid=('Id='+unit+'\nLoadState=loaded\nNeedDaemonReload=no\n'
+               'ExecCondition={ path='+guard.GUARD+' ; argv[]='+guard.GUARD+' '+unit+' ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }\n'
+               'DropInPaths=/etc/systemd/system/'+unit+'.d/'+guard.DROPIN)
+        self.assertEqual(guard.loaded_condition(unit,valid)['Id'],unit)
+        faults=[valid.replace('Id='+unit,'Id=nginx.service'),valid.replace('LoadState=loaded','LoadState=not-found'),
+                valid.replace('NeedDaemonReload=no','NeedDaemonReload=yes'),valid.replace('ignore_errors=no','ignore_errors=yes'),
+                valid.replace('argv[]='+guard.GUARD+' '+unit+' ;','argv[]='+guard.GUARD+' '+unit+' extra ;'),
+                valid.replace(guard.GUARD,guard.PREVIOUS),valid.replace(' }\n',' } { path=/bin/true ; argv[]=/bin/true ; ignore_errors=no ; }\n'),
+                valid.replace('DropInPaths=/etc','DropInPaths=etc'),valid.replace(guard.DROPIN,'foreign.conf'),
+                valid+'\nNeedDaemonReload=no',valid+'\nUnknown=field',valid+'\x00',valid.replace(' }\n','\n')]
+        for value in faults:
+            with self.subTest(raw=value),self.assertRaises(ValueError):guard.loaded_condition(unit,value)
+        with self.assertRaises(ValueError):guard.loaded_condition('nginx.service',valid)
+        with self.assertRaises(ValueError):guard.loaded_condition(unit,'x'*32769)
+
     def test_fixed_condition_is_before_constructors_without_skip_or_mutation(self):
         for unit in guard.SERVICES:
             self.assertEqual(guard.dropin(unit), ('[Service]\nExecCondition=+'+guard.GUARD+' '+unit+'\n').encode())
@@ -39,6 +56,68 @@ class StartupInterlockPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0, 'actual root Linux ordinary ownership fixture required')
 class StartupInterlockFilesystemTests(unittest.TestCase):
+    def test_interrupted_first_reload_keeps_exact_files_but_noop_check_and_install_refuse(self):
+        with support.UpgradeTransactionTests().fixture()as(transaction,runner,root):
+            command=transaction.run_command
+            def interrupted(*args,**kwargs):
+                if args==('/usr/bin/systemctl','daemon-reload'):
+                    raise RuntimeError('scope-owned interruption before manager reload; not native evidence')
+                return command(*args,**kwargs)
+            transaction.run_command=interrupted
+            with self.assertRaises(RuntimeError):guard.install(transaction)
+            transaction.run_command=command
+            def snapshot():
+                return {str(p):(p.stat().st_dev,p.stat().st_ino,p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.read_bytes())for p,_,_ in guard.inventory(transaction)}
+            published=snapshot()
+            for action in(guard.check,guard.install):
+                runner.calls.clear()
+                with self.assertRaisesRegex(ValueError,'manager cache is not current'):action(transaction)
+                self.assertEqual(snapshot(),published)
+                self.assertTrue(runner.calls)
+                self.assertTrue(all(c[:2]==('/usr/bin/systemctl','show')for c in runner.calls))
+            # A separately authorized manager reload is modeled explicitly. The
+            # interlock never performs it in the refused no-op path.
+            runner('/usr/bin/systemctl','daemon-reload');runner.calls.clear()
+            guard.check(transaction);guard.install(transaction)
+            self.assertEqual(snapshot(),published)
+            self.assertTrue(all(c[:2]==('/usr/bin/systemctl','show')for c in runner.calls))
+
+    def test_failed_or_stale_manager_read_never_mutates_a_published_interlock(self):
+        for fault in('missing-command','foreign-command','stale-cache','duplicate-field','missing-dropin','duplicate-dropin','timeout'):
+            with self.subTest(fault=fault),support.UpgradeTransactionTests().fixture()as(transaction,runner,root):
+                guard.install(transaction);runner.calls.clear();command=transaction.run_command
+                before={str(p):(p.stat().st_ino,p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.read_bytes())for p,_,_ in guard.inventory(transaction)}
+                def wrong(*args,**kwargs):
+                    raw=command(*args,**kwargs)
+                    if args[:3]==('/usr/bin/systemctl','show','panel-executor.service')and args[3]=='--property='+guard.LOADED_PROPERTIES:
+                        if fault=='timeout':raise RuntimeError('owned manager timeout')
+                        if fault=='missing-command':return '\n'.join('ExecCondition='if s.startswith('ExecCondition=')else s for s in raw.splitlines())
+                        if fault=='foreign-command':return raw.replace(guard.GUARD,guard.PREVIOUS)
+                        if fault=='stale-cache':return raw.replace('NeedDaemonReload=no','NeedDaemonReload=yes')
+                        if fault=='duplicate-field':return raw+'\nId=panel-executor.service'
+                        if fault=='missing-dropin':return '\n'.join('DropInPaths='if s.startswith('DropInPaths=')else s for s in raw.splitlines())
+                        if fault=='duplicate-dropin':return raw+' '+('/etc/systemd/system/panel-executor.service.d/'+guard.DROPIN)
+                    return raw
+                transaction.run_command=wrong
+                with self.assertRaises((ValueError,RuntimeError)):guard.check(transaction)
+                self.assertEqual(before,{str(p):(p.stat().st_ino,p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.read_bytes())for p,_,_ in guard.inventory(transaction)})
+                self.assertTrue(all(c[:2]==('/usr/bin/systemctl','show')for c in runner.calls))
+
+    def test_same_byte_replacement_during_manager_read_is_detected(self):
+        with support.UpgradeTransactionTests().fixture()as(transaction,runner,root):
+            guard.install(transaction);runner.calls.clear();command=transaction.run_command;injected=[]
+            target=root/'etc/systemd/system/panel.service.d'/guard.DROPIN
+            original=target.stat().st_ino
+            def replace(*args,**kwargs):
+                raw=command(*args,**kwargs)
+                if args[:3]==('/usr/bin/systemctl','show','panel.service'):
+                    temporary=target.with_name('owned-external-replacement');temporary.write_bytes(target.read_bytes());temporary.chmod(0o644);os.replace(temporary,target);injected.append(True)
+                return raw
+            transaction.run_command=replace
+            with self.assertRaisesRegex(ValueError,'changed during manager observation'):guard.check(transaction)
+            self.assertEqual(injected,[True]);self.assertNotEqual(original,target.stat().st_ino)
+            self.assertTrue(all(c[:2]==('/usr/bin/systemctl','show')for c in runner.calls))
+
     def test_mixed_v1_v2_v3_conditions_keep_all_original_binaries_and_authority(self):
         for foreign in (False, True):
             with self.subTest(foreign=foreign),support.UpgradeTransactionTests().fixture() as (transaction,runner,root),contextlib.ExitStack() as patches:
@@ -193,7 +272,8 @@ class StartupInterlockFilesystemTests(unittest.TestCase):
                 identities[str(path)] = path.stat().st_ino
             guard.install(transaction)
             self.assertEqual({str(path):path.stat().st_ino for path, _, _ in guard.inventory(transaction)}, identities)
-            self.assertEqual([call for call in runner.calls if call[0] == '/usr/bin/systemctl'], [('/usr/bin/systemctl','daemon-reload')])
+            self.assertEqual([call for call in runner.calls if call[0] == '/usr/bin/systemctl'and call[1]!='show'], [('/usr/bin/systemctl','daemon-reload')])
+            self.assertEqual(len([call for call in runner.calls if call[0]=='/usr/bin/systemctl'and call[1]=='show']),2*len(guard.SERVICES))
             self.assertFalse(transaction.stopping)
 
     def test_every_foreign_existing_file_parent_and_link_refuses_whole_scope_before_write(self):
