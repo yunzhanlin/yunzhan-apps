@@ -46,6 +46,7 @@ type streamServiceRecordedStopped struct {
 	MemoryEvents             loadBalanceStreamMemoryEvents `json:"memory_events"`
 	OriginalQUITObserved     bool                          `json:"original_quit_observed"`
 	EmptyCgroupBeforeCleanup bool                          `json:"empty_cgroup_before_cleanup"`
+	ManagerPrunedCgroup      bool                          `json:"manager_pruned_cgroup,omitempty"`
 	ManagerCleanupObserved   bool                          `json:"manager_cleanup_observed"`
 }
 
@@ -153,8 +154,8 @@ func decodeStreamServiceReceipt(raw, seedRaw []byte) (streamServiceReceipt, erro
 		if !streamServiceCanonicalCompact(r.Native, &n) || runtime.ActiveEntries != 0 || n.Format != 1 ||
 			!streamServiceNativeIdentity(n.InvocationID, n.AccountUID, n.AccountGID, n.EngineSHA256) ||
 			!loadBalanceStreamAccountHash(n.FinalExitSHA256) || core.Hash(n.FinalExitProperties) != n.FinalExitSHA256 ||
-			!streamStoppedExitMatches([]byte(n.FinalExitProperties), n.InvocationID) ||
-			!n.OriginalQUITObserved || !n.EmptyCgroupBeforeCleanup || !n.ManagerCleanupObserved ||
+			!streamStoppedEvidenceMatches([]byte(n.FinalExitProperties), n.InvocationID, n.EmptyCgroupBeforeCleanup, n.ManagerPrunedCgroup) ||
+			!n.OriginalQUITObserved || !n.ManagerCleanupObserved ||
 			len(n.OriginalProcesses) != 2 || r.CurrentWorker != (streamServiceReceiptProcess{}) {
 			return streamServiceReceipt{}, loadbalancestream.ErrService
 		}

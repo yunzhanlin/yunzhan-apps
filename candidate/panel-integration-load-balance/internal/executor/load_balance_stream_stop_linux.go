@@ -23,6 +23,8 @@ type loadBalanceStreamStoppedProcess struct {
 
 // Produced ONLY by this original QUIT path, never from an inactive unit alone.
 // The pidfds remain held until the original controller has retained its bytes.
+// With ManagerPrunedCgroup, MemoryEvents are the last verified running counters;
+// final counters disappeared and their values are never fabricated.
 type loadBalanceStreamStoppedObservation struct {
 	Format                   int                               `json:"format"`
 	InvocationID             string                            `json:"invocation_id"`
@@ -35,6 +37,7 @@ type loadBalanceStreamStoppedObservation struct {
 	MemoryEvents             loadBalanceStreamMemoryEvents     `json:"memory_events"`
 	OriginalQUITObserved     bool                              `json:"original_quit_observed"`
 	EmptyCgroupBeforeCleanup bool                              `json:"empty_cgroup_before_cleanup"`
+	ManagerPrunedCgroup      bool                              `json:"manager_pruned_cgroup,omitempty"`
 	ManagerCleanupObserved   bool                              `json:"manager_cleanup_observed"`
 	prior                    *loadBalanceStreamServiceObservation
 	publication              *loadBalanceStreamConfigurationPublication
@@ -95,9 +98,9 @@ func (s *loadBalanceStreamStoppedObservation) originalProcessesExited() bool {
 
 func (s *loadBalanceStreamStoppedObservation) current(ctx context.Context) error {
 	if s == nil || ctx == nil || ctx.Err() != nil || s.Format != 1 || !s.OriginalQUITObserved ||
-		!s.EmptyCgroupBeforeCleanup || !s.ManagerCleanupObserved || s.publication == nil || s.owner == nil ||
+		!s.ManagerCleanupObserved || s.publication == nil || s.owner == nil ||
 		!s.publication.serviceIssued || !s.publication.stopCleanupIssued || !s.originalProcessesExited() ||
-		!streamStoppedExitMatches([]byte(s.FinalExitProperties), s.InvocationID) || core.Hash(s.FinalExitProperties) != s.FinalExitSHA256 {
+		!streamStoppedEvidenceMatches([]byte(s.FinalExitProperties), s.InvocationID, s.EmptyCgroupBeforeCleanup, s.ManagerPrunedCgroup) || core.Hash(s.FinalExitProperties) != s.FinalExitSHA256 {
 		return loadbalancestream.ErrService
 	}
 	_, plan, err := s.publication.servicePlanOwned(ctx, s.owner)
@@ -111,7 +114,7 @@ func (s *loadBalanceStreamStoppedObservation) current(ctx context.Context) error
 	// Its disappearance does not excuse any still-live original process.
 	info, err := os.Lstat("/sys/fs/cgroup/system.slice/" + loadbalancestream.ServiceUnitName)
 	if err == nil {
-		if !os.SameFile(info, s.prior.cgroupBefore) {
+		if s.ManagerPrunedCgroup || !os.SameFile(info, s.prior.cgroupBefore) {
 			return loadbalancestream.ErrService
 		}
 		raw, err := readLoadBalanceStreamCgroupFile(s.prior.cgroup, "cgroup.procs", 512)
@@ -136,9 +139,10 @@ func (s *loadBalanceStreamStoppedObservation) bytes(ctx context.Context) ([]byte
 }
 
 // ONE QUIT to the original master; then READ ONLY until every original
-// process exits normally with an unchanged OOM census. No TERM/KILL, forced
-// drain, manager restart or fallback is issued. Only the already-empty unit
-// is stopped afterwards to release its retained manager/cgroup metadata.
+// process exits normally. A retained cgroup requires unchanged final counters;
+// PID1 pruning requires its distinct clean-exit/OOM-stop observation. No
+// TERM/KILL, forced drain, restart or replay is issued. Only the already-empty
+// unit is stopped afterwards to release retained manager metadata.
 func (p *loadBalanceStreamConfigurationPublication) stopOwned(ctx context.Context, w *loadBalanceStreamControlOwner) (*loadBalanceStreamStoppedObservation, error) {
 	if p == nil || p.serviceIssued || p.stopCleanupIssued || !p.serviceEgressCurrent(ctx) {
 		return nil, loadbalancestream.ErrService
@@ -168,6 +172,14 @@ func (p *loadBalanceStreamConfigurationPublication) stopOwned(ctx context.Contex
 	if _, _, err := p.servicePlanOwned(ctx, w); err != nil {
 		return nil, loadbalancestream.ErrService
 	}
+	// Require the actual original invocation's OOM stop policy before QUIT.
+	// A global default of continue must not turn a child OOM into clean-stop
+	// evidence after systemd prunes the empty cgroup. New units set this policy
+	// explicitly; no global manager configuration is changed.
+	policy, err := programQueueCommand(ctx, "/usr/bin/systemctl", "show", loadbalancestream.ServiceUnitName, "--property=Id,InvocationID,OOMPolicy")
+	if err != nil || !streamExactManagerProperties([]byte(policy), map[string]string{"Id": loadbalancestream.ServiceUnitName, "InvocationID": prior.InvocationID, "OOMPolicy": "stop"}) || prior.current(ctx) != nil {
+		return nil, loadbalancestream.ErrService
+	}
 	p.serviceIssued = true
 	if err := unix.PidfdSendSignal(master.pidfd, unix.SIGQUIT, nil, 0); err != nil {
 		return nil, loadbalancestream.ErrService
@@ -181,22 +193,63 @@ func (p *loadBalanceStreamConfigurationPublication) stopOwned(ctx context.Contex
 		}
 		if result.originalProcessesExited() {
 			exit, err := programQueueCommand(bounded, "/usr/bin/systemctl", "show", loadbalancestream.ServiceUnitName, "--property="+streamStoppedExitProperties)
+			if err == nil && streamStoppedAwaitingReapMatches([]byte(exit), prior.InvocationID, prior.MainPID) {
+				select {
+				case <-bounded.Done():
+					return nil, loadbalancestream.ErrService
+				case <-time.After(100 * time.Millisecond):
+					continue
+				}
+			}
 			if err != nil || !streamStoppedExitMatches([]byte(exit), prior.InvocationID) {
 				return nil, loadbalancestream.ErrService
 			}
 			held, e1 := prior.cgroup.Stat()
 			visible, e2 := os.Lstat("/sys/fs/cgroup/system.slice/" + loadbalancestream.ServiceUnitName)
-			pids, e3 := readLoadBalanceStreamCgroupFile(prior.cgroup, "cgroup.procs", 512)
-			rawEvents, e4 := readLoadBalanceStreamCgroupFile(prior.cgroup, "memory.events", 4096)
-			events, e5 := decodeStreamMemoryEvents(rawEvents)
-			if e1 != nil || e2 != nil || e3 != nil || e4 != nil || e5 != nil || len(pids) != 0 ||
-				!os.SameFile(prior.cgroupBefore, held) || !os.SameFile(held, visible) ||
-				events != prior.MemoryEvents || !prior.limitsCurrent() || observeStreamServiceIPPolicy(bounded, prior.plan) != nil {
+			if e1 != nil || !os.SameFile(prior.cgroupBefore, held) {
+				return nil, loadbalancestream.ErrService
+			}
+			switch {
+			case e2 == nil:
+				if !os.SameFile(held, visible) {
+					return nil, loadbalancestream.ErrService
+				}
+				pids, e3 := readLoadBalanceStreamCgroupFile(prior.cgroup, "cgroup.procs", 512)
+				rawEvents, e4 := readLoadBalanceStreamCgroupFile(prior.cgroup, "memory.events", 4096)
+				events, e5 := decodeStreamMemoryEvents(rawEvents)
+				if e3 != nil || e4 != nil || e5 != nil || len(pids) != 0 ||
+					events != prior.MemoryEvents || !prior.limitsCurrent() || observeStreamServiceIPPolicy(bounded, prior.plan) != nil {
+					// PID1 may prune between Lstat and the read. Retry only after
+					// the original named cgroup is actually absent; the next pass
+					// must still obtain complete retained-manager exit evidence.
+					if _, gone := os.Lstat("/sys/fs/cgroup/system.slice/" + loadbalancestream.ServiceUnitName); errors.Is(gone, os.ErrNotExist) {
+						select {
+						case <-bounded.Done():
+							return nil, loadbalancestream.ErrService
+						case <-time.After(100 * time.Millisecond):
+							continue
+						}
+					}
+					return nil, loadbalancestream.ErrService
+				}
+				result.EmptyCgroupBeforeCleanup = true
+			case errors.Is(e2, os.ErrNotExist):
+				// PID1 can prune an empty cgroup while RemainAfterExit retains
+				// its original invocation and clean exit. Do not fabricate final
+				// memory counters, recreate the directory or adopt another unit.
+				exit, err = programQueueCommand(bounded, "/usr/bin/systemctl", "show", loadbalancestream.ServiceUnitName, "--property="+streamStoppedPrunedExitProperties)
+				if err != nil || !streamStoppedPrunedExitMatches([]byte(exit), prior.InvocationID) || !result.originalProcessesExited() {
+					return nil, loadbalancestream.ErrService
+				}
+				if _, err := os.Lstat("/sys/fs/cgroup/system.slice/" + loadbalancestream.ServiceUnitName); !errors.Is(err, os.ErrNotExist) {
+					return nil, loadbalancestream.ErrService
+				}
+				result.ManagerPrunedCgroup = true
+			default:
 				return nil, loadbalancestream.ErrService
 			}
 			result.FinalExitProperties = exit
 			result.FinalExitSHA256 = core.Hash(exit)
-			result.EmptyCgroupBeforeCleanup = true
 			if _, _, err := p.servicePlanOwned(bounded, w); err != nil || !result.originalProcessesExited() {
 				return nil, loadbalancestream.ErrService
 			}

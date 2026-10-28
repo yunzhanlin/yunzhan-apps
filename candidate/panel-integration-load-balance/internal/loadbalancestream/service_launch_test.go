@@ -14,8 +14,8 @@ func TestServiceLaunchExactlySharesUnitPolicyWithoutShellOrBootChanges(t *testin
 		f := serviceFacts()
 		f.NginxVersion = version
 		plan, err := PlanServiceLaunch([]Entry{fixture()}, nil, f, request)
-		if err != nil || !bytes.Contains(plan.Service.Unit, []byte("Type=exec\n")) || bytes.Contains(plan.Service.Unit, []byte("ExecReload=")) {
-			t.Fatal("exec identity or manager-only reload changed", err)
+		if err != nil || !bytes.Contains(plan.Service.Unit, []byte("Type=exec\n")) || !bytes.Contains(plan.Service.Unit, []byte("OOMPolicy=stop\n")) || bytes.Contains(plan.Service.Unit, []byte("ExecReload=")) {
+			t.Fatal("exec identity, explicit OOM stop policy or manager-only reload changed", err)
 		}
 		for _, args := range [][]string{plan.Start, plan.Syntax} {
 			seen := map[string]bool{}

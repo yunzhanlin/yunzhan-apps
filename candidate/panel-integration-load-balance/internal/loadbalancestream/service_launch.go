@@ -89,7 +89,7 @@ func serviceProperties(high, maximum int64, ips []string) []string {
 	return []string{
 		"User=" + ServiceAccount, "Group=" + ServiceAccount,
 		"RuntimeDirectory=panel-load-balance-stream", "RuntimeDirectoryMode=0700", "RuntimeDirectoryPreserve=yes", "UMask=0077",
-		"Restart=no", "RemainAfterExit=yes", "KillMode=mixed", "KillSignal=SIGQUIT", "TimeoutStartSec=10s", "TimeoutStopSec=630s",
+		"Restart=no", "RemainAfterExit=yes", "OOMPolicy=stop", "KillMode=mixed", "KillSignal=SIGQUIT", "TimeoutStartSec=10s", "TimeoutStopSec=630s",
 		"NoNewPrivileges=yes", "CapabilityBoundingSet=", "AmbientCapabilities=", "ProtectSystem=strict", "ProtectHome=yes", "PrivateTmp=yes", "PrivateDevices=yes",
 		"ProtectKernelTunables=yes", "ProtectKernelModules=yes", "ProtectKernelLogs=yes", "ProtectControlGroups=yes", "RestrictSUIDSGID=yes", "RestrictRealtime=yes", "RestrictNamespaces=yes",
 		"LockPersonality=yes", "MemoryDenyWriteExecute=yes", "SystemCallArchitectures=native", "RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX",

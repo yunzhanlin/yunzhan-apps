@@ -77,6 +77,50 @@ func streamServiceReceiptFixture(t *testing.T, state string) ([]byte, []byte, st
 	return append(raw, '\n'), seedRaw, r
 }
 
+func TestLoadBalanceStreamStoppedReceiptDistinguishesPrunedManagerEvidence(t *testing.T) {
+	_, seed, r := streamServiceReceiptFixture(t, "stopped")
+	var n streamServiceRecordedStopped
+	if json.Unmarshal(r.Native, &n) != nil {
+		t.Fatal("fixture decode")
+	}
+	n.EmptyCgroupBeforeCleanup, n.ManagerPrunedCgroup = false, true
+	n.FinalExitProperties += "OOMPolicy=stop\nControlGroup=\n"
+	n.FinalExitSHA256 = core.Hash(n.FinalExitProperties)
+	r.Native, _ = json.Marshal(n)
+	raw, _ := json.Marshal(r)
+	if _, err := decodeStreamServiceReceipt(append(raw, '\n'), seed); err != nil {
+		t.Fatal("complete separate pruned-manager data rejected", err)
+	}
+	for _, change := range []func(*streamServiceRecordedStopped){
+		func(n *streamServiceRecordedStopped) { n.EmptyCgroupBeforeCleanup = true },
+		func(n *streamServiceRecordedStopped) { n.ManagerPrunedCgroup = false },
+		func(n *streamServiceRecordedStopped) { n.OriginalQUITObserved = false },
+		func(n *streamServiceRecordedStopped) { n.ManagerCleanupObserved = false },
+		func(n *streamServiceRecordedStopped) {
+			n.FinalExitProperties = strings.Replace(n.FinalExitProperties, "Result=success", "Result=oom-kill", 1)
+			n.FinalExitSHA256 = core.Hash(n.FinalExitProperties)
+		},
+		func(n *streamServiceRecordedStopped) {
+			n.FinalExitProperties = strings.Replace(n.FinalExitProperties, "OOMPolicy=stop", "OOMPolicy=continue", 1)
+			n.FinalExitSHA256 = core.Hash(n.FinalExitProperties)
+		},
+		func(n *streamServiceRecordedStopped) {
+			n.FinalExitProperties = strings.Replace(n.FinalExitProperties, "ControlGroup=\n", "ControlGroup=/system.slice/foreign.service\n", 1)
+			n.FinalExitSHA256 = core.Hash(n.FinalExitProperties)
+		},
+	} {
+		var badNative streamServiceRecordedStopped
+		json.Unmarshal(r.Native, &badNative)
+		change(&badNative)
+		bad := r
+		bad.Native, _ = json.Marshal(badNative)
+		raw, _ := json.Marshal(bad)
+		if _, err := decodeStreamServiceReceipt(append(raw, '\n'), seed); err == nil {
+			t.Fatal("changed or contradictory pruned-manager evidence accepted")
+		}
+	}
+}
+
 // These synthetic historical bytes exercise decoding only; they grant no
 // authority and cannot be used by the Linux live ownership checks.
 func streamEgressReceiptFixture(t *testing.T, policy loadbalancestream.EgressGuard) streamEgressReceipt {
