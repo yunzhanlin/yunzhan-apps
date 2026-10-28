@@ -308,6 +308,27 @@ class Runner:
 
 @unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid()==0, 'actual root Linux ordinary ownership fixture required')
 class UpgradeTransactionTests(unittest.TestCase):
+    def test_failed_unchanged_unit_upgrade_rolls_back_without_manager_reload(self):
+        with self.fixture() as (transaction, runner, root):
+            for source in (transaction.release/'systemd').glob('*.service'):
+                data=source.read_bytes().replace(b'/opt/panel/bin/',b'/opt/panel/current/bin/').replace(b'/opt/panel/web',b'/opt/panel/current/web').replace(b'development ',b'')
+                (root/'etc/systemd/system'/source.name).write_bytes(data)
+            transaction.backup=root/'initial-interlock-evidence'
+            transaction.backup.mkdir(mode=0o700)
+            transaction.start_guard(install=True)
+            transaction.backup=None
+            before={str(p):(p.stat().st_dev,p.stat().st_ino,p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.read_bytes())for p in (root/'etc/systemd/system').rglob('*')if p.is_file()}
+            runner.calls.clear()
+            runner.fail_start_once=True
+            with self.assertRaises(RuntimeError):
+                transaction.run()
+            transaction.rollback()
+            after={str(p):(p.stat().st_dev,p.stat().st_ino,p.stat().st_mtime_ns,p.stat().st_ctime_ns,p.read_bytes())for p in (root/'etc/systemd/system').rglob('*')if p.is_file()}
+            self.assertFalse(transaction.committed)
+            self.assertEqual(before,after)
+            self.assertEqual(transaction.replaced_units,{})
+            self.assertFalse(any(call[:2]==('/usr/bin/systemctl','daemon-reload')for call in runner.calls))
+
     def test_unchanged_units_and_existing_interlock_preserve_inodes_without_manager_reload(self):
         with self.fixture() as (transaction, runner, root):
             for source in (transaction.release/'systemd').glob('*.service'):

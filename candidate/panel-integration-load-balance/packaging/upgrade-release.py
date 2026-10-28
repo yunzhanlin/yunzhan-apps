@@ -2108,7 +2108,8 @@ class Upgrade:
         self.validate_database_lineage(preserve_restored=True)
         self.defer_timer()
         self.stop_timer()
-        self.run_command('/usr/bin/systemctl','daemon-reload')
+        if self.replaced_units:
+            self.run_command('/usr/bin/systemctl','daemon-reload')
         self.start_previous_state()
         self.wait_readiness()
         self.queue_check()
@@ -2273,7 +2274,8 @@ class Upgrade:
         self.remove_database_sidecars()
         self.restore_database()
         self.journal('rollback-data-restored')
-        self.run_command('/usr/bin/systemctl', 'daemon-reload')
+        if self.replaced_units:
+            self.run_command('/usr/bin/systemctl', 'daemon-reload')
         self.start_previous_state()
         self.wait_readiness()
         self.journal('rolled-back')

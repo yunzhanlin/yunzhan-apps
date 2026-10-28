@@ -592,7 +592,8 @@ class DevelopmentUpgrade(production.Upgrade):
         self.remove_database_sidecars()
         self.restore_database()
         self.journal('rollback-data-restored')
-        self.run_command('/usr/bin/systemctl', 'daemon-reload')
+        if self.replaced_units:
+            self.run_command('/usr/bin/systemctl', 'daemon-reload')
         self.release_runtime()
         self.start_previous_state()
         self.wait_readiness()

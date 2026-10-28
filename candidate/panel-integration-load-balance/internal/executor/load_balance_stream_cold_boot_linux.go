@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"strconv"
@@ -51,7 +52,7 @@ func streamColdBootWorkspaceCurrent(ctx context.Context, installed *loadBalanceS
 	}
 	absent, err := holdLoadBalanceStreamAbsentEgressReadOnly(ctx)
 	if err != nil {
-		return loadbalancestream.ErrService
+		return fmt.Errorf("cold-boot table absence: %w", errors.Join(loadbalancestream.ErrService, err))
 	}
 	defer absent.close()
 	if absent.bootID != currentBoot {
@@ -59,9 +60,20 @@ func streamColdBootWorkspaceCurrent(ctx context.Context, installed *loadBalanceS
 	}
 	for n := 0; n < 2; n++ {
 		unit, err := streamInstallUnitProperties(ctx, loadbalancestream.ServiceUnitName)
-		if err != nil || !streamColdUnitAbsent(unit) || streamColdUIDAbsent(ctx, installed.identity.UID) != nil ||
-			absent.current(ctx) != nil || generation.current(ctx) != nil || installed.current(ctx) != nil {
-			return loadbalancestream.ErrService
+		if err != nil || !streamColdUnitAbsent(unit) {
+			return fmt.Errorf("cold-boot unit absence: %w", loadbalancestream.ErrService)
+		}
+		if err := streamColdUIDAbsent(ctx, installed.identity.UID); err != nil {
+			return fmt.Errorf("cold-boot complete UID census: %w", err)
+		}
+		if err := absent.current(ctx); err != nil {
+			return fmt.Errorf("cold-boot unchanged table absence: %w", errors.Join(loadbalancestream.ErrService, err))
+		}
+		if err := generation.current(ctx); err != nil {
+			return fmt.Errorf("cold-boot unchanged generation: %w", errors.Join(loadbalancestream.ErrService, err))
+		}
+		if err := installed.current(ctx); err != nil {
+			return fmt.Errorf("cold-boot unchanged installation: %w", errors.Join(loadbalancestream.ErrService, err))
 		}
 	}
 	return nil
@@ -124,26 +136,67 @@ func streamColdUIDAbsent(ctx context.Context, uid uint32) error {
 		if err != nil || pid == 0 || strconv.FormatUint(pid, 10) != entry.Name() {
 			continue // Only kernel-created numeric process entries are in scope.
 		}
-		fd, err := unix.Openat(int(dir.Fd()), entry.Name()+"/status", unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
-		if errors.Is(err, unix.ENOENT) || errors.Is(err, unix.ESRCH) {
-			continue // The process has exited; unreadable LIVE processes still fail.
-		}
-		if err != nil {
-			return loadbalancestream.ErrService
-		}
-		file := os.NewFile(uintptr(fd), "held-proc-status")
-		var currentFS unix.Statfs_t
-		raw, readErr := io.ReadAll(io.LimitReader(file, 65537))
-		fsErr := unix.Fstatfs(fd, &currentFS)
-		file.Close()
-		if readErr != nil || fsErr != nil || currentFS.Type != unix.PROC_SUPER_MAGIC || !streamColdStatusUIDAbsent(raw, uid) {
-			return loadbalancestream.ErrService
+		if err := streamColdNumericProcessAbsent(ctx, dir, int(pid), uid); err != nil {
+			return err
 		}
 	}
 	if ctx.Err() != nil {
 		return loadbalancestream.ErrService
 	}
 	return nil
+}
+
+// Every process is bound to an actual pidfd before procfs is consumed. A
+// process may exit between enumeration/open/read: an empty or ESRCH status
+// then proves nothing by itself. Only the held original pidfd's exit event
+// permits that vanished process to be skipped. A live unreadable process, a
+// reused name, unsupported kernel or same-UID credential still refuses.
+func streamColdNumericProcessAbsent(ctx context.Context, proc *os.File, pid int, uid uint32) error {
+	if ctx == nil || ctx.Err() != nil || proc == nil || pid < 1 {
+		return loadbalancestream.ErrService
+	}
+	pidfd, err := unix.PidfdOpen(pid, 0)
+	if errors.Is(err, unix.ESRCH) {
+		return nil // No process existed when acquiring the kernel identity.
+	}
+	if err != nil {
+		return fmt.Errorf("UID census pidfd acquisition: %w", errors.Join(loadbalancestream.ErrService, err))
+	}
+	defer unix.Close(pidfd)
+	if streamColdPIDExited(pidfd) {
+		return nil
+	}
+	fd, err := unix.Openat(int(proc.Fd()), strconv.Itoa(pid)+"/status", unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	if err != nil {
+		if (errors.Is(err, unix.ENOENT) || errors.Is(err, unix.ESRCH)) && streamColdPIDExited(pidfd) {
+			return nil
+		}
+		return fmt.Errorf("UID census status open: %w", errors.Join(loadbalancestream.ErrService, err))
+	}
+	file := os.NewFile(uintptr(fd), "held-proc-status")
+	var currentFS unix.Statfs_t
+	raw, readErr := io.ReadAll(io.LimitReader(file, 65537))
+	fsErr := unix.Fstatfs(fd, &currentFS)
+	file.Close()
+	if streamColdPIDExited(pidfd) {
+		return nil
+	}
+	if readErr != nil || fsErr != nil || currentFS.Type != unix.PROC_SUPER_MAGIC {
+		return fmt.Errorf("UID census live status read: %w", loadbalancestream.ErrService)
+	}
+	if !streamColdStatusUIDAbsent(raw, uid) {
+		return loadbalancestream.ErrService
+	}
+	return ctx.Err()
+}
+
+func streamColdPIDExited(pidfd int) bool {
+	if pidfd < 0 {
+		return false
+	}
+	fd := []unix.PollFd{{Fd: int32(pidfd), Events: unix.POLLIN}}
+	n, err := unix.Poll(fd, 0)
+	return err == nil && n == 1 && fd[0].Revents&(unix.POLLIN|unix.POLLHUP) != 0 && fd[0].Revents & ^int16(unix.POLLIN|unix.POLLHUP) == 0
 }
 
 func (w *loadBalanceStreamColdBootWitness) identityCurrent(ctx context.Context, s *loadBalanceStreamConfigurationStore) error {

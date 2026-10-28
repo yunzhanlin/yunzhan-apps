@@ -5,6 +5,7 @@ package executor
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -13,6 +14,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"local/panel/internal/loadbalancestream"
 )
@@ -88,7 +91,7 @@ func TestLoadBalanceStreamColdBootNativeUIDCensusSeesForeignLiveProcess(t *testi
 	if os.Geteuid() != 0 || e1 != nil || e2 != nil || host == self || host != os.Getenv("PANEL_LBSTREAM_EGRESS_QA_HOST_NETNS") {
 		t.Fatal("new isolated network namespace and real Root required")
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	// Never assume 991 is unused: Ubuntu assigns it to systemd-resolved.
 	// Pick a fixture-only UID/GID absent from both held local NSS originals;
@@ -159,11 +162,46 @@ func TestLoadBalanceStreamColdBootNativeUIDCensusSeesForeignLiveProcess(t *testi
 	if streamColdUIDAbsent(ctx, uid) != loadbalancestream.ErrService {
 		t.Fatal("live same-UID process outside service cgroup was missed")
 	}
+	pidfd, err := unix.PidfdOpen(command.Process.Pid, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unix.Close(pidfd)
+	status, err := os.Open("/proc/" + strconv.Itoa(command.Process.Pid) + "/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer status.Close()
+	if streamColdPIDExited(pidfd) || streamColdPIDExited(-1) {
+		t.Fatal("live or invalid process handle claimed exit")
+	}
 	stdin.Close()
 	err = command.Wait()
 	waited = true
 	if err != nil || streamColdUIDAbsent(ctx, uid) != nil {
 		t.Fatal("own child did not exit cleanly or absence census failed", err)
+	}
+	vanished, readErr := io.ReadAll(io.LimitReader(status, 65537))
+	if len(vanished) != 0 || readErr != nil && !errors.Is(readErr, unix.ESRCH) || streamColdStatusUIDAbsent(vanished, uid) || !streamColdPIDExited(pidfd) {
+		t.Fatal("vanished proc status must fail the old parser and have actual held-pidfd exit proof", readErr)
+	}
+	churn := make(chan error, 1)
+	go func() {
+		for n := 0; n < 64; n++ {
+			if err := exec.CommandContext(ctx, "/usr/bin/true").Run(); err != nil {
+				churn <- err
+				return
+			}
+		}
+		churn <- nil
+	}()
+	for n := 0; n < 16; n++ {
+		if err := streamColdUIDAbsent(ctx, uid); err != nil {
+			t.Fatal("complete census refused proven exited non-service processes", err)
+		}
+	}
+	if err := <-churn; err != nil {
+		t.Fatal("owned process churn did not finish", err)
 	}
 	t.Logf("component_only=true unused_local_uid=%d foreign_live_uid_denied=true original_service_activated=false", uid)
 }

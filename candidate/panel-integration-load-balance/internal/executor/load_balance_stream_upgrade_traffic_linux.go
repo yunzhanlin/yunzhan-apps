@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -150,34 +151,34 @@ func holdLoadBalanceStreamTrafficUpgrade(ctx context.Context, source *loadBalanc
 		return nil, loadbalancestream.ErrJournal
 	}
 	w := &loadBalanceStreamTrafficUpgrade{source: source, history: raw, closed: closed, namespaces: namespaces}
-	fail := func() (*loadBalanceStreamTrafficUpgrade, error) {
+	fail := func(stage string, cause error) (*loadBalanceStreamTrafficUpgrade, error) {
 		w.close()
-		return nil, loadbalancestream.ErrJournal
+		return nil, fmt.Errorf("native stream upgrade %s: %w", stage, errors.Join(loadbalancestream.ErrJournal, cause))
 	}
 	if len(closed) != 0 {
 		w.installed, err = holdLoadBalanceStreamInstalledContext(ctx)
 		if err != nil {
-			return fail()
+			return fail("installed context", err)
 		}
 		w.store = &loadBalanceStreamConfigurationStore{installed: w.installed, source: source, closed: closed, upgrade: w}
-		if w.store.holdCompletedConfiguration(ctx) != nil {
-			return fail()
+		if err := w.store.holdCompletedConfiguration(ctx); err != nil {
+			return fail("complete configuration lineage", err)
 		}
 		seedRaw, _, _, err := w.store.generation.journal.original(ctx)
 		if err != nil {
-			return fail()
+			return fail("original generation journal", err)
 		}
 		w.seed, err = loadbalancestream.DecodeControlSeed(seedRaw)
 		if err != nil {
-			return fail()
+			return fail("original seed decode", err)
 		}
 		w.receipt, err = w.store.recordedServiceReceipt(ctx)
 		if err != nil {
-			return fail()
+			return fail("original service receipt", err)
 		}
 	}
-	if w.current(ctx) != nil {
-		return fail()
+	if err := w.current(ctx); err != nil {
+		return fail("current native evidence", err)
 	}
 	return w, nil
 }
@@ -257,10 +258,11 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 			// A new boot with no unit, no service-UID process and no native
 			// table is a separate read-only upgrade state. Do not invent live
 			// policy handles, start a service or recover an old transaction.
-			if streamColdBootWorkspaceCurrent(ctx, w.installed, w.store.generation, w.receipt.Egress.BootID) == nil {
+			if coldErr := streamColdBootWorkspaceCurrent(ctx, w.installed, w.store.generation, w.receipt.Egress.BootID); coldErr == nil {
 				return w.namespaces.unchanged()
+			} else {
+				return fmt.Errorf("recorded egress and cold-boot admission: %w", errors.Join(err, coldErr))
 			}
-			return err
 		}
 	}
 	if w.egress.current(ctx) != nil {
