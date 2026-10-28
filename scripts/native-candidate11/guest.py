@@ -1,0 +1,209 @@
+"""Actual signed F59 -> C11 installation in a new, isolated AMD64 KVM guest.
+
+Every mutation is once-only. A failed/unknown job is retained and stops the
+suite. This is infrastructure acceptance, never an all-app commercial claim.
+Private snapshots and diagnostics are encrypted by the host before upload.
+"""
+import contextlib, gc, hashlib, http.cookiejar, json, os, pathlib, platform
+import re, runpy, secrets, shutil, sqlite3, stat, subprocess, sys, time
+import traceback, urllib.error, urllib.request
+
+os.umask(0o077)
+assert os.geteuid() == 0 and platform.machine() == 'x86_64'
+payload = pathlib.Path(sys.argv[1]).resolve(strict=True)
+assert len(sys.argv) == 2 and payload.is_dir()
+base = pathlib.Path('/opt/panel-native-qa-' + secrets.token_hex(16))
+base.mkdir(mode=0o700)
+evidence = base / 'evidence'; evidence.mkdir(mode=0o700)
+def sha(p):
+    h = hashlib.sha256()
+    with pathlib.Path(p).open('rb') as f:
+        for block in iter(lambda: f.read(1 << 20), b''): h.update(block)
+    return h.hexdigest()
+def save(name, value):
+    assert re.fullmatch('[A-Za-z0-9._-]+', name)
+    with os.fdopen(os.open(evidence / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600), 'w') as f:
+        json.dump(value, f, sort_keys=True, indent=2); f.write('\n'); f.flush(); os.fsync(f.fileno())
+pins = json.loads((payload / 'assets.json').read_bytes())
+assert pins['format'] == 1 and pins['architecture'] == 'amd64'
+assert pins['programme_key_sha256'] == '4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339'
+assert pins['verifier_sha256'] == 'fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5'
+for name, expected in pins['files'].items():
+    assert re.fullmatch('[A-Za-z0-9._-]+', name)
+    source = payload / name; info = source.lstat()
+    assert stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and sha(source) == expected
+    shutil.copyfile(source, base / name, follow_symlinks=False); os.chmod(base / name, 0o600)
+assert sha(base / 'programme.pub') == pins['programme_key_sha256']
+assert sha(base / 'signed-release.py') == pins['verifier_sha256']
+old = '0.1.0-dev.proapps24memorywaitbmpw'
+new = '0.1.0-dev.proapps24streamcandidate11'
+assert pins['source_inputs_sha256'] == '9f30386d7befc7eb6c7b632f5347a5d79029f9a9b6138d26b4a2fd99b50d07cb'
+assert pins['old_source_inputs_sha256'] == 'd09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a'
+proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_changed': False,
+         'all50_commercial': False, 'normal_signed_programme_upgrade': False,
+         'normal_store_update': False, 'actions': [], 'base': str(base)}
+http = None; csrf = ''; origin = 'http://127.0.0.1:19100'
+def command(label, argv, timeout=30):
+    started = time.monotonic()
+    with (evidence / (label + '.log')).open('xb') as output:
+        result = subprocess.run(argv, stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
+    record = {'label': label, 'exit': result.returncode, 'seconds': time.monotonic() - started,
+              'log_sha256': sha(evidence / (label + '.log'))}
+    save(label + '-result.json', record)
+    assert result.returncode == 0, label + ' failed; original log retained'
+    return record
+def programme(version, action):
+    archive = base / ('panel-' + version + '-linux-amd64.tar.gz')
+    args = ['python3', '-I', '-B', str(base / 'signed-release.py'), action, str(archive), '--public-key', str(base / 'programme.pub')]
+    if action == 'install':
+        proof['actions'].append({'kind': 'signed-programme-install', 'version': version, 'attempt': 1})
+        save(version + '-install-intent.json', proof['actions'][-1])
+    return command(version + '-' + action, args, 1200 if version == old else 1000)
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs): raise AssertionError('API redirect refused')
+def api(path, body=None, key=None):
+    headers = {'Content-Type': 'application/json', 'Origin': origin, 'X-CSRF-Token': csrf}
+    if key: headers['Idempotency-Key'] = key
+    data = None if body is None else json.dumps(body, separators=(',', ':')).encode()
+    request = urllib.request.Request('http://127.0.0.1:19100/api' + path, data=data, headers=headers)
+    try:
+        with http.open(request, timeout=110) as response:
+            raw = response.read((4 << 20) + 1); assert len(raw) <= 4 << 20
+            return response.status, json.loads(raw)
+    except urllib.error.HTTPError as error:
+        raw = error.read(8192)
+        save('HTTP-' + secrets.token_hex(8) + '.json', {'path': path, 'status': error.code, 'body': raw.decode('utf8', 'replace')})
+        raise AssertionError('API ' + path + ' returned HTTP ' + str(error.code)) from None
+def sign_in():
+    global http, csrf
+    import http.cookiejar as cookies
+    http = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(), urllib.request.HTTPCookieProcessor(cookies.CookieJar()))
+    path = pathlib.Path('/etc/panel/first-login.json'); s = path.lstat()
+    assert stat.S_ISREG(s.st_mode) and s.st_uid == 0 and stat.S_IMODE(s.st_mode) == 0o600
+    access = json.loads(path.read_bytes())
+    try:
+        status, result = api('/login', {k: access[k] for k in ('username', 'password')})
+        assert status == 200 and type(result['csrf']) is str and result['csrf']
+        csrf = result['csrf']
+    finally: access.clear()
+def sign_out():
+    global http, csrf
+    if csrf:
+        status, _ = api('/logout', {}); assert status == 200
+        csrf = ''; http = None
+def row(job):
+    with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
+        db.row_factory = sqlite3.Row; db.execute('PRAGMA query_only=ON')
+        value = db.execute('SELECT * FROM runtime_jobs WHERE id=?', (job,)).fetchone()
+        assert value is not None
+        return dict(value)
+def store_change(version, operation):
+    status, page = api('/app-registry?refresh=1')
+    assert status == 200 and page['source']['stale'] is False
+    item = next(v for v in page['catalog']['apps'] if v['id'] == 'load-balance')
+    current = next(v for v in page['status'] if v['id'] == 'load-balance')
+    assert item['version'] == version and item['provider'] == 'panel-module'
+    if version == '1.9.0': assert item['sha256'] == 'a50afd7d2298a6229dcd0dcebdec8fca9684d9d64ee786b62577c8d3ba21038f'
+    save('store-' + version + '-before.json', {'item': item, 'status': current, 'source': page['source'], 'host': page['host']})
+    if operation == 'install': assert current['installed'] is False
+    else:
+        assert current['installed_version'] == '1.8.5' and current['latest_version'] == version
+        assert all(current[k] is True for k in ('state_known', 'installed', 'healthy', 'version_known', 'update_available', 'update_supported'))
+    key = 'native-qa-' + secrets.token_hex(16)
+    body = {'expected_version': version, 'expected_sha256': item['sha256']}
+    save('store-' + version + '-once-intent.json', {'operation': operation, 'body': body, 'idempotency_key': key, 'POST_maximum': 1})
+    proof['actions'].append({'kind': 'app-' + operation, 'version': version, 'POST_attempts': 1})
+    status, response = api('/app-registry/load-balance/' + operation, body, key)
+    save('store-' + version + '-response.json', {'status': status, 'response': response})
+    assert status == 202 and response['provider'] == 'panel-module' and re.fullmatch('[a-f0-9]{32}', response['job_id'])
+    job = response['job_id']; observed = []; proof['last_job_id'] = job
+    for attempt in range(181):
+        value = row(job); observed.append({'at': time.time(), 'row': value})
+        assert value['target_id'] == 'load-balance' and value['idempotency_key'] == key
+        if value['state'] in ('succeeded', 'failed', 'cancelled', 'needs_attention'): break
+        assert value['state'] in ('queued', 'running') and attempt < 180
+        time.sleep(2)
+    save('store-' + version + '-original-job.json', observed)
+    assert value['state'] == 'succeeded' and value['error'] == '', 'Original store job did not succeed; never replayed'
+    status, page = api('/app-registry'); current = next(v for v in page['status'] if v['id'] == 'load-balance')
+    save('store-' + version + '-after.json', {'status': current, 'source': page['source']})
+    assert status == 200 and current['installed_version'] == current['latest_version'] == version
+    assert all(current[k] is True for k in ('installed', 'healthy', 'version_known')) and current['update_available'] is False
+    return job
+def nss():
+    result = {}
+    for name in ('passwd', 'group', 'shadow', 'gshadow'):
+        raw = pathlib.Path('/etc/' + name).read_bytes()
+        selected = [v for v in raw.splitlines(keepends=True) if v.startswith(b'panel-lbstream:')]
+        assert len(selected) <= 1
+        rest = b''.join(v for v in raw.splitlines(keepends=True) if not v.startswith(b'panel-lbstream:'))
+        result[name] = {'sha256': hashlib.sha256(raw).hexdigest(), 'dedicated_count': len(selected),
+                        'without_dedicated_sha256': hashlib.sha256(rest).hexdigest()}
+    return result
+try:
+    for path in ('/etc/panel-release', '/opt/panel', '/var/lib/panel', '/var/lib/panel-executor', '/etc/nginx/nginx.conf'):
+        assert not os.path.lexists(path), 'New guest already has protected installation state: ' + path
+    save('guest-identity.json', {'architecture': platform.machine(), 'boot_id': pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+                               'machine_id_sha256': sha('/etc/machine-id'), 'os_release': pathlib.Path('/etc/os-release').read_text(),
+                               'PID1': pathlib.Path('/proc/1/comm').read_text().strip(), 'fresh_protected_paths_absent': True})
+    assert pathlib.Path('/proc/1/comm').read_text().strip() == 'systemd'
+    programme(old, 'verify'); programme(new, 'verify'); programme(old, 'install')
+    sign_in(); store_change('1.8.5', 'install'); sign_out()
+    library = runpy.run_path(str(base / 'candidate8-programme-business.py'))
+    policy = json.loads((base / 'policy.json').read_bytes()); library['contract'](policy)
+    with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
+        before = library['original']['capture'](db); library['original']['validate'](before)
+    save('programme-before-full.json', before)
+    before_nss = nss(); save('NSS-before.json', before_nss)
+    assert all(v['dedicated_count'] == 0 for v in before_nss.values())
+    gc.collect()
+    for p in pathlib.Path('/proc/self/fd').iterdir():
+        try: target = os.readlink(p)
+        except FileNotFoundError: continue
+        assert not target.startswith('/var/lib/panel/panel.db'), 'QA kept a Core reader across installer'
+    programme(new, 'install')
+    with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
+        after = library['capture_installed'](db, before, policy)
+    save('programme-after-full.json', after)
+    result = library['compare'](before, after, policy); save('programme-preservation.json', result)
+    assert nss() == before_nss
+    proof['normal_signed_programme_upgrade'] = True
+    sign_in(); job = store_change('1.9.0', 'update')
+    status, workspace = api('/app-registry/load-balance/stream/workspace')
+    save('native-workspace.json', workspace); assert status == 200
+    sign_out()
+    after_nss = nss(); save('NSS-after.json', after_nss)
+    assert all(v['dedicated_count'] == 1 for v in after_nss.values())
+    assert all(after_nss[k]['without_dedicated_sha256'] == before_nss[k]['sha256'] for k in before_nss)
+    result = subprocess.run(['getent', 'passwd', 'panel-lbstream'], capture_output=True, text=True, timeout=5)
+    fields = result.stdout.strip().split(':')
+    assert result.returncode == 0 and len(fields) == 7 and fields[0] == 'panel-lbstream'
+    assert fields[2].isdigit() and fields[3].isdigit() and int(fields[2]) > 0 and fields[6] == '/usr/sbin/nologin'
+    proof.update(ok=True, normal_store_update=True, dedicated_UID=int(fields[2]), dedicated_GID=int(fields[3]),
+                 store_update_hint_then_latest_installed=True, original_job_id=job, full_stream_traffic_acceptance=False)
+except BaseException:
+    save('failure.json', {'traceback': traceback.format_exc()})
+finally:
+    if csrf:
+        try: sign_out(); proof['own_session_logged_out'] = True
+        except BaseException: proof['own_session_logout_failed'] = True
+    try:
+        command('native-unit-diagnostics', ['systemctl', 'show', 'panel-lbstream-install@*.service', 'panel-lbstream-account-create@*.service',
+                    '-p', 'Id,LoadState,ActiveState,SubState,Result,MainPID,ControlPID,ExecMainStatus,InvocationID'], 10)
+        command('native-journal', ['journalctl', '-b', '--no-pager', '-o', 'short-precise', '-u', 'panel-lbstream-install@*', '-u', 'panel-lbstream-account-create@*'], 10)
+        command('panel-journal', ['journalctl', '-b', '--no-pager', '-n', '150', '-u', 'panel', '-u', 'panel-executor'], 10)
+        if pathlib.Path('/var/lib/panel/panel.db').exists():
+            with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro', uri=True, timeout=3)) as db:
+                with contextlib.closing(sqlite3.connect(evidence / 'final-Core-private.sqlite')) as output: db.backup(output)
+        roots = [str(p) for p in pathlib.Path('/var/lib/panel-executor').glob('load-balance-stream*')]
+        roots += [str(p) for p in (pathlib.Path('/etc/panel/load-balance-stream'), pathlib.Path('/etc/panel/security-apps/modules/load-balance')) if os.path.lexists(p)]
+        if roots:
+            assert len(roots) <= 32
+            command('original-native-ledgers', ['tar', '-czf', str(evidence / 'original-native-ledgers.tar.gz'), '--', *sorted(roots)], 30)
+        save('NSS-final-public.json', nss())
+    except BaseException: proof['diagnostic_failure'] = traceback.format_exc()
+    save('proof.json', proof)
+    # Only this public, credential-free summary crosses stdout. Full typed rows,
+    # logs and DB are in a separate encrypted evidence artifact, never plaintext.
+    print(json.dumps(proof), flush=True)
+    sys.exit(0 if proof['ok'] else 1)

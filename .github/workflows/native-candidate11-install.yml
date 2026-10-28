@@ -1,0 +1,61 @@
+name: actual native AMD64 signed installation and store update
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - .github/workflows/native-candidate11-install.yml
+      - scripts/native-candidate11/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-candidate11-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download exact signed private-QA cohort without passing tokens to guest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-candidate11-assets"
+          gh release download qa-streamcandidate11-20261028 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-candidate11-assets"
+          python3 - "$RUNNER_TEMP/native-candidate11-assets" <<'PY'
+          import hashlib, json, pathlib, sys
+          base = pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '7d8aa2ef4465dcba0d2d12369cad61ebe1b879dc3d6a7097fad3759fae845d7e'
+          manifest = json.loads((base / 'assets.json').read_bytes())
+          for name, digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name == name
+              assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
+          print('Exact original signatures, public trust root and source-bound QA helpers downloaded; no credentials in payload')
+          PY
+      - name: Prepare hardware guest tools without removing existing host software
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual clean guest signed F59 to C11 programme and one official store update
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-candidate11-public"
+          sudo -n python3 -I -B scripts/native-candidate11/kvm.py "$RUNNER_TEMP/native-candidate11-assets" scripts/native-candidate11 "$RUNNER_TEMP/native-candidate11-public"
+      - name: Retain public proof and encrypted full QA evidence only
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-candidate11-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-candidate11-public/
+          retention-days: 7
+          if-no-files-found: warn
