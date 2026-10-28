@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24streamcandidate11-linux-amd64.tar.gz",
-    "archive_sha256": "b50da268923a690148b10d7f864a7f8903493f8399a30a387a82d88c225243ce",
-    "frozen_inputs_sha256": "9f30386d7befc7eb6c7b632f5347a5d79029f9a9b6138d26b4a2fd99b50d07cb"
+    "archive": "panel-0.1.0-dev.proapps24streamcandidate12-linux-amd64.tar.gz",
+    "archive_sha256": "9004f88447cf550828eb4982d58b5ea343231e2ea7f015bbf96b66600150b6e5",
+    "frozen_inputs_sha256": "f9b340535c4232212d2997515789f2c8eb00d32acf0ec19b2253d92ebfaed0e5"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -1259,7 +1259,7 @@
     "internal/executor/load_balance_stream_install_authority_native_qa_linux_test.go": "c10c632c00d6e1626e655e2021d0039efea5b245e53198ab25026192c83c05b0",
     "internal/executor/load_balance_stream_install_binding.go": "80ec99ab289146e9158f403d4e282163e020752fd112a45804a04382219fe30e",
     "internal/executor/load_balance_stream_install_binding_test.go": "6ab38bbb89b7e169afd479f6da19afdd9948021c17baab90c433f3476067b1df",
-    "internal/executor/load_balance_stream_install_controller_linux.go": "e7d5aaac6593a44e61de763ffe4fa0ccfe36785894946f3a69e22ea65cdef9e1",
+    "internal/executor/load_balance_stream_install_controller_linux.go": "f3f15bd69120ba2cb07b213f8a7e650f16e87b6a78b2700f3a42ec15c3c6fddb",
     "internal/executor/load_balance_stream_install_diagnostics_linux_test.go": "2e30426b84342d2d9e534dc2c3e6ea2e67e31ee99313e9b3ea055dac1c43a506",
     "internal/executor/load_balance_stream_install_gate_linux.go": "81f1df8950e45b3e7c4506a303b7ec1846547962fb7e2549daf8bfff8a664a50",
     "internal/executor/load_balance_stream_install_observation_linux.go": "6602125ecde62b44deaa503810f139611f85644016dab5a48b7bf780c5b0f742",

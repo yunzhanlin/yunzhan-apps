@@ -129,6 +129,24 @@ func streamInstallUnitProperties(ctx context.Context, unit string) (map[string]s
 	return out, nil
 }
 
+// Only this currently authorized original parent may initialize the normal
+// coordination inode on a fresh installation. The account child's namespace
+// opens that same inode read-only and must never create or repair it. Release
+// this separate lease before starting the child so its exclusive lock can run.
+func (w *loadBalanceStreamInstallController) prepareAccountCoordination(ctx context.Context) error {
+	if w.quiescent(ctx) != nil {
+		return errLoadBalanceStreamAccount
+	}
+	bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
+	lease, err := productionDockerMutationStore().acquire(bounded)
+	cancel()
+	if err != nil {
+		return err
+	}
+	defer lease.Close()
+	return lease.use(ctx, w.quiescent)
+}
+
 // Exactly one start-and-wait command follows the already durable account intent and
 // original parent permit. A missing reply/timeout/failure never starts, resets,
 // stops or adopts the dependency again. Parent holds NO Compose lease here.
@@ -143,6 +161,9 @@ func (w *loadBalanceStreamInstallController) accountChild(ctx context.Context) e
 	prior, err := streamInstallUnitProperties(ctx, unit)
 	if err != nil || prior["LoadState"] != "loaded" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
 		return errLoadBalanceStreamAccount
+	}
+	if err = w.prepareAccountCoordination(ctx); err != nil {
+		return err
 	}
 	if _, err = writeLoadBalanceStreamAccountPermit(ctx, w.gate); err != nil {
 		return err
