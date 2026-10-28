@@ -97,6 +97,38 @@ def row(job):
         value = db.execute('SELECT * FROM runtime_jobs WHERE id=?', (job,)).fetchone()
         assert value is not None
         return dict(value)
+def install_nginx_prerequisite():
+    # Distribution Nginx serves the panel's ordinary HTTP site. The independent
+    # stream engine additionally requires a recorded runtime with stream flags.
+    # Obtain it through the same signed store and original runtime worker as UI.
+    target = 'nginx-1.30.6'
+    assert not os.path.lexists('/opt/panel/runtimes/' + target)
+    status, page = api('/app-registry?refresh=1')
+    assert status == 200 and page['source']['stale'] is False
+    item = next(v for v in page['catalog']['apps'] if v['id'] == 'nginx')
+    assert item['version'] == '1.30.6-compat1' and item['provider'] == 'runtime' and item['target'] == target
+    assert item['sha256'] == '81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8'
+    key = 'native-nginx-' + secrets.token_hex(16)
+    body = {'expected_version': item['version'], 'expected_sha256': item['sha256']}
+    save('nginx-once-intent.json', {'POST_maximum': 1, 'body': body, 'idempotency_key': key, 'item': item})
+    proof['actions'].append({'kind': 'nginx-store-install', 'POST_attempts': 1, 'target': target})
+    status, response = api('/app-registry/nginx/install', body, key)
+    save('nginx-queue-response.json', {'status': status, 'response': response})
+    assert status == 202 and response['provider'] == 'runtime' and response['target'] == target
+    assert re.fullmatch('[a-f0-9]{32}', response['job_id'])
+    observed = []
+    for attempt in range(451):
+        value = row(response['job_id']); observed.append({'at': time.time(), 'row': value})
+        assert value['target_id'] == target and value['idempotency_key'] == key
+        if value['state'] in ('succeeded', 'failed', 'cancelled', 'needs_attention'): break
+        assert value['state'] in ('queued', 'running') and attempt < 450
+        time.sleep(2)
+    save('nginx-original-job.json', observed)
+    assert value['state'] == 'succeeded' and value['error'] == '', 'Original Nginx build did not succeed; not replayed'
+    command('nginx-prerequisite-version', ['/opt/panel/runtimes/' + target + '/sbin/nginx', '-V'], 10)
+    text = (evidence / 'nginx-prerequisite-version.log').read_text()
+    assert 'nginx version: nginx/1.30.6\n' in text and '--with-stream' in text.split() and '--with-stream_ssl_module' in text.split()
+    proof['normal_store_Nginx_stream_runtime_installed'] = True
 def store_change(version, operation):
     status, page = api('/app-registry?refresh=1')
     assert status == 200 and page['source']['stale'] is False
@@ -177,7 +209,7 @@ try:
                                'PID1': pathlib.Path('/proc/1/comm').read_text().strip(), 'fresh_protected_paths_absent': True})
     assert pathlib.Path('/proc/1/comm').read_text().strip() == 'systemd'
     programme(old, 'verify'); programme(new, 'verify'); programme(old, 'install')
-    sign_in(); store_change('1.8.5', 'install'); sign_out()
+    sign_in(); install_nginx_prerequisite(); store_change('1.8.5', 'install'); sign_out()
     library = runpy.run_path(str(base / 'candidate8-programme-business.py'))
     policy = json.loads((base / 'policy.json').read_bytes()); library['contract'](policy)
     before = observed_business(library, policy, 'before')
