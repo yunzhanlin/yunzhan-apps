@@ -1,4 +1,4 @@
-"""Actual signed F59 -> C14 installation in a new, isolated AMD64 KVM guest.
+"""Actual signed F59 -> C15 installation in a new, isolated AMD64 KVM guest.
 
 Every mutation is once-only. A failed/unknown job is retained and stops the
 suite. This is infrastructure acceptance, never an all-app commercial claim.
@@ -28,6 +28,8 @@ pins = json.loads((payload / 'assets.json').read_bytes())
 assert pins['format'] == 1 and pins['architecture'] == 'amd64'
 assert pins['programme_key_sha256'] == '4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339'
 assert pins['verifier_sha256'] == 'fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5'
+shutil.copyfile(payload / 'assets.json', base / 'assets.json', follow_symlinks=False)
+os.chmod(base / 'assets.json', 0o600)
 for name, expected in pins['files'].items():
     assert re.fullmatch('[A-Za-z0-9._-]+', name)
     source = payload / name; info = source.lstat()
@@ -36,8 +38,8 @@ for name, expected in pins['files'].items():
 assert sha(base / 'programme.pub') == pins['programme_key_sha256']
 assert sha(base / 'signed-release.py') == pins['verifier_sha256']
 old = '0.1.0-dev.proapps24memorywaitbmpw'
-new = '0.1.0-dev.proapps24streamcandidate14'
-assert pins['source_inputs_sha256'] == '5f9ff11040f74f402f22f4b829ea959beba2da20b4faae9e0ff2fbfa3d583df2'
+new = '0.1.0-dev.proapps24streamcandidate15'
+assert pins['source_inputs_sha256'] == 'fc1a0eb160c482f15eb69ca3cb2a0c2e9fc8bb73c4106adcbd9698366bca0ef1'
 assert pins['old_source_inputs_sha256'] == 'd09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a'
 proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_changed': False,
          'all50_commercial': False, 'normal_signed_programme_upgrade': False,
@@ -265,6 +267,23 @@ try:
     fields = result.stdout.strip().split(':')
     assert result.returncode == 0 and len(fields) == 7 and fields[0] == 'panel-lbstream'
     assert fields[2].isdigit() and fields[3].isdigit() and int(fields[2]) > 0 and fields[6] == '/usr/sbin/nologin'
+    # The frozen normal cohort's own-unit component never resets a Core request.
+    native_root = pathlib.Path('/var/lib/panel-executor/qa-l4-stop24-amd64.' + secrets.token_hex(16))
+    native_root.mkdir(mode=0o700); (native_root / 'tmp').mkdir(mode=0o700)
+    binary = base / 'executor-tests'; assert sha(binary) == pins['files']['executor-tests']
+    os.chmod(binary, 0o700)
+    result = command('native-clean-versus-child-OOM',
+              ['/usr/bin/env', 'PANEL_NATIVE_QA=1', 'PANEL_LBSTREAM_STOP_QA_ROOT=' + str(native_root),
+               'TMPDIR=' + str(native_root / 'tmp'), str(binary),
+               '-test.run=^TestLoadBalanceStreamStopNativeOriginalCleanAndChildOOMAreDistinct$', '-test.v', '-test.count=1'], 120)
+    native_log = (evidence / 'native-clean-versus-child-OOM.log').read_text()
+    assert result['exit'] == 0 and '--- SKIP:' not in native_log
+    assert 'mode=clean accepted=true' in native_log and 'mode=child-oom accepted=false' in native_log
+    proof['native_original_PID1_clean_and_child_OOM_component_passed_without_skips'] = True
+    command('native-TCP-UDP-controls', ['/usr/bin/python3', '-I', '-B', str(base / 'native-stream-traffic.py'), str(base)], 1600)
+    traffic = json.loads((evidence / 'stream-live' / 'proof.json').read_bytes())
+    assert traffic['ok'] and traffic['normal_UDP_and_TCP_removal'] and traffic['workspace_generation5_stopped_verified']
+    proof['real_TCP_UDP_egress_active_drain_and_final_stop'] = True
     proof.update(ok=True, normal_store_update=True, dedicated_UID=int(fields[2]), dedicated_GID=int(fields[3]),
                  store_update_hint_then_latest_installed=True, original_job_id=job, full_stream_traffic_acceptance=False)
 except BaseException:
