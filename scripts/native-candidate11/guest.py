@@ -41,8 +41,8 @@ old = '0.1.0-dev.proapps24memorywaitbmpw'
 new = '0.1.0-dev.proapps24streamcandidate15'
 assert pins['source_inputs_sha256'] == 'fc1a0eb160c482f15eb69ca3cb2a0c2e9fc8bb73c4106adcbd9698366bca0ef1'
 assert pins['old_source_inputs_sha256'] == 'd09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a'
-assert pins['programme_update_source_inputs_sha256'] == 'e19695a0ab583c88bd2b70933aa645f48ebeb2b63c9e96184e1dba58919f8044'
-assert pins['programme_update_version'] == '0.1.0-dev.proapps24streamcandidate23'
+assert pins['programme_update_source_inputs_sha256'] == '93b1973ed627e8b471d5b7d17c843c6a30f7a92bd68b1f01725f78bd80f57f96'
+assert pins['programme_update_version'] == '0.1.0-dev.proapps24streamcandidate24'
 assert pins['initial_traffic_cohort'] == 'four completed controls, TCP running generation4'
 proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_changed': False,
          'all50_commercial': False, 'normal_signed_programme_upgrade': False,
@@ -289,10 +289,10 @@ try:
     assert len(traffic['controls']) == 4
     proof['real_TCP_UDP_egress_active_drain_and_UDP_removal_TCP_retained'] = True
     # Preserve a real connection through the original signed live-programme
-    # replacement. Three distinct C23 controls then replace, stop and
+    # replacement. Three distinct C24 controls then replace, stop and
     # immediately restart it; the original four are never replayed.
     sign_in()
-    live = runpy.run_path(str(base / 'native-candidate23-live-programme.py'))
+    live = runpy.run_path(str(base / 'native-candidate24-live-programme.py'))
     proof['configured_live_programme_upgrade'] = live['run'](base, http, csrf)
     sign_out()
     proof['configured_upgrade_owned_logout_snapshot'] = live['capture_after_owned_logout'](base)
