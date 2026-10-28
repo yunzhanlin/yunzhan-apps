@@ -241,16 +241,30 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 	}
 	facts, err := measureLoadBalanceStreamServiceFacts(ctx, w.installed)
 	if err != nil {
-		return err
+		return fmt.Errorf("current kernel service facts: %w", err)
 	}
-	ports, err := observeLoadBalanceStreamControlPorts(ctx)
+	ports, maintenance, err := streamProgrammeReadPorts(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("read-only programme port admission: %w", err)
+	}
+	if maintenance != nil {
+		defer maintenance.Close()
+	}
+	finish := func() error {
+		if maintenance != nil {
+			if err := streamProgrammeWritersStopped(ctx); err != nil {
+				return err
+			}
+			if err := maintenance.Current(ctx); err != nil {
+				return err
+			}
+		}
+		return w.namespaces.unchanged()
 	}
 	facts.Validation.PanelControlPorts = ports
 	plan, err := loadbalancestream.RecordedControlServicePlan(w.seed, facts)
 	if err != nil || plan.SHA256 != w.store.generation.value.ServiceUnitSHA256 {
-		return loadbalancestream.ErrService
+		return fmt.Errorf("immutable recorded service plan: %w", errors.Join(loadbalancestream.ErrService, err))
 	}
 	if w.egress == nil {
 		w.egress, err = holdLoadBalanceStreamRecordedEgress(ctx, w.seed, w.receipt.State, w.installed.identity.UID, w.receipt.Egress)
@@ -259,7 +273,7 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 			// table is a separate read-only upgrade state. Do not invent live
 			// policy handles, start a service or recover an old transaction.
 			if coldErr := streamColdBootWorkspaceCurrent(ctx, w.installed, w.store.generation, w.receipt.Egress.BootID); coldErr == nil {
-				return w.namespaces.unchanged()
+				return finish()
 			} else {
 				return fmt.Errorf("recorded egress and cold-boot admission: %w", errors.Join(err, coldErr))
 			}
@@ -312,5 +326,5 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 	if w.egress.current(ctx) != nil {
 		return loadbalancestream.ErrEgressGuard
 	}
-	return w.namespaces.unchanged()
+	return finish()
 }

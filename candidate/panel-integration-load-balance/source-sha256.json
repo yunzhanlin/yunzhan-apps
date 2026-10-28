@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24streamcandidate18-linux-amd64.tar.gz",
-    "archive_sha256": "8b8b735478ebc0658bb55ef04b4d3eb6b727076df63b3b08f14375959a870e1a",
-    "frozen_inputs_sha256": "4a549a7f900e67515117e5185ba60344c76ebbc08e6d02ade3877f1d70378f02"
+    "archive": "panel-0.1.0-dev.proapps24streamcandidate19-linux-amd64.tar.gz",
+    "archive_sha256": "89ae8f4227d19ce290a46aab3288e218ac51c72da685f85c19bfeffb42eab1e6",
+    "frozen_inputs_sha256": "bea402bddcbd70909bbffad40c05432338eb0967832dca78cfb47a6aae63bafb"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -1338,7 +1338,9 @@
     "internal/executor/load_balance_stream_upgrade_maintenance_linux_test.go": "8a2a33343bc22ead1dc2013ac307f5c2640e42b895cdb6fd6ea1eb0824c3d71e",
     "internal/executor/load_balance_stream_upgrade_native_qa_linux_test.go": "a42594e51faed77f6f9370e94369b68612e0cb1a153bad231586ccf1c90cf97c",
     "internal/executor/load_balance_stream_upgrade_owner_linux.go": "98fca9c5108309e21df18ef1244d0dbfed910a9a85ae3ecc5cb0e4300b288608",
-    "internal/executor/load_balance_stream_upgrade_traffic_linux.go": "5d7e60ab06716110b5e3bab10a2e6a04171652dc199da3265fa171a40a4677dc",
+    "internal/executor/load_balance_stream_upgrade_ports_linux.go": "4493617994f61afb2059f01df9749ab5315f00e05a6b16d66b72f517a2966f22",
+    "internal/executor/load_balance_stream_upgrade_ports_linux_test.go": "8aaaeb0505d4c919f3ec2800bf23441159e9650310dd61042598fb383e60f44b",
+    "internal/executor/load_balance_stream_upgrade_traffic_linux.go": "f8cbce05685ee45b97a959f829139c0c9b87da349fde7434a74a051a83cdaa04",
     "internal/executor/load_balance_stream_upgrade_traffic_linux_test.go": "22ae821ab4aaa0868592d999c1599fdeb2ac70c2db21446a38c2993ddce46043",
     "internal/executor/load_balance_stream_upgrade_traffic_native_qa_linux_test.go": "b828a3c01d692fbf2d6bce7219056bf1b76216a57bd65df3903a4755ec60a12a",
     "internal/executor/load_balance_stream_version_boundary.go": "64f62a0607c53b1a8adc829f3dbba6bd94d0e734f59c30e430c70146ad1eb62a",
@@ -1811,6 +1813,8 @@
     "internal/runtimecatalog/source_archive_test.go": "33a53336485303c5c0363e3c24600ce0d373b380608aa0f08e04cfbc437915f7",
     "internal/upgradeguard/guard.go": "33c0f62eabbcf787bd9dc7250b1cc64258305eb51236c9c49b77dbb41f1863ba",
     "internal/upgradeguard/guard_test.go": "71913af5b43fb3b7bbdc65eb36264a054ea682be8d4522c47b078d0b46e9935d",
+    "internal/upgradeguard/maintenance_read_linux.go": "4a5c17d5ece771b43d7eeaf8cded34bec030a58ee159f722467cfd12a2b87203",
+    "internal/upgradeguard/maintenance_read_linux_test.go": "aa2337e0bfad92a4506fb4044b18762c0de25c78ea3cdfd0427a228f147b2ed4",
     "internal/upgradeguard/service_startup_linux.go": "a665da14563c9278aa6c766219f863b758e61e30889b3565b3591e92bd1c25e3",
     "internal/upgradeguard/service_startup_linux_test.go": "eca671dc076da373d39354dee0699d60526ccd9fa084067cc10a0de40acec177",
     "internal/upgradeguard/service_startup_other.go": "f16419a058dcc30601093931d5ffb227b8df2ae20146ba454794ee4c07859ad4",
