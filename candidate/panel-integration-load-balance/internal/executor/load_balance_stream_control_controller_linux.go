@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -362,7 +363,7 @@ func (c *loadBalanceStreamTrafficController) execute(ctx context.Context) (core.
 		return empty, err
 	}
 	if c.config.applyEgressOwned(ctx, c.owner) != nil {
-		return empty, loadbalancestream.ErrEgressGuard
+		return empty, fmt.Errorf("original service-intent egress: %w", loadbalancestream.ErrEgressGuard)
 	}
 	switch {
 	case !plan.Service.ShouldRun:
@@ -373,7 +374,7 @@ func (c *loadBalanceStreamTrafficController) execute(ctx context.Context) (core.
 		c.running, err = c.config.reloadOwned(ctx, c.owner)
 	}
 	if err != nil {
-		return empty, err
+		return empty, fmt.Errorf("original service-intent native activation: %w", err)
 	}
 	if c.stopped != nil && c.config.retireStoppedEgressOwned(ctx, c.owner, c.stopped) != nil {
 		return empty, loadbalancestream.ErrEgressGuard

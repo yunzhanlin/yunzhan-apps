@@ -22,6 +22,29 @@ type loadBalanceStreamHostSocket struct {
 	Inode    uint64
 }
 
+// TIME_WAIT is a closed kernel TCP endpoint, not a userspace descriptor or a
+// listener. Only its canonical ownerless shape may be omitted from the known
+// conflict set. This is never a claim that a port is free: the original single
+// native bind and complete owned listener/process/cgroup checks still decide
+// activation. Every live/unknown TCP state and every UDP socket remain blocking.
+func streamInitialSocketConflicts(socket loadBalanceStreamHostSocket, entries []loadbalancestream.Entry) bool {
+	if (socket.Protocol == "tcp" || socket.Protocol == "tcp6") && socket.State == 6 && socket.Inode == 0 && socket.UID == 0 &&
+		socket.Remote.IsValid() && !socket.Remote.Addr().IsUnspecified() && socket.Remote.Port() != 0 {
+		return false
+	}
+	for _, entry := range entries {
+		if entry.Removed {
+			continue
+		}
+		port := int(socket.Local.Port())
+		if (socket.Protocol == "tcp" || socket.Protocol == "tcp6") && (port == entry.ProbePort || entry.Protocol == "tcp" && port == entry.Port) ||
+			(socket.Protocol == "udp" || socket.Protocol == "udp6") && entry.Protocol == "udp" && port == entry.Port {
+			return true
+		}
+	}
+	return false
+}
+
 func streamSocketAddress(value string, ipv6 bool) (netip.AddrPort, bool) {
 	length := 8
 	if ipv6 {

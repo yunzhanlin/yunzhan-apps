@@ -106,7 +106,11 @@ func (s *Service) submitLoadBalanceStreamControl(ctx context.Context, op loadbal
 		}()
 		// An error never writes a successful seal, deletes partial state,
 		// sends another signal/start or repairs a prior directory.
-		_, _ = c.execute(runCtx)
+		if _, err := c.execute(runCtx); err != nil {
+			// Fixed protocol stages and validated request ID only; no credentials,
+			// browser policy, configuration bytes or automatic replay are logged.
+			log.Printf("TCP/UDP original control %s failed: %v; original outcome remains unknown; no replay", op.RequestID, err)
+		}
 	}()
 	return streamControlResult(op, "running"), nil
 }

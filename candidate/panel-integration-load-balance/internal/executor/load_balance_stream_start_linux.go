@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -77,32 +78,28 @@ func (p *loadBalanceStreamConfigurationPublication) activationPlan(ctx context.C
 // require independent native traffic tests and honest UI states before release.
 func (p *loadBalanceStreamConfigurationPublication) startOwnedInitial(ctx context.Context, w *loadBalanceStreamControlOwner) (*loadBalanceStreamServiceObservation, error) {
 	if p == nil || p.serviceIssued || !p.serviceEgressCurrent(ctx) {
-		return nil, loadbalancestream.ErrService
+		return nil, fmt.Errorf("initial current original metadata: %w", loadbalancestream.ErrService)
 	}
 	seed, plan, err := p.servicePlanOwned(ctx, w)
 	if err != nil || !plan.Service.ShouldRun || plan.Service.Retiring.ActiveEntries != 0 || !p.store.first && !p.store.priorStopped && p.store.priorColdBoot == nil {
-		return nil, loadbalancestream.ErrService
+		return nil, fmt.Errorf("initial original plan and retiring admission: %w", loadbalancestream.ErrService)
 	}
 	prior, err := streamInstallUnitProperties(ctx, loadbalancestream.ServiceUnitName)
 	if err != nil || prior["LoadState"] != "not-found" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
-		return nil, loadbalancestream.ErrService
+		return nil, fmt.Errorf("initial fixed unit absence: %w", loadbalancestream.ErrService)
 	}
 	census, err := observeLoadBalanceStreamHostSockets(ctx)
 	if err != nil {
 		return nil, loadbalancestream.ErrService
 	}
-	// Refuse every OBSERVED known occupied target. procfs is not a port
-	// reservation and may omit bind-inactive TCP; actual start/owned-listener
-	// verification remains mandatory, with no success fallback after a race.
+	// Keep every observed live/unknown socket blocking. A canonical ownerless
+	// TCP TIME_WAIT row from a closed probe is not a live socket. Actual native
+	// bind and owned-listener verification remain mandatory, with no retry or
+	// success fallback if another process wins the port after this read.
 	for _, socket := range census.sockets {
-		for _, entry := range seed.After {
-			if entry.Removed {
-				continue
-			}
-			if (socket.Protocol == "tcp" || socket.Protocol == "tcp6") && (int(socket.Local.Port()) == entry.ProbePort || entry.Protocol == "tcp" && int(socket.Local.Port()) == entry.Port) || (socket.Protocol == "udp" || socket.Protocol == "udp6") && entry.Protocol == "udp" && int(socket.Local.Port()) == entry.Port {
-				census.close()
-				return nil, loadbalancestream.ErrService
-			}
+		if streamInitialSocketConflicts(socket, seed.After) {
+			census.close()
+			return nil, fmt.Errorf("initial observed occupied target: %w", loadbalancestream.ErrService)
 		}
 	}
 	if !census.current() {
