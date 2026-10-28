@@ -41,6 +41,8 @@ old = '0.1.0-dev.proapps24memorywaitbmpw'
 new = '0.1.0-dev.proapps24streamcandidate15'
 assert pins['source_inputs_sha256'] == 'fc1a0eb160c482f15eb69ca3cb2a0c2e9fc8bb73c4106adcbd9698366bca0ef1'
 assert pins['old_source_inputs_sha256'] == 'd09edb15d2bcc2b098aabcb6f6ad5517aba4736309afe1cf9d630fb11dabe20a'
+assert pins['programme_update_source_inputs_sha256'] == 'ab45cca5a8b3f1fa7fd31c29ca1f2b886eaf9d660169bc92c79b5f7a5134efa4'
+assert pins['programme_update_version'] == '0.1.0-dev.proapps24streamcandidate21'
 proof = {'ok': False, 'actual_KVM_guest': True, 'architecture': 'amd64', 'Main_changed': False,
          'all50_commercial': False, 'normal_signed_programme_upgrade': False,
          'normal_store_update': False, 'actions': [], 'base': str(base)}
@@ -284,6 +286,16 @@ try:
     traffic = json.loads((evidence / 'stream-live' / 'proof.json').read_bytes())
     assert traffic['ok'] and traffic['normal_UDP_and_TCP_removal'] and traffic['workspace_generation5_stopped_verified']
     proof['real_TCP_UDP_egress_active_drain_and_final_stop'] = True
+    # A distinct new original control restores this owned stopped generation.
+    # Preserve a real connection through the original signed live-programme
+    # replacement, then issue one fresh control under the new programme. The
+    # old five requests and their captures remain untouched and are not replayed.
+    sign_in()
+    live = runpy.run_path(str(base / 'native-candidate21-live-programme.py'))
+    proof['configured_live_programme_upgrade'] = live['run'](base, http, csrf)
+    sign_out()
+    proof['configured_upgrade_owned_logout_snapshot'] = live['capture_after_owned_logout'](base)
+    proof['final_programme_source_inputs_sha256'] = pins['programme_update_source_inputs_sha256']
     proof.update(ok=True, normal_store_update=True, dedicated_UID=int(fields[2]), dedicated_GID=int(fields[3]),
                  store_update_hint_then_latest_installed=True, original_job_id=job, full_stream_traffic_acceptance=False)
 except BaseException:

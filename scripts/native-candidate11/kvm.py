@@ -50,7 +50,7 @@ def host_state():
     return paths
 before = host_state(); save('host-before.json', before)
 assert sha(source / 'recipient.pem') == CERT_SHA256
-assert sha(assets / 'assets.json') == 'bacce1bba8c7945e16ebd8595620e82e5bda97d0f87ba9011cebf2e8007790fc'
+assert sha(assets / 'assets.json') == '0c03166f3af2d13cea68c4f143ebf4f54bb7eeb2f6709476715be9effb7c3c16'
 pin = json.loads((assets / 'assets.json').read_bytes())
 assert pin['architecture'] == 'amd64'
 for name, expected in pin['files'].items():
@@ -97,7 +97,8 @@ scp = ['scp', '-F', '/dev/null', '-i', str(private / 'ssh-client'), '-P', str(po
        '-o', 'StrictHostKeyChecking=yes', '-o', 'UserKnownHostsFile=' + str(known), '-o', 'GlobalKnownHostsFile=/dev/null',
        '-o', 'BatchMode=yes', '-o', 'ForwardAgent=no', '-o', 'LogLevel=ERROR']
 report = {'ok': False, 'host_architecture': platform.machine(), 'emulation_fallback': False, 'host_protected_state_unchanged': False,
-          'all50_commercial': False, 'Main_changed': False, 'source_inputs_sha256': pin['source_inputs_sha256']}
+          'all50_commercial': False, 'Main_changed': False, 'source_inputs_sha256': pin['source_inputs_sha256'],
+          'programme_update_source_inputs_sha256': pin['programme_update_source_inputs_sha256']}
 guest_evidence = None
 try:
     for _ in range(100):
