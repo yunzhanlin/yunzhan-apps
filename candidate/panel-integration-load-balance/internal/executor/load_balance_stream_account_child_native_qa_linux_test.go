@@ -50,6 +50,13 @@ func TestLoadBalanceStreamAccountChildKernelNativeChildRole(t *testing.T) {
 				p.BootID = "a" + p.BootID[1:]
 			}
 		},
+		"wrong-executable": func(p *loadbalancestream.AccountChildPermit) {
+			if p.ParentExeSHA256[0] == 'a' {
+				p.ParentExeSHA256 = "b" + p.ParentExeSHA256[1:]
+			} else {
+				p.ParentExeSHA256 = "a" + p.ParentExeSHA256[1:]
+			}
+		},
 		"expired": func(p *loadbalancestream.AccountChildPermit) {
 			p.CreatedAt = time.Now().Add(-loadbalancestream.AccountChildPermitLifetime - time.Second).UTC().Format(time.RFC3339)
 		},

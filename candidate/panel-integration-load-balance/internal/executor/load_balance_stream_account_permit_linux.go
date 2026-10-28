@@ -4,8 +4,6 @@ package executor
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io"
 	"os"
@@ -56,26 +54,15 @@ func observeLoadBalanceStreamAccountParent(ctx context.Context, g *loadBalanceSt
 	if e1 != nil || e2 != nil || start == 0 || !strings.HasSuffix(string(boot), "\n") {
 		return empty, errLoadBalanceStreamAccount
 	}
-	f, err := os.Open("/proc/self/exe") // Deliberate identity of this live ELF.
+	executable, err := holdLoadBalanceStreamAccountExecutable(ctx, uint32(os.Getpid()))
 	if err != nil {
 		return empty, errLoadBalanceStreamAccount
 	}
-	defer f.Close()
-	a, err := f.Stat()
-	if err != nil || !a.Mode().IsRegular() || a.Size() <= 0 || a.Size() > 128<<20 {
-		return empty, errLoadBalanceStreamAccount
-	}
-	h := sha256.New()
-	if n, err := io.Copy(h, io.LimitReader(f, (128<<20)+1)); err != nil || n != a.Size() {
-		return empty, errLoadBalanceStreamAccount
-	}
-	z, err := f.Stat()
-	if err != nil || !geoStoreStableInfo(a, z) || ctx.Err() != nil {
-		return empty, errLoadBalanceStreamAccount
-	}
+	w := &loadBalanceStreamAccountParent{j: j, pidfd: -1, executable: executable}
+	defer w.Close()
 	p := loadbalancestream.AccountChildPermit{Format: 1, AppVersion: seed.AppVersion, JobID: seed.JobID, ActorID: seed.ActorID, Nonce: seed.Nonce,
 		BootID: strings.TrimSuffix(string(boot), "\n"), ParentPID: uint32(os.Getpid()), ParentStartTicks: start,
-		ParentExeSHA256: hex.EncodeToString(h.Sum(nil)), ProgrammeInputsSHA256: seed.ProgrammeInputsSHA256, SeedSHA256: core.Hash(string(raw)), AccountIntentSHA256: core.Hash(string(records[1])),
+		ParentExeSHA256: executable.sha256, ProgrammeInputsSHA256: seed.ProgrammeInputsSHA256, SeedSHA256: core.Hash(string(raw)), AccountIntentSHA256: core.Hash(string(records[1])),
 		JournalDevice: uint64(ds.Dev), JournalInode: ds.Ino, RunLockDevice: uint64(ls.Dev), RunLockInode: ls.Ino, CreatedAt: time.Now().UTC().Format(time.RFC3339)}
 	if _, err := loadbalancestream.AccountChildPermitBytes(p); err != nil || !streamAccountParentLockInfo(lock, p) {
 		return empty, errLoadBalanceStreamAccount
@@ -84,8 +71,7 @@ func observeLoadBalanceStreamAccountParent(ctx context.Context, g *loadBalanceSt
 	if err != nil {
 		return empty, errLoadBalanceStreamAccount
 	}
-	w := &loadBalanceStreamAccountParent{permit: p, j: j, pidfd: pidfd, fdName: strconv.FormatUint(uint64(j.lock.Fd()), 10)}
-	defer w.Close()
+	w.permit, w.pidfd, w.fdName = p, pidfd, strconv.FormatUint(uint64(j.lock.Fd()), 10)
 	if w.current(ctx) != nil || g.current(ctx) != nil {
 		return empty, errLoadBalanceStreamAccount
 	}

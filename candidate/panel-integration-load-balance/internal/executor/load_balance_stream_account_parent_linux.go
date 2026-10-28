@@ -4,8 +4,6 @@ package executor
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"os"
 	"os/exec"
@@ -26,10 +24,11 @@ import (
 // It must be BindsTo/After the original parent; this snapshot does not promise
 // parent continuity between observations and never creates an account.
 type loadBalanceStreamAccountParent struct {
-	permit loadbalancestream.AccountChildPermit
-	j      *loadBalanceStreamInstallationJournal
-	pidfd  int
-	fdName string
+	permit     loadbalancestream.AccountChildPermit
+	j          *loadBalanceStreamInstallationJournal
+	pidfd      int
+	fdName     string
+	executable *loadBalanceStreamAccountExecutable
 	// Set only by the fixed production child after opening its original
 	// private permit. Kernel-only component witnesses deliberately lack it.
 	permitRecord *loadBalanceStreamHeldAccountPermit
@@ -53,6 +52,10 @@ func streamAccountParentProc(name string, limit int64) ([]byte, error) {
 }
 
 func (w *loadBalanceStreamAccountParent) Close() {
+	if w != nil {
+		w.executable.close()
+		w.executable = nil
+	}
 	if w != nil && w.pidfd >= 0 {
 		unix.Close(w.pidfd)
 		w.pidfd = -1
@@ -161,29 +164,14 @@ func (w *loadBalanceStreamAccountParent) current(ctx context.Context) error {
 	if e1 != nil || e2 != nil || e3 != nil || e4 != nil || string(boot) != p.BootID+"\n" || !streamAccountParentRootStatus(status) || string(cgroup) != "0::"+group+"\n" || start != p.ParentStartTicks || !w.unit(ctx) {
 		return errLoadBalanceStreamAccount
 	}
-	// Parent and fixed child are the SAME independently installed executable,
-	// not a same-name Root process. Pin/read the actual original inode.
-	f, err := os.Open(proc + "/exe")
-	if err != nil {
+	// The held same-programme inode was fully hashed at acquisition. Recheck
+	// actual procfs identities and all original metadata on EVERY observation.
+	if !w.executable.current(ctx, p.ParentPID, p.ParentExeSHA256) {
 		return errLoadBalanceStreamAccount
 	}
-	defer f.Close()
-	a, e1 := f.Stat()
-	self, e2 := os.Stat("/proc/self/exe")
-	if e1 != nil || e2 != nil || !a.Mode().IsRegular() || a.Size() <= 0 || a.Size() > 128<<20 || !os.SameFile(a, self) {
-		return errLoadBalanceStreamAccount
-	}
-	h := sha256.New()
-	if n, err := io.Copy(h, io.LimitReader(f, (128<<20)+1)); err != nil || n != a.Size() || ctx.Err() != nil {
-		return errLoadBalanceStreamAccount
-	}
-	b, err := f.Stat()
-	if err != nil || !geoStoreStableInfo(a, b) || hex.EncodeToString(h.Sum(nil)) != p.ParentExeSHA256 {
-		return errLoadBalanceStreamAccount
-	}
-	o := loadbalancestream.AccountParentObservation{BootID: string(boot[:len(boot)-1]), PID: p.ParentPID, StartTicks: start, ExeSHA256: hex.EncodeToString(h.Sum(nil)), ProgrammeInputsSHA256: seed.ProgrammeInputsSHA256, SeedSHA256: core.Hash(string(raw)), AccountIntentSHA256: core.Hash(string(records[1])), Unit: parent, ChildUnit: child, ControlGroup: group, ProcessControlGroup: group, NoNewPrivileges: true, ActiveRunning: true, ExclusiveRunLock: true, RunLockReadWrite: true, RunLockOrdinary: true, RunLockOwnerPID: p.ParentPID, JournalDevice: uint64(ds.Dev), JournalInode: ds.Ino, RunLockDevice: p.RunLockDevice, RunLockInode: p.RunLockInode, RunLockMode: 0600, RunLockLinks: 1, JournalPhase: "account-intent"}
+	o := loadbalancestream.AccountParentObservation{BootID: string(boot[:len(boot)-1]), PID: p.ParentPID, StartTicks: start, ExeSHA256: w.executable.sha256, ProgrammeInputsSHA256: seed.ProgrammeInputsSHA256, SeedSHA256: core.Hash(string(raw)), AccountIntentSHA256: core.Hash(string(records[1])), Unit: parent, ChildUnit: child, ControlGroup: group, ProcessControlGroup: group, NoNewPrivileges: true, ActiveRunning: true, ExclusiveRunLock: true, RunLockReadWrite: true, RunLockOrdinary: true, RunLockOwnerPID: p.ParentPID, JournalDevice: uint64(ds.Dev), JournalInode: ds.Ino, RunLockDevice: p.RunLockDevice, RunLockInode: p.RunLockInode, RunLockMode: 0600, RunLockLinks: 1, JournalPhase: "account-intent"}
 	endStart, err := moduleProcessStart("/proc", int(p.ParentPID))
-	if err != nil || endStart != start || !loadbalancestream.AccountChildParentMatches(p, o, time.Now()) || !lock.current() || !w.j.current() || !w.descriptor(ctx, w.fdName) || ctx.Err() != nil {
+	if err != nil || endStart != start || !loadbalancestream.AccountChildParentMatches(p, o, time.Now()) || !lock.current() || !w.j.current() || !w.descriptor(ctx, w.fdName) || !w.executable.current(ctx, p.ParentPID, p.ParentExeSHA256) || ctx.Err() != nil {
 		return errLoadBalanceStreamAccount
 	}
 	return nil
@@ -227,7 +215,12 @@ func holdLoadBalanceStreamAccountParent(ctx context.Context, p loadbalancestream
 			w.fdName = entry.Name()
 		}
 	}
-	if w.fdName == "" || w.current(ctx) != nil {
+	if w.fdName == "" {
+		w.Close()
+		return nil, errLoadBalanceStreamAccount
+	}
+	w.executable, err = holdLoadBalanceStreamAccountExecutable(ctx, p.ParentPID)
+	if err != nil || w.current(ctx) != nil {
 		w.Close()
 		return nil, errLoadBalanceStreamAccount
 	}
