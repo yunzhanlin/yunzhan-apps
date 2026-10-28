@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24streamcandidate13-linux-amd64.tar.gz",
-    "archive_sha256": "97235a5a6f4ba56cea2ca510b6c06b1b88258fed82331b41ff45767437691c5e",
-    "frozen_inputs_sha256": "4b38dc65d2ed21c343b76d8e9115d5c242f451d7b9e5d8a313338bbb96439084"
+    "archive": "panel-0.1.0-dev.proapps24streamcandidate14-linux-amd64.tar.gz",
+    "archive_sha256": "cb54a09ab3aeb0f2ab3fc21ea1b4f994c6fc36390bcedad5289c4bd90ae1c478",
+    "frozen_inputs_sha256": "5f9ff11040f74f402f22f4b829ea959beba2da20b4faae9e0ff2fbfa3d583df2"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -801,7 +801,7 @@
     "internal/executor/app_module_report_record_linux.go": "e7e33bca21113f275277b836e8cdb46acdd886c1eae67cd054c62d51aee983fb",
     "internal/executor/app_module_report_record_linux_test.go": "b9ae5cd66d314076c487fb3c92cfc6ffcfbeb2f6d2e4c2706962314a687e3f38",
     "internal/executor/app_module_retrospective_write_linux.go": "14e2bb22cf05849b28dbff4c9bebf174fc2966373c01bbfcfc61a0f0a6a95fab",
-    "internal/executor/app_modules_linux.go": "38a368b1e6bf385aab0ebde2afd519f189080218fc71d861077376ac25b88e4b",
+    "internal/executor/app_modules_linux.go": "016ca021b9bddfb9684c638d5f19dd09da66c4eb5c06c9ce4e8b8beadbf267d8",
     "internal/executor/app_modules_linux_test.go": "cc5767df15190ba91dc2ea18c7109b22e64bb9d178ec70fdbf1fc5ba644940ad",
     "internal/executor/app_modules_other.go": "de04ad27514059b9b4ed027eed3d07a6203bb31a3e86f6a2f9487b2cf6fcb115",
     "internal/executor/app_native_linux.go": "cc9fc7460b99adb928e3be2c9a2fecaf4e1f916501bb4e7a5990fb1e15273839",
@@ -1323,6 +1323,8 @@
     "internal/executor/load_balance_stream_sockets_test.go": "1742496df98aa5c6bf538f0739dfbd5b248504204dcdc8edaf973b80e7b1d1ff",
     "internal/executor/load_balance_stream_start_linux.go": "a76563f4dbd5fc88e511b7355e38ee920b1b34920836403bbe56c47dd1b301e3",
     "internal/executor/load_balance_stream_start_linux_test.go": "9cc5ab24d55e5fad0ff061339b80f01e4cda8af65a7fd4170d4e11622cca5e36",
+    "internal/executor/load_balance_stream_status_linux.go": "efa0c65a2225fe661237e9f3b3f4400772e37fcf904d1e41785ce87369a41302",
+    "internal/executor/load_balance_stream_status_linux_test.go": "75cbed71f47f2e9d1ca29fc7e5c414ad247e088dd28e2ac44edc49be60b41079",
     "internal/executor/load_balance_stream_stop_evidence.go": "0a38ffb189d5ea337096b44e9e79c424cfca1b4bd143de978af814fc948c9783",
     "internal/executor/load_balance_stream_stop_evidence_test.go": "35cd32c4f7a3a59123ebf792757177f67a7d4a4ce74695228c13e82ae2969084",
     "internal/executor/load_balance_stream_stop_linux.go": "f203e2598750f47993ffe54e744e5781db8d7fb1631885418a28d6e03125048c",

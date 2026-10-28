@@ -93,6 +93,11 @@ func (s *Service) moduleInstalled(id string) bool {
 }
 
 func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareAppStatus {
+	if id == "load-balance" {
+		if status, native := s.loadBalanceStreamAppStatus(ctx); native {
+			return status
+		}
+	}
 	out := core.SoftwareAppStatus{ID: id, Detail: "未安装"}
 	if id == "website-statistics-v2" {
 		if _, err := os.Lstat(s.statisticsLogTransactionService().wafPendingPath()); !errors.Is(err, os.ErrNotExist) {
