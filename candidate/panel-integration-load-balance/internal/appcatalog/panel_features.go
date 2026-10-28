@@ -32,6 +32,10 @@ const DiskInodeUsageFeature = "disk-inode-usage-v1"
 // website-only inode feature must not authorize this wider capability.
 const DiskHostJobsFeature = "disk-host-jobs-v1"
 
+// Confirmed pre-start cancellation closes the same original admission only
+// after current-operator, lease and empty-scope verification.
+const DiskHostCancelSealFeature = "disk-host-cancel-seal-v1"
+
 // The2.3.1 browser tracker maintains the original30-minute activity contract
 // across long-lived tabs, storage denial and BFCache. A version-only package
 // cannot claim this fix on an older compiled collector.
@@ -54,7 +58,7 @@ func panelFeatureAvailable(feature string) bool {
 	if feature == LoadBalanceStreamFeature {
 		return runtime.GOOS == "linux" && officialCatalogChannel == "candidate"
 	}
-	return runtime.GOOS == "linux" && (feature == MemcachedUnixRetirementFeature || feature == MemcachedUnixFeature || feature == ApacheNativeBodySiteFeature || feature == PHPBoundedNativeBuildFeature || feature == PHPSecurity20261021Feature || feature == NativeMobileDeliveryFeature || feature == RuntimePackageVersionFeature || feature == WAFBoundHealthFeature || feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature || feature == DiskInodeUsageFeature || feature == DiskHostJobsFeature || feature == MemcachedDigestFeature || feature == AnalyticsSessionFeature || feature == HardeningJournalFeature || feature == IntrusionJournalFeature)
+	return runtime.GOOS == "linux" && (feature == MemcachedUnixRetirementFeature || feature == MemcachedUnixFeature || feature == ApacheNativeBodySiteFeature || feature == PHPBoundedNativeBuildFeature || feature == PHPSecurity20261021Feature || feature == NativeMobileDeliveryFeature || feature == RuntimePackageVersionFeature || feature == WAFBoundHealthFeature || feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature || feature == DiskInodeUsageFeature || feature == DiskHostJobsFeature || feature == DiskHostCancelSealFeature || feature == MemcachedDigestFeature || feature == AnalyticsSessionFeature || feature == HardeningJournalFeature || feature == IntrusionJournalFeature)
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
@@ -142,8 +146,18 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 				if len(manifest.RequiredPanelFeatures) != 2 || !inode || !host {
 					return errors.New("磁盘分析1.4须同时声明 inode 空间与独立全盘后台任务处理器")
 				}
+			case "1.4.1":
+				inode, host, cancel := false, false, false
+				for _, f := range manifest.RequiredPanelFeatures {
+					inode = inode || f == DiskInodeUsageFeature
+					host = host || f == DiskHostJobsFeature
+					cancel = cancel || f == DiskHostCancelSealFeature
+				}
+				if len(manifest.RequiredPanelFeatures) != 3 || !inode || !host || !cancel {
+					return errors.New("磁盘分析1.4.1须声明 inode、全盘任务与原取消收尾处理器")
+				}
 			default:
-				return errors.New("磁盘分析新格式仅允许固定完整版本1.3.0或1.4.0")
+				return errors.New("磁盘分析新格式仅允许固定完整版本1.3.0、1.4.0或1.4.1")
 			}
 		}
 	}
@@ -229,11 +243,14 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		if feature == AnalyticsSessionFeature && (manifest.ID != "website-analytics" || manifest.Version != "2.3.1" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("浏览器会话处理器要求仅属于website-analytics2.3.1")
 		}
-		if feature == DiskInodeUsageFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.3.0" && manifest.Version != "1.4.0" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
-			return errors.New("inode 空间处理器要求仅属于disk-analysis1.3.0或1.4.0")
+		if feature == DiskInodeUsageFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.3.0" && manifest.Version != "1.4.0" && manifest.Version != "1.4.1" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("inode 空间处理器要求仅属于disk-analysis1.3.0、1.4.0或1.4.1")
 		}
-		if feature == DiskHostJobsFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.4.0" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
-			return errors.New("全盘后台任务处理器仅属于disk-analysis1.4.0")
+		if feature == DiskHostJobsFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.4.0" && manifest.Version != "1.4.1" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("全盘后台任务处理器仅属于disk-analysis1.4.0或1.4.1")
+		}
+		if feature == DiskHostCancelSealFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.4.1" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("原取消收尾处理器仅属于disk-analysis1.4.1的固定功能管理目标")
 		}
 		if feature == PlatformMaintenanceFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.0" || manifest.Delivery.Target != manifest.ID) {
 			return errors.New("独立维护处理器要求仅属于platform-ops1.3.0")

@@ -153,6 +153,7 @@
           "platform-maintenance-v1",
           "disk-inode-usage-v1",
           "disk-host-jobs-v1",
+          "disk-host-cancel-seal-v1",
           "compose-memcached-digest-v1",
           "analytics-session-lifecycle-v1",
           "hardening-reversible-journal-v1",
@@ -385,6 +386,57 @@
                   {
                     "contains": {
                       "const": "disk-host-jobs-v1"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "disk-analysis"
+              },
+              "version": {
+                "const": "1.4.1"
+              },
+              "delivery": {
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "disk-analysis"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "enum": [
+                    "disk-inode-usage-v1",
+                    "disk-host-jobs-v1",
+                    "disk-host-cancel-seal-v1"
+                  ]
+                },
+                "allOf": [
+                  {
+                    "contains": {
+                      "const": "disk-inode-usage-v1"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "disk-host-jobs-v1"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "disk-host-cancel-seal-v1"
                     }
                   }
                 ]
@@ -1281,6 +1333,32 @@
                   "const": "disk-host-jobs-v1"
                 }
               }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": ["id", "version"],
+        "properties": {
+          "id": {"const": "disk-analysis"},
+          "version": {"const": "1.4.1"}
+        }
+      },
+      "then": {
+        "required": ["required_panel_features"],
+        "properties": {
+          "required_panel_features": {
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "enum": ["disk-inode-usage-v1", "disk-host-jobs-v1", "disk-host-cancel-seal-v1"]
+            },
+            "allOf": [
+              {"contains": {"const": "disk-inode-usage-v1"}},
+              {"contains": {"const": "disk-host-jobs-v1"}},
+              {"contains": {"const": "disk-host-cancel-seal-v1"}}
             ]
           }
         }

@@ -19,7 +19,7 @@ func TestHostSelectionClosedExactStringsAndNoAuthorityExpansion(t *testing.T) {
 	if err != nil || in != f {
 		t.Fatal(in, err)
 	}
-	for _, replace := range [][2]string{{`"mount_id"`, `"Mount_Id"`}, {`"mount_id":"9007199254740993"`, `"mount_id":9007199254740993`}, {`"mount_id":"9007199254740993"`, `"mount_id":null`}, {`"mount_id":"9007199254740993"`, `"mount_id":"9007199254740993","mount_id":"9007199254740993"`}, {`"app_version":"1.4.0"`, `"app_version":"1.3.0"`}} {
+	for _, replace := range [][2]string{{`"mount_id"`, `"Mount_Id"`}, {`"mount_id":"9007199254740993"`, `"mount_id":9007199254740993`}, {`"mount_id":"9007199254740993"`, `"mount_id":null`}, {`"mount_id":"9007199254740993"`, `"mount_id":"9007199254740993","mount_id":"9007199254740993"`}, {`"app_version":"` + HostAppVersion + `"`, `"app_version":"1.3.0"`}} {
 		if _, err := DecodeSelection([]byte(strings.Replace(string(raw), replace[0], replace[1], 1))); !errors.Is(err, ErrSelection) {
 			t.Fatal("alias/null/numeric/duplicate/old version accepted")
 		}
@@ -91,5 +91,31 @@ func TestHostLaunchIsFixedNoShellOrSandboxSubstitution(t *testing.T) {
 	}
 	if _, err := LaunchArguments(id+";id", "/opt/panel/bin/panel-executor", false); !errors.Is(err, ErrLaunch) {
 		t.Fatal("unit command injection accepted")
+	}
+}
+
+func TestHostVersionPairRetainsOriginalRequestBytes(t *testing.T) {
+	for _, version := range []string{PreviousHostAppVersion, HostAppVersion} {
+		in := Request{Format: 1, JobID: strings.Repeat("d", 32), ActorID: strings.Repeat("e", 32), AccessRevision: "1", Selection: selectionFixture()}
+		in.Selection.AppVersion = version
+		raw, err := json.Marshal(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := DecodeRequest(raw)
+		if err != nil || decoded != in {
+			t.Fatal("fixed original host revision rejected or rebound", version, err)
+		}
+		again, err := json.Marshal(decoded)
+		if err != nil || string(again) != string(raw) {
+			t.Fatal("original request bytes normalized during version compatibility", version)
+		}
+	}
+	for _, version := range []string{"1.3.0", "1.4", "1.4.0-compat1", "1.4.1-rc1", "1.4.1-compat1", "1.4.2", "2.0.0"} {
+		in := selectionFixture()
+		in.AppVersion = version
+		if ValidateSelection(in) == nil {
+			t.Fatal("unsupported host version acquired authority", version)
+		}
 	}
 }

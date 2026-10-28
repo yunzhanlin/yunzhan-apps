@@ -5,6 +5,7 @@ import {officialCatalogBaseURL} from '../tools/official-channel.mjs';
 import {candidateSource} from '../tools/candidate-source.mjs';
 import {createHash,createPublicKey,verify} from 'node:crypto';
 import {readPreStreamPublication} from './helpers/pre-stream-publication.mjs';
+import {schemaBeforeDiskCancel} from './helpers/disk-cancel-schema.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 
 test('publisher channels are two closed official paths without arbitrary URL or fallback',()=>{
@@ -27,7 +28,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
-  assert.deepEqual(changes,['load-balance']);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');
+  assert.deepEqual(changes,['load-balance','disk-analysis']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
   assert.equal(source.apps.find(a=>a.id==='load-balance').version,'1.9.0');
   for(const item of catalog.apps)assert.equal(item.package_url,`${officialCatalogBaseURL('candidate')}/dist/apps/${item.id}/${item.version}/manifest.json`);
   for(const changed of [{...patch,channel:'https://untrusted.invalid'}, {...patch,apps:[patch.apps[0],patch.apps[0]]}, {...patch,apps:[{...patch.apps[0],id:'unknown-application'}]}, {...patch,key:'untrusted'}])assert.throws(()=>candidateSource(stable,changed));
@@ -40,5 +41,6 @@ test('both real signatures are valid while stable publication remains byte-ident
     const raw=await read(prefix+'dist/catalog-v1.json'),bundle=JSON.parse(await read(prefix+'signatures/catalog-v1.bundle.json'));
     assert.equal(bundle.catalog,raw);assert(verify(null,Buffer.from(raw),createPublicKey(key),Buffer.from(bundle.signature,'base64')));
   }
-  for(const name of ['registry/apps.json','schema/app.schema.json','dist/catalog-v1.json','signatures/catalog-v1.sig','signatures/catalog-v1.bundle.json','signatures/catalog-v1.pub.pem'])assert.equal(await read(name),readPreStreamPublication(name));
+  for(const name of ['registry/apps.json','dist/catalog-v1.json','signatures/catalog-v1.sig','signatures/catalog-v1.bundle.json','signatures/catalog-v1.pub.pem'])assert.equal(await read(name),readPreStreamPublication(name));
+  assert.deepEqual(schemaBeforeDiskCancel(await read('schema/app.schema.json')),JSON.parse(readPreStreamPublication('schema/app.schema.json')));
 });

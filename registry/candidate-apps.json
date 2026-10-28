@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-10-27T03:14:46Z",
+  "generated_at": "2026-10-28T22:20:50Z",
   "apps": [
     {
       "schema_version": 1,
@@ -54,6 +54,61 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "disk-analysis",
+      "name": "磁盘分析 · Disk Analysis",
+      "category": "professional",
+      "version": "1.4.1",
+      "summary": "开发候选：保留本地挂载子树只读扫描；已确认的快速取消会核对并收尾原任务，兼容读取历史 1.4.0 任务、结果及原权限绑定。需要提供原取消收尾能力的新面板；完整发行版和双架构实装验收进行中。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "disk-analysis",
+        "manage_route": "app-modules"
+      },
+      "required_panel_features": [
+        "disk-inode-usage-v1",
+        "disk-host-jobs-v1",
+        "disk-host-cancel-seal-v1"
+      ],
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "保留网站范围分析与目录下钻，本地挂载子树后台扫描",
+        "按设备与 inode 去重的分配块、硬链接、逻辑大小和稀疏候选",
+        "不跨子挂载、不跟随链接、不打开特殊文件或读取文件内容",
+        "文件系统真实容量、保留块、inode 与挂载身份核对",
+        "独立受限 worker：CPU20%、内存512MiB、最多1000万项/512层",
+        "最长30分钟与有界结果，未知和不完整不冒充零或成功",
+        "当前完整管理员及明确安装版本/实例/签名清单绑定",
+        "独立原任务进度、只读找回原请求，不自动重发扫描",
+        "原身份绑定取消；已确认快速取消经当前权限、原任务租约及空闲 cgroup 核对后收尾",
+        "中断任务显式元数据收尾，保留失败证据和原操作者",
+        "大文件排行、目录分布及精确整数 JSON 导出",
+        "只读开发候选，不含清理删除或完整商用资格声明"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/disk-analysis"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
       }
     }
   ]

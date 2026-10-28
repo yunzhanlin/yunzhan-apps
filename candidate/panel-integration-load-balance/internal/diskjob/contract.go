@@ -15,8 +15,16 @@ import (
 	"local/panel/internal/diskusage"
 )
 
-const HostAppVersion = "1.4.0" // Fixed host capability; never proof of an installed signed app.
+const HostAppVersion = "1.4.1" // Fixed host capability; never proof of an installed signed app.
+const PreviousHostAppVersion = "1.4.0"
 const HostFeature = "disk-host-jobs-v1"
+
+// The original1.4.0 request bytes and closed receipts remain readable. This
+// exact pair does not admit aliases, future labels or a new installation.
+func HostAppVersionSupported(version string) bool {
+	return version == HostAppVersion || version == PreviousHostAppVersion
+}
+
 const ActiveJobsMax = 128
 
 var ErrSelection = errors.New("全盘任务的宿主视图、范围或安装身份无效")
@@ -79,7 +87,7 @@ func RelativeDirectory(value string) bool {
 }
 
 func ValidateSelection(in Selection) error {
-	if ValidateHost(Host{in.BootID, in.NamespaceID}) != nil || !CanonicalInteger(in.MountID, true) || !ValidSHA(in.MountSHA) || !RelativeDirectory(in.Directory) || in.AppVersion != HostAppVersion || !ValidID(in.InstallationID) || !ValidSHA(in.AppSHA) {
+	if ValidateHost(Host{in.BootID, in.NamespaceID}) != nil || !CanonicalInteger(in.MountID, true) || !ValidSHA(in.MountSHA) || !RelativeDirectory(in.Directory) || !HostAppVersionSupported(in.AppVersion) || !ValidID(in.InstallationID) || !ValidSHA(in.AppSHA) {
 		return ErrSelection
 	}
 	return nil

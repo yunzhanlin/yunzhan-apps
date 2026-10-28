@@ -78,7 +78,7 @@ func TestHostProducerImplicitInstallAndAlternateViewDoNotOptInto14(t *testing.T)
 	s := New(Config{SystemRoot: base, SecurityDir: filepath.Join(base, "security")})
 	calls := 0
 	s.Config.Run = func(context.Context, string, ...string) (string, error) { calls++; return "", nil }
-	for _, version := range []string{"", "1.4.0", "1.4", "1.4.0-rc1"} {
+	for _, version := range []string{"", "1.4.0", "1.4.1", "1.4", "1.4.0-rc1", "1.4.1-rc1"} {
 		if err := s.appModuleLifecycleVersion(t.Context(), "disk-analysis", "install", nil, version, func(string) {}); err == nil {
 			t.Fatal("implicit installation/alternate root opted into host authority", version)
 		}
@@ -98,7 +98,9 @@ func TestHostProducerInstalledEpochIsVersionSpecificAndNeverRepaired(t *testing.
 	}{
 		{"1.3.0", "", true}, {"1.3.0", strings.Repeat("a", 32), false},
 		{"1.4.0", "", false}, {"1.4.0", "invalid", false}, {"1.4.0", strings.Repeat("a", 32), true},
+		{"1.4.1", "", false}, {"1.4.1", "invalid", false}, {"1.4.1", strings.Repeat("a", 32), true},
 		{"1.4.0-rc1", strings.Repeat("a", 32), false},
+		{"1.4.1-rc1", strings.Repeat("a", 32), false}, {"1.4.2", strings.Repeat("a", 32), false},
 	} {
 		record := map[string]any{"id": "disk-analysis", "version": item.version, "settings": map[string]any{}}
 		if item.epoch != "" {

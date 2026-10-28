@@ -48,9 +48,10 @@ func (s *Service) diskHostLifecycleBarrier(ctx context.Context) (io.Closer, erro
 }
 
 func (s *Service) diskHostLifecycleNeeded(action, selected string) bool {
-	if action == "install" && selected == diskjob.HostAppVersion {
+	if action == "install" && diskjob.HostAppVersionSupported(selected) {
 		return true
 	}
 	record, err := s.moduleInstalledRecord("disk-analysis")
-	return err == nil && record["version"] == diskjob.HostAppVersion
+	version, _ := record["version"].(string)
+	return err == nil && diskjob.HostAppVersionSupported(version)
 }

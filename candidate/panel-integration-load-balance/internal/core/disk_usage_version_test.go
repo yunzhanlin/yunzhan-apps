@@ -7,7 +7,7 @@ import (
 )
 
 func TestDiskUsageImplementedVersionAuthorizesExactNewPackageAndRejectsAliases(t *testing.T) {
-	if DiskAnalysisAppVersion != "1.4.0" {
+	if DiskAnalysisAppVersion != "1.4.1" {
 		t.Fatal("candidate handler version is not the fixed1.4 capability")
 	}
 	if DiskAnalysisAppVersion != diskjob.HostAppVersion {
@@ -19,12 +19,12 @@ func TestDiskUsageImplementedVersionAuthorizesExactNewPackageAndRejectsAliases(t
 	if got := SoftwareImplementationVersion("disk-analysis"); got != DiskAnalysisAppVersion {
 		t.Fatalf("actual bounded host handler version is not advertised: %q", got)
 	}
-	for _, version := range []string{"1.0", "1.2.0", "1.3.0", "1.4.0"} {
+	for _, version := range []string{"1.0", "1.2.0", "1.3.0", "1.4.0", "1.4.1"} {
 		if err := ValidateSoftwareUpdate("disk-analysis", version); err != nil {
 			t.Errorf("implemented exact/legacy version %q refused: %v", version, err)
 		}
 	}
-	for _, version := range []string{"", "invalid", "1.3", "1.3.0.0", "1.3.0-compat1", "1.3.0-rc1", "1.3.1", "1.4", "1.4.0.0", "1.4.0-rc1", "1.4.0-compat1", "1.4.1", "2.0.0"} {
+	for _, version := range []string{"", "invalid", "1.3", "1.3.0.0", "1.3.0-compat1", "1.3.0-rc1", "1.3.1", "1.4", "1.4.0.0", "1.4.0-rc1", "1.4.0-compat1", "1.4.1-rc1", "1.4.1-compat1", "1.4.2", "2.0.0"} {
 		if err := ValidateSoftwareUpdate("disk-analysis", version); err == nil {
 			t.Errorf("unsupported or alias version %q accepted", version)
 		}

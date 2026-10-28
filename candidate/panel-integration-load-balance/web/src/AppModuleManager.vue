@@ -29,6 +29,7 @@ import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userMa
 import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
 import PlatformMaintenance from './PlatformMaintenance.vue';
 import HostDiskWorkspace from './HostDiskWorkspace.vue';
+import { hostDiskSupportedVersion } from './hostDisk';
 import LoadBalanceStreamWorkspace from './LoadBalanceStreamWorkspace.vue';
 type API = <T>(
   path: string,
@@ -431,7 +432,7 @@ async function show(id: string) {
     installed.value = !installedUnknown.value && page.status.installed === true;
     installedVersion.value = installed.value && typeof page.status.version==='string' ? page.status.version : '';
     installedInstance.value = installed.value && typeof page.status.installation_id==='string' && /^[a-f0-9]{32}$/.test(page.status.installation_id) ? page.status.installation_id : '';
-    if(id==='disk-analysis' && installedVersion.value==='1.4.0') activeTab.value='host-disk';
+    if(id==='disk-analysis' && hostDiskSupportedVersion(installedVersion.value)) activeTab.value='host-disk';
     healthy.value = installed.value && page.status.healthy === true;
     if (installedUnknown.value) error.value = "应用安装身份或状态无法核对；未自动运行、安装或展示原报告";
     reportStateUnknown.value = page.report_state_unknown === true;

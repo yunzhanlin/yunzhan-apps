@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { hostDiskAllowed, hostDiskBase as base, hostDiskVersion, hostSelection, validHostState, validHostJob, validHostReply,
+import { hostDiskAllowed, hostDiskBase as base, hostDiskSupportedVersion, hostSelection, validHostState, validHostJob, validHostReply,
   sameHostSelection, hostTerminal, hostReport, hostBytes, hostCount, hostCapacityValue, hostDrillDirectory, hostStateLabel, hostReasonLabels, hostID,
   type HostDiskAPI, type HostDiskState, type HostJob, type HostReply, type HostRecovery, type HostSelection, type HostUsageRow } from './hostDisk';
 import type { AccessPlan } from './menuPermissions';
@@ -15,7 +15,7 @@ const mounts = computed(() => state.value?.inventory?.inventory.mounts ?? []);
 const visibleMounts = computed(() => mounts.value.filter(m => `${m.mount_point} ${m.filesystem} ${m.mount_id}`.toLocaleLowerCase().includes(mountFilter.value.toLocaleLowerCase())));
 const mount = computed(() => mounts.value.find(m => m.mount_id === mountID.value));
 const selection = computed(() => hostSelection(state.value, mountID.value, directory.value));
-const enabled = computed(() => allowed.value && props.installed && props.installedVersion === hostDiskVersion && !!state.value?.inventory
+const enabled = computed(() => allowed.value && props.installed && hostDiskSupportedVersion(props.installedVersion) && !!state.value?.inventory
   && state.value.installation_id === props.installationId && state.value.app_version === props.installedVersion);
 const selected = computed(() => jobs.value.find(j => j.id === selectedID.value));
 const report = computed(() => hostReport(reply.value));
@@ -163,7 +163,7 @@ onBeforeUnmount(clear);
       <header class="disk-heading"><div><h3>主机磁盘分析</h3><p>挂载点独立扫描 · 文件与目录排行 · 可核对的后台任务</p></div><el-button :disabled="busy" @click="refresh">只读刷新清单与原任务</el-button></header>
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
       <p v-if="message" role="status" class="disk-notice">{{ message }}</p>
-      <el-alert v-if="!installed || installedVersion!==hostDiskVersion" title="全盘后台任务需要明确更新并核对磁盘分析 1.4.0 与对应面板能力。此页不自动安装或更新；现有网站目录分析继续独立使用。" type="warning" :closable="false" />
+      <el-alert v-if="!installed || !hostDiskSupportedVersion(installedVersion)" title="请先安装或更新磁盘分析，并核对当前应用版本和面板的全盘任务能力。" type="warning" :closable="false" />
       <el-alert v-else-if="state && !enabled" title="应用安装实例或签名清单与当前页面不一致，请重新打开并核对。已暂停新扫描，原任务仅只读查询。" type="warning" :closable="false" />
       <div v-if="pending" class="disk-pending" role="status"><strong>原提交回执待核对</strong><p>原提交标识：{{ pending.key }}。没有自动重试。关闭页面不会取消服务器任务；重开后先读取历史和维护清单。</p><el-button :disabled="busy" @click="reconcileSubmission">只读查询原提交</el-button><el-button :disabled="busy || !enabled" @click="submitOriginal">显式继续提交同一原请求</el-button></div>
       <el-tabs v-model="tab">

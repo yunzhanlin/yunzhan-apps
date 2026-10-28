@@ -15,7 +15,7 @@ import (
 // Actual status-builder/HTTP decoder fixtures, not installed update evidence.
 func TestDiskUsageRegistryStatusDistinguishesLegacyLatestAndMissingVersions(t *testing.T) {
 	item := appcatalog.CatalogItem{ID: "disk-analysis", Version: DiskAnalysisAppVersion, Provider: "panel-module", Target: "disk-analysis", Stage: "ready"}
-	for _, version := range []string{"1.0", "1.2.0", "1.3.0", DiskAnalysisAppVersion, ""} {
+	for _, version := range []string{"1.0", "1.2.0", "1.3.0", "1.4.0", DiskAnalysisAppVersion, ""} {
 		t.Run(version, func(t *testing.T) {
 			executor := registryTestExecutor(t, func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
@@ -60,7 +60,7 @@ func TestDiskUsageRegistryPlatformGateKeepsFixedVersionAndArchitectureBoundaries
 			}
 		}
 	}
-	for _, version := range []string{"1.3", "1.3.0-compat1", "1.4", "1.4.0.0", "1.4.0-rc1", "1.4.1", "1.5.0"} {
+	for _, version := range []string{"1.3", "1.3.0-compat1", "1.4", "1.4.0.0", "1.4.0-rc1", "1.4.1-rc1", "1.4.2", "1.5.0"} {
 		bad := item
 		bad.Version = version
 		if ok, _ := registrySupportOn(bad, "debian-13", "amd64"); ok {

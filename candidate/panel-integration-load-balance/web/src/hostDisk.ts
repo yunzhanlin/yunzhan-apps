@@ -1,6 +1,7 @@
 import { menuPermissionIDs, validAccessPlan, type AccessPlan } from './menuPermissions.ts';
 
-export const hostDiskVersion = '1.4.0';
+export const hostDiskVersion = '1.4.1';
+export const hostDiskSupportedVersion = (version: unknown): boolean => version === hostDiskVersion || version === '1.4.0';
 export const hostDiskBase = '/software/disk-analysis/host';
 export type HostDiskAPI = <T>(path: string, method?: string, body?: unknown, key?: string, signal?: AbortSignal) => Promise<T>;
 export interface HostMount {
@@ -65,14 +66,14 @@ export function hostPath(v: unknown): v is string {
 export function hostRelative(v: unknown): v is string { return v === '' || typeof v === 'string' && !v.startsWith('/') && hostPath('/' + v); }
 export function validHostSelection(v: unknown): v is HostSelection {
   return object(v) && boot(v.boot_id) && namespace(v.mount_namespace_id) && positive(v.mount_id) && sha(v.mount_binding_sha256)
-    && hostRelative(v.relative_directory) && v.app_version === hostDiskVersion && hostID(v.installation_id) && sha(v.app_manifest_sha256);
+    && hostRelative(v.relative_directory) && hostDiskSupportedVersion(v.app_version) && hostID(v.installation_id) && sha(v.app_manifest_sha256);
 }
 const selectionKeys = ['boot_id','mount_namespace_id','mount_id','mount_binding_sha256','relative_directory','app_version','installation_id','app_manifest_sha256'] as const;
 export function sameHostSelection(a: HostSelection, b: HostSelection): boolean { return selectionKeys.every(k => a[k] === b[k]); }
 export function validHostState(v: unknown): v is HostDiskState {
   if (!object(v) || v.format !== 1 || typeof v.installed !== 'boolean' || typeof v.app_version !== 'string') return false;
   if (!v.installed) return v.app_version === '' && v.installation_id === '' && v.app_manifest_sha256 === '' && v.inventory === null;
-  if (v.app_version !== hostDiskVersion) return v.installation_id === '' && v.app_manifest_sha256 === '' && v.inventory === null;
+  if (!hostDiskSupportedVersion(v.app_version)) return v.installation_id === '' && v.app_manifest_sha256 === '' && v.inventory === null;
   const i = v.inventory?.inventory, h = v.inventory?.host;
   return hostID(v.installation_id) && sha(v.app_manifest_sha256) && object(h) && boot(h.boot_id) && namespace(h.mount_namespace_id)
     && object(i) && i.format === 1 && i.mount_list_complete === true && i.snapshot_consistent === false && sha(i.binding_sha256)
@@ -89,7 +90,7 @@ export function validHostState(v: unknown): v is HostDiskState {
       && (!m.path_actionable || hostPath(m.mount_point) && hostPath(m.filesystem_root)));
 }
 export function hostSelection(state: HostDiskState | undefined, id: string, directory: string): HostSelection | undefined {
-  if (!validHostState(state) || state.app_version !== hostDiskVersion || !state.inventory || !hostRelative(directory)) return;
+  if (!validHostState(state) || !hostDiskSupportedVersion(state.app_version) || !state.inventory || !hostRelative(directory)) return;
   const m = state.inventory.inventory.mounts.find(m => m.mount_id === id);
   if (!m || m.filesystem_class !== 'local' || !m.path_actionable) return;
   return { boot_id: state.inventory.host.boot_id, mount_namespace_id: state.inventory.host.mount_namespace_id, mount_id: m.mount_id, mount_binding_sha256: m.binding_sha256, relative_directory: directory,

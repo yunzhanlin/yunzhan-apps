@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as h from '../web/src/hostDisk.ts';
 import {access,state,mount,selection,job,reply,finishedReply,capacity} from './host-disk-fixture.mjs';
+test('fixed original1.4.0 history remains unchanged while1.4.1 is available',()=>{
+ for(const version of ['1.4.0','1.4.1']){const original=structuredClone(finishedReply);original.job.request.selection.app_version=version;original.result.request.selection.app_version=version;const before=JSON.stringify(original);assert(h.validHostReply(original,original.job));assert.equal(JSON.stringify(original),before);const current=structuredClone(state);current.app_version=version;assert(h.validHostState(current));assert.equal(h.hostSelection(current,'31','')?.app_version,version);}
+ for(const version of ['1.4.0-compat1','1.4.1-rc1','1.4.2']){const original=structuredClone(job);original.request.selection.app_version=version;assert.equal(h.validHostJob(original),false);}
+});
+
 test('UI candidate capability matches both fixed program gates without claiming installation',()=>{
  const core=readFileSync(new URL('../internal/core/software_apps.go',import.meta.url),'utf8');
  const worker=readFileSync(new URL('../internal/diskjob/contract.go',import.meta.url),'utf8');

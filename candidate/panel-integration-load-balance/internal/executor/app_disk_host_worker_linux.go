@@ -140,7 +140,7 @@ func (r *diskHostCoreReader) authority(ctx context.Context, in diskjob.Request) 
 		return diskHostFailure(diskHostAuthorityReceipt, ctx, errDiskHostWorker)
 	}
 	installed, err := New(Config{}).moduleInstalledRecord("disk-analysis")
-	if err != nil || installed["version"] != diskjob.HostAppVersion || installed["installation_id"] != in.Selection.InstallationID || core.SoftwareImplementationVersion("disk-analysis") != diskjob.HostAppVersion {
+	if err != nil || installed["version"] != in.Selection.AppVersion || !diskjob.HostAppVersionSupported(in.Selection.AppVersion) || installed["installation_id"] != in.Selection.InstallationID || core.SoftwareImplementationVersion("disk-analysis") != diskjob.HostAppVersion {
 		return diskHostFailure(diskHostAuthorityInstallation, ctx, errDiskHostWorker)
 	}
 	if !r.current() {

@@ -5,6 +5,7 @@ import{exactReviewedPreMemcachedRepository,predecessorScope}from'../tools/review
 import{historicalPHPBoundedCases}from'./reviewed-memcached-unix-inputs.mjs';import{phpBoundedCases}from'../tools/php-bounded-fixtures.mjs';
 import{originalReviewedMemcachedUnixTest,reviewedMemcachedUnixReaders}from'./reviewed-memcached-unix-test-frames.mjs';
 import{prepareFiveAppHistoricalWorkflow,originalReviewedFiveAppHistoricalWorkflow,original34WorkflowSHA,original34RootCalls,currentF48ABICommand,originalF47NegativeCommand,currentUnixSchemaCommand}from'./reviewed-five-app-workflow.mjs';
+import{schemaBeforeDiskCancel}from'./helpers/disk-cancel-schema.mjs';
 const root=fileURLToPath(new URL('../',import.meta.url)),read=n=>fs.readFileSync(path.join(root,n)),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),oldScope=predecessorScope+'/',sourceScope='registry/reviewed-distributors/before-memcached-unix24blfi/',expectedChanges=['memcached','php-82','php-83','php-84','php-85'];
 test('actual original-key current50 changes exactly five packages, retains other45 and every previous signed endpoint',()=>{
  const raw=read('dist/catalog-v1.json'),catalog=JSON.parse(raw),old=json(oldScope+'dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem'),bundle=json('signatures/catalog-v1.bundle.json');
@@ -24,7 +25,7 @@ test('all80 current50 historical and malformed Unix fixtures keep exact JS contr
  for(const c of cases)assert.equal(validateManifest(c.manifest).length===0,c.valid,c.name);
 });
 test('new schema adds only the two Unix capabilities one closed branch and three scoped guards; all older schema semantics remain exact',()=>{
- const before=json(sourceScope+'schema/app.schema.json'),schema=json('schema/app.schema.json'),reversed=structuredClone(schema),flags=['compose-memcached-unix-v1','compose-memcached-retirement-v1'];
+ const before=json(sourceScope+'schema/app.schema.json'),schema=schemaBeforeDiskCancel(read('schema/app.schema.json')),reversed=structuredClone(schema),flags=['compose-memcached-unix-v1','compose-memcached-retirement-v1'];
  assert.equal(schema.allOf.length,before.allOf.length+3);
  const branches=schema.allOf[0].then.oneOf.filter(c=>c.properties?.id?.const==='memcached'&&c.properties?.version?.const==='1.6.45-compat4');assert.equal(branches.length,1);assert.deepEqual(branches[0].properties.stage.enum,['integration','ready']);
  reversed.properties.required_panel_features.items.enum=reversed.properties.required_panel_features.items.enum.filter(v=>!flags.includes(v));

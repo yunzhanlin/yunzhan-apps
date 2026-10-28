@@ -429,7 +429,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	if id == "platform-ops" && selectedVersion == core.PlatformMaintenanceAppVersion {
 		installedRecord["installation_id"] = core.ID()
 	}
-	if id == "disk-analysis" && selectedVersion == diskjob.HostAppVersion {
+	if id == "disk-analysis" && diskjob.HostAppVersionSupported(selectedVersion) {
 		installedRecord["installation_id"] = core.ID()
 	}
 	if action == "configure" {
@@ -498,7 +498,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		}
 		return s.applyHardeningOperation(ctx, old.Settings, "update", add)
 	}
-	if id == "disk-analysis" && (version == diskjob.HostAppVersion || s.diskHostLifecycleNeeded("update", version)) {
+	if id == "disk-analysis" && (diskjob.HostAppVersionSupported(version) || s.diskHostLifecycleNeeded("update", version)) {
 		lease, err := s.diskHostLifecycleBarrier(ctx)
 		if err != nil {
 			return err
@@ -602,7 +602,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			return err
 		}
 		manifest["version"], manifest["updated_at"] = version, core.Now()
-		if id == "disk-analysis" && version == diskjob.HostAppVersion {
+		if id == "disk-analysis" && diskjob.HostAppVersionSupported(version) {
 			if status.Version != version {
 				manifest["installation_id"] = core.ID()
 			} else if instance, ok := manifest["installation_id"].(string); !ok || !core.ValidID(instance) {

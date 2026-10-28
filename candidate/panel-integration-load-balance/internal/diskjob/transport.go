@@ -85,7 +85,7 @@ func ValidateHostState(s HostState) error {
 		}
 		return nil
 	}
-	if s.AppVersion != HostAppVersion {
+	if !HostAppVersionSupported(s.AppVersion) {
 		if s.InstallationID != "" || s.AppSHA != "" || s.Inventory != nil {
 			return ErrSelection
 		}

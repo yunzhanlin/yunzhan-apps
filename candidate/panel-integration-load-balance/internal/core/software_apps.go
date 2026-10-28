@@ -85,7 +85,7 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 
 // Candidate capability implemented by this program. An installed app must still
 // pass its independent signed registry receipt and installation-instance checks.
-const DiskAnalysisAppVersion = "1.4.0"
+const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
 const IntrusionAppVersion = "1.1.0"
 
@@ -140,8 +140,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "disk-analysis" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && comparison >= 0 && version != "1.3.0" && version != DiskAnalysisAppVersion {
-			return errors.New("磁盘分析新版本仅允许固定完整版本1.3.0或1.4.0，拒绝别名或未审核修订")
+		if comparison, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && comparison >= 0 && version != "1.3.0" && version != "1.4.0" && version != DiskAnalysisAppVersion {
+			return errors.New("磁盘分析新版本仅允许固定完整版本1.3.0、1.4.0或1.4.1，拒绝别名或未审核修订")
 		}
 	}
 	if id == "platform-ops" {

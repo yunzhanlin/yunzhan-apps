@@ -141,6 +141,30 @@ func (a *Server) dispatchHostDisk(ctx context.Context, j HostDiskJob, actor stri
 	return current, false, err
 }
 
+// A confirmed cancellation that sent no signal may have won the startup race.
+// Close only its original admission using the existing current-operator and
+// Root lease/scope proof. An unconfirmed cancel reply never enters this path.
+func (a *Server) finishHostDiskConfirmedCancel(ctx context.Context, original HostDiskJob, actor string) (signaled, terminal bool, err error) {
+	if original.Request.ActorID != actor || original.Request.JobID != original.ID || original.State != "cancel_requested" || original.CancelState != "requested" {
+		return false, false, errHostDiskRecord
+	}
+	current, request, err := a.Store.PrepareHostDiskRecovery(ctx, original.ID, actor)
+	if err != nil || current.Request != original.Request {
+		return false, false, errHostDiskRecord
+	}
+	if request == nil {
+		return false, hostDiskTerminal(current.State), nil
+	}
+	var ack diskjob.RecoveryAck
+	if err := a.Executor.Call(ctx, "POST", "/v1/disk-host-jobs/recover", request, &ack); err != nil || diskjob.ValidateRecoveryAck(ack, original.Request) != nil {
+		return false, false, errHostDiskRecord
+	}
+	if _, err := a.Store.FinishHostDiskRecovery(ctx, *request, ack); err != nil {
+		return false, false, err
+	}
+	return ack.SignalRequested, ack.Closure != nil, nil
+}
+
 func (a *Server) diskHostTaskRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /api/software/disk-analysis/host/requests/{key}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		j, found, err := a.Store.HostDiskByRequest(r.Context(), r.PathValue("key"), u.ID)
@@ -215,7 +239,7 @@ func (a *Server) diskHostTaskRoutes(m *http.ServeMux) {
 		send(w, 202, map[string]any{"job": j, "replayed": replay, "dispatch_uncertain": uncertain, "terminal_verified": false})
 	}))
 	m.HandleFunc("POST /api/software/disk-analysis/host/jobs/{id}/cancel", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
-		ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
+		ctx, cancel := context.WithTimeout(r.Context(), 16*time.Second)
 		defer cancel()
 		j, err := a.Store.RequestHostDiskCancel(ctx, r.PathValue("id"), u.ID)
 		if err != nil {
@@ -223,17 +247,23 @@ func (a *Server) diskHostTaskRoutes(m *http.ServeMux) {
 			return
 		}
 		if j.State != "cancel_requested" {
-			send(w, 200, map[string]any{"job": j, "native_cancel_requested": false})
+			send(w, 200, map[string]any{"job": j, "native_cancel_requested": false, "terminal_verified": hostDiskTerminal(j.State)})
 			return
 		}
 		var ack diskjob.CancelAck
 		err = a.Executor.Call(ctx, "POST", "/v1/disk-host-jobs/cancel", j.Request, &ack)
 		uncertain := err != nil || diskjob.ValidateCancelAck(ack, j.Request) != nil
+		signaled, terminal := !uncertain && ack.SignalRequested, false
+		if !uncertain && !signaled {
+			var closeErr error
+			signaled, terminal, closeErr = a.finishHostDiskConfirmedCancel(ctx, j, u.ID)
+			uncertain = closeErr != nil
+		}
 		current, err := a.Store.HostDiskForActor(ctx, j.ID, u.ID)
 		if err != nil {
 			fail(w, 403, "原任务当前读取权限无法核对")
 			return
 		}
-		send(w, 202, map[string]any{"job": current, "cancel_uncertain": uncertain, "native_cancel_requested": !uncertain && ack.SignalRequested, "terminal_verified": false})
+		send(w, 202, map[string]any{"job": current, "cancel_uncertain": uncertain, "native_cancel_requested": !uncertain && signaled, "terminal_verified": !uncertain && terminal})
 	}))
 }

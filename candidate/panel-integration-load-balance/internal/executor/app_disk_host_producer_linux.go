@@ -86,12 +86,12 @@ func (s *Service) diskHostAppIdentity(ctx context.Context, reader *diskHostCoreR
 	if out.AppVersion == "" {
 		out.AppVersion = "1.0"
 	}
-	if out.AppVersion != diskjob.HostAppVersion {
+	if !diskjob.HostAppVersionSupported(out.AppVersion) {
 		return out, nil
 	}
 	out.InstallationID, _ = record["installation_id"].(string)
 	var version, target string
-	if reader.db.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='disk-analysis' AND scope='disk-analysis'").Scan(&version, &out.AppSHA, &target) != nil || version != diskjob.HostAppVersion || target != "disk-analysis" || !diskjob.ValidSHA(out.AppSHA) || !diskjob.ValidID(out.InstallationID) || core.SoftwareImplementationVersion("disk-analysis") != diskjob.HostAppVersion || !reader.current() {
+	if reader.db.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='disk-analysis' AND scope='disk-analysis'").Scan(&version, &out.AppSHA, &target) != nil || version != out.AppVersion || target != "disk-analysis" || !diskjob.ValidSHA(out.AppSHA) || !diskjob.ValidID(out.InstallationID) || core.SoftwareImplementationVersion("disk-analysis") != diskjob.HostAppVersion || !reader.current() {
 		return diskjob.HostState{}, errDiskHostWorker
 	}
 	return out, nil
@@ -119,7 +119,7 @@ func (s *Service) diskHostInventory(ctx context.Context, in diskjob.InventoryReq
 	if err != nil {
 		return state, err
 	}
-	if state.AppVersion != diskjob.HostAppVersion {
+	if !diskjob.HostAppVersionSupported(state.AppVersion) {
 		return state, guard()
 	}
 	lease, err := diskjob.InstanceLease(false)
