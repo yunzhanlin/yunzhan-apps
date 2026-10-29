@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -22,8 +23,8 @@ import (
 	"local/panel/internal/geodata"
 )
 
-// Explicitly synthetic availability isolates ABI/crypto/transport tests. The
-// production feature remains UNAVAILABLE until the Root lifecycle is complete.
+// Synthetic keys and availability isolate ABI/crypto/transport tests. Compiled
+// Linux availability still requires independent Root and installation checks.
 func countryChannelFixture(t *testing.T) (*Client, GeoDataEnvelope, string, []byte) {
 	t.Helper()
 	pub, key, err := ed25519.GenerateKey(rand.Reader)
@@ -66,17 +67,26 @@ func countryFixtureAuthority(t *testing.T, c *Client, in GeoDataEnvelope, appSHA
 	return a
 }
 
-func TestCountryChannelClosedABIAndProductionUnavailableUntilRootLifecycle(t *testing.T) {
+func TestCountryChannelClosedABIAndExactCompiledPlatformAvailability(t *testing.T) {
 	c, in, sha, _ := countryChannelFixture(t)
 	a := countryFixtureAuthority(t, c, in, sha)
 	if a.AppVersion() != "2.6.0" || a.AppSHA256() != sha {
 		t.Fatal("application binding differs")
 	}
-	if panelFeatureAvailable(CountryDataFeature) {
-		t.Fatal("partial country implementation prematurely advertised")
+	want := runtime.GOOS == "linux"
+	if panelFeatureAvailable(CountryDataFeature) != want || CountryDataSupported() != want {
+		t.Fatal("country capability differs from its fixed compiled platform")
 	}
-	if got, err := c.VerifyCountryDataEnvelope(in, "2.6.0", sha, time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), nil); err == nil || !reflect.DeepEqual(got, CountryDataAuthority{}) {
-		t.Fatal("production accepted unfinished Root capability", got, err)
+	got, err := c.VerifyCountryDataEnvelope(in, "2.6.0", sha, time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), nil)
+	if want {
+		if err != nil || got.AppVersion() != a.AppVersion() || got.AppSHA256() != a.AppSHA256() || got.Data().SHA256() != a.Data().SHA256() {
+			t.Fatal("compiled Linux handler failed original exact signed authority", err)
+		}
+	} else if err == nil || !reflect.DeepEqual(got, CountryDataAuthority{}) {
+		t.Fatal("unsupported platform accepted country authority", err)
+	}
+	if got, err := c.verifyCountryDataEnvelope(in, "2.6.0", sha, time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC), nil, func(string) bool { return false }); err == nil || !reflect.DeepEqual(got, CountryDataAuthority{}) {
+		t.Fatal("missing compiled capability accepted signed data", err)
 	}
 	var m Manifest
 	if json.Unmarshal(in.AppManifest, &m) != nil {

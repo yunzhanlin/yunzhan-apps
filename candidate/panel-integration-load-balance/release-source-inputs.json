@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r4-linux-amd64.tar.gz",
-  "archive_sha256": "62069435c286744d027ea2086c87e2743f0f676c6ccd6d5ee5713c8e36aef820",
-  "frozen_inputs_sha256": "e94f0e0884ebb40e6f55b43ddc251effd50e169b64521b0296fbe8f0a812aff8",
+  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r5-linux-amd64.tar.gz",
+  "archive_sha256": "bf37291fa0291a39304703a980fac1d2f132d4ea8f7c64789dd99647c76eccc8",
+  "frozen_inputs_sha256": "4a1006f443296278a39b0943a5804b87ac066e1963b8cfc3b34c5cd5c083e4f0",
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
     "cmd/executor/shutdown.go": "a8faac2abce4b6c5a63cb174ede1ad5ab4a9c61c6f63c480c925c37ff70d3aff",
@@ -81,7 +81,7 @@
     "internal/appcatalog/catalog.go": "3f88d51d1ae95a3d2106db42bee284b18a0da42537b1d71bad528fbddbdcb5fd",
     "internal/appcatalog/catalog_test.go": "d64e936867a677ef21c5b255f54a2111ee27a514ede68c25c624f1aa22919e6b",
     "internal/appcatalog/country_data.go": "cb5fe3d42459d58a1152287f7ebdc031b8856da13e79a3fa7c6e68f72a9c56a8",
-    "internal/appcatalog/country_data_test.go": "6655acf9e93c1b4440de6c31a5143ef11455713e56e6767a663ef1c5e98221c1",
+    "internal/appcatalog/country_data_test.go": "e495937dc9faa3dfa60838c4b32653c4cfcbd461030b0e8aacc404cafd47faab",
     "internal/appcatalog/country_download.go": "6b3e4d876d6acc181daa8d51fed8d909a6900319c7ff80c2d2870dac6bc9a282",
     "internal/appcatalog/disk_cancel_seal_feature_test.go": "5839ce9a9ec4cc56b22921e958ce578373f92c10a3db096779c93e88d029685c",
     "internal/appcatalog/disk_host_features_test.go": "0b13e7d45390b6bde21b1a9a848b60e67a67a81937f31b7f0416dac882dc8dd7",
