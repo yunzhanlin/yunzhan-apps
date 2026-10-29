@@ -1,0 +1,74 @@
+name: actual native C34r4 AMD64 preserving installed Stats260 and real Nginx geography reporting
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - .github/workflows/native-module-c34r4-v2-install.yml
+      - scripts/native-module-c34r4-v2/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-module-c34r4-v2-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read the complete published original-key QA cohort without guest credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-module-c34r4-v2-assets"
+          ready=false
+          for attempt in $(seq 1 90); do
+            if gh release view qa-moduleparentcandidate34r4-20261030-qa2 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/country-release-status.json" 2>/dev/null && python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); sys.exit(0 if v["isDraft"] is False and v["isPrerelease"] is True else 1)' "$RUNNER_TEMP/country-release-status.json"; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          test "$ready" = true
+          gh release download qa-moduleparentcandidate34r4-20261030-qa2 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-module-c34r4-v2-assets"
+          gh release download qa-countrydownloadcancelcandidate33r1-20261030 --repo yunzhanlin/yunzhan-apps --pattern "panel-0.1.0-dev.proapps24countrydownloadcancelcandidate33r1-linux-amd64.tar.gz" --pattern "panel-0.1.0-dev.proapps24countrydownloadcancelcandidate33r1-linux-amd64.tar.gz.manifest" --pattern "panel-0.1.0-dev.proapps24countrydownloadcancelcandidate33r1-linux-amd64.tar.gz.sig" --dir "$RUNNER_TEMP/native-module-c34r4-v2-assets"
+          gh release download qa-moduleparentcandidate34r1-20261030-qa2 --repo yunzhanlin/yunzhan-apps --pattern "panel-0.1.0-dev.proapps24moduleparentcandidate34r1-linux-amd64.tar.gz" --pattern "panel-0.1.0-dev.proapps24moduleparentcandidate34r1-linux-amd64.tar.gz.manifest" --pattern "panel-0.1.0-dev.proapps24moduleparentcandidate34r1-linux-amd64.tar.gz.sig" --dir "$RUNNER_TEMP/native-module-c34r4-v2-assets"
+          python3 - "$RUNNER_TEMP/native-module-c34r4-v2-assets" <<'PY'
+          import hashlib, json, pathlib, sys
+          base = pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '5b3a00e977695916f98be4912dde04366c19766a35968bdf93163ced9a97a733'
+          manifest = json.loads((base / 'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256'] == 'e2800be6bf3da01db4548e7fc90bc88861a3ba5d7ca32284a72cdd72d66d2a46'
+          for name, digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name == name
+              assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
+          print('Both original-key programme cohorts and exact country QA helpers verified; no credentials in guest payload')
+          PY
+      - name: Prepare hardware guest tools while preserving existing host services
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Original C33r1 account and data, C34r1 Stats260 install, then C34r4 preserving that history and database with real Nginx geography reports
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-module-c34r4-v2-public"
+          sudo -n python3 -I -B scripts/native-module-c34r4-v2/kvm.py "$RUNNER_TEMP/native-module-c34r4-v2-assets" scripts/native-module-c34r4-v2 "$RUNNER_TEMP/native-module-c34r4-v2-public"
+      - name: Retain public proof and encrypted complete original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-module-c34r4-v2-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-module-c34r4-v2-public/
+          retention-days: 7
+          if-no-files-found: warn
