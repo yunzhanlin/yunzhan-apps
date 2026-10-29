@@ -167,10 +167,12 @@ func checkProgramUpgradeNativeUnits(ctx context.Context, run Command) error {
 	if err != nil {
 		return errors.New("native program unit inventory cannot be verified")
 	}
-	if err := decodeProgramQueueUnitsWithRuntimeProof(units, diskjob.ClosedScope, func(name string) bool {
+	if err := decodeProgramQueueUnitsWithCountryProof(units, diskjob.ClosedScope, func(name string) bool {
 		return closedStatisticsGeoFailedInstall(ctx, name, run)
 	}, func(name string) bool {
 		return closedRuntimeFailedInstall(ctx, name, run) || closedRuntimeCompileOOMInstall(ctx, name, run) || closedRuntimeSupersededCompileOOMInstall(ctx, name, run)
+	}, func(name string) bool {
+		return closedCountryFailedTask(ctx, name, run)
 	}); err != nil {
 		return err
 	}
@@ -196,6 +198,10 @@ func decodeProgramQueueUnitsWithTerminalProof(text string, closedDisk, closedGeo
 }
 
 func decodeProgramQueueUnitsWithRuntimeProof(text string, closedDisk, closedGeo, closedRuntime func(string) bool) error {
+	return decodeProgramQueueUnitsWithCountryProof(text, closedDisk, closedGeo, closedRuntime, nil)
+}
+
+func decodeProgramQueueUnitsWithCountryProof(text string, closedDisk, closedGeo, closedRuntime, closedCountry func(string) bool) error {
 	if len(text) > 64<<10 || !utf8.ValidString(text) || strings.ContainsAny(text, "\x00\r") {
 		return errors.New("invalid native program unit inventory")
 	}
@@ -220,6 +226,9 @@ func decodeProgramQueueUnitsWithRuntimeProof(text string, closedDisk, closedGeo,
 				completed = true
 			}
 			if _, valid := runtimeFailedUnitID(fields[0]); valid && closedRuntime != nil && closedRuntime(fields[0]) {
+				completed = true
+			}
+			if _, valid := countryFailedUnitID(fields[0]); valid && closedCountry != nil && closedCountry(fields[0]) {
 				completed = true
 			}
 		}

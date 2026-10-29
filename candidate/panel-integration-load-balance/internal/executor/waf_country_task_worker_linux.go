@@ -5,7 +5,6 @@ package executor
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -69,6 +68,7 @@ func RunWAFCountryDataJob(id string) error {
 	service := New(Config{})
 	cache, authority, admissionErr := service.authorizeWAFCountryData(ctx, id, request.ActorID, request.Selection, envelope)
 	var operationErr error
+	var interrupted *countryCachePlan
 	if admissionErr != nil {
 		operationErr = admissionErr
 		out.Error = statisticsGeoBoundedError(admissionErr)
@@ -80,31 +80,43 @@ func RunWAFCountryDataJob(id string) error {
 			operationErr = err
 			out.State = "needs_attention"
 			out.Error = statisticsGeoBoundedError(err)
-			// Observe this same still-owned operation. Only an independently
-			// re-read original commit is success; a proved uncommitted outcome
-			// closes failed while retaining partial bytes and an abort seal.
-			state, committed, settleErr := cache.settlePublicationError(ctx, plan)
-			if settleErr == nil {
-				out.State, out.Cache = state, committed
-				if state == "succeeded" {
-					operationErr, out.Error = nil, ""
-				}
-			} else {
-				out.Error = statisticsGeoBoundedError(fmt.Errorf("%v；原结果收尾尚未核对：%v", err, settleErr))
-			}
+			interrupted = &plan
 		} else {
 			out.State = "succeeded"
 			out.Cache = &entry
 		}
 	}
-	if out.Error == "" && out.State != "succeeded" {
-		out.Error = "原始国家数据任务结果待核对，未重放"
+	current := func(final context.Context) error {
+		if err := countryCheckOwnProcess(true); err != nil {
+			return err
+		}
+		if err := upgradeguard.CheckStartup(); err != nil {
+			return err
+		}
+		marker, err := countryTaskReadStarted(dir.Root, request)
+		if err != nil || marker != started {
+			return errors.New("国家数据原工作启动身份改变，未补建收尾")
+		}
+		if err := countryTaskLiveProcess(final, started); err != nil {
+			return err
+		}
+		// The original store guard captured the download context. Rebuild its
+		// complete signature/Core/instance authority against this bounded
+		// completion context; reusing it would still inherit cancellation.
+		// Reauthorization only reads metadata. It never fetches or dispatches.
+		refreshed, _, err := service.authorizeWAFCountryData(final, id, request.ActorID, request.Selection, envelope)
+		if err != nil {
+			return err
+		}
+		cache = refreshed
+		return nil
 	}
-	if !base.current() || !dir.current() {
-		return errors.New("国家数据原工作目录改变，原任务保留待核对")
+	out, err = completeCountryTask(ctx, base, dir, lock, request, out, &cache, interrupted, current)
+	if err != nil {
+		return err
 	}
-	if err := countryTaskPublishResult(ctx, dir, lock, request, out); err != nil {
-		return errors.New("国家数据业务结果可能已发生但原回执未持久确认；只核对原ID，不重放")
+	if out.State == "succeeded" {
+		return nil
 	}
 	return operationErr
 }

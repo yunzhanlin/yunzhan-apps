@@ -18,6 +18,18 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	  '"panel-waf-country@", "panel-waf-country-account@", ',
 	  '\tif err := r.wafCountryJobs(); err != nil {\n\t\treturn err\n\t}\n',
 	]){assert.equal(legacyQueues.split(addition).length,2);legacyQueues=legacyQueues.replace(addition,'');}
+	// Reverse only the independently proved country-failure hook. The four
+	// older callback protocols and every previous predicate keep their original
+	// hashes below; a changed whole-file digest cannot hide another exemption.
+	const oldCall='decodeProgramQueueUnitsWithRuntimeProof(units, diskjob.ClosedScope,',newCall='decodeProgramQueueUnitsWithCountryProof(units, diskjob.ClosedScope,';
+	assert.equal(legacyQueues.split(newCall).length,2);legacyQueues=legacyQueues.replace(newCall,oldCall);
+	const countryCallback='\t}, func(name string) bool {\n\t\treturn closedCountryFailedTask(ctx, name, run)\n';
+	assert.equal(legacyQueues.split(countryCallback).length,2);legacyQueues=legacyQueues.replace(countryCallback,'');
+	const oldDecoder='func decodeProgramQueueUnitsWithRuntimeProof(text string, closedDisk, closedGeo, closedRuntime func(string) bool) error {\n';
+	const countryDecoder=oldDecoder+'\treturn decodeProgramQueueUnitsWithCountryProof(text, closedDisk, closedGeo, closedRuntime, nil)\n}\n\nfunc decodeProgramQueueUnitsWithCountryProof(text string, closedDisk, closedGeo, closedRuntime, closedCountry func(string) bool) error {\n';
+	assert.equal(legacyQueues.split(countryDecoder).length,2);legacyQueues=legacyQueues.replace(countryDecoder,oldDecoder);
+	const countryBranch='\t\t\tif _, valid := countryFailedUnitID(fields[0]); valid && closedCountry != nil && closedCountry(fields[0]) {\n\t\t\t\tcompleted = true\n\t\t\t}\n';
+	assert.equal(legacyQueues.split(countryBranch).length,2);legacyQueues=legacyQueues.replace(countryBranch,'');
 	const oldBranch='return closedRuntimeFailedInstall(ctx, name, run) || closedRuntimeCompileOOMInstall(ctx, name, run)',newBranch=oldBranch+' || closedRuntimeSupersededCompileOOMInstall(ctx, name, run)';
 	assert.equal(legacyQueues.split(newBranch).length,2);
 	assert.equal(sha(legacyQueues),'bcf8ef698c5d3cdd3482ea219ad1a336735a1f80dcee2461aee19d8b707c4ed3');
@@ -29,6 +41,16 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
  assert.equal(ids.split(command).length,2);
  const reversed=ids.replace(newLoop,()=>originalLoop).replace(command,()=>oldCommand);
  assert.equal(sha(reversed),"176122054507f8db2dad933590fc0428cb6b315702ee172ef574681bad11333f");
+});
+
+test('country failure proof is a separate fixed stopped-unit and complete original two-sided readonly observer',()=>{
+ const text=read('internal/executor/program_upgrade_country_failed_linux.go'),core=read('internal/core/waf_country_failed_native.go'),queues=read('internal/executor/program_upgrade_queues_linux.go');
+ for(const value of ['countryFailedUnitID(name)','countryFailedUnitStopped(raw)','countryFailedUnitSource()','proof.check(ctx, id)','programQueueSame(info, last)','p.jobs.open(false)','"store.lock"','"task.lock"','unix.LOCK_SH|unix.LOCK_NB','r.wafCountryJob(id, id, dir.Root)','VerifyCountryDataEnvelope','request.PreparedAt','p.validate(ctx, result)','result.State != "failed"','result.Cache != nil'])assert(text.includes(value),value);
+ assert.equal((text.match(/p\.validate\(ctx, result\)/g)||[]).length,2);
+ assert(text.includes('os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK'));
+ assert(!/\b(?:WriteFile|Mkdir|Remove|Chmod|StartUnit|RestartUnit|Retry|Recover)\s*\(|"reset-failed"|context\.WithTimeout|context\.WithoutCancel|time\.Sleep|os\.Getenv/.test(text));
+ assert(core.includes('&sql.TxOptions{ReadOnly: true}')&&core.includes('reflect.DeepEqual(*detail.Result, result)')&&core.includes('"waf.country.dispatch"')&&core.includes('"waf.country.result"')&&!/\.(?:Exec|ExecContext)\s*\(/.test(core));
+ assert(queues.includes('return decodeProgramQueueUnitsWithCountryProof(text, closedDisk, closedGeo, closedRuntime, nil)'));
 });
 
 test('superseded OOM branch preserves both original unpublished protocols and cannot mutate jobs or services',()=>{
