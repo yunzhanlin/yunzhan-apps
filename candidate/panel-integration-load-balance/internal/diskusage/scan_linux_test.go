@@ -77,6 +77,11 @@ func TestHostLedgerNativeRefusesUnsafeOwnershipAndReplacedParent(t *testing.T) {
 	if os.Mkdir(public, 0755) != nil {
 		t.Fatal("owned unsafe-permission fixture failed")
 	}
+	// This new owned fixture must really be public even under a private QA
+	// umask; no existing host directory is repaired or made writable.
+	if os.Chmod(public, 0755) != nil {
+		t.Fatal("owned unsafe-permission fixture mode unavailable")
+	}
 	r, err := os.OpenRoot(public)
 	if err != nil {
 		t.Fatal(err)

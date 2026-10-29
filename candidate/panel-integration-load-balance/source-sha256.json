@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24diskcancelcandidate26-linux-amd64.tar.gz",
-    "archive_sha256": "ddf663c2441f406a0da9b0e10409bc017ef956df86765dff7a7e7a5aa69310fa",
-    "frozen_inputs_sha256": "8f8efc19a9ee70b5e8cd5753a16119185cfedc1a785f13c33148d255dab476dd"
+    "archive": "panel-0.1.0-dev.proapps24diskcancelcandidate27-linux-amd64.tar.gz",
+    "archive_sha256": "9723dedf171344702ab57e2ca0e803463147f88fd9c4e6d93ab653ec6950bd52",
+    "frozen_inputs_sha256": "3905be8250f8927d651ab90ec2b2bedafb737f2a4e4bb607b79fd1a18057a6c9"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -626,13 +626,14 @@
     "internal/diskjob/transport_test.go": "5db8a0f66d2ed6471a6d3aacb8f536b72b1e91257563baac8326c01156efefaa",
     "internal/diskusage/capacity_linux.go": "32a30a8bc131713d94eb1943087555dc767ea7fa3a32d65ed6954ec25047279c",
     "internal/diskusage/capacity_linux_test.go": "d0eab07690e0c9f2398b73d989eace411b2eda9c9ce5d378ec0adbc741dd2e1e",
-    "internal/diskusage/ledger_linux.go": "fec303c49e6f57b7011e1d4a6d23d2b89f2a8b114e81cec15a73f12c3371c8ef",
+    "internal/diskusage/ledger_control_linux_test.go": "cd956390b1576981c39118bcf1a7d8f85ac491d20d68d682a0432d35395d084f",
+    "internal/diskusage/ledger_linux.go": "b1a2f36e15c60027ffe98e3da255785967a12077eb8ac692dabc6a4b131c2593",
     "internal/diskusage/mounts.go": "e636fcace61f197ed31140f511aa58713d74b15359f521766f415e7a0f701188",
     "internal/diskusage/mounts_test.go": "23b2213bc48d99472a817cfc803f89a3c7c2b5c4d9f654daa2c15d025ba6aacc",
     "internal/diskusage/observer_linux_test.go": "ec1a3d73b7c35b3ca6aae6fa34e43cd0a76868cde3df85cd96196a4c4fcf154e",
     "internal/diskusage/report.go": "1d116dd8b6e6d0497ee9a7b668a9b9e07de98ed7761e7ef598ac2bbd9a9061aa",
     "internal/diskusage/scan_linux.go": "6a93ae7656b228b2ecc4c6bebc4bbe6efd62a927ea31e3bbd52cf5275cc6eb0b",
-    "internal/diskusage/scan_linux_test.go": "5797876ee1642b4b6b7a7af690ad7289560170f06c899d7004c9bc8da8c48aff",
+    "internal/diskusage/scan_linux_test.go": "397daad0c36aeb593cfded46925bf29c3d783b26a5b89a289d86461f23c31bd1",
     "internal/diskusage/scope_linux.go": "bf2cff38c9278449b6e4a7e3042a48f9f3d33a0a0ef85a42a7d7a0d75114ed10",
     "internal/diskusage/scope_linux_test.go": "db0686f8655643256a9152898ec9061b374c62763f961109f61173b2c0871596",
     "internal/executor/admin_scripts_linux.go": "554b521f17bea1e3eda2e5a6b8a74d400e8fe1ba63021030522e41d8c1d8e54b",

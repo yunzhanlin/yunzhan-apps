@@ -70,6 +70,9 @@ func ledgerParents(name string) bool {
 // root-private worker-job directory. Existing indexes, symlinks, other owners,
 // public/writable ancestors and quota changes are refused, never repaired.
 func NewLedger(ctx context.Context, root *os.Root, pages int64) (*Ledger, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if os.Geteuid() != 0 || root == nil || pages < 16 || pages > 131072 || !ledgerParents(root.Name()) {
 		return nil, ErrLedgerUnavailable
 	}
@@ -98,47 +101,56 @@ func NewLedger(ctx context.Context, root *os.Root, pages int64) (*Ledger, error)
 		return nil, ErrLedgerUnavailable
 	}
 	l := &Ledger{root: root, directory: dir, file: f, identity: dm.Identity, rootInfo: opened}
-	fail := func() (*Ledger, error) { l.Close(); return nil, ErrLedgerUnavailable }
+	fail := func(cause error) (*Ledger, error) { l.Close(); return nil, ledgerDatabaseFailure(ctx, cause) }
 	info, err := f.Stat()
 	if err != nil || !ledgerPrivateInfo(info, false) || info.Size() != 0 {
-		return fail()
+		return fail(nil)
 	}
 	// Anchor SQLite and its fixed journal to the held private directory, not a
 	// fresh path walk through the host being scanned. No URI options are input.
 	name := "/proc/self/fd/" + strconv.FormatUint(uint64(dir.Fd()), 10) + "/inode-index.db"
 	db, err := sql.Open("sqlite", name)
 	if err != nil {
-		return fail()
+		return fail(nil)
 	}
 	l.db = db
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	for _, statement := range []string{"PRAGMA page_size=4096", "PRAGMA cache_size=-4096", "PRAGMA mmap_size=0", "PRAGMA temp_store=MEMORY", "PRAGMA journal_mode=DELETE", "PRAGMA synchronous=FULL", "PRAGMA busy_timeout=1000", "PRAGMA trusted_schema=OFF", "PRAGMA journal_size_limit=1048576"} {
 		if _, err := db.ExecContext(ctx, statement); err != nil {
-			return fail()
+			return fail(err)
 		}
 	}
 	// SQLite ignores unknown PRAGMAs. Verify settings, never infer enforcement
 	// solely from a successful Exec. No large sort/temporary table is used.
 	for pragma, wanted := range map[string]int64{"page_size": 4096, "cache_size": -4096, "mmap_size": 0, "temp_store": 2, "synchronous": 2, "trusted_schema": 0, "journal_size_limit": 1048576} {
 		var actual int64
-		if db.QueryRowContext(ctx, "PRAGMA "+pragma).Scan(&actual) != nil || actual != wanted {
-			return fail()
+		if err := db.QueryRowContext(ctx, "PRAGMA "+pragma).Scan(&actual); err != nil {
+			return fail(err)
+		}
+		if actual != wanted {
+			return fail(nil)
 		}
 	}
 	var actualPages int64
-	if db.QueryRowContext(ctx, "PRAGMA max_page_count="+strconv.FormatInt(pages, 10)).Scan(&actualPages) != nil || actualPages != pages {
-		return fail()
+	if err := db.QueryRowContext(ctx, "PRAGMA max_page_count="+strconv.FormatInt(pages, 10)).Scan(&actualPages); err != nil {
+		return fail(err)
+	}
+	if actualPages != pages {
+		return fail(nil)
 	}
 	var journal string
-	if db.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journal) != nil || journal != "delete" {
-		return fail()
+	if err := db.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journal); err != nil {
+		return fail(err)
+	}
+	if journal != "delete" {
+		return fail(nil)
 	}
 	if _, err := db.ExecContext(ctx, `CREATE TABLE inodes(identity TEXT PRIMARY KEY, kind INTEGER NOT NULL, logical TEXT NOT NULL, blocks TEXT NOT NULL) WITHOUT ROWID`); err != nil {
-		return fail()
+		return fail(err)
 	}
 	if !l.current() {
-		return fail()
+		return fail(nil)
 	}
 	return l, nil
 }
@@ -168,7 +180,7 @@ func (l *Ledger) flush(ctx context.Context) error {
 	if l.tx != nil {
 		if err := l.tx.Commit(); err != nil {
 			l.tx = nil
-			return ErrLedgerUnavailable
+			return ledgerDatabaseFailure(ctx, err)
 		}
 		l.tx = nil
 		l.pending = 0
@@ -197,7 +209,7 @@ func (l *Ledger) Add(ctx context.Context, m Metadata) (bool, error) {
 		var err error
 		l.tx, err = l.db.BeginTx(ctx, nil)
 		if err != nil {
-			return false, ErrLedgerUnavailable
+			return false, ledgerDatabaseFailure(ctx, err)
 		}
 	}
 	key, kind := MetadataIdentityKey(m), m.Mode&unix.S_IFMT
@@ -207,7 +219,7 @@ func (l *Ledger) Add(ctx context.Context, m Metadata) (bool, error) {
 		l.tx.Rollback()
 		l.tx = nil
 		l.pending = 0
-		return false, ErrLedgerUnavailable
+		return false, ledgerDatabaseFailure(ctx, err)
 	}
 	n, err := result.RowsAffected()
 	if err != nil || n < 0 || n > 1 {
@@ -219,8 +231,8 @@ func (l *Ledger) Add(ctx context.Context, m Metadata) (bool, error) {
 	if n == 0 {
 		var oldKind uint16
 		var oldLogical, oldBlocks string
-		if l.tx.QueryRowContext(ctx, `SELECT kind,logical,blocks FROM inodes WHERE identity=?`, key).Scan(&oldKind, &oldLogical, &oldBlocks) != nil {
-			return false, ErrLedgerUnavailable
+		if err := l.tx.QueryRowContext(ctx, `SELECT kind,logical,blocks FROM inodes WHERE identity=?`, key).Scan(&oldKind, &oldLogical, &oldBlocks); err != nil {
+			return false, ledgerDatabaseFailure(ctx, err)
 		}
 		if oldKind != kind || oldLogical != logical || oldBlocks != blocks {
 			return false, ErrMetadataChanged
@@ -271,6 +283,28 @@ func (l *Ledger) Close() error {
 }
 
 // No filename, SQL/path stderr, options or credentials enter a ledger error.
+// SQLite may return an interrupt or sql.ErrTxDone when a context rolls back an
+// in-flight statement. Keep that real cancellation/deadline as a typed cause,
+// while retaining the unavailable-index identity and the fixed public text.
+// Only failed SQL operations use this path; identity/quota-policy mismatches
+// pass nil and cannot be relabeled by a later cancellation.
+type ledgerControlError struct{ cause error }
+
+func (e ledgerControlError) Error() string        { return ErrLedgerUnavailable.Error() }
+func (e ledgerControlError) Unwrap() error        { return e.cause }
+func (e ledgerControlError) Is(target error) bool { return target == ErrLedgerUnavailable }
+
+func ledgerDatabaseFailure(ctx context.Context, err error) error {
+	if err != nil {
+		for _, cause := range []error{context.Canceled, context.DeadlineExceeded} {
+			if errors.Is(err, cause) || errors.Is(ctx.Err(), cause) {
+				return ledgerControlError{cause: cause}
+			}
+		}
+	}
+	return ErrLedgerUnavailable
+}
+
 func ledgerError(err error) bool {
 	return errors.Is(err, ErrLedgerUnavailable) || errors.Is(err, ErrMetadataChanged)
 }
