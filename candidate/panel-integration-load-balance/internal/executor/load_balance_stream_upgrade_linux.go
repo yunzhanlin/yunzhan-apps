@@ -377,7 +377,7 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 	// A native module whose entire original Root history disappeared is NOT
 	// an old unactivated host. This is a read-only fixed-path record reader;
 	// it constructs no Service workers, directories or migration state.
-	if err := checkLoadBalanceStreamNativeModuleHistory(receipts, own); err != nil {
+	if err := checkLoadBalanceStreamNativeModuleHistory(r, receipts, own); err != nil {
 		return err
 	}
 	if err = r.unchanged(); err != nil {
@@ -389,7 +389,28 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 	return ctx.Err()
 }
 
-func checkLoadBalanceStreamNativeModuleHistory(receipts map[string]loadBalanceStreamInstallationReceipt, own string) error {
+// Absence under a shared Root-owned non-writable modules parent is distinct
+// from an installed module's private record authority. Other applications
+// legitimately create that shared parent with 0755. Pin the complete named
+// chain and missing leaf; never chmod it or weaken an existing record reader.
+func streamUpgradeModuleNamespaceMissing(r *programQueueReader) (bool, error) {
+	if r == nil || r.ctx == nil || r.ctx.Err() != nil {
+		return false, errLoadBalanceStreamModule
+	}
+	root, err := r.queueDirectory("etc/panel/security-apps/modules/load-balance", false)
+	if root != nil {
+		root.Close()
+	}
+	return err == nil && root == nil, err
+}
+
+func checkLoadBalanceStreamNativeModuleHistory(r *programQueueReader, receipts map[string]loadBalanceStreamInstallationReceipt, own string) error {
+	if len(receipts) == 0 {
+		missing, err := streamUpgradeModuleNamespaceMissing(r)
+		if err != nil || missing {
+			return err
+		}
+	}
 	s := &Service{Config: Config{SystemRoot: "/", SecurityDir: "/etc/panel/security-apps"}}
 	if threatIDSTrustedParents("/etc/panel/security-apps", false) != nil {
 		return errLoadBalanceStreamModule

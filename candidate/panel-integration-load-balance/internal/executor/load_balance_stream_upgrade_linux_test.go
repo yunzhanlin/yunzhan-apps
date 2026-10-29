@@ -4,6 +4,9 @@ package executor
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -42,6 +45,63 @@ func TestLoadBalanceStreamUpgradeNativeUnitCensusNeverUsesPrefixExemption(t *tes
 	}
 	if decodeLoadBalanceStreamUpgradeJobs("1 unrelated.service start running\n") != nil {
 		t.Fatal("unrelated native job changed the scoped census")
+	}
+}
+
+func TestLoadBalanceStreamUpgradeMissingModuleUnderSharedParentIsReadonly(t *testing.T) {
+	for _, kind := range []string{"shared-0755", "shared-0700", "present", "writable-parent", "foreign-parent", "linked-parent", "appeared-after-observation"} {
+		t.Run(kind, func(t *testing.T) {
+			base := programQueueFixture(t)
+			parent := filepath.Join(base, "etc/panel/security-apps/modules")
+			if err := os.MkdirAll(parent, 0755); err != nil {
+				t.Fatal(err)
+			}
+			switch kind {
+			case "shared-0700":
+				if err := os.Chmod(parent, 0700); err != nil {
+					t.Fatal(err)
+				}
+			case "present":
+				if err := os.Mkdir(filepath.Join(parent, "load-balance"), 0755); err != nil {
+					t.Fatal(err)
+				}
+			case "writable-parent":
+				if err := os.Chmod(parent, 0777); err != nil {
+					t.Fatal(err)
+				}
+			case "foreign-parent":
+				if err := os.Chown(parent, 988, 988); err != nil {
+					t.Fatal(err)
+				}
+			case "linked-parent":
+				if err := os.Rename(parent, parent+"-original"); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Symlink(parent+"-original", parent); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := programQueueTree(t, base)
+			r := &programQueueReader{ctx: context.Background(), root: base}
+			missing, err := streamUpgradeModuleNamespaceMissing(r)
+			reject := kind == "writable-parent" || kind == "foreign-parent" || kind == "linked-parent"
+			if (err != nil) != reject || !reject && missing != (kind != "present") {
+				t.Fatal("missing module observation differs", missing, err)
+			}
+			if !reflect.DeepEqual(before, programQueueTree(t, base)) {
+				t.Fatal("absence observer mutated shared parent or private state")
+			}
+			if kind == "appeared-after-observation" {
+				if err := os.Mkdir(filepath.Join(parent, "load-balance"), 0700); err != nil {
+					t.Fatal(err)
+				}
+				if r.unchanged() == nil {
+					t.Fatal("appeared module was silently adopted as original absence")
+				}
+			} else if !reject && r.unchanged() != nil {
+				t.Fatal("stable original observation changed")
+			}
+		})
 	}
 }
 

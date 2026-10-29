@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24countrycandidate29r8-linux-amd64.tar.gz",
-    "archive_sha256": "349afe3af3d5e0441f5c2c3619dfa0f6651496758d3ccc43c9968812e53e938e",
-    "frozen_inputs_sha256": "68468005b42fec5b774aa9d1be6cc39a85fc87f5733633030bd2452239254cfd"
+    "archive": "panel-0.1.0-dev.proapps24countrycandidate29r9-linux-amd64.tar.gz",
+    "archive_sha256": "2ee37f9b1957bd3b3a3fc4d23895d4e60bb74d61d15abb687135651825cb9f2e",
+    "frozen_inputs_sha256": "4db07d8595c09f63c37a68a34c976dbddd52d408a464383d8db74beca4844369"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -1376,8 +1376,8 @@
     "internal/executor/load_balance_stream_syntax_linux.go": "2250228c93cfddbfcf098f90491f29b91aea5e16b571ace7f745ccb34393d94e",
     "internal/executor/load_balance_stream_syntax_linux_test.go": "67456a2e317a30e1f2439f39bce575b8f6ea430da703e4d5e08b98a2f48037d2",
     "internal/executor/load_balance_stream_upgrade_completion_linux_test.go": "724a18edc9dee62a204cbe70f4d74272d1d315e1ed65f48b9cc06babb1f4aafc",
-    "internal/executor/load_balance_stream_upgrade_linux.go": "2e7bcfb76a52f64b9194bedb49e60cc87c72d8a6ea422be482a7f0d97d2bbd25",
-    "internal/executor/load_balance_stream_upgrade_linux_test.go": "0aeb375f270c0bac37c1de8add05d6c65492335541fdfc682c1c956770dad0a6",
+    "internal/executor/load_balance_stream_upgrade_linux.go": "de75470294466313c84134a6b3c0f55dcbbec24c7b489a1877def343b0e2df9b",
+    "internal/executor/load_balance_stream_upgrade_linux_test.go": "cf9684134c757eafe2a61afd0f422a88201a43d8ef4fd466756fa67b76e039b8",
     "internal/executor/load_balance_stream_upgrade_maintenance_linux_test.go": "8a2a33343bc22ead1dc2013ac307f5c2640e42b895cdb6fd6ea1eb0824c3d71e",
     "internal/executor/load_balance_stream_upgrade_native_qa_linux_test.go": "a42594e51faed77f6f9370e94369b68612e0cb1a153bad231586ccf1c90cf97c",
     "internal/executor/load_balance_stream_upgrade_owner_linux.go": "98fca9c5108309e21df18ef1244d0dbfed910a9a85ae3ecc5cb0e4300b288608",
@@ -1543,8 +1543,8 @@
     "internal/executor/program_queue_refusal.go": "40d88a031ebdddb28527882898a87033d4abc8ed051e0fb6a5c0b926e8b03a5f",
     "internal/executor/program_queue_refusal_linux_test.go": "f48c795e7ef74d8b33098d432a3b97688b9a6c3f9b280edc58feb8861074fbf7",
     "internal/executor/program_queue_refusal_test.go": "d556fe708aa8dda8bbb9a64e130d8693b3c5fe8e111aa1b58ce3be5185ba7bc3",
-    "internal/executor/program_upgrade_country_linux.go": "4825bc3c9dcd112a6f7a3a37e4d9bd7532271cfdfc930ae01a6905afa7b6c388",
-    "internal/executor/program_upgrade_country_linux_test.go": "561722533ac940479e51d173318a8703bb4c476653af40d2185b4443af69e357",
+    "internal/executor/program_upgrade_country_linux.go": "e1ae3cd9a5e893a7023cc02ed3f6ea7f6e8d9092b9458959477ead678b5e9a99",
+    "internal/executor/program_upgrade_country_linux_test.go": "d9b6bb2aa068d24571351c288bac011d8b5ed7d073eca6e2878bf8857b517a81",
     "internal/executor/program_upgrade_geodata_failed_linux.go": "3a0ff905bf489c6849a5f08663facf15c89d4cbdac58b2763e3046d976b593c8",
     "internal/executor/program_upgrade_geodata_failed_linux_test.go": "1a6dc38655fdb518929a3ceacd214575aa63497ae7b6a23b4e23ffa693f54f97",
     "internal/executor/program_upgrade_geodata_linux.go": "e193fdc4337096df61f24016cfd404764c1e60d6fde7326ef6c21280e10e555e",

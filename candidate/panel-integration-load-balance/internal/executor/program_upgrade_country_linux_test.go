@@ -24,6 +24,9 @@ func countryProgramQueueFixture(t *testing.T, state string) (string, string, cou
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		t.Fatal(err)
 	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(dir), "store.lock"), nil, 0600); err != nil {
+		t.Fatal(err)
+	}
 	result := countryTaskOperation(request, state, "synthetic clean pre-transfer refusal")
 	if state == "succeeded" {
 		in := request.Selection
@@ -172,5 +175,63 @@ func TestProgramUpgradeCountryRunningLockAndOriginalNativeUnitsCannotDisappear(t
 	}
 	if checkProgramUpgradeNativeUnits(context.Background(), run) != nil || !queried {
 		t.Fatal("classification did not enumerate actual original country units")
+	}
+}
+
+func TestProgramUpgradeCountryRealNamespaceLockIsReadonlyAndFailClosed(t *testing.T) {
+	for _, kind := range []string{"complete", "service-group", "missing", "busy", "nonempty", "permissions", "directory", "symlink", "hardlink", "foreign-owner", "unknown-member"} {
+		t.Run(kind, func(t *testing.T) {
+			root, dir, _ := countryProgramQueueFixture(t, "succeeded")
+			lockPath := filepath.Join(filepath.Dir(dir), "store.lock")
+			switch kind {
+			case "service-group":
+				if err := os.Chown(lockPath, 0, 988); err != nil {
+					t.Fatal(err)
+				}
+			case "missing", "directory", "symlink":
+				if err := os.Remove(lockPath); err != nil {
+					t.Fatal(err)
+				}
+				if kind == "directory" {
+					if err := os.Mkdir(lockPath, 0700); err != nil {
+						t.Fatal(err)
+					}
+				} else if kind == "symlink" {
+					if err := os.Symlink(filepath.Join(dir, "task.lock"), lockPath); err != nil {
+						t.Fatal(err)
+					}
+				}
+			case "busy":
+				f, err := os.OpenFile(lockPath, os.O_RDWR, 0)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+				if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+					t.Fatal(err)
+				}
+			case "nonempty":
+				if err := os.WriteFile(lockPath, []byte("unknown"), 0600); err != nil {
+					t.Fatal(err)
+				}
+			case "permissions":
+				if err := os.Chmod(lockPath, 0644); err != nil {
+					t.Fatal(err)
+				}
+			case "hardlink":
+				if err := os.Link(lockPath, filepath.Join(root, "namespace-lock-alias")); err != nil {
+					t.Fatal(err)
+				}
+			case "foreign-owner":
+				if err := os.Chown(lockPath, 988, 988); err != nil {
+					t.Fatal(err)
+				}
+			case "unknown-member":
+				if err := os.WriteFile(filepath.Join(filepath.Dir(dir), "foreign.lock"), nil, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			assertCountryProgramQueueReadonly(t, root, kind != "complete" && kind != "service-group")
+		})
 	}
 }

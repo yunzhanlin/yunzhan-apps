@@ -26,17 +26,40 @@ func (r *programQueueReader) wafCountryJobs() error {
 		return err
 	}
 	defer root.Close()
+	// The real task store retains this namespace lock after every preparation.
+	// Observe the existing inode without creating or repairing it, and retain a
+	// shared lease through the complete queue snapshot. A writer, missing lock or
+	// unsafe replacement is unfinished/unknown work, not a terminal task.
+	lock, err := root.OpenFile("store.lock", os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return errors.New("country original namespace lock cannot be verified; upgrade refused")
+	}
+	opened, err := lock.Stat()
+	if err != nil || !runtimeInstallPrivateFile(opened) || opened.Size() != 0 || syscall.Flock(int(lock.Fd()), syscall.LOCK_SH|syscall.LOCK_NB) != nil {
+		lock.Close()
+		return errors.New("country original namespace is preparing or its lock is unsafe; upgrade refused")
+	}
+	named, err := root.Lstat("store.lock")
+	if err != nil || !programQueueSame(opened, named) {
+		lock.Close()
+		return errors.New("country original namespace named lock changed")
+	}
+	r.readLeases = append(r.readLeases, lock)
+	r.snapshots = append(r.snapshots, programQueueSnapshot{filepath.Join(r.root, relative, "store.lock"), named})
 	d, err := root.Open(".")
 	if err != nil {
 		return err
 	}
-	entries, err := d.ReadDir(countryTasksMax + 1)
+	entries, err := d.ReadDir(countryTasksMax + 2)
 	d.Close()
-	if err != nil && !errors.Is(err, io.EOF) || len(entries) > countryTasksMax {
+	if err != nil && !errors.Is(err, io.EOF) || len(entries) > countryTasksMax+1 {
 		return errors.New("country original job inventory exceeds complete budget")
 	}
 	for _, entry := range entries {
 		id := entry.Name()
+		if id == "store.lock" {
+			continue // The exact private inode is already validated and leased.
+		}
 		if !core.ValidID(id) || !entry.IsDir() {
 			return errors.New("country original job has unknown or unfinished preparation; upgrade refused")
 		}
