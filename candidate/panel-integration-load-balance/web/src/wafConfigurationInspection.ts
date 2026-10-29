@@ -5,7 +5,7 @@ export interface WafConfigurationInspection {
  format:1;read_only:true;installed_version:string;policy_revision:string;semantic_record_sha256:string;filesystem_matches:boolean;enforcement_verified:false;differences:WafConfigurationDifference[];
 }
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
-const top=["format","read_only","installed_version","policy_revision","semantic_record_sha256","filesystem_matches","enforcement_verified","differences"],rowKeys=["scope","site_id","actual_exists","expected_exists","actual_sha256","expected_sha256","actual_mode","expected_mode","actual_bytes","expected_bytes"],versions=["2.0.1","2.1.0","2.1.1","2.2.0","2.3.0","2.4.0","2.5.0","2.5.1","2.5.2"],sha=(s:unknown):s is string=>typeof s==="string"&&/^[a-f0-9]{64}$/.test(s),emptySHA="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const top=["format","read_only","installed_version","policy_revision","semantic_record_sha256","filesystem_matches","enforcement_verified","differences"],rowKeys=["scope","site_id","actual_exists","expected_exists","actual_sha256","expected_sha256","actual_mode","expected_mode","actual_bytes","expected_bytes"],versions=["2.0.1","2.1.0","2.1.1","2.2.0","2.3.0","2.4.0","2.5.0","2.5.1","2.5.2","2.6.0"],sha=(s:unknown):s is string=>typeof s==="string"&&/^[a-f0-9]{64}$/.test(s),emptySHA="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 function object(v:unknown,keys:string[]):v is Record<string,unknown>{return !!v&&typeof v==="object"&&!Array.isArray(v)&&Object.keys(v).length===keys.length&&keys.every(k=>Object.hasOwn(v,k));}
 export function decodeWafConfigurationInspection(value:unknown):WafConfigurationInspection{
  const bad=()=>new Error("已安装 WAF 配置差异无法完整核对；未返回部分成功结果");

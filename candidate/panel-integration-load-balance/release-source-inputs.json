@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r9-linux-amd64.tar.gz",
-  "archive_sha256": "2ee37f9b1957bd3b3a3fc4d23895d4e60bb74d61d15abb687135651825cb9f2e",
-  "frozen_inputs_sha256": "4db07d8595c09f63c37a68a34c976dbddd52d408a464383d8db74beca4844369",
+  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r10-linux-amd64.tar.gz",
+  "archive_sha256": "c9383d66c77f5253002c5a5bb56fc10bdac5c5e6b2320595baed7bfeb5820191",
+  "frozen_inputs_sha256": "5ccaa540f6f9395ae71214918613baa054a551f6cd919aeee9aac120452d5f04",
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
     "cmd/executor/shutdown.go": "a8faac2abce4b6c5a63cb174ede1ad5ab4a9c61c6f63c480c925c37ff70d3aff",
@@ -2202,7 +2202,7 @@
     "web/src/wafApplyTask.ts": "bc2ac5d9f1c1532bd9efe4329a2b48227b2b4f5f8931fef08be0d3a56510ac78",
     "web/src/wafBodyInventory.ts": "bea54822f05ec68e76caa92066c22766aaf9170b5d2e458eca281a0354080370",
     "web/src/wafConfigBackups.ts": "093560667b7767ce5197de618f8b42611a5e4da6c4265de94bb79b50dd5480a0",
-    "web/src/wafConfigurationInspection.ts": "1f2084676fcac2116dec2b9b2c4be87e4c76e15f4f91189d4dba877b376f6226",
+    "web/src/wafConfigurationInspection.ts": "0e1ddfbe3fb10bfad482248f79f25a8c8dec89909a7ea2b949d16f656789f3c4",
     "web/src/wafConfigurationVersion.ts": "edb3b34814893d637c9578a501c4f1b2f6a1c3e4e49edd4fbb18f6878ad3c1be",
     "web/src/wafCountryIdentity.ts": "903c44ef5e3546ab47dc4580af311ad1a78490804579b1ceed2686fd623e98c7",
     "web/src/wafCountryPolicy.ts": "c81bde36ac1d4381a227f6138081a11cc7223405949741324138a5158d1c9f2e",
