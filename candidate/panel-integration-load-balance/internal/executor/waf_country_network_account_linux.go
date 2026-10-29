@@ -33,17 +33,29 @@ func validCountryNetworkIdentity(v countryNetworkIdentity) bool {
 // Account ownership metadata belongs to the private module, not the public
 // country-data cache. Keep its filename fixed and creation exclusive: a
 // partial write or an existing identity must remain visible, never replaced.
-func writeCountryNetworkIdentity(root *os.Root, identity countryNetworkIdentity) error {
-	if root == nil || os.Geteuid() != 0 || !validCountryNetworkIdentity(identity) {
-		return errors.New("国家数据账户记录必须是固定Root系统身份")
+func countryNetworkIdentityDirectory(root *os.Root) error {
+	if root == nil || os.Geteuid() != 0 {
+		return errors.New("国家数据账户记录目录必须由Root核对")
 	}
 	directory, err := root.Stat(".")
 	if err != nil {
 		return err
 	}
 	owner, ok := directory.Sys().(*syscall.Stat_t)
-	if !ok || !directory.IsDir() || owner.Uid != 0 || owner.Gid != 0 || directory.Mode().Perm()&0022 != 0 {
+	// Ordinary module directories are Root-owned and may be readable by the
+	// panel service group. That group must never be able to write them.
+	if !ok || !directory.IsDir() || owner.Uid != 0 || directory.Mode().Perm()&0022 != 0 {
 		return errors.New("国家数据账户记录目录不是Root受管目录")
+	}
+	return nil
+}
+
+func writeCountryNetworkIdentity(root *os.Root, identity countryNetworkIdentity) error {
+	if !validCountryNetworkIdentity(identity) {
+		return errors.New("国家数据账户记录必须是固定Root系统身份")
+	}
+	if err := countryNetworkIdentityDirectory(root); err != nil {
+		return err
 	}
 	raw, err := countryCacheJSON(identity)
 	if err != nil || len(raw) < 1 || len(raw) > 2048 {
@@ -56,8 +68,23 @@ func writeCountryNetworkIdentity(root *os.Root, identity countryNetworkIdentity)
 	}
 	defer file.Close()
 	opened, err := file.Stat()
-	if err != nil || !moduleRecordInfo(opened, false, false) || opened.Size() != 0 {
+	if err != nil {
+		return err
+	}
+	owner, ok := opened.Sys().(*syscall.Stat_t)
+	if !ok || !opened.Mode().IsRegular() || opened.Mode().Perm() != 0600 || owner.Uid != 0 || owner.Nlink != 1 || opened.Size() != 0 {
 		return errors.New("国家数据账户新记录身份无法核对；保留原文件")
+	}
+	// A trusted setgid directory may confer its service group. Only this
+	// newly created, still-owned descriptor may be pinned to Root:Root.
+	if owner.Gid != 0 {
+		if err := file.Chown(0, 0); err != nil {
+			return err
+		}
+		opened, err = file.Stat()
+	}
+	if err != nil || !moduleRecordInfo(opened, false, false) || opened.Size() != 0 {
+		return errors.New("国家数据账户新记录不是Root私有文件；保留原文件")
 	}
 	if n, err := file.Write(raw); err != nil {
 		return err
@@ -150,6 +177,15 @@ func (s *Service) prepareCountryNetworkAccount(ctx context.Context) error {
 	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
+	// Refuse an unsafe directory before creating any NSS identity.
+	if err := countryNetworkIdentityDirectory(root); err != nil {
+		return err
+	}
 	for _, kind := range []string{"passwd", "group"} {
 		output, err := s.moduleCommand(ctx, 3*time.Second, "/usr/bin/getent", kind, countryNetworkUsername)
 		var exit *exec.ExitError
@@ -164,11 +200,6 @@ func (s *Service) prepareCountryNetworkAccount(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	root, err := os.OpenRoot(dir)
-	if err != nil {
-		return err
-	}
-	defer root.Close()
 	if err := writeCountryNetworkIdentity(root, identity); err != nil {
 		return err
 	}

@@ -94,3 +94,30 @@ func TestCountryNetworkIdentityRecordDoesNotFollowExistingLink(t *testing.T) {
 		t.Fatal("outside bytes or original link changed", err, linkErr)
 	}
 }
+
+func TestCountryNetworkIdentityRecordUsesTrustedServiceGroupDirectory(t *testing.T) {
+	for _, mode := range []os.FileMode{0755, os.ModeSetgid | 0750} {
+		t.Run(mode.String(), func(t *testing.T) {
+			directory, root := countryIdentityRecordFixture(t)
+			if err := os.Chown(directory, 0, 988); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chmod(directory, mode); err != nil {
+				t.Fatal(err)
+			}
+			if err := countryNetworkIdentityDirectory(root); err != nil {
+				t.Fatal("ordinary Root-owned, non-writable service-group directory rejected", err)
+			}
+			identity := countryNetworkIdentity{1, 987, 982}
+			if err := writeCountryNetworkIdentity(root, identity); err != nil {
+				t.Fatal("account record could not be created with actual module-directory metadata", err)
+			}
+			info, err := root.Lstat("country-network-account.json")
+			raw, readErr := root.ReadFile("country-network-account.json")
+			var actual countryNetworkIdentity
+			if err != nil || !moduleRecordInfo(info, false, false) || readErr != nil || countryCacheDecode(raw, &actual) != nil || actual != identity {
+				t.Fatal("record did not remain Root:Root0600 with original bytes", err, readErr)
+			}
+		})
+	}
+}
