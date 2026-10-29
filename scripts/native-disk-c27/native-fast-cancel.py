@@ -32,6 +32,7 @@ def api(path,body=None,key=None):
   save('http-error-'+secrets.token_hex(6)+'.json',{'path':path,'status':e.code,'body':e.read(8192).decode('utf8','replace')});raise AssertionError('API status '+str(e.code)+' at '+path)from None
 try:
  assert sha(base/'guest.py')==intent['files']['guest.py']
+ assert json.loads(pathlib.Path('/opt/panel/current/SOURCE_INPUTS.json').read_bytes())['inputs_sha256']=='3905be8250f8927d651ab90ec2b2bedafb737f2a4e4bb607b79fd1a18057a6c9'
  before=capture();save('before-all-Core-fields.json',before)
  fixture=pathlib.Path('/srv/yunzhan-qa-disk-cancel-'+secrets.token_hex(16));assert not os.path.lexists(fixture);fixture.mkdir(mode=0o700)
  unique=[]

@@ -32,6 +32,7 @@ def api(path,body=None,key=None):
   save('http-error-'+secrets.token_hex(6)+'.json',{'path':path,'status':e.code,'body':e.read(8192).decode('utf8','replace')});raise AssertionError('API status '+str(e.code)+' at '+path)from None
 try:
  assert sha(base/'guest.py')==intent['files']['guest.py']
+ assert json.loads(pathlib.Path('/opt/panel/current/SOURCE_INPUTS.json').read_bytes())['inputs_sha256']=='3905be8250f8927d651ab90ec2b2bedafb737f2a4e4bb607b79fd1a18057a6c9'
  before=capture();save('before-all-Core-fields.json',before)
  prior=pathlib.Path(intent['fixture_record']);fixture_record=json.loads(prior.read_bytes());assert fixture_record['regular_entries']==250005
  fixture=pathlib.Path(fixture_record['fixture']);assert str(fixture).startswith('/srv/yunzhan-qa-disk-cancel-')and len(fixture.name)==len('yunzhan-qa-disk-cancel-')+32and fixture.is_dir()and not fixture.is_symlink()
