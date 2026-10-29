@@ -113,6 +113,7 @@ func (s *Service) applyWAFTransaction(ctx context.Context, cfg core.WAFConfig, u
 }
 
 func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFConfig, uninstall bool, nginx string, add func(string), legacy *softwareManifest) error {
+	var countryCapacity func(context.Context) error
 	if !uninstall {
 		if err := s.verifyWAFTrustedProxy(ctx, cfg, nginx); err != nil {
 			return err
@@ -120,7 +121,14 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 		if err := s.verifyWAFBodyEngine(cfg); err != nil {
 			return err
 		}
-		if err := s.verifyWAFCountryPolicyCache(ctx, cfg); err != nil {
+		var err error
+		countryCapacity, err = s.prepareWAFCountryMemory(ctx, cfg, nginx)
+		if err != nil {
+			return err
+		}
+	}
+	if countryCapacity != nil {
+		if err := countryCapacity(ctx); err != nil {
 			return err
 		}
 	}
@@ -184,12 +192,22 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 			return rollback(err)
 		}
 	}
+	if countryCapacity != nil {
+		if err := countryCapacity(ctx); err != nil {
+			return rollback(err)
+		}
+	}
 	if _, err := s.Config.Run(ctx, nginx, "-t", "-c", s.Config.NginxConf); err != nil {
 		return rollback(err)
 	}
 	generation, err := s.captureWAFReloadGeneration(ctx, nginx)
 	if err != nil {
 		return rollback(err)
+	}
+	if countryCapacity != nil {
+		if err := countryCapacity(ctx); err != nil {
+			return rollback(err)
+		}
 	}
 	if _, err := s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "nginx"); err != nil {
 		return rollback(err)

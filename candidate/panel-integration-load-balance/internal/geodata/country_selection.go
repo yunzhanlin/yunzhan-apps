@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/netip"
 )
 
 type CountrySelectionMetadata struct {
@@ -14,6 +15,10 @@ type CountrySelectionMetadata struct {
 	Bytes                int64
 	Networks             int
 	Countries            []CountryCIDRCount
+	// RadixNodes counts both roots and the data nodes of the uncompressed
+	// IPv4/IPv6 prefix trees. It excludes allocator/preallocation overhead;
+	// it is a capacity input, never signature or policy authority.
+	RadixNodes uint64
 }
 
 type countryMergeItem struct {
@@ -96,6 +101,8 @@ func VerifyCountrySelection(ctx context.Context, a CountryAuthority, codes []str
 	}
 	heap.Init(&heads)
 	state := countryCIDRState{codes: map[string]int{}}
+	var previous netip.Prefix
+	var radixNodes uint64 = 2
 	for heads.Len() > 0 {
 		if err := ctx.Err(); err != nil {
 			return empty, err
@@ -104,6 +111,12 @@ func VerifyCountrySelection(ctx context.Context, a CountryAuthority, codes []str
 		if err := state.append(item.row); err != nil {
 			return empty, err
 		}
+		nodes, err := countryRadixNodeDelta(previous, item.row.Prefix)
+		if err != nil {
+			return empty, err
+		}
+		radixNodes += nodes
+		previous = item.row.Prefix
 		row, err := cursors[item.slot].next()
 		if errors.Is(err, io.EOF) {
 			if err := finish(item.slot); err != nil {
@@ -123,5 +136,5 @@ func VerifyCountrySelection(ctx context.Context, a CountryAuthority, codes []str
 		return empty, err
 	}
 	counts := state.metadata(totalBytes, "", a.parent.digest, a.parent.manifest.SHA256)
-	return CountrySelectionMetadata{a.SHA256(), counts.ParentManifestSHA256, counts.ParentDatabaseSHA256, totalBytes, counts.Networks, counts.Countries}, nil
+	return CountrySelectionMetadata{ManifestSHA256: a.SHA256(), ParentManifestSHA256: counts.ParentManifestSHA256, ParentDatabaseSHA256: counts.ParentDatabaseSHA256, Bytes: totalBytes, Networks: counts.Networks, Countries: counts.Countries, RadixNodes: radixNodes}, nil
 }
