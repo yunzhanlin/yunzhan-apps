@@ -52,6 +52,7 @@ export function validateManifest(app) {
   const hardening="hardening-reversible-journal-v1";
   const intrusion="intrusion-preserving-journal-v2";
   const wafHealth="waf-bound-health-v1";
+  const wafCountry="waf-country-signed-data-v1";
   const runtimePackage="runtime-package-version-v1";
   const mobileNative="mobile-native-delivery-v132";
   const memcachedImage="memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf";
@@ -65,7 +66,7 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.includes(intrusion)&&(app.id!=="anti-intrusion"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="intrusion-prevention"||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("preserving intrusion journal belongs only to exact anti-intrusion1.1.0 and its fixed executor target");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -100,7 +101,7 @@ export function validateManifest(app) {
     const parts=app.version.split("-")[0].split(".").map(BigInt),floor=[2n,5n,2n];let comparison=0;
     if(parts.some(value=>value>18446744073709551615n))errors.push("WAF health version cannot be safely compared");
     for(let i=0;i<Math.max(parts.length,floor.length);i++){const a=parts[i]??0n,b=floor[i]??0n;if(a!==b){comparison=a>b?1:-1;break;}}
-    if(comparison>=0&&(app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==wafHealth))errors.push("Nginx WAF2.5.2 requires its exact independently compiled site-bound health handler");
+    if(comparison>=0&&app.version!=="2.6.0"&&(app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==wafHealth))errors.push("Nginx WAF2.5.2 requires its exact independently compiled site-bound health handler");
   }
   if(app.id==="anti-intrusion"&&typeof app.version==="string"&&/^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(app.version)){
     const parts=app.version.split("-")[0].split(".").map(BigInt),floor=[1n,1n,0n];let comparison=0;
@@ -160,6 +161,11 @@ export function validateManifest(app) {
       if(!Array.isArray(requirements)||!requirements.includes(identity))errors.push("statistics2.5 requires the actual request identity, migration and gzip panel handler");
       if(app.version!=="2.5.0"&&app.version!=="2.6.0")errors.push("statistics new format requires exact reviewed2.5.0 or2.6.0, not aliases or unreviewed revisions");
     }
+  }
+  const countryPresent=Object.hasOwn(app,"country_data_channel"),countryRequired=Array.isArray(requirements)&&requirements.includes(wafCountry);
+  if(countryPresent||countryRequired||app.id==="nginx-waf"&&app.version==="2.6.0"){
+    const channel=app.country_data_channel;
+    if(app.id!=="nginx-waf"||app.version!=="2.6.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||Object.keys(app.delivery??{}).sort().join(",")!=="manage_route,provider,target"||!countryRequired||requirements.length!==1||!channel||typeof channel!=="object"||Array.isArray(channel)||Object.keys(channel).sort().join(",")!=="format,id"||channel.id!=="dbip-country-lite-v1"||channel.format!==1||Object.hasOwn(app,"geo_data_channel"))errors.push("country data requires exact Nginx WAF2.6.0, its compiled handler and fixed signed channel; no URLs, keys, scripts or unrelated city authority");
   }
   const geoPresent=Object.hasOwn(app,"geo_data_channel"),geoRequired=Array.isArray(requirements)&&requirements.includes(geography);
   if(geoPresent||geoRequired||app.id==="website-statistics-v2"&&app.version==="2.6.0"){

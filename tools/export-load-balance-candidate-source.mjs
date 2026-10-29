@@ -12,7 +12,7 @@ const input=JSON.parse(execFileSync('/usr/bin/tar',['-xOf',archive,prefix+'/SOUR
 assert(input.format===1&&sha(JSON.stringify(input.files))===input.inputs_sha256);
 const output=path.join(root,'candidate/panel-integration-load-balance');assert(!fs.existsSync(output),'inspect original export; never overwrite a source cohort');
 const build=fs.readFileSync(panel+'/packaging/build-release.sh','utf8');assert.equal(sha(build),input.files['packaging/build-release.sh'].sha256);
-const scripts=new Set(['scripts/env.sh']),pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+(scripts\/[a-z0-9-]+\.mjs)/g)].map(v=>v[1]);
+const scripts=new Set(['scripts/env.sh']),pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+((?:scripts\/[a-z0-9-]+\.mjs)(?:\s+scripts\/[a-z0-9-]+\.mjs)*)/g)].flatMap(v=>v[1].split(/\s+/));
 assert(pending.includes('scripts/test-load-balance-stream.mjs')&&pending.includes('scripts/test-load-balance-stream-account-entry.mjs'));
 while(pending.length){
  const name=pending.shift();if(scripts.has(name))continue;

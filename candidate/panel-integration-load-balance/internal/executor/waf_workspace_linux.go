@@ -279,6 +279,10 @@ func (s *Service) wafWorkspaceRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
 		}
+		if err := s.verifyWAFCountryPolicyCache(r.Context(), v); err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
 		if v.TrustedProxy != nil && v.TrustedProxy.Enabled {
 			nginx, err := s.nginxBinary()
 			if err == nil {

@@ -43,5 +43,7 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
   "printf '%s  %s\\n' \"$(shasum -a 256 \"$STAGE/upgraderead-tests\" | cut -d ' ' -f 1)\" \"$OUT/$NAME.upgraderead-tests\" > \"$STAGE/upgraderead-tests.sha256\"\n",
   "ln \"$STAGE/upgraderead-tests.sha256\" \"$OUT/$NAME.upgraderead-tests.sha256\"\n"
 ]) once(addition, '');
+  // The independent country gate is mandatory; no other build bytes move.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-country-identity.mjs scripts/test-waf-country-policy.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
   return text;
 }

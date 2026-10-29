@@ -445,6 +445,7 @@ const softwareState = (id: string) => softwareInstallState(softwareStatus(id));
 const softwareManager = ref<InstanceType<typeof SecurityAppManager> | null>(null);
 const securityWorkspaceEpoch = ref(0);
 const securityWorkspaceScope = shallowRef<{
+  actor: string;
   api: typeof api;
   install: typeof queueSoftwareInstall;
   job: typeof lifecycleJob;
@@ -454,6 +455,7 @@ function bindSecurityWorkspace() {
   const current = () => !appModuleScopeDisposed && epoch === accessEpoch && session === csrf.value &&
     !!session && !!account && user.value === account && !accountChanging.value && validAccessPlan(accessPlan.value) && accessPlan.value.role === "admin";
   securityWorkspaceScope.value = {
+    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",
     api: scopeWorkspaceAPI(api, current),
     install: scopeWorkspaceOperation(queueSoftwareInstall, current),
     job: scopeWorkspaceOperation(async (id: string) => {
@@ -2870,7 +2872,7 @@ onUnmounted(() => {
           <MemcachedAppUpdate v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedAppUpdate" :api="api" :actor="memcachedActor" @changed="refresh()" />
           <MemcachedHistory v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedHistory" :api="api" :actor="memcachedActor" />
           <MemcachedUnixManager v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedUnixManager" :api="api" :actor="memcachedActor" :sites="sites" :full-admin="memcachedFullAdmin" @changed="refresh()" @legacy="memcachedHistory?.open((registryStatus('memcached')?.instances||[]).filter(v=>v.version!=='1.6.45-compat4'))" />
-          <SecurityAppManager v-if="securityWorkspaceScope" :key="securityWorkspaceEpoch" ref="softwareManager" :api="securityWorkspaceScope.api" :on-job="securityWorkspaceScope.job" :on-install="securityWorkspaceScope.install" />
+          <SecurityAppManager v-if="securityWorkspaceScope" :key="securityWorkspaceEpoch" ref="softwareManager" :api="securityWorkspaceScope.api" :actor="securityWorkspaceScope.actor" :on-job="securityWorkspaceScope.job" :on-install="securityWorkspaceScope.install" />
           <el-dialog v-model="versionManagerOpen" :title="`${versionManagerRuntime?.name || '软件'} · 版本管理`" width="500px">
             <p class="runtime-version-help">精确版本独立安装并存；安装后可在对应网站或数据库设置中切换，现有绑定保持不变。</p>
             <el-select v-model="versionManagerSelection" style="width: 100%" aria-label="选择另一软件版本" placeholder="当前目录中没有待安装版本">

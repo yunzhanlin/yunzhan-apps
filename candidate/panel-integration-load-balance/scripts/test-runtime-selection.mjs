@@ -143,6 +143,10 @@ test("actual component wiring has exactly the reviewed UI-only delta from F55",(
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=readFileSync(path,"utf8");
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
+ // The independent country editor adds only current-actor plumbing here.
+ one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
+ one('    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",\n', '');
+ one(' :actor="securityWorkspaceScope.actor"', '');
  one('import { reconcileRuntimeChoices } from "./runtimeSelection";\n',"");
  one('  versions.value = {}; explicitRuntimeVersions.value = {};\n',"");
  const block='const versions = ref<Record<string, string>>({});\nconst explicitRuntimeVersions = ref<Record<string, string>>({});\nfunction applyRuntimeChoices(value: Runtimes) {\n  const next = reconcileRuntimeChoices(value, versions.value, explicitRuntimeVersions.value);\n  versions.value = next.selected; explicitRuntimeVersions.value = next.explicit;\n}\nfunction rememberRuntimeVersion(family: string) {\n  explicitRuntimeVersions.value = { ...explicitRuntimeVersions.value, [family]: versions.value[family] };\n  applyRuntimeChoices(runtimes.value);\n}\n';

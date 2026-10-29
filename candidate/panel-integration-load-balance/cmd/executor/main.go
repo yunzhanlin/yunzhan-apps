@@ -57,6 +57,9 @@ func main() {
 	idsRuleFeed := flag.String("install-network-ids-rulefeed", "", "install signed passive rule data for a fixed verified job, without activation")
 	statisticsGeo := flag.String("statistics-geodata-job", "", "run one installed-instance-bound signed geographic data job")
 	statisticsGeoReader := flag.Bool("statistics-geodata-reader", false, "read-only bounded geographic structure worker; stdin/stdout only")
+	wafCountryJob := flag.String("waf-country-job", "", "run one sealed original signed-country data job without changing website policy")
+	wafCountryTransfer := flag.Bool("waf-country-transfer", false, "fixed low-privilege signed-country transfer; stdin and write-only fd3 only")
+	wafCountryAccount := flag.String("waf-country-account", "", "prepare only the dedicated network account for one original signed-country dispatch")
 	statisticsHistoryRecovery := flag.String("recover-statistics-history", "", "explicit fixed-path native hot-journal recovery bound to database:journal:installed SHA256; preserves immutable originals")
 	diskHostJob := flag.String("disk-host-job", "", "run one sealed actor/instance-bound host disk job in the fixed host scope")
 	diskHostInventory := flag.String("disk-host-inventory", "", "emit bounded host inventory only through a verified fixed inventory scope")
@@ -87,6 +90,21 @@ func main() {
 		// No executor mode consumes positional arguments. Reject before any
 		// host dispatch, including a fixed-job flag hidden after a positional.
 		log.Fatal("executor rejects unexpected positional arguments")
+	}
+	countryAccountEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "waf-country-account" {
+			countryAccountEntry = true
+		}
+	})
+	if countryAccountEntry {
+		if len(os.Args) != 2 || os.Args[1] != "--waf-country-account="+*wafCountryAccount {
+			log.Fatal("fixed country account entry rejects mixed/alias/extra arguments")
+		}
+		if err := executor.RunWAFCountryNetworkAccountJob(*wafCountryAccount); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	lbStreamInstallEntry := false
 	flag.Visit(func(f *flag.Flag) {
@@ -133,6 +151,31 @@ func main() {
 			log.Fatal("fixed Memcached account entry rejects mixed/alias/extra arguments")
 		}
 		if err := executor.RunMemcachedUnixAccountJob(strings.TrimPrefix(*appDependencies, "memcached-unix-")); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	countryEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "waf-country-job" || f.Name == "waf-country-transfer" {
+			countryEntry = true
+		}
+	})
+	if countryEntry {
+		if len(os.Args) != 2 || *wafCountryTransfer && *wafCountryJob != "" || *wafCountryTransfer && os.Args[1] != "--waf-country-transfer" || !*wafCountryTransfer && (*wafCountryJob == "" || os.Args[1] != "--waf-country-job="+*wafCountryJob) {
+			log.Fatal("fixed country data entry rejects empty, alias, mixed or additional flags")
+		}
+		var err error
+		if *wafCountryTransfer {
+			file := os.NewFile(3, "country-original-write-only")
+			err = executor.RunWAFCountryTransfer(os.Stdin, os.Stdout, file)
+			if file != nil {
+				file.Close()
+			}
+		} else {
+			err = executor.RunWAFCountryDataJob(*wafCountryJob)
+		}
+		if err != nil {
 			log.Fatal(err)
 		}
 		return

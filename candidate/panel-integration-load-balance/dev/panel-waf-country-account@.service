@@ -1,0 +1,32 @@
+[Unit]
+Description=Panel original WAF country network account preparation %i
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/panel/bin/panel-executor --waf-country-account=%i
+TimeoutStartSec=15s
+TimeoutStopSec=3s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=CAP_CHOWN CAP_DAC_OVERRIDE CAP_FOWNER CAP_SETGID CAP_SETUID CAP_AUDIT_WRITE
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_NETLINK
+ReadWritePaths=/etc
+ReadOnlyPaths=/var/lib/panel /var/lib/panel-executor/waf-country-jobs
+InaccessiblePaths=-/run/panel-executor/control.sock -/etc/nginx -/etc/systemd/system -/etc/ssh -/srv/panel/sites
+MemoryMax=96M
+MemorySwapMax=0
+TasksMax=16
+CPUQuota=50%
+LimitCORE=0

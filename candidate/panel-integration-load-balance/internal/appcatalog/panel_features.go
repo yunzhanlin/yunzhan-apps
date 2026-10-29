@@ -52,9 +52,14 @@ const HardeningJournalFeature = "hardening-reversible-journal-v1"
 // It cannot authorize the final1.1 preserving transaction merely by label.
 const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 
+// The published health fix is independent of the unfinished country handler.
+// A future country manifest cannot borrow this complete, narrower ABI.
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
+	if feature == CountryDataFeature {
+		return runtime.GOOS == "linux"
+	}
 	if feature == LoadBalanceStreamFeature {
 		return runtime.GOOS == "linux" && officialCatalogChannel == "candidate"
 	}
@@ -82,13 +87,18 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	if handled, err := validateNativeMobileRequirement(manifest, available); handled {
 		return err
 	}
+	if err := validateCountryDataRequirement(manifest); err != nil {
+		return err
+	}
 	if manifest.ID == "nginx-waf" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
 		comparison, valid := CompareVersions(base, "2.5.2")
 		if !valid {
 			return errors.New("Nginx WAF 处理器版本无法核对")
 		}
-		if comparison >= 0 && (manifest.Version != "2.5.2" || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != WAFBoundHealthFeature) {
+		// Exact future2.6 is separately shape-checked above and still refused
+		// by production availability below. Neither label grants a handler.
+		if comparison >= 0 && manifest.Version != "2.6.0" && (manifest.Version != "2.5.2" || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != WAFBoundHealthFeature) {
 			return errors.New("Nginx WAF 2.5.2 须声明固定完整版本与站点绑定的健康检查处理器")
 		}
 	}
@@ -232,7 +242,7 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		}
 		seen[feature] = true
 		if feature == WAFBoundHealthFeature && (manifest.ID != "nginx-waf" || manifest.Version != "2.5.2" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "security") {
-			return errors.New("站点绑定的健康检查处理器仅属于 Nginx WAF 2.5.2 的固定安全管理目标")
+			return errors.New("站点绑定健康检查处理器仅属于nginx-waf2.5.2的固定安全管理目标")
 		}
 		if feature == IntrusionJournalFeature && (manifest.ID != "anti-intrusion" || manifest.Version != "1.1.0" || manifest.Delivery.Target != "intrusion-prevention" || manifest.Delivery.ManageRoute != "security") {
 			return errors.New("防入侵事务处理器仅属于anti-intrusion1.1.0的固定安全管理目标")

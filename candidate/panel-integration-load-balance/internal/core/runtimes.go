@@ -223,7 +223,7 @@ func (s *Store) finishRuntime(j Job, detail string, steps []Step, uncertain bool
 			return tx.Commit()
 		}
 	}
-	if j.Kind == "waf_engine_build" || j.Kind == "apache_body_build" || j.Kind == "analytics_html_build" || j.Kind == "network_ids_rulefeed_install" || j.Kind == "statistics_geodata" {
+	if j.Kind == "waf_engine_build" || j.Kind == "apache_body_build" || j.Kind == "analytics_html_build" || j.Kind == "network_ids_rulefeed_install" || j.Kind == "statistics_geodata" || j.Kind == "waf_country_data" {
 		target := "nginx-waf"
 		if j.Kind == "apache_body_build" {
 			target = "apache-waf"
@@ -273,11 +273,11 @@ func (s *Store) NextRuntimeJob() (Job, error) {
 }
 
 func (s *Store) nextRuntimeInstallJob() (Job, error) {
-	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install','statistics_geodata') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install','statistics_geodata','waf_country_data') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 func (s *Store) nextRuntimeControlJob() (Job, error) {
-	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install','statistics_geodata') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
+	return s.nextRuntimeJob(" AND NOT (kind IN ('install_runtime','install_php_extension','waf_engine_build','apache_body_build','analytics_html_build','network_ids_rulefeed_install','statistics_geodata','waf_country_data') OR (kind='software_install' AND target_id IN ('pure-ftpd','pm2-manager','nfs-manager')))")
 }
 
 // The predicates above are fixed internal SQL, never request parameters.
@@ -329,7 +329,7 @@ func (s *Store) RetryRuntime(id, actor string) error {
 			}
 		}
 	}
-	if kind == "waf_engine_build" || kind == "apache_body_build" || kind == "analytics_html_build" || kind == "network_ids_rulefeed_install" || kind == "statistics_geodata" {
+	if kind == "waf_engine_build" || kind == "apache_body_build" || kind == "analytics_html_build" || kind == "network_ids_rulefeed_install" || kind == "statistics_geodata" || kind == "waf_country_data" {
 		return errors.New("原始构建或数据任务证据不可覆盖；请创建新任务，保留原失败记录")
 	}
 	r, e := tx.Exec(`UPDATE runtime_jobs SET state='queued',error='',updated_at=? WHERE id=? AND state IN ('failed','needs_attention')`, Now(), id)

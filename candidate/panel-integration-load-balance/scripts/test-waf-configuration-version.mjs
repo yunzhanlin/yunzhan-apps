@@ -4,11 +4,12 @@ import {readFileSync} from 'node:fs';
 import {wafConfigurationVersionMatches as matches} from '../web/src/wafConfigurationVersion.ts';
 
 test('installed app must equal a known programme implementation, not just be older',()=>{
-  for(const version of ['2.0.1','2.1.0','2.1.1','2.2.0','2.3.0','2.4.0','2.5.0','2.5.1','2.5.2']){
+  const known=['2.0.1','2.1.0','2.1.1','2.2.0','2.3.0','2.4.0','2.5.0','2.5.1','2.5.2','2.6.0'];
+  for(const version of known){
     assert.equal(matches('nginx-waf',true,version,version),true);
-    if(version!=='2.5.2')assert.equal(matches('nginx-waf',true,version,'2.5.2'),false);
+    for(const implementation of known)assert.equal(matches('nginx-waf',true,version,implementation),version===implementation);
   }
-  for(const version of ['',undefined,null,{},252,'2.5.3','2.6.0','latest','v2.5.2','2.5.2 ']){
+  for(const version of ['',undefined,null,{},252,'2.5.3','2.6.1','2.6.0-preview','latest','v2.5.2','2.5.2 ']){
     assert.equal(matches('nginx-waf',true,version,'2.5.2'),false);
     assert.equal(matches('nginx-waf',true,version,version),false);
     assert.equal(matches('nginx-waf',false,undefined,version),false);
@@ -16,6 +17,7 @@ test('installed app must equal a known programme implementation, not just be old
 });
 test('fresh install requires a known implementation; Apache path is independent',()=>{
   assert.equal(matches('nginx-waf',false,undefined,'2.5.2'),true);
+  assert.equal(matches('nginx-waf',false,undefined,'2.6.0'),true);
   assert.equal(matches('apache-waf',true,'2.2.0','2.3.0'),false);
   assert.equal(matches('apache-waf',true,'2.3.0','2.3.0'),true);
   assert.equal(matches('apache-waf',true,'2.4.0','2.4.0'),true);

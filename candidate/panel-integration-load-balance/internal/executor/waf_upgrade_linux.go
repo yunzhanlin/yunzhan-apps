@@ -20,6 +20,9 @@ import (
 // All other references must still resolve to a regular managed site config.
 // Normal policy edits continue to use the stricter prepareWAFSettings path.
 func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
+	if cfg.Country != nil && (version != core.WAFCountryDataVersion || core.ValidateWAFCountryConfig(cfg.Country) != nil) {
+		return false
+	}
 	if cfg.BodyLogRetention != nil && !wafRetentionVersion(version) {
 		return false
 	}
@@ -30,7 +33,7 @@ func wafHistoricalVersionValid(version string, cfg core.WAFConfig) bool {
 }
 
 func wafLegacyVersion(version string) bool {
-	return version != core.WAFVersion && (version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0" || version == "2.4.0" || version == "2.5.0" || version == "2.5.1")
+	return version != core.WAFVersion && (version == "2.0.1" || version == "2.1.0" || version == "2.1.1" || version == "2.2.0" || version == "2.3.0" || version == "2.4.0" || version == "2.5.0" || version == "2.5.1" || version == "2.5.2")
 }
 
 func (s *Service) wafLegacyMigrationReferences(cfg core.WAFConfig) error {
@@ -154,6 +157,21 @@ func (s *Service) verifyWAFLegacyUpgradePlan(manifest softwareManifest, cfg core
 			return errors.New("WAF 版本迁移不能改变原文件 UID/GID")
 		}
 		want, ok := files[change.Path]
+		if !ok && change.Path == s.wafCountryInstancePath() && core.WAFVersion == core.WAFCountryDataVersion {
+			// The new random installation identity is the sole additional
+			// metadata member of this version upgrade. It shares the original
+			// before/after transaction and rollback, never an outside repair.
+			instance, err := decodeWAFCountryInstance(change.NextData)
+			canonical, encodeErr := countryCacheJSON(instance)
+			if err != nil || encodeErr != nil || !bytes.Equal(canonical, change.NextData) ||
+				seen[change.Path] || change.OldExists || len(change.OldData) != 0 || change.OldOwner != nil ||
+				!change.NextExists || change.NextMode != 0600 || change.NextOwner == nil ||
+				change.NextOwner.UID != uint32(os.Geteuid()) || change.NextOwner.GID != uint32(os.Getegid()) {
+				return errors.New("国家功能升级实例不属于唯一的新建受管事务成员，未开始修改")
+			}
+			seen[change.Path] = true
+			continue
+		}
 		if !ok && wafCCObservationVersion(core.WAFVersion) && filepath.Dir(change.Path) == s.Config.ConfDir {
 			if seen[change.Path] {
 				return errors.New("WAF 历史迁移出现重复网站路径")

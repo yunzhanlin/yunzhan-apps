@@ -88,7 +88,8 @@ func runtimeSupersededCoreFixture(t *testing.T, arch string) (*Store, RuntimeSup
 			t.Fatal(err)
 		}
 	}
-	at := func(n int) string { return time.Now().UTC().Add(time.Duration(n) * time.Second).Format(time.RFC3339) }
+	base := time.Now().UTC().Truncate(time.Second)
+	at := func(n int) string { return base.Add(time.Duration(n) * time.Second).Format(time.RFC3339) }
 	r, _ := runtimecatalog.Find("php-8.2.35")
 	old, err := s.QueueInstall(r.ID, ID(), "fixture-admin")
 	if err != nil {

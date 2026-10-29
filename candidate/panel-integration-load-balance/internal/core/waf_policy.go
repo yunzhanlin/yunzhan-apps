@@ -11,7 +11,7 @@ import (
 	"unicode"
 )
 
-const WAFVersion = "2.5.2"
+const WAFVersion = "2.6.0"
 
 var WAFGroupNames = []string{"method", "sql", "xss", "command", "traversal", "scanner", "cookie"}
 
@@ -67,6 +67,7 @@ type WAFConfig struct {
 	TrustedProxy     *WAFTrustedProxyConfig     `json:"trusted_proxy,omitempty"`
 	BodyLogRotation  *WAFBodyLogRotationConfig  `json:"body_log_rotation,omitempty"`
 	BodyLogRetention *WAFBodyLogRetentionConfig `json:"body_log_retention,omitempty"`
+	Country          *WAFCountryConfig          `json:"country,omitempty"`
 }
 
 func DefaultWAFConfig() WAFConfig {
@@ -120,6 +121,18 @@ func DecodeWAFConfig(raw map[string]any) (WAFConfig, error) {
 	}
 	if err := ValidateWAFBodyLogRetention(v.BodyLogRetention); err != nil {
 		return v, err
+	}
+	if v.Country != nil {
+		if WAFVersion != WAFCountryDataVersion {
+			return v, errors.New("当前完整处理器尚不支持国家策略，未采用未来版本字段")
+		}
+		country, exact := raw["country"]
+		encoded, err := json.Marshal(country)
+		decoded, decodeErr := DecodeWAFCountryConfig(encoded)
+		if !exact || err != nil || decodeErr != nil {
+			return v, errors.New("国家策略字段、签名数据引用或明确模式不完整")
+		}
+		v.Country = &decoded
 	}
 	groupOK := func(groups map[string]bool) bool {
 		for k := range groups {
@@ -256,7 +269,7 @@ func containsString(list []string, s string) bool {
 	}
 	return false
 }
-func WAFScopedSites(v WAFConfig) []string {
+func WAFMetadataScopedSites(v WAFConfig) []string {
 	ids := map[string]bool{}
 	if v.Body != nil {
 		for _, site := range v.Body.Sites {
@@ -284,6 +297,24 @@ func WAFScopedSites(v WAFConfig) []string {
 		}
 	}
 	out := []string{}
+	for id := range ids {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func WAFScopedSites(v WAFConfig) []string {
+	ids := map[string]bool{}
+	for _, id := range WAFMetadataScopedSites(v) {
+		ids[id] = true
+	}
+	if v.Country != nil {
+		for _, site := range v.Country.Sites {
+			ids[site.SiteID] = true
+		}
+	}
+	out := make([]string, 0, len(ids))
 	for id := range ids {
 		out = append(out, id)
 	}

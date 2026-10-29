@@ -136,12 +136,21 @@ func TestWAFPendingBlocksEveryWebsiteMutationBeforeAnyWrite(t *testing.T) {
 }
 
 func TestWAFTransactionEveryInterruptionRestoresExactBytes(t *testing.T) {
-	for cut := 0; cut <= 7; cut++ {
+	for cut := 0; cut <= 8; cut++ {
 		t.Run(string(rune('A'+cut)), func(t *testing.T) {
 			s, cfg, _ := wafBodyPlanFixture(t)
 			plan, err := s.planWAFConfiguration(cfg, false)
-			if err != nil || len(plan) != 7 {
+			if err != nil || len(plan) != 8 {
 				t.Fatal("unexpected fixture size", len(plan), err)
+			}
+			instances := 0
+			for _, change := range plan {
+				if change.Path == s.wafCountryInstancePath() && !change.OldExists && change.NextExists {
+					instances++
+				}
+			}
+			if instances != 1 {
+				t.Fatal("new installation identity is not one rollback-bound transaction member")
 			}
 			_, err = s.startWAFTransaction(plan)
 			if err != nil {

@@ -10,7 +10,14 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	// original input. Neither native-unit exemptions nor changed legacy checks
 	// can be hidden by updating a whole-file digest.
 	assert.equal(queues.split(fencedEntry).length,2);
-	const legacyQueues=queues.replace(fencedEntry,()=>entry);
+	let legacyQueues=queues.replace(fencedEntry,()=>entry);
+	// Strip ONLY the three explicit additional country fences. The previous
+	// queue predicates must still match their complete historical digests.
+	for(const addition of [
+	  '\t\tif err := (&core.Store{DB: reader.db}).CheckWAFCountryUpgrade(ctx); err != nil {\n\t\t\treturn err\n\t\t}\n',
+	  '"panel-waf-country@", "panel-waf-country-account@", ',
+	  '\tif err := r.wafCountryJobs(); err != nil {\n\t\treturn err\n\t}\n',
+	]){assert.equal(legacyQueues.split(addition).length,2);legacyQueues=legacyQueues.replace(addition,'');}
 	const oldBranch='return closedRuntimeFailedInstall(ctx, name, run) || closedRuntimeCompileOOMInstall(ctx, name, run)',newBranch=oldBranch+' || closedRuntimeSupersededCompileOOMInstall(ctx, name, run)';
 	assert.equal(legacyQueues.split(newBranch).length,2);
 	assert.equal(sha(legacyQueues),'bcf8ef698c5d3cdd3482ea219ad1a336735a1f80dcee2461aee19d8b707c4ed3');

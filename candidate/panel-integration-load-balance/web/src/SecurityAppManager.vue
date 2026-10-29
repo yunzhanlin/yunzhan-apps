@@ -32,7 +32,7 @@ export interface SecurityAppStatus {
 }
 interface WAFEvent { time: string; site: string; ip: string; status: number; method: string; bad_method: string; bad_args: string; bad_uri: string; bad_agent: string; rate: string }
 
-const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
+const props = defineProps<{ api: API; actor?: string; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings: Record<string, unknown>) => Promise<string> }>();
 const open = ref(false), busy = ref(false);
 const selected = ref<SecurityAppCatalogItem | null>(null);
 const hasDedicatedWorkspace = computed(() => selected.value?.id === "nginx-waf" || selected.value?.id === "system-hardening" || selected.value?.id === "intrusion-prevention");
@@ -120,7 +120,7 @@ defineExpose({ show, install });
 
 <template>
   <el-dialog v-model="open" :title="selected?.id === 'nginx-waf' ? 'Nginx 防火墙管理工作台' : selected?.id === 'system-hardening' ? '系统基线加固工作台' : selected?.id === 'intrusion-prevention' ? 'SSH 防入侵工作台' : `${selected?.name || '安全软件'} · 设置`" :width="selected?.id === 'nginx-waf' || selected?.id === 'system-hardening' || selected?.id === 'intrusion-prevention' ? 'min(1160px, 96vw)' : '560px'" class="security-app-dialog" destroy-on-close>
-    <WafWorkspace v-if="selected?.id === 'nginx-waf'" :api="api" :on-install="onInstall"/>
+    <WafWorkspace v-if="selected?.id === 'nginx-waf'" :api="api" :actor="actor" :on-install="onInstall"/>
     <HardeningWorkspace v-else-if="selected?.id === 'system-hardening'" :api="api" :on-install="onInstall" :on-job="async id => { open = false; await onJob(id); }"/>
     <IntrusionWorkspace v-else-if="selected?.id === 'intrusion-prevention'" :api="api" :on-install="onInstall" :on-job="async id => { open = false; await onJob(id); }"/>
     <template v-else>

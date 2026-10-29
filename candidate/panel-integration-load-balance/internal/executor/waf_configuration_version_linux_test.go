@@ -53,7 +53,7 @@ func wafConfigurationTree(t *testing.T, root string) map[string]string {
 // This is a private filesystem regression, not an application update. A
 // programme upgrade must not let a legacy client silently promote the app.
 func TestWAFConfigurationRequiresInstalledImplementationVersion(t *testing.T) {
-	versions := []string{"2.0.1", "2.1.0", "2.1.1", "2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.5.1", "2.5.3", "2.6.0", "", "unknown"}
+	versions := []string{"2.0.1", "2.1.0", "2.1.1", "2.2.0", "2.3.0", "2.4.0", "2.5.0", "2.5.1", "2.5.2", "2.5.3", "2.6.1", "2.6.0-preview", "", "unknown"}
 	for _, version := range versions {
 		for _, legacy := range []bool{true, false} {
 			t.Run(fmt.Sprintf("%s/legacy=%v", version, legacy), func(t *testing.T) {
@@ -122,7 +122,7 @@ func TestWAFConfigurationRoutesRejectOldVersionWithoutMutation(t *testing.T) {
 }
 
 func TestWAFConfigurationInstallationRejectsMismatchedSignedVersion(t *testing.T) {
-	for _, version := range []string{"", "2.0.1", "2.5.1", "2.5.3", "2.6.0", "latest"} {
+	for _, version := range []string{"", "2.0.1", "2.5.1", "2.5.2", "2.5.3", "2.6.1", "2.6.0-preview", "latest"} {
 		t.Run(version, func(t *testing.T) {
 			s := wafPolicyFixture(t)
 			before := wafConfigurationTree(t, s.Config.SystemRoot)

@@ -13,7 +13,7 @@ func TestWAFHealthBindingIsVersionedAndRequiresCurrentSiteIdentity(t *testing.T)
 	if !strings.Contains(old, `map "$uri" $pw_health`) || !strings.Contains(old, `~^/__panel_health_[a-f0-9]{32}$`) {
 		t.Fatal("historical renderer changed; original source cannot be independently verified")
 	}
-	for _, version := range []string{"2.5.2"} {
+	for _, version := range []string{"2.5.2", core.WAFCountryDataVersion} {
 		fixed, _ := renderWAFPolicyVersion(cfg, version)
 		if !strings.Contains(fixed, `map "$panel_waf_site:$uri" $pw_health`) || !strings.Contains(fixed, `~^([a-f0-9]{32}):/__panel_health_\\1$`) || strings.Contains(fixed, `~^/__panel_health_[a-f0-9]{32}$`) {
 			t.Fatal("future health exception not bound to actual site", version)

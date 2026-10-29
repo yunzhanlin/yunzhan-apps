@@ -16,10 +16,10 @@ function supported(version, installed = true, apache = false) {
   return Array.from(context.result);
 }
 test('actual WAF UI retains all three existing capability controls on the exact health hotfix version', () => {
-  for (const version of ['2.5.0', '2.5.1', '2.5.2']) assert.deepEqual(supported(version), [true, true, true]);
+  for (const version of ['2.5.0', '2.5.1', '2.5.2', '2.6.0']) assert.deepEqual(supported(version), [true, true, true]);
   assert.deepEqual(supported('2.4.0'), [true, true, false]);
   assert.deepEqual(supported('2.3.0'), [true, false, false]);
-  for (const version of ['', '2.5.2-preview', '2.5.3', '2.6.0', 'future']) assert.deepEqual(supported(version), [false, false, false]);
+  for (const version of ['', '2.5.2-preview', '2.5.3', '2.6.0-preview', '2.6.1', 'future']) assert.deepEqual(supported(version), [false, false, false]);
   assert.deepEqual(supported('2.5.2', false), [false, false, false]);
   assert.deepEqual(supported('2.5.2', true, true), [false, false, false]);
 });

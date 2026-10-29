@@ -40,21 +40,23 @@ type SoftwareAppsPage struct {
 }
 
 type WAFEvent struct {
-	SiteID    string `json:"site_id,omitempty"`
-	Path      string `json:"path,omitempty"`
-	Reason    string `json:"reason,omitempty"`
-	Action    string `json:"action,omitempty"`
-	Time      string `json:"time"`
-	Site      string `json:"site"`
-	IP        string `json:"ip"`
-	Peer      string `json:"peer,omitempty"`
-	Status    int    `json:"status"`
-	Method    string `json:"method"`
-	BadMethod string `json:"bad_method"`
-	BadArgs   string `json:"bad_args"`
-	BadURI    string `json:"bad_uri"`
-	BadAgent  string `json:"bad_agent"`
-	Rate      string `json:"rate"`
+	Country     string `json:"country,omitempty"`
+	CountryData string `json:"country_data,omitempty"`
+	SiteID      string `json:"site_id,omitempty"`
+	Path        string `json:"path,omitempty"`
+	Reason      string `json:"reason,omitempty"`
+	Action      string `json:"action,omitempty"`
+	Time        string `json:"time"`
+	Site        string `json:"site"`
+	IP          string `json:"ip"`
+	Peer        string `json:"peer,omitempty"`
+	Status      int    `json:"status"`
+	Method      string `json:"method"`
+	BadMethod   string `json:"bad_method"`
+	BadArgs     string `json:"bad_args"`
+	BadURI      string `json:"bad_uri"`
+	BadAgent    string `json:"bad_agent"`
+	Rate        string `json:"rate"`
 }
 
 type WAFEventsPage struct {

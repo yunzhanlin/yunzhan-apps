@@ -45,11 +45,23 @@ func renderWAFPolicy(cfg core.WAFConfig) (string, string) {
 // arbitrary text replacement could also alter an administrator's rule values.
 func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string) {
 	var http, server strings.Builder
+	if cfg.Country != nil && version != core.WAFCountryDataVersion {
+		return "invalid_country_policy_version;\n", "invalid_country_policy_version;\n"
+	}
+	countryMaps, countryActive := "", false
+	if cfg.Country != nil {
+		var countryErr error
+		countryMaps, countryActive, countryErr = renderWAFCountryMaps(cfg.Country, cfg.Policy.Mode)
+		if countryErr != nil {
+			return "invalid_country_policy_reference;\n", "invalid_country_policy_reference;\n"
+		}
+	}
 	http.WriteString("# managed by panel nginx-waf " + version + "; independently authored metadata rules\n")
 	// map declares the variable even on a host without managed sites. Site
 	// server blocks assign their immutable ID in rewrite phase before use.
 	wafMap(&http, "$server_name", "panel_waf_site", wafQuote("unmanaged"), nil)
-	ids := append([]string{""}, core.WAFScopedSites(cfg)...)
+	// Country-only overrides must not renumber established metadata/CC zones.
+	ids := append([]string{""}, core.WAFMetadataScopedSites(cfg)...)
 	policies := map[string]core.WAFSitePolicy{}
 	for _, p := range cfg.Policy.Sites {
 		policies[p.SiteID] = p
@@ -137,6 +149,8 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 	if wafBoundHealthVersion(version) {
 		wafMap(&http, "$panel_waf_site:$uri", "pw_health", "0", []wafMapEntry{{`~^([a-f0-9]{32}):/__panel_health_\1$`, "1"}})
 	} else {
+		// Exact historical bytes are needed to verify old installed policy;
+		// old apps do NOT acquire a fix merely by upgrading the programme.
 		wafMap(&http, "$uri", "pw_health", "0", []wafMapEntry{{`~^/__panel_health_[a-f0-9]{32}$`, "1"}})
 	}
 	wafMap(&http, "$request_method", "pw_raw_method", "0", []wafMapEntry{{"TRACE", "1"}, {"TRACK", "1"}})
@@ -153,7 +167,11 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 		}
 		wafMap(&http, source, "pw_raw_"+g, "0", []wafMapEntry{{"~*" + pattern, "1"}})
 	}
+	http.WriteString(countryMaps)
 	blockReason, observeReason := wafQuote(""), wafQuote("")
+	if countryActive {
+		blockReason, observeReason = "$pw_country_block_reason", "$pw_country_observe_reason"
+	}
 	for i, r := range cfg.Policy.Rules {
 		if !r.Enabled {
 			continue
@@ -261,6 +279,9 @@ func renderWAFPolicyVersion(cfg core.WAFConfig, version string) (string, string)
 	metadataLog := "log_format panel_waf escape=json '{\"time\":\"$time_iso8601\",\"site\":\"$server_name\",\"site_id\":\"$panel_waf_site\",\"ip\":\"$remote_addr\",\"status\":$status,\"method\":\"$request_method\",\"path\":\"$uri\",\"reason\":\"$pw_log_reason\",\"action\":\"$pw_log_action\",\"bad_method\":\"$panel_waf_bad_method\",\"bad_args\":\"$panel_waf_bad_args\",\"bad_uri\":\"$panel_waf_bad_uri\",\"bad_agent\":\"$panel_waf_bad_agent\",\"rate\":\"$limit_req_status\"}';\n"
 	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
 		metadataLog = strings.Replace(metadataLog, `,"status":$status`, `,"peer":"$realip_remote_addr","status":$status`, 1)
+	}
+	if countryActive {
+		metadataLog = strings.Replace(metadataLog, `,"status":$status`, `,"country":"$pw_country_label","country_data":"`+cfg.Country.Data.DataManifestSHA+`","status":$status`, 1)
 	}
 	http.WriteString(metadataLog)
 	// A dedicated loopback virtual host proves the exact configuration loaded,

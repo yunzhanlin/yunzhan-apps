@@ -646,6 +646,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.networkIDSOperationRoutes(m)
 	s.networkIDSRuleFeedJobRoutes(m)
 	s.statisticsGeoJobRoutes(m)
+	s.wafCountryRoutes(m)
 	s.analyticsHTMLRoutes(m)
 	s.appDependencyRoutes(m)
 	s.apacheWAFWorkspaceRoutes(m)

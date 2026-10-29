@@ -59,7 +59,7 @@ func isLoadBalanceStreamManifest(m Manifest) bool {
 	return m.SchemaVersion == 1 && m.ID == "load-balance" && m.Version == loadbalancestream.AppVersion && m.Stage == "ready" && m.Category == "professional" && m.Risk == "privileged" &&
 		m.Delivery == (Delivery{Provider: "panel-module", Target: "load-balance", ManageRoute: "app-modules"}) &&
 		m.Health == (Health{Probe: "panel-api", Target: "/api/app-modules/load-balance"}) && m.Uninstall == (Uninstall{PreserveData: true, ReferenceCheck: true}) &&
-		len(m.RequiredPanelFeatures) == 1 && m.RequiredPanelFeatures[0] == LoadBalanceStreamFeature && len(m.RuleFeeds) == 0 && m.RuleDataChannel == nil && m.GeoDataChannel == nil &&
+		len(m.RequiredPanelFeatures) == 1 && m.RequiredPanelFeatures[0] == LoadBalanceStreamFeature && len(m.RuleFeeds) == 0 && m.RuleDataChannel == nil && m.GeoDataChannel == nil && m.CountryDataChannel == nil &&
 		streamReleaseSet(m.Compatibility.OS, []string{"debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"}) && streamReleaseSet(m.Compatibility.Architectures, []string{"amd64", "arm64"})
 }
 

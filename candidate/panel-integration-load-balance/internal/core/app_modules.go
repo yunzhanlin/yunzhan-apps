@@ -215,6 +215,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 	a.networkIDSOperationRoutes(m)
 	a.networkIDSRuleFeedRoutes(m)
 	a.statisticsGeoRoutes(m)
+	a.wafCountryRoutes(m)
 	a.diskHostObservationRoutes(m)
 	a.diskHostTaskRoutes(m)
 	a.diskHostRecoveryRoutes(m)

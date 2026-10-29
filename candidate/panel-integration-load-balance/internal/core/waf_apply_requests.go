@@ -39,7 +39,7 @@ func wafApplyOriginalSettingsForRequest(app, kind, payload, signedVersion string
 	// configure, another app or an unbound version assertion. Keep this closed
 	// historical list independent of future programme version constants.
 	versionedInstall := kind == "software_install" && signedVersion == in.Version &&
-		(app == "nginx-waf" && in.Version == "2.5.2" || app == "apache-waf" && in.Version == "2.4.0")
+		(app == "nginx-waf" && (in.Version == "2.5.2" || in.Version == "2.6.0") || app == "apache-waf" && in.Version == "2.4.0")
 	if in.Version != "" && !versionedInstall {
 		return nil, bad
 	}

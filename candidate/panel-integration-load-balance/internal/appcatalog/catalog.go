@@ -100,6 +100,7 @@ type Manifest struct {
 	RuleFeeds             []RuleFeed       `json:"rule_feeds,omitempty"`
 	RuleDataChannel       *RuleDataChannel `json:"rule_data_channel,omitempty"`
 	GeoDataChannel        *GeoDataChannel  `json:"geo_data_channel,omitempty"`
+	CountryDataChannel    *GeoDataChannel  `json:"country_data_channel,omitempty"`
 	RequiredPanelFeatures []string         `json:"required_panel_features,omitempty"`
 }
 
@@ -553,6 +554,12 @@ func (c *Client) FetchManifest(ctx context.Context, item CatalogItem, cacheDir s
 // The network pull and root-side offline authority verification share the
 // exact same manifest binding and capability validation contract.
 func (c *Client) verifyManifestData(item CatalogItem, raw []byte) (Manifest, error) {
+	return c.verifyManifestDataWithAvailability(item, raw, panelFeatureAvailable)
+}
+
+// The availability seam is private and used ONLY by ABI/crypto fixtures.
+// Production always supplies the actual compiled feature set above.
+func (c *Client) verifyManifestDataWithAvailability(item CatalogItem, raw []byte, available func(string) bool) (Manifest, error) {
 	var manifest Manifest
 	if len(raw) == 0 || len(raw) > maxManifestBytes {
 		return manifest, errors.New("应用包超过容量或为空")
@@ -576,13 +583,16 @@ func (c *Client) verifyManifestData(item CatalogItem, raw []byte) (Manifest, err
 	if manifest.Stage != "ready" {
 		return Manifest{}, errors.New("该应用尚未通过安装验收")
 	}
-	if err := validatePanelRequirements(manifest, panelFeatureAvailable); err != nil {
+	if err := validatePanelRequirements(manifest, available); err != nil {
 		return Manifest{}, err
 	}
 	if err := validateRuleFeeds(manifest); err != nil {
 		return Manifest{}, err
 	}
 	if err := validateGeoDataChannel(manifest); err != nil {
+		return Manifest{}, err
+	}
+	if err := validateCountryDataChannel(manifest); err != nil {
 		return Manifest{}, err
 	}
 	return manifest, nil

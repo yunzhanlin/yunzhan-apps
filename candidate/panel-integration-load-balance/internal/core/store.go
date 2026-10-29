@@ -276,6 +276,10 @@ func OpenStore(path string) (*Store, error) {
 		s.DB.Close()
 		return nil, err
 	}
+	if err = s.migrateWAFCountryRequests(); err != nil {
+		s.DB.Close()
+		return nil, err
+	}
 	return s, nil
 }
 func (s *Store) Audit(actor, action, target, result string) error {

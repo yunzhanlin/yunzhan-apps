@@ -120,6 +120,9 @@ func (s *Service) applyWAFTransactionChecked(ctx context.Context, cfg core.WAFCo
 		if err := s.verifyWAFBodyEngine(cfg); err != nil {
 			return err
 		}
+		if err := s.verifyWAFCountryPolicyCache(ctx, cfg); err != nil {
+			return err
+		}
 	}
 	changes, err := s.planWAFConfiguration(cfg, uninstall)
 	if err != nil {

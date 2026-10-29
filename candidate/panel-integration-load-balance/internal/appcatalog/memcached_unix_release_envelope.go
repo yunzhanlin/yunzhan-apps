@@ -81,7 +81,7 @@ func verifyMemcachedUnixReleaseEnvelope(ctx context.Context, client *Client, in 
 	if handled, err := validateMemcachedUnixRequirement(manifest, available); !handled || err != nil {
 		return empty, errors.New("Memcached Unix 缺少固定完整交付或独立已实现处理器")
 	}
-	if validateRuleFeeds(manifest) != nil || validateGeoDataChannel(manifest) != nil {
+	if validateRuleFeeds(manifest) != nil || validateGeoDataChannel(manifest) != nil || validateCountryDataChannel(manifest) != nil {
 		return empty, errors.New("Memcached Unix 交付包含外来数据通道")
 	}
 	if err := ctx.Err(); err != nil {

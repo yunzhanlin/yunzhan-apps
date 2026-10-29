@@ -116,6 +116,21 @@ func (s *Snapshot) CountryPrefixes(ctx context.Context, countries []string, limi
 		// A short exported label must not keep an entire MMDB buffer alive.
 		wanted[code] = strings.Clone(code)
 	}
+	return s.countryPrefixes(ctx, wanted, false, limit)
+}
+
+// AllCountryPrefixes is an OFFLINE PUBLISHER operation, not an HTTP lookup or
+// a request-supplied verification shortcut. It retains the same full-tree and
+// result budgets, conservative exclusions and zero-partial-result contract.
+func (s *Snapshot) AllCountryPrefixes(ctx context.Context, limit int) (CountryNetworkExport, error) {
+	if ctx == nil || limit < 1 || limit > maxCountryNetworks {
+		return CountryNetworkExport{}, errors.New("完整地域导出上下文或容量无效")
+	}
+	return s.countryPrefixes(ctx, map[string]string{}, true, limit)
+}
+
+func (s *Snapshot) countryPrefixes(ctx context.Context, wanted map[string]string, all bool, limit int) (CountryNetworkExport, error) {
+	var empty CountryNetworkExport
 	if err := ctx.Err(); err != nil {
 		return empty, err
 	}
@@ -157,6 +172,11 @@ func (s *Snapshot) CountryPrefixes(ctx context.Context, countries []string, limi
 			return empty, errors.New("地域国家字段不是规范代码")
 		}
 		selected, wantedCountry := wanted[code]
+		if !wantedCountry && all {
+			selected = strings.Clone(code)
+			wanted[code] = selected
+			wantedCountry = true
+		}
 		if !wantedCountry {
 			continue
 		}

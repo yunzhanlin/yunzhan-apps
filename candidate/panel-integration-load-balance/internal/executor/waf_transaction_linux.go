@@ -83,7 +83,7 @@ func (s *Service) wafChangePathAllowed(path string) bool {
 		return false
 	}
 	h, v := wafFiles(s)
-	for _, allowed := range []string{s.Config.NginxConf, s.softwareManifestPath("nginx-waf"), h, v, s.systemPath("/etc/panel/waf/http.d/20-panel-native-waf.conf")} {
+	for _, allowed := range []string{s.Config.NginxConf, s.softwareManifestPath("nginx-waf"), s.wafCountryInstancePath(), h, v, s.systemPath("/etc/panel/waf/http.d/20-panel-native-waf.conf")} {
 		if path == allowed {
 			return true
 		}

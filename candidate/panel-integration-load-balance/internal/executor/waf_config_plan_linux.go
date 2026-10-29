@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 const wafTransactionBytes = 8 << 20
@@ -289,6 +290,19 @@ func (s *Service) planWAFConfigurationVersion(cfg core.WAFConfig, uninstall bool
 	}
 	if err := put(b, data, !uninstall, 0600); err != nil {
 		return nil, err
+	}
+	if version == core.WAFCountryDataVersion {
+		instance, err := read(s.wafCountryInstancePath())
+		if err != nil {
+			return nil, err
+		}
+		next, present, err := planWAFCountryInstanceBytes(previousVersion, instance.data, instance.existed, uninstall, time.Now())
+		if err != nil {
+			return nil, err
+		}
+		if err := put(instance, next, present, 0600); err != nil {
+			return nil, err
+		}
 	}
 	out := make([]wafConfigChange, 0, len(changes))
 	for _, c := range changes {

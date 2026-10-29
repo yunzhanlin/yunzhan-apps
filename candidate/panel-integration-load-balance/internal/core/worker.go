@@ -39,12 +39,29 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := e.Client.Do(req)
+	countryRPC := path == "/v1/waf/country" || strings.HasPrefix(path, "/v1/waf/country/jobs/")
+	client := e.Client
+	if countryRPC {
+		guarded := *e.Client
+		guarded.Jar = nil
+		guarded.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+		client = &guarded
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("执行服务连接失败: %w", err)
 	}
 	defer resp.Body.Close()
+	if countryRPC && (resp.StatusCode < 200 || resp.StatusCode >= 300) && resp.StatusCode < 400 {
+		return errors.New("国家数据原控制请求返回重定向或非完整状态；未跟随、改址或重新 POST")
+	}
 	limit := int64(1024 * 1024)
+	if path == "/v1/waf/country" {
+		limit = 4096
+	}
+	if strings.HasPrefix(path, "/v1/waf/country/jobs/") {
+		limit = 32 << 10
+	}
 	if path == "/v1/disk-host-jobs/observe" {
 		limit = diskjob.ReceiptBytesMax * 3
 	}
@@ -74,6 +91,15 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 			x.Error = fmt.Sprintf("执行服务返回 HTTP %d", resp.StatusCode)
 		}
 		return errors.New(x.Error)
+	}
+	if strings.HasPrefix(path, "/v1/waf/country/jobs/") {
+		if original, ok := out.(*json.RawMessage); ok {
+			if !json.Valid(b) {
+				return errors.New("国家数据原任务返回不完整 JSON，未接受或重发")
+			}
+			*original = bytes.Clone(b) // Preserve exact wire bytes, including LF.
+			return nil
+		}
 	}
 	return json.Unmarshal(b, out)
 }
@@ -264,6 +290,10 @@ func RunRuntimeInstallWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 }
 
 func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+	if j.Kind == "waf_country_data" {
+		runWAFCountryDataJob(ctx, s, e, j, appcatalog.Default())
+		return
+	}
 	if j.Kind == "apache_body_build" {
 		runApacheBodyEngineJob(ctx, s, e, j)
 		return

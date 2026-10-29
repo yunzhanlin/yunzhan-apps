@@ -1,0 +1,9 @@
+IP Geolocation by DB-IP
+https://db-ip.com/
+License: CC BY 4.0
+https://creativecommons.org/licenses/by/4.0/
+DB-IP City Lite 2026-10; derived canonical country CIDR shards, revision 1.
+Original provider source: https://download.db-ip.com/free/dbip-city-lite-2026-10.mmdb.gz
+Original parent manifest SHA256: 072848fd40e0a17eaf4fb95ba7f7370e9dcde9b2841ac58412ac11512461e1e7
+Generator SHA256: 7c118ef1d41923db5d96f2989d5a60795401c3d8e6a1b31dc59e82486ebe97f5
+Only explicitly selected countries are downloaded; publication does not activate WAF policy.

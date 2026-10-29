@@ -164,7 +164,8 @@
           "php-security-20261021-v1",
           "php-bounded-native-build-v1",
           "compose-memcached-unix-v1",
-          "compose-memcached-retirement-v1"
+          "compose-memcached-retirement-v1",
+          "waf-country-signed-data-v1"
         ]
       }
     },
@@ -239,6 +240,22 @@
         },
         "reference_check": {
           "type": "boolean"
+        }
+      }
+    },
+    "country_data_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "format"
+      ],
+      "properties": {
+        "id": {
+          "const": "dbip-country-lite-v1"
+        },
+        "format": {
+          "const": 1
         }
       }
     }
@@ -928,6 +945,70 @@
                 ]
               }
             }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features",
+              "country_data_channel"
+            ],
+            "properties": {
+              "id": {
+                "const": "nginx-waf"
+              },
+              "version": {
+                "const": "2.6.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "nginx-waf"
+                  },
+                  "manage_route": {
+                    "const": "security"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "waf-country-signed-data-v1"
+                }
+              },
+              "country_data_channel": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "format"
+                ],
+                "properties": {
+                  "id": {
+                    "const": "dbip-country-lite-v1"
+                  },
+                  "format": {
+                    "const": 1
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "geo_data_channel"
+              ]
+            }
           }
         ]
       }
@@ -1340,25 +1421,50 @@
     },
     {
       "if": {
-        "required": ["id", "version"],
+        "required": [
+          "id",
+          "version"
+        ],
         "properties": {
-          "id": {"const": "disk-analysis"},
-          "version": {"const": "1.4.1"}
+          "id": {
+            "const": "disk-analysis"
+          },
+          "version": {
+            "const": "1.4.1"
+          }
         }
       },
       "then": {
-        "required": ["required_panel_features"],
+        "required": [
+          "required_panel_features"
+        ],
         "properties": {
           "required_panel_features": {
             "minItems": 3,
             "maxItems": 3,
             "items": {
-              "enum": ["disk-inode-usage-v1", "disk-host-jobs-v1", "disk-host-cancel-seal-v1"]
+              "enum": [
+                "disk-inode-usage-v1",
+                "disk-host-jobs-v1",
+                "disk-host-cancel-seal-v1"
+              ]
             },
             "allOf": [
-              {"contains": {"const": "disk-inode-usage-v1"}},
-              {"contains": {"const": "disk-host-jobs-v1"}},
-              {"contains": {"const": "disk-host-cancel-seal-v1"}}
+              {
+                "contains": {
+                  "const": "disk-inode-usage-v1"
+                }
+              },
+              {
+                "contains": {
+                  "const": "disk-host-jobs-v1"
+                }
+              },
+              {
+                "contains": {
+                  "const": "disk-host-cancel-seal-v1"
+                }
+              }
             ]
           }
         }
@@ -2377,6 +2483,107 @@
               "1.6.45-compat4"
             ]
           }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "id",
+              "version"
+            ],
+            "properties": {
+              "id": {
+                "const": "nginx-waf"
+              },
+              "version": {
+                "const": "2.6.0"
+              }
+            }
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "waf-country-signed-data-v1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features",
+          "country_data_channel"
+        ],
+        "properties": {
+          "id": {
+            "const": "nginx-waf"
+          },
+          "version": {
+            "const": "2.6.0"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "nginx-waf"
+              },
+              "manage_route": {
+                "const": "security"
+              }
+            },
+            "additionalProperties": false
+          },
+          "required_panel_features": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "waf-country-signed-data-v1"
+            }
+          },
+          "country_data_channel": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "format"
+            ],
+            "properties": {
+              "id": {
+                "const": "dbip-country-lite-v1"
+              },
+              "format": {
+                "const": 1
+              }
+            }
+          }
+        },
+        "not": {
+          "required": [
+            "geo_data_channel"
+          ]
         }
       }
     }

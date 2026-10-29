@@ -28,7 +28,7 @@ func TestWAFVerified251HealthUpgradePreservesCompletePolicyAndInstallTime(t *tes
 		t.Fatal(err)
 	}
 	after, err := s.readSoftwareManifest("nginx-waf")
-	if err != nil || after.Version != "2.5.2" || after.InstalledAt != before.InstalledAt {
+	if err != nil || after.Version != core.WAFVersion || after.InstalledAt != before.InstalledAt {
 		t.Fatal("original identity lost", err)
 	}
 	actual, err := core.DecodeWAFConfig(after.Settings)

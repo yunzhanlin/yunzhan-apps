@@ -16,19 +16,24 @@ import (
 	"testing"
 
 	"local/panel/internal/appcatalog"
+	"local/panel/internal/geodata"
 	"local/panel/internal/runtimecatalog"
 )
 
 // A real signature/manifest/Core HTTP contract with a temporary fixture key.
 // It is not a live original-key application installation or Root engine proof.
 func TestWAFRegistrySignedInstallBindsExactImplementationAndOriginalReplay(t *testing.T) {
-	for _, version := range []string{"2.5.1", "2.5.2"} {
+	for _, version := range []string{"2.5.1", "2.5.2", "2.6.0"} {
 		t.Run(version, func(t *testing.T) {
 			s := testStore(t)
 			u := accessUser(t, s, "waf-signed-admin", "admin", nil)
 			m := appcatalog.Manifest{SchemaVersion: 1, ID: "nginx-waf", Name: "Nginx WAF", Category: "professional", Version: version, Summary: "Private exact signed WAF installation contract", Stage: "ready", Risk: "normal", Delivery: appcatalog.Delivery{Provider: "panel-module", Target: "nginx-waf", ManageRoute: "security"}, Compatibility: appcatalog.Compatibility{OS: []string{runtimecatalog.HostPlatform()}, Architectures: []string{runtime.GOARCH}}, Capabilities: []string{"install"}}
-			if version == WAFVersion {
+			if version == "2.5.2" {
 				m.RequiredPanelFeatures = []string{appcatalog.WAFBoundHealthFeature}
+			}
+			if version == "2.6.0" {
+				m.RequiredPanelFeatures = []string{appcatalog.CountryDataFeature}
+				m.CountryDataChannel = &appcatalog.GeoDataChannel{ID: geodata.CountryChannel, Format: 1}
 			}
 			manifest, err := json.Marshal(m)
 			if err != nil {
