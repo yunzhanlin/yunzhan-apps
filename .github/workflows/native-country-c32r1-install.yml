@@ -1,0 +1,73 @@
+name: actual native C32r1 AMD64 original account and before-dispatch cancellation
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - .github/workflows/native-country-c32r1-install.yml
+      - scripts/native-country-c32r1/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-country-c32r1-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read the complete published original-key QA cohort without guest credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-country-c32r1-assets"
+          ready=false
+          for attempt in $(seq 1 90); do
+            if gh release view qa-countrycancelcandidate32r1-20261030 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/country-release-status.json" 2>/dev/null && python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); sys.exit(0 if v["isDraft"] is False and v["isPrerelease"] is True else 1)' "$RUNNER_TEMP/country-release-status.json"; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          test "$ready" = true
+          gh release download qa-countrycancelcandidate32r1-20261030 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-country-c32r1-assets"
+          gh release download qa-countryinterruptcandidate31r4-20261029 --repo yunzhanlin/yunzhan-apps --pattern "panel-0.1.0-dev.proapps24countryinterruptcandidate31r4-linux-amd64.tar.gz" --pattern "panel-0.1.0-dev.proapps24countryinterruptcandidate31r4-linux-amd64.tar.gz.manifest" --pattern "panel-0.1.0-dev.proapps24countryinterruptcandidate31r4-linux-amd64.tar.gz.sig" --dir "$RUNNER_TEMP/native-country-c32r1-assets"
+          python3 - "$RUNNER_TEMP/native-country-c32r1-assets" <<'PY'
+          import hashlib, json, pathlib, sys
+          base = pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == 'c04e355d89a85482da8859891a71e3d39fc960bed707034dcda7b8819311d266'
+          manifest = json.loads((base / 'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256'] == '8555db1beaa67a32727c21bc58d4b49752db1e20f164395096a0e69d8c78e38e'
+          for name, digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name == name
+              assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
+          print('Both original-key programme cohorts and exact country QA helpers verified; no credentials in guest payload')
+          PY
+      - name: Prepare hardware guest tools while preserving existing host services
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Original signed C31r4 account/data followed by C32r1 upgrade, new policy and original before-dispatch cancellation
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-country-c32r1-public"
+          sudo -n python3 -I -B scripts/native-country-c32r1/kvm.py "$RUNNER_TEMP/native-country-c32r1-assets" scripts/native-country-c32r1 "$RUNNER_TEMP/native-country-c32r1-public"
+      - name: Retain public proof and encrypted complete original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-country-c32r1-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-country-c32r1-public/
+          retention-days: 7
+          if-no-files-found: warn

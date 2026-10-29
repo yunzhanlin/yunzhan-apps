@@ -20,6 +20,8 @@ export interface CountryDetail {
   actor_id: string; request: {id: string;state: string;created_at: string;payload_sha256: string};
   selection: CountrySelection; read_only: boolean; error: string;
   result?: CountryOperation; result_sha256?: string;
+  can_cancel_before_dispatch?: boolean;
+  cancellation?: {format:1;job_id:string;actor_id:string;payload_sha256:string;cancelled_at:string;before_dispatch:true;automatic_replay_allowed:false};
 }
 export interface CountryLookup {
   actor_id: string;request_id: string;state_known: boolean;request?: CountryDetail;
@@ -27,6 +29,9 @@ export interface CountryLookup {
 }
 const id=/^[a-f0-9]{32}$/,sha=/^[a-f0-9]{64}$/,code=/^[A-Z]{2}$/;
 const bad=()=>new Error("原国家数据请求、账户或完整回复无法核对；保留原编号，不创建替代任务");
+function canonicalCountryTimestamp(value:unknown):value is string {
+  return typeof value==='string'&&/^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\dZ$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,19)+'Z'===value;
+}
 export function canonicalCountrySelection(v: CountrySelection): CountrySelection {
   if(!v||Array.isArray(v)||Object.keys(v).sort().join()!=="action,app_manifest_sha256,app_version,countries,data_manifest_sha256,installation_sha256,release,revision"||v.action!=="download"||v.app_version!=="2.6.0"||typeof v.app_manifest_sha256!=="string"||!sha.test(v.app_manifest_sha256)||typeof v.installation_sha256!=="string"||!sha.test(v.installation_sha256)||typeof v.data_manifest_sha256!=="string"||!sha.test(v.data_manifest_sha256)||typeof v.release!=="string"||!/^20[2-9][0-9]-(0[1-9]|1[0-2])$/.test(v.release)||!Number.isSafeInteger(v.revision)||v.revision<1||v.revision>1000||!Array.isArray(v.countries)||v.countries.length<1||v.countries.length>32||v.countries.some((c,i)=>typeof c!=="string"||!code.test(c)||c==="ZZ"||i>0&&c<=v.countries[i-1]!))throw bad();
   return {action:"download",app_version:"2.6.0",app_manifest_sha256:v.app_manifest_sha256,installation_sha256:v.installation_sha256,release:v.release,revision:v.revision,data_manifest_sha256:v.data_manifest_sha256,countries:[...v.countries]};
@@ -41,7 +46,17 @@ function saved(value: unknown,actor: string): CountryRecord|undefined {
 }
 function ticket(v: CountryRecord): CountryTicket{return{key:v.key,selection:canonicalCountrySelection(v.selection),...(v.job===undefined?{}:{job:v.job})};}
 function detailOriginal(value: CountryDetail,old: CountryRecord): CountryDetail {
-  if(!value||value.actor_id!==old.actor||value.read_only!==true||!value.request||typeof value.request.id!=="string"||!id.test(value.request.id)||old.job&&old.job!==value.request.id||!same(value.selection,old.selection)||!["queued","running","succeeded","failed","needs_attention"].includes(value.request.state)||typeof value.request.payload_sha256!=="string"||!sha.test(value.request.payload_sha256)||typeof value.error!=="string"||value.error.length>4096)throw bad();
+  if(!value||value.actor_id!==old.actor||value.read_only!==true||!value.request||typeof value.request.id!=="string"||!id.test(value.request.id)||old.job&&old.job!==value.request.id||!same(value.selection,old.selection)||!["queued","running","succeeded","failed","needs_attention","cancelled"].includes(value.request.state)||typeof value.request.payload_sha256!=="string"||!sha.test(value.request.payload_sha256)||typeof value.error!=="string"||value.error.length>4096)throw bad();
+  if(value.can_cancel_before_dispatch!==undefined&&typeof value.can_cancel_before_dispatch!=='boolean'||value.can_cancel_before_dispatch===true&&(!['queued','running'].includes(value.request.state)||value.error!==''||value.result!==undefined))throw bad();
+  // Browser continuity only: the server independently proves the transaction,
+  // absent dispatch/results and unique actor-bound cancellation audit. This
+  // record never claims that an already issued Root worker was stopped.
+  if(value.request.state==='cancelled'){
+    const c=value.cancellation;
+    if(!c||Object.keys(c).sort().join()!=='actor_id,automatic_replay_allowed,before_dispatch,cancelled_at,format,job_id,payload_sha256'||c.format!==1||c.job_id!==value.request.id||c.actor_id!==old.actor||c.payload_sha256!==value.request.payload_sha256||c.before_dispatch!==true||c.automatic_replay_allowed!==false||!canonicalCountryTimestamp(c.cancelled_at)||!canonicalCountryTimestamp(value.request.created_at)||c.cancelled_at<value.request.created_at||value.error!=='已在提交执行服务前取消原国家数据任务'||value.result!==undefined||value.result_sha256!==undefined||value.can_cancel_before_dispatch!==false)throw bad();
+    return value;
+  }
+  if(value.cancellation!==undefined)throw bad();
   if(value.result){
     const r=value.result,c=r.cache;
     if(r.format!==1||r.job_id!==value.request.id||r.actor_id!==old.actor||!same(r.selection,old.selection)||r.payload_sha256!==value.request.payload_sha256||typeof r.request_sha256!=="string"||!sha.test(r.request_sha256)||typeof r.requested_cache_plan_sha256!=="string"||!sha.test(r.requested_cache_plan_sha256)||r.data_only!==true||r.automatic_replay_allowed!==false||r.state!==value.request.state||r.error!==value.error||typeof value.result_sha256!=="string"||!sha.test(value.result_sha256)||!["succeeded","failed","needs_attention"].includes(r.state))throw bad();
@@ -87,10 +102,10 @@ export class CountryRequestIdentity {
       // Another tab may already have removed this exact terminal pending.
       // Only the caller's already-bound original + a complete terminal can
       // finish its local view; never recreate a row or erase a NEW request.
-      if(!persisted&&(!outcome.state_known||!["succeeded","failed"].includes(outcome.request?.request.state||'')))throw bad();
+      if(!persisted&&(!outcome.state_known||!["succeeded","failed","cancelled"].includes(outcome.request?.request.state||'')))throw bad();
       if(!outcome.state_known){if(outcome.request!==undefined)throw bad();return{result:{ticket:ticket(old)}};}
       const detail=detailOriginal(outcome.request!,old);
-      if(["succeeded","failed"].includes(detail.request.state))return persisted?{remove:true}:{};
+      if(["succeeded","failed","cancelled"].includes(detail.request.state))return persisted?{remove:true}:{};
       const next={...old,job:detail.request.id};return{put:next,result:{ticket:ticket(next)}};
     }))?.ticket;
   }

@@ -54,7 +54,7 @@ func readWAFCountryOriginal(ctx context.Context, db accessReader, id string) (wa
 	if err != nil || !ValidID(out.Actor) || !ValidID(out.Key) || !validLowerSHA256(out.PayloadSHA) || out.Job.ID != id || out.Job.TargetID != "nginx-waf" || out.Job.Kind != "waf_country_data" || out.Key != key || out.Created != created || out.PayloadSHA != Hash(out.Job.Payload) {
 		return wafCountryOriginal{}, bad
 	}
-	if out.Job.State != "queued" && out.Job.State != "running" && out.Job.State != "succeeded" && out.Job.State != "failed" && out.Job.State != "needs_attention" {
+	if out.Job.State != "queued" && out.Job.State != "running" && out.Job.State != "succeeded" && out.Job.State != "failed" && out.Job.State != "needs_attention" && out.Job.State != "cancelled" {
 		return wafCountryOriginal{}, bad
 	}
 	stamp, err := time.Parse(time.RFC3339, created)
@@ -73,6 +73,11 @@ func readWAFCountryOriginal(ctx context.Context, db accessReader, id string) (wa
 	var actor, result string
 	if db.QueryRowContext(ctx, `SELECT count(*),coalesce(min(CASE WHEN length(CAST(actor AS BLOB))=32 THEN actor ELSE '' END),''),coalesce(min(CASE WHEN length(CAST(result AS BLOB))<=16 THEN result ELSE '' END),'') FROM audit_logs WHERE action='waf.country.queue' AND target=?`, id).Scan(&count, &actor, &result) != nil || count != 1 || actor != out.Actor || result != "queued" {
 		return wafCountryOriginal{}, bad
+	}
+	if out.Job.State == "cancelled" {
+		if _, err := countryCancellationProof(ctx, db, out); err != nil {
+			return wafCountryOriginal{}, err
+		}
 	}
 	return out, nil
 }

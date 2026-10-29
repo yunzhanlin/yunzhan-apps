@@ -67,9 +67,9 @@ func (s *Store) CheckWAFCountryUpgrade(ctx context.Context) error {
 		return bad
 	}
 	checks := []string{
-		`SELECT count(*) FROM runtime_jobs WHERE kind='waf_country_data' AND (state IS NULL OR state NOT IN ('succeeded','failed'))`,
+		`SELECT count(*) FROM runtime_jobs WHERE kind='waf_country_data' AND (state IS NULL OR state NOT IN ('succeeded','failed','cancelled'))`,
 		`SELECT count(*) FROM runtime_jobs j LEFT JOIN waf_country_requests r ON r.job_id=j.id WHERE j.kind='waf_country_data' AND (r.job_id IS NULL OR j.target_id!='nginx-waf' OR r.idempotency_key!=j.idempotency_key OR r.created_at!=j.created_at)`,
-		`SELECT count(*) FROM waf_country_requests r LEFT JOIN runtime_jobs j ON j.id=r.job_id WHERE j.id IS NULL OR j.kind!='waf_country_data' OR j.target_id!='nginx-waf' OR j.state IS NULL OR j.state NOT IN ('succeeded','failed')`,
+		`SELECT count(*) FROM waf_country_requests r LEFT JOIN runtime_jobs j ON j.id=r.job_id WHERE j.id IS NULL OR j.kind!='waf_country_data' OR j.target_id!='nginx-waf' OR j.state IS NULL OR j.state NOT IN ('succeeded','failed','cancelled')`,
 		`SELECT count(*) FROM waf_country_results r LEFT JOIN runtime_jobs j ON j.id=r.job_id LEFT JOIN waf_country_requests q ON q.job_id=r.job_id WHERE j.id IS NULL OR q.job_id IS NULL OR j.kind!='waf_country_data' OR r.state IS NULL OR r.state!=j.state OR r.state NOT IN ('succeeded','failed')`,
 	}
 	for _, query := range checks {
@@ -104,7 +104,7 @@ func (s *Store) CheckWAFCountryUpgrade(ctx context.Context) error {
 			return bad
 		}
 		detail, err := countryRequestDetail(ctx, tx, original)
-		if err != nil || detail.Request.State != "succeeded" && detail.Request.State != "failed" || detail.Request.State == "failed" && detail.Error == "" {
+		if err != nil || detail.Request.State != "succeeded" && detail.Request.State != "failed" && detail.Request.State != "cancelled" || detail.Request.State == "failed" && detail.Error == "" || detail.Request.State == "cancelled" && detail.Cancellation == nil {
 			return bad
 		}
 	}

@@ -46,6 +46,38 @@ func (a *Server) wafCountryRoutes(m *http.ServeMux) {
 		return true
 	}
 	const base = "/api/software/nginx-waf/country-data"
+	m.HandleFunc("POST "+base+"/jobs/{id}/cancel-before-dispatch", a.authorize(func(w http.ResponseWriter, r *http.Request, actor identity) {
+		if !allowed(w, r, actor) {
+			return
+		}
+		if r.URL.RawQuery != "" || !ValidID(r.PathValue("id")) {
+			fail(w, 400, "国家数据取消必须绑定同一原任务，不接受来源或路径参数")
+			return
+		}
+		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 4096))
+		var body struct {
+			Actor      string          `json:"actor_id"`
+			PayloadSHA string          `json:"payload_sha256"`
+			Selection  json.RawMessage `json:"selection"`
+		}
+		if err != nil || !wafInventoryJSONShape(raw, []string{"actor_id", "payload_sha256", "selection"}) || json.Unmarshal(raw, &body) != nil || body.Actor != actor.ID || !validLowerSHA256(body.PayloadSHA) {
+			fail(w, 400, "国家数据取消账户或完整原请求无效")
+			return
+		}
+		selection, err := DecodeWAFCountryDataSelection(body.Selection)
+		if err != nil {
+			fail(w, 400, "国家数据取消选项与原请求无法核对")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer cancel()
+		proof, err := a.Store.cancelWAFCountryBeforeDispatch(ctx, actor.ID, r.PathValue("id"), body.PayloadSHA, selection)
+		if err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		send(w, 200, proof)
+	}))
 	m.HandleFunc("GET "+base, a.authorize(func(w http.ResponseWriter, r *http.Request, actor identity) {
 		if !allowed(w, r, actor) {
 			return

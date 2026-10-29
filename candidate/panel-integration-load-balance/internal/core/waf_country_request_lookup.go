@@ -14,11 +14,24 @@ func countryRequestDetail(ctx context.Context, db accessReader, original wafCoun
 	if db.QueryRowContext(ctx, `SELECT error FROM runtime_jobs WHERE id=? AND typeof(error)='text' AND length(CAST(error AS BLOB))<=4096`, id).Scan(&out.Error) != nil || len(out.Error) > 4096 {
 		return empty, errors.New("国家数据原任务详情无法完整读取")
 	}
+	if original.Job.State == "cancelled" {
+		proof, err := countryCancellationProof(ctx, db, original)
+		if err != nil {
+			return empty, err
+		}
+		out.Cancellation = &proof
+		return out, nil
+	}
+	canCancel, err := countryCanCancelBeforeDispatch(ctx, db, original)
+	if err != nil {
+		return empty, err
+	}
+	out.CanCancelBeforeDispatch = canCancel
 	var raw []byte
 	var requestSHA, digest, state, created string
 	// Keep large/corrupt data inside SQLite, not in the privileged caller's
 	// heap. Missing and rejected rows are distinguished below by membership.
-	err := db.QueryRowContext(ctx, `SELECT request_sha256,result_sha256,body,state,created_at FROM waf_country_results WHERE job_id=? AND typeof(body)='blob' AND length(body) BETWEEN 1 AND 32768 AND length(CAST(request_sha256 AS BLOB))=64 AND length(CAST(result_sha256 AS BLOB))=64 AND length(CAST(state AS BLOB)) BETWEEN 1 AND 32 AND length(CAST(created_at AS BLOB))=20`, id).Scan(&requestSHA, &digest, &raw, &state, &created)
+	err = db.QueryRowContext(ctx, `SELECT request_sha256,result_sha256,body,state,created_at FROM waf_country_results WHERE job_id=? AND typeof(body)='blob' AND length(body) BETWEEN 1 AND 32768 AND length(CAST(request_sha256 AS BLOB))=64 AND length(CAST(result_sha256 AS BLOB))=64 AND length(CAST(state AS BLOB)) BETWEEN 1 AND 32 AND length(CAST(created_at AS BLOB))=20`, id).Scan(&requestSHA, &digest, &raw, &state, &created)
 	if errors.Is(err, sql.ErrNoRows) && original.Job.State != "succeeded" {
 		var present int
 		if db.QueryRowContext(ctx, `SELECT count(*) FROM waf_country_results WHERE job_id=?`, id).Scan(&present) != nil || present != 0 {
