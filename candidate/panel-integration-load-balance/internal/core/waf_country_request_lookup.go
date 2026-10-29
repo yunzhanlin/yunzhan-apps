@@ -27,6 +27,11 @@ func countryRequestDetail(ctx context.Context, db accessReader, original wafCoun
 		return empty, err
 	}
 	out.CanCancelBeforeDispatch = canCancel
+	downloadCancellation, err := readCountryDownloadCancellation(ctx, db, original)
+	if err != nil {
+		return empty, err
+	}
+	out.DownloadCancellation = downloadCancellation
 	var raw []byte
 	var requestSHA, digest, state, created string
 	// Keep large/corrupt data inside SQLite, not in the privileged caller's
@@ -37,6 +42,9 @@ func countryRequestDetail(ctx context.Context, db accessReader, original wafCoun
 		if db.QueryRowContext(ctx, `SELECT count(*) FROM waf_country_results WHERE job_id=?`, id).Scan(&present) != nil || present != 0 {
 			return empty, errors.New("国家数据原回执存在但其类型或容量不合法，没有当作缺失结果")
 		}
+		if downloadCancellation != nil && original.Job.State == "failed" {
+			return empty, errors.New("已提交下载的取消请求缺少完整原执行结果，未认定停止")
+		}
 		return out, nil // An uncertain/pre-submission failure is NOT success.
 	}
 	if err != nil || !validLowerSHA256(requestSHA) || !validLowerSHA256(digest) || Hash(string(raw)) != digest || state != original.Job.State {
@@ -46,6 +54,9 @@ func countryRequestDetail(ctx context.Context, db accessReader, original wafCoun
 	stamp, terr := time.Parse(time.RFC3339, created)
 	if err != nil || terr != nil || stamp.UTC().Format(time.RFC3339) != created || parsed.RequestSHA != requestSHA || parsed.State != state || parsed.Error != out.Error {
 		return empty, errors.New("国家数据完整原回执无法与原任务核对")
+	}
+	if downloadCancellation != nil && downloadCancellation.RequestSHA != parsed.RequestSHA || parsed.Error == WAFCountryDownloadCancelledMessage && (downloadCancellation == nil || parsed.State != "failed" || parsed.Cache != nil) {
+		return empty, errors.New("国家下载原取消请求与完整原结果不同，未认定停止")
 	}
 	out.Result, out.ResultSHA = &parsed, digest
 	return out, nil

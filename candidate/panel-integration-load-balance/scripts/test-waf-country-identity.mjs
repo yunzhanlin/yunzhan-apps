@@ -3,7 +3,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import ts from '../web/node_modules/typescript/lib/typescript.js';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const compile=source=>ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-const {CountryRequestIdentity,IndexedCountryStorage,canonicalCountrySelection,readCountryDetail}=await import('data:text/javascript;base64,'+Buffer.from(compile(read('web/src/wafCountryIdentity.ts'))).toString('base64'));
+const {CountryRequestIdentity,IndexedCountryStorage,canonicalCountrySelection,readCountryDetail,readCountryDownloadCancelConditions,countryDownloadCancellationLabel,countryDownloadCancelledMessage}=await import('data:text/javascript;base64,'+Buffer.from(compile(read('web/src/wafCountryIdentity.ts'))).toString('base64'));
 const actor='a'.repeat(32),key='b'.repeat(32),job='c'.repeat(32),hash='d'.repeat(64);
 const selection={action:'download',app_version:'2.6.0',app_manifest_sha256:'e'.repeat(64),installation_sha256:'f'.repeat(64),release:'2026-10',revision:1,data_manifest_sha256:'1'.repeat(64),countries:['CN','US']};
 function atomic(){const data=new Map();let tail=Promise.resolve();return{data,run(actor,write,change){const p=tail.then(()=>{const next=change(structuredClone(data.get(actor)),data.size);assert(!(!write&&(next.put||next.remove)));assert(!(next.put&&next.remove));if(next.put)data.set(actor,structuredClone(next.put));if(next.remove)data.delete(actor);return structuredClone(next.result);});tail=p.catch(()=>{});return p;}};}
@@ -16,6 +16,63 @@ function cancelledLookup(){
  const v=lookup('running');v.request.request.state='cancelled';v.request.can_cancel_before_dispatch=false;v.request.error='已在提交执行服务前取消原国家数据任务';v.request.cancellation={format:1,job_id:job,actor_id:actor,payload_sha256:hash,cancelled_at:'2026-10-20T00:00:01Z',before_dispatch:true,automatic_replay_allowed:false};return v;
 }
 function actualCancel(deps){const source=read('web/src/WafCountryData.vue').split('<script setup lang="ts">')[1].split('</script>')[0],tree=ts.createSourceFile('country.vue',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),node=tree.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='cancelOriginal');assert(node);return Function('deps','const {busy,detailBusy,props,generation,readCountryDetail,current,stopTimer,error,abort,endpoint,detail,pending,readOriginal,readJobs,scheduleOriginal}=deps;'+compile(node.getText(tree))+';return cancelOriginal;')(deps);}
+
+function issuedCancelDetail(state='running'){
+ const value=lookup(state).request;value.can_cancel_before_dispatch=false;
+ value.download_cancellation={format:1,job_id:job,actor_id:actor,payload_sha256:hash,request_sha256:hash,requested_at:'2026-10-20T00:00:01Z',automatic_replay_allowed:false};
+ if(state==='failed'){value.error=countryDownloadCancelledMessage;value.result={...lookup('succeeded').request.result,state,error:value.error};delete value.result.cache;value.result_sha256=hash;}
+ return value;
+}
+function issuedCancelCondition(original){return{actor_id:actor,job_id:job,payload_sha256:hash,request_sha256:hash,selection:structuredClone(original.selection),root_state:'running',can_request:true,read_only:true,automatic_replay_allowed:false};}
+function actualIssuedCancel(deps){const source=read('web/src/WafCountryData.vue').split('<script setup lang="ts">')[1].split('</script>')[0],tree=ts.createSourceFile('country.vue',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS),node=tree.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='requestDownloadCancellation');assert(node);return Function('deps','const {busy,detailBusy,props,generation,readCountryDetail,readCountryDownloadCancelConditions,canRequestDownloadCancellation,current,stopTimer,error,abort,endpoint,detail,pending,readOriginal,readJobs,readDetail,scheduleOriginal}=deps;'+compile(node.getText(tree))+';return requestDownloadCancellation;')(deps);}
+function issuedCancelComponentFixture(mode='normal'){
+ const methods=[],original=lookup('running').request;original.can_cancel_before_dispatch=false;
+ const condition=issuedCancelCondition(original);
+ const deps={busy:{value:mode==='busy'},detailBusy:{value:false},props:{active:mode!=='inactive',actor,api:async(path,method,body,key)=>{methods.push({path,method,body,key});if(method==='GET'){if(mode==='foreign-condition')return{...condition,actor_id:'9'.repeat(32)};if(mode==='account-after-get')deps.props.actor='9'.repeat(32);return mode==='already-completed'?{...condition,root_state:'succeeded',can_request:false}:condition;}if(mode==='lost-ack')throw Error('original cancellation acknowledgement lost');if(mode==='account-after-post')deps.props.actor='9'.repeat(32);return{untrusted:'ignored'};}},generation:1,readCountryDetail,readCountryDownloadCancelConditions,canRequestDownloadCancellation:v=>v?.request.state==='running'&&v.can_cancel_before_dispatch===false&&!v.download_cancellation&&!v.result,current:(g,a)=>g===deps.generation&&deps.props.active&&deps.props.actor===a,stopTimer:()=>{},error:{value:''},abort:new AbortController(),endpoint:'/software/nginx-waf/country-data',detail:{value:original},pending:{value:{key,job,selection}},readOriginal:async()=>methods.push({method:'GET-original-key'}),readJobs:async()=>methods.push({method:'GET-jobs'}),readDetail:async(g,a,id)=>{methods.push({method:'GET-detail',id});deps.detail.value=readCountryDetail(mode==='already-completed'?lookup('succeeded').request:issuedCancelDetail(),a,id);},scheduleOriginal:()=>{}};
+ if(mode==='existing-request')original.download_cancellation=issuedCancelDetail().download_cancellation;
+ if(mode==='not-issued')original.can_cancel_before_dispatch=true;
+ return{deps,methods,original,run:()=>actualIssuedCancel(deps)(original)};
+}
+
+test('issued cancellation retains pending identity until a complete matching terminal and distinguishes a completed commit',async()=>{
+ for(const state of ['running','needs_attention','failed','succeeded']){
+  const value=issuedCancelDetail(state);assert.equal(readCountryDetail(value,actor,job).request.state,state);
+  const label=countryDownloadCancellationLabel(value);assert.match(label,state==='failed'?/下载已取消/:state==='succeeded'?/数据已完成，取消未生效/:/已请求取消/);
+  const store=atomic(),identity=new CountryRequestIdentity(store,actor,()=>key),original=(await identity.begin(selection)).ticket;
+  const reply={...lookup(state),request:value};await identity.observe(reply,original);assert.equal(store.data.size,['failed','succeeded'].includes(state)?0:1);
+ }
+ const original=issuedCancelDetail();
+ for(const mutate of [v=>v.download_cancellation=null,v=>v.download_cancellation.actor_id='9'.repeat(32),v=>v.download_cancellation.job_id='9'.repeat(32),v=>v.download_cancellation.payload_sha256='9'.repeat(64),v=>v.download_cancellation.request_sha256='invalid',v=>v.download_cancellation.requested_at='2026-02-31T00:00:00Z',v=>v.download_cancellation.requested_at='2026-10-19T00:00:00Z',v=>v.download_cancellation.automatic_replay_allowed=true,v=>v.download_cancellation.extra=true,v=>v.can_cancel_before_dispatch=true,v=>v.request.state='queued']){const value=structuredClone(original);mutate(value);assert.throws(()=>readCountryDetail(value,actor,job));}
+ for(const mutate of [v=>delete v.result,v=>delete v.download_cancellation,v=>v.download_cancellation.request_sha256='9'.repeat(64),v=>v.result.cache=lookup('succeeded').request.result.cache]){const value=issuedCancelDetail('failed');mutate(value);assert.throws(()=>readCountryDetail(value,actor,job));}
+ const forged=lookup('failed').request;forged.error=countryDownloadCancelledMessage;assert.throws(()=>readCountryDetail(forged,actor,job));
+});
+
+test('issued cancellation conditions require the complete original Root binding and closed response shape',()=>{
+ const original=lookup('running').request;original.can_cancel_before_dispatch=false;
+ const condition=issuedCancelCondition(original);assert.equal(readCountryDownloadCancelConditions(condition,original,actor).can_request,true);
+ for(const mutate of [v=>v.actor_id='9'.repeat(32),v=>v.job_id='9'.repeat(32),v=>v.payload_sha256='9'.repeat(64),v=>v.request_sha256=['9'.repeat(64)],v=>v.selection.countries=['US'],v=>v.root_state='succeeded',v=>v.can_request='true',v=>v.read_only=false,v=>v.automatic_replay_allowed=true,v=>v.signal='SIGTERM']){const value=structuredClone(condition);mutate(value);assert.throws(()=>readCountryDownloadCancelConditions(value,original,actor));}
+ assert.throws(()=>readCountryDownloadCancelConditions(condition,issuedCancelDetail(),actor));
+});
+
+test('actual issued cancellation first reads original Root conditions, posts once and observes the same job after lost acknowledgement',async()=>{
+ for(const mode of ['normal','lost-ack']){
+  const f=issuedCancelComponentFixture(mode);await f.run();const posts=f.methods.filter(x=>x.method==='POST');assert.equal(posts.length,1);assert.equal(f.methods[0].method,'GET');assert.equal(posts[0].path,'/software/nginx-waf/country-data/jobs/'+job+'/download-cancellation');assert.deepEqual(posts[0].body,{actor_id:actor,payload_sha256:hash,request_sha256:hash,selection});assert.equal(posts[0].key,undefined);assert.equal(f.deps.pending.value.key,key);assert.equal(f.deps.detail.value.request.state,'running');assert(f.deps.detail.value.download_cancellation);assert.equal(f.methods.filter(x=>x.method==='GET-detail').length,1);assert.equal(f.methods.filter(x=>x.method==='GET-original-key').length,1);assert.equal(f.deps.busy.value,false);if(mode==='lost-ack')assert.match(f.deps.error.value,/尚未确认/);
+ }
+});
+
+test('actual issued cancellation refuses stale state and ignores late account responses without an automatic replacement POST',async()=>{
+ for(const mode of ['busy','inactive','existing-request','not-issued','foreign-condition','account-after-get','account-after-post','already-completed']){
+  const f=issuedCancelComponentFixture(mode),original=f.deps.detail.value;await f.run();assert.equal(f.methods.filter(x=>x.method==='POST').length,mode==='account-after-post'?1:0,mode);
+  if(mode.startsWith('account-after')){assert.equal(f.deps.detail.value,original);assert.equal(f.methods.filter(x=>x.method==='GET-detail').length,0);}
+  if(mode==='already-completed'){assert.equal(f.deps.detail.value.request.state,'succeeded');assert.equal(f.deps.detail.value.download_cancellation,undefined);}
+ }
+});
+
+test('actual issued cancellation serializes duplicate clicks while conditions are in flight',async()=>{
+ const f=issuedCancelComponentFixture();let release;const wait=new Promise(resolve=>{release=resolve;}),api=f.deps.props.api;
+ f.deps.props.api=async(...args)=>{if(args[1]==='GET')await wait;return api(...args);};
+ const first=f.run();await f.run();release();await first;assert.equal(f.methods.filter(x=>x.method==='GET').length,1);assert.equal(f.methods.filter(x=>x.method==='POST').length,1);
+});
 
 test('cancelled browser original requires complete bound before-dispatch proof and never adopts a Root result',async()=>{
  const v=cancelledLookup();assert.equal(readCountryDetail(v.request,actor,job).request.state,'cancelled');

@@ -39,15 +39,16 @@ type wafCountryRequestPage struct {
 	ReadOnly   bool                       `json:"read_only"`
 }
 type wafCountryRequestDetail struct {
-	ActorID                 string                   `json:"actor_id"`
-	Request                 wafCountryRequestSummary `json:"request"`
-	Selection               WAFCountryDataSelection  `json:"selection"`
-	ReadOnly                bool                     `json:"read_only"`
-	Error                   string                   `json:"error"`
-	Result                  *WAFCountryDataOperation `json:"result,omitempty"`
-	ResultSHA               string                   `json:"result_sha256,omitempty"`
-	CanCancelBeforeDispatch bool                     `json:"can_cancel_before_dispatch"`
-	Cancellation            *wafCountryCancellation  `json:"cancellation,omitempty"`
+	DownloadCancellation    *WAFCountryDownloadCancellation `json:"download_cancellation,omitempty"`
+	ActorID                 string                          `json:"actor_id"`
+	Request                 wafCountryRequestSummary        `json:"request"`
+	Selection               WAFCountryDataSelection         `json:"selection"`
+	ReadOnly                bool                            `json:"read_only"`
+	Error                   string                          `json:"error"`
+	Result                  *WAFCountryDataOperation        `json:"result,omitempty"`
+	ResultSHA               string                          `json:"result_sha256,omitempty"`
+	CanCancelBeforeDispatch bool                            `json:"can_cancel_before_dispatch"`
+	Cancellation            *wafCountryCancellation         `json:"cancellation,omitempty"`
 }
 
 func (s *Store) readWAFCountryRequest(ctx context.Context, actor, id string) (wafCountryRequestDetail, error) {

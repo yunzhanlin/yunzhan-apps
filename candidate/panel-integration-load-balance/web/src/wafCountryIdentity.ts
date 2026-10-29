@@ -22,7 +22,18 @@ export interface CountryDetail {
   result?: CountryOperation; result_sha256?: string;
   can_cancel_before_dispatch?: boolean;
   cancellation?: {format:1;job_id:string;actor_id:string;payload_sha256:string;cancelled_at:string;before_dispatch:true;automatic_replay_allowed:false};
+  download_cancellation?: CountryDownloadCancellation;
 }
+export interface CountryDownloadCancellation {
+  format:1;job_id:string;actor_id:string;payload_sha256:string;request_sha256:string;
+  requested_at:string;automatic_replay_allowed:false;
+}
+export interface CountryDownloadCancelConditions {
+  actor_id:string;job_id:string;payload_sha256:string;request_sha256:string;
+  selection:CountrySelection;root_state:string;can_request:boolean;
+  read_only:true;automatic_replay_allowed:false;
+}
+export const countryDownloadCancelledMessage='已按原账户请求取消国家数据下载；未启用防护';
 export interface CountryLookup {
   actor_id: string;request_id: string;state_known: boolean;request?: CountryDetail;
   read_only: boolean;automatic_replay_allowed: boolean;
@@ -53,16 +64,21 @@ function detailOriginal(value: CountryDetail,old: CountryRecord): CountryDetail 
   // record never claims that an already issued Root worker was stopped.
   if(value.request.state==='cancelled'){
     const c=value.cancellation;
-    if(!c||Object.keys(c).sort().join()!=='actor_id,automatic_replay_allowed,before_dispatch,cancelled_at,format,job_id,payload_sha256'||c.format!==1||c.job_id!==value.request.id||c.actor_id!==old.actor||c.payload_sha256!==value.request.payload_sha256||c.before_dispatch!==true||c.automatic_replay_allowed!==false||!canonicalCountryTimestamp(c.cancelled_at)||!canonicalCountryTimestamp(value.request.created_at)||c.cancelled_at<value.request.created_at||value.error!=='已在提交执行服务前取消原国家数据任务'||value.result!==undefined||value.result_sha256!==undefined||value.can_cancel_before_dispatch!==false)throw bad();
+    if(!c||Object.keys(c).sort().join()!=='actor_id,automatic_replay_allowed,before_dispatch,cancelled_at,format,job_id,payload_sha256'||c.format!==1||c.job_id!==value.request.id||c.actor_id!==old.actor||c.payload_sha256!==value.request.payload_sha256||c.before_dispatch!==true||c.automatic_replay_allowed!==false||!canonicalCountryTimestamp(c.cancelled_at)||!canonicalCountryTimestamp(value.request.created_at)||c.cancelled_at<value.request.created_at||value.error!=='已在提交执行服务前取消原国家数据任务'||value.result!==undefined||value.result_sha256!==undefined||value.can_cancel_before_dispatch!==false||value.download_cancellation!==undefined)throw bad();
     return value;
   }
   if(value.cancellation!==undefined)throw bad();
+  const stop=value.download_cancellation;
+  if(stop&&(Object.keys(stop).sort().join()!=='actor_id,automatic_replay_allowed,format,job_id,payload_sha256,request_sha256,requested_at'||stop.format!==1||stop.job_id!==value.request.id||stop.actor_id!==old.actor||stop.payload_sha256!==value.request.payload_sha256||typeof stop.request_sha256!=='string'||!sha.test(stop.request_sha256)||!canonicalCountryTimestamp(stop.requested_at)||!canonicalCountryTimestamp(value.request.created_at)||stop.requested_at<value.request.created_at||stop.automatic_replay_allowed!==false||value.can_cancel_before_dispatch===true||value.request.state==='queued'))throw bad();
+  if(value.download_cancellation!==undefined&&!stop)throw bad();
   if(value.result){
     const r=value.result,c=r.cache;
     if(r.format!==1||r.job_id!==value.request.id||r.actor_id!==old.actor||!same(r.selection,old.selection)||r.payload_sha256!==value.request.payload_sha256||typeof r.request_sha256!=="string"||!sha.test(r.request_sha256)||typeof r.requested_cache_plan_sha256!=="string"||!sha.test(r.requested_cache_plan_sha256)||r.data_only!==true||r.automatic_replay_allowed!==false||r.state!==value.request.state||r.error!==value.error||typeof value.result_sha256!=="string"||!sha.test(value.result_sha256)||!["succeeded","failed","needs_attention"].includes(r.state))throw bad();
     if(c&&(c.published!==true||c.activated_nginx_policy!==false||c.data_manifest_sha256!==old.selection.data_manifest_sha256||JSON.stringify(c.countries)!==JSON.stringify(old.selection.countries)||c.release!==old.selection.release||c.revision!==old.selection.revision||typeof c.original_job_id!=="string"||!id.test(c.original_job_id)||typeof c.plan_sha256!=="string"||!sha.test(c.plan_sha256)||typeof c.dataset!=="string"||!new RegExp("^"+old.selection.data_manifest_sha256+"-[a-f0-9]{64}$").test(c.dataset)||c.reused!==(c.original_job_id!==value.request.id)||!Number.isSafeInteger(c.bytes)||c.bytes<1||c.bytes>64*1024*1024||!Number.isSafeInteger(c.networks)||c.networks<1||c.networks>1048576))throw bad();
     if(r.state==="succeeded"&&(!c||r.error!==""))throw bad();
+    if(stop&&stop.request_sha256!==r.request_sha256)throw bad();
   }
+  if(value.error===countryDownloadCancelledMessage&&(!stop||!value.result||value.request.state!=='failed'||value.result.cache!==undefined)||stop&&value.request.state==='failed'&&!value.result)throw bad();
   if(value.request.state==="succeeded"&&!value.result||["failed","needs_attention"].includes(value.request.state)&&value.error==="")throw bad();
   if(["queued","running"].includes(value.request.state)&&(value.error!==""||value.result!==undefined))throw bad();
   return value;
@@ -71,6 +87,23 @@ function detailOriginal(value: CountryDetail,old: CountryRecord): CountryDetail 
 export function readCountryDetail(value:CountryDetail,actor:string,job:string):CountryDetail {
   if(typeof actor!=="string"||!id.test(actor)||typeof job!=="string"||!id.test(job))throw bad();
   return detailOriginal(value,{format:1,actor,key:job,job,selection:canonicalCountrySelection(value?.selection)});
+}
+
+// This browser check preserves the same original identity. Only the server's
+// independent Root observation and transaction can authorize a stop request.
+export function readCountryDownloadCancelConditions(value:CountryDownloadCancelConditions,original:CountryDetail,actor:string):CountryDownloadCancelConditions {
+  const bound=readCountryDetail(original,actor,original?.request?.id);
+  if(!value||Object.keys(value).sort().join()!=='actor_id,automatic_replay_allowed,can_request,job_id,payload_sha256,read_only,request_sha256,root_state,selection'||value.actor_id!==actor||value.job_id!==bound.request.id||value.payload_sha256!==bound.request.payload_sha256||typeof value.request_sha256!=='string'||!sha.test(value.request_sha256)||!same(value.selection,bound.selection)||value.read_only!==true||value.automatic_replay_allowed!==false||typeof value.can_request!=='boolean'||!['queued','running','succeeded','failed','needs_attention'].includes(value.root_state)||bound.request.state!=='running'||bound.result!==undefined||bound.can_cancel_before_dispatch===true||value.can_request&&(value.root_state!=='running'||bound.download_cancellation!==undefined)||bound.download_cancellation&&bound.download_cancellation.request_sha256!==value.request_sha256)throw bad();
+  return value;
+}
+
+export function countryDownloadCancellationLabel(value:CountryDetail):string {
+  if(!value.download_cancellation)return '';
+  if(value.request.state==='succeeded')return '数据已完成，取消未生效（未启用防护）';
+  if(value.request.state==='failed'&&value.result?.error===countryDownloadCancelledMessage)return '下载已取消（未启用防护）';
+  if(value.request.state==='failed')return '原任务已失败，取消未确认生效';
+  if(value.request.state==='needs_attention')return '已请求取消，停止结果待核对';
+  return '已请求取消，正在核对原任务';
 }
 
 // Browser continuity ONLY, not source/signature/Root authority. The first

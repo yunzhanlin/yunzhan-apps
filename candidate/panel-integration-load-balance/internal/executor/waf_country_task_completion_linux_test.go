@@ -62,10 +62,10 @@ func countryCompletionFixture(t *testing.T, point string) (*countryCacheFixture,
 }
 
 func TestCountryTaskCompletionAfterCancelledDownloadRetainsOriginalBytesAndAppendsTerminal(t *testing.T) {
-	for _, kind := range []string{"cancelled", "expired", "already-committed"} {
+	for _, kind := range []string{"cancelled", "expired", "already-committed", "owner-cancelled", "owner-cancelled-commit-won"} {
 		t.Run(kind, func(t *testing.T) {
 			point := "after-file:CN"
-			if kind == "already-committed" {
+			if kind == "already-committed" || kind == "owner-cancelled-commit-won" {
 				point = "after-publish"
 			}
 			f, request, base, dir, lock := countryCompletionFixture(t, point)
@@ -97,15 +97,21 @@ func TestCountryTaskCompletionAfterCancelledDownloadRetainsOriginalBytesAndAppen
 				return nil
 			}
 			out := countryTaskOperation(request, "needs_attention", "original transfer interrupted")
+			if kind == "owner-cancelled" || kind == "owner-cancelled-commit-won" {
+				out.Error = core.WAFCountryDownloadCancelledMessage
+			}
 			result, err := completeCountryTask(original, base, dir, lock, request, out, &f.store, &f.plan, current)
 			if err != nil || checks != 2 || f.downloads != calls || original.Err() == nil {
 				t.Fatal("original finalization failed or fetched again", result, err, checks)
 			}
-			if kind == "already-committed" {
+			if kind == "already-committed" || kind == "owner-cancelled-commit-won" {
 				if result.State != "succeeded" || result.Cache == nil || result.Cache.OriginalJobID != request.JobID || result.Error != "" {
 					t.Fatal("lost original commit was not independently proved", result)
 				}
 			} else {
+				if kind == "owner-cancelled" && result.Error != core.WAFCountryDownloadCancelledMessage {
+					t.Fatal("complete cancelled transfer lost its original stop reason", result)
+				}
 				if result.State != "failed" || result.Cache != nil || result.Error == "" {
 					t.Fatal("partial bytes became committed", result)
 				}

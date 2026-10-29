@@ -46,6 +46,7 @@ func (a *Server) wafCountryRoutes(m *http.ServeMux) {
 		return true
 	}
 	const base = "/api/software/nginx-waf/country-data"
+	a.wafCountryDownloadCancelRoutes(m, allowed)
 	m.HandleFunc("POST "+base+"/jobs/{id}/cancel-before-dispatch", a.authorize(func(w http.ResponseWriter, r *http.Request, actor identity) {
 		if !allowed(w, r, actor) {
 			return

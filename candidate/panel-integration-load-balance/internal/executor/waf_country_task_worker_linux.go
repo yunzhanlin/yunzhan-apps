@@ -75,11 +75,20 @@ func RunWAFCountryDataJob(id string) error {
 	} else {
 		plan := countryCachePlan{1, id, request.Selection.DataManifestSHA, append([]string(nil), request.Selection.Countries...)}
 		original := authority.Envelope()
-		entry, err := cache.publish(ctx, plan, original.DataManifest, original.DataSignature, service.countryIsolatedDownload(request.Selection, authority))
+		download, stopObserving := watchCountryDownloadCancellation(ctx, func(bounded context.Context) (bool, error) {
+			return originalCountryDownloadCancellation(bounded, request)
+		})
+		entry, err := cache.publish(download, plan, original.DataManifest, original.DataSignature, service.countryIsolatedDownload(request.Selection, authority))
+		requestedCancellation := errors.Is(context.Cause(download), errCountryOriginalDownloadCancelled)
+		stopObserving()
 		if err != nil {
 			operationErr = err
 			out.State = "needs_attention"
 			out.Error = statisticsGeoBoundedError(err)
+			if requestedCancellation {
+				operationErr = errCountryOriginalDownloadCancelled
+				out.Error = core.WAFCountryDownloadCancelledMessage
+			}
 			interrupted = &plan
 		} else {
 			out.State = "succeeded"
@@ -100,11 +109,12 @@ func RunWAFCountryDataJob(id string) error {
 		if err := countryTaskLiveProcess(final, started); err != nil {
 			return err
 		}
-		// The original store guard captured the download context. Rebuild its
-		// complete signature/Core/instance authority against this bounded
-		// completion context; reusing it would still inherit cancellation.
-		// Reauthorization only reads metadata. It never fetches or dispatches.
-		refreshed, _, err := service.authorizeWAFCountryData(final, id, request.ActorID, request.Selection, envelope)
+		// Rebuild only the original filesystem-settlement authority against
+		// this independent bounded context. The original signature, current
+		// original Core permission OR its complete historical stop request,
+		// and unchanged installation are checked at every cache checkpoint.
+		// No network/dispatch/republication authority is granted here.
+		refreshed, err := service.countryTaskSettlementAuthority(final, request, envelope)
 		if err != nil {
 			return err
 		}

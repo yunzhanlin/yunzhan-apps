@@ -30,6 +30,10 @@ func (s *Store) finishWAFCountryResult(ctx context.Context, j Job, raw []byte, a
 	if original.Job.State != "queued" && original.Job.State != "running" {
 		return tx.Commit()
 	}
+	cancellation, err := readCountryDownloadCancellation(ctx, tx, original)
+	if err != nil || cancellation != nil && cancellation.RequestSHA != out.RequestSHA || out.Error == WAFCountryDownloadCancelledMessage && (cancellation == nil || out.State != "failed" || out.Cache != nil) {
+		return errors.New("国家下载取消意图与原执行结果不同，没有采用或改写")
+	}
 	var existing int
 	if tx.QueryRowContext(ctx, `SELECT count(*) FROM waf_country_results WHERE job_id=?`, j.ID).Scan(&existing) != nil || existing != 0 {
 		return errors.New("国家数据原始结果已存在或不可读取，没有覆盖")
