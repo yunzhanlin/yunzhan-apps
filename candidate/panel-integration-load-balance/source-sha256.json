@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24countrycandidate29r10-linux-amd64.tar.gz",
-    "archive_sha256": "c9383d66c77f5253002c5a5bb56fc10bdac5c5e6b2320595baed7bfeb5820191",
-    "frozen_inputs_sha256": "5ccaa540f6f9395ae71214918613baa054a551f6cd919aeee9aac120452d5f04"
+    "archive": "panel-0.1.0-dev.proapps24countrycandidate29r11-linux-amd64.tar.gz",
+    "archive_sha256": "e475ca660e6700107549b6a0c3de94c8fe654cc17d44da035a2317eb3761f38b",
+    "frozen_inputs_sha256": "07106458a6dd1a06ebe0a7ca94f39dbf65d2fb8d9e1cec20f892cfdc2089dfcc"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -1955,7 +1955,7 @@
     "packaging/test_app_dependency_budget.py": "421f4ffc3c79f20d5944549e80378d6edc7dd86fbe77bd1045ef0de224f0da3f",
     "packaging/test_development_upgrade_safety.py": "086441275fe290f12ebbc4d1eb8ebdc00eac41eb20e654ef4da591806d4a2ed8",
     "packaging/test_freeze_source.py": "24fdce8d717761e53b82aadd296517d2f6c1bd79cf69f9e66c44fa1429bd9519",
-    "packaging/test_geodata_upgrade_lease.py": "81725fded00153657daf62b4c75095baa1e14392ca5f4b34d1967ec399c202d7",
+    "packaging/test_geodata_upgrade_lease.py": "62d2f44b8e1ab6fed6f9773d8f493299e275e0e3039eda62cee1380ba6f1e1dd",
     "packaging/test_install_dependency_policy.py": "e10a07527713ce0f1c86363f5cd333e375927a9f2fd9353e84ae94a9354c1467",
     "packaging/test_install_development_dispatch.py": "80dc2d805b5c63713581a76b0a2e27ac87fafb7c4865c9ece77c9688bdb19f6c",
     "packaging/test_install_gateway_policy.py": "bad8790fff7be8780555e48bc38e641357aa7a35cbf21747be9dfbe843843ff6",
@@ -1976,7 +1976,7 @@
     "packaging/test_verify_previous_release.py": "7d41ccbd6f14965bdd693cfb9eb919d0c7e9582d2e55f5c99f5f3054d909279e",
     "packaging/test_waf_engine_budget.py": "256fe95179992065f285ba977f5d5ba531147a52d9fd4a609cf5db16bd8813a3",
     "packaging/test_waf_state_directory.py": "c3743c5f05c0d5fcc6cae62ebad44a6f644a76a056045d1f064f0f4c49e2393f",
-    "packaging/upgrade-release.py": "e67fa587176ce4fdbe4e30c19000afc525b268221ddb32b78ad0b95974d9e4e9",
+    "packaging/upgrade-release.py": "2b9b62fc2453340732ba0f96bf2a60c797cfa923bf2b3437ae3d9aa8ac0c4ac4",
     "packaging/verify-release.sh": "819d1e092641e28520cd184e1cc434f8e4ec2a10174f81962a17d703788fd4c8",
     "packaging/waf-state-directory.py": "f61224801ac45ab54620bed95daba39201f4ae2f1914d7e27566cc166ed21432",
     "scripts/env.sh": "3ddc7c2ce227e40c5681dabb1f4f54fb76fb5d1b7a1d38a438bb82fc948e9b0c",

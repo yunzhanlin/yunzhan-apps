@@ -32,6 +32,10 @@ jobs:
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+      - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
+        run: |
+          sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_geodata_upgrade_lease.py
+          sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_statistics_stop_barrier.py
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance

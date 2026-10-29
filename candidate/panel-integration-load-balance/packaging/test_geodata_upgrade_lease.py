@@ -6,6 +6,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -225,6 +226,82 @@ class GeoLeaseRootTests(unittest.TestCase):
                 self.assertEqual(recovered.recover(backup)['phase'], 'prepared')
             finally:
                 recovered.close()
+
+
+@unittest.skipUnless(sys.platform.startswith('linux') and os.geteuid() == 0,
+                     'actual root Linux directory ownership and leases required')
+class GeoWriterStopSharedNamespaceRootTests(unittest.TestCase):
+    @contextlib.contextmanager
+    def workspace(self):
+        with tempfile.TemporaryDirectory(prefix='statistics-stop-shared-') as value:
+            root = pathlib.Path(value)
+            parent = root/'etc/panel/security-apps/modules'
+            parent.mkdir(mode=0o755, parents=True)
+            calls = []
+            def forbid_command(*args):
+                calls.append(args)
+                raise AssertionError('directory/lease observation must not run a command')
+            transaction = upgrade.Upgrade(root/'candidate', root, forbid_command)
+            yield transaction, root, parent, calls
+
+    @staticmethod
+    def identities(root):
+        result = {}
+        for path in [root]+sorted(root.rglob('*')):
+            s = path.lstat()
+            result[str(path)] = (s.st_dev, s.st_ino, s.st_mode, s.st_uid, s.st_gid,
+                                 s.st_nlink, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+        return result
+
+    def test_missing_statistics_accepts_safe_shared_parent_without_writes(self):
+        for mode, group in ((0o700, 0), (0o755, 988), (0o2750, 988)):
+            with self.subTest(mode=mode), self.workspace() as (transaction, root, parent, calls):
+                os.chown(parent, 0, group)
+                parent.chmod(mode)
+                before = self.identities(root)
+                with transaction.statistics_writer_stop_barrier():
+                    self.assertFalse((parent/'website-statistics-v2').exists())
+                self.assertEqual(self.identities(root), before)
+                self.assertEqual(calls, [])
+
+    def test_present_statistics_keeps_private_parent_and_existing_lock_requirements(self):
+        for mode in (0o700, 0o755):
+            with self.subTest(mode=mode), self.workspace() as (transaction, root, parent, calls):
+                parent.chmod(mode)
+                (parent/'website-statistics-v2').mkdir(mode=0o700)
+                lock = parent.parent/'waf-configuration.lock'
+                lock.write_bytes(b'')
+                lock.chmod(0o600)
+                before = self.identities(root)
+                if mode == 0o700:
+                    with transaction.statistics_writer_stop_barrier():
+                        pass
+                else:
+                    with self.assertRaises(ValueError):
+                        with transaction.statistics_writer_stop_barrier():
+                            self.fail('public parent adopted for existing statistics')
+                self.assertEqual(self.identities(root), before)
+                self.assertEqual(calls, [])
+
+    def test_missing_leaf_cannot_hide_writable_foreign_or_linked_parent(self):
+        for kind in ('writable', 'foreign-owner', 'linked-parent', 'linked-leaf'):
+            with self.subTest(kind=kind), self.workspace() as (transaction, root, parent, calls):
+                if kind == 'writable': parent.chmod(0o777)
+                elif kind == 'foreign-owner': os.chown(parent, 988, 988)
+                elif kind == 'linked-parent':
+                    parent.rename(parent.with_name('original-modules'))
+                    parent.symlink_to(parent.with_name('original-modules'), target_is_directory=True)
+                else:
+                    leaf = parent/'website-statistics-v2'
+                    target = parent/'unrelated'
+                    target.mkdir(mode=0o700)
+                    leaf.symlink_to(target, target_is_directory=True)
+                before = self.identities(root)
+                with self.assertRaises((ValueError, OSError)):
+                    with transaction.statistics_writer_stop_barrier():
+                        self.fail('unsafe namespace treated as absent')
+                self.assertEqual(self.identities(root), before)
+                self.assertEqual(calls, [])
 
 
 if __name__ == '__main__':

@@ -1221,13 +1221,18 @@ class Upgrade:
         module = self.path('/etc/panel/security-apps/modules/website-statistics-v2')
         for name, private in (('/etc', False), ('/etc/panel', False),
                               ('/etc/panel/security-apps', False),
-                              ('/etc/panel/security-apps/modules', True),
+                              ('/etc/panel/security-apps/modules', False),
                               ('/etc/panel/security-apps/modules/website-statistics-v2', True)):
             path = self.path(name)
             if not self.exists(path):
                 yield
                 return
             self.directory(path, private=private)
+        # Other applications create the shared Root-owned modules anchor with
+        # 0755. A missing statistics module has no writer-stop lease to hold.
+        # If statistics IS present, retain the original private parent and leaf
+        # requirements before opening its existing cross-process WAF lease.
+        self.directory(module.parent, private=True)
         lock = self.path('/etc/panel/security-apps/waf-configuration.lock')
         self.parents(lock)
         descriptor = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
