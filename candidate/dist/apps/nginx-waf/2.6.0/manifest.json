@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "nginx-waf",
+  "name": "Nginx 请求防火墙 · Nginx WAF",
+  "category": "professional",
+  "version": "2.6.0",
+  "summary": "保留原站点规则、名单、CC、可信代理、独立请求体引擎、日志与快照保留策略；新增固定签名开源国家数据的独立下载和全局/逐站允许、拒绝及观察策略。下载不启用拦截，需明确配置；保留旧安装时间和策略。须先升级对应签名面板，双架构实装及完整商用验收进行中。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "nginx-waf",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-13",
+      "ubuntu-24.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "站点独立分类规则、启停与观察；健康检查仅豁免同一站点精确路径",
+    "IPv4/IPv6 与 URL/UA 名单；每站点 IP/URL CC 限速和原生观察计数",
+    "自定义字面规则、安全配置导入预览；可信代理限定来源，保留原始对端审计",
+    "真实日志筛选、排行与导出；同 inode 数值日志手动及显式大小/时间轮转",
+    "配置备份、修订冲突、失败回滚、重载探针及旧工作进程监听关闭核对",
+    "固定开源 CRS 独立请求体引擎；表单、嵌套 JSON、上传检测与引擎策略保留",
+    "未提交索引与缺失快照显式恢复；可信来源、安装版本及旧客户端配置核对",
+    "显式确认的已完成快照保留期和最新份数保护；持久删除计划不处理当前日志",
+    "中断或未知删除结果暂停后续清理；保全原证据，当前与历史计划不自动重试",
+    "配置迁移、事务回滚和原文件 UID/GID 保全；缺少所有权证据拒绝猜测恢复",
+    "固定签名开源国家数据，独立限权账户下载、原任务历史和来源许可；下载不启用策略",
+    "国家 IPv4/IPv6 全局与逐站允许/拒绝/观察，名单及同站健康优先，总开关暂停保留意图"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software/nginx-waf/config"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "waf-country-signed-data-v1"
+  ],
+  "country_data_channel": {
+    "id": "dbip-country-lite-v1",
+    "format": 1
+  }
+}

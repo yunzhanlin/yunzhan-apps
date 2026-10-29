@@ -28,7 +28,9 @@ test('separate candidate catalogue changes exactly its declared known identities
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
-  assert.deepEqual(changes,['load-balance','disk-analysis']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  assert.deepEqual(changes,['nginx-waf','load-balance','disk-analysis']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  assert.equal(stable.apps.find(a=>a.id==='nginx-waf').version,'2.5.2');
+  const waf=source.apps.find(a=>a.id==='nginx-waf');assert.equal(waf.version,'2.6.0');assert.deepEqual(waf.required_panel_features,['waf-country-signed-data-v1']);assert.deepEqual(waf.country_data_channel,{id:'dbip-country-lite-v1',format:1});assert.deepEqual(waf.compatibility,stable.apps.find(a=>a.id==='nginx-waf').compatibility);
   assert.equal(source.apps.find(a=>a.id==='load-balance').version,'1.9.0');
   for(const item of catalog.apps)assert.equal(item.package_url,`${officialCatalogBaseURL('candidate')}/dist/apps/${item.id}/${item.version}/manifest.json`);
   for(const changed of [{...patch,channel:'https://untrusted.invalid'}, {...patch,apps:[patch.apps[0],patch.apps[0]]}, {...patch,apps:[{...patch.apps[0],id:'unknown-application'}]}, {...patch,key:'untrusted'}])assert.throws(()=>candidateSource(stable,changed));

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-28T22:20:50Z",
+  "generated_at": "2026-10-29T09:01:42Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -459,29 +459,29 @@
       "id": "nginx-waf",
       "name": "Nginx 请求防火墙 · Nginx WAF",
       "category": "professional",
-      "version": "2.5.2",
-      "summary": "修复跨站点健康检查形状路径获得元数据 WAF 豁免的问题：健康检查必须与当前受管站点身份精确绑定。保留站点规则、名单、CC、可信代理、独立开源请求体引擎、日志轮转与快照保留策略及安装时间；引擎和清理仍默认不启用。须先升级到提供 waf-bound-health-v1 的面板。国家策略不在此版本中，完整发行版与交叉架构实装矩阵仍待验收。",
+      "version": "2.6.0",
+      "summary": "保留原站点规则、名单、CC、可信代理、独立请求体引擎、日志与快照保留策略；新增固定签名开源国家数据的独立下载和全局/逐站允许、拒绝及观察策略。下载不启用拦截，需明确配置；保留旧安装时间和策略。须先升级对应签名面板，双架构实装及完整商用验收进行中。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "nginx-waf",
       "manage_route": "security",
       "capabilities": [
-        "站点独立分类规则、启停与观察模式；观察模式拒绝接管外部限速；健康检查仅豁免同一受管站点的精确路径",
-        "IPv4/IPv6 与 URL/UA 名单",
-        "每站点 IP 与 URL CC 限速；原生 CC 观察计数、超限放行及模拟拒绝日志",
-        "自定义字面匹配规则、安全配置导入与预览",
-        "真实日志筛选、排行与导出；同 inode 的数值日志手动及显式大小/时间自动轮转",
+        "站点独立分类规则、启停与观察；健康检查仅豁免同一站点精确路径",
+        "IPv4/IPv6 与 URL/UA 名单；每站点 IP/URL CC 限速和原生观察计数",
+        "自定义字面规则、安全配置导入预览；可信代理限定来源，保留原始对端审计",
+        "真实日志筛选、排行与导出；同 inode 数值日志手动及显式大小/时间轮转",
         "配置备份、修订冲突、失败回滚、重载探针及旧工作进程监听关闭核对",
-        "固定开源 CRS 独立请求体引擎；表单、嵌套 JSON 与上传检测，迁移保留策略与引擎",
-        "未提交索引与缺失快照显式恢复；可信来源模块与安装版本核对，旧客户端保留配置",
-        "受管站点的显式可信代理 CIDR、限定来源头与风险确认；名单与 CC 使用核验 IP，审计另记原始对端",
-        "显式确认的已完成快照保留期与最新份数保护，持久删除计划及进度，不处理当前日志",
-        "中断或未知删除结果阻止后续清理，按完整摘要保留后原快照或索引仍存在时继续暂停，当前与历史计划均不重试",
-        "配置迁移、事务回滚与原文件 UID/GID 保全；旧事务缺少所有权证据时拒绝猜测恢复"
+        "固定开源 CRS 独立请求体引擎；表单、嵌套 JSON、上传检测与引擎策略保留",
+        "未提交索引与缺失快照显式恢复；可信来源、安装版本及旧客户端配置核对",
+        "显式确认的已完成快照保留期和最新份数保护；持久删除计划不处理当前日志",
+        "中断或未知删除结果暂停后续清理；保全原证据，当前与历史计划不自动重试",
+        "配置迁移、事务回滚和原文件 UID/GID 保全；缺少所有权证据拒绝猜测恢复",
+        "固定签名开源国家数据，独立限权账户下载、原任务历史和来源许可；下载不启用策略",
+        "国家 IPv4/IPv6 全局与逐站允许/拒绝/观察，名单及同站健康优先，总开关暂停保留意图"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx-waf/2.5.2/manifest.json",
-      "sha256": "c4388333250b15a5ce68f7e7b36454b32b71bd652531e3d474e41c66f70e4ac1"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx-waf/2.6.0/manifest.json",
+      "sha256": "465bd0775b41e8d7dd8d02de9497294a815a7467e919786fcae719791314c9f2"
     },
     {
       "id": "openlitespeed",
