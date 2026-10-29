@@ -117,6 +117,7 @@ type loadBalanceStreamServiceObservation struct {
 	MemoryEvents    loadBalanceStreamMemoryEvents      `json:"memory_events"`
 	IngressPrograms []uint32                           `json:"ingress_programs"`
 	EgressPrograms  []uint32                           `json:"egress_programs"`
+	FilterSHA256    string                             `json:"filter_sha256,omitempty"`
 	Processes       []*loadBalanceStreamProcessWitness `json:"processes"`
 	installed       *loadBalanceStreamInstalledContext
 	cgroup          *os.File
@@ -165,7 +166,7 @@ func (w *loadBalanceStreamServiceObservation) limitsCurrent() bool {
 }
 
 func (w *loadBalanceStreamServiceObservation) current(ctx context.Context) error {
-	if w == nil || ctx == nil || ctx.Err() != nil || w.installed == nil || w.installed.current(ctx) != nil || w.cgroup == nil || w.Format != 1 || !w.plan.ShouldRun || w.plan.SHA256 != core.Hash(string(w.plan.Unit)) || w.UnitSHA256 != w.plan.SHA256 || w.MemoryHigh != w.plan.MemoryHighBytes || w.MemoryMax != w.plan.MemoryMaxBytes || !w.limitsCurrent() {
+	if w == nil || ctx == nil || ctx.Err() != nil || w.installed == nil || w.installed.current(ctx) != nil || w.cgroup == nil || w.Format != 2 || !streamFilterReceiptFormat(w.Format, w.FilterSHA256) || !w.plan.ShouldRun || w.plan.SHA256 != core.Hash(string(w.plan.Unit)) || w.UnitSHA256 != w.plan.SHA256 || w.MemoryHigh != w.plan.MemoryHighBytes || w.MemoryMax != w.plan.MemoryMaxBytes || !w.limitsCurrent() {
 		return loadbalancestream.ErrService
 	}
 	main, invocation, err := streamServiceManagerFacts(ctx)
@@ -207,6 +208,10 @@ func (w *loadBalanceStreamServiceObservation) current(ctx context.Context) error
 			}
 		}
 	}
+	filter, err := observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms)
+	if err != nil || filter != w.FilterSHA256 {
+		return loadbalancestream.ErrService
+	}
 	if w.AccountUID != w.installed.identity.UID || w.AccountGID != w.installed.identity.GID || w.EngineSHA256 != w.installed.engine.binary.sha || observeStreamServiceIPPolicy(ctx, w.plan) != nil || ctx.Err() != nil {
 		return loadbalancestream.ErrService
 	}
@@ -224,7 +229,7 @@ func observeLoadBalanceStreamService(ctx context.Context, installed *loadBalance
 	if err != nil || threatIDSTrustedParents("/sys/fs/cgroup/system.slice", false) != nil {
 		return nil, loadbalancestream.ErrService
 	}
-	w := &loadBalanceStreamServiceObservation{Format: 1, InvocationID: invocation, MainPID: main, AccountUID: installed.identity.UID, AccountGID: installed.identity.GID, EngineSHA256: installed.engine.binary.sha, UnitSHA256: plan.SHA256, MemoryHigh: plan.MemoryHighBytes, MemoryMax: plan.MemoryMaxBytes, installed: installed, plan: plan, permitsRetiring: permitsRetiring}
+	w := &loadBalanceStreamServiceObservation{Format: 2, InvocationID: invocation, MainPID: main, AccountUID: installed.identity.UID, AccountGID: installed.identity.GID, EngineSHA256: installed.engine.binary.sha, UnitSHA256: plan.SHA256, MemoryHigh: plan.MemoryHighBytes, MemoryMax: plan.MemoryMaxBytes, installed: installed, plan: plan, permitsRetiring: permitsRetiring}
 	fail := func() (*loadBalanceStreamServiceObservation, error) {
 		w.close()
 		return nil, loadbalancestream.ErrService
@@ -272,6 +277,10 @@ func observeLoadBalanceStreamService(ctx context.Context, installed *loadBalance
 		return fail()
 	}
 	w.EgressPrograms, err = loadBalanceStreamCgroupBPFProgramsWithFlags(w.cgroup, unix.BPF_CGROUP_INET_EGRESS, 0)
+	if err != nil {
+		return fail()
+	}
+	w.FilterSHA256, err = observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms)
 	if err != nil || w.current(ctx) != nil {
 		return fail()
 	}

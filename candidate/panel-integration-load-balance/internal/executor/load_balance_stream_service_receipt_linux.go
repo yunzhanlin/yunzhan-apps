@@ -65,6 +65,9 @@ func (s *loadBalanceStreamConfigurationStore) recordedServiceReceipt(ctx context
 func streamServiceMatchesRecorded(current *loadBalanceStreamServiceObservation, receipt streamServiceReceipt) bool {
 	var old streamServiceRecordedRunning
 	if current == nil || receipt.State != "running" || json.Unmarshal(receipt.Native, &old) != nil ||
+		!streamFilterReceiptFormat(old.Format, old.FilterSHA256) ||
+		!streamFilterReceiptFormat(current.Format, current.FilterSHA256) ||
+		!streamServiceBPFIDs(current.IngressPrograms) || !streamServiceBPFIDs(current.EgressPrograms) ||
 		current.InvocationID != old.InvocationID || current.MainPID != old.MainPID ||
 		current.AccountUID != old.AccountUID || current.AccountGID != old.AccountGID ||
 		current.EngineSHA256 != old.EngineSHA256 || current.UnitSHA256 != old.UnitSHA256 ||
@@ -95,9 +98,19 @@ func streamServiceMatchesRecorded(current *loadBalanceStreamServiceObservation, 
 			seenCurrent = seenCurrent || actual == receipt.CurrentWorker
 		}
 	}
-	// Attachments are checked live independently. Their IDs may legitimately
-	// change only in a new original policy operation, not between two controls.
-	return seenCurrent && slices.Equal(current.IngressPrograms, old.IngressPrograms) && slices.Equal(current.EgressPrograms, old.EgressPrograms)
+	if !seenCurrent {
+		return false
+	}
+	if old.Format == 1 {
+		// Never invent a fingerprint for old immutable native bodies. A legacy
+		// generation still needs its exact previously recorded direct IDs.
+		return slices.Equal(current.IngressPrograms, old.IngressPrograms) && slices.Equal(current.EgressPrograms, old.EgressPrograms)
+	}
+	// systemd reload/re-exec may recreate equivalent filters while the exact
+	// original daemon and worker remain alive. New format2 receipts bind the
+	// actual translated instructions and complete ACL maps instead of treating
+	// those ephemeral allocation numbers as persistent policy identity.
+	return current.Format == 2 && streamFilterReceiptFormat(current.Format, current.FilterSHA256) && current.FilterSHA256 == old.FilterSHA256
 }
 
 func (p *loadBalanceStreamConfigurationPublication) retainServiceOwned(ctx context.Context, w *loadBalanceStreamControlOwner, running *loadBalanceStreamServiceObservation, stopped *loadBalanceStreamStoppedObservation) (string, error) {

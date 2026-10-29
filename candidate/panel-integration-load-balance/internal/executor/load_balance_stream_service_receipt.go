@@ -31,6 +31,7 @@ type streamServiceRecordedRunning struct {
 	MemoryEvents    loadBalanceStreamMemoryEvents `json:"memory_events"`
 	IngressPrograms []uint32                      `json:"ingress_programs"`
 	EgressPrograms  []uint32                      `json:"egress_programs"`
+	FilterSHA256    string                        `json:"filter_sha256,omitempty"`
 	Processes       []streamServiceReceiptProcess `json:"processes"`
 }
 
@@ -140,7 +141,7 @@ func decodeStreamServiceReceipt(raw, seedRaw []byte) (streamServiceReceipt, erro
 	switch r.State {
 	case "running":
 		var n streamServiceRecordedRunning
-		if !streamServiceCanonicalCompact(r.Native, &n) || runtime.ActiveEntries == 0 || n.Format != 1 ||
+		if !streamServiceCanonicalCompact(r.Native, &n) || runtime.ActiveEntries == 0 || !streamFilterReceiptFormat(n.Format, n.FilterSHA256) ||
 			!streamServiceNativeIdentity(n.InvocationID, n.AccountUID, n.AccountGID, n.EngineSHA256) ||
 			n.UnitSHA256 != seed.ServiceUnitSHA256 || n.MemoryHigh < loadbalancestream.ServiceBaseMemory ||
 			n.MemoryMax < n.MemoryHigh || n.MemoryMax > loadbalancestream.ServiceBaseMemory+loadbalancestream.MaxMemoryBudget+loadbalancestream.MaxMemoryBudget/4 ||

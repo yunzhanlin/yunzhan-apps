@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24diskcancelcandidate27-linux-amd64.tar.gz",
-    "archive_sha256": "9723dedf171344702ab57e2ca0e803463147f88fd9c4e6d93ab653ec6950bd52",
-    "frozen_inputs_sha256": "3905be8250f8927d651ab90ec2b2bedafb737f2a4e4bb607b79fd1a18057a6c9"
+    "archive": "panel-0.1.0-dev.proapps24filtercandidate28-linux-amd64.tar.gz",
+    "archive_sha256": "e375faedfa77b36aa4cb72a295a5e284f9f4c20045a94d602d184c0c15075fb9",
+    "frozen_inputs_sha256": "a90b74709a04c646ede65f499286046d7ef43bb80265b4afc3e121177f7d48bc"
   },
   "files": {
     "cmd/executor/main.go": "478fd30b28f3e97390d029df97d6667bd81357f5f4016539bd0201d3970ef266",
@@ -1256,6 +1256,10 @@
     "internal/executor/load_balance_stream_engine_linux.go": "c5a4fc7d10d670710c63defe2f560abb8c22f5c33ac0dd5f9adf6c5f6af4fab7",
     "internal/executor/load_balance_stream_engine_linux_test.go": "ca568b965cddf003ea6f98a77d8c4d91b7f7dfcc363eeda9f34c2c759b2ed00a",
     "internal/executor/load_balance_stream_engine_native_qa_linux_test.go": "90ba22fb184b8ab26aeb622976e9a5753707ac89679ec5aef65268c484ca6d10",
+    "internal/executor/load_balance_stream_filter_fingerprint.go": "b4f97d9a4e4d4e4a1fc7e16e49a299a9c3bbd18668e291941e16ba8eec226f80",
+    "internal/executor/load_balance_stream_filter_fingerprint_linux.go": "f12fc4062ccee408c2679aecbefd6e02d11e942df5da3d4db93e686608c6743e",
+    "internal/executor/load_balance_stream_filter_fingerprint_linux_test.go": "c75d5f546e1c72a0a5d3329d176d29e141faa414abf3e3a9d5b232c1414692b3",
+    "internal/executor/load_balance_stream_filter_fingerprint_test.go": "8603e39b6c8a97bc8a5dd0998f3714f4fe10c8a0a764e54e3552794776e95a9d",
     "internal/executor/load_balance_stream_generation_history_linux.go": "37323d6e662e7d81e88a68ff2198a508b4d2732e1d662063f537215090f5137e",
     "internal/executor/load_balance_stream_generation_linux.go": "d46f5c41dcc2065807ddacc2ef71784f4ce6c0694ed1de9594a7428d7ddc5bed",
     "internal/executor/load_balance_stream_generation_linux_test.go": "294d533493a11e262144d0b4109f791523e6e8fde06fede8342f5e4a5657bd7e",
@@ -1320,10 +1324,10 @@
     "internal/executor/load_balance_stream_rpc_group_native_qa_linux_test.go": "6fe5ba408b245552e195b9732ae5ef567d528bb6c4dc228e136899a716bcbf18",
     "internal/executor/load_balance_stream_service_evidence.go": "647c68cd64051a754efea831981162801317f934d5c91f169cbcdf2607469ca2",
     "internal/executor/load_balance_stream_service_evidence_test.go": "9bf0befa6389ebd0d4ec6aef25fa7e885618efb6c3ae4265029f13aa190f9a04",
-    "internal/executor/load_balance_stream_service_observation_linux.go": "b17736a0ce0c1af9ee0c019ecdd314898aaa5b43ec5b185a56422b07e956fc38",
+    "internal/executor/load_balance_stream_service_observation_linux.go": "8a3447ebf4785ef5c34a16fb7fdd4639449107b1696f6694d2653c99c17d847d",
     "internal/executor/load_balance_stream_service_observation_linux_test.go": "a2b5977774682dcc31cf75a79584db9996b11a6cab320d352f71ef40b6ad75cd",
-    "internal/executor/load_balance_stream_service_receipt.go": "f9cb8ba8a222dc93b2cc5955ce7de1a3118d18b6c19869e60e86da07b7f71149",
-    "internal/executor/load_balance_stream_service_receipt_linux.go": "b30afb4872547908840531428312edfa0db54ecd2e855b612c31a33788dfd380",
+    "internal/executor/load_balance_stream_service_receipt.go": "ce61a0d058dd0d8931fb64a5c64e9613adab088c26bab72ccc7502d1c843a7cf",
+    "internal/executor/load_balance_stream_service_receipt_linux.go": "956c4bf0df230a036ec4083a88f2a8edda300204ec587d953013b4a11e22a3d7",
     "internal/executor/load_balance_stream_service_receipt_test.go": "7ce323035a7051c9fd268fc9d80836804334f69e45b64fed92f907d7318fcb4e",
     "internal/executor/load_balance_stream_sockets.go": "9f7e9febce8a1d7978b7596aed4991c79339c1d629130191331e223299c3beb7",
     "internal/executor/load_balance_stream_sockets_linux.go": "7d5f249d5ce744636efe7d7ffb68281604d6ff28e1e2e10b4e5695434ab90392",
