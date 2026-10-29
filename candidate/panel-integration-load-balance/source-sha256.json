@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24moduleparentcandidate34r3-linux-amd64.tar.gz",
-    "archive_sha256": "64b3fc6da8f0f35ef1c8820f86188e9c50ea7e08f7d31155a1c17d608d86f763",
-    "frozen_inputs_sha256": "8b38131f791f4c1b1622124ec67b945147296f3aad96863be289178fc2173586"
+    "archive": "panel-0.1.0-dev.proapps24moduleparentcandidate34r4-linux-amd64.tar.gz",
+    "archive_sha256": "f83f7ee208bdad3fffc2a045053d6d019190b4671f3825f4b83dd2ba968f1d5c",
+    "frozen_inputs_sha256": "e2800be6bf3da01db4548e7fc90bc88861a3ba5d7ca32284a72cdd72d66d2a46"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -1977,7 +1977,7 @@
     "packaging/test_app_dependency_budget.py": "421f4ffc3c79f20d5944549e80378d6edc7dd86fbe77bd1045ef0de224f0da3f",
     "packaging/test_development_upgrade_safety.py": "086441275fe290f12ebbc4d1eb8ebdc00eac41eb20e654ef4da591806d4a2ed8",
     "packaging/test_freeze_source.py": "24fdce8d717761e53b82aadd296517d2f6c1bd79cf69f9e66c44fa1429bd9519",
-    "packaging/test_geodata_upgrade_lease.py": "62d2f44b8e1ab6fed6f9773d8f493299e275e0e3039eda62cee1380ba6f1e1dd",
+    "packaging/test_geodata_upgrade_lease.py": "6246af57f41d80a2439085ff1f913ff676d4b2d20f5ba1d28aeca43ff8c992e6",
     "packaging/test_install_dependency_policy.py": "e10a07527713ce0f1c86363f5cd333e375927a9f2fd9353e84ae94a9354c1467",
     "packaging/test_install_development_dispatch.py": "80dc2d805b5c63713581a76b0a2e27ac87fafb7c4865c9ece77c9688bdb19f6c",
     "packaging/test_install_gateway_policy.py": "bad8790fff7be8780555e48bc38e641357aa7a35cbf21747be9dfbe843843ff6",

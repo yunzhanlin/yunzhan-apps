@@ -264,8 +264,8 @@ class GeoWriterStopSharedNamespaceRootTests(unittest.TestCase):
                 self.assertEqual(self.identities(root), before)
                 self.assertEqual(calls, [])
 
-    def test_present_statistics_keeps_private_parent_and_existing_lock_requirements(self):
-        for mode in (0o700, 0o755):
+    def test_present_statistics_accepts_shared_container_keeps_private_leaf_and_existing_lock(self):
+        for mode in (0o700, 0o711, 0o750, 0o755):
             with self.subTest(mode=mode), self.workspace() as (transaction, root, parent, calls):
                 parent.chmod(mode)
                 (parent/'website-statistics-v2').mkdir(mode=0o700)
@@ -273,13 +273,14 @@ class GeoWriterStopSharedNamespaceRootTests(unittest.TestCase):
                 lock.write_bytes(b'')
                 lock.chmod(0o600)
                 before = self.identities(root)
-                if mode == 0o700:
-                    with transaction.statistics_writer_stop_barrier():
-                        pass
-                else:
-                    with self.assertRaises(ValueError):
-                        with transaction.statistics_writer_stop_barrier():
-                            self.fail('public parent adopted for existing statistics')
+                with transaction.statistics_writer_stop_barrier():
+                    with lock.open('rb') as observer:
+                        with self.assertRaises(BlockingIOError):
+                            upgrade.fcntl.flock(observer, upgrade.fcntl.LOCK_SH | upgrade.fcntl.LOCK_NB)
+                self.assertEqual((parent/'website-statistics-v2').stat().st_mode & 0o777, 0o700)
+                self.assertEqual(lock.stat().st_mode & 0o777, 0o600)
+                with lock.open('rb') as observer:
+                    upgrade.fcntl.flock(observer, upgrade.fcntl.LOCK_SH | upgrade.fcntl.LOCK_NB)
                 self.assertEqual(self.identities(root), before)
                 self.assertEqual(calls, [])
 
