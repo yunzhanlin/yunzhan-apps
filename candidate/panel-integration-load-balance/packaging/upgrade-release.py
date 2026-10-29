@@ -1228,11 +1228,13 @@ class Upgrade:
                 yield
                 return
             self.directory(path, private=private)
-        # Other applications create the shared Root-owned modules anchor with
-        # 0755. A missing statistics module has no writer-stop lease to hold.
-        # If statistics IS present, retain the original private parent and leaf
-        # requirements before opening its existing cross-process WAF lease.
-        self.directory(module.parent, private=True)
+        # The exact shared container is Root-owned and non-writable by other
+        # users, but may already be traversable after country-account setup.
+        # Its app leaf remains0700 and the existing shared WAF lock0600.
+        # Validate without changing permissions or creating/adopting a lock.
+        shared = self.directory(module.parent)
+        if shared.st_mode & (stat.S_ISUID | stat.S_ISGID | stat.S_ISVTX):
+            raise ValueError('unsafe shared statistics module container')
         lock = self.path('/etc/panel/security-apps/waf-configuration.lock')
         self.parents(lock)
         descriptor = os.open(lock, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)

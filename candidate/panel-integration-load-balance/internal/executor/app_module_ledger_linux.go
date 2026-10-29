@@ -30,12 +30,19 @@ func (s *Service) openModuleLedger(ctx context.Context, id string) (*sql.DB, err
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
-	for _, path := range []string{s.Config.SecurityDir, filepath.Join(s.Config.SecurityDir, "modules"), dir} {
+	for index, path := range []string{s.Config.SecurityDir, filepath.Join(s.Config.SecurityDir, "modules"), dir} {
 		info, err := os.Lstat(path)
-		if err != nil || !moduleRecordInfo(info, true, path == s.Config.SecurityDir) {
+		if err != nil || !moduleRecordInfo(info, true, index < 2) {
 			return nil, errors.New("历史目录不安全，未创建或修改记录")
 		}
 	}
+	// Only the configured anchor and exact shared container may be traversable.
+	// Keep the same held-parent and strict app-leaf checks as report readers.
+	guard, err := s.moduleRecordDirectory(id)
+	if err != nil {
+		return nil, err
+	}
+	defer guard.Close()
 	path := filepath.Join(dir, "history.sqlite")
 	for _, name := range []string{path, path + "-journal", path + "-wal", path + "-shm"} {
 		info, err := os.Lstat(name)
@@ -70,6 +77,10 @@ CREATE TABLE IF NOT EXISTS metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL);`)
 	if err != nil {
 		db.Close()
 		return nil, errors.New("历史数据库损坏或不可写，未覆盖旧记录")
+	}
+	if !guard.current() {
+		db.Close()
+		return nil, errors.New("历史目录身份变化，原库保留，未确认为成功")
 	}
 	return db, nil
 }

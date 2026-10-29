@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"local/panel/internal/core"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -225,5 +226,97 @@ func TestModuleSharedContainerNativeUnprivilegedAccessStopsAtPrivateLeaf(t *test
 	actual, err := os.ReadFile(record)
 	if err != nil || string(actual) != string(original) {
 		t.Fatal("native read-only privacy check changed record", err)
+	}
+}
+
+func TestModuleSharedContainerLedgerWritesKeepPrivateFiles(t *testing.T) {
+	for _, mode := range []os.FileMode{0700, 0711, 0750, 0755} {
+		t.Run(mode.String(), func(t *testing.T) {
+			service, record := moduleRecordFixture(t)
+			container := filepath.Dir(filepath.Dir(record))
+			if err := os.Chmod(container, mode); err != nil {
+				t.Fatal(err)
+			}
+			before, err := os.Lstat(container)
+			if err != nil {
+				t.Fatal(err)
+			}
+			original, err := os.ReadFile(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < 2; i++ {
+				if err := service.appendModuleEvent("task-manager", "run", "manual", core.AppModuleInput{Password: "never-in-history"}, map[string]any{"secret": "never-in-result-history"}, nil); err != nil {
+					t.Fatal("real history write rejected a Root-controlled shared parent", err)
+				}
+			}
+			if err := service.writeModuleRetrospectiveRecord("task-manager", "last-report.json", map[string]any{"time": core.Now(), "action": "run", "result": map[string]any{"count": 2}}); err != nil {
+				t.Fatal(err)
+			}
+			history, err := service.moduleHistory("task-manager", core.AppModuleInput{})
+			if err != nil || history.(map[string]any)["total"] != 2 {
+				t.Fatal(history, err)
+			}
+			for _, name := range []string{"installed.json", "history.sqlite", "history.json", "last-report.json"} {
+				info, err := os.Lstat(filepath.Join(filepath.Dir(record), name))
+				if err != nil || !moduleRecordInfo(info, false, false) {
+					t.Fatal("history write exposed private record", name, err)
+				}
+			}
+			after, err := os.Lstat(container)
+			if err != nil || !os.SameFile(before, after) || before.Mode() != after.Mode() {
+				t.Fatal("history writer replaced or chmodded shared parent", err)
+			}
+			current, err := os.ReadFile(record)
+			if err != nil || string(current) != string(original) {
+				t.Fatal("history writer changed installed identity", err)
+			}
+		})
+	}
+}
+
+func TestModuleSharedContainerLedgerRefusesUnsafeAncestryBeforeCreatingFile(t *testing.T) {
+	for _, kind := range []string{"public-leaf", "writable-container", "foreign-container", "symlink-container"} {
+		t.Run(kind, func(t *testing.T) {
+			service, record := moduleRecordFixture(t)
+			container := filepath.Dir(filepath.Dir(record))
+			original, err := os.ReadFile(record)
+			if err != nil {
+				t.Fatal(err)
+			}
+			switch kind {
+			case "public-leaf":
+				err = os.Chmod(filepath.Dir(record), 0755)
+			case "writable-container":
+				err = os.Chmod(container, 0770)
+			case "foreign-container":
+				if os.Geteuid() != 0 {
+					t.Skip("Root fixture required")
+				}
+				err = os.Chown(container, 1, -1)
+			case "symlink-container":
+				if err = os.Rename(container, container+"-original"); err == nil {
+					err = os.Symlink(container+"-original", container)
+				}
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			db, err := service.openModuleLedger(context.Background(), "task-manager")
+			if db != nil {
+				db.Close()
+				t.Fatal("unsafe ledger opened")
+			}
+			if err == nil {
+				t.Fatal("unsafe history ancestry accepted", kind)
+			}
+			if _, err := os.Lstat(filepath.Join(filepath.Dir(record), "history.sqlite")); !errors.Is(err, os.ErrNotExist) {
+				t.Fatal("refusal created or modified history", err)
+			}
+			current, err := os.ReadFile(record)
+			if err != nil || string(current) != string(original) {
+				t.Fatal("refusal changed original installed identity", err)
+			}
+		})
 	}
 }

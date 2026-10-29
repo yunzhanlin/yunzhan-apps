@@ -74,7 +74,7 @@ func ensureLoadBalanceStreamModuleDirectory(ctx context.Context, authorize func(
 			children[i].Close()
 		}
 	}()
-	for _, name := range []string{"modules", "load-balance"} {
+	for index, name := range []string{"modules", "load-balance"} {
 		if authorize(ctx) != nil {
 			return nil, errLoadBalanceStreamModule
 		}
@@ -86,7 +86,7 @@ func ensureLoadBalanceStreamModuleDirectory(ctx context.Context, authorize func(
 			return nil, errLoadBalanceStreamModule
 		}
 		info, err := current.Lstat(name)
-		if err != nil || !moduleRecordInfo(info, true, false) {
+		if err != nil || !moduleRecordInfo(info, true, index == 0) {
 			return nil, errLoadBalanceStreamModule
 		}
 		child, err := current.OpenRoot(name)

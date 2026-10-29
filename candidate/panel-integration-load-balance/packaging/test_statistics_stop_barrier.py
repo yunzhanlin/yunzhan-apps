@@ -33,6 +33,29 @@ class StatisticsStopBarrierTests(unittest.TestCase):
             transaction = upgrade.Upgrade(root/'candidate', root, mock.Mock(side_effect=AssertionError('unexpected host service call')))
             yield transaction, root, module, lock
 
+    def test_traversable_shared_container_keeps_private_leaf_and_original_exclusive_lock(self):
+        for mode in (0o700, 0o711, 0o750, 0o755):
+            with self.subTest(mode=oct(mode)), self.fixture() as (transaction, root, module, lock):
+                module.parent.chmod(mode)
+                parent_before = module.parent.lstat()
+                leaf_before = module.lstat()
+                lock_before = lock.lstat()
+                with transaction.statistics_writer_stop_barrier():
+                    with lock.open('rb') as observer:
+                        with self.assertRaises(BlockingIOError):
+                            fcntl.flock(observer, fcntl.LOCK_SH | fcntl.LOCK_NB)
+                transaction.run_command.assert_not_called()
+                for path, before in ((module.parent, parent_before), (module, leaf_before), (lock, lock_before)):
+                    after = path.lstat()
+                    self.assertEqual((before.st_dev, before.st_ino, before.st_mode, before.st_uid, before.st_gid,
+                                      before.st_nlink, before.st_size, before.st_mtime_ns, before.st_ctime_ns),
+                                     (after.st_dev, after.st_ino, after.st_mode, after.st_uid, after.st_gid,
+                                      after.st_nlink, after.st_size, after.st_mtime_ns, after.st_ctime_ns))
+                self.assertEqual(stat.S_IMODE(module.lstat().st_mode), 0o700)
+                self.assertEqual(stat.S_IMODE(lock.lstat().st_mode), 0o600)
+                with lock.open('rb') as observer:
+                    fcntl.flock(observer, fcntl.LOCK_SH | fcntl.LOCK_NB)
+
     def test_real_shared_writer_blocks_all_stops_and_original_lock_is_unchanged(self):
         with self.fixture() as (transaction, root, module, lock):
             before = lock.lstat()
@@ -76,7 +99,8 @@ class StatisticsStopBarrierTests(unittest.TestCase):
 
     def test_unsafe_existing_paths_refuse_without_any_service_or_permission_repair(self):
         for scenario in ('linked-module', 'public-module', 'linked-lock', 'hardlinked-lock',
-                         'public-lock', 'nonempty-lock', 'missing-lock', 'linked-parent'):
+                         'public-lock', 'nonempty-lock', 'missing-lock', 'linked-parent',
+                         'writable-shared-parent', 'foreign-shared-parent', 'special-shared-parent'):
             with self.subTest(scenario=scenario), self.fixture() as (transaction, root, module, lock):
                 if scenario == 'linked-module':
                     module.rename(root/'retained-module')
@@ -94,16 +118,22 @@ class StatisticsStopBarrierTests(unittest.TestCase):
                     lock.write_bytes(b'unknown evidence')
                 elif scenario == 'missing-lock':
                     lock.rename(root/'retained-lock')
+                elif scenario == 'writable-shared-parent':
+                    module.parent.chmod(0o770)
+                elif scenario == 'foreign-shared-parent':
+                    os.chown(module.parent, 1, -1)
+                elif scenario == 'special-shared-parent':
+                    module.parent.chmod(0o755 | stat.S_ISGID)
                 elif scenario == 'linked-parent':
                     parent = root/'etc/panel/security-apps'
                     parent.rename(root/'retained-security')
                     parent.symlink_to(root/'retained-security', target_is_directory=True)
-                before = {str(p.relative_to(root)): (p.lstat().st_ino, p.lstat().st_mode, p.lstat().st_uid, p.lstat().st_nlink)
+                before = {str(p.relative_to(root)): (p.lstat().st_dev, p.lstat().st_ino, p.lstat().st_mode, p.lstat().st_uid, p.lstat().st_gid, p.lstat().st_nlink, p.lstat().st_size, p.lstat().st_mtime_ns, p.lstat().st_ctime_ns)
                           for p in root.rglob('*')}
                 with self.assertRaises((ValueError, OSError)):
                     transaction.stop_writers()
                 transaction.run_command.assert_not_called()
-                after = {str(p.relative_to(root)): (p.lstat().st_ino, p.lstat().st_mode, p.lstat().st_uid, p.lstat().st_nlink)
+                after = {str(p.relative_to(root)): (p.lstat().st_dev, p.lstat().st_ino, p.lstat().st_mode, p.lstat().st_uid, p.lstat().st_gid, p.lstat().st_nlink, p.lstat().st_size, p.lstat().st_mtime_ns, p.lstat().st_ctime_ns)
                          for p in root.rglob('*')}
                 self.assertEqual(before, after)
 
