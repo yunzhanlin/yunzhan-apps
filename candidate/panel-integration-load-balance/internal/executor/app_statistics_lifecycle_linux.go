@@ -63,14 +63,17 @@ func (s *Service) prepareStatisticsPrivateDirectory() error {
 	if err := s.wafOwnedDirectory(s.Config.SecurityDir, true); err != nil {
 		return err
 	}
-	for _, dir := range []string{filepath.Join(s.Config.SecurityDir, "modules"), s.moduleDir("website-statistics-v2")} {
+	for index, dir := range []string{filepath.Join(s.Config.SecurityDir, "modules"), s.moduleDir("website-statistics-v2")} {
 		if _, err := os.Lstat(dir); errors.Is(err, os.ErrNotExist) {
 			if err = os.Mkdir(dir, 0700); err != nil {
 				return err
 			}
 		}
 		info, err := os.Lstat(dir)
-		if err != nil || !moduleRecordInfo(info, true, false) {
+		// The shared container is Root-controlled, but may already have been
+		// created traversable by country-account preparation. Only this app's
+		// own leaf must be private. Never repair an existing directory here.
+		if err != nil || !moduleRecordInfo(info, true, index == 0) {
 			return errors.New("统计私有目录身份、链接或权限异常，未修复或接管")
 		}
 	}

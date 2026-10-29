@@ -75,7 +75,7 @@ func TestModuleRetrospectiveKnownRecordsAndMissingDoNotRewrite(t *testing.T) {
 
 func TestModuleRetrospectiveUntrustedReadKeepsEvidence(t *testing.T) {
 	for _, name := range []string{"history.json", "last-report.json"} {
-		for _, kind := range []string{"public-file", "group-write", "public-module", "public-modules", "writable-anchor", "foreign-owner", "symlink-file", "symlink-module", "hardlink", "fifo", "directory", "oversize", "malformed", "duplicate", "escaped-duplicate", "case-duplicate", "nested-duplicate", "trailing", "wrong-root", "unknown-field", "missing-field", "deep"} {
+		for _, kind := range []string{"public-file", "group-write", "public-module", "writable-modules", "writable-anchor", "foreign-owner", "symlink-file", "symlink-module", "hardlink", "fifo", "directory", "oversize", "malformed", "duplicate", "escaped-duplicate", "case-duplicate", "nested-duplicate", "trailing", "wrong-root", "unknown-field", "missing-field", "deep"} {
 			t.Run(name+"/"+kind, func(t *testing.T) {
 				s, path := retrospectiveFixture(t, name)
 				outside := filepath.Join(t.TempDir(), "own-sentinel.json")
@@ -99,8 +99,8 @@ func TestModuleRetrospectiveUntrustedReadKeepsEvidence(t *testing.T) {
 					if err := os.Chmod(filepath.Dir(path), 0755); err != nil {
 						t.Fatal(err)
 					}
-				case "public-modules":
-					if err := os.Chmod(filepath.Dir(filepath.Dir(path)), 0755); err != nil {
+				case "writable-modules":
+					if err := os.Chmod(filepath.Dir(filepath.Dir(path)), 0777); err != nil {
 						t.Fatal(err)
 					}
 				case "writable-anchor":

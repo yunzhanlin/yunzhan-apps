@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24countrydownloadcancelcandidate33r1-linux-amd64.tar.gz",
-    "archive_sha256": "f1741c7e2cd34de26d2edba701710df39b2202a0e5b7dc07bd8875e6e4113127",
-    "frozen_inputs_sha256": "92bbbcc520abf60c367d168e650fae07f1a07dcf9127c74d5f32a16d57c776d7"
+    "archive": "panel-0.1.0-dev.proapps24moduleparentcandidate34r1-linux-amd64.tar.gz",
+    "archive_sha256": "b0c9b94cc17db27418792d9f8f02e9cb2c36f6fdb30b5e7fecc5d7b085fc48bf",
+    "frozen_inputs_sha256": "3d4cd988b0b226691c9da1a359d6875f4c415800f2e2a5e62538c9c1bb5aa730"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -201,7 +201,7 @@
     "internal/core/app_mobile.go": "d2f6bfb4a25b2d4791f519ab460e060350a87d2645cdc33653fa2d8e481dbd28",
     "internal/core/app_mobile_test.go": "9512e42caff0fd2dc2f2656b77066bc8ad887e8377197a09b85dee91248b152d",
     "internal/core/app_module_accounts.go": "1fa519f5263a0081c41fa1b66183d7b4f59774bd61139be698484ee3dd55141c",
-    "internal/core/app_module_guidance.go": "8e8cbeb738f84eb685bfc7d49410eff09ccc7a5343415a910c31099dcba158c2",
+    "internal/core/app_module_guidance.go": "d4ca8bc50fd3c514401bd090ffaab02e0a6cf235ddab495bdd4bd06ff42aff84",
     "internal/core/app_module_history.go": "5531b796b75146ad8429bf58845b54ff9cb48cb71ca4a32d90e7f556d0649881",
     "internal/core/app_module_identity_test.go": "ccb270bb8e79a245193dc6d930d127543ae7782dc98e79aa01bdb319e3a050cc",
     "internal/core/app_module_workspace.go": "27e8e9233eb30fc2676fa1f7361f669096f8de66798dcbe07bef384353fa7947",
@@ -840,11 +840,12 @@
     "internal/executor/app_module_ledger_linux_test.go": "28bd7e33e928b98c7a1ca96a337b77318c90258d1e9c18b387d4b7ab95caa57e",
     "internal/executor/app_module_ledger_readonly_linux.go": "b7271189f2ee075593442c65611b42c4401ad46dcb4e450d85d7995764500dd1",
     "internal/executor/app_module_lifecycle_race_linux_test.go": "3b8420823ae878bded5130bfa0535676c5b9be33d19d09809ec4f74af62c7e95",
-    "internal/executor/app_module_record_linux.go": "efe886b7783336d4eaf0a78f23e8d92e20fbbbdd289237d6651f770b6bd6dc72",
-    "internal/executor/app_module_record_linux_test.go": "b74ddbaef3cdac82267c1c08b527591cf6fe81353fc5d6afb7842a7472bc00a4",
+    "internal/executor/app_module_record_linux.go": "06702ead163fb65ac77a415a777c8ae15739ad6441a01c1ae53c93cf80b1290a",
+    "internal/executor/app_module_record_linux_test.go": "78bda95b3e0fa290e63b99695a68b66a34dbc6fae6c4fb344fdcee4d45177a54",
     "internal/executor/app_module_report_record_linux.go": "e7e33bca21113f275277b836e8cdb46acdd886c1eae67cd054c62d51aee983fb",
-    "internal/executor/app_module_report_record_linux_test.go": "b9ae5cd66d314076c487fb3c92cfc6ffcfbeb2f6d2e4c2706962314a687e3f38",
+    "internal/executor/app_module_report_record_linux_test.go": "7bf025132e4bf8adcf2e4ac445babd329ffbfd99dbb60cb3aee552e214cd8633",
     "internal/executor/app_module_retrospective_write_linux.go": "14e2bb22cf05849b28dbff4c9bebf174fc2966373c01bbfcfc61a0f0a6a95fab",
+    "internal/executor/app_module_shared_container_linux_test.go": "69d785020a8c764a1d91f11d9763794d80747f63e49998d2fecab0d8a7accc58",
     "internal/executor/app_modules_linux.go": "3cd8bf6a4b4d5266dc90495b1d1d7f84b468f1675b50f90b946a6c21f9a42f75",
     "internal/executor/app_modules_linux_test.go": "cc5767df15190ba91dc2ea18c7109b22e64bb9d178ec70fdbf1fc5ba644940ad",
     "internal/executor/app_modules_other.go": "de04ad27514059b9b4ed027eed3d07a6203bb31a3e86f6a2f9487b2cf6fcb115",
@@ -892,7 +893,7 @@
     "internal/executor/app_statistics_health_test.go": "4eda77ffe1659706dbbc1ae2ae9c650c36d687c72311aa938eabc02a4fca1601",
     "internal/executor/app_statistics_history_linux.go": "c608a127fa43f05d42bb134ecb706ddd9a2d33249783fee0e86e5628fbccfdf3",
     "internal/executor/app_statistics_history_linux_test.go": "fd9ff7fff211cb98ce53d747c3e264eec0128f8394f5c6922789dc78cbe2fa05",
-    "internal/executor/app_statistics_lifecycle_linux.go": "8b23b59e51a505fd155506f768bc8fffdb68ad06aea07e4f4362a5f9804f794a",
+    "internal/executor/app_statistics_lifecycle_linux.go": "b1360f57be283015d5f4ad993a8e0b82abe929bae3148efa4f67d5776872f16d",
     "internal/executor/app_statistics_lifecycle_linux_test.go": "df2f770a084b4a59ae2794d4d54ebf5b87da8ee25f33c092c9445df1948c2da9",
     "internal/executor/app_statistics_log_names.go": "9e98862dadbdba5a44fc7df9d964cfc002749ac6cc2e0d488f5e796aa9f3f97e",
     "internal/executor/app_statistics_log_names_test.go": "29274e07b9e8a3ac0a41c88c47206380945f459c52069e9cd5f645bb0489d2a0",

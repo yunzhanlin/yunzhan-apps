@@ -56,7 +56,7 @@ func TestModuleInstalledRecordAbsenceAndLegacyHaveDistinctKnownState(t *testing.
 }
 
 func TestModuleUntrustedInstalledRecordFreezesLifecycleAndHidesReport(t *testing.T) {
-	for _, mode := range []string{"public-file", "public-module", "public-modules", "writable-anchor", "foreign-owner", "symlink-file", "symlink-module", "hardlink", "fifo", "directory", "malformed", "duplicate", "escaped-duplicate", "wrong-id", "future-version", "bad-settings"} {
+	for _, mode := range []string{"public-file", "public-module", "writable-modules", "group-writable-modules", "writable-anchor", "foreign-owner", "symlink-file", "symlink-module", "hardlink", "fifo", "directory", "malformed", "duplicate", "escaped-duplicate", "wrong-id", "future-version", "bad-settings"} {
 		t.Run(mode, func(t *testing.T) {
 			s, path := moduleRecordFixture(t)
 			outside := filepath.Join(t.TempDir(), "own-sentinel.json")
@@ -72,8 +72,10 @@ func TestModuleUntrustedInstalledRecordFreezesLifecycleAndHidesReport(t *testing
 				os.Chmod(path, 0644)
 			case "public-module":
 				os.Chmod(filepath.Dir(path), 0755)
-			case "public-modules":
-				os.Chmod(filepath.Dir(filepath.Dir(path)), 0755)
+			case "writable-modules":
+				os.Chmod(filepath.Dir(filepath.Dir(path)), 0777)
+			case "group-writable-modules":
+				os.Chmod(filepath.Dir(filepath.Dir(path)), 0770)
 			case "writable-anchor":
 				os.Chmod(s.Config.SecurityDir, 0777)
 			case "foreign-owner":

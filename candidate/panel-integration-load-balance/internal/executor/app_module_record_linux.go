@@ -17,8 +17,10 @@ import (
 
 // SecurityDir is the executor's trusted configured anchor, not an arbitrary
 // user path. It can be publicly traversable for other panel facilities, but
-// cannot be writable by another user. Every module record stays beneath owned
-// 0700 modules/id directories. Existing paths are never chmod/chowned here.
+// cannot be writable by another user. The exact shared modules container can
+// also be traversable: country-account preparation creates it before ordinary
+// modules. Each application's own directory remains 0700 and its records 0600.
+// Existing paths are never chmod/chowned here.
 func moduleRecordInfo(info os.FileInfo, dir, anchor bool) bool {
 	owner, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || owner.Uid != uint32(os.Geteuid()) || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
@@ -32,8 +34,9 @@ func moduleRecordInfo(info os.FileInfo, dir, anchor bool) bool {
 
 type modulePrivateDirectory struct {
 	*os.Root
-	roots []*os.Root
-	paths []string
+	roots           []*os.Root
+	paths           []string
+	sharedContainer *os.Root
 }
 
 func (d *modulePrivateDirectory) Close() error {
@@ -52,8 +55,9 @@ func (d *modulePrivateDirectory) current() bool {
 	for i, root := range d.roots {
 		opened, err := root.Stat(".")
 		visible, visibleErr := os.Lstat(d.paths[i])
+		traversable := i == 0 || root == d.sharedContainer
 		if err != nil || visibleErr != nil || !os.SameFile(opened, visible) ||
-			!moduleRecordInfo(opened, true, i == 0) || !moduleRecordInfo(visible, true, i == 0) {
+			!moduleRecordInfo(opened, true, traversable) || !moduleRecordInfo(visible, true, traversable) {
 			return false
 		}
 	}
@@ -81,7 +85,8 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 		return nil, errors.New("模块记录根目录读取身份变化")
 	}
 	d := &modulePrivateDirectory{Root: root, roots: []*os.Root{root}, paths: []string{s.Config.SecurityDir}}
-	for _, name := range []string{"modules", id} {
+	for index, name := range []string{"modules", id} {
+		sharedContainer := index == 0
 		info, err := root.Lstat(name)
 		if err != nil {
 			current := d.current()
@@ -91,7 +96,7 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 			}
 			return nil, err
 		}
-		if !moduleRecordInfo(info, true, false) {
+		if !moduleRecordInfo(info, true, sharedContainer) {
 			d.Close()
 			return nil, errors.New("模块安装记录私有目录身份或权限异常")
 		}
@@ -101,13 +106,16 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 			return nil, errors.New("模块记录目录打开期间变化")
 		}
 		opened, err := child.Stat(".")
-		if err != nil || !os.SameFile(info, opened) || !moduleRecordInfo(opened, true, false) {
+		if err != nil || !os.SameFile(info, opened) || !moduleRecordInfo(opened, true, sharedContainer) {
 			child.Close()
 			d.Close()
 			return nil, errors.New("模块记录目录读取身份变化")
 		}
 		root = child
 		d.Root = child
+		if sharedContainer {
+			d.sharedContainer = child
+		}
 		d.roots = append(d.roots, child)
 		d.paths = append(d.paths, filepath.Join(d.paths[len(d.paths)-1], name))
 	}
