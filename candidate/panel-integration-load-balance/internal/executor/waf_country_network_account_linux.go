@@ -6,12 +6,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -26,6 +28,54 @@ type countryNetworkIdentity struct {
 
 func validCountryNetworkIdentity(v countryNetworkIdentity) bool {
 	return v.Format == 1 && v.UID > 0 && v.UID < 1000 && v.GID > 0 && v.GID < 1000
+}
+
+// Account ownership metadata belongs to the private module, not the public
+// country-data cache. Keep its filename fixed and creation exclusive: a
+// partial write or an existing identity must remain visible, never replaced.
+func writeCountryNetworkIdentity(root *os.Root, identity countryNetworkIdentity) error {
+	if root == nil || os.Geteuid() != 0 || !validCountryNetworkIdentity(identity) {
+		return errors.New("国家数据账户记录必须是固定Root系统身份")
+	}
+	directory, err := root.Stat(".")
+	if err != nil {
+		return err
+	}
+	owner, ok := directory.Sys().(*syscall.Stat_t)
+	if !ok || !directory.IsDir() || owner.Uid != 0 || owner.Gid != 0 || directory.Mode().Perm()&0022 != 0 {
+		return errors.New("国家数据账户记录目录不是Root受管目录")
+	}
+	raw, err := countryCacheJSON(identity)
+	if err != nil || len(raw) < 1 || len(raw) > 2048 {
+		return errors.New("国家数据账户记录编码或容量无效")
+	}
+	const name = "country-network-account.json"
+	file, err := root.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	opened, err := file.Stat()
+	if err != nil || !moduleRecordInfo(opened, false, false) || opened.Size() != 0 {
+		return errors.New("国家数据账户新记录身份无法核对；保留原文件")
+	}
+	if n, err := file.Write(raw); err != nil {
+		return err
+	} else if n != len(raw) {
+		return io.ErrShortWrite
+	}
+	if err := file.Sync(); err != nil {
+		return err
+	}
+	after, err := file.Stat()
+	named, namedErr := root.Lstat(name)
+	if err != nil || namedErr != nil || !os.SameFile(opened, after) || !geoStoreStableInfo(after, named) || !moduleRecordInfo(after, false, false) || after.Size() != int64(len(raw)) {
+		return errors.New("国家数据账户记录写入期间改变；保留原证据")
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return hardeningJournalSync(root)
 }
 
 func countryNetworkNamedIdentity() (countryNetworkIdentity, error) {
@@ -114,16 +164,12 @@ func (s *Service) prepareCountryNetworkAccount(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	raw, err := countryCacheJSON(identity)
-	if err != nil {
-		return err
-	}
 	root, err := os.OpenRoot(dir)
 	if err != nil {
 		return err
 	}
 	defer root.Close()
-	if err := countryCacheWriteNew(root, "country-network-account.json", raw); err != nil {
+	if err := writeCountryNetworkIdentity(root, identity); err != nil {
 		return err
 	}
 	_, err = s.countryNetworkAccount(ctx)

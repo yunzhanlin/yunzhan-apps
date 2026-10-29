@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r6-linux-amd64.tar.gz",
-  "archive_sha256": "170e8e543ae1008324ab72ced3782daff401d7bb046e55ccd420bcbd5503f01b",
-  "frozen_inputs_sha256": "81fe4bb609eded4819d9af36fe576111fca421a576915997db87670b10180068",
+  "archive": "panel-0.1.0-dev.proapps24countrycandidate29r7-linux-amd64.tar.gz",
+  "archive_sha256": "b64a0433c17ea6653a8411517868479ebecd082a42cecc4f037927735d8f318b",
+  "frozen_inputs_sha256": "3bb8d42548eeb66ab6c49c1d5d9f3f6cd6041b6e11968d745acabb0e65df321c",
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
     "cmd/executor/shutdown.go": "a8faac2abce4b6c5a63cb174ede1ad5ab4a9c61c6f63c480c925c37ff70d3aff",
@@ -1746,7 +1746,8 @@
     "internal/executor/waf_country_failure_settlement_linux_test.go": "815ba6027d306e10daede9d8213df4e1db5dec03f7ed0263f395fb3c64df1b8b",
     "internal/executor/waf_country_instance_linux.go": "6719b2854b6f0dd9e74462bb1d8f263e96c214e308389f8821f5940416aa8d09",
     "internal/executor/waf_country_instance_linux_test.go": "2dc24fac8111a8370846d183f122333e2fabc0aedd3b617a5cc0482a8ec8b3cc",
-    "internal/executor/waf_country_network_account_linux.go": "30f9f5e6d899239f4469ddd708a8c34e00b18cc4a3bf9f3d89aff3332f205662",
+    "internal/executor/waf_country_network_account_linux.go": "564039afff345aa00f985efbe104499570c2c287121f96ee15949389cf1aed33",
+    "internal/executor/waf_country_network_account_record_linux_test.go": "5f41e72068c6e9498d288bc153a859697d71673d0c5b5d25eef76d145f23e313",
     "internal/executor/waf_country_policy_cache_linux.go": "33c71be0fe9e081607026c00d16926814408666dc68cbe2923e5b9fce87036d6",
     "internal/executor/waf_country_render.go": "e159cd33d140ef7c31e047cef26aa6e561cb346b59cc18a9b75563f24428b2e6",
     "internal/executor/waf_country_render_test.go": "6bb0f894b7a5314c7558c31066bab77570fc44276483398e3fa83b8bf3088e31",
