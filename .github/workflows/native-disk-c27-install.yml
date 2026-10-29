@@ -34,8 +34,8 @@ jobs:
           python3 - "$RUNNER_TEMP/native-disk-c27-assets" <<'PY'
           import hashlib, json, pathlib, sys
           base = pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base / 'assets-v2.json').read_bytes()).hexdigest() == '9a7a24a37381121bbd940c5c554604251d53176fa2363ea87bd9d54d8ee27c4f'
-          manifest = json.loads((base / 'assets-v2.json').read_bytes())
+          assert hashlib.sha256((base / 'assets-v3.json').read_bytes()).hexdigest() == '9e7a8b4749ec81c77eba0e306400d071f725b5955cde318e00a512406b318cee'
+          manifest = json.loads((base / 'assets-v3.json').read_bytes())
           for name, digest in manifest['files'].items():
               assert pathlib.PurePath(name).name == name
               assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
@@ -47,6 +47,8 @@ jobs:
         run: python3 -I -B scripts/native-disk-c27/test_initialized_baseline.py
       - name: Only bounded original-ID status reads may return pending409
         run: python3 -I -B scripts/native-disk-c27/test_pending_original_read.py
+      - name: Original native cancellation accepts either signaled or already canceled with proof
+        run: python3 -I -B scripts/native-disk-c27/test_original_cancel_ack.py
       - name: Prepare hardware guest tools without removing existing host software
         run: |
           sudo apt-get update --error-on=any -o Acquire::Retries=0
@@ -56,7 +58,7 @@ jobs:
         run: |
           umask 077
           mkdir -m 700 "$RUNNER_TEMP/native-disk-c27-public"
-          sudo -n python3 -I -B scripts/native-disk-c27/kvm-v2.py "$RUNNER_TEMP/native-disk-c27-assets" scripts/native-disk-c27 "$RUNNER_TEMP/native-disk-c27-public"
+          sudo -n python3 -I -B scripts/native-disk-c27/kvm-v3.py "$RUNNER_TEMP/native-disk-c27-assets" scripts/native-disk-c27 "$RUNNER_TEMP/native-disk-c27-public"
       - name: Retain public proof and encrypted full QA evidence only
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

@@ -1,6 +1,6 @@
 """QA HTTP observation regression; zero native/store commands and no acceptance claim."""
 import ast,io,json,pathlib,re,secrets,types,unittest,urllib.error,urllib.request
-P=pathlib.Path(__file__).with_name('native-active-cancel-v2.py')
+P=pathlib.Path(__file__).with_name('native-active-cancel-v3.py')
 NODE=next(n for n in ast.parse(P.read_text()).body if isinstance(n,ast.FunctionDef)and n.name=='api')
 PENDING='原全盘执行状态暂不能核对；未重发任务，也未认定结束'
 PATH='/software/disk-analysis/host/jobs/'+'a'*32
@@ -25,6 +25,6 @@ class PendingOriginalRead(unittest.TestCase):
    with self.subTest(options=options):
     with self.assertRaises(AssertionError):self.invoke(**options)
  def test_active_phase_and_canceled_terminal_require_real_native_witnesses(self):
-  source=P.read_text();self.assertIn("observed['original_process']=='alive'and observed['original_scope']=='busy'",source);self.assertIn("cancel['native_cancel_requested']is True and cancel['cancel_uncertain']is False",source);self.assertIn("detail['terminal_verified']is True and detail['job']['state']=='canceled'",source)
+  source=P.read_text();self.assertIn("observed['original_process']=='alive'and observed['original_scope']=='busy'",source);self.assertIn("valid_cancel_ack(status,cancel,job)",source);self.assertIn("detail['terminal_verified']is True and detail['job']['state']=='canceled'",source)
 if __name__=='__main__':unittest.main()
 
