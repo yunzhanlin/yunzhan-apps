@@ -18,6 +18,7 @@ func TestCountryAccountPreparationTemplateAndDispatchScope(t *testing.T) {
 	for _, required := range []string{
 		"ExecStart=/opt/panel/bin/panel-executor --waf-country-account=%i\n",
 		"NoNewPrivileges=true\n", "ProtectSystem=strict\n",
+		"Slice=system.slice\n",
 		"RestrictAddressFamilies=AF_UNIX AF_NETLINK\n", "TimeoutStartSec=15s\n",
 	} {
 		if !strings.Contains(string(raw), required) {

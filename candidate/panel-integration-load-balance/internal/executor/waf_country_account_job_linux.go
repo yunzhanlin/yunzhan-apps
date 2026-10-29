@@ -18,6 +18,7 @@ Description=Panel original WAF country network account preparation %i
 
 [Service]
 Type=oneshot
+Slice=system.slice
 User=root
 Group=root
 ExecStart=/opt/panel/bin/panel-executor --waf-country-account=%i
