@@ -1,0 +1,82 @@
+name: actual native C37r5 QA1 AMD64 Ubuntu24 NFS131 private client and website account
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      # An immutable publication marker is added only after the reviewed QA cohort is published.
+      - scripts/native-nfs-c37r5/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-nfs-c37r5-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read the complete published original-key QA cohort without guest credentials
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-nfs-c37r5-assets"
+          ready=false
+          for attempt in $(seq 1 90); do
+            if gh release view qa-nfsprivateclientcandidate37r5-20261030-qa1 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/country-release-status.json" 2>/dev/null && python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); sys.exit(0 if v["isDraft"] is False and v["isPrerelease"] is True else 1)' "$RUNNER_TEMP/country-release-status.json"; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          test "$ready" = true
+          gh release download qa-nfsprivateclientcandidate37r5-20261030-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-nfs-c37r5-assets"
+          python3 - "$RUNNER_TEMP/native-nfs-c37r5-assets" <<'PY'
+          import hashlib, json, pathlib, sys
+          base = pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == 'e60fbe16bc395450e111a1181914d743407b1504b5c11944ae152e0cc87f6b12'
+          manifest = json.loads((base / 'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256'] == '8cbf310e9c9170d37180ca03e60fb84d6ecc8e35029c15d5562167687929c95b'
+          for name, digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name == name
+              assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
+          print('Original-key C37r5 programme and exact NFS131 native QA verified; no credentials in guest payload')
+          PY
+      - name: Root first-install policy, actual assembled helper and existing WAF packaging fixtures
+        run: |
+          python3 - <<'PY'
+          import hashlib, pathlib
+          assert hashlib.sha256(pathlib.Path('candidate/panel-integration-load-balance/scripts/upgrade-running-development.sh').read_bytes()).hexdigest() == 'b116481c2a3d4e95922884d10f4baeb5ed4a828d902231fb0202eb25a9da8695'
+          assert hashlib.sha256(pathlib.Path('candidate/panel-integration-load-balance/dev/provision-app.sh').read_bytes()).hexdigest() == '05961d8bdce8e5b7e960962a47167a936922b827844c31f0757656b5168bc8c6'
+          PY
+          sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_fresh_ssh_policy.py
+          sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_apache_body_cache_budget.py
+          sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_waf_state_directory.py
+      - name: Prepare hardware guest tools while preserving existing host services
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Fresh Ubuntu24 signed C37r5, private NFS IPv4 IPv6 kernel IO, website account and no global RPC activation
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-nfs-c37r5-public"
+          sudo -n python3 -I -B scripts/native-nfs-c37r5/kvm.py "$RUNNER_TEMP/native-nfs-c37r5-assets" scripts/native-nfs-c37r5 "$RUNNER_TEMP/native-nfs-c37r5-public"
+      - name: Retain public proof and encrypted complete original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-nfs-c37r5-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-nfs-c37r5-public/
+          retention-days: 7
+          if-no-files-found: warn

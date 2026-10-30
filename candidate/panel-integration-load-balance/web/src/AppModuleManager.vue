@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
@@ -22,6 +22,7 @@ import { canOpenAppModule, canReadPath, type AccessPlan } from "./menuPermission
 import {PlatformHealthSnapshot} from './platformHealthSnapshot';
 import {platformFleetView} from './platformHealthView';
 import { initialModuleInspection } from "./moduleInitialInspection";
+import { NFSFormDrafts } from "./nfsFormDrafts";
 import { nfsReportKind, nfsReportForSection, nfsSectionKind, nfsSectionReadAction, type NFSReportKind } from "./nfsReportScope";
 import {dailyWorkerMessage} from "./dailyReportView";
 import {moduleReportProvenance,moduleReportProvenanceNotice,type ReportOrigin,type ReportProvenance} from './moduleReportProvenance';
@@ -155,6 +156,18 @@ const platformMutationObservation = ref<PlatformObservation>();
 const userErrorAnchor = ref<HTMLElement>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
+const nfsFormDrafts = new NFSFormDrafts(value => reactive(value));
+function activateNFSDraft(section: string) {
+  if (definition.value?.id !== 'nfs-manager') return;
+  form.value = nfsFormDrafts.activate(section);
+  selectedPlanID.value = 'nfs-server';
+}
+watch(activeTab, activateNFSDraft, {flush: 'sync'});
+function observeNFSConfig(value: Record<string, any> | undefined, acknowledged?: ReturnType<NFSFormDrafts['submission']>) {
+  nfsFormDrafts.observe(value?.config, acknowledged);
+  selectedPlanID.value = 'nfs-server';
+}
+
 const statisticsQuery = computed(()=>definition.value?.id === "website-statistics-v2" ? analyticsQueryContext(report.value) : undefined);
 const statisticsDraftChanged = computed(()=>!!statisticsQuery.value && !analyticsQueryMatches(statisticsQuery.value,form.value));
 function toggleHTTPHealth(enabled: boolean | string | number) {
@@ -215,7 +228,7 @@ function queueNFSSectionRead(section: string) {
   if (!nfsPageReady || definition.value?.id !== 'nfs-manager' || !installed.value || installedUnknown.value) return;
   const kind = nfsSectionKind(section), changed = kind !== nfsNavigationKind;
   nfsNavigationKind = kind;
-  form.value.confirm = '';
+  if ('confirm' in form.value) form.value.confirm = '';
   if (!kind) { nfsSectionRead.value = undefined; nfsSectionReadError.value = ''; return; }
   if (!changed && (nfsSectionRead.value?.kind === kind || nfsReportKind(report.value) === kind)) return;
   nfsSectionReadError.value = '';
@@ -234,10 +247,7 @@ async function startNFSSectionRead() {
     if (!nfsReadCurrent(request) || controller.signal.aborted) return;
     if (nfsReportKind(value) !== request.kind) throw Error('服务器返回的报告与当前 NFS 页面不符，请手动刷新核对。');
     setReport(value);
-    if (request.kind === 'server' && report.value?.config) {
-      form.value.bind_address = report.value.config.bind_address; form.value.port = report.value.config.port;
-      form.value.expected_revision = report.value.config.revision; selectedPlanID.value = 'nfs-server';
-    }
+    if (request.kind === 'server') observeNFSConfig(report.value);
   } catch (e) {
     if (nfsReadCurrent(request) && !controller.signal.aborted) nfsSectionReadError.value = `读取当前 NFS 页面失败：${e instanceof Error ? e.message : String(e)}。请手动刷新核对。`;
   } finally {
@@ -249,6 +259,8 @@ async function startNFSSectionRead() {
 function cancelNFSSectionRead() {
   nfsPageReady = false; nfsNavigationKind = undefined; nfsSectionRead.value = undefined; nfsSectionReadError.value = '';
   nfsSectionReadController?.abort();
+  nfsFormDrafts.reset();
+  if (definition.value?.id === 'nfs-manager') form.value = {};
 }
 watch(busy, value => { if (!value) void startNFSSectionRead(); }, {flush: 'post'});
 watch([() => props.access, () => visible.value, () => definition.value?.id, () => installedInstance.value, () => installedVersion.value], cancelNFSSectionRead, {deep: true, flush: 'sync'});
@@ -308,6 +320,7 @@ function tabChanged(name: string | number) {
   }
 }
 function fieldLabel(field:Field,section:Section):string {
+  if (definition.value?.id === 'nfs-manager' && section.id === 'mount' && field.key === 'port') return '远程 NFSv4 端口';
   if (definition.value?.id === 'nfs-manager' && ['export', 'export-remove'].includes(section.id)) {
     if (field.key === 'resource_id') return '共享导出名称';
     if (field.key === 'read_only') return '只读共享';
@@ -524,7 +537,7 @@ async function show(id: string) {
     };
     if (id === "pure-ftpd") Object.assign(form.value, {bind_address: "127.0.0.1", port: 2121, passive_start: 30000, passive_end: 30049, passive_address: "127.0.0.1", max_clients: 20, max_per_ip: 4, idle_minutes: 15});
 	if (id === "pure-ftpd") Object.assign(form.value, {quota_mb:0,quota_files:0,upload_kb:0,download_kb:0,max_sessions:0,client_allow:"[]",client_deny:"[]",expected_sha:""});
-    if (id === "nfs-manager") Object.assign(form.value,{bind_address:"127.0.0.1",port:2049,client_allow:'["127.0.0.1"]',confirm:""});
+    if (id === 'nfs-manager') activateNFSDraft(activeTab.value);
     if (id === "php-code-security") Object.assign(form.value,{limit:50,offset:0,confirm:""});
     if (id === "daily-report") Object.assign(form.value,{limit:90,offset:0});
     if (id === "load-balance") Object.assign(form.value,{limit:16,offset:0,resource_id:"",expected_sha:"",confirm:""});
@@ -561,6 +574,14 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
+  if (id === 'nfs-manager') {
+    const section = nfsFormDrafts.select(row);
+    if (!section) { ElMessage.error('所选 NFS 记录身份无法核对，请刷新对应列表'); return; }
+    activeTab.value = section;
+    activateNFSDraft(section);
+    ElMessage.info('已填入所选记录；其他 NFS 操作保留各自草稿，确认仍需重新填写');
+    return;
+  }
   if(id==='task-manager') {
     const original=taskSelection(row);
     form.value.pid=original?.pid || 0;form.value.start_time=original?.start_time || 0;
@@ -602,7 +623,7 @@ function selected(row: Record<string, any>) {
     }
     ElMessage.info("已选中远端记录；修改或新任务请先核对连接修订号与实际进度");return;
   }
-  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? Array.isArray(row.nodes) ? "entry" : "health" : id === "pm2-manager" ? "control" : id === "nfs-manager" ? row.clients ? "export" : "unmount" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
+  const target = id === "php-code-security" ? row.state ? "quarantine-restore" : "quarantine" : id === "disk-analysis" ? "disk" : id === "daily-report" ? "archive" : id === "task-manager" ? "terminate" : id === "load-balance" ? Array.isArray(row.nodes) ? "entry" : "health" : id === "pm2-manager" ? "control" : id === "user-manager" || id === "pure-ftpd" ? "account" : id === "files-sync" ? "plans" : row.path !== undefined && ["website-tamper-proof", "enterprise-tamper-proof"].includes(id || "") ? "restore" : integrityModule.value && row.realtime !== undefined ? "watch" : "";
   activeTab.value = workspace.value.find(section => section.id === target)?.id || workspace.value[0]?.id || "overview";
   if (id === 'platform-ops') {
     activeTab.value = typeof row.token_id === 'string' ? 'tokens' : 'host';
@@ -618,10 +639,6 @@ function selected(row: Record<string, any>) {
     if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
   if (id==="load-balance" && Array.isArray(row.nodes))
     Object.assign(form.value,loadBalanceEntryFields(row));
-  if (id === "nfs-manager") {
-    if (row.clients) form.value.client_allow=JSON.stringify(row.clients,null,2);
-    form.value.confirm="";
-  }
   if (id === "php-code-security") {
     selectedQuarantineState.value = row.state || "";
     form.value.expected_sha = row.sha256 || "";
@@ -766,6 +783,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       return;
     }
     const submitted=inputBody(action);
+    const submittedNFSDraft = definition.value.id === 'nfs-manager' ? nfsFormDrafts.submission(activeTab.value, action) : undefined;
     if (platformMutation) {
       submittedPlatform = await platformObservation(action as PlatformObservation['action'],submitted);
       if(accessGeneration!==idsAccessGeneration)return;
@@ -845,10 +863,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
     if (definition.value.id === "load-balance" && action === "remove") {
       form.value.expected_revision = 0;selectedPlanID.value = "";
     }
-    if (definition.value.id === "nfs-manager" && report.value?.config) {
-      form.value.bind_address=report.value.config.bind_address;form.value.port=report.value.config.port;
-      form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";form.value.confirm="";
-    }
+    if (definition.value.id === 'nfs-manager') observeNFSConfig(report.value);
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
       for (const [key,value] of Object.entries(report.value.config)) if (key !== "revision") form.value[key] = value;
       form.value.expected_revision = report.value.config.revision;
@@ -929,9 +944,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
 	  const selected = report.value.users?.find((row: Record<string, any>) => row.username === form.value.username);
 	  form.value.expected_sha = selected?.expected_sha || "";
     }
-    if (definition.value.id === "nfs-manager" && report.value?.config) {
-      form.value.expected_revision=report.value.config.revision;selectedPlanID.value="nfs-server";
-    }
+    if (definition.value.id === 'nfs-manager') observeNFSConfig(report.value, submittedNFSDraft);
     if (definition.value.id === "load-balance" && Array.isArray(report.value?.entries)) {
       const entry = report.value.entries.find((row: Record<string, any>) => row.domain === selectedPlanID.value);
       form.value.expected_revision=entry?.revision || 0;

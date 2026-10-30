@@ -9,6 +9,7 @@ const compiled=p=>ts.transpileModule(read(p),{compilerOptions:{target:ts.ScriptT
 const {DeferredWorkspace,WorkspaceCodeLoadError,scopeWorkspaceAPI,scopeWorkspaceOperation}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/deferredWorkspace.ts')).toString('base64'));
 const {canOpenAppModule,canReadPath,menuPermissionIDs}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/menuPermissions.ts')).toString('base64'));
 const {initialModuleInspection}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/moduleInitialInspection.ts')).toString('base64'));
+const {NFSFormDrafts}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/nfsFormDrafts.ts')).toString('base64'));
 const {nfsSectionKind}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/nfsReportScope.ts')).toString('base64'));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const initial=(id,actions=['run'],fields=null,installed=true,ready=true)=>initialModuleInspection(id,{id,actions,fields},installed,ready);
@@ -68,7 +69,8 @@ test('the real compiled show function refuses automatic actions after page, site
  const manager=read('web/src/AppModuleManager.vue');
  const source=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
  const cancelStart=manager.indexOf('function cancelNFSSectionRead('),cancelEnd=manager.indexOf('\nwatch(busy,',cancelStart);assert(cancelStart>=0&&cancelEnd>cancelStart);
- const js=ts.transpileModule(manager.slice(cancelStart,cancelEnd)+'\n'+source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const activateStart=manager.indexOf('function activateNFSDraft('),activateEnd=manager.indexOf('\nwatch(activeTab,',activateStart);assert(activateStart>=0&&activateEnd>activateStart);
+ const js=ts.transpileModule(manager.slice(activateStart,activateEnd)+'\n'+manager.slice(cancelStart,cancelEnd)+'\n'+source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
   const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation','platformReadNotice'].map(key=>[key,{value:undefined}]));
   refs.installedVersion.value='old-version';refs.installedInstance.value='a'.repeat(32);
@@ -77,7 +79,7 @@ test('the real compiled show function refuses automatic actions after page, site
   const previousNFSController=new AbortController();
   refs.nfsSectionRead={value:{kind:'clients',attempted:true}};refs.nfsSectionReadError={value:'previous read failure'};
   const requests=[],executed=[];
-  const bindings={...refs,initialModuleInspection,nfsSectionKind,canReadPath,idsAccessGeneration:1,nfsPageReady:true,nfsNavigationKind:'clients',nfsSectionReadController:previousNFSController,platformHealthSnapshot:new PlatformHealthSnapshot(),platformFleetView,
+  const bindings={...refs,nfsFormDrafts:new NFSFormDrafts(),initialModuleInspection,nfsSectionKind,canReadPath,idsAccessGeneration:1,nfsPageReady:true,nfsNavigationKind:'clients',nfsSectionReadController:previousNFSController,platformHealthSnapshot:new PlatformHealthSnapshot(),platformFleetView,
    platformSnapshotContext:()=>refs.installed.value&&!refs.installedUnknown.value?{generation:1,installationID:refs.installedInstance.value}:undefined,
    props:{api:async path=>{requests.push(path);if(path===failedPath)throw new Error('retained read failure '+path);
     return path==='/app-modules/'+id ? {definition:{id,actions,fields},status:{id,installed:true,healthy:true,state_unknown:unknown},report:unknown||reportUnknown?{untrusted:'not-current'}:null,report_state_unknown:reportUnknown,workspace:[{id:'manage'}],...pageChange} : []; }},
