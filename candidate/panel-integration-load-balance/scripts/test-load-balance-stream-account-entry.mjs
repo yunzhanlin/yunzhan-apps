@@ -11,6 +11,9 @@ test('build baseline cannot hide removed gates, missing source binding or unknow
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
  assert.notEqual(digest(beforeLoadBalanceStreamBuild(text.replace('go vet ./...','true'))),digest(baseline));
+ const nfsGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-nfs-report-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ assert.equal(text.split(nfsGate).length,2);
+ for(const changed of [text.replace(nfsGate,''),text.replace(nfsGate,nfsGate+nfsGate),text.replace(nfsGate,nfsGate.replace('--test','--check')),text.replace(nfsGate,nfsGate.replace('test-nfs-report-scope.mjs','test-module-state.mjs'))])assert.throws(()=>beforeLoadBalanceStreamBuild(changed));
  for (const required of ['"$BUILD_ROOT/packaging/fresh-ssh-policy.py"', 'first-install.py fresh-ssh-policy.py waf-state-directory.py', "<<'PY_CHECK_INSTALLER_HELPERS'", 'value.st_nlink != 1', 'helpers <= staged_helpers', "print('packaged installer helpers verified: '"]) {
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }

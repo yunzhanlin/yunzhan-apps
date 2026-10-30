@@ -9,6 +9,7 @@ const compiled=p=>ts.transpileModule(read(p),{compilerOptions:{target:ts.ScriptT
 const {DeferredWorkspace,WorkspaceCodeLoadError,scopeWorkspaceAPI,scopeWorkspaceOperation}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/deferredWorkspace.ts')).toString('base64'));
 const {canOpenAppModule,canReadPath,menuPermissionIDs}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/menuPermissions.ts')).toString('base64'));
 const {initialModuleInspection}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/moduleInitialInspection.ts')).toString('base64'));
+const {nfsSectionKind}=await import('data:text/javascript;base64,'+Buffer.from(compiled('web/src/nfsReportScope.ts')).toString('base64'));
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const initial=(id,actions=['run'],fields=null,installed=true,ready=true)=>initialModuleInspection(id,{id,actions,fields},installed,ready);
 test('dedicated Apache opening cannot issue a generic inspection; existing reviewed inspections stay intact',()=>{
@@ -66,23 +67,28 @@ test('actual manager uses the closed selector only after its complete page and d
 test('the real compiled show function refuses automatic actions after page, site or certificate read failures',async()=>{
  const manager=read('web/src/AppModuleManager.vue');
  const source=manager.slice(manager.indexOf('async function show('),manager.indexOf('function selected('));
- const js=ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+ const cancelStart=manager.indexOf('function cancelNFSSectionRead('),cancelEnd=manager.indexOf('\nwatch(busy,',cancelStart);assert(cancelStart>=0&&cancelEnd>cancelStart);
+ const js=ts.transpileModule(manager.slice(cancelStart,cancelEnd)+'\n'+source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
   const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation','platformReadNotice'].map(key=>[key,{value:undefined}]));
   refs.installedVersion.value='old-version';refs.installedInstance.value='a'.repeat(32);
   refs.userMutationObservation.value={action:'update',username:'old-account',state:'unverified'};
   refs.platformMutationObservation.value={action:'issue-token',state:'unverified',requiredRead:'token-list'};
+  const previousNFSController=new AbortController();
+  refs.nfsSectionRead={value:{kind:'clients',attempted:true}};refs.nfsSectionReadError={value:'previous read failure'};
   const requests=[],executed=[];
-  const bindings={...refs,initialModuleInspection,canReadPath,idsAccessGeneration:1,platformHealthSnapshot:new PlatformHealthSnapshot(),platformFleetView,
+  const bindings={...refs,initialModuleInspection,nfsSectionKind,canReadPath,idsAccessGeneration:1,nfsPageReady:true,nfsNavigationKind:'clients',nfsSectionReadController:previousNFSController,platformHealthSnapshot:new PlatformHealthSnapshot(),platformFleetView,
    platformSnapshotContext:()=>refs.installed.value&&!refs.installedUnknown.value?{generation:1,installationID:refs.installedInstance.value}:undefined,
    props:{api:async path=>{requests.push(path);if(path===failedPath)throw new Error('retained read failure '+path);
     return path==='/app-modules/'+id ? {definition:{id,actions,fields},status:{id,installed:true,healthy:true,state_unknown:unknown},report:unknown||reportUnknown?{untrusted:'not-current'}:null,report_state_unknown:reportUnknown,workspace:[{id:'manage'}],...pageChange} : []; }},
    setReport:value=>{refs.report.value=value;},analyticsQueryContext:()=>undefined,restoreAnalyticsQuery:()=>undefined,
    execute:async action=>{executed.push(action);}};
-  await new Function(...Object.keys(bindings),js+'\nreturn show;')(...Object.values(bindings))(id);
+  const view=new Function(...Object.keys(bindings),js+'\nreturn {show,nfsState:()=>({ready:nfsPageReady,kind:nfsNavigationKind})};')(...Object.values(bindings));await view.show(id);
+  assert(previousNFSController.signal.aborted,'opening must cancel the previous NFS read through the actual cancellation function');
+  assert.equal(refs.nfsSectionRead.value,undefined);assert.equal(refs.nfsSectionReadError.value,'');
   assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
   assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
-  return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value};
+  return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value,nfs:view.nfsState()};
  }
  for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){
   const out=await open(id,path);assert.equal(out.requests.at(-1),path);assert.deepEqual(out.executed,[]);assert.match(out.error,/retained read failure/);
@@ -111,6 +117,9 @@ test('the real compiled show function refuses automatic actions after page, site
  assert.equal(wrongDefinition.unknown,true);assert.equal(wrongDefinition.installed,false);assert.deepEqual(wrongDefinition.executed,[]);assert.match(wrongDefinition.error,/页面身份无法核对/);
  assert.deepEqual((await open('pure-ftpd',undefined,['run'],[{key:'site_id',kind:'site'}])).executed,['run']);
  assert.deepEqual((await open('nfs-manager',undefined,['run','server-report'])).executed,['server-report']);
+ const nfs=await open('nfs-manager',undefined,['run','server-report'],null,false,false,{workspace:[{id:'server'}],status:{id:'nfs-manager',installed:true,healthy:true,version:'1.3.0',installation_id:'c'.repeat(32)}});
+ assert.deepEqual(nfs.executed,['server-report']);assert.deepEqual(nfs.nfs,{ready:true,kind:'server'});
+ assert.deepEqual((await open('nfs-manager','/sites',['run','server-report'])).nfs,{ready:false,kind:undefined},'incomplete opening must not enable a later NFS tab read');
  assert.deepEqual((await open('file-monitor',undefined,['policies'],[{key:'site_id',kind:'site'}])).executed,['policies']);
  for(const id of ['task-manager','pure-ftpd','file-monitor']){
   const state=await open(id,undefined,['run'],null,true);

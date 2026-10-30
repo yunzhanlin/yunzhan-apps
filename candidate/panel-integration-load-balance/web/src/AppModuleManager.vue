@@ -22,6 +22,7 @@ import { canOpenAppModule, canReadPath, type AccessPlan } from "./menuPermission
 import {PlatformHealthSnapshot} from './platformHealthSnapshot';
 import {platformFleetView} from './platformHealthView';
 import { initialModuleInspection } from "./moduleInitialInspection";
+import { nfsReportKind, nfsReportForSection, nfsSectionKind, nfsSectionReadAction, type NFSReportKind } from "./nfsReportScope";
 import {dailyWorkerMessage} from "./dailyReportView";
 import {moduleReportProvenance,moduleReportProvenanceNotice,type ReportOrigin,type ReportProvenance} from './moduleReportProvenance';
 import { taskSelection, taskTerminationNotice } from "./taskManager";
@@ -142,6 +143,10 @@ const definition = ref<Definition>(),
   healthy = ref(false),
   report = ref<Record<string, any>>();
 const reportStateUnknown = ref(false);
+interface NFSSectionRead { kind: NFSReportKind; accessGeneration: number; installationID: string; installedVersion: string; attempted: boolean }
+const nfsSectionRead = shallowRef<NFSSectionRead>();
+const nfsSectionReadError = ref("");
+let nfsSectionReadController: AbortController | undefined, nfsPageReady = false, nfsNavigationKind: NFSReportKind | undefined;
 const reportProvenance = ref<ReportProvenance>();
 const reportProvenanceNotice = computed(() => moduleReportProvenanceNotice(reportProvenance.value));
 watch(report, value => { if (value === undefined || value === null) reportProvenance.value = undefined; }, {flush:'sync'});
@@ -197,8 +202,57 @@ async function verifyRemotePlanConnection() {
 }
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function sectionReport(section:string) {
+  if (definition.value?.id === 'nfs-manager') return nfsReportForSection(section, report.value);
   return definition.value?.id==='load-balance' ? loadBalanceReportForSection(section,report.value) : report.value;
 }
+function nfsReadCurrent(request: NFSSectionRead) {
+  return nfsSectionRead.value === request && nfsPageReady && visible.value && definition.value?.id === 'nfs-manager'
+    && installed.value && !installedUnknown.value && installedInstance.value === request.installationID && installedVersion.value === request.installedVersion
+    && idsAccessGeneration === request.accessGeneration && nfsSectionKind(activeTab.value) === request.kind
+    && (props.access === undefined || canOpenAppModule(props.access, 'nfs-manager'));
+}
+function queueNFSSectionRead(section: string) {
+  if (!nfsPageReady || definition.value?.id !== 'nfs-manager' || !installed.value || installedUnknown.value) return;
+  const kind = nfsSectionKind(section), changed = kind !== nfsNavigationKind;
+  nfsNavigationKind = kind;
+  form.value.confirm = '';
+  if (!kind) { nfsSectionRead.value = undefined; nfsSectionReadError.value = ''; return; }
+  if (!changed && (nfsSectionRead.value?.kind === kind || nfsReportKind(report.value) === kind)) return;
+  nfsSectionReadError.value = '';
+  nfsSectionRead.value = {kind, accessGeneration: idsAccessGeneration, installationID: installedInstance.value, installedVersion: installedVersion.value, attempted: false};
+  void startNFSSectionRead();
+}
+async function startNFSSectionRead() {
+  const request = nfsSectionRead.value;
+  if (!request || request.attempted || busy.value || !nfsReadCurrent(request)) return;
+  request.attempted = true;
+  const controller = new AbortController();
+  nfsSectionReadController = controller;
+  busy.value = true;
+  try {
+    const value = await props.api(`/app-modules/nfs-manager/${nfsSectionReadAction(request.kind)}`, 'POST', {}, undefined, controller.signal);
+    if (!nfsReadCurrent(request) || controller.signal.aborted) return;
+    if (nfsReportKind(value) !== request.kind) throw Error('服务器返回的报告与当前 NFS 页面不符，请手动刷新核对。');
+    setReport(value);
+    if (request.kind === 'server' && report.value?.config) {
+      form.value.bind_address = report.value.config.bind_address; form.value.port = report.value.config.port;
+      form.value.expected_revision = report.value.config.revision; selectedPlanID.value = 'nfs-server';
+    }
+  } catch (e) {
+    if (nfsReadCurrent(request) && !controller.signal.aborted) nfsSectionReadError.value = `读取当前 NFS 页面失败：${e instanceof Error ? e.message : String(e)}。请手动刷新核对。`;
+  } finally {
+    if (nfsSectionRead.value === request) nfsSectionRead.value = undefined;
+    if (nfsSectionReadController === controller) nfsSectionReadController = undefined;
+    busy.value = false;
+  }
+}
+function cancelNFSSectionRead() {
+  nfsPageReady = false; nfsNavigationKind = undefined; nfsSectionRead.value = undefined; nfsSectionReadError.value = '';
+  nfsSectionReadController?.abort();
+}
+watch(busy, value => { if (!value) void startNFSSectionRead(); }, {flush: 'post'});
+watch([() => props.access, () => visible.value, () => definition.value?.id, () => installedInstance.value, () => installedVersion.value], cancelNFSSectionRead, {deep: true, flush: 'sync'});
+onBeforeUnmount(cancelNFSSectionRead);
 const exportableReport=computed(()=>definition.value?.id==='load-balance'&&activeTab.value==='history' ? history.value : sectionReport(activeTab.value));
 const reportExportNow=ref(Date.now());
 const reportExportTimer=window.setInterval(()=>{reportExportNow.value=Date.now();},1000);
@@ -245,6 +299,7 @@ async function refreshHistory(reset = false) {
   finally { busy.value = false; }
 }
 function tabChanged(name: string | number) {
+  if (definition.value?.id === 'nfs-manager') queueNFSSectionRead(String(name));
   if (name === "history") void refreshHistory(true);
   if(definition.value?.id==="files-sync" && String(name).startsWith("remote-"))report.value=undefined;
   if(definition.value?.id==="files-sync" && ["remote-backups","remote-backup-store"].includes(String(name))) {
@@ -253,6 +308,10 @@ function tabChanged(name: string | number) {
   }
 }
 function fieldLabel(field:Field,section:Section):string {
+  if (definition.value?.id === 'nfs-manager' && ['export', 'export-remove'].includes(section.id)) {
+    if (field.key === 'resource_id') return '共享导出名称';
+    if (field.key === 'read_only') return '只读共享';
+  }
   if(definition.value?.id==="load-balance" && section.id==="transaction-archive" && field.key==="confirm")return "归档精确确认：ARCHIVE LOAD TRANSACTION "+(form.value.resource_id||"原事务标识");
   if(definition.value?.id==="files-sync" && section.id.startsWith("remote-")) {
     if(section.id==="remote-backups") {
@@ -381,10 +440,12 @@ function setReport(value: any, origin: ReportOrigin = 'request') {
       : value && typeof value === "object"
         ? value
         : { result: value };
+  if (definition.value?.id === 'nfs-manager' && nfsReportKind(report.value) === nfsSectionKind(activeTab.value)) nfsSectionReadError.value = '';
   if(definition.value?.id==='platform-ops')platformHealthSnapshot.remember(report.value,platformSnapshotContext());
 }
 async function show(id: string) {
   if (busy.value) throw new Error("当前应用仍在读取或执行操作；等待结束后再打开其他应用");
+  cancelNFSSectionRead();
   const openingGeneration=idsAccessGeneration;
   let restoredPlatformSnapshot=false;
   busy.value = true;
@@ -493,6 +554,9 @@ async function show(id: string) {
     platformReadNotice.value='下方是本窗口上次完整健康快照，不代表重新打开时已完成检查；主机配置或授权可能已变化。仅在本账户授权与安装身份一致时保留，不保存到浏览器存储；请手动刷新核对，不会自动检查。';
   const inspection = reportStateUnknown.value ? undefined : initialModuleInspection(id, definition.value, installed.value, pageReady);
   if (inspection) await execute(inspection);
+  if (id === 'nfs-manager' && openingGeneration === idsAccessGeneration && visible.value && definition.value?.id === id && pageReady) {
+    nfsPageReady = true; nfsNavigationKind = nfsSectionKind(activeTab.value);
+  }
 }
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
@@ -1327,6 +1391,8 @@ defineExpose({ show });
           <AppModuleReport :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
         </section>
         <p v-else-if="definition.id==='load-balance'" class="module-report-empty" role="status">此页面尚无对应操作的报告。请执行本页查询或操作；其他页面的缓存结果不会当作本页回执。</p>
+        <el-alert v-if="definition.id==='nfs-manager' && nfsSectionReadError" :title="nfsSectionReadError" type="error" :closable="false" role="status" />
+        <p v-if="definition.id==='nfs-manager' && sectionReport(section.id)===undefined" class="module-report-empty" role="status">{{ busy ? '正在读取当前 NFS 页面对应的状态…' : '当前页面暂无已核对的报告，请使用本页刷新按钮读取。' }}</p>
         </el-tab-pane>
         <el-tab-pane label="报告与日志" name="reports">
           <AnalyticsQueryContext v-if="definition.id === 'website-statistics-v2' && report !== undefined" :report="report" />

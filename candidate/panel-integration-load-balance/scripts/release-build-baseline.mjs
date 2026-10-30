@@ -45,6 +45,9 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
 ]) once(addition, '');
   // The independent country gate is mandatory; no other build bytes move.
   once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-country-identity.mjs scripts/test-waf-country-policy.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
+  // Require the exact NFS navigation regression once. Only this reviewed
+  // additive command is reversed; the historical whole-script digests stay.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-nfs-report-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
   // Undo only the exact reviewed first-install helper delivery additions.
   // Every earlier command and baseline digest remains protected; changing or
   // omitting this copy/checksum/dependency gate cannot be normalized away.
