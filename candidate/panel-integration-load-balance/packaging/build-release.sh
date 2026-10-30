@@ -168,6 +168,10 @@ source = (root / 'install.sh').read_text()
 helpers = set(re.findall(r'\$HERE/([a-z0-9][a-z0-9._-]*\.py)', source))
 if not 1 <= len(helpers) <= 64:
     raise ValueError('invalid installer helper dependency set')
+copy = next(line for line in source.splitlines() if line.startswith('cp -a "$HERE/bin"'))
+staged_helpers = set(re.findall(r'\$HERE/([a-z0-9][a-z0-9._-]*\.py)', copy))
+if not helpers <= staged_helpers:
+    raise ValueError('installer does not stage required helper: ' + ','.join(sorted(helpers - staged_helpers)))
 for name in sorted(helpers):
     value = (root / name).lstat()
     if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:

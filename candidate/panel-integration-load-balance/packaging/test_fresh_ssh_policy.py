@@ -39,6 +39,7 @@ class PolicyTest(unittest.TestCase):
                 (release / name).mkdir()
             for name in ('RELEASE', 'SOURCE_INPUTS.json', 'BUILD_CHECKS.txt'):
                 (release / name).write_bytes(b'bounded packaging fixture\n')
+            (release / 'RELEASE').write_text('PANEL_FORMAT=1\nPANEL_VERSION=0.1.0-candidate\nPANEL_OS=linux\nPANEL_ARCH=amd64\n')
             env = dict(os.environ, BUILD_ROOT=str(source_root), STAGE=directory, NAME='release')
             copied = subprocess.run(['bash', '-eu', '-c', copy], env=env, capture_output=True, text=True)
             self.assertEqual(copied.returncode, 0, copied.stderr)
@@ -54,6 +55,43 @@ class PolicyTest(unittest.TestCase):
             records = dict((line.split(None, 1)[1], line.split(None, 1)[0])
                            for line in (release / 'SHA256SUMS').read_text().splitlines())
             self.assertEqual(records['fresh-ssh-policy.py'], hashlib.sha256(PATH.read_bytes()).hexdigest())
+            normalized = subprocess.run([sys.executable, str(release / 'release-file-modes.py'), 'normalize', str(release)],
+                                        capture_output=True, text=True)
+            self.assertEqual(normalized.returncode, 0, normalized.stderr)
+            # Run the real second copy and metadata commands, not just the
+            # builder's first copy. The installed tree must pass the same
+            # checksum/mode verifier before release publication can proceed.
+            installer = (release / 'install.sh').read_text()
+            install_copy = next(line for line in installer.splitlines()
+                                if line.startswith('cp -a "$HERE/bin"'))
+            metadata_start = installer.index('for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do')
+            metadata_end = installer.index('\ndone', metadata_start) + len('\ndone')
+            installed = pathlib.Path(directory) / 'installed.tmp'
+            install_umask = next(line for line in installer.splitlines() if line.startswith('umask '))
+            install_mkdir = next(line for line in installer.splitlines() if line == 'mkdir -p "$RELEASE_DIR.tmp"')
+            install_env = dict(os.environ, HERE=str(release), RELEASE_DIR=str(pathlib.Path(directory) / 'installed'))
+            copied = subprocess.run(['bash', '-eu', '-c', install_umask + '\n' + install_mkdir + '\n' + install_copy + '\n' + installer[metadata_start:metadata_end]],
+                                    env=install_env, capture_output=True, text=True)
+            self.assertEqual(copied.returncode, 0, copied.stderr)
+            self.assertEqual((installed / 'fresh-ssh-policy.py').read_bytes(), PATH.read_bytes())
+            verified = subprocess.run(['bash', str(installed / 'verify-release.sh'), str(installed)],
+                                      capture_output=True, text=True)
+            self.assertEqual(verified.returncode, 0, verified.stderr)
+            self.assertIn('release checksums verified', verified.stdout)
+            # The package can contain the helper while the install copy omits
+            # it. This exact original native failure must now fail pre-sign.
+            broken_copy = install_copy.replace('"$HERE/fresh-ssh-policy.py" ', '')
+            self.assertNotEqual(broken_copy, install_copy)
+            (release / 'install.sh').write_text(installer.replace(install_copy, broken_copy))
+            missing_stage = subprocess.run([sys.executable, '-I', '-B', '-c', checker, str(release)],
+                                           capture_output=True, text=True)
+            self.assertNotEqual(missing_stage.returncode, 0)
+            self.assertIn('installer does not stage required helper: fresh-ssh-policy.py', missing_stage.stderr)
+            (release / 'install.sh').write_text(installer)
+            (installed / 'fresh-ssh-policy.py').unlink()
+            missing_installed = subprocess.run(['bash', str(installed / 'verify-release.sh'), str(installed)],
+                                              capture_output=True, text=True)
+            self.assertNotEqual(missing_installed.returncode, 0)
             helper.unlink()
             missing = subprocess.run([sys.executable, '-I', '-B', '-c', checker, str(release)], capture_output=True, text=True)
             self.assertNotEqual(missing.returncode, 0)

@@ -206,7 +206,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$HERE/start-guard-install.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/fresh-ssh-policy.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$HERE/start-guard-install.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done
