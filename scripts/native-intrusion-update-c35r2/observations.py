@@ -43,7 +43,7 @@ def appended(a,z,name):
 def observation_deltas(a,z,boot,stamp):
     snapshot_valid(a);snapshot_valid(z);assert 0<=z['at']-a['at']<=600
     samples=sorted(appended(a,z,'monitor_samples'),key=lambda r:r['sampled_at']);assert 0<=len(samples)<=math.ceil((z['at']-a['at'])/5)+2
-    previous=max(values(a,'monitor_samples'),key=lambda r:r['sampled_at']);old_last_id=max(r['id']for r in values(a,'monitor_samples'))
+    previous=max(values(a,'monitor_samples'),key=lambda r:r['sampled_at']);old_last_id=max(r['id']for r in values(a,'monitor_samples'));network_resets=[]
     for i,r in enumerate(samples):
         assert r['id']==old_last_id+i+1 and a['started_at']-1<=r['sampled_at']<=z['at']+1 and type(r['sampled_at'])is int and r['sampled_at']>previous['sampled_at']
         assert r['boot_id']==previous['boot_id']==boot and r['state']==previous['state']=='ok'and r['error']==''
@@ -51,10 +51,16 @@ def observation_deltas(a,z,boot,stamp):
             assert type(r[n])is int and 0<=r[n]<(1<<63)
         assert r['memory_total']==previous['memory_total']and 0<r['memory_used']<=r['memory_total']and r['disk_total']==previous['disk_total']and 0<=r['disk_used']<=r['disk_total']
         close(r['memory_percent'],r['memory_used']*100/r['memory_total']);close(r['disk_percent'],r['disk_used']*100/r['disk_total'])
-        elapsed=r['sampled_at']-previous['sampled_at'];dt=r['cpu_total']-previous['cpu_total'];di=r['cpu_idle']-previous['cpu_idle'];assert 0<=di<=dt and dt>0
+        elapsed=r['sampled_at']-previous['sampled_at'];assert 0<elapsed<=120;dt=r['cpu_total']-previous['cpu_total'];di=r['cpu_idle']-previous['cpu_idle'];assert 0<=di<=dt and dt>0
         close(r['cpu_percent'],(dt-di)*100/dt)
         for field,rate in(('network_rx','network_rx_rate'),('network_tx','network_tx_rate'),('disk_read','disk_read_rate'),('disk_write','disk_write_rate')):
-            assert r[field]>=previous[field];close(r[rate],(r[field]-previous[field])/elapsed)
+            if r[field]<previous[field]:
+                # /proc/net/dev sums current interfaces. Removing the owned SSH
+                # fixture veth can lower a total without rebooting. Match the
+                # unchanged Core per-direction reset rule: only NULL is valid.
+                assert field in('network_rx','network_tx')and r[rate]is None
+                network_resets.append({'sample_id':r['id'],'field':field,'previous':previous[field],'current':r[field],'rate':None})
+            else:close(r[rate],(r[field]-previous[field])/elapsed)
         assert type(r['uptime_seconds'])is float and previous['uptime_seconds']<=r['uptime_seconds']<=previous['uptime_seconds']+elapsed+2
         assert type(r['load_1'])in(int,float)and math.isfinite(r['load_1'])and r['load_1']>=0
         previous=r
@@ -79,4 +85,4 @@ def observation_deltas(a,z,boot,stamp):
     before={r['name']:r['seq']for r in values(a,'sqlite_sequence')};after={r['name']:r['seq']for r in values(z,'sqlite_sequence')};assert before.keys()==after.keys()
     assert before['monitor_samples']==old_last_id and after['monitor_samples']==old_last_id+len(samples)
     for name in before.keys()-{'monitor_samples'}:assert before[name]==after[name]
-    return {'ok':True,'new_monitor_samples':len(samples),'every_new_percent_CPU_network_and_disk_rate_recomputed':True,'new_minute_zero_DB_observations':len(db),'condition_values_bound_to_actual_newest_sample':True,'same_nginx_status_and_only_fresh_clock':True,'notification_error_identity_and_only_fresh_clock':True,'only_matching_monitor_sample_sequence_increment':True,'all_original_observation_rows_preserved':True}
+    return {'ok':True,'new_monitor_samples':len(samples),'every_new_percent_CPU_network_and_disk_rate_recomputed':True,'network_counter_resets_require_exact_NULL_per_direction':network_resets,'new_minute_zero_DB_observations':len(db),'condition_values_bound_to_actual_newest_sample':True,'same_nginx_status_and_only_fresh_clock':True,'notification_error_identity_and_only_fresh_clock':True,'only_matching_monitor_sample_sequence_increment':True,'all_original_observation_rows_preserved':True}
