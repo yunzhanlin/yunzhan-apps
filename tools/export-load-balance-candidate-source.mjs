@@ -12,14 +12,14 @@ const input=JSON.parse(execFileSync('/usr/bin/tar',['-xOf',archive,prefix+'/SOUR
 assert(input.format===1&&sha(JSON.stringify(input.files))===input.inputs_sha256);
 const output=path.join(root,'candidate/panel-integration-load-balance');assert(!fs.existsSync(output),'inspect original export; never overwrite a source cohort');
 const build=fs.readFileSync(panel+'/packaging/build-release.sh','utf8');assert.equal(sha(build),input.files['packaging/build-release.sh'].sha256);
-const scripts=new Set(['scripts/env.sh']),pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+((?:scripts\/[a-z0-9-]+\.mjs)(?:\s+scripts\/[a-z0-9-]+\.mjs)*)/g)].flatMap(v=>v[1].split(/\s+/));
+const scripts=new Set(['scripts/env.sh','scripts/upgrade-running-development.sh']),pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+((?:scripts\/[a-z0-9-]+\.mjs)(?:\s+scripts\/[a-z0-9-]+\.mjs)*)/g)].flatMap(v=>v[1].split(/\s+/));
 assert(pending.includes('scripts/test-load-balance-stream.mjs')&&pending.includes('scripts/test-load-balance-stream-account-entry.mjs'));
 while(pending.length){
  const name=pending.shift();if(scripts.has(name))continue;
  const bytes=fs.readFileSync(panel+'/'+name);assert.equal(sha(bytes),input.files[name]?.sha256,name);scripts.add(name);
  for(const match of bytes.toString().matchAll(/from\s*['"]\.\/([a-z0-9-]+\.mjs)['"]/g))pending.push('scripts/'+match[1]);
 }
-const allowed=name=>['go.mod','go.sum'].includes(name)||scripts.has(name)||/^(?:cmd|internal|packaging|web\/src|web\/public)\//.test(name)||/^dev\/[A-Za-z0-9_@.\\-]+\.(?:service|timer|mount|conf)$/.test(name)||/^web\/(?:index.html|package.json|package-lock.json|tsconfig.json|tsconfig.node.json|vite.config.ts)$/.test(name)||/^mobile\//.test(name)&&!/(?:^|\/)(?:build|\.build|\.gradle|\.swiftpm|xcuserdata|\.DS_Store)(?:\/|$)/.test(name)&&!name.endsWith('local.properties');
+const allowed=name=>['go.mod','go.sum','dev/provision-app.sh'].includes(name)||scripts.has(name)||/^(?:cmd|internal|packaging|web\/src|web\/public)\//.test(name)||/^dev\/[A-Za-z0-9_@.\\-]+\.(?:service|timer|mount|conf)$/.test(name)||/^web\/(?:index.html|package.json|package-lock.json|tsconfig.json|tsconfig.node.json|vite.config.ts)$/.test(name)||/^mobile\//.test(name)&&!/(?:^|\/)(?:build|\.build|\.gradle|\.swiftpm|xcuserdata|\.DS_Store)(?:\/|$)/.test(name)&&!name.endsWith('local.properties');
 const selected=Object.keys(input.files).filter(allowed).sort(),payload=[];
 for(const name of selected){
  assert(path.posix.normalize(name)===name&&!name.split('/').includes('..'));
@@ -28,7 +28,7 @@ for(const name of selected){
  const bytes=fs.readFileSync(source);assert(bytes.length===expected.bytes&&sha(bytes)===expected.sha256&&(s.mode&4095)===expected.mode,name);
  payload.push([name,bytes]);
 }
-assert(selected.includes('internal/appcatalog/official_channel.go')&&selected.includes('scripts/release-build-baseline.mjs')&&selected.includes('scripts/load-balance-stream-fixture.mjs'));
+assert(selected.includes('scripts/upgrade-running-development.sh')&&selected.includes('dev/provision-app.sh')&&selected.includes('internal/appcatalog/official_channel.go')&&selected.includes('scripts/release-build-baseline.mjs')&&selected.includes('scripts/load-balance-stream-fixture.mjs'));
 fs.mkdirSync(output,{recursive:true,mode:0o755});const files={};
 for(const[name,bytes]of payload){const target=path.join(output,name);fs.mkdirSync(path.dirname(target),{recursive:true,mode:0o755});fs.writeFileSync(target,bytes,{flag:'wx',mode:input.files[name].mode});files[name]=sha(bytes);}
 const release={archive:basename,archive_sha256:sha(fs.readFileSync(archive)),frozen_inputs_sha256:input.inputs_sha256};

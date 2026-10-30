@@ -1,4 +1,4 @@
-name: actual native C35r9 QA1 AMD64 Ubuntu24 automatic first-install SSH policy and signed Anti-intrusion111
+name: actual native C35r9 QA2 AMD64 Ubuntu24 automatic first-install SSH policy and signed Anti-intrusion111
 
 on:
   push:
@@ -54,6 +54,11 @@ jobs:
           PY
       - name: Root first-install policy, actual assembled helper and existing WAF packaging fixtures
         run: |
+          python3 - <<'PY'
+          import hashlib, pathlib
+          assert hashlib.sha256(pathlib.Path('candidate/panel-integration-load-balance/scripts/upgrade-running-development.sh').read_bytes()).hexdigest() == 'b116481c2a3d4e95922884d10f4baeb5ed4a828d902231fb0202eb25a9da8695'
+          assert hashlib.sha256(pathlib.Path('candidate/panel-integration-load-balance/dev/provision-app.sh').read_bytes()).hexdigest() == '05961d8bdce8e5b7e960962a47167a936922b827844c31f0757656b5168bc8c6'
+          PY
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_fresh_ssh_policy.py
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_apache_body_cache_budget.py
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_waf_state_directory.py
