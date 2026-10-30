@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24nfsprivateclientcandidate37r3-linux-amd64.tar.gz",
-    "archive_sha256": "b0dd8fef84a343ce87931df5eeb527fbfcafe9a423b24185b40cba49f6ec4082",
-    "frozen_inputs_sha256": "5d5f39308b65a1a9bd7838e99bdbe492e48c436f61703a35b65b179885cfad6b"
+    "archive": "panel-0.1.0-dev.proapps24nfsprivateclientcandidate37r4-linux-amd64.tar.gz",
+    "archive_sha256": "09ac953151401cbd5982c4855189bf9ce68e45bacc71b011f948526710d6126e",
+    "frozen_inputs_sha256": "32b87a4e429f428c4563b75a9b321d2a227ce117814deda64ae9901db27adbe2"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -204,7 +204,7 @@
     "internal/core/app_mobile.go": "d2f6bfb4a25b2d4791f519ab460e060350a87d2645cdc33653fa2d8e481dbd28",
     "internal/core/app_mobile_test.go": "9512e42caff0fd2dc2f2656b77066bc8ad887e8377197a09b85dee91248b152d",
     "internal/core/app_module_accounts.go": "1fa519f5263a0081c41fa1b66183d7b4f59774bd61139be698484ee3dd55141c",
-    "internal/core/app_module_guidance.go": "0f1c23fcca8792e31bd4b5c4036f616ec396d2d9f004f06f4a6dee24b4b6d29f",
+    "internal/core/app_module_guidance.go": "d245f3a8c8c6d4f4addc13ad7873eb5b5a94aff80b31009bc9464c51dac2fe21",
     "internal/core/app_module_history.go": "5531b796b75146ad8429bf58845b54ff9cb48cb71ca4a32d90e7f556d0649881",
     "internal/core/app_module_identity_test.go": "ccb270bb8e79a245193dc6d930d127543ae7782dc98e79aa01bdb319e3a050cc",
     "internal/core/app_module_workspace.go": "27e8e9233eb30fc2676fa1f7361f669096f8de66798dcbe07bef384353fa7947",
@@ -858,8 +858,8 @@
     "internal/executor/app_network_linux_test.go": "ca58f3380587985ac48c55fc898cd334a2958b036bd469634f3247aa4d155a69",
     "internal/executor/app_nfs_client_runtime_linux.go": "b144b12c67b29cdc839f131c13797c82b80d622de80073ff4f62cf0d1b8e2d81",
     "internal/executor/app_nfs_client_runtime_linux_test.go": "0511023433174057e143e23804de579850218f094ba4f21b695a2057e6d49115",
-    "internal/executor/app_nfs_exports_linux.go": "019456d5bbd760313357a18676e1afd5f6975857e0bc48358a8da8914b2a43ed",
-    "internal/executor/app_nfs_exports_linux_test.go": "a2d1599305069cfc71b5f8e43ec4014296b8ea2239c3192e828d863416c798de",
+    "internal/executor/app_nfs_exports_linux.go": "62f5b92f0c8df0523cd082364ff1755adbd5a59aca5f3ee2ae2a26e1f21925d8",
+    "internal/executor/app_nfs_exports_linux_test.go": "c8a8bbd221f0d42d24cd210c098cb4d322db90bc64ec12707d66ed2cfafb476a",
     "internal/executor/app_nfs_mount_state_linux.go": "df17c531857c25ee1c1bb6d8500b8c989f46c965023d8d8de6833fe6ce9bbfaa",
     "internal/executor/app_nfs_runtime_linux.go": "132ad8cf63adca3689e8d18518d6e1bb015e3a4b3b2a1224644b3997a2c1790f",
     "internal/executor/app_notification_events_linux.go": "ca0918ec1c5b493daaae5463cc2472dc4515a5e006ca04a60efb873989b39a93",

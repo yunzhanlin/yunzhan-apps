@@ -58,7 +58,7 @@ func TestNFSServerStrictBoundsAndAnonymousWebsiteIdentity(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	for _, needed := range []string{"Protocols = 4", "Enable_UDP = false", "Access_Type = None", "all_squash", "Anonymous_uid = 1001", "Access_Type = RO", "Pseudo = /website-one"} {
+	for _, needed := range []string{"Protocols = 4", "Enable_UDP = false", "Only_Numeric_Owners = true", "Allow_Numeric_Owners = true", "Access_Type = None", "all_squash", "Anonymous_uid = 1001", "Access_Type = RO", "Pseudo = /website-one"} {
 		if !strings.Contains(text, needed) {
 			t.Fatal("missing required export isolation", needed)
 		}

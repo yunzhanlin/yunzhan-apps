@@ -639,7 +639,7 @@ func renderNFSServer(v nfsServerConfig, plugins string) (string, error) {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "NFS_CORE_PARAM { Bind_addr = %s; NFS_Port = %d; Protocols = 4; Enable_UDP = false; Enable_NLM = false; Enable_RQUOTA = false; Plugins_Dir = \"%s\"; RPC_Max_Connections = 128; RPC_Ioq_ThrdMax = 32; Dbus_Name_Prefix = cloudstack; }\nNFS_KRB5 { Active_krb5 = false; }\n", v.BindAddress, v.Port, plugins)
-	b.WriteString("NFSv4 { RecoveryBackend = fs; RecoveryRoot = /var/lib/panel-executor/nfs-server-recovery; Lease_Lifetime = 30; Grace_Period = 30; Max_Client_Ids = 128; Minor_Versions = 1,2; }\nMDCACHE { Entries_HWMark = 4096; }\nLOG { Default_Log_Level = WARN; }\n")
+	b.WriteString("NFSv4 { Only_Numeric_Owners = true; Allow_Numeric_Owners = true; RecoveryBackend = fs; RecoveryRoot = /var/lib/panel-executor/nfs-server-recovery; Lease_Lifetime = 30; Grace_Period = 30; Max_Client_Ids = 128; Minor_Versions = 1,2; }\nMDCACHE { Entries_HWMark = 4096; }\nLOG { Default_Log_Level = WARN; }\n")
 	for _, e := range v.Exports {
 		access := "RO"
 		if !e.ReadOnly {
