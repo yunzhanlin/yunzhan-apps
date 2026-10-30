@@ -1,13 +1,13 @@
 {
-  "version": "0.1.0-dev.proapps24intrusionubuntu22candidate35r1",
+  "version": "0.1.0-dev.proapps24intrusionubuntu22candidate35r2",
   "application_version": "1.1.1",
   "scope": "candidate/panel-integration-load-balance",
   "required_panel_features": [
     "intrusion-preserving-journal-v2",
     "intrusion-upstream0112-v1"
   ],
-  "parent_source_inputs_sha256": "e2800be6bf3da01db4548e7fc90bc88861a3ba5d7ca32284a72cdd72d66d2a46",
-  "source_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa",
+  "parent_source_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa",
+  "source_inputs_sha256": "3c8dbb9dacc68ad23a5904c99303f421703e48db39e3f4d0215d5013603b48a8",
   "frozen_files": 18007,
   "exported_files": 2232,
   "normal_builds_all_mandatory_gates": true,
@@ -18,15 +18,15 @@
   "original_app_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
   "normal_archives": {
     "amd64": {
-      "archive_sha256": "143b95705bcb3e8d05d27094e456bbffc03e7859d1a5aebaa46d2ed465d4fbcd",
-      "manifest_sha256": "dabb6de7969b2f04169d0c8bfb4b3e2c10faa1f177512232f9639bb292906cec",
-      "signature_sha256": "7582d80e10f3c02ef7ffeeda2f2c56aaa6c91cefa4d6fc410084a321db54470b",
+      "archive_sha256": "f073c7d297b69f1dcf92776d3f8d51b1b32a576593dc8c1c0b3908761a1b119f",
+      "manifest_sha256": "5efb7f4a3d4c15fbb73f9aa681081a603d8579822c757e48e163872e36bd8691",
+      "signature_sha256": "a4c05d5216fe21983f8d64b76bf7f8a4ea840cfb1408b98954a4e2ef2ec429e8",
       "signature_bytes": 64
     },
     "arm64": {
-      "archive_sha256": "6a50f2f0c16ed17918594a52564eeb53895fb6fef92b1f09cc5949b66b833013",
-      "manifest_sha256": "fbd5b948e561edfe29ed999a43667fe42600000b1d8fd4f087fa5d22a9e7aad8",
-      "signature_sha256": "e836224ecbf1e82bfbfb270761f0bc0003ff8290503e2c9951031d67534cfdad",
+      "archive_sha256": "4f6b6e2bf858be394bb10370da0688036fafbcebfd19fb8e982cd91434e5df10",
+      "manifest_sha256": "12ac801e535780a98a81d32c1500dcbed78c8bb6086ef95ad5a0bec371499ae6",
+      "signature_sha256": "6e968bd8f2e5ec87802ba11e017702dad3b51be57601c08b854207d7ccbd67e9",
       "signature_bytes": 64
     }
   },
@@ -61,5 +61,81 @@
   "native_source_CI_pending": true,
   "security_diff_scan_pending": true,
   "Main_19100_changed": false,
-  "commercial_all50": false
+  "commercial_all50": false,
+  "previous_programme": {
+    "version": "0.1.0-dev.proapps24intrusionubuntu22candidate35r1",
+    "source_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa",
+    "normal_archives": {
+      "amd64": {
+        "archive_sha256": "143b95705bcb3e8d05d27094e456bbffc03e7859d1a5aebaa46d2ed465d4fbcd",
+        "manifest_sha256": "dabb6de7969b2f04169d0c8bfb4b3e2c10faa1f177512232f9639bb292906cec",
+        "signature_sha256": "7582d80e10f3c02ef7ffeeda2f2c56aaa6c91cefa4d6fc410084a321db54470b",
+        "signature_bytes": 64
+      },
+      "arm64": {
+        "archive_sha256": "6a50f2f0c16ed17918594a52564eeb53895fb6fef92b1f09cc5949b66b833013",
+        "manifest_sha256": "fbd5b948e561edfe29ed999a43667fe42600000b1d8fd4f087fa5d22a9e7aad8",
+        "signature_sha256": "e836224ecbf1e82bfbfb270761f0bc0003ff8290503e2c9951031d67534cfdad",
+        "signature_bytes": 64
+      }
+    },
+    "source_CI_run": 40979091203,
+    "both_native_source_CI_jobs": "success",
+    "security_diff_scan_id": "30e34f52-5ac3-4d82-ba3e-932e37b0ab9d",
+    "security_review_paths": 41,
+    "reportable_findings": 0,
+    "one_separate_CI_dependency_followup_review": true
+  },
+  "exact_R2_source_delta": [
+    "scripts/test-intrusion-workspace.mjs",
+    "web/src/IntrusionWorkspace.vue",
+    "web/src/intrusionWorkspace.ts"
+  ],
+  "R2_UI_contract": {
+    "current_exact_version": "1.1.1",
+    "complete_native111_workspace_decoded": true,
+    "actual_native_workspace_sha256": "acfc79552b41bc7b3b39fbd98e6a90186e73df4eb1ca1f9d11dc6ad3379368cb",
+    "old_110_readability_retained_but_update_required_before_configuration": true,
+    "old_forged_alias_future_and_incomplete_state_refusals_retained": true,
+    "current_editor_and_update_hint_share_exact_version": true,
+    "focused_regression_tests": 7,
+    "actual_rendered_installed_R2_browser_pending": false
+  },
+  "Root_protocol_authorization_and_installer_sources_identical_to_R1": true,
+  "ARM_native_R1_original_chain": {
+    "normal_original_key_signed_fresh_programme_install": true,
+    "normal_original_key_signed111_app_install": true,
+    "original_install_job": "b94f1ebfcf859f1ccec2753b33cfe1f0",
+    "distinct_actual_Core_configure_job": "5cce8a47cb530c2a18b12ad5c4e562a0",
+    "actual_IPv4_IPv6_SSH_failed_authentication_bans_and_other_port_preserved": true,
+    "unchanged_bantime_with_retry_and_findtime_configuration_preserved_original_ban_times": true,
+    "only_explicit_IPv4_unbanned_with_success_audit": true,
+    "remaining_IPv6_creation_expiry_and_filter_preserved": true,
+    "own_client_namespace_and_extra_key_removed": true,
+    "NSS_and_five_original_service_lifetimes_preserved": true,
+    "original_false_QA_reports_preserved": 3,
+    "original_evidence_tar_sha256": "9e882d42c2c3694ea30cf600cceb5a90aeb2046afbf13492c91c24de613ae85d",
+    "not_R2_programme_browser_AMD_or_110_to111_acceptance": true
+  },
+  "AMD_normal_native_R2_ubuntu22_fresh_journey_pending": true,
+  "native_110_to111_signed_store_update_pending": true,
+  "ARM_R2_actual_programme_upgrade_and_rendered_UI": {
+    "normal_original_key_signed_R1_to_R2_programme_upgrade": true,
+    "original_source_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa",
+    "source_inputs_sha256": "3c8dbb9dacc68ad23a5904c99303f421703e48db39e3f4d0215d5013603b48a8",
+    "all_original_typed_SQLite_tables_and_columns": 114,
+    "all_protected_file_entries": 242,
+    "only_independently_qualified_background_notification_clock_changed": true,
+    "actual_running_panel_and_executor_equal_both_target_archive_binary_hashes": true,
+    "original_Jail_settings_and_remaining_IPv6_ban_creation_expiry_and_static_NFT_preserved": true,
+    "actual_installed111_four_tabs_settings_enabled_and_original_history_visible": true,
+    "UI_app_mutations": 0,
+    "normal_own_UI_login_logout": true,
+    "browser_private_loopback_adapter_not_public_domain_proxy_acceptance": true,
+    "full_native_guard_exit": 0,
+    "original_proof_sha256": "eb8ae9a3c413a7ff8eb940b2ae67e254b7da4bb9a597a7cbbcc0ccc058b93f20",
+    "original_evidence_tar_sha256": "6a3f550d3cec8bf006478612f38fb5d6ac2ed0d52931631fd7a0d9c4f1619d51",
+    "UI_source_png_assumption_refusal_preserved_actual_JPEG_bytes_unchanged": true,
+    "AMD_and_110_to111_and_Main_pending": true
+  }
 }

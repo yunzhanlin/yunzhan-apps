@@ -2,7 +2,7 @@
 import {computed,onMounted,onUnmounted,ref} from "vue";
 import {ElMessageBox} from "element-plus";
 import {formatPanelDateTime} from "./panelTime";
-import {decodeIntrusionWorkspace,decodeIntrusionRequests,intrusionID,type IntrusionWorkspace,type IntrusionRequests,type IntrusionRequest} from "./intrusionWorkspace";
+import {decodeIntrusionWorkspace,decodeIntrusionRequests,intrusionID,intrusionCurrentVersion,intrusionVersionRequiresUpdate,type IntrusionWorkspace,type IntrusionRequests,type IntrusionRequest} from "./intrusionWorkspace";
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 const props=defineProps<{api:API;onInstall:(id:string,settings:Record<string,unknown>)=>Promise<string>;onJob:(id:string)=>Promise<void>}>();
 const view=ref<IntrusionWorkspace>(),requests=ref<IntrusionRequests>(),error=ref(""),loading=ref(false),busy=ref(false),tab=ref("overview");
@@ -12,7 +12,7 @@ const ticket=ref<OriginalTicket>();
 let disposed=false,generation=0;
 const current=computed(()=>view.value?.current);
 const blocked=computed(()=>!view.value||!requests.value||loading.value||busy.value||!!ticket.value||!!view.value.pending);
-const legacy=computed(()=>!!current.value?.installed&&current.value.version!=="1.1.0");
+const legacy=computed(()=>intrusionVersionRequiresUpdate(current.value));
 const actionName=(a:string)=>({install:"安装",configure:"配置",uninstall:"移除受管策略",update:"更新",recover:"显式恢复"}[a]||a);
 const ports=(p:number[]|undefined)=>p?.length?p.join("、"):"尚未核对";
 const label=(name:string)=>({max_retry:"失败次数",find_time_minutes:"统计窗口（分钟）",ban_time_minutes:"封禁时长（分钟）"}[name]||name);
@@ -91,7 +91,7 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;});
           <p>配置、运行属性、当前内核集合及服务状态分别核对；只读采样通过不代表已完成失败登录、冷启动或长期运行验收。</p>
         </el-tab-pane>
         <el-tab-pane label="防护设置" name="settings">
-          <el-alert v-if="legacy" type="warning" title="当前为旧版。请先在应用商店完成签名 1.1.0 更新；保存配置不会代替更新或改写版本标签。" :closable="false"/>
+          <el-alert v-if="legacy" type="warning" :title="'当前为旧版。请先在应用商店完成签名 ' + intrusionCurrentVersion + ' 更新；保存配置不会代替更新或改写版本标签。'" :closable="false"/>
           <el-form label-position="top" :disabled="blocked||legacy"><div class="intrusion-form"><el-form-item label="失败次数"><el-input-number v-model="form.max_retry" :min="2" :max="20" :precision="0"/></el-form-item><el-form-item label="统计窗口（分钟）"><el-input-number v-model="form.find_time_minutes" :min="1" :max="1440" :precision="0"/></el-form-item><el-form-item label="封禁时长（分钟）"><el-input-number v-model="form.ban_time_minutes" :min="10" :max="10080" :precision="0"/></el-form-item></div></el-form>
           <p>仅接管已运行且受支持的 SSHD Jail；不自动改造自定义动作、切换日志后端或安装依赖。检测到外部改动、未知状态会停止并保留原证据。</p>
           <div class="intrusion-buttons"><el-button type="primary" :disabled="blocked||legacy" @click="submit(current?.installed?'configure':'install')">{{ current?.installed?'保存并核对实际策略':'从签名应用仓库安装' }}</el-button><el-button v-if="current?.installed" type="danger" plain :disabled="blocked" @click="submit('uninstall')">恢复底层策略并移除受管文件</el-button></div>

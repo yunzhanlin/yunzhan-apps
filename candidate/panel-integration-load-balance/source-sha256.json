@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24intrusionubuntu22candidate35r1-linux-amd64.tar.gz",
-    "archive_sha256": "143b95705bcb3e8d05d27094e456bbffc03e7859d1a5aebaa46d2ed465d4fbcd",
-    "frozen_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa"
+    "archive": "panel-0.1.0-dev.proapps24intrusionubuntu22candidate35r2-linux-amd64.tar.gz",
+    "archive_sha256": "f073c7d297b69f1dcf92776d3f8d51b1b32a576593dc8c1c0b3908761a1b119f",
+    "frozen_inputs_sha256": "3c8dbb9dacc68ad23a5904c99303f421703e48db39e3f4d0215d5013603b48a8"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -2029,7 +2029,7 @@
     "scripts/test-file-manager-scope.mjs": "89890ff6c51c9c5b4a5700a301476e8de05e26f605c3e0ce656700c6430cf6e9",
     "scripts/test-frontend-release.mjs": "51e349162ca42043f9cc538246fe842e231daa765acc7fdd389aed0b123291c1",
     "scripts/test-host-disk.mjs": "4d45917047e346bf0c15a543632e9511f442a9d4badd564833b0db049212402a",
-    "scripts/test-intrusion-workspace.mjs": "4b2f836a2da74291c26ffe79915f6b967cab1dbf9843b1bfe4549ffe21ae19a9",
+    "scripts/test-intrusion-workspace.mjs": "1e11a708c7be67007a32826308e655e783e00c27f3feab66948c3e6678ed180d",
     "scripts/test-job-presentation.mjs": "b7d8be9fdaa558dc66ccb3750913e5e103c2c1f250616066c658d1fc0e5e0e25",
     "scripts/test-load-balance-alerts.mjs": "afb81e54c8177c02c1871ea9093f6aac4b13294fe1bd4bedd5d0aded4280d854",
     "scripts/test-load-balance-report-export.mjs": "222840e1d7de0a6e83d7b658722ee7039f2ce8ac27afe8b7c15b2b79bb938e93",
@@ -2122,7 +2122,7 @@
     "web/src/FileToolsMenu.vue": "eb6e14b7c0f536678e3cdeb75549decfa29d906d039ca4ee8bc08f50d2ba57a9",
     "web/src/HardeningWorkspace.vue": "2f42f7cbf334753ec2c36878028e25819c95749dc5cc6407e1360a9de21eae3a",
     "web/src/HostDiskWorkspace.vue": "3f3665a202a09cd60630df43c66677d140ad7090491c1c7cb593532fe3eeec96",
-    "web/src/IntrusionWorkspace.vue": "0306f0ff20bbe4ac53a147d2f3f57effb13475847d82ff6b28e5c17fe4e25864",
+    "web/src/IntrusionWorkspace.vue": "feb2ec42c1688400f29c74eb057c113997ff97fb8779172bae44d3c07d25f882",
     "web/src/LoadBalanceStreamWorkspace.vue": "f01efb0c2fb6f32d74b902deb115f00bf1ad10a30bf57c60a9e4d3dbba92b788",
     "web/src/MariaDBManager.vue": "96e7e87d9e0ae59103a30a1f13a6dc96f50f238330b525291eb60dcbc998e3c4",
     "web/src/MemcachedAppUpdate.vue": "3b287510d803479abcfdfd1f8e2e3a60e6213616f2ae54dae9d875f908c6b837",
@@ -2184,7 +2184,7 @@
     "web/src/epochReadGate.ts": "9a301e512a0fa837fa234806b1fbf3f5c3aa2a007e95355326439dfc7127f0f0",
     "web/src/frontendRelease.ts": "d2b833b25c750a27583b842cb0250dfc3547ed2b5103eac5888aa083b8b6bfd6",
     "web/src/hostDisk.ts": "d9916144714f9c8c9bfa42e22363f82ad248ad19a22e82896d9989c31dd6ced8",
-    "web/src/intrusionWorkspace.ts": "5bca71162c93338559c2210cfd02aae5228a43009dadee27ac5e4c8af0c79e6f",
+    "web/src/intrusionWorkspace.ts": "d5c8662af55ec3e409f8b4ab967214a0c260bbecd35a2942e8cedf675bf08ae6",
     "web/src/loadBalanceReport.ts": "9f43216894b0546864002923edcea0bb23ee14121ed11ca26c62fd8db2f65d86",
     "web/src/loadBalanceReportExport.ts": "068a078d67446d85371f3e677518fe1b22274afa9d3b9570810c4308099e7e45",
     "web/src/loadBalanceRouting.ts": "52a31376454c9651594cda8a9053931ebe28c82051b8aec61c6289788350233e",

@@ -4,6 +4,10 @@ export interface IntrusionTransaction {id:string;sha256:string;action:string;sta
 export interface IntrusionWorkspace {format:1;checked_at:string;state_known:boolean;current:IntrusionCurrent|null;pending:IntrusionTransaction|null;history:IntrusionTransaction[];retained_temporaries:number;ban_duration_semantics:string;detail:string}
 export interface IntrusionRequest {id:string;action:string;state:string;created_at:string;request_sha256:string}
 export interface IntrusionRequests {actor_id:string;entries:IntrusionRequest[];next_cursor:string;read_only:true}
+export const intrusionCurrentVersion = "1.1.1";
+export function intrusionVersionRequiresUpdate(value:Pick<IntrusionCurrent,"installed"|"version">|null|undefined):boolean {
+  return !!value?.installed&&value.version!==intrusionCurrentVersion;
+}
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));
 const keys=(v:Record<string,unknown>,fields:string[])=>Object.keys(v).sort().join(",")===[...fields].sort().join(",");
 const text=(v:unknown):v is string=>typeof v==="string"&&new TextEncoder().encode(v).length<=16384;
@@ -19,7 +23,7 @@ function action(v:unknown):boolean {
 }
 function current(v:unknown):boolean {
   if(!object(v)||!keys(v,["format","checked_at","installed","version","service_active","config_matches","healthy","kernel_scope_verified","kernel_scope_deferred","active_bans_known","active_bans","ssh_effective_ports","ssh_listening_ports","ssh_ports_match","actions","settings","runtime_settings","warnings","detail"])||v.format!==1||!stamp(v.checked_at)||!text(v.detail)||!bools(v,["installed","service_active","config_matches","healthy","kernel_scope_verified","kernel_scope_deferred","active_bans_known","ssh_ports_match"])||!text(v.version)||!ports(v.ssh_effective_ports,true)||!ports(v.ssh_listening_ports,true)||!integer(v.active_bans,0,4096)||!settings(v.settings,!v.installed)||!Array.isArray(v.actions)||v.actions.length>16||!v.actions.every(action)||!Array.isArray(v.warnings)||v.warnings.length>64||!v.warnings.every(text)||!object(v.runtime_settings)||Object.keys(v.runtime_settings).some(k=>!["maxretry","findtime","bantime"].includes(k))||!Object.values(v.runtime_settings).every(n=>integer(n,1,604800)))return false;
-  if(v.installed&&!["1.0","1.0.0","1.1.0"].includes(v.version))return false;
+  if(v.installed&&!["1.0","1.0.0","1.1.0",intrusionCurrentVersion].includes(v.version))return false;
   if(!v.installed&&(v.version!==""||v.healthy||v.service_active||v.config_matches))return false;
   if(v.ssh_ports_match&&(!v.ssh_effective_ports.length||JSON.stringify(v.ssh_effective_ports)!==JSON.stringify(v.ssh_listening_ports)))return false;
   if(v.healthy&&(!v.actions.length||v.actions.some(a=>!object(a)||a.scope_verified!==true||a.kernel_scope_verified!==true||JSON.stringify(a.ports)!==JSON.stringify(v.ssh_listening_ports))))return false;

@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {decodeIntrusionWorkspace,decodeIntrusionRequests} from '../web/src/intrusionWorkspace.ts';
+import {decodeIntrusionWorkspace,decodeIntrusionRequests,intrusionCurrentVersion,intrusionVersionRequiresUpdate} from '../web/src/intrusionWorkspace.ts';
 const at='2026-10-20T00:00:00Z',id='1'.repeat(32),sha='a'.repeat(64);
 const settings=()=>({max_retry:5,find_time_minutes:10,ban_time_minutes:60});
 const current=()=>({format:1,checked_at:at,installed:true,version:'1.1.0',service_active:true,config_matches:true,healthy:false,kernel_scope_verified:false,kernel_scope_deferred:true,active_bans_known:true,active_bans:0,ssh_effective_ports:[2882],ssh_listening_ports:[2882],ssh_ports_match:true,actions:[{name:'nftables',ports:[2882],protocol:'tcp',scope_verified:true,kernel_scope_verified:false,kernel_scope_deferred:true,kernel_ipv4:false,kernel_ipv6:false,detail:'Synthetic deferred observation'}],settings:settings(),runtime_settings:{maxretry:5,findtime:600,bantime:3600},warnings:['等待首次实际封禁'],detail:'Synthetic read-only sample, no installed/native acceptance'});
@@ -17,6 +17,15 @@ test('complete normal, deferred and original pending views do not invent install
 test('unknown/truncated/oversized/contradictory server observations fail closed',()=>{
  for(const v of [null,[],{}, {...workspace(),state_known:false},{...workspace(),current:null},{...workspace(),checked_at:'2026-02-30T00:00:00Z'},{...workspace(),retained_temporaries:129},{...workspace(),history:Array(129).fill(transaction())},{...workspace(),extra:'private authority'}])assert.throws(()=>decodeIntrusionWorkspace(v));
  for(const change of [{version:'1.1.0-fake'},{healthy:true},{ssh_listening_ports:[22]},{active_bans:1.5},{settings:{max_retry:5}},{runtime_settings:{script:'root'}},{warnings:Array(65).fill('x')},{kernel_scope_verified:true},{actions:[{...current().actions[0],actionstart:'root script'}]},{detail:'汉'.repeat(6000)}])assert.throws(()=>decodeIntrusionWorkspace({...workspace(),current:{...current(),...change}}));
+});
+test('111 decodes complete native states and enables only its exact current editor',()=>{
+ assert.equal(intrusionCurrentVersion,'1.1.1');
+ const deferred=workspace();deferred.current.version='1.1.1';assert.deepEqual(decodeIntrusionWorkspace(deferred),deferred);assert.equal(intrusionVersionRequiresUpdate(deferred.current),false);
+ const healthy=structuredClone(deferred);Object.assign(healthy.current,{healthy:true,kernel_scope_verified:true,kernel_scope_deferred:false,active_bans:2,warnings:[]});Object.assign(healthy.current.actions[0],{kernel_scope_verified:true,kernel_scope_deferred:false,kernel_ipv4:true,kernel_ipv6:true});assert.deepEqual(decodeIntrusionWorkspace(healthy),healthy);
+ for(const version of ['1.0','1.0.0','1.1.0']){const old=workspace();old.current.version=version;assert.deepEqual(decodeIntrusionWorkspace(old),old);assert.equal(intrusionVersionRequiresUpdate(old.current),true);}
+ for(const version of ['1.1.1-fake','1.1.2','v1.1.1','01.1.1'])assert.throws(()=>decodeIntrusionWorkspace({...deferred,current:{...deferred.current,version}}));
+ assert.equal(intrusionVersionRequiresUpdate(undefined),false);assert.equal(intrusionVersionRequiresUpdate(null),false);assert.equal(intrusionVersionRequiresUpdate({installed:false,version:''}),false);
+ const component=readFileSync(new URL('../web/src/IntrusionWorkspace.vue',import.meta.url),'utf8');assert.match(component,/const legacy=computed\(\(\)=>intrusionVersionRequiresUpdate\(current.value\)\)/);assert(component.includes("+ intrusionCurrentVersion + ' 更新"));
 });
 test('own original request pages are ordered, bounded, account-bound and key-free',()=>{
  assert.deepEqual(decodeIntrusionRequests(requests()),requests());
