@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"debug/elf"
@@ -50,6 +51,7 @@ type nfsRuntimeSelection struct {
 	Binary             string            `json:"-"`
 	LibraryDir         string            `json:"-"`
 	Shim               string            `json:"-"`
+	ClientBinary       string            `json:"-"`
 }
 
 var nfsAPTVersion = regexp.MustCompile(`^[0-9][A-Za-z0-9.+:~_-]{0,127}$`)
@@ -86,7 +88,7 @@ func nfsAllowedDependencies(raw string) ([]string, error) {
 }
 func parseNFSAPTMetadata(name, version, arch, data string) (nfsAPTPackage, error) {
 	var result nfsAPTPackage
-	if (name != "nfs-ganesha" && name != "nfs-ganesha-vfs") || !nfsAPTVersion.MatchString(version) || (arch != "amd64" && arch != "arm64") {
+	if (name != "nfs-ganesha" && name != "nfs-ganesha-vfs" && name != "nfs-common") || !nfsAPTVersion.MatchString(version) || (arch != "amd64" && arch != "arm64") {
 		return result, errors.New("NFS APT 包身份无效")
 	}
 	for _, paragraph := range strings.Split(strings.TrimSpace(data), "\n\n") {
@@ -115,7 +117,7 @@ func parseNFSAPTMetadata(name, version, arch, data string) (nfsAPTPackage, error
 	if result.Name == "" {
 		return result, errors.New("未找到当前候选版本的已认证 NFS APT 元数据")
 	}
-	_, e := nfsAllowedDependencies(result.Depends)
+	_, e := nfsPackageDependencies(result)
 	return result, e
 }
 func nfsFileDigest(path string, limit int64) (string, error) {
@@ -165,15 +167,23 @@ func (s *Service) nfsRuntime() (nfsRuntimeSelection, error) {
 	return s.validateNFSRuntime(v)
 }
 func (s *Service) validateNFSRuntime(v nfsRuntimeSelection) (nfsRuntimeSelection, error) {
-	if v.Format != 1 || !nfsNativePrefix.MatchString(v.Prefix) || !nfsLibraryName.MatchString(v.MainLibrary) || v.Architecture != runtime.GOARCH || v.Platform != runtimecatalog.HostPlatform() || v.IsolationSourceSHA != core.Hash(string(nfsRPCIsolation)) || len(v.Packages) != 2 || len(v.Files) != 7 {
+	packageCount, fileCount := 2, 7
+	if v.Format == 2 {
+		packageCount, fileCount = 3, 9
+	}
+	if (v.Format != 1 && v.Format != 2) || !nfsNativePrefix.MatchString(v.Prefix) || !nfsLibraryName.MatchString(v.MainLibrary) || v.Architecture != runtime.GOARCH || v.Platform != runtimecatalog.HostPlatform() || v.IsolationSourceSHA != core.Hash(string(nfsRPCIsolation)) || len(v.Packages) != packageCount || len(v.Files) != fileCount {
 		return v, errors.New("NFS 私有运行时来源、平台或隔离记录无效")
 	}
-	for i, name := range []string{"nfs-ganesha", "nfs-ganesha-vfs"} {
+	packageNames := []string{"nfs-ganesha", "nfs-ganesha-vfs"}
+	if v.Format == 2 {
+		packageNames = append(packageNames, "nfs-common")
+	}
+	for i, name := range packageNames {
 		p := v.Packages[i]
-		if p.Name != name || p.Architecture != v.Architecture || !nfsAPTVersion.MatchString(p.Version) || len(p.SHA256) != 64 || p.Size < 1024 || p.Size > 64<<20 || p.Version != v.Packages[0].Version {
+		if p.Name != name || p.Architecture != v.Architecture || !nfsAPTVersion.MatchString(p.Version) || len(p.SHA256) != 64 || p.Size < 1024 || p.Size > 64<<20 || i < 2 && p.Version != v.Packages[0].Version {
 			return v, errors.New("NFS 原生包来源不一致")
 		}
-		if _, e := nfsAllowedDependencies(p.Depends); e != nil {
+		if _, e := nfsPackageDependencies(p); e != nil {
 			return v, e
 		}
 	}
@@ -187,13 +197,25 @@ func (s *Service) validateNFSRuntime(v nfsRuntimeSelection) (nfsRuntimeSelection
 			return v, e
 		}
 	}
-	for _, name := range []string{"bin/ganesha.nfsd", "lib/" + v.MainLibrary, "lib/libfsalvfs.so", "lib/libpanel-nfs-rpc-isolation.so", "licenses/nfs-ganesha.txt", "licenses/nfs-ganesha-vfs.txt", "licenses/cloudstack-nfs-rpc-isolation.c"} {
+	required := nfsServerRuntimeFiles(v.MainLibrary)
+	if v.Format == 2 {
+		required = append(required, "bin/mount.nfs", "licenses/nfs-common.txt")
+	}
+	for _, name := range required {
 		path := filepath.Join(base, name)
 		digest, e := nfsFileDigest(path, 32<<20)
 		if e != nil || v.Files[name] != digest {
 			return v, errors.New("NFS 独立原生文件或完整许可通知摘要不符")
 		}
-		if !strings.HasPrefix(name, "licenses/") {
+		if name == "bin/mount.nfs" {
+			info, statErr := os.Lstat(path)
+			if statErr != nil || info.Mode() != 0755 {
+				return v, errors.New("NFS 独立挂载工具权限无效")
+			}
+			if e = validateNFSClientELF(path, v.Architecture); e != nil {
+				return v, e
+			}
+		} else if !strings.HasPrefix(name, "licenses/") {
 			if e = validateNFSELF(path, v.Architecture); e != nil {
 				return v, e
 			}
@@ -202,6 +224,9 @@ func (s *Service) validateNFSRuntime(v nfsRuntimeSelection) (nfsRuntimeSelection
 	v.Binary = filepath.Join(base, "bin/ganesha.nfsd")
 	v.LibraryDir = filepath.Join(base, "lib")
 	v.Shim = filepath.Join(v.LibraryDir, "libpanel-nfs-rpc-isolation.so")
+	if v.Format == 2 {
+		v.ClientBinary = filepath.Join(base, "bin/mount.nfs")
+	}
 	return v, nil
 }
 func nfsCommandIn(ctx context.Context, dir, name string, args ...string) (string, error) {
@@ -250,17 +275,43 @@ func copyNFSNative(source, target string, mode os.FileMode) error {
 }
 func installPrivateNFSRuntime(ctx context.Context) error {
 	s := New(Config{})
-	if _, e := s.nfsRuntime(); e == nil {
+	lock, err := s.lockNFSFile(nfsRuntimeInstallLock)
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	current, currentErr := s.nfsRuntime()
+	if currentErr == nil && current.Format == 2 {
 		return nil
 	}
+	var previous []byte
 	if exists(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json")) {
-		return errors.New("现有 NFS 原生来源校验失败，拒绝静默覆盖")
+		if currentErr != nil {
+			return errors.New("现有 NFS 原生来源校验失败，拒绝静默覆盖")
+		}
+		previous, err = ftpPrivateRead(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json"), 32<<10)
+		if err != nil {
+			return err
+		}
+	}
+	publish := func(selection nfsRuntimeSelection) error {
+		now, readErr := ftpPrivateRead(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json"), 32<<10)
+		if previous == nil && !errors.Is(readErr, os.ErrNotExist) || previous != nil && (readErr != nil || !bytes.Equal(now, previous)) {
+			return errors.New("NFS 原运行时记录在准备期间变化；保留原记录和候选，不覆盖")
+		}
+		return moduleWrite(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json"), selection)
 	}
 	if _, e := s.moduleCommand(ctx, 2*time.Minute, "/usr/bin/apt-get", "update"); e != nil {
 		return e
 	}
 	packages := []nfsAPTPackage{}
-	for _, name := range []string{"nfs-ganesha", "nfs-ganesha-vfs"} {
+	reuseServer := previous != nil
+	downloadNames := []string{"nfs-ganesha", "nfs-ganesha-vfs", "nfs-common"}
+	if reuseServer {
+		packages = append(packages, current.Packages...)
+		downloadNames = []string{"nfs-common"}
+	}
+	for _, name := range downloadNames {
 		policy, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/apt-cache", "policy", name)
 		if e != nil {
 			return e
@@ -272,7 +323,7 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 			}
 		}
 		if !nfsAPTVersion.MatchString(version) {
-			return errors.New("当前平台没有经过 APT 认证的 NFS-Ganesha 候选包")
+			return fmt.Errorf("当前平台没有经过 APT 认证的 %s 候选包", name)
 		}
 		control, e := s.moduleCommand(ctx, 20*time.Second, "/usr/bin/apt-cache", "show", name+"="+version)
 		if e != nil {
@@ -287,23 +338,13 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 	if packages[0].Version != packages[1].Version {
 		return errors.New("NFS 主程序与 VFS 候选版本不一致")
 	}
-	dependencies := map[string]bool{"nfs-common": true, "build-essential": true}
-	for _, p := range packages {
-		names, e := nfsAllowedDependencies(p.Depends)
-		if e != nil {
-			return e
-		}
-		for _, name := range names {
-			dependencies[name] = true
-		}
+	install, err := nfsGlobalDependencies(packages, reuseServer)
+	if err != nil {
+		return err
 	}
-	install := []string{}
-	for name := range dependencies {
-		install = append(install, name)
-	}
-	sort.Strings(install)
-	// No nfs-ganesha package is installed: its maintainer scripts and system
-	// service must never execute or replace an existing host NFS server.
+	// Only reviewed shared libraries and build tools are installed globally.
+	// Ganesha AND nfs-common are privately extracted; their maintainer
+	// scripts, rpcbind and system NFS services must never be installed here.
 	if _, e := s.moduleCommand(ctx, 5*time.Minute, "/usr/bin/apt-get", append([]string{"install", "-y", "--no-install-recommends", "--download-only"}, install...)...); e != nil {
 		return e
 	}
@@ -326,7 +367,11 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 	if e = os.Mkdir(extracted, 0700); e != nil {
 		return e
 	}
-	for _, p := range packages {
+	downloadPackages := packages
+	if reuseServer {
+		downloadPackages = packages[2:]
+	}
+	for _, p := range downloadPackages {
 		if _, e = nfsCommandIn(ctx, work, "/usr/bin/apt-get", "download", p.Name+"="+p.Version); e != nil {
 			return e
 		}
@@ -346,34 +391,67 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 			return e
 		}
 	}
-	binary := filepath.Join(extracted, "usr/bin/ganesha.nfsd")
-	if e = validateNFSELF(binary, runtime.GOARCH); e != nil {
-		return e
-	}
-	f, e := elf.Open(binary)
+	client, e := nfsExtractedClient(extracted)
 	if e != nil {
 		return e
 	}
-	needed, e := f.ImportedLibraries()
-	f.Close()
-	if e != nil {
+	if e = validateNFSClientELF(client, runtime.GOARCH); e != nil {
 		return e
 	}
-	mainLibrary := ""
-	for _, name := range needed {
-		if nfsLibraryName.MatchString(name) {
-			if mainLibrary != "" {
-				return errors.New("NFS 原生主库身份不唯一")
+	mainLibrary := current.MainLibrary
+	type nativeCopy struct {
+		source, name, expectedSHA string
+		mode                      os.FileMode
+	}
+	copies := []nativeCopy{
+		{client, "bin/mount.nfs", "", 0755},
+		{filepath.Join(extracted, "usr/share/doc/nfs-common/copyright"), "licenses/nfs-common.txt", "", 0644},
+	}
+	if reuseServer {
+		oldBase := filepath.Join(base, current.Prefix)
+		for _, name := range nfsServerRuntimeFiles(mainLibrary) {
+			mode := os.FileMode(0644)
+			if name == "bin/ganesha.nfsd" {
+				mode = 0755
 			}
-			mainLibrary = name
+			copies = append(copies, nativeCopy{filepath.Join(oldBase, name), name, current.Files[name], mode})
 		}
-	}
-	if mainLibrary == "" {
-		return errors.New("NFS 程序缺少已审核的主库依赖")
-	}
-	fsal, e := filepath.Glob(filepath.Join(extracted, "usr/lib/*-linux-gnu/ganesha/libfsalvfs.so"))
-	if e != nil || len(fsal) != 1 {
-		return errors.New("NFS VFS 库不唯一")
+	} else {
+		binary := filepath.Join(extracted, "usr/bin/ganesha.nfsd")
+		if e = validateNFSELF(binary, runtime.GOARCH); e != nil {
+			return e
+		}
+		f, openErr := elf.Open(binary)
+		if openErr != nil {
+			return openErr
+		}
+		needed, importErr := f.ImportedLibraries()
+		f.Close()
+		if importErr != nil {
+			return importErr
+		}
+		for _, name := range needed {
+			if nfsLibraryName.MatchString(name) {
+				if mainLibrary != "" {
+					return errors.New("NFS 原生主库身份不唯一")
+				}
+				mainLibrary = name
+			}
+		}
+		if mainLibrary == "" {
+			return errors.New("NFS 程序缺少已审核的主库依赖")
+		}
+		fsal, globErr := filepath.Glob(filepath.Join(extracted, "usr/lib/*-linux-gnu/ganesha/libfsalvfs.so"))
+		if globErr != nil || len(fsal) != 1 {
+			return errors.New("NFS VFS 库不唯一")
+		}
+		copies = append(copies,
+			nativeCopy{binary, "bin/ganesha.nfsd", "", 0755},
+			nativeCopy{filepath.Join(extracted, "usr/lib/ganesha", mainLibrary), "lib/" + mainLibrary, "", 0644},
+			nativeCopy{fsal[0], "lib/libfsalvfs.so", "", 0644},
+			nativeCopy{filepath.Join(extracted, "usr/share/doc/nfs-ganesha/copyright"), "licenses/nfs-ganesha.txt", "", 0644},
+			nativeCopy{filepath.Join(extracted, "usr/share/doc/nfs-ganesha-vfs/copyright"), "licenses/nfs-ganesha-vfs.txt", "", 0644},
+		)
 	}
 	encoded, _ := json.Marshal(packages)
 	prefix := "apt-" + core.Hash(string(encoded) + core.Hash(string(nfsRPCIsolation)))[:16]
@@ -384,10 +462,19 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 		if e != nil || decodeFTPPrivateJSON(b, &saved) != nil {
 			return errors.New("NFS 候选已存在但恢复来源缺失；保留，不覆盖")
 		}
+		if saved.Format != 2 {
+			return errors.New("NFS 新候选不是独立客户端运行时")
+		}
 		if _, e = s.validateNFSRuntime(saved); e != nil {
 			return e
 		}
-		if e = moduleWrite(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json"), saved); e != nil {
+		if previous != nil {
+			retained, readErr := ftpPrivateRead(filepath.Join(target, "previous-runtime.json"), 32<<10)
+			if readErr != nil || !bytes.Equal(retained, previous) {
+				return errors.New("NFS 候选与保留的原运行时不符")
+			}
+		}
+		if e = publish(saved); e != nil {
 			return e
 		}
 		return nil
@@ -397,53 +484,57 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 		return e
 	}
 	files := map[string]string{}
-	for _, item := range []struct {
-		source, name string
-		mode         os.FileMode
-	}{{binary, "bin/ganesha.nfsd", 0755}, {filepath.Join(extracted, "usr/lib/ganesha", mainLibrary), "lib/" + mainLibrary, 0644}, {fsal[0], "lib/libfsalvfs.so", 0644}, {filepath.Join(extracted, "usr/share/doc/nfs-ganesha/copyright"), "licenses/nfs-ganesha.txt", 0644}, {filepath.Join(extracted, "usr/share/doc/nfs-ganesha-vfs/copyright"), "licenses/nfs-ganesha-vfs.txt", 0644}} {
-		if e = copyNFSNative(item.source, filepath.Join(stage, item.name), item.mode); e != nil {
-			return e
-		}
-		digest, e := nfsFileDigest(filepath.Join(stage, item.name), 32<<20)
+	for _, item := range copies {
+		digest, e := copyNFSVerifiedNative(item.source, filepath.Join(stage, item.name), item.mode, item.expectedSHA)
 		if e != nil {
 			return e
 		}
 		files[item.name] = digest
 	}
-	source := filepath.Join(work, "nfs-rpc-isolation.c")
-	if e = atomicWrite(source, nfsRPCIsolation, 0600); e != nil {
+	if !reuseServer {
+		source := filepath.Join(work, "nfs-rpc-isolation.c")
+		if e = atomicWrite(source, nfsRPCIsolation, 0600); e != nil {
+			return e
+		}
+		shim := filepath.Join(stage, "lib/libpanel-nfs-rpc-isolation.so")
+		if _, e = nfsCommandIn(ctx, work, "/usr/bin/cc", "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-Werror", "-Wl,-z,relro,-z,now", "-o", shim, source); e != nil {
+			return e
+		}
+		if e = os.Chmod(shim, 0644); e != nil {
+			return e
+		}
+		if e = validateNFSELF(shim, runtime.GOARCH); e != nil {
+			return e
+		}
+		files["lib/libpanel-nfs-rpc-isolation.so"], e = nfsFileDigest(shim, 32<<20)
+		if e != nil {
+			return e
+		}
+		licensePath := filepath.Join(stage, "licenses/cloudstack-nfs-rpc-isolation.c")
+		if e = atomicWrite(licensePath, nfsRPCIsolation, 0644); e != nil {
+			return e
+		}
+		files["licenses/cloudstack-nfs-rpc-isolation.c"], e = nfsFileDigest(licensePath, 32<<20)
+		if e != nil {
+			return e
+		}
+	}
+	selection := nfsRuntimeSelection{Format: 2, Prefix: prefix, Platform: runtimecatalog.HostPlatform(), Architecture: runtime.GOARCH, MainLibrary: mainLibrary, IsolationSourceSHA: core.Hash(string(nfsRPCIsolation)), Packages: packages, Files: files}
+	if _, e = nfsCommandIn(ctx, work, filepath.Join(stage, "bin/mount.nfs"), "-V"); e != nil {
 		return e
 	}
-	shim := filepath.Join(stage, "lib/libpanel-nfs-rpc-isolation.so")
-	if _, e = nfsCommandIn(ctx, work, "/usr/bin/cc", "-shared", "-fPIC", "-O2", "-Wall", "-Wextra", "-Werror", "-Wl,-z,relro,-z,now", "-o", shim, source); e != nil {
-		return e
+	if previous != nil {
+		if e = atomicWrite(filepath.Join(stage, "previous-runtime.json"), previous, 0600); e != nil {
+			return e
+		}
 	}
-	if e = os.Chmod(shim, 0644); e != nil {
-		return e
-	}
-	if e = validateNFSELF(shim, runtime.GOARCH); e != nil {
-		return e
-	}
-	files["lib/libpanel-nfs-rpc-isolation.so"], e = nfsFileDigest(shim, 32<<20)
-	if e != nil {
-		return e
-	}
-	licensePath := filepath.Join(stage, "licenses/cloudstack-nfs-rpc-isolation.c")
-	if e = atomicWrite(licensePath, nfsRPCIsolation, 0644); e != nil {
-		return e
-	}
-	files["licenses/cloudstack-nfs-rpc-isolation.c"], e = nfsFileDigest(licensePath, 32<<20)
-	if e != nil {
-		return e
-	}
-	selection := nfsRuntimeSelection{Format: 1, Prefix: prefix, Platform: runtimecatalog.HostPlatform(), Architecture: runtime.GOARCH, MainLibrary: mainLibrary, IsolationSourceSHA: core.Hash(string(nfsRPCIsolation)), Packages: packages, Files: files}
 	if e = moduleWrite(filepath.Join(stage, "runtime-manifest.json"), selection); e != nil {
 		return e
 	}
 	if e = os.Rename(stage, target); e != nil {
 		return e
 	}
-	if e = moduleWrite(filepath.Join(s.moduleDir("nfs-manager"), "native-runtime.json"), selection); e != nil {
+	if e = publish(selection); e != nil {
 		return e
 	}
 	_, e = s.nfsRuntime()

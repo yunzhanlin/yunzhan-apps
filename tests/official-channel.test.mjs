@@ -28,7 +28,10 @@ test('separate candidate catalogue changes exactly its declared known identities
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
-  assert.deepEqual(changes,['nginx-waf','load-balance','disk-analysis','anti-intrusion']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  assert.deepEqual(changes,['nginx-waf','load-balance','disk-analysis','anti-intrusion','nfs-manager']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  const originalNFS=stable.apps.find(a=>a.id==='nfs-manager'),nfs=source.apps.find(a=>a.id==='nfs-manager');assert.equal(originalNFS.version,'1.3.0');assert.equal(nfs.version,'1.3.1');assert.deepEqual(nfs.delivery,originalNFS.delivery);assert.deepEqual(nfs.compatibility,originalNFS.compatibility);
+  assert.equal(createHash('sha256').update(await read('dist/apps/nfs-manager/1.3.0/manifest.json')).digest('hex'),'c37a0d23ddb10a3e14e13c5304bbec0df0a3acf6954ab869ce40c9d253ad59ec');
+  assert.equal(catalog.apps.find(a=>a.id==='nfs-manager').sha256,'c9d887dee3eb717bab1046e7977511b5d9190452a9eb43cceec330c22c307144');
   assert.equal(stable.apps.find(a=>a.id==='anti-intrusion').version,'1.1.0');
   const intrusion=source.apps.find(a=>a.id==='anti-intrusion');assert.equal(intrusion.version,'1.1.1');assert.deepEqual(intrusion.required_panel_features,['intrusion-preserving-journal-v2','intrusion-upstream0112-v1']);assert.deepEqual(intrusion.delivery,stable.apps.find(a=>a.id==='anti-intrusion').delivery);
   assert.equal(stable.apps.find(a=>a.id==='nginx-waf').version,'2.5.2');

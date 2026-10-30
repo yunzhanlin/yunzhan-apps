@@ -90,6 +90,7 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
 const IntrusionAppVersion = "1.1.1"
+const NFSPrivateClientAppVersion = "1.3.1"
 
 // Module implementations ship in the signed panel executor, not arbitrary
 // GitHub scripts. A newer catalog cannot claim code this executor lacks.
@@ -132,6 +133,12 @@ func ValidateSoftwareUpdate(id, version string) error {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, HardeningAppVersion); valid && comparison >= 0 && version != HardeningAppVersion {
 			return errors.New("持久加固版本仅允许固定完整1.1.0，拒绝未审核别名")
+		}
+	}
+	if id == "nfs-manager" {
+		base, _, _ := strings.Cut(version, "-")
+		if cmp, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && cmp >= 0 && version != "1.3.0" && version != NFSPrivateClientAppVersion {
+			return errors.New("NFS 独立客户端仅支持固定完整1.3.1或保留的1.3.0，拒绝别名及未审核版本")
 		}
 	}
 	if id == "website-analytics" {

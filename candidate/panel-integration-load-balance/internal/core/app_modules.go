@@ -418,7 +418,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "pure-ftpd":
 			version = "1.0.54-compat6"
 		case "nfs-manager":
-			version = "1.3.0"
+			version = NFSPrivateClientAppVersion
 		case "network-threat-detection":
 			version = "1.3.1"
 		case "pm2-manager":

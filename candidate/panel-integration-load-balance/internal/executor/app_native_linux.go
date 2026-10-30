@@ -140,7 +140,7 @@ func InstallAppDependencies(id string) (err error) {
 	if id == "network-threat-detection" {
 		return preparePrivateThreatIDSService(ctx)
 	}
-	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "nfs-manager": {"nfs-common"}, "pm2-manager": {"nodejs", "npm"}}[id]
+	packages := map[string][]string{"pure-ftpd": {"build-essential", "pkg-config", "libssl-dev", "libsodium-dev", "patch"}, "pm2-manager": {"nodejs", "npm"}}[id]
 	if id == "apache-waf" {
 		packages = apacheBodyBuildDependencies()
 		if s.wafBuildPackagesReady(packages) {
@@ -1051,14 +1051,15 @@ func NFSMountOperation(id string, unmount bool) error {
 	if present, e := s.nfsMountStatus(m); e != nil || present {
 		return e
 	}
-	option := "rw"
-	if m.ReadOnly {
-		option = "ro"
+	runtime, e := s.nfsRuntime()
+	if e != nil {
+		return e
 	}
-	if m.Port == 0 {
-		m.Port = 2049
+	command, args, e := nfsClientMountCommand(runtime, m)
+	if e != nil {
+		return e
 	}
-	_, e := s.moduleCommand(ctx, 25*time.Second, "/usr/bin/mount", "-t", "nfs", "-o", option+",nosuid,nodev,noexec,vers=4.2,proto="+nfsClientTransport(m.Source)+",port="+strconv.Itoa(m.Port)+",timeo=50,retrans=2", m.Source, target)
+	_, e = s.moduleCommand(ctx, 25*time.Second, command, args...)
 	if e != nil {
 		return e
 	}
@@ -1182,8 +1183,8 @@ func (s *Service) appDependencyReady(id string) bool {
 		lock, lockErr := os.ReadFile(s.systemPath(appNativeRoot + "/pm2/package-lock.json"))
 		return e == nil && lockErr == nil && core.Hash(string(lock)) == core.Hash(string(pm2Lock)) && st.Mode().Perm()&0005 == 0005 && moduleRead(filepath.Join(s.moduleDir(id), "dependency-result.json"), &result) == nil && result.OK && result.LockSHA == core.Hash(string(pm2Lock)) && exists(s.systemPath(appNativeRoot+"/pm2/node_modules/pm2/bin/pm2"))
 	case "nfs-manager":
-		_, err := s.nfsRuntime()
-		return err == nil && (exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs")))
+		v, err := s.nfsRuntime()
+		return err == nil && (v.Format == 2 || exists(s.systemPath("/sbin/mount.nfs")) || exists(s.systemPath("/usr/sbin/mount.nfs")))
 	}
 	return false
 }
@@ -1228,7 +1229,11 @@ func (s *Service) appDependencyRoutes(m *http.ServeMux) {
 				respond(w, 200, map[string]string{"state": "running"})
 				return
 			}
-			if s.appDependencyReady(id) {
+			ready := s.appDependencyReady(id)
+			if id == "nfs-manager" {
+				ready = s.nfsPrivateClientReady()
+			}
+			if ready {
 				respond(w, 200, map[string]string{"state": "ready"})
 				return
 			}

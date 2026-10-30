@@ -264,6 +264,8 @@ const names: Record<string, string> = {
   encrypted: "传输加密",
   client_identity: "客户端文件身份",
   runtime_ready: "独立运行时就绪",
+  runtime_format: "运行时格式",
+  private_client_ready: "独立挂载工具就绪",
   actual_nfs_v4_rpc: "真实 NFSv4 RPC 检查通过",
   export_error: "导出目录告警",
   hosts: "主机",

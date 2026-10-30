@@ -132,7 +132,7 @@ func (s *Service) lockNFSServer() (*os.File, error) {
 	return s.lockNFSFile("server.lock")
 }
 func (s *Service) lockNFSFile(name string) (*os.File, error) {
-	if name != "server.lock" && name != "clients.lock" && name != "client-helper.lock" {
+	if name != "server.lock" && name != "clients.lock" && name != "client-helper.lock" && name != nfsRuntimeInstallLock {
 		return nil, errors.New("NFS 私有锁名称无效")
 	}
 	dir := s.moduleDir("nfs-manager")
@@ -482,9 +482,9 @@ func (s *Service) moduleNFSServer(ctx context.Context, action string, in core.Ap
 		return nil, err
 	}
 	if action == "server-report" {
-		_, runtimeErr := s.nfsRuntime()
+		runtimeSelection, runtimeErr := s.nfsRuntime()
 		enabled, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-enabled", nfsServerUnit)
-		out := map[string]any{"config": v, "service_active": s.nfsActive(ctx), "boot_enabled": strings.TrimSpace(enabled) == "enabled", "recovery_pending": s.nfsPending(), "runtime_ready": runtimeErr == nil, "encrypted": false, "client_identity": "all_squash to website UID/GID", "firewall_changed": false}
+		out := map[string]any{"config": v, "service_active": s.nfsActive(ctx), "boot_enabled": strings.TrimSpace(enabled) == "enabled", "recovery_pending": s.nfsPending(), "runtime_ready": runtimeErr == nil, "runtime_format": runtimeSelection.Format, "private_client_ready": runtimeErr == nil && runtimeSelection.Format == 2, "encrypted": false, "client_identity": "all_squash to website UID/GID", "firewall_changed": false}
 		if runtimeErr != nil {
 			out["runtime_error"] = runtimeErr.Error()
 		}
