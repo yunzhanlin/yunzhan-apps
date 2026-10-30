@@ -137,5 +137,20 @@
     "original_evidence_tar_sha256": "6a3f550d3cec8bf006478612f38fb5d6ac2ed0d52931631fd7a0d9c4f1619d51",
     "UI_source_png_assumption_refusal_preserved_actual_JPEG_bytes_unchanged": true,
     "AMD_and_110_to111_and_Main_pending": true
+  },
+  "AMD_QA1_original_false_and_QA2_scope": {
+    "original_run": 40986811736,
+    "job": 123839638964,
+    "result": false,
+    "programme_install_refusal": "original installer rejects qa-owned public key before unpack; no installer or app mutation started",
+    "actual_hardware_KVM_verified": true,
+    "host_protected_state_unchanged": true,
+    "app_install_POSTs": 0,
+    "original_CMS_and_plaintext_hashes_verified": true,
+    "QA2_change": "Copy only exact pinned held-descriptor input bytes to a new Root-owned0700 directory/files0600; original signer/public key/guards/production SDK unchanged",
+    "new_guest_sha256": "76c388cf4966ecfc2ff6e6306c824fce4eaef2a5e05591cf703db4db44bc3b21",
+    "new_AMD_assets_sha256": "503ce94e31ef35a25cebe5c16f454a4c561f72925a508ddd939393b24a18cb30",
+    "distinct_fresh_QA2_native_pending": true,
+    "original_failed_or_unknown_operation_replayed": false
   }
 }
