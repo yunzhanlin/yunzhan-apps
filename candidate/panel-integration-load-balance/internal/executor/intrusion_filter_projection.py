@@ -35,7 +35,7 @@ def project_filter_metadata(commands):
     root = filter_projection_trusted_package()
     from fail2ban.version import version
     from fail2ban.server.filter import Filter
-    if version not in ("1.0.2", "1.1.0"):
+    if version not in ("0.11.2", "1.0.2", "1.1.0"):
         raise ValueError("unverified upstream projection version")
     for name, module in tuple(sys.modules.items()):
         if name == "fail2ban" or name.startswith("fail2ban."):

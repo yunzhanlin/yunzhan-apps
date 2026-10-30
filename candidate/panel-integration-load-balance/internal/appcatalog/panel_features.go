@@ -63,10 +63,13 @@ func panelFeatureAvailable(feature string) bool {
 	if feature == LoadBalanceStreamFeature {
 		return runtime.GOOS == "linux" && officialCatalogChannel == "candidate"
 	}
-	return runtime.GOOS == "linux" && (feature == MemcachedUnixRetirementFeature || feature == MemcachedUnixFeature || feature == ApacheNativeBodySiteFeature || feature == PHPBoundedNativeBuildFeature || feature == PHPSecurity20261021Feature || feature == NativeMobileDeliveryFeature || feature == RuntimePackageVersionFeature || feature == WAFBoundHealthFeature || feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature || feature == DiskInodeUsageFeature || feature == DiskHostJobsFeature || feature == DiskHostCancelSealFeature || feature == MemcachedDigestFeature || feature == AnalyticsSessionFeature || feature == HardeningJournalFeature || feature == IntrusionJournalFeature)
+	return runtime.GOOS == "linux" && (feature == MemcachedUnixRetirementFeature || feature == MemcachedUnixFeature || feature == ApacheNativeBodySiteFeature || feature == PHPBoundedNativeBuildFeature || feature == PHPSecurity20261021Feature || feature == NativeMobileDeliveryFeature || feature == RuntimePackageVersionFeature || feature == WAFBoundHealthFeature || feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature || feature == PlatformMaintenanceFeature || feature == DiskInodeUsageFeature || feature == DiskHostJobsFeature || feature == DiskHostCancelSealFeature || feature == MemcachedDigestFeature || feature == AnalyticsSessionFeature || feature == HardeningJournalFeature || feature == IntrusionJournalFeature || feature == IntrusionUbuntu22Feature)
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateIntrusionUbuntu22Requirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateLoadBalanceStreamRequirement(manifest, available); handled {
 		return err
 	}

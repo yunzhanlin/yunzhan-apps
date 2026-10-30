@@ -89,7 +89,7 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 // pass its independent signed registry receipt and installation-instance checks.
 const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
-const IntrusionAppVersion = "1.1.0"
+const IntrusionAppVersion = "1.1.1"
 
 // Module implementations ship in the signed panel executor, not arbitrary
 // GitHub scripts. A newer catalog cannot claim code this executor lacks.
@@ -126,7 +126,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 		}
 	}
 	if id == "intrusion-prevention" && version != IntrusionAppVersion {
-		return errors.New("防入侵事务更新仅允许固定完整1.1.0，拒绝旧标签、别名及未审核版本")
+		return errors.New("防入侵事务更新仅允许固定完整1.1.1，拒绝旧标签、别名及未审核版本")
 	}
 	if id == "system-hardening" {
 		base, _, _ := strings.Cut(version, "-")
@@ -295,7 +295,7 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")
 	}
 	if id == "intrusion-prevention" && action == "install" && version != IntrusionAppVersion {
-		return "", errors.New("防入侵1.1.0安装需匹配的签名应用版本，不能直接安装或隐式提升旧包")
+		return "", errors.New("防入侵1.1.1安装需匹配的签名应用版本，不能直接安装或隐式提升旧包")
 	}
 	if action == "install" && version != "" {
 		if err := ValidateSoftwareInstallVersion(id, version); err != nil {

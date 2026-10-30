@@ -1,0 +1,65 @@
+{
+  "version": "0.1.0-dev.proapps24intrusionubuntu22candidate35r1",
+  "application_version": "1.1.1",
+  "scope": "candidate/panel-integration-load-balance",
+  "required_panel_features": [
+    "intrusion-preserving-journal-v2",
+    "intrusion-upstream0112-v1"
+  ],
+  "parent_source_inputs_sha256": "e2800be6bf3da01db4548e7fc90bc88861a3ba5d7ca32284a72cdd72d66d2a46",
+  "source_inputs_sha256": "fb445c3a92390aff66b1568a36fa3ba9def552ea40a6d34d52b01716fd62afaa",
+  "frozen_files": 18007,
+  "exported_files": 2232,
+  "normal_builds_all_mandatory_gates": true,
+  "normal_builder_sha256": "6f9a0b5c833a3cab26523525925968e496203c166a8b0d6b949ff9822808f7ea",
+  "original_signer_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "programme_signing_scope": "original DEV QA key only; not stable production promotion",
+  "programme_public_key_sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+  "original_app_public_key_sha256": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+  "normal_archives": {
+    "amd64": {
+      "archive_sha256": "143b95705bcb3e8d05d27094e456bbffc03e7859d1a5aebaa46d2ed465d4fbcd",
+      "manifest_sha256": "dabb6de7969b2f04169d0c8bfb4b3e2c10faa1f177512232f9639bb292906cec",
+      "signature_sha256": "7582d80e10f3c02ef7ffeeda2f2c56aaa6c91cefa4d6fc410084a321db54470b",
+      "signature_bytes": 64
+    },
+    "arm64": {
+      "archive_sha256": "6a50f2f0c16ed17918594a52564eeb53895fb6fef92b1f09cc5949b66b833013",
+      "manifest_sha256": "fbd5b948e561edfe29ed999a43667fe42600000b1d8fd4f087fa5d22a9e7aad8",
+      "signature_sha256": "e836224ecbf1e82bfbfb270761f0bc0003ff8290503e2c9951031d67534cfdad",
+      "signature_bytes": 64
+    }
+  },
+  "app_manifest_sha256": "6d612505ac72ec97fdafdbc0eb8dae999df296e5203bb47058f799dd2aa6f01e",
+  "old110_test_only_canonical_fixture_sha256": "aa043bc10cd8dc42e5337eb87de488f3e1a05748f060847fbee7619f4c4978b4",
+  "ARM_components": {
+    "upstream_package": "0.11.2-6",
+    "real_SSH_failed_authentications_before_ban_per_family": 5,
+    "IPv4_IPv6_real_bans": true,
+    "actual_unban_setters": 1,
+    "remaining_IPv6_and_other_Jail_preserved": true,
+    "native_readonly_inspection_ms": [
+      55,
+      53
+    ],
+    "Root_regression_tests": 187,
+    "actual_complete_filter_metadata_matches_offline_projection": true,
+    "original_evidence_tar_sha256": "5c2c7e96a38a6a1e0012f8dd57c6153e9b2de5b5b578edb5ad7517f107335001",
+    "normal_signed_application_install_or_update": false
+  },
+  "independent_Draft202012_scope": {
+    "actual_candidate_apps": 50,
+    "extra_original110_positive": 1,
+    "negative_intrusion_and_stream_cases": 29,
+    "total": 80,
+    "external_schema_fetches": 0,
+    "previous_schema_sha256": "6a7c50f5d9f4b21d13fa6c97c4eb754b4d605bb65cffb6783022fea5e98b056a",
+    "existing_stream190_declaration_completed_without_changing_app_manifest_SDK_or_firewall": true
+  },
+  "normal_native_programme_install_and_upgrade_pending": true,
+  "normal_signed_app_install_update_and_UI_pending": true,
+  "native_source_CI_pending": true,
+  "security_diff_scan_pending": true,
+  "Main_19100_changed": false,
+  "commercial_all50": false
+}

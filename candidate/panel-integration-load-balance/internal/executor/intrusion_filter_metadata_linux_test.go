@@ -37,6 +37,43 @@ func TestIntrusionFilterMetadataCannotDefaultMissingMalformedOrForeignState(t *t
 	}
 }
 
+func TestIntrusionUpstreamVersionsRemainExactAndMetadataBound(t *testing.T) {
+	for _, version := range []string{"0.11.2", "1.0.2", "1.1.0"} {
+		t.Run(version, func(t *testing.T) {
+			value := intrusionDeclaredFilterMetadata(version)
+			if !intrusionVerifiedUpstreamVersion(version) || !intrusionFilterMetadataValid(value) {
+				t.Fatal("verified version rejected", version)
+			}
+			var batch intrusionReadOnlyBatch
+			if err := json.Unmarshal(intrusionBatchFixture(t), &batch); err != nil {
+				t.Fatal(err)
+			}
+			batch.Version = version
+			raw, _ := json.Marshal(batch)
+			if version != "1.0.2" {
+				if _, err := intrusionDecodeReadOnlyBatch(raw, batch.PID); err == nil {
+					t.Fatal("metadata from another daemon version accepted")
+				}
+			}
+			metadata, _ := json.Marshal(value)
+			for i := range batch.Observations {
+				if strings.Join(batch.Observations[i].Args, " ") == "get sshd filter-metadata" {
+					batch.Observations[i].Value = string(metadata)
+				}
+			}
+			raw, _ = json.Marshal(batch)
+			if _, err := intrusionDecodeReadOnlyBatch(raw, batch.PID); err != nil {
+				t.Fatal("matching complete batch rejected", err)
+			}
+		})
+	}
+	for _, version := range []string{"", "0.11", "0.11.1", "0.11.3", "0.11.2-6", "v0.11.2", "0.11.2\n", "1.0.3", "1.1.1", "2.0.0"} {
+		if intrusionVerifiedUpstreamVersion(version) || intrusionFilterMetadataValid(intrusionDeclaredFilterMetadata(version)) {
+			t.Fatal("unknown version or package alias admitted", version)
+		}
+	}
+}
+
 func TestIntrusionFilterAgreementRefusesUnreadLiveStateAndDiskMismatch(t *testing.T) {
 	runtime := intrusionEffectiveRuntimeFixture(t, "arm64")
 	for _, kind := range []string{"absent", "different-digest", "different-version"} {
@@ -96,6 +133,11 @@ value={'usedns':'no','prefregex':None,'failregex':['^readable regex$'],'ignorere
 original=copy.deepcopy(value);first=fingerprint('1.0.2',value);assert value==original and len(first['sha256'])==64
 other=copy.deepcopy(value);other['logencoding']='utf8';other['ignorecommand']=False;other['datepattern']=tuple(other['datepattern']);assert first==fingerprint('1.0.2',other)
 assert first!=fingerprint('1.1.0',value)
+jammy=fingerprint('0.11.2',value);assert jammy!=first and jammy!=fingerprint('1.1.0',value) and value==original
+for version in ('0.11.1','0.11.3','0.11.2-6','v0.11.2','0.11.2\n'):
+ try:fingerprint(version,value)
+ except ValueError:pass
+ else:raise AssertionError('unknown version or package alias accepted: '+version)
 other=copy.deepcopy(value);other['failregex']=['^changed text$'];assert first!=fingerprint('1.0.2',other)
 for field,bad in [('usedns','NO'),('maxlines',True),('maxlines',1025),('failregex',[]),('failregex',['x'*65537]),('ignoreregex',['unseen']),('ignorecommand','echo private'),('ignorecache',{}),('ignoreip',['192.0.2.1']),('ignoreself',False),('logtimezone','UTC'),('datepattern',[]),('hidden_regex_flags',8)]:
  changed=copy.deepcopy(value);changed[field]=bad

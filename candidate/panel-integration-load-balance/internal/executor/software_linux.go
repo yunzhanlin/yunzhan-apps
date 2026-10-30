@@ -594,7 +594,7 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 				return
 			}
 			if install && in.Version != core.IntrusionAppVersion {
-				respond(w, 409, map[string]string{"error": "防入侵1.1.0须通过匹配版本的签名应用安装；未提升旧包或直接安装"})
+				respond(w, 409, map[string]string{"error": "防入侵1.1.1须通过匹配版本的签名应用安装；未提升旧包或直接安装"})
 				return
 			}
 			if !install && action != "update" && in.Version != "" || (action == "update" || action == "uninstall") && len(in.Settings) != 0 {

@@ -28,7 +28,9 @@ test('separate candidate catalogue changes exactly its declared known identities
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
-  assert.deepEqual(changes,['nginx-waf','load-balance','disk-analysis']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  assert.deepEqual(changes,['nginx-waf','load-balance','disk-analysis','anti-intrusion']);assert.deepEqual(patch.apps.map(a=>a.id),changes);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  assert.equal(stable.apps.find(a=>a.id==='anti-intrusion').version,'1.1.0');
+  const intrusion=source.apps.find(a=>a.id==='anti-intrusion');assert.equal(intrusion.version,'1.1.1');assert.deepEqual(intrusion.required_panel_features,['intrusion-preserving-journal-v2','intrusion-upstream0112-v1']);assert.deepEqual(intrusion.delivery,stable.apps.find(a=>a.id==='anti-intrusion').delivery);
   assert.equal(stable.apps.find(a=>a.id==='nginx-waf').version,'2.5.2');
   const waf=source.apps.find(a=>a.id==='nginx-waf');assert.equal(waf.version,'2.6.0');assert.deepEqual(waf.required_panel_features,['waf-country-signed-data-v1']);assert.deepEqual(waf.country_data_channel,{id:'dbip-country-lite-v1',format:1});assert.deepEqual(waf.compatibility,stable.apps.find(a=>a.id==='nginx-waf').compatibility);
   assert.equal(source.apps.find(a=>a.id==='load-balance').version,'1.9.0');

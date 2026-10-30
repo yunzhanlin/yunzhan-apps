@@ -135,7 +135,7 @@ func (s *Service) inspectIntrusion(ctx context.Context) (out intrusionInspection
 	}
 	var managedPolicy *intrusionManagedPolicy
 	var managedFiles []fileBackup
-	if manifest.Version == intrusionTransactionVersion {
+	if intrusionManagedVersion(manifest.Version) {
 		managedFiles, err = s.intrusionJournalCurrentFiles()
 		if err != nil {
 			return out, err

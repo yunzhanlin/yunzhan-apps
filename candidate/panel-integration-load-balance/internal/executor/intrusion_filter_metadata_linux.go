@@ -41,7 +41,14 @@ func (value *intrusionFilterMetadata) UnmarshalJSON(raw []byte) error {
 var intrusionFilterDigest = regexp.MustCompile(`^[a-f0-9]{64}$`)
 
 func intrusionFilterMetadataValid(value intrusionFilterMetadata) bool {
-	return value.Format == 1 && (value.Version == "1.0.2" || value.Version == "1.1.0") && intrusionFilterDigest.MatchString(value.SHA256)
+	return value.Format == 1 && intrusionVerifiedUpstreamVersion(value.Version) && intrusionFilterDigest.MatchString(value.SHA256)
+}
+
+// These exact upstream wire/filter versions have a closed primitive-only
+// adapter. A version match never replaces complete action, filter, process
+// lifetime, on-disk configuration and actual kernel-scope verification.
+func intrusionVerifiedUpstreamVersion(version string) bool {
+	return version == "0.11.2" || version == "1.0.2" || version == "1.1.0"
 }
 
 func intrusionReadFilterMetadata(read func(string, ...string) (string, error)) (intrusionFilterMetadata, error) {

@@ -48,7 +48,7 @@ func intrusionBatchAllowedArgs(args []string) bool {
 
 func intrusionDecodeReadOnlyBatch(raw []byte, pid string) (map[string]intrusionReadOnlyBatchObservation, error) {
 	var result intrusionReadOnlyBatch
-	if len(raw) < 1 || len(raw) > 32<<10 || decodeProgramQueueJSON(raw, &result) != nil || result.Format != 1 || result.PID != pid || result.Version != "1.0.2" && result.Version != "1.1.0" || len(result.Observations) < 8 || len(result.Observations) > 32 {
+	if len(raw) < 1 || len(raw) > 32<<10 || decodeProgramQueueJSON(raw, &result) != nil || result.Format != 1 || result.PID != pid || !intrusionVerifiedUpstreamVersion(result.Version) || len(result.Observations) < 8 || len(result.Observations) > 32 {
 		return nil, errors.New("入侵防护批量只读响应的身份、格式或容量无法核对")
 	}
 	values := map[string]intrusionReadOnlyBatchObservation{}

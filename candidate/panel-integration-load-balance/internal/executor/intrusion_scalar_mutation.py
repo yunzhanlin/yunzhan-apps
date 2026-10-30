@@ -154,7 +154,7 @@ def main():
             current_peer()
             return decode_reply(bytes(reply[:-len(END)]))
 
-        if rpc(["version"]) not in ("1.0.2", "1.1.0"):
+        if rpc(["version"]) not in ("0.11.2", "1.0.2", "1.1.0"):
             raise ValueError("unverified service protocol")
         value = rpc(getter)
         if type(value) is not kind:

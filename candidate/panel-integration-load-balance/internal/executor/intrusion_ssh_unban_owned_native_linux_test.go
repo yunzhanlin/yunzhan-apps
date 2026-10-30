@@ -37,7 +37,7 @@ func TestOwnedIntrusionSSHUnbanNative(t *testing.T) {
 		}
 	}
 	host, err := os.ReadFile("/etc/hostname")
-	if err != nil || strings.TrimSpace(string(host)) != "lima-panel-compat-ubuntu24" && strings.TrimSpace(string(host)) != "lima-panel-store-apps-debian13" {
+	if err != nil || strings.TrimSpace(string(host)) != "lima-panel-compat-ubuntu24" && strings.TrimSpace(string(host)) != "lima-panel-store-apps-debian13" && strings.TrimSpace(string(host)) != "lima-panel-intrusion-c35-clean-ubuntu22" && strings.TrimSpace(string(host)) != "yunzhan-native-kvm-c35" {
 		t.Fatal("not declared QA VM")
 	}
 	boot, err := os.ReadFile("/proc/sys/kernel/random/boot_id")

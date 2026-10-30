@@ -15,7 +15,7 @@ FILTER_METADATA_FIELDS = (
 
 
 def filter_metadata_fingerprint(version, values):
-    if version not in ("1.0.2", "1.1.0") or type(values) is not dict or set(values) != set(FILTER_METADATA_FIELDS):
+    if version not in ("0.11.2", "1.0.2", "1.1.0") or type(values) is not dict or set(values) != set(FILTER_METADATA_FIELDS):
         raise ValueError("filter metadata surface")
     value = dict(values)
 

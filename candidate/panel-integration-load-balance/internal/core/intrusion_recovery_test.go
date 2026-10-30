@@ -77,7 +77,7 @@ func TestIntrusionRecoveryQueueBindsFullOriginalOnceAndAuditsOnce(t *testing.T) 
 
 func TestIntrusionVersionRequiresExactSignedInstallAndActualUpdate(t *testing.T) {
 	s := testStore(t)
-	for _, version := range []string{"", "1.0", "1.0.0", "1.1", "v1.1.0", "1.1.0-alias", "1.1.1", "1.2.0", "01.1.0"} {
+	for _, version := range []string{"", "1.0", "1.0.0", "1.1", "v1.1.0", "1.1.0-alias", "1.1.0", "1.1.1-alias", "1.1.2", "1.2.0", "01.1.0"} {
 		if ValidateSoftwareUpdate("intrusion-prevention", version) == nil {
 			t.Fatal("unimplemented or ambiguous update accepted", version)
 		}

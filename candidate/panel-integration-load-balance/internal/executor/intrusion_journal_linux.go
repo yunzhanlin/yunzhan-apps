@@ -16,8 +16,15 @@ import (
 	"local/panel/internal/core"
 )
 
-const intrusionTransactionVersion = "1.1.0"
+const intrusionTransactionVersion = "1.1.1"
 const intrusionJournalBytes = 256 << 10
+
+// The journal format is unchanged. Retained 1.1.0 plans must still derive
+// their original byte-identical targets; reading or recovering them never
+// substitutes the current package version or creates a new operation.
+func intrusionManagedVersion(version string) bool {
+	return version == "1.1.0" || version == intrusionTransactionVersion
+}
 
 // These are identities, not paths, command templates or persisted nft input.
 // Recovery must observe the live sets again. Historical IPs in KernelBefore
@@ -119,7 +126,7 @@ func intrusionJournalManifest(file hardeningJournalFile) (softwareManifest, erro
 	if !file.Exists || decodeProgramQueueJSON(file.Data, &manifest) != nil || manifest.ID != "intrusion-prevention" || !hardeningCanonicalTime(manifest.InstalledAt) || len(manifest.Previous) != 0 {
 		return manifest, errors.New("入侵防护原清单身份、字段或时间不可核对")
 	}
-	if manifest.Version != "1.0" && manifest.Version != "1.0.0" && manifest.Version != intrusionTransactionVersion {
+	if manifest.Version != "1.0" && manifest.Version != "1.0.0" && !intrusionManagedVersion(manifest.Version) {
 		return manifest, errors.New("入侵防护原版本未支持本次固定迁移")
 	}
 	_, err := intrusionSettings(manifest.Settings)
@@ -136,7 +143,7 @@ func intrusionJournalManifest(file hardeningJournalFile) (softwareManifest, erro
 // observed underlying configuration; it never stops or removes the base Jail.
 func intrusionJournalDerive(plan intrusionJournalPlan) (intrusionJournalPlan, error) {
 	plan.Files = slices.Clone(plan.Files)
-	if plan.Format != 1 || !core.ValidID(plan.ID) || !hardeningCanonicalTime(plan.StartedAt) || !hardeningBootID.MatchString(plan.BootID) || plan.TargetVersion != intrusionTransactionVersion || len(plan.Files) != 3 {
+	if plan.Format != 1 || !core.ValidID(plan.ID) || !hardeningCanonicalTime(plan.StartedAt) || !hardeningBootID.MatchString(plan.BootID) || !intrusionManagedVersion(plan.TargetVersion) || len(plan.Files) != 3 {
 		return plan, errors.New("入侵防护事务格式、原任务或固定目标无效")
 	}
 	if plan.Action != "configure" && plan.Action != "update" && plan.Action != "install" && plan.Action != "uninstall" {
@@ -187,11 +194,14 @@ func intrusionJournalDerive(plan intrusionJournalPlan) (intrusionJournalPlan, er
 			return plan, err
 		}
 		installedAt = old.InstalledAt
+		if plan.TargetVersion == "1.1.0" && old.Version == intrusionTransactionVersion {
+			return plan, errors.New("旧事务不能降级或接管新版防入侵清单")
+		}
 	}
 	if plan.Action == "update" && !reflect.DeepEqual(oldSettings, plan.TargetSettings) {
 		return plan, errors.New("入侵防护更新不能偷偷改动原限额")
 	}
-	if plan.Action == "configure" && old.Version != intrusionTransactionVersion {
+	if plan.Action == "configure" && old.Version != plan.TargetVersion {
 		return plan, errors.New("原版本须先完成受审更新，配置操作不能隐式升级")
 	}
 	jail := plan.Files[0].Before
@@ -205,7 +215,7 @@ func intrusionJournalDerive(plan intrusionJournalPlan) (intrusionJournalPlan, er
 	if plan.Action == "install" {
 		// BeforeSettings above requires all three known-absent fixed files.
 		// The actual base Jail, its current bans and filters remain in place.
-	} else if old.Version == intrusionTransactionVersion {
+	} else if intrusionManagedVersion(old.Version) {
 		var policy intrusionManagedPolicy
 		if !policyFile.Exists || decodeProgramQueueJSON(policyFile.Data, &policy) != nil || intrusionPolicyValidate(policy) != nil || !reflect.DeepEqual(policy, plan.BeforePolicy) {
 			return plan, errors.New("原受管策略文件与实际动作范围不一致")
@@ -255,7 +265,7 @@ func intrusionJournalDerive(plan intrusionJournalPlan) (intrusionJournalPlan, er
 	if err != nil {
 		return plan, err
 	}
-	manifest := softwareManifest{ID: "intrusion-prevention", Version: intrusionTransactionVersion, Settings: settings, InstalledAt: installedAt}
+	manifest := softwareManifest{ID: "intrusion-prevention", Version: plan.TargetVersion, Settings: settings, InstalledAt: installedAt}
 	manifestRaw, err := intrusionJournalEncode(manifest)
 	if err != nil {
 		return plan, err

@@ -1,0 +1,210 @@
+{
+  "format": 1,
+  "id": "11111111111111111111111111111111",
+  "action": "update",
+  "started_at": "2026-10-20T00:00:00Z",
+  "boot_id": "11111111-2222-3333-4444-555555555555",
+  "target_version": "1.1.0",
+  "target_settings": {
+    "ban_time_minutes": 60,
+    "find_time_minutes": 10,
+    "max_retry": 5
+  },
+  "target_ports": [
+    2882
+  ],
+  "before_policy": {
+    "format": 1,
+    "action": "nftables",
+    "name": "probe_sshd",
+    "table": "f2b-table",
+    "chain": "f2b-chain",
+    "ipv4_set": "addr-set-probe_sshd",
+    "ipv6_set": "addr6-set-probe_sshd",
+    "ports": [
+      22
+    ],
+    "max_matches": 5
+  },
+  "kernel_state": "rules_observed",
+  "kernel_before": "eyJuZnRhYmxlcyI6W3sibWV0YWluZm8iOnsianNvbl9zY2hlbWFfdmVyc2lvbiI6MSwicmVsZWFzZV9uYW1lIjoiT2xkIERvYyBZYWsgIzMiLCJ2ZXJzaW9uIjoiMS4wLjkifX0seyJ0YWJsZSI6eyJmYW1pbHkiOiJpbmV0IiwiaGFuZGxlIjoxLCJuYW1lIjoiZjJiLXRhYmxlIn19LHsic2V0Ijp7ImVsZW0iOlsiMTI3LjAuMC4yIl0sImZhbWlseSI6ImluZXQiLCJoYW5kbGUiOjIsIm5hbWUiOiJhZGRyLXNldC1wcm9iZV9zc2hkIiwidGFibGUiOiJmMmItdGFibGUiLCJ0eXBlIjoiaXB2NF9hZGRyIn19LHsic2V0Ijp7ImVsZW0iOlsiMTI3LjAuMC4zIl0sImZhbWlseSI6ImluZXQiLCJoYW5kbGUiOjQsIm5hbWUiOiJhZGRyLXNldC1wcm9iZV9vdGhlciIsInRhYmxlIjoiZjJiLXRhYmxlIiwidHlwZSI6ImlwdjRfYWRkciJ9fSx7ImNoYWluIjp7ImZhbWlseSI6ImluZXQiLCJoYW5kbGUiOjEsImhvb2siOiJpbnB1dCIsIm5hbWUiOiJmMmItY2hhaW4iLCJwb2xpY3kiOiJhY2NlcHQiLCJwcmlvIjotMSwidGFibGUiOiJmMmItdGFibGUiLCJ0eXBlIjoiZmlsdGVyIn19LHsicnVsZSI6eyJjaGFpbiI6ImYyYi1jaGFpbiIsImV4cHIiOlt7Im1hdGNoIjp7ImxlZnQiOnsicGF5bG9hZCI6eyJmaWVsZCI6ImRwb3J0IiwicHJvdG9jb2wiOiJ0Y3AifX0sIm9wIjoiPT0iLCJyaWdodCI6MjJ9fSx7Im1hdGNoIjp7ImxlZnQiOnsicGF5bG9hZCI6eyJmaWVsZCI6InNhZGRyIiwicHJvdG9jb2wiOiJpcCJ9fSwib3AiOiI9PSIsInJpZ2h0IjoiQGFkZHItc2V0LXByb2JlX3NzaGQifX0seyJyZWplY3QiOnsiZXhwciI6InBvcnQtdW5yZWFjaGFibGUiLCJ0eXBlIjoiaWNtcCJ9fV0sImZhbWlseSI6ImluZXQiLCJoYW5kbGUiOjMsInRhYmxlIjoiZjJiLXRhYmxlIn19LHsicnVsZSI6eyJjaGFpbiI6ImYyYi1jaGFpbiIsImV4cHIiOlt7Im1hdGNoIjp7ImxlZnQiOnsicGF5bG9hZCI6eyJmaWVsZCI6ImRwb3J0IiwicHJvdG9jb2wiOiJ0Y3AifX0sIm9wIjoiPT0iLCJyaWdodCI6Mjk5OTl9fSx7Im1hdGNoIjp7ImxlZnQiOnsicGF5bG9hZCI6eyJmaWVsZCI6InNhZGRyIiwicHJvdG9jb2wiOiJpcCJ9fSwib3AiOiI9PSIsInJpZ2h0IjoiQGFkZHItc2V0LXByb2JlX290aGVyIn19LHsicmVqZWN0Ijp7ImV4cHIiOiJwb3J0LXVucmVhY2hhYmxlIiwidHlwZSI6ImljbXAifX1dLCJmYW1pbHkiOiJpbmV0IiwiaGFuZGxlIjo1LCJ0YWJsZSI6ImYyYi10YWJsZSJ9fV19",
+  "kernel_directory": null,
+  "bans_before": [
+    "127.0.0.2"
+  ],
+  "configuration_before": {
+    "Entries": {
+      ".": {
+        "Kind": "directory",
+        "Mode": 2147484141,
+        "UID": 0,
+        "GID": 0,
+        "Device": 1,
+        "Inode": 1,
+        "Size": 0,
+        "ModifiedNS": 0,
+        "ChangedNS": 0,
+        "SHA256": ""
+      },
+      "jail.d": {
+        "Kind": "directory",
+        "Mode": 2147484141,
+        "UID": 0,
+        "GID": 0,
+        "Device": 1,
+        "Inode": 2,
+        "Size": 0,
+        "ModifiedNS": 0,
+        "ChangedNS": 0,
+        "SHA256": ""
+      },
+      "jail.d/panel-intrusion.local": {
+        "Kind": "file",
+        "Mode": 420,
+        "UID": 0,
+        "GID": 0,
+        "Device": 1,
+        "Inode": 3,
+        "Size": 126,
+        "ModifiedNS": 1,
+        "ChangedNS": 1,
+        "SHA256": "83a3493e39636001559934ff7c98fa7b51db7b092ba290b1c73d19ac8fe2e9fe"
+      }
+    },
+    "Bytes": 126
+  },
+  "action_before": {
+    "format": 1,
+    "action": "nftables",
+    "properties": [
+      "ESCAPE_CRE",
+      "ESCAPE_VN_CRE",
+      "actionban",
+      "actioncheck",
+      "actionflush",
+      "actionreban",
+      "actionreload",
+      "actionrepair",
+      "actionstart",
+      "actionstop",
+      "actionunban",
+      "actname",
+      "addr_family",
+      "addr_family?family=inet6",
+      "addr_set",
+      "addr_set?family=inet6",
+      "addr_type",
+      "addr_type?family=inet6",
+      "banEpoch",
+      "blocktype",
+      "chain",
+      "chain_hook",
+      "chain_priority",
+      "chain_type",
+      "name",
+      "nftables",
+      "port",
+      "protocol",
+      "table",
+      "table_family",
+      "timeout"
+    ],
+    "values": {
+      "actionban": "nft add element inet f2b-table \u003caddr_set\u003e \\{ \u003cip\u003e \\}",
+      "actioncheck": "nft list chain inet f2b-table f2b-chain | grep -q '@\u003caddr_set\u003e[ \\t]'",
+      "actionflush": "{ nft flush set inet f2b-table \u003caddr_set\u003e 2\u003e /dev/null; } || {\n{ nft -a list chain inet f2b-table f2b-chain | grep -oP '@\u003caddr_set\u003e\\s+.*\\s+\\Khandle\\s+(\\d+)$'; } | while read -r hdl; do\nnft delete rule inet f2b-table f2b-chain $hdl; done\nnft delete set inet f2b-table \u003caddr_set\u003e\nnft add set inet f2b-table \u003caddr_set\u003e \\{ type \u003caddr_type\u003e\\; \\}\nfor proto in $(echo 'tcp' | sed 's/,/ /g'); do\nnft add rule inet f2b-table f2b-chain $proto dport \\{ $(echo '22' | sed s/:/-/g) \\} \u003caddr_family\u003e saddr @\u003caddr_set\u003e reject\ndone\n}",
+      "actionreban": "",
+      "actionreload": "",
+      "actionrepair": "",
+      "actionstart": "nft add table inet f2b-table\nnft -- add chain inet f2b-table f2b-chain \\{ type filter hook input priority -1 \\; \\}\nnft add set inet f2b-table \u003caddr_set\u003e \\{ type \u003caddr_type\u003e\\; \\}\nfor proto in $(echo 'tcp' | sed 's/,/ /g'); do\nnft add rule inet f2b-table f2b-chain $proto dport \\{ $(echo '22' | sed s/:/-/g) \\} \u003caddr_family\u003e saddr @\u003caddr_set\u003e reject\ndone",
+      "actionstop": "{ nft -a list chain inet f2b-table f2b-chain | grep -oP '@\u003caddr_set\u003e\\s+.*\\s+\\Khandle\\s+(\\d+)$'; } | while read -r hdl; do\nnft delete rule inet f2b-table f2b-chain $hdl; done\nnft delete set inet f2b-table \u003caddr_set\u003e\n{ nft list table inet f2b-table | grep -qP '^\\s+set\\s+'; } || {\nnft delete table inet f2b-table\n}",
+      "actionunban": "nft delete element inet f2b-table \u003caddr_set\u003e \\{ \u003cip\u003e \\}",
+      "actname": "nftables",
+      "addr_family": "ip",
+      "addr_family?family=inet6": "ip6",
+      "addr_set": "addr-set-\u003cname\u003e",
+      "addr_set?family=inet6": "addr6-set-\u003cname\u003e",
+      "addr_type": "ipv4_addr",
+      "addr_type?family=inet6": "ipv6_addr",
+      "banEpoch": "0",
+      "blocktype": "reject",
+      "chain": "\u003cknown/chain\u003e",
+      "chain_hook": "input",
+      "chain_priority": "-1",
+      "chain_type": "filter",
+      "name": "probe_sshd",
+      "nftables": "nft",
+      "port": "22",
+      "protocol": "tcp",
+      "table": "f2b-table",
+      "table_family": "inet",
+      "timeout": "60"
+    }
+  },
+  "process_before": "123",
+  "process_start_before": "10000",
+  "journal_match_before": "_SYSTEMD_UNIT=sshd.service + _COMM=sshd",
+  "effective_before": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "files": [
+    {
+      "name": "jail",
+      "before": {
+        "exists": true,
+        "mode": 420,
+        "owner": {
+          "uid": 0,
+          "gid": 0
+        },
+        "data": "IyBtYW5hZ2VkIGJ5IHBhbmVsIGludHJ1c2lvbi1wcmV2ZW50aW9uIDEuMApbc3NoZF0KZW5hYmxlZCA9IHRydWUKYmFja2VuZCA9IHN5c3RlbWQKbWF4cmV0cnkgPSA1CmZpbmR0aW1lID0gMTBtCmJhbnRpbWUgPSA2MG0K"
+      },
+      "after": {
+        "exists": true,
+        "mode": 420,
+        "owner": {
+          "uid": 0,
+          "gid": 0
+        },
+        "data": "IyBtYW5hZ2VkIGJ5IHBhbmVsIGludHJ1c2lvbi1wcmV2ZW50aW9uIDEuMQpbc3NoZF0KZW5hYmxlZCA9IHRydWUKYmFja2VuZCA9IHN5c3RlbWQKbWF4cmV0cnkgPSA1CmZpbmR0aW1lID0gMTBtCmJhbnRpbWUgPSA2MG0KcG9ydCA9IDI4ODIKcHJvdG9jb2wgPSB0Y3AKbWF4bWF0Y2hlcyA9IDUK"
+      }
+    },
+    {
+      "name": "manifest",
+      "before": {
+        "exists": true,
+        "mode": 384,
+        "owner": {
+          "uid": 0,
+          "gid": 0
+        },
+        "data": "ewogICJpZCI6ICJpbnRydXNpb24tcHJldmVudGlvbiIsCiAgInZlcnNpb24iOiAiMS4wIiwKICAic2V0dGluZ3MiOiB7CiAgICAiYmFuX3RpbWVfbWludXRlcyI6IDYwLAogICAgImZpbmRfdGltZV9taW51dGVzIjogMTAsCiAgICAibWF4X3JldHJ5IjogNQogIH0sCiAgImluc3RhbGxlZF9hdCI6ICIyMDI2LTEwLTAxVDAwOjAwOjAwWiIKfQo="
+      },
+      "after": {
+        "exists": true,
+        "mode": 384,
+        "owner": {
+          "uid": 0,
+          "gid": 0
+        },
+        "data": "ewogICJpZCI6ICJpbnRydXNpb24tcHJldmVudGlvbiIsCiAgInZlcnNpb24iOiAiMS4xLjAiLAogICJzZXR0aW5ncyI6IHsKICAgICJiYW5fdGltZV9taW51dGVzIjogNjAsCiAgICAiZmluZF90aW1lX21pbnV0ZXMiOiAxMCwKICAgICJtYXhfcmV0cnkiOiA1CiAgfSwKICAiaW5zdGFsbGVkX2F0IjogIjIwMjYtMTAtMDFUMDA6MDA6MDBaIgp9Cg=="
+      }
+    },
+    {
+      "name": "policy",
+      "before": {
+        "exists": false,
+        "mode": 0,
+        "owner": null,
+        "data": null
+      },
+      "after": {
+        "exists": true,
+        "mode": 384,
+        "owner": {
+          "uid": 0,
+          "gid": 0
+        },
+        "data": "ewogICJmb3JtYXQiOiAxLAogICJhY3Rpb24iOiAibmZ0YWJsZXMiLAogICJuYW1lIjogInByb2JlX3NzaGQiLAogICJ0YWJsZSI6ICJmMmItdGFibGUiLAogICJjaGFpbiI6ICJmMmItY2hhaW4iLAogICJpcHY0X3NldCI6ICJhZGRyLXNldC1wcm9iZV9zc2hkIiwKICAiaXB2Nl9zZXQiOiAiYWRkcjYtc2V0LXByb2JlX3NzaGQiLAogICJwb3J0cyI6IFsKICAgIDI4ODIKICBdLAogICJtYXhfbWF0Y2hlcyI6IDUKfQo="
+      }
+    }
+  ]
+}

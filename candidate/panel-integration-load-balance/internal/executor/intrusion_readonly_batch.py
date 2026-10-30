@@ -1,7 +1,7 @@
 """Independent, read-only Fail2ban wire adapter; standard library only.
 
 Protocol reference: fail2ban/fail2ban protocol.py, transmitter.py and
-banmanager.py in upstream 1.0.2/1.1.0. No Fail2ban library or plugin is imported.
+banmanager.py in upstream 0.11.2/1.0.2/1.1.0. No Fail2ban library or plugin is imported.
 Only builtin primitive replies are accepted. No pickle globals, reducers,
 constructors, persistent objects, arbitrary commands or socket paths are allowed.
 """
@@ -170,7 +170,7 @@ def main():
             return decode_reply(bytes(reply[:-len(END)]))
 
         version = rpc(["version"])
-        if version not in ("1.0.2", "1.1.0"):
+        if version not in ("0.11.2", "1.0.2", "1.1.0"):
             raise ValueError("unverified service protocol version")
         names = action_names(rpc(["get", "sshd", "actions"]))
         records = [{"args": ["get", "sshd", "process-start"], "ok": True, "value": wanted_start + "\n"},

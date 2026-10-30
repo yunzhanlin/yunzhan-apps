@@ -271,7 +271,10 @@ EOF
   SSH_LISTEN_PORT="$(awk '$1=="port" {print $2; exit}' <<< "$SSHD_EFFECTIVE_CONFIG")"
   [[ "$SSH_LISTEN_PORT" =~ ^[0-9]{1,5}$ ]] || SSH_LISTEN_PORT=22
   install -d -m 0755 /etc/fail2ban/jail.d
-  printf '[sshd]\nbackend = systemd\nport = %s\n' "$SSH_LISTEN_PORT" > /etc/fail2ban/jail.d/panel-sshd.local
+  # A fresh panel uses the same closed nft multiport backend on every supported
+  # distribution. Ubuntu 22 otherwise inherits iptables-multiport; existing
+  # installations are never switched by an upgrade or by an application read.
+  printf '[sshd]\nbackend = systemd\nbanaction = nftables-multiport\nport = %s\n' "$SSH_LISTEN_PORT" > /etc/fail2ban/jail.d/panel-sshd.local
   chmod 0644 /etc/fail2ban/jail.d/panel-sshd.local
 fi
 enable_program_services(){

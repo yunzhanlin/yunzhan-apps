@@ -29,6 +29,11 @@ jobs:
         run: npm test
       - name: Candidate build must not modify the stable signed directory
         run: git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures
+      - name: Independent Draft202012 schema for signed fifty and exact intrusion111 negatives
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-upgrade --no-install-recommends python3-jsonschema
+          YUNZHAN_SCHEMA_PYTHON=/usr/bin/python3 node tools/check-intrusion-ubuntu22-schema.mjs
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
