@@ -64,7 +64,7 @@ fi
 # End verified development-layout dispatch; ordinary production/fresh path.
 FRESH=1;[[ -f "$MARKER" ]]&&FRESH=0
 if ((FRESH)) && { ((NO_SERVICES==0)) || ((PREFLIGHT_ONLY)); };then
-  for existing in /etc/nginx/nginx.conf /etc/systemd/system/panel.service /opt/panel/current /var/lib/panel/panel.db /etc/panel/firewall.nft;do
+  for existing in /etc/nginx/nginx.conf /etc/systemd/system/panel.service /opt/panel/current /var/lib/panel/panel.db /etc/panel/firewall.nft /etc/fail2ban /var/lib/fail2ban /run/fail2ban /usr/bin/fail2ban-client /etc/systemd/system/fail2ban.service /etc/systemd/system/fail2ban.service.d /usr/lib/systemd/system/fail2ban.service /lib/systemd/system/fail2ban.service;do
     candidate="$(prefix "$existing")"
     if [[ -e "$candidate" || -L "$candidate" ]];then
       echo "existing host configuration blocks first install: $existing; inspect and migrate it before retrying" >&2
@@ -265,17 +265,9 @@ table inet panel {
 }
 EOF
   chmod 0640 /etc/panel/firewall.nft
-  # Capture sshd's complete output before parsing it.  With pipefail enabled,
-  # exiting awk early can SIGPIPE sshd and abort a fresh install halfway through.
-  SSHD_EFFECTIVE_CONFIG="$(/usr/sbin/sshd -T 2>/dev/null)"
-  SSH_LISTEN_PORT="$(awk '$1=="port" {print $2; exit}' <<< "$SSHD_EFFECTIVE_CONFIG")"
-  [[ "$SSH_LISTEN_PORT" =~ ^[0-9]{1,5}$ ]] || SSH_LISTEN_PORT=22
-  install -d -m 0755 /etc/fail2ban/jail.d
-  # A fresh panel uses the same closed nft multiport backend on every supported
-  # distribution. Ubuntu 22 otherwise inherits iptables-multiport; existing
-  # installations are never switched by an upgrade or by an application read.
-  printf '[sshd]\nbackend = systemd\nbanaction = nftables-multiport\nport = %s\n' "$SSH_LISTEN_PORT" > /etc/fail2ban/jail.d/panel-sshd.local
-  chmod 0644 /etc/fail2ban/jail.d/panel-sshd.local
+  # Read the complete effective sshd configuration, preserving every numeric
+  # listen port. Existing files and unsafe parents are refused, never adopted.
+  FRESH_SSH_PORTS="$(/usr/bin/python3 -I -B "$HERE/fresh-ssh-policy.py" configure)"
 fi
 enable_program_services(){
   systemctl enable panel-terminal panel-terminal-root panel-executor panel panel-nginx-recovery panel-firewall-recovery panel-firewall
@@ -313,7 +305,14 @@ if systemctl cat docker.service >/dev/null 2>&1; then
   systemctl restart panel-compose-recovery || FAILED=1
 fi
 restart_release_services || FAILED=1
-if ((FRESH));then systemctl enable --now fail2ban || FAILED=1;fi
+if ((FRESH));then
+  systemctl enable --now fail2ban || FAILED=1
+  if ((FAILED==0));then
+    # APT may already have started the distro jail before our file was written.
+    # Load this exact new first-install policy and verify the live readback.
+    /usr/bin/python3 -I -B "$HERE/fresh-ssh-policy.py" activate "$FRESH_SSH_PORTS" || FAILED=1
+  fi
+fi
 for _ in {1..30};do curl -fsS --max-time 2 http://127.0.0.1:19100/api/ready >/dev/null 2>&1&&break;sleep 1;done
 curl -fsS --max-time 3 http://127.0.0.1:19100/api/ready >/dev/null||FAILED=1
 if ((FRESH))&&((FAILED==0));then
@@ -343,6 +342,6 @@ print('Remote access: forward 127.0.0.1:19110 to server 127.0.0.1:19100 over SSH
 print(f'  http://127.0.0.1:19110/{entry}/')
 print('For direct IP:port access, enable the public HTTP entry in Panel Settings after login.')
 PY
-    printf 'SSH tunnel command: ssh -p %s -N -L 127.0.0.1:19110:127.0.0.1:19100 SSH_USER@SERVER_IP\n' "$SSH_LISTEN_PORT"
+    printf 'SSH tunnel command: ssh -p %s -N -L 127.0.0.1:19110:127.0.0.1:19100 SSH_USER@SERVER_IP\n' "${FRESH_SSH_PORTS%%,*}"
   fi
 fi

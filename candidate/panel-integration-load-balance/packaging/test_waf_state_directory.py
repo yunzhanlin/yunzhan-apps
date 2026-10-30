@@ -20,7 +20,8 @@ class WAFStatePackagingTests(unittest.TestCase):
         self.assertLess(installer.index(copy),installer.index('"$RELEASE_DIR.tmp/verify-release.sh"'))
         builder=(root/'packaging/build-release.sh').read_text()
         self.assertIn('"$BUILD_ROOT/packaging/waf-state-directory.py"',builder)
-        self.assertIn('first-install.py waf-state-directory.py',builder)
+        checksum=next(line for line in builder.splitlines() if line.strip().startswith('{ find bin web systemd config '))
+        self.assertIn('waf-state-directory.py',checksum.split())
 
 
 @unittest.skipUnless(sys.platform=="linux" and os.geteuid()==0,"actual root Linux private fixture required")

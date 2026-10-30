@@ -11,6 +11,9 @@ test('build baseline cannot hide removed gates, missing source binding or unknow
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
  assert.notEqual(digest(beforeLoadBalanceStreamBuild(text.replace('go vet ./...','true'))),digest(baseline));
+ for (const required of ['"$BUILD_ROOT/packaging/fresh-ssh-policy.py"', 'first-install.py fresh-ssh-policy.py waf-state-directory.py', "<<'PY_CHECK_INSTALLER_HELPERS'", 'value.st_nlink != 1', "print('packaged installer helpers verified: '"]) {
+  assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
+ }
  for (const required of ['./internal/upgraderead', '$NAME.upgraderead-tests.sha256', '$STAGE/upgraderead-tests']) {
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }

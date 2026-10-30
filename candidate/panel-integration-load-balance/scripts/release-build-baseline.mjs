@@ -45,5 +45,11 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
 ]) once(addition, '');
   // The independent country gate is mandatory; no other build bytes move.
   once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-waf-country-identity.mjs scripts/test-waf-country-policy.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
+  // Undo only the exact reviewed first-install helper delivery additions.
+  // Every earlier command and baseline digest remains protected; changing or
+  // omitting this copy/checksum/dependency gate cannot be normalized away.
+  once("\"$BUILD_ROOT/packaging/first-install.py\" \"$BUILD_ROOT/packaging/fresh-ssh-policy.py\" \"$BUILD_ROOT/packaging/waf-state-directory.py\"", "\"$BUILD_ROOT/packaging/first-install.py\" \"$BUILD_ROOT/packaging/waf-state-directory.py\"");
+  once('first-install.py fresh-ssh-policy.py waf-state-directory.py', 'first-install.py waf-state-directory.py');
+  once("# Every literal Python helper used by the packaged installer must be present.\n# Validate the actual assembled tree before checksumming/signing, so a new\n# source helper cannot silently be omitted from the delivery.\npython3 -I -B - \"$STAGE/$NAME\" <<'PY_CHECK_INSTALLER_HELPERS' | tee -a \"$STAGE/$NAME/BUILD_CHECKS.txt\"\nimport pathlib, re, stat, sys\nroot = pathlib.Path(sys.argv[1])\nsource = (root / 'install.sh').read_text()\nhelpers = set(re.findall(r'\\$HERE/([a-z0-9][a-z0-9._-]*\\.py)', source))\nif not 1 <= len(helpers) <= 64:\n    raise ValueError('invalid installer helper dependency set')\nfor name in sorted(helpers):\n    value = (root / name).lstat()\n    if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:\n        raise ValueError('missing or linked packaged installer helper: ' + name)\nprint('packaged installer helpers verified: ' + str(len(helpers)))\nPY_CHECK_INSTALLER_HELPERS\n", '');
   return text;
 }

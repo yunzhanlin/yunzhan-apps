@@ -157,7 +157,23 @@ done
 cp "$BUILD_ROOT/dev/"*.service "$BUILD_ROOT/dev/"*.timer "$BUILD_ROOT/dev/"*.mount "$STAGE/$NAME/systemd/"
 rm -f "$STAGE/$NAME/systemd/panel-pebble"*
 cp "$BUILD_ROOT/dev/nginx.conf" "$BUILD_ROOT/dev/nginx-panel.conf" "$STAGE/$NAME/config/"
-cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/prune-releases.py" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$BUILD_ROOT/packaging/development-upgrade.py" "$BUILD_ROOT/packaging/start-guard-install.py" "$STAGE/$NAME/"
+cp "$BUILD_ROOT/packaging/install.sh" "$BUILD_ROOT/packaging/verify-release.sh" "$BUILD_ROOT/packaging/prune-releases.sh" "$BUILD_ROOT/packaging/prune-releases.py" "$BUILD_ROOT/packaging/first-install.py" "$BUILD_ROOT/packaging/fresh-ssh-policy.py" "$BUILD_ROOT/packaging/waf-state-directory.py" "$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py" "$BUILD_ROOT/packaging/upgrade-release.py" "$BUILD_ROOT/packaging/development-upgrade.py" "$BUILD_ROOT/packaging/start-guard-install.py" "$STAGE/$NAME/"
+# Every literal Python helper used by the packaged installer must be present.
+# Validate the actual assembled tree before checksumming/signing, so a new
+# source helper cannot silently be omitted from the delivery.
+python3 -I -B - "$STAGE/$NAME" <<'PY_CHECK_INSTALLER_HELPERS' | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+import pathlib, re, stat, sys
+root = pathlib.Path(sys.argv[1])
+source = (root / 'install.sh').read_text()
+helpers = set(re.findall(r'\$HERE/([a-z0-9][a-z0-9._-]*\.py)', source))
+if not 1 <= len(helpers) <= 64:
+    raise ValueError('invalid installer helper dependency set')
+for name in sorted(helpers):
+    value = (root / name).lstat()
+    if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:
+        raise ValueError('missing or linked packaged installer helper: ' + name)
+print('packaged installer helpers verified: ' + str(len(helpers)))
+PY_CHECK_INSTALLER_HELPERS
 chmod 0755 "$STAGE/$NAME/install.sh" "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME/prune-releases.sh" "$STAGE/$NAME/bin/"*
 cat > "$STAGE/$NAME/RELEASE" <<EOF
 PANEL_FORMAT=1
@@ -171,7 +187,7 @@ EOF
   # Escaped systemd mount names contain literal backslashes. Ordinary xargs
   # interprets those characters and can hash a different nonexistent path.
   # Keep the complete filename NUL-delimited through sorting and hashing.
-  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh prune-releases.py first-install.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py start-guard-install.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+  { find bin web systemd config -type f -print0; printf '%s\0' RELEASE SOURCE_INPUTS.json BUILD_CHECKS.txt install.sh verify-release.sh prune-releases.sh prune-releases.py first-install.py fresh-ssh-policy.py waf-state-directory.py native-build-directories.py release-file-modes.py upgrade-release.py development-upgrade.py start-guard-install.py; } | LC_ALL=C sort -z | xargs -0 shasum -a 256 > SHA256SUMS
 )
 python3 "$BUILD_ROOT/packaging/release-file-modes.py" normalize "$STAGE/$NAME"
 "$STAGE/$NAME/verify-release.sh" "$STAGE/$NAME"
