@@ -58,7 +58,7 @@
   },
   "normal_native_programme_install_and_upgrade_pending": true,
   "normal_signed_app_install_update_and_UI_pending": true,
-  "native_source_CI_pending": true,
+  "native_source_CI_pending": false,
   "security_diff_scan_pending": true,
   "Main_19100_changed": false,
   "commercial_all50": false,
@@ -152,5 +152,64 @@
     "new_AMD_assets_sha256": "503ce94e31ef35a25cebe5c16f454a4c561f72925a508ddd939393b24a18cb30",
     "distinct_fresh_QA2_native_pending": true,
     "original_failed_or_unknown_operation_replayed": false
+  },
+  "R2_QA2_AMD_actual_native_accepted": {
+    "run": 40987772862,
+    "job": 123842695800,
+    "artifact_id": 12948082049,
+    "release_id": 428570337,
+    "tag": "qa-intrusionubuntu22candidate35r2-20261030-qa2",
+    "normal_original_DEV_signed_programme_and_official_signed111_app_install": true,
+    "actual_KVM_x86_64_Ubuntu22": true,
+    "actual_dualstack_SSH_five_failed_auth_attempts_each": true,
+    "preserving_configure_job": "2420abbe0e346e2e485cc8145fce9e74",
+    "install_job": "b2ec41b6508d0a3c7d0f6354fe08dd35",
+    "normal_audited_v4_unban_remaining_v6_expiry_preserved": true,
+    "all38_private_original_files_independently_compared": true,
+    "qualification_receipt_sha256": "22141ec2a796a2d5a390f8a1062c3c01720276e9a23a7b7a43de6894979e8746",
+    "only_fresh_111_acceptance_not_110_to111_update": true
+  },
+  "R2_ARM_actual_old110_signed_UI_update_accepted": {
+    "old_stable_baseline_source_inputs_sha256": "e2800be6bf3da01db4548e7fc90bc88861a3ba5d7ca32284a72cdd72d66d2a46",
+    "old_app_manifest_sha256": "63df83f7a31237cfdf810d3374b379032f609d9c97b2c77eaa5fde174b31a112",
+    "original110_install_job": "4dfb951df0dd745f2bce552e94bd129d",
+    "original110_configure_job": "ded303eecf90730685b83074b317511f",
+    "normal_original_key_programme_upgrade_preserves114_typed_tables_and238_protected_entries": true,
+    "normal_UI_111_update_job": "ef7ca26ef255959ec5783353e1fabc8c",
+    "one_UI_update_POST_and_own_logout": true,
+    "old110_canonical_history_bytes_install_time_Jail_policy_filters_NSS_five_lifetimes_and_ban_expiry_preserved": true,
+    "only_version_and_one_new_terminal_added": true,
+    "original82_private_files_independently_compared": true,
+    "qualification_receipt_sha256": "6c9613eeb0b23f8248ece764ec95bb26f51ea61fb670b446ee3ef7cd3d90148a",
+    "normal_own_session_and_temporary_tunnel_closed": true,
+    "limitations": [
+      "Historical installer wrote numeric22 configuration after the distro daemon auto-started with service-name ssh; a distinct fresh QA used ordinary OS reload before first old110 app request. Not fresh automatic initialization acceptance.",
+      "Store before/after original screenshots retained; intermediate saved AX artifacts are diffs. Settings/history/request were observed in live CUA tool output and proven by original Root snapshots.",
+      "Loopback UI origin mapping only, not public-domain proxy acceptance.",
+      "AMD110-to111 update and Main19100 delivery remain pending."
+    ]
+  },
+  "R2_current_source_CI": {
+    "runs": [
+      40986811626,
+      40987772886
+    ],
+    "both_amd64_and_arm64_original_mandatory_jobs_passed": true,
+    "source_inputs_sha256": "3c8dbb9dacc68ad23a5904c99303f421703e48db39e3f4d0215d5013603b48a8"
+  },
+  "R2_QA3_AMD_old110_update_pending": {
+    "scope": "Separate fresh Ubuntu24 actual KVM case; original stable110 signed install/SSH, preserved programme upgrade, normal signed111 store update. Current R2 programme archives reused byte-for-byte fromQA2; no source/key/feature/URL override or old operation replay.",
+    "tag": "qa-intrusionubuntu22candidate35r2-20261030-qa3",
+    "exact_new_payload_manifest_sha256": "adb4338fac69f6cea524f143f3f046e9fead909bf0093637768c4f7ddc27c67b",
+    "native_pending": true,
+    "Main_changed": false,
+    "all50_commercial": false
+  },
+  "R2_security_review_record": {
+    "scanId": "d05eebe5-0e7c-499f-8bcb-ce0e34111999",
+    "immutable11_path_review_draft_complete": true,
+    "report_sealed": false,
+    "prior_finalization_failed_before_valid_final_draft_and_not_retried": true,
+    "QA2_4_path_and_QA3_harness_changes_reviewed_separately_not_a_new_sealed_scan": true
   }
 }
