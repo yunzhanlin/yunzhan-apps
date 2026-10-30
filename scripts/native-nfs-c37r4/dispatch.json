@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "source_commit": "68df0dbf5625fe389747875734e7aece3177b396",
+  "source_inputs_sha256": "32b87a4e429f428c4563b75a9b321d2a227ce117814deda64ae9901db27adbe2",
+  "release_id": 429085720,
+  "release_tag": "qa-nfsprivateclientcandidate37r4-20261030-qa1",
+  "assets_manifest_sha256": "74108101072febd1cca2b8ccce3952cc06c58b8c9206a0068cc83a91ced456a9",
+  "normal_native_AMD64_once": true,
+  "existing_ARM64_upgrade_and_fresh_separate": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}
