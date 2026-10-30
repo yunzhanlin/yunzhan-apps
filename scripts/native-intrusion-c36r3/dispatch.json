@@ -1,0 +1,12 @@
+{
+  "format": 1,
+  "source_commit": "07bfa7b8cc5692cac4af8a6e6f9fb492bde2da1d",
+  "source_inputs_sha256": "1d9910740e082833fb4e5156fc6baf2e2b977bc67efc865ec6ee4a3ebc425f25",
+  "release_id": 428894087,
+  "release_tag": "qa-nfsreportcandidate36r3-20261030-qa1",
+  "assets_manifest_sha256": "07e9f6d7e67dda81f1d756f91f9fbffd597e40077a28ea8a351a2053f0f779be",
+  "normal_native_AMD64_once": true,
+  "existing_ARM64_upgrade_separate": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}
