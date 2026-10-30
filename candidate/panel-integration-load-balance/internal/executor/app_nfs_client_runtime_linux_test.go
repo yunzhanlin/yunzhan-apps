@@ -4,9 +4,11 @@ package executor
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"local/panel/internal/core"
@@ -60,6 +62,52 @@ func TestNFSPrivateClientInstallerLockIsAllowedExclusiveAndPrivate(t *testing.T)
 		t.Fatal("released original lock remained unavailable", err)
 	}
 	next.Close()
+}
+
+func TestNFSPrivateClientNativeCopyModesIndependentOfServiceUmask(t *testing.T) {
+	const child = "PANEL_NFS_COPY_MODE_TEST_CHILD"
+	if os.Getenv(child) != "1" {
+		binary, err := os.Executable()
+		if err != nil {
+			t.Fatal(err)
+		}
+		// A process umask is global; exercise real restricted masks in a
+		// separate test process without changing parallel fixtures' masks.
+		cmd := exec.Command(binary, "-test.run=^TestNFSPrivateClientNativeCopyModesIndependentOfServiceUmask$", "-test.count=1", "-test.v")
+		cmd.Env = append(os.Environ(), child+"=1")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("private native file modes failed: %v\n%s", err, out)
+		}
+		return
+	}
+	for _, mask := range []int{0027, 0077} {
+		func() {
+			previous := syscall.Umask(mask)
+			defer syscall.Umask(previous)
+			root := t.TempDir()
+			if err := os.Chmod(root, 0700); err != nil {
+				t.Fatal(err)
+			}
+			source := filepath.Join(root, "authenticated-original")
+			payload := []byte("native-copy mode contract, not executed")
+			if err := os.WriteFile(source, payload, 0600); err != nil {
+				t.Fatal(err)
+			}
+			for _, item := range []struct {
+				name string
+				mode os.FileMode
+			}{{"bin/mount.nfs", 0755}, {"licenses/nfs-common.txt", 0644}} {
+				target := filepath.Join(root, "candidate", item.name)
+				if _, err := copyNFSVerifiedNative(source, target, item.mode, core.Hash(string(payload))); err != nil {
+					t.Fatal(err)
+				}
+				info, err := os.Lstat(target)
+				if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != item.mode {
+					t.Fatalf("umask %04o did not preserve %s exact mode %04o: %v %v", mask, item.name, item.mode, info, err)
+				}
+			}
+		}()
+	}
 }
 
 func TestNFSPrivateClientAuthenticatedPackageIdentity(t *testing.T) {

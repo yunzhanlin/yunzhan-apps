@@ -265,6 +265,11 @@ func copyNFSNative(source, target string, mode os.FileMode) error {
 		e = errors.New("NFS 原生文件大小无效")
 	}
 	if e == nil {
+		// The dependency unit deliberately keeps UMask=0027. Set the reviewed
+		// native file mode through this new held descriptor before publication.
+		e = out.Chmod(mode)
+	}
+	if e == nil {
 		e = out.Sync()
 	}
 	closeErr := out.Close()
@@ -532,6 +537,11 @@ func installPrivateNFSRuntime(ctx context.Context) error {
 		return e
 	}
 	if e = os.Rename(stage, target); e != nil {
+		return e
+	}
+	// Check every native file, mode, package and derived path while the old
+	// runtime record still points to the original verified server/client.
+	if _, e = s.validateNFSRuntime(selection); e != nil {
 		return e
 	}
 	if e = publish(selection); e != nil {
