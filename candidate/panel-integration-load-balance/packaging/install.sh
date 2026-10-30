@@ -64,7 +64,7 @@ fi
 # End verified development-layout dispatch; ordinary production/fresh path.
 FRESH=1;[[ -f "$MARKER" ]]&&FRESH=0
 if ((FRESH)) && { ((NO_SERVICES==0)) || ((PREFLIGHT_ONLY)); };then
-  for existing in /etc/nginx/nginx.conf /etc/systemd/system/panel.service /opt/panel/current /var/lib/panel/panel.db /etc/panel/firewall.nft /etc/fail2ban /var/lib/fail2ban /run/fail2ban /usr/bin/fail2ban-client /etc/systemd/system/fail2ban.service /etc/systemd/system/fail2ban.service.d /usr/lib/systemd/system/fail2ban.service /lib/systemd/system/fail2ban.service;do
+  for existing in /etc/nginx/nginx.conf /etc/systemd/system/panel.service /opt/panel/current /var/lib/panel/panel.db /etc/panel/firewall.nft /etc/fail2ban /var/lib/fail2ban /run/fail2ban /usr/bin/fail2ban-client /etc/systemd/system/fail2ban.service /etc/systemd/system/fail2ban.service.d /run/systemd/system/fail2ban.service /run/systemd/system/fail2ban.service.d /etc/init.d/fail2ban /usr/lib/systemd/system/fail2ban.service /lib/systemd/system/fail2ban.service;do
     candidate="$(prefix "$existing")"
     if [[ -e "$candidate" || -L "$candidate" ]];then
       echo "existing host configuration blocks first install: $existing; inspect and migrate it before retrying" >&2
@@ -148,9 +148,19 @@ if ((NO_SERVICES==0)); then
     APT_ACQUIRE_OPTIONS=(-o Acquire::Retries=0 -o Acquire::http::Timeout=30 -o Acquire::https::Timeout=30)
     fresh_apt_acquire apt-get update --error-on=any "${APT_ACQUIRE_OPTIONS[@]}"
     # Fetch and authenticate the complete set before dpkg/NSS/service writes.
-    # Only the last command can install packages, and it cannot download.
+    # The two ordered install commands below cannot download or retry dpkg.
     fresh_apt_acquire apt-get install -y --no-upgrade --no-install-recommends --download-only "${APT_ACQUIRE_OPTIONS[@]}" "${REQUIRED_PACKAGES[@]}"
-    apt-get install -y --no-upgrade --no-install-recommends --no-download "${APT_ACQUIRE_OPTIONS[@]}" "${REQUIRED_PACKAGES[@]}"
+    # Configure SSH protection before Fail2ban's package postinst can start it.
+    # No live action-name migration, jail reload or existing-ban flush is used.
+    FRESH_PREPARE_PACKAGES=()
+    for package in "${REQUIRED_PACKAGES[@]}";do
+      [[ "$package" == fail2ban ]] || FRESH_PREPARE_PACKAGES+=("$package")
+    done
+    apt-get install -y --no-upgrade --no-install-recommends --no-download "${APT_ACQUIRE_OPTIONS[@]}" "${FRESH_PREPARE_PACKAGES[@]}"
+    mkdir -m 0755 /etc/fail2ban
+    mkdir -m 0755 /etc/fail2ban/jail.d
+    FRESH_SSH_PORTS="$(/usr/bin/python3 -I -B "$HERE/fresh-ssh-policy.py" configure)"
+    apt-get install -y --no-upgrade --no-install-recommends --no-download "${APT_ACQUIRE_OPTIONS[@]}" fail2ban
   fi
   getent group panel >/dev/null || groupadd --system panel
   id panel >/dev/null 2>&1 || useradd --system --gid panel --home-dir /var/lib/panel --shell /usr/sbin/nologin panel
@@ -265,9 +275,6 @@ table inet panel {
 }
 EOF
   chmod 0640 /etc/panel/firewall.nft
-  # Read the complete effective sshd configuration, preserving every numeric
-  # listen port. Existing files and unsafe parents are refused, never adopted.
-  FRESH_SSH_PORTS="$(/usr/bin/python3 -I -B "$HERE/fresh-ssh-policy.py" configure)"
 fi
 enable_program_services(){
   systemctl enable panel-terminal panel-terminal-root panel-executor panel panel-nginx-recovery panel-firewall-recovery panel-firewall
@@ -308,8 +315,8 @@ restart_release_services || FAILED=1
 if ((FRESH));then
   systemctl enable --now fail2ban || FAILED=1
   if ((FAILED==0));then
-    # APT may already have started the distro jail before our file was written.
-    # Load this exact new first-install policy and verify the live readback.
+    # The owned policy predates package installation and first daemon start.
+    # Verify the exact live readback without reloading or migrating any action.
     /usr/bin/python3 -I -B "$HERE/fresh-ssh-policy.py" activate "$FRESH_SSH_PORTS" || FAILED=1
   fi
 fi

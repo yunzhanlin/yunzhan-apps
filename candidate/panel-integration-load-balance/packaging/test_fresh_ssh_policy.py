@@ -1,4 +1,4 @@
-"""Exercise effective-port, original ban lifetime and once-only load contracts.
+"""Exercise effective-port, original ban lifetime and preconfigured first-start contracts.
 Native distro packages, SSH and nft enforcement remain separate hardware gates.
 """
 import importlib.util
@@ -198,7 +198,7 @@ class PolicyTest(unittest.TestCase):
                     target.write_bytes(b'keep me\n')
                 # Only test the real exclusive-open behavior here. The actual
                 # /etc parent ownership check has an independent negative test.
-                with mock.patch.object(POLICY, 'CONFIG', target), mock.patch.object(POLICY, 'parents'), mock.patch.object(POLICY, 'run', return_value='port 22\n'):
+                with mock.patch.object(POLICY, 'package_absent'), mock.patch.object(POLICY, 'CONFIG', target), mock.patch.object(POLICY, 'parents'), mock.patch.object(POLICY, 'run', return_value='port 22\n'):
                     with self.assertRaises(FileExistsError):
                         POLICY.configure()
                 self.assertEqual(original.read_bytes(), b'foreign configuration\n')
@@ -217,64 +217,109 @@ class PolicyTest(unittest.TestCase):
     def test_fixed_client_exec_has_no_shell_or_custom_socket(self):
         response = subprocess.CompletedProcess([], 0, stdout=b'OK\n', stderr=b'')
         with mock.patch.object(POLICY.subprocess, 'run', return_value=response) as call:
-            self.assertEqual(POLICY.client('reload', 'sshd'), 'OK\n')
+            self.assertEqual(POLICY.client('get', 'sshd', 'actions'), 'OK\n')
         args, options = call.call_args
-        self.assertEqual(args, (['/usr/bin/fail2ban-client', 'reload', 'sshd'],))
+        self.assertEqual(args, (['/usr/bin/fail2ban-client', 'get', 'sshd', 'actions'],))
         self.assertNotIn('shell', options)
         self.assertEqual(options['stdin'], subprocess.DEVNULL)
         self.assertEqual(options['timeout'], 8)
         self.assertEqual(options['env']['PATH'], '/usr/sbin:/usr/bin:/sbin:/bin')
         self.assertNotIn('PYTHONPATH', options['env'])
 
-    def activation(self, initial='nftables', native='ssh', refuse=False, lose_ban=False, replace_pid=False):
+    def activation(self, initial='nftables-multiport', native='22,2222', refuse=False, lose_ban=False, replace_pid=False):
         calls = []
-        state = {'name': initial, 'port': native, 'reloads': 0}
+        state = {'name': initial, 'port': native, 'reloads': 0, 'ban_reads': 0}
+        lifetimes = {}
         def client(*args):
             calls.append(args)
             if args == ('-t',):
                 return 'OK\n'
             if args == ('get', 'sshd', 'actions'):
+                if not state['name']:
+                    return 'No actions for jail sshd\n'
                 return 'The jail sshd has the following actions:\n' + state['name'] + '\n'
             if args == ('get', 'sshd', 'banip', '--with-time'):
-                return '\n' if lose_ban and state['reloads'] else TIMED + '\n' + V6_TIMED + '\n'
-            if args == ('reload', 'sshd'):
-                state['reloads'] += 1
-                if not refuse:
-                    state.update(name='nftables-multiport', port='22,2222')
-                return 'OK\n'
+                state['ban_reads'] += 1
+                return '\n' if lose_ban and state['ban_reads'] > 1 else TIMED + '\n' + V6_TIMED + '\n'
             if len(args) == 5 and args[:3] == ('get', 'sshd', 'action') and args[-1] == 'port':
-                return state['port'] + '\n'
+                return ('ssh' if refuse else state['port']) + '\n'
             if args[:2] == ('get', 'sshd') and len(args) == 3 and args[2] in POLICY.FILTER_FIELDS:
                 return 'original-' + args[2]
-            raise AssertionError('unexpected command ' + repr(args))
+            raise AssertionError('unexpected command, including any live migration: ' + repr(args))
         def lifetime(unit):
-            return {'unit': unit, 'pid': 333 if replace_pid and state['reloads'] else 222}
+            lifetimes[unit] = lifetimes.get(unit, 0) + 1
+            return {'unit': unit, 'pid': 333 if replace_pid and lifetimes[unit] > 1 else 222, 'start_ticks': '100'}
         with mock.patch.object(POLICY, 'run', return_value='port 2222\nport 22\n'), mock.patch.object(POLICY, 'config_bytes', return_value=POLICY.rendered('22,2222')), mock.patch.object(POLICY, 'identities', return_value={'original': 'unchanged'}), mock.patch.object(POLICY, 'lifetime', side_effect=lifetime), mock.patch.object(POLICY, 'client', side_effect=client):
             try:
                 return POLICY.activate('22,2222'), calls, state
-            except ValueError:
-                self.assertLessEqual(state['reloads'], 1)
-                self.assertFalse(any('restart' in x or '--unban' in x for x in calls))
-                raise
+            finally:
+                self.assertFalse(any(x[0] in ('reload', 'restart', 'set', 'unban') for x in calls))
 
-    def test_actual_fresh24_service_name_shape_gets_one_targeted_reload(self):
+    def test_stock_or_empty_actions_are_refused_without_live_migration(self):
+        for action in ('nftables', 'iptables-multiport', ''):
+            with self.subTest(action=action), self.assertRaises(ValueError):
+                self.activation(action, 'ssh')
+
+    def test_preconfigured_first_start_needs_no_reload(self):
         result, calls, state = self.activation()
         self.assertTrue(result['ok'])
-        self.assertTrue(result['targeted_reload'])
-        self.assertEqual(result['original_active_bans'], 2)
-        self.assertEqual(state['reloads'], 1)
-        self.assertEqual(calls.count(('reload', 'sshd')), 1)
-        self.assertFalse(any('restart' in x or '--unban' in x or '--all' in x for x in calls))
-
-    def test_already_loaded_policy_needs_no_reload(self):
-        result, calls, state = self.activation('nftables-multiport', '22,2222')
         self.assertFalse(result['targeted_reload'])
+        self.assertEqual(result['runtime_reload_restart_or_unban_calls'], 0)
+        self.assertEqual(result['original_active_bans'], 2)
+        self.assertEqual(result['fail2ban_start_ticks'], 100)
+        self.assertGreater(result['clock_ticks_per_second'], 0)
         self.assertEqual(state['reloads'], 0)
 
     def test_refused_readback_lost_ban_or_replaced_daemon_never_retried(self):
         for flags in ({'refuse': True}, {'lose_ban': True}, {'replace_pid': True}):
             with self.subTest(flags=flags), self.assertRaises(ValueError):
                 self.activation(**flags)
+
+    def test_preseed_rejects_preexisting_client_unit_or_state_before_reading_sshd(self):
+        for name in ('/usr/bin/fail2ban-client', '/run/fail2ban', '/var/lib/fail2ban',
+                     '/etc/systemd/system/fail2ban.service', '/run/systemd/system/fail2ban.service'):
+            with self.subTest(path=name), mock.patch.object(POLICY.os.path, 'lexists', side_effect=lambda p: p == name), mock.patch.object(POLICY, 'run') as run:
+                with self.assertRaises(ValueError):
+                    POLICY.configure()
+                run.assert_not_called()
+
+    def test_actual_install_orders_prerequisites_and_preseed_before_first_fail2ban_start(self):
+        installer = PATH.with_name('install.sh').read_text()
+        start = installer.index('    FRESH_PREPARE_PACKAGES=()')
+        end = installer.index('\n  fi', start)
+        block = installer[start:end]
+        with tempfile.TemporaryDirectory() as directory:
+            events = pathlib.Path(directory) / 'events'
+            ready = pathlib.Path(directory) / 'ready'
+            env = dict(os.environ, EVENTS=str(events), READY=str(ready))
+            stubs = r"""
+apt-get(){
+  if [[ "${@: -1}" == fail2ban ]];then
+    [[ -f "$READY" ]] || return 91
+    printf 'fail2ban-first-start\n' >> "$EVENTS"
+  else
+    [[ "$*" != *fail2ban* ]] || return 92
+    printf 'prerequisites\n' >> "$EVENTS"
+  fi
+}
+mkdir(){
+  [[ "$1" == -m && "$2" == 0755 ]] || return 93
+  [[ "$3" == /etc/fail2ban || "$3" == /etc/fail2ban/jail.d ]] || return 94
+  printf 'directory:%s\n' "$3" >> "$EVENTS"
+}
+/usr/bin/python3(){
+  [[ "$*" == '-I -B /owned-release/fresh-ssh-policy.py configure' ]] || return 95
+  printf 'preseed\n' >> "$EVENTS"; : > "$READY"; printf '22,2222\n'
+}
+REQUIRED_PACKAGES=(nginx fail2ban openssh-server python3-systemd)
+HERE=/owned-release
+"""
+            options = next(line.strip() for line in installer.splitlines() if line.strip().startswith('APT_ACQUIRE_OPTIONS=('))
+            result = subprocess.run(['bash', '-eu', '-c', stubs + options + '\n' + block + '\n[[ "$FRESH_SSH_PORTS" == 22,2222 ]]'],
+                                    env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(events.read_text().splitlines(), ['prerequisites', 'directory:/etc/fail2ban',
+                             'directory:/etc/fail2ban/jail.d', 'preseed', 'fail2ban-first-start'])
 
     def test_existing_fail2ban_is_rejected_before_first_install_apt(self):
         source = PATH.with_name('install.sh').read_text()

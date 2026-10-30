@@ -2,9 +2,9 @@
 """Initialize only a newly provisioned first-install SSH jail.
 
 The installer refuses pre-existing Fail2ban before package or service writes.
-Ordinary upgrades never call this helper. A distro postinst may already have
-started its default jail; load our exact policy without restarting the daemon
-or unbanning addresses. See the upstream fail2ban-client(1) reload contract.
+Ordinary upgrades never call this helper. The owned policy is written before
+Fail2ban package installation, so the first daemon starts with its final action.
+Activation is read-only: no jail reload, action migration, restart or unban.
 """
 import datetime
 import hashlib
@@ -90,7 +90,17 @@ def config_bytes(path):
         return raw
 
 
+def package_absent():
+    for name in ('/usr/bin/fail2ban-client', '/run/fail2ban', '/var/lib/fail2ban',
+                 '/etc/systemd/system/fail2ban.service', '/etc/systemd/system/fail2ban.service.d',
+                 '/run/systemd/system/fail2ban.service', '/run/systemd/system/fail2ban.service.d',
+                 '/etc/init.d/fail2ban',
+                 '/usr/lib/systemd/system/fail2ban.service', '/lib/systemd/system/fail2ban.service'):
+        require(not os.path.lexists(name), 'Fail2ban must be absent before first policy creation')
+
+
 def configure():
+    package_absent()
     ports = ssh_ports(run(['/usr/sbin/sshd', '-T']))
     raw = rendered(ports)
     parents(CONFIG)
@@ -107,6 +117,11 @@ def configure():
     finally:
         os.close(fd)
     require(config_bytes(CONFIG) == raw, 'written first-install SSH policy differs')
+    print(json.dumps({'phase': 'pre-fail2ban-install', 'ports': ports,
+                      'boot': pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip(),
+                      'boottime_ns': time.clock_gettime_ns(time.CLOCK_BOOTTIME),
+                      'fail2ban_client_and_units_absent': True,
+                      'policy_sha256': hashlib.sha256(raw).hexdigest()}, sort_keys=True), file=sys.stderr)
     return ports
 
 
@@ -155,7 +170,7 @@ def preserved_bans(before, after, now):
     expired = 0
     for address, original in before.items():
         if address in after:
-            require(after[address] == original, 'first-install reload altered original ban lifetime')
+            require(after[address] == original, 'first-install verification observed altered original ban lifetime')
             continue
         # A normal expiry is not an unban. Permanent or unparseable records may
         # never disappear; use the same local timezone as the client's output.
@@ -176,23 +191,21 @@ def activate(ports):
     original_bans = bans(client('get', 'sshd', 'banip', '--with-time'))
     original_filters = {n: client('get', 'sshd', n) for n in FILTER_FIELDS}
     nss = identities()
-    name = action()
-    reload_needed = name != 'nftables-multiport' or client('get', 'sshd', 'action', name, 'port').strip() != ports
-    if reload_needed:
-        # One targeted reload. No --restart, --unban, global reload or retry.
-        client('reload', 'sshd')
     require(action() == 'nftables-multiport'
             and client('get', 'sshd', 'action', 'nftables-multiport', 'port').strip() == ports,
-            'first-install SSH policy not active after original load attempt')
+            'first-start SSH policy is not loaded; no live action migration attempted')
     after_bans = bans(client('get', 'sshd', 'banip', '--with-time'))
     expired = preserved_bans(original_bans, after_bans, time.time())
     require({n: client('get', 'sshd', n) for n in FILTER_FIELDS} == original_filters,
-            'first-install load altered stock SSH detection filters')
+            'first-install verification observed altered SSH detection filters')
     require({n: lifetime(n) for n in original_lifetimes} == original_lifetimes,
-            'first-install load replaced a protected SSH daemon')
+            'first-install verification observed a replaced SSH daemon')
     require(identities() == nss and config_bytes(CONFIG) == expected,
-            'first-install load changed identities or owned policy')
-    return {'ok': True, 'ports': ports, 'targeted_reload': reload_needed,
+            'first-install verification observed changed identities or owned policy')
+    return {'ok': True, 'ports': ports, 'targeted_reload': False,
+            'runtime_reload_restart_or_unban_calls': 0,
+            'fail2ban_start_ticks': int(original_lifetimes['fail2ban.service']['start_ticks']),
+            'clock_ticks_per_second': os.sysconf('SC_CLK_TCK'),
             'original_active_bans': len(original_bans), 'naturally_expired': expired,
             'original_daemons_filters_and_identities_preserved': True}
 

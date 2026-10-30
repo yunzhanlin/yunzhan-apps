@@ -1,17 +1,17 @@
-name: actual native C35r8 QA1 AMD64 Ubuntu24 automatic first-install SSH policy and signed Anti-intrusion111
+name: actual native C35r9 QA1 AMD64 Ubuntu24 automatic first-install SSH policy and signed Anti-intrusion111
 
 on:
   push:
     branches: [codex/app-candidate]
     paths:
-      - .github/workflows/native-intrusion-c35r8-install.yml
-      - scripts/native-intrusion-c35r8/**
+      - .github/workflows/native-intrusion-c35r9-install.yml
+      - scripts/native-intrusion-c35r9/**
 
 permissions:
   contents: read
 
 concurrency:
-  group: native-intrusion-c35r8-${{ github.sha }}
+  group: native-intrusion-c35r9-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -30,23 +30,23 @@ jobs:
         run: |
           set -eu
           umask 077
-          mkdir -m 700 "$RUNNER_TEMP/native-intrusion-c35r8-assets"
+          mkdir -m 700 "$RUNNER_TEMP/native-intrusion-c35r9-assets"
           ready=false
           for attempt in $(seq 1 90); do
-            if gh release view qa-freshsshpolicycandidate35r8-20261030-qa1 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/country-release-status.json" 2>/dev/null && python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); sys.exit(0 if v["isDraft"] is False and v["isPrerelease"] is True else 1)' "$RUNNER_TEMP/country-release-status.json"; then
+            if gh release view qa-freshsshpolicycandidate35r9-20261030-qa1 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/country-release-status.json" 2>/dev/null && python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); sys.exit(0 if v["isDraft"] is False and v["isPrerelease"] is True else 1)' "$RUNNER_TEMP/country-release-status.json"; then
               ready=true
               break
             fi
             sleep 10
           done
           test "$ready" = true
-          gh release download qa-freshsshpolicycandidate35r8-20261030-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-intrusion-c35r8-assets"
-          python3 - "$RUNNER_TEMP/native-intrusion-c35r8-assets" <<'PY'
+          gh release download qa-freshsshpolicycandidate35r9-20261030-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-intrusion-c35r9-assets"
+          python3 - "$RUNNER_TEMP/native-intrusion-c35r9-assets" <<'PY'
           import hashlib, json, pathlib, sys
           base = pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '0eb6c6719f75d17d4e950c84a13f27c58d0d72f3081271b0c8db87fe1e6bea39'
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == '1de13cf078c8edff30ec695a7f4ce3715d507f40f2f0c9444b32f132c02b687e'
           manifest = json.loads((base / 'assets.json').read_bytes())
-          assert manifest['source_inputs_sha256'] == '72c1a1805556798fcd1571fb05beacd6d67add41d92e59f6f14e73e16b85bf21'
+          assert manifest['source_inputs_sha256'] == '6066e91750b2cd497cccd89d4148513cf08cd6acd72054b4ea1b120b4dfeea35'
           for name, digest in manifest['files'].items():
               assert pathlib.PurePath(name).name == name
               assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
@@ -62,16 +62,16 @@ jobs:
           sudo apt-get update --error-on=any -o Acquire::Retries=0
           sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
           test -c /dev/kvm
-      - name: Fresh Ubuntu24 signed C35r8, real dualstack SSH enforcement, preserving configure and audited unban
+      - name: Fresh Ubuntu24 signed C35r9, real dualstack SSH enforcement, preserving configure and audited unban
         run: |
           umask 077
-          mkdir -m 700 "$RUNNER_TEMP/native-intrusion-c35r8-public"
-          sudo -n python3 -I -B scripts/native-intrusion-c35r8/kvm.py "$RUNNER_TEMP/native-intrusion-c35r8-assets" scripts/native-intrusion-c35r8 "$RUNNER_TEMP/native-intrusion-c35r8-public"
+          mkdir -m 700 "$RUNNER_TEMP/native-intrusion-c35r9-public"
+          sudo -n python3 -I -B scripts/native-intrusion-c35r9/kvm.py "$RUNNER_TEMP/native-intrusion-c35r9-assets" scripts/native-intrusion-c35r9 "$RUNNER_TEMP/native-intrusion-c35r9-public"
       - name: Retain public proof and encrypted complete original QA evidence
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: native-intrusion-c35r8-amd64-${{ github.run_id }}
-          path: ${{ runner.temp }}/native-intrusion-c35r8-public/
+          name: native-intrusion-c35r9-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-intrusion-c35r9-public/
           retention-days: 7
           if-no-files-found: warn

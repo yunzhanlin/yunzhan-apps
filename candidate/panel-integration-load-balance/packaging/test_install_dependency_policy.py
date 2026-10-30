@@ -12,8 +12,11 @@ STUBS="""dpkg-query(){
 }
 apt-get(){
  printf '%s mode=%s\\n' "$*" "${NEEDRESTART_MODE:-unset}" >> "$APT_LOG"
+ if [[ "$*" == *--no-download* && "${@: -1}" == fail2ban ]];then
+  [[ -f "$POLICY_LOG" ]] && [[ "$(tail -n 1 "$POLICY_LOG")" == configure ]] || return 96
+ fi
  case "${FAIL_APT_PHASE:-}:$*" in
-  update:update*|download:*--download-only*|install:*--no-download*)
+  update:update*|download:*--download-only*|install:*--no-download*|fail2ban-install:*--no-download*fail2ban)
    APT_FAILS=$((${APT_FAILS:-0}+1))
    if ((APT_FAILS<=${FAIL_APT_COUNT:-3})); then return "${FAIL_APT_STATUS:-100}"; fi;;
  esac
@@ -22,13 +25,22 @@ apt-get(){
 sleep(){ printf '%s\\n' "$*" >> "$SLEEP_LOG"; }
 exec(){ "$@"; }
 python3(){ :; }
+mkdir(){
+ [[ "$1" == -m && "$2" == 0755 ]] || return 97
+ [[ "$3" == /etc/fail2ban || "$3" == /etc/fail2ban/jail.d ]] || return 98
+ printf 'mkdir:%s\\n' "$3" >> "$POLICY_LOG"
+}
+/usr/bin/python3(){
+ [[ "$*" == "-I -B $HERE/fresh-ssh-policy.py configure" ]] || return 99
+ printf 'configure\\n' >> "$POLICY_LOG"; printf '22\\n'
+}
 """
 class InstallDependencyPolicyTest(unittest.TestCase):
  def run_block(self,platform='ubuntu-24.04',fresh=0,services=0,preflight=0,**extra):
   with tempfile.TemporaryDirectory() as directory:
-   env=os.environ.copy();env.update(HERE=directory,PANEL_PLATFORM=platform,ID=platform.split('-')[0],PANEL_VERSION='0.1.0-dev.fixture',FRESH=str(fresh),NO_SERVICES=str(services),PREFLIGHT_ONLY=str(preflight),APT_LOG=directory+'/apt',DEPS_LOG=directory+'/deps',SLEEP_LOG=directory+'/sleep',**extra)
+   env=os.environ.copy();env.update(HERE=directory,PANEL_PLATFORM=platform,ID=platform.split('-')[0],PANEL_VERSION='0.1.0-dev.fixture',FRESH=str(fresh),NO_SERVICES=str(services),PREFLIGHT_ONLY=str(preflight),APT_LOG=directory+'/apt',DEPS_LOG=directory+'/deps',SLEEP_LOG=directory+'/sleep',POLICY_LOG=directory+'/policy',**extra)
    result=subprocess.run(['bash','-eu','-c',STUBS+BLOCK],env=env,capture_output=True,text=True)
-   logs={name:pathlib.Path(directory,name).read_text().splitlines() if pathlib.Path(directory,name).exists() else [] for name in ('apt','deps','sleep')}
+   logs={name:pathlib.Path(directory,name).read_text().splitlines() if pathlib.Path(directory,name).exists() else [] for name in ('apt','deps','sleep','policy')}
    return result,logs
  def test_upgrade_never_runs_apt_for_supported_platforms(self):
   for platform in ('debian-12','debian-13','ubuntu-22.04','ubuntu-24.04','ubuntu-26.04'):
@@ -47,7 +59,7 @@ class InstallDependencyPolicyTest(unittest.TestCase):
    with self.subTest(platform=platform):
     result,logs=self.run_block(platform,fresh=1)
     self.assertEqual(result.returncode,0,result.stderr);self.assertEqual(logs['deps'],[])
-    self.assertEqual(len(logs['apt']),3)
+    self.assertEqual(len(logs['apt']),4)
     self.assertTrue(logs['apt'][0].startswith('update --error-on=any '))
     for line in logs['apt']:
      self.assertIn('-o Acquire::Retries=0',line)
@@ -56,7 +68,10 @@ class InstallDependencyPolicyTest(unittest.TestCase):
      self.assertTrue(line.endswith('mode=l'))
     self.assertIn('install -y --no-upgrade --no-install-recommends --download-only',logs['apt'][1])
     self.assertIn('install -y --no-upgrade --no-install-recommends --no-download',logs['apt'][2])
-    self.assertEqual(logs['apt'][1].replace('--download-only','--no-download'),logs['apt'][2])
+    full=logs['apt'][1].replace('--download-only','--no-download').split()
+    self.assertEqual([v for v in full if v!='fail2ban'],logs['apt'][2].split())
+    self.assertEqual(full[:full.index('ca-certificates')]+['fail2ban','mode=l'],logs['apt'][3].split())
+    self.assertEqual(logs['policy'],['mkdir:/etc/fail2ban','mkdir:/etc/fail2ban/jail.d','configure'])
     for forbidden in ('--ignore-missing','--fix-missing','--allow-unauthenticated','--allow-insecure','Verify-Peer','Verify-Host','Sandbox::User','ForceIPv','-qq'):
      self.assertTrue(all(forbidden not in line for line in logs['apt']),forbidden)
  def test_fresh_update_or_download_failure_never_attempts_package_install(self):
@@ -67,15 +82,23 @@ class InstallDependencyPolicyTest(unittest.TestCase):
     self.assertEqual(len(logs['apt']),count)
     if phase!='install': self.assertTrue(all('--no-download' not in line for line in logs['apt']))
     self.assertEqual(logs['sleep'],['2','4'] if phase!='install' else [])
- def test_transient_acquisition_recovers_but_package_install_runs_once(self):
+ def test_transient_acquisition_recovers_but_each_ordered_install_runs_once(self):
   for phase in ('update','download'):
    for failures in (1,2):
     with self.subTest(phase=phase,failures=failures):
      result,logs=self.run_block(fresh=1,FAIL_APT_PHASE=phase,FAIL_APT_COUNT=str(failures))
      self.assertEqual(result.returncode,0,result.stderr)
-     self.assertEqual(len(logs['apt']),3+failures)
-     self.assertEqual(sum('--no-download' in line for line in logs['apt']),1)
+     self.assertEqual(len(logs['apt']),4+failures)
+     self.assertEqual(sum('--no-download' in line for line in logs['apt']),2)
      self.assertEqual(logs['sleep'],['2','4'][:failures])
+ def test_fail2ban_package_failure_is_not_retried_after_policy_preseed(self):
+  result,logs=self.run_block(fresh=1,FAIL_APT_PHASE='fail2ban-install')
+  self.assertEqual(result.returncode,100,result.stderr)
+  self.assertEqual(len(logs['apt']),4)
+  self.assertEqual(sum('--no-download' in line for line in logs['apt']),2)
+  self.assertEqual(sum('--no-download' in line and ' fail2ban mode=l' in line for line in logs['apt']),1)
+  self.assertEqual(logs['policy'],['mkdir:/etc/fail2ban','mkdir:/etc/fail2ban/jail.d','configure'])
+  self.assertEqual(logs['sleep'],[])
  def test_crashed_acquisition_is_not_retried(self):
   for phase,count in (('update',1),('download',2)):
    result,logs=self.run_block(fresh=1,FAIL_APT_PHASE=phase,FAIL_APT_STATUS='137')
