@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24phpsessionguardcandidate40r2-linux-amd64.tar.gz",
-  "archive_sha256": "1fd14450487a38c8dcebb0374164e3ca9303525da6ee8e6e4fb14945bd596c9f",
-  "frozen_inputs_sha256": "73faf3045116826c44b2077653e751406a101e046e01b9cf66a58c4fc06314e5",
+  "archive": "panel-0.1.0-dev.proapps24phpsessionguardcandidate40r3-linux-amd64.tar.gz",
+  "archive_sha256": "eab7a85600a5adb7d23b559b23806268b6fd796190bccb8a0466c54de7bcbdca",
+  "frozen_inputs_sha256": "33c40c57a4c5e205e919e8117ae177b4048c893daf09b5379388af7dba605fc6",
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
     "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
@@ -1545,7 +1545,7 @@
     "internal/executor/php_other.go": "1eba6931d6455588744b955dea76153855402b4d5e17054e78ddad79617251ae",
     "internal/executor/php_security_admission_linux_test.go": "e77f9b304595396cf1b9aa30be4c1f1b1f69bf71ee2cfce81a6a87232a4fddaf",
     "internal/executor/php_session_startup_linux_test.go": "4d84ddf3941fab253a1287a788a157621f0e80d818cc69a97cf598c9802f9806",
-    "internal/executor/php_session_startup_native_linux_test.go": "9a4c0f8ab56533606294039371b7c62b349abaac2b1891d351fa9bf727aac6de",
+    "internal/executor/php_session_startup_native_linux_test.go": "eed0c71dd6cb7dc7276b5460af227f5e1bdb8110ca895cad6f6510a284744261",
     "internal/executor/php_session_startup_test.go": "21aae1e8a1f70b454dfeed49fb2100f179723cf3eafbcb5eb87a7f0d6418b984",
     "internal/executor/php_settings.go": "0a4ff193e1c5658f8a9757955059d19e23b68e745268536eabb0724070ec6d65",
     "internal/executor/php_settings_test.go": "b914dcc727d455596b60fab07a869588e427dadeba28b784b9190588a61338f7",

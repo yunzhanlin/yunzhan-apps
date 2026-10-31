@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"local/panel/internal/core"
@@ -92,8 +93,16 @@ func testPHPSessionPrivatePool(t *testing.T, site core.Site, r runtimecatalog.Re
 		if err := os.Mkdir(path, 0700); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.Chown(path, uid, gid); err != nil {
-			t.Fatal(err)
+		if name == "public" {
+			// The worker may read the fixed scripts, never replace them while
+			// this Root fixture is creating or verifying files.
+			if err := os.Chmod(path, 0755); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			if err := os.Chown(path, uid, gid); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	socket := filepath.Join(dir, "fpm.sock")
@@ -106,18 +115,12 @@ func testPHPSessionPrivatePool(t *testing.T, site core.Site, r runtimecatalog.Re
 		t.Fatal(err)
 	}
 	probe := filepath.Join(dir, "public", "probe.php")
-	if err := os.WriteFile(probe, []byte(phpProbeScript(site)), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(probe, 0644); err != nil {
+	if err := writePHPSessionNativeScript(probe, []byte(phpProbeScript(site))); err != nil {
 		t.Fatal(err)
 	}
 	upload := filepath.Join(dir, "public", "upload.php")
 	script := `<?php header('Content-Type: application/json'); echo json_encode(['enabled'=>filter_var(ini_get('session.upload_progress.enabled'),FILTER_VALIDATE_BOOL),'files'=>count($_FILES),'error'=>$_FILES['sample']['error']??-1,'sha256'=>isset($_FILES['sample']['tmp_name'])?hash_file('sha256',$_FILES['sample']['tmp_name']):'']);`
-	if err := os.WriteFile(upload, []byte(script), 0644); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(upload, 0644); err != nil {
+	if err := writePHPSessionNativeScript(upload, []byte(script)); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
@@ -198,7 +201,7 @@ func testPHPSessionPrivatePool(t *testing.T, site core.Site, r runtimecatalog.Re
 	if actual.Enabled != enableControl || actual.Files != 1 || actual.Error != 0 || actual.SHA256 != hex.EncodeToString(digest[:]) {
 		t.Fatal("normal file upload or startup protection failed", actual)
 	}
-	session, err := os.ReadFile(filepath.Join(dir, "private", "sess_"+sessionID))
+	session, err := readPHPSessionNativeProgress(dir, sessionID, uid)
 	if enableControl {
 		if err != nil || !bytes.Contains(session, []byte("native-protection-probe")) {
 			t.Fatal("positive control did not exercise pre-script session progress", err)
@@ -210,6 +213,101 @@ func testPHPSessionPrivatePool(t *testing.T, site core.Site, r runtimecatalog.Re
 		t.Fatal("startup protection rewrote FPM configuration", err)
 	}
 	t.Logf("actual PHP %s: configured=%v enabled-control=%v, non-root account %d:%d, FPM parameters and normal multipart upload verified", r.Version, site.Settings.PHP != nil, enableControl, uid, gid)
+}
+
+func writePHPSessionNativeScript(path string, data []byte) error {
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|syscall.O_NOFOLLOW, 0600)
+	if err != nil {
+		return err
+	}
+	_, err = f.Write(data)
+	if err == nil {
+		err = f.Chmod(0644)
+	}
+	return errors.Join(err, f.Close())
+}
+
+func readPHPSessionNativeProgress(dir, id string, uid int) ([]byte, error) {
+	if !core.ValidID(id) {
+		return nil, errors.New("invalid native session identity")
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, err
+	}
+	defer root.Close()
+	f, err := root.OpenFile("private/sess_"+id, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	s, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	native, ok := s.Sys().(*syscall.Stat_t)
+	if !s.Mode().IsRegular() || !ok || native.Uid != uint32(uid) || native.Nlink != 1 {
+		return nil, errors.New("unexpected native session file ownership or type")
+	}
+	data, err := io.ReadAll(io.LimitReader(f, 65537))
+	if len(data) > 65536 {
+		return nil, errors.New("native session file exceeds limit")
+	}
+	return data, err
+}
+
+func TestPHPSessionNativeScriptRejectsLinksAndExistingFiles(t *testing.T) {
+	for _, link := range []bool{false, true} {
+		dir := t.TempDir()
+		canary := filepath.Join(dir, "canary")
+		if err := os.WriteFile(canary, []byte("unchanged"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		path := filepath.Join(dir, "probe.php")
+		if link {
+			if err := os.Symlink(canary, path); err != nil {
+				t.Fatal(err)
+			}
+		} else if err := os.WriteFile(path, []byte("existing"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if writePHPSessionNativeScript(path, []byte("replacement")) == nil {
+			t.Fatal("native fixture overwrote an existing file or link")
+		}
+		data, err := os.ReadFile(canary)
+		s, statErr := os.Stat(canary)
+		if err != nil || statErr != nil || string(data) != "unchanged" || s.Mode().Perm() != 0600 {
+			t.Fatal("native fixture changed the outside canary", err, statErr)
+		}
+	}
+}
+
+func TestPHPSessionNativeProgressRejectsLinksAndOversize(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "private"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	id := core.ID()
+	path := filepath.Join(dir, "private", "sess_"+id)
+	outside := filepath.Join(t.TempDir(), "canary")
+	if err := os.WriteFile(outside, []byte("outside"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, path); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := readPHPSessionNativeProgress(dir, id, os.Geteuid()); err == nil || data != nil {
+		t.Fatal("native session read followed a link")
+	}
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, bytes.Repeat([]byte("x"), 65537), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := readPHPSessionNativeProgress(dir, id, os.Geteuid()); err == nil || data != nil {
+		t.Fatal("native session read accepted oversized data")
+	}
 }
 
 func phpSessionNativeFastCGI(socket string, params [][2]string, body []byte) ([]byte, error) {

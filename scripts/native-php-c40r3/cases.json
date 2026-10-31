@@ -1,0 +1,66 @@
+{
+  "debian12": {
+    "architecture": "amd64",
+    "digest": "sha512:3d94c9dd66d8a283fde060b8810373b7ae04038b956ee00d553d1ae564f6fbdeaa2fd6e7404e87e53348b5a9509170f3ea7c0731ba737590c5c4cb8d559a47f8",
+    "guest": "guest.py",
+    "guest_sha256": "f490a928e49b82c9673e3950ebed6c73766c76487d61949921d0bf36aa26764f",
+    "hostname": "yunzhan-native-kvm-c40r3-debian12",
+    "image": "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-genericcloud-amd64-20260923-2610.qcow2",
+    "official_checksums_sha256": "d76594b14771bdbcfe098e5a440a631ce5226cdb9268679a1e2a84ee197b9357",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/SHA512SUMS",
+    "platform": "debian-12",
+    "version_id": "12"
+  },
+  "debian13": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "guest.py",
+    "guest_sha256": "f490a928e49b82c9673e3950ebed6c73766c76487d61949921d0bf36aa26764f",
+    "hostname": "yunzhan-native-kvm-c40r3-debian13",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/SHA512SUMS",
+    "platform": "debian-13",
+    "version_id": "13"
+  },
+  "ubuntu22": {
+    "architecture": "amd64",
+    "digest": "sha256:012d81fade7e8ff4428fc35dfeee711d66d1f47d5ea9c5c8ced96a85b959835c",
+    "guest": "guest.py",
+    "guest_sha256": "f490a928e49b82c9673e3950ebed6c73766c76487d61949921d0bf36aa26764f",
+    "hostname": "yunzhan-native-kvm-c40r3-ubuntu22",
+    "image": "https://cloud-images.ubuntu.com/jammy/20261004/jammy-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "75fa01bb93c2859ca88ab5821fe9ae4eb3ada1ef356d663abfb2f41a7c270e01",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/jammy/20261004/SHA256SUMS",
+    "platform": "ubuntu-22.04",
+    "version_id": "22.04"
+  },
+  "ubuntu24": {
+    "architecture": "amd64",
+    "digest": "sha256:6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "guest": "guest.py",
+    "guest_sha256": "f490a928e49b82c9673e3950ebed6c73766c76487d61949921d0bf36aa26764f",
+    "hostname": "yunzhan-native-kvm-c40r3-ubuntu24",
+    "image": "https://cloud-images.ubuntu.com/noble/20260926/noble-server-cloudimg-amd64.img",
+    "original_pinned_image_source": {
+      "commit": "83082f8afcfb3bd1e96c492bb4f83555da3c8269",
+      "constant": "IMAGE_SHA256",
+      "file": "scripts/native-nfs-c37r5/kvm.py",
+      "original_hardware_native_qualification": true
+    },
+    "platform": "ubuntu-24.04",
+    "version_id": "24.04"
+  },
+  "ubuntu26": {
+    "architecture": "amd64",
+    "digest": "sha256:5645d0318ad21f643ebb1ac4567514620e9893380b07b0201fda163baa5b7eb5",
+    "guest": "guest.py",
+    "guest_sha256": "f490a928e49b82c9673e3950ebed6c73766c76487d61949921d0bf36aa26764f",
+    "hostname": "yunzhan-native-kvm-c40r3-ubuntu26",
+    "image": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "489dd5ab1206aba5cb21769e8095e911feb01a313aec448e4bdc291f918b6549",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/SHA256SUMS",
+    "platform": "ubuntu-26.04",
+    "version_id": "26.04"
+  }
+}
