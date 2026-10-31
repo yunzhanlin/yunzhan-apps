@@ -64,6 +64,13 @@ func nfsAllowedDependencies(raw string) ([]string, error) {
 	seen := map[string]bool{}
 	for _, entry := range strings.Split(raw, ",") {
 		parts := strings.Fields(strings.TrimSpace(entry))
+		// Ubuntu26's authenticated Ganesha6.5 metadata names this exact bus
+		// alternative. Like the older plain dbus dependency, neither service
+		// package belongs to our privately extracted server's global plan.
+		// Other alternatives still require an independent dependency review.
+		if strings.Join(parts, " ") == "default-dbus-system-bus | dbus-system-bus" {
+			continue
+		}
 		if len(parts) == 0 || strings.Contains(entry, "|") {
 			return nil, errors.New("NFS APT 依赖结构未经审核")
 		}

@@ -1,0 +1,71 @@
+name: actual C37r8 AMD64 NFS131 declared OS matrix
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-nfs-c37r8/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-nfs-c37r8-os-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download original reviewed signed cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-nfs-c37r8-assets"
+          gh release view qa-nfschecksumcandidate37r8-20261031-qa1 --repo yunzhanlin/yunzhan-apps --json isDraft,isPrerelease > "$RUNNER_TEMP/cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert not v["isDraft"] and v["isPrerelease"]' "$RUNNER_TEMP/cohort.json"
+          gh release download qa-nfschecksumcandidate37r8-20261031-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-nfs-c37r8-assets"
+          python3 - "$RUNNER_TEMP/native-nfs-c37r8-assets" <<'PY'
+          import hashlib, json, pathlib, sys
+          base = pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base / 'assets.json').read_bytes()).hexdigest() == 'c93df092531c03164571af01b07c7022ec24452ca9a39fe29bba47b16cdfab67'
+          manifest = json.loads((base / 'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256'] == '888081abdb701fd97a5e69c2cd68b63b0f7c373f7c67a2616b40a31f941003fe'
+          for name, digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name == name
+              assert hashlib.sha256((base / name).read_bytes()).hexdigest() == digest
+          print('Exact original signed cohort verified')
+          PY
+      - name: Prepare actual hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Fresh original-key programme and NFS131 actual kernel journey
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-nfs-c37r8-public"
+          sudo -n python3 -I -B scripts/native-nfs-c37r8/kvm.py "$RUNNER_TEMP/native-nfs-c37r8-assets" scripts/native-nfs-c37r8 "$RUNNER_TEMP/native-nfs-c37r8-public" "$OS_CASE"
+      - name: Retain public proof and encrypted complete original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-nfs-c37r8-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-nfs-c37r8-public/
+          retention-days: 7
+          if-no-files-found: warn

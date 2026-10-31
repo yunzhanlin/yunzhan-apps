@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24nfsprivateclientcandidate37r7-linux-amd64.tar.gz",
-  "archive_sha256": "21a99060281aad6674cc33511971b47ca78f310df55cca42e1fe3edcded5280b",
-  "frozen_inputs_sha256": "14278e635343d1020be3a516d31fd1d1122f6c9c3a1779eab2cf442674dc6457",
+  "archive": "panel-0.1.0-dev.proapps24nfsprivateclientcandidate37r8-linux-amd64.tar.gz",
+  "archive_sha256": "015ed9ec56f1869937a58e28d3a06f284fe2793bd275992475979ae23859be2a",
+  "frozen_inputs_sha256": "888081abdb701fd97a5e69c2cd68b63b0f7c373f7c67a2616b40a31f941003fe",
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
     "cmd/executor/shutdown.go": "a8faac2abce4b6c5a63cb174ede1ad5ab4a9c61c6f63c480c925c37ff70d3aff",
@@ -859,7 +859,8 @@
     "internal/executor/app_nfs_exports_linux.go": "62f5b92f0c8df0523cd082364ff1755adbd5a59aca5f3ee2ae2a26e1f21925d8",
     "internal/executor/app_nfs_exports_linux_test.go": "c8a8bbd221f0d42d24cd210c098cb4d322db90bc64ec12707d66ed2cfafb476a",
     "internal/executor/app_nfs_mount_state_linux.go": "df17c531857c25ee1c1bb6d8500b8c989f46c965023d8d8de6833fe6ce9bbfaa",
-    "internal/executor/app_nfs_runtime_linux.go": "132ad8cf63adca3689e8d18518d6e1bb015e3a4b3b2a1224644b3997a2c1790f",
+    "internal/executor/app_nfs_runtime_linux.go": "a075e46126f77d810a2144c296d2e08b6f6070849f9b9518d5d1043348645374",
+    "internal/executor/app_nfs_ubuntu26_dependencies_linux_test.go": "02849f925bb6373c1e1e8fb6d17d7314468ac07dac3c4cfe0a42708de47c366c",
     "internal/executor/app_notification_events_linux.go": "ca0918ec1c5b493daaae5463cc2472dc4515a5e006ca04a60efb873989b39a93",
     "internal/executor/app_notification_events_linux_test.go": "196f53071ddaa8b9ac6d23b372fbc45b62c68013a8aeb2a2a97c6304ce873b87",
     "internal/executor/app_php_quarantine_linux.go": "d96c6b665bc1dee11e0a0ab7d3891d7666125a4b88fd8322eda8d682d6766317",
