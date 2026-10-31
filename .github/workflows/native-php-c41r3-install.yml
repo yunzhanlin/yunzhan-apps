@@ -1,0 +1,68 @@
+name: actual C41r3 AMD64 PHP custom configuration and CAS
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-php-c41r3/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-php-c41r3-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download the original reviewed signed cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-php-c41r3-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/429937013 > "$RUNNER_TEMP/cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v["id"]==429937013 and not v["draft"] and v["prerelease"] and v["tag_name"]=="qa-phpswitchpreservecandidate41r3-20261031-qa1" and len(v["assets"])==7' "$RUNNER_TEMP/cohort.json"
+          gh release download qa-phpswitchpreservecandidate41r3-20261031-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-php-c41r3-assets"
+          cp scripts/native-php-c41r3/guest.py scripts/native-php-c41r3/functional.py "$RUNNER_TEMP/native-php-c41r3-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-php-c41r3-assets/"
+          cp scripts/native-php-c41r3/payload.json "$RUNNER_TEMP/native-php-c41r3-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-php-c41r3-assets" <<'PY'
+          import hashlib,json,pathlib,sys
+          base=pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='ac73f16b410d508b6cf1b191e54937c6fe6cb6daedd9b1bd6819b41d9174caa8'
+          manifest=json.loads((base/'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256']=='757e1941dc2e3e138cef458eb52114545d168ee41286872012e100770c50a1fb'
+          for name,digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name==name
+              assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+          print('Original programme signatures, key and reviewed QA payload bound')
+          PY
+      - name: Prepare actual hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Fresh normal programme and real PHP configuration preservation journey
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-php-c41r3-public"
+          sudo -n python3 -I -B scripts/native-php-c41r3/kvm.py "$RUNNER_TEMP/native-php-c41r3-assets" scripts/native-php-c41r3 "$RUNNER_TEMP/native-php-c41r3-public" ubuntu24
+      - name: Retain public proof and encrypted original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-php-c41r3-amd64-ubuntu24-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-php-c41r3-public/
+          retention-days: 7
+          if-no-files-found: warn

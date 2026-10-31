@@ -1,0 +1,14 @@
+{
+  "format": 1,
+  "programme_source_commit": "33934555c978e86589cd041a69a98a1552d8aea0",
+  "source_inputs_sha256": "757e1941dc2e3e138cef458eb52114545d168ee41286872012e100770c50a1fb",
+  "release_id": 429937013,
+  "release_tag": "qa-phpswitchpreservecandidate41r3-20261031-qa1",
+  "payload_manifest_sha256": "ac73f16b410d508b6cf1b191e54937c6fe6cb6daedd9b1bd6819b41d9174caa8",
+  "actual_AMD64_cases": [
+    "ubuntu24"
+  ],
+  "Main_changed": false,
+  "all50_commercial": false,
+  "maximum_workflow_dispatches": 1
+}

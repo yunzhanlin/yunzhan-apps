@@ -1,0 +1,18 @@
+{
+  "ubuntu24": {
+    "architecture": "amd64",
+    "digest": "sha256:6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "guest": "guest.py",
+    "guest_sha256": "7ad48b8e08075801f39e0755a3c3521f6d636add0453cd4a3c6bb0188ca15fa9",
+    "hostname": "yunzhan-native-kvm-c41r3-ubuntu24",
+    "image": "https://cloud-images.ubuntu.com/noble/20260926/noble-server-cloudimg-amd64.img",
+    "original_pinned_image_source": {
+      "commit": "83082f8afcfb3bd1e96c492bb4f83555da3c8269",
+      "constant": "IMAGE_SHA256",
+      "file": "scripts/native-nfs-c37r5/kvm.py",
+      "original_hardware_native_qualification": true
+    },
+    "platform": "ubuntu-24.04",
+    "version_id": "24.04"
+  }
+}
