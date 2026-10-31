@@ -1,4 +1,5 @@
 import pathlib
+import importlib.util
 import subprocess
 import tempfile
 import unittest
@@ -22,21 +23,18 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             mount.write_bytes(b"owned exact escaped mount filename\n")
             (base / "web/owned space ' and quote").write_bytes(b"owned filename fixture\n")
             subprocess.run(["bash", "-eu", "-o", "pipefail", "-c", pipeline], cwd=base, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            checker = ["shasum", "-a", "256", "--strict", "-c"] if subprocess.check_output(["uname", "-s"]).strip() == b"Darwin" else ["sha256sum", "--strict", "-c"]
             verifier = (root / "packaging/verify-release.sh").read_text()
-            self.assertIn("sha256sum --strict -c", verifier)
-            self.assertIn("shasum -a 256 --strict -c", verifier)
-            self.assertIn('"$(uname -s)" == Darwin', verifier)
-            verified = subprocess.run([*checker, "SHA256SUMS"], cwd=base, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertEqual(verified.stdout.count(b": OK"), 17)
+            self.assertIn('python3 -I -B "$VERIFY_HOME/release-file-modes.py" verify "$DIR"', verifier)
+            self.assertNotIn("sha256sum --strict -c", verifier)
+            spec=importlib.util.spec_from_file_location("release_checksums",root/"packaging/release-file-modes.py")
+            policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
+            self.assertEqual(policy.payload_checksums(base),17)
             sums = (base / "SHA256SUMS").read_bytes()
             (base / "SHA256SUMS").write_bytes(sums + b"malformed line cannot be skipped\n")
-            malformed = subprocess.run([*checker, "SHA256SUMS"], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertNotEqual(malformed.returncode, 0)
+            with self.assertRaises(ValueError):policy.payload_checksums(base)
             (base / "SHA256SUMS").write_bytes(sums)
             mount.write_bytes(b"owned tampered checksum fixture\n")
-            refused = subprocess.run([*checker, "SHA256SUMS"], cwd=base, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            self.assertNotEqual(refused.returncode, 0)
+            with self.assertRaises(ValueError):policy.payload_checksums(base)
 
     def test_fixed_mount_has_physical_byte_and_inode_limits_not_site_storage(self):
         root = pathlib.Path(__file__).resolve().parents[1]

@@ -13,12 +13,11 @@ while IFS='=' read -r key value; do
     *) false ;;
   esac || { echo "invalid release field: $key" >&2; exit 1; }
 done < "$DIR/RELEASE"
-# Darwin's /sbin/sha256sum silently skips GNU-escaped filenames while
-# reporting success. Use the parser proven for this platform and require
-# strict format checking; no malformed line is permitted to be ignored.
-(cd "$DIR" && if [[ "$(uname -s)" == Darwin ]]; then shasum -a 256 --strict -c SHA256SUMS >/dev/null; else sha256sum --strict -c SHA256SUMS >/dev/null; fi)
+# Use one strict parser for GNU-escaped filenames on every supported OS.
+# Check every payload file through held directory descriptors; malformed,
+# duplicate, missing and changed entries are rejected without a fallback.
 # Use this verified candidate's policy, not a possibly absent or older helper
 # inside the previous release. Both current and retained payloads must pass
 # the same strict read-only permissions/type/link checks; never repair modes.
-python3 "$VERIFY_HOME/release-file-modes.py" check "$DIR"
+python3 -I -B "$VERIFY_HOME/release-file-modes.py" verify "$DIR"
 echo 'release checksums verified'
