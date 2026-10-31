@@ -15,6 +15,7 @@ import (
 // Its private Root producer and actual stopped unit are authenticated separately.
 type RuntimeFailedInstallEvidence struct {
 	JobID, ReleaseID, Error string
+	ExtensionID             string
 	Steps                   []Step
 }
 
@@ -28,6 +29,23 @@ func (s *Store) ValidateRuntimeFailedInstall(ctx context.Context, in RuntimeFail
 	if ctx.Err() != nil || !ValidID(in.JobID) || !known || r.Family == "docker" || in.Error == "" || len(in.Error) > 65536 || len(in.Steps) < 1 || len(in.Steps) > 128 || in.Steps[len(in.Steps)-1].Message != in.Error {
 		return "", bad
 	}
+	kindWant, queuedAction, queuedTarget := "install_runtime", "runtime.install", in.ReleaseID
+	payloadWant := ""
+	// An extension failure must name the fixed extension in both the original
+	// canonical queue payload and its audit target. It cannot borrow the parent
+	// runtime's installation authority or the audit of another extension.
+	if in.ExtensionID != "" {
+		if _, ok := runtimecatalog.FindExtension(in.ExtensionID); !ok || r.Family != "php" {
+			return "", bad
+		}
+		kindWant, queuedAction = "install_php_extension", "php.extension.install"
+		queuedTarget += " / " + in.ExtensionID
+		encoded, err := json.Marshal(ExtensionJobPayload{ExtensionID: in.ExtensionID})
+		if err != nil {
+			return "", bad
+		}
+		payloadWant = string(encoded)
+	}
 	rawSteps, err := json.Marshal(in.Steps)
 	if err != nil || len(rawSteps) > 192<<10 {
 		return "", bad
@@ -38,7 +56,7 @@ func (s *Store) ValidateRuntimeFailedInstall(ctx context.Context, in RuntimeFail
 	}
 	defer tx.Rollback()
 	var target, kind, state, detail, steps, payload, key, created, updated string
-	if tx.QueryRowContext(ctx, `SELECT target_id,kind,state,error,steps,payload,idempotency_key,created_at,updated_at FROM runtime_jobs WHERE id=?`, in.JobID).Scan(&target, &kind, &state, &detail, &steps, &payload, &key, &created, &updated) != nil || target != in.ReleaseID || kind != "install_runtime" || state != "failed" || detail != in.Error || steps != string(rawSteps) || len(payload) > 128<<10 || key == "" || len(key) > 128 {
+	if tx.QueryRowContext(ctx, `SELECT target_id,kind,state,error,steps,payload,idempotency_key,created_at,updated_at FROM runtime_jobs WHERE id=?`, in.JobID).Scan(&target, &kind, &state, &detail, &steps, &payload, &key, &created, &updated) != nil || target != in.ReleaseID || kind != kindWant || state != "failed" || detail != in.Error || steps != string(rawSteps) || len(payload) > 128<<10 || key == "" || len(key) > 128 || (in.ExtensionID != "" && payload != payloadWant) {
 		return "", bad
 	}
 	start, e1 := time.Parse(time.RFC3339, created)
@@ -61,10 +79,10 @@ func (s *Store) ValidateRuntimeFailedInstall(ctx context.Context, in RuntimeFail
 	// Existing runtime audit records use release IDs rather than job IDs. Exact
 	// original timestamps and unique rows are mandatory; ambiguity stays blocked.
 	var actor string
-	if tx.QueryRowContext(ctx, `SELECT count(*),coalesce(min(actor),'') FROM audit_logs WHERE action='runtime.install' AND target=? AND result='queued' AND created_at=?`, target, created).Scan(&count, &actor) != nil || count != 1 || actor == "" {
+	if tx.QueryRowContext(ctx, `SELECT count(*),coalesce(min(actor),'') FROM audit_logs WHERE action=? AND target=? AND result='queued' AND created_at=?`, queuedAction, queuedTarget, created).Scan(&count, &actor) != nil || count != 1 || actor == "" {
 		return "", bad
 	}
-	if tx.QueryRowContext(ctx, `SELECT count(*) FROM audit_logs WHERE actor='executor' AND action='install_runtime' AND target=? AND result='failed' AND created_at=?`, target, updated).Scan(&count) != nil || count != 1 {
+	if tx.QueryRowContext(ctx, `SELECT count(*) FROM audit_logs WHERE actor='executor' AND action=? AND target=? AND result='failed' AND created_at=?`, kindWant, target, updated).Scan(&count) != nil || count != 1 {
 		return "", bad
 	}
 	bound, _ := json.Marshal([]string{in.JobID, target, kind, state, detail, steps, payload, key, created, updated, actor})

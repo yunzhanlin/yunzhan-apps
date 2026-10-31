@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24nfsprivateclientcandidate37r8-linux-amd64.tar.gz",
-    "archive_sha256": "015ed9ec56f1869937a58e28d3a06f284fe2793bd275992475979ae23859be2a",
-    "frozen_inputs_sha256": "888081abdb701fd97a5e69c2cd68b63b0f7c373f7c67a2616b40a31f941003fe"
+    "archive": "panel-0.1.0-dev.proapps24runtimeextensionclosurecandidate38-linux-amd64.tar.gz",
+    "archive_sha256": "35439b0945039f74eeb7cb3ed9019e3e99b7da4ae16006dd8113437c0ddb014c",
+    "frozen_inputs_sha256": "2273aea05853e725c283f210abe70da0a53b808709d4c0245467abd896b53203"
   },
   "files": {
     "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
@@ -501,7 +501,8 @@
     "internal/core/runtime_bundles_test.go": "05f0153820a4e54c93cdb7d4f6b460be88e9f4de647df652e1fe7683855d50ba",
     "internal/core/runtime_compile_oom_upgrade.go": "06c7de138a4a3625b24cba22d45b3ac6105c6ed99123ab5f00f53e1963f163e1",
     "internal/core/runtime_compile_oom_upgrade_test.go": "7525279bd367a810da9b7a1750dae9e0f4d53c98d5caec870a751e5a32840306",
-    "internal/core/runtime_failed_upgrade.go": "9587021a77ee210f413561554aa8d9c2e36a51ceb8034eab644654abf100bc34",
+    "internal/core/runtime_failed_extension_upgrade_test.go": "c4a87cb3560155fda75493b7dc26868ca747c033af3f6d345d6fa1be4c966a85",
+    "internal/core/runtime_failed_upgrade.go": "a3cb97319254326b88cc789d674bf265862a6d71f7f0cbdabadad515a2db2a0c",
     "internal/core/runtime_failed_upgrade_test.go": "d223cf622fc7baf13e3f05ceaf5032cc80a902b82407f29d649d1073f8fd98bc",
     "internal/core/runtime_install_observation_test.go": "8ed06663b4849bcf61444b45ce7ed32ccf25f4fd9da61ac49baf3c973ed34c87",
     "internal/core/runtime_lifecycle.go": "2d2d2730eaad696852b10fd0f27972039d40985189312d60055fb6fcabe0f9cb",
@@ -1583,8 +1584,8 @@
     "internal/executor/program_upgrade_queues_linux_test.go": "706965d2c47c45dd869895f775ff9618a6a6b9443059561eeed1004ee17df72f",
     "internal/executor/program_upgrade_runtime_compile_oom_linux.go": "174c81f08b3215402b4ff0ee9d14dd7aa0fa0e24c08a2e25dad91d0f77758ef1",
     "internal/executor/program_upgrade_runtime_compile_oom_linux_test.go": "e4a97f16ac2c7b394126b840bf198aa351f2c22396f5b1d168ce34561a6ed433",
-    "internal/executor/program_upgrade_runtime_failed_linux.go": "6fc52ef3916b5a627c2288d0d693452048e3d5ab3304bc5c115922c3b9b97f4f",
-    "internal/executor/program_upgrade_runtime_failed_linux_test.go": "8b84c2fe7870a283611967d31d62a754cedf8655f5275937552fdbdd9ed85353",
+    "internal/executor/program_upgrade_runtime_failed_linux.go": "20864e0d0b5246b60c772451f625e37ee49fcd2bb7c5a525d21abfba124ff14a",
+    "internal/executor/program_upgrade_runtime_failed_linux_test.go": "52f2d2b8fbbb2b0ff40d09af7300f60a1eabc82d7a7245a70ac14fc590a2915a",
     "internal/executor/program_upgrade_runtime_successor_linux.go": "aa5634545ffeabd103f5ff3b6c4bdac85bb96cca0c40668c1c962d09a25d9119",
     "internal/executor/program_upgrade_runtime_successor_linux_test.go": "52dfc338295525d0f7cf169e3f1d24741f093e531502afa8b4f9dce9fd18be04",
     "internal/executor/redis_auth_linux.go": "a1d1e1c03bf43c3eb2801b18b6577e9b276e814d4d771f1bc8cc5981bb266780",
@@ -1608,8 +1609,9 @@
     "internal/executor/remote_backups_linux_test.go": "cbfce6b0483f944be8df7072b577b4af3260883c077f381d0c99029903705fcd",
     "internal/executor/root_file_open_linux.go": "6efb1764eb617439a76fdd6312130d7f3826ef9405eb11a389f894a4a85cbdd5",
     "internal/executor/routes_linux_test.go": "9698685f106bdf213f80b9e7c7b6d937c3af137e118b648b1a5dd15e1f44c05d",
-    "internal/executor/runtime_build_cache_linux.go": "fcc1e197fe5047388ff6d2b520c79d4e2d759c9036d41859597e5db30acad909",
+    "internal/executor/runtime_build_cache_linux.go": "bc4aa66ce35db8c5e79c8b3947da721459a9307511b46a431661dec2242eb017",
     "internal/executor/runtime_build_cache_native_linux_test.go": "a266c652eb0c8caf7a0c26258fb233b95d37e76d6fcce06e022ebe69c8e8faf7",
+    "internal/executor/runtime_build_capacity_labels_linux_test.go": "90f03f85a23bcf744fc38a7ad61f4083e7db6cc77d68cfe21f3832b7708a0222",
     "internal/executor/runtime_build_lock_native_linux_test.go": "b1426a4dd7af3a2c6b49e59f1798998b47b487b2ed27e5f008991d866c195ddb",
     "internal/executor/runtime_compiler_collection_native_linux_test.go": "9fb545f6410553db24170cbbe43ce2413d49355a4d46c01bccc3c321c5a745cb",
     "internal/executor/runtime_compiler_diagnostics_linux_test.go": "ad7bd4581e094c6e7f81ac5d16341822da85fb03f5f09ddd75262b5bc485eff1",
@@ -1809,7 +1811,7 @@
     "internal/executor/waf_engine_download_linux_test.go": "9ded3767551bbfbab416fe3fdf819f0b9abed6b2c1d8133e8f66c08cfcc1869b",
     "internal/executor/waf_engine_extract_linux.go": "6240e4f7591c2ea96fe247fac6596bdd8476edd3edf19ba75973706f54b69638",
     "internal/executor/waf_engine_extract_linux_test.go": "e2129841ec280ba1042cfe74042442c002ebcd97a5d8ccc7a44044b4e69b2e49",
-    "internal/executor/waf_engine_native_linux.go": "c9891bed45afaae7de9443591311bfe970a0e59841e9fc6b48b6704116aa1cc3",
+    "internal/executor/waf_engine_native_linux.go": "7f0ff1863daf6f13210662c35a322058c681b9031e95a95904f8404ec6e04138",
     "internal/executor/waf_engine_native_linux_test.go": "eb2fd12ac8c05260a483d2c9fbb5c83b45449bfb84c10cb9bf93687fc21cbeb4",
     "internal/executor/waf_engine_routes_linux.go": "f7c6ee8a07ddaffe870a42d334cf3ba7e58f87102a52cc9fa0dc718eeb8af244",
     "internal/executor/waf_engine_sources.go": "aaa8504a9cc911b58f67a4c233e8c16c05532b5f45a7f3ce3476b20ae6490b57",

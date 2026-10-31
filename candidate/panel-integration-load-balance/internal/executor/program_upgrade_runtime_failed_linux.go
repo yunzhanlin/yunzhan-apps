@@ -142,7 +142,7 @@ func (p runtimeFailedUpgradeProof) check(ctx context.Context, id string) error {
 		return err
 	}
 	var status InstallStatus
-	if json.Unmarshal(raw, &status) != nil || validateRuntimeInstallStatus(status, id) != nil || status.ExtensionID != "" || status.State != "failed" || status.Error == "" || len(status.Steps) < 1 || status.Steps[len(status.Steps)-1].Message != status.Error {
+	if json.Unmarshal(raw, &status) != nil || validateRuntimeInstallStatus(status, id) != nil || status.State != "failed" || status.Error == "" || len(status.Steps) < 1 || status.Steps[len(status.Steps)-1].Message != status.Error {
 		return bad
 	}
 	canonical, _ := json.Marshal(status)
@@ -193,7 +193,7 @@ func closedRuntimeFailedInstall(ctx context.Context, name string, run Command) b
 		if !reader.current() {
 			return "", errors.New("原生运行时终态 Core 数据库身份变化")
 		}
-		bound, err := (&core.Store{DB: reader.db}).ValidateRuntimeFailedInstall(ctx, core.RuntimeFailedInstallEvidence{JobID: status.JobID, ReleaseID: status.ReleaseID, Error: status.Error, Steps: status.Steps})
+		bound, err := (&core.Store{DB: reader.db}).ValidateRuntimeFailedInstall(ctx, core.RuntimeFailedInstallEvidence{JobID: status.JobID, ReleaseID: status.ReleaseID, ExtensionID: status.ExtensionID, Error: status.Error, Steps: status.Steps})
 		if !reader.current() {
 			return "", errors.New("原生运行时终态 Core 数据库身份变化")
 		}

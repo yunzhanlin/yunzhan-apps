@@ -111,7 +111,7 @@ func prepareRuntimeBuildDirectory(id string) (string, error) {
 		if err != nil || len(entries) >= 512 {
 			return "", errors.New("运行时构建缓存达到保留限额；未自动删除历史尝试")
 		}
-		if err := wafBuildDiskBudget(runtimeBuildCache); err != nil {
+		if err := privateBuildDiskBudget(runtimeBuildCache, "运行时"); err != nil {
 			return "", err
 		}
 		if err := root.Mkdir(id, 0755); err != nil {

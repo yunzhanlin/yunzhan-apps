@@ -582,12 +582,17 @@ func probeWAFNativeModule(ctx context.Context, s *Service, nginx, prefix, build 
 }
 
 func wafBuildDiskBudget(cache string) error {
+	return privateBuildDiskBudget(cache, "WAF")
+}
+
+// Labels are fixed by the internal caller; the disk and cache limits are shared.
+func privateBuildDiskBudget(cache, label string) error {
 	var stat syscall.Statfs_t
 	if err := syscall.Statfs(cache, &stat); err != nil {
 		return err
 	}
 	if stat.Bsize < 1 || stat.Bavail*uint64(stat.Bsize) < 1<<30 {
-		return errors.New("WAF 源码构建需至少 1 GiB 可用空间，未开始修改")
+		return fmt.Errorf("%s 源码构建需至少 1 GiB 可用空间，未开始修改", label)
 	}
 	var bytes int64
 	var count int
@@ -597,7 +602,7 @@ func wafBuildDiskBudget(cache string) error {
 		}
 		count++
 		if count > 300000 {
-			return errors.New("WAF 私有构建缓存条目达到上限，需安全归档")
+			return fmt.Errorf("%s 私有构建缓存条目达到上限，需安全归档", label)
 		}
 		st, err := os.Lstat(p)
 		if err != nil {
@@ -606,7 +611,7 @@ func wafBuildDiskBudget(cache string) error {
 		if st.Mode().IsRegular() {
 			bytes += st.Size()
 			if bytes > 6<<30 {
-				return errors.New("WAF 私有构建缓存超过 6 GiB，保留现有证据并停止新构建")
+				return fmt.Errorf("%s 私有构建缓存超过 6 GiB，保留现有证据并停止新构建", label)
 			}
 		}
 		return nil

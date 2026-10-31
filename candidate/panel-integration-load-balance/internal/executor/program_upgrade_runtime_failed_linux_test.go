@@ -62,7 +62,7 @@ func TestRuntimeFailedUpgradePrivateRootProofNeverWritesOrTrustsAmbiguity(t *tes
 	if os.Geteuid() != 0 {
 		t.Skip("actual Root-private filesystem models required")
 	}
-	for _, mutation := range []string{"original", "missing-lock", "lock-link", "lock-hardlink", "lock-mode", "busy", "record-link", "record-hardlink", "record-mode", "record-owner", "root-mode", "root-owner", "record-running", "record-success", "record-empty-error", "record-empty-steps", "record-wrong-final-step", "record-extension", "record-id", "record-release", "duplicate-json", "unknown-json", "whitespace-json", "missing-core", "different-core", "mid-core", "mid-unit", "mid-file-identical", "mid-file-changed", "mid-lock", "mid-move", "cancelled"} {
+	for _, mutation := range []string{"original", "php-extension", "missing-lock", "lock-link", "lock-hardlink", "lock-mode", "busy", "record-link", "record-hardlink", "record-mode", "record-owner", "root-mode", "root-owner", "record-running", "record-success", "record-empty-error", "record-empty-steps", "record-wrong-final-step", "record-extension", "record-id", "record-release", "duplicate-json", "unknown-json", "whitespace-json", "missing-core", "different-core", "mid-core", "mid-unit", "mid-file-identical", "mid-file-changed", "mid-lock", "mid-move", "cancelled"} {
 		t.Run(mutation, func(t *testing.T) {
 			dir := filepath.Join(t.TempDir(), "private")
 			if err := os.Mkdir(dir, 0700); err != nil {
@@ -70,6 +70,9 @@ func TestRuntimeFailedUpgradePrivateRootProofNeverWritesOrTrustsAmbiguity(t *tes
 			}
 			id := core.ID()
 			status := InstallStatus{JobID: id, ReleaseID: "nginx-1.30.6", State: "failed", Error: "synthetic original failure", Steps: []core.Step{{Time: core.Now(), Message: "synthetic original failure"}}}
+			if mutation == "php-extension" {
+				status.ReleaseID, status.ExtensionID = "php-8.5.12", "redis-6.3.0"
+			}
 			raw, _ := json.Marshal(status)
 			file := filepath.Join(dir, id+".json")
 			lockPath := filepath.Join(dir, ".native-start.lock")
@@ -224,7 +227,7 @@ func TestRuntimeFailedUpgradePrivateRootProofNeverWritesOrTrustsAmbiguity(t *tes
 				before = nil
 			}
 			err := p.check(ctx, id)
-			if mutation == "original" {
+			if mutation == "original" || mutation == "php-extension" {
 				if err != nil || calls != 2 || showCalls != 2 {
 					t.Fatal(err, calls, showCalls)
 				}
