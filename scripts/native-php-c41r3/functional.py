@@ -137,6 +137,12 @@ def tree_of(paths):
   if os.path.lexists(f):walk(f)
  return result
 
+def owned_entries(path):
+ try:info=path.lstat()
+ except FileNotFoundError:return []
+ assert stat.S_ISDIR(info.st_mode)and info.st_uid==0 and not info.st_mode&0o022
+ members=list(path.iterdir());assert len(members)<=10000;return members
+
 def current_site(identity):
  _,sites=api('/sites');rows=[v for v in sites if v['id']==identity];assert len(rows)==1;return rows[0]
 
@@ -193,7 +199,7 @@ def refusal_state(site):
 proof={'ok':False,'source_inputs_sha256':SOURCE,'architecture':arch,'scope':'actual signed PHP Redis, configured owned website, custom protection/cache byte preservation, normal cross-version switch, explicit stale-SHA refusal and separate fresh return','all50_commercial':False,'Main_changed':False,'automatic_retry_or_original_job_replay':False,'normal_application_install_POSTs':0,'normal_extension_install_POSTs':0,'normal_site_create_POSTs':0,'normal_site_configure_POSTs':0,'normal_PHP_switch_POSTs':0,'QA_custom_config_writes':0}
 try:
  guard('initial');before=snapshot();save('before.json',before);original_nss=nss();save('original-nss-before.json',original_nss);original_kernel=kernel_rules();save('original-kernel-before.json',original_kernel)
- existing_sites=[v.name for v in pathlib.Path('/srv/panel/sites').iterdir()if re.fullmatch('[a-f0-9]{32}',v.name)];original_confs=sorted(str(v)for v in pathlib.Path('/etc/panel/sites-enabled').iterdir()if v.name.endswith('.conf'))
+ existing_sites=[v.name for v in owned_entries(pathlib.Path('/srv/panel/sites'))if re.fullmatch('[a-f0-9]{32}',v.name)];original_confs=sorted(str(v)for v in owned_entries(pathlib.Path('/etc/panel/sites-enabled'))if v.name.endswith('.conf'))
  protected_paths=['/etc/nginx','/etc/panel/security-apps/modules/nfs-manager','/opt/panel/app-modules/nfs-manager','/etc/systemd/system/panel-nfs-server.service',*original_confs,*['/srv/panel/sites/'+v for v in existing_sites]]
  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
   db.execute('PRAGMA query_only=ON')

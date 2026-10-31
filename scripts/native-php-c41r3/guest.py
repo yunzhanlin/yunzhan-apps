@@ -83,7 +83,7 @@ try:
  plan={'base':str(functional_base),'boot':pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip(),'architecture':'amd64','platform':'ubuntu-24.04','prepare_apps':True,'files':{'worker.py':sha(payload/'functional.py')},'programme_binaries':{n:sha('/opt/panel/current/bin/'+n)for n in('panel','panel-executor','panel-start-guard')},'Main_changed':False}
  for name,raw in [('worker.py',(payload/'functional.py').read_bytes()),('intent.json',json.dumps(plan,sort_keys=True).encode())]:
   with os.fdopen(os.open(functional_base/name,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb')as f:f.write(raw);f.flush();os.fsync(f.fileno())
- save('original-functional-once-intent.json',{'plan':plan,'maximum_submissions':1,'unknown_outcome_observe_only':True})
+ save('original-functional-bound-plan.json',{'plan':plan,'maximum_submissions':1,'unknown_outcome_observe_only':True})
  command('original-functional',['/usr/bin/python3','-I','-B',str(functional_base/'worker.py'),str(functional_base)],2400)
  result=json.loads((functional_base/'evidence/proof.json').read_bytes());assert result['ok']is True and result['architecture']=='amd64'and result['normal_application_install_POSTs']==2 and result['normal_extension_install_POSTs']==2 and result['normal_PHP_switch_POSTs']==3
  proof.update(ok=True,normal_programme_signature_and_all203_installed_entries_verified=True,functional_proof_sha256=sha(functional_base/'evidence/proof.json'),actual_nonroot_account_HTTP_multipart_CLI_Redis_custom_config_and_stale_CAS=True)

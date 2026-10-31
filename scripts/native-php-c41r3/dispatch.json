@@ -4,11 +4,14 @@
   "source_inputs_sha256": "757e1941dc2e3e138cef458eb52114545d168ee41286872012e100770c50a1fb",
   "release_id": 429937013,
   "release_tag": "qa-phpswitchpreservecandidate41r3-20261031-qa1",
-  "payload_manifest_sha256": "ac73f16b410d508b6cf1b191e54937c6fe6cb6daedd9b1bd6819b41d9174caa8",
+  "payload_manifest_sha256": "fea6318599fac1c7c918b558703f37653b7a9589a0591db703bfdff484aa400e",
   "actual_AMD64_cases": [
     "ubuntu24"
   ],
   "Main_changed": false,
   "all50_commercial": false,
-  "maximum_workflow_dispatches": 1
+  "maximum_workflow_dispatches": 1,
+  "QA_revision": 2,
+  "original_QA_revision1_run": 41206555262,
+  "original_case_failure": "Bound-plan record collided with command once-intent before functional process submission; original programme203 entries passed; no app/site request dispatched"
 }
