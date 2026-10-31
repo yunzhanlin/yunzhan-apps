@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "source_commit": "e38e7b0b9a1cb39e62228cad02e7469554adb409",
+  "source_inputs_sha256": "888081abdb701fd97a5e69c2cd68b63b0f7c373f7c67a2616b40a31f941003fe",
+  "release_id": 429727518,
+  "release_tag": "qa-nfschecksumcandidate37r8-20261031-qa1",
+  "assets_manifest_sha256": "c93df092531c03164571af01b07c7022ec24452ca9a39fe29bba47b16cdfab67",
+  "normal_native_AMD64_once": true,
+  "ARM64_fresh26_and_reboot_qualified_other_cases_separate": true,
+  "actual_AMD64_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "Main_changed": false,
+  "all50_commercial": false
+}
