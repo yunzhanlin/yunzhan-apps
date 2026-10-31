@@ -1,0 +1,75 @@
+name: actual C42 AMD64 PM2 stopped-state and account matrix
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-pm2-c42/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-pm2-c42-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download the original reviewed signed cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-pm2-c42-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/430076698 > "$RUNNER_TEMP/cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v["id"]==430076698 and not v["draft"] and v["prerelease"] and v["tag_name"]=="qa-pm2stopstatecandidate42-20261101-qa1" and len(v["assets"])==7' "$RUNNER_TEMP/cohort.json"
+          gh release download qa-pm2stopstatecandidate42-20261101-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-pm2-c42-assets"
+          cp scripts/native-pm2-c42/guest.py scripts/native-pm2-c42/prepare.py scripts/native-pm2-c42/functional.py scripts/native-pm2-c42/capture.py "$RUNNER_TEMP/native-pm2-c42-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-pm2-c42-assets/"
+          cp scripts/native-pm2-c42/payload.json "$RUNNER_TEMP/native-pm2-c42-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-pm2-c42-assets" <<'PY'
+          import hashlib,json,pathlib,sys
+          base=pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='81442c1f8cf132b031378e698e74841d1f45d5324d9dae8c61860d8f96ad0e7f'
+          manifest=json.loads((base/'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256']=='e138bc4eb3d4fdddbc67d514d4eef86e401c59962e5a71b1baa128d00df69e8a'
+          for name,digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name==name
+              assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+          print('Original programme signatures, key and reviewed QA payload bound')
+          PY
+      - name: Prepare actual hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Fresh normal programme, signed PM2 installation and real nonroot account/project journey
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-pm2-c42-public"
+          sudo -n python3 -I -B scripts/native-pm2-c42/kvm.py "$RUNNER_TEMP/native-pm2-c42-assets" scripts/native-pm2-c42 "$RUNNER_TEMP/native-pm2-c42-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-pm2-c42-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-pm2-c42-public/
+          retention-days: 7
+          if-no-files-found: warn

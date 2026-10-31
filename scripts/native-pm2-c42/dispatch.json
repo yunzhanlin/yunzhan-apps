@@ -1,0 +1,18 @@
+{
+  "cohort": "C42-PM2-stopped-state",
+  "source_inputs_sha256": "e138bc4eb3d4fdddbc67d514d4eef86e401c59962e5a71b1baa128d00df69e8a",
+  "release_tag": "qa-pm2stopstatecandidate42-20261101-qa1",
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "only_fresh_owned_KVM_guests": true,
+  "maximum_normal_programme_install_per_guest": 1,
+  "maximum_PM2_install_per_guest": 1,
+  "no_unknown_mutation_replay": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}

@@ -1,0 +1,21 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "capture.py": "21fc0864d8c33931af646792721f33649387c5c62c25bb0457c450bb681cd3fd",
+    "functional.py": "66f4d5cd287857b0c661a6792149f699fb6eb4ac4347b18232f0b2d90124371e",
+    "guest.py": "c1f2e16c588447e75eeb0dd30de6081a62b88a859955f040a31bfe1d99cc1e52",
+    "panel-0.1.0-dev.proapps24pm2stopstatecandidate42-linux-amd64.tar.gz": "2b4a1a679ea41a593c0980c53798ea70cba85ac48f3e4a3342c95087ca1dd246",
+    "panel-0.1.0-dev.proapps24pm2stopstatecandidate42-linux-amd64.tar.gz.manifest": "042253c0f7057e9ee367229d43e2f6854b8207a5685ed2d41a8ec4ed1e59ad79",
+    "panel-0.1.0-dev.proapps24pm2stopstatecandidate42-linux-amd64.tar.gz.sig": "3dfc5c6bac87ce96288f1a23eb3d5edb91fa540ac81562c02c345e7ffd7f2ad7",
+    "prepare.py": "fd81ac60c6a5877fbbb40a8b88aa92cd1e0df2e7a89608aef4aef4ef3b4eb03d",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 430076698,
+  "release_tag": "qa-pm2stopstatecandidate42-20261101-qa1",
+  "source_inputs_sha256": "e138bc4eb3d4fdddbc67d514d4eef86e401c59962e5a71b1baa128d00df69e8a",
+  "version": "0.1.0-dev.proapps24pm2stopstatecandidate42"
+}
