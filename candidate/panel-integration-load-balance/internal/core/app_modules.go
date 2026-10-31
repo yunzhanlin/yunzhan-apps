@@ -422,7 +422,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "network-threat-detection":
 			version = "1.3.1"
 		case "pm2-manager":
-			version = "7.0.4-compat5"
+			version = "7.0.4-compat6"
 		case "website-statistics-v2":
 			version = "2.6.0"
 		case "apache-waf":

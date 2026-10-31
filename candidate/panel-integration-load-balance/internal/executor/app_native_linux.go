@@ -535,8 +535,14 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			if e := moduleRead(p, &app); e != nil {
 				return nil, e
 			}
-			state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pm2@"+app.ID)
-			out = append(out, map[string]any{"app": publicPM2App(app), "state": strings.TrimSpace(state)})
+			state, stateErr := s.readPM2UnitState(ctx, "panel-pm2@"+app.ID+".service")
+			row := map[string]any{"app": publicPM2App(app), "state": state.ActiveState, "state_known": stateErr == nil, "boot_enabled": state.UnitFileState == "enabled"}
+			if stateErr != nil {
+				row["state"] = "unknown"
+				row["boot_enabled"] = nil
+				row["error"] = stateErr.Error()
+			}
+			out = append(out, row)
 		}
 		return map[string]any{"apps": out, "pm2_version": "7.0.4"}, nil
 	}
@@ -650,6 +656,13 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		if in.ExpectedRevision != app.Revision {
 			return nil, errors.New("PM2 配置已变化，请重新选择项目后保存")
 		}
+		beforeState, e := s.readPM2UnitState(ctx, unit)
+		if e != nil {
+			return nil, e
+		}
+		if beforeState.ActiveState == "failed" {
+			return nil, errors.New("PM2 原服务失败，请先显式停止或启动并核对，再保存配置")
+		}
 		previous, e := backupFile(path)
 		if e != nil {
 			return nil, e
@@ -704,12 +717,19 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 				}
 			}
 		}
+		currentState, e := s.readPM2UnitState(ctx, unit)
+		if e != nil || currentState != beforeState {
+			return nil, errors.New("PM2 运行状态在保存前已变化，未修改项目；请刷新后重试")
+		}
 		app.Revision++
 		if e = s.patchPM2Environment(&app, in.EnvironmentPatch); e != nil {
 			return nil, e
 		}
 		if e = moduleWrite(path, app); e != nil {
 			return nil, e
+		}
+		if beforeState.ActiveState == "inactive" {
+			return map[string]any{"app": publicPM2App(app), "ok": true, "service_active": false, "boot_enabled": beforeState.UnitFileState == "enabled", "runtime_validated": false, "preserved_stopped": true}, nil
 		}
 		if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "restart", unit); e == nil {
 			e = s.pm2Ready(ctx, unit, app.Port)
@@ -729,11 +749,7 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		}
 		return map[string]any{"app": publicPM2App(app), "ok": true}, nil
 	case "start", "stop", "restart":
-		_, e := s.Config.Run(ctx, "/usr/bin/systemctl", action, unit)
-		if e == nil && action != "stop" {
-			e = s.pm2Ready(ctx, unit, app.Port)
-		}
-		return map[string]any{"id": app.ID, "action": action, "ok": e == nil}, e
+		return s.controlPM2(ctx, app, action, unit)
 	case "logs":
 		out, e := s.Config.Run(ctx, "/usr/bin/journalctl", "-u", unit, "-n", "100", "--no-pager", "-o", "cat")
 		return map[string]any{"logs": out}, e

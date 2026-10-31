@@ -155,6 +155,9 @@ const names: Record<string, string> = {
   idle_minutes: "空闲超时（分钟）",
   service_active: "服务正在运行",
   boot_enabled: "开机启动",
+	state_known: "运行状态已核对",
+	runtime_validated: "本次已验证入口运行",
+	preserved_stopped: "已保留停止状态",
   data_tls_required: "数据通道强制加密",
   tls_required: "控制通道强制加密",
   tls_verified: "实际 TLS 探测通过",
@@ -521,6 +524,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown, row?:Record<string,unknown>): string {
+	if(props.id==='pm2-manager'&&key==='state')return ({active:'运行中',inactive:'已停止',failed:'运行失败',unknown:'无法核对'} as Record<string,string>)[String(value)]||'未知状态';
   if(props.id==='disk-analysis'){const notice=diskValueNotice(props.report,key,value);if(notice)return notice;}
   if(props.id==='disk-analysis'&&key==='allocation_basis')return value==='st_blocks_512_inode_deduplicated'?'Linux 已分配块，按本次扫描范围内 inode 去重':'未知计算方式';
   if(props.id==='website-statistics-v2' && key==='history_request_receipt_limit' && props.report.history_request_ids_enabled!==true)return '未启用（旧版历史模式）';
@@ -577,6 +581,7 @@ function rows(values: any[],key=''): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
+	if(props.id==='pm2-manager'&&values.some(value=>value&&typeof value==='object'&&(value.app||'instances' in value)))return ['id','site_id','state','boot_enabled','state_known','entry','port','instances','memory_mb','revision','environment_keys','error'];
   if(props.id==='task-manager'&&values.some(value=>value&&typeof value==='object'&&'pid' in value))return taskProcessColumns(values);
   if(props.id==="files-sync" && values.some(value=>value && value.backup_archive_state))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_archive_state","backup_snapshot_sha256","pending_recovery","content_verified"];
   if(props.id==="files-sync" && values.some(value=>value && value.backup_transaction_id))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_files","pending_recovery"];
