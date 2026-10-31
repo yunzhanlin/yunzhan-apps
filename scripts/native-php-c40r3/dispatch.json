@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "source_commit": "8b1b46e313c6990a89d9a0b65140ded89fd45043",
+  "source_inputs_sha256": "33c40c57a4c5e205e919e8117ae177b4048c893daf09b5379388af7dba605fc6",
+  "release_id": 429875263,
+  "release_tag": "qa-phpsessionguardcandidate40r3-20261031-qa1",
+  "assets_manifest_sha256": "9d69b91808d6a7cb68030e7bed1c8ed8d399084487a7a30978bfe047313fd38c",
+  "normal_native_AMD64_once": true,
+  "ARM64_four_actual_private_PHP_FPM_versions_qualified_other_OS_cases_separate": true,
+  "actual_AMD64_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "Main_changed": false,
+  "all50_commercial": false
+}
