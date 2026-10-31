@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "source_programme_commit": "83082f8afcfb3bd1e96c492bb4f83555da3c8269",
+  "source_inputs_sha256": "8cbf310e9c9170d37180ca03e60fb84d6ecc8e35029c15d5562167687929c95b",
+  "QA_parent_commit": "06802a0db936813720647cc08f1857baa398cfad",
+  "release_id": 429181649,
+  "release_tag": "qa-nfsprivateclientcandidate37r5-20261030-qa1",
+  "source_review_sha256": "aff3e9655ed1af4735a9e6861e34631a92e337b6dcfb4aa392fbbe45fc01fc33",
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu26"
+  ],
+  "maximum_first_installs_each_case": 1,
+  "Ubuntu24_native_run_not_replayed": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}
