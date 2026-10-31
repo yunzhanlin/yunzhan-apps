@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "source_commit": "47d0af246ddbb9eb95157174200f2940add6e534",
+  "source_inputs_sha256": "2273aea05853e725c283f210abe70da0a53b808709d4c0245467abd896b53203",
+  "release_id": 429785193,
+  "release_tag": "qa-runtimeextensionclosurecandidate38-20261031-qa1",
+  "assets_manifest_sha256": "513b40a196953d7deb108bf0feb0cd038e4acbfb34cc74f4bced8d6eb59e9ea7",
+  "normal_native_AMD64_once": true,
+  "ARM64_fresh26_and_reboot_qualified_other_cases_separate": true,
+  "actual_AMD64_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "Main_changed": false,
+  "all50_commercial": false
+}
