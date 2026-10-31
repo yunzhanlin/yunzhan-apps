@@ -7,6 +7,10 @@ import (
 	"strings"
 )
 
+func phpSessionProgressGuarded(r runtimecatalog.Release) bool {
+	return r.Family == "php" && strings.HasPrefix(r.Version, "8.")
+}
+
 func phpProbeScript(site core.Site) string {
 	code := "<?php header('Content-Type: text/plain'); echo PHP_VERSION;"
 	for _, pair := range core.PHPIniValues(site.Settings.PHP) {
@@ -15,6 +19,9 @@ func phpProbeScript(site core.Site) string {
 		} else {
 			code += " echo '|', ini_get('" + pair[0] + "');"
 		}
+	}
+	if r, ok := runtimecatalog.Find(site.PHPVersionID); ok && phpSessionProgressGuarded(r) {
+		code += " echo '|', filter_var(ini_get('session.upload_progress.enabled'), FILTER_VALIDATE_BOOL) ? '1' : '0';"
 	}
 	if site.Settings.PHP != nil {
 		for _, id := range site.Settings.PHP.Extensions {
@@ -30,6 +37,9 @@ func phpProbeExpected(site core.Site) string {
 		value := pair[1]
 
 		expected += "|" + value
+	}
+	if r, ok := runtimecatalog.Find(site.PHPVersionID); ok && phpSessionProgressGuarded(r) {
+		expected += "|0"
 	}
 	if site.Settings.PHP != nil {
 		for _, id := range site.Settings.PHP.Extensions {

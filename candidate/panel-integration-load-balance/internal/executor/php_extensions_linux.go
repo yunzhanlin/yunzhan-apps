@@ -342,6 +342,11 @@ func phpExtensionArgs(ctx context.Context, r runtimecatalog.Release, settings *c
 	if e := core.ValidatePHPSettings(settings); e != nil {
 		return nil, e
 	}
+	if phpSessionProgressGuarded(r) {
+		// Apply before FPM parses a request, including legacy pools with unset
+		// PHP settings. Existing pool files and instance identities stay intact.
+		out = append(out, "-d", "session.upload_progress.enabled=0")
+	}
 	if settings == nil {
 		return out, nil
 	}
