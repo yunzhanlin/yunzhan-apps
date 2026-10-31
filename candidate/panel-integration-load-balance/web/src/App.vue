@@ -18,11 +18,12 @@ import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
 import { normalizeStoreSearch, sortStoreSearchResults } from "./storeSearch";
 import { useMobileNavigation } from "./mobileNavigation";
 import { phpSecurityFor, phpSecurityExposure } from "./phpSecurity";
+import { parsePHPSwitchPreview, samePHPSwitchContext, type PHPSwitchContext, type PHPSwitchPreview } from "./phpSwitchPreview";
 import { softwareInstallState, uniqueSoftwareStatus } from "./softwareState";
 import { reconcileRuntimeChoices } from "./runtimeSelection";
 import type { SecurityAppCatalogItem, SecurityAppStatus } from "./SecurityAppManager.vue";
 import PanelIcon from "./PanelIcon.vue";
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef } from "vue";
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
   Odometer,
@@ -96,6 +97,7 @@ interface Site {
   created_at: string;
   runtime_instance_id: string;
   php_version_id: string;
+  settings_revision: number;
 }
 interface Job {
   id: string;
@@ -805,6 +807,15 @@ const phpOpen = ref(false),
   phpTarget = ref<Site | null>(null),
   phpSelection = ref(""),
   submittingPHP = ref(false);
+const phpPreview = shallowRef<PHPSwitchPreview>();
+let phpPreviewEpoch = 0;
+function phpSwitchContext(): PHPSwitchContext | null {
+  const site = sites.value.find(item => item.id === phpTarget.value?.id);
+  if (!phpOpen.value || !site || !accessPlan.value || !["admin", "operator"].includes(accessPlan.value.role) || !canOpenView(accessPlan.value, "sites")) return null;
+  return {site_id:site.id, release_id:phpSelection.value, current_release_id:site.php_version_id,
+    revision:site.settings_revision, access:JSON.stringify(accessPlan.value)};
+}
+watch(() => JSON.stringify(phpSwitchContext()), () => { phpPreviewEpoch++; phpPreview.value = undefined; }, {flush:"sync"});
 const installedPHP = computed(() =>
   runtimes.value.installed.filter(
     (r) => r.family === "php" && r.status === "installed",
@@ -954,18 +965,36 @@ async function activateNginx(id: string) {
   }
 }
 function choosePHP(site: Site) {
+  if (submittingPHP.value) return;
   phpTarget.value = site;
   phpSelection.value = site.php_version_id;
   phpOpen.value = true;
 }
+async function readPHPPreview() {
+  const context = phpSwitchContext(), epoch = phpPreviewEpoch;
+  if (!context) throw Error("网站或账户权限已变化，请重新打开 PHP 切换");
+  const value = await api<unknown>(`/sites/${context.site_id}/php/preview`, "POST", {release_id:context.release_id});
+  if (epoch !== phpPreviewEpoch || !samePHPSwitchContext(context, phpSwitchContext())) throw Error("PHP 选择或网站状态已变化，原预览已失效");
+  const preview = parsePHPSwitchPreview(value, context);
+  phpPreview.value = preview;
+  return {context,preview,epoch};
+}
+async function previewPHP() {
+  if (submittingPHP.value) return;
+  submittingPHP.value = true;
+  try { await readPHPPreview(); } catch(e) { ElMessage.error((e as Error).message); }
+  finally { submittingPHP.value = false; }
+}
 async function switchPHP() {
-  if (!phpTarget.value) return;
+  if (!phpTarget.value || submittingPHP.value) return;
   submittingPHP.value = true;
   try {
+    const {context,preview,epoch} = await readPHPPreview();
+    if (epoch !== phpPreviewEpoch || !samePHPSwitchContext(context, phpSwitchContext())) throw Error("网站状态已变化，请重新预览");
     const result = await api<{ job_id: string }>(
-      `/sites/${phpTarget.value.id}/php`,
+      `/sites/${context.site_id}/php`,
       "POST",
-      { release_id: phpSelection.value },
+      { release_id: context.release_id, expected_config_sha: preview.config_sha },
     );
     phpOpen.value = false;
     await refresh();
@@ -3424,9 +3453,11 @@ onUnmounted(() => {
     <el-dialog
       v-model="phpOpen"
       title="网站 PHP 版本"
-      width="500px"
+      width="760px"
       class="create-dialog"
       :close-on-click-modal="false"
+      :close-on-press-escape="!submittingPHP"
+      :show-close="!submittingPHP"
     >
       <template v-if="phpTarget"
         ><p class="dialog-intro">
@@ -3440,6 +3471,7 @@ onUnmounted(() => {
         <el-select
           v-model="phpSelection"
           aria-label="目标 PHP 版本"
+          :disabled="submittingPHP"
           style="width: 100%"
           ><el-option value="" label="静态站点（禁止执行 PHP）" /><el-option
             v-for="rt in installedPHP"
@@ -3451,8 +3483,17 @@ onUnmounted(() => {
           先验证候选 PHP 进程，再检查 Nginx 配置与实际访问。成功后同步该站点的
           CLI 绑定；失败保留原版本。
         </p>
+        <p v-if="phpPreview" data-testid="php-switch-preview-mode">
+          {{ phpPreview.preserves_custom_config ? "仅替换 PHP 绑定与受管健康检查，保留其余网站配置。" : "该操作将重新生成网站配置，请核对下方预览。" }}
+        </p>
+        <details v-if="phpPreview" data-testid="php-switch-config-preview">
+          <summary>查看当前配置与切换后配置</summary>
+          <p>当前配置</p><pre style="max-height:220px;overflow:auto;white-space:pre-wrap">{{ phpPreview.current }}</pre>
+          <p>切换后配置</p><pre style="max-height:220px;overflow:auto;white-space:pre-wrap">{{ phpPreview.candidate }}</pre>
+        </details>
         <div class="dialog-actions">
-          <el-button @click="phpOpen = false">取消</el-button
+          <el-button :disabled="submittingPHP" @click="phpOpen = false">取消</el-button>
+          <el-button :disabled="submittingPHP" @click="previewPHP">预览配置</el-button
           ><el-button type="primary" :loading="submittingPHP" @click="switchPHP"
             >验证并切换</el-button
           >

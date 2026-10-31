@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { beforeLoadBalanceStreamBuild } from "./release-build-baseline.mjs";
+import { beforePHPSwitchPreviewApp } from "./php-switch-preview-baseline.mjs";
 import { reconcileRuntimeChoices as choose } from "../web/src/runtimeSelection.ts";
 const release=(family,version,extra={})=>({id:family+"-"+version,version,channel:"stable",...extra});
 const family=(name,releases,extra={})=>({family:name,state:"available",versions:releases.map(x=>x.version),releases,...extra});
@@ -141,7 +142,7 @@ test("all eight current runtime families use server/installed identities, not li
 });
 test("actual component wiring has exactly the reviewed UI-only delta from F55",()=>{
  const path=new URL("../web/src/App.vue",import.meta.url);
- let text=readFileSync(path,"utf8");
+ let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
  // The independent country editor adds only current-actor plumbing here.
  one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
@@ -167,3 +168,12 @@ test("ordinary portable release build requires this regression without changing 
  assert.equal(createHash("sha256").update(original).digest("hex"),"9efa9a1e0155a8d4c88caf370306191ffa4675011fdd0bb79a282dd9e2ee02c1");
 });
 
+
+test("PHP preview normalization rejects altered or duplicated control flow and retains unrelated edits",()=>{
+ const current=readFileSync(new URL("../web/src/App.vue",import.meta.url),"utf8");
+ assert.throws(()=>beforePHPSwitchPreviewApp(current.replace("expected_config_sha: preview.config_sha","expected_config_sha: foreignDigest")));
+ assert.throws(()=>beforePHPSwitchPreviewApp(current.replace("async function readPHPPreview() {","async function readPHPPreview() {\n  // unreviewed change")));
+ const old=beforePHPSwitchPreviewApp(current);
+ assert.equal(beforePHPSwitchPreviewApp(current+"\n// unrelated change"),old+"\n// unrelated change");
+ assert.throws(()=>beforePHPSwitchPreviewApp(current+current));
+});

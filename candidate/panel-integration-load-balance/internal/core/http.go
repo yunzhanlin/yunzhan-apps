@@ -268,6 +268,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 	}))
 
 	m.HandleFunc("POST /api/sites/{id}/php", a.authorize(a.switchPHP))
+	m.HandleFunc("POST /api/sites/{id}/php/preview", a.authorize(a.previewPHP))
 	m.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, "接口不存在") })
 	files := panelStaticHandler(c.WebDir)
 	m.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -679,12 +680,13 @@ func (a *Server) installRuntimeBundle(w http.ResponseWriter, r *http.Request, u 
 }
 func (a *Server) switchPHP(w http.ResponseWriter, r *http.Request, u identity) {
 	var in struct {
-		ReleaseID string `json:"release_id"`
+		ReleaseID         string `json:"release_id"`
+		ExpectedConfigSHA string `json:"expected_config_sha"`
 	}
 	if !decode(w, r, &in) {
 		return
 	}
-	id, e := a.Store.QueuePHP(r.PathValue("id"), in.ReleaseID, u.Username)
+	id, e := a.Store.QueuePHPWithConfig(r.PathValue("id"), in.ReleaseID, u.Username, in.ExpectedConfigSHA)
 	if e != nil {
 		fail(w, 409, e.Error())
 		return

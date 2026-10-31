@@ -105,6 +105,8 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 }
 
 type ApplyRequest struct {
+	PreserveNginx     bool   `json:"preserve_nginx,omitempty"`
+	PreviousSite      *Site  `json:"previous_site,omitempty"`
 	ExpectedConfigSHA string `json:"expected_config_sha,omitempty"`
 	Site              Site   `json:"site"`
 	Sites             []Site `json:"sites,omitempty"`
@@ -190,6 +192,7 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				continue
 			}
 			result := ApplyResult{}
+			previousSite := site
 			enabled := j.Kind != "disable_site"
 			previousStatus := site.Status
 			if j.Kind == "create_site" || j.Kind == "switch_php" {
@@ -202,6 +205,11 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				}
 			}
 			expectedConfigSHA := ""
+			if j.Kind == "switch_php" {
+				var p JobPayload
+				_ = json.Unmarshal([]byte(j.Payload), &p)
+				expectedConfigSHA = p.ExpectedConfigSHA
+			}
 			if j.Kind == "configure_site" {
 				var p JobPayload
 				_ = json.Unmarshal([]byte(j.Payload), &p)
@@ -248,7 +256,12 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 					}
 				}
 			}
-			err = e.Call(ctx, "POST", "/v1/sites/apply", ApplyRequest{Site: site, Sites: allSites, Enabled: enabled, JobID: j.ID, ExpectedConfigSHA: expectedConfigSHA}, &result)
+			request := ApplyRequest{Site: site, Sites: allSites, Enabled: enabled, JobID: j.ID, ExpectedConfigSHA: expectedConfigSHA}
+			if j.Kind == "switch_php" && previousSite.PHPVersionID != "" && site.PHPVersionID != "" && site.Settings.WebServer == "nginx" {
+				request.PreserveNginx = true
+				request.PreviousSite = &previousSite
+			}
+			err = e.Call(ctx, "POST", "/v1/sites/apply", request, &result)
 			detail := ""
 			status := result.Status
 			if err != nil {

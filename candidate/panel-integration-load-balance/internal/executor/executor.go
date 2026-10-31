@@ -302,6 +302,10 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 		}
 	}
 	add("校验站点标识、目录归属与期望状态")
+	phpPlan, planErr := s.phpSwitchPreservationPlan(in)
+	if planErr != nil {
+		return result, planErr
+	}
 	dir := filepath.Join(s.Config.SitesDir, in.Site.ID)
 	if _, err := os.Lstat(dir); errors.Is(err, os.ErrNotExist) {
 		if !in.Enabled {
@@ -444,12 +448,18 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 		return result, errors.New("保存期间实际 Nginx 配置已变化，请重新预览")
 	}
 	content, renderErr := renderSiteConfig(in.Site, public)
+	if phpPlan != nil {
+		if !hadOld || string(old) != phpPlan.original {
+			return result, errors.New("PHP 切换期间实际 Nginx 配置已变化，未覆盖原配置")
+		}
+		content, renderErr = phpPlan.candidate, nil
+	}
 	if renderErr != nil {
 		return result, renderErr
 	}
 	if !in.Enabled {
 		content = fmt.Sprintf("# managed by panel; site=%s; disabled\n", in.Site.ID)
-	} else {
+	} else if phpPlan == nil {
 		content, renderErr = s.preserveWAFBodySiteConfig(content, in.Site.ID)
 		if renderErr != nil {
 			return result, renderErr
@@ -488,7 +498,11 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 		}
 		apacheSites = []core.Site{candidate}
 	}
-	apacheRollback, err := s.applyApacheSites(ctx, apacheSites, add)
+	apacheRollback := func() error { return nil }
+	var err error
+	if phpPlan == nil {
+		apacheRollback, err = s.applyApacheSites(ctx, apacheSites, add)
+	}
 	if err != nil {
 		if re := rollback(); re == nil && !strings.Contains(err.Error(), "恢复失败") {
 			result.Restored = true
@@ -642,6 +656,7 @@ func (s *Service) Handler() http.Handler {
 	s.fileRoutes(m)
 	s.systemFileRoutes(m)
 	s.siteSettingsRoutes(m)
+	s.phpSwitchPreviewRoutes(m)
 	s.siteTrafficRoutes(m)
 	s.databaseMetricRoutes(m)
 	s.databaseConnectionRoutes(m)

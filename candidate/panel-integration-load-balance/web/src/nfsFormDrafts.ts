@@ -79,6 +79,11 @@ export class NFSFormDrafts {
     if (typeof resource !== 'string' || !/^[a-z][a-z0-9-]{2,31}$/.test(resource)) return;
     if ('clients' in row) {
       if (!Array.isArray(row.clients) || !row.clients.length || row.clients.some(client => typeof client !== 'string') || typeof row.read_only !== 'boolean' || typeof row.site_id !== 'string' || !/^[a-f0-9]{32}$/.test(row.site_id) || row.path !== undefined && typeof row.path !== 'string') return;
+      if (this.active === 'export-remove') {
+        const removal = this.activate('export-remove');
+        Object.assign(removal, {resource_id: resource, expected_revision: this.server?.revision ?? 0});
+        return 'export-remove';
+      }
       const value = this.activate('export');
       Object.assign(value, {resource_id: resource, site_id: row.site_id, path: row.path ?? '', client_allow: JSON.stringify(row.clients, null, 2), read_only: row.read_only, expected_revision: this.server?.revision ?? 0, confirm: ''});
       const removal = this.entries.get('export-remove') ?? {value: this.wrap(this.defaults('export-remove')), baseline: ''};

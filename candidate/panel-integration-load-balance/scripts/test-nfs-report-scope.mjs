@@ -127,3 +127,21 @@ test('a selected export keeps its CAS revision after save until selected again, 
  const d=new drafts.NFSFormDrafts();d.observe(server().config);const row={...server().config.exports[0],resource_id:'share-one'};d.select(row);const value=d.activate('export'),submitted=d.submission('export','export-save');d.observe({...server().config,revision:10},submitted);assert.equal(value.expected_revision,10);d.observe({...server().config,revision:11});assert.equal(value.expected_revision,10);d.select(row);assert.equal(value.expected_revision,11);
  for(const invalid of [{...row,read_only:'false'},{...row,site_id:'bad'},{...row,clients:'::1'},{...row,clients:[]}])assert.equal(d.select(invalid),undefined);
 });
+
+test('selecting an export on the removal page preserves the removal operation and unsaved edit draft',async()=>{
+ const calls=[],h=harness(async(...args)=>{calls.push(args);return server()});h.go('export');await settle();
+ Object.assign(h.form.value,{resource_id:'draft-edit',site_id:'b'.repeat(32),path:'draft-path',client_allow:'["127.0.0.2"]',read_only:true});
+ const edit=structuredClone(h.form.value);h.go('export-remove');await settle();const beforeCalls=calls.length;
+ h.selected({...server().config.exports[0],resource_id:'share-one'});
+ assert.equal(h.activeTab.value,'export-remove');assert.deepEqual(h.form.value,{resource_id:'share-one',expected_revision:9});assert.equal(calls.length,beforeCalls);
+ h.go('export');assert.deepEqual(h.form.value,edit);
+});
+
+test('a removal row selection uses the observed revision, rejects malformed rows and never silently rebases',()=>{
+ const d=new drafts.NFSFormDrafts();d.observe(server().config);const edit=d.activate('export');edit.resource_id='draft-edit';
+ const removal=d.activate('export-remove');d.observe({...server().config,revision:10});const row={...server().config.exports[0],resource_id:'share-one'};
+ assert.equal(d.select(row),'export-remove');assert.equal(d.activate('export-remove'),removal);assert.deepEqual(removal,{resource_id:'share-one',expected_revision:10});assert.equal(edit.resource_id,'draft-edit');
+ for(const invalid of [{...row,site_id:'invalid'},{...row,clients:[]},{...row,read_only:'false'}]){assert.equal(d.select(invalid),undefined);assert.deepEqual(removal,{resource_id:'share-one',expected_revision:10});}
+ const submitted=d.submission('export-remove','export-remove');assert.equal(submitted.revision,10);assert.equal(d.submission('export-remove','export-save'),undefined);
+ d.observe({...server().config,revision:11});assert.equal(removal.expected_revision,10);assert.equal(d.select(row),'export-remove');assert.equal(removal.expected_revision,11);
+});

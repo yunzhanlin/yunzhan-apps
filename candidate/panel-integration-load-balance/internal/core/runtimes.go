@@ -149,6 +149,12 @@ func (s *Store) queueInstallBound(release, key, actor string, bind func(*sql.Tx,
 	return id, tx.Commit()
 }
 func (s *Store) QueuePHP(id, release, actor string) (string, error) {
+	return s.QueuePHPWithConfig(id, release, actor, "")
+}
+func (s *Store) QueuePHPWithConfig(id, release, actor, expectedConfigSHA string) (string, error) {
+	if expectedConfigSHA != "" && (len(expectedConfigSHA) != 64 || strings.IndexFunc(expectedConfigSHA, func(c rune) bool { return !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f') }) >= 0) {
+		return "", errors.New("网站配置摘要无效，请重新预览")
+	}
 	if release != "" {
 		if r, ok := runtimecatalog.Find(release); !ok || r.Family != "php" || !s.RuntimeInstalled(release) {
 			return "", errors.New("请先安装所选 PHP 精确版本")
@@ -176,7 +182,7 @@ func (s *Store) QueuePHP(id, release, actor string) (string, error) {
 	}
 	defer tx.Rollback()
 	jobID := ID()
-	p, _ := json.Marshal(JobPayload{ReleaseID: release, PreviousStatus: site.Status})
+	p, _ := json.Marshal(JobPayload{ReleaseID: release, PreviousStatus: site.Status, ExpectedConfigSHA: expectedConfigSHA})
 	_, e = tx.Exec(`INSERT INTO jobs(id,site_id,payload,kind,state,created_at,updated_at) VALUES(?,?,?,'switch_php','queued',?,?)`, jobID, id, string(p), Now(), Now())
 	if e != nil {
 		return "", errors.New("该站点已有运行中的任务")
