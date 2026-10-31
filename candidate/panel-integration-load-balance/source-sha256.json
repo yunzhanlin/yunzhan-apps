@@ -1,12 +1,15 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24runtimeextensionclosurecandidate38-linux-amd64.tar.gz",
-    "archive_sha256": "35439b0945039f74eeb7cb3ed9019e3e99b7da4ae16006dd8113437c0ddb014c",
-    "frozen_inputs_sha256": "2273aea05853e725c283f210abe70da0a53b808709d4c0245467abd896b53203"
+    "archive": "panel-0.1.0-dev.proapps24executorcliargumentscandidate39r2-linux-amd64.tar.gz",
+    "archive_sha256": "dce9ea870f755a0b789b997348bfa4595a832995b24c2546ae671564597c0c06",
+    "frozen_inputs_sha256": "e46fbc369672d8fa250bedd29f076974f3ce26cc5accd17aad6fdd408a5a7af3"
   },
   "files": {
-    "cmd/executor/main.go": "0fc6525a0cfc5f18e6b4b2b7ea10de2838a94aa901243780ba655c1bd16a5cc6",
+    "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
+    "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
+    "cmd/executor/cli_arguments_test.go": "2655ad73714df0a044748d0aa2fe44aec585ab64985fc12183fc33ee6c0211d2",
+    "cmd/executor/main.go": "efdfbcf8aea789855c504e67699b30db2556f3a493e668da3d023f95b0d2b131",
     "cmd/executor/shutdown.go": "a8faac2abce4b6c5a63cb174ede1ad5ab4a9c61c6f63c480c925c37ff70d3aff",
     "cmd/executor/shutdown_test.go": "608c7c61a2a580a5276e2d68fa7eca9e1e41e72f10e733a7732a227c39aa7bab",
     "cmd/geodata-countries/main.go": "b97dad4e25441dec78450103f8fdfd606c59bcb5f294868550d6c431e9f30e4c",
@@ -2045,7 +2048,7 @@
     "scripts/test-load-balance-alerts.mjs": "afb81e54c8177c02c1871ea9093f6aac4b13294fe1bd4bedd5d0aded4280d854",
     "scripts/test-load-balance-report-export.mjs": "222840e1d7de0a6e83d7b658722ee7039f2ce8ac27afe8b7c15b2b79bb938e93",
     "scripts/test-load-balance-routing.mjs": "c5a5ed04ebb21065e172b1319460530ee346c80d125fadadc906416f2efd2afc",
-    "scripts/test-load-balance-stream-account-entry.mjs": "29d629ae524048248a791d6db3692b3f4115a93c2e76f86334f7f463db6094de",
+    "scripts/test-load-balance-stream-account-entry.mjs": "92f27c52596bc627e60ec09a06eb2650488af266d0583ae238d9b401c999e901",
     "scripts/test-load-balance-stream.mjs": "1278b992675a4cf330f5b171e630af46f509e4979e098d6252121a30b182a612",
     "scripts/test-load-balance-transactions.mjs": "c9f8e04ec61487b679611804f62c9a549cbc0796945a959c7c861f32ea252823",
     "scripts/test-memcached-unix-workspace.mjs": "6a163b905c836f5d3429b6961a87c6461fac5d5e5578287a58bc99dd5492b80b",

@@ -27,7 +27,7 @@ func main() {
 	install := flag.String("install-job", "", "run a reviewed runtime installation job")
 	prepare := flag.String("prepare-site", "", "create an isolated site account")
 	servePHP := flag.String("serve-php", "", "serve one managed PHP pool")
-	siteCLI := flag.String("site-cli", "", "run the CLI bound to this site")
+	siteCLI := flag.String("site-cli", "", "run the CLI bound to this site; use -- before PHP arguments")
 	nginxOp := flag.String("nginx-operation", "", "execute a fixed Nginx service operation")
 	nginxRollback := flag.String("nginx-rollback", "", "recover an uncommitted Nginx change")
 	recoverNginx := flag.Bool("recover-nginx", false, "restore unfinished Nginx selections at boot")
@@ -39,7 +39,7 @@ func main() {
 	mysqlPrepare := flag.String("prepare-mysql", "", "create an isolated database account")
 	mysqlServe := flag.String("serve-mysql", "", "serve an isolated database instance")
 	mysqlJob := flag.String("database-job", "", "run a managed database operation")
-	mysqlCLI := flag.String("database-cli", "", "run a local root database client")
+	mysqlCLI := flag.String("database-cli", "", "run a local root database client; use -- before client arguments")
 	mysqlOverwriteRecovery := flag.Bool("recover-database-overwrites", false, "recover interrupted database replacement operations")
 	terminalServer := flag.String("terminal-server", "", "serve restricted terminal sessions on a private Unix socket")
 	terminalUser := flag.String("terminal-user", "panel-task", "fixed identity for terminal-server")
@@ -86,10 +86,8 @@ func main() {
 	nfsServe := flag.Bool("serve-nfs-server", false, "serve private NFSv4 website exports")
 	nfsRecover := flag.Bool("recover-nfs-server", false, "recover unfinished NFSv4 export configuration")
 	flag.Parse()
-	if flag.NArg() != 0 {
-		// No executor mode consumes positional arguments. Reject before any
-		// host dispatch, including a fixed-job flag hidden after a positional.
-		log.Fatal("executor rejects unexpected positional arguments")
+	if err := validateExecutorCLIArguments(flag.CommandLine, os.Args[1:]); err != nil {
+		log.Fatal(err)
 	}
 	countryAccountEntry := false
 	flag.Visit(func(f *flag.Flag) {

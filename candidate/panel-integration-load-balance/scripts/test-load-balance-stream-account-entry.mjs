@@ -42,7 +42,12 @@ test('production worker retains independent authority and create-once checks',()
 test('original parent entry and unit cannot be a generic Root command or boot hook',()=>{
  const parent=fs.readFileSync(new URL('../dev/panel-lbstream-install@.service',import.meta.url),'utf8');
  assert(main.includes('flag.String("load-balance-stream-install-job", ""'));
- assert(main.indexOf('if flag.NArg() != 0 {')>main.indexOf('flag.Parse()')&&main.indexOf('if flag.NArg() != 0 {')<main.indexOf('if lbStreamInstallEntry {'));
+ const argumentGate='if err := validateExecutorCLIArguments(flag.CommandLine, os.Args[1:]); err != nil {';
+ assert(main.indexOf(argumentGate)>main.indexOf('flag.Parse()')&&main.indexOf(argumentGate)<main.indexOf('if lbStreamInstallEntry {'));
+ const argumentsSource=fs.readFileSync(new URL('../cmd/executor/cli_arguments.go',import.meta.url),'utf8');
+ for(const required of ['if f.Name == "site-cli" || f.Name == "database-cli" {','if name == "" {','if flags.NArg() != 0 {','executor rejects unexpected positional arguments','value == "" || flags.NFlag() != 1','argv[head] != "--"','!slices.Equal(argv[head+1:], flags.Args())'])assert(argumentsSource.includes(required),required);
+ const nativeArgumentsTests=fs.readFileSync(new URL('../cmd/executor/cli_arguments_linux_test.go',import.meta.url),'utf8');
+ assert(nativeArgumentsTests.includes('func TestExecutorCLIEntryRejectsAmbiguityBeforeAnyHostDispatch(')&&nativeArgumentsTests.includes('main()'));
  const begin=main.indexOf('if lbStreamInstallEntry {'),end=main.indexOf('lbStreamAccountEntry := false');assert(begin>0&&end>begin);
  const entry=main.slice(begin,end);assert(entry.includes('len(os.Args) != 2 || os.Args[1] != "--load-balance-stream-install-job="+*lbStreamInstallJob'));assert(entry.includes('executor.RunLoadBalanceStreamInstallJob(*lbStreamInstallJob)'));
  for(const line of['BindsTo=panel.service','After=panel.service','Type=exec','Slice=system.slice','ExecStart=/opt/panel/bin/panel-executor --load-balance-stream-install-job=%i','Restart=no','RemainAfterExit=no','KillMode=control-group','RuntimeMaxSec=95s','NoNewPrivileges=yes','ProtectSystem=strict','PrivateNetwork=yes','RestrictAddressFamilies=AF_UNIX','ReadWritePaths=/etc/panel/security-apps /var/lib/panel-executor','MemoryMax=256M','MemorySwapMax=0','TasksMax=32'])assert(parent.split('\n').includes(line),line);
