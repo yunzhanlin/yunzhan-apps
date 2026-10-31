@@ -12,6 +12,11 @@ import importlib.util
 import json
 import os
 import pathlib
+import sys
+
+# This helper imports siblings from the immutable signed release. Normal
+# Python invocation must not add unlisted bytecode before integrity checks.
+sys.dont_write_bytecode = True
 
 SPEC = importlib.util.spec_from_file_location('panel_guard_upgrade', pathlib.Path(__file__).with_name('upgrade-release.py'))
 production = importlib.util.module_from_spec(SPEC)

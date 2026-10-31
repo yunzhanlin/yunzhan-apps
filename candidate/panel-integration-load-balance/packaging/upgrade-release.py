@@ -26,6 +26,10 @@ import time
 import types
 import uuid
 
+# Dynamic startup-guard imports run from the checked release directory.
+# Keep fresh, upgrade and recovery validation strictly free of bytecode writes.
+sys.dont_write_bytecode = True
+
 PROGRAMS = ('panel-terminal.service', 'panel-terminal-root.service', 'panel-executor.service', 'panel.service')
 TIMER = 'panel-mysql-overwrite-recovery.timer'
 QUEUES = ('jobs', 'runtime_jobs', 'mysql_jobs', 'acme_orders')

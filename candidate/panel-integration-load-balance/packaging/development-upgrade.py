@@ -19,6 +19,10 @@ import stat
 import sys
 import time
 
+# Loading the transaction must preserve the complete signed payload tree.
+# Do not depend on the invoking shell's environment or Python flags.
+sys.dont_write_bytecode = True
+
 SPEC = importlib.util.spec_from_file_location('panel_program_upgrade', pathlib.Path(__file__).with_name('upgrade-release.py'))
 production = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(production)
