@@ -1,0 +1,34 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "bootstrap.py": "e05abeb559bd9e1195e050ef88adc1c096300f76e1337f1edb5521e51f822ed2",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "functional.py": "5a96d3d2dded5d423ef5f632b93bc486c719401e1f48b13c9314cbfec3c40245",
+    "guest.py": "692e9a675a452f266897540cb0da8645b8e62fa838255ece3a162a25eb2247be",
+    "panel-0.1.0-dev.proapps24alertreadonlycandidate44r2-linux-amd64.tar.gz": "6c744e4d7d543fc8e51872c189a3dfb16450d318b037beb3bf4619966fd2450a",
+    "panel-0.1.0-dev.proapps24alertreadonlycandidate44r2-linux-amd64.tar.gz.manifest": "be361924ffd6625641a389abb85fb0374796246aabd4bd3c4afd1b1ad48b61e4",
+    "panel-0.1.0-dev.proapps24alertreadonlycandidate44r2-linux-amd64.tar.gz.sig": "ef826a1f42f49a4881c0477c29553777751d076d8a771abe20e2353409608b45",
+    "panel-0.1.0-dev.proapps24phpswitchpreservecandidate41r3-linux-amd64.tar.gz": "e0d260c623728251ed406fed9f868e48a2d8f00009da85e6b304a8ddea051b2a",
+    "panel-0.1.0-dev.proapps24phpswitchpreservecandidate41r3-linux-amd64.tar.gz.manifest": "64a9c8f1cf3aca56dc63d48fc7fee45c2ca44086e82386430966df55ac5b9b5f",
+    "panel-0.1.0-dev.proapps24phpswitchpreservecandidate41r3-linux-amd64.tar.gz.sig": "f91d9c32bff95a8f271f94af307dab49c4fd1e1e7a32716ab31889e5692584d3",
+    "prepare.py": "908cff99289ee2a36233b60be27e62ef445f23d722ecb90563852b6ad0655e04",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "shop.py": "eef305b98398906f44b4841d79f8444d80c89363a684bb8b92d85628ec7740a1",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "historical_bootstrap": {
+    "PM2_install": "normal legacy default5 before upgrading; not a signed catalogue-install claim",
+    "release_id": 429937013,
+    "release_tag": "qa-phpswitchpreservecandidate41r3-20261031-qa1",
+    "source_commit": "33934555c978e86589cd041a69a98a1552d8aea0",
+    "source_inputs_sha256": "757e1941dc2e3e138cef458eb52114545d168ee41286872012e100770c50a1fb",
+    "version": "0.1.0-dev.proapps24phpswitchpreservecandidate41r3"
+  },
+  "release_id": 430348503,
+  "release_tag": "qa-alertreadonlycandidate44r2-20261101-qa1",
+  "source_inputs_sha256": "038aeb46562e6e080e8bba061c1dd3285405056b9e8fafe6bcaba6213abe57cd",
+  "version": "0.1.0-dev.proapps24alertreadonlycandidate44r2"
+}

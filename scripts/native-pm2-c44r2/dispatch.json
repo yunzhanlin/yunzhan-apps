@@ -1,0 +1,23 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "cohort": "C44r2 normal upgrade, real accounts and signed PM2 compat6 update",
+  "legacy_PM2_install_not_a_signed_catalogue_install_claim": true,
+  "maximum_legacy_PM2_install_per_guest": 1,
+  "maximum_normal_programme_first_install_per_guest": 1,
+  "maximum_normal_programme_upgrade_per_guest": 1,
+  "maximum_signed_PM2_store_update_per_guest": 1,
+  "no_unknown_mutation_replay": true,
+  "only_fresh_owned_KVM_guests": true,
+  "original_failed_C42_and_C44_jobs_not_rerun": true,
+  "release_id": 430348503,
+  "release_tag": "qa-alertreadonlycandidate44r2-20261101-qa1",
+  "source_inputs_sha256": "038aeb46562e6e080e8bba061c1dd3285405056b9e8fafe6bcaba6213abe57cd"
+}

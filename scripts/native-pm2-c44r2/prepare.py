@@ -1,0 +1,34 @@
+"""Retain the C41 legacy install and create an owned fixture under signed C44r2."""
+import ast,contextlib,hashlib,http.cookiejar,json,os,pathlib,pwd,re,socket,sqlite3,stat,subprocess,sys,time,traceback,urllib.error,urllib.request
+os.umask(0o077);base=pathlib.Path(sys.argv[1]);assert re.fullmatch('/opt/panel-pm2-c43-prepare-[a-f0-9]{32}',str(base));p=json.loads((base/'intent.json').read_bytes());evidence=base/'evidence';evidence.mkdir(mode=0o700);capture=(base/'capture.py').read_bytes();assert hashlib.sha256(capture).hexdigest()==p['files']['capture.py']
+names={'sha','save','command','unit','snapshot','guard','api','probe','wait_job','NoRedirect','fixture_source','history'};nodes=[v for v in ast.parse(capture).body if isinstance(v,(ast.FunctionDef,ast.ClassDef))and v.name in names];assert len(nodes)==len(names);exec(compile(ast.Module(body=nodes,type_ignores=[]),'<bound-original-PM2-native-normal-client>','exec'),globals())
+origin='http://127.0.0.1:19100';client=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect(),urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()));csrf='';events=[];secret=p['synthetic_environment'];own_site=None
+proof={'ok':False,'source_inputs_sha256':p['source_inputs_sha256'],'architecture':p['architecture'],'platform':p['platform'],'normal_PM2_install_POSTs':0,'normal_site_create_POSTs':0,'normal_PM2_create_POSTs':0,'Main_changed':False,'all50_commercial':False,'original_mutations_replayed':False}
+try:
+ assert json.loads(pathlib.Path('/opt/panel/current/SOURCE_INPUTS.json').read_bytes())['inputs_sha256']==p['source_inputs_sha256'];guard();save('before.json',snapshot());history('history-before');access_path=pathlib.Path('/etc/panel/first-login.json');s=access_path.lstat();assert stat.S_ISREG(s.st_mode)and s.st_uid==0 and s.st_nlink==1 and stat.S_IMODE(s.st_mode)==0o600;access=json.loads(access_path.read_bytes())
+ try:csrf=api('login','/login',{k:access[k]for k in ('username','password')})['csrf']
+ finally:access.clear()
+ catalog=api('signed-catalogue','/app-registry?refresh=1');assert len(catalog['catalog']['apps'])==50 and not catalog['source']['stale']and catalog['host']=={'platform':p['platform'],'architecture':p['architecture']};item=next(v for v in catalog['catalog']['apps']if v['id']=='pm2-manager');status=next(v for v in catalog['status']if v['id']=='pm2-manager');assert item['version']=='7.0.4-compat6'and status['state_known']and status['installed']and status['healthy']and status['installed_version']=='7.0.4-compat5'and status['update_available']
+ with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
+  db.execute('PRAGMA query_only=ON');assert db.execute("SELECT COUNT(*) FROM app_registry_receipts WHERE app_id='pm2-manager'").fetchone()==(0,);legacy=db.execute('SELECT kind,target_id,state,error FROM runtime_jobs WHERE id=?',(p['legacy_install_job_id'],)).fetchone();assert legacy==('software_install','pm2-manager','succeeded','')
+ proof['original_install_job_id']=p['legacy_install_job_id']
+ proof['normal_site_create_POSTs']+=1;accepted=api('normal-site-create','/sites',{'name':'Owned C43 fresh PM2','slug':p['resource_id'],'domain':p['resource_id']+'.localhost','php_version_id':''},202,p['site_key']);job=wait_job('normal-site-create',accepted['job_id'],'jobs');own_site=job['site_id']
+ code=fixture_source(p);result=api('normal-entry-create','/sites/'+own_site+'/files/action',{'action':'create','path':p['entry'],'content':code});assert result['sha256']==hashlib.sha256(code.encode()).hexdigest()
+ proof['normal_PM2_create_POSTs']+=1;created=api('normal-PM2-create','/app-modules/pm2-manager/create',{'resource_id':p['resource_id'],'site_id':own_site,'entry':p['entry'],'port':p['port'],'instances':1,'memory_mb':128,'environment_patch':{'QA_PM2_CANARY':secret}});assert created['ok']and created['app']['revision']==1;running=probe('initial-running');assert running['actual_HTTP']['start_count']==1
+ stopped=api('initial-explicit-stop','/app-modules/pm2-manager/stop',{'resource_id':p['resource_id']});assert stopped['ok']and stopped['boot_enabled']is False;name='panel-pm2@'+p['resource_id']+'.service';assert unit(name)['ActiveState']=='inactive'and unit(name)['UnitFileState']=='disabled'
+ updated=api('initial-stopped-save','/app-modules/pm2-manager/update',{'resource_id':p['resource_id'],'expected_revision':1,'memory_mb':160});assert updated['ok']and updated['preserved_stopped']and updated['runtime_validated']is False and updated['app']['revision']==2;counter=pathlib.Path('/srv/panel/sites')/own_site/'private'/('pm2-'+p['resource_id'])/'qa-c43-start-count';assert counter.read_text()=='1'and unit(name)['ActiveState']=='inactive'
+ # A distinct explicit start intentionally prepares the same revision2/count2
+ # baseline used by the already reviewed actual C43 service journey.
+ api('baseline-explicit-start','/app-modules/pm2-manager/start',{'resource_id':p['resource_id']});running=probe('baseline-explicit-running');assert running['actual_HTTP']['start_count']==2;api('baseline-explicit-stop','/app-modules/pm2-manager/stop',{'resource_id':p['resource_id']});state=unit(name);assert state['ActiveState']=='inactive'and state['UnitFileState']=='disabled'and state['MainPID']=='0'and counter.read_text()=='2'
+ save('prepared-owned-fixture.json',{'site_id':own_site,'resource_id':p['resource_id'],'marker':p['marker'],'entry':p['entry'],'port':p['port'],'app_revision':2,'start_count':2,'actual_nonroot_UID':running['nonroot_UID'],'actual_primary_GID':running['primary_GID'],'native_unit_stopped_boot_disabled':True,'normal_PM2_version':'7.0.4-compat5','normal_PM2_install_job_id':proof['original_install_job_id'],'legacy_install_did_not_use_signed_catalogue':True,'offered_update_version':item['version'],'offered_update_sha256':item['sha256']});proof.update(ok=True,legacy_normal_install_retained_without_reinstall=True,normal_signed_shop_install_claim=False,actual_nonroot_UID=running['nonroot_UID'],actual_primary_GID=running['primary_GID'],owned_site_id=own_site,initial_stopped_save_never_started_project=True,explicit_baseline_start_intended=True)
+except BaseException:proof['failure']=traceback.format_exc().replace(secret,'[synthetic-environment-redacted]')
+finally:
+ if csrf:
+  try:api('logout','/logout',{});csrf=''
+  except BaseException:proof['logout_failure']='Inspect original logout; no replay'
+ try:save('after.json',snapshot())
+ except BaseException:proof['capture_failure']=traceback.format_exc();proof['ok']=False
+ try:history('history-after')
+ except BaseException:proof['history_capture_failure']=traceback.format_exc();proof['ok']=False
+ save('HTTP-events.json',events);save('proof.json',proof);print(json.dumps({'ok':proof['ok'],'base':str(base),'proof_sha256':sha(evidence/'proof.json'),'architecture':p['architecture'],'Main_changed':False,'all50_commercial':False}),flush=True)
+sys.exit(0 if proof['ok']else 1)
