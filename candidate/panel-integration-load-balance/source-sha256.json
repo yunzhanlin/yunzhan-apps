@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24pm2ioackcandidate48-linux-amd64.tar.gz",
-    "archive_sha256": "0b87c8d2241af41fbf146f34d4a629feb3154eb62f262c91e0945b0c025174ef",
-    "frozen_inputs_sha256": "08e692c22b06cf6267b665ddd1a320250e520c1caf745afaf90d7d10d7b7743a"
+    "archive": "panel-0.1.0-dev.proapps24apacheprivatecandidate49-linux-amd64.tar.gz",
+    "archive_sha256": "1a371a6ba5650cb4a96093e96d207ef12ba816892a114ab2245c09dae44289b8",
+    "frozen_inputs_sha256": "a435aeb33c112b0e2a6512b9b7a1a57620d8b443f2a7e047be1772f47208d09d"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -849,12 +849,13 @@
     "internal/executor/app_load_balance_traffic_alert_linux.go": "31495fd09936baddb3f55654a0c86c7d03d8c51d3fae0e9cf066fd585f9540bd",
     "internal/executor/app_load_balance_traffic_alert_linux_test.go": "8b369cffc8d24c37614bf7011fa5900f6d925e6c0cfdddb27d5ffe6e23e223fe",
     "internal/executor/app_mobile_signed_version_linux_test.go": "eae361e0256fdc79c679434ad55abe7527dae50a33625bd592fc0f83aa22a1ec",
+    "internal/executor/app_module_apache_record_linux_test.go": "1fabe22bff643a9ad6ba52a9878e25297c282bbb28a9cfe97ccd03383ec6f69a",
     "internal/executor/app_module_history_linux.go": "786e2359addc354cc2d4617455426c5d2149bd796725148a2649d113f90895db",
     "internal/executor/app_module_ledger_linux.go": "9b4311a4dc7e51ebb8bced257b6dc015bea78d991d5c0f8609f0e3019e2e0cf7",
     "internal/executor/app_module_ledger_linux_test.go": "28bd7e33e928b98c7a1ca96a337b77318c90258d1e9c18b387d4b7ab95caa57e",
     "internal/executor/app_module_ledger_readonly_linux.go": "a67dcd858b70e8e6cebee4397430d5ca238692f6de1904e45c84c8d752402c8d",
     "internal/executor/app_module_lifecycle_race_linux_test.go": "3b8420823ae878bded5130bfa0535676c5b9be33d19d09809ec4f74af62c7e95",
-    "internal/executor/app_module_record_linux.go": "06702ead163fb65ac77a415a777c8ae15739ad6441a01c1ae53c93cf80b1290a",
+    "internal/executor/app_module_record_linux.go": "6b7586e82d8037ab999c3a59852124334367a195239eda02be99c2363cd55abc",
     "internal/executor/app_module_record_linux_test.go": "78bda95b3e0fa290e63b99695a68b66a34dbc6fae6c4fb344fdcee4d45177a54",
     "internal/executor/app_module_report_record_linux.go": "e7e33bca21113f275277b836e8cdb46acdd886c1eae67cd054c62d51aee983fb",
     "internal/executor/app_module_report_record_linux_test.go": "7bf025132e4bf8adcf2e4ac445babd329ffbfd99dbb60cb3aee552e214cd8633",

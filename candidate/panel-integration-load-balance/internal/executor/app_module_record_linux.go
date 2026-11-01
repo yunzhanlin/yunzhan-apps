@@ -19,8 +19,11 @@ import (
 // user path. It can be publicly traversable for other panel facilities, but
 // cannot be writable by another user. The exact shared modules container can
 // also be traversable: country-account preparation creates it before ordinary
-// modules. Each application's own directory remains 0700 and its records 0600.
-// Existing paths are never chmod/chowned here.
+// modules. Apache's transaction/engine preparation also creates its exact
+// application directory as0750 before installation. Both0700 and that fixed
+// 0750 Apache directory remain non-writable by other accounts; every record
+// still requires0600. Other application directories remain0700. Existing
+// paths are never chmod/chowned here.
 func moduleRecordInfo(info os.FileInfo, dir, anchor bool) bool {
 	owner, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || owner.Uid != uint32(os.Geteuid()) || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
@@ -32,11 +35,22 @@ func moduleRecordInfo(info os.FileInfo, dir, anchor bool) bool {
 	return info.Mode().IsRegular() && info.Mode().Perm() == 0600 && owner.Nlink == 1
 }
 
+// Reconcile the actual Apache transaction producer with this read-only
+// consumer. This exception applies only to the exact Apache application
+// directory, never its record, ancestors, or another application's directory.
+func moduleRecordDirectoryInfo(info os.FileInfo, anchor, apache bool) bool {
+	if apache && info.Mode().Perm() == 0750 {
+		return moduleRecordInfo(info, true, true)
+	}
+	return moduleRecordInfo(info, true, anchor)
+}
+
 type modulePrivateDirectory struct {
 	*os.Root
 	roots           []*os.Root
 	paths           []string
 	sharedContainer *os.Root
+	apacheDirectory *os.Root
 }
 
 func (d *modulePrivateDirectory) Close() error {
@@ -57,7 +71,7 @@ func (d *modulePrivateDirectory) current() bool {
 		visible, visibleErr := os.Lstat(d.paths[i])
 		traversable := i == 0 || root == d.sharedContainer
 		if err != nil || visibleErr != nil || !os.SameFile(opened, visible) ||
-			!moduleRecordInfo(opened, true, traversable) || !moduleRecordInfo(visible, true, traversable) {
+			!moduleRecordDirectoryInfo(opened, traversable, root == d.apacheDirectory) || !moduleRecordDirectoryInfo(visible, traversable, root == d.apacheDirectory) {
 			return false
 		}
 	}
@@ -87,6 +101,7 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 	d := &modulePrivateDirectory{Root: root, roots: []*os.Root{root}, paths: []string{s.Config.SecurityDir}}
 	for index, name := range []string{"modules", id} {
 		sharedContainer := index == 0
+		apacheDirectory := index == 1 && id == "apache-waf"
 		info, err := root.Lstat(name)
 		if err != nil {
 			current := d.current()
@@ -96,7 +111,7 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 			}
 			return nil, err
 		}
-		if !moduleRecordInfo(info, true, sharedContainer) {
+		if !moduleRecordDirectoryInfo(info, sharedContainer, apacheDirectory) {
 			d.Close()
 			return nil, errors.New("模块安装记录私有目录身份或权限异常")
 		}
@@ -106,7 +121,7 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 			return nil, errors.New("模块记录目录打开期间变化")
 		}
 		opened, err := child.Stat(".")
-		if err != nil || !os.SameFile(info, opened) || !moduleRecordInfo(opened, true, sharedContainer) {
+		if err != nil || !os.SameFile(info, opened) || !moduleRecordDirectoryInfo(opened, sharedContainer, apacheDirectory) {
 			child.Close()
 			d.Close()
 			return nil, errors.New("模块记录目录读取身份变化")
@@ -115,6 +130,9 @@ func (s *Service) moduleRecordDirectory(id string) (*modulePrivateDirectory, err
 		d.Root = child
 		if sharedContainer {
 			d.sharedContainer = child
+		}
+		if apacheDirectory {
+			d.apacheDirectory = child
 		}
 		d.roots = append(d.roots, child)
 		d.paths = append(d.paths, filepath.Join(d.paths[len(d.paths)-1], name))
