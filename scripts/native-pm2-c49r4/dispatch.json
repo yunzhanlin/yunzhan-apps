@@ -1,0 +1,21 @@
+{
+  "Apache_application_acceptance_claim": false,
+  "Main_changed": false,
+  "PM2_from": "7.0.4-compat8",
+  "PM2_to": "7.0.4-compat9",
+  "actual_browser_UI_claim": false,
+  "actual_reboot_or_powerloss_claim": false,
+  "all50_commercial": false,
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "cohort": "C49r4-QA1",
+  "manifest_sha256": "f53bd60c94d4ef5b20af0ed2a44fc1393c7e61811779944855b726872804ba71",
+  "release_id": 430804107,
+  "release_tag": "qa-apacheprivatecandidate49r4-20261102-qa1",
+  "source_inputs_sha256": "e5327e4d874a1ca3cefb9c07bd3e6f13b6cc113dff495af8d51f8bb962b4f763"
+}
