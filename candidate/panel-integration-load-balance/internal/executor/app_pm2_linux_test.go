@@ -29,8 +29,10 @@ func TestPM2LimitsAndActualPortReadiness(t *testing.T) {
 	_, port, _ := net.SplitHostPort(listener.Addr().String())
 	n, _ := strconv.Atoi(port)
 	s := New(Config{Run: func(context.Context, string, ...string) (string, error) { return "active\n", nil }})
-	if err = s.pm2Ready(context.Background(), "panel-pm2@qa-test", n); err != nil {
-		t.Fatal(err)
+	bounded, stop := context.WithTimeout(context.Background(), 70*time.Millisecond)
+	defer stop()
+	if err = s.pm2Ready(bounded, "panel-pm2@qa-test", n); err == nil {
+		t.Fatal("a real but unowned TCP listener and claimed active state were accepted")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -48,16 +50,20 @@ func TestPM2ReadinessColdStartBudgetAndParentCancellation(t *testing.T) {
 	_, port, _ := net.SplitHostPort(listener.Addr().String())
 	n, _ := strconv.Atoi(port)
 	called := false
-	s := New(Config{Run: func(ctx context.Context, command string, args ...string) (string, error) {
+	inspect := func(ctx context.Context) error {
 		called = true
 		deadline, ok := ctx.Deadline()
 		remaining := time.Until(deadline)
 		if !ok || remaining <= 30*time.Second || remaining > 45*time.Second {
 			t.Fatalf("cold startup must have a bounded 45-second budget, got %v", remaining)
 		}
-		return "active\n", nil
-	}})
-	if err = s.pm2Ready(context.Background(), "panel-pm2@qa-cold-start", n); err != nil || !called {
+		conn, err := net.Dial("tcp4", net.JoinHostPort("127.0.0.1", strconv.Itoa(n)))
+		if err == nil {
+			conn.Close()
+		}
+		return err
+	}
+	if err = waitForPM2OwnedReadiness(context.Background(), inspect); err != nil || !called {
 		t.Fatal("real port readiness with cold-start budget", err, called)
 	}
 	if pm2ReadinessTimeout != 45*time.Second {
@@ -68,16 +74,16 @@ func TestPM2ReadinessColdStartBudgetAndParentCancellation(t *testing.T) {
 	// alone, no automatic extension and no 45-second wait after cancellation.
 	ctx, cancel := context.WithTimeout(context.Background(), 70*time.Millisecond)
 	defer cancel()
-	s = New(Config{Run: func(probe context.Context, command string, args ...string) (string, error) {
+	inspect = func(probe context.Context) error {
 		caller, _ := ctx.Deadline()
 		deadline, ok := probe.Deadline()
 		if !ok || !deadline.Equal(caller) {
 			t.Fatal("readiness extended the caller deadline")
 		}
-		return "active\n", nil
-	}})
+		return errPM2ListenerOwnership
+	}
 	started := time.Now()
-	if err = s.pm2Ready(ctx, "panel-pm2@qa-cancelled-start", 0); err == nil {
+	if err = waitForPM2OwnedReadiness(ctx, inspect); err == nil {
 		t.Fatal("supervisor without a ready port accepted")
 	}
 	if ctx.Err() != context.DeadlineExceeded || time.Since(started) > 2*time.Second {

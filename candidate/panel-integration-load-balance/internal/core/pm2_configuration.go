@@ -10,7 +10,11 @@ import (
 
 var pm2ConfigurationProjectID = regexp.MustCompile(`^[a-z][a-z0-9-]{2,31}$`)
 
-const PM2ConfigurationAppVersion = "7.0.4-compat7"
+const PM2OwnedListenerAppVersion = "7.0.4-compat8"
+
+// Keep the configuration API's existing symbol while binding the current
+// application revision to the owned-listener implementation as well.
+const PM2ConfigurationAppVersion = PM2OwnedListenerAppVersion
 
 func ParsePM2ConfigurationQuery(raw string) (AppModuleInput, error) {
 	if len(raw) > 512 {

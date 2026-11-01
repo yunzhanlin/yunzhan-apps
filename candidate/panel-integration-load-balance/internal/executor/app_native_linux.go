@@ -500,26 +500,27 @@ func pm2Limits(instances, memoryMB int) (int, int, error) {
 // active supervisor into success: the actual loopback port must become ready.
 const pm2ReadinessTimeout = 45 * time.Second
 
-// A successful systemd start only proves the supervisor was spawned. Confirm
-// that the selected local application port actually becomes ready before
-// committing deployment success. No application request bodies are sent.
+// A successful systemd start and an unrelated TCP listener cannot prove this
+// project is ready. Every production path uses the owned-listener inspection;
+// the separate wait helper makes deadline behavior independently testable.
 func (s *Service) pm2Ready(ctx context.Context, unit string, port int) error {
+	return waitForPM2OwnedReadiness(ctx, func(probe context.Context) error {
+		return s.verifyPM2OwnedLoopback(probe, unit, port)
+	})
+}
+
+func waitForPM2OwnedReadiness(ctx context.Context, inspect func(context.Context) error) error {
 	probeCtx, cancel := context.WithTimeout(ctx, pm2ReadinessTimeout)
 	defer cancel()
 	tick := time.NewTicker(200 * time.Millisecond)
 	defer tick.Stop()
 	for {
-		state, err := s.Config.Run(probeCtx, "/usr/bin/systemctl", "is-active", unit)
-		if err == nil && strings.TrimSpace(state) == "active" {
-			conn, err := (&net.Dialer{Timeout: 500 * time.Millisecond}).DialContext(probeCtx, "tcp", fmt.Sprintf("127.0.0.1:%d", port))
-			if err == nil {
-				conn.Close()
-				return nil
-			}
+		if inspect(probeCtx) == nil && probeCtx.Err() == nil {
+			return nil
 		}
 		select {
 		case <-probeCtx.Done():
-			return errors.New("PM2 应用未在指定回环端口就绪，请检查应用日志和 HOST / PORT 配置")
+			return errors.New("PM2 应用的回环监听及进程归属未能就绪，请检查应用日志和 HOST / PORT 配置")
 		case <-tick.C:
 		}
 	}

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -155,22 +154,16 @@ func TestPM2UnknownObservationDoesNotReportBootDisabled(t *testing.T) {
 }
 
 func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing.T) {
-	s, app, path := pm2StateAppFixture(t)
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer listener.Close()
-	app.Port = listener.Addr().(*net.TCPAddr).Port
-	if err := moduleWrite(path, app); err != nil {
-		t.Fatal(err)
-	}
+	fixture := pm2OwnedListenerTestFixture(t)
+	s, app := fixture.s, fixture.app
+	path := filepath.Join(s.moduleDir("pm2-manager"), "apps", app.ID+".json")
 	before, _ := os.ReadFile(path)
+	ownedRead := s.Config.Run
 	restarts, stops := 0, 0
 	state := pm2TestState("active", "enabled")
-	s.Config.Run = func(_ context.Context, command string, args ...string) (string, error) {
-		if command != "/usr/bin/systemctl" {
-			t.Fatal(command)
+	s.Config.Run = func(ctx context.Context, command string, args ...string) (string, error) {
+		if command != "/usr/bin/systemctl" || len(args) == 3 && args[2] == "--property=ControlGroup" {
+			return ownedRead(ctx, command, args...)
 		}
 		switch args[0] {
 		case "show":
@@ -201,7 +194,7 @@ func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing
 		return "", nil
 	}
 	secret := "candidate-secret-must-roll-back"
-	_, err = s.modulePM2(context.Background(), "update", core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, MemoryMB: 192, EnvironmentPatch: map[string]*string{"TOKEN": &secret}})
+	_, err := s.modulePM2(context.Background(), "update", core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, MemoryMB: 192, EnvironmentPatch: map[string]*string{"TOKEN": &secret}})
 	after, _ := os.ReadFile(path)
 	if err == nil || restarts != 2 || stops != 1 || string(before) != string(after) {
 		t.Fatal("failed active update lost original encrypted manifest or skipped candidate stop", err, restarts, stops)
@@ -266,14 +259,15 @@ func TestPM2ActiveUpdateStopFailureRetainsOriginalIntentWithoutAnotherRestart(t 
 }
 
 func TestPM2ControlStopDisablesBootAndExplicitStartEnablesIt(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer listener.Close()
+	fixture := pm2OwnedListenerTestFixture(t)
+	s, app := fixture.s, fixture.app
+	ownedRead := s.Config.Run
 	state := pm2TestState("active", "enabled")
 	commands := []string{}
-	s := New(Config{Run: func(_ context.Context, _ string, args ...string) (string, error) {
+	s.Config.Run = func(ctx context.Context, command string, args ...string) (string, error) {
+		if command != "/usr/bin/systemctl" || len(args) == 3 && args[2] == "--property=ControlGroup" {
+			return ownedRead(ctx, command, args...)
+		}
 		commands = append(commands, strings.Join(args, " "))
 		switch args[0] {
 		case "show":
@@ -294,15 +288,15 @@ func TestPM2ControlStopDisablesBootAndExplicitStartEnablesIt(t *testing.T) {
 			t.Fatal(args)
 		}
 		return "", nil
-	}})
-	app := pm2App{ID: "qa-state", Port: listener.Addr().(*net.TCPAddr).Port}
+	}
+	unit := "panel-pm2@" + app.ID + ".service"
 	for _, action := range []string{"stop", "start"} {
-		result, err := s.controlPM2(context.Background(), app, action, "panel-pm2@qa-state.service")
+		result, err := s.controlPM2(context.Background(), app, action, unit)
 		if err != nil || result.(map[string]any)["boot_enabled"] != (action == "start") {
 			t.Fatal(result, err)
 		}
 	}
-	if !strings.Contains(strings.Join(commands, "\n"), "disable --now panel-pm2@qa-state.service") || !strings.Contains(strings.Join(commands, "\n"), "enable --now panel-pm2@qa-state.service") {
+	if !strings.Contains(strings.Join(commands, "\n"), "disable --now "+unit) || !strings.Contains(strings.Join(commands, "\n"), "enable --now "+unit) {
 		t.Fatal(commands)
 	}
 }
