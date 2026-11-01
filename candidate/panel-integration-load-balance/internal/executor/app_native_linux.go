@@ -737,12 +737,20 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		if e != nil {
 			rollbackCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 			defer cancel()
+			// Cancel the candidate's pending systemd restart before restoring
+			// its manifest. Otherwise an automatic restart can load the restored
+			// entry just before our explicit restart, launching it twice.
+			_, stopErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "stop", unit)
+			stopped, stateErr := s.readPM2UnitState(rollbackCtx, unit)
 			restoreErr := restoreFiles([]fileBackup{previous})
+			if stopErr != nil || stateErr != nil || restoreErr != nil || stopped.ActiveState != "inactive" || stopped.UnitFileState != beforeState.UnitFileState {
+				return nil, errors.New("PM2 更新失败，旧配置已尝试恢复；候选服务停止状态、原开机设置或配置无法完整核对，请检查项目")
+			}
 			_, restartErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "restart", unit)
 			if restartErr == nil {
 				restartErr = s.pm2Ready(rollbackCtx, unit, old.Port)
 			}
-			if restoreErr != nil || restartErr != nil {
+			if restartErr != nil {
 				return nil, errors.New("PM2 更新失败且恢复旧配置或重启失败，请核对项目")
 			}
 			return nil, e

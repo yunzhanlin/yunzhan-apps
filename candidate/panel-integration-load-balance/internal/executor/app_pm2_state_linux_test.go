@@ -166,19 +166,33 @@ func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing
 		t.Fatal(err)
 	}
 	before, _ := os.ReadFile(path)
-	restarts := 0
+	restarts, stops := 0, 0
+	state := pm2TestState("active", "enabled")
 	s.Config.Run = func(_ context.Context, command string, args ...string) (string, error) {
 		if command != "/usr/bin/systemctl" {
 			t.Fatal(command)
 		}
 		switch args[0] {
 		case "show":
-			return pm2TestStateText(pm2TestState("active", "enabled")), nil
+			return pm2TestStateText(state), nil
+		case "stop":
+			stops++
+			candidate, readErr := os.ReadFile(path)
+			if readErr != nil || string(candidate) == string(before) {
+				t.Fatal("old manifest was restored before the candidate restart was cancelled", readErr)
+			}
+			state = pm2TestState("inactive", "enabled")
 		case "restart":
 			restarts++
 			if restarts == 1 {
+				state = pm2TestState("failed", "enabled")
 				return "", errors.New("injected candidate process failure")
 			}
+			restored, readErr := os.ReadFile(path)
+			if stops != 1 || readErr != nil || string(restored) != string(before) {
+				t.Fatal("rollback restart ran before the candidate stopped and original bytes were restored", readErr)
+			}
+			state = pm2TestState("active", "enabled")
 		case "is-active":
 			return "active\n", nil
 		default:
@@ -189,8 +203,8 @@ func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing
 	secret := "candidate-secret-must-roll-back"
 	_, err = s.modulePM2(context.Background(), "update", core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, MemoryMB: 192, EnvironmentPatch: map[string]*string{"TOKEN": &secret}})
 	after, _ := os.ReadFile(path)
-	if err == nil || restarts != 2 || string(before) != string(after) {
-		t.Fatal("failed active update lost original encrypted manifest", err, restarts)
+	if err == nil || restarts != 2 || stops != 1 || string(before) != string(after) {
+		t.Fatal("failed active update lost original encrypted manifest or skipped candidate stop", err, restarts, stops)
 	}
 	var restored pm2App
 	if err := json.Unmarshal(after, &restored); err != nil {
@@ -199,6 +213,54 @@ func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing
 	environment, err := s.readPM2Environment(restored)
 	if err != nil || environment["TOKEN"] != "private-environment-before-state-save" {
 		t.Fatal("old secret was not readable after rollback", err)
+	}
+}
+
+func TestPM2ActiveUpdateStopFailureRestoresManifestWithoutAnotherRestart(t *testing.T) {
+	s, app, path := pm2StateAppFixture(t)
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restarts, stops := 0, 0
+	s.Config.Run = func(_ context.Context, command string, args ...string) (string, error) {
+		if command != "/usr/bin/systemctl" {
+			t.Fatal(command)
+		}
+		switch args[0] {
+		case "show":
+			return pm2TestStateText(pm2TestState("active", "enabled")), nil
+		case "restart":
+			restarts++
+			if restarts != 1 {
+				t.Fatal("rollback restarted an unconfirmed candidate")
+			}
+			return "", errors.New("injected candidate restart failure")
+		case "stop":
+			stops++
+			candidate, readErr := os.ReadFile(path)
+			if readErr != nil || string(candidate) == string(before) {
+				t.Fatal("old bytes became visible before candidate stop", readErr)
+			}
+			return "", errors.New("candidate stop could not be confirmed")
+		default:
+			t.Fatal(args)
+		}
+		return "", nil
+	}
+	secret := "candidate-secret-must-not-remain-after-stop-failure"
+	_, err = s.modulePM2(context.Background(), "update", core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, MemoryMB: 192, EnvironmentPatch: map[string]*string{"TOKEN": &secret}})
+	after, readErr := os.ReadFile(path)
+	if err == nil || readErr != nil || restarts != 1 || stops != 1 || string(before) != string(after) {
+		t.Fatal("unconfirmed stop lost original bytes or dispatched another restart", err, readErr, restarts, stops)
+	}
+	var restored pm2App
+	if err := json.Unmarshal(after, &restored); err != nil {
+		t.Fatal(err)
+	}
+	environment, err := s.readPM2Environment(restored)
+	if err != nil || environment["TOKEN"] != "private-environment-before-state-save" {
+		t.Fatal("old secret not preserved after stop failure", err)
 	}
 }
 
