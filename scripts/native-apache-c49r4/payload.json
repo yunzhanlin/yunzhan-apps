@@ -1,0 +1,20 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "casebook.py": "38f36ec64220712dfa534b95651be1ae9887593e4f751619778d4b6780804008",
+    "guest.py": "c5dae01b84c2d9a5662e7d502c80c6d9fec85c84101a6b29243b6503e24b2186",
+    "panel-0.1.0-dev.proapps24apacheprivatecandidate49r4-linux-amd64.tar.gz": "4a18f8471973b61d7b2fd1af7ab605a8ed3d5d366c52e08ee3f98830ad669fae",
+    "panel-0.1.0-dev.proapps24apacheprivatecandidate49r4-linux-amd64.tar.gz.manifest": "debc8b8fadaf648b14e5a739d69fe37bcfdba5346dd6e8b65bf274be0559b2c5",
+    "panel-0.1.0-dev.proapps24apacheprivatecandidate49r4-linux-amd64.tar.gz.sig": "8a66d440d0d0c1d8324f46f4c0ebb338ef2103f0e2be7f67476597fa1f11b09d",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 430804107,
+  "release_tag": "qa-apacheprivatecandidate49r4-20261102-qa1",
+  "source_inputs_sha256": "e5327e4d874a1ca3cefb9c07bd3e6f13b6cc113dff495af8d51f8bb962b4f763",
+  "version": "0.1.0-dev.proapps24apacheprivatecandidate49r4"
+}
