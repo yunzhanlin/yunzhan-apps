@@ -1,0 +1,85 @@
+name: actual C47 AMD64 upgrade accounts and signed PM2 update
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-pm2-c47/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-pm2-c47-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download the original reviewed signed cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-pm2-c47-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/430508592 > "$RUNNER_TEMP/cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v["id"]==430508592 and not v["draft"] and v["prerelease"] and v["tag_name"]=="qa-pm2ownedlistenercandidate47-20261101-qa1" and len(v["assets"])==7' "$RUNNER_TEMP/cohort.json"
+          gh release download qa-pm2ownedlistenercandidate47-20261101-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-pm2-c47-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/430433767 > "$RUNNER_TEMP/bootstrap-cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v["id"]==430433767 and not v["draft"] and v["prerelease"] and v["tag_name"]=="qa-pm2configdurablecandidate46r2-20261101-qa1" and len(v["assets"])==7' "$RUNNER_TEMP/bootstrap-cohort.json"
+          gh release download qa-pm2configdurablecandidate46r2-20261101-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --dir "$RUNNER_TEMP/native-pm2-c47-assets"
+          cp scripts/native-pm2-c47/guest.py scripts/native-pm2-c47/prepare.py scripts/native-pm2-c47/functional.py scripts/native-pm2-c47/capture.py scripts/native-pm2-c47/bootstrap.py scripts/native-pm2-c47/shop.py "$RUNNER_TEMP/native-pm2-c47-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-pm2-c47-assets/"
+          cp scripts/native-pm2-c47/payload.json "$RUNNER_TEMP/native-pm2-c47-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-pm2-c47-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          base=pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='16cdbf5b920246c2c2fd072f7a8785e744f52cfa43297345f1830644ab817d7f'
+          manifest=json.loads((base/'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256']=='c761613ae003b8cde9df5d777d6b1c4013dbaeb832082a5dc3a0ee4d1e1c319c'
+          for name,digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name==name
+              assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+          signer_pin_expression=ast.dump(ast.parse("sha(payload / 'signed-release.py')",mode='eval').body)
+          signer_pins=[]
+          for node in ast.walk(ast.parse((base/'guest.py').read_bytes())):
+              if isinstance(node,ast.Assert) and isinstance(node.test,ast.Compare) and ast.dump(node.test.left)==signer_pin_expression:
+                  assert len(node.test.ops)==len(node.test.comparators)==1 and isinstance(node.test.ops[0],ast.Eq) and isinstance(node.test.comparators[0],ast.Constant)
+                  signer_pins.append(node.test.comparators[0].value)
+          assert signer_pins==[manifest['files']['signed-release.py']]
+          print('Original programme signatures, key and reviewed QA payload bound')
+          PY
+      - name: Prepare actual hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Normal C46r2 to C47 programme upgrade, actual nonroot journey and compat8 signed store update
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-pm2-c47-public"
+          sudo -n python3 -I -B scripts/native-pm2-c47/kvm.py "$RUNNER_TEMP/native-pm2-c47-assets" scripts/native-pm2-c47 "$RUNNER_TEMP/native-pm2-c47-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-pm2-c47-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-pm2-c47-public/
+          retention-days: 7
+          if-no-files-found: warn
