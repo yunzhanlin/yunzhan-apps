@@ -7,6 +7,11 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // Recognize exactly the reviewed Apache numeric-log gate and the larger
+  // whole-suite time budget. Keep the old commands and frozen digests intact;
+  // removing, duplicating or altering either addition must fail closed.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-numeric-logs.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
+  once('go test ./... -timeout=30m', 'go test ./...');
   // Only this additional PM2 acknowledgement/cancellation regression is
   // removed for historical comparison. All old commands and hashes stay.
   once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');

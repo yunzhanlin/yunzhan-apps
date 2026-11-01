@@ -9,8 +9,12 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	// Undo only this exact, additional fail-closed wrapper before comparing the
 	// original input. Neither native-unit exemptions nor changed legacy checks
 	// can be hidden by updating a whole-file digest.
-	assert.equal(queues.split(fencedEntry).length,2);
-	let legacyQueues=queues.replace(fencedEntry,()=>entry);
+	// Remove only the exact new outer Apache numeric-evidence fence. The
+	// historical reader, native predicates, commands and digest stay unchanged.
+	const apacheAddition='\tif err := checkApacheNumericLogUpgrade(ctx, "/"); err != nil {\n\t\treturn err\n\t}\n';
+	const apacheFencedEntry=fencedEntry.replace('\treturn checkLoadBalanceStreamUpgrade(ctx, nil)',apacheAddition+'\treturn checkLoadBalanceStreamUpgrade(ctx, nil)');
+	assert.equal(queues.split(apacheFencedEntry).length,2);
+	let legacyQueues=queues.replace(apacheFencedEntry,()=>entry);
 	// Strip only the separately tested additional PM2 configuration inventory.
 	// All historical predicates, fixed commands and deadlines below remain exact.
 	const pm2Addition='\tif err := r.pm2Configurations(); err != nil {\n\t\treturn err\n\t}\n';

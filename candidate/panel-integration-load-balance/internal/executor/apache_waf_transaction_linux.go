@@ -108,6 +108,13 @@ func (s *Service) planApacheWAFTransaction(backups []fileBackup, source, rules s
 }
 
 func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
+	// The current operation already owns the exclusive Apache lock. Observe
+	// the separate numeric evidence without reacquiring or replaying it.
+	if s.Config.SystemRoot != "/" || s.Config.SitesDir == "/srv/panel/sites" {
+		if err := s.apacheNumericLogHealthLocked(ctx); err != nil {
+			return err
+		}
+	}
 	// Inspect before recovery so the chosen reload cannot conceal a bad journal.
 	tx, err := s.readWAFTransaction()
 	if errors.Is(err, os.ErrNotExist) {

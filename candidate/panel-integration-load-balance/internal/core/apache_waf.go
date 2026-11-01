@@ -91,6 +91,7 @@ func (s *Store) validateApacheWAFSites(cfg WAFConfig) error {
 }
 
 func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
+	a.apacheNumericLogRoutes(m)
 	a.apacheBodyEngineRoutes(m)
 	a.apacheBodyReportRoutes(m)
 	a.apacheWAFHistoryRoutes(m)
