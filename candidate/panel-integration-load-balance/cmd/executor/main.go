@@ -78,6 +78,7 @@ func main() {
 	idsRecover := flag.Bool("recover-network-ids", false, "recover the fixed private IDS two-file configuration before capture")
 	idsAuthorize := flag.Bool("authorize-network-ids-start", false, "verify private IDS committed configuration or live executor candidate")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
+	pm2ConfigStart := flag.String("pm2-config-start-check", "", "read-only PM2 interrupted configuration start fence")
 	pm2Deploy := flag.String("pm2-deploy", "", "deploy locked dependencies for one managed PM2 application")
 	ftpServe := flag.Bool("serve-ftp", false, "serve the fixed managed FTPS configuration")
 	ftpRecover := flag.Bool("recover-ftp", false, "recover interrupted FTPS configuration before boot")
@@ -316,6 +317,13 @@ func main() {
 	if *ftpServe {
 		if e := executor.ServePureFTP(); e != nil {
 			log.Fatal(e)
+		}
+		return
+	}
+	if *pm2ConfigStart != "" {
+		if e := executor.CheckPM2ConfigurationStart(*pm2ConfigStart); e != nil {
+			log.Print(e)
+			os.Exit(1) // ExecCondition skips the service; no restart loop.
 		}
 		return
 	}

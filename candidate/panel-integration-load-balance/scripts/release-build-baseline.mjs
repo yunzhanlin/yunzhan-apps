@@ -7,6 +7,9 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // Only this additional PM2 acknowledgement/cancellation regression is
+  // removed for historical comparison. All old commands and hashes stay.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
   once(`APP_CHANNEL="\${3:-stable}"
 if (( $# > 3 )) || [[ "$APP_CHANNEL" != stable && "$APP_CHANNEL" != candidate ]]; then echo 'application channel must be stable or candidate; no URL/key override is accepted' >&2; exit 2; fi
 if [[ "$APP_CHANNEL" == candidate && "$VERSION" != *candidate* ]]; then echo 'candidate application channel requires a clearly labelled candidate programme version' >&2; exit 2; fi

@@ -216,7 +216,7 @@ func TestPM2ActiveUpdateRestoresOldEncryptedConfigAfterRestartFailure(t *testing
 	}
 }
 
-func TestPM2ActiveUpdateStopFailureRestoresManifestWithoutAnotherRestart(t *testing.T) {
+func TestPM2ActiveUpdateStopFailureRetainsOriginalIntentWithoutAnotherRestart(t *testing.T) {
 	s, app, path := pm2StateAppFixture(t)
 	before, err := os.ReadFile(path)
 	if err != nil {
@@ -248,19 +248,20 @@ func TestPM2ActiveUpdateStopFailureRestoresManifestWithoutAnotherRestart(t *test
 		}
 		return "", nil
 	}
-	secret := "candidate-secret-must-not-remain-after-stop-failure"
+	secret := "candidate-secret-retained-only-encrypted-after-unconfirmed-stop"
 	_, err = s.modulePM2(context.Background(), "update", core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, MemoryMB: 192, EnvironmentPatch: map[string]*string{"TOKEN": &secret}})
 	after, readErr := os.ReadFile(path)
-	if err == nil || readErr != nil || restarts != 1 || stops != 1 || string(before) != string(after) {
-		t.Fatal("unconfirmed stop lost original bytes or dispatched another restart", err, readErr, restarts, stops)
+	if err == nil || readErr != nil || restarts != 1 || stops != 1 || string(before) == string(after) {
+		t.Fatal("unconfirmed stop overwrote candidate bytes or dispatched another restart", err, readErr, restarts, stops)
 	}
-	var restored pm2App
-	if err := json.Unmarshal(after, &restored); err != nil {
-		t.Fatal(err)
+	records, readErr := s.pm2ConfigRecords()
+	if readErr != nil || len(records) != 1 {
+		t.Fatal(records, readErr)
 	}
-	environment, err := s.readPM2Environment(restored)
-	if err != nil || environment["TOKEN"] != "private-environment-before-state-save" {
-		t.Fatal("old secret not preserved after stop failure", err)
+	for _, record := range records {
+		if record.Receipt != nil || string(record.Intent.Before) != string(before) || string(record.Intent.After) != string(after) {
+			t.Fatal("unconfirmed stop lost exact old cipher or claimed a terminal result")
+		}
 	}
 }
 

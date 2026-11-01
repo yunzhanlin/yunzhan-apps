@@ -684,6 +684,9 @@ func checkProgramUpgradeQueues(ctx context.Context, root string) error {
 	if err := r.pm2Deployments(); err != nil {
 		return err
 	}
+	if err := r.pm2Configurations(); err != nil {
+		return err
+	}
 	if err := r.nativeBuilds(); err != nil {
 		return err
 	}

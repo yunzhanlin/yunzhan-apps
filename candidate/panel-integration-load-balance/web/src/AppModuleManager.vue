@@ -27,6 +27,7 @@ import { nfsReportKind, nfsReportForSection, nfsSectionKind, nfsSectionReadActio
 import {dailyWorkerMessage} from "./dailyReportView";
 import {moduleReportProvenance,moduleReportProvenanceNotice,type ReportOrigin,type ReportProvenance} from './moduleReportProvenance';
 import { taskSelection, taskTerminationNotice } from "./taskManager";
+import {newPM2ConfigurationID,pm2ConfigurationFields,pm2ConfigurationReplyMatches,pm2ConfigurationReadConfirms,pm2ConfigurationAbsentMatches,type PM2ConfigurationObservation} from './pm2Configuration';
 import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, type UserMutationObservation } from "./userManagementReceipt";
 import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
 import PlatformMaintenance from './PlatformMaintenance.vue';
@@ -153,6 +154,8 @@ const reportProvenanceNotice = computed(() => moduleReportProvenanceNotice(repor
 watch(report, value => { if (value === undefined || value === null) reportProvenance.value = undefined; }, {flush:'sync'});
 const userMutationObservation = ref<UserMutationObservation>();
 const platformMutationObservation = ref<PlatformObservation>();
+const pm2ConfigurationObservation = ref<PM2ConfigurationObservation>();
+const pm2ConfigurationAbsent = ref(false);
 const userErrorAnchor = ref<HTMLElement>();
 const form = ref<Record<string, any>>({}),
   sites = ref<{ id: string; name: string; domain: string }[]>([]);
@@ -193,6 +196,11 @@ const certificates = ref<{id:string;name:string;domains:string[];trusted:boolean
 const selectedPlanID = ref("");
 const selectedQuarantineState = ref("");
 function canExecutePHP(action: string) {
+	if (definition.value?.id==='pm2-manager') {
+		if(action==='update' && pm2ConfigurationObservation.value)return false;
+		if(action==='cancel-configuration-request')return /^[a-f0-9]{32}$/.test(form.value.pm2_operation_id||'') && form.value.confirm===`CANCEL PM2 ${form.value.pm2_operation_id}`;
+		if(action==='recover-configuration')return /^[a-f0-9]{32}$/.test(form.value.pm2_operation_id||'') && /^[a-f0-9]{64}$/.test(form.value.expected_sha||'') && form.value.confirm===`RECOVER PM2 ${form.value.pm2_operation_id}`;
+	}
   if (definition.value?.id !== "php-code-security") return true;
   if (action === "restore-quarantine") return selectedQuarantineState.value === "quarantined" && form.value.confirm === `RESTORE PHP ${form.value.resource_id}`;
   if (action === "recover-quarantine") return ["prepared", "conflict", "restoring"].includes(selectedQuarantineState.value) && form.value.confirm === `RECOVER PHP ${form.value.resource_id}`;
@@ -276,7 +284,7 @@ function clearWriteOnlyFields() {
 }
 watch([() => props.access, () => visible.value, () => definition.value?.id], cancelVersionRead, {deep:true, flush:'sync'});
 onBeforeUnmount(cancelVersionRead);
-watch(() => props.access, () => { idsAccessGeneration++;cancelDiskScan();cancelPlatformHealthRead();platformHealthSnapshot.clear();platformReadNotice.value="";diskScanNotice.value="";idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
+watch(() => props.access, () => { idsAccessGeneration++;cancelDiskScan();cancelPlatformHealthRead();platformHealthSnapshot.clear();platformReadNotice.value="";diskScanNotice.value="";idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined;pm2ConfigurationObservation.value=undefined;pm2ConfigurationAbsent.value=false; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
 watch(visible, value => { if (!value) { cancelDiskScan(); cancelPlatformHealthRead(); clearWriteOnlyFields(); } });
 watch(() => definition.value?.id, () => { cancelDiskScan(); cancelPlatformHealthRead(); platformReadNotice.value=""; diskScanNotice.value=""; });
 onBeforeUnmount(clearWriteOnlyFields);
@@ -420,6 +428,9 @@ const labels: Record<string, string> = {
   deployment: "刷新部署状态",
   "cancel-deployment": "取消部署并恢复",
   "recover-deployment": "恢复中断部署",
+  "configuration": "读取原配置事务",
+  "recover-configuration": "恢复旧配置并停止",
+  "cancel-configuration-request": "取消未接受的原请求",
 	"account-limits": "保存账户限制",
 	"recount-quota": "重统计当前网站容量",
   "archive-deployments": "归档旧部署记录",
@@ -574,6 +585,12 @@ async function show(id: string) {
 function selected(row: Record<string, any>) {
   clearWriteOnlyFields();
   const id = definition.value?.id;
+	if(id==='pm2-manager' && row.pm2_operation_id!==undefined) {
+		const fields=pm2ConfigurationFields(row);
+		if(!fields){ElMessage.error('原配置事务身份或摘要不可核对，请刷新');return;}
+		Object.assign(form.value,fields);activeTab.value='configuration';
+		ElMessage.info('已选择原配置事务；恢复会保持项目停止，不重放原更新');return;
+	}
   if (id === 'nfs-manager') {
     const section = nfsFormDrafts.select(row);
     if (!section) { ElMessage.error('所选 NFS 记录身份无法核对，请刷新对应列表'); return; }
@@ -639,6 +656,10 @@ function selected(row: Record<string, any>) {
     if (row[f.key] !== undefined) form.value[f.key] = f.kind === "json" ? JSON.stringify(row[f.key], null, 2) : row[f.key];
   if (id==="load-balance" && Array.isArray(row.nodes))
     Object.assign(form.value,loadBalanceEntryFields(row));
+	if(id==='pm2-manager' && /^[a-z][a-z0-9-]{2,31}$/.test(row.id||'') && Number.isSafeInteger(row.revision) && row.revision>0) {
+		Object.assign(form.value,{resource_id:row.id,pm2_operation_id:'',expected_sha:'',confirm:''});
+		selectedPlanID.value=row.id;form.value.expected_revision=row.revision;
+	}
   if (id === "php-code-security") {
     selectedQuarantineState.value = row.state || "";
     form.value.expected_sha = row.sha256 || "";
@@ -750,6 +771,7 @@ async function executePlatformHealthRead() {
 }
 async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   if (!definition.value || installedUnknown.value || busy.value || !canExecutePHP(action)) return;
+  if(definition.value.id==='pm2-manager' && action==='configuration'){await readPM2Configurations();return;}
   if (definition.value.id === 'disk-analysis' && action === 'run') { await executeDiskScan(); return; }
   if (definition.value.id === 'platform-ops' && action === 'run') { await executePlatformHealthRead(); return; }
   const userMutation = definition.value.id === 'user-manager' && isUserMutation(action);
@@ -783,6 +805,10 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       return;
     }
     const submitted=inputBody(action);
+	if(definition.value.id==='pm2-manager' && action==='update') {
+		const ticket={appID:String(submitted.resource_id||''),operationID:newPM2ConfigurationID()};
+		submitted.pm2_operation_id=ticket.operationID;pm2ConfigurationObservation.value=ticket;pm2ConfigurationAbsent.value=false;
+	}
     const submittedNFSDraft = definition.value.id === 'nfs-manager' ? nfsFormDrafts.submission(activeTab.value, action) : undefined;
     if (platformMutation) {
       submittedPlatform = await platformObservation(action as PlatformObservation['action'],submitted);
@@ -803,6 +829,8 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       submitted,
     );
     if(accessGeneration!==idsAccessGeneration)return;
+    if(definition.value.id==='pm2-manager' && action==='update' && pm2ConfigurationObservation.value && !pm2ConfigurationReplyMatches(pm2ConfigurationObservation.value,result))throw Error('PM2 原配置提交回执未能核对；请读取原操作，勿重复保存');
+    if(definition.value.id==='pm2-manager' && ['configuration','run','cancel-configuration-request'].includes(action))observePM2Configuration(result);
     if (submittedPlatform) {
       if (!await platformMutationReplyMatches(submittedPlatform,result)) throw Error('多主机操作回执身份无法核对；原操作可能已执行，请只读刷新对应清单，不重复提交');
       if(accessGeneration!==idsAccessGeneration)return;
@@ -936,6 +964,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       if (submittedUser && !userManagementListKnown(refreshed)) throw Error('刷新返回的账户列表身份、授权或修订无法核对');
       if (submittedPlatform && !platformReadKnown('run',refreshed)) throw Error('刷新返回的多主机清单身份或完整性无法核对');
       setReport(refreshed);
+      if(definition.value.id==='pm2-manager')observePM2Configuration(refreshed);
       if(submittedPlatform){const row=(refreshed as Record<string,any>).hosts?.find((row:Record<string,any>)=>row.id===form.value.resource_id);form.value.expected_sha=row?.expected_sha||'';selectedPlanID.value=row?.id||'';}
     }
     if (definition.value.id === "pure-ftpd" && report.value?.config) {
@@ -988,12 +1017,44 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       if(visible.value&&accessGeneration===idsAccessGeneration){userErrorAnchor.value?.scrollIntoView({block:'nearest'});userErrorAnchor.value?.focus({preventScroll:true});}
     }
   } finally {
+    if(definition.value?.id==='pm2-manager' && action==='update')clearWriteOnlyFields();
     if(definition.value?.id==="files-sync")clearWriteOnlyFields();
     if(userMutation && accessGeneration===idsAccessGeneration)clearWriteOnlyFields();
     if(platformMutation && accessGeneration===idsAccessGeneration)clearWriteOnlyFields();
     if(accessGeneration===idsAccessGeneration && definition.value?.id==='task-manager' && action==='terminate') {form.value.pid=0;form.value.start_time=0;}
     busy.value = false;
   }
+}
+function observePM2Configuration(value: unknown) {
+ const ticket=pm2ConfigurationObservation.value;if(!ticket)return;
+ pm2ConfigurationAbsent.value=pm2ConfigurationAbsentMatches(ticket,value);
+ if(pm2ConfigurationReadConfirms(ticket,value)) { pm2ConfigurationObservation.value=undefined;pm2ConfigurationAbsent.value=false;form.value.expected_revision=0;selectedPlanID.value=''; }
+}
+async function cancelUnacceptedPM2Configuration() {
+ const ticket=pm2ConfigurationObservation.value;
+ if(!ticket||!pm2ConfigurationAbsent.value||busy.value||definition.value?.id!=='pm2-manager')return;
+ Object.assign(form.value,{resource_id:ticket.appID,pm2_operation_id:ticket.operationID,expected_sha:'',confirm:'CANCEL PM2 '+ticket.operationID});activeTab.value='configuration';
+ await execute('cancel-configuration-request');form.value.confirm='';
+}
+async function readPM2Configurations() {
+ if(busy.value || definition.value?.id!=='pm2-manager')return;
+ const generation=idsAccessGeneration;busy.value=true;error.value='';
+ try {
+  const ticket=pm2ConfigurationObservation.value;
+  const query=new URLSearchParams();
+  const input={resource_id:ticket?.appID||form.value.resource_id,pm2_operation_id:ticket?.operationID||form.value.pm2_operation_id,limit:form.value.limit,offset:form.value.offset};
+  for(const [key,value]of Object.entries(input))if(value!==undefined&&value!==null&&value!=='')query.set(key,String(value));
+  const result=await props.api('/app-modules/pm2-manager/configuration?'+query.toString(),'GET');
+  if(generation!==idsAccessGeneration||!visible.value)return;
+  setReport(result);observePM2Configuration(result);
+ }catch(e){if(generation===idsAccessGeneration)error.value=e instanceof Error?e.message:String(e);}
+ finally{if(generation===idsAccessGeneration)busy.value=false;}
+}
+async function reviewPM2Configuration() {
+  const ticket=pm2ConfigurationObservation.value;
+  if(!ticket || busy.value || definition.value?.id!=='pm2-manager')return;
+  Object.assign(form.value,{resource_id:ticket.appID,pm2_operation_id:ticket.operationID,expected_sha:'',confirm:'',offset:0});activeTab.value='configuration';
+  await execute('configuration');
 }
 async function reviewRemoteTicket(ticket:RemoteRequestTicket) {
   if(busy.value || !definition.value || definition.value.id!=="files-sync")return;
@@ -1068,6 +1129,12 @@ defineExpose({ show });
       <el-alert v-if="definition?.id==='platform-ops' && platformReadNotice" :title="platformReadNotice" type="warning" :closable="false" />
       <el-alert v-if="definition?.id==='user-manager' && userMutationObservation?.state !== 'acknowledged' && userMutationObservation" type="warning" :closable="false" title="账户操作或后续刷新未完全核对。已暂停重复写入；请在账户列表手动刷新核对，不能将断网或刷新失败当作未执行。" />
       <el-alert v-if="definition?.id==='platform-ops' && platformMutationObservation && platformMutationObservation.state!=='acknowledged'" type="warning" :closable="false" :title="`多主机操作或后续刷新未完全核对，已暂停重复写入。请手动${platformMutationObservation.requiredRead==='token-list'?'只读刷新授权清单（可按标识撤销丢失回执的授权）':'刷新主机健康清单'}；断网不等于未执行。`" />
+      <div v-if="definition?.id==='pm2-manager' && pm2ConfigurationObservation">
+        <el-alert type="warning" :closable="false" title="本次配置保存尚未完整核对，已暂停重复保存。读取原操作后再决定；断网不表示未执行。" />
+        <el-button :disabled="busy" @click="reviewPM2Configuration">只读核对原配置操作</el-button>
+        <el-button v-if="pm2ConfigurationAbsent" :disabled="busy" @click="cancelUnacceptedPM2Configuration">取消未接受的原请求</el-button>
+        <p v-if="pm2ConfigurationAbsent">当前未发现已接受记录。取消会持久关闭原操作标识，阻止延迟请求执行；不会改动项目配置或启停服务。</p>
+      </div>
       <template v-if="definition">
         <p>
           <el-tag :type="healthy ? 'success' : 'warning'">{{

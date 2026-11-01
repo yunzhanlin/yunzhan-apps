@@ -87,6 +87,7 @@ type AppModuleInput struct {
 	ClientDeny           []string                        `json:"client_deny"`
 	Enabled              bool                            `json:"enabled"`
 	ExpectedRevision     int64                           `json:"expected_revision,omitempty"`
+	PM2OperationID       string                          `json:"pm2_operation_id,omitempty"`
 	NetworkInterface     string                          `json:"network_interface,omitempty"`
 	HomeNetworks         []string                        `json:"home_networks,omitempty"`
 	RuleProfile          *NetworkIDSRuleProfileSelection `json:"rule_profile,omitempty"`
@@ -181,7 +182,8 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "server-report", "server-start", "server-stop", "server-probe", "server-recover", "server-config", "export-save", "export-remove")
 			definitions[i].Fields = append(definitions[i].Fields, site, path, AppModuleField{"bind_address", "NFS 本机监听 IPv4/IPv6", "text"}, AppModuleField{"port", "NFSv4 监听端口", "number"}, AppModuleField{"client_allow", "允许客户端 IP/CIDR（JSON 数组，必须明确指定）", "json"}, AppModuleField{"expected_revision", "共享服务修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "网络暴露 / 可写导出确认", "text"})
 		case "pm2-manager":
-			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments")
+			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request")
+			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"pm2_operation_id", "原配置事务标识（选择事务自动填写）", "identity"}, AppModuleField{"expected_sha", "原配置事务摘要（自动填写）", "identity"}, AppModuleField{"confirm", "恢复确认：RECOVER PM2 原事务标识", "text"}, AppModuleField{"limit", "事务每页条数（最多 128）", "number"}, AppModuleField{"offset", "事务分页起点", "number"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"environment_patch", "环境变量增量（JSON，仅写入）", "secret-json"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"allow_install_scripts", "允许安装脚本（网站用户，不是 root）", "boolean"})
@@ -211,6 +213,7 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.pm2ConfigurationRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
 	a.networkIDSOperationRoutes(m)
 	a.networkIDSRuleFeedRoutes(m)
@@ -422,7 +425,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "network-threat-detection":
 			version = "1.3.1"
 		case "pm2-manager":
-			version = "7.0.4-compat6"
+			version = PM2ConfigurationAppVersion
 		case "website-statistics-v2":
 			version = "2.6.0"
 		case "apache-waf":

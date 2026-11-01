@@ -175,6 +175,18 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		out.Enabled = out.Healthy
 	case "pm2-manager":
 		out.Healthy = s.appDependencyReady(id)
+		if records, err := s.pm2ConfigRecords(); err != nil {
+			out.Healthy = false
+			out.Detail = "PM2 配置事务不可核对，请检查原记录"
+		} else {
+			for _, record := range records {
+				if record.Receipt == nil && record.Cancellation == nil {
+					out.Healthy = false
+					out.Detail = "PM2 配置更新中断，请查看原事务并显式恢复"
+					break
+				}
+			}
+		}
 	case "nfs-manager":
 		out.Healthy = s.appDependencyReady(id) && !s.nfsPending()
 		if out.Version == core.NFSPrivateClientAppVersion {
@@ -362,6 +374,15 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			}
 		}
 		if id == "pm2-manager" {
+			records, err := s.pm2ConfigRecords()
+			if err != nil {
+				return err
+			}
+			for _, record := range records {
+				if record.Receipt == nil && record.Cancellation == nil {
+					return errors.New("PM2 配置事务未恢复，拒绝卸载；原记录保留")
+				}
+			}
 			rows, _ := filepath.Glob(filepath.Join(s.moduleDir(id), "apps", "*.json"))
 			if len(rows) > 0 {
 				return errors.New("仍有 PM2 项目，请先删除项目")
@@ -655,6 +676,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
+	s.pm2ConfigurationReadRoutes(m)
 	s.diskHostObservationRoutes(m)
 	s.diskHostProducerRoutes(m)
 	s.diskHostCancelRoutes(m)
@@ -743,7 +765,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "应用已卸载，未执行排队操作"})
 			return
 		}
-		if action != "history" {
+		if action != "history" && !(id == "pm2-manager" && (action == "recover-configuration" || action == "cancel-configuration-request")) {
 			if err := s.moduleRetrospectivePreflight(id); err != nil {
 				respond(w, 409, map[string]any{"error": err.Error(), "report_state_unknown": true})
 				return

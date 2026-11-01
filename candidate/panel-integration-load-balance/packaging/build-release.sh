@@ -108,6 +108,7 @@ printf 'Official app catalogue channel: %s (same compiled publisher key; no runt
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-host-disk.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-disk-scan-lifecycle.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-user-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-management-receipt.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-health-view.mjs scripts/test-platform-health-lifecycle.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-platform-maintenance-secrets.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"

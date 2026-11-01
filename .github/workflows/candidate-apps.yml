@@ -44,12 +44,20 @@ jobs:
       - name: Native alert and PM2 race regression with the original candidate source
         working-directory: candidate/panel-integration-load-balance
         # Race instrumentation changes runtime cost. Keep the production 2s
-        # full-capacity deadline in the normal build, including the full Root
-        # suite above; retain all functional alert and PM2 races here.
-        run: sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^Test(ModuleAlert|LoadBalance(Alert|Traffic)|ModuleHistory|ModuleInstalledRecord|ModuleUntrustedInstalledRecord|PM2)' -skip '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$'
+        # full-capacity deadline and the PM2 5s independent-journal deadline in
+        # the normal Root suite and dedicated steps; retain functional races here.
+        run: sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^Test(ModuleAlert|LoadBalance(Alert|Traffic)|ModuleHistory|ModuleInstalledRecord|ModuleUntrustedInstalledRecord|PM2)' -skip '^Test(LoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands|PM2ConfigurationUpgradeBudgetIsIndependentFromUnchangedLegacyBudget)$'
       - name: Original maximum alert inventory and production deadline without race instrumentation
         working-directory: candidate/panel-integration-load-balance
         run: sudo "$(command -v go)" test -v -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$'
+      - name: Original PM2 retained-journal capacity and five-second deadline without race instrumentation
+        working-directory: candidate/panel-integration-load-balance
+        run: sudo "$(command -v go)" test -v -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestPM2ConfigurationUpgradeBudgetIsIndependentFromUnchangedLegacyBudget$'
+      - name: Actual PM2 uncertain-save, durable-cancellation and existing account receipt regressions
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          npm ci --ignore-scripts --prefix web
+          node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs scripts/test-user-management-receipt.mjs scripts/test-platform-management-receipt.mjs
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance

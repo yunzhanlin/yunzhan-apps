@@ -17,6 +17,19 @@ const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
   pm2_version: "PM2 版本",
+  configuration_transactions: "配置更新与恢复记录",
+  configuration_transaction: "本次配置更新回执",
+  configuration_state: "配置提交状态",
+  configuration_inventory_complete: "原配置事务库存已完整核对",
+  pm2_operation_id: "原配置操作标识",
+  previous_revision: "原修订号",
+  next_revision: "候选修订号",
+  previous_running: "更新前运行中",
+  previous_boot_enabled: "更新前开机启动",
+  max_retained_intents: "原配置事务保留上限",
+  page_complete: "当前已显示最后一页",
+  next_offset: "下一页起点",
+  automatic_replay: "自动重放原操作",
   signal_accepted:"信号发送已接受",
   exit_verified:"退出已核对",
   connections:"连接明细",
@@ -524,7 +537,7 @@ const info = computed(() =>
   ),
 );
 function format(key: string, value: unknown, row?:Record<string,unknown>): string {
-	if(props.id==='pm2-manager'&&key==='state')return ({active:'运行中',inactive:'已停止',failed:'运行失败',unknown:'无法核对'} as Record<string,string>)[String(value)]||'未知状态';
+	if(props.id==='pm2-manager'&&['state','configuration_state'].includes(key))return ({active:'运行中',inactive:'已停止',failed:'运行失败',unknown:'无法核对',needs_attention:'更新未确认，需核对恢复',committed:'配置已持久提交',rolled_back:'更新失败，已恢复旧配置',recovered_stopped:'已恢复旧配置并停止',cancelled_before_publication:'未发布配置，原请求已取消'} as Record<string,string>)[String(value)]||'未知状态';
   if(props.id==='disk-analysis'){const notice=diskValueNotice(props.report,key,value);if(notice)return notice;}
   if(props.id==='disk-analysis'&&key==='allocation_basis')return value==='st_blocks_512_inode_deduplicated'?'Linux 已分配块，按本次扫描范围内 inode 去重':'未知计算方式';
   if(props.id==='website-statistics-v2' && key==='history_request_receipt_limit' && props.report.history_request_ids_enabled!==true)return '未启用（旧版历史模式）';
@@ -581,7 +594,8 @@ function rows(values: any[],key=''): Record<string, any>[] {
   });
 }
 function columns(values: any[]) {
-	if(props.id==='pm2-manager'&&values.some(value=>value&&typeof value==='object'&&(value.app||'instances' in value)))return ['id','site_id','state','boot_enabled','state_known','entry','port','instances','memory_mb','revision','environment_keys','error'];
+	if(props.id==='pm2-manager'&&values.some(value=>value&&typeof value==='object'&&value.pm2_operation_id))return ['resource_id','pm2_operation_id','state','previous_revision','next_revision','created_at','previous_running','previous_boot_enabled'];
+	if(props.id==='pm2-manager'&&values.some(value=>value&&typeof value==='object'&&(value.app||'instances' in value)))return ['id','site_id','state','configuration_state','boot_enabled','state_known','entry','port','instances','memory_mb','revision','environment_keys','error'];
   if(props.id==='task-manager'&&values.some(value=>value&&typeof value==='object'&&'pid' in value))return taskProcessColumns(values);
   if(props.id==="files-sync" && values.some(value=>value && value.backup_archive_state))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_archive_state","backup_snapshot_sha256","pending_recovery","content_verified"];
   if(props.id==="files-sync" && values.some(value=>value && value.backup_transaction_id))return ["backup_transaction_id","remote_target_id","revision","backup_bytes","backup_files","pending_recovery"];
@@ -839,6 +853,7 @@ function mobileDownloadURL(item: unknown): string | undefined {
               'processes',
               'users',
               'apps',
+              'configuration_transactions',
               'mounts',
               'exports',
               'hosts',

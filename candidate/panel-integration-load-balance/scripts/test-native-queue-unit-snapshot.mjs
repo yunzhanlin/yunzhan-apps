@@ -11,6 +11,10 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	// can be hidden by updating a whole-file digest.
 	assert.equal(queues.split(fencedEntry).length,2);
 	let legacyQueues=queues.replace(fencedEntry,()=>entry);
+	// Strip only the separately tested additional PM2 configuration inventory.
+	// All historical predicates, fixed commands and deadlines below remain exact.
+	const pm2Addition='\tif err := r.pm2Configurations(); err != nil {\n\t\treturn err\n\t}\n';
+	assert.equal(legacyQueues.split(pm2Addition).length,2);legacyQueues=legacyQueues.replace(pm2Addition,'');
 	// Strip ONLY the three explicit additional country fences. The previous
 	// queue predicates must still match their complete historical digests.
 	for(const addition of [

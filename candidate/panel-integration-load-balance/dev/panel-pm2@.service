@@ -3,6 +3,7 @@ Description=CloudStack PM2 application %i
 After=network.target
 [Service]
 Type=simple
+ExecCondition=/opt/panel/bin/panel-executor --pm2-config-start-check %i
 ExecStart=/opt/panel/bin/panel-executor --serve-pm2 %i
 Restart=on-failure
 RestartSec=3

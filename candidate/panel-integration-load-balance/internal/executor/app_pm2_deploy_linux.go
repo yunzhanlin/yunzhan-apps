@@ -74,7 +74,7 @@ func (s *Service) lockPM2Project(id string) (*os.File, error) {
 	}
 	if err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		f.Close()
-		return nil, errors.New("该项目正在部署依赖，请先查看部署结果")
+		return nil, errors.New("该项目正在处理配置或依赖部署，请先读取原操作记录")
 	}
 	return f, nil
 }

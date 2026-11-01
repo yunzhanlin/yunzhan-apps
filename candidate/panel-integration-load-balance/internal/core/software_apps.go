@@ -100,6 +100,21 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "pm2-manager" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, "7.0.4"); valid && comparison >= 0 {
+			known := false
+			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", PM2ConfigurationAppVersion} {
+				if version == v {
+					known = true
+					break
+				}
+			}
+			if !known {
+				return errors.New("PM2 更新仅允许固定完整的已实现修订；未接受别名或未来版本")
+			}
+		}
+	}
 	if id == "load-balance" {
 		base, _, _ := strings.Cut(version, "-")
 		comparison, valid := appcatalog.CompareVersions(base, "1.9.0")

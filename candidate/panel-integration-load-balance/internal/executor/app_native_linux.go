@@ -526,6 +526,16 @@ func (s *Service) pm2Ready(ctx context.Context, unit string, port int) error {
 }
 
 func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if action == "configuration" {
+		return s.pm2ConfigurationReport(in)
+	}
+	configuration, err := s.pm2ConfigRecords()
+	if err != nil {
+		return nil, err
+	}
 	dir := filepath.Join(s.moduleDir("pm2-manager"), "apps")
 	if action == "run" {
 		paths, _ := filepath.Glob(filepath.Join(dir, "*.json"))
@@ -537,6 +547,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			}
 			state, stateErr := s.readPM2UnitState(ctx, "panel-pm2@"+app.ID+".service")
 			row := map[string]any{"app": publicPM2App(app), "state": state.ActiveState, "state_known": stateErr == nil, "boot_enabled": state.UnitFileState == "enabled"}
+			if pm2ConfigPending(configuration, app.ID) {
+				row["configuration_state"] = "needs_attention"
+			}
 			if stateErr != nil {
 				row["state"] = "unknown"
 				row["boot_enabled"] = nil
@@ -544,7 +557,13 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 			}
 			out = append(out, row)
 		}
-		return map[string]any{"apps": out, "pm2_version": "7.0.4"}, nil
+		page, err := publicPM2ConfigPage(configuration, core.AppModuleInput{Limit: 64})
+		if err != nil {
+			return nil, err
+		}
+		page["apps"] = out
+		page["pm2_version"] = "7.0.4"
+		return page, nil
 	}
 	if !moduleResourceID.MatchString(in.ResourceID) {
 		return nil, errors.New("PM2 标识无效")
@@ -553,6 +572,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 	unit := "panel-pm2@" + in.ResourceID + ".service"
 	var app pm2App
 	if action == "create" {
+		if pm2ConfigPending(configuration, in.ResourceID) {
+			return nil, errors.New("PM2 原配置事务尚未恢复，未创建项目")
+		}
 		instances, memoryMB, limitErr := pm2Limits(in.Instances, in.MemoryMB)
 		if limitErr != nil {
 			return nil, limitErr
@@ -636,6 +658,29 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		return nil, err
 	}
 	defer projectLock.Close()
+	// Re-read the live manifest after acquiring the interprocess project lock.
+	if e := moduleRead(path, &app); e != nil {
+		return nil, e
+	}
+	if app.ID != in.ResourceID || !core.ValidID(app.SiteID) {
+		return nil, errors.New("PM2 项目清单身份不匹配")
+	}
+	configuration, err = s.pm2ConfigRecords()
+	if err != nil {
+		return nil, err
+	}
+	if action == "update" {
+		before, e := s.pm2ConfigLiveBytes(app.ID)
+		if e != nil {
+			return nil, e
+		}
+		if out, known, e := pm2ConfigurationDuplicate(in, before, configuration); known {
+			return out, e
+		}
+	}
+	if pm2ConfigPending(configuration, app.ID) && action != "logs" && action != "recover-configuration" && action != "cancel-configuration-request" {
+		return nil, errors.New("PM2 配置事务未完成，请先查看并显式恢复；未重放原操作")
+	}
 	if action != "dependencies" && action != "logs" && action != "recover-deployment" && action != "cancel-deployment" && action != "archive-deployments" {
 		if job, err := s.pm2LastDeployment(app.ID); err == nil {
 			if job.State == "queued" || job.State == "running" || job.State == "switching" || job.State == "needs_attention" {
@@ -646,6 +691,10 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		}
 	}
 	switch action {
+	case "cancel-configuration-request":
+		return s.cancelPM2ConfigurationRequest(ctx, in)
+	case "recover-configuration":
+		return s.recoverPM2Configuration(ctx, in, configuration)
 	case "archive-deployments":
 		return s.archivePM2Deployments(app.ID)
 	case "recover-deployment", "cancel-deployment":
@@ -725,37 +774,7 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		if e = s.patchPM2Environment(&app, in.EnvironmentPatch); e != nil {
 			return nil, e
 		}
-		if e = moduleWrite(path, app); e != nil {
-			return nil, e
-		}
-		if beforeState.ActiveState == "inactive" {
-			return map[string]any{"app": publicPM2App(app), "ok": true, "service_active": false, "boot_enabled": beforeState.UnitFileState == "enabled", "runtime_validated": false, "preserved_stopped": true}, nil
-		}
-		if _, e = s.Config.Run(ctx, "/usr/bin/systemctl", "restart", unit); e == nil {
-			e = s.pm2Ready(ctx, unit, app.Port)
-		}
-		if e != nil {
-			rollbackCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-			defer cancel()
-			// Cancel the candidate's pending systemd restart before restoring
-			// its manifest. Otherwise an automatic restart can load the restored
-			// entry just before our explicit restart, launching it twice.
-			_, stopErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "stop", unit)
-			stopped, stateErr := s.readPM2UnitState(rollbackCtx, unit)
-			restoreErr := restoreFiles([]fileBackup{previous})
-			if stopErr != nil || stateErr != nil || restoreErr != nil || stopped.ActiveState != "inactive" || stopped.UnitFileState != beforeState.UnitFileState {
-				return nil, errors.New("PM2 更新失败，旧配置已尝试恢复；候选服务停止状态、原开机设置或配置无法完整核对，请检查项目")
-			}
-			_, restartErr := s.Config.Run(rollbackCtx, "/usr/bin/systemctl", "restart", unit)
-			if restartErr == nil {
-				restartErr = s.pm2Ready(rollbackCtx, unit, old.Port)
-			}
-			if restartErr != nil {
-				return nil, errors.New("PM2 更新失败且恢复旧配置或重启失败，请核对项目")
-			}
-			return nil, e
-		}
-		return map[string]any{"app": publicPM2App(app), "ok": true}, nil
+		return s.applyPM2Configuration(ctx, in, previous.data, app, beforeState)
 	case "start", "stop", "restart":
 		return s.controlPM2(ctx, app, action, unit)
 	case "logs":
@@ -844,6 +863,9 @@ func ServePM2(id string) error {
 		return errors.New("PM2 标识无效")
 	}
 	s := New(Config{SitesDir: "/srv/panel/sites"})
+	if e := s.checkPM2ConfigurationStart(context.Background(), id); e != nil {
+		return e
+	}
 	var app pm2App
 	if e := moduleRead(filepath.Join(s.moduleDir("pm2-manager"), "apps", id+".json"), &app); e != nil {
 		return e
