@@ -47,7 +47,7 @@ jobs:
           python3 - "$RUNNER_TEMP/native-pm2-c46r2-assets" <<'PY'
           import ast,hashlib,json,pathlib,sys
           base=pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='d80471993d4d1cee6f54cd8c529135a0138a0fc94e13a2ad40632184a924886c'
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='886fa59f607e314c310240949cdb2c4599d6443099bfc8612a8e01a7f8d69b95'
           manifest=json.loads((base/'assets.json').read_bytes())
           assert manifest['source_inputs_sha256']=='4e38861a2aa0dfa1f6933dead17d70dbc49dbaaf6aeaab6be771938be1d394bc'
           for name,digest in manifest['files'].items():

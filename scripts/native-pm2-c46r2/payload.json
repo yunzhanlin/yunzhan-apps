@@ -6,7 +6,7 @@
     "bootstrap.py": "f3f8ea82fa8248f8f951d94d4211a96180cb0d35b4d85a5f4c01260ced9fa208",
     "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
     "functional.py": "01421e44d76f98edf9ff1dd86396d86971688f20ec7418c070fc7595cfeb20a7",
-    "guest.py": "288f731776ed695bab211cc021bf9966a6f314539b539365456306291f6114eb",
+    "guest.py": "88b514501d6940fb3afa6d1cdba0c4a024871132840217cc7324002feaa5d9c1",
     "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz": "73e1ef256e2b0bae72787f76dcae3c7beb530953910fc5d0483bd3e140fb587d",
     "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz.manifest": "0a44425046d7de52c25671946c58112e94781324a53dcaf6732566fed5125a0a",
     "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz.sig": "fd0f58ab16f2da1fd71538c23b8ccbd335647fe6f8f581213dd296d4c3510aa2",
@@ -15,7 +15,7 @@
     "panel-0.1.0-dev.proapps24pm2gracefulstopcandidate45-linux-amd64.tar.gz.sig": "3c987644451aead0ba1639fde711515a975545defb09257f3b6a12a0dee9240c",
     "prepare.py": "4635aa77e0884cf82a6d536d2ad8326e3bc3bf9b75773917bd16f6c448356957",
     "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
-    "shop.py": "fff31b3137ab4b43bffeec7886bf0437bf3b71c0fc0a7154262bb1faafe68f7f",
+    "shop.py": "486e0b85061d857ae40f00db430d030e8036951d2d1d2831bc76ec3868011870",
     "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
   },
   "format": 1,
