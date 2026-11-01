@@ -32,12 +32,12 @@ func (s *Service) openModuleLedger(ctx context.Context, id string) (*sql.DB, err
 	}
 	for index, path := range []string{s.Config.SecurityDir, filepath.Join(s.Config.SecurityDir, "modules"), dir} {
 		info, err := os.Lstat(path)
-		if err != nil || !moduleRecordInfo(info, true, index < 2) {
+		if err != nil || !moduleRecordDirectoryInfo(info, index < 2, index == 2 && id == "apache-waf") {
 			return nil, errors.New("历史目录不安全，未创建或修改记录")
 		}
 	}
-	// Only the configured anchor and exact shared container may be traversable.
-	// Keep the same held-parent and strict app-leaf checks as report readers.
+	// Use the same exact Apache0750 compatibility as the held-parent readers.
+	// Other application leaves stay0700; private database files remain0600.
 	guard, err := s.moduleRecordDirectory(id)
 	if err != nil {
 		return nil, err

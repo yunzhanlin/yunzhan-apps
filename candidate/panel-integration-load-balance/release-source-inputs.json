@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24apacheprivatecandidate49-linux-amd64.tar.gz",
-  "archive_sha256": "1a371a6ba5650cb4a96093e96d207ef12ba816892a114ab2245c09dae44289b8",
-  "frozen_inputs_sha256": "a435aeb33c112b0e2a6512b9b7a1a57620d8b443f2a7e047be1772f47208d09d",
+  "archive": "panel-0.1.0-dev.proapps24apacheprivatecandidate49r2-linux-amd64.tar.gz",
+  "archive_sha256": "4ee50b12858db83acc855050976b6455240eeec01d48a89c834cde766dcf555b",
+  "frozen_inputs_sha256": "5378bf06db56c33af918be94968ff702f1aff68406a4e0de489fc1c08dc0416b",
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
     "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
@@ -847,9 +847,9 @@
     "internal/executor/app_load_balance_traffic_alert_linux.go": "31495fd09936baddb3f55654a0c86c7d03d8c51d3fae0e9cf066fd585f9540bd",
     "internal/executor/app_load_balance_traffic_alert_linux_test.go": "8b369cffc8d24c37614bf7011fa5900f6d925e6c0cfdddb27d5ffe6e23e223fe",
     "internal/executor/app_mobile_signed_version_linux_test.go": "eae361e0256fdc79c679434ad55abe7527dae50a33625bd592fc0f83aa22a1ec",
-    "internal/executor/app_module_apache_record_linux_test.go": "1fabe22bff643a9ad6ba52a9878e25297c282bbb28a9cfe97ccd03383ec6f69a",
+    "internal/executor/app_module_apache_record_linux_test.go": "5496184700221ff1096c0da1dc01ccd982002204bd2b94eab3f34700516f9dc5",
     "internal/executor/app_module_history_linux.go": "786e2359addc354cc2d4617455426c5d2149bd796725148a2649d113f90895db",
-    "internal/executor/app_module_ledger_linux.go": "9b4311a4dc7e51ebb8bced257b6dc015bea78d991d5c0f8609f0e3019e2e0cf7",
+    "internal/executor/app_module_ledger_linux.go": "bf721d1144bd79d6cb9fda9525455003572b744f19899fcbbd156c09d28f24ed",
     "internal/executor/app_module_ledger_linux_test.go": "28bd7e33e928b98c7a1ca96a337b77318c90258d1e9c18b387d4b7ab95caa57e",
     "internal/executor/app_module_ledger_readonly_linux.go": "a67dcd858b70e8e6cebee4397430d5ca238692f6de1904e45c84c8d752402c8d",
     "internal/executor/app_module_lifecycle_race_linux_test.go": "3b8420823ae878bded5130bfa0535676c5b9be33d19d09809ec4f74af62c7e95",
