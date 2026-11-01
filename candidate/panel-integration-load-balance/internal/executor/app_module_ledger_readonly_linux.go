@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -54,6 +55,13 @@ func (s *Service) openModuleLedgerReadOnly(ctx context.Context, id string) (*sql
 	opened, err := pinned.Stat()
 	if err != nil || !os.SameFile(info, opened) || !moduleRecordInfo(opened, false, false) || !dir.current() {
 		return fail(errors.New("历史数据库打开身份变化"))
+	}
+	// The actual writer uses DELETE journaling. Opening a WAL-mode database
+	// can create auxiliary files even with mode=ro. Refuse that foreign or
+	// interrupted state before SQLite is opened; only its writer may recover.
+	header := make([]byte, 100)
+	if _, err = pinned.ReadAt(header, 0); err != nil || !bytes.Equal(header[:16], []byte("SQLite format 3\x00")) || header[18] != 1 || header[19] != 1 {
+		return fail(errors.New("历史数据库头或日志模式不可只读核对；未创建事务侧文件"))
 	}
 	// The SQLite connection itself is mode=ro. Keep the verified descriptor
 	// and complete private ancestry alive and check identity/content metadata

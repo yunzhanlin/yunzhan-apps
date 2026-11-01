@@ -33,12 +33,13 @@ func lbTrafficNativeRead(t *testing.T, s *Service, query string, want int) core.
 	}
 	return f
 }
-func TestLoadBalanceAlertCancelledCallerDoesNotScanAfterWaitingOnConfigurationLock(t *testing.T) {
+func TestLoadBalanceAlertCancelledCallerDoesNotScanWhileUnrelatedMutationIsHeld(t *testing.T) {
 	s := wafPolicyFixture(t)
 	for _, path := range []string{"/v1/load-balance-alert-events", "/v1/load-balance-traffic-alert-events"} {
 		mux := http.NewServeMux()
 		s.moduleAlertRoutes(mux)
 		ctx, cancel := context.WithCancel(context.Background())
+		cancel()
 		req := httptest.NewRequest("GET", path, nil).WithContext(ctx)
 		w := httptest.NewRecorder()
 		s.mu.Lock()
@@ -47,7 +48,6 @@ func TestLoadBalanceAlertCancelledCallerDoesNotScanAfterWaitingOnConfigurationLo
 		done := make(chan struct{})
 		go func() { started.Done(); mux.ServeHTTP(w, req); close(done) }()
 		started.Wait()
-		cancel()
 		s.mu.Unlock()
 		select {
 		case <-done:

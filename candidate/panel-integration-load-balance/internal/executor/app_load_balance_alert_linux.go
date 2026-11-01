@@ -19,15 +19,31 @@ func (s *Service) loadBalanceAlertRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "告警源不接受自定义目标、游标或查询参数"})
 			return
 		}
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if r.Context().Err() != nil {
 			return
+		}
+		guard, installed, guardErr := s.beginModuleAlertRead("load-balance")
+		if guardErr != nil {
+			respond(w, 409, map[string]string{"error": "负载均衡原安装身份不可核对，未扫描告警历史"})
+			return
+		}
+		if !installed {
+			respond(w, 200, core.LoadBalanceAlertFeed{SchemaVersion: 1, Entries: []core.LoadBalanceAlertEntry{}})
+			return
+		}
+		if installed {
+			defer guard.dir.Close()
 		}
 		feed, err := s.loadBalanceAlertFeed(r)
 		if err != nil {
 			respond(w, 409, map[string]string{"error": "负载均衡告警源无法完整核对，原状态保留"})
 			return
+		}
+		if installed {
+			if err := guard.check(r.Context()); err != nil {
+				respond(w, 409, map[string]string{"error": "负载均衡原安装身份读取期间改变，未返回部分告警"})
+				return
+			}
 		}
 		respond(w, 200, feed)
 	})

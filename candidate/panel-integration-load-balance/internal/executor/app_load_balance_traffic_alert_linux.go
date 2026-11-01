@@ -20,15 +20,31 @@ func (s *Service) loadBalanceTrafficAlertRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "切流告警源不接受自定义查询、目标或路径"})
 			return
 		}
-		s.mu.Lock()
-		defer s.mu.Unlock()
 		if r.Context().Err() != nil {
-			return // Do not start a full scan after a cancelled caller waited on the lock.
+			return // Do not scan a source for an already cancelled caller.
+		}
+		guard, installed, guardErr := s.beginModuleAlertRead("load-balance")
+		if guardErr != nil {
+			respond(w, 409, map[string]string{"error": "负载均衡原安装身份不可核对，未扫描告警历史"})
+			return
+		}
+		if !installed {
+			respond(w, 200, core.LoadBalanceTrafficFeed{SchemaVersion: 1, Records: []core.LoadBalanceTrafficRecord{}, WorkerState: "unknown"})
+			return
+		}
+		if installed {
+			defer guard.dir.Close()
 		}
 		feed, e := s.loadBalanceTrafficAlertFeed(r)
 		if e != nil {
 			respond(w, 409, map[string]string{"error": "切流事务或调度库存无法完整核对，保留原证据"})
 			return
+		}
+		if installed {
+			if err := guard.check(r.Context()); err != nil {
+				respond(w, 409, map[string]string{"error": "负载均衡原安装身份读取期间改变，未返回部分告警"})
+				return
+			}
 		}
 		respond(w, 200, feed)
 	})
