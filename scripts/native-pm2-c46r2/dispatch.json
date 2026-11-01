@@ -1,0 +1,19 @@
+{
+  "Main_changed": false,
+  "PM2_from": "7.0.4-compat6",
+  "PM2_to": "7.0.4-compat7",
+  "actual_browser_UI_claim": false,
+  "actual_reboot_or_powerloss_claim": false,
+  "all50_commercial": false,
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "cohort": "C46r2-QA1",
+  "release_id": 430433767,
+  "release_tag": "qa-pm2configdurablecandidate46r2-20261101-qa1",
+  "source_inputs_sha256": "4e38861a2aa0dfa1f6933dead17d70dbc49dbaaf6aeaab6be771938be1d394bc"
+}

@@ -1,0 +1,34 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "bootstrap.py": "f3f8ea82fa8248f8f951d94d4211a96180cb0d35b4d85a5f4c01260ced9fa208",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "functional.py": "01421e44d76f98edf9ff1dd86396d86971688f20ec7418c070fc7595cfeb20a7",
+    "guest.py": "288f731776ed695bab211cc021bf9966a6f314539b539365456306291f6114eb",
+    "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz": "73e1ef256e2b0bae72787f76dcae3c7beb530953910fc5d0483bd3e140fb587d",
+    "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz.manifest": "0a44425046d7de52c25671946c58112e94781324a53dcaf6732566fed5125a0a",
+    "panel-0.1.0-dev.proapps24pm2configdurablecandidate46r2-linux-amd64.tar.gz.sig": "fd0f58ab16f2da1fd71538c23b8ccbd335647fe6f8f581213dd296d4c3510aa2",
+    "panel-0.1.0-dev.proapps24pm2gracefulstopcandidate45-linux-amd64.tar.gz": "ed67aa2c6c981e7ac2313c828035382eb3ed4aac5b517d386e96da8719506a47",
+    "panel-0.1.0-dev.proapps24pm2gracefulstopcandidate45-linux-amd64.tar.gz.manifest": "232a6b230ed1f7bbe1f67d6b34f8683f05df95841afc6cd13af9aaa88e8fd0a5",
+    "panel-0.1.0-dev.proapps24pm2gracefulstopcandidate45-linux-amd64.tar.gz.sig": "3c987644451aead0ba1639fde711515a975545defb09257f3b6a12a0dee9240c",
+    "prepare.py": "4635aa77e0884cf82a6d536d2ad8326e3bc3bf9b75773917bd16f6c448356957",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "shop.py": "fff31b3137ab4b43bffeec7886bf0437bf3b71c0fc0a7154262bb1faafe68f7f",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "historical_bootstrap": {
+    "PM2_install": "normal legacy default6 before upgrading; not a signed catalogue-install claim",
+    "release_id": 430369917,
+    "release_tag": "qa-pm2gracefulstopcandidate45-20261101-qa1",
+    "source_commit": "0597e918dae0abdd05c196ae891f4e821f5e996c",
+    "source_inputs_sha256": "8d784711df87b69657ab3848ecd52d28a1d4f6a5ac756ebd279ba09635b2eeb4",
+    "version": "0.1.0-dev.proapps24pm2gracefulstopcandidate45"
+  },
+  "release_id": 430433767,
+  "release_tag": "qa-pm2configdurablecandidate46r2-20261101-qa1",
+  "source_inputs_sha256": "4e38861a2aa0dfa1f6933dead17d70dbc49dbaaf6aeaab6be771938be1d394bc",
+  "version": "0.1.0-dev.proapps24pm2configdurablecandidate46r2"
+}
