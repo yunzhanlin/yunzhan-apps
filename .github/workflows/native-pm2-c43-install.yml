@@ -42,14 +42,21 @@ jobs:
           cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-pm2-c43-assets/"
           cp scripts/native-pm2-c43/payload.json "$RUNNER_TEMP/native-pm2-c43-assets/assets.json"
           python3 - "$RUNNER_TEMP/native-pm2-c43-assets" <<'PY'
-          import hashlib,json,pathlib,sys
+          import ast,hashlib,json,pathlib,sys
           base=pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='d884af96a38dac708202ca0ddd7ca612bc6dc03766e00946d99a650788010a1e'
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='a6a43e31410e0d44df1a7eebfb2f0a484c4a1e51195e11c01ecf3c46580c0f50'
           manifest=json.loads((base/'assets.json').read_bytes())
           assert manifest['source_inputs_sha256']=='84b9a7b8f98f15e3cfbaec993c2cd1e24468a68c1132473cdc28da41b56a9f93'
           for name,digest in manifest['files'].items():
               assert pathlib.PurePath(name).name==name
               assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+          signer_pin_expression=ast.dump(ast.parse("sha(payload / 'signed-release.py')",mode='eval').body)
+          signer_pins=[]
+          for node in ast.walk(ast.parse((base/'guest.py').read_bytes())):
+              if isinstance(node,ast.Assert) and isinstance(node.test,ast.Compare) and ast.dump(node.test.left)==signer_pin_expression:
+                  assert len(node.test.ops)==len(node.test.comparators)==1 and isinstance(node.test.ops[0],ast.Eq) and isinstance(node.test.comparators[0],ast.Constant)
+                  signer_pins.append(node.test.comparators[0].value)
+          assert signer_pins==[manifest['files']['signed-release.py']]
           print('Original programme signatures, key and reviewed QA payload bound')
           PY
       - name: Prepare actual hardware guest tools

@@ -1,5 +1,5 @@
 """One fresh signed C43 programme and actual PM2 fixture on an owned native guest.
-Uses actual hardware-KVM AMD64. Existing Main ARM64 evidence is separate.
+Uses actual hardware-KVM AMD64. Existing isolated ARM64 evidence is separate.
 """
 import contextlib,hashlib,http.cookiejar,json,os,pathlib,platform,re,runpy,secrets,sqlite3,stat,subprocess,sys,time,traceback,urllib.error,urllib.request
 os.umask(0o077);assert len(sys.argv)==2 and os.geteuid()==0
@@ -16,7 +16,7 @@ def save(n,v):
  with os.fdopen(os.open(evidence/n,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'w')as f:json.dump(v,f,sort_keys=True,indent=2);f.write(chr(10));f.flush();os.fsync(f.fileno())
 for n,h in pins['files'].items():
  assert re.fullmatch('[A-Za-z0-9._-]+',n);f=payload/n;s=f.lstat();assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and sha(f)==h
-assert sha(payload/'signed-release.py')=='fe128e82b4e11345b320cd782134768bfe1a4df14947c435d7494873a7a7b7b5'
+assert sha(payload/'signed-release.py')=='fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5'
 assert sha(payload/'release-signing-dev.pub')=='4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339'
 # The normal installer requires an independently pinned Root-owned trust key.
 # SCP input belongs to the disposable qa user; copy only exact pinned regular
