@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "pm2-manager",
+  "name": "PM2 Manager",
+  "category": "deployment",
+  "version": "7.0.4-compat6",
+  "summary": "候选维护更新：停止项目保存配置保持停止，分别显示运行与开机状态；更新失败先停止候选再恢复旧加密配置。保留非 root、加密仅写环境变量、锁定 npm 部署及恢复/取消。需对应新版面板；长任务并发与配置保存中途断电恢复仍待验收。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "pm2-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "非 root PM2 集群与启停",
+    "日志与执行历史",
+    "独立显示当前运行和开机状态，保留开机意图",
+    "内存重启阈值",
+    "修订冲突及未知状态拒绝；停止项目保存配置保持停止",
+    "加密仅写入环境变量增量管理",
+    "锁定 npm 依赖后台部署",
+    "网站用户受控安装脚本",
+    "依赖失败回滚",
+    "中断部署恢复与取消",
+    "旧部署可恢复归档",
+    "最长45秒就绪检查、调用方取消；失败先停候选再恢复旧加密配置"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/pm2-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
