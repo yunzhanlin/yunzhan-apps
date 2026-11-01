@@ -1,0 +1,11 @@
+{
+  "cohort": "C46r2-QA2-diagnostic",
+  "purpose": "Observe complete original failure in one new isolated KVM guest after fixing host collector namespace; no old job or guest is replayed",
+  "source_inputs_sha256": "4e38861a2aa0dfa1f6933dead17d70dbc49dbaaf6aeaab6be771938be1d394bc",
+  "release_id": 430433767,
+  "architecture": "amd64",
+  "case": "debian12",
+  "full_five_OS_acceptance": false,
+  "Main_changed": false,
+  "all50_commercial": false
+}
