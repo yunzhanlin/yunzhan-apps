@@ -164,6 +164,16 @@ function beforeCandidateFixtureDependencies(path,bytes){
 }
 export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
+ if(path==='tests/geodata-channel-publisher.test.mjs'){
+  const addition="'tools/load-balance-stream-contract.mjs','tools/apache-native-body-contract.mjs','signatures/catalog-v1.pub.pem'",text=bytes.toString();
+  if(text.includes(addition)){assert.equal(text.split(addition).length,2);bytes=Buffer.from(text.replace(addition,()=>"'tools/load-balance-stream-contract.mjs','signatures/catalog-v1.pub.pem'"));}
+ }
+ // Only the two new publisher imports are added to the private build fixture.
+ // Remove their exact copy-list suffix before the unchanged historical checks.
+ if(path==='tests/versioning.test.mjs'){
+  const addition="'candidate-assets.mjs','apache-native-body-contract.mjs','candidate-schema.mjs'",text=bytes.toString();
+  if(text.includes(addition)){assert.equal(text.split(addition).length,2);bytes=Buffer.from(text.replace(addition,()=>"'candidate-assets.mjs'"));}
+ }
  bytes=beforeCandidateFixtureDependencies(path,bytes);
  const sha=b=>createHash('sha256').update(b).digest('hex');if(sha(bytes)===plan.before)return bytes;
  assert.equal(sha(bytes),plan.after,'Unknown reader or assertion change is not an input qualification');

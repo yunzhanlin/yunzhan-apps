@@ -5,6 +5,7 @@ import { canonical, pretty, sha256, validateManifest } from "./lib.mjs";
 import { officialCatalogBaseURL } from "./official-channel.mjs";
 import { candidateSource } from "./candidate-source.mjs";
 import { candidateAssets } from "./candidate-assets.mjs";
+import { candidateSchema } from "./candidate-schema.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const args=process.argv.slice(2);
@@ -16,7 +17,7 @@ const output=path.join(root,candidate?'candidate':'');
 if (source.schema_version !== 1 || !Array.isArray(source.apps)) throw new Error("registry/apps.json format is invalid");
 const catalogBaseURL = officialCatalogBaseURL(source.channel === undefined ? 'stable' : source.channel);
 if(!candidate&&source.channel!==undefined&&source.channel!=='stable')throw Error('stable catalogue cannot select the candidate channel');
-if(candidate)await candidateAssets(root);
+if(candidate){await candidateAssets(root);await candidateSchema(root);}
 
 // Keep historical version endpoints available while clients refresh signed catalogs.
 await mkdir(path.join(output, "dist"), { recursive: true });

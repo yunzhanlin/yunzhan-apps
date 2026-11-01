@@ -153,6 +153,7 @@
           "platform-maintenance-v1",
           "disk-inode-usage-v1",
           "disk-host-jobs-v1",
+          "disk-host-cancel-seal-v1",
           "compose-memcached-digest-v1",
           "analytics-session-lifecycle-v1",
           "hardening-reversible-journal-v1",
@@ -162,9 +163,12 @@
           "mobile-native-delivery-v132",
           "php-security-20261021-v1",
           "php-bounded-native-build-v1",
-          "load-balance-stream-controller-v1",
           "compose-memcached-unix-v1",
-          "compose-memcached-retirement-v1"
+          "compose-memcached-retirement-v1",
+          "waf-country-signed-data-v1",
+          "intrusion-upstream0112-v1",
+          "load-balance-stream-controller-v1",
+          "apache-native-body-site-transactions-v1"
         ]
       }
     },
@@ -241,6 +245,22 @@
           "type": "boolean"
         }
       }
+    },
+    "country_data_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "format"
+      ],
+      "properties": {
+        "id": {
+          "const": "dbip-country-lite-v1"
+        },
+        "format": {
+          "const": 1
+        }
+      }
     }
   },
   "allOf": [
@@ -264,27 +284,6 @@
       },
       "then": {
         "oneOf": [
-          {
-            "properties": {
-              "id": { "const": "load-balance" },
-              "version": { "const": "1.9.0" },
-              "category": { "const": "professional" },
-              "stage": { "const": "ready" },
-              "risk": { "const": "privileged" },
-              "delivery": {
-                "properties": {
-                  "provider": { "const": "panel-module" },
-                  "target": { "const": "load-balance" },
-                  "manage_route": { "const": "app-modules" }
-                }
-              },
-              "required_panel_features": {
-                "minItems": 1,
-                "maxItems": 1,
-                "items": { "const": "load-balance-stream-controller-v1" }
-              }
-            }
-          },
           {
             "properties": {
               "id": {
@@ -407,6 +406,57 @@
                   {
                     "contains": {
                       "const": "disk-host-jobs-v1"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "disk-analysis"
+              },
+              "version": {
+                "const": "1.4.1"
+              },
+              "delivery": {
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "disk-analysis"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 3,
+                "maxItems": 3,
+                "items": {
+                  "enum": [
+                    "disk-inode-usage-v1",
+                    "disk-host-jobs-v1",
+                    "disk-host-cancel-seal-v1"
+                  ]
+                },
+                "allOf": [
+                  {
+                    "contains": {
+                      "const": "disk-inode-usage-v1"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "disk-host-jobs-v1"
+                    }
+                  },
+                  {
+                    "contains": {
+                      "const": "disk-host-cancel-seal-v1"
                     }
                   }
                 ]
@@ -898,6 +948,260 @@
                 ]
               }
             }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features",
+              "country_data_channel"
+            ],
+            "properties": {
+              "id": {
+                "const": "nginx-waf"
+              },
+              "version": {
+                "const": "2.6.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "nginx-waf"
+                  },
+                  "manage_route": {
+                    "const": "security"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "waf-country-signed-data-v1"
+                }
+              },
+              "country_data_channel": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "format"
+                ],
+                "properties": {
+                  "id": {
+                    "const": "dbip-country-lite-v1"
+                  },
+                  "format": {
+                    "const": 1
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "geo_data_channel"
+              ]
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "anti-intrusion"
+              },
+              "version": {
+                "const": "1.1.1"
+              },
+              "delivery": {
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "intrusion-prevention"
+                  },
+                  "manage_route": {
+                    "const": "security"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 2,
+                "maxItems": 2,
+                "prefixItems": [
+                  {
+                    "const": "intrusion-preserving-journal-v2"
+                  },
+                  {
+                    "const": "intrusion-upstream0112-v1"
+                  }
+                ],
+                "items": false
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "load-balance"
+              },
+              "version": {
+                "const": "1.9.0"
+              },
+              "category": {
+                "const": "professional"
+              },
+              "stage": {
+                "const": "ready"
+              },
+              "risk": {
+                "const": "privileged"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "load-balance"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "load-balance-stream-controller-v1"
+                }
+              },
+              "compatibility": {
+                "required": [
+                  "os",
+                  "architectures"
+                ],
+                "properties": {
+                  "os": {
+                    "minItems": 5,
+                    "maxItems": 5,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "debian-12",
+                        "debian-13",
+                        "ubuntu-22.04",
+                        "ubuntu-24.04",
+                        "ubuntu-26.04"
+                      ]
+                    }
+                  },
+                  "architectures": {
+                    "minItems": 2,
+                    "maxItems": 2,
+                    "uniqueItems": true,
+                    "items": {
+                      "enum": [
+                        "amd64",
+                        "arm64"
+                      ]
+                    }
+                  }
+                }
+              },
+              "health": {
+                "required": [
+                  "probe",
+                  "target"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "probe": {
+                    "const": "panel-api"
+                  },
+                  "target": {
+                    "const": "/api/app-modules/load-balance"
+                  }
+                }
+              },
+              "uninstall": {
+                "required": [
+                  "preserve_data",
+                  "reference_check"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "preserve_data": {
+                    "const": true
+                  },
+                  "reference_check": {
+                    "const": true
+                  }
+                }
+              }
+            },
+            "required": [
+              "risk"
+            ]
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.4.0"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
           }
         ]
       }
@@ -1301,6 +1605,57 @@
               {
                 "contains": {
                   "const": "disk-host-jobs-v1"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "disk-analysis"
+          },
+          "version": {
+            "const": "1.4.1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+              "enum": [
+                "disk-inode-usage-v1",
+                "disk-host-jobs-v1",
+                "disk-host-cancel-seal-v1"
+              ]
+            },
+            "allOf": [
+              {
+                "contains": {
+                  "const": "disk-inode-usage-v1"
+                }
+              },
+              {
+                "contains": {
+                  "const": "disk-host-jobs-v1"
+                }
+              },
+              {
+                "contains": {
+                  "const": "disk-host-cancel-seal-v1"
                 }
               }
             ]
@@ -2326,26 +2681,309 @@
     },
     {
       "if": {
-        "required": ["id", "version"],
-        "properties": {
-          "id": { "const": "load-balance" },
-          "version": {
-            "not": {
-              "enum": ["1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", "1.3.1", "1.4.0", "1.4.1", "1.5.0", "1.6.0", "1.7.0", "1.7.1", "1.8.0", "1.8.1", "1.8.2", "1.8.3", "1.8.4", "1.8.5"]
+        "anyOf": [
+          {
+            "required": [
+              "id",
+              "version"
+            ],
+            "properties": {
+              "id": {
+                "const": "nginx-waf"
+              },
+              "version": {
+                "const": "2.6.0"
+              }
             }
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "waf-country-signed-data-v1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features",
+          "country_data_channel"
+        ],
+        "properties": {
+          "id": {
+            "const": "nginx-waf"
+          },
+          "version": {
+            "const": "2.6.0"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "nginx-waf"
+              },
+              "manage_route": {
+                "const": "security"
+              }
+            },
+            "additionalProperties": false
+          },
+          "required_panel_features": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "waf-country-signed-data-v1"
+            }
+          },
+          "country_data_channel": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "format"
+            ],
+            "properties": {
+              "id": {
+                "const": "dbip-country-lite-v1"
+              },
+              "format": {
+                "const": 1
+              }
+            }
+          }
+        },
+        "not": {
+          "required": [
+            "geo_data_channel"
+          ]
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "anti-intrusion"
+          },
+          "version": {
+            "const": "1.1.1"
           }
         }
       },
       "then": {
-        "required": ["required_panel_features"],
+        "required": [
+          "required_panel_features"
+        ],
         "properties": {
-          "version": { "const": "1.9.0" },
+          "required_panel_features": {
+            "minItems": 2,
+            "maxItems": 2,
+            "prefixItems": [
+              {
+                "const": "intrusion-preserving-journal-v2"
+              },
+              {
+                "const": "intrusion-upstream0112-v1"
+              }
+            ],
+            "items": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "load-balance"
+          },
+          "version": {
+            "const": "1.9.0"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
           "required_panel_features": {
             "minItems": 1,
             "maxItems": 1,
-            "items": { "const": "load-balance-stream-controller-v1" }
+            "items": {
+              "const": "load-balance-stream-controller-v1"
+            }
           }
         }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              }
+            }
+          },
+          {
+            "required": [
+              "delivery"
+            ],
+            "properties": {
+              "delivery": {
+                "required": [
+                  "target"
+                ],
+                "properties": {
+                  "target": {
+                    "const": "apache-waf"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "oneOf": [
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "enum": [
+                  "1.0",
+                  "1.0-compat1",
+                  "1.1.0",
+                  "2.0.0",
+                  "2.1.0",
+                  "2.2.0",
+                  "2.3.0"
+                ]
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "required_panel_features"
+              ]
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.4.0"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
+          }
+        ]
       }
     }
   ]

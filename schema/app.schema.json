@@ -167,7 +167,8 @@
           "compose-memcached-retirement-v1",
           "waf-country-signed-data-v1",
           "intrusion-upstream0112-v1",
-          "load-balance-stream-controller-v1"
+          "load-balance-stream-controller-v1",
+          "apache-native-body-site-transactions-v1"
         ]
       }
     },
@@ -1158,6 +1159,49 @@
             "required": [
               "risk"
             ]
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.4.0"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
           }
         ]
       }
@@ -2800,6 +2844,146 @@
             }
           }
         }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              }
+            }
+          },
+          {
+            "required": [
+              "delivery"
+            ],
+            "properties": {
+              "delivery": {
+                "required": [
+                  "target"
+                ],
+                "properties": {
+                  "target": {
+                    "const": "apache-waf"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "then": {
+        "oneOf": [
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "enum": [
+                  "1.0",
+                  "1.0-compat1",
+                  "1.1.0",
+                  "2.0.0",
+                  "2.1.0",
+                  "2.2.0",
+                  "2.3.0"
+                ]
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              }
+            },
+            "not": {
+              "required": [
+                "required_panel_features"
+              ]
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.4.0"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
+          }
+        ]
       }
     }
   ]

@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-01T12:51:06Z",
+  "generated_at": "2026-11-01T15:18:02Z",
   "apps": [
     {
       "schema_version": 1,
@@ -159,6 +159,59 @@
         "preserve_data": true,
         "reference_check": true
       }
+    },
+    {
+      "schema_version": 1,
+      "id": "apache-waf",
+      "name": "Apache 请求防火墙 · Apache WAF",
+      "category": "professional",
+      "version": "2.4.0",
+      "summary": "保留独立 Apache 站点规则、名单、可信代理和三文件持久恢复；增加固定开源请求体引擎、表单/JSON/XML/上传检测、逐站观察与阻断、硬配额缓存和数值日志。构建与网站启用独立；CC 限速尚未提供，完整双架构商用实装验收进行中。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "apache-waf",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "独立 Apache 工作台：站点分类规则、IP/URL/UA 名单、字面规则、导入预览与真实事件筛选",
+        "精确2.4.0原签名与独立面板处理器门禁；面板更新和普通配置保存不提升旧2.3应用版本",
+        "固定开源ModSecurity v2、已修补私有YAJL和OWASP CRS；原源码、补丁、许可、ABI及加固核对",
+        "受限独立账户构建与完整编译进程回收；构建、选择引擎与网站启用相互独立",
+        "表单、嵌套JSON、XML与上传字段检测；SQL注入、XSS、命令和路径攻击规则，正常正文原样转发",
+        "逐站观察、阻断与停用；CRS级别、异常阈值、正文/非文件/JSON深度及参数预算",
+        "独立128MiB/4096 inode请求体缓存硬配额；容量、所有权或缓存写入失败拒绝不完整正文",
+        "32MiB数值日志上限，记录规则匹配；不保存正文、Cookie、认证头或原始查询内容",
+        "默认关闭的可信代理CIDR与右向左地址链；有效客户端与原始连接双身份日志",
+        "完整配置、规则、安装记录三文件事务；修订冲突、原生校验、重载指纹及失败恢复",
+        "完整事务库存，活动100份/128MiB、归档512份/256MiB；按原标识摘要无覆盖归档",
+        "正常网站修改保留原策略和封存引擎；移除逐站请求体策略后删除对应受管区块并重新核验"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/software/apache-waf/config"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      },
+      "required_panel_features": [
+        "apache-native-body-site-transactions-v1"
+      ]
     },
     {
       "schema_version": 1,
