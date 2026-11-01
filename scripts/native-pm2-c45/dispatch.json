@@ -5,10 +5,12 @@
   "normal_installed_unit_sha256": "4af2d8e8e44ea32f684440bdf1e1493c8f975e1aa0f4fbdca16ad94ee9eda3f7",
   "original_failed_Ubuntu22_proof_sha256": "1f3e7d87629dc323052ce0400e2485b38078839484e9fedb974aed55dbc9834a",
   "original_failed_run_retained": 41272565870,
-  "payload_sha256": "130fe0081d962756059a9c48b8c14db9ab818a9b045d2100794ed24af83f168e",
+  "payload_sha256": "81300cb46da68fd6b3eeebc4e533b0dc02c22207d5ef0d85e52f8286b47bc28e",
   "purpose": "New owned C45 five-system hardware-KVM installs; supervisor-first PM2 stop, exact source-cohort upgrade, nonroot account/project, stopped saves and one signed compat5-to-compat6 update. Original failed C44r2 run is retained; no rerun or old mutation replay.",
   "release_id": 430369917,
   "release_tag": "qa-pm2gracefulstopcandidate45-20261101-qa1",
   "source_commit": "0597e918dae0abdd05c196ae891f4e821f5e996c",
-  "source_inputs_sha256": "8d784711df87b69657ab3848ecd52d28a1d4f6a5ac756ebd279ba09635b2eeb4"
+  "source_inputs_sha256": "8d784711df87b69657ab3848ecd52d28a1d4f6a5ac756ebd279ba09635b2eeb4",
+  "unpublished_draft_interface_correction_from": "e2952f0a8793e6331822a0d8a276f9d851b12767",
+  "unpublished_original_was_not_dispatched": true
 }
