@@ -1,0 +1,21 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "functional.py": "1b2ea353c4c3a45879254a0355450c3d5d312244ca1911b86f3c57a3a2dbd549",
+    "guest.py": "32e4677d83feb422561028d101abf59f81ba0e69e452de7a11d687f39b5a8ec0",
+    "panel-0.1.0-dev.proapps24pm2rollbackstopcandidate43-linux-amd64.tar.gz": "65a567a0d28ea8f66ba0e691385cd78f7682fd51422cf5bfc593e5b1dc433333",
+    "panel-0.1.0-dev.proapps24pm2rollbackstopcandidate43-linux-amd64.tar.gz.manifest": "daca77e13ebc468afdfceccd987f2462fcc5ffb83766a298b1c6f4a1bd337ddc",
+    "panel-0.1.0-dev.proapps24pm2rollbackstopcandidate43-linux-amd64.tar.gz.sig": "32c9e4edd344eff949277f9004a8b6bb3f3a0f38e2f400bf0519d2463b8f79ee",
+    "prepare.py": "fbda311cec57f7da5e86eb9385bf73e2b7d06feb228441a3da0bcae0b5321f21",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 430292185,
+  "release_tag": "qa-pm2rollbackstopcandidate43-20261101-qa1",
+  "source_inputs_sha256": "84b9a7b8f98f15e3cfbaec993c2cd1e24468a68c1132473cdc28da41b56a9f93",
+  "version": "0.1.0-dev.proapps24pm2rollbackstopcandidate43"
+}

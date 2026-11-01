@@ -1,0 +1,19 @@
+{
+  "cohort": "C43-PM2-rollback-stop",
+  "source_inputs_sha256": "84b9a7b8f98f15e3cfbaec993c2cd1e24468a68c1132473cdc28da41b56a9f93",
+  "release_tag": "qa-pm2rollbackstopcandidate43-20261101-qa1",
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "only_fresh_owned_KVM_guests": true,
+  "maximum_normal_programme_install_per_guest": 1,
+  "maximum_PM2_install_per_guest": 1,
+  "no_unknown_mutation_replay": true,
+  "original_C42_failed_jobs_not_rerun": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}
