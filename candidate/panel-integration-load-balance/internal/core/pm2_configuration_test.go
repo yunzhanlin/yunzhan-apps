@@ -29,15 +29,15 @@ func TestPM2ConfigurationReleaseKeepsHistoricalRevisionsAndRejectsFutureAliases(
 	if SoftwareImplementationVersion("pm2-manager") != PM2ConfigurationAppVersion {
 		t.Fatal("configuration durability has no separate application revision")
 	}
-	if PM2OwnedListenerAppVersion != "7.0.4-compat8" || PM2ConfigurationAppVersion != PM2OwnedListenerAppVersion {
-		t.Fatal("owned listener readiness has no exact implemented revision")
+	if PM2OwnedListenerAppVersion != "7.0.4-compat8" || PM2IOAcknowledgementAppVersion != "7.0.4-compat9" || PM2ConfigurationAppVersion != PM2IOAcknowledgementAppVersion {
+		t.Fatal("listener and storage acknowledgement revisions must remain exact")
 	}
-	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2ConfigurationAppVersion} {
+	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion} {
 		if err := ValidateSoftwareUpdate("pm2-manager", v); err != nil {
 			t.Fatal(v, err)
 		}
 	}
-	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9", "7.0.5", "99.0.0"} {
+	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9.0", "7.0.4-compat9-alias", "7.0.4-compat10", "7.0.5", "99.0.0"} {
 		if err := ValidateSoftwareUpdate("pm2-manager", v); err == nil {
 			t.Fatal("unimplemented alias accepted", v)
 		}

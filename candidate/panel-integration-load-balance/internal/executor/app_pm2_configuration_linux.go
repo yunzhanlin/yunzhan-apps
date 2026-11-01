@@ -80,13 +80,7 @@ func pm2ConfigChild(d *modulePrivateDirectory, name string, create bool) error {
 		if err = d.Mkdir(name, 0700); err != nil {
 			return err
 		}
-		parent, e := d.Open(".")
-		if e != nil {
-			return e
-		}
-		err = parent.Sync()
-		parent.Close()
-		if err != nil {
+		if err = pm2ConfigSync(d); err != nil {
 			return err
 		}
 		info, err = d.Lstat(name)
@@ -126,46 +120,37 @@ func (s *Service) openPM2ConfigStore(create bool) (*pm2ConfigStore, error) {
 	return &pm2ConfigStore{d}, nil
 }
 func pm2ConfigRead(d *modulePrivateDirectory, name string) ([]byte, error) {
-	info, err := d.Lstat(name)
+	return pm2ConfigReadRoot(d.Root, name, d.current)
+}
+func pm2ConfigReadRoot(root *os.Root, name string, current func() bool) ([]byte, error) {
+	info, err := root.Lstat(name)
 	if err != nil {
 		return nil, err
 	}
 	if !moduleRecordInfo(info, false, false) || info.Size() < 1 || info.Size() > pm2ConfigRecordLimit {
 		return nil, errors.New("PM2 private record identity or capacity is invalid")
 	}
-	f, err := d.OpenFile(name, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	f, err := root.OpenFile(name, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	opened, err := f.Stat()
-	if err != nil || !programQueueSame(info, opened) {
-		return nil, errors.New("PM2 private record changed before read")
-	}
-	raw, err := io.ReadAll(io.LimitReader(f, pm2ConfigRecordLimit+1))
-	after, ae := f.Stat()
-	visible, ve := d.Lstat(name)
-	if err != nil || ae != nil || ve != nil || len(raw) != int(info.Size()) || !programQueueSame(info, after) || !programQueueSame(info, visible) || !d.current() {
-		return nil, errors.New("PM2 private record changed during read")
-	}
-	return raw, nil
+	return pm2ConfigReadDurable(f, info, func() bool {
+		visible, err := root.Lstat(name)
+		return err == nil && programQueueSame(info, visible) && current()
+	})
 }
 func pm2ConfigSync(d *modulePrivateDirectory) error {
-	if !d.current() {
+	return pm2ConfigSyncRoot(d.Root, d.current)
+}
+func pm2ConfigSyncRoot(root *os.Root, current func() bool) error {
+	if !current() {
 		return errors.New("PM2 transaction namespace changed")
 	}
-	f, err := d.Open(".")
+	f, err := root.Open(".")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if err = f.Sync(); err != nil {
-		return err
-	}
-	if !d.current() {
-		return errors.New("PM2 transaction namespace changed")
-	}
-	return nil
+	return pm2ConfigSyncDurable(f, current)
 }
 
 // Never replace an original intent/result, including a partial file left by
@@ -178,16 +163,8 @@ func pm2ConfigCreate(d *modulePrivateDirectory, name string, raw []byte) error {
 	if err != nil {
 		return err
 	}
-	_, err = f.Write(raw)
-	if err == nil {
-		err = f.Sync()
-	}
-	closeErr := f.Close()
-	if err != nil {
+	if err = pm2ConfigWriteDurable(f, raw); err != nil {
 		return err
-	}
-	if closeErr != nil {
-		return closeErr
 	}
 	return pm2ConfigSync(d)
 }
@@ -237,7 +214,9 @@ func (d *pm2ConfigStore) records() (map[string]pm2ConfigRecord, error) {
 		return nil, err
 	}
 	entries, err := f.ReadDir(2*pm2ConfigIntentLimit + 1)
-	f.Close()
+	if closeErr := f.Close(); closeErr != nil {
+		return nil, errors.Join(err, closeErr)
+	}
 	if err != nil && !errors.Is(err, io.EOF) || len(entries) > 2*pm2ConfigIntentLimit {
 		return nil, errors.New("PM2 complete configuration inventory exceeds its 512-intent budget")
 	}
@@ -253,6 +232,9 @@ func (d *pm2ConfigStore) records() (map[string]pm2ConfigRecord, error) {
 			return nil, errors.New("PM2 configuration streaming budget exceeded")
 		}
 		files[entry.Name()] = raw
+	}
+	if err = pm2ConfigSync(d.modulePrivateDirectory); err != nil {
+		return nil, err
 	}
 	after, statErr := d.Stat(".")
 	if statErr != nil || !programQueueSame(before, after) || !d.current() {

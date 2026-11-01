@@ -104,7 +104,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, "7.0.4"); valid && comparison >= 0 {
 			known := false
-			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2ConfigurationAppVersion} {
+			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion} {
 				if version == v {
 					known = true
 					break

@@ -20,7 +20,9 @@ func (r *programQueueReader) pm2Configurations() error {
 		return err
 	}
 	entries, err := dir.ReadDir(2*pm2ConfigIntentLimit + 1)
-	dir.Close()
+	if closeErr := dir.Close(); closeErr != nil {
+		return errors.Join(err, closeErr)
+	}
 	if err != nil && !errors.Is(err, io.EOF) || len(entries) > 2*pm2ConfigIntentLimit {
 		return errors.New("PM2 configuration complete upgrade inventory exceeds budget")
 	}
@@ -36,7 +38,7 @@ func (r *programQueueReader) pm2Configurations() error {
 		if statErr != nil || !runtimeInstallPrivateFile(before) {
 			return errors.New("PM2 configuration record identity is not private")
 		}
-		raw, readErr := ruleFeedStoreRead(root, entry.Name(), pm2ConfigRecordLimit, 0600)
+		raw, readErr := pm2ConfigReadRoot(root, entry.Name(), func() bool { return r.ctx.Err() == nil })
 		if readErr != nil {
 			return readErr
 		}
@@ -50,6 +52,9 @@ func (r *programQueueReader) pm2Configurations() error {
 		}
 		r.snapshots = append(r.snapshots, programQueueSnapshot{filepath.Join(r.root, relative, entry.Name()), after})
 		files[entry.Name()] = raw
+	}
+	if err = pm2ConfigSyncRoot(root, func() bool { return r.ctx.Err() == nil }); err != nil {
+		return err
 	}
 	records, err := decodePM2ConfigurationRecords(files)
 	if err != nil {
