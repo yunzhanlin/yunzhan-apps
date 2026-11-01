@@ -43,7 +43,13 @@ jobs:
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_statistics_stop_barrier.py
       - name: Native alert and PM2 race regression with the original candidate source
         working-directory: candidate/panel-integration-load-balance
-        run: sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^Test(ModuleAlert|LoadBalance(Alert|Traffic)|ModuleHistory|ModuleInstalledRecord|ModuleUntrustedInstalledRecord|PM2)'
+        # Race instrumentation changes runtime cost. Keep the production 2s
+        # full-capacity deadline in the normal build, including the full Root
+        # suite above; retain all functional alert and PM2 races here.
+        run: sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^Test(ModuleAlert|LoadBalance(Alert|Traffic)|ModuleHistory|ModuleInstalledRecord|ModuleUntrustedInstalledRecord|PM2)' -skip '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$'
+      - name: Original maximum alert inventory and production deadline without race instrumentation
+        working-directory: candidate/panel-integration-load-balance
+        run: sudo "$(command -v go)" test -v -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestLoadBalanceTrafficNativeMaximumRecordAndByteBudgetsMeasuredWithoutCommands$'
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
