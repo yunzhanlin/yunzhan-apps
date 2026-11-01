@@ -1,0 +1,10 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "format": 1,
+  "full_five_OS_originals_required": true,
+  "original_release_id": 430910468,
+  "payload_sha256": "d15a6a249742248c90db2775a38eb14c5b5f761cd9953ade1db807a122a44dd7",
+  "qa_round": "C50r4-native-numeric-maintenance-QA1",
+  "source_inputs_sha256": "1d3a807f72780f23724decb93d9a5ee479a675cf3c759b068f4494ed4afbc61b"
+}

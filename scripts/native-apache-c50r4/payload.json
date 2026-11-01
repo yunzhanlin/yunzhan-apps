@@ -1,0 +1,20 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "casebook.py": "38f36ec64220712dfa534b95651be1ae9887593e4f751619778d4b6780804008",
+    "guest.py": "ed3d17a7974544bd2bf22fae8e3cd7c8693b76c6c35c9572c24c8bedee28277b",
+    "panel-0.1.0-dev.proapps24apachelogscandidate50r4-linux-amd64.tar.gz": "b3eb41c0983f236419d98b69a61b4381019f8d16a90a58623a42b393a94aee00",
+    "panel-0.1.0-dev.proapps24apachelogscandidate50r4-linux-amd64.tar.gz.manifest": "fe29025918c03940615a3c97452d8cf2b7efa4543ab0ff73f764caff0808e520",
+    "panel-0.1.0-dev.proapps24apachelogscandidate50r4-linux-amd64.tar.gz.sig": "58c607b406f11e261362330d7db02005de501fc4ac184066b606cda05083fac4",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 430910468,
+  "release_tag": "qa-apachelogscandidate50r4-20261102-qa1",
+  "source_inputs_sha256": "1d3a807f72780f23724decb93d9a5ee479a675cf3c759b068f4494ed4afbc61b",
+  "version": "0.1.0-dev.proapps24apachelogscandidate50r4"
+}
