@@ -22,7 +22,13 @@ type ApacheWAFHistoryInput struct {
 }
 
 func ApacheWAFHistoryVersion(version string) bool {
-	return version == "2.0.0" || version == "2.1.0" || version == "2.2.0" || version == ApacheWAFVersion
+	return version == "2.0.0" || version == "2.1.0" || version == "2.2.0" || ApacheWAFHistoryMaintenanceVersion(version)
+}
+
+// This closed list authorizes bounded record maintenance only. Native engine
+// activation and signed application installation retain their separate guards.
+func ApacheWAFHistoryMaintenanceVersion(version string) bool {
+	return version == "2.3.0" || version == "2.4.0"
 }
 
 func ApacheWAFHistoryQuery(raw string) (ApacheWAFHistoryInput, error) {

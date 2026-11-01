@@ -30,12 +30,12 @@ func TestApacheWAFHistoryClosedQueryBodyAndVersions(t *testing.T) {
 			t.Fatal("unsafe archive accepted", raw)
 		}
 	}
-	for _, v := range []string{"2.0.0", "2.1.0", "2.2.0", "2.3.0"} {
+	for _, v := range []string{"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0"} {
 		if !ApacheWAFHistoryVersion(v) {
 			t.Fatal(v)
 		}
 	}
-	for _, v := range []string{"", "1.0", "2.3.1", "2.4.0", "v2.3.0", "2.3.0 ", "2.3.0-beta"} {
+	for _, v := range []string{"", "1.0", "2.3.1", "2.4.1", "v2.3.0", "v2.4.0", "2.4.0-beta", "2.3.0 ", "2.3.0-beta"} {
 		if ApacheWAFHistoryVersion(v) {
 			t.Fatal("future version accepted", v)
 		}

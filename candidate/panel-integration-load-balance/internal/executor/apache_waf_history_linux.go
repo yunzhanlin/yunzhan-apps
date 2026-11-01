@@ -380,7 +380,7 @@ func (s *Service) apacheWAFHistoryVersion() (string, error) {
 	if decodeApacheWAFPrivateJSON(b, &manifest, map[string]bool{"id": true, "version": true, "settings": true, "installed_at": true, "updated_at": true}, 32768) != nil || manifest.ID != "apache-waf" || !core.ApacheWAFHistoryVersion(manifest.Version) {
 		return "", errors.New("Apache 安装身份或版本未核对")
 	}
-	if _, err = core.DecodeApacheWAFConfig(manifest.Settings); err != nil {
+	if _, err = core.DecodeApacheWAFVersionConfig(manifest.Settings, manifest.Version); err != nil {
 		return "", err
 	}
 	return manifest.Version, nil
@@ -410,8 +410,9 @@ func (s *Service) apacheWAFHistoryOperation(ctx context.Context, action string, 
 		return nil, err
 	}
 	blocked := ""
-	if version != core.ApacheWAFVersion {
-		blocked = "请通过应用商店签名升级到 Apache WAF 2.3.0，旧版仅查看库存"
+	maintenance := core.ApacheWAFHistoryMaintenanceVersion(version)
+	if !maintenance {
+		blocked = "当前版本仅支持查看事务；请通过应用商店更新后再归档"
 	}
 	if inv.Pending {
 		blocked = "Apache 有待恢复或未结束事务；原证据保留，禁止归档和重放"
@@ -427,7 +428,7 @@ func (s *Service) apacheWAFHistoryOperation(ctx context.Context, action string, 
 		}
 		start := min(in.Offset, len(inv.Rows))
 		end := min(start+in.Limit, len(inv.Rows))
-		return map[string]any{"apache_transactions": inv.Rows[start:end], "limit": in.Limit, "offset": in.Offset, "total": len(inv.Rows), "transaction_active_count": inv.Active, "transaction_archive_count": inv.Archived, "transaction_active_bytes": inv.ActiveBytes, "transaction_archive_bytes": inv.ArchiveBytes, "transaction_slots_available": apacheWAFActiveTransactions - inv.Active, "pending": inv.Pending, "records_retained": true, "configuration_changed": false, "transaction_archive_ready": blocked == "", "transaction_replay_ready": version == core.ApacheWAFVersion && !inv.Pending, "transaction_archive_blocked": blocked, "scope": "完整三文件事务核对后返回非敏感分页。活动最多 100 份 / 128 MiB（含待恢复标记），归档最多 512 份 / 256 MiB；逻辑预算不是内核配额。旧 config-backups 原样保留，不在此库存或新事务写入范围。"}, nil
+		return map[string]any{"apache_transactions": inv.Rows[start:end], "limit": in.Limit, "offset": in.Offset, "total": len(inv.Rows), "transaction_active_count": inv.Active, "transaction_archive_count": inv.Archived, "transaction_active_bytes": inv.ActiveBytes, "transaction_archive_bytes": inv.ArchiveBytes, "transaction_slots_available": apacheWAFActiveTransactions - inv.Active, "pending": inv.Pending, "records_retained": true, "configuration_changed": false, "transaction_archive_ready": blocked == "", "transaction_replay_ready": maintenance && !inv.Pending, "transaction_archive_blocked": blocked, "scope": "完整三文件事务核对后返回非敏感分页。活动最多 100 份 / 128 MiB（含待恢复标记），归档最多 512 份 / 256 MiB；逻辑预算不是内核配额。旧 config-backups 原样保留，不在此库存或新事务写入范围。"}, nil
 	}
 	if blocked != "" {
 		return nil, errors.New(blocked)

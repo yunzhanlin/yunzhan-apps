@@ -8,9 +8,9 @@ const inventory=ref<ApacheTransactionInventory>(),receipt=ref<ApacheArchiveRecei
 const confirm=ref(""),error=ref(""),operationError=ref(""),busy=ref(false),known=ref(false),page=ref(1);
 const limit=16;
 let epoch=0,disposed=false;
-const readable=computed(()=>props.installed&&["2.0.0","2.1.0","2.2.0","2.3.0"].includes(props.version||""));
+const readable=computed(()=>props.installed&&["2.0.0","2.1.0","2.2.0","2.3.0","2.4.0"].includes(props.version||""));
 const selectedCurrent=computed(()=>selected.value&&known.value&&inventory.value?.apache_transactions.find(row=>row.transaction_id===selected.value?.transaction_id&&row.transaction_sha256===selected.value?.transaction_sha256&&row.transaction_archived===selected.value?.transaction_archived));
-const writable=computed(()=>!!selectedCurrent.value&&props.version==="2.3.0"&&!props.parentBusy&&!busy.value&&
+const writable=computed(()=>!!selectedCurrent.value&&["2.3.0","2.4.0"].includes(props.version||"")&&!props.parentBusy&&!busy.value&&
   inventory.value?.transaction_replay_ready&&(selectedCurrent.value.transaction_archived||selectedCurrent.value.transaction_archivable)&&
   confirm.value===`ARCHIVE APACHE TRANSACTION ${selectedCurrent.value.transaction_id}`);
 const label=(state:string)=>({committed:"已提交",recovered:"已恢复",applying:"未结束"}[state]||"未知状态");
@@ -51,7 +51,7 @@ onUnmounted(()=>{disposed=true;epoch++;});
 
 <template>
   <section aria-label="Apache 配置事务维护">
-    <el-alert v-if="!readable" title="先安装已知版本 Apache WAF。旧版 2.0 / 2.1 / 2.2 仅查看，签名升级到 2.3.0 后开放归档，不以面板版本冒充应用已升级。" type="info" :closable="false"/>
+    <el-alert v-if="!readable" :title="props.installed?'当前版本不支持配置事务维护，请通过应用商店更新。':'安装 Apache WAF 后可查看配置事务。'" type="info" :closable="false"/>
     <div class="actions"><p>完整核对三文件事务后返回分页元数据，不显示配置备份内容。</p><el-button :loading="busy" :disabled="!readable || parentBusy" @click="refresh">刷新 Apache 事务库存</el-button></div>
     <el-alert v-if="error" :title="error" type="error" :closable="false"/>
     <el-alert v-if="operationError" :title="operationError" type="error" :closable="false"/>
@@ -77,7 +77,7 @@ onUnmounted(()=>{disposed=true;epoch++;});
       <el-button type="warning" :loading="busy" :disabled="!writable" @click="archive">{{selected.transaction_archived?'按原标识和摘要核对':'归档完整原事务'}}</el-button>
     </div>
     <el-alert v-if="receipt" :title="receipt.replayed?'已核对原归档；没有再次移动或创建新事务。':'已核对完整原事务归档；配置未修改，备份未删除。'" type="success" :closable="false"/>
-    <p>这是本机有界逻辑预算，不是内核硬配额，也不是外部异地备份。归档满额停止，不自动清理证据。旧 config-backups 保持原样、不纳入此库存；2.3.0 的新修改仅使用完整持久化事务，避免重复生成另一套无法维护的备份。</p>
+    <p>这是本机有界逻辑预算，不是内核硬配额，也不是外部异地备份。归档满额停止，不自动清理证据。旧 config-backups 保持原样、不纳入此库存；2.3.0 和 2.4.0 的配置修改使用完整持久化事务。</p>
   </section>
 </template>
 

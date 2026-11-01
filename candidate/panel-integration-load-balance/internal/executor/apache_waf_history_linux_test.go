@@ -149,7 +149,11 @@ func TestApacheWAFHistoryArchiveExactBytesOwnerInodeAndLostReplyReplay(t *testin
 }
 
 func TestApacheWAFHistoryKnownVersionsReadOnlyAndUnknownVersionsRefuse(t *testing.T) {
-	for _, version := range []string{"2.0.0", "2.1.0", "2.2.0", "2.3.0", "2.3.1", "2.4.0"} {
+	for _, c := range []struct {
+		version            string
+		readable, writable bool
+	}{{"2.0.0", true, false}, {"2.1.0", true, false}, {"2.2.0", true, false}, {"2.3.0", true, true}, {"2.4.0", true, true}, {"2.3.1", false, false}, {"2.4.1", false, false}, {"v2.4.0", false, false}} {
+		version := c.version
 		t.Run(version, func(t *testing.T) {
 			s, tx, path, b := apacheHistoryFixture(t)
 			installed := filepath.Join(s.moduleDir("apache-waf"), "installed.json")
@@ -161,18 +165,18 @@ func TestApacheWAFHistoryKnownVersionsReadOnlyAndUnknownVersionsRefuse(t *testin
 				t.Fatal(err)
 			}
 			out, err := s.apacheWAFHistoryOperation(context.Background(), "transactions", core.ApacheWAFHistoryInput{Limit: 16})
-			known := core.ApacheWAFHistoryVersion(version)
+			known := c.readable
 			if (err == nil) != known {
 				t.Fatal("version read contract", version, err)
 			}
-			if known && out.(map[string]any)["transaction_archive_ready"] != (version == core.ApacheWAFVersion) {
+			if known && out.(map[string]any)["transaction_archive_ready"] != c.writable {
 				t.Fatal("old app got new write authority")
 			}
 			_, err = s.apacheWAFHistoryOperation(context.Background(), "archive-transaction", apacheArchiveInput(tx, b))
-			if (err == nil) != (version == core.ApacheWAFVersion) {
+			if (err == nil) != c.writable {
 				t.Fatal("version archive contract", err)
 			}
-			if version != core.ApacheWAFVersion {
+			if !c.writable {
 				actual, _ := os.ReadFile(path)
 				if !bytes.Equal(actual, b) {
 					t.Fatal("version refusal changed original record")
