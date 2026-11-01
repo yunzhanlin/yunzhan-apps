@@ -164,3 +164,42 @@ func TestWAFApplyVersionedOriginalRequiresExactSignedInstallContext(t *testing.T
 		t.Fatal("legacy reader adopted a versioned original")
 	}
 }
+
+func TestApacheSignedLegacyOriginalKeepsClosedVersionAndBodyAuthority(t *testing.T) {
+	for _, version := range []string{"2.3.0", "2.4.0"} {
+		t.Run(version, func(t *testing.T) {
+			settings := WAFSettings(DefaultApacheWAFConfig())
+			raw, err := json.Marshal(map[string]any{"settings": settings, "version": version})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := wafApplyOriginalSettingsForRequest("apache-waf", "software_install", string(raw), version); err != nil {
+				t.Fatal("exact original signed Apache install was rejected", err)
+			}
+			for _, context := range []struct{ app, kind, signed string }{
+				{"apache-waf", "software_configure", version}, {"apache-waf", "software_install", ""},
+				{"apache-waf", "software_install", "2.3.1"}, {"apache-waf", "unknown", version},
+				{"nginx-waf", "software_install", version},
+			} {
+				if _, err := wafApplyOriginalSettingsForRequest(context.app, context.kind, string(raw), context.signed); err == nil {
+					t.Fatal("unbound or different signed context became authority", context)
+				}
+			}
+			if _, err := wafApplyOriginalSettings("apache-waf", string(raw)); err == nil {
+				t.Fatal("legacy anonymous reader authorized a versioned request")
+			}
+		})
+	}
+	for _, version := range []string{"2.3.1", "2.3.0-beta", "2.4.1", "v2.3.0", "2.3.0 "} {
+		raw, _ := json.Marshal(map[string]any{"settings": WAFSettings(DefaultApacheWAFConfig()), "version": version})
+		if _, err := wafApplyOriginalSettingsForRequest("apache-waf", "software_install", string(raw), version); err == nil {
+			t.Fatal("unknown or aliased version became signed authority", version)
+		}
+	}
+	cfg := DefaultApacheWAFConfig()
+	cfg.Body = &WAFBodyConfig{EngineJobID: strings.Repeat("a", 32), Sites: []WAFBodySitePolicy{{SiteID: strings.Repeat("b", 32), Policy: DefaultWAFBodyPolicy()}}}
+	raw, _ := json.Marshal(map[string]any{"settings": WAFSettings(cfg), "version": "2.3.0"})
+	if _, err := wafApplyOriginalSettingsForRequest("apache-waf", "software_install", string(raw), "2.3.0"); err == nil {
+		t.Fatal("historical metadata-only signed install acquired native body authority")
+	}
+}
