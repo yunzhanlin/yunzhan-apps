@@ -1,0 +1,20 @@
+{
+  "Main_changed": false,
+  "PM2_from": "7.0.4-compat8",
+  "PM2_to": "7.0.4-compat9",
+  "actual_browser_UI_claim": false,
+  "actual_reboot_or_powerloss_claim": false,
+  "all50_commercial": false,
+  "cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "cohort": "C48-QA1",
+  "manifest_sha256": "f53bd60c94d4ef5b20af0ed2a44fc1393c7e61811779944855b726872804ba71",
+  "release_id": 430581995,
+  "release_tag": "qa-pm2ioackcandidate48-20261101-qa1",
+  "source_inputs_sha256": "08e692c22b06cf6267b665ddd1a320250e520c1caf745afaf90d7d10d7b7743a"
+}

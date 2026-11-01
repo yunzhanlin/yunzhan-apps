@@ -1,0 +1,34 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "bootstrap.py": "19301e0711ffccf73f2bc3495d4ea94971df1c50cf3783fb665da790d1e8e601",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "functional.py": "17f4b0070974fbd4e411e31ec25531f425749a5593cb7494d22c7e1cd4585fec",
+    "guest.py": "5fd03c9140d9f1da7e39483d8b817bde5a301d5f1098436dfa37fe66a9c2cf74",
+    "panel-0.1.0-dev.proapps24pm2ioackcandidate48-linux-amd64.tar.gz": "0b87c8d2241af41fbf146f34d4a629feb3154eb62f262c91e0945b0c025174ef",
+    "panel-0.1.0-dev.proapps24pm2ioackcandidate48-linux-amd64.tar.gz.manifest": "30237e915423ae23fed98675575546945f196c5759bb9ac402a3638fefc7658e",
+    "panel-0.1.0-dev.proapps24pm2ioackcandidate48-linux-amd64.tar.gz.sig": "a2c7ce416f43bca8981fa145f4146eed8a132f29a09de374f8fe7037717d72b8",
+    "panel-0.1.0-dev.proapps24pm2ownedlistenercandidate47-linux-amd64.tar.gz": "7566be8a95fff2e061de3f61de3c9c9f705ce61a14991d2ecd4f5bfaa5b50891",
+    "panel-0.1.0-dev.proapps24pm2ownedlistenercandidate47-linux-amd64.tar.gz.manifest": "5e6f140d5b816dcf0c466854e93d0ff3bc41e3143f9a06ab895de0d19dc29169",
+    "panel-0.1.0-dev.proapps24pm2ownedlistenercandidate47-linux-amd64.tar.gz.sig": "a726a780f9605f105445f465c02b30958a777aa0f2306bbd0690d2df59b33202",
+    "prepare.py": "117460164ac1d26fdd875ed13063adb2781e2885402ea42736842a84976b27b1",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "shop.py": "d120d83590491606ec1295ecf9b8c78a98ac7231c8cfa22851791fca5442a547",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "historical_bootstrap": {
+    "PM2_install": "normal legacy default8 before upgrading; separate from signed catalogue acceptance",
+    "release_id": 430508592,
+    "release_tag": "qa-pm2ownedlistenercandidate47-20261101-qa1",
+    "source_commit": "9daaab0d61c742b81c012c217f489cb71f14b06e",
+    "source_inputs_sha256": "c761613ae003b8cde9df5d777d6b1c4013dbaeb832082a5dc3a0ee4d1e1c319c",
+    "version": "0.1.0-dev.proapps24pm2ownedlistenercandidate47"
+  },
+  "release_id": 430581995,
+  "release_tag": "qa-pm2ioackcandidate48-20261101-qa1",
+  "source_inputs_sha256": "08e692c22b06cf6267b665ddd1a320250e520c1caf745afaf90d7d10d7b7743a",
+  "version": "0.1.0-dev.proapps24pm2ioackcandidate48"
+}
