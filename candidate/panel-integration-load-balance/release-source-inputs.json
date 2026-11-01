@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24alertreadonlycandidate44r2-linux-amd64.tar.gz",
-  "archive_sha256": "6c744e4d7d543fc8e51872c189a3dfb16450d318b037beb3bf4619966fd2450a",
-  "frozen_inputs_sha256": "038aeb46562e6e080e8bba061c1dd3285405056b9e8fafe6bcaba6213abe57cd",
+  "archive": "panel-0.1.0-dev.proapps24pm2gracefulstopcandidate45-linux-amd64.tar.gz",
+  "archive_sha256": "ed67aa2c6c981e7ac2313c828035382eb3ed4aac5b517d386e96da8719506a47",
+  "frozen_inputs_sha256": "8d784711df87b69657ab3848ecd52d28a1d4f6a5ac756ebd279ba09635b2eeb4",
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
     "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
@@ -61,7 +61,7 @@
     "dev/panel-pebble.service": "9246d509d12beab13535cae4a13c59cb0f17adcea4d5aa0c8ed79f2ca148792a",
     "dev/panel-php@.service": "7dfaf52c563b0676f6c2444b49416dba585f140804e73a1b29c07ce0d1d8c3d1",
     "dev/panel-pm2-deploy@.service": "68bf8828342eb6ec18e7f8ac28a7ca40d187fcf21070c06a6a12ff0c6c12c4cc",
-    "dev/panel-pm2@.service": "5c73ae73f0357acaa76a4b175d24688eaf9c7969a299267ab27413e9455cb5fd",
+    "dev/panel-pm2@.service": "0cff1e5af317d0581504b6573d39eedbfdd7e545abc5780ac450b7e7fa289477",
     "dev/panel-pure-ftpd-recover.service": "0ae6e689848aeb707e0ef7b731b34cf8d509eb309ae0e2066ae26bc81f2b9fab",
     "dev/panel-pure-ftpd.service": "0b981c9165f18928d99f3beb1b9cff6a05940d1bff643233e355a5807164939e",
     "dev/panel-redis@.service": "52cac981ac25d3beff46fedaa3055b2461572ed01397fd3ad2bb9c0fcbc5ce66",
