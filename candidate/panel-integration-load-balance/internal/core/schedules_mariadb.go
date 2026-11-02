@@ -132,7 +132,11 @@ func (s *Store) claimMariaDBScheduleCleanup() (mariaDBScheduleCleanup, error) {
 	scan := func(row *sql.Row) error {
 		return row.Scan(&v.ScheduleID, &v.ScheduleName, &v.Backup.ID, &v.Backup.DatabaseID, &v.Backup.InstanceID, &v.Backup.DatabaseName, &v.Backup.Version, &v.Backup.Bytes, &v.Backup.SHA256, &v.Backup.CreatedAt)
 	}
-	e := scan(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,database_id,instance_id,'', '',bytes,sha256,created_at FROM mariadb_schedule_cleanup_jobs WHERE state='pending' ORDER BY created_at,artifact_id LIMIT 1`))
+	ready, e := readyRetentionPredicate("mariadb")
+	if e != nil {
+		return v, e
+	}
+	e = scan(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,database_id,instance_id,'', '',bytes,sha256,created_at FROM mariadb_schedule_cleanup_jobs WHERE ` + ready + ` ORDER BY created_at,artifact_id LIMIT 1`))
 	if e == nil || !errors.Is(e, sql.ErrNoRows) {
 		return v, e
 	}
@@ -143,6 +147,8 @@ FROM schedule_artifacts sa JOIN schedules s ON s.id=sa.schedule_id JOIN mariadb_
 WHERE sa.kind='mariadb_backup')
 SELECT schedule_id,name,artifact_id,database_id,instance_id,database_name,release_id,bytes,sha256,created_at
 FROM ranked WHERE position>retention_count
+AND artifact_id IN (` + mustEligibleRetentionSQL("mariadb") + `)
+AND NOT EXISTS(SELECT 1 FROM mariadb_schedule_cleanup_jobs c WHERE c.artifact_id=ranked.artifact_id)
 AND NOT EXISTS (SELECT 1 FROM mariadb_remote_copies rc WHERE rc.artifact_id=ranked.artifact_id AND rc.state!='succeeded')
 ORDER BY schedule_id,position DESC LIMIT 1`))
 	if e != nil {
@@ -162,6 +168,10 @@ func (s *Store) cleanupMariaDBScheduleRetention(ctx context.Context, ex *Executo
 	if e != nil {
 		return e
 	}
+	reserved, e := s.reserveScheduleCleanup(ctx, scheduleCleanupIdentity{Engine: "mariadb", ArtifactID: v.Backup.ID, ScheduleID: v.ScheduleID, Bytes: v.Backup.Bytes, SHA256: v.Backup.SHA256, DatabaseID: v.Backup.DatabaseID, ServerID: v.Backup.InstanceID})
+	if e != nil || !reserved {
+		return e
+	}
 	q := url.Values{"database_id": {v.Backup.DatabaseID}, "instance_id": {v.Backup.InstanceID}, "bytes": {strconv.FormatInt(v.Backup.Bytes, 10)}, "sha256": {v.Backup.SHA256}}
 	var result struct {
 		Deleted bool `json:"deleted"`
@@ -175,7 +185,7 @@ func (s *Store) cleanupMariaDBScheduleRetention(ctx context.Context, ex *Executo
 		if len(message) > 500 {
 			message = message[:500]
 		}
-		_, _ = s.DB.Exec(`UPDATE mariadb_schedule_cleanup_jobs SET attempts=attempts+1,last_error=? WHERE artifact_id=? AND state='pending'`, message, v.Backup.ID)
+		_ = s.recordScheduleCleanupFailure(ctx, "mariadb", v.Backup.ID, message)
 		return errors.New(message)
 	}
 	tx, e := s.DB.Begin()
@@ -197,7 +207,7 @@ func (s *Store) cleanupMariaDBScheduleRetention(ctx context.Context, ex *Executo
 	if n, _ := res.RowsAffected(); n != 1 {
 		return errors.New("MariaDB 备份镜像与清理单不一致")
 	}
-	_, e = tx.Exec(`UPDATE mariadb_schedule_cleanup_jobs SET state='completed',attempts=attempts+1,last_error='',completed_at=? WHERE artifact_id=? AND state='pending'`, Now(), v.Backup.ID)
+	e = completeScheduleCleanup(tx, "mariadb", v.Backup.ID)
 	if e == nil {
 		_, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES('scheduler','schedule.mariadb_retention',?,'success',?)`, v.ScheduleName+":"+v.Backup.ID, Now())
 	}

@@ -21,14 +21,18 @@ func scanSiteScheduleCleanup(row interface{ Scan(...any) error }) (siteScheduleC
 }
 
 func (s *Store) claimSiteScheduleCleanup() (siteScheduleCleanup, error) {
-	v, e := scanSiteScheduleCleanup(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,site_id,bytes,sha256 FROM site_schedule_cleanup_jobs WHERE state='pending' ORDER BY created_at,artifact_id LIMIT 1`))
+	ready, e := readyRetentionPredicate("site")
+	if e != nil {
+		return siteScheduleCleanup{}, e
+	}
+	v, e := scanSiteScheduleCleanup(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,site_id,bytes,sha256 FROM site_schedule_cleanup_jobs WHERE ` + ready + ` ORDER BY created_at,artifact_id LIMIT 1`))
 	if e == nil || !errors.Is(e, sql.ErrNoRows) {
 		return v, e
 	}
 	v, e = scanSiteScheduleCleanup(s.DB.QueryRow(`WITH ranked AS (
  SELECT sa.schedule_id,s.name,sa.artifact_id,b.site_id,b.bytes,b.sha256,ROW_NUMBER() OVER(PARTITION BY sa.schedule_id ORDER BY sa.created_at DESC,sa.artifact_id DESC) position,s.retention_count
  FROM schedule_artifacts sa JOIN schedules s ON s.id=sa.schedule_id JOIN site_backups b ON b.id=sa.artifact_id WHERE sa.kind='site_backup'
-) SELECT schedule_id,name,artifact_id,site_id,bytes,sha256 FROM ranked WHERE position>retention_count ORDER BY schedule_id,position DESC LIMIT 1`))
+) SELECT schedule_id,name,artifact_id,site_id,bytes,sha256 FROM ranked WHERE position>retention_count AND artifact_id IN (` + mustEligibleRetentionSQL("site") + `) AND NOT EXISTS(SELECT 1 FROM site_schedule_cleanup_jobs c WHERE c.artifact_id=ranked.artifact_id) ORDER BY schedule_id,position DESC LIMIT 1`))
 	if e != nil {
 		return v, e
 	}
@@ -36,7 +40,7 @@ func (s *Store) claimSiteScheduleCleanup() (siteScheduleCleanup, error) {
 	if e != nil {
 		return v, e
 	}
-	return scanSiteScheduleCleanup(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,site_id,bytes,sha256 FROM site_schedule_cleanup_jobs WHERE state='pending' ORDER BY created_at,artifact_id LIMIT 1`))
+	return scanSiteScheduleCleanup(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,site_id,bytes,sha256 FROM site_schedule_cleanup_jobs WHERE ` + ready + ` ORDER BY created_at,artifact_id LIMIT 1`))
 }
 
 func (s *Store) cleanupSiteScheduleRetention(ctx context.Context, ex *ExecutorClient) error {
@@ -48,6 +52,10 @@ func (s *Store) cleanupSiteScheduleRetention(ctx context.Context, ex *ExecutorCl
 		return nil
 	}
 	if e != nil {
+		return e
+	}
+	reserved, e := s.reserveScheduleCleanup(ctx, scheduleCleanupIdentity{Engine: "site", ArtifactID: v.Backup.ID, ScheduleID: v.ScheduleID, Bytes: v.Backup.Bytes, SHA256: v.Backup.SHA256, SiteID: v.Backup.SiteID})
+	if e != nil || !reserved {
 		return e
 	}
 	q := url.Values{"bytes": {strconv.FormatInt(v.Backup.Bytes, 10)}, "sha256": {v.Backup.SHA256}}
@@ -63,7 +71,7 @@ func (s *Store) cleanupSiteScheduleRetention(ctx context.Context, ex *ExecutorCl
 		if len(message) > 500 {
 			message = message[:500]
 		}
-		_, _ = s.DB.Exec(`UPDATE site_schedule_cleanup_jobs SET attempts=attempts+1,last_error=? WHERE artifact_id=? AND state='pending'`, message, v.Backup.ID)
+		_ = s.recordScheduleCleanupFailure(ctx, "site", v.Backup.ID, message)
 		return errors.New(message)
 	}
 	tx, e := s.DB.Begin()
@@ -85,7 +93,7 @@ func (s *Store) cleanupSiteScheduleRetention(ctx context.Context, ex *ExecutorCl
 	if n, _ := resultDB.RowsAffected(); n != 1 {
 		return errors.New("网站备份记录与清理单不一致")
 	}
-	_, e = tx.Exec(`UPDATE site_schedule_cleanup_jobs SET state='completed',attempts=attempts+1,last_error='',completed_at=? WHERE artifact_id=? AND state='pending'`, Now(), v.Backup.ID)
+	e = completeScheduleCleanup(tx, "site", v.Backup.ID)
 	if e == nil {
 		_, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES('scheduler','schedule.site_retention',?,'success',?)`, v.ScheduleName+":"+v.Backup.ID, Now())
 	}

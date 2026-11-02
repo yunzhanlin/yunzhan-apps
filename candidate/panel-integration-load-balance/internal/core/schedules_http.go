@@ -55,6 +55,7 @@ func (a *Server) hydrateScheduleDatabaseTarget(ctx context.Context, v *Schedule)
 }
 
 func (a *Server) scheduleRoutes(m *http.ServeMux) {
+	a.scheduleRetentionRoutes(m)
 	m.HandleFunc("POST /api/schedules/runs/{id}/log-cleanup/continue", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var in LogCleanupContinueRequest
 		if !decode(w, r, &in) {

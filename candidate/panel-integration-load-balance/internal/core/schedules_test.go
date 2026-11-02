@@ -208,7 +208,7 @@ func TestDueScheduleAdvancesAndSkipsOverlap(t *testing.T) {
 	}
 }
 
-func TestScheduleRetentionRetriesVerifiedDeletion(t *testing.T) {
+func TestScheduleRetentionPreservesUnconfirmedDeletionWithoutAutomaticReplay(t *testing.T) {
 	s := testStore(t)
 	server, db := scheduleDatabaseFixture(t, s)
 	base := time.Date(2026, 9, 19, 12, 0, 0, 0, time.UTC)
@@ -258,8 +258,8 @@ func TestScheduleRetentionRetriesVerifiedDeletion(t *testing.T) {
 	var state string
 	s.DB.QueryRow(`SELECT count(*) FROM mysql_backups`).Scan(&backups)
 	s.DB.QueryRow(`SELECT state FROM schedule_cleanup_jobs WHERE artifact_id=?`, ids[0]).Scan(&state)
-	if calls != 2 || backups != 2 || state != "completed" {
-		t.Fatal("retention did not complete idempotently", calls, backups, state)
+	if calls != 1 || backups != 3 || state != "pending" {
+		t.Fatal("unconfirmed retention was replayed or its original records changed", calls, backups, state)
 	}
 }
 

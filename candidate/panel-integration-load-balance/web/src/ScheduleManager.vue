@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
+import ScheduleRetention from "./ScheduleRetention.vue";
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import {
@@ -654,6 +655,7 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         <el-empty v-if="!filteredSchedules.length" :description="schedules.length ? '没有符合筛选条件的计划任务' : '还没有计划任务'" />
       </div>
     </section>
+    <ScheduleRetention :api="props.api" />
     <section class="panel-card run-history">
       <div class="card-heading">
         <div>

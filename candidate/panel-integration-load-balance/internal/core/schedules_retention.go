@@ -23,8 +23,12 @@ func scanScheduleCleanup(row interface{ Scan(...any) error }) (scheduleCleanup, 
 }
 
 func (s *Store) pendingScheduleCleanup() (scheduleCleanup, error) {
+	ready, e := readyRetentionPredicate("mysql")
+	if e != nil {
+		return scheduleCleanup{}, e
+	}
 	return scanScheduleCleanup(s.DB.QueryRow(`SELECT schedule_id,schedule_name,artifact_id,database_id,server_id,version,bytes,sha256,state
-FROM schedule_cleanup_jobs WHERE state='pending' ORDER BY created_at,artifact_id LIMIT 1`))
+FROM schedule_cleanup_jobs WHERE ` + ready + ` ORDER BY created_at,artifact_id LIMIT 1`))
 }
 
 func (s *Store) claimScheduleCleanup() (scheduleCleanup, error) {
@@ -39,7 +43,10 @@ func (s *Store) claimScheduleCleanup() (scheduleCleanup, error) {
  WHERE sa.kind='database_backup'
 )
 SELECT schedule_id,schedule_name,artifact_id,database_id,server_id,version,bytes,sha256,'pending'
-FROM ranked WHERE position>retention_count ORDER BY schedule_id,position DESC LIMIT 1`)
+FROM ranked WHERE position>retention_count
+AND artifact_id IN (` + mustEligibleRetentionSQL("mysql") + `)
+AND NOT EXISTS(SELECT 1 FROM schedule_cleanup_jobs c WHERE c.artifact_id=ranked.artifact_id)
+ORDER BY schedule_id,position DESC LIMIT 1`)
 	v, e := scanScheduleCleanup(row)
 	if e != nil {
 		return v, e
@@ -63,6 +70,10 @@ func (s *Store) cleanupScheduleRetention(ctx context.Context, ex *ExecutorClient
 	if e != nil {
 		return e
 	}
+	reserved, e := s.reserveScheduleCleanup(ctx, scheduleCleanupIdentity{Engine: "mysql", ArtifactID: v.Backup.ID, ScheduleID: v.ScheduleID, Bytes: v.Backup.Bytes, SHA256: v.Backup.SHA256, DatabaseID: v.Backup.DatabaseID, ServerID: v.Backup.ServerID, Version: v.Backup.Version})
+	if e != nil || !reserved {
+		return e
+	}
 	q := url.Values{
 		"database_id": {v.Backup.DatabaseID},
 		"sha256":      {v.Backup.SHA256},
@@ -81,7 +92,7 @@ func (s *Store) cleanupScheduleRetention(ctx context.Context, ex *ExecutorClient
 		if len(message) > 500 {
 			message = message[:500]
 		}
-		_, _ = s.DB.Exec(`UPDATE schedule_cleanup_jobs SET attempts=attempts+1,last_error=? WHERE artifact_id=? AND state='pending'`, message, v.Backup.ID)
+		_ = s.recordScheduleCleanupFailure(ctx, "mysql", v.Backup.ID, message)
 		return errors.New(message)
 	}
 	tx, e := s.DB.Begin()
@@ -105,7 +116,7 @@ func (s *Store) cleanupScheduleRetention(ctx context.Context, ex *ExecutorClient
 	if n != 1 {
 		return errors.New("数据库备份记录与清理单不一致")
 	}
-	_, e = tx.Exec(`UPDATE schedule_cleanup_jobs SET state='completed',attempts=attempts+1,last_error='',completed_at=? WHERE artifact_id=? AND state='pending'`, Now(), v.Backup.ID)
+	e = completeScheduleCleanup(tx, "mysql", v.Backup.ID)
 	if e == nil {
 		_, e = tx.Exec(`INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES('scheduler','schedule.retention',?,'success',?)`, v.ScheduleName+":"+v.Backup.ID, Now())
 	}

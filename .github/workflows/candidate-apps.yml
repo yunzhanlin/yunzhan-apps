@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate]
+    branches: [codex/app-candidate, codex/backup-retention-c54]
   workflow_dispatch:
 
 permissions:
@@ -60,6 +60,11 @@ jobs:
           print('Actual native Root identity execution:4 roots,21 leaf scenarios,23 PASS records,zero skips/failures')
           PY
           sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestAnalyticsClientAddressManifestRequiresBothHandlersAndExactIdentity$'
+      - name: Actual native backup retention reservation, starvation and read-only API regressions
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          sudo "$(command -v go)" test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core -run '^Test(Retention|ScheduleRetention|SiteScheduleRetention|MariaDBRetention)' > "$RUNNER_TEMP/backup-retention-native.jsonl"
+          node ../../tools/check-retention-native-execution.mjs "$RUNNER_TEMP/backup-retention-native.jsonl"
       - name: Native alert and PM2 race regression with the original candidate source
         working-directory: candidate/panel-integration-load-balance
         # Race instrumentation changes runtime cost. Keep the production 2s
@@ -89,5 +94,13 @@ jobs:
         with:
           name: analytics-root-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/analytics-identity-root-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain original backup retention source test events for independent count verification
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: backup-retention-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/backup-retention-native.jsonl
           retention-days: 7
           if-no-files-found: error

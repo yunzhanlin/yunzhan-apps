@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { fileURLToPath } from 'node:url';
+
+assert.equal(process.argv.length, 3, 'one original Go JSON event file is required');
+const expected = JSON.parse(fs.readFileSync(fileURLToPath(new URL('./retention-native-execution.json', import.meta.url))));
+const sdk = JSON.parse(fs.readFileSync(fileURLToPath(new URL('../candidate/panel-integration-load-balance/source-sha256.json', import.meta.url))));
+assert.equal(sdk.release.frozen_inputs_sha256, expected.source_inputs_sha256, 'test inventory belongs to another source cohort');
+const path = process.argv[2], info = fs.lstatSync(path);
+assert(info.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= 4 * 1024 * 1024, 'missing/empty/oversized original Go events');
+const rows = fs.readFileSync(path, 'utf8').split('\n').filter(line => line.trim()).map(line => JSON.parse(line));
+assert(rows.length > 0 && rows.every(row => row.Package === expected.package), 'unexpected package or empty execution');
+assert(!rows.some(row => ['skip', 'fail'].includes(row.Action)), 'retention tests may not skip or fail');
+const started = rows.filter(row => row.Action === 'run' && row.Test).map(row => row.Test).sort();
+const passed = rows.filter(row => row.Action === 'pass' && row.Test).map(row => row.Test).sort();
+assert.deepEqual(started, expected.expected_pass_tests, 'exact reviewed tests must actually start once');
+assert.deepEqual(passed, expected.expected_pass_tests, 'exact reviewed tests must actually pass once');
+assert.equal(new Set(passed).size, passed.length, 'duplicate terminal test events');
+assert.deepEqual(passed.filter(name => !name.includes('/')), expected.expected_root_tests);
+assert.equal(rows.filter(row => row.Action === 'pass' && !row.Test).length, 1, 'missing original package success');
+console.log(JSON.stringify({ok: true, source_inputs_sha256: expected.source_inputs_sha256, roots: expected.expected_root_tests.length, PASS: passed.length, skips: 0, failures: 0, normal_installed_acceptance: false}));
