@@ -90,6 +90,16 @@ test("historical build digests reverse only the exact new gate and explicit suit
  for(const changed of [builder.replace(gate,""),builder.replace(gate,gate+gate),builder.replace(gate,gate.replace("--test","--check")),builder.replace(budget,"go test ./... && go vet ./..."),builder.replace(budget,budget+budget),builder.replace(budget,budget.replace("30m","1m"))])assert.throws(()=>beforeLoadBalanceStreamBuild(changed));
  assert.notEqual(beforeLoadBalanceStreamBuild(builder.replace("go vet ./...","go vet ./... -unknown-flag")),baseline);
 });
+test("private backup helper delivery must occur exactly once in both verified build lists",()=>{
+ const builder=read("packaging/build-release.sh"),baseline=beforeLoadBalanceStreamBuild(builder);
+ const copy='"$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/backup-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py"';
+ const sums='fresh-ssh-policy.py backup-directories.py waf-state-directory.py';
+ for(const part of [copy,sums]){
+  for(const replacement of ['',part+part,part.replace('backup-directories.py','unreviewed-backup-helper.py')])assert.throws(()=>beforeLoadBalanceStreamBuild(builder.replace(part,replacement)));
+ }
+ assert.notEqual(beforeLoadBalanceStreamBuild(builder.replace('xargs -0 shasum -a 256','xargs -0 shasum -a 512')),baseline);
+ assert(!baseline.includes('backup-directories.py'));
+});
 
 const automationModule=ts.transpileModule(read('web/src/apacheLogAutomation.ts'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText.replace('"./apacheNumericLogs"',JSON.stringify('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64')));
 const autoGuards=await import('data:text/javascript;base64,'+Buffer.from(automationModule).toString('base64'));

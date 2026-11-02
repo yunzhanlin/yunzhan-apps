@@ -63,6 +63,12 @@ if ((NO_SERVICES==0)) && [[ "$TARGET_ROOT" == / ]] &&
 fi
 # End verified development-layout dispatch; ordinary production/fresh path.
 FRESH=1;[[ -f "$MARKER" ]]&&FRESH=0
+if ((FRESH)); then
+  # No APT, account, service or filesystem mutation precedes this read-only
+  # check. Existing backups are never permission-repaired by an installation.
+  command -v python3 >/dev/null || { echo 'python3 is required for backup preflight; no host changes made' >&2; exit 1; }
+  python3 "$HERE/backup-directories.py" check --root "$TARGET_ROOT"
+fi
 if ((FRESH)) && { ((NO_SERVICES==0)) || ((PREFLIGHT_ONLY)); };then
   for existing in /etc/nginx/nginx.conf /etc/systemd/system/panel.service /opt/panel/current /var/lib/panel/panel.db /etc/panel/firewall.nft /etc/fail2ban /var/lib/fail2ban /run/fail2ban /usr/bin/fail2ban-client /etc/systemd/system/fail2ban.service /etc/systemd/system/fail2ban.service.d /run/systemd/system/fail2ban.service /run/systemd/system/fail2ban.service.d /etc/init.d/fail2ban /usr/lib/systemd/system/fail2ban.service /lib/systemd/system/fail2ban.service;do
     candidate="$(prefix "$existing")"
@@ -170,7 +176,8 @@ if ((NO_SERVICES==0)); then
   id panel-redis >/dev/null 2>&1 || useradd --system --user-group --home-dir /srv/panel/redis --shell /usr/sbin/nologin --comment panel-redis panel-redis
 	  id panel-mariadb >/dev/null 2>&1 || useradd --system --user-group --home-dir /srv/panel/mariadb --shell /usr/sbin/nologin --comment panel-mariadb panel-mariadb
 fi
-mkdir -p "$(dirname "$RELEASE_DIR")" "$(prefix /opt/panel/runtimes)" "$(prefix /opt/panel/php-extensions)" "$(prefix /etc/panel/sites-enabled)" "$(prefix /etc/panel/mysql)" "$(prefix /etc/panel/redis)" "$(prefix /etc/panel/mariadb)" "$(prefix /etc/panel/node)" "$(prefix /etc/panel/compose)" "$(prefix /var/lib/panel)" "$(prefix /var/lib/panel-executor)" "$(prefix /var/lib/panel-executor/admin-scripts)" "$(prefix /var/lib/panel-executor/sftp-jobs)" "$(prefix /var/lib/panel-executor/sftp-users)" "$(prefix /var/lib/panel-executor/docker-jobs)" "$(prefix /var/lib/panel-tasks/jobs)" "$(prefix /var/lib/panel-tasks/work)" "$(prefix /var/lib/panel-build-deps)" "$(prefix /var/backups/panel/system)" "$(prefix /var/backups/panel/mysql)" "$(prefix /var/backups/panel/mariadb)" "$(prefix /var/backups/panel/sites)" "$(prefix /srv/panel/sites)" "$(prefix /srv/panel/mysql)" "$(prefix /srv/panel/redis)" "$(prefix /srv/panel/mariadb)" "$(prefix /srv/panel/sftp)" "$(prefix /var/cache/panel-build)" "$(prefix /var/cache/panel-nginx)" "$(prefix /var/log/apache2)"
+if ((FRESH)); then python3 "$HERE/backup-directories.py" create --root "$TARGET_ROOT"; fi
+mkdir -p "$(dirname "$RELEASE_DIR")" "$(prefix /opt/panel/runtimes)" "$(prefix /opt/panel/php-extensions)" "$(prefix /etc/panel/sites-enabled)" "$(prefix /etc/panel/mysql)" "$(prefix /etc/panel/redis)" "$(prefix /etc/panel/mariadb)" "$(prefix /etc/panel/node)" "$(prefix /etc/panel/compose)" "$(prefix /var/lib/panel)" "$(prefix /var/lib/panel-executor)" "$(prefix /var/lib/panel-executor/admin-scripts)" "$(prefix /var/lib/panel-executor/sftp-jobs)" "$(prefix /var/lib/panel-executor/sftp-users)" "$(prefix /var/lib/panel-executor/docker-jobs)" "$(prefix /var/lib/panel-tasks/jobs)" "$(prefix /var/lib/panel-tasks/work)" "$(prefix /var/lib/panel-build-deps)" "$(prefix /srv/panel/sites)" "$(prefix /srv/panel/mysql)" "$(prefix /srv/panel/redis)" "$(prefix /srv/panel/mariadb)" "$(prefix /srv/panel/sftp)" "$(prefix /var/cache/panel-build)" "$(prefix /var/cache/panel-nginx)" "$(prefix /var/log/apache2)"
 chmod 0700 "$(prefix /var/lib/panel-executor/admin-scripts)"
 install -d -m 0750 "$(prefix /etc/panel/security-apps)" "$(prefix /etc/panel/waf)" "$(prefix /etc/panel/waf/http.d)" "$(prefix /etc/panel/waf/server.d)"
 command -v flock >/dev/null || { echo 'flock is required for release updates' >&2; exit 1; }
@@ -181,7 +188,6 @@ fi
 exec 9>"$(prefix /opt/panel/releases/.release.lock)"
 flock -x 9
 install -d -m 0700 "$(prefix /etc/panel/sites-archive)" "$(prefix /srv/panel/sites/.archives)"
-chmod 0700 "$(prefix /var/backups/panel/system)"
 for sub in client proxy fastcgi uwsgi scgi;do mkdir -p "$(prefix "/var/cache/panel-nginx/$sub")";done
 if ((NO_SERVICES==0));then
   chown -R www-data:www-data /var/cache/panel-nginx
@@ -216,7 +222,7 @@ fi
 ROLLBACK_DB=""
 rm -rf "$RELEASE_DIR.tmp"
 mkdir -p "$RELEASE_DIR.tmp"
-cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/fresh-ssh-policy.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$HERE/start-guard-install.py" "$RELEASE_DIR.tmp/"
+cp -a "$HERE/bin" "$HERE/web" "$HERE/systemd" "$HERE/config" "$HERE/RELEASE" "$HERE/SHA256SUMS" "$HERE/prune-releases.sh" "$HERE/prune-releases.py" "$HERE/install.sh" "$HERE/verify-release.sh" "$HERE/first-install.py" "$HERE/fresh-ssh-policy.py" "$HERE/waf-state-directory.py" "$HERE/native-build-directories.py" "$HERE/backup-directories.py" "$HERE/release-file-modes.py" "$HERE/upgrade-release.py" "$HERE/development-upgrade.py" "$HERE/start-guard-install.py" "$RELEASE_DIR.tmp/"
 for metadata in SOURCE_INPUTS.json BUILD_CHECKS.txt; do
   [[ ! -f "$HERE/$metadata" ]] || cp -a "$HERE/$metadata" "$RELEASE_DIR.tmp/"
 done

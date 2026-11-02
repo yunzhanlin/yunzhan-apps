@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2]
   workflow_dispatch:
 
 permissions:
@@ -43,6 +43,10 @@ jobs:
         run: |
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_geodata_upgrade_lease.py
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_statistics_stop_barrier.py
+      - name: Actual thirteen private backup directory source fixtures with nonempty Root execution proof
+        run: |
+          sudo python3 -I -B tools/run-backup-directory-native.py > "$RUNNER_TEMP/backup-directory-native.json"
+          node tools/check-backup-directory-native.mjs "$RUNNER_TEMP/backup-directory-native.json" "$(uname -m)"
       - name: Analytics managed address trust and private Root include race fixtures (not installed Nginx acceptance)
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -102,5 +106,13 @@ jobs:
         with:
           name: backup-retention-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/backup-retention-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain actual Root private backup directory execution for independent count verification
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: backup-directory-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/backup-directory-native.json
           retention-days: 7
           if-no-files-found: error

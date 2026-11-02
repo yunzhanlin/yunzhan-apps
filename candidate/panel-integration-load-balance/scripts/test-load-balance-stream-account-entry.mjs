@@ -8,16 +8,19 @@ test('build baseline cannot hide removed gates, missing source binding or unknow
  const baseline=beforeLoadBalanceStreamBuild(text);
  assert.equal(digest(baseline),'af902f50fc54ec540a221761930cecadd721fad248e31de3de456955a9c7e681');
  for(const required of ['APP_CHANNEL="${3:-stable}"', 'APP_CHANNEL" != stable && "$APP_CHANNEL" != candidate', '"$VERSION" != *candidate*', 'PROGRAMME_INPUTS_SHA=', 'PANEL_LDFLAGS=', 'scripts/test-load-balance-stream.mjs', 'scripts/test-load-balance-stream-account-entry.mjs', 'go test -c -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -ldflags="$PANEL_LDFLAGS"']){
+  assert(text.includes(required),'mutation input must exist: '+required);
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
  assert.notEqual(digest(beforeLoadBalanceStreamBuild(text.replace('go vet ./...','true'))),digest(baseline));
  const nfsGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-nfs-report-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
  assert.equal(text.split(nfsGate).length,2);
  for(const changed of [text.replace(nfsGate,''),text.replace(nfsGate,nfsGate+nfsGate),text.replace(nfsGate,nfsGate.replace('--test','--check')),text.replace(nfsGate,nfsGate.replace('test-nfs-report-scope.mjs','test-module-state.mjs'))])assert.throws(()=>beforeLoadBalanceStreamBuild(changed));
- for (const required of ['"$BUILD_ROOT/packaging/fresh-ssh-policy.py"', 'first-install.py fresh-ssh-policy.py waf-state-directory.py', "<<'PY_CHECK_INSTALLER_HELPERS'", 'value.st_nlink != 1', 'helpers <= staged_helpers', "print('packaged installer helpers verified: '"]) {
+ for (const required of ['"$BUILD_ROOT/packaging/fresh-ssh-policy.py"', '"$BUILD_ROOT/packaging/backup-directories.py"', 'first-install.py fresh-ssh-policy.py backup-directories.py waf-state-directory.py', "<<'PY_CHECK_INSTALLER_HELPERS'", 'value.st_nlink != 1', 'helpers <= staged_helpers', "print('packaged installer helpers verified: '"]) {
+  assert(text.includes(required),'mutation input must exist: '+required);
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
  for (const required of ['./internal/upgraderead', '$NAME.upgraderead-tests.sha256', '$STAGE/upgraderead-tests']) {
+  assert(text.includes(required),'mutation input must exist: '+required);
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
 });

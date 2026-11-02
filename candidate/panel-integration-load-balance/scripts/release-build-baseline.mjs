@@ -7,6 +7,11 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // Recognize only C55's exact new helper delivery in the copy and checksum
+  // lists. Removing, duplicating or renaming either addition must still fail;
+  // all historical commands and whole-script digests remain unchanged.
+  once('"$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/backup-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py"', '"$BUILD_ROOT/packaging/native-build-directories.py" "$BUILD_ROOT/packaging/release-file-modes.py"');
+  once('fresh-ssh-policy.py backup-directories.py waf-state-directory.py', 'fresh-ssh-policy.py waf-state-directory.py');
   // Recognize exactly the reviewed Apache numeric-log gate and the larger
   // whole-suite time budget. Keep the old commands and frozen digests intact;
   // removing, duplicating or altering either addition must fail closed.

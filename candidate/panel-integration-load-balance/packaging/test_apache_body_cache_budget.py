@@ -17,7 +17,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             base = pathlib.Path(directory)
             for name in ("bin", "web", "systemd", "config"):
                 (base / name).mkdir()
-            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "fresh-ssh-policy.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py", "development-upgrade.py", "start-guard-install.py"):
+            for name in ("RELEASE", "SOURCE_INPUTS.json", "BUILD_CHECKS.txt", "install.sh", "verify-release.sh", "prune-releases.sh", "prune-releases.py", "first-install.py", "fresh-ssh-policy.py", "backup-directories.py", "waf-state-directory.py", "native-build-directories.py", "release-file-modes.py", "upgrade-release.py", "development-upgrade.py", "start-guard-install.py"):
                 (base / name).write_bytes(b"owned checksum fixture\n")
             mount = base / "systemd" / r"var-cache-panel\x2dapache\x2dbody.mount"
             mount.write_bytes(b"owned exact escaped mount filename\n")
@@ -28,7 +28,7 @@ class ApacheBodyCachePackagingTests(unittest.TestCase):
             self.assertNotIn("sha256sum --strict -c", verifier)
             spec=importlib.util.spec_from_file_location("release_checksums",root/"packaging/release-file-modes.py")
             policy=importlib.util.module_from_spec(spec);spec.loader.exec_module(policy)
-            self.assertEqual(policy.payload_checksums(base),17)
+            self.assertEqual(policy.payload_checksums(base),18)
             sums = (base / "SHA256SUMS").read_bytes()
             (base / "SHA256SUMS").write_bytes(sums + b"malformed line cannot be skipped\n")
             with self.assertRaises(ValueError):policy.payload_checksums(base)

@@ -1,0 +1,30 @@
+{
+  "expected_test_ids": [
+    "test_backup_directories.BackupDirectoryPolicyTests.test_nonroot_cannot_check_or_create",
+    "test_backup_directories.BackupDirectoryPolicyTests.test_only_fresh_entrypoints_provision_backups_before_accounts_or_services",
+    "test_backup_directories.BackupDirectoryRootTests.test_actual_installer_refuses_existing_bad_root_without_touching_it",
+    "test_backup_directories.BackupDirectoryRootTests.test_actual_isolated_installer_preflight_and_fresh_creation_and_private_read_denial",
+    "test_backup_directories.BackupDirectoryRootTests.test_all_targets_are_prechecked_before_first_create",
+    "test_backup_directories.BackupDirectoryRootTests.test_check_is_readonly_and_fresh_dirs_private_under_all_caller_umasks",
+    "test_backup_directories.BackupDirectoryRootTests.test_existing_private_contents_inode_permissions_and_owner_are_unchanged",
+    "test_backup_directories.BackupDirectoryRootTests.test_foreign_uid_gid_symlinks_and_files_cannot_redirect_provisioning",
+    "test_backup_directories.BackupDirectoryRootTests.test_isolated_existing_release_staging_does_not_repair_backup_permissions",
+    "test_backup_directories.BackupDirectoryRootTests.test_linked_or_writable_ancestors_and_staging_boundaries_refuse",
+    "test_backup_directories.BackupDirectoryRootTests.test_nonprivate_empty_or_populated_roots_refuse_without_any_repair",
+    "test_backup_directories.BackupDirectoryRootTests.test_racing_existing_directory_is_validated_and_never_chmodded",
+    "test_backup_directories.BackupDirectoryRootTests.test_setgid_parent_does_not_make_new_backup_roots_group_readable"
+  ],
+  "normal_installed_acceptance": false,
+  "source_files": {
+    "dev/provision-app.sh": "51659a4fbf86171a114000251a43004c2bea7cc33f370492802d2e65327f5f75",
+    "packaging/backup-directories.py": "f3cc3d7e09677d572d6c4902a55e06ad6690acf04ba6bfe270dfe58662c6ca13",
+    "packaging/build-release.sh": "4accd9c758eef2e2d13afb26cdeac853fa96619e5bbfdb3e3c7b8c6c6274644c",
+    "packaging/install.sh": "243ab2541561ed242de9d9586a95311af6e1c2c79b55efadabe99d3128efa590",
+    "packaging/test_apache_body_cache_budget.py": "ce60fe339f30b21cb9dedfda08df5e8e328249df610ee1997c46dffe91b79fb1",
+    "packaging/test_backup_directories.py": "941eeeacdca3a2fcd1ef357189fb085f7cd6868ebd7915b4df04257bfe7fb9a1",
+    "scripts/release-build-baseline.mjs": "0ce7ffed456b00d446b6fb44bf209a351adf3a500d6c71fcf87d7425257d869a",
+    "scripts/test-apache-numeric-logs.mjs": "a639016fa69ddeb34b10b553a8e02c285d4677f4e164886c94661b312ff387c8",
+    "scripts/test-load-balance-stream-account-entry.mjs": "1678331a166f834b8a7f9462af673b48b98bdf7c5374e4af288f28212a9eeec0"
+  },
+  "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+}

@@ -6,6 +6,8 @@ if [[ "$(id -u)" != 0 || ! -f /workspace/.build/panel || ! -d /workspace/web/dis
 fi
 PANEL_NATIVE_BUILD_PREPARER="$(cd "$(dirname "${BASH_SOURCE[0]}")/../packaging" && pwd)/native-build-directories.py"
 python3 "$PANEL_NATIVE_BUILD_PREPARER" check
+PANEL_BACKUP_DIRECTORY_PREPARER="$(cd "$(dirname "${BASH_SOURCE[0]}")/../packaging" && pwd)/backup-directories.py"
+python3 "$PANEL_BACKUP_DIRECTORY_PREPARER" check
 if [[ ! -f /etc/panel-development-vm ]]; then
   if [[ "$(hostname)" != lima-panel-dev ]]; then echo 'Unexpected VM hostname; refusing to manage services.' >&2; exit 1; fi
   touch /etc/panel-development-vm
@@ -24,10 +26,7 @@ install -d -m 0755 /srv/panel/mysql /etc/panel/mysql
 install -d -m 0755 /etc/fail2ban /etc/apache2 /srv/panel/mariadb /var/log/apache2
 install -d -m 0755 /srv/panel/redis /etc/panel/redis
 install -d -m 0755 /etc/panel/node
-install -d -m 0700 /var/backups/panel/mysql
-install -d -m 0700 /var/backups/panel/mariadb
-install -d -m 0700 /var/backups/panel/sites
-install -d -m 0700 /var/backups/panel/system
+python3 "$PANEL_BACKUP_DIRECTORY_PREPARER" create
 install -d -m 0750 -o root -g panel-task /var/lib/panel-tasks /var/lib/panel-tasks/jobs
 install -d -m 0750 -o panel-task -g panel-task /var/lib/panel-tasks/work
 install -d -m 0755 /opt/panel/app-modules /var/cache/panel-waf-build /var/cache/panel-waf-body
