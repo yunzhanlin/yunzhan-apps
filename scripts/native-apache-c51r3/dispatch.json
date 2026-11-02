@@ -1,0 +1,21 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "actual_daemon_timer_required": true,
+  "all50_commercial": false,
+  "all_actual_FPM_process_evidence_same_original_schema": true,
+  "case_id": "C51r3-QA1",
+  "guest_sha256": "36aea333364ea0d5665d21d1f5c9933a68404950bd370efac4475c6e58838637",
+  "payload_sha256": "13c905973371dfee11800e046a2ca410cbeb36971fccb46640f9d90f02052b17",
+  "per_OS_actual_HTTP_requests": 4168,
+  "per_OS_actual_PHP_reached": 4136,
+  "release_id": 431036890,
+  "release_tag": "qa-apacheautologscandidate51r3-20261102-qa1",
+  "source_inputs_sha256": "13824198c96b5d17baafddf2225e5c95aec56f324ae7243611a79998fcb2b23e"
+}

@@ -1,0 +1,20 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "files": {
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "guest.py": "36aea333364ea0d5665d21d1f5c9933a68404950bd370efac4475c6e58838637",
+    "panel-0.1.0-dev.proapps24apacheautologscandidate51r3-linux-amd64.tar.gz": "f0520138f691efe58032cebb97b664009ad89ec50ecafbb318e3040ce30085fd",
+    "panel-0.1.0-dev.proapps24apacheautologscandidate51r3-linux-amd64.tar.gz.manifest": "ee41e099490071dc72b13ba5c45b3bc93440c0f638df0ca131ed971d81416197",
+    "panel-0.1.0-dev.proapps24apacheautologscandidate51r3-linux-amd64.tar.gz.sig": "c36ae3f578e7c86dd949daca1df776a1a32f924a4d81b24e6b8bd9cbfc56b045",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 431036890,
+  "release_tag": "qa-apacheautologscandidate51r3-20261102-qa1",
+  "source_inputs_sha256": "13824198c96b5d17baafddf2225e5c95aec56f324ae7243611a79998fcb2b23e",
+  "version": "0.1.0-dev.proapps24apacheautologscandidate51r3"
+}

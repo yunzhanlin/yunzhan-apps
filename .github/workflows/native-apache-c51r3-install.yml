@@ -1,0 +1,82 @@
+name: actual Apache automatic numeric log timer and PHP matrix on five AMD64 systems
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-apache-c51r3/dispatch.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-apache-c51r3-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Download the original reviewed signed cohort
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-c51r3-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431036890 > "$RUNNER_TEMP/cohort.json"
+          python3 -c 'import json,sys; v=json.load(open(sys.argv[1])); assert v["id"]==431036890 and not v["draft"] and v["prerelease"] and v["tag_name"]=="qa-apacheautologscandidate51r3-20261102-qa1" and len(v["assets"])==7' "$RUNNER_TEMP/cohort.json"
+          gh release download qa-apacheautologscandidate51r3-20261102-qa1 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/native-apache-c51r3-assets"
+          cp scripts/native-apache-c51r3/guest.py scripts/native-apache-c51r3/capture.py scripts/native-apache-c51r3/casebook.py "$RUNNER_TEMP/native-apache-c51r3-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-apache-c51r3-assets/"
+          cp scripts/native-apache-c51r3/payload.json "$RUNNER_TEMP/native-apache-c51r3-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-apache-c51r3-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          base=pathlib.Path(sys.argv[1])
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='13c905973371dfee11800e046a2ca410cbeb36971fccb46640f9d90f02052b17'
+          manifest=json.loads((base/'assets.json').read_bytes())
+          assert manifest['source_inputs_sha256']=='13824198c96b5d17baafddf2225e5c95aec56f324ae7243611a79998fcb2b23e'
+          for name,digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name==name
+              assert hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+          signer_pin_expression=ast.dump(ast.parse("sha(payload / 'signed-release.py')",mode='eval').body)
+          signer_pins=[]
+          for node in ast.walk(ast.parse((base/'guest.py').read_bytes())):
+              if isinstance(node,ast.Assert) and isinstance(node.test,ast.Compare) and ast.dump(node.test.left)==signer_pin_expression:
+                  assert len(node.test.ops)==len(node.test.comparators)==1 and isinstance(node.test.ops[0],ast.Eq) and isinstance(node.test.comparators[0],ast.Constant)
+                  signer_pins.append(node.test.comparators[0].value)
+          assert signer_pins==[manifest['files']['signed-release.py']]
+          print('Original programme signatures, key and reviewed QA payload bound')
+          PY
+      - name: Prepare actual hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Original signed C51r3 install, Apache PHP native accounts,4168 actual requests, manual log maintenance and actual minute timer
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-c51r3-public"
+          sudo -n python3 -I -B scripts/native-apache-c51r3/kvm.py "$RUNNER_TEMP/native-apache-c51r3-assets" scripts/native-apache-c51r3 "$RUNNER_TEMP/native-apache-c51r3-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original QA evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-apache-c51r3-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-apache-c51r3-public/
+          retention-days: 7
+          if-no-files-found: warn
