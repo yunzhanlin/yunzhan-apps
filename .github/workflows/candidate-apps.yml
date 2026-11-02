@@ -36,6 +36,8 @@ jobs:
           YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-intrusion-ubuntu22-schema.mjs
       - name: Independent analytics232 exact two-handler schema and all fifty legacy manifests
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-client-schema.mjs
+      - name: Independent Apache CC250 ordered dual-handler schema and exact historical fifty
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...

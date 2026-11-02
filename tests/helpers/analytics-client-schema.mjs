@@ -1,7 +1,8 @@
 // Remove only the exact reviewed analytics232 ABI, retaining every older field and array order.
 import assert from'node:assert/strict';import{canonical,sha256}from'../../tools/lib.mjs';
+import{schemaBeforeApacheCC}from'./apache-cc-schema.mjs';
 export function schemaBeforeAnalyticsClientAddress(value){
- const s=structuredClone(value),feature='analytics-managed-client-address-v1',flags=s.properties.required_panel_features.items.enum;
+ const s=schemaBeforeApacheCC(value),feature='analytics-managed-client-address-v1',flags=s.properties.required_panel_features.items.enum;
  if(!flags.includes(feature))return s;
  assert.equal(flags.filter(f=>f===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();
  const branches=s.allOf[0].then.oneOf;assert.equal(branches.filter(b=>b.properties?.id?.const==='website-analytics'&&b.properties.version?.const==='2.3.2').length,1);
