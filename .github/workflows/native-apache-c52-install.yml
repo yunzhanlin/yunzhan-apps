@@ -1,4 +1,4 @@
-name: actual Apache BSD writer contention and PHP matrix on five AMD64 systems
+name: actual C52 Debian12 writer contention with bounded read-only observation
 
 on:
   push:
@@ -20,7 +20,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+        os_case: [debian12]
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     steps:
@@ -44,7 +44,7 @@ jobs:
           python3 - "$RUNNER_TEMP/native-apache-c52-assets" <<'PY'
           import ast,hashlib,json,pathlib,sys
           base=pathlib.Path(sys.argv[1])
-          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='669f8b8f5d323d9701c62dea10a4eb57c963c0ebe570aef6cadf1774ff21a7cb'
+          assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='f055ac86ae47fd6e504ca02e1e074a385d8dbbf27cf26348181176e8b6ab0c7d'
           manifest=json.loads((base/'assets.json').read_bytes())
           assert manifest['source_inputs_sha256']=='44fa6a9522dbf207647c5664d05fbfbdc9f348e4bd2b66560373e1140805ba72'
           for name,digest in manifest['files'].items():

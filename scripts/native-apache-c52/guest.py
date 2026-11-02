@@ -70,6 +70,18 @@ def install_runtime(app,version):
 def counter_rows():
  s=counter.lstat();assert stat.S_ISREG(s.st_mode)and stat.S_IMODE(s.st_mode)==0o600 and s.st_nlink==1 and s.st_uid==account.pw_uid and s.st_gid==account.pw_gid and s.st_size<=262144
  rows=counter.read_text().splitlines();assert all(re.fullmatch('[a-f0-9]{32}',x)for x in rows)and len(rows)==len(set(rows));return rows
+automatic_read_contentions=[]
+def automatic_status_observation(label):
+ # Only this fixed read-only GET may wait after the exact shared-lock conflict.
+ # The original HTTP response and event have already been saved by api().
+ try:return api(label,'/software/apache-waf/body-log/automatic')
+ except AssertionError:
+  original=evidence/(label+'-original-response.json')
+  if not original.is_file():raise
+  response=json.loads(original.read_bytes())
+  if response!={'status':409,'value':{'error':'WAF 正在变更或恢复，请稍后重试'}}:raise
+  automatic_read_contentions.append({'label':label,'at':time.time(),'method':'GET','path':'/software/apache-waf/body-log/automatic','status':409})
+  return None
 def request_once(mode,port,c):
  rid=secrets.token_hex(16);label=mode+'-'+str(port)+'-'+c['name'];before=counter_rows();assert before==reached
  raw=bytes.fromhex(c['body_hex']);assert len(raw)==c['body_bytes']and hashlib.sha256(raw).hexdigest()==c['body_sha256']
@@ -143,9 +155,13 @@ def verify_actual_automatic_rotation():
   save('auto-real-BSD-writer-held.json',{'pid':os.getpid(),'fd':writer.fileno(),'fdinfo':info,'source_inode':before.st_ino,'original_bytes':len(raw),'original_sha256':digest})
   enabled=api('auto-one-explicit-policy-enable','/software/apache-waf/body-log/automatic/configure',{'expected_revision':0,'enabled':True,'rotate_mib':1,'max_age_minutes':60})
   assert enabled['configured']and enabled['policy_revision']==1 and enabled['policy']=={'enabled':True,'rotate_mib':1,'max_age_minutes':60}
-  busy_observations=[];busy_deadline=time.monotonic()+150
+  busy_observations=[];busy_deadline=time.monotonic()+150;busy_reads=0
   while True:
-   current=api('auto-known-writer-busy-readonly-'+str(len(busy_observations)),'/software/apache-waf/body-log/automatic');busy_observations.append(current);busy_record=current['record']
+   current=automatic_status_observation('auto-known-writer-busy-readonly-'+str(busy_reads));busy_reads+=1
+   if current is None:
+    assert time.monotonic()<busy_deadline,'Read-only configuration lock remains busy; original operation unresolved'
+    time.sleep(3);continue
+   busy_observations.append(current);busy_record=current['record']
    assert busy_record['state']in('idle','blocked')and not busy_record.get('error_code'),busy_record
    assert busy_record['history']==enabled['record']['history']and all(busy_record.get(k)==enabled['record'].get(k)for k in('window_started_at','last_rotation_at'))
    assert log.read_bytes()==raw and log.lstat().st_ino==before.st_ino and list(pathlib.Path('/var/lib/panel-apache-body/archives').iterdir())==[]
@@ -157,9 +173,13 @@ def verify_actual_automatic_rotation():
   fcntl.flock(writer.fileno(),fcntl.LOCK_UN);writer.close()
  released_at=time.time();save('auto-real-BSD-writer-released.json',{'at':released_at,'next_minute_check_is_new_operation_not_replay':True})
  save('auto-real-minute-timer-wait-started.json',{'at':time.time(),'maximum_wait_seconds':150,'direct_rotate_or_runOnce_calls':0})
- observations=[];deadline=time.monotonic()+150
+ observations=[];deadline=time.monotonic()+150;timer_reads=0
  while True:
-  v=api('auto-timer-readonly-'+str(len(observations)),'/software/apache-waf/body-log/automatic');observations.append(v);record=v['record']
+  v=automatic_status_observation('auto-timer-readonly-'+str(timer_reads));timer_reads+=1
+  if v is None:
+   assert time.monotonic()<deadline,'Read-only configuration lock remains busy; original operation unresolved'
+   time.sleep(3);continue
+  observations.append(v);record=v['record']
   assert record['state']in('idle','blocked','rotating','completed')and not record.get('error_code'),record
   if record.get('last_rotation_at'):break
   assert time.monotonic()<deadline,'Actual installed daemon timer unresolved; no replay'
@@ -331,6 +351,7 @@ finally:
  if csrf:
   try:api('logout','/logout',{});csrf=''
   except BaseException:proof['logout_unknown_observe_only']=True;proof['ok']=False
+ save('automatic-read-only-contentions.json',{'observations':automatic_read_contentions,'only_fixed_GET_conflicts_observed':True,'application_mutating_request_replays':0})
  save('HTTP-events.json',events);save('request-summary.json',requests);save('proof.json',proof)
  print(json.dumps({'ok':proof['ok'],'base':str(base),'proof_sha256':sha(evidence/'proof.json'),'source_inputs_sha256':SOURCE,'architecture':'amd64','Main_changed':False,'all50_commercial':False}),flush=True)
 sys.exit(0 if proof['ok']else 1)

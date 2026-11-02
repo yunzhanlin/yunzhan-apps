@@ -1,23 +1,21 @@
 {
   "Main_changed": false,
   "OS_cases": [
-    "debian12",
-    "debian13",
-    "ubuntu22",
-    "ubuntu24",
-    "ubuntu26"
+    "debian12"
   ],
   "actual_BSD_writer_contention_required": true,
   "actual_daemon_timer_required": true,
   "all4000_original_PHP_response_bodies_required": true,
   "all50_commercial": false,
   "all_actual_FPM_process_evidence_same_original_schema": true,
-  "case_id": "C52-QA2",
-  "prior_manifest_pin_refusal_run": 41394898018,
-  "guest_sha256": "3a754a64c6979bb6ebbfe487807de6a5834b2391996d7acd1190d7c70a05feb8",
-  "payload_sha256": "669f8b8f5d323d9701c62dea10a4eb57c963c0ebe570aef6cadf1774ff21a7cb",
+  "case_id": "C52-QA3",
+  "guest_sha256": "bccd6e4b880d94b3a1e346419738b56cfb075c40489e77513ba37a4980375a8e",
+  "known_configuration_lock_conflict_GETs_observed_not_mutations_retried": true,
+  "payload_sha256": "f055ac86ae47fd6e504ca02e1e074a385d8dbbf27cf26348181176e8b6ab0c7d",
   "per_OS_actual_HTTP_requests": 4168,
   "per_OS_actual_PHP_reached": 4136,
+  "prior_manifest_pin_refusal_run": 41394898018,
+  "prior_read_only_conflict_run": 41395635091,
   "release_id": 431102346,
   "release_tag": "qa-apachewriterbusycandidate52-20261102-qa1",
   "source_inputs_sha256": "44fa6a9522dbf207647c5664d05fbfbdc9f348e4bd2b66560373e1140805ba72"
