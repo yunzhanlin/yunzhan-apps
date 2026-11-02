@@ -1,0 +1,44 @@
+{
+  "all15_payload_files_bound": true,
+  "all50_commercial": false,
+  "cohort": "C55r2-native-factory-and-legacy-upgrade-QA1",
+  "local_validation_only": true,
+  "normal_installation_performed": false,
+  "ok": true,
+  "original_source_CI_execution_gate": {
+    "actual_Root_directory_methods": 22,
+    "actual_analytics_PASS": 46,
+    "actual_directory_methods": 26,
+    "actual_retention_PASS": 90,
+    "normal_installed_acceptance": false,
+    "ok": true,
+    "original_artifacts": 6,
+    "skips": 0
+  },
+  "payload_sha256": "43c88512c9eaf841c1b68fff57a970bbaf355cb42ee51a7a16564181cd72f0da",
+  "reviewed_files": {
+    "scripts/native-private-backup-c55r2/baseline-business.py": "1dd4510f0514d35fab8ba49c04c50f8666b5f28000e1acfc789c0d2e9e17b94c",
+    "scripts/native-private-backup-c55r2/business.py": "a80c633fa3cfb674ae3ab9f1e137bb47f322264b59e0316025171480f45c3f67",
+    "scripts/native-private-backup-c55r2/capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "scripts/native-private-backup-c55r2/cases.json": "36a73c63735349ad987df48edee9df99200e5f97ca460dc107bba99451540473",
+    "scripts/native-private-backup-c55r2/check-source-ci.py": "274700fc90b5046401779359b8c17045424ac2e602b1ef83b4a47cf304f1294b",
+    "scripts/native-private-backup-c55r2/cold.py": "17785c74d32883a9d342f3ab174463d3c3a027e7c68ead1ba333ecca813eb407",
+    "scripts/native-private-backup-c55r2/guest.py": "1b1a7e94ff68a0c7f0d7798eef0a84e657a0bb68083de5fcf5da0926e3a8e13c",
+    "scripts/native-private-backup-c55r2/install-observers.py": "fafa11713422ee864c88127396bff6e914bcdd2f03aacc954c568d535138a5d7",
+    "scripts/native-private-backup-c55r2/kvm.py": "728d14f4eb7cc5e9874b791ff00e2e8419b7b8aa5a00ec3305ac031f79f86dc8",
+    "scripts/native-private-backup-c55r2/payload.json": "43c88512c9eaf841c1b68fff57a970bbaf355cb42ee51a7a16564181cd72f0da",
+    "scripts/native-private-backup-c55r2/preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "scripts/native-private-backup-c55r2/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-private-backup-c55r2/source-ci.json": "791de7da9d8c5ccebfeb792c5eca77414f445536d5deb22bf22d00f83fb6e43f"
+  },
+  "shell_blocks": 4,
+  "six_cases": [
+    "debian12",
+    "debian13",
+    "debian13upgrade",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "workflow_sha256": "4d4bf1ab1ac33b1ed1a8592ec928e81acc8ba1ad39a2574c5d21a145de7a6891"
+}

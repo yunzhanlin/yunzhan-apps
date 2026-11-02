@@ -1,0 +1,124 @@
+"""Once-only signed C55r2 factory install, or C54 business -> C55r2 upgrade.
+
+All business belongs to this new guest. Existing state is observed, never
+permission-repaired; failed/unknown operations are retained without replay.
+"""
+import ast,contextlib,copy,gzip,hashlib,http.cookiejar,json,os,pathlib,platform,pwd,re,runpy,secrets,shutil,sqlite3,stat,subprocess,sys,tarfile,time,traceback,urllib.error,urllib.request
+os.umask(0o077);assert os.geteuid()==0 and len(sys.argv)==2
+payload=pathlib.Path(sys.argv[1]).resolve(strict=True);pins=json.loads((payload/'assets.json').read_bytes())
+OLD='2b8e71c50b16ba6008955a4d9168b195a087e3063412445a0596f27b53b1bfb9';NEW='f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6'
+OLD_VERSION='0.1.0-dev.proapps24backupretentioncandidate54';VERSION='0.1.0-dev.proapps24privatebackupcandidate55r2'
+assert platform.machine()=='x86_64'and pins['architecture']=='amd64'and pins['version']==VERSION and pins['source_inputs_sha256']==NEW and pins['baseline_source_inputs_sha256']==OLD and pins['baseline_version']==OLD_VERSION
+case=pins['OS_case'];assert case['platform']in('debian-12','debian-13','ubuntu-22.04','ubuntu-24.04','ubuntu-26.04')and case['mode']in('fresh','upgrade')and pathlib.Path('/etc/hostname').read_text().strip()==case['hostname']and 'VERSION_ID="'+case['version_id']+'"'in pathlib.Path('/usr/lib/os-release').read_text()
+base=pathlib.Path('/opt/panel-private-backup-c55r2-native-qa-'+secrets.token_hex(16));base.mkdir(mode=0o700);evidence=base/'evidence';evidence.mkdir(mode=0o700)
+def sha(f):return hashlib.sha256(pathlib.Path(f).read_bytes()).hexdigest()
+def save(n,v):
+ assert re.fullmatch('[A-Za-z0-9._-]+',n)
+ with os.fdopen(os.open(evidence/n,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'w')as f:json.dump(v,f,sort_keys=True,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
+verified=base/'verified-input';verified.mkdir(mode=0o700)
+for n,h in pins['files'].items():
+ assert re.fullmatch('[A-Za-z0-9._-]+',n)
+ with os.fdopen(os.open(payload/n,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC),'rb')as f:
+  s=os.fstat(f.fileno());assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and 0<s.st_size<=64<<20;raw=f.read((64<<20)+1);z=os.fstat(f.fileno());assert len(raw)==s.st_size and hashlib.sha256(raw).hexdigest()==h and(s.st_dev,s.st_ino,s.st_size,s.st_mtime_ns,s.st_ctime_ns)==(z.st_dev,z.st_ino,z.st_size,z.st_mtime_ns,z.st_ctime_ns)
+ with os.fdopen(os.open(verified/n,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb')as f:f.write(raw);f.flush();os.fsync(f.fileno())
+payload=verified;assert sha(payload/'signed-release.py')=='fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5'and sha(payload/'release-signing-dev.pub')=='4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339'
+names={'command','unit','snapshot','NoRedirect'};nodes=[v for v in ast.parse((payload/'capture.py').read_bytes()).body if isinstance(v,(ast.FunctionDef,ast.ClassDef))and v.name in names];assert len(nodes)==4;exec(compile(ast.Module(body=nodes,type_ignores=[]),'<original-full113-observer>','exec'),globals())
+names={'guard','wait_initial_cpu_observation','run_once','installed_archive','preserving_programme_compare'};nodes=[v for v in ast.parse((payload/'install-observers.py').read_bytes()).body if isinstance(v,ast.FunctionDef)and v.name in names];assert len(nodes)==5;exec(compile(ast.Module(body=nodes,type_ignores=[]),'<bound-original-install-observers>','exec'),globals())
+qualify=runpy.run_path(str(payload/'preservation.py'))['qualify_background'];boot=pathlib.Path('/proc/sys/kernel/random/boot_id').read_text().strip();p={'boot':boot};own_site=None
+def root_metadata():
+ result={}
+ for name in('system','mysql','mariadb','sites'):
+  path=pathlib.Path('/var/backups/panel')/name;s=path.lstat();assert stat.S_ISDIR(s.st_mode)and s.st_uid==s.st_gid==0
+  result[str(path)]={'mode':stat.S_IMODE(s.st_mode),'uid':s.st_uid,'gid':s.st_gid,'ino':s.st_ino,'dev':s.st_dev}
+ return result
+def fresh_host_state():
+ result={}
+ def walk(path):
+  if not os.path.lexists(path):result[str(path)]={'exists':False};return
+  s=path.lstat();v={'mode':s.st_mode,'uid':s.st_uid,'gid':s.st_gid,'ino':s.st_ino,'dev':s.st_dev,'links':s.st_nlink}
+  if stat.S_ISREG(s.st_mode):assert s.st_size<32<<20;v['sha256']=sha(path)
+  elif stat.S_ISLNK(s.st_mode):v['target']=os.readlink(path)
+  else:assert stat.S_ISDIR(s.st_mode)
+  result[str(path)]=v;assert len(result)<20000
+  if stat.S_ISDIR(s.st_mode):
+   for child in sorted(path.iterdir()):walk(child)
+ for name in('/etc/nginx','/etc/panel','/etc/panel-release','/etc/fail2ban','/opt/panel','/var/lib/panel','/var/lib/panel-executor','/var/backups/panel','/etc/passwd','/etc/group','/etc/shadow','/etc/gshadow'):walk(pathlib.Path(name))
+ return {'files':result,'packages':command(['dpkg-query','-W','-f=${Package}\t${Version}\t${db:Status-Status}\n'])}
+def prove_unrelated_UID_denied():
+ script="""import json,os,pathlib
+os.setgroups([]);os.setgid(65534);os.setuid(65534)
+assert os.geteuid()==65534 and os.getegid()==65534 and not os.getgroups()
+cap=next(x.split(':',1)[1].strip()for x in pathlib.Path('/proc/self/status').read_text().splitlines()if x.startswith('CapEff:'));assert int(cap,16)==0
+assert pathlib.Path('/etc/os-release').read_text()
+denied=[]
+for name in('system','mysql','mariadb','sites'):
+ path='/var/backups/panel/'+name
+ try:os.listdir(path)
+ except PermissionError:denied.append(path)
+ else:raise AssertionError('Unrelated UID listed a private backup root')
+print(json.dumps({'uid':os.geteuid(),'gid':os.getegid(),'CapEff':cap,'positive_read_control':True,'denied':denied}))
+"""
+ result=subprocess.run(['/usr/bin/python3','-I','-B','-c',script],capture_output=True,timeout=15);save('actual-unrelated-UID-original-outcome.json',{'exit':result.returncode,'stdout_hex':result.stdout.hex(),'stderr_hex':result.stderr.hex()});assert result.returncode==0
+ actual=json.loads(result.stdout);assert actual['uid']==actual['gid']==65534 and len(actual['denied'])==4 and actual['positive_read_control'];save('actual-unrelated-UID-privacy-qualified.json',actual)
+proof={'ok':False,'base':str(base),'architecture':'amd64','OS_case':case,'source_inputs_sha256':NEW,'normal_first_install_submissions':0,'normal_C55r2_upgrade_submissions':0,'Main_changed':False,'all50_commercial':False,'actual_browser_UI_acceptance':False,'original_mutations_replayed':False,'powerloss_ready':False}
+try:
+ assert all(not os.path.lexists(n)for n in('/opt/panel','/var/lib/panel','/var/lib/panel-executor','/etc/nginx/nginx.conf','/etc/panel-release'))
+ signer=['python3','-I','-B',str(payload/'signed-release.py')];key=['--public-key',str(payload/'release-signing-dev.pub')];old=payload/('panel-'+OLD_VERSION+'-linux-amd64.tar.gz');new=payload/('panel-'+VERSION+'-linux-amd64.tar.gz')
+ initial,initial_version,initial_source=(new,VERSION,NEW)if case['mode']=='fresh'else(old,OLD_VERSION,OLD)
+ run_once('initial-original-signature-verify',signer+['verify',str(initial)]+key,45);fresh_before=fresh_host_state();save('before-fresh-preflight.json',fresh_before)
+ run_once('one-initial-fresh-preflight',signer+['install',str(initial)]+key+['--preflight-only'],900);fresh_after=fresh_host_state();save('after-fresh-preflight.json',fresh_after);assert fresh_before==fresh_after
+ proof['normal_first_install_submissions']+=1;run_once('one-original-signed-first-install',signer+['install',str(initial)]+key,1800);assert not pathlib.Path('/opt/panel/DEVELOPMENT_RELEASE').exists();target=installed_archive('initial-actual-install',initial_version,initial_source);wait_initial_cpu_observation();guard('initial-baseline')
+ initial_roots=root_metadata();save('initial-installed-backup-root-metadata.json',initial_roots)
+ expected_modes={n:(0o700 if case['mode']=='fresh'or n=='system'else 0o755)for n in('system','mysql','mariadb','sites')}
+ for name,v in initial_roots.items():assert v['mode']==expected_modes[pathlib.Path(name).name]and not list(pathlib.Path(name).iterdir())
+ if case['mode']=='fresh':prove_unrelated_UID_denied();proof['four_factory_backup_roots_Root0700']=True
+ nonce=secrets.token_hex(16);business_prefix='c55r2'if case['mode']=='fresh'else'c54';business_root=pathlib.Path('/opt/panel-retention-'+business_prefix+'-business-'+nonce);business_root.mkdir(mode=0o700);files={}
+ business_source=payload/('business.py'if case['mode']=='fresh'else'baseline-business.py')
+ for n,source in [('guest.py',business_source),('capture.py',payload/'capture.py')]:
+  with(business_root/n).open('xb')as f:f.write(source.read_bytes());f.flush();os.fsync(f.fileno())
+  files[n]=sha(business_root/n)
+ intent={'root':str(business_root),'nonce':nonce,'files':files,'peer':{'boot':boot,'machine_id_sha256':sha('/etc/machine-id')},'boot':boot,'site_id':None,'resource_id':None,'source_inputs_sha256':initial_source}
+ with(business_root/'intent.json').open('x')as f:json.dump(intent,f,sort_keys=True);f.flush();os.fsync(f.fileno())
+ run_once('one-real-scheduler-and-Root-business',['python3','-I','-B',str(business_root/'guest.py'),str(business_root)],420)
+ business=json.loads((business_root/'evidence/proof.json').read_bytes());assert business['ok']and business['real_backups_created']==7 and business['actual_completed_deletions']==1 and business['durable_unknown_not_replayed_after_real_Core_SIGKILL'];save('original-business-proof.json',business)
+ shutil.copytree(business_root/'evidence',evidence/'business',copy_function=shutil.copyfile)
+ definitions={'api','policy','entry','backup_inventory'};nodes=[v for v in ast.parse((payload/'business.py').read_bytes()).body if isinstance(v,ast.FunctionDef)and v.name in definitions];assert len(nodes)==4;exec(compile(ast.Module(body=nodes,type_ignores=[]),'<reviewed-once-only-business-API-and-observer>','exec'),globals())
+ if case['mode']=='upgrade':
+  guard('before-C55r2-upgrade');before=snapshot();save('before-C55r2-upgrade-original113.json',before);roots_before=root_metadata();save('before-C55r2-upgrade-root-metadata.json',roots_before);backups_before=backup_inventory('before-C55r2-upgrade-backups')
+  run_once('original-C55r2-signature-verify',signer+['verify',str(new)]+key,45);run_once('one-C55r2-upgrade-preflight',signer+['install',str(new)]+key+['--preflight-only'],900);pre=snapshot();save('after-C55r2-preflight-original113.json',pre);save('preflight-preservation-qualified.json',preserving_programme_compare(before,pre));assert roots_before==root_metadata()and backups_before==backup_inventory('after-C55r2-preflight-backups')
+  proof['normal_C55r2_upgrade_submissions']+=1;run_once('one-original-signed-C55r2-upgrade',signer+['install',str(new)]+key,1200);target=installed_archive('actual-C55r2-upgrade',VERSION,NEW);after=snapshot();save('after-C55r2-upgrade-original113.json',after);save('upgrade-preservation-qualified.json',preserving_programme_compare(before,after,target));guard('C55r2-upgraded');assert roots_before==root_metadata()and backups_before==backup_inventory('after-C55r2-upgrade-backups')
+  proof['existing_backup_bytes_modes_inode_and_owners_preserved']=True;proof['all113_original_upgrade_tables_qualified']=True
+ origin='http://127.0.0.1:19100';csrf='';events=[];client=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect(),urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()));access=json.loads(pathlib.Path('/etc/panel/first-login.json').read_bytes())
+ try:csrf=api('cold-preparation-login','/login',{k:access[k]for k in('username','password')})['csrf']
+ finally:access.clear()
+ current=api('cold-owned-schedules','/schedules')['schedules'];assert {v['id']for v in current}==set(business['schedule_ids'])and all(not v['enabled']for v in current)
+ for i,schedule in enumerate(current):updated=policy('cold-enable-only-owned-'+str(i),schedule,2,True);assert updated['enabled']and updated['revision']==4
+ api('cold-preparation-logout','/logout',{});time.sleep(7)
+ with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
+  db.row_factory=sqlite3.Row;db.execute('PRAGMA query_only=ON');cleanup=[dict(v)for v in db.execute('SELECT *FROM site_schedule_cleanup_jobs ORDER BY artifact_id')];assert len(cleanup)==3 and all(v['attempts']==1 for v in cleanup)
+ save('cold-enabled-original-records.json',cleanup);cold_before=snapshot();save('before-hard-powerloss-original113.json',cold_before);backup_inventory('before-hard-powerloss-backups')
+ # Persist only QA evidence. No product DB checkpoint, sync or backup flush.
+ for outcome_file in evidence.glob('*-original-outcome.json'):
+  operation=json.loads(outcome_file.read_bytes());stem=outcome_file.name[:-len('-original-outcome.json')]
+  if 'stdout_sha256'in operation:
+   for channel in('stdout','stderr'):assert sha(evidence/(stem+'.'+channel+'.log'))==operation[channel+'_sha256']
+ durable={}
+ for f in sorted(evidence.rglob('*')):
+  metadata=f.lstat();assert not stat.S_ISLNK(metadata.st_mode)
+  if stat.S_ISDIR(metadata.st_mode):continue
+  assert stat.S_ISREG(metadata.st_mode)and metadata.st_uid==0 and metadata.st_nlink==1 and stat.S_IMODE(metadata.st_mode)==0o600 and metadata.st_size<32<<20
+  fd=os.open(f,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+  try:os.fsync(fd)
+  finally:os.close(fd)
+  durable[str(f.relative_to(evidence))]={'sha256':sha(f),'bytes':metadata.st_size,'mode':stat.S_IMODE(metadata.st_mode),'uid':metadata.st_uid,'gid':metadata.st_gid,'inode':metadata.st_ino}
+ save('pre-powerloss-durable-QA-evidence.json',durable)
+ for folder in sorted([evidence,*[f for f in evidence.rglob('*')if f.is_dir()]],key=lambda f:len(f.parts),reverse=True):
+  fd=os.open(folder,os.O_RDONLY|os.O_DIRECTORY)
+  try:os.fsync(fd)
+  finally:os.close(fd)
+ cold={'base':str(base),'boot':boot,'machine_id_sha256':sha('/etc/machine-id'),'root_uuid':subprocess.check_output(['findmnt','-n','-o','UUID','/'],text=True).strip(),'source_inputs_sha256':NEW,'cold_script_sha256':sha(payload/'cold.py'),'target_programmes':target,'business_root':str(business_root),'schedule_ids':business['schedule_ids'],'backup_root_metadata':root_metadata()}
+ with(base/'cold-intent.json').open('x')as f:json.dump(cold,f,sort_keys=True);f.flush();os.fsync(f.fileno())
+ fd=os.open(base,os.O_RDONLY|os.O_DIRECTORY);os.fsync(fd);os.close(fd)
+ proof.update(ok=True,powerloss_ready=True,business_root=str(business_root),normal_original_signed_install=True,all204_C55r2_actual_installed_entries_verified=True,business_source_inputs_sha256=initial_source,real_normal_API_backups=7,real_permission_failure_no_starvation=True,real_Core_SIGKILL_unknown_not_replayed=True,two_owned_schedules_enabled_for_real_powerloss=True,independent_business_original113_reconciliation_pending=True)
+except BaseException:save('original-failure.json',{'traceback':traceback.format_exc()})
+save('proof.json',proof);print(json.dumps(proof),flush=True);sys.exit(0 if proof['ok']else 1)

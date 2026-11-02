@@ -1,0 +1,25 @@
+{
+  "architecture": "amd64",
+  "baseline_source_inputs_sha256": "2b8e71c50b16ba6008955a4d9168b195a087e3063412445a0596f27b53b1bfb9",
+  "baseline_version": "0.1.0-dev.proapps24backupretentioncandidate54",
+  "files": {
+    "baseline-business.py": "1dd4510f0514d35fab8ba49c04c50f8666b5f28000e1acfc789c0d2e9e17b94c",
+    "business.py": "a80c633fa3cfb674ae3ab9f1e137bb47f322264b59e0316025171480f45c3f67",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "cold.py": "17785c74d32883a9d342f3ab174463d3c3a027e7c68ead1ba333ecca813eb407",
+    "guest.py": "1b1a7e94ff68a0c7f0d7798eef0a84e657a0bb68083de5fcf5da0926e3a8e13c",
+    "install-observers.py": "fafa11713422ee864c88127396bff6e914bcdd2f03aacc954c568d535138a5d7",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz": "7bdd91352444d2f06151974d8d46d40e59bd81d8b7cd91fbf34233730ce3ebeb",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz.manifest": "dc49914b51bcf6d5938fa41e7f0ab216133cc490bdcbdd69e321c737fecf6fd6",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz.sig": "c55902d2bdcaab14cba83fa4ea20e9262998b1c79b7cb1ac5aa0bd782ea824de",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz": "afd2b1a8db5a7e69f5408b376f697b3dd60577c939ca8cb029e5c08760bee508",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.manifest": "7bbd6a65ad71749dc86728454297eb19e1177e95724af19ab5dec1a42316d0d5",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.sig": "27f49742708030d66db11d630eeb3d39231ddf54d1cc2b3609176528a62d342b",
+    "preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "normal_signed_original_cohorts": true,
+  "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6",
+  "version": "0.1.0-dev.proapps24privatebackupcandidate55r2"
+}

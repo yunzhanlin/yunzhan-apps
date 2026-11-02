@@ -1,0 +1,95 @@
+{
+  "artifacts": [
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13170982116,
+      "execution": {
+        "PASS": 13,
+        "actual_Root_test_methods": 11,
+        "architecture": "x86_64",
+        "normal_installed_acceptance": false,
+        "ok": true,
+        "skips": 0,
+        "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+      },
+      "name": "backup-directory-native-ubuntu-24.04-41503343033",
+      "original_execution_sha256": "33bcd9720ad4b42fd57b37f1a9ce7cc18b04938c7227f35430c3aebcba8c59ff",
+      "original_zip_sha256": "8b745795c0bab26c52ec06751914086ed52363e2bc31eb61300c44816bd24f31"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13170773077,
+      "execution": {
+        "PASS": 45,
+        "failures": 0,
+        "normal_installed_acceptance": false,
+        "ok": true,
+        "roots": 12,
+        "skips": 0,
+        "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+      },
+      "name": "backup-retention-native-ubuntu-24.04-41503343033",
+      "original_execution_sha256": "4c9bfc748eea647d2a210a9d17c028ca36cdc715b7a6650eb7a6464c45ddda69",
+      "original_zip_sha256": "0e4573bc1c43be3dde50c587758b77d23918a1c3bed41cc105a461620972941e"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13170457971,
+      "execution": {
+        "PASS": 13,
+        "actual_Root_test_methods": 11,
+        "architecture": "aarch64",
+        "normal_installed_acceptance": false,
+        "ok": true,
+        "skips": 0,
+        "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+      },
+      "name": "backup-directory-native-ubuntu-24.04-arm-41503343033",
+      "original_execution_sha256": "c298139cb24bff245c4f51150532e468063d39e94b07faa1e667dd8ec6bf1f70",
+      "original_zip_sha256": "9293a53a66b6a420ccca307b7bbaa9c23f904e0961c377aecbd290ed5f951c33"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13170442909,
+      "execution": {
+        "PASS": 23,
+        "roots": 4,
+        "skips": 0
+      },
+      "name": "analytics-root-native-ubuntu-24.04-arm-41503343033",
+      "original_execution_sha256": "deb24e48ba34162090afbf337cb5c827c61bf71e8f8687b00a428eb6e99d409e",
+      "original_zip_sha256": "01ad84c7cd1d30af371d68c7776ad7c36264a75ee57ddcc02a5533bba4b06f68"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13170218093,
+      "execution": {
+        "PASS": 45,
+        "failures": 0,
+        "normal_installed_acceptance": false,
+        "ok": true,
+        "roots": 12,
+        "skips": 0,
+        "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+      },
+      "name": "backup-retention-native-ubuntu-24.04-arm-41503343033",
+      "original_execution_sha256": "c3918b3bfc8c1c249d8e9931c3a5a1b0a161b30cb1d0a7f210ce2d8814f91d75",
+      "original_zip_sha256": "ade1ad0cc2fa412e057925421756456a03be87e0a741f076a5a1f2dd5463870c"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13170059345,
+      "execution": {
+        "PASS": 23,
+        "roots": 4,
+        "skips": 0
+      },
+      "name": "analytics-root-native-ubuntu-24.04-41503343033",
+      "original_execution_sha256": "5f9e2e052adf6e4b6783944d4e5b62d0d1cf92c1e2814207b92ed46358d7d578",
+      "original_zip_sha256": "16b8f05c6b918f5fb1ad5378a8323c2edb1dfa3adc021f8703dc3fdd6b4ac4cc"
+    }
+  ],
+  "head": "95f63cf17c3305dc5d09f88499ecd5591b1a1db9",
+  "run": 41503343033,
+  "source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6"
+}
