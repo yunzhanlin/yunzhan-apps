@@ -1,0 +1,24 @@
+{
+  "architecture": "amd64",
+  "baseline_source_inputs_sha256": "5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87",
+  "baseline_version": "0.1.0-dev.proapps24analyticsidentitycandidate53r3",
+  "files": {
+    "baseline-guest.py": "37c2e7733cbfab3c23a1fb253e5dbd4a516159bb5d7f75aa2b47f32c15248a35",
+    "business.py": "1dd4510f0514d35fab8ba49c04c50f8666b5f28000e1acfc789c0d2e9e17b94c",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "cold.py": "b6a000cf2f8acc356ecab21f8dc5ec5b4b4296e4d6e0e44da140b854074aea6d",
+    "guest.py": "502e62a55cb32b8b91a6bf2db5b1d8e38b9f495d44e50f4371a29137f0149242",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz": "539c4c8208553ab860d2f3bb5a0752f48721551eca903b63a94075f977dd82ab",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz.manifest": "ec403d9927723d8494d72d13e46a402458ebab03e8a419bdbda4338b7f6a4df6",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz.sig": "c71928ed13adbe386c89f07bec0f8204700fd8b189a840f7758603c4db47465a",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz": "7bdd91352444d2f06151974d8d46d40e59bd81d8b7cd91fbf34233730ce3ebeb",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz.manifest": "dc49914b51bcf6d5938fa41e7f0ab216133cc490bdcbdd69e321c737fecf6fd6",
+    "panel-0.1.0-dev.proapps24backupretentioncandidate54-linux-amd64.tar.gz.sig": "c55902d2bdcaab14cba83fa4ea20e9262998b1c79b7cb1ac5aa0bd782ea824de",
+    "preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "normal_signed_original_cohorts": true,
+  "source_inputs_sha256": "2b8e71c50b16ba6008955a4d9168b195a087e3063412445a0596f27b53b1bfb9",
+  "version": "0.1.0-dev.proapps24backupretentioncandidate54"
+}
