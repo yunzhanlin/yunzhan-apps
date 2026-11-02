@@ -1,0 +1,106 @@
+name: Actual analytics232 C53r3 five-OS AMD64 install and preserving upgrade
+
+on:
+  push:
+    branches: [codex/app-candidate]
+    paths:
+      - scripts/native-analytics-c53r3/dispatch.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: native-analytics-c53r3-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/app-candidate'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Check immutable source CI and independently count original Root execution events
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/analytics-c53r3-ABI"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41441089840 > "$RUNNER_TEMP/analytics-c53r3-ABI/run.json"
+          gh run download 41441089840 --repo yunzhanlin/yunzhan-apps --pattern 'analytics-root-native-*' --dir "$RUNNER_TEMP/analytics-c53r3-ABI/events"
+          python3 - "$RUNNER_TEMP/analytics-c53r3-ABI" <<'PY'
+          import json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);run=json.loads((root/'run.json').read_bytes())
+          assert run['id']==41441089840 and run['head_sha']=='19294c833de1bf045e68e2f3be94ad9011a58511' and run['status']=='completed' and run['conclusion']=='success'
+          events=sorted((root/'events').glob('*/analytics-identity-root-native.jsonl'));assert len(events)==2
+          expected={'TestNativeAnalyticsProxyIdentityPrivateFileAndStableRevalidation','TestNativeAnalyticsProxyIdentityRejectsUntrustedKeyAndParents','TestNativeAnalyticsProxyIdentityPreservesChangedOrPartialOriginal','TestNativeAnalyticsProxyIdentityCapacityRefusesWithoutDeletion'}
+          for file in events:
+              rows=[json.loads(line)for line in file.read_bytes().splitlines()if line.strip()]
+              passed=[r['Test']for r in rows if r.get('Action')=='pass'and r.get('Test')]
+              assert len(passed)==len(set(passed))==23 and {x for x in passed if '/'not in x}==expected
+              assert not any(r.get('Action')in('skip','fail')for r in rows)
+              assert sum(r.get('Action')=='pass'and not r.get('Test')for r in rows)==1
+          print('Both original native source architectures actually executed23 Root PASS records each; installed tests remain separate')
+          PY
+      - name: Download both original-key signed programme cohorts and validate the exact QA payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-analytics-c53r3-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431102346 > "$RUNNER_TEMP/analytics-C52-cohort.json"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431440563 > "$RUNNER_TEMP/analytics-C53r3-cohort.json"
+          python3 - "$RUNNER_TEMP/analytics-C52-cohort.json" "$RUNNER_TEMP/analytics-C53r3-cohort.json" <<'PY'
+          import json,sys
+          for file,rid,tag,head in [(sys.argv[1],431102346,'qa-apachewriterbusycandidate52-20261102-qa1','4332367e7b8fd82c3788ab8411c12a2de8a8cbed'),(sys.argv[2],431440563,'qa-analyticsidentitycandidate53r3-20261102-qa1','19294c833de1bf045e68e2f3be94ad9011a58511')]:
+              v=json.load(open(file));assert v['id']==rid and v['tag_name']==tag and v['target_commitish']==head and not v['draft']and v['prerelease']and len(v['assets'])==7
+          PY
+          gh release download qa-apachewriterbusycandidate52-20261102-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --dir "$RUNNER_TEMP/native-analytics-c53r3-assets"
+          gh release download qa-analyticsidentitycandidate53r3-20261102-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --pattern release-signing-dev.pub --dir "$RUNNER_TEMP/native-analytics-c53r3-assets"
+          cp scripts/native-analytics-c53r3/guest.py scripts/native-analytics-c53r3/capture.py scripts/native-analytics-c53r3/preservation.py scripts/native-analytics-c53r3/business.py "$RUNNER_TEMP/native-analytics-c53r3-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-analytics-c53r3-assets/"
+          cp scripts/native-analytics-c53r3/payload.json "$RUNNER_TEMP/native-analytics-c53r3-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-analytics-c53r3-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          base=pathlib.Path(sys.argv[1]);assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='2e4090a756cd03c6e682fac93d16b9b8193e471777bd51e17b34acd850cd7a26'
+          manifest=json.loads((base/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87'and len(manifest['files'])==12
+          for name,digest in manifest['files'].items():
+              assert pathlib.PurePath(name).name==name and hashlib.sha256((base/name).read_bytes()).hexdigest()==digest
+              if name.endswith('.py'):ast.parse((base/name).read_bytes())
+          for source_name in('guest.py','business.py','capture.py','preservation.py'):
+              assert (base/source_name).read_bytes()==pathlib.Path('scripts/native-analytics-c53r3',source_name).read_bytes()
+          print('Both exact original signed release cohorts and reviewed once-only QA payload bound')
+          PY
+      - name: Prepare actual KVM hardware guest tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual normal C52 install,231 legacy events,preserving C53r3 upgrade,signed232 update and real Nginx cross-site admission
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-analytics-c53r3-public"
+          sudo -n python3 -I -B scripts/native-analytics-c53r3/kvm.py "$RUNNER_TEMP/native-analytics-c53r3-assets" scripts/native-analytics-c53r3 "$RUNNER_TEMP/native-analytics-c53r3-public" "$OS_CASE"
+      - name: Retain actual public proof and encrypted original guest evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-analytics-c53r3-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-analytics-c53r3-public/
+          retention-days: 7
+          if-no-files-found: error

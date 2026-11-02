@@ -1,0 +1,29 @@
+{
+  "Main_changed": false,
+  "all50_commercial": false,
+  "architecture": "amd64",
+  "baseline_release_id": 431102346,
+  "baseline_release_tag": "qa-apachewriterbusycandidate52-20261102-qa1",
+  "baseline_source_inputs_sha256": "44fa6a9522dbf207647c5664d05fbfbdc9f348e4bd2b66560373e1140805ba72",
+  "baseline_version": "0.1.0-dev.proapps24apachewriterbusycandidate52",
+  "files": {
+    "business.py": "13b2717bd13a7303760750d8e350151f70dfeb0e18ae5f313f1a64c10dc427e8",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "guest.py": "0ae532ce2b6d766f86b9e054a9688b5e3b81ba547689f6f19a0c73d1a88c7b9b",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz": "539c4c8208553ab860d2f3bb5a0752f48721551eca903b63a94075f977dd82ab",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz.manifest": "ec403d9927723d8494d72d13e46a402458ebab03e8a419bdbda4338b7f6a4df6",
+    "panel-0.1.0-dev.proapps24analyticsidentitycandidate53r3-linux-amd64.tar.gz.sig": "c71928ed13adbe386c89f07bec0f8204700fd8b189a840f7758603c4db47465a",
+    "panel-0.1.0-dev.proapps24apachewriterbusycandidate52-linux-amd64.tar.gz": "67d3af8d2402b7dd3bb53c0a56f984f50b292141a5e30e8addaddceb33419b59",
+    "panel-0.1.0-dev.proapps24apachewriterbusycandidate52-linux-amd64.tar.gz.manifest": "bbc0dc0644cf4354697e30650336fefc11ffc57dcc58fb80cde964aef4b55376",
+    "panel-0.1.0-dev.proapps24apachewriterbusycandidate52-linux-amd64.tar.gz.sig": "15d3f5bdd6bff586c4a703ba07d4bdd1c7101ca3b64cdbf2394a7d64d1ee3045",
+    "preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "format": 1,
+  "release_id": 431440563,
+  "release_tag": "qa-analyticsidentitycandidate53r3-20261102-qa1",
+  "source_commit": "19294c833de1bf045e68e2f3be94ad9011a58511",
+  "source_inputs_sha256": "5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87",
+  "version": "0.1.0-dev.proapps24analyticsidentitycandidate53r3"
+}

@@ -1,0 +1,13 @@
+{
+  "case": "C53r3-normal-install-and-analytics232-five-OS-AMD64-QA1",
+  "source_inputs_sha256": "5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87",
+  "maximum_each_case_dispatch": 1,
+  "real_KVM_required": true,
+  "normal_signed_C52_baseline_programme": true,
+  "baseline_analytics231_source": "normal_compiled_default_admin_install_not_historical_signed_catalogue",
+  "normal_signed_C53r3_programme_upgrade": true,
+  "signed_232_application_update": true,
+  "new_or_existing_fixture_may_not_replay_uncertain_mutations": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}
