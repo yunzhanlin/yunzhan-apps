@@ -1,8 +1,10 @@
 {
+  "QA_only_change": "canonical JSON roundtrip before comparing persisted and live schema; no values or records removed",
   "all50_commercial": false,
   "all_five_original_programme_preservation_helpers_byte_exact": true,
-  "cohort": "C54-native-five-OS-QA1",
+  "cohort": "C54-native-five-OS-QA2",
   "fresh_host_business_AST_unchanged_except_state_function": true,
+  "fresh_owned_guests": true,
   "matrix_OS_cases": [
     "debian12",
     "debian13",
@@ -10,23 +12,26 @@
     "ubuntu24",
     "ubuntu26"
   ],
+  "original_QA1_failure_retained": true,
+  "original_QA1_run": 41480110672,
+  "original_business_and_installer_helpers_unchanged": true,
   "original_programme_release": 431668180,
   "original_source_CI": 41471366385,
   "original_unknown_outcomes": "observe_only",
-  "payload_sha256": "6d93812725ba9eb4a94f53693e967fcf30a8ebd1ff1ffcaefe4ab73a9b277875",
+  "payload_sha256": "60f5b38d6f3c131c13a0aae638f02a1fac8bebad5784d3e18459f4ef8f589caf",
   "reviewed_files": {
     "scripts/native-backup-retention-c54/baseline-guest.py": "37c2e7733cbfab3c23a1fb253e5dbd4a516159bb5d7f75aa2b47f32c15248a35",
     "scripts/native-backup-retention-c54/business.py": "1dd4510f0514d35fab8ba49c04c50f8666b5f28000e1acfc789c0d2e9e17b94c",
     "scripts/native-backup-retention-c54/capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
-    "scripts/native-backup-retention-c54/cases.json": "2b0ce2ccced891948c449415ddf1ee269580fa7c9e6d1164096870f531733f6a",
-    "scripts/native-backup-retention-c54/cold.py": "b6a000cf2f8acc356ecab21f8dc5ec5b4b4296e4d6e0e44da140b854074aea6d",
+    "scripts/native-backup-retention-c54/cases.json": "eed19ae465c9e4e60727d46e05cae79686677725dab8b100f77dae92879a0876",
+    "scripts/native-backup-retention-c54/cold.py": "0eaac70e19d39d59ce552ea4e88f293fd34013143fd0572dadd92af59360b5d7",
     "scripts/native-backup-retention-c54/guest.py": "502e62a55cb32b8b91a6bf2db5b1d8e38b9f495d44e50f4371a29137f0149242",
-    "scripts/native-backup-retention-c54/kvm.py": "f2b9d3008a5adfcb59ba7ef10d28ffb446292ee91a018c9edfe37e768b492536",
-    "scripts/native-backup-retention-c54/payload.json": "6d93812725ba9eb4a94f53693e967fcf30a8ebd1ff1ffcaefe4ab73a9b277875",
+    "scripts/native-backup-retention-c54/kvm.py": "3f6955e7c1e1e48843a7efe8c7a718868b67aaefe7b10cc11809299d45eb186a",
+    "scripts/native-backup-retention-c54/payload.json": "60f5b38d6f3c131c13a0aae638f02a1fac8bebad5784d3e18459f4ef8f589caf",
     "scripts/native-backup-retention-c54/preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
     "scripts/native-backup-retention-c54/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
   },
   "shell_blocks_syntax_checked": 4,
   "source_inputs_sha256": "2b8e71c50b16ba6008955a4d9168b195a087e3063412445a0596f27b53b1bfb9",
-  "workflow_sha256": "4ac9610ab442be7743de734c2e9b47e56dadbf46c92733612b25476fe7c11f44"
+  "workflow_sha256": "8238ef2f50ee3a4eff3c49d3b27419ecefd4f19d63700bbee2a987478cdf66da"
 }

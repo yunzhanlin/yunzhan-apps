@@ -19,7 +19,7 @@ try:
    break
   except Exception:assert time.monotonic()<deadline;time.sleep(1)
  assert json.loads(pathlib.Path('/opt/panel/current/SOURCE_INPUTS.json').read_bytes())['inputs_sha256']==intent['source_inputs_sha256']
- time.sleep(18);a=json.loads((base/'evidence/before-hard-powerloss-original113.json').read_bytes());z=snapshot();save('after-hard-powerloss-original113.json',z);assert a['schema']==z['schema']and a['boot']==intent['boot']and z['boot']==boot
+ time.sleep(18);a=json.loads((base/'evidence/before-hard-powerloss-original113.json').read_bytes());z=json.loads(json.dumps(snapshot()));save('after-hard-powerloss-original113.json',z);assert a['schema']==z['schema']and a['boot']==intent['boot']and z['boot']==boot
  for key in('nss','packages','NFS_state','protected_files'):assert a[key]==z[key],key
  for name,v in a['lifetimes'].items():
   now=z['lifetimes'][name];assert now['MainPID']!='0'and now['ActiveState']=='active'and now['InvocationID']!=v['InvocationID']and now['exe_sha256']==v['exe_sha256']
