@@ -1,5 +1,5 @@
 {
-  "case": "C53r3-normal-install-and-analytics232-five-OS-AMD64-QA1",
+  "case": "C53r3-QA2-Ubuntu24-and26-initial-CPU-warmup",
   "source_inputs_sha256": "5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87",
   "maximum_each_case_dispatch": 1,
   "real_KVM_required": true,
@@ -9,5 +9,11 @@
   "signed_232_application_update": true,
   "new_or_existing_fixture_may_not_replay_uncertain_mutations": true,
   "Main_changed": false,
-  "all50_commercial": false
+  "all50_commercial": false,
+  "original_QA1_run_preserved": 41451900289,
+  "original_two_cases_successful_programme_upgrade_not_replayed": true,
+  "only_new_disposable_cases": [
+    "ubuntu24",
+    "ubuntu26"
+  ]
 }

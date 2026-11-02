@@ -1,4 +1,4 @@
-name: Actual analytics232 C53r3 five-OS AMD64 install and preserving upgrade
+name: Actual analytics232 C53r3 QA2 Ubuntu24 and26 after initial CPU observation
 
 on:
   push:
@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+        os_case: [ubuntu24, ubuntu26]
     runs-on: ubuntu-24.04
     timeout-minutes: 100
     steps:
@@ -74,7 +74,7 @@ jobs:
           cp scripts/native-analytics-c53r3/payload.json "$RUNNER_TEMP/native-analytics-c53r3-assets/assets.json"
           python3 - "$RUNNER_TEMP/native-analytics-c53r3-assets" <<'PY'
           import ast,hashlib,json,pathlib,sys
-          base=pathlib.Path(sys.argv[1]);assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='2e4090a756cd03c6e682fac93d16b9b8193e471777bd51e17b34acd850cd7a26'
+          base=pathlib.Path(sys.argv[1]);assert hashlib.sha256((base/'assets.json').read_bytes()).hexdigest()=='ec356bb3726e96f9361cfcd7ef65493a9fb4dd87aa6c43220c97c850d20c039a'
           manifest=json.loads((base/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='5205013d8b65fea12a4f3dd584c3a6cc49afa3bd7582c59e5f3c917cac36bb87'and len(manifest['files'])==12
           for name,digest in manifest['files'].items():
               assert pathlib.PurePath(name).name==name and hashlib.sha256((base/name).read_bytes()).hexdigest()==digest

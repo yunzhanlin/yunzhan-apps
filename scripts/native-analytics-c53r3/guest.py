@@ -45,6 +45,18 @@ def guard(label):
   r=subprocess.run(['/opt/panel/current/bin/panel-executor','--check-program-upgrade-queues'],capture_output=True,timeout=35);u=unit('panel-mysql-overwrite-recovery.service');save(label+'-guard-'+str(i)+'.json',{'exit':r.returncode,'stdout_hex':r.stdout.hex(),'stderr_hex':r.stderr.hex(),'recovery_unit':u})
   if r.returncode==0:assert r.stdout==r.stderr==b'';return
   assert i<8 and r.stdout==b''and b'panel-mysql-overwrite-recovery.service'in r.stderr and u['ActiveState']=='activating'and u['SubState']=='condition'and u['MainPID']=='0';time.sleep(1)
+def wait_initial_cpu_observation():
+ deadline=time.monotonic()+90;observations=[]
+ while True:
+  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True,timeout=3))as db:
+   db.execute('PRAGMA query_only=ON');db.execute('BEGIN');conditions=db.execute('SELECT metric,active_since,clear_since,last_value FROM monitor_conditions ORDER BY metric').fetchall();samples=db.execute('SELECT sampled_at,state,error,boot_id,cpu_total,cpu_idle,cpu_percent FROM monitor_samples ORDER BY id DESC LIMIT 2').fetchall()
+  metrics={x[0]for x in conditions};observations.append({'at':time.time(),'conditions':conditions,'latest_samples':samples})
+  assert metrics<= {'collector','cpu','disk','memory','service:nginx:nginx'}
+  if metrics=={'collector','cpu','disk','memory','service:nginx:nginx'}and len(samples)==2 and all(x[1]=='ok'and x[2]==''and x[3]==boot for x in samples)and samples[0][6]is not None:
+   cpu=next(x for x in conditions if x[0]=='cpu');assert 0<=cpu[3]<=100
+   if cpu[1]==cpu[2]==0 and cpu[3]<80 and cpu[3]==samples[0][6]:
+    save('initial-CPU-monitor-readonly-warmup.json',{'ok':True,'no_configuration_or_job_mutations':True,'all_original_observations':observations,'first_valid_CPU_sample_completed_before_upgrade_baseline':True});proof['initial_CPU_monitor_settled_before_baseline']=True;return
+  assert time.monotonic()<deadline,'Fresh initial CPU sample unresolved; no installer attempted';time.sleep(1)
 def run_once(label,args,timeout):
  save(label+'-once-intent.json',{'args':args,'maximum_submissions':1,'unknown_observe_only':True})
  with(evidence/(label+'.stdout.log')).open('xb')as out,(evidence/(label+'.stderr.log')).open('xb')as err:r=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=timeout)
@@ -92,7 +104,7 @@ try:
   finally:connection.close()
   save('legacy-event-'+str(i)+'-original-HTTP-response.json',{'status':status,'original_body_hex':body.hex(),'headers':headers});assert status==204 and body==b''and not any(k.lower()=='set-cookie'for k,v in headers)
  report=api('actual-legacy231-two-event-report','/analytics/sites/'+own_site+'/report');assert report['overview']['pv']==report['overview']['uv']==2 and report['overview']['unique_network_peers']==1 and 'client_addresses'not in report
- guard('before-programme-upgrade');before=snapshot();save('before-C53r3-upgrade-entire113.json',before)
+ wait_initial_cpu_observation();guard('before-programme-upgrade');before=snapshot();save('before-C53r3-upgrade-entire113.json',before)
  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:legacy_rows=db.execute('SELECT id,data,ip_hash FROM analytics_events WHERE site_id=?ORDER BY id',(own_site,)).fetchall()
  assert len(legacy_rows)==2 and all('client_address'not in x[1]for x in legacy_rows)
  save('original-compiled231-baseline.json',{'normal_compiled_default_install_not_historical_signed_catalogue_claim':True,'original_job':legacy_job,'site_id':own_site,'domain':domain,'original_installed_hex':installed_original.hex(),'original_vhost_hex':original_vhost.hex(),'original_legacy_rows':legacy_rows})
