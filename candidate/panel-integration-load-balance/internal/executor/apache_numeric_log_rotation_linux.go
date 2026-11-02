@@ -299,14 +299,14 @@ func (s *Service) runApacheNumericLogRotationOnce(ctx context.Context, now time.
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" || os.Geteuid() != 0 {
 		return nil
 	}
-	manifest, err := s.readSoftwareManifest("apache-waf")
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
+	if err := ctx.Err(); err != nil {
+		return err
 	}
+	_, native, err := s.apacheNumericInstalledConfig()
 	if err != nil {
 		return err
 	}
-	if manifest.Version != core.ApacheWAFNativeBodyVersion {
+	if !native {
 		return nil
 	}
 	logs := s.apacheNumericLogService()
@@ -325,11 +325,11 @@ func (s *Service) runApacheNumericLogRotationOnce(ctx context.Context, now time.
 		return err
 	}
 	defer lock.Close()
-	manifest, err = s.readSoftwareManifest("apache-waf")
+	cfg, native, err := logs.apacheNumericInstalledConfig()
 	if err != nil {
 		return err
 	}
-	if manifest.Version != core.ApacheWAFNativeBodyVersion {
+	if !native {
 		return errors.New("Apache 原签名安装版本已变化，未轮转")
 	}
 	record, _, err = logs.readApacheNumericRotationRecord()
@@ -339,11 +339,10 @@ func (s *Service) runApacheNumericLogRotationOnce(ctx context.Context, now time.
 	if !record.Policy.Enabled {
 		return nil
 	}
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(manifest.Settings)
-	if err != nil {
+	if err = verifyApacheNumericRotationEngine(ctx, cfg); err != nil {
 		return err
 	}
-	if err = logs.verifyApacheWAFHealth(ctx, manifest.Version, manifest.Settings); err != nil {
+	if err = logs.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, core.WAFSettings(cfg)); err != nil {
 		return err
 	}
 	_, err = logs.runApacheNumericRotationLocked(ctx, now, lock, cfg, func(intent string) (apacheNumericLogArchive, error) {

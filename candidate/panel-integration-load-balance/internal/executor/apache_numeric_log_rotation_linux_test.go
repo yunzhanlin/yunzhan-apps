@@ -269,3 +269,55 @@ func TestApacheNumericAutomationAbsentDisabledAndRevisionNeverClearUncertainty(t
 		t.Fatal("missing durable policy")
 	}
 }
+
+func TestApacheNumericAutomationUsesActualModuleAuthorityAndPausedEngineVerification(t *testing.T) {
+	cfg := core.DefaultApacheWAFConfig()
+	cfg.Policy.Revision = 7
+	cfg.Body = &core.WAFBodyConfig{EngineJobID: core.ID(), Sites: []core.WAFBodySitePolicy{}}
+	s, original := apacheNativeRecordFixture(t, core.ApacheWAFNativeBodyVersion, cfg)
+	// A conflicting, otherwise well-shaped generic manifest cannot substitute
+	// for the Apache module record. Removing only our fixture module must report
+	// absent even while this unrelated file remains.
+	foreign := filepath.Join(s.Config.SecurityDir, "apache-waf.json")
+	other := core.DefaultApacheWAFConfig()
+	other.Policy.Revision = 999
+	data, _ := json.Marshal(map[string]any{"id": "apache-waf", "version": core.ApacheWAFNativeBodyVersion, "settings": core.WAFSettings(other)})
+	if err := os.WriteFile(foreign, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, native, err := s.apacheNumericInstalledConfig()
+	if err != nil || !native || got.Policy.Revision != 7 || got.Body == nil || got.Body.EngineJobID != cfg.Body.EngineJobID {
+		t.Fatal("did not consume real Apache module", got, native, err)
+	}
+	if apacheBodyActive(got) {
+		t.Fatal("fixture unexpectedly has active body sites")
+	}
+	if err = verifyApacheNumericRotationEngine(context.Background(), got); err == nil {
+		t.Fatal("paused sites bypassed missing sealed engine")
+	}
+	unchanged, _ := os.ReadFile(filepath.Join(s.moduleDir("apache-waf"), "installed.json"))
+	if !bytes.Equal(original, unchanged) {
+		t.Fatal("reader rewrote module identity")
+	}
+	if err = os.Remove(filepath.Join(s.moduleDir("apache-waf"), "installed.json")); err != nil {
+		t.Fatal(err)
+	}
+	if _, native, err = s.apacheNumericInstalledConfig(); err != nil || native {
+		t.Fatal("unrelated software manifest adopted", native, err)
+	}
+	after, _ := os.ReadFile(foreign)
+	if !bytes.Equal(after, data) {
+		t.Fatal("foreign manifest changed")
+	}
+	legacy, _ := apacheNativeRecordFixture(t, core.ApacheWAFVersion, core.DefaultApacheWAFConfig())
+	if _, native, err = legacy.apacheNumericInstalledConfig(); err != nil || native {
+		t.Fatal("metadata-only app granted numerical automation", native, err)
+	}
+	broken, _ := apacheNativeRecordFixture(t, core.ApacheWAFNativeBodyVersion, cfg)
+	if err = os.Chmod(filepath.Join(broken.moduleDir("apache-waf"), "installed.json"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = broken.apacheNumericInstalledConfig(); err == nil {
+		t.Fatal("unsafe module authority treated as absent/default")
+	}
+}

@@ -39,7 +39,9 @@ test('actual routing cancels only explicit health reads, never mutations or thei
 });
 test('retired legacy lifecycle entry refuses before reading credentials or executing SSH',()=>{
  const entry=new URL('./test-software-routing-install-browser.mjs',import.meta.url),text=readFileSync(entry,'utf8');
- assert(text.indexOf("throw Error('旧生命周期验收入口已退役")<text.indexOf('fs.readFileSync('));
- assert(text.indexOf("throw Error('旧生命周期验收入口已退役")<text.indexOf("const backup=ssh("));
+ const refusal=text.indexOf("throw Error('旧生命周期验收入口已退役");assert(refusal>=0);
+ for(const sink of ['fs.readFileSync(',"const backup=ssh("]){const at=text.indexOf(sink);assert(at<0||refusal<at);}
+ const statements=text.split(/\r?\n/).map(line=>line.trim()).filter(line=>line&&!line.startsWith('//'));
+ assert.equal(statements.length,1);assert.match(statements[0],/^throw Error\('旧生命周期验收入口已退役[^']*'\);$/);
  const result=spawnSync(process.execPath,[fileURLToPath(entry)],{encoding:'utf8',timeout:5000});assert.equal(result.status,1);assert.match(result.stderr,/旧生命周期验收入口已退役/);assert.equal(result.stdout,'');
 });

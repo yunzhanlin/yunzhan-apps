@@ -20,6 +20,36 @@ type apacheNumericAutomationRequest struct {
 	MaxAgeMinutes    int   `json:"max_age_minutes"`
 }
 
+// Apache is installed as a module. The separate software-manifest reader is a
+// closed authority for other applications and must not be widened or used here.
+func (s *Service) apacheNumericInstalledConfig() (core.WAFConfig, bool, error) {
+	record, err := s.moduleInstalledRecord("apache-waf")
+	if errors.Is(err, os.ErrNotExist) {
+		return core.WAFConfig{}, false, nil
+	}
+	if err != nil {
+		return core.WAFConfig{}, false, err
+	}
+	if record["version"] != core.ApacheWAFNativeBodyVersion {
+		return core.WAFConfig{}, false, nil
+	}
+	settings, ok := record["settings"].(map[string]any)
+	if !ok {
+		return core.WAFConfig{}, false, errors.New("Apache 原安装策略缺失，未采用默认值")
+	}
+	cfg, err := core.DecodeApacheWAFNativeBodyConfig(settings)
+	return cfg, true, err
+}
+
+func verifyApacheNumericRotationEngine(ctx context.Context, cfg core.WAFConfig) error {
+	if cfg.Body == nil || !core.ValidID(cfg.Body.EngineJobID) {
+		return errors.New("须先明确选择已验证的本机请求体引擎；不会自动构建或启用防护")
+	}
+	// Numerical logs can outlive active sites. Rehash the selected sealed engine
+	// even when every site is paused, rather than relying on active-only health.
+	return verifyApacheBodyBuildContext(ctx, cfg.Body.EngineJobID)
+}
+
 func (s *Service) apacheNumericRotationFence(ctx context.Context, intent string) error {
 	if err := ctx.Err(); err != nil {
 		return err
@@ -96,19 +126,17 @@ func (s *Service) configureApacheNumericAutomation(ctx context.Context, request 
 		if err = s.apacheNumericLogHealthLocked(ctx); err != nil {
 			return nil, err
 		}
-		installed, readErr := s.moduleInstalledRecord("apache-waf")
-		if readErr != nil || installed["version"] != core.ApacheWAFNativeBodyVersion {
+		cfg, native, readErr := s.apacheNumericInstalledConfig()
+		if readErr != nil {
+			return nil, readErr
+		}
+		if !native {
 			return nil, errors.New("Apache 原签名请求体安装无法核实")
 		}
-		settings, ok := installed["settings"].(map[string]any)
-		if !ok {
-			return nil, errors.New("Apache 原安装策略缺失，未采用默认值")
+		if err = verifyApacheNumericRotationEngine(ctx, cfg); err != nil {
+			return nil, err
 		}
-		cfg, decodeErr := core.DecodeApacheWAFNativeBodyConfig(settings)
-		if decodeErr != nil || cfg.Body == nil || !core.ValidID(cfg.Body.EngineJobID) {
-			return nil, errors.New("须先明确选择已验证的本机请求体引擎；不会自动构建或启用防护")
-		}
-		if err = s.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, settings); err != nil {
+		if err = s.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, core.WAFSettings(cfg)); err != nil {
 			return nil, err
 		}
 		record.Revision = cfg.Policy.Revision

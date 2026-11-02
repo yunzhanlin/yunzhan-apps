@@ -12,13 +12,24 @@ const input=JSON.parse(execFileSync('/usr/bin/tar',['-xOf',archive,prefix+'/SOUR
 assert(input.format===1&&sha(JSON.stringify(input.files))===input.inputs_sha256);
 const output=path.join(root,'candidate/panel-integration-load-balance');assert(!fs.existsSync(output),'inspect original export; never overwrite a source cohort');
 const build=fs.readFileSync(panel+'/packaging/build-release.sh','utf8');assert.equal(sha(build),input.files['packaging/build-release.sh'].sha256);
-const scripts=new Set(['scripts/env.sh','scripts/upgrade-running-development.sh']),pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+((?:scripts\/[a-z0-9-]+\.mjs)(?:\s+scripts\/[a-z0-9-]+\.mjs)*)/g)].flatMap(v=>v[1].split(/\s+/));
-assert(pending.includes('scripts/test-load-balance-stream.mjs')&&pending.includes('scripts/test-load-balance-stream-account-entry.mjs'));
-while(pending.length){
- const name=pending.shift();if(scripts.has(name))continue;
- const bytes=fs.readFileSync(panel+'/'+name);assert.equal(sha(bytes),input.files[name]?.sha256,name);scripts.add(name);
- for(const match of bytes.toString().matchAll(/from\s*['"]\.\/([a-z0-9-]+\.mjs)['"]/g))pending.push('scripts/'+match[1]);
+function normalBuildScripts(panel,input,build){
+ const scripts=new Set(['scripts/env.sh','scripts/upgrade-running-development.sh']);
+ const pending=[...build.matchAll(/\bnode(?:\s+--[a-z-]+)*\s+((?:scripts\/[a-z0-9-]+\.mjs)(?:\s+scripts\/[a-z0-9-]+\.mjs)*)/g)].flatMap(v=>v[1].split(/\s+/));
+ assert(pending.includes('scripts/test-load-balance-stream.mjs')&&pending.includes('scripts/test-load-balance-stream-account-entry.mjs'));
+ while(pending.length){
+  const name=pending.shift();if(scripts.has(name))continue;
+  assert(/^scripts\/[a-z0-9-]+\.(?:mjs|html|json)$/.test(name),'invalid frozen build dependency');
+  assert(scripts.size<1024,'normal build dependency capacity exceeded');
+  const info=fs.lstatSync(panel+'/'+name);assert(info.isFile()&&!info.isSymbolicLink()&&info.nlink===1&&info.size<=2<<20,name);
+  const bytes=fs.readFileSync(panel+'/'+name);assert.equal(sha(bytes),input.files[name]?.sha256,name);scripts.add(name);
+  for(const match of bytes.toString().matchAll(/from\s*['"]\.\/([a-z0-9-]+\.mjs)['"]/g))pending.push('scripts/'+match[1]);
+  // Contract tests also consume literal sibling fixtures via new URL(). They
+  // are build inputs even when not imported (notably the retired safety entry).
+  for(const match of bytes.toString().matchAll(/\bnew\s+URL\(\s*['"]\.\/([a-z0-9-]+\.(?:mjs|html|json))['"]\s*,\s*import\.meta\.url\s*\)/g))pending.push('scripts/'+match[1]);
+ }
+ return scripts;
 }
+const scripts=normalBuildScripts(panel,input,build);
 const allowed=name=>['go.mod','go.sum','dev/provision-app.sh'].includes(name)||scripts.has(name)||/^(?:cmd|internal|packaging|web\/src|web\/public)\//.test(name)||/^dev\/[A-Za-z0-9_@.\\-]+\.(?:service|timer|mount|conf)$/.test(name)||/^web\/(?:index.html|package.json|package-lock.json|tsconfig.json|tsconfig.node.json|vite.config.ts)$/.test(name)||/^mobile\//.test(name)&&!/(?:^|\/)(?:build|\.build|\.gradle|\.swiftpm|xcuserdata|\.DS_Store)(?:\/|$)/.test(name)&&!name.endsWith('local.properties');
 const selected=Object.keys(input.files).filter(allowed).sort(),payload=[];
 for(const name of selected){

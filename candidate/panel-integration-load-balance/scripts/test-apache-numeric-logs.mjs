@@ -113,7 +113,7 @@ function automaticComponent(mode='success',version='2.4.0'){
   return mode==='bad-status'?{...structuredClone(server),record_sha256:''}:structuredClone(server);
  }});
  const bindings={...autoGuards,props,computed:vue.computed,ref:vue.ref,emit:(...event)=>events.push(event),ElMessageBox:{prompt:async(text,title,opts)=>({value:opts.inputPlaceholder})}};
- const logic=new Function('bindings','with(bindings){'+autoActual+';return{applied,draft,draftRevision,known,uncertain,error,receipt,reading,writing,dirty,staleDraft,readStatus,save,retain,resetDraft};}')(bindings);
+ const logic=new Function('bindings','with(bindings){'+autoActual+';return{applied,draft,draftRevision,known,uncertain,error,receipt,reading,writing,dirty,staleDraft,validDraft,availabilityChanged,readStatus,save,retain,resetDraft};}')(bindings);
  return{props,calls,events,logic,server};
 }
 test('automatic log status rejects contradictory identity, unsafe privacy fields and capacity',()=>{
@@ -134,7 +134,7 @@ test('actual automatic component never retries a lost or foreign acknowledgement
   const t=automaticComponent(mode);await t.logic.readStatus(true);t.logic.draft.value.enabled=true;await t.logic.save();
   assert.equal(t.logic.uncertain.value,true);assert.equal(t.logic.known.value,false);assert.match(t.logic.error.value,/不会自动重试/);
   await t.logic.readStatus();await t.logic.save();assert.equal(t.calls.length,2);
-  await t.logic.readStatus(true);assert.equal(t.calls.length,3);assert.equal(t.logic.uncertain.value,false);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);assert.equal(t.calls.filter(x=>x.method==='POST').length,1);
+  await t.logic.readStatus(true);assert.equal(t.calls.length,3);assert.equal(t.logic.uncertain.value,false);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);assert.equal(t.calls.filter(x=>x.method==='POST').length,1);assert.equal(t.logic.draftRevision.value,2);t.logic.draft.value.rotate_mib=4;assert.equal(t.logic.staleDraft.value,false);
  }
 });
 test('actual automatic component serializes double saves and ignores late or malformed reads',async()=>{
@@ -150,4 +150,28 @@ test('an unknown automatic result also blocks a new manual rotation',async()=>{
  const child=automaticComponent();child.server.record.state='unknown';child.server.record.error_code='rotation_failed';await child.logic.readStatus(true);
  assert(child.events.some(x=>x[0]==='blocked'&&x[1]===true));assert.equal(child.calls.filter(x=>x.method==='POST').length,0);
  for(const version of ['2.3.0','2.4.1','v2.4.0','']){const old=automaticComponent('success',version);await old.logic.readStatus(true);assert.equal(old.calls.length,0)}
+});
+
+test('actual availability callback preserves unsaved drafts across tab switches',async()=>{
+ assert.match(autoSource,/watch\(\(\)=>\[props\.active,props\.installed,props\.version\],availabilityChanged/);
+ const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=4;
+ t.props.active=false;t.logic.availabilityChanged([false,true,'2.4.0'],[true,true,'2.4.0']);
+ assert.equal(t.calls.length,1);assert.equal(t.logic.draft.value.rotate_mib,4);
+ t.props.active=true;t.logic.availabilityChanged([true,true,'2.4.0'],[false,true,'2.4.0']);await new Promise(setImmediate);
+ assert.equal(t.calls.length,2);assert.equal(t.logic.draft.value.rotate_mib,4);assert.equal(t.logic.applied.value.policy.rotate_mib,16);assert.equal(t.logic.draftRevision.value,1);assert.equal(t.logic.dirty.value,true);assert.equal(t.calls.filter(x=>x.method==='POST').length,0);
+});
+test('clean forms follow external revisions while edited forms retain their original revision',async()=>{
+ const t=automaticComponent();await t.logic.readStatus(true);t.server.policy.rotate_mib=t.server.record.policy.rotate_mib=8;t.server.policy_revision=t.server.record.config_revision=2;
+ await t.logic.readStatus();assert.equal(t.logic.draft.value.rotate_mib,8);assert.equal(t.logic.draftRevision.value,2);assert.equal(t.logic.dirty.value,false);
+ t.logic.draft.value.rotate_mib=4;assert.equal(t.logic.staleDraft.value,false);await t.logic.save();assert.equal(t.calls.at(-1).body.expected_revision,2);assert.equal(t.logic.applied.value.policy_revision,3);
+});
+test('availability invalidates late responses and resets only a changed installation identity',async()=>{
+ const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=4;
+ t.props.installed=false;t.logic.availabilityChanged([true,false,'2.4.0'],[true,true,'2.4.0']);assert.equal(t.logic.applied.value,undefined);assert.equal(t.logic.draft.value.rotate_mib,16);assert.equal(t.calls.length,1);
+ t.props.installed=true;t.logic.availabilityChanged([true,true,'2.4.0'],[true,false,'2.4.0']);await new Promise(setImmediate);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);
+});
+test('incomplete or out-of-bound thresholds never create an uncertain mutation',async()=>{
+ for(const value of [undefined,null,0,29,1.5]){
+  const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=value;assert.equal(t.logic.validDraft.value,false);await t.logic.save();assert.equal(t.calls.filter(x=>x.method==='POST').length,0);assert.equal(t.logic.uncertain.value,false);
+ }
 });

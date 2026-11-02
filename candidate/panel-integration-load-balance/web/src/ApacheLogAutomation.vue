@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,onBeforeUnmount,ref,watch} from "vue";
 import {ElMessageBox} from "element-plus";
-import {apacheAutomationDefaults,apacheAutomationStatus,sameApacheAutomationPolicy,type ApacheAutomationStatus} from "./apacheLogAutomation";
+import {apacheAutomationDefaults,apacheAutomationStatus,apacheAutomationPolicy,sameApacheAutomationPolicy,type ApacheAutomationStatus} from "./apacheLogAutomation";
 import {formatPanelDateTime} from "./panelTime";
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 const props=defineProps<{api:API;active:boolean;installed:boolean;version?:string;parentBusy:boolean}>();
@@ -12,6 +12,7 @@ let epoch=0,disposed=false,initialized=false,inventoryIdentity="";
 const supported=computed(()=>props.installed&&props.version==="2.4.0");
 const current=(ticket:number)=>!disposed&&props.active&&ticket===epoch;
 const dirty=computed(()=>!!applied.value&&!sameApacheAutomationPolicy(draft.value,applied.value.policy));
+const validDraft=computed(()=>apacheAutomationPolicy(draft.value));
 const staleDraft=computed(()=>dirty.value&&applied.value?.policy_revision!==draftRevision.value);
 const busy=computed(()=>reading.value||writing.value||confirming.value||props.parentBusy);
 const unknownRotation=computed(()=>["rotating","unknown"].includes(applied.value?.record?.state||""));
@@ -27,8 +28,10 @@ async function readStatus(explicit=false){
   const result=await props.api<unknown>("/software/apache-waf/body-log/automatic");
   if(!current(ticket))return;
   if(!apacheAutomationStatus(result))throw Error("自动轮转配置、记录摘要或历史无法完整核实");
+  const preserveDraft=initialized&&!!applied.value&&!sameApacheAutomationPolicy(draft.value,applied.value.policy);
   applied.value=result;known.value=true;error.value="";if(explicit)uncertain.value=false;
-  if(!initialized)resetDraft();
+  if(!preserveDraft)resetDraft();
+  else if(sameApacheAutomationPolicy(draft.value,result.policy))draftRevision.value=result.policy_revision;
   const identity=JSON.stringify([result.record?.id,result.record?.state,result.record?.archive_count,result.record?.archive?.id]);
   if(inventoryIdentity&&inventoryIdentity!==identity)emit("inventory-change");
   inventoryIdentity=identity;
@@ -37,7 +40,7 @@ async function readStatus(explicit=false){
  finally{if(current(ticket))reading.value=false;}
 }
 async function save(){
- if(busy.value||!known.value||uncertain.value||!dirty.value||staleDraft.value)return;
+ if(busy.value||!known.value||uncertain.value||!dirty.value||staleDraft.value||!validDraft.value)return;
  const ticket=epoch,submitted={...draft.value},revision=draftRevision.value;
  writing.value=true;receipt.value="";error.value="";
  try{
@@ -70,7 +73,15 @@ async function retain(){
  }catch(e){if(current(ticket)){known.value=false;uncertain.value=true;emit("blocked",true);error.value="保留结果需核对："+(e as Error).message+"。请读取原状态，不要重复提交。";}}
  finally{if(current(ticket))writing.value=false;}
 }
-watch(()=>[props.active,props.installed,props.version],()=>{epoch++;initialized=false;inventoryIdentity="";known.value=false;uncertain.value=false;reading.value=false;writing.value=false;confirming.value=false;applied.value=undefined;error.value="";receipt.value="";emit("blocked",true);if(props.active&&supported.value)void readStatus(true);},{immediate:true});
+function availabilityChanged(next:readonly unknown[],previous?:readonly unknown[]){
+ const changed=!previous||next[1]!==previous[1]||next[2]!==previous[2];
+ epoch++;uncertain.value=uncertain.value||writing.value;
+ known.value=false;reading.value=false;writing.value=false;confirming.value=false;receipt.value="";
+ if(changed){initialized=false;inventoryIdentity="";applied.value=undefined;draft.value=apacheAutomationDefaults();draftRevision.value=0;uncertain.value=false;error.value="";}
+ emit("blocked",true);
+ if(props.active&&supported.value)void readStatus(true);
+}
+watch(()=>[props.active,props.installed,props.version],availabilityChanged,{immediate:true});
 const timer=setInterval(()=>{void readStatus();},15000);
 onBeforeUnmount(()=>{disposed=true;epoch++;clearInterval(timer);});
 </script>
@@ -87,8 +98,9 @@ onBeforeUnmount(()=>{disposed=true;epoch++;clearInterval(timer);});
     <el-form-item label="文件大小触发（MiB）"><el-input-number v-model="draft.rotate_mib" :min="1" :max="28" :disabled="busy||!known||uncertain" aria-label="Apache 自动轮转大小阈值"/></el-form-item>
     <el-form-item label="非空日志轮转窗口（分钟）"><el-input-number v-model="draft.max_age_minutes" :min="10" :max="1440" :disabled="busy||!known||uncertain" aria-label="Apache 自动轮转时间阈值"/></el-form-item>
    </el-form>
-   <div class="automation-actions"><el-button type="primary" :loading="writing" :disabled="busy||!known||uncertain||!dirty||staleDraft" @click="save">保存自动轮转策略</el-button><el-button :disabled="busy||!dirty||!known" @click="resetDraft">放弃草稿</el-button><span v-if="dirty">有未保存修改</span></div>
+   <div class="automation-actions"><el-button type="primary" :loading="writing" :disabled="busy||!known||uncertain||!dirty||staleDraft||!validDraft" @click="save">保存自动轮转策略</el-button><el-button :disabled="busy||!dirty||!known" @click="resetDraft">放弃草稿</el-button><span v-if="dirty">有未保存修改</span></div>
   </template>
+  <p v-if="!validDraft&&supported">请输入完整阈值：大小为 1–28 MiB，时间为 10–1440 分钟。</p>
   <template v-if="known&&applied">
    <p>已保存策略：{{applied.policy.enabled?'开启':'关闭'}} · {{applied.policy.rotate_mib}} MiB / {{applied.policy.max_age_minutes}} 分钟 · 修订 {{applied.policy_revision}}</p>
    <div v-if="applied.record" class="automation-status" role="status">
