@@ -151,7 +151,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
           <p>缩短保留天数会在后续采集时清理过期事件，不能恢复；导出统计只包含聚合结果，不是原始事件备份。</p>
           <h4>同源采集代理（自动管理）</h4><p>开启立即自动添加到对应网站配置，关闭立即移除；执行器先备份，再校验 Nginx 并应用，失败恢复旧配置。仅允许 tracker.js、auto.js 和 event，不代理面板管理接口。</p><p>访客入口：{{site?.domain}}/__yunzhan/analytics/ → 本机采集服务。{{settings.proxy_endpoint ? `已应用的内部上游：http://${settings.proxy_endpoint}/collect/analytics/` : '当前没有已应用的受管采集代理。'}}</p>
           <h4>{{settings.auto_inject_html ? '已选择 HTML 自动接入' : '手动添加 JS 采集标签'}}</h4><p v-if="settings.auto_inject_html">无需修改模板。仅本网站启用，关闭自动接入会从 Nginx 配置撤掉响应过滤器，模板文件始终保持原样。已经手动加入的同一采集器会去重，不重复计数。</p><p v-else>将下列代码加入 {{site?.domain}} 的 HTML 模板；或先加载可选引擎，再开启本网站的 HTML 自动接入。</p><p>浏览器始终使用当前网站的域名与协议；内部上游不应换成网站域名，否则可能循环代理。严格 CSP、压缩上游或缺少明确 head 的页面可能需要手动接入；自动接入不改写这些页面。</p><pre v-if="!settings.auto_inject_html">{{snippet}}</pre>
-          <h4>能力与边界</h4><ul><li v-for="note in report?.limitations || []" :key="note">{{note}}</li><li>全机最多保留 200000 条事件；每秒最多接收 100 个请求，同一网络对端每分钟最多 1200 个请求。达到上限会拒绝新采集，不伪造统计。</li></ul>
+          <h4>能力与边界</h4><ul><li v-for="note in report?.limitations || []" :key="note">{{note}}</li><li>全机最多保留 200000 条事件；每个面板进程每秒最多接收 100 个请求。已核实的客户端地址每分钟最多接收 1200 个通过格式校验的采集请求；未核实地址的旧代理采集按网站和浏览器访客标识分别计数，每个面板进程每分钟最多核准 6000 次采集处理，独立限额表最多保留 6000 个当分钟计数项；跨分钟的延迟请求会重新核对当前总限额。达到上限会拒绝新采集，不伪造统计。</li></ul>
         </template><el-empty v-else description="先选择网站" />
       </el-tab-pane>
       <el-tab-pane label="版本与更新" name="version"><slot name="version" /></el-tab-pane>

@@ -46,8 +46,19 @@ jobs:
       - name: Analytics managed address trust and private Root include race fixtures (not installed Nginx acceptance)
         working-directory: candidate/panel-integration-load-balance
         run: |
-          sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core -run '^TestAnalytics(ManagedClient|LegacyProxyVisitors|ClientAddressReport|ClientProxyIdentity)'
-          sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestNativeAnalyticsProxyIdentity'
+          sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core -run '^TestAnalytics(ManagedClient|LegacyProxyVisitors|ClientAddressReport|ClientProxyIdentity|MinuteAdmission|CarriedRequest|StaleOrReversedClock|ExactClientMinute|ConcurrentCarried)'
+          sudo "$(command -v go)" test -json -race -count=1 -p 1 -tags=qa_analytics_identity -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestNativeAnalyticsProxyIdentity' > "$RUNNER_TEMP/analytics-identity-root-native.jsonl"
+          python3 - "$RUNNER_TEMP/analytics-identity-root-native.jsonl" <<'PY'
+          import json,pathlib,sys
+          rows=[json.loads(line)for line in pathlib.Path(sys.argv[1]).read_text().splitlines()if line.strip()]
+          tests=[row['Test']for row in rows if row.get('Action')=='pass'and row.get('Test')]
+          roots={name for name in tests if '/'not in name}
+          expected={'TestNativeAnalyticsProxyIdentityPrivateFileAndStableRevalidation','TestNativeAnalyticsProxyIdentityRejectsUntrustedKeyAndParents','TestNativeAnalyticsProxyIdentityPreservesChangedOrPartialOriginal','TestNativeAnalyticsProxyIdentityCapacityRefusesWithoutDeletion'}
+          assert roots==expected and len(tests)==len(set(tests))==23,('Native Root identity tests must actually execute: expected4 roots and23 pass records',roots,len(tests))
+          assert not any(row.get('Action')in('skip','fail')for row in rows),'Native Root identity tests may not skip or fail'
+          assert sum(row.get('Action')=='pass'and not row.get('Test')for row in rows)==1,'Missing actual Go package pass'
+          print('Actual native Root identity execution:4 roots,21 leaf scenarios,23 PASS records,zero skips/failures')
+          PY
           sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestAnalyticsClientAddressManifestRequiresBothHandlersAndExactIdentity$'
       - name: Native alert and PM2 race regression with the original candidate source
         working-directory: candidate/panel-integration-load-balance
@@ -72,3 +83,11 @@ jobs:
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
         working-directory: candidate/panel-integration-load-balance
         run: go test -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate"
+      - name: Retain original synthetic Root test events for independent execution verification
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: analytics-root-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/analytics-identity-root-native.jsonl
+          retention-days: 7
+          if-no-files-found: error

@@ -37,6 +37,7 @@ type Server struct {
 	analyticsRateMu    sync.Mutex
 	analyticsRates     map[string]analyticsRate
 	analyticsGlobal    analyticsRate
+	analyticsMinute    analyticsRate
 	outboundMu         sync.Mutex
 	outboundCollectMu  sync.Mutex
 	outboundDispatchMu sync.Mutex

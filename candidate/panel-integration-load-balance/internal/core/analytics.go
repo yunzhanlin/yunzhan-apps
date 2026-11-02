@@ -27,6 +27,10 @@ const analyticsCapacity = 200000
 const analyticsReportLimit = 20000
 const analyticsReportBytes = 8 << 20
 
+const analyticsGlobalSecondLimit = 100
+const analyticsMinuteGrantLimit = analyticsGlobalSecondLimit * 60
+const analyticsIdentityMinuteLimit = 1200
+
 //go:embed analytics_tracker.js
 var analyticsTracker string
 
@@ -209,6 +213,7 @@ func (a *Server) analyticsAllowed(ip string, now time.Time) bool {
 		return false
 	}
 	a.analyticsGlobal.Count++
+	a.analyticsMinute.Count++
 	return true
 }
 
@@ -216,10 +221,19 @@ func (a *Server) analyticsAllowed(ip string, now time.Time) bool {
 // bounded global budget; new visitor identities cannot bypass this ceiling.
 func (a *Server) analyticsGlobalRateReady(now time.Time) bool {
 	second := now.Unix()
+	minute := second / 60
+	// Do not rewind either budget when delayed callers or the wall clock
+	// present an older window. One minute admits at most 100 * 60 grants.
+	if second < a.analyticsGlobal.Window || minute < a.analyticsMinute.Window {
+		return false
+	}
+	if a.analyticsMinute.Window != minute {
+		a.analyticsMinute = analyticsRate{Window: minute}
+	}
 	if a.analyticsGlobal.Window != second {
 		a.analyticsGlobal = analyticsRate{Window: second}
 	}
-	return a.analyticsGlobal.Count < 100
+	return a.analyticsGlobal.Count < analyticsGlobalSecondLimit && a.analyticsMinute.Count < analyticsMinuteGrantLimit
 }
 
 func (a *Server) analyticsGlobalAllowed(now time.Time) bool {
@@ -229,12 +243,27 @@ func (a *Server) analyticsGlobalAllowed(now time.Time) bool {
 		return false
 	}
 	a.analyticsGlobal.Count++
+	a.analyticsMinute.Count++
 	return true
 }
 
-func (a *Server) analyticsClientAllowed(identity string, now time.Time) bool {
+func (a *Server) analyticsClientAllowed(identity string, admittedAt, now time.Time) bool {
 	a.analyticsRateMu.Lock()
 	defer a.analyticsRateMu.Unlock()
+	minute := now.Unix() / 60
+	if minute < admittedAt.Unix()/60 || minute < a.analyticsMinute.Window {
+		return false
+	}
+	// Site/key lookups and body reads may cross a minute after the first
+	// global grant. Re-admit those requests in the allocation window while
+	// holding the same mutex; an old grant cannot allocate uncounted entries.
+	if minute != admittedAt.Unix()/60 {
+		if !a.analyticsGlobalRateReady(now) {
+			return false
+		}
+		a.analyticsGlobal.Count++
+		a.analyticsMinute.Count++
+	}
 	return a.analyticsIdentityRateAllowed(identity, now)
 }
 
@@ -255,7 +284,10 @@ func (a *Server) analyticsIdentityRateAllowed(identity string, now time.Time) bo
 	if v.Window != minute {
 		v = analyticsRate{Window: minute}
 	}
-	if v.Count >= 1200 || len(a.analyticsRates) >= 2048 && v.Count == 0 {
+	// Every production allocation has a global grant in this same minute.
+	// Its capacity must cover the full bounded grant budget, so anonymous
+	// visitor churn cannot fill it before unrelated clients exhaust that budget.
+	if v.Count >= analyticsIdentityMinuteLimit || len(a.analyticsRates) >= analyticsMinuteGrantLimit && v.Count == 0 {
 		return false
 	}
 	v.Count++
@@ -413,7 +445,8 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "采集连接地址无效")
 		return
 	}
-	if !a.analyticsGlobalAllowed(time.Now()) {
+	admittedAt := time.Now()
+	if !a.analyticsGlobalAllowed(admittedAt) {
 		w.Header().Set("Retry-After", "60")
 		fail(w, 429, "采集请求过于频繁")
 		return
@@ -452,7 +485,7 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	if rateIdentity == "" {
 		rateIdentity = "unverified-proxy-visitor:" + site.ID + ":" + v.Visitor
 	}
-	if !a.analyticsClientAllowed(rateIdentity, time.Now()) {
+	if !a.analyticsClientAllowed(rateIdentity, admittedAt, time.Now()) {
 		w.Header().Set("Retry-After", "60")
 		fail(w, 429, "采集请求过于频繁")
 		return
