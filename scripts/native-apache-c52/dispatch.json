@@ -1,0 +1,23 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "actual_BSD_writer_contention_required": true,
+  "actual_daemon_timer_required": true,
+  "all4000_original_PHP_response_bodies_required": true,
+  "all50_commercial": false,
+  "all_actual_FPM_process_evidence_same_original_schema": true,
+  "case_id": "C52-QA1",
+  "guest_sha256": "3a754a64c6979bb6ebbfe487807de6a5834b2391996d7acd1190d7c70a05feb8",
+  "payload_sha256": "669f8b8f5d323d9701c62dea10a4eb57c963c0ebe570aef6cadf1774ff21a7cb",
+  "per_OS_actual_HTTP_requests": 4168,
+  "per_OS_actual_PHP_reached": 4136,
+  "release_id": 431102346,
+  "release_tag": "qa-apachewriterbusycandidate52-20261102-qa1",
+  "source_inputs_sha256": "44fa6a9522dbf207647c5664d05fbfbdc9f348e4bd2b66560373e1140805ba72"
+}
