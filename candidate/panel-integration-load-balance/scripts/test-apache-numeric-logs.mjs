@@ -165,7 +165,7 @@ test('clean forms follow external revisions while edited forms retain their orig
  await t.logic.readStatus();assert.equal(t.logic.draft.value.rotate_mib,8);assert.equal(t.logic.draftRevision.value,2);assert.equal(t.logic.dirty.value,false);
  t.logic.draft.value.rotate_mib=4;assert.equal(t.logic.staleDraft.value,false);await t.logic.save();assert.equal(t.calls.at(-1).body.expected_revision,2);assert.equal(t.logic.applied.value.policy_revision,3);
 });
-test('availability invalidates late responses and resets only a changed installation identity',async()=>{
+test('availability resets only a changed installation identity',async()=>{
  const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=4;
  t.props.installed=false;t.logic.availabilityChanged([true,false,'2.4.0'],[true,true,'2.4.0']);assert.equal(t.logic.applied.value,undefined);assert.equal(t.logic.draft.value.rotate_mib,16);assert.equal(t.calls.length,1);
  t.props.installed=true;t.logic.availabilityChanged([true,true,'2.4.0'],[true,false,'2.4.0']);await new Promise(setImmediate);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);
@@ -174,4 +174,39 @@ test('incomplete or out-of-bound thresholds never create an uncertain mutation',
  for(const value of [undefined,null,0,29,1.5]){
   const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=value;assert.equal(t.logic.validDraft.value,false);await t.logic.save();assert.equal(t.calls.filter(x=>x.method==='POST').length,0);assert.equal(t.logic.uncertain.value,false);
  }
+});
+
+test('actual active callback prevents late GET success/error/finally from touching a fresh read',async()=>{
+ for(const oldOutcome of ['resolve','reject']){
+  const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=4;const requests=[];
+  t.props.api=async(path,method)=>{assert.equal(method,undefined);return new Promise((resolve,reject)=>requests.push({resolve,reject}))};
+  const old=t.logic.readStatus();assert.equal(requests.length,1);
+  t.props.active=false;t.logic.availabilityChanged([false,true,'2.4.0'],[true,true,'2.4.0']);
+  t.props.active=true;t.logic.availabilityChanged([true,true,'2.4.0'],[false,true,'2.4.0']);assert.equal(requests.length,2);assert.equal(t.logic.reading.value,true);
+  const stale=automaticFixture();stale.policy_revision=stale.record.config_revision=9;stale.policy.enabled=stale.record.policy.enabled=true;
+  if(oldOutcome==='resolve')requests[0].resolve(stale);else requests[0].reject(Error('obsolete GET failure'));
+  await old;assert.equal(t.logic.reading.value,true);assert.equal(t.logic.known.value,false);assert.equal(t.logic.error.value,'');assert.equal(t.logic.applied.value.policy_revision,1);
+  requests[1].resolve(automaticFixture());await new Promise(setImmediate);assert.equal(t.logic.reading.value,false);assert.equal(t.logic.known.value,true);assert.equal(t.logic.applied.value.policy_revision,1);assert.equal(t.logic.draft.value.rotate_mib,4);assert.equal(t.logic.draftRevision.value,1);
+ }
+});
+test('a hidden pending POST never overwrites observed state or clears a newer explicit write',async()=>{
+ for(const oldOutcome of ['resolve','reject']){
+  const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.enabled=true;const posts=[],calls=[];
+  const current=automaticFixture();current.policy_revision=current.record.config_revision=2;current.policy.enabled=current.record.policy.enabled=true;
+  t.props.api=async(path,method,body)=>{calls.push({path,method,body:structuredClone(body)});if(method==='POST')return new Promise((resolve,reject)=>posts.push({resolve,reject}));return structuredClone(current)};
+  const old=t.logic.save();assert.equal(posts.length,1);assert.equal(t.logic.writing.value,true);
+  t.props.active=false;t.logic.availabilityChanged([false,true,'2.4.0'],[true,true,'2.4.0']);assert.equal(t.logic.uncertain.value,true);
+  t.props.active=true;t.logic.availabilityChanged([true,true,'2.4.0'],[false,true,'2.4.0']);await new Promise(setImmediate);
+  assert.equal(posts.length,1);assert.equal(t.logic.known.value,true);assert.equal(t.logic.uncertain.value,false);assert.equal(t.logic.draftRevision.value,2);assert.equal(t.logic.dirty.value,false);
+  t.logic.draft.value.rotate_mib=4;const next=t.logic.save();assert.equal(posts.length,2);assert.equal(t.logic.writing.value,true);assert.equal(calls.at(-1).body.expected_revision,2);
+  if(oldOutcome==='resolve')posts[0].resolve({obsolete:'ignored without parsing'});else posts[0].reject(Error('obsolete POST failure'));
+  await old;assert.equal(t.logic.writing.value,true);assert.equal(t.logic.error.value,'');assert.equal(t.logic.applied.value.policy_revision,2);
+  current.policy_revision=current.record.config_revision=3;current.policy.rotate_mib=current.record.policy.rotate_mib=4;posts[1].resolve(structuredClone(current));await next;
+  assert.equal(t.logic.writing.value,false);assert.equal(t.logic.applied.value.policy_revision,3);assert.equal(t.logic.known.value,true);assert.equal(t.logic.uncertain.value,false);
+ }
+});
+test('version-only availability changes reset old draft and reinitialize supported installation',async()=>{
+ const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.rotate_mib=4;
+ t.props.version='2.3.0';t.logic.availabilityChanged([true,true,'2.3.0'],[true,true,'2.4.0']);assert.equal(t.logic.applied.value,undefined);assert.equal(t.logic.draft.value.rotate_mib,16);assert.equal(t.calls.length,1);
+ t.props.version='2.4.0';t.logic.availabilityChanged([true,true,'2.4.0'],[true,true,'2.3.0']);await new Promise(setImmediate);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);assert.equal(t.logic.draftRevision.value,1);
 });

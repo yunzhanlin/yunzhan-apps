@@ -320,4 +320,23 @@ func TestApacheNumericAutomationUsesActualModuleAuthorityAndPausedEngineVerifica
 	if _, _, err = broken.apacheNumericInstalledConfig(); err == nil {
 		t.Fatal("unsafe module authority treated as absent/default")
 	}
+	missing, _ := apacheNativeRecordFixture(t, core.ApacheWAFNativeBodyVersion, cfg)
+	source := filepath.Join(missing.moduleDir("apache-waf"), "installed.json")
+	original, _ = os.ReadFile(source)
+	var raw map[string]any
+	if json.Unmarshal(original, &raw) != nil {
+		t.Fatal("fixture module JSON")
+	}
+	delete(raw, "version")
+	original, _ = json.Marshal(raw)
+	if err = os.WriteFile(source, original, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err = missing.apacheNumericInstalledConfig(); err == nil {
+		t.Fatal("missing version treated as absent/non-native")
+	}
+	unchanged, _ = os.ReadFile(source)
+	if !bytes.Equal(unchanged, original) {
+		t.Fatal("corrupt version authority repaired")
+	}
 }

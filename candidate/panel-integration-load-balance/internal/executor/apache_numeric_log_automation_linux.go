@@ -30,7 +30,11 @@ func (s *Service) apacheNumericInstalledConfig() (core.WAFConfig, bool, error) {
 	if err != nil {
 		return core.WAFConfig{}, false, err
 	}
-	if record["version"] != core.ApacheWAFNativeBodyVersion {
+	version, ok := record["version"].(string)
+	if !ok || version == "" {
+		return core.WAFConfig{}, false, errors.New("Apache 安装版本缺失或无效，未作为未安装或采用默认值")
+	}
+	if version != core.ApacheWAFNativeBodyVersion {
 		return core.WAFConfig{}, false, nil
 	}
 	settings, ok := record["settings"].(map[string]any)
