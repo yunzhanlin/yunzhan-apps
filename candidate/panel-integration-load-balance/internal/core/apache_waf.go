@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -12,6 +14,18 @@ const ApacheWAFVersion = "2.3.0"
 // application's install/configure APIs until native activation is verified.
 const ApacheWAFNativeBodyVersion = "2.4.0"
 
+const ApacheWAFNativeCCVersion = "2.5.0"
+
+type ApacheWAFCCConfig struct {
+	EngineJobID string `json:"engine_job_id"`
+}
+
+// Explicit identities only: future versions and aliases cannot acquire native
+// module authority through a version comparison or a programme upgrade.
+func ApacheWAFNativeVersion(version string) bool {
+	return version == ApacheWAFNativeBodyVersion || version == ApacheWAFNativeCCVersion
+}
+
 func DefaultApacheWAFConfig() WAFConfig {
 	cfg := DefaultWAFConfig()
 	cfg.Policy.CCEnabled = false
@@ -19,19 +33,61 @@ func DefaultApacheWAFConfig() WAFConfig {
 }
 
 func DecodeApacheWAFConfig(raw map[string]any) (WAFConfig, error) {
-	return decodeApacheWAFConfig(raw, false)
+	return decodeApacheWAFConfig(raw, false, false, true)
 }
 
 // A native candidate and its recovery oracle share the same closed policy
 // decoder. Keeping this separate prevents a Core upgrade from silently giving
 // an installed 2.3 metadata-only application new capabilities or receipts.
 func DecodeApacheWAFNativeBodyConfig(raw map[string]any) (WAFConfig, error) {
-	return decodeApacheWAFConfig(raw, true)
+	return decodeApacheWAFConfig(raw, true, false, true)
 }
 
-func decodeApacheWAFConfig(raw map[string]any, nativeBody bool) (WAFConfig, error) {
+func DecodeApacheWAFNativeCCConfig(raw map[string]any) (WAFConfig, error) {
+	return decodeApacheWAFConfig(raw, true, true, true)
+}
+
+// Core can validate a configure/preview shape before Root reads the exact
+// current installation and inherits an omitted unchanged engine reference.
+// This never authorizes installation, preview success or native activation.
+func decodeApacheWAFNativeCCDraft(raw map[string]any) (WAFConfig, error) {
+	return decodeApacheWAFConfig(raw, true, true, false)
+}
+
+func decodeApacheWAFConfig(raw map[string]any, nativeBody, nativeCC, requireCCReference bool) (WAFConfig, error) {
 	if len(raw) == 0 {
 		return DefaultApacheWAFConfig(), nil
+	}
+	if _, exists := raw["country"]; exists {
+		return WAFConfig{}, errors.New("Apache 不接受 Nginx 专用地域策略；未忽略字段或宣称生效")
+	}
+	full, err := json.Marshal(raw)
+	if err != nil || len(full) > 128<<10 {
+		return WAFConfig{}, errors.New("Apache WAF 配置超过 128 KiB 或格式无效")
+	}
+	var cc *ApacheWAFCCConfig
+	if value, exists := raw["apache_cc"]; exists {
+		if !nativeCC || raw["policy"] == nil {
+			return WAFConfig{}, errors.New("Apache 原生 CC 需要签名2.5.0及完整 policy，旧版不能获得该能力")
+		}
+		encoded, err := json.Marshal(value)
+		if err != nil || len(encoded) > 256 || bytes.Equal(encoded, []byte("null")) {
+			return WAFConfig{}, errors.New("Apache CC 引擎引用格式无效")
+		}
+		var input ApacheWAFCCConfig
+		d := json.NewDecoder(bytes.NewReader(encoded))
+		d.DisallowUnknownFields()
+		if d.Decode(&input) != nil || !ValidID(input.EngineJobID) {
+			return WAFConfig{}, errors.New("Apache CC 引擎必须引用明确核验的本机构建任务")
+		}
+		cc = &input
+		copy := make(map[string]any, len(raw))
+		for k, v := range raw {
+			if k != "apache_cc" {
+				copy[k] = v
+			}
+		}
+		raw = copy
 	}
 	if _, present := raw["policy"]; !present {
 		if _, explicit := raw["trusted_proxy"]; explicit {
@@ -48,6 +104,7 @@ func decodeApacheWAFConfig(raw map[string]any, nativeBody bool) (WAFConfig, erro
 	if err != nil {
 		return cfg, err
 	}
+	cfg.ApacheCC = cc
 	if cfg.Body != nil && !nativeBody {
 		return cfg, errors.New("Apache 尚未实现原生请求体引擎；不能保存 Nginx 请求体策略冒充生效")
 	}
@@ -57,12 +114,21 @@ func decodeApacheWAFConfig(raw map[string]any, nativeBody bool) (WAFConfig, erro
 	if cfg.BodyLogRotation != nil || cfg.BodyLogRetention != nil {
 		return cfg, errors.New("Apache 不接受 Nginx 请求体日志轮转或保留期策略")
 	}
-	if cfg.Policy.CCEnabled || len(cfg.Policy.CCRules) != 0 {
+	if !nativeCC && (cfg.Policy.CCEnabled || len(cfg.Policy.CCRules) != 0) {
 		return cfg, errors.New("Apache 元数据防护不提供 CC 限速；请关闭 CC 并通过 Nginx 入口配置限速")
 	}
 	for _, site := range cfg.Policy.Sites {
-		if site.CCEnabled != nil && *site.CCEnabled || site.Rate != 0 || site.Burst != 0 {
+		if !nativeCC && (site.CCEnabled != nil && *site.CCEnabled || site.Rate != 0 || site.Burst != 0) {
 			return cfg, errors.New("Apache 站点策略不接受独立 CC 速率或容量")
+		}
+	}
+	if nativeCC {
+		needed := cfg.Policy.CCEnabled || len(cfg.Policy.CCRules) != 0
+		for _, site := range cfg.Policy.Sites {
+			needed = needed || site.CCEnabled != nil && *site.CCEnabled || site.Rate != 0 || site.Burst != 0
+		}
+		if needed && requireCCReference && cfg.ApacheCC == nil {
+			return cfg, errors.New("Apache CC 策略需要明确选择已核验的本机原生限流引擎")
 		}
 	}
 	return cfg, nil
@@ -124,7 +190,7 @@ func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 		}
 		// Shape validation does not authorize native activation: the executor
 		// preview rechecks the exact installed version and sealed engine.
-		cfg, err := DecodeApacheWAFNativeBodyConfig(in.Settings)
+		cfg, err := decodeApacheWAFNativeCCDraft(in.Settings)
 		if err == nil {
 			err = a.Store.validateApacheWAFSites(cfg)
 		}

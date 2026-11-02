@@ -7,6 +7,10 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // C56 adds exactly this mandatory CC selection/admission UI regression.
+  // Keep every prior command and frozen whole-script digest unchanged;
+  // omission, duplication or any altered command must fail normalization.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-cc.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
   // Recognize only C55's exact new helper delivery in the copy and checksum
   // lists. Removing, duplicating or renaming either addition must still fail;
   // all historical commands and whole-script digests remain unchanged.

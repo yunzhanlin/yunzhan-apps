@@ -21,9 +21,12 @@ test('fresh install requires a known implementation; Apache path is independent'
   assert.equal(matches('apache-waf',true,'2.2.0','2.3.0'),false);
   assert.equal(matches('apache-waf',true,'2.3.0','2.3.0'),true);
   assert.equal(matches('apache-waf',true,'2.4.0','2.4.0'),true);
+  assert.equal(matches('apache-waf',true,'2.5.0','2.5.0'),true);
+  assert.equal(matches('apache-waf',true,'2.4.0','2.5.0'),false);
+  assert.equal(matches('apache-waf',true,'2.5.0','2.4.0'),false);
   assert.equal(matches('apache-waf',true,'2.3.0','2.4.0'),false);
   assert.equal(matches('apache-waf',true,'2.4.0','2.3.0'),false);
-  for(const value of [undefined,null,{},'2.4.0-compat1','2.5.0'])assert.equal(matches('apache-waf',true,value,value),false);
+  for(const value of [undefined,null,{},'2.4.0-compat1','2.5.0-alias','2.6.0'])assert.equal(matches('apache-waf',true,value,value),false);
   assert.equal(matches('foreign',true,'2.5.2','2.5.2'),false);
   assert.equal(matches('nginx-waf',undefined,'2.5.2','2.5.2'),false);
 });

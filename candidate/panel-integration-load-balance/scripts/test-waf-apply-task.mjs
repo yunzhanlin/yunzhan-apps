@@ -153,16 +153,16 @@ test('actual success statement is refused if another healthy configuration super
  }
 });
 test('committed configuration binds the exact next revision and all normalized policy data',()=>{
- const wanted={profile:'balanced',rate_per_second:20,policy:{revision:7,mode:'block',lists:{ip_allow:[],ip_deny:[{id:'x',value:'127.0.0.1'}]}},body:{engine_job_id:id,sites:[]},trusted_proxy:{enabled:false},body_log_rotation:{enabled:false},body_log_retention:{enabled:false}};
+ const wanted={profile:'balanced',rate_per_second:20,policy:{revision:7,mode:'block',lists:{ip_allow:[],ip_deny:[{id:'x',value:'127.0.0.1'}]}},body:{engine_job_id:id,sites:[]},trusted_proxy:{enabled:false},body_log_rotation:{enabled:false},body_log_retention:{enabled:false},apache_cc:{engine_job_id:id}};
  const committed=structuredClone(wanted);committed.policy.revision=8;
  assert.equal(wafCommittedConfiguration(wanted,committed),true);
- const reordered={body_log_retention:committed.body_log_retention,body_log_rotation:committed.body_log_rotation,trusted_proxy:committed.trusted_proxy,body:committed.body,policy:{lists:committed.policy.lists,mode:'block',revision:8},rate_per_second:20,profile:'balanced'};
+ const reordered={apache_cc:committed.apache_cc,body_log_retention:committed.body_log_retention,body_log_rotation:committed.body_log_rotation,trusted_proxy:committed.trusted_proxy,body:committed.body,policy:{lists:committed.policy.lists,mode:'block',revision:8},rate_per_second:20,profile:'balanced'};
  assert.equal(wafCommittedConfiguration(wanted,reordered),true);
- for(const mutation of [v=>{v.policy.revision=7;},v=>{v.policy.revision=9;},v=>{v.policy.mode='off';},v=>{v.body.engine_job_id='b'.repeat(32);},v=>{v.trusted_proxy.enabled=true;},v=>{v.body_log_rotation.enabled=true;},v=>{v.body_log_retention.enabled=true;},v=>{v.policy.lists.ip_deny[0].value='::1';},v=>{v.extra='unknown';}]){
+ for(const mutation of [v=>{v.policy.revision=7;},v=>{v.policy.revision=9;},v=>{v.policy.mode='off';},v=>{v.body.engine_job_id='b'.repeat(32);},v=>{v.trusted_proxy.enabled=true;},v=>{v.body_log_rotation.enabled=true;},v=>{v.body_log_retention.enabled=true;},v=>{v.apache_cc.engine_job_id='b'.repeat(32);},v=>{v.policy.lists.ip_deny[0].value='::1';},v=>{v.extra='unknown';}]){
   const different=structuredClone(committed);mutation(different);assert.equal(wafCommittedConfiguration(wanted,different),false);
  }
  const absent={profile:'balanced',rate_per_second:20,policy:{revision:7,mode:'block'}};
- const preserved={...structuredClone(absent),policy:{revision:8,mode:'block'},body:committed.body,trusted_proxy:committed.trusted_proxy,body_log_rotation:committed.body_log_rotation,body_log_retention:committed.body_log_retention};
+ const preserved={...structuredClone(absent),policy:{revision:8,mode:'block'},body:committed.body,trusted_proxy:committed.trusted_proxy,body_log_rotation:committed.body_log_rotation,body_log_retention:committed.body_log_retention,apache_cc:committed.apache_cc};
  assert.equal(wafCommittedConfiguration(absent,preserved),true,'independent omissions retain their executor-defined meaning');
 });
 test('unknown, oversized, non-JSON, deep and unsafe revisions never prove a committed configuration',()=>{

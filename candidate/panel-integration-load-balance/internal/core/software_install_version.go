@@ -48,7 +48,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 	if count == 0 {
 		// The legacy unbound direct interface remains legacy. It cannot borrow
 		// the independently signed native identities by naming a new version.
-		if j.TargetID == "mobile-pwa" && requested == NativeMobileAppVersion || j.TargetID == "apache-waf" && requested == ApacheWAFNativeBodyVersion {
+		if j.TargetID == "mobile-pwa" && requested == NativeMobileAppVersion || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) {
 			return "", bad
 		}
 		if requested != "" && ValidateSoftwareInstallVersion(j.TargetID, requested) != nil {

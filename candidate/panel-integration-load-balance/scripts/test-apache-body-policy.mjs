@@ -3,9 +3,10 @@ import assert from'node:assert/strict';
 import{readFileSync}from'node:fs';
 import{apacheBodyPolicySupported as supported,apacheBodyPolicyAddSite as add}from'../web/src/apacheBodyPolicy.ts';
 const a='a'.repeat(32),b='b'.repeat(32),e='c'.repeat(32),read=n=>readFileSync(new URL('../'+n,import.meta.url),'utf8');
-test('only actual matching2.4 installed identity enables native body draft',()=>{
+test('only actual matching2.4 or2.5 installed identity enables native body draft',()=>{
  assert.equal(supported(true,'2.4.0','2.4.0'),true);
- for(const values of [[false,'2.4.0','2.4.0'],['true','2.4.0','2.4.0'],[undefined,'2.4.0','2.4.0'],[true,'2.3.0','2.4.0'],[true,'2.4.0','2.3.0'],[true,'2.4.0-compat1','2.4.0'],[true,'2.5.0','2.5.0'],[true,null,null]])assert.equal(supported(...values),false,JSON.stringify(values));
+ assert.equal(supported(true,'2.5.0','2.5.0'),true);
+ for(const values of [[false,'2.4.0','2.4.0'],['true','2.4.0','2.4.0'],[undefined,'2.4.0','2.4.0'],[true,'2.3.0','2.4.0'],[true,'2.4.0','2.3.0'],[true,'2.4.0-compat1','2.4.0'],[true,'2.6.0','2.6.0'],[true,'2.5.0','2.4.0'],[true,'2.4.0','2.5.0'],[true,null,null]])assert.equal(supported(...values),false,JSON.stringify(values));
 });
 test('explicit selected site starts observe and preserves prior immutable draft',()=>{
  const body={engine_job_id:e,sites:[]},snapshot=structuredClone(body),sites=[{id:a,status:'running'},{id:b,status:'stopped'}];
@@ -18,7 +19,7 @@ test('explicit selected site starts observe and preserves prior immutable draft'
 });
 test('native UI only edits drafts with fresh complete inventory; no own write endpoint',()=>{
  const view=read('web/src/ApacheBodyPolicy.vue');
- for(const text of ['apacheBodyBuildInventory(out)','known.value=false','ticket!==epoch','row.state==="ready"','apacheBodyPolicyAddSite','props.parentBusy','onBeforeUnmount','观察','缓存写入失败返回503','Apache本版不提供CC限速'])assert.ok(view.includes(text),text);
+ for(const text of ['apacheBodyBuildInventory(out)','known.value=false','ticket!==epoch','row.state==="ready"','apacheBodyPolicyAddSite','props.parentBusy','onBeforeUnmount','观察','缓存写入失败返回503','CC 限流在“CC 防护”页独立配置'])assert.ok(view.includes(text),text);
  assert.doesNotMatch(view,/"POST"|fetch\(|setInterval|\/nginx-waf|\/configure|\/install|\/update/);
  assert.match(read('web/src/WafWorkspace.vue'),/<ApacheBodyPolicy :api="api" :active="tab==='apache-body-policy'"/);
  assert.match(read('packaging/build-release.sh'),/test-apache-body-policy\.mjs/);

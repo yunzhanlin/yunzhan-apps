@@ -3038,6 +3038,14 @@ html.dark .el-table td.el-table__cell { border-color: #354357; }
   font-size: 11px;
 }
 .store-main .runtime-product span { font-size: 14px; }
+.store-main .runtime-product {
+  grid-template-columns: minmax(0, 1fr);
+}
+.store-main .runtime-product > span {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .store-main .runtime-card p {
   min-height: 49px;
   margin: 9px 0 2px;

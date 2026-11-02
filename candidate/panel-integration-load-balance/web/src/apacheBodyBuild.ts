@@ -2,6 +2,7 @@
 export interface ApacheBodyBuild {
   job_id:string; state:string; error?:string; build_only:true;
   architecture?:string; engine_version?:string; yajl_version?:string;
+  native_cc_version?:string;
   crs_version?:string; apache_version?:string;
   integrity_verified?:boolean; module_abi_validated?:boolean;
   elf_hardening_validated?:boolean; compiler_groups_collected?:boolean;
@@ -16,6 +17,7 @@ export function apacheBodyBuildRow(value:unknown, expectedID?:string):value is A
     || !Array.isArray(v.steps) || v.steps.length>48 || v.steps.some(step=>!step || typeof step.time!=="string" || !Number.isFinite(Date.parse(step.time))
       || typeof step.message!=="string" || !step.message || step.message.length>512 || step.message.includes("\0"))) return false;
   if(v.state==="failed" && !v.error)return false;
+  if(v.native_cc_version!==undefined && (v.native_cc_version!=="1.0.0" || v.state!=="ready"))return false;
   if(v.state==="retained_unsupported")return !!v.error && v.historical_integrity_verified===true
     && v.integrity_verified===false && v.module_abi_validated===false && v.elf_hardening_validated===false && v.compiler_groups_collected===false
     && ["amd64","arm64"].includes(v.architecture || "") && v.apache_version==="2.4.68"

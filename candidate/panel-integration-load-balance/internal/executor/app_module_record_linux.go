@@ -185,7 +185,7 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
 	if value, exists := manifest["version"]; exists {
 		version, ok := value.(string)
 		cmp, valid := appcatalog.CompareVersions(version, core.SoftwareImplementationVersion(id))
-		nativeApache := id == "apache-waf" && version == core.ApacheWAFNativeBodyVersion
+		nativeApache := id == "apache-waf" && core.ApacheWAFNativeVersion(version)
 		if !ok || !valid || cmp > 0 && !nativeApache {
 			return nil, errors.New("模块安装记录版本不能由当前处理器核对")
 		}

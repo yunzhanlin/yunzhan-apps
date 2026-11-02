@@ -441,16 +441,16 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			return e
 		}
 	case "apache-waf":
-		if action == "install" && selectedVersion == core.ApacheWAFNativeBodyVersion {
-			return s.applyApacheNativeWAF(ctx, settings, true, false, add)
+		if action == "install" && core.ApacheWAFNativeVersion(selectedVersion) {
+			return s.applyApacheNativeWAFVersion(ctx, settings, true, false, selectedVersion, add)
 		}
 		if action == "configure" {
 			record, err := s.moduleInstalledRecord(id)
 			if err != nil {
 				return err
 			}
-			if record["version"] == core.ApacheWAFNativeBodyVersion {
-				return s.applyApacheNativeWAF(ctx, settings, false, false, add)
+			if version, ok := record["version"].(string); ok && core.ApacheWAFNativeVersion(version) {
+				return s.applyApacheNativeWAFVersion(ctx, settings, false, false, version, add)
 			}
 		}
 		return s.applyApacheWAF(ctx, settings, action == "install", false, add)
@@ -625,8 +625,8 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			add("FTP 固定源码、构建补丁、独立程序和许可证校验通过；切换失败将恢复原服务")
 		}
 		if id == "apache-waf" && cmp > 0 {
-			if version == core.ApacheWAFNativeBodyVersion {
-				return s.applyApacheNativeWAF(ctx, status.Settings, false, true, add)
+			if core.ApacheWAFNativeVersion(version) {
+				return s.applyApacheNativeWAFVersion(ctx, status.Settings, false, true, version, add)
 			}
 			if version != core.ApacheWAFVersion {
 				return errors.New("Apache WAF 更新目标与当前受限处理器版本不符，拒绝隐式版本切换")

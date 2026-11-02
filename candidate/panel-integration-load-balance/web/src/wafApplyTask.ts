@@ -16,7 +16,7 @@ export function wafCommittedConfiguration(requested: unknown, current: unknown):
   const wanted: Record<string, unknown> = {...requested, policy: {...requested.policy, revision: revision + 1}};
   // Omission has the same preserve-independent-field meaning as the executor.
   // An explicit object must still match completely, including arrays and IDs.
-  for (const field of ["body", "trusted_proxy", "body_log_rotation", "body_log_retention"]) {
+  for (const field of ["body", "trusted_proxy", "body_log_rotation", "body_log_retention", "apache_cc"]) {
     if (!Object.hasOwn(requested, field) && Object.hasOwn(current, field)) wanted[field] = current[field];
   }
   try {

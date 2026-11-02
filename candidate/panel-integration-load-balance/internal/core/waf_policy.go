@@ -68,6 +68,7 @@ type WAFConfig struct {
 	BodyLogRotation  *WAFBodyLogRotationConfig  `json:"body_log_rotation,omitempty"`
 	BodyLogRetention *WAFBodyLogRetentionConfig `json:"body_log_retention,omitempty"`
 	Country          *WAFCountryConfig          `json:"country,omitempty"`
+	ApacheCC         *ApacheWAFCCConfig         `json:"apache_cc,omitempty"`
 }
 
 func DefaultWAFConfig() WAFConfig {
@@ -103,6 +104,9 @@ func DecodeWAFConfig(raw map[string]any) (WAFConfig, error) {
 	d.DisallowUnknownFields()
 	if e = d.Decode(&v); e != nil {
 		return v, fmt.Errorf("WAF 配置包含未知字段或类型错误：%w", e)
+	}
+	if v.ApacheCC != nil {
+		return v, errors.New("Nginx 不接受 Apache 原生 CC 引擎引用")
 	}
 	if v.Profile != "balanced" && v.Profile != "strict" || v.Rate < 5 || v.Rate > 200 {
 		return v, errors.New("防护级别为 balanced/strict，默认速率为 5–200 次/秒")

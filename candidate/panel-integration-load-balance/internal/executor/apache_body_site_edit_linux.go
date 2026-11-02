@@ -26,7 +26,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	if _, err := os.Lstat(paths[2]); errors.Is(err, os.ErrNotExist) {
 		// Missing installation does not authorize erasing an orphaned native
 		// block. Ordinary first-time websites otherwise keep their old path.
-		if source, err := apacheWAFReadStableFile(paths[0], 2<<20); err == nil && (strings.Contains(string(source), "PANEL APACHE NATIVE BODY") || apacheBodyExternalDirective.Match(source)) {
+		if source, err := apacheWAFReadStableFile(paths[0], 2<<20); err == nil && (apacheNativeDirectivesPresent(string(source))) {
 			return nil, true, errors.New("Apache 含无安装记录的请求体挂载，未覆盖网站")
 		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, true, err
@@ -53,7 +53,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	if err := json.Unmarshal(manifest.data, &installed); err != nil || installed.ID != "apache-waf" {
 		return nil, true, errors.New("Apache 防护安装身份不可核实，未覆盖网站")
 	}
-	if installed.Version != core.ApacheWAFNativeBodyVersion {
+	if !core.ApacheWAFNativeVersion(installed.Version) {
 		if installed.Version != core.ApacheWAFVersion && installed.Version != "2.2.0" && installed.Version != "2.1.0" && installed.Version != "2.0.0" && installed.Version != "1.0" {
 			return nil, true, errors.New("Apache 防护安装版本未知，未猜测或覆盖网站")
 		}
@@ -61,7 +61,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 			return nil, true, errors.New("未知或元数据旧版不能接管原生请求体策略，未覆盖网站")
 		}
 		source, err := apacheWAFReadStableFile(paths[0], 2<<20)
-		if err == nil && (strings.Contains(string(source), "PANEL APACHE NATIVE BODY") || apacheBodyExternalDirective.Match(source)) {
+		if err == nil && (apacheNativeDirectivesPresent(string(source))) {
 			return nil, true, errors.New("Apache 元数据安装记录与原生挂载矛盾，未覆盖网站")
 		} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return nil, true, err
@@ -71,7 +71,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	if count == 0 {
 		return nil, true, errors.New("请先停用并移除 Apache 防护的站点策略，再停止最后一个受管网站")
 	}
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(installed.Settings)
+	cfg, err := core.DecodeApacheWAFVersionConfig(installed.Settings, installed.Version)
 	if err != nil {
 		return nil, true, err
 	}
@@ -97,14 +97,14 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	}
 	module := filepath.Join(release.Prefix(), "modules/mod_remoteip.so")
 	oldSource := string(backups[0].data)
-	domain, err := apacheWAFConfigurationFilesMatchVersion(oldSource, cfg, module, paths[1], core.ApacheWAFNativeBodyVersion)
+	domain, err := apacheWAFConfigurationFilesMatchVersion(oldSource, cfg, module, paths[1], installed.Version)
 	if err != nil {
 		return nil, true, err
 	}
 	// An unrelated Nginx edit must not reload Apache or increase its native
 	// policy revision. Validate the whole saved generation and candidate plan
 	// before deciding that no Apache mutation/engine authority is requested.
-	preparedNoop, rulesNoop, err := apacheBodySitePolicy(content, cfg, module)
+	preparedNoop, rulesNoop, err := apacheBodySitePolicyVersion(content, cfg, module, installed.Version)
 	if err != nil {
 		return nil, true, err
 	}
@@ -132,7 +132,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	if err != nil || strings.TrimSpace(state) != "active" {
 		return nil, true, errors.New("Apache 原生防护实际服务未运行，未覆盖或隐式启动网站")
 	}
-	if err := apacheWAFWaitLoadedVersion(ctx, cfg, domain, core.ApacheWAFNativeBodyVersion); err != nil {
+	if err := apacheWAFWaitLoadedVersion(ctx, cfg, domain, installed.Version); err != nil {
 		return nil, true, err
 	}
 	next := cfg
@@ -152,7 +152,7 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 	if err != nil {
 		return nil, true, err
 	}
-	rules, err := renderApacheWAFVersion(next, bindings, core.ApacheWAFNativeBodyVersion)
+	rules, err := renderApacheWAFVersion(next, bindings, installed.Version)
 	if err != nil {
 		return nil, true, err
 	}
@@ -168,11 +168,11 @@ func (s *Service) applyApacheNativeBodySites(ctx context.Context, content string
 		if err := s.verifyApacheBodyTransition(ctx, cfg, cfg); err != nil {
 			return err
 		}
-		domain, err := apacheWAFConfigurationFilesMatchVersion(source, cfg, module, paths[1], core.ApacheWAFNativeBodyVersion)
+		domain, err := apacheWAFConfigurationFilesMatchVersion(source, cfg, module, paths[1], installed.Version)
 		if err != nil {
 			return err
 		}
-		return apacheWAFWaitLoadedVersion(ctx, cfg, domain, core.ApacheWAFNativeBodyVersion)
+		return apacheWAFWaitLoadedVersion(ctx, cfg, domain, installed.Version)
 	}
 	if err := txs.applyApacheWAFPlanned(ctx, plan, func(ctx context.Context) error { return verify(ctx, next, prepared) }, add); err != nil {
 		return nil, true, err

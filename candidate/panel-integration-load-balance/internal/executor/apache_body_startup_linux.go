@@ -8,7 +8,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"local/panel/internal/core"
@@ -47,7 +46,7 @@ func (s *Service) apacheBodyNoOrphanSource() error {
 	if err != nil {
 		return err
 	}
-	if strings.Contains(string(source), "PANEL APACHE NATIVE BODY") || apacheBodyExternalDirective.Match(source) {
+	if apacheNativeDirectivesPresent(string(source)) {
 		return errors.New("Apache 原生挂载没有对应有效安装策略，未启动或清除")
 	}
 	return nil
@@ -80,7 +79,7 @@ func (s *Service) prepareApacheBodyCommittedRuntime(ctx context.Context) error {
 	if err := json.Unmarshal(manifest.data, &installed); err != nil || installed.ID != "apache-waf" {
 		return errors.New("Apache 防护启动安装身份不可核实")
 	}
-	if installed.Version != core.ApacheWAFNativeBodyVersion {
+	if !core.ApacheWAFNativeVersion(installed.Version) {
 		if installed.Version != core.ApacheWAFVersion && installed.Version != "2.2.0" && installed.Version != "2.1.0" && installed.Version != "2.0.0" && installed.Version != "1.0" {
 			return errors.New("Apache 防护启动版本未知，未猜测或启动模块")
 		}
@@ -89,7 +88,7 @@ func (s *Service) prepareApacheBodyCommittedRuntime(ctx context.Context) error {
 		}
 		return s.apacheBodyNoOrphanSource()
 	}
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(installed.Settings)
+	cfg, err := core.DecodeApacheWAFVersionConfig(installed.Settings, installed.Version)
 	if err != nil {
 		return err
 	}
@@ -108,7 +107,7 @@ func (s *Service) prepareApacheBodyCommittedRuntime(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	if _, err := apacheWAFConfigurationFilesMatchVersion(string(backups[0].data), cfg, filepath.Join(release.Prefix(), "modules/mod_remoteip.so"), paths[1], core.ApacheWAFNativeBodyVersion); err != nil {
+	if _, err := apacheWAFConfigurationFilesMatchVersion(string(backups[0].data), cfg, filepath.Join(release.Prefix(), "modules/mod_remoteip.so"), paths[1], installed.Version); err != nil {
 		return err
 	}
 	if err := s.verifyApacheBodyTransition(ctx, cfg, cfg); err != nil {

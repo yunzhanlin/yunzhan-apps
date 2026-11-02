@@ -92,7 +92,11 @@ func verifyApacheBodyRetainedBytes(ctx context.Context, record apacheBodyBuildRe
 	if err != nil || r.CLI() != record.ApacheBinary {
 		return errors.New("当前 Apache 程序选择与构建记录不匹配")
 	}
-	for _, item := range []struct{ path, sha string }{{r.CLI(), record.ApacheSHA}, {filepath.Join(record.Prefix, "apache/mod_security2.so"), record.ModuleSHA}} {
+	files := []struct{ path, sha string }{{r.CLI(), record.ApacheSHA}, {filepath.Join(record.Prefix, "apache/mod_security2.so"), record.ModuleSHA}}
+	if record.Format == 2 {
+		files = append(files, struct{ path, sha string }{filepath.Join(record.Prefix, "apache/mod_yunzhan_cc.so"), record.CCModuleSHA})
+	}
+	for _, item := range files {
 		actual, err := wafNativeFileSHA(ctx, item.path, 64<<20)
 		if err != nil || actual != item.sha {
 			return errors.New("Apache 实际程序或请求体模块缺失、变化或摘要错误")

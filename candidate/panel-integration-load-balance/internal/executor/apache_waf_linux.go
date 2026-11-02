@@ -36,7 +36,7 @@ func (s *Service) apacheWAFSettings(raw map[string]any, install bool) (core.WAFC
 // write, revision increase, reload, version promotion, or healthy-status claim.
 // Preview and ordinary configure keep their separate legacy write refusal.
 func (s *Service) apacheWAFReadSettings() (core.WAFConfig, error) {
-	if record, err := s.moduleInstalledRecord("apache-waf"); err == nil && record["version"] == core.ApacheWAFNativeBodyVersion {
+	if record, err := s.moduleInstalledRecord("apache-waf"); err == nil && apacheNativeRecord(record) {
 		return s.apacheNativeSettings(nil, false, false)
 	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return core.WAFConfig{}, err
@@ -276,7 +276,7 @@ func (s *Service) applyApacheWAF(ctx context.Context, raw map[string]any, instal
 	return nil
 }
 
-func (s *Service) readApacheWAFEvents() (core.WAFEventsPage, error) {
+func (s *Service) readApacheWAFLegacyEvents() (core.WAFEventsPage, error) {
 	page := core.WAFEventsPage{Events: []core.WAFEvent{}}
 	f, err := os.OpenFile(s.systemPath("/var/log/apache2/panel-waf.events.log"), os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if errors.Is(err, os.ErrNotExist) {
@@ -322,6 +322,13 @@ func (s *Service) readApacheWAFEvents() (core.WAFEventsPage, error) {
 			page.HasMore = true
 			continue
 		}
+		if event.Reason == "cc" {
+			if event.Action == "block" && event.Status == 429 {
+				event.Rate = "REJECTED"
+			} else if event.Action == "observe" {
+				event.Rate = "REJECTED_DRY_RUN"
+			}
+		}
 		event.Time = time.Unix(event.Epoch, 0).UTC().Format(time.RFC3339)
 		page.Events = append(page.Events, event.WAFEvent)
 		if len(page.Events) == 5000 {
@@ -345,8 +352,8 @@ func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 			return
 		}
 		version := core.ApacheWAFVersion
-		if record, e := s.moduleInstalledRecord("apache-waf"); e == nil && record["version"] == core.ApacheWAFNativeBodyVersion {
-			version = core.ApacheWAFNativeBodyVersion
+		if record, e := s.moduleInstalledRecord("apache-waf"); e == nil && apacheNativeRecord(record) {
+			version = record["version"].(string)
 		}
 		respond(w, 200, map[string]any{"settings": cfg, "defaults": core.DefaultApacheWAFConfig(), "status": s.appModuleStatus(r.Context(), "apache-waf"), "implementation_version": version})
 	})
@@ -357,7 +364,7 @@ func (s *Service) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
-		if record, e := s.moduleInstalledRecord("apache-waf"); e == nil && record["version"] == core.ApacheWAFNativeBodyVersion {
+		if record, e := s.moduleInstalledRecord("apache-waf"); e == nil && apacheNativeRecord(record) {
 			out, err := s.apacheNativePreview(r.Context(), raw)
 			if err != nil {
 				respond(w, 409, map[string]string{"error": err.Error()})

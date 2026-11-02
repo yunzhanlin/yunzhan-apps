@@ -92,7 +92,7 @@ func (s *Service) apacheNumericLogRoutes(m *http.ServeMux) {
 			return false
 		}
 		record, err := s.moduleInstalledRecord("apache-waf")
-		if err != nil || record["version"] != core.ApacheWAFNativeBodyVersion {
+		if err != nil || !apacheNativeRecord(record) {
 			respond(w, 409, map[string]string{"error": "请先完成 Apache2.4.0 原签名安装；日志未创建或接管"})
 			return false
 		}

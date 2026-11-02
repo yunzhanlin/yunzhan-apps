@@ -28,8 +28,8 @@ func (s *Service) apacheNativeCurrent() (map[string]any, error) {
 		return nil, err
 	}
 	version, ok := record["version"].(string)
-	if !ok || version != core.ApacheWAFVersion && version != core.ApacheWAFNativeBodyVersion {
-		return nil, errors.New("Apache 原生版本仅接续完整2.3.0或2.4.0安装记录；先完成原签名迁移")
+	if !ok || version != core.ApacheWAFVersion && !core.ApacheWAFNativeVersion(version) {
+		return nil, errors.New("Apache 原生版本仅接续完整2.3.0、2.4.0或2.5.0安装记录；先完成原签名迁移")
 	}
 	if _, ok := record["settings"].(map[string]any); !ok {
 		return nil, errors.New("Apache 完整原配置缺失；未采用默认值替代")
@@ -38,37 +38,62 @@ func (s *Service) apacheNativeCurrent() (map[string]any, error) {
 }
 
 func (s *Service) apacheNativeSettings(raw map[string]any, install, upgrading bool) (core.WAFConfig, error) {
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(raw)
-	if err != nil {
-		return cfg, err
+	version := core.ApacheWAFNativeBodyVersion
+	if current, err := s.apacheNativeCurrent(); err == nil {
+		if installed, ok := current["version"].(string); ok && core.ApacheWAFNativeVersion(installed) {
+			version = installed
+		}
 	}
-	for _, name := range []string{"body", "trusted_proxy"} {
+	return s.apacheNativeSettingsVersion(raw, install, upgrading, version)
+}
+
+func apacheNativeDecodeInput(raw map[string]any, version string, priorCC *core.ApacheWAFCCConfig) (core.WAFConfig, error) {
+	input := raw
+	if _, explicit := raw["apache_cc"]; !explicit && version == core.ApacheWAFNativeCCVersion && raw["policy"] != nil && priorCC != nil {
+		input = make(map[string]any, len(raw)+1)
+		for k, v := range raw {
+			input[k] = v
+		}
+		input["apache_cc"] = map[string]any{"engine_job_id": priorCC.EngineJobID}
+	}
+	return core.DecodeApacheWAFVersionConfig(input, version)
+}
+
+func (s *Service) apacheNativeSettingsVersion(raw map[string]any, install, upgrading bool, version string) (core.WAFConfig, error) {
+	if !core.ApacheWAFNativeVersion(version) {
+		return core.WAFConfig{}, errors.New("Apache 原生目标版本没有完整实现")
+	}
+	for _, name := range []string{"body", "trusted_proxy", "apache_cc"} {
 		if _, explicit := raw[name]; explicit && raw["policy"] == nil {
-			return cfg, errors.New("Apache 原生及可信代理策略需要完整policy与当前修订号")
+			return core.WAFConfig{}, errors.New("Apache 原生及可信代理策略需要完整 policy 与当前修订号")
 		}
 	}
 	current, err := s.apacheNativeCurrent()
 	if errors.Is(err, os.ErrNotExist) {
 		if !install {
-			return cfg, errors.New("Apache 原生防护未安装，配置不能提升版本")
+			return core.WAFConfig{}, errors.New("Apache 原生防护未安装，配置不能提升版本")
 		}
-		return cfg, nil
+		return core.DecodeApacheWAFVersionConfig(raw, version)
 	}
 	if err != nil {
-		return cfg, err
+		return core.WAFConfig{}, err
 	}
 	if install {
-		return cfg, errors.New("Apache 应用已安装，不能以重新安装覆盖版本、策略或历史")
+		return core.WAFConfig{}, errors.New("Apache 应用已安装，不能以重新安装覆盖版本、策略或历史")
 	}
-	if current["version"] != core.ApacheWAFNativeBodyVersion && !upgrading {
-		return cfg, errors.New("先使用应用商店签名升级至Apache2.4.0，配置保存不授予请求体能力")
+	if current["version"] != version && !upgrading {
+		return core.WAFConfig{}, errors.New("Apache 原生版本不匹配；配置保存不能提升应用能力，请先在应用商店签名更新")
 	}
 	previous, err := core.DecodeApacheWAFVersionConfig(current["settings"].(map[string]any), current["version"].(string))
 	if err != nil {
-		return cfg, err
+		return core.WAFConfig{}, err
 	}
 	if len(raw) == 0 {
-		return previous, nil
+		return core.DecodeApacheWAFVersionConfig(core.WAFSettings(previous), version)
+	}
+	cfg, err := apacheNativeDecodeInput(raw, version, previous.ApacheCC)
+	if err != nil {
+		return cfg, err
 	}
 	if _, ok := raw["policy"]; !ok {
 		profile, rate := cfg.Profile, cfg.Rate
@@ -84,8 +109,11 @@ func (s *Service) apacheNativeSettings(raw map[string]any, install, upgrading bo
 		if _, ok := raw["trusted_proxy"]; !ok {
 			cfg.TrustedProxy = previous.TrustedProxy
 		}
+		if _, ok := raw["apache_cc"]; !ok {
+			cfg.ApacheCC = previous.ApacheCC
+		}
 	}
-	return core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg))
+	return core.DecodeApacheWAFVersionConfig(core.WAFSettings(cfg), version)
 }
 
 func apacheNativeMetadataMounts(source string) string {
@@ -104,6 +132,10 @@ func apacheNativeMetadataMounts(source string) string {
 // Remove only canonical old body sections before applying the existing strict
 // proxy planner; sealed CRS includes never become an arbitrary-include bypass.
 func apacheNativeCandidate(source string, previous, next core.WAFConfig, module string) (string, string, error) {
+	return apacheNativeCandidateVersion(source, previous, next, module, core.ApacheWAFNativeBodyVersion)
+}
+
+func apacheNativeCandidateVersion(source string, previous, next core.WAFConfig, module, version string) (string, string, error) {
 	outside, err := transitionApacheBodySource(source, previous, core.DefaultApacheWAFConfig())
 	if err != nil {
 		return "", "", err
@@ -121,7 +153,7 @@ func apacheNativeCandidate(source string, previous, next core.WAFConfig, module 
 	if err != nil || len(bindings) == 0 {
 		return "", "", errors.New("Apache 原生策略需要运行中的受管网站")
 	}
-	rules, err := renderApacheWAFVersion(next, bindings, core.ApacheWAFNativeBodyVersion)
+	rules, err := renderApacheWAFVersion(next, bindings, version)
 	return prepared, rules, err
 }
 
@@ -130,14 +162,18 @@ func (s *Service) confirmApacheNativeReplay(ctx context.Context, raw map[string]
 		return false, nil
 	}
 	current, err := s.apacheNativeCurrent()
-	if err != nil || current["version"] != core.ApacheWAFNativeBodyVersion {
+	if err != nil {
 		return false, nil
 	}
-	wanted, err := core.DecodeApacheWAFNativeBodyConfig(current["settings"].(map[string]any))
+	version := current["version"].(string)
+	if !core.ApacheWAFNativeVersion(version) {
+		return false, nil
+	}
+	wanted, err := core.DecodeApacheWAFVersionConfig(current["settings"].(map[string]any), version)
 	if err != nil {
 		return false, err
 	}
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(raw)
+	cfg, err := apacheNativeDecodeInput(raw, version, wanted.ApacheCC)
 	if err != nil || wanted.Policy.Revision != cfg.Policy.Revision+1 {
 		return false, nil
 	}
@@ -147,22 +183,51 @@ func (s *Service) confirmApacheNativeReplay(ctx context.Context, raw map[string]
 	if _, ok := raw["trusted_proxy"]; !ok {
 		cfg.TrustedProxy = wanted.TrustedProxy
 	}
+	if _, ok := raw["apache_cc"]; !ok {
+		cfg.ApacheCC = wanted.ApacheCC
+	}
 	cfg.Policy.Revision = wanted.Policy.Revision
 	a, _ := json.Marshal(cfg)
 	b, _ := json.Marshal(wanted)
 	if !bytes.Equal(a, b) {
 		return false, nil
 	}
-	if err = s.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, current["settings"].(map[string]any)); err != nil {
+	if err = s.verifyApacheWAFHealth(ctx, version, current["settings"].(map[string]any)); err != nil {
 		return true, errors.New("Apache 原生原请求字节已提交但实际加载未核实，未重载、重写或冒充成功：" + err.Error())
 	}
 	return true, nil
 }
 
-// Separate entrypoint, reached only by a signed2.4 install/update or an exact
-// current2.4 configuration. Metadata2.3 and direct legacy installation remain
+// Separate entrypoint, reached only by an exact signed native install/update
+// or the same version's current configuration. Metadata2.3 and direct legacy installation remain
 // unchanged. The complete prior/next triplet is journaled before activation.
 func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, install, upgrading bool, add func(string)) error {
+	return s.applyApacheNativeWAFVersion(ctx, raw, install, upgrading, core.ApacheWAFNativeBodyVersion, add)
+}
+
+func apacheNativeMutationManifest(original []byte, cfg core.WAFConfig, version, installedAt string) (map[string]json.RawMessage, error) {
+	document := map[string]json.RawMessage{}
+	if len(original) > 0 {
+		var err error
+		document, err = apacheBodySiteManifestDocument(original)
+		if err != nil {
+			return nil, err
+		}
+	}
+	for key, value := range map[string]any{"id": "apache-waf", "version": version, "settings": core.WAFSettings(cfg), "installed_at": installedAt, "updated_at": core.Now()} {
+		encoded, err := json.Marshal(value)
+		if err != nil {
+			return nil, err
+		}
+		document[key] = encoded
+	}
+	return document, nil
+}
+
+func (s *Service) applyApacheNativeWAFVersion(ctx context.Context, raw map[string]any, install, upgrading bool, version string, add func(string)) error {
+	if !core.ApacheWAFNativeVersion(version) {
+		return errors.New("Apache 原生应用目标版本未实现")
+	}
 	txs := s.apacheWAFTransactionService()
 	lock, err := txs.lockWAFConfiguration()
 	if err != nil {
@@ -173,6 +238,13 @@ func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, 
 		return err
 	}
 	if !install && !upgrading {
+		current, e := s.apacheNativeCurrent()
+		if e != nil {
+			return e
+		}
+		if current["version"] != version {
+			return errors.New("Apache 原请求目标版本与当前签名安装不一致，未采用重放")
+		}
 		if replay, e := s.confirmApacheNativeReplay(ctx, raw); replay || e != nil {
 			if e != nil {
 				return e
@@ -181,7 +253,7 @@ func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, 
 			return nil
 		}
 	}
-	cfg, err := s.apacheNativeSettings(raw, install, upgrading)
+	cfg, err := s.apacheNativeSettingsVersion(raw, install, upgrading, version)
 	if err != nil {
 		return err
 	}
@@ -215,7 +287,7 @@ func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, 
 		if err = json.Unmarshal(backups[2].data, &old); err != nil || old.ID != "apache-waf" {
 			return errors.New("Apache 原安装身份不可核对")
 		}
-		if old.Version != core.ApacheWAFNativeBodyVersion && !(upgrading && old.Version == core.ApacheWAFVersion) {
+		if old.Version != version && !(upgrading && (old.Version == core.ApacheWAFVersion || old.Version == core.ApacheWAFNativeBodyVersion && version == core.ApacheWAFNativeCCVersion)) {
 			return errors.New("Apache 原生版本转换不受支持，未修改")
 		}
 		previous, err = core.DecodeApacheWAFVersionConfig(old.Settings, old.Version)
@@ -237,7 +309,7 @@ func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, 
 	}
 	module := filepath.Join(release.Prefix(), "modules/mod_remoteip.so")
 	cfg.Policy.Revision++
-	updated, rules, err := apacheNativeCandidate(string(backups[0].data), previous, cfg, module)
+	updated, rules, err := apacheNativeCandidateVersion(string(backups[0].data), previous, cfg, module, version)
 	if err != nil {
 		return err
 	}
@@ -254,20 +326,31 @@ func (s *Service) applyApacheNativeWAF(ctx context.Context, raw map[string]any, 
 	if err = s.prepareApacheBodyStorage(ctx, cfg); err != nil {
 		return err
 	}
-	manifest := map[string]any{"id": "apache-waf", "version": core.ApacheWAFNativeBodyVersion, "settings": core.WAFSettings(cfg), "installed_at": installedAt, "updated_at": core.Now()}
+	if apacheCCPolicyMayLog(cfg) && apacheCCPolicyMayLog(previous) {
+		if err = verifyApacheCCLogStorage(false); err != nil {
+			return err
+		}
+	}
+	if err = s.prepareApacheCCLogStorage(ctx, cfg); err != nil {
+		return err
+	}
+	manifest, err := apacheNativeMutationManifest(backups[2].data, cfg, version, installedAt)
+	if err != nil {
+		return err
+	}
 	plan, err := txs.planApacheWAFTransaction(backups, updated, rules, manifest, false)
 	if err != nil {
 		return err
 	}
 	if err = txs.applyApacheWAFPlanned(ctx, plan, func(bounded context.Context) error {
-		domain, e := apacheWAFConfigurationFilesMatchVersion(updated, cfg, module, paths[1], core.ApacheWAFNativeBodyVersion)
+		domain, e := apacheWAFConfigurationFilesMatchVersion(updated, cfg, module, paths[1], version)
 		if e != nil {
 			return e
 		}
-		return apacheWAFWaitLoadedVersion(bounded, cfg, domain, core.ApacheWAFNativeBodyVersion)
+		return apacheWAFWaitLoadedVersion(bounded, cfg, domain, version)
 	}, add); err != nil {
 		return err
 	}
-	add("Apache2.4应用完整三文件事务与实际加载核验通过；请求体仅按明确站点策略启用，原程序、日志和失败历史保留")
+	add("Apache 原生应用完整三文件事务与实际加载核验通过；请求体仅按明确站点策略启用，原程序、日志和失败历史保留")
 	return nil
 }

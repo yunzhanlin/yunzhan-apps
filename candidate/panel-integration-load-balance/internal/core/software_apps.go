@@ -40,28 +40,32 @@ type SoftwareAppsPage struct {
 }
 
 type WAFEvent struct {
-	Country     string `json:"country,omitempty"`
-	CountryData string `json:"country_data,omitempty"`
-	SiteID      string `json:"site_id,omitempty"`
-	Path        string `json:"path,omitempty"`
-	Reason      string `json:"reason,omitempty"`
-	Action      string `json:"action,omitempty"`
-	Time        string `json:"time"`
-	Site        string `json:"site"`
-	IP          string `json:"ip"`
-	Peer        string `json:"peer,omitempty"`
-	Status      int    `json:"status"`
-	Method      string `json:"method"`
-	BadMethod   string `json:"bad_method"`
-	BadArgs     string `json:"bad_args"`
-	BadURI      string `json:"bad_uri"`
-	BadAgent    string `json:"bad_agent"`
-	Rate        string `json:"rate"`
+	Country       string `json:"country,omitempty"`
+	CountryData   string `json:"country_data,omitempty"`
+	SiteID        string `json:"site_id,omitempty"`
+	Path          string `json:"path,omitempty"`
+	PathTruncated bool   `json:"path_truncated,omitempty"`
+	Reason        string `json:"reason,omitempty"`
+	Action        string `json:"action,omitempty"`
+	Time          string `json:"time"`
+	Site          string `json:"site"`
+	IP            string `json:"ip"`
+	Peer          string `json:"peer,omitempty"`
+	Status        int    `json:"status"`
+	Method        string `json:"method"`
+	BadMethod     string `json:"bad_method"`
+	BadArgs       string `json:"bad_args"`
+	BadURI        string `json:"bad_uri"`
+	BadAgent      string `json:"bad_agent"`
+	Rate          string `json:"rate"`
 }
 
 type WAFEventsPage struct {
-	Events  []WAFEvent `json:"events"`
-	HasMore bool       `json:"has_more"`
+	Events                 []WAFEvent `json:"events"`
+	HasMore                bool       `json:"has_more"`
+	MetadataBestEffort     bool       `json:"metadata_best_effort,omitempty"`
+	CCLogCapacityNearLimit bool       `json:"cc_log_capacity_near_limit,omitempty"`
+	CCLogTailIncomplete    bool       `json:"cc_log_tail_incomplete,omitempty"`
 }
 
 var softwareAppCatalog = []SoftwareAppCatalogItem{
@@ -129,11 +133,11 @@ func ValidateSoftwareUpdate(id, version string) error {
 		}
 	}
 	if id == "apache-waf" {
-		if version == ApacheWAFNativeBodyVersion {
+		if ApacheWAFNativeVersion(version) {
 			return nil
 		}
-		if base, _, _ := strings.Cut(version, "-"); base == ApacheWAFNativeBodyVersion {
-			return errors.New("Apache 原生请求体应用仅允许固定完整2.4.0，拒绝别名")
+		if base, _, _ := strings.Cut(version, "-"); ApacheWAFNativeVersion(base) {
+			return errors.New("Apache 原生防护应用仅允许固定完整2.4.0或2.5.0，拒绝别名")
 		}
 	}
 	if id == "mobile-pwa" {
@@ -195,7 +199,7 @@ func ValidateSoftwareInstallVersion(id, version string) error {
 	if err := ValidateSoftwareUpdate(id, version); err != nil {
 		return err
 	}
-	if id == "apache-waf" && version != ApacheWAFVersion && version != ApacheWAFNativeBodyVersion {
+	if id == "apache-waf" && version != ApacheWAFVersion && !ApacheWAFNativeVersion(version) {
 		return errors.New("Apache 新安装须选择完整受支持的签名版本；旧包不能隐式安装为新版，请刷新应用商店")
 	}
 	return nil
@@ -305,7 +309,7 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if action != "install" && action != "configure" && action != "uninstall" && action != "update" && !((id == "system-hardening" || id == "intrusion-prevention") && action == "recover") {
 		return "", errors.New("软件生命周期操作无效")
 	}
-	nativeApache := id == "apache-waf" && version == ApacheWAFNativeBodyVersion && (action == "install" || action == "update")
+	nativeApache := id == "apache-waf" && ApacheWAFNativeVersion(version) && (action == "install" || action == "update")
 	nativeMobile := id == "mobile-pwa" && version == NativeMobileAppVersion && (action == "install" || action == "update")
 	if nativeApache && bind == nil {
 		return "", errors.New("Apache2.4原生安装或更新须使用匹配的签名仓库请求，旧直接接口不能提升能力")

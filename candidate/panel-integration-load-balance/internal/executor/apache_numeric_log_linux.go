@@ -345,14 +345,14 @@ func (s *Service) rotateApacheNumericLogWithIntent(ctx context.Context, lock *os
 		return out, errors.New("Apache 上次日志维护结果仍未知，未重复截断")
 	}
 	installed, err := s.moduleInstalledRecord("apache-waf")
-	if err != nil || installed["version"] != core.ApacheWAFNativeBodyVersion {
+	if err != nil || !apacheNativeRecord(installed) {
 		return out, errors.New("手动日志轮转须有完整 Apache2.4.0 原生安装")
 	}
 	settings, ok := installed["settings"].(map[string]any)
 	if !ok {
 		return out, errors.New("Apache 原配置缺失，未采用默认值")
 	}
-	if err = s.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, settings); err != nil {
+	if err = s.verifyApacheWAFHealth(ctx, installed["version"].(string), settings); err != nil {
 		return out, err
 	}
 	return s.snapshotAndTruncateApacheNumericLog(ctx)

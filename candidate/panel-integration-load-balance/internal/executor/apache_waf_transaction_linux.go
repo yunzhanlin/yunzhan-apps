@@ -151,7 +151,7 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 		if old.ID != "apache-waf" {
 			return errors.New("Apache 恢复安装身份与固定防护应用不一致，保留事务")
 		}
-		if old.Version != core.ApacheWAFNativeBodyVersion {
+		if !core.ApacheWAFNativeVersion(old.Version) {
 			if old.Version != core.ApacheWAFVersion && old.Version != "2.2.0" && old.Version != "2.1.0" && old.Version != "2.0.0" && old.Version != "1.0" {
 				return errors.New("Apache 恢复安装版本未知，未加载模块且保留事务")
 			}
@@ -162,8 +162,8 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 				return err
 			}
 		}
-		if old.Version == core.ApacheWAFNativeBodyVersion {
-			cfg, err = core.DecodeApacheWAFNativeBodyConfig(old.Settings)
+		if core.ApacheWAFNativeVersion(old.Version) {
+			cfg, err = core.DecodeApacheWAFVersionConfig(old.Settings, old.Version)
 			if err != nil {
 				return err
 			}
@@ -236,7 +236,7 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 		}
 		return acknowledge()
 	}
-	if old.Version != core.ApacheWAFNativeBodyVersion {
+	if !core.ApacheWAFNativeVersion(old.Version) {
 		cfg, err = core.DecodeApacheWAFConfig(old.Settings)
 		if err != nil {
 			return err

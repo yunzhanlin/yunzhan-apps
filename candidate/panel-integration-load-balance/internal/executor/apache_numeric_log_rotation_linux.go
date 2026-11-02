@@ -354,7 +354,7 @@ func (s *Service) runApacheNumericLogRotationOnce(ctx context.Context, now time.
 	if err = verifyApacheNumericRotationEngine(ctx, cfg); err != nil {
 		return err
 	}
-	if err = logs.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, core.WAFSettings(cfg)); err != nil {
+	if err = logs.verifyApacheCurrentNativeConfigHealth(ctx, cfg); err != nil {
 		return err
 	}
 	_, err = logs.runApacheNumericRotationLocked(ctx, now, lock, cfg, func(intent string) (apacheNumericLogArchive, error) {

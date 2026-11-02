@@ -96,11 +96,18 @@ func renderApacheWAFVersion(cfg core.WAFConfig, bindings map[string][]string, ve
 		}
 		return apacheWAFInitialRules, nil
 	}
-	if version != core.ApacheWAFVersion && version != core.ApacheWAFNativeBodyVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" || version == "2.0.0" && cfg.TrustedProxy != nil {
+	if version != core.ApacheWAFVersion && !core.ApacheWAFNativeVersion(version) && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" || version == "2.0.0" && cfg.TrustedProxy != nil {
 		return "", errors.New("Apache 防护完整性版本或旧版代理策略不支持")
 	}
-	if cfg.Body != nil && version != core.ApacheWAFNativeBodyVersion {
+	if cfg.Body != nil && !core.ApacheWAFNativeVersion(version) {
 		return "", errors.New("Apache 元数据旧版不能渲染原生请求体策略")
+	}
+	if version == core.ApacheWAFNativeCCVersion {
+		if _, err := core.DecodeApacheWAFNativeCCConfig(core.WAFSettings(cfg)); err != nil {
+			return "", err
+		}
+	} else if _, err := core.DecodeApacheWAFVersionConfig(core.WAFSettings(cfg), version); err != nil {
+		return "", err
 	}
 	if err := core.ValidateApacheWAFTrustedProxy(cfg.TrustedProxy); err != nil {
 		return "", err

@@ -33,6 +33,14 @@ func TestApacheBodyNativeReadOnlyAPIReadyReplayClosedInputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	var record apacheBodyBuildRecord
+	if err := apacheBodyDecodeJSON(before, &record); err != nil {
+		t.Fatal(err)
+	}
+	wantCC := ""
+	if record.Format == 2 {
+		wantCC = apacheCCEngineVersion
+	}
 	s := nativeWAFService()
 	s.Config.Run = func(ctx context.Context, program string, args ...string) (string, error) {
 		t.Errorf("readonly/ready replay attempted an external command: %s %v", program, args)
@@ -56,6 +64,9 @@ func TestApacheBodyNativeReadOnlyAPIReadyReplayClosedInputs(t *testing.T) {
 		if json.Unmarshal(w.Body.Bytes(), &got) != nil || got.JobID != id || got.State != "ready" || !got.BuildOnly || !got.IntegrityVerified || !got.ABIValidated || !got.HardeningValidated || !got.CompilerCollected || got.Error != "" || got.Engine != apacheBodyEngineVersion || got.YAJL != apacheBodyYAJLVersion || got.ApacheVersion != "2.4.68" {
 			t.Fatal("ready API lacks all independently verified program facts", w.Body.String())
 		}
+		if got.NativeCCVersion != wantCC {
+			t.Fatal("native CC capability must equal the actual sealed program format", w.Body.String())
+		}
 	}
 	assertReady(call("GET", base+"body-engine/jobs/"+id, "", 200))
 	var inventory struct {
@@ -70,6 +81,9 @@ func TestApacheBodyNativeReadOnlyAPIReadyReplayClosedInputs(t *testing.T) {
 	found := 0
 	for _, row := range inventory.Entries {
 		if row.JobID == id && row.State == "ready" {
+			if row.NativeCCVersion != wantCC {
+				t.Fatal("inventory dropped or fabricated the actual native CC capability", row)
+			}
 			found++
 		}
 	}
@@ -96,4 +110,7 @@ func TestApacheBodyNativeReadOnlyAPIReadyReplayClosedInputs(t *testing.T) {
 		t.Fatal("completed ready task gained a cancellation barrier", err)
 	}
 	t.Log("NATIVE_APACHE_READONLY_API_READY_REPLAY", id)
+	if record.Format == 2 {
+		t.Log("NATIVE_APACHE_CC_READONLY_API_READY_REPLAY", id)
+	}
 }

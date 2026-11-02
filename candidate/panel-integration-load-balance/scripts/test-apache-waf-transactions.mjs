@@ -37,7 +37,7 @@ function componentFixture(version,mode='success') {
 }
 
 test('actual component reads native2.4 and admits maintenance only for exact current versions and a verified original selection',async()=>{
- for(const [version,readable,writable]of [['2.0.0',true,false],['2.1.0',true,false],['2.2.0',true,false],['2.3.0',true,true],['2.4.0',true,true],['2.3.1',false,false],['2.4.1',false,false],['v2.4.0',false,false],['2.4.0-beta',false,false]]) {
+ for(const [version,readable,writable]of [['2.0.0',true,false],['2.1.0',true,false],['2.2.0',true,false],['2.3.0',true,true],['2.4.0',true,true],['2.5.0',true,true],['2.3.1',false,false],['2.4.1',false,false],['v2.4.0',false,false],['2.4.0-beta',false,false]]) {
   const {logic,bindings,calls,props}=componentFixture(version);
   assert.equal(logic.readable.value,readable,version);
   await logic.refresh();assert.equal(calls.length,readable?1:0,version);
@@ -52,7 +52,7 @@ test('actual component reads native2.4 and admits maintenance only for exact cur
 });
 
 test('actual native2.4 archive handler retains unknown outcomes and requires explicit readonly refresh before another write',async()=>{
- for(const version of['2.3.0','2.4.0'])for(const mode of['refused','lost-reply','foreign-reply']) {
+ for(const version of['2.3.0','2.4.0','2.5.0'])for(const mode of['refused','lost-reply','foreign-reply']) {
   const {logic,bindings,calls}=componentFixture(version,mode);
   await logic.refresh();logic.choose(bindings.inventory.value.apache_transactions[0]);bindings.confirm.value='ARCHIVE APACHE TRANSACTION '+id;assert.equal(logic.writable.value,true);
   await logic.archive();assert.equal(calls.length,2);assert.equal(bindings.receipt.value,undefined);assert.equal(bindings.known.value,false);assert.equal(bindings.busy.value,false);assert.match(bindings.operationError.value,/不会自动重试/);

@@ -35,6 +35,13 @@ func runApacheBodyNativeBuildCommand(ctx context.Context, paths apacheBodyBuildP
 	return runBoundedNativeBuildCommand(ctx, command, logPath, buildHome, true)
 }
 
+func runApacheBodyCCNativeBuildCommand(ctx context.Context, paths apacheBodyBuildPaths, index int, command wafBuildCommand, logPath, buildHome string) error {
+	if err := validateApacheBodyCCBuildCommand(paths, index, command); err != nil {
+		return err
+	}
+	return runBoundedNativeBuildCommand(ctx, command, logPath, buildHome, true)
+}
+
 // Source-specific validators above remain separate. Sharing cancellation and
 // log bounds does not expand Nginx's command or download source authority.
 func runBoundedNativeBuildCommand(ctx context.Context, command wafBuildCommand, logPath, buildHome string, clearInherited bool) error {

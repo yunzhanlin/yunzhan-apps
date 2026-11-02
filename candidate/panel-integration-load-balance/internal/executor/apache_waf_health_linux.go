@@ -45,7 +45,7 @@ func apacheWAFReadStableFile(path string, limit int64) ([]byte, error) {
 }
 
 func (s *Service) apacheWAFConfigurationMatches(version string, cfg core.WAFConfig) (string, error) {
-	if version != core.ApacheWAFVersion && version != core.ApacheWAFNativeBodyVersion {
+	if version != core.ApacheWAFVersion && !core.ApacheWAFNativeVersion(version) {
 		return "", errors.New("旧版 Apache WAF 需先签名升级，尚未按新版契约确认完整性")
 	}
 	source, bindings, err := s.apacheWAFSource()
@@ -65,8 +65,8 @@ func apacheWAFConfigurationFilesMatch(source string, cfg core.WAFConfig, module,
 }
 
 func apacheWAFConfigurationFilesMatchVersion(source string, cfg core.WAFConfig, module, rulesPath, version string) (string, error) {
-	if version == core.ApacheWAFNativeBodyVersion {
-		if _, err := core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg)); err != nil {
+	if core.ApacheWAFNativeVersion(version) {
+		if _, err := core.DecodeApacheWAFVersionConfig(core.WAFSettings(cfg), version); err != nil {
 			return "", err
 		}
 	} else if cfg.Body != nil {
@@ -150,7 +150,7 @@ func apacheWAFWaitLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain,
 }
 
 func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain string, client *http.Client, version string) error {
-	if version != core.ApacheWAFVersion && version != core.ApacheWAFNativeBodyVersion && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
+	if version != core.ApacheWAFVersion && !core.ApacheWAFNativeVersion(version) && version != "2.2.0" && version != "2.1.0" && version != "2.0.0" && version != "1.0" {
 		return errors.New("Apache 配置指纹版本不支持")
 	}
 	if !core.ValidDomain(domain) {
@@ -169,6 +169,9 @@ func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain
 	defer res.Body.Close()
 	if res.StatusCode >= 300 && res.StatusCode < 400 || res.StatusCode < 200 || res.StatusCode >= 500 || res.Header.Get("X-Panel-Apache-WAF") != apacheWAFProbeVersion(cfg, version) {
 		return errors.New("Apache 实际加载指纹与配置不一致，未宣称保护正常")
+	}
+	if version == core.ApacheWAFNativeCCVersion && cfg.ApacheCC != nil && (res.StatusCode != http.StatusNoContent || res.Header.Get("X-Panel-Apache-CC-Probe") != apacheCCEngineVersion || res.Header.Get("X-Panel-Apache-CC") != apacheCCEngineVersion+":"+apacheCCPolicyFingerprint(cfg)) {
+		return errors.New("Apache 原生 CC 模块实际加载指纹未核实")
 	}
 	if version == "1.0" {
 		// Its old 'active' marker is not unique. Also verify the known fixed
@@ -229,7 +232,7 @@ func (s *Service) verifyApacheWAFHealth(ctx context.Context, version string, set
 	if err != nil {
 		return err
 	}
-	if version == core.ApacheWAFNativeBodyVersion {
+	if core.ApacheWAFNativeVersion(version) {
 		if err = s.verifyApacheBodyTransition(ctx, cfg, cfg); err != nil {
 			return err
 		}

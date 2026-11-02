@@ -54,20 +54,27 @@ func verifyApacheBodyMetadataDirectory() error {
 func (s *Service) verifyApacheBodyTransition(ctx context.Context, previous, next core.WAFConfig) error {
 	checked := map[string]bool{}
 	for _, cfg := range []core.WAFConfig{previous, next} {
-		if _, err := core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg)); err != nil {
+		if _, err := core.DecodeApacheWAFNativeCCConfig(core.WAFSettings(cfg)); err != nil {
 			return err
 		}
-		if !apacheBodyActive(cfg) {
+		if !apacheBodyActive(cfg) && cfg.ApacheCC == nil {
 			continue
 		}
 		if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" || os.Geteuid() != 0 {
 			return errors.New("Apache 请求体程序只可在实际受管环境核验，拒绝模拟命令或自定义源码路径")
 		}
-		if !checked[cfg.Body.EngineJobID] {
+		if cfg.ApacheCC != nil && !checked["cc:"+cfg.ApacheCC.EngineJobID] {
+			if err := verifyApacheCCBuildContext(ctx, cfg.ApacheCC.EngineJobID); err != nil {
+				return err
+			}
+			checked["cc:"+cfg.ApacheCC.EngineJobID] = true
+			checked["body:"+cfg.ApacheCC.EngineJobID] = true
+		}
+		if apacheBodyActive(cfg) && !checked["body:"+cfg.Body.EngineJobID] {
 			if err := verifyApacheBodyBuildContext(ctx, cfg.Body.EngineJobID); err != nil {
 				return err
 			}
-			checked[cfg.Body.EngineJobID] = true
+			checked["body:"+cfg.Body.EngineJobID] = true
 		}
 	}
 	return ctx.Err()

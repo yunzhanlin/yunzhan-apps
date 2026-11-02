@@ -61,10 +61,11 @@ func (s *Service) apacheNativePreview(ctx context.Context, raw map[string]any) (
 	if err != nil {
 		return nil, err
 	}
-	if current["version"] != core.ApacheWAFNativeBodyVersion {
+	version := current["version"].(string)
+	if !core.ApacheWAFNativeVersion(version) {
 		return nil, errors.New("预览不授予原生版本，先签名升级Apache应用")
 	}
-	previous, err := core.DecodeApacheWAFNativeBodyConfig(current["settings"].(map[string]any))
+	previous, err := core.DecodeApacheWAFVersionConfig(current["settings"].(map[string]any), version)
 	if err != nil {
 		return nil, err
 	}
@@ -81,17 +82,22 @@ func (s *Service) apacheNativePreview(ctx context.Context, raw map[string]any) (
 		return nil, err
 	}
 	module := filepath.Join(release.Prefix(), "modules/mod_remoteip.so")
-	if _, err = apacheWAFConfigurationFilesMatchVersion(source, previous, module, filepath.Join(s.moduleDir("apache-waf"), "rules.conf"), core.ApacheWAFNativeBodyVersion); err != nil {
+	if _, err = apacheWAFConfigurationFilesMatchVersion(source, previous, module, filepath.Join(s.moduleDir("apache-waf"), "rules.conf"), version); err != nil {
 		return nil, err
 	}
 	next := cfg
 	next.Policy.Revision++
-	prepared, rules, err := apacheNativeCandidate(source, previous, next, module)
+	prepared, rules, err := apacheNativeCandidateVersion(source, previous, next, module, version)
 	if err != nil {
 		return nil, err
 	}
 	if err = s.verifyApacheBodyTransition(ctx, previous, cfg); err != nil {
 		return nil, err
+	}
+	if apacheCCPolicyMayLog(cfg) {
+		if err = verifyApacheCCLogStorage(!apacheCCPolicyMayLog(previous)); err != nil {
+			return nil, err
+		}
 	}
 	if cfg.TrustedProxy != nil && cfg.TrustedProxy.Enabled {
 		if err = verifyApacheWAFRemoteIPModule(module); err != nil {
@@ -110,5 +116,5 @@ func (s *Service) apacheNativePreview(ctx context.Context, raw map[string]any) (
 			return nil, e
 		}
 	}
-	return map[string]any{"settings": cfg, "http_config": prepared, "server_config": rules, "read_only": true, "body_activation_explicit": true, "implementation_version": core.ApacheWAFNativeBodyVersion, "planned_revision": next.Policy.Revision}, nil
+	return map[string]any{"settings": cfg, "http_config": prepared, "server_config": rules, "read_only": true, "body_activation_explicit": true, "implementation_version": version, "planned_revision": next.Policy.Revision}, nil
 }

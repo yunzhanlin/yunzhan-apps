@@ -84,7 +84,7 @@ func (s *Service) removeApacheWAF(ctx context.Context, add func(string)) error {
 	if err = json.Unmarshal(backups[2].data, &current); err != nil || current.ID != "apache-waf" {
 		return errors.New("Apache 安装记录身份异常，未卸载")
 	}
-	if current.Version == core.ApacheWAFVersion || current.Version == core.ApacheWAFNativeBodyVersion {
+	if current.Version == core.ApacheWAFVersion || core.ApacheWAFNativeVersion(current.Version) {
 		err = s.verifyApacheWAFHealth(ctx, current.Version, current.Settings)
 	} else {
 		err = s.verifyApacheWAFLegacyUpgrade(ctx, core.SoftwareAppStatus{Installed: true, Version: current.Version, Settings: current.Settings})
@@ -97,8 +97,8 @@ func (s *Service) removeApacheWAF(ctx context.Context, add func(string)) error {
 		return err
 	}
 	source := string(backups[0].data)
-	if current.Version == core.ApacheWAFNativeBodyVersion {
-		cfg, e := core.DecodeApacheWAFNativeBodyConfig(current.Settings)
+	if core.ApacheWAFNativeVersion(current.Version) {
+		cfg, e := core.DecodeApacheWAFVersionConfig(current.Settings, current.Version)
 		if e != nil {
 			return e
 		}

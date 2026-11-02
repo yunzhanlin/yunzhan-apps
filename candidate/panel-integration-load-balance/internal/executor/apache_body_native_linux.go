@@ -94,7 +94,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		}
 	}
 	jobPath := filepath.Join(apacheBodyJobs, id+".json")
-	record := apacheBodyBuildRecord{Format: 1, JobID: id, State: "building", Architecture: runtime.GOARCH, Engine: apacheBodyEngineVersion, YAJL: apacheBodyYAJLVersion, CRS: wafBodyCRSVersion, Prefix: filepath.Join(apacheBodyEngines, id), SourceSHA: map[string]string{}, AssetSHA: apacheBodyReleaseAssetPins(), StartedAt: core.Now(), CompletedBuildSteps: []string{}, Steps: []core.Step{}}
+	record := apacheBodyBuildRecord{Format: 2, CCEngine: apacheCCEngineVersion, JobID: id, State: "building", Architecture: runtime.GOARCH, Engine: apacheBodyEngineVersion, YAJL: apacheBodyYAJLVersion, CRS: wafBodyCRSVersion, Prefix: filepath.Join(apacheBodyEngines, id), SourceSHA: map[string]string{}, AssetSHA: apacheBodyReleaseAssetPinsForFormat(2), StartedAt: core.Now(), CompletedBuildSteps: []string{}, Steps: []core.Step{}}
 	if err := createApacheBodyRecord(jobPath, record); err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 			}
 		}
 	}()
-	for name := range apacheBodyReleaseAssetPins() {
+	for name := range apacheBodyReleaseAssetPinsForFormat(record.Format) {
 		b, err := verifiedApacheBodyReleaseAsset(name)
 		if err != nil {
 			return err
@@ -246,7 +246,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 			return err
 		}
 	}
-	plan, err := apacheBodyNativeBuildPlan(paths)
+	plan, err := apacheBodyBuildPlanForFormat(paths, record.Format)
 	if err != nil {
 		return err
 	}
@@ -254,7 +254,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		if err := step(command.Label); err != nil {
 			return err
 		}
-		if err := runApacheBodyNativeBuildCommand(ctx, paths, i, command, filepath.Join(build, "build.log"), paths.Work); err != nil {
+		if err := runApacheBodyCCNativeBuildCommand(ctx, paths, i, command, filepath.Join(build, "build.log"), paths.Work); err != nil {
 			return err
 		}
 		record.CompletedBuildSteps = append(record.CompletedBuildSteps, command.Label)
@@ -273,6 +273,10 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 	if err := probeApacheBodyELF(ctx, module); err != nil {
 		return err
 	}
+	ccModule := filepath.Join(paths.Work, "mod_yunzhan_cc.so")
+	if err := probeApacheBodyELF(ctx, ccModule); err != nil {
+		return err
+	}
 	record.HardeningValidated = true
 	if err := os.Mkdir(record.Prefix, 0755); err != nil {
 		return err
@@ -283,6 +287,9 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		}
 	}
 	if err := copyWAFNativeFile(ctx, module, filepath.Join(record.Prefix, "apache/mod_security2.so"), 64<<20, 0); err != nil {
+		return err
+	}
+	if err := copyWAFNativeFile(ctx, ccModule, filepath.Join(record.Prefix, "apache/mod_yunzhan_cc.so"), 4<<20, 0); err != nil {
 		return err
 	}
 	// Root-owned re-extraction, not the compiler's rules/unicode output.
@@ -315,7 +322,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 	if err := copyWAFNativeFile(ctx, filepath.Join(resources, "apache-modsecurity/modsecurity-v2.9.15/unicode.mapping"), filepath.Join(unicodeDir, "unicode.mapping"), 2<<20, 0); err != nil {
 		return err
 	}
-	for name := range apacheBodyReleaseAssetPins() {
+	for name := range apacheBodyReleaseAssetPinsForFormat(record.Format) {
 		b, err := verifiedApacheBodyReleaseAsset(name)
 		if err != nil {
 			return err
@@ -333,10 +340,17 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 	if err := probeApacheBodyModule(ctx, s, r.Prefix(), record.Prefix, build); err != nil {
 		return err
 	}
+	if err := probeApacheCCModule(ctx, s, r.Prefix(), record.Prefix, build); err != nil {
+		return err
+	}
+	record.CCABIValidated = true
 	if current, err := wafNativeFileSHA(ctx, r.CLI(), 64<<20); err != nil || current != record.ApacheSHA {
 		return errors.New("编译期间实际 Apache 程序摘要变化，拒绝发布")
 	}
 	if record.ModuleSHA, err = wafNativeFileSHA(ctx, filepath.Join(record.Prefix, "apache/mod_security2.so"), 64<<20); err != nil {
+		return err
+	}
+	if record.CCModuleSHA, err = wafNativeFileSHA(ctx, filepath.Join(record.Prefix, "apache/mod_yunzhan_cc.so"), 4<<20); err != nil {
 		return err
 	}
 	if record.TreeSHA, err = runtimeTreeSHA(ctx, record.Prefix, record.Prefix); err != nil {
@@ -350,7 +364,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 }
 
 func apacheBodyBuildDependencies() []string {
-	return []string{"build-essential", "pkg-config", "libpcre2-dev", "libxml2-dev", "libapr1-dev", "libaprutil1-dev", "patch"}
+	return []string{"build-essential", "pkg-config", "libpcre2-dev", "libxml2-dev", "libapr1-dev", "libaprutil1-dev", "libssl-dev", "patch"}
 }
 
 func apacheBodyNotCanceled(id string) error {

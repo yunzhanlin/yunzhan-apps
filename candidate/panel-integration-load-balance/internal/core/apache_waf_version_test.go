@@ -16,13 +16,25 @@ func apacheNativeRequestFixture() WAFConfig {
 }
 
 func TestApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t *testing.T) {
-	for _, scenario := range []string{"signed", "nil", "noop", "foreign", "revoked"} {
+	for _, version := range []string{ApacheWAFNativeBodyVersion, ApacheWAFNativeCCVersion} {
+		t.Run(version, func(t *testing.T) { testApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t, version) })
+	}
+}
+
+func testApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t *testing.T, targetVersion string) {
+	for _, scenario := range []string{"signed", "nil", "noop", "foreign", "revoked", "other-native-version"} {
 		t.Run(scenario, func(t *testing.T) {
 			s, _, _ := wafTaskTestServer(t)
 			u := wafArchivePendingIdentity(t, s, "waf-admin")
-			item := appcatalog.CatalogItem{ID: "apache-waf", Target: "apache-waf", Provider: "panel-module", Version: ApacheWAFNativeBodyVersion, SHA256: strings.Repeat("b", 64)}
+			item := appcatalog.CatalogItem{ID: "apache-waf", Target: "apache-waf", Provider: "panel-module", Version: targetVersion, SHA256: strings.Repeat("b", 64)}
 			if scenario == "foreign" {
 				item.ID = "daily-report"
+			}
+			if scenario == "other-native-version" {
+				item.Version = ApacheWAFNativeBodyVersion
+				if targetVersion == ApacheWAFNativeBodyVersion {
+					item.Version = ApacheWAFNativeCCVersion
+				}
 			}
 			key := "native-update-" + scenario
 			var bind func(*sql.Tx, string, bool) error
@@ -36,7 +48,7 @@ func TestApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t *testing
 					t.Fatal(e)
 				}
 			}
-			job, err := s.queueSoftwareActionBound("apache-waf", "update", map[string]any{"untrusted": "must not replace current settings"}, ApacheWAFNativeBodyVersion, key, u.Username, bind)
+			job, err := s.queueSoftwareActionBound("apache-waf", "update", map[string]any{"untrusted": "must not replace current settings"}, targetVersion, key, u.Username, bind)
 			if scenario != "signed" {
 				if err == nil || job != "" {
 					t.Fatal("unsigned or borrowed native update queued", scenario, job, err)
@@ -60,7 +72,7 @@ func TestApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t *testing
 				Settings map[string]any `json:"settings"`
 				Version  string         `json:"version"`
 			}
-			if json.Unmarshal([]byte(payload), &raw) != nil || raw.Settings != nil || raw.Version != ApacheWAFNativeBodyVersion {
+			if json.Unmarshal([]byte(payload), &raw) != nil || raw.Settings != nil || raw.Version != targetVersion {
 				t.Fatal("update replaced live configuration", payload)
 			}
 			// A completed original keeps its immutable request identity even after
@@ -71,7 +83,7 @@ func TestApacheNativeUpdateCannotBorrowNilNoopForeignOrRevokedBinding(t *testing
 			if _, e := s.DB.Exec("DELETE FROM app_registry_pending WHERE job_id=?", job); e != nil {
 				t.Fatal(e)
 			}
-			replay, e := s.queueSoftwareActionBound("apache-waf", "update", nil, ApacheWAFNativeBodyVersion, key, u.Username, bind)
+			replay, e := s.queueSoftwareActionBound("apache-waf", "update", nil, targetVersion, key, u.Username, bind)
 			if e != nil || replay != job {
 				t.Fatal("original completed update replay changed", replay, e)
 			}
@@ -96,16 +108,34 @@ func TestApacheNativeScopesRequireActuallyRunningManagedApacheSites(t *testing.T
 }
 
 func TestApacheNativeSignedInstallBindsVersionActorPayloadAndOriginalRequestAtomically(t *testing.T) {
-	for _, scenario := range []string{"signed", "missing-registry-binding", "different-signed-version"} {
+	for _, version := range []string{ApacheWAFNativeBodyVersion, ApacheWAFNativeCCVersion} {
+		t.Run(version, func(t *testing.T) {
+			testApacheNativeSignedInstallBindsVersionActorPayloadAndOriginalRequestAtomically(t, version)
+		})
+	}
+}
+
+func testApacheNativeSignedInstallBindsVersionActorPayloadAndOriginalRequestAtomically(t *testing.T, targetVersion string) {
+	for _, scenario := range []string{"signed", "missing-registry-binding", "different-signed-version", "other-native-version"} {
 		t.Run(scenario, func(t *testing.T) {
 			s, _, _ := wafTaskTestServer(t)
 			u := wafArchivePendingIdentity(t, s, "waf-admin")
 			cfg := apacheNativeRequestFixture()
+			if targetVersion == ApacheWAFNativeCCVersion {
+				cfg.ApacheCC = &ApacheWAFCCConfig{EngineJobID: ID()}
+				cfg.Policy.CCEnabled = true
+			}
 			cfg.Body.Sites[0].SiteID = wafSiteFixture(t, s, 991, "apache", "running", nil)
 			settings := WAFSettings(cfg)
-			item := appcatalog.CatalogItem{ID: "apache-waf", Target: "apache-waf", Provider: "panel-module", Version: ApacheWAFNativeBodyVersion, SHA256: strings.Repeat("a", 64)}
+			item := appcatalog.CatalogItem{ID: "apache-waf", Target: "apache-waf", Provider: "panel-module", Version: targetVersion, SHA256: strings.Repeat("a", 64)}
 			if scenario == "different-signed-version" {
 				item.Version = ApacheWAFVersion
+			}
+			if scenario == "other-native-version" {
+				item.Version = ApacheWAFNativeBodyVersion
+				if targetVersion == ApacheWAFNativeBodyVersion {
+					item.Version = ApacheWAFNativeCCVersion
+				}
 			}
 			key := "native-bound-" + scenario
 			bind := s.bindWAFApplyRequest("apache-waf", key, u)
@@ -119,7 +149,7 @@ func TestApacheNativeSignedInstallBindsVersionActorPayloadAndOriginalRequestAtom
 					return wafBind(tx, job, existing)
 				}
 			}
-			job, err := s.queueSoftwareActionBound("apache-waf", "install", settings, ApacheWAFNativeBodyVersion, key, u.Username, bind)
+			job, err := s.queueSoftwareActionBound("apache-waf", "install", settings, targetVersion, key, u.Username, bind)
 			if scenario != "signed" {
 				if err == nil || job != "" {
 					t.Fatal("unbound native install queued", job, err)
@@ -136,7 +166,7 @@ func TestApacheNativeSignedInstallBindsVersionActorPayloadAndOriginalRequestAtom
 				t.Fatal(err)
 			}
 			var payload, actor, version string
-			if err = s.DB.QueryRow("SELECT j.payload,w.actor_id,i.version FROM runtime_jobs j JOIN waf_apply_requests w ON w.job_id=j.id JOIN app_registry_install_requests i ON i.job_id=j.id WHERE j.id=?", job).Scan(&payload, &actor, &version); err != nil || actor != u.ID || version != ApacheWAFNativeBodyVersion {
+			if err = s.DB.QueryRow("SELECT j.payload,w.actor_id,i.version FROM runtime_jobs j JOIN waf_apply_requests w ON w.job_id=j.id JOIN app_registry_install_requests i ON i.job_id=j.id WHERE j.id=?", job).Scan(&payload, &actor, &version); err != nil || actor != u.ID || version != targetVersion {
 				t.Fatal("original native authority missing", err)
 			}
 			if _, err = wafApplyOriginalSettingsForRequest("apache-waf", "software_install", payload, version); err != nil {
@@ -157,7 +187,7 @@ func TestApacheNativeVersionDoesNotPromoteMetadataDefaultOrAliases(t *testing.T)
 	}
 	cfg := apacheNativeRequestFixture()
 	raw := WAFSettings(cfg)
-	for _, version := range []string{"", "1.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0-compat1", "2.5.0", "02.4.0", "18446744073709551616.0.0"} {
+	for _, version := range []string{"", "1.0", "2.1.0", "2.2.0", "2.3.0", "2.4.0-compat1", "2.5.0-compat1", "2.6.0", "02.4.0", "18446744073709551616.0.0"} {
 		if _, err := DecodeApacheWAFVersionConfig(raw, version); err == nil {
 			t.Fatal("non-native identity borrowed body capability", version)
 		}
@@ -168,7 +198,7 @@ func TestApacheNativeVersionDoesNotPromoteMetadataDefaultOrAliases(t *testing.T)
 	if ValidateSoftwareUpdate("apache-waf", ApacheWAFNativeBodyVersion) != nil {
 		t.Fatal("exact signed update unavailable")
 	}
-	for _, version := range []string{"2.4.0-compat1", "2.4.1", "2.5.0", "02.4.0", "unknown"} {
+	for _, version := range []string{"2.4.0-compat1", "2.4.1", "2.5.0-compat1", "2.6.0", "02.4.0", "unknown"} {
 		if ValidateSoftwareUpdate("apache-waf", version) == nil {
 			t.Fatal("unknown/aliased native version update allowed", version)
 		}

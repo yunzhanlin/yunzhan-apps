@@ -36,6 +36,9 @@ type apacheBodyBuildRecord struct {
 	ApacheSHA           string            `json:"apache_sha256"`
 	Prefix              string            `json:"prefix"`
 	ModuleSHA           string            `json:"module_sha256,omitempty"`
+	CCEngine            string            `json:"cc_engine_version,omitempty"`
+	CCModuleSHA         string            `json:"cc_module_sha256,omitempty"`
+	CCABIValidated      bool              `json:"cc_module_abi_validated,omitempty"`
 	TreeSHA             string            `json:"tree_sha256,omitempty"`
 	SourceSHA           map[string]string `json:"source_sha256"`
 	AssetSHA            map[string]string `json:"asset_sha256"`
@@ -63,6 +66,9 @@ func apacheBodyReleaseAssetPins() map[string]string {
 }
 
 func verifiedApacheBodyReleaseAsset(name string) ([]byte, error) {
+	if _, ok := apacheCCAssetPins()[name]; ok {
+		return verifiedApacheCCAsset(name)
+	}
 	if name == "modsecurity-crs-LICENSE" {
 		return verifiedWAFEngineAsset(name)
 	}
@@ -77,13 +83,16 @@ func apacheBodyRecordContract(record apacheBodyBuildRecord) error {
 	if record.CompilerCollection != apacheBodyCompilerCollectionContract {
 		return errors.New("Apache 程序缺少当前专用 cgroup 与稳定进程回收证据，旧进程组标记不能授权启用")
 	}
-	return apacheBodyRecordAuthorityContract(record, apacheBodyEngineVersion, apacheBodyReleaseAssetPins())
+	return apacheBodyRecordAuthorityContract(record, apacheBodyEngineVersion, apacheBodyReleaseAssetPinsForFormat(record.Format))
 }
 
 // Exact previous YZ4, group-only YZ5 and pre-reap-witness YZ5 bytes may be
 // inspected, never activated. v1 had an exit/adoption race and is not upgraded.
 // No migration invents the stronger collection witness or rewrites old records.
 func apacheBodyRetainedRecordContract(record apacheBodyBuildRecord) error {
+	if record.Format != 1 {
+		return errors.New("历史保留程序仅允许精确的请求体格式1；CC 格式不能采用历史回收证据")
+	}
 	if record.CompilerCollection != "" && record.CompilerCollection != "dedicated_cgroup_v2_pidfd_reaped_v1" {
 		return errors.New("保留程序含未知或当前回收契约，不属于闭合历史查阅范围")
 	}
@@ -103,10 +112,19 @@ func apacheBodyRetainedRecordContract(record apacheBodyBuildRecord) error {
 
 func apacheBodyRecordAuthorityContract(record apacheBodyBuildRecord, engine string, assets map[string]string) error {
 	r, ok := runtimecatalog.Find("apache-2.4.68")
-	if !ok || record.Format != 1 || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
+	if !ok || record.Format != 1 && record.Format != 2 || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
 		return errors.New("Apache 请求体程序未完成、架构不匹配或发布身份异常")
 	}
-	for _, digest := range []string{record.ApacheSHA, record.ModuleSHA, record.TreeSHA} {
+	digests := []string{record.ApacheSHA, record.ModuleSHA, record.TreeSHA}
+	if record.Format == 2 {
+		if record.CCEngine != apacheCCEngineVersion || !record.CCABIValidated {
+			return errors.New("Apache CC 模块身份或独立 ABI 核验证据缺失")
+		}
+		digests = append(digests, record.CCModuleSHA)
+	} else if record.CCEngine != "" || record.CCModuleSHA != "" || record.CCABIValidated {
+		return errors.New("请求体格式1不能声明原生 CC 能力")
+	}
+	for _, digest := range digests {
 		decoded, err := hex.DecodeString(digest)
 		if err != nil || len(decoded) != 32 || digest != strings.ToLower(digest) {
 			return errors.New("Apache 程序完整摘要缺失或格式异常")
@@ -125,7 +143,7 @@ func apacheBodyRecordAuthorityContract(record apacheBodyBuildRecord, engine stri
 			return errors.New("Apache 补丁、许可或变更通知摘要不匹配")
 		}
 	}
-	plan, err := apacheBodyNativeBuildPlan(apacheBodyPaths(record.JobID))
+	plan, err := apacheBodyBuildPlanForFormat(apacheBodyPaths(record.JobID), record.Format)
 	if err != nil {
 		return err
 	}

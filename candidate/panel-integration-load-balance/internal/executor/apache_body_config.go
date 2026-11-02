@@ -97,12 +97,12 @@ func apacheBodyStripBlock(source, begin, end, expected string) (string, error) {
 // rule files outside recovery's allowlist. Removing a policy removes its own
 // complete section; no other site directive, comment, rewrite or PHP handler is
 // changed. This pure renderer never claims a sealed program or reload success.
-func transitionApacheBodySource(source string, previous, next core.WAFConfig) (string, error) {
+func transitionApacheBodyOnlySource(source string, previous, next core.WAFConfig) (string, error) {
 	if len(source) > 2<<20 {
 		return "", errors.New("Apache 配置超过 2 MiB")
 	}
 	for _, cfg := range []core.WAFConfig{previous, next} {
-		if _, err := core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg)); err != nil {
+		if _, err := core.DecodeApacheWAFNativeCCConfig(core.WAFSettings(cfg)); err != nil {
 			return "", err
 		}
 	}

@@ -27,7 +27,7 @@ func apacheMetadataSitePolicy(content string, cfg core.WAFConfig, version, modul
 	if _, err := core.DecodeApacheWAFConfig(core.WAFSettings(cfg)); err != nil {
 		return "", "", err
 	}
-	if strings.Contains(content, "PANEL APACHE NATIVE BODY") || apacheBodyExternalDirective.MatchString(content) {
+	if apacheNativeDirectivesPresent(content) {
 		return "", "", errors.New("Apache 元数据网站不能接管未知原生模块或请求体挂载")
 	}
 	prepared, err := prepareApacheWAFTrustedProxySource(content, cfg.TrustedProxy, module)
@@ -100,7 +100,7 @@ func (s *Service) applyApacheWAFMetadataSites(ctx context.Context, content strin
 	if err := json.Unmarshal(manifest.data, &installed); err != nil || installed.ID != "apache-waf" {
 		return nil, true, errors.New("Apache 元数据防护安装身份无法核对，未修改网站")
 	}
-	if installed.Version == core.ApacheWAFNativeBodyVersion {
+	if core.ApacheWAFNativeVersion(installed.Version) {
 		return nil, true, errors.New("原生 Apache 请求体安装必须使用独立已核验的网站事务")
 	}
 	if count == 0 {

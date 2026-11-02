@@ -34,14 +34,14 @@ func (s *Service) apacheNumericInstalledConfig() (core.WAFConfig, bool, error) {
 	if !ok || version == "" {
 		return core.WAFConfig{}, false, errors.New("Apache 安装版本缺失或无效，未作为未安装或采用默认值")
 	}
-	if version != core.ApacheWAFNativeBodyVersion {
+	if !core.ApacheWAFNativeVersion(version) {
 		return core.WAFConfig{}, false, nil
 	}
 	settings, ok := record["settings"].(map[string]any)
 	if !ok {
 		return core.WAFConfig{}, false, errors.New("Apache 原安装策略缺失，未采用默认值")
 	}
-	cfg, err := core.DecodeApacheWAFNativeBodyConfig(settings)
+	cfg, err := core.DecodeApacheWAFVersionConfig(settings, version)
 	return cfg, true, err
 }
 
@@ -140,7 +140,7 @@ func (s *Service) configureApacheNumericAutomation(ctx context.Context, request 
 		if err = verifyApacheNumericRotationEngine(ctx, cfg); err != nil {
 			return nil, err
 		}
-		if err = s.verifyApacheWAFHealth(ctx, core.ApacheWAFNativeBodyVersion, core.WAFSettings(cfg)); err != nil {
+		if err = s.verifyApacheCurrentNativeConfigHealth(ctx, cfg); err != nil {
 			return nil, err
 		}
 		record.Revision = cfg.Policy.Revision

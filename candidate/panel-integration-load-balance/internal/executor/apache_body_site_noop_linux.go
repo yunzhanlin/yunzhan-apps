@@ -10,7 +10,11 @@ import (
 // create native cache directories or claim a running protected Apache. Actual
 // changes still take the original sealed-engine and live-generation path.
 func apacheBodySitePolicy(content string, cfg core.WAFConfig, module string) (string, string, error) {
-	if _, err := core.DecodeApacheWAFNativeBodyConfig(core.WAFSettings(cfg)); err != nil {
+	return apacheBodySitePolicyVersion(content, cfg, module, core.ApacheWAFNativeBodyVersion)
+}
+
+func apacheBodySitePolicyVersion(content string, cfg core.WAFConfig, module, version string) (string, string, error) {
+	if _, err := core.DecodeApacheWAFVersionConfig(core.WAFSettings(cfg), version); err != nil {
 		return "", "", err
 	}
 	prepared, err := prepareApacheWAFTrustedProxySource(content, cfg.TrustedProxy, module)
@@ -25,7 +29,7 @@ func apacheBodySitePolicy(content string, cfg core.WAFConfig, module string) (st
 	if err != nil {
 		return "", "", err
 	}
-	rules, err := renderApacheWAFVersion(cfg, bindings, core.ApacheWAFNativeBodyVersion)
+	rules, err := renderApacheWAFVersion(cfg, bindings, version)
 	return prepared, rules, err
 }
 

@@ -15,6 +15,7 @@ type ApacheBodyEngineStatus struct {
 	Error                       string `json:"error,omitempty"`
 	Architecture                string `json:"architecture"`
 	Engine                      string `json:"engine_version"`
+	NativeCCVersion             string `json:"native_cc_version,omitempty"`
 	CRS                         string `json:"crs_version"`
 	ApacheVersion               string `json:"apache_version"`
 	StartedAt                   string `json:"started_at,omitempty"`

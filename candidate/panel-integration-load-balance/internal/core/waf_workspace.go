@@ -16,21 +16,24 @@ type WAFDimension struct {
 	Count int    `json:"count"`
 }
 type WAFReport struct {
-	Events   []WAFEvent     `json:"events"`
-	Total    int            `json:"total"`
-	Blocked  int            `json:"blocked"`
-	Observed int            `json:"observed"`
-	Sources  int            `json:"sources"`
-	Partial  bool           `json:"partial"`
-	Scanned  int            `json:"scanned"`
-	Rules    []WAFDimension `json:"rules"`
-	IPs      []WAFDimension `json:"ips"`
-	Sites    []WAFDimension `json:"sites"`
-	Hours    []WAFDimension `json:"hours"`
-	From     string         `json:"from"`
-	To       string         `json:"to"`
-	Page     int            `json:"page"`
-	Limit    int            `json:"limit"`
+	Events                 []WAFEvent     `json:"events"`
+	Total                  int            `json:"total"`
+	Blocked                int            `json:"blocked"`
+	Observed               int            `json:"observed"`
+	Sources                int            `json:"sources"`
+	Partial                bool           `json:"partial"`
+	Scanned                int            `json:"scanned"`
+	Rules                  []WAFDimension `json:"rules"`
+	IPs                    []WAFDimension `json:"ips"`
+	Sites                  []WAFDimension `json:"sites"`
+	Hours                  []WAFDimension `json:"hours"`
+	From                   string         `json:"from"`
+	To                     string         `json:"to"`
+	Page                   int            `json:"page"`
+	Limit                  int            `json:"limit"`
+	MetadataBestEffort     bool           `json:"metadata_best_effort,omitempty"`
+	CCLogCapacityNearLimit bool           `json:"cc_log_capacity_near_limit,omitempty"`
+	CCLogTailIncomplete    bool           `json:"cc_log_tail_incomplete,omitempty"`
 }
 
 func WAFEventReason(e WAFEvent) string {
@@ -116,6 +119,8 @@ func BuildWAFReport(snapshot WAFEventsPage, q url.Values, now time.Time) (WAFRep
 	page, _ := strconv.Atoi(query.Get("page"))
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	out := WAFReport{Events: []WAFEvent{}, Partial: snapshot.HasMore, Scanned: len(snapshot.Events), From: start.Format(time.RFC3339), To: end.Format(time.RFC3339), Page: page, Limit: limit}
+	out.MetadataBestEffort, out.CCLogCapacityNearLimit = snapshot.MetadataBestEffort, snapshot.CCLogCapacityNearLimit
+	out.CCLogTailIncomplete = snapshot.CCLogTailIncomplete
 	maps := map[string]map[string]int{}
 	for _, k := range []string{"rules", "ips", "sites", "hours"} {
 		maps[k] = map[string]int{}
