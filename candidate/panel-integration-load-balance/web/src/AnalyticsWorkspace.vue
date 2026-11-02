@@ -4,7 +4,7 @@ import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
 type API = <T>(path:string,method?:string,body?:unknown,idempotencyKey?:string)=>Promise<T>;
-interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean}
+interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean;client_address_mode?:string}
 interface Dimension {name:string;count:number}
 interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[]}
 interface Funnel {source:string;from:string;to:string;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
@@ -14,12 +14,13 @@ interface Report {
   pages:Dimension[];sources:Dimension[];browsers:Dimension[];devices:Dimension[];entry_pages:Dimension[];exit_pages:Dimension[];hours:Dimension[];campaigns:Dimension[];
   sessions:Session[];heatmap:{path:string;x:number;y:number;count:number}[];
   performance:Record<string,{samples:number;p75?:number}>;limitations:string[];
+  client_addresses?:{unique_addresses:number;known_pageviews:number;unknown_pageviews:number;legacy_pageviews:number;sources:Dimension[]};
 }
 const props=defineProps<{api:API;installed:boolean;installedVersion?:string;sites:{id:string;name:string;domain:string}[]}>();
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),report=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && (props.installedVersion==="2.3.0" || props.installedVersion==="2.3.1"));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2"].includes(props.installedVersion||""));
 const range=ref<[Date,Date]>(),heatPath=ref("");
 const funnelSteps=ref("/\n/checkout\n/success"),funnelWindow=ref(30),funnelBusy=ref(false),funnelError=ref(""),funnel=ref<Funnel>();
 let funnelSequence=0;
@@ -99,6 +100,16 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <template v-if="report">
           <div class="analytics-metrics"><article v-for="m in metrics" :key="m.key"><span>{{m.label}}</span><strong>{{report.overview[m.key]}}</strong></article></div>
           <el-descriptions :column="2" border><el-descriptions-item label="平均前台停留">{{report.overview.avg_engagement_seconds.toFixed(1)}} 秒</el-descriptions-item><el-descriptions-item label="跳出率">{{report.overview.bounce_rate.toFixed(1)}}%</el-descriptions-item><el-descriptions-item label="实际采样事件">{{report.sampled_events}}</el-descriptions-item><el-descriptions-item label="采集状态">{{settings?.enabled ? '已开启，等待/接收浏览器事件' : '未开启'}}</el-descriptions-item></el-descriptions>
+          <section v-if="report.client_addresses" class="analytics-client-addresses" aria-label="客户端连接地址统计">
+            <h4>客户端连接地址</h4>
+            <p>从直接连接或受保护的本机采集代理取得，只保存按网站隔离的地址摘要。连接地址可能属于 NAT、CDN 或其它代理，不能用来认定真实人数；旧记录和未核实来源单独列出。</p>
+            <el-descriptions :column="2" border>
+              <el-descriptions-item label="已取得地址的不同摘要">{{report.client_addresses.known_pageviews ? report.client_addresses.unique_addresses : '无样本'}}</el-descriptions-item>
+              <el-descriptions-item label="含地址的浏览记录">{{report.client_addresses.known_pageviews}} / {{report.overview.pv}}</el-descriptions-item>
+              <el-descriptions-item label="地址未核实的浏览记录">{{report.client_addresses.unknown_pageviews}}</el-descriptions-item>
+              <el-descriptions-item label="其中旧版本记录">{{report.client_addresses.legacy_pageviews}}</el-descriptions-item>
+            </el-descriptions>
+          </section>
           <h4>UTC 小时趋势</h4><el-table :data="[...report.hours].sort((a,b)=>a.name.localeCompare(b.name))" empty-text="尚无浏览器浏览数据"><el-table-column prop="name" label="小时" /><el-table-column prop="count" label="浏览量" /></el-table>
         </template>
         <el-empty v-else description="请选择网站；接入采集后查看真实指标" />
@@ -133,6 +144,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <el-descriptions v-if="report" :column="2" border><el-descriptions-item v-for="(value,key) in report.performance" :key="key" :label="String(key).toUpperCase()">{{value.p75 === undefined ? '无样本' : value.p75.toFixed(3)}} · {{value.samples}} 个样本</el-descriptions-item></el-descriptions>
       </el-tab-pane>
       <el-tab-pane label="采集设置" name="settings">
+        <el-alert v-if="settings?.enabled && settings.client_address_mode==='legacy_proxy'" title="当前网站仍使用旧采集代理。保存采集配置后启用受保护的客户端地址传递；历史记录保持原样。" type="info" :closable="false" />
         <AnalyticsHTMLEngine :api="api" :installed="installed" :supported="htmlSupported" @ready="htmlEngineReady=$event" />
         <template v-if="settings"><el-alert title="采集默认关闭。开启前请按你的网站隐私政策设置访客告知或同意机制；采集器尊重 DNT/GPC，且不采集输入内容。" type="info" :closable="false" />
           <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="setEnabled" /></el-form-item><el-form-item label="HTML 自动接入（立即应用）"><el-switch v-model="settings.auto_inject_html" aria-label="HTML 自动接入" :disabled="!installed || busy || (!settings.auto_inject_html && (!settings.enabled || !htmlSupported || !htmlEngineReady))" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>

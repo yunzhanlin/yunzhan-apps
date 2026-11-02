@@ -63,6 +63,8 @@ func sameAnalyticsRequest(a, b AnalyticsConfig) bool {
 	b.Key = ""
 	a.ProxyEndpoint = ""
 	b.ProxyEndpoint = ""
+	a.ClientAddressMode = ""
+	b.ClientAddressMode = ""
 	return a == b
 }
 
@@ -101,6 +103,7 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 	if !decode(w, r, &in) {
 		return
 	}
+	in.ClientAddressMode = ""
 	in.SiteID = r.PathValue("id")
 	in.Key = ""
 	in.ProxyEndpoint = ""
@@ -162,7 +165,7 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		settings.AnalyticsInjectHTML = false
 	}
 	if settings.AnalyticsInjectHTML && !AnalyticsHTMLAppVersionSupported(module.Status.Version) {
-		fail(w, 409, "请先在应用商店签名升级网站分析到 2.3.0 或 2.3.1；安装清单不代替新版面板能力")
+		fail(w, 409, "请先在应用商店签名升级网站分析到受支持的 2.3.0、2.3.1 或 2.3.2；安装清单不代替新版面板能力")
 		return
 	}
 	requestedInjection := settings.AnalyticsInjectHTML
@@ -186,8 +189,14 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	settings.AnalyticsEndpoint = ""
+	settings.AnalyticsProxyIdentity = ""
 	if in.Enabled {
 		settings.AnalyticsEndpoint = endpoint
+		settings.AnalyticsProxyIdentity, err = AnalyticsProxyIdentity(a.accountSecretKey, site.ID)
+		if err != nil {
+			fail(w, 409, "无法准备采集代理身份；未提交配置")
+			return
+		}
 	}
 	candidate := site
 	candidate.Settings = settings

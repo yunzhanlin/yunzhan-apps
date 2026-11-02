@@ -168,7 +168,8 @@
           "waf-country-signed-data-v1",
           "intrusion-upstream0112-v1",
           "load-balance-stream-controller-v1",
-          "apache-native-body-site-transactions-v1"
+          "apache-native-body-site-transactions-v1",
+          "analytics-managed-client-address-v1"
         ]
       }
     },
@@ -1199,6 +1200,39 @@
                 "maxItems": 1,
                 "items": {
                   "const": "apache-native-body-site-transactions-v1"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "website-analytics"
+              },
+              "version": {
+                "const": "2.3.2"
+              },
+              "delivery": {
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "website-analytics"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 2,
+                "maxItems": 2,
+                "items": {
+                  "enum": [
+                    "analytics-session-lifecycle-v1",
+                    "analytics-managed-client-address-v1"
+                  ]
                 }
               }
             }
@@ -2984,6 +3018,39 @@
             }
           }
         ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-analytics"
+          },
+          "version": {
+            "const": "2.3.2"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "enum": [
+                "analytics-session-lifecycle-v1",
+                "analytics-managed-client-address-v1"
+              ]
+            }
+          }
+        }
       }
     }
   ]

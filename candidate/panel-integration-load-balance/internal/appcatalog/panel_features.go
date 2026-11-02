@@ -57,6 +57,9 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
+	if feature == AnalyticsClientAddressFeature {
+		return runtime.GOOS == "linux"
+	}
 	if feature == CountryDataFeature {
 		return runtime.GOOS == "linux"
 	}
@@ -67,6 +70,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateAnalyticsClientAddressRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateIntrusionUbuntu22Requirement(manifest, available); handled {
 		return err
 	}

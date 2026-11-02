@@ -50,6 +50,8 @@ export function validateManifest(app) {
   const hostDiskCancelSeal="disk-host-cancel-seal-v1";
   const memcached="compose-memcached-digest-v1";
   const analyticsSession="analytics-session-lifecycle-v1";
+  const analyticsClient="analytics-managed-client-address-v1";
+  const analyticsScope=app.id==="website-analytics"&&app.delivery?.provider==="panel-module"&&app.delivery?.target===app.id&&app.delivery?.manage_route==="app-modules"&&Array.isArray(requirements)&&((app.version==="2.3.1"&&requirements.length===1&&requirements[0]===analyticsSession)||(app.version==="2.3.2"&&requirements.length===2&&new Set(requirements).size===2&&requirements.includes(analyticsSession)&&requirements.includes(analyticsClient)));
   const hardening="hardening-reversible-journal-v1";
   const intrusion="intrusion-preserving-journal-v2";
   const intrusion0112="intrusion-upstream0112-v1";
@@ -70,11 +72,12 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===intrusion||feature===intrusion0112)&&!intrusionScope)errors.push("intrusion handlers require the exact reviewed version, fixed target and complete ordered feature declaration");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
-    if(Array.isArray(requirements)&&requirements.includes(analyticsSession)&&(app.id!=="website-analytics"||app.version!=="2.3.1"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="app-modules"||requirements.length!==1))errors.push("analytics session handler belongs only to exact website-analytics2.3.1");
+    if(Array.isArray(requirements)&&requirements.includes(analyticsSession)&&!analyticsScope)errors.push("analytics session handler requires the complete exact reviewed 2.3.1 or2.3.2 application identity");
+    if(Array.isArray(requirements)&&requirements.includes(analyticsClient)&&(!analyticsScope||app.version!=="2.3.2"))errors.push("managed client-address handler belongs only to exact website-analytics2.3.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===retirement||feature===identity||feature===geography)&&(app.id!=="website-statistics-v2"||app.delivery?.target!==app.id))errors.push("statistics handler requirement belongs only to website-statistics-v2");
     if(Array.isArray(requirements)&&requirements.includes(maintenance)&&(app.id!=="platform-ops"||app.version!=="1.3.0"||app.delivery?.target!==app.id))errors.push("maintenance handler belongs only to exact platform-ops1.3.0");
     if(Array.isArray(requirements)&&requirements.includes(disk)&&(app.id!=="disk-analysis"||!["1.3.0","1.4.0","1.4.1"].includes(app.version)||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="app-modules"))errors.push("inode usage handler belongs only to exact reviewed disk-analysis1.3.0,1.4.0 or1.4.1");
@@ -125,7 +128,7 @@ export function validateManifest(app) {
     const parts=app.version.split("-")[0].split(".").map(BigInt),floor=[2n,3n,1n];let comparison=0;
     if(parts.some(value=>value>18446744073709551615n))errors.push("analytics session version cannot be safely compared");
     for(let i=0;i<Math.max(parts.length,floor.length);i++){const a=parts[i]??0n,b=floor[i]??0n;if(a!==b){comparison=a>b?1:-1;break;}}
-    if(comparison>=0&&(app.version!=="2.3.1"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="app-modules"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==analyticsSession))errors.push("analytics2.3.1 requires its exact independently compiled session lifecycle handler");
+    if(comparison>=0&&!analyticsScope)errors.push("analytics2.3.1 and2.3.2 require their exact independently compiled complete handler declarations");
   }
   // This is ONE reviewed Compose ABI, not a general provider exemption.
   // Only the immutable published compat1 and exact pinned compat2 are reviewed;

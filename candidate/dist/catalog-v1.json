@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-01T15:18:02Z",
+  "generated_at": "2026-11-02T08:42:06Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1125,8 +1125,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.3.1",
-      "summary": "真实浏览器采集、标准 INP、SPA 页面访问与有界顺序转化漏斗；按实际活动续期、空闲 30 分钟重建会话，被动性能不延长活跃访客；可选 HTML 自动接入默认关闭，保留模板与 CSP；需具备会话生命周期处理器的面板",
+      "version": "2.3.2",
+      "summary": "开发候选：保留浏览器 PV/UV、会话、标准 INP 与有界漏斗；新增受保护采集代理、站点隔离的客户端地址摘要及未核实/历史样本覆盖率，修复同源代理共享采集限额；保存采集配置后显式接入，原始 IP 与代理凭据不进入事件；完整双架构实装及界面验收仍在进行",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1136,18 +1136,18 @@
         "浏览器 JS 采集、PV 与浏览器 UV",
         "可选有界 HTML 自动接入，默认关闭",
         "固定源码构建与实际 Nginx ABI 核验",
-        "实际工作进程确认后逐站启用同源代理",
+        "逐站受保护同源代理、配置校验及失败保全",
         "保留模板及 CSP，不适用响应原样通过",
         "活动续期、30 分钟空闲分会话与入口/离开分布",
-        "点击坐标热图",
+        "点击坐标热图与 SPA 路由页面访问",
         "性能 p75 与标准 INP，被动性能不刷新旅程",
-        "SPA 路由页面访问",
         "2–8 步有界顺序转化漏斗",
-        "保留期和容量上限",
-        "站点隔离与报告导出"
+        "按网站隔离的客户端连接地址摘要及来源覆盖率",
+        "已知地址与未核实访客的有界独立采集限额",
+        "历史未核实记录保留、保留期、站点隔离及报告导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.3.1/manifest.json",
-      "sha256": "c33f6f987ea318dfff42c5a9a225aa4e8d123d8334f74c207dbf93e475cbb157"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.3.2/manifest.json",
+      "sha256": "7dc753e299b2801066ae6faa36e92d36169ee0bdc5f992192a5f9dd6861b8a8d"
     },
     {
       "id": "website-statistics-v2",

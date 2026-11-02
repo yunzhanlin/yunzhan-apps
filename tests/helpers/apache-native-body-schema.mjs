@@ -2,8 +2,9 @@
 // All older predicates remain visible to the existing historical comparisons.
 import assert from 'node:assert/strict';
 import {canonical,sha256} from '../../tools/lib.mjs';
+import{schemaBeforeAnalyticsClientAddress}from'./analytics-client-schema.mjs';
 export function schemaBeforeApacheNativeBody(value){
- const s=structuredClone(value),feature='apache-native-body-site-transactions-v1',flags=s.properties.required_panel_features.items.enum;
+ const s=schemaBeforeAnalyticsClientAddress(value),feature='apache-native-body-site-transactions-v1',flags=s.properties.required_panel_features.items.enum;
  if(!flags.includes(feature))return s;
  assert.equal(flags.filter(f=>f===feature).length,1,'Unknown Apache schema feature extension');assert.equal(flags.at(-1),feature,'Unknown Apache schema feature order');flags.pop();
  const branches=s.allOf[0].then.oneOf;

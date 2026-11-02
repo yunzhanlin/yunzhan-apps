@@ -301,6 +301,11 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 			return result, errors.New("实际 Nginx 配置已发生变化，请重新预览")
 		}
 	}
+	if in.Enabled && in.Site.Settings.AnalyticsProxyIdentity != "" {
+		if err := s.prepareSiteAnalyticsIdentity(in.Site); err != nil {
+			return result, err
+		}
+	}
 	add("校验站点标识、目录归属与期望状态")
 	phpPlan, planErr := s.phpSwitchPreservationPlan(in)
 	if planErr != nil {

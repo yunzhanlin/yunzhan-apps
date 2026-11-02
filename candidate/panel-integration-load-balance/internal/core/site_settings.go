@@ -20,25 +20,26 @@ type RewriteRule struct {
 	Flag        string `json:"flag"`
 }
 type SiteSettings struct {
-	PublicIngress       bool          `json:"public_ingress,omitempty"`
-	AnalyticsEndpoint   string        `json:"analytics_endpoint,omitempty"`
-	AnalyticsInjectHTML bool          `json:"analytics_inject_html,omitempty"`
-	WAFEnabled          *bool         `json:"waf_enabled,omitempty"`
-	ACME                bool          `json:"acme,omitempty"`
-	TLS                 *SiteTLS      `json:"tls,omitempty"`
-	PHP                 *PHPSettings  `json:"php,omitempty"`
-	Domains             []string      `json:"domains"`
-	DocumentRoot        string        `json:"document_root"`
-	IndexFiles          []string      `json:"index_files"`
-	Mode                string        `json:"mode"`
-	Rewrite             string        `json:"rewrite"`
-	Rules               []RewriteRule `json:"rules"`
-	ProxyURL            string        `json:"proxy_url"`
-	ProxyPreserveHost   bool          `json:"proxy_preserve_host,omitempty"`
-	RedirectURL         string        `json:"redirect_url"`
-	RedirectCode        int           `json:"redirect_code"`
-	PreserveURI         bool          `json:"preserve_uri"`
-	WebServer           string        `json:"web_server,omitempty"`
+	PublicIngress          bool          `json:"public_ingress,omitempty"`
+	AnalyticsEndpoint      string        `json:"analytics_endpoint,omitempty"`
+	AnalyticsInjectHTML    bool          `json:"analytics_inject_html,omitempty"`
+	AnalyticsProxyIdentity string        `json:"analytics_proxy_identity,omitempty"`
+	WAFEnabled             *bool         `json:"waf_enabled,omitempty"`
+	ACME                   bool          `json:"acme,omitempty"`
+	TLS                    *SiteTLS      `json:"tls,omitempty"`
+	PHP                    *PHPSettings  `json:"php,omitempty"`
+	Domains                []string      `json:"domains"`
+	DocumentRoot           string        `json:"document_root"`
+	IndexFiles             []string      `json:"index_files"`
+	Mode                   string        `json:"mode"`
+	Rewrite                string        `json:"rewrite"`
+	Rules                  []RewriteRule `json:"rules"`
+	ProxyURL               string        `json:"proxy_url"`
+	ProxyPreserveHost      bool          `json:"proxy_preserve_host,omitempty"`
+	RedirectURL            string        `json:"redirect_url"`
+	RedirectCode           int           `json:"redirect_code"`
+	PreserveURI            bool          `json:"preserve_uri"`
+	WebServer              string        `json:"web_server,omitempty"`
 }
 
 // A missing value preserves the historical behavior for existing sites.
@@ -92,6 +93,11 @@ func ValidDomain(value string) bool {
 }
 func ValidateSiteSettings(in SiteSettings, primary, php string) error {
 	in = DefaultSiteSettings(in)
+	if in.AnalyticsProxyIdentity != "" {
+		if in.AnalyticsEndpoint == "" || len(in.AnalyticsProxyIdentity) != 64 || strings.Trim(in.AnalyticsProxyIdentity, "0123456789abcdef") != "" {
+			return errors.New("采集代理身份必须是与启用上游绑定的固定摘要")
+		}
+	}
 	if in.AnalyticsEndpoint != "" {
 		if e := ValidateAnalyticsEndpoint(in.AnalyticsEndpoint); e != nil {
 			return e
@@ -273,6 +279,7 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 	if analytics == nil {
 		in.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 		in.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
+		in.AnalyticsProxyIdentity = site.Settings.AnalyticsProxyIdentity
 	} else if analytics.SiteID != site.ID || (analytics.AutoInjectHTML != nil && in.AnalyticsInjectHTML != *analytics.AutoInjectHTML) {
 		return "", errors.New("采集任务的网站或自动接入意图与候选配置不一致，未入队")
 	}
@@ -449,6 +456,7 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 		in.Settings = DefaultSiteSettings(in.Settings)
 		in.Settings.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 		in.Settings.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
+		in.Settings.AnalyticsProxyIdentity = site.Settings.AnalyticsProxyIdentity
 		if site.SettingsRevision != in.ExpectedRevision {
 			fail(w, 409, "网站设置已变化，请重新读取")
 			return

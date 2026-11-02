@@ -158,8 +158,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "website-analytics" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, AnalyticsSessionAppVersion); valid && comparison >= 0 && version != AnalyticsSessionAppVersion {
-			return errors.New("浏览器分析会话修订仅允许固定完整版本2.3.1，拒绝别名或未审核修订")
+		if comparison, valid := appcatalog.CompareVersions(base, AnalyticsSessionAppVersion); valid && comparison >= 0 && version != AnalyticsSessionAppVersion && version != AnalyticsClientAddressAppVersion {
+			return errors.New("浏览器分析仅允许固定完整版本 2.3.1 或 2.3.2，拒绝别名及未审核修订")
 		}
 	}
 	if id == "disk-analysis" {

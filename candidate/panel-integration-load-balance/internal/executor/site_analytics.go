@@ -5,6 +5,10 @@ import (
 	"local/panel/internal/core"
 )
 
+func siteAnalyticsIdentityPath(site core.Site) string {
+	return "/etc/panel/analytics-ingress/" + site.ID + "-" + site.Settings.AnalyticsProxyIdentity + ".conf"
+}
+
 func siteAnalyticsProxy(site core.Site) string {
 	endpoint := site.Settings.AnalyticsEndpoint
 	if endpoint == "" {
@@ -14,6 +18,10 @@ func siteAnalyticsProxy(site core.Site) string {
 	// untrusted hostname, URL, configuration fragment or general proxy target.
 	if core.ValidateAnalyticsEndpoint(endpoint) != nil {
 		return ""
+	}
+	identity := ""
+	if site.Settings.AnalyticsProxyIdentity != "" {
+		identity = "    include " + siteAnalyticsIdentityPath(site) + ";\n"
 	}
 	return fmt.Sprintf(`  # managed analytics proxy; site=%s
   location ^~ /__yunzhan/analytics/ {
@@ -26,7 +34,7 @@ func siteAnalyticsProxy(site core.Site) string {
     proxy_set_header Content-Type $http_content_type;
     proxy_set_header DNT $http_dnt;
     proxy_set_header Sec-GPC $http_sec_gpc;
-    proxy_set_header Cookie "";
+%s    proxy_set_header Cookie "";
     proxy_set_header Authorization "";
     proxy_hide_header Set-Cookie;
     proxy_connect_timeout 1s;
@@ -34,7 +42,7 @@ func siteAnalyticsProxy(site core.Site) string {
     client_max_body_size 4k;
     access_log off;
   }
-`, site.ID, endpoint)
+`, site.ID, endpoint, identity)
 }
 
 // Explicit opt-in: import only the immutable, signed context-aware program.

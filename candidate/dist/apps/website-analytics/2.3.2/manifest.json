@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "网站分析 · Website Analytics",
+  "category": "professional",
+  "version": "2.3.2",
+  "summary": "开发候选：保留浏览器 PV/UV、会话、标准 INP 与有界漏斗；新增受保护采集代理、站点隔离的客户端地址摘要及未核实/历史样本覆盖率，修复同源代理共享采集限额；保存采集配置后显式接入，原始 IP 与代理凭据不进入事件；完整双架构实装及界面验收仍在进行",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集、PV 与浏览器 UV",
+    "可选有界 HTML 自动接入，默认关闭",
+    "固定源码构建与实际 Nginx ABI 核验",
+    "逐站受保护同源代理、配置校验及失败保全",
+    "保留模板及 CSP，不适用响应原样通过",
+    "活动续期、30 分钟空闲分会话与入口/离开分布",
+    "点击坐标热图与 SPA 路由页面访问",
+    "性能 p75 与标准 INP，被动性能不刷新旅程",
+    "2–8 步有界顺序转化漏斗",
+    "按网站隔离的客户端连接地址摘要及来源覆盖率",
+    "已知地址与未核实访客的有界独立采集限额",
+    "历史未核实记录保留、保留期、站点隔离及报告导出"
+  ],
+  "required_panel_features": [
+    "analytics-session-lifecycle-v1",
+    "analytics-managed-client-address-v1"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

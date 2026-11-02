@@ -40,14 +40,15 @@ var analyticsWebVitals string
 var analyticsWebVitalsLicense string
 
 type AnalyticsConfig struct {
-	SiteID         string `json:"site_id"`
-	Key            string `json:"key"`
-	Enabled        bool   `json:"enabled"`
-	Clicks         bool   `json:"clicks"`
-	Retention      int    `json:"retention_days"`
-	Revision       int64  `json:"revision"`
-	ProxyEndpoint  string `json:"proxy_endpoint,omitempty"`
-	AutoInjectHTML *bool  `json:"auto_inject_html,omitempty"`
+	SiteID            string `json:"site_id"`
+	Key               string `json:"key"`
+	Enabled           bool   `json:"enabled"`
+	Clicks            bool   `json:"clicks"`
+	Retention         int    `json:"retention_days"`
+	Revision          int64  `json:"revision"`
+	ProxyEndpoint     string `json:"proxy_endpoint,omitempty"`
+	AutoInjectHTML    *bool  `json:"auto_inject_html,omitempty"`
+	ClientAddressMode string `json:"client_address_mode,omitempty"`
 }
 
 type analyticsRate struct {
@@ -56,30 +57,32 @@ type analyticsRate struct {
 }
 
 type AnalyticsEvent struct {
-	ID             string  `json:"id"`
-	PageID         string  `json:"page_id"`
-	Visitor        string  `json:"visitor"`
-	Session        string  `json:"session"`
-	Kind           string  `json:"kind"`
-	Path           string  `json:"path"`
-	Title          string  `json:"title"`
-	Referer        string  `json:"referer"`
-	Campaign       string  `json:"campaign"`
-	Duration       float64 `json:"duration"`
-	X              float64 `json:"x"`
-	Y              float64 `json:"y"`
-	TTFB           float64 `json:"ttfb"`
-	FCP            float64 `json:"fcp"`
-	LCP            float64 `json:"lcp"`
-	CLS            float64 `json:"cls"`
-	CLSAvailable   bool    `json:"cls_available"`
-	INP            float64 `json:"inp"`
-	INPAvailable   bool    `json:"inp_available"`
-	PerformanceSeq int     `json:"performance_seq"`
-	Received       int64   `json:"received_at"`
-	IPHash         string  `json:"-"`
-	Browser        string  `json:"browser"`
-	Device         string  `json:"device"`
+	ID                  string  `json:"id"`
+	PageID              string  `json:"page_id"`
+	Visitor             string  `json:"visitor"`
+	Session             string  `json:"session"`
+	Kind                string  `json:"kind"`
+	Path                string  `json:"path"`
+	Title               string  `json:"title"`
+	Referer             string  `json:"referer"`
+	Campaign            string  `json:"campaign"`
+	Duration            float64 `json:"duration"`
+	X                   float64 `json:"x"`
+	Y                   float64 `json:"y"`
+	TTFB                float64 `json:"ttfb"`
+	FCP                 float64 `json:"fcp"`
+	LCP                 float64 `json:"lcp"`
+	CLS                 float64 `json:"cls"`
+	CLSAvailable        bool    `json:"cls_available"`
+	INP                 float64 `json:"inp"`
+	INPAvailable        bool    `json:"inp_available"`
+	PerformanceSeq      int     `json:"performance_seq"`
+	Received            int64   `json:"received_at"`
+	IPHash              string  `json:"-"`
+	Browser             string  `json:"browser"`
+	Device              string  `json:"device"`
+	ClientAddressHash   string  `json:"client_address_hash,omitempty"`
+	ClientAddressSource string  `json:"client_address_source,omitempty"`
 }
 
 func (s *Store) migrateAnalytics() error {
@@ -202,22 +205,52 @@ func analyticsOrigin(site Site, raw string) bool {
 func (a *Server) analyticsAllowed(ip string, now time.Time) bool {
 	a.analyticsRateMu.Lock()
 	defer a.analyticsRateMu.Unlock()
-	if a.analyticsRates == nil {
-		a.analyticsRates = map[string]analyticsRate{}
+	if !a.analyticsGlobalRateReady(now) || !a.analyticsIdentityRateAllowed(ip, now) {
+		return false
 	}
-	second, minute := now.Unix(), now.Unix()/60
+	a.analyticsGlobal.Count++
+	return true
+}
+
+// The caller holds analyticsRateMu. Invalid public requests consume the same
+// bounded global budget; new visitor identities cannot bypass this ceiling.
+func (a *Server) analyticsGlobalRateReady(now time.Time) bool {
+	second := now.Unix()
 	if a.analyticsGlobal.Window != second {
 		a.analyticsGlobal = analyticsRate{Window: second}
 	}
-	if a.analyticsGlobal.Count >= 100 {
+	return a.analyticsGlobal.Count < 100
+}
+
+func (a *Server) analyticsGlobalAllowed(now time.Time) bool {
+	a.analyticsRateMu.Lock()
+	defer a.analyticsRateMu.Unlock()
+	if !a.analyticsGlobalRateReady(now) {
 		return false
 	}
+	a.analyticsGlobal.Count++
+	return true
+}
+
+func (a *Server) analyticsClientAllowed(identity string, now time.Time) bool {
+	a.analyticsRateMu.Lock()
+	defer a.analyticsRateMu.Unlock()
+	return a.analyticsIdentityRateAllowed(identity, now)
+}
+
+// The caller holds analyticsRateMu. Unknown loopback clients use a site-scoped
+// pseudonymous visitor key rather than sharing one proxy-wide minute bucket.
+func (a *Server) analyticsIdentityRateAllowed(identity string, now time.Time) bool {
+	if a.analyticsRates == nil {
+		a.analyticsRates = map[string]analyticsRate{}
+	}
+	minute := now.Unix() / 60
 	for k, v := range a.analyticsRates {
 		if v.Window != minute {
 			delete(a.analyticsRates, k)
 		}
 	}
-	key := Hash(ip)
+	key := Hash(identity)
 	v := a.analyticsRates[key]
 	if v.Window != minute {
 		v = analyticsRate{Window: minute}
@@ -227,7 +260,6 @@ func (a *Server) analyticsAllowed(ip string, now time.Time) bool {
 	}
 	v.Count++
 	a.analyticsRates[key] = v
-	a.analyticsGlobal.Count++
 	return true
 }
 
@@ -262,6 +294,13 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 		}
 		v.ProxyEndpoint = site.Settings.AnalyticsEndpoint
 		v.AutoInjectHTML = &site.Settings.AnalyticsInjectHTML
+		v.ClientAddressMode = "disabled"
+		if c := site.Settings; v.Enabled && c.AnalyticsEndpoint != "" {
+			v.ClientAddressMode = "legacy_proxy"
+			if c.AnalyticsProxyIdentity != "" {
+				v.ClientAddressMode = "managed_proxy"
+			}
+		}
 		send(w, 200, v)
 	}))
 	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(a.configureAnalyticsProxy))
@@ -369,9 +408,12 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 		return
 	}
-	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-	// Never trust a client-provided forwarding header for rate limits or IP data.
-	if !a.analyticsAllowed(ip, time.Now()) {
+	peer, peerErr := analyticsPeerAddress(r.RemoteAddr)
+	if peerErr != nil {
+		fail(w, 400, "采集连接地址无效")
+		return
+	}
+	if !a.analyticsGlobalAllowed(time.Now()) {
 		w.Header().Set("Retry-After", "60")
 		fail(w, 429, "采集请求过于频繁")
 		return
@@ -383,6 +425,11 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	}
 	if !analyticsOrigin(site, r.Header.Get("Origin")) {
 		fail(w, 403, "统计来源不匹配")
+		return
+	}
+	clientAddress, addressSource, addressErr := a.analyticsClientAddress(r, site, peer)
+	if addressErr != nil {
+		fail(w, 403, addressErr.Error())
 		return
 	}
 	if r.Header.Get("Content-Type") != "application/json" && r.Header.Get("Content-Type") != "text/plain;charset=UTF-8" {
@@ -401,6 +448,15 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, e.Error())
 		return
 	}
+	rateIdentity := clientAddress
+	if rateIdentity == "" {
+		rateIdentity = "unverified-proxy-visitor:" + site.ID + ":" + v.Visitor
+	}
+	if !a.analyticsClientAllowed(rateIdentity, time.Now()) {
+		w.Header().Set("Retry-After", "60")
+		fail(w, 429, "采集请求过于频繁")
+		return
+	}
 	v.Received = time.Now().Unix()
 	v.Browser, v.Device = analyticsClient(r.UserAgent())
 	if v.Device == "Bot" {
@@ -415,7 +471,12 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	}
 	v.Visitor = digest(v.Visitor)
 	v.Session = digest(v.Session)
-	v.IPHash = digest(ip)
+	v.IPHash = digest(peer.String())
+	v.ClientAddressHash = ""
+	v.ClientAddressSource = addressSource
+	if clientAddress != "" {
+		v.ClientAddressHash = digest("client-address-v1:" + clientAddress)
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if e = a.Store.storeAnalyticsEvent(ctx, site.ID, c.Retention, v); e != nil {
@@ -575,6 +636,7 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	}
 	pages, sources, browsers, devices, entries, exits, hours, campaigns := map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}, map[string]int{}
 	visitors, ips, active := map[string]bool{}, map[string]bool{}, map[string]bool{}
+	clientAddresses := newAnalyticsClientAddresses()
 	sessions := map[string]*analyticsSession{}
 	heat := map[analyticsHeatPoint]*analyticsHeatPoint{}
 	// Multiple lifecycle beacons for one navigation are updates, not independent
@@ -617,6 +679,7 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		switch v.Kind {
 		case "pageview":
 			pv++
+			clientAddresses.Observe(v)
 			visitors[v.Visitor] = true
 			ips[v.IPHash] = true
 			pages[v.Path]++
@@ -718,5 +781,5 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		bounceRate = float64(bounces) / float64(sessionCount) * 100
 		avgDuration = duration / float64(sessionCount)
 	}
-	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数，不冒充访客 IP 数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本，不包含 SPA 路由加载性能，也不能替代实验室性能测试。"}}, nil
+	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本，不包含 SPA 路由加载性能，也不能替代实验室性能测试。"}}, nil
 }
