@@ -10,6 +10,7 @@ import (
 	"local/panel/internal/core"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 	"testing"
@@ -202,8 +203,15 @@ func TestApacheNumericAutomaticCancelClockLockAndStrictRecordRefusal(t *testing.
 		t.Fatal(err)
 	}
 	out, err := runApacheRotationFixture(t, s, cfg, now.Add(10*time.Minute), nil)
-	if err == nil || out.State != "unknown" {
-		t.Fatal("BSD writer exclusion bypassed", out, err)
+	if err != errApacheNumericWriterBusy || out.State != "blocked" || out.ErrorCode != "" || out.Archive != nil || len(out.History) != 0 {
+		t.Fatal("known BSD writer contention must defer before snapshot creation", out, err)
+	}
+	current, _ := os.ReadFile(live)
+	if len(current) == 0 || out.WindowStartedAt != now.Format(time.RFC3339) || out.LastRotationAt != "" {
+		t.Fatal("writer contention truncated the log or reset the window", out)
+	}
+	if err = s.apacheNumericRotationFence(context.Background(), ""); err != nil {
+		t.Fatal("known no-op became an unknown-outcome fence", err)
 	}
 	// Use a fresh private fixture for malformed records, never edit an uncertain
 	// original merely to make the next test eligible.
@@ -215,6 +223,75 @@ func TestApacheNumericAutomaticCancelClockLockAndStrictRecordRefusal(t *testing.
 		if _, _, err = fresh.readApacheNumericRotationRecord(); err == nil {
 			t.Fatal("malformed private record adopted", string(raw))
 		}
+	}
+}
+
+func TestApacheNumericAutomaticWriterDeferralPreservesHistoryAndNextCheck(t *testing.T) {
+	s, live, row, cfg, now := apacheRotationFixture(t)
+	completed, err := runApacheRotationFixture(t, s, cfg, now.Add(10*time.Minute), nil)
+	if err != nil || completed.State != "completed" || completed.Archive == nil {
+		t.Fatal(completed, err)
+	}
+	oldArchive := *completed.Archive
+	if err = os.WriteFile(live, row, 0600); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.Stat(live)
+	writer, err := os.OpenFile(live, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer.Close()
+	if err = syscall.Flock(int(writer.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		t.Fatal(err)
+	}
+	deferred, err := runApacheRotationFixture(t, s, cfg, now.Add(20*time.Minute), nil)
+	if err != errApacheNumericWriterBusy || deferred.State != "blocked" || deferred.Archive != nil || deferred.ErrorCode != "" || len(deferred.History) != 1 || !reflect.DeepEqual(deferred.History[0], completed.History[0]) || deferred.LastRotationAt != completed.LastRotationAt || deferred.WindowStartedAt != completed.WindowStartedAt || deferred.ConfigRevision != completed.ConfigRevision || deferred.ArchiveCount != 1 {
+		t.Fatal("contention changed the last completed history or policy", deferred, err)
+	}
+	if data, e := os.ReadFile(live); e != nil || !bytes.Equal(data, row) {
+		t.Fatal("contention changed current bytes", e)
+	}
+	archives, err := s.apacheNumericLogArchives()
+	if err != nil || len(archives) != 1 || archives[0] != oldArchive {
+		t.Fatal("contention created or changed a snapshot", archives, err)
+	}
+	// The deferred record uses only the established fields, states and codes.
+	if err = validateApacheNumericRotationRecord(deferred); err != nil {
+		t.Fatal("deferred record no longer matches the original schema", err)
+	}
+	if err = syscall.Flock(int(writer.Fd()), syscall.LOCK_UN); err != nil {
+		t.Fatal(err)
+	}
+	next, err := runApacheRotationFixture(t, s, cfg, now.Add(21*time.Minute), nil)
+	if err != nil || next.State != "completed" || next.ID == deferred.ID || len(next.History) != 2 || !reflect.DeepEqual(next.History[0], completed.History[0]) {
+		t.Fatal("next original check failed to rotate after the writer released", next, err)
+	}
+	after, _ := os.Stat(live)
+	if !os.SameFile(before, after) || after.Size() != 0 {
+		t.Fatal("successful next check lost the original live inode")
+	}
+	if data, e := os.ReadFile(filepath.Join(s.apacheNumericLogArchiveDirectory(), oldArchive.ID+".log")); e != nil || !bytes.Equal(data, row) {
+		t.Fatal("previous completed snapshot changed", e)
+	}
+}
+
+func TestApacheNumericAutomaticBusyMarkerAfterSnapshotIntentRemainsUnknown(t *testing.T) {
+	s, live, row, cfg, now := apacheRotationFixture(t)
+	out, err := runApacheRotationFixture(t, s, cfg, now.Add(10*time.Minute), func(stage string) error {
+		if stage == "intent-durable" {
+			return errApacheNumericWriterBusy
+		}
+		return nil
+	})
+	if err != errApacheNumericWriterBusy || out.State != "unknown" || out.Archive == nil || out.Archive.State != "copying" || out.ErrorCode != "rotation_failed" {
+		t.Fatal("a post-intent failure was misclassified as a known no-op", out, err)
+	}
+	if data, e := os.ReadFile(live); e != nil || !bytes.Equal(data, row) {
+		t.Fatal("post-intent failure changed the current log", e)
+	}
+	if err = s.apacheNumericRotationFence(context.Background(), ""); err == nil {
+		t.Fatal("post-intent uncertainty lost its no-replay fence")
 	}
 }
 

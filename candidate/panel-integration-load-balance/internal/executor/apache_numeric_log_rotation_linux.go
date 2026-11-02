@@ -252,6 +252,18 @@ func (s *Service) runApacheNumericRotationLocked(ctx context.Context, now time.T
 		return out, err
 	}
 	entry, rotationErr := rotate(out.ID)
+	if rotationErr == errApacheNumericWriterBusy && entry == (apacheNumericLogArchive{}) {
+		// The primitive proved exclusion failed before any snapshot write. This
+		// is a known no-op, unlike every error after snapshot intent creation.
+		// Keep the original window and history; the next minute is a new check.
+		// Reuse the existing record schema so a normal rollback can still read it.
+		out.State = "blocked"
+		out.ErrorCode = ""
+		if err := s.writeApacheNumericRotationRecord(out); err != nil {
+			return out, err
+		}
+		return out, rotationErr
+	}
 	if core.ValidID(entry.ID) {
 		out.Archive = &entry
 	}

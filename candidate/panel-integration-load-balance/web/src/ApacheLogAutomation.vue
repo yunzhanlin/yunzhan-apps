@@ -16,7 +16,7 @@ const validDraft=computed(()=>apacheAutomationPolicy(draft.value));
 const staleDraft=computed(()=>dirty.value&&applied.value?.policy_revision!==draftRevision.value);
 const busy=computed(()=>reading.value||writing.value||confirming.value||props.parentBusy);
 const unknownRotation=computed(()=>["rotating","unknown"].includes(applied.value?.record?.state||""));
-const stateLabels:Record<string,string>={idle:"等待触发",rotating:"轮转结果待核对",completed:"已确认完成",blocked:"达到上限，已暂停",unknown:"结果未知，已暂停",retained_unknown:"已保留未知结果"};
+const stateLabels:Record<string,string>={idle:"等待触发",rotating:"轮转结果待核对",completed:"已确认完成",blocked:"轮转暂缓",unknown:"结果未知，已暂停",retained_unknown:"已保留未知结果"};
 const stateName=(value:string)=>stateLabels[value]||"状态未核实";
 const errorLabels:Record<string,string>={archive_capacity:"8 个快照名额已满，请先导出并按摘要管理快照。",history_capacity:"未知结果历史达到上限，原证据已保留。",rotation_failed:"原轮转没有确认完成，禁止自动和手动重复截断。",verification_failed:"轮转后的完整摘要或完成索引未通过核对。"};
 const errorName=(value?:string)=>errorLabels[value||""]||"";
@@ -109,6 +109,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;clearInterval(timer);});
     <span>上次核对日志：{{applied.record.log_bytes}} 字节 · 快照 {{applied.record.archive_count}} / 8</span>
     <span v-if="applied.record.last_rotation_at">最后完成：{{formatPanelDateTime(applied.record.last_rotation_at)}}</span>
     <p v-if="errorName(applied.record.error_code)">{{errorName(applied.record.error_code)}}</p>
+    <p v-else-if="applied.record.state==='blocked'">本次未开始快照或截断，等待下一次定时核对；详细原因请查看执行器日志。</p>
     <p v-if="Date.now()-Date.parse(applied.record.checked_at)>180000&&applied.policy.enabled">超过三分钟没有新的检查记录，请核对执行器和原日志；未显示为正在正常调度。</p>
     <template v-if="unknownRotation"><code>{{applied.record.id}}</code><code>{{applied.record_sha256}}</code><el-button :disabled="busy||uncertain" @click="retain">按摘要保留未知自动轮转</el-button></template>
     <div v-if="applied.record.history.length" class="automation-history"><h5>最近轮转摘要</h5><article v-for="row in [...applied.record.history].reverse()" :key="row.id"><span>{{formatPanelDateTime(row.at)}} · {{row.outcome==='completed'?'已确认完成':'原未知结果已保留'}}</span><code>{{row.archive?.id||row.id}}</code><span v-if="row.archive">{{row.archive.bytes}} 字节</span></article></div>

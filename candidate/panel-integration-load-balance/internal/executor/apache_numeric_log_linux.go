@@ -21,6 +21,11 @@ import (
 const apacheNumericLogLimit int64 = 32 << 20
 const apacheNumericLogArchiveLimit = 8
 
+// Only a failed nonblocking BSD flock can return this exact sentinel. At that
+// point no snapshot intent, copy or truncation has begun. Every other failure
+// remains an uncertain operation for the automatic coordinator.
+var errApacheNumericWriterBusy = errors.New("Apache 数值日志正在写入，本次未开始快照或截断；下一次定时检查再尝试")
+
 type apacheNumericLogArchive struct {
 	ID         string `json:"id"`
 	CapturedAt string `json:"captured_at"`
@@ -388,7 +393,10 @@ func (s *Service) snapshotAndTruncateApacheNumericLogAt(ctx context.Context, che
 	defer f.Close()
 	// ModSecurity v2 uses BSD flock, not the fcntl record lock used by Apache.
 	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		return out, errors.New("Apache 数值日志正在写入，请稍后核对")
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			return out, errApacheNumericWriterBusy
+		}
+		return out, errors.New("Apache 数值日志写入锁无法核对，未开始快照或截断")
 	}
 	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 	st, err := f.Stat()
