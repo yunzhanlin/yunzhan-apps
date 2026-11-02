@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24apacheautologscandidate51r2-linux-amd64.tar.gz",
-    "archive_sha256": "79a84196518e7fd1b9c1deed4a3161479f687f01dcaa4a3a9f574c934379cff5",
-    "frozen_inputs_sha256": "3129eb767e727a77e9e9ad344cf1ee32902d163481f283c5b8c39a88b5793b63"
+    "archive": "panel-0.1.0-dev.proapps24apacheautologscandidate51r3-linux-amd64.tar.gz",
+    "archive_sha256": "f0520138f691efe58032cebb97b664009ad89ec50ecafbb318e3040ce30085fd",
+    "frozen_inputs_sha256": "13824198c96b5d17baafddf2225e5c95aec56f324ae7243611a79998fcb2b23e"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2172,7 +2172,7 @@
     "web/src/ApacheBodyBuild.vue": "83dd67717f3e6067e9f6e5b0fb4084edc88c34b0654d759df1f69af18fe41a10",
     "web/src/ApacheBodyEvents.vue": "f1bb47954e8ef9f1e72f6b11e2d9a72c9e679964715906d357f5e6afd238d4f7",
     "web/src/ApacheBodyPolicy.vue": "c9818f12738d0d13678d435fe82278be4e19a38792bceeb33f1cea7c15f42775",
-    "web/src/ApacheLogAutomation.vue": "93e2ccc6ca8b464b7d09e6b41920ec17438a997e173d40966a086ee1820fdf4f",
+    "web/src/ApacheLogAutomation.vue": "10eef58c8fae93137486b2982db2d7f24674e360b85227b1fed96daacb82e1cc",
     "web/src/ApacheNumericLogs.vue": "be67c9eaad78d4f51a90dd160a4abd29f6e38b3e3072055fcf246302c08d0d28",
     "web/src/ApacheWafTransactions.vue": "99021d5dbb471798264d82cd54fb412d362fd03c553e869aae2d0ea157a6ac2c",
     "web/src/App.vue": "d2ce2ded0ab6c08537f2202788a5acf7226c88b8452e412163aee41a78e8aa07",
