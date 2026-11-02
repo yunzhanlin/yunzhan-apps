@@ -324,10 +324,10 @@ func (s *Service) rotateApacheNumericLogUnderLock(ctx context.Context, lock *os.
 // A manual HTTP call must never bypass an unknown automatic truncate result.
 func (s *Service) rotateApacheNumericLogWithIntent(ctx context.Context, lock *os.File, intent string) (apacheNumericLogArchive, error) {
 	var out apacheNumericLogArchive
-	if intent != "" {
-		return out, errors.New("Apache 手动轮转不接受自动意图标识")
-	}
 	if err := s.verifyApacheNumericLock(lock); err != nil {
+		return out, err
+	}
+	if err := s.apacheNumericRotationFence(ctx, intent); err != nil {
 		return out, err
 	}
 	if _, err := os.Lstat(s.wafPendingPath()); !errors.Is(err, os.ErrNotExist) {

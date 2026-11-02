@@ -112,6 +112,8 @@ func (s *Service) apacheNumericLogHealthLocked(ctx context.Context) error {
 	if len(pending) != 0 {
 		return errors.New("Apache 日志维护未确认完成")
 	}
-	_, err = s.apacheNumericLogArchives()
-	return err
+	if _, err = s.apacheNumericLogArchives(); err != nil {
+		return err
+	}
+	return s.apacheNumericRotationFence(ctx, "")
 }

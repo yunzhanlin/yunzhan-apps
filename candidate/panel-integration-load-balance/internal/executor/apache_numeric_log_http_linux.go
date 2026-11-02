@@ -134,6 +134,39 @@ func (s *Service) apacheNumericLogRoutes(m *http.ServeMux) {
 		defer lock.Close()
 		return logs.apacheNumericInventory(ctx)
 	})
+	register("GET /v1/software/apache-waf/body-log/automatic", false, func(ctx context.Context, logs *Service, r *http.Request) (any, error) {
+		lock, err := logs.lockWAFObservation()
+		if err != nil {
+			return nil, err
+		}
+		defer lock.Close()
+		return logs.apacheNumericAutomationStatus(ctx)
+	})
+	register("POST /v1/software/apache-waf/body-log/automatic/configure", true, func(ctx context.Context, logs *Service, r *http.Request) (any, error) {
+		var in apacheNumericAutomationRequest
+		if err := apacheNumericLogRequest(r, &in, "automatic-configure"); err != nil {
+			return nil, err
+		}
+		return logs.configureApacheNumericAutomation(ctx, in, time.Now().UTC())
+	})
+	register("POST /v1/software/apache-waf/body-log/automatic/retain", true, func(ctx context.Context, logs *Service, r *http.Request) (any, error) {
+		var in struct {
+			SHA     string `json:"sha256"`
+			Confirm bool   `json:"confirm_unknown"`
+		}
+		if err := apacheNumericLogRequest(r, &in, "automatic-retain"); err != nil {
+			return nil, err
+		}
+		if _, err := logs.retainApacheNumericRotationOutcome(ctx, in.SHA, time.Now().UTC()); err != nil {
+			return nil, err
+		}
+		lock, err := logs.lockWAFObservation()
+		if err != nil {
+			return nil, err
+		}
+		defer lock.Close()
+		return logs.apacheNumericAutomationStatus(ctx)
+	})
 	register("GET /v1/software/apache-waf/body-log/archives/{id}", false, func(ctx context.Context, logs *Service, r *http.Request) (any, error) {
 		lock, err := logs.lockWAFObservation()
 		if err != nil {

@@ -43,7 +43,10 @@ function component(mode="success",version="2.4.0",confirmOverride){
   return mode==="bad-inventory"?{...current,inventory_complete:false}:structuredClone(current);
  }});
  const bindings={...guards,props,computed:vue.computed,ref:vue.ref,ElMessageBox:{confirm:confirmOverride??(async()=>{}),prompt:async(text,title,opts)=>({value:opts.inputPlaceholder})},document:{createElement:()=>({click(){throw Error("test did not authorize download")}})}};
- const logic=new Function("bindings","with(bindings){"+actual+";return{inventory,known,unknown,error,receipt,reading,writing,confirming,supported,blocked,refresh,action,exportSnapshot};}")(bindings);
+ const logic=new Function("bindings","with(bindings){"+actual+";return{inventory,known,unknown,error,receipt,reading,writing,confirming,supported,blocked,automaticBlocked,refresh,action,exportSnapshot};}")(bindings);
+ // This isolated parent fixture represents the child's validated status event.
+ // Its unknown/error behavior is exercised independently below.
+ logic.automaticBlocked.value=false;
  return {calls,props,logic};
 }
 test("actual component only admits exact native version, known inventory and idle parent",async()=>{
@@ -74,7 +77,7 @@ test("failed or late inventory is never displayed as verified zero",async()=>{
 });
 test("real workspace exposes a separate maintenance pane and keeps automatic deletion absent",()=>{
  const workspace=read("web/src/WafWorkspace.vue");assert(workspace.includes('name="apache-numeric-logs"'));assert(workspace.includes('<ApacheNumericLogs :api="api"'));
- assert(source.includes("当前页提供手动维护"));assert(!source.includes("setInterval"));assert(!source.includes("onMounted("));
+ assert(source.includes("<ApacheLogAutomation"));assert(source.includes("自动轮转须明确保存策略"));assert(!source.includes("setInterval"));assert(!source.includes("onMounted("));
 });
 
 
@@ -86,4 +89,65 @@ test("historical build digests reverse only the exact new gate and explicit suit
  const baseline=beforeLoadBalanceStreamBuild(builder);
  for(const changed of [builder.replace(gate,""),builder.replace(gate,gate+gate),builder.replace(gate,gate.replace("--test","--check")),builder.replace(budget,"go test ./... && go vet ./..."),builder.replace(budget,budget+budget),builder.replace(budget,budget.replace("30m","1m"))])assert.throws(()=>beforeLoadBalanceStreamBuild(changed));
  assert.notEqual(beforeLoadBalanceStreamBuild(builder.replace("go vet ./...","go vet ./... -unknown-flag")),baseline);
+});
+
+const automationModule=ts.transpileModule(read('web/src/apacheLogAutomation.ts'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText.replace('"./apacheNumericLogs"',JSON.stringify('data:text/javascript;base64,'+Buffer.from(compiled).toString('base64')));
+const autoGuards=await import('data:text/javascript;base64,'+Buffer.from(automationModule).toString('base64'));
+const automaticFixture=()=>({configured:true,policy_revision:1,policy:{enabled:false,rotate_mib:16,max_age_minutes:60},record:{format:1,config_revision:1,policy:{enabled:false,rotate_mib:16,max_age_minutes:60},id:'e'.repeat(32),state:'idle',window_started_at:'2026-11-02T00:00:00Z',checked_at:'2026-11-02T00:00:00Z',policy_revision:0,log_bytes:0,archive_count:0,history:[]},record_sha256:'f'.repeat(64),read_only:true,core_maintenance:true,check_interval_seconds:60,automatic_deletion:false});
+const autoSource=read('web/src/ApacheLogAutomation.vue');
+const autoActual=ts.transpileModule(autoSource.slice(autoSource.indexOf('const applied=ref'),autoSource.indexOf('watch(()=>[props.active')),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+function automaticComponent(mode='success',version='2.4.0'){
+ const calls=[],events=[];let server=automaticFixture();
+ const props=vue.reactive({active:true,installed:true,version,parentBusy:false,api:async(path,method,body)=>{
+  calls.push({path,method,body:structuredClone(body)});
+  if(method==='POST'){
+   assert.equal(path,'/software/apache-waf/body-log/automatic/configure');
+   assert.equal(body.expected_revision,server.policy_revision);
+   const next={enabled:body.enabled,rotate_mib:body.rotate_mib,max_age_minutes:body.max_age_minutes};
+   server.policy=next;server.policy_revision++;server.record.policy=structuredClone(next);server.record.config_revision=server.policy_revision;
+   if(mode==='lost-reply')throw Error('original result unavailable');
+   const reply=structuredClone(server);if(mode==='foreign-reply')reply.policy_revision++;
+   return reply;
+  }
+  assert.equal(path,'/software/apache-waf/body-log/automatic');
+  return mode==='bad-status'?{...structuredClone(server),record_sha256:''}:structuredClone(server);
+ }});
+ const bindings={...autoGuards,props,computed:vue.computed,ref:vue.ref,emit:(...event)=>events.push(event),ElMessageBox:{prompt:async(text,title,opts)=>({value:opts.inputPlaceholder})}};
+ const logic=new Function('bindings','with(bindings){'+autoActual+';return{applied,draft,draftRevision,known,uncertain,error,receipt,reading,writing,dirty,staleDraft,readStatus,save,retain,resetDraft};}')(bindings);
+ return{props,calls,events,logic,server};
+}
+test('automatic log status rejects contradictory identity, unsafe privacy fields and capacity',()=>{
+ const good=automaticFixture();assert.equal(autoGuards.apacheAutomationStatus(good),true);
+ assert.equal(autoGuards.apacheAutomationStatus({configured:false,policy_revision:0,policy:autoGuards.apacheAutomationDefaults(),record:null,record_sha256:'',read_only:true,core_maintenance:true,check_interval_seconds:60,automatic_deletion:false}),true);
+ for(const change of [{policy_revision:0},{configured:false},{automatic_deletion:true},{check_interval_seconds:1},{raw_log:'private'},{record:{...good.record,config_revision:2}},{record:{...good.record,archive_count:9}},{record:{...good.record,state:'completed'}},{policy:{...good.policy,rotate_mib:29}},{record:{...good.record,history:Array(17).fill({id,at:good.record.checked_at,outcome:'unknown_retained'})}}])assert.equal(autoGuards.apacheAutomationStatus({...good,...change}),false);
+});
+test('actual automatic component preserves drafts and rejects a competing configuration revision',async()=>{
+ const t=automaticComponent();await t.logic.readStatus(true);assert.equal(t.calls.length,1);
+ t.logic.draft.value.rotate_mib=4;t.server.record.checked_at='2026-11-02T00:01:00Z';await t.logic.readStatus();
+ assert.equal(t.logic.draft.value.rotate_mib,4);assert.equal(t.logic.applied.value.policy.rotate_mib,16);assert.equal(t.logic.draftRevision.value,1);
+ t.server.policy_revision=2;t.server.record.config_revision=2;t.server.policy.rotate_mib=8;t.server.record.policy.rotate_mib=8;
+ await t.logic.readStatus();assert.equal(t.logic.staleDraft.value,true);await t.logic.save();assert.equal(t.calls.filter(x=>x.method==='POST').length,0);
+ t.logic.resetDraft();assert.equal(t.logic.draft.value.rotate_mib,8);assert.equal(t.logic.draftRevision.value,2);assert.equal(t.logic.dirty.value,false);
+});
+test('actual automatic component never retries a lost or foreign acknowledgement',async()=>{
+ for(const mode of ['lost-reply','foreign-reply']){
+  const t=automaticComponent(mode);await t.logic.readStatus(true);t.logic.draft.value.enabled=true;await t.logic.save();
+  assert.equal(t.logic.uncertain.value,true);assert.equal(t.logic.known.value,false);assert.match(t.logic.error.value,/不会自动重试/);
+  await t.logic.readStatus();await t.logic.save();assert.equal(t.calls.length,2);
+  await t.logic.readStatus(true);assert.equal(t.calls.length,3);assert.equal(t.logic.uncertain.value,false);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);assert.equal(t.calls.filter(x=>x.method==='POST').length,1);
+ }
+});
+test('actual automatic component serializes double saves and ignores late or malformed reads',async()=>{
+ const t=automaticComponent();await t.logic.readStatus(true);t.logic.draft.value.enabled=true;let reply;
+ t.props.api=async(path,method,body)=>{t.calls.push({path,method,body});return new Promise(resolve=>{reply=resolve})};
+ const first=t.logic.save();await Promise.resolve();await t.logic.save();assert.equal(t.calls.filter(x=>x.method==='POST').length,1);
+ const result=automaticFixture();result.policy_revision=2;result.record.config_revision=2;result.policy.enabled=result.record.policy.enabled=true;reply(result);await first;assert.equal(t.logic.known.value,true);
+ const late=automaticComponent();late.props.api=async()=>new Promise(resolve=>{reply=resolve});const pending=late.logic.readStatus(true);late.props.active=false;reply(automaticFixture());await pending;assert.equal(late.logic.applied.value,undefined);
+ const bad=automaticComponent('bad-status');await bad.logic.readStatus(true);assert.equal(bad.logic.known.value,false);assert(bad.events.some(x=>x[0]==='blocked'&&x[1]===true));
+});
+test('an unknown automatic result also blocks a new manual rotation',async()=>{
+ const parent=component();await parent.logic.refresh();parent.logic.automaticBlocked.value=true;await parent.logic.action('rotate');assert.equal(parent.calls.filter(x=>x.method==='POST').length,0);
+ const child=automaticComponent();child.server.record.state='unknown';child.server.record.error_code='rotation_failed';await child.logic.readStatus(true);
+ assert(child.events.some(x=>x[0]==='blocked'&&x[1]===true));assert.equal(child.calls.filter(x=>x.method==='POST').length,0);
+ for(const version of ['2.3.0','2.4.1','v2.4.0','']){const old=automaticComponent('success',version);await old.logic.readStatus(true);assert.equal(old.calls.length,0)}
 });

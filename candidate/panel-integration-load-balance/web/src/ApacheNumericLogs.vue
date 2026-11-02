@@ -3,9 +3,11 @@ import {computed,onBeforeUnmount,ref,watch} from "vue";
 import {ElMessageBox} from "element-plus";
 import {apacheLogActionReceipt,apacheLogExport,apacheLogInventory,type ApacheLogArchive,type ApacheLogInventory,type ApacheLogRecovery,type ApacheLogStage} from "./apacheNumericLogs";
 import {formatPanelDateTime} from "./panelTime";
+import ApacheLogAutomation from "./ApacheLogAutomation.vue";
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 const props=defineProps<{api:API;active:boolean;installed:boolean;version?:string;parentBusy:boolean}>();
 const inventory=ref<ApacheLogInventory>(),reading=ref(false),writing=ref(false),confirming=ref(false),known=ref(false),unknown=ref(false),error=ref(""),receipt=ref("");
+const automaticBlocked=ref(true);
 let epoch=0,disposed=false;
 const current=(ticket:number)=>!disposed && props.active && ticket===epoch;
 const supported=computed(()=>props.installed && props.version==="2.4.0");
@@ -29,7 +31,7 @@ async function confirm(text:string,exact?:string):Promise<boolean>{
  }catch{return false;}
 }
 async function action(kind:"rotate"|"remove"|"retain"|"retain-stage",item?:ApacheLogArchive|ApacheLogRecovery|ApacheLogStage){
- if(blocked.value)return;
+ if(blocked.value || kind==="rotate" && automaticBlocked.value)return;
  const ticket=epoch;
  let path="/software/apache-waf/body-log/rotate",payload:unknown={},id="",digest="",text="将完整核验并保存当前数字日志快照，再清空同一个日志文件；Apache 不重载。最多保留 8 份，写入锁忙或结果未知时会保留证据并拒绝重复截断。",exact:string|undefined;
  if(kind==="remove"){
@@ -71,7 +73,8 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
  <section class="apache-logs">
   <el-alert type="info" :closable="false" title="保存数字日志快照后轮转，不重载 Apache。仅管理员可维护，不包含 IP、URI、Cookie、请求体或文件原文。"/>
   <p v-if="!supported">需要先完成 Apache 原生防护应用的签名安装。当前读取不会创建日志、安装软件或启用网站防护。</p>
-  <div class="apache-log-actions"><el-button :loading="reading" :disabled="!supported || writing" @click="refresh">核对完整库存</el-button><el-button type="primary" :loading="writing" :disabled="blocked || !inventory || inventory.archives.length>=8 || inventory.recovery.length>0 || inventory.index_stages.length>0" @click="action('rotate')">保存快照并轮转</el-button></div>
+  <ApacheLogAutomation :api="api" :active="active" :installed="installed" :version="version" :parent-busy="parentBusy||writing||confirming" @blocked="automaticBlocked=$event" @inventory-change="refresh"/>
+  <div class="apache-log-actions"><el-button :loading="reading" :disabled="!supported || writing" @click="refresh">核对完整库存</el-button><el-button type="primary" :loading="writing" :disabled="blocked || automaticBlocked || !inventory || inventory.archives.length>=8 || inventory.recovery.length>0 || inventory.index_stages.length>0" @click="action('rotate')">保存快照并轮转</el-button></div>
   <el-alert v-if="error" type="error" :closable="false" :title="error"/>
   <el-alert v-if="receipt && known" type="success" :closable="false" :title="receipt"/>
   <p v-if="!known && supported" role="status">{{reading?'正在核对固定目录、全部快照与摘要':'库存尚不可核实，不能当成零个快照。'}}</p>
@@ -89,7 +92,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
    <template v-if="inventory.recovery.length"><h4>未确认完成的原轮转或删除</h4><p>保留不会重做原轮转、恢复原流量或宣称成功。删除结果待核对的记录须按原标识及摘要明确处理。</p><div v-for="row in inventory.recovery" :key="row.archive.id" class="apache-log-recovery"><code>{{row.archive.id}}</code><span>{{label(row.archive.state)}} · {{row.snapshot_missing?'原快照缺失':row.snapshot_bytes+' 字节'}}</span><el-button :disabled="blocked || row.archive.state==='removing'" @click="action('retain',row)">核对并保留未知结果</el-button></div></template>
    <template v-if="inventory.index_stages.length"><h4>未提交的原索引残件</h4><div v-for="row in inventory.index_stages" :key="row.id" class="apache-log-recovery"><code>{{row.id}}</code><span>{{row.bytes}} 字节 · {{row.sha256}}</span><el-button :disabled="blocked" @click="action('retain-stage',row)">按原摘要保留残件</el-button></div></template>
   </template>
-  <p>快照可能重叠，不合计为独立流量或已确认拦截数。导出只读取所选快照尾部最多 4 MiB / 5000 条数字记录；未确认复制、损坏摘要或异常路径不会作为完整导出。当前页提供手动维护，不自动设置轮转周期或删除历史。</p>
+  <p>快照可能重叠，不合计为独立流量或已确认拦截数。导出只读取所选快照尾部最多 4 MiB / 5000 条数字记录；未确认复制、损坏摘要或异常路径不会作为完整导出。自动轮转须明确保存策略，快照删除始终需要逐份按摘要确认。</p>
  </section>
 </template>
 <style scoped>

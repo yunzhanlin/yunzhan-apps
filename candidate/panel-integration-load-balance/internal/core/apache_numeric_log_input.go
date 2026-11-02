@@ -20,6 +20,10 @@ func DecodeApacheNumericLogMaintenance(raw []byte, kind string) (map[string]any,
 		fields = map[string]string{"index_sha256": "sha", "snapshot_sha256": "optional-sha", "snapshot_missing": "bool", "confirm_unknown": "true"}
 	case "retain-stage":
 		fields = map[string]string{"sha256": "sha", "confirm_unknown": "true"}
+	case "automatic-retain":
+		fields = map[string]string{"sha256": "sha", "confirm_unknown": "true"}
+	case "automatic-configure":
+		fields = map[string]string{"expected_revision": "revision", "enabled": "bool", "rotate_mib": "size", "max_age_minutes": "age"}
 	default:
 		return nil, errors.New("Apache 日志维护操作无效")
 	}
@@ -46,7 +50,13 @@ func DecodeApacheNumericLogMaintenance(raw []byte, kind string) (map[string]any,
 		if d.Decode(&value) != nil || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
 			return nil, errors.New("Apache 日志维护不接受null")
 		}
-		if typ == "bool" || typ == "true" {
+		if typ == "revision" || typ == "size" || typ == "age" {
+			var v int64
+			if json.Unmarshal(value, &v) != nil || typ == "revision" && (v < 0 || v > 1000000000) || typ == "size" && (v < 1 || v > 28) || typ == "age" && (v < 10 || v > 1440) {
+				return nil, errors.New("Apache 自动轮转修订、大小或时间阈值无效")
+			}
+			out[name] = v
+		} else if typ == "bool" || typ == "true" {
 			var v bool
 			if json.Unmarshal(value, &v) != nil || typ == "true" && !v {
 				return nil, errors.New("Apache 日志维护需要明确布尔确认")

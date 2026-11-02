@@ -1618,7 +1618,7 @@ func (s *Service) StartAppModuleWorkerContext(ctx context.Context) {
 		s.moduleWatchWake = make(chan struct{}, 1)
 		s.mu.Unlock()
 	}, s.runIntegrityWatcher, s.runLoadBalanceHealthWorker,
-		s.runWAFBodyLogRotationWorker, s.runWAFBodyLogRetentionWorker,
+		s.runWAFBodyLogRotationWorker, s.runWAFBodyLogRetentionWorker, s.runApacheNumericLogRotationWorker,
 		s.runThreatIDSRotationWorker, s.runStatisticsHistoryWorker,
 		s.runStatisticsGeoCacheWorker, s.runRemoteSyncWorker, s.runScheduledModuleWorker)
 }

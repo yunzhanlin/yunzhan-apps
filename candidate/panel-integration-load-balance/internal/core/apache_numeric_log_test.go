@@ -59,7 +59,7 @@ func TestApacheNumericLogHTTPAuthorizationClosedForwardingAndAudit(t *testing.T)
 	remove := `{"sha256":"` + sha + `","confirm_delete":true}`
 	for _, name := range []string{viewer.Username, operator.Username} {
 		cookie, token := login(name)
-		for _, v := range []struct{ method, path, body string }{{"GET", base + "archives", ""}, {"POST", base + "rotate", "{}"}, {"POST", base + "archives/" + id + "/remove", remove}} {
+		for _, v := range []struct{ method, path, body string }{{"GET", base + "archives", ""}, {"GET", base + "automatic", ""}, {"POST", base + "automatic/configure", `{"expected_revision":0,"enabled":true,"rotate_mib":16,"max_age_minutes":60}`}, {"POST", base + "automatic/retain", `{"sha256":"` + sha + `","confirm_unknown":true}`}, {"POST", base + "rotate", "{}"}, {"POST", base + "archives/" + id + "/remove", remove}} {
 			before := calls
 			w := request(v.method, v.path, v.body, token, a.Config.Origin, cookie)
 			if w.Code != 403 || calls != before {
@@ -82,7 +82,7 @@ func TestApacheNumericLogHTTPAuthorizationClosedForwardingAndAudit(t *testing.T)
 	if out.Code != 200 || calls != before+1 || gotMethod != "GET" || gotPath != "/v1/software/apache-waf/body-log/archives" || !strings.Contains(out.Body.String(), "18446744073709551610") {
 		t.Fatal("read or integer evidence forwarding", out.Code, gotPath, out.Body.String())
 	}
-	for _, v := range []struct{ path, body string }{{"rotate", "{}"}, {"archives/" + id + "/remove", remove}, {"archives/" + id + "/retain", `{"index_sha256":"` + sha + `","snapshot_sha256":"","snapshot_missing":true,"confirm_unknown":true}`}, {"index-stages/" + id + "/retain", `{"sha256":"` + sha + `","confirm_unknown":true}`}} {
+	for _, v := range []struct{ path, body string }{{"rotate", "{}"}, {"automatic/configure", `{"expected_revision":0,"enabled":true,"rotate_mib":16,"max_age_minutes":60}`}, {"automatic/retain", `{"sha256":"` + sha + `","confirm_unknown":true}`}, {"archives/" + id + "/remove", remove}, {"archives/" + id + "/retain", `{"index_sha256":"` + sha + `","snapshot_sha256":"","snapshot_missing":true,"confirm_unknown":true}`}, {"index-stages/" + id + "/retain", `{"sha256":"` + sha + `","confirm_unknown":true}`}} {
 		before := calls
 		out = request("POST", base+v.path, v.body, csrf, a.Config.Origin, admin)
 		if out.Code != 200 || calls != before+1 || gotMethod != "POST" || gotPath != "/v1/software/apache-waf/body-log/"+v.path {
@@ -108,7 +108,7 @@ func TestApacheNumericLogHTTPAuthorizationClosedForwardingAndAudit(t *testing.T)
 		}
 	}
 	var audits int
-	if err := s.DB.QueryRow("SELECT count(*)FROM audit_logs WHERE action LIKE 'apache.body-log.%'").Scan(&audits); err != nil || audits != 8 {
+	if err := s.DB.QueryRow("SELECT count(*)FROM audit_logs WHERE action LIKE 'apache.body-log.%'").Scan(&audits); err != nil || audits != 12 {
 		t.Fatal("maintenance receipts not audited", audits, err)
 	}
 	if _, err := s.DB.Exec(`CREATE TRIGGER block_apache_log_request_audit BEFORE INSERT ON audit_logs WHEN NEW.action='apache.body-log.rotate.requested' BEGIN SELECT RAISE(ABORT,'owned test failure'); END`); err != nil {

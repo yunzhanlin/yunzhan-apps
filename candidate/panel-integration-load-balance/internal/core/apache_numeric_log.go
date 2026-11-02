@@ -16,6 +16,8 @@ func (a *Server) apacheNumericLogRoutes(m *http.ServeMux) {
 		{"GET", "archives", "inventory"}, {"GET", "archives/{id}", "export"},
 		{"POST", "rotate", "rotate"}, {"POST", "archives/{id}/remove", "remove"},
 		{"POST", "archives/{id}/retain", "retain"}, {"POST", "index-stages/{id}/retain", "retain-stage"},
+		{"GET", "automatic", "automatic-status"},
+		{"POST", "automatic/configure", "automatic-configure"}, {"POST", "automatic/retain", "automatic-retain"},
 	} {
 		m.HandleFunc(op.method+" /api/software/apache-waf/body-log/"+op.suffix, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 			role, _, err := a.Store.appUserRole(u.ID)

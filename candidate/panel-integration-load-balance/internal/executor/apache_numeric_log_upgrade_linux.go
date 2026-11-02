@@ -23,6 +23,9 @@ func (s *Service) apacheNumericLogReadFence(ctx context.Context) error {
 	}
 	path := filepath.Join(s.moduleDir("apache-waf"), "waf-configuration.lock")
 	absent := func() error {
+		if _, err := os.Lstat(s.apacheNumericRotationPath()); !errors.Is(err, os.ErrNotExist) {
+			return errors.New("Apache 自动日志证据存在但原配置锁缺失；未忽略未知结果")
+		}
 		for _, dir := range []string{s.apacheNumericLogArchiveDirectory(), s.apacheNumericLogIndexDirectory(), s.systemPath("/var/lib/panel-apache-body/retained-index-staging")} {
 			err := s.apacheNumericLogPrivateDirectory(dir, false)
 			if errors.Is(err, os.ErrNotExist) {
