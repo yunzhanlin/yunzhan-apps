@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24apachecccandidate56r3-linux-amd64.tar.gz",
-  "archive_sha256": "65da8ad3e5227da8caeef9b647af10fbde743d2f252b7ef3e5c401e29a314f6e",
-  "frozen_inputs_sha256": "0eb7d7540a2f8a40f45de911ec3049ffa884ef7ea26e2bf683065231b6d195fe",
+  "archive": "panel-0.1.0-dev.proapps24apachecccandidate56r4-linux-amd64.tar.gz",
+  "archive_sha256": "1c132516fa67ae16338cd962a113174656b4a70b78c6566dccd259ad47612c22",
+  "frozen_inputs_sha256": "90704f9163688ccd9e5fdade8bc259e064402d7c6104135429c3c927598d7c7e",
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
     "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
@@ -813,7 +813,7 @@
     "internal/executor/apache_waf_linux.go": "0cd892f554f76e3adfbcc89828c7d69fb1fa69787358470ace4a37a6d334a0d3",
     "internal/executor/apache_waf_native_history_linux_test.go": "adea6daf8601281d79d6637a69aa891408ba14fe80665e0df729b1721819cc93",
     "internal/executor/apache_waf_native_lifecycle_linux.go": "7e487a2b0c2f0ae420f71bb67a8835e680ed816ecd2153b5b16f9b3f9df0c5c2",
-    "internal/executor/apache_waf_native_lifecycle_linux_test.go": "df45b70abe275ea7ec9057432eb9e6d4b4aa286bff3943f612cd8a8a0ad1ee2a",
+    "internal/executor/apache_waf_native_lifecycle_linux_test.go": "740f83e8a81728a7dfc50b88935eb827f6c079c1397100e46e5f4f0cbe54a87b",
     "internal/executor/apache_waf_native_preview_linux.go": "3149ff5e11674eea68caf137ce0107bd02ce2d9febd147eb735d820ac84200c4",
     "internal/executor/apache_waf_native_version_linux.go": "c3fec549ee9ed3e9ba8a6a6d135f8f210a91d69a4a8c5cb0dd042704464b34f8",
     "internal/executor/apache_waf_remove_linux.go": "f8451cd0a9bc28740e77109f6abd7f2bb080e6e948f22700a7795b9211e37459",

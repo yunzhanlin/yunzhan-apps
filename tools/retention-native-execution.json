@@ -1,5 +1,5 @@
 {
-  "source_inputs_sha256": "0eb7d7540a2f8a40f45de911ec3049ffa884ef7ea26e2bf683065231b6d195fe",
+  "source_inputs_sha256": "90704f9163688ccd9e5fdade8bc259e064402d7c6104135429c3c927598d7c7e",
   "package": "local/panel/internal/core",
   "expected_root_tests": [
     "TestMariaDBRetentionWaitsForRemoteCopy",

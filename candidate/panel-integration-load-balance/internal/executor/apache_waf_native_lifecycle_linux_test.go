@@ -77,7 +77,18 @@ func TestApacheNativeLifecyclePrivateVersionAndRevisionAreNotRequestFlags(t *tes
 	if _, e := native.apacheNativeSettings(map[string]any{"profile": "strict", "rate_per_second": 30}, false, false); e != nil {
 		t.Fatal("legacy profile edit failed preserving native policy", e)
 	}
-	for _, version := range []string{"2.4.0-compat1", "2.5.0", "2.2.0"} {
+	cc, ccOriginal := apacheNativeRecordFixture(t, core.ApacheWAFNativeCCVersion, cfg)
+	ccSettings, e := cc.apacheNativeSettings(core.WAFSettings(cfg), false, false)
+	if e != nil || !reflect.DeepEqual(ccSettings, cfg) || ccSettings.ApacheCC != nil {
+		t.Fatal("exact installed CC version failed to preserve its original body-only settings", e)
+	}
+	if b, e := os.ReadFile(filepath.Join(cc.moduleDir("apache-waf"), "installed.json")); e != nil || !reflect.DeepEqual(b, ccOriginal) {
+		t.Fatal("read-only CC preparation changed the original installation", e)
+	}
+	if _, e := native.apacheNativeSettingsVersion(core.WAFSettings(cfg), false, false, core.ApacheWAFNativeCCVersion); e == nil {
+		t.Fatal("caller selected CC target promoted the private body-only installation")
+	}
+	for _, version := range []string{"2.4.0-compat1", "2.5.0-compat1", "2.5.1", "2.6.0", "2.2.0"} {
 		other, _ := apacheNativeRecordFixture(t, version, cfg)
 		if _, e := other.apacheNativeSettings(nil, false, false); e == nil {
 			t.Fatal("unknown or unmigrated record granted native write", version)
