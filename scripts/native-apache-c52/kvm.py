@@ -54,7 +54,7 @@ def host_state():
     return paths
 before = host_state(); save('host-before.json', before)
 assert sha(source / 'recipient.pem') == CERT_SHA256
-assert sha(assets / 'assets.json') == '13c905973371dfee11800e046a2ca410cbeb36971fccb46640f9d90f02052b17'
+assert sha(assets / 'assets.json') == '669f8b8f5d323d9701c62dea10a4eb57c963c0ebe570aef6cadf1774ff21a7cb'
 pin = json.loads((assets / 'assets.json').read_bytes())
 assert pin['architecture'] == 'amd64'
 assert sha(assets / 'guest.py') == pin['files']['guest.py']
