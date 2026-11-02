@@ -1,8 +1,8 @@
-name: Actual C54 QA2 five OS signed upgrade real backup retention and hard powerloss
+name: Actual C54 QA3 five OS signed upgrade real backup retention and hard powerloss
 
 on:
   push:
-    branches: [codex/backup-retention-c54-native-qa2]
+    branches: [codex/backup-retention-c54-native-qa3]
     paths: [scripts/native-backup-retention-c54/dispatch.json]
 
 permissions:
@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   native-amd64-install:
-    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/backup-retention-c54-native-qa2'
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/backup-retention-c54-native-qa3'
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -69,13 +69,13 @@ jobs:
           python3 - "$RUNNER_TEMP/native-retention-c54-assets" <<'PY'
           import ast,hashlib,json,pathlib,sys
           root=pathlib.Path(sys.argv[1]);sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
-          assert sha(root/'assets.json')=='60f5b38d6f3c131c13a0aae638f02a1fac8bebad5784d3e18459f4ef8f589caf'
+          assert sha(root/'assets.json')=='16d54e031f57d9fa52a88edc42518888049e22dff0f547eb410828db5406dcf2'
           manifest=json.loads((root/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='2b8e71c50b16ba6008955a4d9168b195a087e3063412445a0596f27b53b1bfb9'and len(manifest['files'])==14
           for n,h in manifest['files'].items():
               assert pathlib.PurePath(n).name==n and sha(root/n)==h
               if n.endswith('.py'):ast.parse((root/n).read_bytes())
           source=pathlib.Path('scripts/native-backup-retention-c54')
-          assert sha(source/'kvm.py')=='3f6955e7c1e1e48843a7efe8c7a718868b67aaefe7b10cc11809299d45eb186a'
+          assert sha(source/'kvm.py')=='4861d7c83f1ec63edc1e39e63b03208ae25d76fe0845b4a70b4f7bc666a253a6'
           for n in('guest.py','business.py','cold.py','baseline-guest.py','capture.py','preservation.py'):assert (root/n).read_bytes()==(source/n).read_bytes()
           print('Original signed C53r3 and C54 assets and once-only real retention payload verified')
           PY

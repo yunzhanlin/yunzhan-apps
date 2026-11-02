@@ -48,6 +48,25 @@ try:
  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
   db.row_factory=sqlite3.Row;db.execute('PRAGMA query_only=ON');cleanup=[dict(v)for v in db.execute('SELECT *FROM site_schedule_cleanup_jobs ORDER BY artifact_id')];assert len(cleanup)==3 and all(v['attempts']==1 for v in cleanup)
  save('cold-enabled-original-records.json',cleanup);cold_before=snapshot();save('before-hard-powerloss-original113.json',cold_before);backup_inventory('before-hard-powerloss-backups')
+ # Persist only this QA's evidence. Do not sync/checkpoint, chmod or otherwise
+ # prepare the product DB, backup files or executor receipts for the power cut.
+ for outcome_file in evidence.glob('*-original-outcome.json'):
+  operation=json.loads(outcome_file.read_bytes());stem=outcome_file.name[:-len('-original-outcome.json')]
+  for channel in('stdout','stderr'):assert sha(evidence/(stem+'.'+channel+'.log'))==operation[channel+'_sha256']
+ durable={}
+ for f in sorted(evidence.rglob('*')):
+  metadata=f.lstat();assert not stat.S_ISLNK(metadata.st_mode)
+  if stat.S_ISDIR(metadata.st_mode):continue
+  assert stat.S_ISREG(metadata.st_mode)and metadata.st_uid==0 and metadata.st_nlink==1 and stat.S_IMODE(metadata.st_mode)==0o600 and metadata.st_size<32<<20
+  fd=os.open(f,os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC)
+  try:os.fsync(fd)
+  finally:os.close(fd)
+  durable[str(f.relative_to(evidence))]={'sha256':sha(f),'bytes':metadata.st_size,'mode':stat.S_IMODE(metadata.st_mode),'uid':metadata.st_uid,'gid':metadata.st_gid,'inode':metadata.st_ino}
+ save('pre-powerloss-durable-QA-evidence.json',durable)
+ for folder in sorted([evidence,*[f for f in evidence.rglob('*')if f.is_dir()]],key=lambda f:len(f.parts),reverse=True):
+  fd=os.open(folder,os.O_RDONLY|os.O_DIRECTORY)
+  try:os.fsync(fd)
+  finally:os.close(fd)
  cold={'base':str(base),'boot':boot,'machine_id_sha256':sha('/etc/machine-id'),'root_uuid':subprocess.check_output(['findmnt','-n','-o','UUID','/'],text=True).strip(),'source_inputs_sha256':NEW,'cold_script_sha256':sha(payload/'cold.py'),'target_programmes':target,'business_root':str(business_root),'schedule_ids':business['schedule_ids']}
  with(base/'cold-intent.json').open('x')as f:json.dump(cold,f,sort_keys=True);f.flush();os.fsync(f.fileno())
  fd=os.open(base,os.O_RDONLY|os.O_DIRECTORY);os.fsync(fd);os.close(fd)
