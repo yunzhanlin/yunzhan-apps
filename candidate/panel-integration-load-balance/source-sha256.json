@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24apachecccandidate56r5-linux-amd64.tar.gz",
-    "archive_sha256": "f873aeb63e957eb2ca528f21866b7f2a867e0bff655b747f034d375c8a69abdd",
-    "frozen_inputs_sha256": "1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d"
+    "archive": "panel-0.1.0-dev.proapps24apacherewritecandidate56r7-linux-amd64.tar.gz",
+    "archive_sha256": "cd74a46c01ec56ffdefe6ff1d113d31d8d88e26f73b3131b9143a55538457966",
+    "frozen_inputs_sha256": "56d5a0e09cd4591b99e11e34fb21b418f596fe50daf1cb6b8f52839519e09d99"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -806,8 +806,9 @@
     "internal/executor/apache_numeric_log_store_linux.go": "42fff13db9e82f5ae3a19c28a5da66a25652d234f6fa7c1db6de60d4eac1b0e3",
     "internal/executor/apache_numeric_log_upgrade_linux.go": "1db28835823bb583749262e4ce1cc64302310f630c635e6e5818d2f517406705",
     "internal/executor/apache_numeric_log_upgrade_linux_test.go": "8511bfd8826e8e77e396de0de37ae94116977eed39b7f89ca3443c02ccb29486",
-    "internal/executor/apache_sites_linux.go": "5429b792810c02dfbd9cc76ccf472ad6779a3024e97a96d90cb4fee684e5d0d9",
+    "internal/executor/apache_sites_linux.go": "83643667b86b2eaba2dc83903e928dfe7f22a31621c1d0ff8cda59c76a3bc076",
     "internal/executor/apache_sites_other.go": "d286c3452f19030dda3cb57a7bcc93adb12315002f7e8b6e81b88bb7166e6da4",
+    "internal/executor/apache_sites_rewrite_native_linux_test.go": "9739d1f25324e9ccc0c5f51beecfeec24d386776b84e2bfb041a7d06db526518",
     "internal/executor/apache_waf_health_linux.go": "d0cf7920c85720dbb658ca9a0fcb31d314317d7efe5f7dd9ddcbfb2dc204c434",
     "internal/executor/apache_waf_health_linux_test.go": "e474c18b0c459ad95d457eea44f1dbf760613e5f43fbe8a0f0cab5bbc283625a",
     "internal/executor/apache_waf_history_linux.go": "e13ee74946224262d8a5fd0fb2dd275bda7b6012920e8b2970ff93b10fbf252b",
@@ -2207,7 +2208,7 @@
     "web/src/ApacheBodyBuild.vue": "843912fa17c70957668b4c6f441d8ea07b0d8a1fa6a3ea2f4abe32c6da4a59b4",
     "web/src/ApacheBodyEvents.vue": "f1bb47954e8ef9f1e72f6b11e2d9a72c9e679964715906d357f5e6afd238d4f7",
     "web/src/ApacheBodyPolicy.vue": "abff587a8e22758d5230029a35e50a39e2579e0ee4e86c44e798fce2e85d9b24",
-    "web/src/ApacheCCEngine.vue": "1e736d4aa1c1050045eee32539d65aa1b255d50dfedb6a3cfe4d2a5f97e05f7f",
+    "web/src/ApacheCCEngine.vue": "388e096684be1e1e65ed37ce1ff5780a78bd54befa42224e002222c8f72f720d",
     "web/src/ApacheLogAutomation.vue": "725c96335ce5ce55f0fc7e5610a5142f21986a231f67514717fa8a98d1dfdacc",
     "web/src/ApacheNumericLogs.vue": "f22c4789da3de93e1c0fc766e480e8310c2c58e46937c61884a3f2c015dd971b",
     "web/src/ApacheWafTransactions.vue": "ad62567d8c18f59b61ba9a3b5edb81246fa62df29ebc1bd4671b1324eafaf432",

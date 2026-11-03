@@ -70,28 +70,31 @@ func renderApacheSites(sites []core.Site, sitesDir string) (string, int, error) 
 		if len(domains) > 1 {
 			fmt.Fprintf(&out, "  ServerAlias %s\n", strings.Join(domains[1:], " "))
 		}
-		fmt.Fprintf(&out, "  DocumentRoot %s\n  ErrorLog /var/log/apache2/panel-%s.error.log\n  CustomLog /var/log/apache2/panel-%s.access.log combined\n  <Directory %s>\n    Options -Indexes -FollowSymLinks\n    AllowOverride None\n    Require all granted\n", strconv.Quote(root), site.ID, site.ID, strconv.Quote(root))
+		fmt.Fprintf(&out, "  DocumentRoot %s\n  ErrorLog /var/log/apache2/panel-%s.error.log\n  CustomLog /var/log/apache2/panel-%s.access.log combined\n", strconv.Quote(root), site.ID, site.ID)
 		if settings.Rewrite != "none" {
-			out.WriteString("    RewriteEngine On\n")
+			// Directory-context rewriting requires a symlink-following option
+			// and otherwise rejects unrelated PHP probes with AH00670. Keep
+			// the no-follow policy and rewrite URLs in this managed vhost.
+			out.WriteString("  RewriteEngine On\n")
 			switch settings.Rewrite {
 			case "spa":
-				out.WriteString("    RewriteCond %{REQUEST_FILENAME} !-f\n    RewriteCond %{REQUEST_FILENAME} !-d\n    RewriteRule ^ index.html [L]\n")
+				out.WriteString("  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f\n  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d\n  RewriteRule ^/ /index.html [PT,L,NS]\n")
 			case "wordpress":
-				out.WriteString("    RewriteCond %{REQUEST_FILENAME} !-f\n    RewriteCond %{REQUEST_FILENAME} !-d\n    RewriteRule ^ index.php [L,QSA]\n")
+				out.WriteString("  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f\n  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d\n  RewriteRule ^/ /index.php [PT,L,QSA,NS]\n")
 			case "thinkphp":
-				out.WriteString("    RewriteCond %{REQUEST_FILENAME} !-f\n    RewriteCond %{REQUEST_FILENAME} !-d\n    RewriteRule ^ index.php?s=$0 [L,QSA]\n")
+				out.WriteString("  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-f\n  RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI} !-d\n  RewriteRule ^/.*$ /index.php?s=$0 [PT,L,QSA,NS]\n")
 			case "custom":
 				for _, rule := range settings.Rules {
-					pattern := strings.TrimPrefix(rule.Pattern, "^/")
-					flag := "L"
-					if strings.Contains(rule.Replacement, "$args") || strings.Contains(rule.Replacement, "$query_string") {
-						flag += ",QSA"
-					}
-					fmt.Fprintf(&out, "    RewriteRule %s %s [%s]\n", pattern, strings.ReplaceAll(rule.Replacement, "$args", ""), flag)
+					// Preserve slashless Apache patterns and the requested ^
+					// anchor. PT retains URL mapping rather than filesystem-path
+					// inference for a substituted value.
+					pattern := "^/" + strings.TrimPrefix(strings.TrimPrefix(rule.Pattern, "^/"), "^")
+					replacement, flags := apacheRewriteReplacement(rule.Replacement)
+					fmt.Fprintf(&out, "  RewriteRule %s %s [%s]\n", pattern, replacement, flags)
 				}
 			}
 		}
-		out.WriteString("  </Directory>\n  <FilesMatch \"^\\.\">\n    Require all denied\n  </FilesMatch>\n")
+		fmt.Fprintf(&out, "  <Directory %s>\n    Options -Indexes -FollowSymLinks\n    AllowOverride None\n    Require all granted\n  </Directory>\n  <FilesMatch \"^\\.\">\n    Require all denied\n  </FilesMatch>\n", strconv.Quote(root))
 		if site.PHPVersionID != "" {
 			fmt.Fprintf(&out, "  <FilesMatch \"\\.php$\">\n    SetHandler \"proxy:unix:%s|fcgi://localhost/\"\n  </FilesMatch>\n", poolSocket(site))
 		}
@@ -99,6 +102,19 @@ func renderApacheSites(sites []core.Site, sitesDir string) (string, int, error) 
 		count++
 	}
 	return out.String(), count, nil
+}
+
+// Core admits only $1-$9 and these four URL variables. Expand the fixed
+// variables and retain backreferences; never pass arbitrary expressions or
+// append the original query twice when it is explicitly substituted.
+func apacheRewriteReplacement(value string) (string, string) {
+	hasQuery := strings.Contains(value, "$args") || strings.Contains(value, "$query_string")
+	flags := "PT,L"
+	if strings.Contains(value, "$is_args") && !hasQuery {
+		flags += ",QSA"
+	}
+	value = strings.NewReplacer("$query_string", "%{QUERY_STRING}", "$is_args", "?", "$args", "%{QUERY_STRING}", "$uri", "%{REQUEST_URI}").Replace(value)
+	return value, flags
 }
 
 func (s *Service) applyApacheSites(ctx context.Context, sites []core.Site, add func(string)) (func() error, error) {

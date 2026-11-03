@@ -40,7 +40,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
    <el-alert v-if="settings.apache_cc?.engine_job_id&&!ready.some(row=>row.job_id===settings.apache_cc?.engine_job_id)" type="warning" :closable="false" title="原选择尚未通过本次核对；不会自动更换。保存时还会重新验证所选引擎。"/>
    <p>每个网站独立计算同一访客和 URL 规则的额度，多进程共享。超限返回 429；观察模式放行并记录。最多同时启用 64 个网站，每站点保留 4,096 个活跃访客与规则组合；空间不足时阻断模式返回 503，日志显示容量原因。</p>
    <p>CC 事件使用独立私有日志，最多 32 MiB；满额后停止记录，防护继续生效。原内容保留，不自动覆盖。</p>
-   <p>Apache 位于反向代理后时，请在“可信反代来源”中配置受信来源；未配置时按直接连接地址计数。突发值表示基础请求之外的额外名额，额度按所设速率持续补充。</p>
+   <p>Apache 位于反向代理后时，请在“可信反代来源”中配置受信来源；未配置时按直接连接地址计数。突发值是正常单次请求之外的额外名额；例如突发值为 2 时，可连续通过 3 次请求，额度按所设速率持续补充。</p>
   </template>
  </section>
 </template>

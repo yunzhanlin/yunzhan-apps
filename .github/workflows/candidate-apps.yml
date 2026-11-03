@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7]
   workflow_dispatch:
 
 permissions:
@@ -46,6 +46,21 @@ jobs:
         run: |
           sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestApacheCC' > "$RUNNER_TEMP/apache-cc-native.jsonl"
           node ../../tools/check-apache-cc-native.mjs "$RUNNER_TEMP/apache-cc-native.jsonl" "$(uname -m)"
+      - name: Actual Apache rewrite variable source regression with exact nonempty execution
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestApacheRewriteReplacementClosedVariables$' > "$RUNNER_TEMP/apache-rewrite-source.jsonl"
+          python3 - "$RUNNER_TEMP/apache-rewrite-source.jsonl" <<'PY'
+          import json,pathlib,platform,sys
+          path=pathlib.Path(sys.argv[1]);assert path.is_file()and not path.is_symlink()and 0<path.stat().st_size<1<<20
+          assert platform.system()=='Linux'and platform.machine()in('x86_64','aarch64')
+          rows=[json.loads(line)for line in path.read_text().splitlines()];root='TestApacheRewriteReplacementClosedVariables'
+          wanted={root}|{root+'/'+value for value in ['/index.php?name=$1','/index.php?name=$1&$args','/index.php?$query_string','/index.php$is_args$args','/index.php$is_args','/index.php?path=$uri']}
+          started=[r['Test']for r in rows if r.get('Action')=='run'and r.get('Test')];passed=[r['Test']for r in rows if r.get('Action')=='pass'and r.get('Test')]
+          assert len(wanted)==len(started)==len(passed)==7 and set(started)==set(passed)==wanted
+          assert all(r['Package']=='local/panel/internal/executor'for r in rows)and not any(r['Action']in('skip','fail')for r in rows)and sum(r['Action']=='pass'and not r.get('Test')for r in rows)==1
+          print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_PASS':7,'skips':0,'normal_PHP_or_WAF_install_acceptance':False}))
+          PY
       - name: Actual Apache Format2 upgrade queue family and binding guards with nonempty execution proof
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -161,5 +176,13 @@ jobs:
         with:
           name: apache-upgrade-queue-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/apache-upgrade-queue-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain original nonempty Apache rewrite variable execution
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: apache-rewrite-native-source-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/apache-rewrite-source.jsonl
           retention-days: 7
           if-no-files-found: error
