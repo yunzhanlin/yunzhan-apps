@@ -1,0 +1,26 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian13legacyqa3"
+  ],
+  "all50_commercial": false,
+  "case_id": "C56r9-legacy-QA3",
+  "cold_sha256": "d58dd5ce31c6bb765119cf0acddd923b36c1a1e6200321031cc2f480ef434007",
+  "final_service_observations_require_actual_healthy_recovery": true,
+  "guest_sha256": "a9e4bee54d36b5f18be6919ef6f9baefda55ee247dee467a4c458d93a1e7fe93",
+  "native_KVM_required": true,
+  "native_http_sha256": "13591b3489aa895782be2b9a485d6bfc397adcdda89c0d63f3395490b9084831",
+  "only_QA_comparison_corrected": "one exact signed original C55r2 to C56r9 mount unit replacement",
+  "original_failed_or_unknown_operations_never_replayed": true,
+  "original_failed_runs_preserved": [
+    41631088457,
+    41638439630
+  ],
+  "original_native_QA1_run": 41631088457,
+  "original_tar_owner_not_install_owner": true,
+  "payload_sha256": "3476aa02d6d3f5215d804a2a729bf642f0eac0c005e522df8f23368d75adeab5",
+  "programme_release_assets_changed": false,
+  "release_id": 432619707,
+  "release_tag": "qa-apachelatecachecandidate56r9-20261103-qa1",
+  "source_inputs_sha256": "1f3cca6b0b4d953183de2101ca5855c80fd1e15e7c86b998b825068f66c6aec1"
+}

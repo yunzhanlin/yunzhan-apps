@@ -1,0 +1,96 @@
+name: Actual C56r9 preserved Format1 legacy upgrade QA3 signed mount comparison
+
+on:
+  push:
+    branches: [codex/apache-native-cc-c56r9-legacy-qa3]
+    paths: [scripts/native-apache-cc-c56r9-legacy-qa3/dispatch.json]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: native-apache-cc-c56r9-legacy-qa3-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/apache-native-cc-c56r9-legacy-qa3'
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        os_case: [debian13legacyqa3]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify both actual native source jobs and original twelve nonempty execution files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/apache-cc-c56r9-ABI"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41628011688 > "$RUNNER_TEMP/apache-cc-c56r9-ABI/run.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41628011688/jobs?per_page=100 > "$RUNNER_TEMP/apache-cc-c56r9-ABI/jobs.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41628011688/artifacts > "$RUNNER_TEMP/apache-cc-c56r9-ABI/artifacts.json"
+          gh run download 41628011688 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/apache-cc-c56r9-ABI/events"
+          python3 -I -B scripts/native-apache-cc-c56r9-legacy-qa3/check-source-ci.py "$RUNNER_TEMP/apache-cc-c56r9-ABI"
+      - name: Download and bind both original key signed programme cohorts and reviewed payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431844996 > "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/432619707 > "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json"
+          python3 - "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json" "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json" <<'PY'
+          import json,sys
+          for file,rid,tag,head in [(sys.argv[1],431844996,'qa-privatebackupcandidate55r2-20261103-qa1','95f63cf17c3305dc5d09f88499ecd5591b1a1db9'),(sys.argv[2],432619707,'qa-apachelatecachecandidate56r9-20261103-qa1','681c1d2c2833f07d6a7d8be3190bca73cc8005e6')]:
+              v=json.load(open(file));assert v['id']==rid and v['tag_name']==tag and v['target_commitish']==head and not v['draft']and v['prerelease']and len(v['assets'])==7
+          PY
+          gh release download qa-privatebackupcandidate55r2-20261103-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --dir "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets"
+          gh release download qa-apachelatecachecandidate56r9-20261103-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --pattern release-signing-dev.pub --dir "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets"
+          cp scripts/native-apache-cc-c56r9-legacy-qa3/guest.py scripts/native-apache-cc-c56r9-legacy-qa3/acceptance.py scripts/native-apache-cc-c56r9-legacy-qa3/cold.py scripts/native-apache-cc-c56r9-legacy-qa3/boot-transition.py scripts/native-apache-cc-c56r9-legacy-qa3/casebook.py scripts/native-apache-cc-c56r9-legacy-qa3/capture.py scripts/native-apache-cc-c56r9-legacy-qa3/preservation.py "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets/"
+          cp scripts/native-apache-cc-c56r9-legacy-qa3/payload.json "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          assert sha(root/'assets.json')=='3476aa02d6d3f5215d804a2a729bf642f0eac0c005e522df8f23368d75adeab5'
+          manifest=json.loads((root/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='1f3cca6b0b4d953183de2101ca5855c80fd1e15e7c86b998b825068f66c6aec1'and len(manifest['files'])==15
+          for n,h in manifest['files'].items():
+              assert pathlib.PurePath(n).name==n and sha(root/n)==h
+              if n.endswith('.py'):ast.parse((root/n).read_bytes())
+          source=pathlib.Path('scripts/native-apache-cc-c56r9-legacy-qa3')
+          assert sha(source/'kvm.py')=='928f83e51b9f7223f30d0f6168560b75d1d0f357e6b344fc74230449d757fdfa'
+          for n in('guest.py','acceptance.py','cold.py','boot-transition.py','casebook.py','capture.py','preservation.py'):assert (root/n).read_bytes()==(source/n).read_bytes()
+          print('Original signed C55r2 and C56r9 cohorts and once-only Apache CC native payload verified')
+          PY
+      - name: Prepare native KVM hardware tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual signed factory or preserved legacy programme upgrade, body168 requests, native CC and VM powerloss
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-public"
+          sudo -n python3 -I -B scripts/native-apache-cc-c56r9-legacy-qa3/kvm.py "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-assets" scripts/native-apache-cc-c56r9-legacy-qa3 "$RUNNER_TEMP/native-apache-cc-c56r9-legacy-qa3-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original guest evidence including failed cases
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-apache-cc-c56r9-legacy-qa3-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-apache-cc-c56r9-legacy-qa3-public/
+          retention-days: 7
+          if-no-files-found: error
