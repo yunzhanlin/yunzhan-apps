@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "source_inputs_sha256": "56d5a0e09cd4591b99e11e34fb21b418f596fe50daf1cb6b8f52839519e09d99",
+  "source_inputs_sha256": "10befc96fa4de6eb277889ce7aefdd447e8d81af62f7d3d80ca4b458ddaccfaf",
   "package": "local/panel/internal/executor",
   "expected_root_tests": [
     "TestApacheCCDefaultLogAndOpaqueInstallationStaySeparateFromBodyMetadata",

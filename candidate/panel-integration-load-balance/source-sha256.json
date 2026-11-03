@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24apacherewritecandidate56r7-linux-amd64.tar.gz",
-    "archive_sha256": "cd74a46c01ec56ffdefe6ff1d113d31d8d88e26f73b3131b9143a55538457966",
-    "frozen_inputs_sha256": "56d5a0e09cd4591b99e11e34fb21b418f596fe50daf1cb6b8f52839519e09d99"
+    "archive": "panel-0.1.0-dev.proapps24apachecachebootcandidate56r8-linux-amd64.tar.gz",
+    "archive_sha256": "ff97a94c11368f3759f9440e28c095421c2923745e00ff1a868509ba80c5c86e",
+    "frozen_inputs_sha256": "10befc96fa4de6eb277889ce7aefdd447e8d81af62f7d3d80ca4b458ddaccfaf"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -28,7 +28,7 @@
     "dev/nginx.conf": "5e75d558fb4a5f67bfb69bc3b45a78467844205ff6dd633ab399b94f07b44565",
     "dev/panel-analytics-html-build@.service": "72a7cbc2477176ef77561ba05178c0b2f21c56a6782b8b57b59ea749ddc9fa85",
     "dev/panel-apache-body-build@.service": "df90b0eccf4d0909b57b7c4ed6ee515bdc2347a6d5a4675d78cd06fa054aff3f",
-    "dev/panel-apache-body-cache-check.service": "4a07355b0ffe0d6d916ee4ea0700d1eb5735caf0ec2c2d776b91b851e1bfe85e",
+    "dev/panel-apache-body-cache-check.service": "747c4dcd2a513be8367057ec16c6a14c4d845c1455e9f6a9a44cc9ddfd768a52",
     "dev/panel-apache.service": "d5b2f3b77acd4591094ae9211159f0ea32c6dbf621e4caf798128b04757d0b7b",
     "dev/panel-app-dependencies@.service": "1733d8365400a0f9d773a7b15f7ee98321e3fa1b085df02373d5a571ea82077b",
     "dev/panel-app-dependencies@network-threat-detection.service": "b079e7aa644855a20d50502b03e339b75b1e9a59d96eb0d077abff0bbb536017",
