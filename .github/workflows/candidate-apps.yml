@@ -82,7 +82,7 @@ jobs:
               assert len(tests)==len(set(tests))==61 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d' and len(index['files'])==2344
+          assert index['release']['frozen_inputs_sha256']=='56d5a0e09cd4591b99e11e34fb21b418f596fe50daf1cb6b8f52839519e09d99' and len(index['files'])==2345
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':61,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
