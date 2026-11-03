@@ -1,0 +1,22 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "debian13legacy",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "all50_commercial": false,
+  "case_id": "C56r9-QA1",
+  "cold_sha256": "d58dd5ce31c6bb765119cf0acddd923b36c1a1e6200321031cc2f480ef434007",
+  "guest_sha256": "15b156a9cab0b59fb898aa8b8d2627c8d0369fe16085bcda4f73be55470ad408",
+  "native_KVM_required": true,
+  "native_http_sha256": "13591b3489aa895782be2b9a485d6bfc397adcdda89c0d63f3395490b9084831",
+  "original_failed_or_unknown_operations_never_replayed": true,
+  "payload_sha256": "003ae7951608786953ffb19858a5d5537ad9094bd4b7022ecd082dc8a0f5d81e",
+  "release_id": 432619707,
+  "release_tag": "qa-apachelatecachecandidate56r9-20261103-qa1",
+  "source_inputs_sha256": "1f3cca6b0b4d953183de2101ca5855c80fd1e15e7c86b998b825068f66c6aec1"
+}
