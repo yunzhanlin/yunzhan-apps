@@ -1,5 +1,11 @@
 [Unit]
 Description=Fixed bounded temporary Apache request-body cache
+# This optional cache is only needed by Apache, after local filesystem setup.
+# Keep the readonly sandboxed guard after tmpfiles without a local-fs cycle.
+DefaultDependencies=no
+After=local-fs.target
+Conflicts=umount.target
+Before=umount.target
 Requires=panel-apache-body-cache-check.service
 After=panel-apache-body-cache-check.service
 Before=panel-apache.service
