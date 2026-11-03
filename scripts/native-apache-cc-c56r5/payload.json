@@ -1,0 +1,25 @@
+{
+  "architecture": "amd64",
+  "baseline_source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6",
+  "baseline_version": "0.1.0-dev.proapps24privatebackupcandidate55r2",
+  "files": {
+    "acceptance.py": "9d9fcc416a40af2399a0386b386d1ab670f916354eb0732bdd062a753c6cca75",
+    "boot-transition.py": "17785c74d32883a9d342f3ab174463d3c3a027e7c68ead1ba333ecca813eb407",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "cold.py": "8d638943272d97cba6d35b813de6a340f57baf4c4a9e26ae584b290e961e9edc",
+    "guest.py": "0a24e78245096180a6dbf3a0de45702c04be1e55b2837b8632a9f7c5cfab3316",
+    "panel-0.1.0-dev.proapps24apachecccandidate56r5-linux-amd64.tar.gz": "f873aeb63e957eb2ca528f21866b7f2a867e0bff655b747f034d375c8a69abdd",
+    "panel-0.1.0-dev.proapps24apachecccandidate56r5-linux-amd64.tar.gz.manifest": "3d3e1e0e966e35d6b65dd05a9d925ae43777bc50fa186f8b5169157b04d83768",
+    "panel-0.1.0-dev.proapps24apachecccandidate56r5-linux-amd64.tar.gz.sig": "df0f3da372689cc5671969a3259076718daeba911fa44eb8d11befabe94fdccc",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz": "afd2b1a8db5a7e69f5408b376f697b3dd60577c939ca8cb029e5c08760bee508",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.manifest": "7bbd6a65ad71749dc86728454297eb19e1177e95724af19ab5dec1a42316d0d5",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.sig": "27f49742708030d66db11d630eeb3d39231ddf54d1cc2b3609176528a62d342b",
+    "preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "normal_signed_original_cohorts": true,
+  "source_inputs_sha256": "1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d",
+  "version": "0.1.0-dev.proapps24apachecccandidate56r5"
+}

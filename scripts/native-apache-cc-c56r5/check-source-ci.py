@@ -1,0 +1,44 @@
+"""Recheck both original source jobs and all ten exact nonempty artifacts.
+
+This checks recorded source execution, not local architecture simulation or
+native installed-service acceptance. Original ZIP identities are retained in
+the separately qualified source-ci.json; extracted event bytes must match.
+"""
+import hashlib,json,pathlib,subprocess,sys
+root=pathlib.Path(sys.argv[1]);spec=json.loads(pathlib.Path(__file__).with_name('source-ci.json').read_bytes())
+run=json.loads((root/'run.json').read_bytes());jobs=json.loads((root/'jobs.json').read_bytes())['jobs']
+assert run['id']==spec['run']==41551743292 and run['head_sha']==spec['head']=='719e1499e41c2305280f94155d64944a173fef92'and run['status']=='completed'and run['conclusion']=='success'and run['run_attempt']==1
+assert len(jobs)==2 and {j['name']for j in jobs}=={'candidate-native-abi (ubuntu-24.04)','candidate-native-abi (ubuntu-24.04-arm)'}and all(j['status']=='completed'and j['conclusion']=='success'for j in jobs)
+artifacts=json.loads((root/'artifacts.json').read_bytes())['artifacts'];assert len(artifacts)==len(spec['artifacts'])==10
+expected={v['artifact_id']:v for v in spec['artifacts']};assert len(expected)==10
+for item in artifacts:
+ bound=expected[item['id']];assert item['name']==bound['name']and item['digest']=='sha256:'+bound['original_zip_sha256']and not item['expired']and item['workflow_run']['id']==spec['run']and item['workflow_run']['head_sha']==spec['head']
+assert {f.name for f in(root/'events').iterdir()}=={v['name']for v in expected.values()}
+index=json.loads(pathlib.Path('candidate/panel-integration-load-balance/source-sha256.json').read_bytes());assert index['release']['frozen_inputs_sha256']==spec['source_inputs_sha256']=='1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d'and len(index['files'])==2344
+for name,digest in index['files'].items():
+ path=pathlib.Path('candidate/panel-integration-load-balance')/name;assert path.is_file()and not path.is_symlink()and hashlib.sha256(path.read_bytes()).hexdigest()==digest
+for item in expected.values():
+ folder=root/'events'/item['name'];files=list(folder.iterdir());assert len(files)==1 and files[0].is_file()and not files[0].is_symlink();file=files[0];assert 0<file.stat().st_size<4<<20 and hashlib.sha256(file.read_bytes()).hexdigest()==item['original_execution_sha256']
+ if item['name'].startswith('backup-directory-native-'):
+  assert file.name=='backup-directory-native.json';subprocess.run(['node','tools/check-backup-directory-native.mjs',str(file),item['architecture']],check=True)
+ elif item['name'].startswith('backup-retention-native-'):
+  assert file.name=='backup-retention-native.jsonl';subprocess.run(['node','tools/check-retention-native-execution.mjs',str(file)],check=True)
+ elif item['name'].startswith('apache-cc-native-'):
+  assert file.name=='apache-cc-native.jsonl'
+  code="import fs from 'node:fs';import{verifyApacheCCExecution}from'./tools/check-apache-cc-native.mjs';const rows=fs.readFileSync(process.argv[1],'utf8').trim().split('\\n').map(s=>JSON.parse(s));console.log(JSON.stringify(verifyApacheCCExecution(rows,process.argv[2])));"
+  subprocess.run(['node','--input-type=module','-e',code,str(file),item['architecture']],check=True)
+ else:
+  values=[json.loads(v)for v in file.read_text().splitlines()];assert values and all(v['Package']=='local/panel/internal/executor'for v in values)
+  started=[v['Test']for v in values if v.get('Action')=='run'and v.get('Test')];passed=[v['Test']for v in values if v.get('Action')=='pass'and v.get('Test')]
+  if item['name'].startswith('analytics-root-native-'):
+   assert file.name=='analytics-identity-root-native.jsonl';wanted_roots={'TestNativeAnalyticsProxyIdentityPrivateFileAndStableRevalidation','TestNativeAnalyticsProxyIdentityRejectsUntrustedKeyAndParents','TestNativeAnalyticsProxyIdentityPreservesChangedOrPartialOriginal','TestNativeAnalyticsProxyIdentityCapacityRefusesWithoutDeletion'};count=23
+   assert {n for n in passed if '/'not in n}==wanted_roots
+  else:
+   assert item['name'].startswith('apache-upgrade-queue-native-')and file.name=='apache-upgrade-queue-native.jsonl'
+   matrix='TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific';bindings='TestProgramUpgradeQueuesApacheCCFormat2KeepsEveryBindingFence';wanted={matrix,bindings}
+   wanted.update(matrix+'/'+family+'-'+str(version)+'-'+state for family in ('apache-body','waf-engine','analytics-html')for version in (0,1,2,3)for state in ('ready','failed','building','unknown'))
+   wanted.update(bindings+'/'+kind for kind in ('wrong-id','wrong-architecture','wrong-prefix','bad-start','missing-finish','reversed-time','duplicate-key','unknown-key','public-record','linked-record','cancelled-but-building'))
+   count=61;assert len(wanted)==count and set(passed)==wanted
+  assert len(passed)==len(set(passed))==count and sorted(started)==sorted(passed)
+  assert not any(v.get('Action')in ('skip','fail')for v in values)and sum(v.get('Action')=='pass'and not v.get('Test')for v in values)==1
+print(json.dumps({'ok':True,'original_artifacts':10,'actual_directory_PASS':26,'actual_Root_directory_methods':22,'actual_retention_PASS':90,'actual_analytics_PASS':46,'actual_Apache_CC_PASS':106,'actual_native_C_cases':12,'actual_Apache_Format2_queue_PASS':122,'skips':0,'normal_installed_acceptance':False}))

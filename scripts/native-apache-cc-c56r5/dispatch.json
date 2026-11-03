@@ -1,0 +1,22 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "debian13legacy",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "all50_commercial": false,
+  "case_id": "C56r5-QA1",
+  "cold_sha256": "8d638943272d97cba6d35b813de6a340f57baf4c4a9e26ae584b290e961e9edc",
+  "guest_sha256": "0a24e78245096180a6dbf3a0de45702c04be1e55b2837b8632a9f7c5cfab3316",
+  "native_KVM_required": true,
+  "native_http_sha256": "9d9fcc416a40af2399a0386b386d1ab670f916354eb0732bdd062a753c6cca75",
+  "original_failed_or_unknown_operations_never_replayed": true,
+  "payload_sha256": "d6a19a05c2c27e2ebed501adec4d17ca11b3d8c30f1e214f08591fd76fb7b3d7",
+  "release_id": 432113974,
+  "release_tag": "qa-apachecccandidate56r5-20261103-qa1",
+  "source_inputs_sha256": "1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d"
+}
