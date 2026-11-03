@@ -75,7 +75,14 @@ func (r *programQueueReader) nativeBuilds() error {
 	return nil
 }
 func programQueueBuildTerminal(format int, id, job, state, arch, prefix, wantPrefix, started, finished string) error {
-	if format != 1 || !core.ValidID(id) || job != id || arch != runtime.GOARCH || prefix != filepath.Join(wantPrefix, id) {
+	if format != 1 {
+		return errors.New("native build record binding cannot be verified")
+	}
+	return programQueueBuildTerminalIdentity(id, job, state, arch, prefix, wantPrefix, started, finished)
+}
+
+func programQueueBuildTerminalIdentity(id, job, state, arch, prefix, wantPrefix, started, finished string) error {
+	if !core.ValidID(id) || job != id || arch != runtime.GOARCH || prefix != filepath.Join(wantPrefix, id) {
 		return errors.New("native build record binding cannot be verified")
 	}
 	if _, err := time.Parse(time.RFC3339, started); err != nil {
@@ -105,6 +112,12 @@ func programQueueApacheBuild(id string, raw []byte) error {
 	var v apacheBodyBuildRecord
 	if decodeProgramQueueJSON(raw, &v) != nil {
 		return errors.New("native Apache build record cannot be decoded")
+	}
+	// Only the Apache producer has a Format2 CC record. Keep its original
+	// identity, time and terminal-state fences; never rewrite a stored record
+	// or grant engine ABI/activation trust through this queue-only observation.
+	if v.Format == 2 {
+		return programQueueBuildTerminalIdentity(id, v.JobID, v.State, v.Architecture, v.Prefix, apacheBodyEngines, v.StartedAt, v.FinishedAt)
 	}
 	return programQueueBuildTerminal(v.Format, id, v.JobID, v.State, v.Architecture, v.Prefix, apacheBodyEngines, v.StartedAt, v.FinishedAt)
 }

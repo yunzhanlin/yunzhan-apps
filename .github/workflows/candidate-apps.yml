@@ -46,6 +46,30 @@ jobs:
         run: |
           sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestApacheCC' > "$RUNNER_TEMP/apache-cc-native.jsonl"
           node ../../tools/check-apache-cc-native.mjs "$RUNNER_TEMP/apache-cc-native.jsonl" "$(uname -m)"
+      - name: Actual Apache Format2 upgrade queue family and binding guards with nonempty execution proof
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestProgramUpgradeQueuesApacheCCFormat2' > "$RUNNER_TEMP/apache-upgrade-queue-native.jsonl"
+          python3 - "$RUNNER_TEMP/apache-upgrade-queue-native.jsonl" <<'PY'
+          import json,pathlib,platform,sys
+          path=pathlib.Path(sys.argv[1]);assert path.is_file() and not path.is_symlink() and 0<path.stat().st_size<=4<<20
+          rows=[json.loads(line)for line in path.read_text().splitlines()]
+          assert 0<len(rows)<=10000 and platform.system()=='Linux' and platform.machine() in ('x86_64','aarch64')
+          matrix='TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific'
+          bindings='TestProgramUpgradeQueuesApacheCCFormat2KeepsEveryBindingFence'
+          expected={matrix,bindings}
+          expected.update(matrix+'/'+family+'-'+str(version)+'-'+state for family in ('apache-body','waf-engine','analytics-html')for version in (0,1,2,3)for state in ('ready','failed','building','unknown'))
+          expected.update(bindings+'/'+kind for kind in ('wrong-id','wrong-architecture','wrong-prefix','bad-start','missing-finish','reversed-time','duplicate-key','unknown-key','public-record','linked-record','cancelled-but-building'))
+          assert len(expected)==61
+          assert all(row.get('Package')=='local/panel/internal/executor' and row.get('Action')not in ('skip','fail') and (not row.get('Test') or row['Test'] in expected)for row in rows)
+          for action in ('run','pass'):
+              tests=[row['Test']for row in rows if row.get('Action')==action and row.get('Test')]
+              assert len(tests)==len(set(tests))==61 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
+          assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
+          index=json.loads(pathlib.Path('source-sha256.json').read_text())
+          assert index['release']['frozen_inputs_sha256']=='1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d' and len(index['files'])==2344
+          print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':61,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
+          PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
         run: |
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_geodata_upgrade_lease.py
@@ -129,5 +153,13 @@ jobs:
         with:
           name: apache-cc-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/apache-cc-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain original Apache Format2 upgrade queue source execution
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: apache-upgrade-queue-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/apache-upgrade-queue-native.jsonl
           retention-days: 7
           if-no-files-found: error

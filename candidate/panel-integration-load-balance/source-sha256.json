@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24apachecccandidate56r4-linux-amd64.tar.gz",
-    "archive_sha256": "1c132516fa67ae16338cd962a113174656b4a70b78c6566dccd259ad47612c22",
-    "frozen_inputs_sha256": "90704f9163688ccd9e5fdade8bc259e064402d7c6104135429c3c927598d7c7e"
+    "archive": "panel-0.1.0-dev.proapps24apachecccandidate56r5-linux-amd64.tar.gz",
+    "archive_sha256": "f873aeb63e957eb2ca528f21866b7f2a867e0bff655b747f034d375c8a69abdd",
+    "frozen_inputs_sha256": "1d04d55fd7f94ab192517b1467f4760686c57ebe5365515d8b4d4bc8d6ffe66d"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -1635,6 +1635,7 @@
     "internal/executor/program_queue_refusal.go": "40d88a031ebdddb28527882898a87033d4abc8ed051e0fb6a5c0b926e8b03a5f",
     "internal/executor/program_queue_refusal_linux_test.go": "f48c795e7ef74d8b33098d432a3b97688b9a6c3f9b280edc58feb8861074fbf7",
     "internal/executor/program_queue_refusal_test.go": "d556fe708aa8dda8bbb9a64e130d8693b3c5fe8e111aa1b58ce3be5185ba7bc3",
+    "internal/executor/program_upgrade_apache_cc_linux_test.go": "2d04c8389cf7ac80c803d504e319518ce05f9878eb33a08ef6ec55cd55db0f99",
     "internal/executor/program_upgrade_country_failed_linux.go": "8f4a61d91fe12411cd583ae98f2aa5f80aa6b0edde3e668f0e7146a9b50d1d9f",
     "internal/executor/program_upgrade_country_failed_linux_test.go": "f9301044c5f46d6f7074b8097fc0fc43bb3e51c5350f5b066b38318ae791ef0e",
     "internal/executor/program_upgrade_country_linux.go": "e1ae3cd9a5e893a7023cc02ed3f6ea7f6e8d9092b9458959477ead678b5e9a99",
@@ -1650,7 +1651,7 @@
     "internal/executor/program_upgrade_ids_units_linux.go": "1c334fc5291183b930556fc0ffe8d1709b9acea82d3a59c5a4ce2c25ae772821",
     "internal/executor/program_upgrade_ids_units_linux_test.go": "99f0e5ea47888650e0c6bdec0b7f64758f8722c387c7be50498840cca0a8eda1",
     "internal/executor/program_upgrade_ids_units_native_qa_linux_test.go": "cdbc60ed04057c98fc186e7787c84aecb53815e54bdd2e3907296700cb9afaa4",
-    "internal/executor/program_upgrade_native_records_linux.go": "5e11b322a9d5b05da6166e53e858adcf7539cdfb751c94285a9f86697d6c8f55",
+    "internal/executor/program_upgrade_native_records_linux.go": "8560e9f9f8273036611fac3d25d149ac3f7231f05b535b74ce82b4ab63578d57",
     "internal/executor/program_upgrade_native_records_linux_test.go": "f2f75c1e75afc78058275a6e67cfb949fa244a4f6a8cdb02cfbc5ac8cfb9cc48",
     "internal/executor/program_upgrade_platform_linux.go": "e404f57906a300d8c4339500c84da4848e6a2fed531d0cea18332147bdf3502f",
     "internal/executor/program_upgrade_platform_linux_test.go": "cdee98862b380f919b27ad868310472d851d6e0b1736b0ced76ff89d29f225ae",
