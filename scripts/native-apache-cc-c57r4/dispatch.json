@@ -1,0 +1,25 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "debian13legacy",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "all50_commercial": false,
+  "archive_native_http_sha256": "6a88a5f6f6385d700616443406ccd57f32ea34c05e0540d519a21daf21e3afbf",
+  "case_id": "C57r4-QA1",
+  "cold_sha256": "eb7bb410ced227c9924a0d53a78c7b4aa2083b1edb61d2c19b199554150af0af",
+  "guest_sha256": "cbf06ca92cb3468824d2db263e98403c6af6c03189deba2002096495d428e1ac",
+  "native_KVM_required": true,
+  "native_http_sha256": "29f462766321aff889747ffef8c58b25607ec55c1c6f8cce10b19790ddbb2d5e",
+  "original_failed_or_unknown_operations_never_replayed": true,
+  "payload_sha256": "8b246abb728e2bf66b06494cfe905d6983aeba4f59810269dcde96cc61f627a6",
+  "release_id": 433400946,
+  "release_tag": "qa-apacheccarchivecandidate57r4-20261104-qa1",
+  "source_ci_head": "ca4678318a15cc6f73b3f379e4a7c5fb235a34ce",
+  "source_ci_run": 41752057997,
+  "source_inputs_sha256": "d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e"
+}

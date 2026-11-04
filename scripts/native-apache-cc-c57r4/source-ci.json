@@ -1,0 +1,93 @@
+{
+  "all50_commercial": false,
+  "artifacts": [
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286864031,
+      "name": "apache-rewrite-native-source-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "29bc212eca9f752e2e3b39067d585d4e696a0cc3c3c043d45b982c1ecbf43b94",
+      "original_zip_sha256": "0a252a26d57cccc25134f9eaf39ba3d5cd61aadb40b30308304bcc777a21eb2e"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286814266,
+      "name": "apache-upgrade-queue-native-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "23741c4c095fa7e079eafc2195996a60929f7881c60277868f3548aa8eca858d",
+      "original_zip_sha256": "ce93cb172eea6e6223e19bff2872da8b7f34569f7e22dbb91bb31644e19b8223"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286814250,
+      "name": "analytics-root-native-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "3dd2e52ae1273868ce24cd8678d6e7aeb563587124010db76110c06680b4fd62",
+      "original_zip_sha256": "97c910d9f1e9ff3fd9be591f0cdd4d1819f6cc3125e749a22413216d47736988"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286749324,
+      "name": "backup-retention-native-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "e90102b08589ea82848f8cf13d05753d548a6e047fddc67bfc69e9b5866defd5",
+      "original_zip_sha256": "da10561fd798fa89d2af96a102d8d597a99f0c77728bdd30ef141f17d75495b1"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286644662,
+      "name": "analytics-root-native-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "6bf227299c29a17899d5ae44d3cc3b9cf12cfc35f45d29b88bed59ba1b90ae5b",
+      "original_zip_sha256": "2c7cfc4a8f74716d73d2525dfd6a7440221b0a4cd6ab79d7c160fa7c5ca6b3e7"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286488236,
+      "name": "backup-directory-native-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "b31d6f454b6224d5468c353ab30b168514a554583cbe44a395563e9b6e6a6cf5",
+      "original_zip_sha256": "50e3c17dd3481fe126c6e9297e49a5d2cde810846e55911f50b6f4054a99dae9"
+    },
+    {
+      "architecture": "aarch64",
+      "artifact_id": 13286443351,
+      "name": "apache-cc-native-ubuntu-24.04-arm-41752057997",
+      "original_execution_sha256": "ff28b4a9b94c27d751ca17890cfe4126d7395b64578f487e8b211bdc2e889a81",
+      "original_zip_sha256": "d9c86f924ed7ba1f051fa8b423d4a4e0f2def72e2fe99de42cf7a57d1f00ce68"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286373661,
+      "name": "apache-cc-native-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "77d74083caaea933c76b9148191ed88c4c5283185825c249a858947bfea4222e",
+      "original_zip_sha256": "f290d6d944e516080ccabef2d6f07d2553b246c8605d4c69465bc61715a91278"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286349967,
+      "name": "backup-directory-native-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "8bc2a71762d576e1109a06b9a2a9b34412f7ff5cf6291b527242e1c4c9a8babb",
+      "original_zip_sha256": "e196ae597a391fba8a60a2a68a37a3d69d21eb8b45775e4c5101f6971ef7ea75"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286343641,
+      "name": "apache-rewrite-native-source-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "0005f36406a57eedaf2914a02e34e8288b6db1b91ecdac6ab269cdaadcc8e0ae",
+      "original_zip_sha256": "5aa821fb76482e5f82b48c280ea122d78869eb21f9e2c62117e3bc56ff4805a3"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286343639,
+      "name": "apache-upgrade-queue-native-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "8828b2eb5a897d1920b098cd6dbd72ec738aef2e6b387ef01717f7c31d546a99",
+      "original_zip_sha256": "7c1db5f71b33f0801c28a14e6965901599a0c659c1928aabd23c8b9459824fc3"
+    },
+    {
+      "architecture": "x86_64",
+      "artifact_id": 13286124038,
+      "name": "backup-retention-native-ubuntu-24.04-41752057997",
+      "original_execution_sha256": "0e6534b1b8881876a5d84034401da3e8d23debdceab7aadf1244e8d4c99a1134",
+      "original_zip_sha256": "9ce788cbf5683e12f5778fb47b524d251fc6a80f65e37a36e9041051f59152a6"
+    }
+  ],
+  "head": "ca4678318a15cc6f73b3f379e4a7c5fb235a34ce",
+  "normal_installed_acceptance": false,
+  "run": 41752057997,
+  "source_inputs_sha256": "d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e"
+}
