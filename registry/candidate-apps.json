@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-04T00:39:30Z",
+  "generated_at": "2026-11-04T19:30:05Z",
   "apps": [
     {
       "schema_version": 1,
@@ -375,8 +375,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.3.2",
-      "summary": "开发候选：保留浏览器 PV/UV、会话、标准 INP 与有界漏斗；新增受保护采集代理、站点隔离的客户端地址摘要及未核实/历史样本覆盖率，修复同源代理共享采集限额；保存采集配置后显式接入，原始 IP 与代理凭据不进入事件；完整双架构实装及界面验收仍在进行",
+      "version": "2.4.0",
+      "summary": "开发候选：保留 PV/UV、会话、标准文档 INP、漏斗和受保护采集代理；新增逐页性能与显式 SPA 路由就绪耗时，旧标识、后台、超时和重复调用拒绝。不采集 DOM 或输入，未接入不生成耗时；原数据保留，完整实装与商用验收仍在进行。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -403,17 +403,18 @@
         "固定源码构建与实际 Nginx ABI 核验",
         "逐站受保护同源代理、配置校验及失败保全",
         "保留模板及 CSP，不适用响应原样通过",
-        "活动续期、30 分钟空闲分会话与入口/离开分布",
-        "点击坐标热图与 SPA 路由页面访问",
-        "性能 p75 与标准 INP，被动性能不刷新旅程",
-        "2–8 步有界顺序转化漏斗",
+        "活动续期、30分钟空闲分会话与2–8步顺序漏斗",
+        "入口/离开分布、可选点击坐标与SPA路径访问",
+        "标准文档INP及p75；最多5000次访问、100个路径和类型组",
+        "显式SPA就绪耗时；旧标识、后台、超时及重复调用拒绝",
         "按网站隔离的客户端连接地址摘要及来源覆盖率",
         "已知地址与未核实访客的有界独立采集限额",
         "历史未核实记录保留、保留期、站点隔离及报告导出"
       ],
       "required_panel_features": [
         "analytics-session-lifecycle-v1",
-        "analytics-managed-client-address-v1"
+        "analytics-managed-client-address-v1",
+        "analytics-route-readiness-v1"
       ],
       "health": {
         "probe": "panel-api",

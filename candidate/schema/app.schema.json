@@ -171,7 +171,8 @@
           "apache-native-body-site-transactions-v1",
           "analytics-managed-client-address-v1",
           "apache-native-cc-site-transactions-v1",
-          "apache-cc-log-archive-v1"
+          "apache-cc-log-archive-v1",
+          "analytics-route-readiness-v1"
         ]
       }
     },
@@ -1337,6 +1338,55 @@
                   }
                 ],
                 "items": false
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "website-analytics"
+              },
+              "version": {
+                "const": "2.4.0"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "website-analytics"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "analytics-session-lifecycle-v1",
+                    "analytics-managed-client-address-v1",
+                    "analytics-route-readiness-v1"
+                  ]
+                }
               }
             }
           }
@@ -3275,6 +3325,135 @@
               "enum": [
                 "analytics-session-lifecycle-v1",
                 "analytics-managed-client-address-v1"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "type": "array",
+            "contains": {
+              "const": "analytics-route-readiness-v1"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-analytics"
+          },
+          "version": {
+            "const": "2.4.0"
+          },
+          "delivery": {
+            "type": "object",
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "website-analytics"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "analytics-session-lifecycle-v1",
+                "analytics-managed-client-address-v1",
+                "analytics-route-readiness-v1"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-analytics"
+          },
+          "version": {
+            "pattern": "^(?:0*2\\.0*4(?:\\.|$)|0*2\\.0*(?:[5-9]|[1-9][0-9]+)(?:\\.|$)|0*(?:[3-9]|[1-9][0-9]+)(?:\\.|$))"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-analytics"
+          },
+          "version": {
+            "const": "2.4.0"
+          },
+          "delivery": {
+            "type": "object",
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "website-analytics"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "analytics-session-lifecycle-v1",
+                "analytics-managed-client-address-v1",
+                "analytics-route-readiness-v1"
               ]
             }
           }

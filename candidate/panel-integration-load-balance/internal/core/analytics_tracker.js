@@ -30,13 +30,14 @@ try {
   if(data&&valid(data.id)&&Number.isSafeInteger(data.last)&&data.last>=0&&data.last<=sessionLast&&sessionLast-data.last<1800000)session=data.id;
 } catch {}
 if(!session)session=identifier();
+let routeMeasurement=null;
 const persistSession=()=>{try{sessionStorage.setItem("yz.analytics.session",JSON.stringify({id:session,last:sessionLast}));}catch{}};
 // Foreground engagement/clicks/visits refresh an existing session, including in
 // a long-lived SPA. Storage denial must not destroy in-memory continuity.
 // A future/corrupt persisted clock or real clock reversal cannot pin a session.
 const touchSession=()=>{
   const now=Date.now(),changed=now<sessionLast||now-sessionLast>=1800000;
-  if(changed)session=identifier();
+  if(changed){session=identifier();routeMeasurement=null;}
   sessionLast=now;persistSession();return changed;
 };
 let path=location.pathname, title=(document.title || "").slice(0,128),pageID=identifier();
@@ -48,19 +49,20 @@ const send = (kind, fields={}) => {
   if (stopped || sent>=240) return;
   // A late performance flush belongs to its original document/session and is
   // not evidence of renewed user activity. Never let it extend the idle clock.
-  if(kind!=="performance"&&touchSession()&&kind!=="pageview"){
+  if(kind!=="performance"&&kind!=="route-performance"&&touchSession()&&kind!=="pageview"){
     pageID=identifier();pageview();
     // The new visit may consume the final document-budget event. Do not send
     // event241 or reset the budget when a logical session changes.
     if(stopped||sent>=240)return;
   }
   sent++;
-  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields,...(kind==="performance"?{performance_seq:sent}:{})});
+  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields,...(kind==="performance"||kind==="route-performance"?{performance_seq:sent}:{})});
   // Same-origin reverse proxy is required. Do not send panel cookies or retry
   // failed beacons. The host's CSP and privacy policy remain authoritative.
-  try { fetch(endpoint.href,{method:"POST",body,headers:{"Content-Type":"application/json"},credentials:"omit",cache:"no-store",keepalive:true,redirect:"error",mode:"same-origin"}).then(r=>{if(r.status===429||r.status===503)stopped=true;}).catch(()=>{}); } catch {}
+  try { fetch(endpoint.href,{method:"POST",body,headers:{"Content-Type":"application/json"},credentials:"omit",cache:"no-store",keepalive:true,redirect:"error",mode:"same-origin"}).then(r=>{if(r.status===429||r.status===503)stopped=true;}).catch(()=>{});return true; } catch {return false;}
 };
 const pageview=() => {
+  routeMeasurement=null;
   path=location.pathname;title=(document.title || "").slice(0,128);
   let referer="",campaign="";
   try {if(document.referrer){const u=new URL(document.referrer);if(u.protocol==="http:"||u.protocol==="https:")referer=u.origin;}}catch{}
@@ -79,10 +81,10 @@ pageview();
 let timer=setInterval(engagement,30000);
 const sendPerformance=()=>send("performance",{...navigation,...metrics});
 document.addEventListener("visibilitychange",()=>{
-  if(document.visibilityState==="hidden"){engagement();visibleSince=null;sendPerformance();}
+  if(document.visibilityState==="hidden"){routeMeasurement=null;engagement();visibleSince=null;sendPerformance();}
   else visibleSince=performance.now();
 });
-window.addEventListener("pagehide",()=>{engagement();visibleSince=null;sendPerformance();clearInterval(timer);timer=null;});
+window.addEventListener("pagehide",()=>{routeMeasurement=null;engagement();visibleSince=null;sendPerformance();clearInterval(timer);timer=null;});
 // A persisted pageshow is a new perceived visit, not an ordinary load event.
 // Restart engagement and CLS; navigation/paint times are unknown on restoration.
 window.addEventListener("pageshow",event=>{if(event.persisted){
@@ -92,8 +94,34 @@ window.addEventListener("pageshow",event=>{if(event.persisted){
   try{metrics.cls_available=foregroundLoad&&PerformanceObserver.supportedEntryTypes.includes("layout-shift");}catch{metrics.cls_available=false;}
   if(timer===null)timer=setInterval(engagement,30000);
 }});
-// Navigation timing is for the original document only, not SPA route changes.
-const route=()=>{if(location.pathname!==path){engagement();pageID=identifier();pageview();}};
+// A website must explicitly mark its own route as ready. Two animation frames,
+// history changes or a timer are not proof that asynchronous content rendered.
+// Only a fresh opaque ticket is exposed, never visitor/session/site secrets.
+// A stale async completion cannot label the next route, a hidden visit, or a
+// restored document. No timing is emitted before that explicit integration.
+const currentRoute=()=>{
+  const r=routeMeasurement,now=performance.now();
+  if(!r||stopped||sent>=240||document.visibilityState!=="visible"||location.pathname!==r.path||pageID!==r.page_id||session!==r.session||!Number.isFinite(now)||now<r.started||now-r.started>300000)return null;
+  return Object.freeze({id:r.id,path:r.path});
+};
+const routeReady=id=>{
+  const current=currentRoute();
+  if(!current||typeof id!=="string"||id!==current.id)return false;
+  const r=routeMeasurement,elapsed=performance.now()-r.started;
+  if(!Number.isFinite(elapsed)||elapsed<0||elapsed>300000)return false;
+  routeMeasurement=null; // One attempt, no automatic retry or duplicate score.
+  return send("route-performance",{path:r.path,title:r.title,page_id:r.page_id,session:r.session,route_ready_ms:elapsed})===true;
+};
+try {
+  if(!("yunzhanAnalytics" in window))Object.defineProperty(window,"yunzhanAnalytics",{value:Object.freeze({routePerformanceVersion:1,currentRoute,routeReady}),configurable:true});
+} catch {} // Never replace a website's existing namespace or block its router.
+// Standard navigation/paint/INP metrics stay bound to the original document.
+const route=()=>{if(location.pathname!==path){
+  const started=performance.now();engagement();
+  // An engagement after real inactivity can already start the new page visit.
+  if(location.pathname!==path){pageID=identifier();pageview();}
+  if(document.visibilityState==="visible"&&Number.isFinite(started))routeMeasurement={id:identifier(),started,path,title,page_id:pageID,session};
+}};
 window.addEventListener("popstate",route);
 window.addEventListener("hashchange",route);
 for(const name of ["pushState","replaceState"]){

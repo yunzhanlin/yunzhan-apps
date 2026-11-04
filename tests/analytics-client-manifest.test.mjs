@@ -2,6 +2,7 @@ import test from'node:test';
 import assert from'node:assert/strict';
 import{readFileSync}from'node:fs';
 import{validateManifest}from'../tools/lib.mjs';
+import{schemaBeforeAnalyticsRoute}from'./helpers/analytics-route-schema.mjs';
 
 const previous=()=>JSON.parse(readFileSync(new URL('../dist/apps/website-analytics/2.3.1/manifest.json',import.meta.url)));
 const session='analytics-session-lifecycle-v1',address='analytics-managed-client-address-v1';
@@ -32,7 +33,7 @@ test('analytics232 publisher keeps exact legacy session packages and requires bo
 });
 
 test('analytics232 JSON schema preserves231 and declares exact two-feature scope',()=>{
- const schema=JSON.parse(readFileSync(new URL('../schema/app.schema.json',import.meta.url)));
+ const schema=schemaBeforeAnalyticsRoute(JSON.parse(readFileSync(new URL('../schema/app.schema.json',import.meta.url))));
  assert(schema.properties.required_panel_features.items.enum.includes(address));
  const alternatives=schema.allOf[0].then.oneOf.filter(v=>v.properties?.id?.const==='website-analytics');
  assert.equal(alternatives.length,2);

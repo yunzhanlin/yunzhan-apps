@@ -417,7 +417,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "user-manager":
 			version = "1.3.1"
 		case "website-analytics":
-			version = AnalyticsClientAddressAppVersion
+			version = AnalyticsRouteAppVersion
 		case "pure-ftpd":
 			version = "1.0.54-compat6"
 		case "nfs-manager":

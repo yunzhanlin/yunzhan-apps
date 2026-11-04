@@ -61,32 +61,33 @@ type analyticsRate struct {
 }
 
 type AnalyticsEvent struct {
-	ID                  string  `json:"id"`
-	PageID              string  `json:"page_id"`
-	Visitor             string  `json:"visitor"`
-	Session             string  `json:"session"`
-	Kind                string  `json:"kind"`
-	Path                string  `json:"path"`
-	Title               string  `json:"title"`
-	Referer             string  `json:"referer"`
-	Campaign            string  `json:"campaign"`
-	Duration            float64 `json:"duration"`
-	X                   float64 `json:"x"`
-	Y                   float64 `json:"y"`
-	TTFB                float64 `json:"ttfb"`
-	FCP                 float64 `json:"fcp"`
-	LCP                 float64 `json:"lcp"`
-	CLS                 float64 `json:"cls"`
-	CLSAvailable        bool    `json:"cls_available"`
-	INP                 float64 `json:"inp"`
-	INPAvailable        bool    `json:"inp_available"`
-	PerformanceSeq      int     `json:"performance_seq"`
-	Received            int64   `json:"received_at"`
-	IPHash              string  `json:"-"`
-	Browser             string  `json:"browser"`
-	Device              string  `json:"device"`
-	ClientAddressHash   string  `json:"client_address_hash,omitempty"`
-	ClientAddressSource string  `json:"client_address_source,omitempty"`
+	ID                  string   `json:"id"`
+	PageID              string   `json:"page_id"`
+	Visitor             string   `json:"visitor"`
+	Session             string   `json:"session"`
+	Kind                string   `json:"kind"`
+	Path                string   `json:"path"`
+	Title               string   `json:"title"`
+	Referer             string   `json:"referer"`
+	Campaign            string   `json:"campaign"`
+	Duration            float64  `json:"duration"`
+	X                   float64  `json:"x"`
+	Y                   float64  `json:"y"`
+	TTFB                float64  `json:"ttfb"`
+	FCP                 float64  `json:"fcp"`
+	LCP                 float64  `json:"lcp"`
+	CLS                 float64  `json:"cls"`
+	CLSAvailable        bool     `json:"cls_available"`
+	INP                 float64  `json:"inp"`
+	INPAvailable        bool     `json:"inp_available"`
+	PerformanceSeq      int      `json:"performance_seq"`
+	RouteReadyMillis    *float64 `json:"route_ready_ms,omitempty"`
+	Received            int64    `json:"received_at"`
+	IPHash              string   `json:"-"`
+	Browser             string   `json:"browser"`
+	Device              string   `json:"device"`
+	ClientAddressHash   string   `json:"client_address_hash,omitempty"`
+	ClientAddressSource string   `json:"client_address_source,omitempty"`
 }
 
 func (s *Store) migrateAnalytics() error {
@@ -145,7 +146,7 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 	if !ValidID(v.ID) || !ValidID(v.PageID) || !ValidID(v.Visitor) || !ValidID(v.Session) {
 		return errors.New("事件标识无效")
 	}
-	if v.Kind != "pageview" && v.Kind != "engagement" && v.Kind != "performance" && !(v.Kind == "click" && clicks) {
+	if v.Kind != "pageview" && v.Kind != "engagement" && !analyticsPassivePerformance(v.Kind) && !(v.Kind == "click" && clicks) {
 		return errors.New("事件类型无效")
 	}
 	p, e := analyticsPath(v.Path)
@@ -164,6 +165,9 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 	if v.Duration > 30 || v.X > 100 || v.Y > 100 || v.TTFB > 300000 || v.FCP > 300000 || v.LCP > 300000 || v.CLS > 100 || v.INP > 300000 || v.PerformanceSeq < 0 || v.PerformanceSeq > 240 {
 		return errors.New("事件数值超出范围")
 	}
+	if err := validateAnalyticsRouteTiming(v); err != nil {
+		return err
+	}
 	if v.Kind != "click" {
 		v.X = 0
 		v.Y = 0
@@ -176,7 +180,9 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 		v.CLSAvailable = false
 		v.INP = 0
 		v.INPAvailable = false
-		v.PerformanceSeq = 0
+		if v.Kind != "route-performance" {
+			v.PerformanceSeq = 0
+		}
 	} else if !v.INPAvailable {
 		v.INP = 0
 	}
@@ -676,9 +682,10 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	// performance samples. Keep the newest sample per visitor/page navigation.
 	performance := []AnalyticsEvent{}
 	performanceIndex := map[string]int{}
+	performancePartial := false
 	for _, v := range events {
-		key := v.Visitor + ":" + v.PageID
-		if v.Kind != "performance" {
+		key := v.Kind + ":" + v.Visitor + ":" + v.PageID
+		if !analyticsPassivePerformance(v.Kind) {
 			continue
 		}
 		if index, exists := performanceIndex[key]; exists {
@@ -691,6 +698,8 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		} else if len(performance) < 5000 {
 			performanceIndex[key] = len(performance)
 			performance = append(performance, v)
+		} else {
+			performancePartial = true
 		}
 	}
 	pv, clicks := 0, 0
@@ -700,7 +709,7 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		// original document, not renewed foreground activity or a visit.
 		// Keep it in the independent metric aggregation above, but never
 		// extend an ended journey or invent an active visitor from it.
-		if v.Kind == "performance" {
+		if analyticsPassivePerformance(v.Kind) {
 			continue
 		}
 		ss := sessions[v.Session]
@@ -814,5 +823,5 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		bounceRate = float64(bounces) / float64(sessionCount) * 100
 		avgDuration = duration / float64(sessionCount)
 	}
-	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本，不包含 SPA 路由加载性能，也不能替代实验室性能测试。"}}, nil
+	return map[string]any{"source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance_pages": analyticsPerformanceByPage(performance, partial || performancePartial), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本。逐页性能按文档或 SPA 分开，最多展示 100 个路径/类型组，达到采样或分组上限明确标记部分结果。SPA 路由就绪耗时仅在网站显式接入后，从路径变更到该网站确认就绪，未接入不生成数值；不冒充 SPA 的 LCP/INP，也不能替代实验室性能测试。"}}, nil
 }

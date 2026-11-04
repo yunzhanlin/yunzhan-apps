@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3]
   workflow_dispatch:
 
 permissions:
@@ -36,6 +36,8 @@ jobs:
           YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-intrusion-ubuntu22-schema.mjs
       - name: Independent analytics232 exact two-handler schema and all fifty legacy manifests
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-client-schema.mjs
+      - name: Independent analytics240 exact three-handler schema, future negatives and retained fifty
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-route-schema.mjs
       - name: Independent Apache CC250 ordered dual-handler schema and exact historical fifty
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
       - name: Independent Apache251 ordered archive handlers and all historical fifty manifests
@@ -84,7 +86,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='eae270a3a6bfa18e4eb01b2980ae7567f5184c443999cfa8ada690f572e19648' and len(index['files'])==2373
+          assert index['release']['frozen_inputs_sha256']=='f0b345f464055abfe9b798b193b52803916d2dca0a22e25d2a760133f87b7ede' and len(index['files'])==2381
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -112,6 +114,11 @@ jobs:
           print('Actual native Root identity execution:4 roots,21 leaf scenarios,23 PASS records,zero skips/failures')
           PY
           sudo "$(command -v go)" test -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestAnalyticsClientAddressManifestRequiresBothHandlersAndExactIdentity$'
+      - name: Actual route collector and manifest source cases with exact nonempty execution proof
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^TestAnalyticsRoute(TimingBoundsAndSeparation|ReportDeduplicatesWithoutChangingJourneyOrDocument|ReportGroupAndVisitLimitsAreVisible|ManifestRequiresAllHandlersAndExactApp)$' > "$RUNNER_TEMP/analytics-route-source.jsonl"
+          node ../../tools/check-analytics-route-execution.mjs "$RUNNER_TEMP/analytics-route-source.jsonl" "$(uname -m)"
       - name: Actual native backup retention reservation, starvation and read-only API regressions
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -135,6 +142,7 @@ jobs:
           npm ci --ignore-scripts --prefix web
           node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs scripts/test-user-management-receipt.mjs scripts/test-platform-management-receipt.mjs
           node --experimental-strip-types --test scripts/test-analytics-session.mjs
+          node --experimental-strip-types --test scripts/test-analytics-performance.mjs
           node --experimental-strip-types --test scripts/test-apache-cc-archives.mjs
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
@@ -187,5 +195,13 @@ jobs:
         with:
           name: apache-rewrite-native-source-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/apache-rewrite-source.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain original route source cases for independent nonempty count verification
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: analytics-route-source-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/analytics-route-source.jsonl
           retention-days: 7
           if-no-files-found: error

@@ -76,6 +76,7 @@ printf 'Official app catalogue channel: %s (same compiled publisher key; no runt
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-frontend-release.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/test-analytics-tracker.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-session.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
+(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-performance.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-redis-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-redis-credentials.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-latency.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
+import AnalyticsPerformanceReport from "./AnalyticsPerformanceReport.vue";
+import type {AnalyticsPerformancePages} from "./analyticsPerformance";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
 type API = <T>(path:string,method?:string,body?:unknown,idempotencyKey?:string)=>Promise<T>;
@@ -13,14 +15,14 @@ interface Report {
   overview:{pv:number;uv:number;sessions:number;active_visitors:number;clicks:number;bounce_rate:number;avg_engagement_seconds:number;unique_network_peers:number};
   pages:Dimension[];sources:Dimension[];browsers:Dimension[];devices:Dimension[];entry_pages:Dimension[];exit_pages:Dimension[];hours:Dimension[];campaigns:Dimension[];
   sessions:Session[];heatmap:{path:string;x:number;y:number;count:number}[];
-  performance:Record<string,{samples:number;p75?:number}>;limitations:string[];
+  performance:Record<string,{samples:number;p75?:number}>;performance_pages?:AnalyticsPerformancePages;limitations:string[];
   client_addresses?:{unique_addresses:number;known_pageviews:number;unknown_pageviews:number;legacy_pageviews:number;sources:Dimension[]};
 }
 const props=defineProps<{api:API;installed:boolean;installedVersion?:string;sites:{id:string;name:string;domain:string}[]}>();
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),report=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0"].includes(props.installedVersion||""));
 const range=ref<[Date,Date]>(),heatPath=ref("");
 const funnelSteps=ref("/\n/checkout\n/success"),funnelWindow=ref(30),funnelBusy=ref(false),funnelError=ref(""),funnel=ref<Funnel>();
 let funnelSequence=0;
@@ -140,8 +142,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         </template><el-empty v-else-if="!funnelBusy" description="选择网站并输入业务路径后计算；不会生成演示结果" />
       </el-tab-pane>
       <el-tab-pane label="页面性能" name="performance">
-        <p>浏览器样本的 p75 指标（毫秒，CLS 除外）。INP 使用本地打包的官方 web-vitals 标准库，不发送 DOM 或输入内容。浏览器不支持、没有可测交互或其他无样本情况都不显示零分；指标按完整文档访问归属，不冒充 SPA 路由性能。</p>
-        <el-descriptions v-if="report" :column="2" border><el-descriptions-item v-for="(value,key) in report.performance" :key="key" :label="String(key).toUpperCase()">{{value.p75 === undefined ? '无样本' : value.p75.toFixed(3)}} · {{value.samples}} 个样本</el-descriptions-item></el-descriptions>
+        <AnalyticsPerformanceReport v-if="report" :document-metrics="report.performance" :pages="report.performance_pages" />
       </el-tab-pane>
       <el-tab-pane label="采集设置" name="settings">
         <el-alert v-if="settings?.enabled && settings.client_address_mode==='legacy_proxy'" title="当前网站仍使用旧采集代理。保存采集配置后启用受保护的客户端地址传递；历史记录保持原样。" type="info" :closable="false" />

@@ -7,6 +7,13 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // C59 adds one mandatory performance behavior gate immediately after the
+  // existing session gate. Reverse only that additive command for historical
+  // whole-script pins; omission, duplication, movement or edits still fail.
+  const sessionGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-session.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  const routeGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-analytics-performance.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  assert.equal(text.split(routeGate).length,2,'missing or duplicate route performance gate');
+  once(sessionGate+routeGate,sessionGate);
   // Require C57's complete CC archive/recovery UI behavior gate exactly once.
   // Reverse only that reviewed addition for the historical whole-script pins.
   once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-cc-archives.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');

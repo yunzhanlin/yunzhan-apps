@@ -1,8 +1,9 @@
 // Only the exact reviewed archive extension may be reversed for historical pins.
 import assert from 'node:assert/strict';
 import {canonical,sha256} from '../../tools/lib.mjs';
+import {schemaBeforeAnalyticsRoute} from './analytics-route-schema.mjs';
 export function schemaBeforeApacheCCArchive(value){
- const s=structuredClone(value),feature='apache-cc-log-archive-v1',flags=s.properties.required_panel_features.items.enum;
+ const s=schemaBeforeAnalyticsRoute(value),feature='apache-cc-log-archive-v1',flags=s.properties.required_panel_features.items.enum;
  if(!flags.includes(feature))return s;
  assert.equal(flags.filter(f=>f===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();
  const branches=s.allOf[0].then.oneOf;assert.equal(sha256(canonical(branches.at(-1))),'335388840da486704360253935afc01f40f5c9c440a14a4f3088a51ae46a1956');branches.pop();

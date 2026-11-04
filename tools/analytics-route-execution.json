@@ -1,0 +1,75 @@
+{
+  "source_inputs_sha256": "f0b345f464055abfe9b798b193b52803916d2dca0a22e25d2a760133f87b7ede",
+  "source_file_count": 2381,
+  "packages": [
+    "local/panel/internal/core",
+    "local/panel/internal/appcatalog"
+  ],
+  "expected_tests": [
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteTimingBoundsAndSeparation"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteReportDeduplicatesWithoutChangingJourneyOrDocument"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteReportGroupAndVisitLimitsAreVisible"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/missing"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/duplicate"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/extra"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/old"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/future"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/alias"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/build"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/leading-zero"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/other-app"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/target"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/route"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/runtime"
+    }
+  ],
+  "normal_installed_acceptance": false
+}

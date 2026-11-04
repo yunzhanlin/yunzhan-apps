@@ -10,6 +10,6 @@ test('archive251 requires all three exact ordered handlers and preserves old250 
 test('archive schema addition cannot hide omitted or altered prior predicates',async()=>{
  const schema=await read('schema/app.schema.json'),previous=schemaBeforeApacheCCArchive(schema),delivered=await read('candidate/schema/app.schema.json');assert.deepEqual(schema,delivered);
  assert.equal(previous.properties.required_panel_features.items.enum.includes('apache-cc-log-archive-v1'),false);
- for(const change of [s=>s.properties.name.maxLength++,s=>s.allOf[0].then.oneOf.at(-1).properties.required_panel_features.prefixItems.reverse(),s=>s.properties.required_panel_features.items.enum.push('apache-cc-log-archive-v1')]){const altered=structuredClone(schema);change(altered);assert.throws(()=>schemaBeforeApacheCCArchive(altered));}
+ for(const change of [s=>s.properties.name.maxLength++,s=>s.allOf[0].then.oneOf.find(v=>v.properties?.id?.const==='apache-waf'&&v.properties?.version?.const==='2.5.1').properties.required_panel_features.prefixItems.reverse(),s=>s.properties.required_panel_features.items.enum.push('apache-cc-log-archive-v1')]){const altered=structuredClone(schema);change(altered);assert.throws(()=>schemaBeforeApacheCCArchive(altered));}
  assert.equal(sha256(canonical(previous)),sha256(canonical(schemaBeforeApacheCCArchive(delivered))));
 });
