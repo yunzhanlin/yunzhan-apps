@@ -42,11 +42,11 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-archive-schema.mjs
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
-        run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+        run: sudo env CGO_ENABLED=0 "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
       - name: Actual Apache CC source methods and six real native C cases with nonempty execution proof
         working-directory: candidate/panel-integration-load-balance
         run: |
-          sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestApacheCC' > "$RUNNER_TEMP/apache-cc-native.jsonl"
+          sudo env CGO_ENABLED=0 "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestApacheCC' > "$RUNNER_TEMP/apache-cc-native.jsonl"
           node ../../tools/check-apache-cc-native.mjs "$RUNNER_TEMP/apache-cc-native.jsonl" "$(uname -m)"
       - name: Actual Apache rewrite variable source regression with exact nonempty execution
         working-directory: candidate/panel-integration-load-balance
@@ -84,7 +84,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='1b51add591bcbd840f80d6598a1200cd75cf3976c258ebe57771ad36a872eeb3' and len(index['files'])==2372
+          assert index['release']['frozen_inputs_sha256']=='d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e' and len(index['files'])==2372
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
