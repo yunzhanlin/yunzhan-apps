@@ -42,6 +42,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
       - name: Independent Apache251 ordered archive handlers and all historical fifty manifests
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-archive-schema.mjs
+      - name: Bind every backup directory source witness before long native suites
+        run: python3 -I -B -c "import runpy; runpy.run_path('tools/run-backup-directory-native.py')['source_files']()"
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo env CGO_ENABLED=0 "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
