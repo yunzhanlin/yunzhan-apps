@@ -1,0 +1,26 @@
+{
+  "architecture": "amd64",
+  "baseline_source_inputs_sha256": "f9095bc9eb5c59529d900cff4026846451f9d5fab793ecc81283d4cc674457e6",
+  "baseline_version": "0.1.0-dev.proapps24privatebackupcandidate55r2",
+  "files": {
+    "acceptance.py": "9e9a736ac68e6caad2e7a2f24f0b52012bd114e130396f9c26b14df4ea1fc228",
+    "archive_acceptance.py": "ea557b3dc2fd8e22b5579409c66374c7b769a5040dbfdaa44786b8f54428f94a",
+    "boot-transition.py": "17785c74d32883a9d342f3ab174463d3c3a027e7c68ead1ba333ecca813eb407",
+    "capture.py": "6fcd61bf2544128a565b1672caa2bd721fc95cf79df5d1a9a48e7d4b67b54d22",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "cold.py": "d1d46cd5206931cdc1fd5977f66c3eedec3472eb5a35481d7b55659c958aae04",
+    "guest.py": "fd63a888f821312468c46f975cba25c99f9d166e0842da23a6dad3f32d232dc1",
+    "panel-0.1.0-dev.proapps24apacheccarchivecandidate57r5-linux-amd64.tar.gz": "57700dfeccb18c34eeb2cc932f5dc794714b71d6e8df44f116362489cea8e6ba",
+    "panel-0.1.0-dev.proapps24apacheccarchivecandidate57r5-linux-amd64.tar.gz.manifest": "f81c2cc1b80ad3041bba0aca39d18877a1d8da550c62d2a8f58ef6e725dae987",
+    "panel-0.1.0-dev.proapps24apacheccarchivecandidate57r5-linux-amd64.tar.gz.sig": "fa162394b0a9994a0383808c3a5138d5f4ec8efeb8649b326531a3c88c2467d8",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz": "afd2b1a8db5a7e69f5408b376f697b3dd60577c939ca8cb029e5c08760bee508",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.manifest": "7bbd6a65ad71749dc86728454297eb19e1177e95724af19ab5dec1a42316d0d5",
+    "panel-0.1.0-dev.proapps24privatebackupcandidate55r2-linux-amd64.tar.gz.sig": "27f49742708030d66db11d630eeb3d39231ddf54d1cc2b3609176528a62d342b",
+    "preservation.py": "8a88965041d481e732920ee380653461690c72ce3a9128741e67d35850c1e822",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "normal_signed_original_cohorts": true,
+  "source_inputs_sha256": "8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53",
+  "version": "0.1.0-dev.proapps24apacheccarchivecandidate57r5"
+}

@@ -1,0 +1,96 @@
+name: Actual C57r5 five OS independent Root Apache CC archives and preserved Format1 upgrade
+
+on:
+  push:
+    branches: [codex/apache-cc-root-gid-c57r5-native]
+    paths: [scripts/native-apache-cc-c57r5/dispatch.json]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: native-apache-cc-c57r5-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/apache-cc-root-gid-c57r5-native'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26, debian13legacy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify both actual native source jobs and original twelve nonempty execution files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/apache-cc-c57r5-ABI"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41862212046 > "$RUNNER_TEMP/apache-cc-c57r5-ABI/run.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41862212046/jobs?per_page=100 > "$RUNNER_TEMP/apache-cc-c57r5-ABI/jobs.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41862212046/artifacts > "$RUNNER_TEMP/apache-cc-c57r5-ABI/artifacts.json"
+          gh run download 41862212046 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/apache-cc-c57r5-ABI/events"
+          python3 -I -B scripts/native-apache-cc-c57r5/check-source-ci.py "$RUNNER_TEMP/apache-cc-c57r5-ABI"
+      - name: Download and bind both original key signed programme cohorts and reviewed payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c57r5-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431844996 > "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/434139587 > "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json"
+          python3 - "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json" "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json" <<'PY'
+          import json,sys
+          for file,rid,tag,head in [(sys.argv[1],431844996,'qa-privatebackupcandidate55r2-20261103-qa1','95f63cf17c3305dc5d09f88499ecd5591b1a1db9'),(sys.argv[2],434139587,'qa-apacheccarchivecandidate57r5-20261104-qa1','4beb6abfc9a272da5953131f2eb4643449608505')]:
+              v=json.load(open(file));assert v['id']==rid and v['tag_name']==tag and v['target_commitish']==head and not v['draft']and v['prerelease']and len(v['assets'])==7
+          PY
+          gh release download qa-privatebackupcandidate55r2-20261103-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --dir "$RUNNER_TEMP/native-apache-cc-c57r5-assets"
+          gh release download qa-apacheccarchivecandidate57r5-20261104-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --pattern release-signing-dev.pub --dir "$RUNNER_TEMP/native-apache-cc-c57r5-assets"
+          cp scripts/native-apache-cc-c57r5/guest.py scripts/native-apache-cc-c57r5/acceptance.py scripts/native-apache-cc-c57r5/archive_acceptance.py scripts/native-apache-cc-c57r5/cold.py scripts/native-apache-cc-c57r5/boot-transition.py scripts/native-apache-cc-c57r5/casebook.py scripts/native-apache-cc-c57r5/capture.py scripts/native-apache-cc-c57r5/preservation.py "$RUNNER_TEMP/native-apache-cc-c57r5-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-apache-cc-c57r5-assets/"
+          cp scripts/native-apache-cc-c57r5/payload.json "$RUNNER_TEMP/native-apache-cc-c57r5-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-apache-cc-c57r5-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          assert sha(root/'assets.json')=='d918e0c05b9f3ad59e11c2f63829843652a29747511bd1097917127f76b3fe12'
+          manifest=json.loads((root/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53'and len(manifest['files'])==16
+          for n,h in manifest['files'].items():
+              assert pathlib.PurePath(n).name==n and sha(root/n)==h
+              if n.endswith('.py'):ast.parse((root/n).read_bytes())
+          source=pathlib.Path('scripts/native-apache-cc-c57r5')
+          assert sha(source/'kvm.py')=='cf60850f1ee2bf902f058c9c997fe16a34306268eacd3cd95a4c92c2a3c5a375'
+          for n in('guest.py','acceptance.py','archive_acceptance.py','cold.py','boot-transition.py','casebook.py','capture.py','preservation.py'):assert (root/n).read_bytes()==(source/n).read_bytes()
+          print('Original signed C55r2 and C57r5 cohorts and once-only Apache CC native payload verified')
+          PY
+      - name: Prepare native KVM hardware tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual signed factory or preserved legacy programme upgrade, body168 requests, native CC and VM powerloss
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c57r5-public"
+          sudo -n python3 -I -B scripts/native-apache-cc-c57r5/kvm.py "$RUNNER_TEMP/native-apache-cc-c57r5-assets" scripts/native-apache-cc-c57r5 "$RUNNER_TEMP/native-apache-cc-c57r5-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original guest evidence including failed cases
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-apache-cc-c57r5-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-apache-cc-c57r5-public/
+          retention-days: 7
+          if-no-files-found: error

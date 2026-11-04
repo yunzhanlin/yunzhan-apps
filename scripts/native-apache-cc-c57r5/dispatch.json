@@ -1,0 +1,29 @@
+{
+  "Main_changed": false,
+  "OS_cases": [
+    "debian12",
+    "debian13",
+    "debian13legacy",
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
+  ],
+  "all50_commercial": false,
+  "archive_native_http_sha256": "ea557b3dc2fd8e22b5579409c66374c7b769a5040dbfdaa44786b8f54428f94a",
+  "case_id": "C57r5",
+  "cold_sha256": "d1d46cd5206931cdc1fd5977f66c3eedec3472eb5a35481d7b55659c958aae04",
+  "guest_sha256": "fd63a888f821312468c46f975cba25c99f9d166e0842da23a6dad3f32d232dc1",
+  "metadata_contract": "Root UID0 and actual panel-executor Group=panel; exact complete inode witness;0600 private files and0700 private directories",
+  "native_KVM_required": true,
+  "native_http_sha256": "9e9a736ac68e6caad2e7a2f24f0b52012bd114e130396f9c26b14df4ea1fc228",
+  "original_R4_QA1_run_preserved": 41755010976,
+  "original_R4_QA2_run_preserved": 41756875047,
+  "original_failed_or_unknown_operations_never_replayed": true,
+  "payload_sha256": "d918e0c05b9f3ad59e11c2f63829843652a29747511bd1097917127f76b3fe12",
+  "release_id": 434139587,
+  "release_tag": "qa-apacheccarchivecandidate57r5-20261104-qa1",
+  "source_ci_head": "4beb6abfc9a272da5953131f2eb4643449608505",
+  "source_ci_manifest_sha256": "518166252e3aaa40f4f1c2bb65ef0256b96d78e1a47efc79b138a32b9d4fb2d0",
+  "source_ci_run": 41862212046,
+  "source_inputs_sha256": "8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53"
+}

@@ -1,0 +1,91 @@
+{
+  "run": 41862212046,
+  "head": "4beb6abfc9a272da5953131f2eb4643449608505",
+  "source_inputs_sha256": "8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53",
+  "artifacts": [
+    {
+      "artifact_id": 13342440150,
+      "name": "apache-cc-native-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "6687045a7765a159a30932c65b24816351793d9d1dcb283f29121df2c84f3ef1",
+      "original_execution_sha256": "4c37267e292b3d97e39afa72676186832d6135992edff682387902ee9ca46d6a"
+    },
+    {
+      "artifact_id": 13342430075,
+      "name": "apache-rewrite-native-source-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "bc0559e68138e20f616722513742593296d1d75008b495ef4f5feb478d06691e",
+      "original_execution_sha256": "cf627ed14341554573eab81a417bc6dfcdd5cf84bdf92440e7c26a5f52a3c9f6"
+    },
+    {
+      "artifact_id": 13342395258,
+      "name": "backup-retention-native-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "21adb2e3b60bce54a2bf3eb9f34f0bb656f567fe1ed970aa422a11016fc655f9",
+      "original_execution_sha256": "0681c2b7828988e9d0e7a404e72275c559c0a5544119b93bd130d26cdb0a6b7a"
+    },
+    {
+      "artifact_id": 13342350238,
+      "name": "apache-upgrade-queue-native-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "dd3c649d049899c05f34b372eb0d13e286b5f8efc2cf884430c320f03524bcc9",
+      "original_execution_sha256": "cbae0568cc17fd827481f7904700c53b7b287ec4100ada2ee7a8c994194a6e04"
+    },
+    {
+      "artifact_id": 13342275337,
+      "name": "backup-directory-native-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "8da1e1c2b369b08806104d414148abcc21dd3dfbfe8dd523e62d3bc0da7f4e44",
+      "original_execution_sha256": "9606e9d7a55cc703f16b00226e0f75ab5061edafcd0c12354582b3a09daefb08"
+    },
+    {
+      "artifact_id": 13342235509,
+      "name": "apache-upgrade-queue-native-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "13b85f8a28f76294055e944a61429d359041f78594808648b7562591ea5a551a",
+      "original_execution_sha256": "8cac812a06a1360abb01d20b2c2d903299bee012088ceb3eebc279480eee9d12"
+    },
+    {
+      "artifact_id": 13342080710,
+      "name": "apache-rewrite-native-source-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "b8a05bce2032053e2f8d77c1cf0b1a6d2b3c54bf8f4101224424ab960004698b",
+      "original_execution_sha256": "18b8aa2013197c3c409aada34cb425e686aa5730b9852568291e90986b63ed22"
+    },
+    {
+      "artifact_id": 13342075792,
+      "name": "backup-directory-native-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "7a6591d03f366984fa359fe863877ce10ee349362f1d203852a1f8946407de2a",
+      "original_execution_sha256": "4a64bb8102385a8fb596ce0b3ba4a86e71134ce97a47b7f0ae1b8394b2e27411"
+    },
+    {
+      "artifact_id": 13340793498,
+      "name": "apache-cc-native-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "5c1ff3457b0caf2958bb5ae7b0c16c26f34a88a064eed3176fb9e5acc8f39469",
+      "original_execution_sha256": "61a3419ae7821a3476a1e2992af539dff5fb1855e409e3dbe8e0b4265f58b450"
+    },
+    {
+      "artifact_id": 13340608697,
+      "name": "backup-retention-native-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "57450a0f11a7920c8a7a59d7aa91162fafd9889b52966fa0e789b216d14e6d0d",
+      "original_execution_sha256": "284559b1977b063a2fb7c5cfecdd591e18bc6c8e075f54100a6efe1c8ae603f9"
+    },
+    {
+      "artifact_id": 13340459040,
+      "name": "analytics-root-native-ubuntu-24.04-arm-41862212046",
+      "architecture": "aarch64",
+      "original_zip_sha256": "96b976d46e7b9cf3bdf350d5d6a2aa7ec668bdbc40f1f8c11b24932108f919fe",
+      "original_execution_sha256": "14b8ec21d58ba107dfab900b07670a2e21d37afc08ec7ce29daf60c1fe24a450"
+    },
+    {
+      "artifact_id": 13340129975,
+      "name": "analytics-root-native-ubuntu-24.04-41862212046",
+      "architecture": "x86_64",
+      "original_zip_sha256": "db62fdd8bc6553eef1afa8c1dff8ed013e42567b7af20fbdcac86fa6c2e2e6ba",
+      "original_execution_sha256": "7cf7470a9c3d391c0ab68ad09077b8417da906c683c7173261297c87f0ebd74a"
+    }
+  ]
+}
