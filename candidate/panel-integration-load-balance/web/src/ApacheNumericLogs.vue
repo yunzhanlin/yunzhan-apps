@@ -10,7 +10,7 @@ const inventory=ref<ApacheLogInventory>(),reading=ref(false),writing=ref(false),
 const automaticBlocked=ref(true);
 let epoch=0,disposed=false;
 const current=(ticket:number)=>!disposed && props.active && ticket===epoch;
-const supported=computed(()=>props.installed && ["2.4.0","2.5.0"].includes(props.version||""));
+const supported=computed(()=>props.installed && ["2.4.0","2.5.0","2.5.1"].includes(props.version||""));
 const blocked=computed(()=>!supported.value || props.parentBusy || reading.value || writing.value || confirming.value || !known.value || unknown.value);
 const label=(s:string)=>({completed:"快照已完成",copying:"复制结果待核对",prepared:"截断结果待核对",removing:"删除结果待核对",retained:"已保留未知结果","retained-incomplete":"已保留不完整快照","retained-missing":"原快照缺失，保留意图"}[s] || "状态不可核实");
 async function refresh(){

@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57]
   workflow_dispatch:
 
 permissions:
@@ -38,6 +38,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-client-schema.mjs
       - name: Independent Apache CC250 ordered dual-handler schema and exact historical fifty
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
+      - name: Independent Apache251 ordered archive handlers and all historical fifty manifests
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-archive-schema.mjs
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
@@ -61,29 +63,29 @@ jobs:
           assert all(r['Package']=='local/panel/internal/executor'for r in rows)and not any(r['Action']in('skip','fail')for r in rows)and sum(r['Action']=='pass'and not r.get('Test')for r in rows)==1
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_PASS':7,'skips':0,'normal_PHP_or_WAF_install_acceptance':False}))
           PY
-      - name: Actual Apache Format2 upgrade queue family and binding guards with nonempty execution proof
+      - name: Actual Apache Format2 and Format3 upgrade queue family and binding guards with nonempty execution proof
         working-directory: candidate/panel-integration-load-balance
         run: |
-          sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestProgramUpgradeQueuesApacheCCFormat2' > "$RUNNER_TEMP/apache-upgrade-queue-native.jsonl"
+          sudo "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^TestProgramUpgradeQueuesApacheCCFormats' > "$RUNNER_TEMP/apache-upgrade-queue-native.jsonl"
           python3 - "$RUNNER_TEMP/apache-upgrade-queue-native.jsonl" <<'PY'
           import json,pathlib,platform,sys
           path=pathlib.Path(sys.argv[1]);assert path.is_file() and not path.is_symlink() and 0<path.stat().st_size<=4<<20
           rows=[json.loads(line)for line in path.read_text().splitlines()]
           assert 0<len(rows)<=10000 and platform.system()=='Linux' and platform.machine() in ('x86_64','aarch64')
-          matrix='TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific'
-          bindings='TestProgramUpgradeQueuesApacheCCFormat2KeepsEveryBindingFence'
+          matrix='TestProgramUpgradeQueuesApacheCCFormatsAreTerminalOnlyAndFamilySpecific'
+          bindings='TestProgramUpgradeQueuesApacheCCFormatsKeepEveryBindingFence'
           expected={matrix,bindings}
-          expected.update(matrix+'/'+family+'-'+str(version)+'-'+state for family in ('apache-body','waf-engine','analytics-html')for version in (0,1,2,3)for state in ('ready','failed','building','unknown'))
-          expected.update(bindings+'/'+kind for kind in ('wrong-id','wrong-architecture','wrong-prefix','bad-start','missing-finish','reversed-time','duplicate-key','unknown-key','public-record','linked-record','cancelled-but-building'))
-          assert len(expected)==61
+          expected.update(matrix+'/'+family+'-'+str(version)+'-'+state for family in ('apache-body','waf-engine','analytics-html')for version in (0,1,2,3,4)for state in ('ready','failed','building','unknown'))
+          expected.update(bindings+'/'+str(version)+'-'+kind for version in (2,3)for kind in ('wrong-id','wrong-architecture','wrong-prefix','bad-start','missing-finish','reversed-time','duplicate-key','unknown-key','public-record','linked-record','cancelled-but-building'))
+          assert len(expected)==84
           assert all(row.get('Package')=='local/panel/internal/executor' and row.get('Action')not in ('skip','fail') and (not row.get('Test') or row['Test'] in expected)for row in rows)
           for action in ('run','pass'):
               tests=[row['Test']for row in rows if row.get('Action')==action and row.get('Test')]
-              assert len(tests)==len(set(tests))==61 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
+              assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='1f3cca6b0b4d953183de2101ca5855c80fd1e15e7c86b998b825068f66c6aec1' and len(index['files'])==2345
-          print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':61,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
+          assert index['release']['frozen_inputs_sha256']=='1b51add591bcbd840f80d6598a1200cd75cf3976c258ebe57771ad36a872eeb3' and len(index['files'])==2372
+          print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
         run: |
@@ -133,6 +135,7 @@ jobs:
           npm ci --ignore-scripts --prefix web
           node --experimental-strip-types --test scripts/test-pm2-configuration-receipt.mjs scripts/test-user-management-receipt.mjs scripts/test-platform-management-receipt.mjs
           node --experimental-strip-types --test scripts/test-analytics-session.mjs
+          node --experimental-strip-types --test scripts/test-apache-cc-archives.mjs
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
@@ -170,7 +173,7 @@ jobs:
           path: ${{ runner.temp }}/apache-cc-native.jsonl
           retention-days: 7
           if-no-files-found: error
-      - name: Retain original Apache Format2 upgrade queue source execution
+      - name: Retain original Apache Format2 and Format3 upgrade queue source execution
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

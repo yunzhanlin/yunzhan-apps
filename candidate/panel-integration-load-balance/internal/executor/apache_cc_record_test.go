@@ -28,7 +28,7 @@ func TestApacheCCReadyRecordCannotAdoptOldOrPartialAuthority(t *testing.T) {
 	}
 	mutations := map[string]func(*apacheBodyBuildRecord){
 		"body-only-format-with-CC-fields": func(v *apacheBodyBuildRecord) { v.Format = 1 },
-		"unknown-format":                  func(v *apacheBodyBuildRecord) { v.Format = 3 },
+		"format3-cannot-adopt-format2":    func(v *apacheBodyBuildRecord) { v.Format = 3 },
 		"missing-engine":                  func(v *apacheBodyBuildRecord) { v.CCEngine = "" },
 		"different-engine":                func(v *apacheBodyBuildRecord) { v.CCEngine = "1.1.0" },
 		"missing-ABI":                     func(v *apacheBodyBuildRecord) { v.CCABIValidated = false },

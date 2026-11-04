@@ -220,3 +220,10 @@ test('version-only availability changes reset old draft and reinitialize support
  t.props.version='2.3.0';t.logic.availabilityChanged([true,true,'2.3.0'],[true,true,'2.4.0']);assert.equal(t.logic.applied.value,undefined);assert.equal(t.logic.draft.value.rotate_mib,16);assert.equal(t.calls.length,1);
  t.props.version='2.4.0';t.logic.availabilityChanged([true,true,'2.4.0'],[true,true,'2.3.0']);await new Promise(setImmediate);assert.equal(t.logic.known.value,true);assert.equal(t.logic.dirty.value,false);assert.equal(t.logic.draftRevision.value,1);
 });
+
+test("exact240,250 and251 all retain real numeric rotation and automatic status access",async()=>{
+ for(const version of ["2.4.0","2.5.0","2.5.1"]){
+  const numeric=component("success",version);await numeric.logic.refresh();assert.equal(numeric.logic.known.value,true);assert.equal(numeric.calls.length,1);
+  const automatic=automaticComponent("success",version);await automatic.logic.readStatus();assert.equal(automatic.logic.known.value,true);assert.equal(automatic.calls.length,1);
+ }
+});

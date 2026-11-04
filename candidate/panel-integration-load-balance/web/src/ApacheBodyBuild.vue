@@ -77,7 +77,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;stopObserving();});
   <section class="apache-build">
     <el-alert type="info" :closable="false" title="只构建独立本机程序，不加载模块、不安装应用、不修改网站。固定 ModSecurity v2、私有静态 YAJL 与 OWASP CRS；必须已有受管 Apache 2.4.68。"/>
     <p>新构建同时提供请求体检查与 CC 限流；已有仅请求体引擎保持可用，不会被替换。</p>
-    <p>固定单路编译，85% CPU / 640 MiB 内存、576 MiB 回收水位，最长 4 小时；可能等待全局构建锁。不会自动安装 Apache、扩大资源预算或删除失败证据。启用策略还需要明确安装对应的 2.4.0 或 2.5.0 签名应用，并在“请求体站点策略”选择网站、预览及保存；本构建页不启用防护。</p>
+    <p>固定单路编译，85% CPU / 640 MiB 内存、576 MiB 回收水位，最长 4 小时；可能等待全局构建锁。不会自动安装 Apache、扩大资源预算或删除失败证据。启用策略还需要明确安装对应的 2.4.0、2.5.0 或 2.5.1 签名应用，并在“请求体站点策略”选择网站、预览及保存；本构建页不启用防护。</p>
     <p>数值事件单独保存在受保护的目录，不修改系统日志目录权限。检测模式不因规则匹配拦截请求；缓存写入不可用时仍应返回 503，不能把已截断的请求体送入网站。此异常行为需通过真实缓存耗尽验收，不以构建成功代替。</p>
     <p>升级后旧版 YZ4 不会被标成新版或自动启用。仅在原程序、规则和许可仍完整时显示“旧版程序保留”；损坏则显示需核对。新构建使用新任务标识，不覆盖原证据。</p>
     <div class="apache-build-actions"><el-button :loading="writing" :disabled="parentBusy || reading || (!known && !pendingKey) || rows.some(row=>['queued','running'].includes(row.state))" @click="build">{{pendingKey?'核对本次构建请求':'构建 Apache 兼容引擎'}}</el-button><el-button :loading="reading" :disabled="writing" @click="refresh">核对完整库存</el-button><el-button v-if="selected && ['queued','running'].includes(selected.state)" type="warning" :disabled="parentBusy || writing" @click="cancel">停止专用构建并保留证据</el-button></div>
@@ -87,7 +87,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;stopObserving();});
     <el-table v-if="known" :data="rows" max-height="320" empty-text="已核实：没有本机 Apache 请求体构建记录" @row-click="(row:ApacheBodyBuild)=>selected=row">
       <el-table-column prop="job_id" label="任务标识" min-width="210" show-overflow-tooltip/>
       <el-table-column label="程序" min-width="200"><template #default="{row}">Apache {{row.apache_version || '待核对'}} / {{row.architecture || '待核对'}}<small>ModSecurity {{row.engine_version || '待核对'}} · YAJL {{row.yajl_version || '待核对'}} · CRS {{row.crs_version || '待核对'}}</small></template></el-table-column>
-      <el-table-column label="CC 能力" min-width="140"><template #default="{row}">{{row.native_cc_version==='1.0.0'?'已核验，可选择':row.state==='ready'?'仅请求体':'尚未核实'}}</template></el-table-column>
+      <el-table-column label="CC 能力" min-width="140"><template #default="{row}">{{['1.0.0','1.1.0'].includes(row.native_cc_version||'')?'已核验，可选择':row.state==='ready'?'仅请求体':'尚未核实'}}</template></el-table-column>
       <el-table-column label="状态" min-width="230"><template #default="{row}">{{label(row.state)}}<small v-if="row.error">{{row.error}}</small></template></el-table-column>
     </el-table>
     <template v-if="selected && known"><h4>{{label(selected.state)}} · {{selected.job_id}}</h4><ol v-if="selected.steps.length"><li v-for="(step,index) in selected.steps" :key="index">{{formatPanelDateTime(step.time)}} · {{step.message}}</li></ol></template>

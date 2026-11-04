@@ -66,6 +66,9 @@ func apacheBodyReleaseAssetPins() map[string]string {
 }
 
 func verifiedApacheBodyReleaseAsset(name string) ([]byte, error) {
+	if _, ok := apacheCCRotationAssetPins()[name]; ok {
+		return verifiedApacheCCAsset(name)
+	}
 	if _, ok := apacheCCAssetPins()[name]; ok {
 		return verifiedApacheCCAsset(name)
 	}
@@ -112,12 +115,12 @@ func apacheBodyRetainedRecordContract(record apacheBodyBuildRecord) error {
 
 func apacheBodyRecordAuthorityContract(record apacheBodyBuildRecord, engine string, assets map[string]string) error {
 	r, ok := runtimecatalog.Find("apache-2.4.68")
-	if !ok || record.Format != 1 && record.Format != 2 || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
+	if !ok || record.Format != 1 && !apacheCCFormatHasModule(record.Format) || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
 		return errors.New("Apache 请求体程序未完成、架构不匹配或发布身份异常")
 	}
 	digests := []string{record.ApacheSHA, record.ModuleSHA, record.TreeSHA}
-	if record.Format == 2 {
-		if record.CCEngine != apacheCCEngineVersion || !record.CCABIValidated {
+	if apacheCCFormatHasModule(record.Format) {
+		if record.CCEngine != apacheCCEngineForFormat(record.Format) || !record.CCABIValidated {
 			return errors.New("Apache CC 模块身份或独立 ABI 核验证据缺失")
 		}
 		digests = append(digests, record.CCModuleSHA)

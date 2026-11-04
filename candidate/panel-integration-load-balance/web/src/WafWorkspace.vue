@@ -11,6 +11,7 @@ import ApacheBodyEvents from "./ApacheBodyEvents.vue";
 import ApacheNumericLogs from "./ApacheNumericLogs.vue";
 import ApacheBodyPolicy from "./ApacheBodyPolicy.vue";
 import ApacheCCEngine from "./ApacheCCEngine.vue";
+import ApacheCCArchives from "./ApacheCCArchives.vue";
 import WafConfigBackups from "./WafConfigBackups.vue";
 import WafConfigurationInspection from "./WafConfigurationInspection.vue";
 import WafApplyRecovery from "./WafApplyRecovery.vue";
@@ -63,7 +64,7 @@ const newID = () => randomId().replaceAll("-", "");
 const cfg = ref<Config>(), applied = ref<Config>(), status = ref<Status>(), sites = ref<Site[]>([]), implementation = ref("");
 const installState = computed(() => softwareInstallState(status.value ? {id:engine,...status.value} : undefined));
 const configurationVersionMatches = computed(() => installState.value !== "unknown" && wafConfigurationVersionMatches(engine, status.value!.installed, status.value?.version, implementation.value));
-const apacheCCSupported = computed(() => apache && status.value?.installed === true && status.value.version === "2.5.0" && implementation.value === "2.5.0");
+const apacheCCSupported = computed(() => apache && status.value?.installed === true && ["2.5.0","2.5.1"].includes(status.value.version || "") && implementation.value === status.value.version);
 const ccObservationSupported = computed(() => apacheCCSupported.value || !apache && status.value?.installed && ["2.3.0","2.4.0","2.5.0","2.5.1","2.5.2","2.6.0"].includes(status.value.version || ""));
 const bodyRotationSupported = computed(() => !apache && status.value?.installed && ["2.4.0","2.5.0","2.5.1","2.5.2","2.6.0"].includes(status.value.version || ""));
 const bodyRetentionSupported = computed(() => !apache && status.value?.installed && ["2.5.0","2.5.1","2.5.2","2.6.0"].includes(status.value.version || ""));
@@ -535,6 +536,7 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
         <el-tab-pane v-if="apache" label="请求体引擎构建" name="apache-body-build"><ApacheBodyBuild :api="api" :active="tab==='apache-body-build'" :parent-busy="busy"/></el-tab-pane>
         <el-tab-pane v-if="apache" label="请求体数值记录" name="apache-body-events"><ApacheBodyEvents :api="api" :active="tab==='apache-body-events'" :sites="sites"/></el-tab-pane>
         <el-tab-pane v-if="apache" label="日志维护" name="apache-numeric-logs"><ApacheNumericLogs :api="api" :active="tab==='apache-numeric-logs'" :installed="!!status?.installed" :version="status?.version" :parent-busy="busy"/></el-tab-pane>
+        <el-tab-pane v-if="apache" label="CC 日志归档" name="apache-cc-archives"><ApacheCCArchives :api="api" :actor="actor" :active="tab==='apache-cc-archives'" :installed="!!status?.installed" :version="status?.version" :implementation="implementation" :revision="applied?.policy.revision||0" :parent-busy="busy||dirty"/></el-tab-pane>
         <el-tab-pane v-if="apache" label="配置事务" name="transactions"><ApacheWafTransactions :api="api" :active="tab==='transactions'" :installed="!!status?.installed" :version="status?.version" :parent-busy="busy"/></el-tab-pane>
         <el-tab-pane label="操作记录" name="history"><div class="waf-actions"><p>最近 50 次持久化任务，包括安装、升级、配置与失败原因。</p><el-button @click="refreshHistory">刷新记录</el-button></div><el-table :data="history" max-height="420" empty-text="尚无操作记录"><el-table-column label="时间" width="170"><template #default="{row}">{{formatPanelDateTime(row.created_at)}}</template></el-table-column><el-table-column prop="kind" label="操作"/><el-table-column prop="state" label="状态"/><el-table-column prop="error" label="错误 / 结果" min-width="240" show-overflow-tooltip/><el-table-column prop="id" label="任务标识" min-width="220" show-overflow-tooltip/></el-table></el-tab-pane>
       </el-tabs>

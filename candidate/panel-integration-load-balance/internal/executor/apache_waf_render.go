@@ -102,7 +102,7 @@ func renderApacheWAFVersion(cfg core.WAFConfig, bindings map[string][]string, ve
 	if cfg.Body != nil && !core.ApacheWAFNativeVersion(version) {
 		return "", errors.New("Apache 元数据旧版不能渲染原生请求体策略")
 	}
-	if version == core.ApacheWAFNativeCCVersion {
+	if core.ApacheWAFCCVersion(version) {
 		if _, err := core.DecodeApacheWAFNativeCCConfig(core.WAFSettings(cfg)); err != nil {
 			return "", err
 		}

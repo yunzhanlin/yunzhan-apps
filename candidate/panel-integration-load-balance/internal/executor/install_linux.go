@@ -356,11 +356,17 @@ func InstallJob(id string) (ret error) {
 	if r.Family == "node" {
 		return installNode(ctx, r, id, add)
 	}
+	if r.Family == "apache" && !nativeWAFService().wafBuildPackagesReady([]string{"libapr1-dev", "libaprutil1-dev", "libnghttp2-dev"}) {
+		return errors.New("Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码")
+	}
 	base, e := prepareRuntimeBuildDirectory(id)
 	if e != nil {
 		return e
 	}
 	archive := filepath.Join(base, "source.tar.gz")
+	if e = add("正在从官方站点下载精确版本源码并校验完整性"); e != nil {
+		return e
+	}
 	if e = downloadRuntimeSource(ctx, r, archive); e != nil {
 		return e
 	}

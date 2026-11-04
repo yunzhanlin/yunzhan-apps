@@ -117,12 +117,13 @@ func (s *Service) readApacheWAFEvents() (core.WAFEventsPage, error) {
 		if readErr != nil && !errors.Is(readErr, os.ErrNotExist) {
 			return legacy, readErr
 		}
-		if readErr == nil && record["version"] == core.ApacheWAFNativeCCVersion {
+		version, _ := record["version"].(string)
+		if readErr == nil && core.ApacheWAFCCVersion(version) {
 			settings, ok := record["settings"].(map[string]any)
 			if !ok {
 				return legacy, errors.New("Apache CC 原策略缺失，未显示为零事件")
 			}
-			cfg, decodeErr := core.DecodeApacheWAFVersionConfig(settings, core.ApacheWAFNativeCCVersion)
+			cfg, decodeErr := core.DecodeApacheWAFVersionConfig(settings, version)
 			if decodeErr != nil {
 				return legacy, decodeErr
 			}

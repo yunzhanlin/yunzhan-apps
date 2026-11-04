@@ -1173,7 +1173,7 @@ defineExpose({ show });
             <el-button v-if="versionStatus?.update_available" :disabled="busy || !versionStatus.update_supported || versions?.source.stale" @click="updateVersion">{{versionStatus.update_supported ? '更新应用' : '需升级面板'}}</el-button>
           </template>
         </AnalyticsWorkspace>
-        <WafWorkspace v-else-if="definition.id === 'apache-waf'" :api="api" engine="apache-waf" :on-install="onInstall" />
+        <WafWorkspace v-else-if="definition.id === 'apache-waf'" :api="api" :actor="geoActor" engine="apache-waf" :on-install="onInstall" />
         <el-tabs v-else v-model="activeTab" class="module-manager-tabs" @tab-change="tabChanged">
         <el-alert v-if="definition.id==='daily-report'" :title="dailyWorkerNotice.message" :type="dailyWorkerNotice.observed?'info':'warning'" :closable="false" class="daily-worker-status" />
         <el-tab-pane label="概览" name="overview">

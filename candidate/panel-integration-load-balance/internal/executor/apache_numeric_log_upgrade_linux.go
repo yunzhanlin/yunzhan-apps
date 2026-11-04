@@ -26,7 +26,10 @@ func (s *Service) apacheNumericLogReadFence(ctx context.Context) error {
 		if _, err := os.Lstat(s.apacheNumericRotationPath()); !errors.Is(err, os.ErrNotExist) {
 			return errors.New("Apache 自动日志证据存在但原配置锁缺失；未忽略未知结果")
 		}
-		for _, dir := range []string{s.apacheNumericLogArchiveDirectory(), s.apacheNumericLogIndexDirectory(), s.systemPath("/var/lib/panel-apache-body/retained-index-staging")} {
+		if _, err := os.Lstat(s.apacheCCArchiveClosedDirectory()); !errors.Is(err, os.ErrNotExist) {
+			return errors.New("CC 原关闭记录存在但配置锁缺失，未创建锁或忽略原请求")
+		}
+		for _, dir := range []string{s.apacheNumericLogArchiveDirectory(), s.apacheNumericLogIndexDirectory(), s.systemPath("/var/lib/panel-apache-body/retained-index-staging"), s.apacheCCArchiveDirectory(), s.apacheCCArchiveHistoryDirectory()} {
 			err := s.apacheNumericLogPrivateDirectory(dir, false)
 			if errors.Is(err, os.ErrNotExist) {
 				continue
@@ -64,6 +67,9 @@ func (s *Service) apacheNumericLogReadFence(ctx context.Context) error {
 	}
 	defer syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
 	if err := s.apacheNumericLogHealthLocked(ctx); err != nil {
+		return err
+	}
+	if err := s.apacheCCArchiveReadFence(ctx); err != nil {
 		return err
 	}
 	current, err := os.Lstat(path)

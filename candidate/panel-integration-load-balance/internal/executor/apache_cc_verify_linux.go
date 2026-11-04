@@ -19,7 +19,7 @@ func verifyApacheCCBuildContext(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
-	if record.Format != 2 || record.CCEngine != apacheCCEngineVersion || !record.CCABIValidated {
+	if !apacheCCFormatHasModule(record.Format) || record.CCEngine != apacheCCEngineForFormat(record.Format) || !record.CCABIValidated {
 		return errors.New("所选 Apache 引擎没有经独立核验的原生 CC 模块；构建包含 CC 的新引擎后再明确选择")
 	}
 	if err := apacheBodyRecordContract(record); err != nil {

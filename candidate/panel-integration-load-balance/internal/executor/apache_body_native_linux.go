@@ -94,7 +94,16 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		}
 	}
 	jobPath := filepath.Join(apacheBodyJobs, id+".json")
-	record := apacheBodyBuildRecord{Format: 2, CCEngine: apacheCCEngineVersion, JobID: id, State: "building", Architecture: runtime.GOARCH, Engine: apacheBodyEngineVersion, YAJL: apacheBodyYAJLVersion, CRS: wafBodyCRSVersion, Prefix: filepath.Join(apacheBodyEngines, id), SourceSHA: map[string]string{}, AssetSHA: apacheBodyReleaseAssetPinsForFormat(2), StartedAt: core.Now(), CompletedBuildSteps: []string{}, Steps: []core.Step{}}
+	s := nativeWAFService()
+	format := 2
+	installed, installedErr := s.moduleInstalledRecord("apache-waf")
+	if installedErr != nil && !errors.Is(installedErr, os.ErrNotExist) {
+		return installedErr
+	}
+	if installedErr == nil && installed["version"] == core.ApacheWAFCCLogArchiveVersion {
+		format = 3
+	}
+	record := apacheBodyBuildRecord{Format: format, CCEngine: apacheCCEngineForFormat(format), JobID: id, State: "building", Architecture: runtime.GOARCH, Engine: apacheBodyEngineVersion, YAJL: apacheBodyYAJLVersion, CRS: wafBodyCRSVersion, Prefix: filepath.Join(apacheBodyEngines, id), SourceSHA: map[string]string{}, AssetSHA: apacheBodyReleaseAssetPinsForFormat(format), StartedAt: core.Now(), CompletedBuildSteps: []string{}, Steps: []core.Step{}}
 	if err := createApacheBodyRecord(jobPath, record); err != nil {
 		return err
 	}
@@ -123,7 +132,6 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		record.Steps = append(record.Steps, core.Step{Time: core.Now(), Message: message})
 		return saveApacheBodyRecord(jobPath, record)
 	}
-	s := nativeWAFService()
 	if err := step("核对实际 Apache 2.4.68、固定构建依赖和专用非特权账户"); err != nil {
 		return err
 	}
@@ -254,7 +262,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		if err := step(command.Label); err != nil {
 			return err
 		}
-		if err := runApacheBodyCCNativeBuildCommand(ctx, paths, i, command, filepath.Join(build, "build.log"), paths.Work); err != nil {
+		if err := runApacheBodyCCNativeBuildCommandForFormat(ctx, paths, record.Format, i, command, filepath.Join(build, "build.log"), paths.Work); err != nil {
 			return err
 		}
 		record.CompletedBuildSteps = append(record.CompletedBuildSteps, command.Label)

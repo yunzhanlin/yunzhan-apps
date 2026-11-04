@@ -15,6 +15,11 @@ const ApacheWAFVersion = "2.3.0"
 const ApacheWAFNativeBodyVersion = "2.4.0"
 
 const ApacheWAFNativeCCVersion = "2.5.0"
+const ApacheWAFCCLogArchiveVersion = "2.5.1"
+
+func ApacheWAFCCVersion(version string) bool {
+	return version == ApacheWAFNativeCCVersion || version == ApacheWAFCCLogArchiveVersion
+}
 
 type ApacheWAFCCConfig struct {
 	EngineJobID string `json:"engine_job_id"`
@@ -23,7 +28,7 @@ type ApacheWAFCCConfig struct {
 // Explicit identities only: future versions and aliases cannot acquire native
 // module authority through a version comparison or a programme upgrade.
 func ApacheWAFNativeVersion(version string) bool {
-	return version == ApacheWAFNativeBodyVersion || version == ApacheWAFNativeCCVersion
+	return version == ApacheWAFNativeBodyVersion || ApacheWAFCCVersion(version)
 }
 
 func DefaultApacheWAFConfig() WAFConfig {
@@ -158,6 +163,7 @@ func (s *Store) validateApacheWAFSites(cfg WAFConfig) error {
 
 func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 	a.apacheNumericLogRoutes(m)
+	a.apacheCCArchiveRoutes(m)
 	a.apacheBodyEngineRoutes(m)
 	a.apacheBodyReportRoutes(m)
 	a.apacheWAFHistoryRoutes(m)

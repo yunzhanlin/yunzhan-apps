@@ -18,6 +18,8 @@ func DecodeApacheNumericLogMaintenance(raw []byte, kind string) (map[string]any,
 		fields = map[string]string{"sha256": "sha", "confirm_delete": "true"}
 	case "retain":
 		fields = map[string]string{"index_sha256": "sha", "snapshot_sha256": "optional-sha", "snapshot_missing": "bool", "confirm_unknown": "true"}
+	case "cc-history":
+		fields = map[string]string{"sha256": "sha", "confirm_preserve": "true"}
 	case "retain-stage":
 		fields = map[string]string{"sha256": "sha", "confirm_unknown": "true"}
 	case "automatic-retain":

@@ -4,9 +4,9 @@ import {apacheBodyBuildInventory,type ApacheBodyBuild} from "./apacheBodyBuild";
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 const props=defineProps<{api:API;active:boolean;installed:unknown;version:unknown;implementation:unknown;settings:{apache_cc?:{engine_job_id:string}};parentBusy:boolean}>();
 const emit=defineEmits<{"request-build":[]}>();
-const supported=computed(()=>props.installed===true&&props.version==="2.5.0"&&props.implementation==="2.5.0");
+const supported=computed(()=>props.installed===true&&["2.5.0","2.5.1"].includes(props.version as string)&&props.implementation===props.version);
 const rows=ref<ApacheBodyBuild[]>([]),known=ref(false),reading=ref(false),error=ref("");
-const ready=computed(()=>known.value?rows.value.filter(row=>row.state==="ready"&&row.native_cc_version==="1.0.0"):[]);
+const ready=computed(()=>known.value?rows.value.filter(row=>row.state==="ready"&&["1.0.0","1.1.0"].includes(row.native_cc_version||"")):[]);
 let epoch=0,disposed=false;
 async function refresh(){
  if(!props.active||!supported.value||reading.value)return;
@@ -29,7 +29,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
 
 <template>
  <section class="apache-cc-engine">
-  <el-alert v-if="!supported" type="warning" :closable="false" title="CC 防护需要已安装的 Apache WAF 2.5.0，并且面板支持对应版本。"/>
+  <el-alert v-if="!supported" type="warning" :closable="false" title="CC 防护需要已安装的 Apache WAF 2.5.0 或 2.5.1，并且面板支持对应版本。"/>
   <template v-else>
    <el-alert type="info" :closable="false" title="先核对并选择支持 CC 的本机引擎，再启用限流、预览和保存。选择引擎只修改草稿，不会立即启用。"/>
    <div class="apache-cc-actions"><el-button :loading="reading" :disabled="parentBusy" @click="refresh">核对 CC 引擎</el-button><el-button :disabled="parentBusy" @click="emit('request-build')">构建防护引擎</el-button></div>

@@ -113,10 +113,10 @@ func programQueueApacheBuild(id string, raw []byte) error {
 	if decodeProgramQueueJSON(raw, &v) != nil {
 		return errors.New("native Apache build record cannot be decoded")
 	}
-	// Only the Apache producer has a Format2 CC record. Keep its original
+	// Only the Apache producer has Format2/3 CC records. Keep their original
 	// identity, time and terminal-state fences; never rewrite a stored record
 	// or grant engine ABI/activation trust through this queue-only observation.
-	if v.Format == 2 {
+	if apacheCCFormatHasModule(v.Format) {
 		return programQueueBuildTerminalIdentity(id, v.JobID, v.State, v.Architecture, v.Prefix, apacheBodyEngines, v.StartedAt, v.FinishedAt)
 	}
 	return programQueueBuildTerminal(v.Format, id, v.JobID, v.State, v.Architecture, v.Prefix, apacheBodyEngines, v.StartedAt, v.FinishedAt)

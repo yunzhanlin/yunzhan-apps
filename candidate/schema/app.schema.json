@@ -170,7 +170,8 @@
           "load-balance-stream-controller-v1",
           "apache-native-body-site-transactions-v1",
           "analytics-managed-client-address-v1",
-          "apache-native-cc-site-transactions-v1"
+          "apache-native-cc-site-transactions-v1",
+          "apache-cc-log-archive-v1"
         ]
       }
     },
@@ -1281,6 +1282,58 @@
                   },
                   {
                     "const": "apache-native-cc-site-transactions-v1"
+                  }
+                ],
+                "items": false
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.5.1"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                  {
+                    "const": "apache-native-body-site-transactions-v1"
+                  },
+                  {
+                    "const": "apache-native-cc-site-transactions-v1"
+                  },
+                  {
+                    "const": "apache-cc-log-archive-v1"
                   }
                 ],
                 "items": false
@@ -2983,6 +3036,18 @@
                 }
               }
             }
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "apache-cc-log-archive-v1"
+                }
+              }
+            }
           }
         ]
       },
@@ -3122,6 +3187,58 @@
                   },
                   {
                     "const": "apache-native-cc-site-transactions-v1"
+                  }
+                ],
+                "items": false
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "apache-waf"
+              },
+              "version": {
+                "const": "2.5.1"
+              },
+              "delivery": {
+                "type": "object",
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "apache-waf"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                  {
+                    "const": "apache-native-body-site-transactions-v1"
+                  },
+                  {
+                    "const": "apache-native-cc-site-transactions-v1"
+                  },
+                  {
+                    "const": "apache-cc-log-archive-v1"
                   }
                 ],
                 "items": false

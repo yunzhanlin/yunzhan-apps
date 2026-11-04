@@ -1,9 +1,10 @@
 // Strip only the exact reviewed CC extension before historical schema checks.
 // Hash the entire restored schema, so unrelated predicates cannot be normalized away.
 import assert from 'node:assert/strict';
+import {schemaBeforeApacheCCArchive} from './apache-cc-archive-schema.mjs';
 import {canonical,sha256} from '../../tools/lib.mjs';
 export function schemaBeforeApacheCC(value){
- const s=structuredClone(value),feature='apache-native-cc-site-transactions-v1',flags=s.properties.required_panel_features.items.enum;
+ const s=schemaBeforeApacheCCArchive(value),feature='apache-native-cc-site-transactions-v1',flags=s.properties.required_panel_features.items.enum;
  if(!flags.includes(feature))return s;
  assert.equal(flags.filter(f=>f===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();
  const branches=s.allOf[0].then.oneOf;

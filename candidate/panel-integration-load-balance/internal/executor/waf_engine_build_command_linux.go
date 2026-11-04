@@ -36,7 +36,11 @@ func runApacheBodyNativeBuildCommand(ctx context.Context, paths apacheBodyBuildP
 }
 
 func runApacheBodyCCNativeBuildCommand(ctx context.Context, paths apacheBodyBuildPaths, index int, command wafBuildCommand, logPath, buildHome string) error {
-	if err := validateApacheBodyCCBuildCommand(paths, index, command); err != nil {
+	return runApacheBodyCCNativeBuildCommandForFormat(ctx, paths, 2, index, command, logPath, buildHome)
+}
+
+func runApacheBodyCCNativeBuildCommandForFormat(ctx context.Context, paths apacheBodyBuildPaths, format, index int, command wafBuildCommand, logPath, buildHome string) error {
+	if err := validateApacheBodyCCBuildCommandForFormat(paths, format, index, command); err != nil {
 		return err
 	}
 	return runBoundedNativeBuildCommand(ctx, command, logPath, buildHome, true)

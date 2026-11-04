@@ -49,7 +49,7 @@ func (s *Service) apacheNativeSettings(raw map[string]any, install, upgrading bo
 
 func apacheNativeDecodeInput(raw map[string]any, version string, priorCC *core.ApacheWAFCCConfig) (core.WAFConfig, error) {
 	input := raw
-	if _, explicit := raw["apache_cc"]; !explicit && version == core.ApacheWAFNativeCCVersion && raw["policy"] != nil && priorCC != nil {
+	if _, explicit := raw["apache_cc"]; !explicit && core.ApacheWAFCCVersion(version) && raw["policy"] != nil && priorCC != nil {
 		input = make(map[string]any, len(raw)+1)
 		for k, v := range raw {
 			input[k] = v
@@ -287,7 +287,7 @@ func (s *Service) applyApacheNativeWAFVersion(ctx context.Context, raw map[strin
 		if err = json.Unmarshal(backups[2].data, &old); err != nil || old.ID != "apache-waf" {
 			return errors.New("Apache 原安装身份不可核对")
 		}
-		if old.Version != version && !(upgrading && (old.Version == core.ApacheWAFVersion || old.Version == core.ApacheWAFNativeBodyVersion && version == core.ApacheWAFNativeCCVersion)) {
+		if old.Version != version && !(upgrading && (old.Version == core.ApacheWAFVersion || old.Version == core.ApacheWAFNativeBodyVersion && core.ApacheWAFCCVersion(version) || old.Version == core.ApacheWAFNativeCCVersion && version == core.ApacheWAFCCLogArchiveVersion)) {
 			return errors.New("Apache 原生版本转换不受支持，未修改")
 		}
 		previous, err = core.DecodeApacheWAFVersionConfig(old.Settings, old.Version)

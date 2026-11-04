@@ -112,6 +112,7 @@ func apacheBodyEventsSameFile(a, b os.FileInfo) bool {
 
 func (s *Service) apacheBodyReportRoutes(m *http.ServeMux) {
 	s.apacheNumericLogRoutes(m)
+	s.apacheCCArchiveRoutes(m)
 	m.HandleFunc("GET /v1/software/apache-waf/body-report", func(w http.ResponseWriter, r *http.Request) {
 		query, err := core.ApacheBodyReportQuery(r.URL.Query(), time.Now())
 		if err != nil {

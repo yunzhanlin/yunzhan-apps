@@ -71,7 +71,7 @@ func apacheNativeQueueBinding(tx *sql.Tx, action, key, job, actor, payload strin
 // default metadata implementation at2.3 prevents programme upgrades and legacy
 // direct install requests from silently granting body-parser authority.
 func DecodeApacheWAFVersionConfig(raw map[string]any, version string) (WAFConfig, error) {
-	if version == ApacheWAFNativeCCVersion {
+	if ApacheWAFCCVersion(version) {
 		return DecodeApacheWAFNativeCCConfig(raw)
 	}
 	if version == ApacheWAFNativeBodyVersion {
@@ -90,7 +90,7 @@ func apacheWAFRequestedSettings(raw map[string]any, action, version string) (WAF
 	if action == "configure" && version == "" {
 		return decodeApacheWAFNativeCCDraft(raw)
 	}
-	if action == "install" && version == ApacheWAFNativeCCVersion {
+	if action == "install" && ApacheWAFCCVersion(version) {
 		return DecodeApacheWAFNativeCCConfig(raw)
 	}
 	if action == "configure" && version == "" || action == "install" && version == ApacheWAFNativeBodyVersion {

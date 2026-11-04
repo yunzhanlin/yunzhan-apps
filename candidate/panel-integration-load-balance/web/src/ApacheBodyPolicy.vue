@@ -39,7 +39,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
 
 <template>
  <section class="apache-policy">
-  <el-alert v-if="!supported" type="warning" :closable="false" title="只有已安装且与面板实现一致的Apache WAF 2.4.0 或 2.5.0 签名应用可配置请求体策略。构建成功或更新面板不能提升元数据2.3应用的能力。"/>
+  <el-alert v-if="!supported" type="warning" :closable="false" title="只有已安装且与面板实现一致的Apache WAF 2.4.0、2.5.0 或 2.5.1 签名应用可配置请求体策略。构建成功或更新面板不能提升元数据2.3应用的能力。"/>
   <template v-else>
    <el-alert type="info" :closable="false" title="仅修改草稿。先核对引擎、明确选择网站、预览，再点击上方“保存并应用”；不会因进入本页、构建或选择引擎而启用。"/>
    <div class="apache-policy-actions"><el-button :loading="reading" :disabled="parentBusy" @click="refresh">核对完整引擎库存</el-button><el-button :disabled="parentBusy" @click="emit('request-build')">前往独立引擎构建</el-button></div>
@@ -67,7 +67,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
    </el-table>
    <p>新增策略默认观察；全局或站点的停用、观察优先，不能用请求体策略绕过。元数据白名单不跳过请求体检查。移除策略并保存会删除该网站的受管请求体区块，不删除网站、引擎、缓存或日志。</p>
    <p>使用固定开源ModSecurity v2、私有已修补YAJL及OWASP CRS。请求体缓存具有独立硬配额；缓存写入失败返回503，不把截断正文交给网站。观察模式只放行规则匹配，不能绕过服务器原生拒绝、解析上限或存储故障。旧长连接和已接收请求不被强制中断。</p>
-   <p>完整配置、规则、安装记录共同备份并原子交接；原生校验、平滑重载和实际加载指纹通过后才确认成功。失败保留原任务和恢复证据。数值规则匹配记录不等于独立请求数或已确认的拦截量；{{version==='2.5.0'?'CC 限流在“CC 防护”页独立配置。':'CC 限流需升级 Apache WAF 至 2.5.0。'}}</p>
+   <p>完整配置、规则、安装记录共同备份并原子交接；原生校验、平滑重载和实际加载指纹通过后才确认成功。失败保留原任务和恢复证据。数值规则匹配记录不等于独立请求数或已确认的拦截量；{{(version==='2.5.0'||version==='2.5.1')?'CC 限流在“CC 防护”页独立配置。':'CC 限流需升级 Apache WAF 至 2.5.0。'}}</p>
   </template>
  </section>
 </template>

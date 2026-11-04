@@ -16,9 +16,9 @@ import (
 	"local/panel/internal/core"
 )
 
-func TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific(t *testing.T) {
+func TestProgramUpgradeQueuesApacheCCFormatsAreTerminalOnlyAndFamilySpecific(t *testing.T) {
 	for _, family := range []string{"apache-body", "waf-engine", "analytics-html"} {
-		for _, format := range []int{0, 1, 2, 3} {
+		for _, format := range []int{0, 1, 2, 3, 4} {
 			for _, state := range []string{"ready", "failed", "building", "unknown"} {
 				t.Run(family+"-"+string(rune('0'+format))+"-"+state, func(t *testing.T) {
 					root, id := programQueueFixture(t), core.ID()
@@ -38,7 +38,7 @@ func TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific(t *t
 					}
 					before := programQueueTree(t, root)
 					err := checkProgramUpgradeQueues(context.Background(), root)
-					allowed := (format == 1 || family == "apache-body" && format == 2) && (state == "ready" || state == "failed")
+					allowed := (format == 1 || family == "apache-body" && (format == 2 || format == 3)) && (state == "ready" || state == "failed")
 					if (err == nil) != allowed {
 						t.Fatal(family, format, state, err)
 					}
@@ -51,57 +51,59 @@ func TestProgramUpgradeQueuesApacheCCFormat2IsTerminalOnlyAndFamilySpecific(t *t
 	}
 }
 
-func TestProgramUpgradeQueuesApacheCCFormat2KeepsEveryBindingFence(t *testing.T) {
-	for _, kind := range []string{"wrong-id", "wrong-architecture", "wrong-prefix", "bad-start", "missing-finish", "reversed-time", "duplicate-key", "unknown-key", "public-record", "linked-record", "cancelled-but-building"} {
-		t.Run(kind, func(t *testing.T) {
-			root, id := programQueueFixture(t), core.ID()
-			base := "var/lib/panel-executor/apache-body"
-			control := wafEngineRequest{Format: 1, JobID: id, CreatedAt: core.Now()}
-			writeProgramQueueFixture(t, root, base+"-requests", id, control)
-			record := apacheBodyBuildRecord{Format: 2, JobID: id, State: "ready", Architecture: runtime.GOARCH, Prefix: filepath.Join(apacheBodyEngines, id), StartedAt: "2026-11-03T00:00:00Z", FinishedAt: "2026-11-03T00:00:01Z"}
-			switch kind {
-			case "wrong-id":
-				record.JobID = core.ID()
-			case "wrong-architecture":
-				record.Architecture = "foreign"
-			case "wrong-prefix":
-				record.Prefix = filepath.Join(wafNativeEngines, id)
-			case "bad-start":
-				record.StartedAt = "unknown"
-			case "missing-finish":
-				record.FinishedAt = ""
-			case "reversed-time":
-				record.FinishedAt = "2026-11-02T23:59:59Z"
-			case "cancelled-but-building":
-				record.State = "building"
-				writeProgramQueueFixture(t, root, base+"-cancellations", id, control)
-			}
-			file := writeProgramQueueFixture(t, root, base+"-builds", id, record)
-			raw, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatal(err)
-			}
-			switch kind {
-			case "duplicate-key":
-				err = os.WriteFile(file, bytesAppendObject(raw, `"format":2`), 0600)
-			case "unknown-key":
-				err = os.WriteFile(file, bytesAppendObject(raw, `"caller_trust":true`), 0600)
-			case "public-record":
-				err = os.Chmod(file, 0644)
-			case "linked-record":
-				err = os.Link(file, filepath.Join(root, "own-alias"))
-			}
-			if err != nil {
-				t.Fatal(err)
-			}
-			before := programQueueTree(t, root)
-			if checkProgramUpgradeQueues(context.Background(), root) == nil {
-				t.Fatal("Format2 bypassed an original binding, privacy, pending-state or JSON fence")
-			}
-			if !reflect.DeepEqual(before, programQueueTree(t, root)) {
-				t.Fatal("refusal modified original evidence")
-			}
-		})
+func TestProgramUpgradeQueuesApacheCCFormatsKeepEveryBindingFence(t *testing.T) {
+	for _, format := range []int{2, 3} {
+		for _, kind := range []string{"wrong-id", "wrong-architecture", "wrong-prefix", "bad-start", "missing-finish", "reversed-time", "duplicate-key", "unknown-key", "public-record", "linked-record", "cancelled-but-building"} {
+			t.Run(string(rune('0'+format))+"-"+kind, func(t *testing.T) {
+				root, id := programQueueFixture(t), core.ID()
+				base := "var/lib/panel-executor/apache-body"
+				control := wafEngineRequest{Format: 1, JobID: id, CreatedAt: core.Now()}
+				writeProgramQueueFixture(t, root, base+"-requests", id, control)
+				record := apacheBodyBuildRecord{Format: format, JobID: id, State: "ready", Architecture: runtime.GOARCH, Prefix: filepath.Join(apacheBodyEngines, id), StartedAt: "2026-11-03T00:00:00Z", FinishedAt: "2026-11-03T00:00:01Z"}
+				switch kind {
+				case "wrong-id":
+					record.JobID = core.ID()
+				case "wrong-architecture":
+					record.Architecture = "foreign"
+				case "wrong-prefix":
+					record.Prefix = filepath.Join(wafNativeEngines, id)
+				case "bad-start":
+					record.StartedAt = "unknown"
+				case "missing-finish":
+					record.FinishedAt = ""
+				case "reversed-time":
+					record.FinishedAt = "2026-11-02T23:59:59Z"
+				case "cancelled-but-building":
+					record.State = "building"
+					writeProgramQueueFixture(t, root, base+"-cancellations", id, control)
+				}
+				file := writeProgramQueueFixture(t, root, base+"-builds", id, record)
+				raw, err := os.ReadFile(file)
+				if err != nil {
+					t.Fatal(err)
+				}
+				switch kind {
+				case "duplicate-key":
+					err = os.WriteFile(file, bytesAppendObject(raw, `"format":2`), 0600)
+				case "unknown-key":
+					err = os.WriteFile(file, bytesAppendObject(raw, `"caller_trust":true`), 0600)
+				case "public-record":
+					err = os.Chmod(file, 0644)
+				case "linked-record":
+					err = os.Link(file, filepath.Join(root, "own-alias"))
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				before := programQueueTree(t, root)
+				if checkProgramUpgradeQueues(context.Background(), root) == nil {
+					t.Fatal("CC format bypassed an original binding, privacy, pending-state or JSON fence")
+				}
+				if !reflect.DeepEqual(before, programQueueTree(t, root)) {
+					t.Fatal("refusal modified original evidence")
+				}
+			})
+		}
 	}
 }
 

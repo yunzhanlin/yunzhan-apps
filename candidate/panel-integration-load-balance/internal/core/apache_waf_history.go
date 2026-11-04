@@ -28,7 +28,7 @@ func ApacheWAFHistoryVersion(version string) bool {
 // This closed list authorizes bounded record maintenance only. Native engine
 // activation and signed application installation retain their separate guards.
 func ApacheWAFHistoryMaintenanceVersion(version string) bool {
-	return version == "2.3.0" || version == "2.4.0" || version == "2.5.0"
+	return version == "2.3.0" || version == "2.4.0" || ApacheWAFCCVersion(version)
 }
 
 func ApacheWAFHistoryQuery(raw string) (ApacheWAFHistoryInput, error) {

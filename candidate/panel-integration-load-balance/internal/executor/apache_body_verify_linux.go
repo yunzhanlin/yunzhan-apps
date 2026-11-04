@@ -93,7 +93,7 @@ func verifyApacheBodyRetainedBytes(ctx context.Context, record apacheBodyBuildRe
 		return errors.New("当前 Apache 程序选择与构建记录不匹配")
 	}
 	files := []struct{ path, sha string }{{r.CLI(), record.ApacheSHA}, {filepath.Join(record.Prefix, "apache/mod_security2.so"), record.ModuleSHA}}
-	if record.Format == 2 {
+	if apacheCCFormatHasModule(record.Format) {
 		files = append(files, struct{ path, sha string }{filepath.Join(record.Prefix, "apache/mod_yunzhan_cc.so"), record.CCModuleSHA})
 	}
 	for _, item := range files {

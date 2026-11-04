@@ -9,7 +9,7 @@ const emit=defineEmits<{(event:"inventory-change"):void;(event:"blocked",value:b
 const applied=ref<ApacheAutomationStatus>(),draft=ref(apacheAutomationDefaults()),draftRevision=ref(0);
 const reading=ref(false),writing=ref(false),confirming=ref(false),known=ref(false),uncertain=ref(false),error=ref(""),receipt=ref("");
 let epoch=0,disposed=false,initialized=false,inventoryIdentity="";
-const supported=computed(()=>props.installed&&props.version==="2.4.0");
+const supported=computed(()=>props.installed&&["2.4.0","2.5.0","2.5.1"].includes(props.version||""));
 const current=(ticket:number)=>!disposed&&props.active&&ticket===epoch;
 const dirty=computed(()=>!!applied.value&&!sameApacheAutomationPolicy(draft.value,applied.value.policy));
 const validDraft=computed(()=>apacheAutomationPolicy(draft.value));

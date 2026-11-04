@@ -62,7 +62,7 @@ func (s *Service) apacheBodyEngineStatus(ctx context.Context, id string) (core.A
 	} else if err != nil {
 		return out, err
 	} else {
-		if (record.Format != 1 && record.Format != 2) || record.Architecture != runtime.GOARCH || record.Prefix != filepath.Join(apacheBodyEngines, id) || (record.Engine != apacheBodyEngineVersion && record.Engine != "2.9.15-yz4") || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || len(record.Steps) > 48 {
+		if (record.Format != 1 && !apacheCCFormatHasModule(record.Format)) || record.Architecture != runtime.GOARCH || record.Prefix != filepath.Join(apacheBodyEngines, id) || (record.Engine != apacheBodyEngineVersion && record.Engine != "2.9.15-yz4") || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || len(record.Steps) > 48 {
 			return out, errors.New("原生构建记录身份异常")
 		}
 		out.StartedAt, out.FinishedAt, out.Steps, out.ApacheVersion = record.StartedAt, record.FinishedAt, record.Steps, record.ApacheVersion
@@ -88,7 +88,7 @@ func (s *Service) apacheBodyEngineStatus(ctx context.Context, id string) (core.A
 				out.State, out.Error = "needs_attention", err.Error()
 			} else {
 				out.State, out.IntegrityVerified = "ready", true
-				if record.Format == 2 {
+				if apacheCCFormatHasModule(record.Format) {
 					out.NativeCCVersion = record.CCEngine
 				}
 			}

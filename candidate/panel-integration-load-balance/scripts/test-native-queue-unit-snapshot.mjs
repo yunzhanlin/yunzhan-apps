@@ -1,6 +1,7 @@
 // Static frozen-input contracts only. Linux behavior has a separate real QA gate.
+import {beforeApacheBuildDependencyAdmission} from './release-build-baseline.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
-const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>fs.readFileSync(path.join(root,n),'utf8'),sha=b=>createHash('sha256').update(b).digest('hex');
+const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>{const value=fs.readFileSync(path.join(root,n),'utf8');return n==='internal/executor/install_linux.go'?beforeApacheBuildDependencyAdmission(value):value;},sha=b=>createHash('sha256').update(b).digest('hex');
 test('all original13-property predicates and legacy5s reader stay exact beneath the additional L4 fence',()=>{
  const ids=read('internal/executor/program_upgrade_ids_linux.go'),queues=read('internal/executor/program_upgrade_queues_linux.go');
  assert.equal(sha(ids.slice(ids.indexOf('func programQueueIDSIdleUnit('))),"c6180dba37d9036f10ea0ad032ac9885a9c6306519bf23e2a10e46d3cb094488");

@@ -7,6 +7,9 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // Require C57's complete CC archive/recovery UI behavior gate exactly once.
+  // Reverse only that reviewed addition for the historical whole-script pins.
+  once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-cc-archives.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n', '');
   // C56 adds exactly this mandatory CC selection/admission UI regression.
   // Keep every prior command and frozen whole-script digest unchanged;
   // omission, duplication or any altered command must fail normalization.
@@ -72,4 +75,13 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
   once('first-install.py fresh-ssh-policy.py waf-state-directory.py', 'first-install.py waf-state-directory.py');
   once("# Every literal Python helper used by the packaged installer must be present.\n# Validate the actual assembled tree before checksumming/signing, so a new\n# source helper cannot silently be omitted from the delivery.\npython3 -I -B - \"$STAGE/$NAME\" <<'PY_CHECK_INSTALLER_HELPERS' | tee -a \"$STAGE/$NAME/BUILD_CHECKS.txt\"\nimport pathlib, re, stat, sys\nroot = pathlib.Path(sys.argv[1])\nsource = (root / 'install.sh').read_text()\nhelpers = set(re.findall(r'\\$HERE/([a-z0-9][a-z0-9._-]*\\.py)', source))\nif not 1 <= len(helpers) <= 64:\n    raise ValueError('invalid installer helper dependency set')\ncopy = next(line for line in source.splitlines() if line.startswith('cp -a \"$HERE/bin\"'))\nstaged_helpers = set(re.findall(r'\\$HERE/([a-z0-9][a-z0-9._-]*\\.py)', copy))\nif not helpers <= staged_helpers:\n    raise ValueError('installer does not stage required helper: ' + ','.join(sorted(helpers - staged_helpers)))\nfor name in sorted(helpers):\n    value = (root / name).lstat()\n    if not stat.S_ISREG(value.st_mode) or value.st_nlink != 1:\n        raise ValueError('missing or linked packaged installer helper: ' + name)\nprint('packaged installer helpers verified: ' + str(len(helpers)))\nPY_CHECK_INSTALLER_HELPERS\n", '');
   return text;
+}
+
+// Reverse only C57's exact Apache dependency admission for historical PHP pins.
+export function beforeApacheBuildDependencyAdmission(text) {
+ for(const addition of ["\tif r.Family == \"apache\" && !nativeWAFService().wafBuildPackagesReady([]string{\"libapr1-dev\", \"libaprutil1-dev\", \"libnghttp2-dev\"}) {\n\t\treturn errors.New(\"Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码\")\n\t}\n", "\tif e = add(\"正在从官方站点下载精确版本源码并校验完整性\"); e != nil {\n\t\treturn e\n\t}\n"]) {
+  assert.equal(text.split(addition).length,2,"missing, duplicate or altered Apache dependency/progress addition");
+  text=text.replace(addition,()=>'');
+ }
+ return text;
 }

@@ -8,9 +8,9 @@ const inventory=ref<ApacheTransactionInventory>(),receipt=ref<ApacheArchiveRecei
 const confirm=ref(""),error=ref(""),operationError=ref(""),busy=ref(false),known=ref(false),page=ref(1);
 const limit=16;
 let epoch=0,disposed=false;
-const readable=computed(()=>props.installed&&["2.0.0","2.1.0","2.2.0","2.3.0","2.4.0","2.5.0"].includes(props.version||""));
+const readable=computed(()=>props.installed&&["2.0.0","2.1.0","2.2.0","2.3.0","2.4.0","2.5.0","2.5.1"].includes(props.version||""));
 const selectedCurrent=computed(()=>selected.value&&known.value&&inventory.value?.apache_transactions.find(row=>row.transaction_id===selected.value?.transaction_id&&row.transaction_sha256===selected.value?.transaction_sha256&&row.transaction_archived===selected.value?.transaction_archived));
-const writable=computed(()=>!!selectedCurrent.value&&["2.3.0","2.4.0","2.5.0"].includes(props.version||"")&&!props.parentBusy&&!busy.value&&
+const writable=computed(()=>!!selectedCurrent.value&&["2.3.0","2.4.0","2.5.0","2.5.1"].includes(props.version||"")&&!props.parentBusy&&!busy.value&&
   inventory.value?.transaction_replay_ready&&(selectedCurrent.value.transaction_archived||selectedCurrent.value.transaction_archivable)&&
   confirm.value===`ARCHIVE APACHE TRANSACTION ${selectedCurrent.value.transaction_id}`);
 const label=(state:string)=>({committed:"已提交",recovered:"已恢复",applying:"未结束"}[state]||"未知状态");

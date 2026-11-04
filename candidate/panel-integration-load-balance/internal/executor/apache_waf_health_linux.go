@@ -170,8 +170,21 @@ func apacheWAFProbeLoadedVersion(ctx context.Context, cfg core.WAFConfig, domain
 	if res.StatusCode >= 300 && res.StatusCode < 400 || res.StatusCode < 200 || res.StatusCode >= 500 || res.Header.Get("X-Panel-Apache-WAF") != apacheWAFProbeVersion(cfg, version) {
 		return errors.New("Apache 实际加载指纹与配置不一致，未宣称保护正常")
 	}
-	if version == core.ApacheWAFNativeCCVersion && cfg.ApacheCC != nil && (res.StatusCode != http.StatusNoContent || res.Header.Get("X-Panel-Apache-CC-Probe") != apacheCCEngineVersion || res.Header.Get("X-Panel-Apache-CC") != apacheCCEngineVersion+":"+apacheCCPolicyFingerprint(cfg)) {
-		return errors.New("Apache 原生 CC 模块实际加载指纹未核实")
+	if core.ApacheWAFCCVersion(version) && cfg.ApacheCC != nil {
+		expectedCC := apacheCCEngineVersion
+		if version == core.ApacheWAFCCLogArchiveVersion {
+			record, err := readApacheBodyBuildRecord(cfg.ApacheCC.EngineJobID)
+			if err != nil {
+				return err
+			}
+			if !apacheCCFormatHasModule(record.Format) || apacheBodyRecordContract(record) != nil {
+				return errors.New("Apache CC 当前选择的原生程序身份未核实")
+			}
+			expectedCC = apacheCCEngineForFormat(record.Format)
+		}
+		if res.StatusCode != http.StatusNoContent || res.Header.Get("X-Panel-Apache-CC-Probe") != expectedCC || res.Header.Get("X-Panel-Apache-CC") != expectedCC+":"+apacheCCPolicyFingerprint(cfg) {
+			return errors.New("Apache 原生 CC 模块实际加载指纹未核实")
+		}
 	}
 	if version == "1.0" {
 		// Its old 'active' marker is not unique. Also verify the known fixed

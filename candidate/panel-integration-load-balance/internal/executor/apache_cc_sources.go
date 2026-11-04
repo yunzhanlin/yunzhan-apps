@@ -10,6 +10,20 @@ import (
 )
 
 const apacheCCEngineVersion = "1.0.0"
+const apacheCCRotationEngineVersion = "1.1.0"
+
+func apacheCCFormatHasModule(format int) bool { return format == 2 || format == 3 }
+
+func apacheCCEngineForFormat(format int) string {
+	switch format {
+	case 2:
+		return apacheCCEngineVersion
+	case 3:
+		return apacheCCRotationEngineVersion
+	default:
+		return ""
+	}
+}
 
 //go:embed assets/apache-cc-*
 var apacheCCAssets embed.FS
@@ -26,6 +40,9 @@ func apacheCCAssetPins() map[string]string {
 func verifiedApacheCCAsset(name string) ([]byte, error) {
 	want, ok := apacheCCAssetPins()[name]
 	if !ok {
+		want, ok = apacheCCRotationAssetPins()[name]
+	}
+	if !ok {
 		return nil, errors.New("Apache CC 资源未在固定审核清单内")
 	}
 	b, err := apacheCCAssets.ReadFile("assets/" + name)
@@ -39,13 +56,30 @@ func verifiedApacheCCAsset(name string) ([]byte, error) {
 	return b, nil
 }
 
+// Format2 keeps the original four exact resources. Format3 alone permits the
+// independently pinned writer which refuses stale open descriptions after a
+// locked name exchange. Old records are neither rewritten nor relabelled.
+func apacheCCRotationAssetPins() map[string]string {
+	old := apacheCCAssetPins()
+	return map[string]string{
+		"apache-cc-log-v2.h":    "55e1e7bb561d80a901a18f50b0168236caf3a3d0cce89e1e5efe0d4d52140074",
+		"apache-cc-module-v2.c": "04fbbbe8d36c468cd9fb59cf63d13083d9f8456a737f6fbe46c7872ad68cd13b",
+		"apache-cc-core.h":      old["apache-cc-core.h"],
+		"apache-cc-LICENSE":     old["apache-cc-LICENSE"],
+	}
+}
+
 // Format1 remains the exact accepted body-only build plan and asset set.
 // Format2 adds one independently authored DSO; neither format adopts the
 // other's record by relabeling its version or manufacturing missing proof.
 func apacheBodyReleaseAssetPinsForFormat(format int) map[string]string {
 	pins := apacheBodyReleaseAssetPins()
-	if format == 2 {
-		for name, digest := range apacheCCAssetPins() {
+	if apacheCCFormatHasModule(format) {
+		cc := apacheCCAssetPins()
+		if format == 3 {
+			cc = apacheCCRotationAssetPins()
+		}
+		for name, digest := range cc {
 			pins[name] = digest
 		}
 	}
@@ -60,20 +94,28 @@ func apacheBodyBuildPlanForFormat(paths apacheBodyBuildPaths, format int) ([]waf
 	if format == 1 {
 		return plan, nil
 	}
-	if format != 2 {
+	if !apacheCCFormatHasModule(format) {
 		return nil, errors.New("Apache 引擎构建格式未实现")
 	}
+	module, label := "apache-cc-module.c", "非特权编译固定 Apache 原生共享 CC 模块"
+	if format == 3 {
+		module, label = "apache-cc-module-v2.c", "非特权编译固定 Apache 可轮转日志的原生共享 CC 模块"
+	}
 	plan = append(plan, wafBuildCommand{
-		Label:     "非特权编译固定 Apache 原生共享 CC 模块",
+		Label:     label,
 		Directory: paths.Work,
 		Program:   "/usr/bin/cc",
-		Arguments: []string{"-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-g0", "-fPIC", "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-shared", "-Wl,-z,relro,-z,now", "-I" + filepath.Join(paths.Apache, "include"), "-I/usr/include/apr-1.0", "-I" + paths.Assets, filepath.Join(paths.Assets, "apache-cc-module.c"), "-o", filepath.Join(paths.Work, "mod_yunzhan_cc.so"), "-lcrypto", "-pthread"},
+		Arguments: []string{"-std=c11", "-Wall", "-Wextra", "-Werror", "-O2", "-g0", "-fPIC", "-fstack-protector-strong", "-D_FORTIFY_SOURCE=2", "-shared", "-Wl,-z,relro,-z,now", "-I" + filepath.Join(paths.Apache, "include"), "-I/usr/include/apr-1.0", "-I" + paths.Assets, filepath.Join(paths.Assets, module), "-o", filepath.Join(paths.Work, "mod_yunzhan_cc.so"), "-lcrypto", "-pthread"},
 	})
 	return plan, nil
 }
 
 func validateApacheBodyCCBuildCommand(paths apacheBodyBuildPaths, index int, command wafBuildCommand) error {
-	plan, err := apacheBodyBuildPlanForFormat(paths, 2)
+	return validateApacheBodyCCBuildCommandForFormat(paths, 2, index, command)
+}
+
+func validateApacheBodyCCBuildCommandForFormat(paths apacheBodyBuildPaths, format, index int, command wafBuildCommand) error {
+	plan, err := apacheBodyBuildPlanForFormat(paths, format)
 	if err != nil {
 		return err
 	}

@@ -35,7 +35,7 @@ test('the lazy scoped workspace only mutates on explicit actions and preserves a
  assert.match(view,/apacheBodyQueueReply\(out\)/);assert.match(view,/apacheBodyBuildRow\(out,id\)/);assert.match(view,/apacheBodyBuildInventory\(out\)/);
  assert.match(view,/ticket===epoch/);assert.match(view,/onBeforeUnmount\(\(\)=>\{disposed=true;epoch\+\+;stopObserving\(\)/);
  assert.match(view,/<el-table v-if="known"/);assert.match(view,/v-if="selected && known"/);assert.match(view,/库存尚不可核实（不是零个引擎）/);
- assert.match(view,/85% CPU \/ 640 MiB/);assert.match(view,/没有安装应用或启用网站/);assert.match(view,/本构建页不启用防护/);assert.match(view,/明确安装对应的 2.4.0 或 2.5.0 签名应用/);
+ assert.match(view,/85% CPU \/ 640 MiB/);assert.match(view,/没有安装应用或启用网站/);assert.match(view,/本构建页不启用防护/);assert.match(view,/明确安装对应的 2.4.0、2.5.0 或 2.5.1 签名应用/);
  const watch=view.split('watch(()=>props.active,')[1].split('onBeforeUnmount')[0];assert.doesNotMatch(watch,/POST|build\(|cancel\(/);
  assert.doesNotMatch(view,/setInterval|\/software\/nginx-waf|body-log\/|selectBodyEngine/);
 });

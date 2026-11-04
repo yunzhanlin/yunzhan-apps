@@ -58,8 +58,13 @@ test("failed or stale reads preserve the original CC reference and cannot enable
   assert.equal(t.logic.known.value,false);assert.equal(t.logic.ready.value.length,0);
   t.logic.chooseEngine(ready.job_id);assert.equal(t.props.settings.apache_cc.engine_job_id,"c".repeat(32));
  }finally{t.stop();}
- for(const value of [{},inventory([{...ready,integrity_verified:false}]),inventory([{...ready,native_cc_version:"1.1.0"}])]){
+ for(const value of [{},inventory([{...ready,integrity_verified:false}]),inventory([{...ready,native_cc_version:"1.2.0"}])]){
   const t=component(async()=>value,{active:true,settings:{apache_cc:{engine_job_id:"c".repeat(32)}}});
   try{await settle();assert.equal(t.logic.known.value,false);assert.equal(t.logic.ready.value.length,0);assert.ok(t.logic.error.value);t.logic.chooseEngine(ready.job_id);assert.equal(t.props.settings.apache_cc.engine_job_id,"c".repeat(32));}finally{t.stop();}
  }
+});
+
+test("exact251 preserves selectable sealed1.0 and independently verified1.1 engines",async()=>{
+ const next={...ready,job_id:"d".repeat(32),native_cc_version:"1.1.0"},t=component(async()=>inventory([ready,next]),{active:true,version:"2.5.1",implementation:"2.5.1"});
+ try{await settle();assert.equal(t.logic.known.value,true);assert.equal(t.logic.ready.value.length,2);assert.equal(t.props.settings.apache_cc,undefined);t.logic.chooseEngine(next.job_id);assert.equal(t.props.settings.apache_cc.engine_job_id,next.job_id);assert.equal(t.calls.length,1);}finally{t.stop();}
 });

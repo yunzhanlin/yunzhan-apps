@@ -57,7 +57,7 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == ApacheNativeCCSiteFeature {
+	if feature == ApacheNativeCCSiteFeature || feature == ApacheCCLogArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == AnalyticsClientAddressFeature {
@@ -85,6 +85,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	// The independent Unix profile requires its exact compiled Core/Root
 	// handlers. Availability is not a claim of runtime or commercial acceptance.
 	if handled, err := validateMemcachedUnixRequirement(manifest, available); handled {
+		return err
+	}
+	if handled, err := validateApacheCCArchiveRequirement(manifest, available); handled {
 		return err
 	}
 	if handled, err := validateApacheNativeCCRequirement(manifest, available); handled {
