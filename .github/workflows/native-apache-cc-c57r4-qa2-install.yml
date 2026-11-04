@@ -1,0 +1,96 @@
+name: Actual C57r4 QA2 five OS independent Root Apache CC archives and preserved Format1 upgrade
+
+on:
+  push:
+    branches: [codex/apache-cc-rootcopy-c57r4-native-qa2]
+    paths: [scripts/native-apache-cc-c57r4-qa2/dispatch.json]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: native-apache-cc-c57r4-qa2-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/apache-cc-rootcopy-c57r4-native-qa2'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os_case: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26, debian13legacy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify both actual native source jobs and original twelve nonempty execution files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/apache-cc-c57r4-ABI"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41752057997 > "$RUNNER_TEMP/apache-cc-c57r4-ABI/run.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41752057997/jobs?per_page=100 > "$RUNNER_TEMP/apache-cc-c57r4-ABI/jobs.json"
+          gh api repos/yunzhanlin/yunzhan-apps/actions/runs/41752057997/artifacts > "$RUNNER_TEMP/apache-cc-c57r4-ABI/artifacts.json"
+          gh run download 41752057997 --repo yunzhanlin/yunzhan-apps --dir "$RUNNER_TEMP/apache-cc-c57r4-ABI/events"
+          python3 -I -B scripts/native-apache-cc-c57r4-qa2/check-source-ci.py "$RUNNER_TEMP/apache-cc-c57r4-ABI"
+      - name: Download and bind both original key signed programme cohorts and reviewed payload
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/431844996 > "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/433400946 > "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json"
+          python3 - "$RUNNER_TEMP/ApacheCC-C55r2-cohort.json" "$RUNNER_TEMP/ApacheCC-C56r9-cohort.json" <<'PY'
+          import json,sys
+          for file,rid,tag,head in [(sys.argv[1],431844996,'qa-privatebackupcandidate55r2-20261103-qa1','95f63cf17c3305dc5d09f88499ecd5591b1a1db9'),(sys.argv[2],433400946,'qa-apacheccarchivecandidate57r4-20261104-qa1','ca4678318a15cc6f73b3f379e4a7c5fb235a34ce')]:
+              v=json.load(open(file));assert v['id']==rid and v['tag_name']==tag and v['target_commitish']==head and not v['draft']and v['prerelease']and len(v['assets'])==7
+          PY
+          gh release download qa-privatebackupcandidate55r2-20261103-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --dir "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets"
+          gh release download qa-apacheccarchivecandidate57r4-20261104-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*linux-amd64.tar.gz*' --pattern release-signing-dev.pub --dir "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets"
+          cp scripts/native-apache-cc-c57r4-qa2/guest.py scripts/native-apache-cc-c57r4-qa2/acceptance.py scripts/native-apache-cc-c57r4-qa2/archive_acceptance.py scripts/native-apache-cc-c57r4-qa2/cold.py scripts/native-apache-cc-c57r4-qa2/boot-transition.py scripts/native-apache-cc-c57r4-qa2/casebook.py scripts/native-apache-cc-c57r4-qa2/capture.py scripts/native-apache-cc-c57r4-qa2/preservation.py "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets/"
+          cp candidate/panel-integration-load-balance/packaging/signed-release.py "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets/"
+          cp scripts/native-apache-cc-c57r4-qa2/payload.json "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets/assets.json"
+          python3 - "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets" <<'PY'
+          import ast,hashlib,json,pathlib,sys
+          root=pathlib.Path(sys.argv[1]);sha=lambda f:hashlib.sha256(f.read_bytes()).hexdigest()
+          assert sha(root/'assets.json')=='c41285469b1626ae54f7bf56b2b59fa2bdab8a7e90653b7eb2111277bbfa9c3f'
+          manifest=json.loads((root/'assets.json').read_bytes());assert manifest['source_inputs_sha256']=='d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e'and len(manifest['files'])==16
+          for n,h in manifest['files'].items():
+              assert pathlib.PurePath(n).name==n and sha(root/n)==h
+              if n.endswith('.py'):ast.parse((root/n).read_bytes())
+          source=pathlib.Path('scripts/native-apache-cc-c57r4-qa2')
+          assert sha(source/'kvm.py')=='4af4cf8d078a010382bd36af45e938fdfd6afd0c146a33f74450ee70c01a542c'
+          for n in('guest.py','acceptance.py','archive_acceptance.py','cold.py','boot-transition.py','casebook.py','capture.py','preservation.py'):assert (root/n).read_bytes()==(source/n).read_bytes()
+          print('Original signed C55r2 and C57r4 cohorts and once-only Apache CC native payload verified')
+          PY
+      - name: Prepare native KVM hardware tools
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual signed factory or preserved legacy programme upgrade, body168 requests, native CC and VM powerloss
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-public"
+          sudo -n python3 -I -B scripts/native-apache-cc-c57r4-qa2/kvm.py "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-assets" scripts/native-apache-cc-c57r4-qa2 "$RUNNER_TEMP/native-apache-cc-c57r4-qa2-public" "$OS_CASE"
+      - name: Retain public proof and encrypted original guest evidence including failed cases
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-apache-cc-c57r4-qa2-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/native-apache-cc-c57r4-qa2-public/
+          retention-days: 7
+          if-no-files-found: error
