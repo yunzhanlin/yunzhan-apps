@@ -27,7 +27,7 @@ function component({api,storage=new Map(),props:overrides={},confirm=async()=>{}
  const sessionStorage={getItem(key){if(storageFailure)throw Error('owned storage denial');return storage.get(key)??null;},setItem(key,value){if(storageFailure)throw Error('owned storage denial');storage.set(key,value);},removeItem(key){if(storageFailure)throw Error('owned storage denial');storage.delete(key);}};
  let blob;
  const bindings={...guards,props,computed:vue.computed,ref:vue.ref,watch:vue.watch,onBeforeUnmount:fn=>cleanups.push(fn),ElMessageBox:{confirm},sessionStorage,browserSHA256,randomId:()=>String(nonce++).padStart(32,'0'),formatPanelDateTime:v=>v,URL:{createObjectURL(value){blob=value;return 'blob:owned-fixture';},revokeObjectURL(){}},document:{createElement(){return {click(){downloaded.push(blob);}}}}};
- const scope=vue.effectScope();const logic=scope.run(()=>new Function('bindings','with(bindings){'+actual+';return{inventory,known,error,operationError,storageError,storageReady,reading,writing,confirming,supported,pending,observation,allowIncomplete,canArchive,canClose,archive,refresh,closeUnstarted,download,receipt,recovery,pendingRetention,pendingHistory,inspectRecovery,retainUnknown,acknowledgeRetainedOriginal,preserveHistory,acknowledgeObservedRetention,priorRetentions};}')(bindings));
+ const scope=vue.effectScope();const logic=scope.run(()=>new Function('bindings','with(bindings){'+actual+';return{inventory,known,error,operationError,storageError,storageReady,reading,writing,confirming,supported,pending,observation,allowIncomplete,canArchive,canClose,archive,refresh,closeUnstarted,download,receipt,recovery,pendingRetention,pendingHistory,inspectRecovery,retainUnknown,acknowledgeRetainedOriginal,preserveHistory,acknowledgeObservedRetention,priorRetentions,archiveTime,archiveStatus};}')(bindings));
  return {props,calls,logic,storage,downloaded,stop(){cleanups.forEach(f=>f());scope.stop();}};
 }
 
@@ -112,6 +112,23 @@ function retainedRow(proof=recoveryFixture(),retainerGroup=0){
  return {id:proof.record.id,state:'retained-unknown',record_sha256:{retained:'d'.repeat(64)},problem:'original result remains unknown',retained:{format:2,id:proof.record.id,receipt_id:'5'.repeat(32),at:'2026-11-03T14:01:00Z',outcome:'unknown-retained',snapshot:structuredClone(proof.snapshot),snapshot_sha256:proof.snapshot_sha256,retention_intent:{device:'2049',inode:'18446744073709551502',uid:0,gid:retainerGroup,bytes:500,sha256:'6'.repeat(64)},...(data?{archive:{...data}}:{}),original_current_log:base.prepared.fresh,no_replay:true,no_name_exchange:true,current_log_untouched:true,original_outcome_unknown:true}};
 }
 function historyFixture(row=entry(),history=false){const recovery=recoveryFixture(unknownRow({request_id:row.id,expected_revision:7,allow_incomplete:false}));return {record:row,snapshot:recovery.snapshot,snapshot_sha256:recovery.snapshot_sha256,history,read_only:true,no_delete:true};}
+
+test('a retained unknown archive without its original intent displays the evidence time and verified copy',()=>{
+ const row=retainedRow(recoveryFixture(undefined,content(),false,987),987);
+ assert.equal(guards.ccArchiveEntry(row),true);assert.equal(row.intent,undefined);
+ const t=component({api:async()=>fixture()});
+ try{assert.deepEqual(t.logic.archiveTime(row),{label:'证据保留时间',text:'2026-11-03T14:01:00Z'});assert.equal(guards.ccArchiveData(row).sha256,row.retained.archive.sha256);assert.match(t.logic.archiveStatus(row),/原结果未知/);assert.doesNotMatch(t.logic.archiveStatus(row),/已校验/);assert.equal(t.calls.length,0);}finally{t.stop();}
+});
+
+test('a completed archive displays its completion time separately from the original request',()=>{
+ const row=entry();assert.notEqual(row.completed.at,row.intent.at);const t=component({api:async()=>fixture()});
+ try{assert.deepEqual(t.logic.archiveTime(row),{label:'完成时间',text:row.completed.at});assert.equal(t.calls.length,0);}finally{t.stop();}
+});
+
+test('an unknown operation without a timestamp never invents a date or a verified backup',()=>{
+ const row=unknownRow(),t=component({api:async()=>fixture()});
+ try{assert.deepEqual(t.logic.archiveTime(row),{label:'请求时间',text:'时间未核实'});assert.equal(guards.ccArchiveData(row),undefined);assert.equal(t.logic.archiveStatus(row),'结果未知');assert.equal(t.calls.length,0);}finally{t.stop();}
+});
 
 test('retained unknown evidence has an independent canonical snapshot digest and never pretends to be completed',()=>{
  const proof=recoveryFixture(),row=retainedRow(proof);

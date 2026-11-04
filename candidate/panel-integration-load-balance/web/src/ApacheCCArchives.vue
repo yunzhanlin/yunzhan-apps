@@ -21,6 +21,13 @@ const busy=computed(()=>reading.value||writing.value||confirming.value||props.pa
 const canArchive=computed(()=>supported.value&&storageReady.value&&known.value&&!busy.value&&!pending.value&&!pendingRetention.value&&!pendingHistory.value&&!!inventory.value?.maintenance_healthy&&inventory.value.archives.length<8&&inventory.value.current.available&&inventory.value.current.bytes>0&&(!inventory.value.current.tail_incomplete||allowIncomplete.value)&&Number.isSafeInteger(props.revision)&&props.revision>=1&&props.revision<=1000000000);
 const archiveRows=computed(()=>inventory.value?[...inventory.value.archives,...inventory.value.history]:[]);
 const isHistory=(row:CCArchiveEntry)=>!!inventory.value?.history.some(value=>value.id===row.id);
+function archiveTime(row:CCArchiveEntry){
+ const at=row.state==="retained-unknown"?row.retained?.at:row.state==="completed"?row.completed?.at:row.intent?.at;
+ const label=row.state==="retained-unknown"?"证据保留时间":row.state==="completed"?"完成时间":"请求时间";
+ return {label,text:at?formatPanelDateTime(at):"时间未核实"};
+}
+const archiveStatus=(row:CCArchiveEntry)=>(row.state==="completed"?"独立副本已校验":row.state==="retained-unknown"?"证据已保留 · 原结果未知":"结果未知")+(row.intent?.tail_incomplete?" · 含残缺末行":"");
+const sourceStatus=(row:CCArchiveEntry)=>row.source_status==="changed-after-copy"?"原来源文件已变化，独立副本完整":row.source_status==="not-authoritative"?"原来源文件另行保留，内容不作为副本依据":"";
 const canClose=computed(()=>supported.value&&known.value&&!busy.value&&!!pending.value&&["not-recorded","closed"].includes(observation.value?.kind||""));
 const key=()=>"yunzhan.apache-cc-archive.v1."+props.actor;
 const retentionKey=()=>key()+".retain";
@@ -237,19 +244,39 @@ onBeforeUnmount(()=>{disposed=true;epoch++;});
   <template v-if="known&&inventory">
    <p>当前 CC 日志：{{inventory.current.available?inventory.current.bytes+' 字节':'已核实尚未创建'}} / 32 MiB{{inventory.current.tail_incomplete?' · 末行不完整，需明确保留原字节后才能归档':''}}。空日志不生成归档。</p>
    <p>待归档 {{inventory.archives.length}} / 8 份 · 历史 {{inventory.history.length}} / 32 份 · 每份独立副本最多 32 MiB，原文件另行保留并占用额外空间 · {{inventory.maintenance_healthy?'本次库存已核实':'有未知结果，暂停新归档'}}。转存历史会保留全部原文件，历史已满时暂停，不自动删除数据。</p>
-   <el-table :data="archiveRows" max-height="440" empty-text="已核实：当前没有 CC 原始日志归档">
+   <el-table class="cc-archive-table" :data="archiveRows" max-height="440" empty-text="已核实：当前没有 CC 原始日志归档">
     <el-table-column prop="id" label="原请求标识" min-width="240" show-overflow-tooltip/>
     <el-table-column label="存放位置" width="100"><template #default="{row}">{{isHistory(row)?'历史保留':'待归档'}}</template></el-table-column>
-    <el-table-column label="归档时间" min-width="175"><template #default="{row}">{{formatPanelDateTime(row.intent?.at)}}</template></el-table-column>
-    <el-table-column label="原始字节" width="115"><template #default="{row}">{{ccArchiveData(row)?.bytes??row.intent?.source.bytes??'未知'}}</template></el-table-column>
-    <el-table-column label="状态" min-width="160"><template #default="{row}">{{row.state==='completed'?'独立副本已校验':row.state==='retained-unknown'?'证据已保留 · 原结果未知':'结果未知'}}{{row.intent?.tail_incomplete?' · 含残缺末行':''}}<small v-if="row.problem">{{row.problem}}</small><small v-if="row.source_status==='changed-after-copy'">原来源文件已变化，独立副本完整</small><small v-else-if="row.source_status==='not-authoritative'">原来源文件另行保留，内容不作为副本依据</small></template></el-table-column>
-    <el-table-column label="SHA-256" min-width="210" show-overflow-tooltip><template #default="{row}">{{row.completed?.archive.sha256||row.intent?.source.sha256||'尚未核实'}}</template></el-table-column>
+    <el-table-column label="记录时间" min-width="175"><template #default="{row}"><span>{{archiveTime(row).text}}</span><small>{{archiveTime(row).label}}</small></template></el-table-column>
+    <el-table-column label="副本字节" width="115"><template #default="{row}">{{ccArchiveData(row)?.bytes??'尚无已校验副本'}}</template></el-table-column>
+    <el-table-column label="状态" min-width="160"><template #default="{row}">{{archiveStatus(row)}}<small v-if="row.problem">{{row.problem}}</small><small v-if="sourceStatus(row)">{{sourceStatus(row)}}</small></template></el-table-column>
+    <el-table-column label="副本 SHA-256" min-width="210" show-overflow-tooltip><template #default="{row}">{{ccArchiveData(row)?.sha256||'尚无已校验副本'}}</template></el-table-column>
     <el-table-column label="操作" min-width="260"><template #default="{row}"><el-button link :disabled="busy||!ccArchiveData(row)" @click="download(row)">下载已校验副本</el-button><el-button v-if="row.state!=='completed'" link :disabled="busy" @click="inspectRecovery(row)">核对原始证据</el-button><el-button v-if="!isHistory(row)&&row.state!=='unknown'" link :disabled="busy||!storageReady||inventory.history.length>=32||!!pendingRetention||!!pendingHistory&&pendingHistory.id!==row.id" @click="preserveHistory(row)">保留并转存历史</el-button></template></el-table-column>
    </el-table>
+   <ul class="cc-archive-cards" aria-label="CC 日志归档记录">
+    <li v-if="!archiveRows.length">已核实：当前没有 CC 原始日志归档</li>
+    <li v-for="row in archiveRows" :key="row.id">
+     <article :aria-label="'CC 原归档 '+row.id">
+      <header><strong>{{isHistory(row)?'历史保留':'待归档'}}</strong><span>{{archiveStatus(row)}}</span></header>
+      <dl>
+       <dt>原请求标识</dt><dd><code>{{row.id}}</code></dd>
+       <dt>{{archiveTime(row).label}}</dt><dd>{{archiveTime(row).text}}</dd>
+       <dt>副本字节</dt><dd>{{ccArchiveData(row)?.bytes??'尚无已校验副本'}}</dd>
+       <dt>副本 SHA-256</dt><dd><code>{{ccArchiveData(row)?.sha256||'尚无已校验副本'}}</code></dd>
+      </dl>
+      <small v-if="row.problem">{{row.problem}}</small><small v-if="sourceStatus(row)">{{sourceStatus(row)}}</small>
+      <div class="cc-card-actions">
+       <el-button :disabled="busy||!ccArchiveData(row)" @click="download(row)">下载已校验副本</el-button>
+       <el-button v-if="row.state!=='completed'" :disabled="busy" @click="inspectRecovery(row)">核对原始证据</el-button>
+       <el-button v-if="!isHistory(row)&&row.state!=='unknown'" :disabled="busy||!storageReady||inventory.history.length>=32||!!pendingRetention||!!pendingHistory&&pendingHistory.id!==row.id" @click="preserveHistory(row)">保留并转存历史</el-button>
+      </div>
+     </article>
+    </li>
+   </ul>
   </template>
   <p>归档建立仅 Root 可访问的独立副本，并保留原 inode 与独立阶段记录，不把残缺末行解释为完整事件，不将未知结果追认为成功。下载按段核对身份，完整文件摘要一致后才生成文件。</p>
  </section>
 </template>
 <style scoped>
-.cc-archives{display:grid;gap:14px}.cc-archives p{margin:0;color:#64748b;line-height:1.7}.cc-archive-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.cc-archive-actions .el-button{margin:0}.cc-original-request{display:grid;gap:10px;padding:14px;border:1px solid #e2e8f0;border-radius:8px}.cc-original-request code{overflow-wrap:anywhere}.cc-archives small{display:block;line-height:1.5;color:#b45309}@media(max-width:760px){.cc-archive-actions{align-items:flex-start;flex-direction:column}.cc-original-request .el-button{white-space:normal;height:auto;min-height:32px;max-width:100%}}
+.cc-archives{display:grid;gap:14px;min-width:0}.cc-archives p{margin:0;color:#64748b;line-height:1.7}.cc-archive-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.cc-archive-actions .el-button{margin:0}.cc-original-request{display:grid;gap:10px;padding:14px;border:1px solid #e2e8f0;border-radius:8px}.cc-original-request code{overflow-wrap:anywhere}.cc-archives small{display:block;line-height:1.5;color:#b45309}.cc-archive-cards{display:none;list-style:none;margin:0;padding:0}.cc-archive-cards article{display:grid;gap:12px;min-width:0;padding:14px;border:1px solid var(--el-border-color-light,#e2e8f0);border-radius:8px}.cc-archive-cards header{display:flex;gap:8px;flex-wrap:wrap;line-height:1.6}.cc-archive-cards dl{display:grid;gap:6px;margin:0;min-width:0}.cc-archive-cards dt{color:var(--el-text-color-secondary,#64748b);font-size:12px}.cc-archive-cards dd{margin:0 0 6px;min-width:0;overflow-wrap:anywhere;line-height:1.6}.cc-archive-cards code{overflow-wrap:anywhere;white-space:normal}.cc-card-actions{display:flex;flex-wrap:wrap;gap:8px}.cc-card-actions .el-button{margin:0;white-space:normal;min-height:36px;height:auto;max-width:100%}@media(max-width:760px){.cc-archive-table{display:none}.cc-archive-cards{display:grid;gap:12px}.cc-archive-actions{align-items:flex-start;flex-direction:column}.cc-original-request .el-button{white-space:normal;height:auto;min-height:32px;max-width:100%}}
 </style>
