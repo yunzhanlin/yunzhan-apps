@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -130,17 +131,52 @@ func TestApacheCCArchiveExclusionCapacityAndIndependentBodyNamespace(t *testing.
 }
 
 func TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair(t *testing.T) {
-	for _, kind := range []string{"empty", "symlink", "hardlink", "public", "oversize", "cancelled", "archive-tamper", "record-public", "partial-receipt", "unknown-file"} {
+	for _, kind := range []string{"empty", "symlink", "hardlink", "public", "oversize", "cancelled", "archive-tamper", "record-public", "partial-receipt", "unknown-file", "archive-group-tamper", "prepared-group-witness", "completed-group-witness"} {
 		t.Run(kind, func(t *testing.T) {
 			s, live, _, _ := apacheCCArchiveFixture(t, []byte("original\n"))
 			ctx := context.Background()
 			id := core.ID()
-			if kind == "archive-tamper" || kind == "record-public" || kind == "partial-receipt" || kind == "unknown-file" {
+			if kind == "archive-tamper" || kind == "record-public" || kind == "partial-receipt" || kind == "unknown-file" || kind == "archive-group-tamper" || kind == "prepared-group-witness" || kind == "completed-group-witness" {
 				if _, err := s.archiveApacheCCLogAt(ctx, id, nil); err != nil {
 					t.Fatal(err)
 				}
 				dir := filepath.Join(s.apacheCCArchiveDirectory(), id)
 				switch kind {
+				case "archive-group-tamper":
+					if os.Geteuid() != 0 {
+						t.Skip("requires genuine Root group metadata fixture")
+					}
+					if err := os.Chown(filepath.Join(dir, "data.log"), os.Geteuid(), os.Getegid()+1); err != nil {
+						t.Fatal(err)
+					}
+				case "prepared-group-witness":
+					var value apacheCCArchivePrepared
+					file := filepath.Join(dir, "prepared.json")
+					if _, err := readApacheCCArchivePhase(file, &value); err != nil {
+						t.Fatal(err)
+					}
+					value.Archive.GID++
+					raw, err := json.Marshal(value)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(file, raw, 0600); err != nil {
+						t.Fatal(err)
+					}
+				case "completed-group-witness":
+					var value apacheCCArchiveCompleted
+					file := filepath.Join(dir, "completed.json")
+					if _, err := readApacheCCArchivePhase(file, &value); err != nil {
+						t.Fatal(err)
+					}
+					value.Archive.GID++
+					raw, err := json.Marshal(value)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := os.WriteFile(file, raw, 0600); err != nil {
+						t.Fatal(err)
+					}
 				case "archive-tamper":
 					if err := os.WriteFile(filepath.Join(dir, "data.log"), []byte("forged\n"), 0600); err != nil {
 						t.Fatal(err)

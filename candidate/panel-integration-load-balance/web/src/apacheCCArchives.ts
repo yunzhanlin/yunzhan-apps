@@ -29,17 +29,20 @@ export const sameCCArchiveRequest=(a:CCArchiveRequest,b:CCArchiveRequest)=>a.req
 function file(v:unknown):v is CCFile {
  return object(v)&&keys(v,["device","inode","uid","gid","bytes","sha256"])&&decimal(v.device)&&decimal(v.inode)&&integer(v.uid,0,4294967295)&&integer(v.gid,0,4294967295)&&integer(v.bytes,0,33554432)&&sha(v.sha256);
 }
+// The service and native reader can use different Root groups. Preserve
+// every recorded GID in hashes and exact file identities.
+const sameFile=(a:CCFile,b:CCFile)=>a.device===b.device&&a.inode===b.inode&&a.uid===b.uid&&a.gid===b.gid&&a.bytes===b.bytes&&a.sha256===b.sha256;
 const retentionName=(name:string)=>/^retain-(?:intent-)?[a-f0-9]{32}\.json$/.test(name);
 function snapshot(v:unknown,wanted:string):v is CCSnapshot {
  if(!object(v)||!keys(v,["format","id","files","source_identity_only"])||v.format!==2||v.source_identity_only!==true||v.id!==wanted||!object(v.files)||Object.keys(v.files).length>21)return false;
  const attempts=new Set<string>();
  for(const [name,value] of Object.entries(v.files)){
   if(!file(value))return false;
-  if(name==="data.log"){if(value.uid!==0||value.gid!==0)return false;continue;}
-  if(name==="next.log"){if((value.uid===0)!==(value.gid===0)||value.bytes!==0||value.sha256!==emptySHA)return false;continue;}
+  if(name==="data.log"){if(value.uid!==0)return false;continue;}
+  if(name==="next.log"){if((value.uid!==0&&value.gid===0)||value.bytes!==0||value.sha256!==emptySHA)return false;continue;}
   if(retentionName(name))attempts.add(name.replace(/^retain-(?:intent-)?/,"").slice(0,-5));
   else if(!["intent.json","prepared.json","completed.json"].includes(name))return false;
-  if(value.uid!==0||value.gid!==0||value.bytes>(retentionName(name)?16384:4096))return false;
+  if(value.uid!==0||value.bytes>(retentionName(name)?16384:4096))return false;
  }
  return attempts.size<=8;
 }
@@ -50,12 +53,17 @@ export function ccSnapshotSHA(v:CCSnapshot):string {
 }
 export const ccRetentionTicket=(v:unknown):v is CCRetentionTicket=>object(v)&&keys(v,["id","sha256"])&&id(v.id)&&sha(v.sha256);
 function retained(v:unknown,wanted:string):v is CCRetained {
- if(!object(v)||!keys(v,["format","id","receipt_id","at","outcome","snapshot","snapshot_sha256","retention_intent","original_current_log","no_replay","no_name_exchange","current_log_untouched","original_outcome_unknown"],["archive","preserved_source"])||v.format!==2||v.id!==wanted||!id(v.receipt_id)||!utc(v.at)||v.outcome!=="unknown-retained"||!snapshot(v.snapshot,wanted)||v.snapshot_sha256!==ccSnapshotSHA(v.snapshot)||v.no_replay!==true||v.no_name_exchange!==true||v.current_log_untouched!==true||v.original_outcome_unknown!==true||!file(v.retention_intent)||v.retention_intent.bytes===0||v.retention_intent.bytes>16384||v.retention_intent.uid!==0||v.retention_intent.gid!==0||!file(v.original_current_log)||v.original_current_log.uid===0||v.original_current_log.gid===0)return false;
+ if(!object(v)||!keys(v,["format","id","receipt_id","at","outcome","snapshot","snapshot_sha256","retention_intent","original_current_log","no_replay","no_name_exchange","current_log_untouched","original_outcome_unknown"],["archive","preserved_source"])||v.format!==2||v.id!==wanted||!id(v.receipt_id)||!utc(v.at)||v.outcome!=="unknown-retained"||!snapshot(v.snapshot,wanted)||v.snapshot_sha256!==ccSnapshotSHA(v.snapshot)||v.no_replay!==true||v.no_name_exchange!==true||v.current_log_untouched!==true||v.original_outcome_unknown!==true||!file(v.retention_intent)||v.retention_intent.bytes===0||v.retention_intent.bytes>16384||v.retention_intent.uid!==0||!file(v.original_current_log)||v.original_current_log.uid===0||v.original_current_log.gid===0)return false;
  if(Object.keys(v.snapshot.files).length>19||Object.hasOwn(v.snapshot.files,"retain-"+v.receipt_id+".json")||Object.hasOwn(v.snapshot.files,"retain-intent-"+v.receipt_id+".json"))return false;
  const source=v.snapshot.files["next.log"];
- if(source?(!file(v.preserved_source)||v.preserved_source.uid!==0||v.preserved_source.gid!==0||v.preserved_source.device!==source.device||v.preserved_source.inode!==source.inode||v.preserved_source.bytes!==0||v.preserved_source.sha256!==emptySHA):v.preserved_source!==undefined)return false;
+ if(source){
+  if(!file(v.preserved_source)||v.preserved_source.uid!==0)return false;
+  if(source.uid!==0&&(source.uid!==v.original_current_log.uid||source.gid!==v.original_current_log.gid))return false;
+  const projected={...source,uid:0,gid:source.uid===0?source.gid:v.preserved_source.gid};
+  if(!sameFile(v.preserved_source,projected))return false;
+ }else if(v.preserved_source!==undefined)return false;
  const data=v.snapshot.files["data.log"];
- return data?file(v.archive)&&v.archive.uid===0&&v.archive.gid===0&&v.archive.device===data.device&&v.archive.inode===data.inode&&v.archive.bytes===data.bytes&&v.archive.sha256===data.sha256:v.archive===undefined;
+ return data?file(v.archive)&&v.archive.uid===0&&sameFile(v.archive,data):v.archive===undefined;
 }
 function intent(v:unknown,wanted:string):v is CCIntent {
  return object(v)&&keys(v,["format","id","at","request","source","tail_incomplete"])&&v.format===2&&v.id===wanted&&utc(v.at)&&ccArchiveRequest(v.request)&&v.request.request_id===wanted&&file(v.source)&&v.source.bytes>0&&v.source.uid>0&&v.source.gid>0&&typeof v.tail_incomplete==="boolean"&&(!v.tail_incomplete||v.request.allow_incomplete);
@@ -66,12 +74,12 @@ export function ccArchiveEntry(v:unknown,wanted?:string):v is CCArchiveEntry {
  if(v.retained!==undefined||v.record_sha256.retained!==undefined)return false;
  if(v.intent!==undefined&&(!intent(v.intent,v.id)||!sha(v.record_sha256.intent)))return false;
  if(v.prepared!==undefined){
-  if(!intent(v.intent,v.id)||!object(v.prepared)||!keys(v.prepared,["format","id","fresh","archive"])||v.prepared.format!==2||v.prepared.id!==v.id||!file(v.prepared.fresh)||v.prepared.fresh.bytes!==0||v.prepared.fresh.sha256!==emptySHA||v.prepared.fresh.device!==v.intent.source.device||v.prepared.fresh.inode===v.intent.source.inode||v.prepared.fresh.uid!==v.intent.source.uid||v.prepared.fresh.gid!==v.intent.source.gid||!sha(v.record_sha256.prepared)||!file(v.prepared.archive)||v.prepared.archive.uid!==0||v.prepared.archive.gid!==0||v.prepared.archive.device!==v.intent.source.device||v.prepared.archive.inode===v.intent.source.inode||v.prepared.archive.inode===v.prepared.fresh.inode||v.prepared.archive.bytes!==v.intent.source.bytes||v.prepared.archive.sha256!==v.intent.source.sha256)return false;
+  if(!intent(v.intent,v.id)||!object(v.prepared)||!keys(v.prepared,["format","id","fresh","archive"])||v.prepared.format!==2||v.prepared.id!==v.id||!file(v.prepared.fresh)||v.prepared.fresh.bytes!==0||v.prepared.fresh.sha256!==emptySHA||v.prepared.fresh.device!==v.intent.source.device||v.prepared.fresh.inode===v.intent.source.inode||v.prepared.fresh.uid!==v.intent.source.uid||v.prepared.fresh.gid!==v.intent.source.gid||!sha(v.record_sha256.prepared)||!file(v.prepared.archive)||v.prepared.archive.uid!==0||v.prepared.archive.device!==v.intent.source.device||v.prepared.archive.inode===v.intent.source.inode||v.prepared.archive.inode===v.prepared.fresh.inode||v.prepared.archive.bytes!==v.intent.source.bytes||v.prepared.archive.sha256!==v.intent.source.sha256)return false;
  }
  if(v.state==="unknown")return v.source_status===undefined&&v.completed===undefined&&v.record_sha256.completed===undefined&&typeof v.problem==="string"&&!!v.problem;
  if(v.state!=="completed"||v.problem!==undefined||!intent(v.intent,v.id)||!object(v.prepared)||!object(v.completed)||!keys(v.completed,["format","id","at","archive"])||v.completed.format!==2||v.completed.id!==v.id||!utc(v.completed.at)||v.completed.at<v.intent.at||!file(v.completed.archive)||!sha(v.record_sha256.completed))return false;
  const a=v.completed.archive,b=v.prepared.archive as CCFile;
- return ["matches-witness","changed-after-copy"].includes(v.source_status as string)&&a.uid===0&&a.gid===0&&a.device===b.device&&a.inode===b.inode&&a.bytes===b.bytes&&a.sha256===b.sha256&&Object.keys(v.record_sha256).length===3;
+ return ["matches-witness","changed-after-copy"].includes(v.source_status as string)&&a.uid===0&&sameFile(a,b)&&Object.keys(v.record_sha256).length===3;
 }
 export function ccArchiveInventory(v:unknown):v is CCArchiveInventory {
  if(!object(v)||!keys(v,["archives","history","max_history","current","inventory_complete","maintenance_healthy","max_archives","max_archive_bytes","read_only","atomic_name_exchange","reloads_apache"])||v.inventory_complete!==true||v.read_only!==true||v.max_archives!==8||v.max_history!==32||v.max_archive_bytes!==33554432||v.atomic_name_exchange!==true||v.reloads_apache!==false||!Array.isArray(v.archives)||v.archives.length>8||!v.archives.every(row=>ccArchiveEntry(row))||!Array.isArray(v.history)||v.history.length>32||!v.history.every(row=>ccArchiveEntry(row)&&row.state!=="unknown"))return false;

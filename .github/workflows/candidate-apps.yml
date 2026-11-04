@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5]
   workflow_dispatch:
 
 permissions:
@@ -84,7 +84,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e' and len(index['files'])==2372
+          assert index['release']['frozen_inputs_sha256']=='8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53' and len(index['files'])==2373
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures

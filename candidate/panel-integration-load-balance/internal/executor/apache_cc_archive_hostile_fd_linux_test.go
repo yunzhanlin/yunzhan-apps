@@ -13,6 +13,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 )
@@ -27,8 +30,16 @@ func TestApacheCCArchiveHeldProducerFDIndependentCopy(t *testing.T) {
 		testApacheCCHeldFD(t, mode)
 		return
 	}
-	for _, mode := range []string{"completed", "retained-unknown"} {
-		t.Run(mode, func(t *testing.T) {
+	for _, c := range []struct {
+		name, mode string
+		group      uint32
+	}{
+		{"completed", "completed", 0}, {"retained-unknown", "retained-unknown", 0},
+		{"completed-service-group", "completed", 987}, {"retained-unknown-service-group", "retained-unknown", 987},
+		{"retained-sealed", "retained-sealed", 0}, {"retained-sealed-service-group", "retained-sealed", 987},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			mode := c.mode
 			root := t.TempDir()
 			for _, name := range []string{"/etc", "/tmp", apacheCCLogDirectory, "/var/lib/panel-apache-body", "/etc/panel/security-apps"} {
 				path := filepath.Join(root, name)
@@ -67,7 +78,7 @@ func TestApacheCCArchiveHeldProducerFDIndependentCopy(t *testing.T) {
 			}
 			cmd := exec.Command("/fixture.test", "-test.v", "-test.run=^TestApacheCCArchiveHeldProducerFDIndependentCopy$", "-test.timeout=25s")
 			cmd.Env = []string{"PANEL_CC_COPY_CASE=" + mode, "TMPDIR=/tmp"}
-			cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Unshareflags: syscall.CLONE_NEWNS}
+			cmd.SysProcAttr = &syscall.SysProcAttr{Chroot: root, Unshareflags: syscall.CLONE_NEWNS, Credential: &syscall.Credential{Uid: 0, Gid: c.group}}
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				t.Fatalf("actual UID33 %s: %v\n%s", mode, err, output)
@@ -130,7 +141,7 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 	}
 	id := core.ID()
 	entry, err := s.archiveApacheCCLogAt(ctx, id, func(stage string) error {
-		if mode == "retained-unknown" && stage == "names-exchanged" {
+		if mode == "retained-unknown" && stage == "names-exchanged" || mode == "retained-sealed" && stage == "sealed-durable" {
 			return errors.New("owned interrupted exchange")
 		}
 		return nil
@@ -140,7 +151,7 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 		t.Fatal(lockErr)
 	}
 	defer lock.Close()
-	if mode == "retained-unknown" {
+	if strings.HasPrefix(mode, "retained-") {
 		if err == nil {
 			t.Fatal("owned interruption missing")
 		}
@@ -148,7 +159,14 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		entry, err = s.retainApacheCCArchiveUnderLock(ctx, lock, id, apacheCCArchiveSnapshotSHA(snapshot), nil)
+		if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_UN); err != nil {
+			t.Fatal(err)
+		}
+		testApacheCCOtherRootGroupRetain(t, id, apacheCCArchiveSnapshotSHA(snapshot))
+		if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+			t.Fatal(err)
+		}
+		entry, err = s.readApacheCCArchive(ctx, id)
 		if err != nil || entry.State != "retained-unknown" {
 			t.Fatal(entry, err)
 		}
@@ -179,7 +197,7 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 		t.Fatal("copy shares producer inode", err)
 	}
 	owner := copyInfo.Sys().(*syscall.Stat_t)
-	if owner.Uid != 0 || owner.Gid != 0 || owner.Nlink != 1 || copyInfo.Mode().Perm() != 0600 {
+	if owner.Uid != 0 || owner.Gid != uint32(os.Getegid()) || owner.Nlink != 1 || copyInfo.Mode().Perm() != 0600 {
 		t.Fatal("copy not Root private")
 	}
 	sourceInfo, err := os.Lstat(filepath.Join(dir, "next.log"))
@@ -195,6 +213,7 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 	if _, err := s.readApacheCCArchive(ctx, id); err != nil {
 		t.Fatal("original drift blocked protected copy", err)
 	}
+	testApacheCCOtherRootGroup(t, id, entry.State, core.Hash(string(original)))
 	chunk, err := s.apacheCCArchiveChunk(ctx, id, 0)
 	if err != nil || chunk["sha256"] != core.Hash(string(original)) {
 		t.Fatal("copy export unavailable", chunk, err)
@@ -235,10 +254,31 @@ func testApacheCCHeldFD(t *testing.T, mode string) {
 	if _, err := s.apacheCCArchiveChunk(ctx, id, 0); err != nil {
 		t.Fatal("history copy export failed", err)
 	}
+	testApacheCCOtherRootGroup(t, id, entry.State, core.Hash(string(original)))
 	t.Log("UID33 old-FD modification succeeded; independent Root bytes, new active log, history export and upgrade fence remained intact")
 }
 
 func TestApacheCCArchiveHeldProducerFDChild(t *testing.T) {
+	if id := os.Getenv("PANEL_CC_ROOT_RETAIN_ID"); id != "" {
+		if os.Geteuid() != 0 || !core.ValidID(id) {
+			t.Fatal("invalid Root retention fixture")
+		}
+		service := New(Config{SystemRoot: "/", SecurityDir: "/etc/panel/security-apps", SitesDir: "/srv/panel/sites"}).apacheNumericLogService()
+		lock, err := service.lockWAFConfiguration()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer lock.Close()
+		entry, err := service.retainApacheCCArchiveUnderLock(context.Background(), lock, id, os.Getenv("PANEL_CC_ROOT_RETAIN_SHA"), nil)
+		if err != nil || entry.State != "retained-unknown" {
+			t.Fatal("cross-group retention", entry, err)
+		}
+		return
+	}
+	if id := os.Getenv("PANEL_CC_ROOT_READER_ID"); id != "" {
+		testApacheCCRootReader(t, id)
+		return
+	}
 	if os.Getenv("PANEL_CC_PRODUCER_CHILD") != "1" {
 		return
 	}
@@ -275,4 +315,85 @@ func TestApacheCCArchiveHeldProducerFDChild(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("GROWN uid=33")
+}
+
+// A separate real Root process has another primary group. It cannot infer a
+// sealed inode's original group from its own credentials or rewrite witnesses.
+func testApacheCCOtherRootGroup(t *testing.T, id, state, sha string) {
+	gid := 987
+	if os.Getegid() != 0 {
+		gid = 0
+	}
+	cmd := exec.Command("/fixture.test", "-test.run=^TestApacheCCArchiveHeldProducerFDChild$", "-test.timeout=15s")
+	cmd.Env = []string{"PANEL_CC_ROOT_READER_ID=" + id, "PANEL_CC_ROOT_READER_GID=" + strconv.Itoa(gid), "PANEL_CC_ROOT_READER_STATE=" + state, "PANEL_CC_ROOT_READER_SHA=" + sha, "TMPDIR=/tmp"}
+	cmd.Stdin = bytes.NewReader(nil)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 0, Gid: uint32(gid)}}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cross-group Root reader: %v\n%s", err, output)
+	}
+}
+
+func testApacheCCRootReader(t *testing.T, id string) {
+	gid, err := strconv.Atoi(os.Getenv("PANEL_CC_ROOT_READER_GID"))
+	if err != nil || os.Geteuid() != 0 || os.Getegid() != gid || !core.ValidID(id) {
+		t.Fatal("wrong real Root reader identity", err)
+	}
+	s := New(Config{SystemRoot: "/", SecurityDir: "/etc/panel/security-apps", SitesDir: "/srv/panel/sites"}).apacheNumericLogService()
+	witness := func() map[string]string {
+		out := map[string]string{}
+		for _, base := range []string{apacheCCLogDirectory} {
+			if err := filepath.Walk(base, func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+				st := info.Sys().(*syscall.Stat_t)
+				value := fmt.Sprintf("%d:%d:%d:%d:%d:%d:%d:%d", st.Dev, st.Ino, st.Uid, st.Gid, st.Mode, st.Nlink, st.Size, st.Mtim.Nano())
+				if info.Mode().IsRegular() {
+					raw, e := os.ReadFile(path)
+					if e != nil {
+						return e
+					}
+					value += ":" + core.Hash(string(raw))
+				}
+				out[path] = value
+				return nil
+			}); err != nil {
+				t.Fatal(err)
+			}
+		}
+		return out
+	}
+	before := witness()
+	ctx := context.Background()
+	entry, err := s.readApacheCCArchive(ctx, id)
+	if err != nil || entry.State != os.Getenv("PANEL_CC_ROOT_READER_STATE") {
+		t.Fatal("cross-group original receipt", entry, err)
+	}
+	if err := s.apacheCCArchiveReadFence(ctx); err != nil {
+		t.Fatal("cross-group upgrade fence", err)
+	}
+	if _, err := s.apacheCCRecoverySnapshot(ctx, id, "", nil); err != nil {
+		t.Fatal("cross-group snapshot", err)
+	}
+	chunk, err := s.apacheCCArchiveChunk(ctx, id, 0)
+	if err != nil || chunk["sha256"] != os.Getenv("PANEL_CC_ROOT_READER_SHA") {
+		t.Fatal("cross-group chunk", chunk, err)
+	}
+	if !reflect.DeepEqual(before, witness()) {
+		t.Fatal("cross-group observation altered original private files")
+	}
+}
+
+func testApacheCCOtherRootGroupRetain(t *testing.T, id, sha string) {
+	gid := 987
+	if os.Getegid() != 0 {
+		gid = 0
+	}
+	cmd := exec.Command("/fixture.test", "-test.run=^TestApacheCCArchiveHeldProducerFDChild$", "-test.timeout=15s")
+	cmd.Env = []string{"PANEL_CC_ROOT_RETAIN_ID=" + id, "PANEL_CC_ROOT_RETAIN_SHA=" + sha, "TMPDIR=/tmp"}
+	cmd.Stdin = bytes.NewReader(nil)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Credential: &syscall.Credential{Uid: 0, Gid: uint32(gid)}}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("cross-group Root retention: %v\n%s", err, output)
+	}
 }

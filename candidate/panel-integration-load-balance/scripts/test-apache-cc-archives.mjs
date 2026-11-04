@@ -10,9 +10,9 @@ import {browserSHA256} from '../web/src/browserSHA256.ts';
 const vue=createRequire(new URL('../web/package.json',import.meta.url))('vue');
 const actor='a'.repeat(32),otherActor='b'.repeat(32),empty=browserSHA256('');
 const content=()=>{const data=new Uint8Array(262147);data.fill(120);data[data.length-1]=10;return data;};
-function entry(request={request_id:'c'.repeat(32),expected_revision:7,allow_incomplete:false},data=content()){
+function entry(request={request_id:'c'.repeat(32),expected_revision:7,allow_incomplete:false},data=content(),rootGroup=0){
  const source={device:'2049',inode:'18446744073709551610',uid:33,gid:33,bytes:data.length,sha256:browserSHA256(data)};
- const archive={...source,inode:'18446744073709551608',uid:0,gid:0};
+ const archive={...source,inode:'18446744073709551608',uid:0,gid:rootGroup};
  return {id:request.request_id,state:'completed',source_status:'matches-witness',record_sha256:{intent:'d'.repeat(64),prepared:'e'.repeat(64),completed:'f'.repeat(64)},intent:{format:2,id:request.request_id,at:'2026-11-03T14:00:00Z',request:structuredClone(request),source,tail_incomplete:false},prepared:{format:2,id:request.request_id,fresh:{...source,inode:'18446744073709551609',bytes:0,sha256:empty},archive},completed:{format:2,id:request.request_id,at:'2026-11-03T14:00:01Z',archive}};
 }
 const fixture=(rows=[])=>({archives:structuredClone(rows),history:[],max_history:32,current:{available:true,bytes:128,max_bytes:33554432,tail_incomplete:false,capacity_near_limit:false,read_only:true},inventory_complete:true,maintenance_healthy:rows.every(x=>x.state!=='unknown'),max_archives:8,max_archive_bytes:33554432,read_only:true,atomic_name_exchange:true,reloads_apache:false});
@@ -102,14 +102,14 @@ test('a corrupt complete-length chunk or foreign receipt never becomes a partial
 });
 
 function unknownRow(request={request_id:'c'.repeat(32),expected_revision:7,allow_incomplete:false}){return {id:request.request_id,state:'unknown',record_sha256:{},problem:'original unknown phase'};}
-function recoveryFixture(row=unknownRow(),data=content(),prior=false){
- const base=entry({request_id:row.id,expected_revision:7,allow_incomplete:false},data),meta={device:'2049',inode:'18446744073709551500',uid:0,gid:0,bytes:17,sha256:'a'.repeat(64)};
+function recoveryFixture(row=unknownRow(),data=content(),prior=false,rootGroup=0){
+ const base=entry({request_id:row.id,expected_revision:7,allow_incomplete:false},data,rootGroup),meta={device:'2049',inode:'18446744073709551500',uid:0,gid:rootGroup,bytes:17,sha256:'a'.repeat(64)};
  const snapshot={format:2,source_identity_only:true,id:row.id,files:{'intent.json':meta,'data.log':base.prepared.archive,...(prior?{['retain-intent-'+ '4'.repeat(32)+'.json']:{...meta,inode:'18446744073709551501',bytes:0,sha256:empty}}:{})}};
  return {record:row,snapshot,snapshot_sha256:guards.ccSnapshotSHA(snapshot),read_only:true,automatic_replay_allowed:false};
 }
-function retainedRow(proof=recoveryFixture()){
+function retainedRow(proof=recoveryFixture(),retainerGroup=0){
  const base=entry({request_id:proof.record.id,expected_revision:7,allow_incomplete:false}),data=proof.snapshot.files['data.log'];
- return {id:proof.record.id,state:'retained-unknown',record_sha256:{retained:'d'.repeat(64)},problem:'original result remains unknown',retained:{format:2,id:proof.record.id,receipt_id:'5'.repeat(32),at:'2026-11-03T14:01:00Z',outcome:'unknown-retained',snapshot:structuredClone(proof.snapshot),snapshot_sha256:proof.snapshot_sha256,retention_intent:{device:'2049',inode:'18446744073709551502',uid:0,gid:0,bytes:500,sha256:'6'.repeat(64)},...(data?{archive:{...data,uid:0,gid:0}}:{}),original_current_log:base.prepared.fresh,no_replay:true,no_name_exchange:true,current_log_untouched:true,original_outcome_unknown:true}};
+ return {id:proof.record.id,state:'retained-unknown',record_sha256:{retained:'d'.repeat(64)},problem:'original result remains unknown',retained:{format:2,id:proof.record.id,receipt_id:'5'.repeat(32),at:'2026-11-03T14:01:00Z',outcome:'unknown-retained',snapshot:structuredClone(proof.snapshot),snapshot_sha256:proof.snapshot_sha256,retention_intent:{device:'2049',inode:'18446744073709551502',uid:0,gid:retainerGroup,bytes:500,sha256:'6'.repeat(64)},...(data?{archive:{...data}}:{}),original_current_log:base.prepared.fresh,no_replay:true,no_name_exchange:true,current_log_untouched:true,original_outcome_unknown:true}};
 }
 function historyFixture(row=entry(),history=false){const recovery=recoveryFixture(unknownRow({request_id:row.id,expected_revision:7,allow_incomplete:false}));return {record:row,snapshot:recovery.snapshot,snapshot_sha256:recovery.snapshot_sha256,history,read_only:true,no_delete:true};}
 
@@ -232,4 +232,59 @@ test('independent copies reject same-inode provenance, legacy receipts and unbou
  for(const patch of [{source_identity_only:false},{format:1},{files:{...proof.snapshot.files,'data.log':row.intent.source}},{files:{...proof.snapshot.files,'next.log':row.intent.source}}]){
   const snapshot={...proof.snapshot,...patch};assert.equal(guards.ccRecovery({...proof,snapshot,snapshot_sha256:guards.ccSnapshotSHA(snapshot)},row.id),false);
  }
+});
+
+
+test('Root service groups remain visible in completed inventory, request and history codecs',()=>{
+ for(const group of [0,987,65534]){
+  const row=entry(undefined,content(),group),proof=historyFixture(row);
+  proof.snapshot.files['data.log']=structuredClone(row.completed.archive);proof.snapshot.files['intent.json'].gid=group;proof.snapshot_sha256=guards.ccSnapshotSHA(proof.snapshot);
+  assert.equal(guards.ccArchiveEntry(row),true);assert.equal(guards.ccArchiveInventory(fixture([row])),true);
+  assert.equal(guards.ccRequestObservation({kind:'archive',record:row,read_only:true},row.intent.request),true);
+  assert.equal(guards.ccHistoryObservation(proof,row.id),true);
+  const mismatch={...row,completed:{...row.completed,archive:{...row.completed.archive,gid:group+1}}};assert.equal(guards.ccArchiveEntry(mismatch),false);
+  assert.equal(row.completed.archive.gid,group);
+ }
+});
+
+test('mixed Root groups retain exact data and already-private source witnesses in both directions',()=>{
+ for(const [writer,retainer]of [[987,0],[0,987]])for(const privateSource of [false,true]){
+  const proof=recoveryFixture(undefined,content(),false,writer),base=entry();
+  proof.snapshot.files['next.log']={...base.intent.source,uid:privateSource?0:33,gid:privateSource?writer:33,bytes:0,sha256:empty};proof.snapshot_sha256=guards.ccSnapshotSHA(proof.snapshot);
+  const row=retainedRow(proof,retainer);row.source_status='not-authoritative';row.retained.preserved_source={...proof.snapshot.files['next.log'],uid:0,gid:privateSource?writer:retainer};
+  assert.equal(guards.ccRecovery(proof,row.id),true);assert.equal(guards.ccArchiveEntry(row),true);assert.equal(guards.ccArchiveInventory(fixture([row])),true);
+  assert.equal(row.retained.archive.gid,writer);assert.equal(row.retained.retention_intent.gid,retainer);assert.equal(guards.ccSnapshotSHA(row.retained.snapshot),proof.snapshot_sha256);
+  const dataBad=structuredClone(row);dataBad.retained.archive.gid=writer+1;assert.equal(guards.ccArchiveEntry(dataBad),false);
+  if(privateSource){const sourceBad=structuredClone(row);sourceBad.retained.preserved_source.gid=writer+1;assert.equal(guards.ccArchiveEntry(sourceBad),false);}
+  else{const workerBad=structuredClone(row);workerBad.retained.snapshot.files['next.log'].gid=34;workerBad.retained.snapshot_sha256=guards.ccSnapshotSHA(workerBad.retained.snapshot);assert.equal(guards.ccArchiveEntry(workerBad),false);}
+ }
+});
+
+test('every private GID remains in canonical snapshot hashes and foreign Root ownership is refused',()=>{
+ const proof=recoveryFixture(undefined,content(),false,987),original=proof.snapshot_sha256;
+ for(const name of Object.keys(proof.snapshot.files)){
+  const bad=structuredClone(proof);bad.snapshot.files[name].gid++;assert.notEqual(guards.ccSnapshotSHA(bad.snapshot),original);assert.equal(guards.ccRecovery(bad,bad.record.id),false);
+  const foreign=structuredClone(proof);foreign.snapshot.files[name].uid=33;foreign.snapshot_sha256=guards.ccSnapshotSHA(foreign.snapshot);assert.equal(guards.ccRecovery(foreign,foreign.record.id),false);
+ }
+});
+
+test('actual Vue archive flow accepts a Root service group and verifies both original download chunks',async()=>{
+ const data=content(),row=entry(undefined,data,987);let rows=[];
+ const t=component({api:async(path,method,request)=>{
+  if(method==='POST'){const current=entry(request,data,987);rows=[current];return current;}
+  if(path.endsWith('/archives'))return fixture(rows.length?rows:[row]);
+  const selected=rows[0]??row;if(path.endsWith('/'+selected.id))return selected;
+  const part=Number(path.split('/').at(-1)),chunk=data.slice(part*262144,(part+1)*262144);
+  return {archive_id:selected.id,part,offset:part*262144,bytes:chunk.length,total_bytes:data.length,sha256:selected.completed.archive.sha256,data_base64:Buffer.from(chunk).toString('base64'),raw_original_private_log:true,tail_incomplete:false,original_outcome_unknown:false};
+ }});
+ try{t.props.active=true;await settle();assert.equal(t.logic.known.value,true);assert.equal(t.logic.error.value,'');await t.logic.archive();assert.equal(t.calls.filter(x=>x[1]==='POST').length,1);const actual=t.logic.inventory.value.archives[0];assert.equal(actual.completed.archive.gid,987);await t.logic.download(actual);assert.equal(t.downloaded.length,1);assert.deepEqual(new Uint8Array(await t.downloaded[0].arrayBuffer()),data);}finally{t.stop();}
+});
+
+test('actual Vue mixed-group retention keeps the original unknown outcome and original data group',async()=>{
+ const proof=recoveryFixture(undefined,content(),false,987);let row=proof.record,posts=0;
+ const t=component({props:{active:true},api:async(path,method,body)=>{
+  if(method==='POST'){posts++;assert.equal(body.sha256,proof.snapshot_sha256);row=retainedRow(proof,0);return row;}
+  if(path.endsWith('/recovery'))return {...proof,record:row};return fixture([row]);
+ }});
+ try{await settle();await t.logic.inspectRecovery(row);assert.equal(t.logic.recovery.value.snapshot.files['data.log'].gid,987);await t.logic.retainUnknown();assert.equal(posts,1);assert.equal(t.logic.inventory.value.archives[0].state,'retained-unknown');assert.equal(t.logic.inventory.value.archives[0].retained.archive.gid,987);assert.equal(t.logic.inventory.value.archives[0].retained.retention_intent.gid,0);assert.match(t.logic.receipt.value,/原归档结果仍未知/);}finally{t.stop();}
 });

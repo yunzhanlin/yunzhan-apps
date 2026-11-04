@@ -91,8 +91,8 @@ func (s *Service) ccArchiveRecoveryOwner(info os.FileInfo, data bool) (int, int,
 	if !ok {
 		return 0, 0, errors.New("CC 原恢复文件身份不可核实")
 	}
-	if owner.Uid == uint32(os.Geteuid()) && owner.Gid == uint32(os.Getegid()) {
-		return os.Geteuid(), os.Getegid(), nil
+	if owner.Uid == uint32(os.Geteuid()) {
+		return os.Geteuid(), int(owner.Gid), nil
 	}
 	uid, gid, err := s.apacheCCArchiveWorker()
 	if err != nil {
@@ -190,7 +190,7 @@ func (s *Service) apacheCCRecoverySnapshot(ctx context.Context, id, exclude stri
 }
 
 func (s *Service) validateApacheCCRetained(v apacheCCArchiveRetained, id, name string) error {
-	if v.Format != apacheCCArchiveFormat || v.ID != id || !core.ValidID(v.ReceiptID) || name != "retain-"+v.ReceiptID+".json" || !validApacheNumericRotationTime(v.At) || v.Outcome != "unknown-retained" || v.Snapshot.Format != apacheCCArchiveFormat || !v.Snapshot.SourceIdentityOnly || v.Snapshot.ID != id || v.Snapshot.Files == nil || len(v.Snapshot.Files) > apacheCCArchiveEntries-2 || v.SnapshotSHA != apacheCCArchiveSnapshotSHA(v.Snapshot) || !v.NoReplay || !v.NoExchange || !v.CurrentUntouched || !v.OriginalOutcomeUnknown || !validApacheCCArchiveFile(v.Current) || !validApacheCCArchiveFile(v.IntentFile) || v.IntentFile.Bytes == 0 || v.IntentFile.Bytes > 16384 || v.IntentFile.UID != uint32(os.Geteuid()) || v.IntentFile.GID != uint32(os.Getegid()) {
+	if v.Format != apacheCCArchiveFormat || v.ID != id || !core.ValidID(v.ReceiptID) || name != "retain-"+v.ReceiptID+".json" || !validApacheNumericRotationTime(v.At) || v.Outcome != "unknown-retained" || v.Snapshot.Format != apacheCCArchiveFormat || !v.Snapshot.SourceIdentityOnly || v.Snapshot.ID != id || v.Snapshot.Files == nil || len(v.Snapshot.Files) > apacheCCArchiveEntries-2 || v.SnapshotSHA != apacheCCArchiveSnapshotSHA(v.Snapshot) || !v.NoReplay || !v.NoExchange || !v.CurrentUntouched || !v.OriginalOutcomeUnknown || !validApacheCCArchiveFile(v.Current) || !validApacheCCArchiveFile(v.IntentFile) || v.IntentFile.Bytes == 0 || v.IntentFile.Bytes > 16384 || v.IntentFile.UID != uint32(os.Geteuid()) {
 		return errors.New("CC 原保留回执格式或原摘要不可核对")
 	}
 	uid, gid, err := s.apacheCCArchiveWorker()
@@ -208,7 +208,7 @@ func (s *Service) validateApacheCCRetained(v apacheCCArchiveRetained, id, name s
 			if f.Bytes != 0 || f.SHA256 != core.Hash("") {
 				return errors.New("CC 来源身份快照不能冒充已封存内容")
 			}
-			if !((f.UID == uint32(uid) && f.GID == uint32(gid)) || (f.UID == uint32(os.Geteuid()) && f.GID == uint32(os.Getegid()))) {
+			if !((f.UID == uint32(uid) && f.GID == uint32(gid)) || f.UID == uint32(os.Geteuid())) {
 				return errors.New("CC 原数据恢复账户不一致")
 			}
 		} else {
@@ -220,15 +220,22 @@ func (s *Service) validateApacheCCRetained(v apacheCCArchiveRetained, id, name s
 			} else if n != "intent.json" && n != "prepared.json" && n != "completed.json" {
 				return errors.New("CC 回执包含未知证据名")
 			}
-			if f.UID != uint32(os.Geteuid()) || f.GID != uint32(os.Getegid()) || f.Bytes > limit {
+			if f.UID != uint32(os.Geteuid()) || f.Bytes > limit {
 				return errors.New("CC 原阶段证据身份或容量不一致")
 			}
 		}
 	}
 	source, hasSource := v.Snapshot.Files["next.log"]
 	if hasSource {
-		source.UID, source.GID = uint32(os.Geteuid()), uint32(os.Getegid())
-		if v.Source == nil || *v.Source != source {
+		if v.Source == nil || v.Source.UID != uint32(os.Geteuid()) {
+			return errors.New("CC 原来源保留回执不是固定 Root 身份")
+		}
+		// Preserve an already private original group. Only a verified worker
+		// inode may change ownership, recording the actual retainer group.
+		if source.UID != uint32(os.Geteuid()) {
+			source.UID, source.GID = uint32(os.Geteuid()), v.Source.GID
+		}
+		if *v.Source != source {
 			return errors.New("CC 原来源保留身份不一致")
 		}
 	} else if v.Source != nil {
@@ -241,7 +248,6 @@ func (s *Service) validateApacheCCRetained(v apacheCCArchiveRetained, id, name s
 		}
 		return nil
 	}
-	data.UID, data.GID = uint32(os.Geteuid()), uint32(os.Getegid())
 	if v.Archive == nil || *v.Archive != data {
 		return errors.New("CC 已封存恢复数据与原快照身份不一致")
 	}
@@ -397,7 +403,7 @@ func (s *Service) retainApacheCCArchiveUnderLock(ctx context.Context, lock *os.F
 	if err != nil {
 		return empty, err
 	}
-	intentFile, err := apacheCCArchiveInspect(ctx, intentFD, intentPath, os.Geteuid(), os.Getegid())
+	intentFile, err := apacheCCArchivePrivateInspect(ctx, intentFD, intentPath)
 	intentFD.Close()
 	if err != nil {
 		return empty, err
@@ -407,18 +413,23 @@ func (s *Service) retainApacheCCArchiveUnderLock(ctx context.Context, lock *os.F
 	}
 	var preservedSource *apacheCCArchiveFile
 	if data != nil {
-		if err := data.Chown(os.Geteuid(), os.Getegid()); err != nil {
-			return empty, err
+		originalOwner := snapshot.Files["next.log"]
+		sealedGroup := int(originalOwner.GID)
+		if originalOwner.UID != uint32(os.Geteuid()) {
+			sealedGroup = os.Getegid()
+			if err := data.Chown(os.Geteuid(), sealedGroup); err != nil {
+				return empty, err
+			}
 		}
 		if err := data.Sync(); err != nil {
 			return empty, err
 		}
-		value, err := apacheCCArchiveSourceIdentity(data, dataPath, os.Geteuid(), os.Getegid())
+		value, err := apacheCCArchivePrivateSourceIdentity(data, dataPath)
 		if err != nil {
 			return empty, err
 		}
 		wanted := snapshot.Files["next.log"]
-		wanted.UID, wanted.GID = uint32(os.Geteuid()), uint32(os.Getegid())
+		wanted.UID, wanted.GID = uint32(os.Geteuid()), uint32(sealedGroup)
 		if value != wanted {
 			return empty, errors.New("CC 原恢复数据封存后身份变化，结果仍未知")
 		}
@@ -432,7 +443,7 @@ func (s *Service) retainApacheCCArchiveUnderLock(ctx context.Context, lock *os.F
 			return empty, err
 		}
 		syncErr := fd.Sync()
-		value, inspectErr := apacheCCArchiveInspect(ctx, fd, path, os.Geteuid(), os.Getegid())
+		value, inspectErr := apacheCCArchivePrivateInspect(ctx, fd, path)
 		fd.Close()
 		if syncErr != nil || inspectErr != nil || value != wanted {
 			return empty, errors.New("CC Root 独立副本的持久化或完整性未核实；保留原残件")

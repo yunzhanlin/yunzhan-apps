@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "source_inputs_sha256": "d41c971d111a9575ea76fb8de47bec9921a0b584c6492ef135878edea270439e",
+  "source_inputs_sha256": "8b45df48c06b340c4842b19a8c35f2307d0d242582892741fcc7d3b91c17da53",
   "package": "local/panel/internal/executor",
   "expected_root_tests": [
     "TestApacheCCArchiveClosureCannotHideStartedOrCorruptEvidence",
@@ -51,7 +51,11 @@
     "TestApacheCCArchiveHeldProducerFDChild",
     "TestApacheCCArchiveHeldProducerFDIndependentCopy",
     "TestApacheCCArchiveHeldProducerFDIndependentCopy/completed",
+    "TestApacheCCArchiveHeldProducerFDIndependentCopy/completed-service-group",
+    "TestApacheCCArchiveHeldProducerFDIndependentCopy/retained-sealed",
+    "TestApacheCCArchiveHeldProducerFDIndependentCopy/retained-sealed-service-group",
     "TestApacheCCArchiveHeldProducerFDIndependentCopy/retained-unknown",
+    "TestApacheCCArchiveHeldProducerFDIndependentCopy/retained-unknown-service-group",
     "TestApacheCCArchiveHistoryCapacityReleasesActiveSlotsWithoutDeletingFiles",
     "TestApacheCCArchiveHistoryLostRepliesNeverLoseOriginalOrReplayRename",
     "TestApacheCCArchiveHistoryLostRepliesNeverLoseOriginalOrReplayRename/history-directories-durable",
@@ -105,12 +109,15 @@
     "TestApacheCCArchiveRecoveryRejectsChangedDigestForeignRecordAndLostActiveLog/foreign-file",
     "TestApacheCCArchiveRecoveryRejectsChangedDigestForeignRecordAndLostActiveLog/missing-current",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair",
+    "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/archive-group-tamper",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/archive-tamper",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/cancelled",
+    "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/completed-group-witness",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/empty",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/hardlink",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/oversize",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/partial-receipt",
+    "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/prepared-group-witness",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/public",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/record-public",
     "TestApacheCCArchiveRefusesForeignFilesAndCorruptReceiptsWithoutRepair/symlink",
@@ -197,5 +204,5 @@
     "3200 admissions across eight real processes share exactly 31 tokens; SIGKILL owner recovery has no refill"
   ],
   "normal_installed_acceptance": false,
-  "source_file_count": 2372
+  "source_file_count": 2373
 }

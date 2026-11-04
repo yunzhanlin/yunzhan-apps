@@ -198,7 +198,7 @@ func readApacheCCArchiveRecord(path string, out any, limit int64) (string, error
 		return "", err
 	}
 	st, err := os.Lstat(path)
-	if err != nil || st.Mode().Perm() != 0600 || st.Sys().(*syscall.Stat_t).Nlink != 1 || st.Sys().(*syscall.Stat_t).Uid != uint32(os.Geteuid()) || st.Sys().(*syscall.Stat_t).Gid != uint32(os.Getegid()) {
+	if err != nil || st.Mode().Perm() != 0600 || st.Sys().(*syscall.Stat_t).Nlink != 1 || st.Sys().(*syscall.Stat_t).Uid != uint32(os.Geteuid()) {
 		return "", errors.New("CC 归档记录不是原私有单链接文件")
 	}
 	if validateWAFRotationJSONShape(raw) != nil || apacheBodyDecodeJSON(raw, out) != nil {
@@ -287,11 +287,13 @@ func (s *Service) readApacheCCArchive(ctx context.Context, id string) (apacheCCA
 		return out, err
 	}
 	defer f.Close()
-	actual, err := apacheCCArchiveInspect(ctx, f, filepath.Join(dir, "data.log"), os.Geteuid(), os.Getegid())
+	actual, err := apacheCCArchivePrivateInspect(ctx, f, filepath.Join(dir, "data.log"))
 	if err != nil || actual != completed.Archive {
 		return out, errors.New("CC 原封存数据的内容或身份已变化，未显示为可用归档")
 	}
-	status, err := apacheCCArchiveSourceStatus(ctx, filepath.Join(dir, "next.log"), intent.Source)
+	sourceWitness := intent.Source
+	sourceWitness.UID, sourceWitness.GID = uint32(os.Geteuid()), completed.Archive.GID
+	status, err := apacheCCArchiveSourceStatus(ctx, filepath.Join(dir, "next.log"), sourceWitness)
 	if err != nil {
 		return out, err
 	}
@@ -453,7 +455,7 @@ func (s *Service) archiveApacheCCLogRequestAt(ctx context.Context, in core.Apach
 	if err := copyFD.Sync(); err != nil {
 		return out, err
 	}
-	copyIdentity, err := apacheCCArchiveInspect(ctx, copyFD, copyPath, os.Geteuid(), os.Getegid())
+	copyIdentity, err := apacheCCArchivePrivateInspect(ctx, copyFD, copyPath)
 	if err != nil || copyIdentity.Bytes != source.Bytes || copyIdentity.SHA256 != source.SHA256 || copyIdentity.Device != source.Device || copyIdentity.Inode == source.Inode {
 		return out, errors.New("CC Root 独立副本未完整核对；保留残件，不交换原日志")
 	}
@@ -528,7 +530,7 @@ func (s *Service) archiveApacheCCLogRequestAt(ctx context.Context, in core.Apach
 			return out, err
 		}
 	}
-	sealed, err := apacheCCArchiveInspect(ctx, copyFD, copyPath, os.Geteuid(), os.Getegid())
+	sealed, err := apacheCCArchivePrivateInspect(ctx, copyFD, copyPath)
 	active, activeErr := apacheCCArchiveInspect(ctx, fresh, s.systemPath(apacheCCLogPath), uid, gid)
 	if err != nil || activeErr != nil || sealed != copyIdentity || active != identity {
 		return out, errors.New("CC 名称交换后的原始数据或新日志无法核对，结果保持未知")

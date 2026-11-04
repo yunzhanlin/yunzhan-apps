@@ -12,7 +12,7 @@ import (
 )
 
 func apacheCCIndependentCopy(copy, source, fresh apacheCCArchiveFile) bool {
-	return validApacheCCArchiveFile(copy) && copy.UID == uint32(os.Geteuid()) && copy.GID == uint32(os.Getegid()) && copy.Device == source.Device && copy.Inode != source.Inode && copy.Inode != fresh.Inode && copy.Bytes == source.Bytes && copy.SHA256 == source.SHA256
+	return validApacheCCArchiveFile(copy) && copy.UID == uint32(os.Geteuid()) && copy.Device == source.Device && copy.Inode != source.Inode && copy.Inode != fresh.Inode && copy.Bytes == source.Bytes && copy.SHA256 == source.SHA256
 }
 
 // The preserved producer inode is forensic material, not archive authority.
@@ -38,15 +38,14 @@ func apacheCCArchiveSourceStatus(ctx context.Context, path string, witness apach
 		return "", err
 	}
 	defer f.Close()
-	identity, err := apacheCCArchiveSourceIdentity(f, path, os.Geteuid(), os.Getegid())
+	identity, err := apacheCCArchiveSourceIdentity(f, path, int(witness.UID), int(witness.GID))
 	if err != nil || identity.Device != witness.Device || identity.Inode != witness.Inode {
 		return "", errors.New("CC 原来源文件身份缺失或变化；未忽略原文件")
 	}
-	actual, err := apacheCCArchiveInspect(ctx, f, path, os.Geteuid(), os.Getegid())
+	actual, err := apacheCCArchiveInspect(ctx, f, path, int(witness.UID), int(witness.GID))
 	if ctx.Err() != nil {
 		return "", ctx.Err()
 	}
-	witness.UID, witness.GID = uint32(os.Geteuid()), uint32(os.Getegid())
 	if err != nil || actual != witness {
 		return "changed-after-copy", nil
 	}

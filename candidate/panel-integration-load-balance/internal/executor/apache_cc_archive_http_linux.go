@@ -113,7 +113,7 @@ func (s *Service) apacheCCArchiveChunk(ctx context.Context, id string, part int)
 	if err != nil {
 		return nil, err
 	}
-	identity, err := apacheCCArchiveStat(before, os.Geteuid(), os.Getegid())
+	identity, err := apacheCCArchivePrivateStat(before)
 	want := *original
 	want.SHA256 = ""
 	if err != nil || identity != want {
