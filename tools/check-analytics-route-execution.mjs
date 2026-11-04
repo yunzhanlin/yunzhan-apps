@@ -7,7 +7,7 @@ export const spec=JSON.parse(fs.readFileSync(new URL('./analytics-route-executio
 export function verifyAnalyticsRouteExecution(events,architecture){
  assert(['x86_64','aarch64'].includes(architecture));assert(Array.isArray(events)&&events.length>0&&events.length<=20000);
  const started=[],passed=[],packages=new Map();
- const wanted=spec.expected_tests.map(x=>x.package+':'+x.name).sort();assert.equal(wanted.length,16);assert.equal(new Set(wanted).size,16);
+ const wanted=spec.expected_tests.map(x=>x.package+':'+x.name).sort();assert.equal(wanted.length,42);assert.equal(new Set(wanted).size,42);
  for(const event of events){
   assert(event&&typeof event==='object'&&!Array.isArray(event));assert(spec.packages.includes(event.Package));assert(!['skip','fail'].includes(event.Action),'empty, skipped or failed execution cannot qualify');
   if(event.Test){const name=event.Package+':'+event.Test;assert(wanted.includes(name),'foreign test cannot replace the actual route contract');if(event.Action==='run')started.push(name);if(event.Action==='pass')passed.push(name);}
@@ -15,7 +15,7 @@ export function verifyAnalyticsRouteExecution(events,architecture){
  }
  assert.deepEqual(started.sort(),wanted);assert.deepEqual(passed.sort(),wanted);
  assert.deepEqual([...packages.keys()].sort(),[...spec.packages].sort());assert([...packages.values()].every(n=>n===1));
- return {ok:true,architecture,actual_PASS:passed.length,test_roots:4,skips:0,source_inputs_sha256:spec.source_inputs_sha256,source_only_not_installed:true};
+ return {ok:true,architecture,actual_PASS:passed.length,test_roots:9,skips:0,source_inputs_sha256:spec.source_inputs_sha256,source_only_not_installed:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.argv.length,4);assert.equal(process.platform,'linux');assert.equal(process.argv[3],process.arch==='arm64'?'aarch64':process.arch==='x64'?'x86_64':'unsupported');

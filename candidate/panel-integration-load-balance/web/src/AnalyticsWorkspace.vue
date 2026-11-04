@@ -8,10 +8,10 @@ import { randomId } from "./randomId";
 type API = <T>(path:string,method?:string,body?:unknown,idempotencyKey?:string)=>Promise<T>;
 interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean;client_address_mode?:string}
 interface Dimension {name:string;count:number}
-interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[]}
-interface Funnel {source:string;from:string;to:string;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
+interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[];page_order_source?:string;page_order_uncertain?:boolean}
+interface Funnel {source:string;from:string;to:string;ordering_uncertain_sessions?:number;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
 interface Report {
-  source:string;from:string;to:string;partial:boolean;sampled_events:number;
+  source:string;from:string;to:string;partial:boolean;sampled_events:number;ordering_uncertain_sessions?:number;
   overview:{pv:number;uv:number;sessions:number;active_visitors:number;clicks:number;bounce_rate:number;avg_engagement_seconds:number;unique_network_peers:number};
   pages:Dimension[];sources:Dimension[];browsers:Dimension[];devices:Dimension[];entry_pages:Dimension[];exit_pages:Dimension[];hours:Dimension[];campaigns:Dimension[];
   sessions:Session[];heatmap:{path:string;x:number;y:number;count:number}[];
@@ -22,7 +22,7 @@ const props=defineProps<{api:API;installed:boolean;installedVersion?:string;site
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),report=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1"].includes(props.installedVersion||""));
 const range=ref<[Date,Date]>(),heatPath=ref("");
 const funnelSteps=ref("/\n/checkout\n/success"),funnelWindow=ref(30),funnelBusy=ref(false),funnelError=ref(""),funnel=ref<Funnel>();
 let funnelSequence=0;
@@ -121,8 +121,9 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <el-empty v-else description="选择网站后查看分布" />
       </el-tab-pane>
       <el-tab-pane label="访客与会话" name="sessions">
+        <el-alert v-if="(report?.ordering_uncertain_sessions||0)>0" title="部分会话缺少访问序号或序号存在冲突，这些旅程按服务端接收顺序估计；旧记录保留原样。" type="warning" :closable="false" />
         <p>标识经服务端按网站隔离后哈希。浏览器标识不等于真实人数，原始 IP 不保留。</p>
-        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>会话标识：{{row.id}}</p></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
+        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
       </el-tab-pane>
       <el-tab-pane label="点击热图" name="heatmap">
         <p>需在采集设置单独开启。只采集百分比坐标，不读取表单、输入内容或网页截图。</p>
@@ -134,6 +135,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <p>每行填写一个本网站页面路径，按顺序分析浏览器会话；精确匹配，不填写域名、查询参数或片段。上方时间范围同时用于漏斗。默认路径只是输入示例，不代表已发生转化。</p>
         <el-form label-position="top"><el-form-item label="顺序页面（2–8 步）"><el-input v-model="funnelSteps" type="textarea" :rows="4" :maxlength="16400" aria-label="漏斗顺序页面" /></el-form-item><el-form-item label="从入口到目标的转化时限（分钟）"><el-input-number v-model="funnelWindow" :min="1" :max="1440" aria-label="漏斗转化时限" /></el-form-item><el-button type="primary" :disabled="!selected || funnelBusy" :loading="funnelBusy" @click="computeFunnel">计算真实漏斗</el-button><el-button :disabled="!funnel || funnelBusy" @click="exportFunnel">导出漏斗</el-button></el-form>
         <el-alert v-if="funnelError" :title="funnelError" type="error" :closable="false" />
+        <el-alert v-if="(funnel?.ordering_uncertain_sessions||0)>0" title="漏斗包含顺序待核对的会话，转化结果仅供估计；缺少或冲突的访问序号、网络延迟均可能影响顺序与时限。" type="warning" :closable="false" />
         <template v-if="funnel"><el-alert v-if="funnel.partial" title="漏斗达到 20000 条页面事件或 8 MiB 上限，早期步骤可能缺失；请缩短时间范围，不可据此认定完整转化率。" type="warning" :closable="false" />
           <p>{{funnel.from}} → {{funnel.to}} · {{funnel.sampled_pageviews}} 条页面事件 · {{funnel.unique_pageviews}} 次去重页面访问 · {{funnel.completed_sessions}} 个完成会话</p>
           <el-table :data="funnel.steps" empty-text="没有匹配页面"><el-table-column type="index" label="步骤" width="70" /><el-table-column prop="path" label="页面路径" show-overflow-tooltip /><el-table-column prop="sessions" label="到达会话" width="105" /><el-table-column label="入口转化率" width="125"><template #default="{row}">{{row.overall_rate.toFixed(1)}}%</template></el-table-column><el-table-column label="上步转化率" width="125"><template #default="{row,$index}">{{$index===0?'—':row.previous_rate.toFixed(1)+'%'}}</template></el-table-column><el-table-column label="到下步流失" width="110"><template #default="{row,$index}">{{$index===funnel.steps.length-1?'—':row.drop_off}}</template></el-table-column></el-table>

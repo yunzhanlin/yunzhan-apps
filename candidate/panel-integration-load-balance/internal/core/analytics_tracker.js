@@ -16,7 +16,9 @@ const activeSlot=Symbol.for("yunzhan.analytics.active-document");
 if(window[activeSlot]!==undefined)return;
 window[activeSlot]=config.site;
 const identifier = () => [...crypto.getRandomValues(new Uint8Array(16))].map(v=>v.toString(16).padStart(2,"0")).join("");
-let visitor, session, sessionLast=Date.now();
+let visitor, session, sessionLast=Date.now(), navigationSequence=0, navigationSequenceKnown=true;
+const navigationSequenceLimit=1000000000;
+const validNavigationSequence=value=>Number.isSafeInteger(value)&&value>=0&&value<=navigationSequenceLimit;
 try {
   let data = JSON.parse(localStorage.getItem("yz.analytics.visitor") || "null");
   if (!data || !valid(data.id) || !Number.isFinite(data.created) || Date.now()-data.created>90*86400000) {
@@ -27,17 +29,32 @@ try {
 } catch { visitor=identifier(); }
 try {
   const data = JSON.parse(sessionStorage.getItem("yz.analytics.session") || "null");
-  if(data&&valid(data.id)&&Number.isSafeInteger(data.last)&&data.last>=0&&data.last<=sessionLast&&sessionLast-data.last<1800000)session=data.id;
+  if(data&&valid(data.id)&&Number.isSafeInteger(data.last)&&data.last>=0&&data.last<=sessionLast&&sessionLast-data.last<1800000){
+    session=data.id;
+    if(data.navigation_seq!==undefined){
+      if(validNavigationSequence(data.navigation_seq))navigationSequence=data.navigation_seq;
+      else navigationSequenceKnown=false;
+    }
+  }
 } catch {}
 if(!session)session=identifier();
 let routeMeasurement=null;
-const persistSession=()=>{try{sessionStorage.setItem("yz.analytics.session",JSON.stringify({id:session,last:sessionLast}));}catch{}};
+const syncNavigationSequence=now=>{
+  try{
+    const data=JSON.parse(sessionStorage.getItem("yz.analytics.session")||"null");
+    if(!data||data.id!==session||!Number.isSafeInteger(data.last)||data.last<0||data.last>now||data.navigation_seq===undefined)return;
+    if(validNavigationSequence(data.navigation_seq))navigationSequence=Math.max(navigationSequence,data.navigation_seq);
+    else navigationSequenceKnown=false;
+  }catch{} // Storage denial keeps the current in-memory order, without retries.
+};
+const persistSession=()=>{try{sessionStorage.setItem("yz.analytics.session",JSON.stringify({id:session,last:sessionLast,navigation_seq:navigationSequenceKnown?navigationSequence:null}));}catch{}};
 // Foreground engagement/clicks/visits refresh an existing session, including in
 // a long-lived SPA. Storage denial must not destroy in-memory continuity.
 // A future/corrupt persisted clock or real clock reversal cannot pin a session.
 const touchSession=()=>{
   const now=Date.now(),changed=now<sessionLast||now-sessionLast>=1800000;
-  if(changed){session=identifier();routeMeasurement=null;}
+  if(changed){session=identifier();routeMeasurement=null;navigationSequence=0;navigationSequenceKnown=true;}
+  else syncNavigationSequence(now); // A restored document must not reuse an earlier visit's counter.
   sessionLast=now;persistSession();return changed;
 };
 let path=location.pathname, title=(document.title || "").slice(0,128),pageID=identifier();
@@ -56,7 +73,13 @@ const send = (kind, fields={}) => {
     if(stopped||sent>=240)return;
   }
   sent++;
-  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields,...(kind==="performance"||kind==="route-performance"?{performance_seq:sent}:{})});
+  let navigationOrder={};
+  if(kind==="pageview"){
+    if(navigationSequenceKnown&&navigationSequence<navigationSequenceLimit)navigationOrder={navigation_seq:++navigationSequence};
+    else navigationSequenceKnown=false; // Never wrap, reset the budget or fabricate an ordering claim.
+    persistSession();
+  }
+  const body=JSON.stringify({id:identifier(),page_id:pageID,visitor,session,kind,path,title,...fields,...(kind==="performance"||kind==="route-performance"?{performance_seq:sent}:{}),...navigationOrder});
   // Same-origin reverse proxy is required. Do not send panel cookies or retry
   // failed beacons. The host's CSP and privacy policy remain authoritative.
   try { fetch(endpoint.href,{method:"POST",body,headers:{"Content-Type":"application/json"},credentials:"omit",cache:"no-store",keepalive:true,redirect:"error",mode:"same-origin"}).then(r=>{if(r.status===429||r.status===503)stopped=true;}).catch(()=>{});return true; } catch {return false;}

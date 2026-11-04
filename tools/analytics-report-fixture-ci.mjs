@@ -13,6 +13,8 @@ export const correctedAnalyticsFixtureSHA = '1b73f895be87608a170b9ca1f8adb950235
 export const alreadyCorrectedAnalyticsFixtureSHA = 'd673322ad44c9b22b9f4f6c838329758e35e103da0b1d5d81ae6be4f56ac65f7';
 // C59 changes only the exact-version test below the unchanged clock fixture.
 export const routeVersionAnalyticsFixtureSHA = 'aba6be9a625bfb8aceb9fe07dd197ac6d8d6ef7fa8528779ec2cc36dd0dcf044';
+// C59r4 extends only the exact-version contract; the clock fixture remains byte exact.
+export const navigationVersionAnalyticsFixtureSHA = '79c14a6c0b028fa7cf280b2f3b82b11737a65bfd5121015c2a6d4c1d218d528a';
 export const analyticsFixturePlan = {
   "insert": "\tfor _, now := range []time.Time{\n\t\ttime.Now(),\n\t\ttime.Date(2026, 10, 25, 0, 0, 0, 0, time.UTC),\n\t\ttime.Date(2026, 10, 25, 0, 30, 0, 0, time.UTC),\n\t\ttime.Date(2026, 10, 25, 0, 59, 59, 0, time.UTC),\n\t\ttime.Date(2026, 10, 25, 1, 0, 0, 0, time.UTC),\n\t\ttime.Date(2026, 10, 25, 12, 0, 0, 0, time.UTC),\n\t\ttime.Date(2026, 10, 25, 8, 30, 0, 0, time.FixedZone(\"east\", 8*60*60)),\n\t\ttime.Date(2026, 10, 24, 17, 30, 0, 0, time.FixedZone(\"west\", -7*60*60)),\n\t} {\n\t\tt.Run(now.Format(time.RFC3339), func(t *testing.T) {",
   "closing": "\n\t\t// Preserve the independent current-day default; the journey fixture asks\n\t\t// for its own explicit two-hour window rather than changing production.\n\t\tday, err := a.Store.analyticsReport(context.Background(), config.SiteID, \"\", \"\", now)\n\t\tif err != nil { t.Fatal(err) }\n\t\tstart := now.UTC().Truncate(24*time.Hour).Unix()\n\t\texpectedPV, expectedActive := 0, 0\n\t\tif oldAt >= start { expectedPV++ }\n\t\tif currentAt >= start { expectedPV++; expectedActive = 1 }\n\t\tdayOverview := day[\"overview\"].(map[string]any)\n\t\tif dayOverview[\"pv\"] != expectedPV || dayOverview[\"sessions\"] != expectedPV || dayOverview[\"active_visitors\"] != expectedActive {\n\t\t\tt.Fatal(\"current-day default changed or passive performance became activity\", dayOverview, expectedPV, expectedActive)\n\t\t}\n\t\t})\n\t}\n}\n\nfunc TestAnalyticsSessionPatch",
@@ -71,7 +73,7 @@ export function reviewedAnalyticsReplacement(source, dir, index) {
   assert(stat.isFile() && !stat.isSymbolicLink() && stat.nlink === 1 && fs.realpathSync(target) === target);
   const raw = fs.readFileSync(target);
   assert.equal(sha(raw), index.files[analyticsFixtureMember]);
-  if ([alreadyCorrectedAnalyticsFixtureSHA,routeVersionAnalyticsFixtureSHA].includes(index.files[analyticsFixtureMember])) return null;
+  if ([alreadyCorrectedAnalyticsFixtureSHA,routeVersionAnalyticsFixtureSHA,navigationVersionAnalyticsFixtureSHA].includes(index.files[analyticsFixtureMember])) return null;
   assert.equal(index.files[analyticsFixtureMember], originalAnalyticsFixtureSHA);
   assert.equal(sha(raw), originalAnalyticsFixtureSHA);
   const replacement = dir + '/reviewed-analytics-session-fixture_test.go';

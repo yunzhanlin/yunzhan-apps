@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4]
   workflow_dispatch:
 
 permissions:
@@ -38,6 +38,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-client-schema.mjs
       - name: Independent analytics240 exact three-handler schema, future negatives and retained fifty
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-route-schema.mjs
+      - name: Independent analytics241 exact four-handler schema and immutable240 compatibility
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-navigation-schema.mjs
       - name: Independent Apache CC250 ordered dual-handler schema and exact historical fifty
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
       - name: Independent Apache251 ordered archive handlers and all historical fifty manifests
@@ -88,7 +90,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='f0b345f464055abfe9b798b193b52803916d2dca0a22e25d2a760133f87b7ede' and len(index['files'])==2381
+          assert index['release']['frozen_inputs_sha256']=='8e9a4a7c5b409be22ceb21d28965c3f9e20f49d1a5820bce3ca440f6abd3b4f3' and len(index['files'])==2385
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -119,7 +121,7 @@ jobs:
       - name: Actual route collector and manifest source cases with exact nonempty execution proof
         working-directory: candidate/panel-integration-load-balance
         run: |
-          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^TestAnalyticsRoute(TimingBoundsAndSeparation|ReportDeduplicatesWithoutChangingJourneyOrDocument|ReportGroupAndVisitLimitsAreVisible|ManifestRequiresAllHandlersAndExactApp)$' > "$RUNNER_TEMP/analytics-route-source.jsonl"
+          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^TestAnalytics(Route(TimingBoundsAndSeparation|ReportDeduplicatesWithoutChangingJourneyOrDocument|ReportGroupAndVisitLimitsAreVisible|ManifestRequiresAllHandlersAndExactApp)|Navigation(SequenceBoundsAndPassiveSeparation|OrderingConflictLegacyAndScope|SameSecondRealSQLReportAndFunnel|LegacyAndDelayedFunnelDisclosesUncertainty|ManifestRequiresFourExactScopedHandlers))$' > "$RUNNER_TEMP/analytics-route-source.jsonl"
           node ../../tools/check-analytics-route-execution.mjs "$RUNNER_TEMP/analytics-route-source.jsonl" "$(uname -m)"
       - name: Actual native backup retention reservation, starvation and read-only API regressions
         working-directory: candidate/panel-integration-load-balance

@@ -155,7 +155,7 @@ func TestAnalyticsAutoHTTPQueuesWithoutPrematurePublicOptInAndAllowsSafeOptOut(t
 	if w := request("POST", path, body2, auth.CSRF, "route-patch-unready", cookie); w.Code != 409 || calls != before+3 || !strings.Contains(w.Body.String(), "actual engine readiness unavailable") {
 		t.Fatal("2.4.0 bypassed actual HTML engine readiness", w.Code, calls)
 	}
-	version = "2.4.1"
+	version = "2.4.2"
 	before = calls
 	if w := request("POST", path, body2, auth.CSRF, "unknown-future-version", cookie); w.Code != 409 || calls != before+1 {
 		t.Fatal("future unknown module reached an HTML preview", w.Code, calls)

@@ -21,6 +21,42 @@ function fixture({seed,wall=start,storage,deny=false,privacy={},namespace}={}){
  const advance=delta=>{now+=delta;clock+=Math.max(0,delta)},dispatch=(events,name,event={})=>{for(const callback of [...(events.get(name)||[])])callback(event)};
  return{sent,values,context,now:()=>now,writes:()=>writes,advance,tick(delta=30000){advance(delta);for(const callback of [...timers.values()])callback()},visibility(value){document.visibilityState=value;dispatch(documentEvents,'visibilitychange')},windowEvent:(name,event={})=>dispatch(windowEvents,name,event)};
 }
+test('navigation sequence survives SPA visits and a following full document without changing the session',()=>{
+ const f=fixture(),first=f.sent[0].event;assert.equal(first.navigation_seq,1);
+ f.context.history.pushState(null,'','/second');const second=f.sent.at(-1).event;assert.equal(second.navigation_seq,2);assert.equal(second.session,first.session);
+ const next=fixture({storage:f.values,wall:f.now()+1000});assert.equal(next.sent[0].event.navigation_seq,3);assert.equal(next.sent[0].event.session,first.session);
+ assert.equal(JSON.parse(next.values.get('yz.analytics.session')).navigation_seq,3);
+});
+test('a restored document advances past another document counter instead of reusing its old value',()=>{
+ const f=fixture(),session=f.sent[0].event.session;f.windowEvent('pagehide');
+ const other=fixture({storage:f.values,wall:f.now()+500});assert.equal(other.sent[0].event.navigation_seq,2);
+ f.advance(1000);f.windowEvent('pageshow',{persisted:true});const restored=f.sent.at(-1).event;
+ assert.equal(restored.kind,'pageview');assert.equal(restored.navigation_seq,3);assert.equal(restored.session,session);
+});
+test('genuine inactivity or clock reversal resets navigation order only with a new session',()=>{
+ for(const delta of[idle,-1000]){
+  const f=fixture(),original=f.sent[0].event;f.context.history.pushState(null,'','/second');f.advance(delta);f.context.history.pushState(null,'','/new-session');
+  const visit=f.sent.filter(row=>row.event.kind==='pageview').at(-1).event;assert.notEqual(visit.session,original.session);assert.equal(visit.navigation_seq,1);
+ }
+});
+test('corrupted persisted navigation counters retain the active session but never invent ordering metadata',()=>{
+ for(const navigation_seq of[null,-1,'2',1.25,1000000001]){
+  const id='e'.repeat(32),f=fixture({seed:{id,last:start-1000,navigation_seq}});assert.equal(f.sent[0].event.session,id);assert.equal(f.sent[0].event.navigation_seq,undefined);
+  f.context.history.pushState(null,'','/unknown-order');assert.equal(f.sent.at(-1).event.navigation_seq,undefined);assert.equal(JSON.parse(f.values.get('yz.analytics.session')).navigation_seq,null);
+  f.advance(idle);f.context.history.pushState(null,'','/genuine-new-session');const next=f.sent.filter(row=>row.event.kind==='pageview').at(-1).event;assert.notEqual(next.session,id);assert.equal(next.navigation_seq,1);
+ }
+});
+test('navigation order saturates without wrapping, changing the session or resetting the event budget',()=>{
+ const f=fixture({seed:{id:'f'.repeat(32),last:start-1,navigation_seq:999999999}}),session=f.sent[0].event.session;assert.equal(f.sent[0].event.navigation_seq,1000000000);
+ f.context.history.pushState(null,'','/after-limit');assert.equal(f.sent.at(-1).event.navigation_seq,undefined);assert.equal(f.sent.at(-1).event.session,session);
+ for(let i=0;i<300;i++)f.context.history.pushState(null,'','/route-'+i);assert.equal(f.sent.length,240);assert(f.sent.slice(1).every(row=>row.event.navigation_seq===undefined));
+});
+test('passive metrics and engagement never claim an extra browser navigation',()=>{
+ const f=fixture();f.tick();f.context.history.pushState(null,'','/route');const ticket=f.context.window.yunzhanAnalytics.currentRoute();f.advance(10);f.context.window.yunzhanAnalytics.routeReady(ticket.id);f.windowEvent('pagehide');
+ assert.deepEqual(f.sent.filter(row=>row.event.kind==='pageview').map(row=>row.event.navigation_seq),[1,2]);
+ assert(f.sent.filter(row=>row.event.kind!=='pageview').every(row=>row.event.navigation_seq===undefined));
+ const denied=fixture({deny:true});denied.context.history.pushState(null,'','/next');assert.equal(denied.sent.at(-1).event.navigation_seq,2);assert.equal(denied.writes(),0);
+});
 test('actual foreground engagement refreshes persisted activity without changing original session',()=>{
  const f=fixture({seed:{id:'c'.repeat(32),last:start-1000}}),session=f.sent[0].event.session;f.tick();
  assert.equal(session,'c'.repeat(32));assert.equal(f.sent.at(-1).event.session,session);assert.equal(JSON.parse(f.values.get('yz.analytics.session')).last,f.now());
@@ -59,11 +95,11 @@ test('session boundary is exact and passive telemetry cannot reset the240-docume
 test('privacy opt-outs do not create sessions or schedule background activity',()=>{
  for(const privacy of[{doNotTrack:'1'},{globalPrivacyControl:true}]){const f=fixture({privacy});assert.equal(f.sent.length,0);assert.equal(f.writes(),0);f.tick();assert.equal(f.sent.length,0);}
 });
-test('actual Vue HTML opt-in retains exact known versions including2.4.0, rejecting aliases and future revisions',()=>{
+test('actual Vue HTML opt-in retains exact known versions including2.4.1, rejecting aliases and future revisions',()=>{
  const component=readFileSync(new URL('../web/src/AnalyticsWorkspace.vue',import.meta.url),'utf8'),lines=component.split('\n').filter(line=>line.startsWith('const htmlSupported='));assert.equal(lines.length,1);
  const actual=new Function('props','computed',lines[0]+';return htmlSupported.value;');
- for(const version of['2.3.0','2.3.1','2.3.2','2.4.0']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
- for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
+ for(const version of['2.3.0','2.3.1','2.3.2','2.4.0','2.4.1']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
+ for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1-compat1','2.4.1+build','02.4.1','2.4.2'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
  assert.equal(actual({installed:true},computed),false);
 });
 

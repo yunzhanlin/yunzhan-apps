@@ -1,26 +1,62 @@
 {
-  "source_inputs_sha256": "f0b345f464055abfe9b798b193b52803916d2dca0a22e25d2a760133f87b7ede",
-  "source_file_count": 2381,
+  "source_inputs_sha256": "8e9a4a7c5b409be22ceb21d28965c3f9e20f49d1a5820bce3ca440f6abd3b4f3",
+  "source_file_count": 2385,
   "packages": [
     "local/panel/internal/core",
     "local/panel/internal/appcatalog"
   ],
   "expected_tests": [
     {
-      "package": "local/panel/internal/core",
-      "name": "TestAnalyticsRouteTimingBoundsAndSeparation"
-    },
-    {
-      "package": "local/panel/internal/core",
-      "name": "TestAnalyticsRouteReportDeduplicatesWithoutChangingJourneyOrDocument"
-    },
-    {
-      "package": "local/panel/internal/core",
-      "name": "TestAnalyticsRouteReportGroupAndVisitLimitsAreVisible"
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/missing"
     },
     {
       "package": "local/panel/internal/appcatalog",
-      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp"
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/duplicate"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/foreign-feature"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/previous-version"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/future"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/alias"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/build"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/leading-zero"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/foreign-app"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/wrong-provider"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/wrong-target"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers/wrong-route"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsNavigationManifestRequiresFourExactScopedHandlers"
     },
     {
       "package": "local/panel/internal/appcatalog",
@@ -69,6 +105,74 @@
     {
       "package": "local/panel/internal/appcatalog",
       "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp/runtime"
+    },
+    {
+      "package": "local/panel/internal/appcatalog",
+      "name": "TestAnalyticsRouteManifestRequiresAllHandlersAndExactApp"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationSequenceBoundsAndPassiveSeparation"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/legacy"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/negative"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/overflow"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/duplicate-sequence"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/page-reused-with-new-sequence"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/another-visitor"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/another-session"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/invalid-page"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope/passive-event"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationOrderingConflictLegacyAndScope"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationSameSecondRealSQLReportAndFunnel"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsNavigationLegacyAndDelayedFunnelDisclosesUncertainty"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteTimingBoundsAndSeparation"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteReportDeduplicatesWithoutChangingJourneyOrDocument"
+    },
+    {
+      "package": "local/panel/internal/core",
+      "name": "TestAnalyticsRouteReportGroupAndVisitLimitsAreVisible"
     }
   ],
   "normal_installed_acceptance": false

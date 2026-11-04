@@ -1,9 +1,10 @@
+import {schemaBeforeAnalyticsNavigation} from './analytics-navigation-schema.mjs';
 // Reverse only C59's closed additive route scope for historical whole-schema
 // pins. All older predicates and unrelated edits remain bound to their digest.
 import assert from 'node:assert/strict';
 import {canonical,sha256} from '../../tools/lib.mjs';
 export function schemaBeforeAnalyticsRoute(value){
- const s=structuredClone(value),feature='analytics-route-readiness-v1',flags=s.properties.required_panel_features.items.enum;
+ const s=schemaBeforeAnalyticsNavigation(value),feature='analytics-route-readiness-v1',flags=s.properties.required_panel_features.items.enum;
  const branches=s.allOf[0].then.oneOf;
  if(!flags.includes(feature)&&!branches.some(v=>v.properties?.version?.const==='2.4.0'&&v.properties?.id?.const==='website-analytics'))return s;
  assert.equal(flags.filter(v=>v===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();

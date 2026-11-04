@@ -21,17 +21,18 @@ type analyticsFunnelStep struct {
 }
 
 type analyticsFunnelReport struct {
-	Source            string                `json:"source"`
-	From              string                `json:"from"`
-	To                string                `json:"to"`
-	WindowMinutes     int                   `json:"window_minutes"`
-	SampledPageviews  int                   `json:"sampled_pageviews"`
-	UniquePageviews   int                   `json:"unique_pageviews"`
-	Partial           bool                  `json:"partial"`
-	Steps             []analyticsFunnelStep `json:"steps"`
-	CompletedSessions int                   `json:"completed_sessions"`
-	Duration          map[string]float64    `json:"duration_seconds"`
-	Limitations       []string              `json:"limitations"`
+	Source                    string                `json:"source"`
+	From                      string                `json:"from"`
+	To                        string                `json:"to"`
+	WindowMinutes             int                   `json:"window_minutes"`
+	SampledPageviews          int                   `json:"sampled_pageviews"`
+	UniquePageviews           int                   `json:"unique_pageviews"`
+	Partial                   bool                  `json:"partial"`
+	OrderingUncertainSessions int                   `json:"ordering_uncertain_sessions"`
+	Steps                     []analyticsFunnelStep `json:"steps"`
+	CompletedSessions         int                   `json:"completed_sessions"`
+	Duration                  map[string]float64    `json:"duration_seconds"`
+	Limitations               []string              `json:"limitations"`
 }
 
 func analyticsWindow(rawFrom, rawTo string, now time.Time) (time.Time, time.Time, error) {
@@ -107,7 +108,7 @@ func (a *Server) analyticsFunnel(w http.ResponseWriter, r *http.Request, u ident
 func (s *Store) analyticsFunnelReport(ctx context.Context, siteID string, rawSteps []string, rawFrom, rawTo string, minutes int, now time.Time) (analyticsFunnelReport, error) {
 	out := analyticsFunnelReport{Source: "browser-telemetry", WindowMinutes: minutes, Steps: []analyticsFunnelStep{}, Duration: map[string]float64{}, Limitations: []string{
 		"仅按本网站页面路径精确匹配；允许步骤之间浏览其他页面，重复步骤必须来自不同页面访问。",
-		"按服务端接收时间排序，同秒按入库顺序；离线重发或网络乱序可能影响结果，浏览器事件不等于支付或业务审计。",
+		"完整且无冲突的浏览器访问序号用于排序；时限仍按服务端接收秒数计算。旧记录、缺少或冲突的序号，以及顺序与接收时间矛盾的会话，按接收顺序估计并单列待核对会话；网络延迟可能影响结果，不能作为支付或业务审计。",
 		"每个浏览器会话最多计数一次；可重新从入口尝试，转化时限从对应入口开始，已经达到的阶段不会因后续逾时撤销。",
 		"只处理时间范围内最新 20000 条页面事件或 8 MiB 原始数据；截断、窗口边界与保留期可能丢失早期步骤，partial 为 true 时必须缩短范围。",
 		"只返回聚合计数与耗时；不返回访客、会话、原始 IP、查询字符串或表单内容。",
@@ -148,6 +149,7 @@ func (s *Store) analyticsFunnelReport(ctx context.Context, siteID string, rawSte
 		}
 		// Ordering and scope come from server-written columns, not client time.
 		v.PageID = data.PageID
+		v.NavigationSeq, v.Kind = data.NavigationSeq, "pageview"
 		events = append(events, v)
 	}
 	if err = rows.Err(); err != nil {
@@ -157,6 +159,31 @@ func (s *Store) analyticsFunnelReport(ctx context.Context, siteID string, rawSte
 		return out, err
 	}
 	out.SampledPageviews = len(events)
+	// Keep sessions independent. Avoid a pairwise comparator that mixes client
+	// sequence and server time: that can become non-transitive with legacy rows.
+	groups := map[string][]AnalyticsEvent{}
+	keys := []string{}
+	for index := len(events) - 1; index >= 0; index-- {
+		v := events[index]
+		key := v.Visitor + ":" + v.Session
+		if _, exists := groups[key]; !exists {
+			keys = append(keys, key)
+		}
+		groups[key] = append(groups[key], v)
+	}
+	events = events[:0]
+	for _, key := range keys {
+		ordered := analyticsOrderedPageviews(groups[key])
+		if ordered.Uncertain || !ordered.ReceivedOrdered {
+			// Browser order cannot establish an elapsed server-clock window when
+			// receipt times contradict it. Preserve the historical estimate and
+			// disclose uncertainty, rather than inventing a duration or a zero.
+			out.OrderingUncertainSessions++
+			events = append(events, groups[key]...)
+		} else {
+			events = append(events, ordered.Events...)
+		}
+	}
 	type progress struct {
 		starts    []int64
 		reached   int
@@ -166,11 +193,10 @@ func (s *Store) analyticsFunnelReport(ctx context.Context, siteID string, rawSte
 	seen := map[string]bool{}
 	durations := []float64{}
 	window := int64(minutes) * 60
-	for i := len(events) - 1; i >= 0; i-- {
+	for _, v := range events {
 		if err = ctx.Err(); err != nil {
 			return out, err
 		}
-		v := events[i]
 		key := v.Visitor + ":" + v.Session
 		page := key + ":" + v.PageID
 		if seen[page] {

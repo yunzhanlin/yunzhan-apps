@@ -60,7 +60,7 @@ func panelFeatureAvailable(feature string) bool {
 	if feature == ApacheNativeCCSiteFeature || feature == ApacheCCLogArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
-	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature {
+	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature || feature == AnalyticsNavigationOrderFeature {
 		return runtime.GOOS == "linux"
 	}
 	if feature == CountryDataFeature {
@@ -73,6 +73,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateAnalyticsNavigationRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateAnalyticsRouteRequirement(manifest, available); handled {
 		return err
 	}
