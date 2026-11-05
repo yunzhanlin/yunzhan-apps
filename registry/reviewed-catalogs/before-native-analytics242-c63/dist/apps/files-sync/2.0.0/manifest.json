@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "2.0.0",
+  "summary": "保留本机和跨服务器实时、定时与手动增量同步。完整核对已提交的远端归档后，可建立本机 Root 私有独立副本；原件、归档和检查点保留，远端旧写句柄无法修改本机副本。中断保留原片段，按当前状态摘要显式恢复，迟到请求不重复启动；完整副本可离线核验，下载逐段和整文件摘要通过后交付。全连接最多 128 份、1 GiB、每份 8 次明确尝试；仅保留未完成片段不声明成功，不是整站一致性快照。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "本机与跨服务器实时、定时及手动增量同步；冲突保留，变化序号和降级补查",
+    "固定 IP、独立核实 SSH 公钥、加密凭据和受限非 root SFTP；不执行远端命令",
+    "独立连接与计划修订、后台原任务、取消及显式恢复，终态归档保留证据",
+    "实际远端事务和逻辑容量核对，完整摘要与精确确认的受控归档，不自动删除",
+    "从已提交并完整核对的归档建立本机 Root0700/0600 独立副本，不改原件或检查点",
+    "远端旧写入句柄不能更改本机副本；符号链接、硬链接、异主和未知记录拒绝接管",
+    "真实中断保留原片段和 inode，新尝试独立完成；完整原尝试可离线确认",
+    "恢复绑定当前副本状态摘要，迟到请求不重复启动；明确保留残片不标成功",
+    "完整本机副本可离线核验；下载逐段校验并在整文件摘要通过后交付",
+    "完整管理员权限重新核对，权限或账户变化不交付私有记录和下载",
+    "全连接最多128份/1GiB（含中断片段），每份最多8次明确尝试，不自动清理",
+    "新备份处理器由签名清单独立声明；旧面板不能借新版本标签获得能力"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/files-sync"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "files-sync-root-independent-backup-v1"
+  ]
+}

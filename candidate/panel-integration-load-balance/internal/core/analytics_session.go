@@ -8,5 +8,5 @@ const AnalyticsSessionAppVersion = "2.3.1"
 // The session patch preserves the already explicit HTML engine opt-in. Do not
 // silently enable future or aliased application versions via a numeric range.
 func AnalyticsHTMLAppVersionSupported(version string) bool {
-	return version == "2.3.0" || version == AnalyticsSessionAppVersion || version == AnalyticsClientAddressAppVersion || version == AnalyticsRouteAppVersion || version == AnalyticsNavigationOrderAppVersion
+	return version == "2.3.0" || version == AnalyticsSessionAppVersion || version == AnalyticsClientAddressAppVersion || version == AnalyticsRouteAppVersion || version == AnalyticsNavigationOrderAppVersion || version == AnalyticsQueryContextAppVersion
 }

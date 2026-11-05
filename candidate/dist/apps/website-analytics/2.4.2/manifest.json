@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "id": "website-analytics",
+  "name": "网站分析 · Website Analytics",
+  "category": "professional",
+  "version": "2.4.2",
+  "summary": "开发候选：保留真实浏览采集、逐页性能、SPA 就绪耗时、访问序号和受保护同源代理；日期控件适配窄屏，报表、漏斗和导出绑定当前网站及时间区间，日期改变立即清除旧结果，迟到响应不能覆盖当前查询。原记录不改写，完整实装与商用验收仍在进行。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-analytics",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "浏览器 JS 采集、PV 与浏览器 UV",
+    "可选有界 HTML 自动接入，默认关闭",
+    "固定源码构建与实际 Nginx ABI 核验",
+    "逐站受保护同源代理、配置校验及失败保全",
+    "保留模板及 CSP，不适用响应原样通过",
+    "活动续期、30分钟空闲分会话、BFCache访问序号和2–8步顺序漏斗",
+    "入口/离开与可选点击坐标、SPA路径；旧记录或冲突顺序标为待核对",
+    "标准文档INP及p75；最多5000次访问、100个路径和类型组",
+    "显式SPA就绪耗时；旧标识、后台、超时及重复调用拒绝",
+    "按网站隔离的客户端连接地址摘要及来源覆盖率",
+    "已知地址与未核实访客的有界独立采集限额",
+    "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出"
+  ],
+  "required_panel_features": [
+    "analytics-session-lifecycle-v1",
+    "analytics-managed-client-address-v1",
+    "analytics-route-readiness-v1",
+    "analytics-navigation-order-v1",
+    "website-analytics-query-context-v1"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-analytics"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

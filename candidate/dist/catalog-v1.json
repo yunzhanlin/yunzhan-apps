@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-05T03:53:31Z",
+  "generated_at": "2026-11-05T13:02:00Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1125,8 +1125,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.4.1",
-      "summary": "开发候选：保留实际浏览采集、标准文档 INP、逐页性能、显式 SPA 就绪耗时和受保护采集代理；以会话内访问序号修复快速跳转的入库乱序，旧记录或冲突序号明确标注待核对。原数据不改写，双架构实装和商用验收仍在进行。",
+      "version": "2.4.2",
+      "summary": "开发候选：保留真实浏览采集、逐页性能、SPA 就绪耗时、访问序号和受保护同源代理；日期控件适配窄屏，报表、漏斗和导出绑定当前网站及时间区间，日期改变立即清除旧结果，迟到响应不能覆盖当前查询。原记录不改写，完整实装与商用验收仍在进行。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1144,10 +1144,10 @@
         "显式SPA就绪耗时；旧标识、后台、超时及重复调用拒绝",
         "按网站隔离的客户端连接地址摘要及来源覆盖率",
         "已知地址与未核实访客的有界独立采集限额",
-        "历史未核实记录保留、保留期、站点隔离及报告导出"
+        "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.4.1/manifest.json",
-      "sha256": "db4856ef540181d61141bcdd40114adcd81c445eee6898d9706827147a3181e2"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.4.2/manifest.json",
+      "sha256": "704ed57b5d353411debf2dbedc283bab8df45df9cf692411e2f6705b49c91254"
     },
     {
       "id": "website-statistics-v2",

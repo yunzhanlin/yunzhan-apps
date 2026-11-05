@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63]
   workflow_dispatch:
 
 permissions:
@@ -40,6 +40,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-route-schema.mjs
       - name: Independent analytics241 exact four-handler schema and immutable240 compatibility
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-navigation-schema.mjs
+      - name: Independent analytics242 exact five-handler query ABI and retained241 negatives
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-analytics-query-schema.mjs
       - name: Independent Apache CC250 ordered dual-handler schema and exact historical fifty
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-schema.mjs
       - name: Independent Apache251 ordered archive handlers and all historical fifty manifests
@@ -96,7 +98,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='e45d7ffce457697dc0b45434ecc875830e3c35059e2b657e9abfe90be5b81398' and len(index['files'])==2429
+          assert index['release']['frozen_inputs_sha256']=='cafc17ede45326941fb6318b1be536cba012c5428a545719d907a9377dd7ab82' and len(index['files'])==2434
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -178,6 +180,22 @@ jobs:
           ref: 34efafed267e00d860710b339310d386b24381f7
           path: predecessor-kernel
           persist-credentials: false
+      - name: Original immediate C62r4 source before the analytics query context handler
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 2eb0c240387167ed6a9d477b08e7c5757c671594
+          path: predecessor-analytics-query
+          persist-credentials: false
+      - name: Actual unchanged C62r4 compiled ABI must refuse analytics242 and retain all other49
+        working-directory: predecessor-analytics-query/candidate/panel-integration-load-balance
+        run: |
+          set +e
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/analytics-query-predecessor.jsonl"
+          original_exit=$?
+          set -e
+          test "$original_exit" -eq 1
+          git diff --exit-code -- .
+          node "$GITHUB_WORKSPACE/tools/check-analytics-query-predecessor.mjs" "$RUNNER_TEMP/analytics-query-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
       - name: Original immediate C61r3 source before the independent Files Sync handler
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -188,12 +206,12 @@ jobs:
         working-directory: predecessor-filesync/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-analytics242-c63" > "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
           git diff --exit-code -- .
-          node "$GITHUB_WORKSPACE/tools/check-files-sync-independent-predecessor.mjs" "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
+          node "$GITHUB_WORKSPACE/tools/check-files-sync-independent-predecessor.mjs" "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-analytics242-c63/dist/catalog-v1.json"
       - name: Actual immediate C60 compiled ABI must retain website150 and refuse only enterprise150
         working-directory: predecessor-kernel/candidate/panel-integration-load-balance
         run: |
@@ -246,6 +264,12 @@ jobs:
           node --test scripts/test-integrity-kernel-workspace.mjs
           node --test scripts/test-enterprise-kernel-workspace.mjs
           node --experimental-strip-types --test scripts/test-remote-independent-backup.mjs
+      - name: Actual analytics242 compiled ABI and Vue query export fences with nonempty execution proof
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestAnalyticsQueryRequiresExactFiveHandlersAndRetainsOriginalABI$' > "$RUNNER_TEMP/analytics-query-source.jsonl"
+          node --experimental-strip-types --test --test-reporter=tap scripts/test-browser-analytics-query.mjs > "$RUNNER_TEMP/analytics-query-vue.tap"
+          node ../../tools/check-analytics-query-execution.mjs "$RUNNER_TEMP/analytics-query-source.jsonl" "$RUNNER_TEMP/analytics-query-vue.tap" "$(uname -m)"
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
@@ -257,6 +281,17 @@ jobs:
         with:
           name: analytics-root-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/analytics-identity-root-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain exact analytics242 source Vue and unchanged predecessor originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: analytics-query-source-${{ matrix.os }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/analytics-query-source.jsonl
+            ${{ runner.temp }}/analytics-query-vue.tap
+            ${{ runner.temp }}/analytics-query-predecessor.jsonl
           retention-days: 7
           if-no-files-found: error
       - name: Retain exact Files Sync Core Root unprivileged SFTP and predecessor originals

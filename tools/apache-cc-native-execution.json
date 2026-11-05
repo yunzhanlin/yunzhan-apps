@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "source_inputs_sha256": "e45d7ffce457697dc0b45434ecc875830e3c35059e2b657e9abfe90be5b81398",
+  "source_inputs_sha256": "cafc17ede45326941fb6318b1be536cba012c5428a545719d907a9377dd7ab82",
   "package": "local/panel/internal/executor",
   "expected_root_tests": [
     "TestApacheCCArchiveClosureCannotHideStartedOrCorruptEvidence",
@@ -204,5 +204,5 @@
     "3200 admissions across eight real processes share exactly 31 tokens; SIGKILL owner recovery has no refill"
   ],
   "normal_installed_acceptance": false,
-  "source_file_count": 2429
+  "source_file_count": 2434
 }

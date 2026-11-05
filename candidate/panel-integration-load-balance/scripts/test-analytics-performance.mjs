@@ -1,4 +1,5 @@
 import test from 'node:test';
+import './test-browser-analytics-query.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';

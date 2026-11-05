@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "source_inputs_sha256": "cafc17ede45326941fb6318b1be536cba012c5428a545719d907a9377dd7ab82",
+  "source_sdk_files": 2434,
+  "Node_test_names": [
+    "an unfinished or reversed time range cannot silently become a default query",
+    "picker milliseconds normalize to the actual collector second without mutating the picker dates",
+    "an explicit report must carry the same actual instants as its selected range",
+    "a late request is obsolete even if inputs return A to B to A",
+    "actual Vue date edits hide the old report and block its export until the current query completes",
+    "actual Vue discards an old response after dates change A to B to A",
+    "actual Vue rejects an unrelated returned time range and does not send an incomplete range",
+    "actual Vue funnel export requires the requested paths and window as well as the current dates"
+  ],
+  "actual_Go_PASS_per_arch": 13,
+  "actual_Node_PASS_per_arch": 8,
+  "actual_Vue_component_cases": 4,
+  "not_installed_acceptance": true
+}
