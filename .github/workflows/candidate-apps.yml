@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64]
   workflow_dispatch:
 
 permissions:
@@ -52,6 +52,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-enterprise-kernel-schema.mjs
       - name: Independent Files Sync200 exact compiled copy ABI and all retained signed manifests
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-files-sync-independent-schema.mjs
+      - name: Independent Files Sync201 exact two-handler retention schema and all retained manifests
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-files-sync-unpublished-schema.mjs
       - name: Bind every backup directory source witness before long native suites
         run: python3 -I -B -c "import runpy; runpy.run_path('tools/run-backup-directory-native.py')['source_files']()"
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
@@ -98,7 +100,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='cafc17ede45326941fb6318b1be536cba012c5428a545719d907a9377dd7ab82' and len(index['files'])==2434
+          assert index['release']['frozen_inputs_sha256']=='7cd6fe286200d0a3ec53edc54c917f2c1e03dfff662b280c9a054a0371bf8686' and len(index['files'])==2443
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -190,12 +192,28 @@ jobs:
         working-directory: predecessor-analytics-query/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/analytics-query-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync201-c64" > "$RUNNER_TEMP/analytics-query-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
           git diff --exit-code -- .
-          node "$GITHUB_WORKSPACE/tools/check-analytics-query-predecessor.mjs" "$RUNNER_TEMP/analytics-query-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
+          node "$GITHUB_WORKSPACE/tools/check-analytics-query-predecessor.mjs" "$RUNNER_TEMP/analytics-query-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync201-c64/dist/catalog-v1.json"
+      - name: Original immediate C63 source before unpublished fragment retention
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 04555b0f1e102ebf8ad385351784cf33697ee194
+          path: predecessor-filesync-unpublished
+          persist-credentials: false
+      - name: Actual unchanged C63 compiled ABI must refuse only Files Sync201 and retain all other49
+        working-directory: predecessor-filesync-unpublished/candidate/panel-integration-load-balance
+        run: |
+          set +e
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl"
+          original_exit=$?
+          set -e
+          test "$original_exit" -eq 1
+          git diff --exit-code -- .
+          node "$GITHUB_WORKSPACE/tools/check-files-sync-unpublished-predecessor.mjs" "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
       - name: Original immediate C61r3 source before the independent Files Sync handler
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -270,6 +288,14 @@ jobs:
           go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestAnalyticsQueryRequiresExactFiveHandlersAndRetainsOriginalABI$' > "$RUNNER_TEMP/analytics-query-source.jsonl"
           node --experimental-strip-types --test --test-reporter=tap scripts/test-browser-analytics-query.mjs > "$RUNNER_TEMP/analytics-query-vue.tap"
           node ../../tools/check-analytics-query-execution.mjs "$RUNNER_TEMP/analytics-query-source.jsonl" "$RUNNER_TEMP/analytics-query-vue.tap" "$(uname -m)"
+      - name: Actual Files Sync201 Core authority Root retention and seven Vue lifecycle cases
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^Test(RemoteUnpublished|FilesSyncUnpublished)' > "$RUNNER_TEMP/files-sync-unpublished-core.jsonl"
+          sudo "$RUNNER_TEMP/files-sync-executor-tests" -test.v -test.count=1 -test.run='^TestRemoteUnpublishedCopy' -test.timeout=5m > "$RUNNER_TEMP/files-sync-unpublished-root.stdout"
+          go tool test2json -p local/panel/internal/executor < "$RUNNER_TEMP/files-sync-unpublished-root.stdout" > "$RUNNER_TEMP/files-sync-unpublished-root.jsonl"
+          node --experimental-strip-types --test --test-reporter=tap scripts/test-remote-unpublished-copy.mjs > "$RUNNER_TEMP/files-sync-unpublished-vue.tap"
+          node ../../tools/check-files-sync-unpublished-execution.mjs "$RUNNER_TEMP/files-sync-unpublished-core.jsonl" "$RUNNER_TEMP/files-sync-unpublished-root.jsonl" "$RUNNER_TEMP/files-sync-unpublished-vue.tap" "$(uname -m)"
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
@@ -307,6 +333,19 @@ jobs:
             ${{ runner.temp }}/files-sync-independent-sftp.jsonl
             ${{ runner.temp }}/files-sync-independent-identity.json
             ${{ runner.temp }}/files-sync-independent-predecessor.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain exact Files Sync201 Core Root Vue and unchanged predecessor originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: files-sync-unpublished-native-${{ matrix.os }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/files-sync-unpublished-core.jsonl
+            ${{ runner.temp }}/files-sync-unpublished-root.stdout
+            ${{ runner.temp }}/files-sync-unpublished-root.jsonl
+            ${{ runner.temp }}/files-sync-unpublished-vue.tap
+            ${{ runner.temp }}/files-sync-unpublished-predecessor.jsonl
           retention-days: 7
           if-no-files-found: error
       - name: Retain original backup retention source test events for independent count verification

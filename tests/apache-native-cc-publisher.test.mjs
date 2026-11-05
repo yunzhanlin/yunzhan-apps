@@ -16,7 +16,7 @@ test('CC publication rejects borrowed, partial, reversed, duplicate and future a
 test('CC schema extension preserves every original predicate and historical manifest byte',async()=>{
  const schemas=await Promise.all(['schema/app.schema.json','candidate/schema/app.schema.json'].map(read));assert.deepEqual(schemas[0],schemas[1]);
  for(const schema of schemas){assert.equal(sha256(canonical(schemaBeforeApacheCC(schema))),'4f0e6b862ec021eb3483f7b801ebf35328d635c07d8c3395a628e77349d30441');
-  const changed=structuredClone(schema);changed.properties.name.maxLength++;assert.throws(()=>schemaBeforeApacheCC(changed),/Every pre(?:CC|Archive|Route|Navigation|Kernel|Query)/);
+  const changed=structuredClone(schema);changed.properties.name.maxLength++;assert.throws(()=>schemaBeforeApacheCC(changed),/Every pre(?:CC|Archive|Route|Navigation|Kernel|Query|Unpublished)/);
   const incomplete=structuredClone(schema);incomplete.allOf[0].then.oneOf.find(v=>v.properties?.id?.const==='apache-waf'&&v.properties?.version?.const==='2.5.0').properties.required_panel_features.prefixItems.reverse();assert.throws(()=>schemaBeforeApacheCC(incomplete));
  }
  assert.equal(sha256(await readFile(new URL('../candidate/dist/apps/apache-waf/2.4.0/manifest.json',import.meta.url))),'24c70a38581a46593ad404f07b9ba12e60e8434a2bfacaf36255942063a41038');

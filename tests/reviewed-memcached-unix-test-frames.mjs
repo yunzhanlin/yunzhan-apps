@@ -166,6 +166,8 @@ export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
  // Only the new fixture dependency is reversed; all historical digests and
  // assertions below stay exact, and undeclared edits still fail them.
+ const unpublishedAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/files-sync-independent-manifest.mjs','tools/files-sync-unpublished-manifest.mjs'","'tools/files-sync-independent-manifest.mjs'"]:path==='tests/versioning.test.mjs'?["'files-sync-independent-manifest.mjs','files-sync-unpublished-manifest.mjs'","'files-sync-independent-manifest.mjs'"]:null;
+ if(unpublishedAddition&&bytes.toString().includes(unpublishedAddition[0])){const text=bytes.toString();assert.equal(text.split(unpublishedAddition[0]).length,2);bytes=Buffer.from(text.replace(unpublishedAddition[0],()=>unpublishedAddition[1]));}
  const independentAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/lib.mjs','tools/files-sync-independent-manifest.mjs'","'tools/lib.mjs'"]:path==='tests/versioning.test.mjs'?["'lib.mjs','files-sync-independent-manifest.mjs'","'lib.mjs'"]:null;
  if(independentAddition&&bytes.toString().includes(independentAddition[0])){const text=bytes.toString();assert.equal(text.split(independentAddition[0]).length,2);bytes=Buffer.from(text.replace(independentAddition[0],()=>independentAddition[1]));}
  const kernelAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/lib.mjs','tools/integrity-kernel-manifest.mjs'","'tools/lib.mjs'"]:path==='tests/versioning.test.mjs'?["'lib.mjs','integrity-kernel-manifest.mjs'","'lib.mjs'"]:null;

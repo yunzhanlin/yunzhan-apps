@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "load-balance",
+  "name": "负载均衡 · Load Balance",
+  "category": "professional",
+  "version": "1.9.0",
+  "summary": "保留 HTTP/HTTPS 健康路由、事务、归档和告警；新增专用无能力身份的独立 TCP/UDP 回环代理、双代排空与按协议/地址/端口约束的出站防火墙。修复 ARM64 nft 元信息识别。需对应完整签名面板；本版不开放公网监听或自动开机启用，历史或中断任务仅可观察，恢复须新的原始授权。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "load-balance",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "保留原 HTTP/HTTPS 加权路由、备用节点、IP 粘滞和严格后端 TLS，不改写已有配置",
+    "保留连续健康阈值摘除恢复、显式流量开关、私有归档与会话绑定报告下载",
+    "保留健康、切流/后台及来源三范围 HMAC 或 TLS SMTP 告警，不扩大旧通道授权范围",
+    "TCP/UDP 仅监听回环；独立 Nginx 进程，轮询、最少连接、源 IP 策略和备用节点",
+    "TCP 二进制传输与半关闭；UDP 明确请求/响应边界，失败不重放业务数据报",
+    "专用锁定账户、零能力、NNP 和固定 cgroup 资源边界；不借用普通网站进程身份",
+    "完整当前/排空两代出站授权，精确匹配专用 UID、连接方向、协议、后端 IP 和端口",
+    "识别主流 nft 版本的元信息格式，但自有表、链、规则和句柄仍须完整严格核对",
+    "原请求、签名目录和清单、执行任务及当前操作者授权绑定，观察历史不重放安装或流量操作",
+    "独立配置、内核观察和安装回执；修改、删除、停用和排空保留递增修订与原始证据",
+    "双代原子规则替换；排空完成并核对旧进程退出后才退役旧节点，无自动无限重启",
+    "重启后必须新授权并核对完整账户进程及内核状态；不自动启用公网或开机服务"
+  ],
+  "required_panel_features": [
+    "load-balance-stream-controller-v1"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/load-balance"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

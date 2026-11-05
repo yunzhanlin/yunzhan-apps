@@ -22,10 +22,16 @@ var remoteCopyDigest = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 func RemoteIndependentBackupAction(action string) bool {
 	switch action {
-	case "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy":
+	case "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy", "remote-copy-fragments", "retain-remote-copy-fragments":
 		return true
 	}
 	return false
+}
+func RemoteUnpublishedCopyAction(action string) bool {
+	return action == "remote-copy-fragments" || action == "retain-remote-copy-fragments"
+}
+func RemoteIndependentInventoryAction(action string) bool {
+	return action == "remote-copies" || action == "remote-copy-fragments"
 }
 func DecodeRemoteIndependentInput(action string, raw []byte) (AppModuleInput, error) {
 	var out AppModuleInput
@@ -55,12 +61,12 @@ func DecodeRemoteIndependentInput(action string, raw []byte) (AppModuleInput, er
 		case "expected_revision":
 			decodeErr = json.Unmarshal(value, &out.ExpectedRevision)
 		case "resource_id":
-			if action == "remote-copies" {
+			if RemoteIndependentInventoryAction(action) {
 				return out, errors.New("库存查询不接受原事务字段")
 			}
 			decodeErr = json.Unmarshal(value, &out.ResourceID)
 		case "expected_sha", "confirm":
-			if action != "copy-remote-backup" && action != "recover-remote-copy" && action != "retain-remote-copy" {
+			if action != "copy-remote-backup" && action != "recover-remote-copy" && action != "retain-remote-copy" && action != "retain-remote-copy-fragments" {
 				return out, errors.New("只读请求不接受复制或恢复授权")
 			}
 			if key == "expected_sha" {
@@ -69,7 +75,7 @@ func DecodeRemoteIndependentInput(action string, raw []byte) (AppModuleInput, er
 				decodeErr = json.Unmarshal(value, &out.Confirm)
 			}
 		case "limit", "offset":
-			if action != "remote-copies" {
+			if !RemoteIndependentInventoryAction(action) {
 				return out, errors.New("所选副本操作不接受分页")
 			}
 			if key == "limit" {
@@ -87,7 +93,7 @@ func DecodeRemoteIndependentInput(action string, raw []byte) (AppModuleInput, er
 	if token, err := d.Token(); err != nil || token != json.Delim('}') || d.Decode(&struct{}{}) != io.EOF || !seen["remote_target_id"] || !seen["expected_revision"] || !remoteCopyTargetID.MatchString(out.RemoteTargetID) || out.ExpectedRevision < 1 || out.ExpectedRevision > 1000000000 {
 		return out, errors.New("独立备份连接、修订或完整对象无效")
 	}
-	if action == "remote-copies" {
+	if RemoteIndependentInventoryAction(action) {
 		if out.Limit < 0 || out.Limit > 32 || out.Offset < 0 || out.Offset > 128 {
 			return out, errors.New("独立副本分页超限")
 		}
@@ -96,12 +102,14 @@ func DecodeRemoteIndependentInput(action string, raw []byte) (AppModuleInput, er
 	if !seen["resource_id"] || !ValidID(out.ResourceID) {
 		return out, errors.New("原归档事务标识无效")
 	}
-	if action == "copy-remote-backup" || action == "recover-remote-copy" || action == "retain-remote-copy" {
+	if action == "copy-remote-backup" || action == "recover-remote-copy" || action == "retain-remote-copy" || action == "retain-remote-copy-fragments" {
 		prefix := "COPY BACKUP "
 		if action == "recover-remote-copy" {
 			prefix = "RECOVER COPY "
 		} else if action == "retain-remote-copy" {
 			prefix = "RETAIN COPY "
+		} else if action == "retain-remote-copy-fragments" {
+			prefix = "RETAIN FRAGMENTS "
 		}
 		if !remoteCopyDigest.MatchString(out.ExpectedSHA) || out.Confirm != prefix+out.ResourceID {
 			return out, errors.New("独立备份须核对完整原摘要与精确确认")
@@ -163,7 +171,7 @@ func (a *Server) remoteIndependentDownloadRoutes(m *http.ServeMux) {
 		var status struct {
 			Status SoftwareAppStatus `json:"status"`
 		}
-		if a.Executor.Call(ctx, "GET", "/v1/app-modules/files-sync", nil, &status) != nil || !knownInstalledAppModule("files-sync", status.Status) || status.Status.Version != appcatalog.FilesSyncIndependentBackupVersion {
+		if a.Executor.Call(ctx, "GET", "/v1/app-modules/files-sync", nil, &status) != nil || !knownInstalledAppModule("files-sync", status.Status) || !appcatalog.FilesSyncIndependentBackupSupported(status.Status.Version) {
 			fail(w, 409, "文件同步2.0.0安装身份待核对，未读取备份")
 			return
 		}

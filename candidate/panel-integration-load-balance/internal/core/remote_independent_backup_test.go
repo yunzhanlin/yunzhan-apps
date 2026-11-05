@@ -41,12 +41,12 @@ func TestRemoteIndependentBackupInputRejectsAmbiguousOrUnrelatedAuthority(t *tes
 	if _, err := DecodeRemoteIndependentInput("verify-remote-copy", []byte(base)); err == nil {
 		t.Fatal("read borrowed mutation authority")
 	}
-	for _, v := range []string{"2.0.0-compat1", "2.0.1", "bad"} {
+	for _, v := range []string{"2.0.0-compat1", "2.0.1-compat1", "2.0.2", "bad"} {
 		if ValidateSoftwareUpdate("files-sync", v) == nil {
 			t.Fatal("unimplemented version", v)
 		}
 	}
-	for _, v := range []string{"1.9.0", appcatalog.FilesSyncIndependentBackupVersion} {
+	for _, v := range []string{"1.9.0", appcatalog.FilesSyncIndependentBackupVersion, appcatalog.FilesSyncUnpublishedRetentionVersion} {
 		if err := ValidateSoftwareUpdate("files-sync", v); err != nil {
 			t.Fatal(err)
 		}

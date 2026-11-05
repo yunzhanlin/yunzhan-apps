@@ -29,7 +29,7 @@ test('exact signed C62 fifty and all49 unaffected current app entries remain imm
  for(const [name,hash]of Object.entries(receipt.files_sha256))assert.equal(sha256(read(base+name)),hash,name);
  const raw=read(base+'dist/catalog-v1.json'),key=createPublicKey(read(base+'signatures/catalog-v1.pub.pem'));
  assert(verify(null,raw,key,Buffer.from(read(base+'signatures/catalog-v1.sig').toString().trim(),'base64')));
- const old=json(base+'dist/catalog-v1.json').apps,current=json('candidate/dist/catalog-v1.json').apps;
+ const old=json(base+'dist/catalog-v1.json').apps,current=json('registry/reviewed-catalogs/before-native-filesync201-c64/dist/catalog-v1.json').apps;
  assert.equal(old.length,50);assert.equal(current.length,50);
  const before=new Map(old.map(a=>[a.id,a])),after=new Map(current.map(a=>[a.id,a]));assert.deepEqual([...before.keys()],[...after.keys()]);
  assert.deepEqual([...before.keys()].filter(id=>JSON.stringify(before.get(id))!==JSON.stringify(after.get(id))),['website-analytics']);

@@ -205,7 +205,7 @@ func remoteCopyTemporary(name string) bool {
 	return strings.HasPrefix(name, "record-") && strings.HasSuffix(name, ".part") && core.ValidID(strings.TrimSuffix(strings.TrimPrefix(name, "record-"), ".part"))
 }
 func remoteCopyPublish(d *modulePrivateDirectory, name string, value any) ([]byte, error) {
-	if name != "intent.json" && name != "attempt.json" && name != "result.json" && name != "retained.json" || !d.current() {
+	if name != "intent.json" && name != "attempt.json" && name != "result.json" && name != "retained.json" && name != remoteUnpublishedReceipt || !d.current() {
 		return nil, errors.New("独立备份记录名称或目录无效")
 	}
 	if _, err := d.Lstat(name); !errors.Is(err, os.ErrNotExist) {

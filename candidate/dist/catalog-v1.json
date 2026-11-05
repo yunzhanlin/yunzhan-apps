@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-05T13:02:00Z",
+  "generated_at": "2026-11-05T16:22:12Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -233,8 +233,8 @@
       "id": "files-sync",
       "name": "Files Sync",
       "category": "professional",
-      "version": "2.0.0",
-      "summary": "保留本机和跨服务器实时、定时与手动增量同步。完整核对已提交的远端归档后，可建立本机 Root 私有独立副本；原件、归档和检查点保留，远端旧写句柄无法修改本机副本。中断保留原片段，按当前状态摘要显式恢复，迟到请求不重复启动；完整副本可离线核验，下载逐段和整文件摘要通过后交付。全连接最多 128 份、1 GiB、每份 8 次明确尝试；仅保留未完成片段不声明成功，不是整站一致性快照。",
+      "version": "2.0.1",
+      "summary": "开发候选：保留增量同步、远程归档和 Root 独立副本；中断后缺失主意图的有界原片段可离线核对、条件确认保留并追认原回执。原字节与命名空间保留，未知状态不冒充完整备份；正常实装与真实断电验收仍在进行。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -248,14 +248,14 @@
         "从已提交并完整核对的归档建立本机 Root0700/0600 独立副本，不改原件或检查点",
         "远端旧写入句柄不能更改本机副本；符号链接、硬链接、异主和未知记录拒绝接管",
         "真实中断保留原片段和 inode，新尝试独立完成；完整原尝试可离线确认",
-        "恢复绑定当前副本状态摘要，迟到请求不重复启动；明确保留残片不标成功",
+        "恢复绑定当前快照与修订，未发布原片段可离线盘点、条件保留并追认原回执；不授权下载、重传或标为成功",
         "完整本机副本可离线核验；下载逐段校验并在整文件摘要通过后交付",
         "完整管理员权限重新核对，权限或账户变化不交付私有记录和下载",
-        "全连接最多128份/1GiB（含中断片段），每份最多8次明确尝试，不自动清理",
+        "全连接最多128份/1GiB文件内容（含中断片段）；原片段元数据另设固定上限，每份最多8次明确尝试，不自动清理",
         "新备份处理器由签名清单独立声明；旧面板不能借新版本标签获得能力"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/files-sync/2.0.0/manifest.json",
-      "sha256": "99772bfb694ee308190ec3377d67aecac51b0422b8ddd55fd0b8b323e3841932"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/files-sync/2.0.1/manifest.json",
+      "sha256": "566b82e9df1ca4418c0a577fd0adc907a235e6983a074ec5a34d690b2ae26418"
     },
     {
       "id": "load-balance",

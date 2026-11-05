@@ -24,7 +24,7 @@ name=contract['test_overlay_path'];assert name=='internal/executor/integrity_ker
 current=workspace/'candidate/panel-integration-load-balance'/name
 newindex=read(workspace/'candidate/panel-integration-load-balance/source-sha256.json')
 assert sha(workspace/'candidate/panel-integration-load-balance/source-sha256.json')==contract['published_source_index_sha256']
-assert newindex['release']['frozen_inputs_sha256']==contract['published_source_inputs_sha256']and len(newindex['files'])==contract['published_source_sdk_files']==2434
+assert newindex['release']['frozen_inputs_sha256']==contract['published_source_inputs_sha256']and len(newindex['files'])==contract['published_source_sdk_files']==2443
 assert sha(current)==newindex['files'][name]==contract['test_overlay_sha256']
 target=original/name
 if sys.argv[3]=='stage':

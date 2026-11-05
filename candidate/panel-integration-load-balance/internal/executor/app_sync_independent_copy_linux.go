@@ -18,21 +18,26 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const remoteCopyScope = "从已提交且完整核对的远端归档建立本机Root私有独立副本，不改远端、网站、原归档或检查点。副本不是远端硬链接；远端旧写句柄不能修改本机字节。每份最多两份8MiB原文件，全部连接合计128份、1GiB（包括中断片段），每份最多8次明确尝试。中断后只显式核对恢复；完整本机副本可离线确认，残片保留并创建新的私有尝试，不截断或覆盖。列表只核对元数据，选择后核验完整内容；下载须完整摘要一致。未提供整站快照或自动删除，也不防御同等Root权限对本机副本的主动修改。"
+const remoteCopyScope = "从已提交且完整核对的远端归档建立本机Root私有独立副本，不改远端、网站、原归档或检查点。副本不是远端硬链接；远端旧写句柄不能修改本机字节。每份最多两份8MiB原文件，全部连接合计128份，文件内容与未完成数据片段合计1GiB；原记录与回执另有固定大小限制，每份最多8次明确尝试。中断后只显式核对恢复；完整本机副本可离线确认，残片保留并创建新的私有尝试，不截断或覆盖。列表只核对元数据，选择后核验完整内容；下载须完整摘要一致。未提供整站快照或自动删除，也不防御同等Root权限对本机副本的主动修改。"
 
 func remoteCopyAction(action string) bool {
 	switch action {
-	case "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy":
+	case "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy", "remote-copy-fragments", "retain-remote-copy-fragments":
 		return true
 	}
 	return false
 }
-func (s *Service) remoteCopyInstalled() error {
+func (s *Service) remoteCopyInstalledVersion() (string, error) {
 	r, err := s.moduleInstalledRecord("files-sync")
-	if err != nil || r["version"] != appcatalog.FilesSyncIndependentBackupVersion {
-		return errors.New("请先通过签名应用商店将文件同步更新到2.0.0；旧包未获得独立备份能力")
+	version, _ := r["version"].(string)
+	if err != nil || !appcatalog.FilesSyncIndependentBackupSupported(version) {
+		return "", errors.New("请先通过签名应用商店将文件同步更新到2.0.0或2.0.1；旧包未获得独立备份能力")
 	}
-	return nil
+	return version, nil
+}
+func (s *Service) remoteCopyInstalled() error {
+	_, err := s.remoteCopyInstalledVersion()
+	return err
 }
 func remoteCopySHA(f *os.File, info os.FileInfo, expected moduleFile, current func() bool) error {
 	opened, err := f.Stat()
@@ -158,7 +163,7 @@ func (s *Service) copyRemoteSourceFile(ctx context.Context, c *remoteSyncClient,
 	return remoteCopySync(d)
 }
 func (s *Service) remoteCopyReport(cfg remoteSyncConfig, in core.AppModuleInput) (any, error) {
-	rows, total, err := s.allRemoteCopyRecords()
+	rows, total, count, err := s.remoteCopyBudget()
 	if err != nil {
 		return nil, err
 	}
@@ -174,14 +179,20 @@ func (s *Service) remoteCopyReport(cfg remoteSyncConfig, in core.AppModuleInput)
 	}
 	start := min(in.Offset, len(selected))
 	end := min(start+limit, len(selected))
-	return map[string]any{"independent_backups": selected[start:end], "total": len(selected), "global_copies": len(rows), "retained_bytes": total, "record_limit": remoteCopyMaxRecords, "byte_limit": remoteCopyMaxBytes, "attempt_limit": remoteCopyMaxAttempts, "offset": in.Offset, "limit": limit, "remote_files_changed": false, "scope": remoteCopyScope}, nil
+	return map[string]any{"independent_backups": selected[start:end], "total": len(selected), "global_copies": count, "retained_bytes": total, "record_limit": remoteCopyMaxRecords, "byte_limit": remoteCopyMaxBytes, "attempt_limit": remoteCopyMaxAttempts, "offset": in.Offset, "limit": limit, "remote_files_changed": false, "scope": remoteCopyScope}, nil
 }
 func (s *Service) moduleRemoteCopy(ctx context.Context, action string, in core.AppModuleInput) (any, error) {
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
 	}
-	if err := s.remoteCopyInstalled(); err != nil {
+	installedVersion, err := s.remoteCopyInstalledVersion()
+	if err != nil {
 		return nil, err
+	}
+	if core.RemoteUnpublishedCopyAction(action) {
+		if installedVersion != appcatalog.FilesSyncUnpublishedRetentionVersion {
+			return nil, errors.New("未发布原片段核对须先通过签名商店更新文件同步至2.0.1")
+		}
 	}
 	if err := remoteCopyInput(action, in); err != nil {
 		return nil, err
@@ -189,6 +200,12 @@ func (s *Service) moduleRemoteCopy(ctx context.Context, action string, in core.A
 	cfg, err := s.readRemoteConfig(in.RemoteTargetID)
 	if err != nil || cfg.Revision != in.ExpectedRevision {
 		return nil, errors.New("远端连接身份或修订改变；请重新核对")
+	}
+	if action == "remote-copy-fragments" {
+		return s.remoteUnpublishedReport(cfg, in)
+	}
+	if action == "retain-remote-copy-fragments" {
+		return s.retainUnpublishedRemoteCopy(cfg, in)
 	}
 	if action == "remote-copies" {
 		return s.remoteCopyReport(cfg, in)
@@ -263,9 +280,9 @@ func (s *Service) moduleRemoteCopy(ctx context.Context, action string, in core.A
 	if recordErr == nil && source.SHA != record.Intent.Source.SHA {
 		return nil, errors.New("原意图与当前归档不一致，保留全部片段")
 	}
-	rows, total, err := s.allRemoteCopyRecords()
+	_, total, count, err := s.remoteCopyBudget()
 	needed := remoteBackupSnapshotBytes(source.Snapshot)
-	if err != nil || recordErr != nil && len(rows) >= remoteCopyMaxRecords || total > remoteCopyMaxBytes-needed || len(record.Attempts) >= remoteCopyMaxAttempts {
+	if err != nil || recordErr != nil && count >= remoteCopyMaxRecords || total > remoteCopyMaxBytes-needed || len(record.Attempts) >= remoteCopyMaxAttempts {
 		return nil, errors.New("独立备份容量、尝试次数或库存不能接收完整副本；原片段保留")
 	}
 	bounded, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -307,7 +324,7 @@ func (s *Service) moduleRemoteCopy(ctx context.Context, action string, in core.A
 		if err != nil {
 			return nil, err
 		}
-		intent := remoteCopyIntent{Format: 1, Version: appcatalog.FilesSyncIndependentBackupVersion, Source: source, CreatedAt: core.Now()}
+		intent := remoteCopyIntent{Format: 1, Version: installedVersion, Source: source, CreatedAt: core.Now()}
 		_, err = remoteCopyPublish(d, "intent.json", intent)
 		d.Close()
 		if err != nil {

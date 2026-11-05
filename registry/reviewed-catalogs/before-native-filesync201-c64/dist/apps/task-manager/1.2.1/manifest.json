@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "task-manager",
+  "name": "Task manager",
+  "category": "professional",
+  "version": "1.2.1",
+  "summary": "真实进程身份优先表格、当前快照名称/PID 筛选和受管过滤；CPU/I/O 未取得显示未知。只读原 PID/启动身份，只允许受管非 root 进程 SIGTERM，不自动重发或宣称退出；需要支持 1.2.1 的签名面板。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "task-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "实时进程",
+    "CPU 与内存",
+    "网络连接",
+    "受管非 root 进程终止",
+    "专用操作流程",
+    "执行历史",
+    "名称/PID 快照筛选，不重新采样或改变权限",
+    "身份优先列和真实未知速率，最多显示 500 条",
+    "信号接受不等于退出；原 PID/启动身份只读"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/task-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

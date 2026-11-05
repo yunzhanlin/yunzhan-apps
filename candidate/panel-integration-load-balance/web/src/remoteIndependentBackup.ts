@@ -3,6 +3,7 @@ import { bytesToHex } from '@noble/hashes/utils.js';
 import { menuPermissionIDs, validAccessPlan, type AccessPlan } from './menuPermissions';
 
 export const independentBackupVersion='2.0.0', independentChunkBytes=256*1024, independentFileBytes=8*1024*1024;
+export function independentBackupSupported(version:unknown){return version===independentBackupVersion||version==='2.0.1';}
 const target=/^[a-z0-9][a-z0-9-]{2,63}$/, id=/^[a-f0-9]{32}$/, sha=/^[a-f0-9]{64}$/;
 const matches=(pattern:RegExp,value:unknown)=>typeof value==='string'&&pattern.test(value);
 const integer=(n:unknown,max:number)=>Number.isSafeInteger(n)&&Number(n)>=0&&Number(n)<=max;

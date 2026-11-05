@@ -275,10 +275,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if action == "install" && originalModuleErr == nil {
 			return errors.New("文件同步已安装，请使用签名更新流程；不覆盖原安装、连接和备份")
 		}
-		if action == "install" && selectedVersion != appcatalog.FilesSyncIndependentBackupVersion {
-			rows, _, err := s.allRemoteCopyRecords()
-			if err != nil || len(rows) != 0 {
-				return errors.New("保留的独立备份须用2.0.0处理器核对；不安装旧版遮蔽原数据")
+		if action == "install" {
+			if err := s.remoteCopyVersionPreflight(selectedVersion, false); err != nil {
+				return err
 			}
 		}
 	}
@@ -537,17 +536,8 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 
 func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {
 	if id == "files-sync" {
-		if pending, err := s.remoteCopyPending("", ""); err != nil {
+		if err := s.remoteCopyVersionPreflight(version, true); err != nil {
 			return err
-		} else if pending {
-			return errors.New("独立备份待核对，保留原数据并拒绝更新应用")
-		}
-		rows, _, err := s.allRemoteCopyRecords()
-		if err != nil {
-			return err
-		}
-		if len(rows) != 0 && version != appcatalog.FilesSyncIndependentBackupVersion {
-			return errors.New("保留的独立备份不能用旧版应用重新标记；原数据保留")
 		}
 	}
 	if core.ValidIntegrityKernelApplication(id) {

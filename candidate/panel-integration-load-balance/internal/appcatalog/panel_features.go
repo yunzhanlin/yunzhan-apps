@@ -57,7 +57,7 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == FilesSyncIndependentBackupFeature {
+	if feature == FilesSyncIndependentBackupFeature || feature == FilesSyncUnpublishedRetentionFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == IntegrityKernelFeature || feature == EnterpriseKernelFeature {
@@ -79,6 +79,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateFilesSyncUnpublishedRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateAnalyticsQueryRequirement(manifest, available); handled {
 		return err
 	}

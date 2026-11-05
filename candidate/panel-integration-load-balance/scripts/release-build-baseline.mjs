@@ -2,7 +2,16 @@
 // remaining build script with its pre-L4 frozen digest; unknown edits survive.
 import assert from 'node:assert/strict';
 
+export function beforeUnpublishedCopyBuild(text) {
+  const independent='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-independent-backup.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  const unpublished='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-unpublished-copy.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  assert.equal(text.split(unpublished).length,2,'missing or duplicate unpublished-retention build gate');
+  assert.equal(text.split(independent+unpublished).length,2,'unpublished-retention gate must follow the original independent-copy gate exactly');
+  return text.replace(independent+unpublished,independent);
+}
+
 export function beforeLoadBalanceStreamBuild(text) {
+  text=beforeUnpublishedCopyBuild(text);
   const once = (current, previous) => {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);

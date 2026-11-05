@@ -10,6 +10,6 @@ export function filesSyncIndependentCases(root){
   ['foreign-app',m=>{m.id='daily-report';m.delivery.target=m.id}],['wrong-provider',m=>m.delivery.provider='runtime'],['wrong-target',m=>m.delivery.target='file-monitor'],['wrong-route',m=>m.delivery.manage_route='security'],
  ]){const manifest=current();edit(manifest);cases.push({name,valid:false,manifest})}
  const actual=JSON.parse(fs.readFileSync(root+'/registry/candidate-apps.json')).apps.find(app=>app.id==='files-sync');
- if(!actual)throw Error('actual candidate files-sync200 is missing');cases.push({name:'actual-candidate200',valid:true,manifest:actual});
+ if(!actual)throw Error('actual candidate files-sync is missing');cases.push({name:'actual-candidate',valid:true,manifest:actual});
  return cases;
 }

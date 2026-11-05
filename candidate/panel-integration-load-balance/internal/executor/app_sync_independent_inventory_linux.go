@@ -15,7 +15,7 @@ import (
 )
 
 func validateRemoteCopyIntent(v remoteCopyIntent, target, transaction string) error {
-	if v.Format != 1 || v.Version != appcatalog.FilesSyncIndependentBackupVersion || v.Source.State != "committed" || len(v.Source.Snapshot.Files) == 0 || validateRemoteBackupArchiveRecord(v.Source, target, transaction) != nil {
+	if v.Format != 1 || !appcatalog.FilesSyncIndependentBackupSupported(v.Version) || v.Source.State != "committed" || len(v.Source.Snapshot.Files) == 0 || validateRemoteBackupArchiveRecord(v.Source, target, transaction) != nil {
 		return errors.New("独立备份原意图、固定版本或源归档身份损坏")
 	}
 	created, err := time.Parse(time.RFC3339, v.CreatedAt)
@@ -221,54 +221,86 @@ func (s *Service) remoteCopyAttemptInventory(target, transaction, attempt string
 	}
 	return files, total, nil
 }
-func (s *Service) allRemoteCopyRecords() ([]remoteCopyRecord, int64, error) {
+func (s *Service) allRemoteCopyInventory() (remoteCopyInventory, error) {
+	out := remoteCopyInventory{Records: []remoteCopyRecord{}, Unpublished: []remoteUnpublishedCopy{}}
 	d, err := s.remoteCopyDirectory("", "", "", false)
 	if errors.Is(err, os.ErrNotExist) {
-		return []remoteCopyRecord{}, 0, nil
+		return out, nil
 	}
 	if err != nil {
-		return nil, 0, err
+		return out, err
 	}
 	defer d.Close()
 	targets, err := remoteCopyEntries(d, 16)
 	if err != nil {
-		return nil, 0, err
+		return out, err
 	}
-	rows := []remoteCopyRecord{}
-	var total int64
 	for _, entry := range targets {
 		if !syncPlanID.MatchString(entry.Name()) {
-			return nil, 0, errors.New("独立备份含未知连接目录")
+			return out, errors.New("独立备份含未知连接目录")
 		}
 		dir, err := s.remoteCopyDirectory(entry.Name(), "", "", false)
 		if err != nil {
-			return nil, 0, err
+			return out, err
 		}
 		children, err := remoteCopyEntries(dir, remoteCopyMaxRecords)
 		dir.Close()
 		if err != nil {
-			return nil, 0, err
+			return out, err
 		}
 		for _, child := range children {
-			if !core.ValidID(child.Name()) || len(rows) >= remoteCopyMaxRecords {
-				return nil, 0, errors.New("独立备份超出128份或含未知目录")
+			if !core.ValidID(child.Name()) || out.count() >= remoteCopyMaxRecords {
+				return out, errors.New("独立备份超出128份或含未知目录")
 			}
 			r, err := s.readRemoteCopyRecord(entry.Name(), child.Name())
 			if err != nil {
-				return nil, 0, err
+				fragment, fragmentErr := s.readUnpublishedRemoteCopy(entry.Name(), child.Name())
+				if fragmentErr != nil {
+					return out, err
+				}
+				if out.UnpublishedBytes > remoteUnpublishedMaxMetadataBytes-fragment.Bytes {
+					return out, errors.New("未发布原记录与回执超过固定元数据预算；未自动删除")
+				}
+				out.UnpublishedBytes += fragment.Bytes
+				out.Unpublished = append(out.Unpublished, fragment)
+				continue
 			}
-			if total > remoteCopyMaxBytes-r.Bytes {
-				return nil, 0, errors.New("独立备份和原片段超过1GiB；未自动删除")
+			if out.Bytes > remoteCopyMaxBytes-r.Bytes {
+				return out, errors.New("独立备份和原片段超过1GiB；未自动删除")
 			}
-			total += r.Bytes
-			rows = append(rows, r)
+			out.Bytes += r.Bytes
+			out.Records = append(out.Records, r)
 		}
 	}
-	sort.Slice(rows, func(i, j int) bool {
-		a, b := rows[i].Intent.Source.Snapshot, rows[j].Intent.Source.Snapshot
+	sort.Slice(out.Records, func(i, j int) bool {
+		a, b := out.Records[i].Intent.Source.Snapshot, out.Records[j].Intent.Source.Snapshot
 		return a.TargetID < b.TargetID || a.TargetID == b.TargetID && a.TransactionID < b.TransactionID
 	})
-	return rows, total, nil
+	sort.Slice(out.Unpublished, func(i, j int) bool {
+		a, b := out.Unpublished[i].Snapshot, out.Unpublished[j].Snapshot
+		return a.TargetID < b.TargetID || a.TargetID == b.TargetID && a.TransactionID < b.TransactionID
+	})
+	return out, nil
+}
+
+// Normal copy/recovery/lifecycle paths still fail closed on an unpublished
+// intent. Only its dedicated offline review can expose bounded fragment data.
+// Explicitly retained tombstones continue to consume global count and bytes.
+func (s *Service) remoteCopyBudget() ([]remoteCopyRecord, int64, int, error) {
+	all, err := s.allRemoteCopyInventory()
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	for _, v := range all.Unpublished {
+		if v.Retained == nil {
+			return nil, 0, 0, errors.New("未发布主意图的原片段须先离线核对并明确保留；未开始新复制或当作成功备份")
+		}
+	}
+	return all.Records, all.Bytes, all.count(), nil
+}
+func (s *Service) allRemoteCopyRecords() ([]remoteCopyRecord, int64, error) {
+	rows, total, _, err := s.remoteCopyBudget()
+	return rows, total, err
 }
 func (s *Service) remoteCopyPending(target, allowTransaction string) (bool, error) {
 	rows, _, err := s.allRemoteCopyRecords()
@@ -322,7 +354,7 @@ func remoteCopyInput(action string, in core.AppModuleInput) error {
 	if !syncPlanID.MatchString(in.RemoteTargetID) || in.ExpectedRevision < 1 {
 		return errors.New("请选择实际远端连接与当前修订")
 	}
-	if action == "remote-copies" {
+	if core.RemoteIndependentInventoryAction(action) {
 		rest.Limit, rest.Offset = 0, 0
 		if in.Limit < 0 || in.Limit > 32 || in.Offset < 0 || in.Offset > remoteCopyMaxRecords {
 			return errors.New("独立副本分页超出1–32条、0–128起点范围")
@@ -332,13 +364,15 @@ func remoteCopyInput(action string, in core.AppModuleInput) error {
 		if !core.ValidID(in.ResourceID) {
 			return errors.New("请选择实际原归档事务")
 		}
-		if action == "copy-remote-backup" || action == "recover-remote-copy" || action == "retain-remote-copy" {
+		if action == "copy-remote-backup" || action == "recover-remote-copy" || action == "retain-remote-copy" || action == "retain-remote-copy-fragments" {
 			rest.ExpectedSHA, rest.Confirm = "", ""
 			prefix := "COPY BACKUP "
 			if action == "recover-remote-copy" {
 				prefix = "RECOVER COPY "
 			} else if action == "retain-remote-copy" {
 				prefix = "RETAIN COPY "
+			} else if action == "retain-remote-copy-fragments" {
+				prefix = "RETAIN FRAGMENTS "
 			}
 			if !coreSHA.MatchString(in.ExpectedSHA) || in.Confirm != prefix+in.ResourceID {
 				return errors.New("独立备份与恢复须核对原摘要并填写精确确认")

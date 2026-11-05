@@ -146,7 +146,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "remote-archive", "archive-remote-job")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-backups")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-backup-preview", "remote-backup-archive", "archive-remote-backup", "recover-remote-backup")
-			definitions[i].Actions = append(definitions[i].Actions, "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy")
+			definitions[i].Actions = append(definitions[i].Actions, "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy", "remote-copy-fragments", "retain-remote-copy-fragments")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"remote_target_revision", "所选连接修订号（与计划修订号独立）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"expected_sha", "所选远端任务完整记录摘要（自动填写）", "identity"}, AppModuleField{"confirm", "归档精确确认：ARCHIVE REMOTE 任务标识", "text"}, AppModuleField{"limit", "远端归档每页条数（最多 32）", "number"}, AppModuleField{"offset", "远端归档分页起点（最多 2048）", "number"})
@@ -337,8 +337,8 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			fail(w, 409, "应用安装身份或状态待核对；请安装应用或核对原记录，未执行业务")
 			return
 		}
-		if id == "files-sync" && RemoteIndependentBackupAction(action) && module.Status.Version != appcatalog.FilesSyncIndependentBackupVersion {
-			fail(w, 409, "独立备份须先通过签名商店更新文件同步至2.0.0；旧安装不借用新能力")
+		if id == "files-sync" && RemoteIndependentBackupAction(action) && (!appcatalog.FilesSyncIndependentBackupSupported(module.Status.Version) || RemoteUnpublishedCopyAction(action) && module.Status.Version != appcatalog.FilesSyncUnpublishedRetentionVersion) {
+			fail(w, 409, "独立备份须用固定2.0.0或2.0.1，未发布原片段核对须先签名更新至2.0.1；旧安装不借用新能力")
 			return
 		}
 		if id == "task-manager" && action == "terminate" {
@@ -439,7 +439,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 				version = IntegrityKernelAppVersion
 			}
 			if d.ID == "files-sync" {
-				version = appcatalog.FilesSyncIndependentBackupVersion
+				version = appcatalog.FilesSyncUnpublishedRetentionVersion
 			}
 		case "daily-report":
 			version = "1.4.0"

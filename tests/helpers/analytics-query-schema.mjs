@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import {schemaBeforeFilesSyncUnpublished}from './files-sync-unpublished-schema.mjs';
 import {canonical,sha256} from '../../tools/lib.mjs';
 const feature='website-analytics-query-context-v1';
 export function schemaBeforeAnalyticsQuery(value){
- const s=structuredClone(value),features=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
+ const s=schemaBeforeFilesSyncUnpublished(value),features=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!features.includes(feature)&&!branches.some(v=>v.properties?.version?.const==='2.4.2'&&v.properties?.id?.const==='website-analytics'))return s;
  assert.equal(features.filter(v=>v===feature).length,1);assert.equal(features.at(-1),feature);features.pop();
  assert.equal(sha256(canonical(branches.pop())),'f056154c262f3eaa5e0ab968d8c6c51e87621051bc9a484c9064d5773b0120cf');
