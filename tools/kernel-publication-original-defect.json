@@ -3,8 +3,8 @@
   "original_source_commit": "2c747b22a0b928bf60c68b57260c25ff1aea55a5",
   "original_source_inputs_sha256": "26deb47c0cf04d18c7e6462cfae39c3111f1d7faf717cf0f1e7e4ac5430f36f7",
   "original_source_sdk_files": 2413,
-  "published_source_inputs_sha256": "85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152",
-  "published_source_sdk_files": 2414,
+  "published_source_inputs_sha256": "e45d7ffce457697dc0b45434ecc875830e3c35059e2b657e9abfe90be5b81398",
+  "published_source_sdk_files": 2429,
   "test_overlay_path": "internal/executor/integrity_kernel_publication_linux_test.go",
   "test_overlay_sha256": "2e4f0af75868d25581e6bdb97a2997d5a85b1d119365f398c84e70e9ba3bb170",
   "original_production_files": {
@@ -81,5 +81,5 @@
   "installed_or_store_acceptance": false,
   "original_source_index_sha256": "cd61b7f9d16709852d0473e18c2c305145ad29976cda7f5d983ba07f23b46775",
   "original_release_source_index_sha256": "66d82869288ccbb29479bea20ed50699736609c8571d9699be2f74cd9efe9865",
-  "published_source_index_sha256": "11c23fe3ff9667cbc4d9d81e672c71acf6283f820de1442a2952e2e49a7a45e9"
+  "published_source_index_sha256": "e64ff2a0e0975e22f71bd9e925749d5d127398194b6eacab017c2c78fb021e0b"
 }

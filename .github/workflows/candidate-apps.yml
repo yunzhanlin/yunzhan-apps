@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62]
   workflow_dispatch:
 
 permissions:
@@ -48,6 +48,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-integrity-kernel-schema.mjs
       - name: Independent enterprise150 ownership ABI and all exact negative schema fixtures
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-enterprise-kernel-schema.mjs
+      - name: Independent Files Sync200 exact compiled copy ABI and all retained signed manifests
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-files-sync-independent-schema.mjs
       - name: Bind every backup directory source witness before long native suites
         run: python3 -I -B -c "import runpy; runpy.run_path('tools/run-backup-directory-native.py')['source_files']()"
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
@@ -94,7 +96,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152' and len(index['files'])==2414
+          assert index['release']['frozen_inputs_sha256']=='e45d7ffce457697dc0b45434ecc875830e3c35059e2b657e9abfe90be5b81398' and len(index['files'])==2429
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -133,6 +135,26 @@ jobs:
           sudo "$(command -v go)" test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^(TestIntegrityKernel|TestEnterpriseKernel)' > "$RUNNER_TEMP/integrity-kernel-core.jsonl"
           sudo env PANEL_INTEGRITY_KERNEL_NATIVE=1 "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^(TestIntegrity(Kernel|Flag)|TestAppReliabilityIntegrity)' > "$RUNNER_TEMP/integrity-kernel-executor.jsonl"
           node ../../tools/check-enterprise-kernel-execution.mjs "$RUNNER_TEMP/integrity-kernel-core.jsonl" "$RUNNER_TEMP/integrity-kernel-executor.jsonl" "$(uname -m)"
+      - name: Actual Files Sync Core authority and independent manifest ABI source methods
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          go test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^Test(RemoteIndependent|FilesSyncIndependent)' > "$RUNNER_TEMP/files-sync-independent-core.jsonl"
+          programme_inputs="$(python3 -I -B -c 'import json;print(json.load(open("source-sha256.json"))["release"]["frozen_inputs_sha256"])')"
+          CGO_ENABLED=0 go test -c -ldflags="-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate -X=local/panel/internal/executor.loadBalanceStreamCompiledProgrammeInputsSHA256=$programme_inputs" -o "$RUNNER_TEMP/files-sync-executor-tests" ./internal/executor
+      - name: Actual Root private files and UID33 denied reads using the compiled native executable
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          sudo "$RUNNER_TEMP/files-sync-executor-tests" -test.v -test.count=1 -test.run='^TestRemoteIndependentRoot' -test.timeout=5m > "$RUNNER_TEMP/files-sync-independent-root.stdout"
+          go tool test2json -p local/panel/internal/executor < "$RUNNER_TEMP/files-sync-independent-root.stdout" > "$RUNNER_TEMP/files-sync-independent-root.jsonl"
+      - name: Real OpenSSH SFTP full legacy and independent-copy source suite with all capabilities removed
+        run: |
+          if [ ! -x /usr/lib/openssh/sftp-server ]; then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y openssh-sftp-server
+          fi
+          sudo setpriv --bounding-set=-all --reuid="$(id -u)" --regid="$(id -g)" --clear-groups --no-new-privs env GITHUB_ACTIONS="$GITHUB_ACTIONS" GITHUB_REPOSITORY="$GITHUB_REPOSITORY" PANEL_REMOTE_SYNC_CI_SOURCE=files-sync-root-independent-backup-v1 PANEL_REMOTE_SYNC_NATIVE_SFTP_QA=1 python3 -I -B tools/run-files-sync-independent-unprivileged.py "$RUNNER_TEMP/files-sync-executor-tests" "$RUNNER_TEMP/files-sync-independent-identity.json" > "$RUNNER_TEMP/files-sync-independent-sftp.stdout"
+          go tool test2json -p local/panel/internal/executor < "$RUNNER_TEMP/files-sync-independent-sftp.stdout" > "$RUNNER_TEMP/files-sync-independent-sftp.jsonl"
+          node tools/check-files-sync-independent-execution.mjs "$RUNNER_TEMP/files-sync-independent-core.jsonl" "$RUNNER_TEMP/files-sync-independent-root.jsonl" "$RUNNER_TEMP/files-sync-independent-sftp.jsonl" "$RUNNER_TEMP/files-sync-independent-identity.json" "$(uname -m)"
       - name: Preserve original C61r2 production source for the known metadata publication defect
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -156,15 +178,31 @@ jobs:
           ref: 34efafed267e00d860710b339310d386b24381f7
           path: predecessor-kernel
           persist-credentials: false
+      - name: Original immediate C61r3 source before the independent Files Sync handler
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 7c25a2abe9868355265451cd4c9b184222e308fb
+          path: predecessor-filesync
+          persist-credentials: false
+      - name: Actual unchanged C61r3 compiled ABI must refuse Files Sync200 and retain all other49
+        working-directory: predecessor-filesync/candidate/panel-integration-load-balance
+        run: |
+          set +e
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl"
+          original_exit=$?
+          set -e
+          test "$original_exit" -eq 1
+          git diff --exit-code -- .
+          node "$GITHUB_WORKSPACE/tools/check-files-sync-independent-predecessor.mjs" "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
       - name: Actual immediate C60 compiled ABI must retain website150 and refuse only enterprise150
         working-directory: predecessor-kernel/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json" immediate-C60
+          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" immediate-C60
       - name: Preserve the original C59 compiled source for the two later kernel scopes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -175,11 +213,11 @@ jobs:
         working-directory: legacy-predecessor-kernel/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json" legacy-C59
+          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" legacy-C59
       - name: Actual native backup retention reservation, starvation and read-only API regressions
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -207,6 +245,7 @@ jobs:
           node --experimental-strip-types --test scripts/test-apache-cc-archives.mjs
           node --test scripts/test-integrity-kernel-workspace.mjs
           node --test scripts/test-enterprise-kernel-workspace.mjs
+          node --experimental-strip-types --test scripts/test-remote-independent-backup.mjs
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
@@ -218,6 +257,21 @@ jobs:
         with:
           name: analytics-root-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/analytics-identity-root-native.jsonl
+          retention-days: 7
+          if-no-files-found: error
+      - name: Retain exact Files Sync Core Root unprivileged SFTP and predecessor originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: files-sync-independent-native-${{ matrix.os }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/files-sync-independent-core.jsonl
+            ${{ runner.temp }}/files-sync-independent-root.stdout
+            ${{ runner.temp }}/files-sync-independent-root.jsonl
+            ${{ runner.temp }}/files-sync-independent-sftp.stdout
+            ${{ runner.temp }}/files-sync-independent-sftp.jsonl
+            ${{ runner.temp }}/files-sync-independent-identity.json
+            ${{ runner.temp }}/files-sync-independent-predecessor.jsonl
           retention-days: 7
           if-no-files-found: error
       - name: Retain original backup retention source test events for independent count verification

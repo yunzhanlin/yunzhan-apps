@@ -2,6 +2,7 @@
 // remain bound to their original complete digest, including negative tests.
 import assert from'node:assert/strict';
 import {canonical,sha256}from'../../tools/lib.mjs';
+import {schemaBeforeFilesSyncIndependent}from'./files-sync-independent-schema.mjs';
 export function schemaBeforeIntegrityKernel(value){
  const s=schemaBeforeEnterpriseKernel(value),feature='integrity-kernel-inode-journal-v1',flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!flags.includes(feature)&&!branches.some(v=>v.properties?.id?.const==='website-tamper-proof'))return s;
@@ -14,7 +15,7 @@ export function schemaBeforeIntegrityKernel(value){
 // C61 appends exactly one independent scope and two closed ownership guards.
 // Verify the complete C60 schema again before applying its original projector.
 export function schemaBeforeEnterpriseKernel(value){
- const s=structuredClone(value),feature='enterprise-integrity-kernel-ownership-v1',flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
+ const s=schemaBeforeFilesSyncIndependent(value),feature='enterprise-integrity-kernel-ownership-v1',flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!flags.includes(feature)&&!branches.some(v=>v.properties?.id?.const==='enterprise-tamper-proof'))return s;
  assert.equal(flags.filter(v=>v===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();
  assert.equal(sha256(canonical(branches.at(-1))),'26438094b44ea5a2ffccb3279a69a3f3e17ac0e729531d0c857e089635cb70bf');branches.pop();

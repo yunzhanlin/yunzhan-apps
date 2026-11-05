@@ -189,7 +189,7 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
 		if !ok || !valid || cmp > 0 && !nativeApache {
 			return nil, errors.New("模块安装记录版本不能由当前处理器核对")
 		}
-		if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == integrityKernelModule) && core.ValidateSoftwareUpdate(id, version) != nil {
+		if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == integrityKernelModule || id == "files-sync") && core.ValidateSoftwareUpdate(id, version) != nil {
 			return nil, errors.New("应用安装版本不是当前处理器可核对的完整固定版本")
 		}
 	}

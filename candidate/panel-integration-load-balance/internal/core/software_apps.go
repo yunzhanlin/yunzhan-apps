@@ -104,6 +104,12 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "files-sync" {
+		base, _, _ := strings.Cut(version, "-")
+		if cmp, valid := appcatalog.CompareVersions(base, appcatalog.FilesSyncIndependentBackupVersion); valid && cmp >= 0 && version != appcatalog.FilesSyncIndependentBackupVersion {
+			return errors.New("文件同步独立备份仅允许固定完整2.0.0，拒绝别名和未实现版本")
+		}
+	}
 	if id == "pm2-manager" {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, "7.0.4"); valid && comparison >= 0 {

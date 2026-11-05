@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "files-sync",
+  "name": "Files Sync",
+  "category": "professional",
+  "version": "1.9.0",
+  "summary": "本机和跨服务器实时与定时增量同步，固定 IP、公钥核对和加密凭据；非 root SFTP，不执行远端命令。变化合并、持久序号、降级补查；冲突、中断或存储异常暂停并保留原任务。实际备份事务和逻辑容量只读核对；完整摘要与精确确认后受控迁移原备份至保留归档，释放活动名额，保留字节、权限及原身份。中断只显式恢复，不删除或自动清理；硬链接不是独立不可变快照，每连接归档上限 512 份、1 GiB 逻辑字节，需对应版本面板。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "files-sync",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "本机增量、本机定时与 Linux 实时补查",
+    "固定 IP、SSH 公钥核对与密码或私钥本机加密保存",
+    "非 root SFTP 子系统，不执行远端命令",
+    "私有旧文件备份、无覆盖交接、外部修改保留、取消与显式恢复",
+    "持久任务、刷新保留、同标识重放及空来源绑定与修订拒绝",
+    "终态任务完整摘要归档，不删除远端备份、凭据或检查点",
+    "跨服务器 Linux 实时合并与 60–86400 秒定时补查，降级可见",
+    "独立连接与计划修订号，冲突暂停后显式核对恢复",
+    "持久变化序号不误确认执行中的新变化；暂停移除保留原任务，最多 16 个计划",
+    "只读实际备份事务与逻辑容量，正好满额仍可查询，未知条目、异主或符号链接拒绝不完整统计",
+    "专用整数分页 1–32 条、起点 0–512；选择事务只回填身份，完整核对不触发迁移",
+    "原摘要与精确确认的备份归档、保留库存和显式中断恢复；不删除，硬链接非不可变快照"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/files-sync"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -671,6 +671,11 @@ func checkProgramUpgradeQueues(ctx context.Context, root string) error {
 	// controller while its protection or original transition needs attention.
 	// This literal constructs no worker and performs no recovery or writes.
 	protected := &Service{Config: Config{SecurityDir: filepath.Join(root, "etc/panel/security-apps")}}
+	if pending, err := protected.remoteCopyPending("", ""); err != nil {
+		return err
+	} else if pending {
+		return errors.New("独立备份原操作待核对，保留副本和片段并拒绝升级")
+	}
 	if err := protected.integrityKernelReference(""); err != nil {
 		return err
 	}

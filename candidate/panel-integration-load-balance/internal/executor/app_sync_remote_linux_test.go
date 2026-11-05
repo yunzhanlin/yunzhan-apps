@@ -44,6 +44,7 @@ type remoteSyncFixture struct {
 	connections          sync.Map
 	listener             net.Listener
 	archiveReplyGate     atomic.Pointer[remoteBackupReplyGate]
+	independentReadGate  atomic.Pointer[remoteIndependentReadGate]
 }
 
 func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
@@ -55,7 +56,11 @@ func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
 		t.Skip("native OpenSSH SFTP fixture requires explicit owned QA opt-in")
 	}
 	host, e := os.ReadFile("/etc/hostname")
-	if e != nil || (strings.TrimSpace(string(host)) != "lima-panel-ids24hj-clean-ubuntu24" && strings.TrimSpace(string(host)) != "lima-panel-analytics23t-unit-debian13") {
+	owned := e == nil && (strings.TrimSpace(string(host)) == "lima-panel-ids24hj-clean-ubuntu24" || strings.TrimSpace(string(host)) == "lima-panel-analytics23t-unit-debian13" || strings.TrimSpace(string(host)) == "lima-panel-nfs-c38-fresh-ubuntu26" || strings.TrimSpace(string(host)) == "lima-p59a")
+	// This additional test-only scope is the project's ephemeral GitHub runner,
+	// still non-root, explicitly opted in, exact-binary-pinned and loopback-only.
+	ci := os.Getenv("GITHUB_ACTIONS") == "true" && os.Getenv("GITHUB_REPOSITORY") == "yunzhanlin/yunzhan-apps" && os.Getenv("PANEL_REMOTE_SYNC_CI_SOURCE") == "files-sync-root-independent-backup-v1"
+	if !owned && !ci {
 		t.Fatal("native SFTP fixture restricted to owned QA hosts")
 	}
 	native := "/usr/lib/openssh/sftp-server"
@@ -164,6 +169,10 @@ func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
 								}
 								cmd.Stdin = &remoteBackupGateReader{source: stream, gate: gate}
 								cmd.Stdout = &remoteBackupGateWriter{target: stream, gate: gate}
+							}
+							if gate := f.independentReadGate.Load(); gate != nil {
+								cmd.Stdin = &remoteIndependentGateReader{source: stream, gate: gate}
+								cmd.Stdout = &remoteIndependentGateWriter{target: stream, gate: gate}
 							}
 							_ = cmd.Run()
 							return

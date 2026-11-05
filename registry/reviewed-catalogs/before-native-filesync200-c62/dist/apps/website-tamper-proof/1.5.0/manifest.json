@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "website-tamper-proof",
+  "name": "Website Tamper-proof",
+  "category": "professional",
+  "version": "1.5.0",
+  "summary": "签名基线、实时检测与恢复；可明确启用原生 inode 写保护，保留原数据、排除目录和原有保护标记。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "website-tamper-proof",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "签名基线与完整内容校验",
+    "实时监控与定时补查",
+    "指定文件受控恢复",
+    "Linux inode 内核写保护",
+    "按网站明确启停与目录排除",
+    "保留原权限和不可变标记",
+    "持久任务与中断结果核对",
+    "未开始提交独立封存",
+    "签名版本与原操作者权限绑定",
+    "保留原请求、进度与执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/website-tamper-proof"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "integrity-kernel-inode-journal-v1"
+  ]
+}

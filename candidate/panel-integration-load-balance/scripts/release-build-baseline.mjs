@@ -7,6 +7,13 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // C62 adds exactly one mandatory independent-backup protocol gate after
+  // the original remote-archive gate. Require its exact command and position,
+  // then reverse only that addition for every unchanged historical build hash.
+  const remoteArchiveGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-backup-archive.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  const independentCopyGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-remote-independent-backup.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  assert.equal(text.split(independentCopyGate).length,2,'missing or duplicate independent backup build gate');
+  once(remoteArchiveGate+independentCopyGate,remoteArchiveGate);
   // C61's enterprise gate must follow the original website gate exactly.
   // Remove only that new command before the unchanged historical comparison.
   const websiteKernelGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-integrity-kernel-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';

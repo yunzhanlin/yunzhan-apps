@@ -35,6 +35,7 @@ import HostDiskWorkspace from './HostDiskWorkspace.vue';
 import { hostDiskSupportedVersion } from './hostDisk';
 import LoadBalanceStreamWorkspace from './LoadBalanceStreamWorkspace.vue';
 import IntegrityKernelWorkspace from './IntegrityKernelWorkspace.vue';
+import RemoteIndependentBackups from './RemoteIndependentBackups.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -1201,6 +1202,8 @@ defineExpose({ show });
           <IntegrityKernelWorkspace :module-id="definition.id" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
+        <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <template v-else>
         <el-alert :title="section.help" type="info" :closable="false" />
         <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
@@ -1477,6 +1480,7 @@ defineExpose({ show });
         <p v-else-if="definition.id==='load-balance'" class="module-report-empty" role="status">此页面尚无对应操作的报告。请执行本页查询或操作；其他页面的缓存结果不会当作本页回执。</p>
         <el-alert v-if="definition.id==='nfs-manager' && nfsSectionReadError" :title="nfsSectionReadError" type="error" :closable="false" role="status" />
         <p v-if="definition.id==='nfs-manager' && sectionReport(section.id)===undefined" class="module-report-empty" role="status">{{ busy ? '正在读取当前 NFS 页面对应的状态…' : '当前页面暂无已核对的报告，请使用本页刷新按钮读取。' }}</p>
+        </template>
         </el-tab-pane>
         <el-tab-pane label="报告与日志" name="reports">
           <AnalyticsQueryContext v-if="definition.id === 'website-statistics-v2' && report !== undefined" :report="report" />

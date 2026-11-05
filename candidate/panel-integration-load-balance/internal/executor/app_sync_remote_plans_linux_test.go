@@ -654,9 +654,24 @@ func TestRemoteSyncPlanHTTPHistoryAndReportFailurePauseAcceptedPolicy(t *testing
 			r := httptest.NewRequest("POST", "/v1/app-modules/files-sync/schedule-remote-plan", bytes.NewReader(body))
 			w := httptest.NewRecorder()
 			f.s.Handler().ServeHTTP(w, r)
-			if w.Code != 409 && w.Code != 500 {
-				t.Fatal("persistence failure claimed success", w.Code, w.Body.String())
+			if w.Code != 409 {
+				t.Fatal("pre-existing invalid retrospective file was not refused before business", w.Code, w.Body.String())
 			}
+			if _, err := f.s.readRemotePlan(input.ResourceID); !os.IsNotExist(err) {
+				t.Fatal("HTTP preflight invented or accepted a policy despite pre-existing corruption", err)
+			}
+			// Separate unit phase: a real production policy method accepts a new
+			// policy, then the production failure callback must pause it. This
+			// does not claim the preceding refused HTTP request accepted work,
+			// or pretend the HTTP fixture injected an error after publication.
+			if _, err := f.s.moduleRemoteSync(t.Context(), "schedule-remote-plan", input); err != nil {
+				t.Fatal(err)
+			}
+			accepted := remotePlanReload(t, f.s, input.ResourceID)
+			if !accepted.Enabled {
+				t.Fatal("positive accepted-policy control missing")
+			}
+			f.s.remotePlanControlRecordFailed("schedule-remote-plan", input)
 			p := remotePlanReload(t, f.s, input.ResourceID)
 			if p.Enabled || p.LastState != "paused-error" || !f.s.moduleAutoBlocked[remotePlanBlockedID(p.ID)] {
 				t.Fatal("accepted policy kept writing after report/history failure", p)

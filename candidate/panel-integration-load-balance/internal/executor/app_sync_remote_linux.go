@@ -469,6 +469,9 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 			operationError = fmt.Errorf("SFTP 服务端状态码 %d；未回显不可信远端错误正文，请核对目录、权限和恢复记录", status.Code)
 		}
 	}()
+	if remoteCopyAction(action) {
+		return s.moduleRemoteCopy(ctx, action, in)
+	}
 	if action == "remote-plans" || strings.HasSuffix(action, "-remote-plan") {
 		return s.moduleRemotePlans(action, in)
 	}

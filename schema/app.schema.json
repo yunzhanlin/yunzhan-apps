@@ -175,7 +175,8 @@
           "analytics-route-readiness-v1",
           "analytics-navigation-order-v1",
           "integrity-kernel-inode-journal-v1",
-          "enterprise-integrity-kernel-ownership-v1"
+          "enterprise-integrity-kernel-ownership-v1",
+          "files-sync-root-independent-backup-v1"
         ]
       }
     },
@@ -1517,6 +1518,45 @@
               "required_panel_features": {
                 "const": [
                   "enterprise-integrity-kernel-ownership-v1"
+                ]
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "files-sync"
+              },
+              "version": {
+                "const": "2.0.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "files-sync"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "const": [
+                  "files-sync-root-independent-backup-v1"
                 ]
               }
             }
@@ -3989,6 +4029,121 @@
           "required_panel_features": {
             "const": [
               "enterprise-integrity-kernel-ownership-v1"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "const": "files-sync"
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "version": {
+                "pattern": "^[01](?:\\.(?:0|[1-9][0-9]*)){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$"
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "files-sync"
+              },
+              "version": {
+                "const": "2.0.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "files-sync"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "const": [
+                  "files-sync-root-independent-backup-v1"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "contains": {
+              "const": "files-sync-root-independent-backup-v1"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "files-sync"
+          },
+          "version": {
+            "const": "2.0.0"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "files-sync"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "const": [
+              "files-sync-root-independent-backup-v1"
             ]
           }
         }

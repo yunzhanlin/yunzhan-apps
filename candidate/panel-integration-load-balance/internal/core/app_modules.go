@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"local/panel/internal/appcatalog"
 	"net/http"
 	"time"
 )
@@ -145,6 +146,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "remote-archive", "archive-remote-job")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-backups")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-backup-preview", "remote-backup-archive", "archive-remote-backup", "recover-remote-backup")
+			definitions[i].Actions = append(definitions[i].Actions, "remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy")
 			definitions[i].Actions = append(definitions[i].Actions, "remote-plans", "schedule-remote-plan", "pause-remote-plan", "resume-remote-plan", "remove-remote-plan")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"remote_target_revision", "所选连接修订号（与计划修订号独立）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"expected_sha", "所选远端任务完整记录摘要（自动填写）", "identity"}, AppModuleField{"confirm", "归档精确确认：ARCHIVE REMOTE 任务标识", "text"}, AppModuleField{"limit", "远端归档每页条数（最多 32）", "number"}, AppModuleField{"offset", "远端归档分页起点（最多 2048）", "number"})
@@ -213,6 +215,7 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.remoteIndependentDownloadRoutes(m)
 	a.integrityKernelRoutes(m)
 	a.pm2ConfigurationRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
@@ -287,13 +290,30 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			fail(w, 400, "应用操作不被支持")
 			return
 		}
+		if id == "files-sync" && RemoteIndependentBackupAction(action) {
+			access, err := a.Store.UserAccess(u.ID)
+			if err != nil || !fullAdministrator(access) {
+				fail(w, 403, "独立备份及私有库存仅完整管理员可操作")
+				return
+			}
+		}
 		if id == "network-threat-detection" && NetworkIDSBackgroundAction(action) {
 			a.submitNetworkIDSOperation(w, r, u, action)
 			return
 		}
 		var in AppModuleInput
 		var historyRaw json.RawMessage
-		if id == "load-balance" && LoadBalanceHistoryAction(action) {
+		if id == "files-sync" && RemoteIndependentBackupAction(action) {
+			if !decode(w, r, &historyRaw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = DecodeRemoteIndependentInput(action, historyRaw)
+			if inputErr != nil {
+				fail(w, 400, inputErr.Error())
+				return
+			}
+		} else if id == "load-balance" && LoadBalanceHistoryAction(action) {
 			if !decode(w, r, &historyRaw) {
 				return
 			}
@@ -315,6 +335,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		}
 		if err = a.Executor.Call(ctx, "GET", "/v1/app-modules/"+id, nil, &module); err != nil || !knownInstalledAppModule(id, module.Status) {
 			fail(w, 409, "应用安装身份或状态待核对；请安装应用或核对原记录，未执行业务")
+			return
+		}
+		if id == "files-sync" && RemoteIndependentBackupAction(action) && module.Status.Version != appcatalog.FilesSyncIndependentBackupVersion {
+			fail(w, 409, "独立备份须先通过签名商店更新文件同步至2.0.0；旧安装不借用新能力")
 			return
 		}
 		if id == "task-manager" && action == "terminate" {
@@ -383,6 +407,13 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			fail(w, 409, err.Error())
 			return
 		}
+		if id == "files-sync" && RemoteIndependentBackupAction(action) {
+			current, accessErr := a.Store.UserAccess(u.ID)
+			if accessErr != nil || !fullAdministrator(current) {
+				fail(w, 403, "授权已改变；原操作结果请由完整管理员核对，未返回私有备份记录")
+				return
+			}
+		}
 		_ = a.Store.Audit(u.Username, "app-module."+action, id, "succeeded")
 		if id == "load-balance" {
 			out = a.withLoadBalanceReportExport(u, action, out, time.Now())
@@ -408,7 +439,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 				version = IntegrityKernelAppVersion
 			}
 			if d.ID == "files-sync" {
-				version = "1.9.0"
+				version = appcatalog.FilesSyncIndependentBackupVersion
 			}
 		case "daily-report":
 			version = "1.4.0"

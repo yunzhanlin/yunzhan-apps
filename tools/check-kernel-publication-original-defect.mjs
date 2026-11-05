@@ -26,6 +26,6 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
  assert.equal(process.argv[3],process.arch==='x64'?'x86_64':process.arch==='arm64'?'aarch64':'unsupported');
  const file=process.argv[2],s=fs.lstatSync(file);assert(s.isFile()&&!s.isSymbolicLink()&&s.size>0&&s.size<4*1024*1024);
  const index=JSON.parse(fs.readFileSync(root+'candidate/panel-integration-load-balance/source-sha256.json'));
- assert.equal(index.release.frozen_inputs_sha256,publicationOriginalDefect.published_source_inputs_sha256);assert.equal(Object.keys(index.files).length,2414);
+ assert.equal(index.release.frozen_inputs_sha256,publicationOriginalDefect.published_source_inputs_sha256);assert.equal(Object.keys(index.files).length,publicationOriginalDefect.published_source_sdk_files);
  console.log(JSON.stringify(verifyPublicationOriginalDefect(fs.readFileSync(file,'utf8').trim().split('\n').map(line=>JSON.parse(line)),process.argv[3])));
 }

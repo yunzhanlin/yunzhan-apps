@@ -16,6 +16,11 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	const apacheFencedEntry=fencedEntry.replace('\treturn checkLoadBalanceStreamUpgrade(ctx, nil)',apacheAddition+'\treturn checkLoadBalanceStreamUpgrade(ctx, nil)');
 	assert.equal(queues.split(apacheFencedEntry).length,2);
 	let legacyQueues=queues.replace(apacheFencedEntry,()=>entry);
+	// C62 adds only this separate read-only independent-copy pending fence.
+	// Remove the exact addition before checking the unchanged original inode
+	// block and all historical queue hashes. No predicate/digest is weakened.
+	const copyAddition="\tif pending, err := protected.remoteCopyPending(\"\", \"\"); err != nil {\n\t\treturn err\n\t} else if pending {\n\t\treturn errors.New(\"独立备份原操作待核对，保留副本和片段并拒绝升级\")\n\t}\n";
+	assert.equal(legacyQueues.split(copyAddition).length,2);legacyQueues=legacyQueues.replace(copyAddition,'');
 	// C60 adds only this independent read-only inode/admission reference
 	// fence. Require it exactly once, then compare all previous bytes with
 	// their unchanged digest; no old predicate or deadline is exempted.

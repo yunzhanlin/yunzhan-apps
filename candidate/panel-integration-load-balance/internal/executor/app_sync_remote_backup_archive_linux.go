@@ -179,6 +179,9 @@ func (s *Service) allRemoteBackupArchiveRecords(target string) ([]remoteBackupAr
 	return rows, nil
 }
 func (s *Service) remoteBackupArchivePending(target string) (bool, error) {
+	if pending, err := s.remoteCopyPending(target, ""); err != nil || pending {
+		return pending, err
+	}
 	rows, err := s.allRemoteBackupArchiveRecords(target)
 	if err != nil {
 		return false, err
