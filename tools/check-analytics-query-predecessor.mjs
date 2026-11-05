@@ -4,6 +4,7 @@ import path from 'node:path';
 import {fileURLToPath}from 'node:url';
 export function verifyAnalyticsQueryPredecessor(rows,ids){
  const prefix='TestPublishedCandidateRepositoryCurrentSignedManifestABI',feature='website-analytics-query-context-v1';
+ const originalRefusal='网站分析 2.4.1 须声明固定完整版本和四个必需处理器';
  assert.equal(ids.length,50);assert.equal(new Set(ids).size,50);assert(ids.includes('website-analytics'));
  assert(rows.length>0&&rows.every(row=>row.Package==='local/panel/internal/appcatalog')&&!rows.some(row=>row.Action==='skip'));
  assert(rows.every(row=>!row.Test||row.Test===prefix||ids.some(id=>row.Test===prefix+'/'+id)));
@@ -12,8 +13,8 @@ export function verifyAnalyticsQueryPredecessor(rows,ids){
   const actual=rows.filter(row=>row.Action===action&&row.Test).map(row=>row.Test);assert.equal(actual.length,new Set(actual).size);assert.deepEqual(actual.sort(),wanted.sort());
  }
  assert.equal(rows.filter(row=>row.Action==='fail'&&!row.Test).length,1);assert.equal(rows.filter(row=>row.Action==='pass'&&!row.Test).length,0);
- assert(rows.some(row=>row.Test===prefix+'/website-analytics'&&row.Output?.includes(feature)));
- return {ok:true,original_C62r4_unchanged:true,exact_missing_feature:feature,other49_apps_passed:true,only_analytics242_refused:true,not_installed_acceptance:true};
+ assert(rows.some(row=>row.Test===prefix+'/website-analytics'&&row.Output?.includes('actual compiled verifier rejects the candidate manifest '+originalRefusal)));
+ return {ok:true,original_C62r4_unchanged:true,new_required_feature:feature,actual_original_four_handler_ABI_refusal:originalRefusal,other49_apps_passed:true,only_analytics242_refused:true,not_installed_acceptance:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux');assert.equal(process.argv.length,4);
