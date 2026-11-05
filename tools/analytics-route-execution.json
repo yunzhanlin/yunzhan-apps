@@ -1,6 +1,6 @@
 {
   "source_inputs_sha256": "85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152",
-  "source_file_count": 2413,
+  "source_file_count": 2414,
   "packages": [
     "local/panel/internal/core",
     "local/panel/internal/appcatalog"
