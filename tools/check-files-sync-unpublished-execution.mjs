@@ -18,10 +18,10 @@ export function verifyUnpublishedExecution(core,executor,tap,architecture){
  const coreCount=exactEvents(core,s.core_packages),rootCount=exactEvents(executor,{'local/panel/internal/executor':s.Root_executor_cases});
  assert.equal(coreCount,26);assert.equal(rootCount,25);assert.equal(s.Root_executor_cases.filter(n=>!n.includes('/')).length,9);
  assert(executor.some(r=>r.Test==='TestRemoteUnpublishedCopyAtFullContentBudgetRetainsMetadataAndCountsTombstone'&&r.Output?.includes('original_regular_records=127 logical_content_bytes=1073741824 retained_unpublished_namespaces=1 total_namespaces=128')&&r.Output.includes('full_content_claim=false')),'The actual sparse metadata capacity witness must remain explicitly distinct from a full1GiB transfer');
- const names=[...tap.matchAll(/^ok \d+ - (.+)$/gm)].map(m=>m[1]);assert.equal(names.length,13);assert.deepEqual(names,s.Node_test_names);
- for(const pattern of [/^# tests 13$/m,/^# pass 13$/m,/^# fail 0$/m,/^# cancelled 0$/m,/^# skipped 0$/m,/^# todo 0$/m])assert(pattern.test(tap));
+ const names=[...tap.matchAll(/^ok \d+ - (.+)$/gm)].map(m=>m[1]);assert.equal(names.length,29);assert.deepEqual(names,s.Node_test_names);
+ for(const pattern of [/^# tests 29$/m,/^# pass 29$/m,/^# fail 0$/m,/^# cancelled 0$/m,/^# skipped 0$/m,/^# todo 0$/m])assert(pattern.test(tap));
  assert(!/^not ok|# SKIP|# TODO/m.test(tap));assert.equal(names.filter(n=>n.startsWith('actual Vue')).length,7);
- return {ok:true,architecture,actual_Core_and_ABI_PASS:coreCount,actual_Root_PASS:rootCount,actual_Node_PASS:13,actual_Vue_cases:7,skips:0,not_installed_or_powercut_acceptance:true};
+ return {ok:true,architecture,actual_Core_and_ABI_PASS:coreCount,actual_Root_PASS:rootCount,actual_Node_PASS:29,actual_Vue_cases:7,skips:0,not_installed_or_powercut_acceptance:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux');assert.equal(process.argv.length,6);

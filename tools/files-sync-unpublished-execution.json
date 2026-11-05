@@ -64,6 +64,22 @@
   "Node_test_names": [
     "the new mandatory build gate is exactly additive to the complete original C63 build",
     "unpublished empty and opaque metadata never become source/copy authority",
+    "rejects unbound unpublished record: other_target",
+    "rejects unbound unpublished record: other_revision",
+    "rejects unbound unpublished record: unsafe_transaction",
+    "rejects unbound unpublished record: array_digest",
+    "rejects unbound unpublished record: invented_state",
+    "rejects unbound unpublished record: invented_source",
+    "rejects unbound unpublished record: success_claim",
+    "rejects unbound unpublished record: download_claim",
+    "rejects unbound unpublished record: missing_private",
+    "rejects unbound unpublished record: duplicate_part",
+    "rejects unbound unpublished record: unsafe_name",
+    "rejects unbound unpublished record: oversize_part",
+    "rejects unbound unpublished record: array_file_digest",
+    "rejects unbound unpublished record: unaccounted_bytes",
+    "rejects unbound unpublished record: unbounded_parts",
+    "rejects unbound unpublished record: unknown_time",
     "retained state requires a valid timestamp and separately bounded original receipt bytes",
     "incomplete or malformed inventory is rejected instead of becoming an empty success",
     "retention acknowledgement binds the original transaction, snapshot and false authority flags",
@@ -79,8 +95,18 @@
   "actual_Core_and_ABI_PASS": 26,
   "actual_Root_PASS": 25,
   "actual_Root_top_methods": 9,
-  "actual_Node_PASS": 13,
+  "actual_Node_PASS": 29,
   "actual_Vue_cases": 7,
   "exact_cases_derived_from_original_observed_source_executions": true,
-  "not_installed_or_powercut_acceptance": true
+  "not_installed_or_powercut_acceptance": true,
+  "original_Node_execution_witness": {
+    "run": 42066099845,
+    "head": "39dbbdb1de773e358ed1a5a0d525c55d452887a4",
+    "original_artifact_id": 13435356592,
+    "original_tap_sha256": "6632c3002729d74e7f3801f419d148ae950addf61364ff0a14991b393fe4dbfa",
+    "static_tests": 13,
+    "dynamic_boundary_tests": 16,
+    "all_actual_tests": 29,
+    "original_check_failed_and_is_preserved": true
+  }
 }
