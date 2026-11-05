@@ -18,11 +18,11 @@
   "source_files": {
     "dev/provision-app.sh": "51659a4fbf86171a114000251a43004c2bea7cc33f370492802d2e65327f5f75",
     "packaging/backup-directories.py": "f3cc3d7e09677d572d6c4902a55e06ad6690acf04ba6bfe270dfe58662c6ca13",
-    "packaging/build-release.sh": "602f604fad0b1d337082d4c5492cee9a2b6a2ea02036fd386e5e3a1630c176e7",
+    "packaging/build-release.sh": "27c0456259a62d3bee03bae34f63341f27222814ff9eb56b046679dd98638242",
     "packaging/install.sh": "243ab2541561ed242de9d9586a95311af6e1c2c79b55efadabe99d3128efa590",
     "packaging/test_apache_body_cache_budget.py": "ce60fe339f30b21cb9dedfda08df5e8e328249df610ee1997c46dffe91b79fb1",
     "packaging/test_backup_directories.py": "941eeeacdca3a2fcd1ef357189fb085f7cd6868ebd7915b4df04257bfe7fb9a1",
-    "scripts/release-build-baseline.mjs": "dc82c75c1dfb55d192956fb75a6df0565ea19283cf98505359c52274aeaf7ebf",
+    "scripts/release-build-baseline.mjs": "a6bd7010171a8727d3919a230b8702e1e11b0634f9ff317c3e9f5ea7a95cd265",
     "scripts/test-apache-numeric-logs.mjs": "b567045cce0fda93e3f65d59a6e64d9d5a859dd18d6dfd17d89dbd44616a4a89",
     "scripts/test-load-balance-stream-account-entry.mjs": "1678331a166f834b8a7f9462af673b48b98bdf7c5374e4af288f28212a9eeec0"
   },
