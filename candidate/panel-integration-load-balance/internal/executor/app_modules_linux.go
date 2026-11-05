@@ -253,6 +253,11 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			return errors.New("维护应用安装须使用签名应用的明确版本，未把旧接口升级为新授权")
 		}
 		selectedVersion = core.SoftwareImplementationVersion(id)
+		if id == integrityKernelModule && action == "install" {
+			// The legacy unversioned endpoint never selected the new signed
+			// kernel-write ABI. Keep its old, monitor-only installation.
+			selectedVersion = "1.4.1"
+		}
 		if id == "mobile-pwa" && action == "install" {
 			// The pre-native direct interface never opted into signed1.3.2
 			// delivery. Preserve its legacy identity, including retained old jobs.
@@ -265,6 +270,16 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	originalModule, originalModuleErr := s.moduleInstalledRecord(id)
 	if originalModuleErr != nil && !errors.Is(originalModuleErr, os.ErrNotExist) {
 		return errors.New("原安装记录身份、权限或内容无法核对，未执行安装、配置或卸载")
+	}
+	if id == integrityKernelModule {
+		if action == "install" && originalModuleErr == nil {
+			return errors.New("应用已安装，请使用签名更新流程；安装不能覆盖原版本、基线或内核任务")
+		}
+		if action == "uninstall" || action == "install" {
+			if err := s.integrityKernelReference(""); err != nil {
+				return err
+			}
+		}
 	}
 	if id == "load-balance" {
 		version, _ := originalModule["version"].(string)
@@ -510,6 +525,11 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 }
 
 func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {
+	if id == integrityKernelModule {
+		if err := s.integrityKernelReference(""); err != nil {
+			return err
+		}
+	}
 	if id == "load-balance" && loadBalanceStreamIndependentLifecycle(version) {
 		return errLoadBalanceStreamIndependentLifecycle
 	}
@@ -689,6 +709,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.appDependencyRoutes(m)
 	s.apacheWAFWorkspaceRoutes(m)
 	s.moduleAlertRoutes(m)
+	s.integrityKernelRoutes(m)
 	m.HandleFunc("GET /v1/app-modules/{id}/history", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if _, ok := core.FindAppModule(id); !ok {
@@ -1012,6 +1033,11 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 	}
 	results := []any{}
 	for _, site := range ids {
+		if action == "baseline" && id == integrityKernelModule {
+			if e := s.integrityKernelReference(site); e != nil {
+				return nil, e
+			}
+		}
 		f, e := s.openFiles(site)
 		if e != nil {
 			return nil, e
@@ -1616,8 +1642,9 @@ func (s *Service) StartAppModuleWorkerContext(ctx context.Context) {
 	s.moduleWorkers.start(ctx, func() {
 		s.mu.Lock()
 		s.moduleWatchWake = make(chan struct{}, 1)
+		s.integrityKernelWake = make(chan struct{}, 1)
 		s.mu.Unlock()
-	}, s.runIntegrityWatcher, s.runLoadBalanceHealthWorker,
+	}, s.runIntegrityWatcher, s.runIntegrityKernelWorker, s.runLoadBalanceHealthWorker,
 		s.runWAFBodyLogRotationWorker, s.runWAFBodyLogRetentionWorker, s.runApacheNumericLogRotationWorker,
 		s.runThreatIDSRotationWorker, s.runStatisticsHistoryWorker,
 		s.runStatisticsGeoCacheWorker, s.runRemoteSyncWorker, s.runScheduledModuleWorker)

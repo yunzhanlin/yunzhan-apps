@@ -1,0 +1,8 @@
+import test from'node:test';
+import assert from'node:assert/strict';
+import {verifyIntegrityKernelPredecessor as verify}from'../tools/check-integrity-kernel-predecessor.mjs';
+const prefix='TestPublishedCandidateRepositoryCurrentSignedManifestABI',pkg='local/panel/internal/appcatalog';
+const ids=['website-tamper-proof',...Array.from({length:49},(_,i)=>'fixture-'+i)];
+function fixture(){return [{Package:pkg,Action:'run',Test:prefix},...ids.flatMap(id=>[{Package:pkg,Action:'run',Test:prefix+'/'+id},{Package:pkg,Action:id==='website-tamper-proof'?'fail':'pass',Test:prefix+'/'+id}]),{Package:pkg,Action:'output',Test:prefix+'/website-tamper-proof',Output:'unsupported required panel feature integrity-kernel-inode-journal-v1'},{Package:pkg,Action:'fail',Test:prefix},{Package:pkg,Action:'fail'}]}
+test('predecessor proof requires all fifty and the exact new handler refusal',()=>{const r=verify(fixture(),ids);assert.equal(r.other49_passed,49);assert.equal(r.installed_or_store_acceptance,false)});
+for(const kind of ['empty','missing-original','duplicate-original','wrong-package','skip','wrong-app','no-feature-error','unexpected-success'])test('rejects invalid predecessor proof '+kind,()=>{let rows=fixture();if(kind==='empty')rows=[];if(kind==='missing-original')rows.splice(2,1);if(kind==='duplicate-original')rows.push({...rows[1]});if(kind==='wrong-package')rows[0].Package='foreign';if(kind==='skip')rows[2].Action='skip';if(kind==='wrong-app')rows.find(r=>r.Action==='fail'&&r.Test?.includes('/')).Test=prefix+'/other';if(kind==='no-feature-error')rows=rows.filter(r=>r.Action!=='output');if(kind==='unexpected-success')rows.push({Package:pkg,Action:'pass'});assert.throws(()=>verify(rows,ids))});

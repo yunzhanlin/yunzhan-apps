@@ -22,6 +22,10 @@ func (s *Service) siteArchiveRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": "网站归档预检标识或参数无效"})
 			return
 		}
+		if err := s.integrityKernelReference(id); err != nil {
+			respond(w, 409, map[string]string{"error": err.Error()})
+			return
+		}
 		s.mu.Lock()
 		defer s.mu.Unlock()
 		finish, err := s.lockWAFSiteMutation()
@@ -85,6 +89,9 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 	}
 	defer unlock()
 	if err := s.phpQuarantineReference(in.Site.ID); err != nil {
+		return result, err
+	}
+	if err := s.integrityKernelReference(in.Site.ID); err != nil {
 		return result, err
 	}
 	if s.moduleInstalled("nfs-manager") {

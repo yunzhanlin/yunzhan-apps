@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-04T19:30:05Z",
+  "generated_at": "2026-11-05T01:14:04Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1181,29 +1181,27 @@
       "id": "website-tamper-proof",
       "name": "Website Tamper-proof",
       "category": "professional",
-      "version": "1.4.1",
-      "summary": "签名基线、Linux 实时内容与权限变化检测、指定文件恢复；动态目录、溢出补查、策略修订和可筛选持久历史。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "version": "1.5.0",
+      "summary": "签名基线、实时检测与恢复；可明确启用原生 inode 写保护，保留原数据、排除目录和原有保护标记。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
       "target": "website-tamper-proof",
       "manage_route": "app-modules",
       "capabilities": [
-        "签名文件基线",
-        "变更事件",
-        "备份恢复",
-        "网站级策略",
-        "Linux 实时文件事件",
-        "动态目录与溢出补查",
-        "策略修订保护",
-        "365 天有界历史分页",
-        "专用流程与执行历史",
-        "签名 Webhook 脱敏推送",
-        "持久队列与退避重试",
-        "实际送达记录"
+        "签名基线与完整内容校验",
+        "实时监控与定时补查",
+        "指定文件受控恢复",
+        "Linux inode 内核写保护",
+        "按网站明确启停与目录排除",
+        "保留原权限和不可变标记",
+        "持久任务与中断结果核对",
+        "未开始提交独立封存",
+        "签名版本与原操作者权限绑定",
+        "保留原请求、进度与执行历史"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-tamper-proof/1.4.1/manifest.json",
-      "sha256": "d0cb88beca90c5bde4d72aad6797510a3a231b703a9289a21eeccedde551f803"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-tamper-proof/1.5.0/manifest.json",
+      "sha256": "b32889ec62ad7dd8500d7c959ddf7603abbe39f68c1477bc2044cd11dc90dcb7"
     }
   ]
 }

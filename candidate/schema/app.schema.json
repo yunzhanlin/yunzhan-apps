@@ -173,7 +173,8 @@
           "apache-native-cc-site-transactions-v1",
           "apache-cc-log-archive-v1",
           "analytics-route-readiness-v1",
-          "analytics-navigation-order-v1"
+          "analytics-navigation-order-v1",
+          "integrity-kernel-inode-journal-v1"
         ]
       }
     },
@@ -1438,6 +1439,45 @@
                     "analytics-navigation-order-v1"
                   ]
                 }
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "website-tamper-proof"
+              },
+              "version": {
+                "const": "1.5.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "website-tamper-proof"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "const": [
+                  "integrity-kernel-inode-journal-v1"
+                ]
               }
             }
           }
@@ -3680,6 +3720,121 @@
                 "analytics-navigation-order-v1"
               ]
             }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-tamper-proof"
+          }
+        }
+      },
+      "then": {
+        "anyOf": [
+          {
+            "properties": {
+              "version": {
+                "pattern": "^(?:0(?:\\.(?:0|[1-9][0-9]*)){0,3}|1(?:\\.[0-4](?:\\.(?:0|[1-9][0-9]*)){0,2})?)(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$"
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "website-tamper-proof"
+              },
+              "version": {
+                "const": "1.5.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "website-tamper-proof"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "const": [
+                  "integrity-kernel-inode-journal-v1"
+                ]
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "contains": {
+              "const": "integrity-kernel-inode-journal-v1"
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "id",
+          "version",
+          "delivery",
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "website-tamper-proof"
+          },
+          "version": {
+            "const": "1.5.0"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "website-tamper-proof"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "const": [
+              "integrity-kernel-inode-journal-v1"
+            ]
           }
         }
       }

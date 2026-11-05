@@ -166,6 +166,12 @@ func ValidateSoftwareUpdate(id, version string) error {
 			return errors.New("浏览器分析仅允许固定完整版本 2.3.1、2.3.2、2.4.0 或 2.4.1，拒绝别名及未审核修订")
 		}
 	}
+	if id == "website-tamper-proof" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, IntegrityKernelAppVersion); valid && comparison >= 0 && version != IntegrityKernelAppVersion {
+			return errors.New("内核写保护仅允许固定完整版本 1.5.0，拒绝别名或未知未来版本")
+		}
+	}
 	if id == "disk-analysis" {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && comparison >= 0 && version != "1.3.0" && version != "1.4.0" && version != DiskAnalysisAppVersion {

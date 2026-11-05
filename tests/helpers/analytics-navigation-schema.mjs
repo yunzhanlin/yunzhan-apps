@@ -2,8 +2,9 @@
 // predicate and unrelated edit remains bound to its original whole digest.
 import assert from 'node:assert/strict';
 import {canonical,sha256} from '../../tools/lib.mjs';
+import {schemaBeforeIntegrityKernel} from './integrity-kernel-schema.mjs';
 export function schemaBeforeAnalyticsNavigation(value){
- const s=structuredClone(value),feature='analytics-navigation-order-v1',flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
+ const s=schemaBeforeIntegrityKernel(value),feature='analytics-navigation-order-v1',flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!flags.includes(feature)&&!branches.some(v=>v.properties?.version?.const==='2.4.1'&&v.properties?.id?.const==='website-analytics'))return s;
  assert.equal(flags.filter(v=>v===feature).length,1);assert.equal(flags.at(-1),feature);flags.pop();
  assert.equal(sha256(canonical(branches.at(-1))),'786542e69efe06ff9b57e15005d1a470ef285bc804250474e35be21295d3e089');branches.pop();

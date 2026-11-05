@@ -164,6 +164,10 @@ function beforeCandidateFixtureDependencies(path,bytes){
 }
 export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
+ // Only the new fixture dependency is reversed; all historical digests and
+ // assertions below stay exact, and undeclared edits still fail them.
+ const kernelAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/lib.mjs','tools/integrity-kernel-manifest.mjs'","'tools/lib.mjs'"]:path==='tests/versioning.test.mjs'?["'lib.mjs','integrity-kernel-manifest.mjs'","'lib.mjs'"]:null;
+ if(kernelAddition&&bytes.toString().includes(kernelAddition[0])){const text=bytes.toString();assert.equal(text.split(kernelAddition[0]).length,2);bytes=Buffer.from(text.replace(kernelAddition[0],()=>kernelAddition[1]));}
  if(path==='tests/geodata-channel-publisher.test.mjs'){
   const addition="'tools/load-balance-stream-contract.mjs','tools/apache-native-body-contract.mjs','signatures/catalog-v1.pub.pem'",text=bytes.toString();
   if(text.includes(addition)){assert.equal(text.split(addition).length,2);bytes=Buffer.from(text.replace(addition,()=>"'tools/load-balance-stream-contract.mjs','signatures/catalog-v1.pub.pem'"));}

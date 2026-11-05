@@ -16,6 +16,11 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	const apacheFencedEntry=fencedEntry.replace('\treturn checkLoadBalanceStreamUpgrade(ctx, nil)',apacheAddition+'\treturn checkLoadBalanceStreamUpgrade(ctx, nil)');
 	assert.equal(queues.split(apacheFencedEntry).length,2);
 	let legacyQueues=queues.replace(apacheFencedEntry,()=>entry);
+	// C60 adds only this independent read-only inode/admission reference
+	// fence. Require it exactly once, then compare all previous bytes with
+	// their unchanged digest; no old predicate or deadline is exempted.
+	const kernelAddition='\t// Native inode flags survive a process replacement. Do not replace the\n\t// controller while its protection or original transition needs attention.\n\t// This literal constructs no worker and performs no recovery or writes.\n\tprotected := &Service{Config: Config{SecurityDir: filepath.Join(root, "etc/panel/security-apps")}}\n\tif err := protected.integrityKernelReference(""); err != nil {\n\t\treturn err\n\t}\n';
+	assert.equal(legacyQueues.split(kernelAddition).length,2);legacyQueues=legacyQueues.replace(kernelAddition,'');
 	// Strip only the separately tested additional PM2 configuration inventory.
 	// All historical predicates, fixed commands and deadlines below remain exact.
 	const pm2Addition='\tif err := r.pm2Configurations(); err != nil {\n\t\treturn err\n\t}\n';

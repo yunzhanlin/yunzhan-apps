@@ -667,6 +667,13 @@ func checkProgramUpgradeQueues(ctx context.Context, root string) error {
 	if err := r.hardeningPending(); err != nil {
 		return err
 	}
+	// Native inode flags survive a process replacement. Do not replace the
+	// controller while its protection or original transition needs attention.
+	// This literal constructs no worker and performs no recovery or writes.
+	protected := &Service{Config: Config{SecurityDir: filepath.Join(root, "etc/panel/security-apps")}}
+	if err := protected.integrityKernelReference(""); err != nil {
+		return err
+	}
 	checks := []struct {
 		path     string
 		maximum  int

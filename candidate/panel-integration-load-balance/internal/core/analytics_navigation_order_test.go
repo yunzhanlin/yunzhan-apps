@@ -87,7 +87,9 @@ func TestAnalyticsNavigationOrderingConflictLegacyAndScope(t *testing.T) {
 func TestAnalyticsNavigationSameSecondRealSQLReportAndFunnel(t *testing.T) {
 	a, _, config := analyticsFixture(t, true)
 	visitor, session := ID(), ID()
-	stamp := time.Now().Unix() - 2
+	now := time.Now().UTC()
+	from, to := now.Add(-time.Minute).Format(time.RFC3339), now.Add(time.Minute).Format(time.RFC3339)
+	stamp := now.Unix() - 2
 	paths := []string{"/qa/start", "/c59-ready", "/c59-stale", "/c59-current"}
 	pages := []string{ID(), ID(), ID(), ID()}
 	// Exact installed-browser failure: current reaches Nginx/Core before stale.
@@ -122,7 +124,7 @@ func TestAnalyticsNavigationSameSecondRealSQLReportAndFunnel(t *testing.T) {
 		return out
 	}
 	before := readOriginal()
-	report, err := a.Store.analyticsReport(context.Background(), config.SiteID, "", "", time.Now())
+	report, err := a.Store.analyticsReport(context.Background(), config.SiteID, from, to, now)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +133,7 @@ func TestAnalyticsNavigationSameSecondRealSQLReportAndFunnel(t *testing.T) {
 	if len(sessions) != 1 || !reflect.DeepEqual(sessions[0].Journey, paths) || sessions[0].Exit != "/c59-current" || sessions[0].Entry != "/qa/start" || sessions[0].PageOrderUncertain || sessions[0].PageOrderSource != "browser-navigation-sequence" || sessions[0].Last != stamp || counts["pv"] != 4 || counts["sessions"] != 1 || report["ordering_uncertain_sessions"] != 0 {
 		t.Fatal(sessions, counts, report["ordering_uncertain_sessions"])
 	}
-	funnel, err := a.Store.analyticsFunnelReport(context.Background(), config.SiteID, []string{"/qa/start", "/c59-stale", "/c59-current"}, "", "", 30, time.Now())
+	funnel, err := a.Store.analyticsFunnelReport(context.Background(), config.SiteID, []string{"/qa/start", "/c59-stale", "/c59-current"}, from, to, 30, now)
 	if err != nil || funnel.CompletedSessions != 1 || funnel.OrderingUncertainSessions != 0 || funnel.UniquePageviews != 4 {
 		t.Fatal("same-second legitimate conversion lost to arrival order", funnel, err)
 	}
@@ -142,7 +144,9 @@ func TestAnalyticsNavigationSameSecondRealSQLReportAndFunnel(t *testing.T) {
 
 func TestAnalyticsNavigationLegacyAndDelayedFunnelDisclosesUncertainty(t *testing.T) {
 	a, _, config := analyticsFixture(t, true)
-	stamp := time.Now().Unix() - 10
+	now := time.Now().UTC()
+	from, to := now.Add(-time.Minute).Format(time.RFC3339), now.Add(time.Minute).Format(time.RFC3339)
+	stamp := now.Unix() - 10
 	add := func(visitor, session, path string, sequence, received int64) {
 		t.Helper()
 		v := AnalyticsEvent{ID: ID(), PageID: ID(), Visitor: visitor, Session: session, Kind: "pageview", Path: path, NavigationSeq: sequence, Received: received}
@@ -159,11 +163,11 @@ func TestAnalyticsNavigationLegacyAndDelayedFunnelDisclosesUncertainty(t *testin
 	visitor, ordinary := ID(), ID()
 	add(visitor, ordinary, "/entry", 1, stamp+4)
 	add(visitor, ordinary, "/done", 2, stamp+5)
-	funnel, err := a.Store.analyticsFunnelReport(context.Background(), config.SiteID, []string{"/entry", "/done"}, "", "", 30, time.Now())
+	funnel, err := a.Store.analyticsFunnelReport(context.Background(), config.SiteID, []string{"/entry", "/done"}, from, to, 30, now)
 	if err != nil || funnel.Partial || funnel.CompletedSessions != 2 || funnel.OrderingUncertainSessions != 2 || funnel.Duration["average"] != 1 {
 		t.Fatal("uncertain receipt timing was hidden or fabricated", funnel, err)
 	}
-	report, err := a.Store.analyticsReport(context.Background(), config.SiteID, "", "", time.Now())
+	report, err := a.Store.analyticsReport(context.Background(), config.SiteID, from, to, now)
 	if err != nil || report["ordering_uncertain_sessions"] != 1 {
 		t.Fatal(report, err)
 	}

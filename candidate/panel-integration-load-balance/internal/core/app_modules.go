@@ -213,6 +213,7 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.integrityKernelRoutes(m)
 	a.pm2ConfigurationRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
 	a.networkIDSOperationRoutes(m)
@@ -403,6 +404,9 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.2.1"
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
+			if d.ID == "website-tamper-proof" {
+				version = IntegrityKernelAppVersion
+			}
 			if d.ID == "files-sync" {
 				version = "1.9.0"
 			}

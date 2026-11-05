@@ -40,6 +40,8 @@ type Service struct {
 	moduleAutoBlocked           map[string]bool // Guarded by mu; stop automatic writes after persistence failure.
 	statisticsArchiveScanCursor map[string]int  // Guarded by mu; bounded scheduling only, never history authority.
 	moduleWorkers               workerLifecycle
+	integrityKernelRunning      sync.Map
+	integrityKernelWake         chan struct{}
 	moduleWatchWake             chan struct{}
 	moduleWatchStatus           map[string]moduleRealtimeStatus // Guarded by mu; runtime status is never a persisted promise.
 	idsOperationMu              sync.Mutex
