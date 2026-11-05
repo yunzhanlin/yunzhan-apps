@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3]
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,7 @@ jobs:
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, independently resolved
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -94,7 +94,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='26deb47c0cf04d18c7e6462cfae39c3111f1d7faf717cf0f1e7e4ac5430f36f7' and len(index['files'])==2413
+          assert index['release']['frozen_inputs_sha256']=='85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152' and len(index['files'])==2414
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -133,6 +133,23 @@ jobs:
           sudo "$(command -v go)" test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^(TestIntegrityKernel|TestEnterpriseKernel)' > "$RUNNER_TEMP/integrity-kernel-core.jsonl"
           sudo env PANEL_INTEGRITY_KERNEL_NATIVE=1 "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^(TestIntegrity(Kernel|Flag)|TestAppReliabilityIntegrity)' > "$RUNNER_TEMP/integrity-kernel-executor.jsonl"
           node ../../tools/check-enterprise-kernel-execution.mjs "$RUNNER_TEMP/integrity-kernel-core.jsonl" "$RUNNER_TEMP/integrity-kernel-executor.jsonl" "$(uname -m)"
+      - name: Preserve original C61r2 production source for the known metadata publication defect
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 2c747b22a0b928bf60c68b57260c25ff1aea55a5
+          path: original-publication-defect
+          persist-credentials: false
+      - name: Actual unchanged C61r2 production must reproduce all31 publication regressions
+        working-directory: original-publication-defect/candidate/panel-integration-load-balance
+        run: |
+          python3 "$GITHUB_WORKSPACE/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . stage
+          set +e
+          sudo "$(command -v go)" test -json -count=1 -p 1 ./internal/executor -run '^TestIntegrityKernel(Concurrent(Status|Admission)WaitsForCompletePublication|StoppedIncompletePublicationStaysUnknown)$' -timeout=60s > "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl"
+          original_exit=$?
+          set -e
+          test "$original_exit" -eq 1
+          python3 "$GITHUB_WORKSPACE/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . verify
+          node "$GITHUB_WORKSPACE/tools/check-kernel-publication-original-defect.mjs" "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl" "$(uname -m)"
       - name: Original predecessor source for the real old compiled handler boundary
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -261,5 +278,6 @@ jobs:
             ${{ runner.temp }}/integrity-kernel-executor.jsonl
             ${{ runner.temp }}/integrity-kernel-predecessor.jsonl
             ${{ runner.temp }}/integrity-kernel-legacy-predecessor.jsonl
+            ${{ runner.temp }}/integrity-kernel-original-publication-defect.jsonl
           retention-days: 7
           if-no-files-found: error

@@ -26,5 +26,5 @@
     "scripts/test-apache-numeric-logs.mjs": "b567045cce0fda93e3f65d59a6e64d9d5a859dd18d6dfd17d89dbd44616a4a89",
     "scripts/test-load-balance-stream-account-entry.mjs": "1678331a166f834b8a7f9462af673b48b98bdf7c5374e4af288f28212a9eeec0"
   },
-  "source_inputs_sha256": "26deb47c0cf04d18c7e6462cfae39c3111f1d7faf717cf0f1e7e4ac5430f36f7"
+  "source_inputs_sha256": "85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152"
 }

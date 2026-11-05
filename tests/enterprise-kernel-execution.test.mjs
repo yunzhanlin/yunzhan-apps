@@ -13,7 +13,7 @@ function fixture(){
  return{core,executor};
 }
 test('enterprise source validator retains all old cases and requires each independent app witness',()=>{
- for(const arch of['x86_64','aarch64']){const f=fixture(),result=verify(f.core,f.executor,arch);assert.equal(result.PASS['local/panel/internal/executor'],86);assert.equal(result.PASS['local/panel/internal/core'],35);assert.equal(result.PASS['local/panel/internal/appcatalog'],22);assert.equal(result.installed_or_store_acceptance,false)}
+ for(const arch of['x86_64','aarch64']){const f=fixture(),result=verify(f.core,f.executor,arch);assert.equal(result.PASS['local/panel/internal/executor'],117);assert.equal(result.PASS['local/panel/internal/core'],35);assert.equal(result.PASS['local/panel/internal/appcatalog'],22);assert.equal(result.installed_or_store_acceptance,false)}
 });
 for(const kind of['empty','missing-pass','duplicate-pass','skip','foreign-case','no-package-pass','missing-enterprise-writer','borrowed-writer','excluded-not-writable','held-writer-succeeded','missing-enterprise-fence','borrowed-fence'])test('enterprise source evidence refuses '+kind,()=>{
  const f=fixture();switch(kind){

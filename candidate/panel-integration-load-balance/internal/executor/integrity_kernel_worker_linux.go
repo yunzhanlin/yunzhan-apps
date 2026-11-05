@@ -410,6 +410,18 @@ func (s *Service) integrityKernelRelease(ctx context.Context, request core.Integ
 	return nil
 }
 
+// A GET must not observe plan.json before its first write or the initial
+// progress record before it is durable. Later progress is append-only and is
+// not parsed as a completed result while the original worker is running.
+func (s *Service) integrityKernelPublishPlan(d *modulePrivateDirectory, id string, plan integrityKernelPlan) (*integrityKernelJournal, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := integrityKernelCreate(d, "plan.json", plan); err != nil {
+		return nil, err
+	}
+	return newIntegrityKernelJournal(d, id, integrityKernelDigest(plan))
+}
+
 func (s *Service) integrityKernelExecute(parent context.Context, request core.IntegrityKernelRequest) {
 	application := core.IntegrityKernelRequestApplication(request)
 	if application == "" {
@@ -462,7 +474,7 @@ func (s *Service) integrityKernelExecute(parent context.Context, request core.In
 			plan, err = s.integrityKernelPrepare(ctx, request)
 		} else {
 			var rows []core.IntegrityKernelOperation
-			rows, err = s.integrityKernelOperations()
+			rows, err = s.integrityKernelOperationSnapshot()
 			if err == nil {
 				source := integrityKernelLatest(rows, request.Input.SiteID)
 				if source == nil || source.Request.ID != request.ID {
@@ -481,12 +493,9 @@ func (s *Service) integrityKernelExecute(parent context.Context, request core.In
 			}
 		}
 	}
-	if err == nil {
-		err = integrityKernelCreate(d, "plan.json", plan)
-	}
 	var journal *integrityKernelJournal
 	if err == nil {
-		journal, err = newIntegrityKernelJournal(d, request.ID, integrityKernelDigest(plan))
+		journal, err = s.integrityKernelPublishPlan(d, request.ID, plan)
 	}
 	if journal != nil {
 		defer journal.file.Close()

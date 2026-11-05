@@ -84,6 +84,12 @@ func (s *Service) integrityKernelAdmission(id string) (core.IntegrityKernelAdmis
 	return out, nil
 }
 
+func (s *Service) integrityKernelAdmissionSnapshot(id string) (core.IntegrityKernelAdmission, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.integrityKernelAdmission(id)
+}
+
 // The caller already holds mu and has just checked current authority. A
 // queued worker must obtain this same lock before persisting its start. The
 // exclusive closure therefore either proves no dispatch or returns the exact
@@ -239,7 +245,7 @@ func (s *Service) integrityKernelApplicationAdmissionRoutes(m *http.ServeMux, ro
 			respond(w, 400, map[string]string{"error": "原提交核对标识无效"})
 			return
 		}
-		out, err := s.integrityKernelAdmission(r.PathValue("id"))
+		out, err := s.integrityKernelAdmissionSnapshot(r.PathValue("id"))
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return

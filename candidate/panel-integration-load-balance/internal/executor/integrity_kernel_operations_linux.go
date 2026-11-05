@@ -237,6 +237,15 @@ func (s *Service) integrityKernelOperations() ([]core.IntegrityKernelOperation, 
 	return rows, nil
 }
 
+// Only metadata publication is serialized. The original inode walk, hashes,
+// authority checks and ioctls run outside this lock. Callers already holding
+// mu use integrityKernelOperations directly, without taking it twice.
+func (s *Service) integrityKernelOperationSnapshot() ([]core.IntegrityKernelOperation, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.integrityKernelOperations()
+}
+
 func integrityKernelLatest(rows []core.IntegrityKernelOperation, site string) *core.IntegrityKernelOperation {
 	var latest *core.IntegrityKernelOperation
 	for i := range rows {
@@ -446,7 +455,7 @@ func (s *Service) runIntegrityKernelWorker(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		rows, err := s.integrityKernelOperations()
+		rows, err := s.integrityKernelOperationSnapshot()
 		if err == nil {
 			for _, row := range rows {
 				if ctx.Err() != nil {

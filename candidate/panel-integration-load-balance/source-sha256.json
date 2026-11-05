@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24enterprisekernelcandidate61r2-linux-amd64.tar.gz",
-    "archive_sha256": "65cd93000ec75494319fdc3e9b2d1aa6e20b7064131f491f046151cab37a82d3",
-    "frozen_inputs_sha256": "26deb47c0cf04d18c7e6462cfae39c3111f1d7faf717cf0f1e7e4ac5430f36f7"
+    "archive": "panel-0.1.0-dev.proapps24enterprisekernelcandidate61r3-linux-amd64.tar.gz",
+    "archive_sha256": "34e8862967e0dd5f0117213614957d4ea7f4d785d59680a02f02fca132ee8700",
+    "frozen_inputs_sha256": "85621127f3203c28b762fd743b9d6c48b2235ad221c1056db255cbbacdebc152"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -1258,19 +1258,20 @@
     "internal/executor/install_timeout_linux_test.go": "adc13f9e090025963c0c0be76f9c12d53d9f727ab5867e0d5bc65b4b86f88631",
     "internal/executor/integrity_inode_flags_linux.go": "88584e4f2bd673f709ad53d3f702a9b24d52ea7cab02681c178a0ff936eeaf48",
     "internal/executor/integrity_inode_flags_linux_test.go": "119070f5067d26303f3b22762ebbaefd7acbf73dbffc39437b58bdaf10597cad",
-    "internal/executor/integrity_kernel_admission_linux.go": "8983bde3127439fc61099e51f5a115125b6283958555cc59eeb979f6c76109dd",
+    "internal/executor/integrity_kernel_admission_linux.go": "8487689e3ac8a8016631f21f9ed88ac85a7a66f07e39e8f549eb0de1de720d7b",
     "internal/executor/integrity_kernel_admission_linux_test.go": "079845294bb29a8499ac0450d5954b57f2eb533e30060e1d4e2ee0dedee7504d",
     "internal/executor/integrity_kernel_application_json_linux.go": "b25f80d7056b84534e7a0bb109e28ea39cb86ffadf4c72f1bbcbf5a307f199ba",
     "internal/executor/integrity_kernel_apps_linux.go": "6c09b0f7fe89ea21814cbd71c61e4dbd62ae0e1e0b35d8b7922930714e39dbf8",
     "internal/executor/integrity_kernel_apps_linux_test.go": "aba400070ef8dfa1d9a31c6f45701005921b2bee229e0fb002ee9e39be9f8335",
     "internal/executor/integrity_kernel_capacity_linux.go": "512017b088da323a0b1a2ecbdc3cd83955c267240eae63d31847bd393adf330c",
     "internal/executor/integrity_kernel_linux_test.go": "ab9cae3c59b932ac371d33993ff7b7f0df316f0fa499979f4fbb10d8fd275756",
-    "internal/executor/integrity_kernel_operations_linux.go": "711b403947c3eae5ef1bd6458778695dbe1598b029b010a1db21598a5a1679af",
+    "internal/executor/integrity_kernel_operations_linux.go": "f0de96a93bc2bcd4fd5b61a43ce757bbc1824d72b9bc1b6b857e7b6304a04277",
     "internal/executor/integrity_kernel_owned_native_linux_test.go": "572bb114968aefa3bcd827cc55f54da5d0a3761ee03e55b1d5960f3c6d91c177",
     "internal/executor/integrity_kernel_plan_linux.go": "4007ef3fbb7e37af37c69e29a54fe08d4763b86245459b059359a5a4699ae3d8",
-    "internal/executor/integrity_kernel_status_linux.go": "a643734e512ab30c254f11e3c5c4ed433f4d390745a9a5345d253ded5e49394b",
+    "internal/executor/integrity_kernel_publication_linux_test.go": "2e4f0af75868d25581e6bdb97a2997d5a85b1d119365f398c84e70e9ba3bb170",
+    "internal/executor/integrity_kernel_status_linux.go": "03c1e6fe686c0e794f3c7d3e5fd4b1d5f7427960f853402e723e47ac3e7bc713",
     "internal/executor/integrity_kernel_store_linux.go": "61b99ed7b6c14e967199feab10b5b5122b7cc14c15a399edb6494141e6aeecb5",
-    "internal/executor/integrity_kernel_worker_linux.go": "6b5212021d88f0ffa008b6554d61947025ebaac237ed26f01e2f98d8a232fbdf",
+    "internal/executor/integrity_kernel_worker_linux.go": "9dfeb6a2ad68179a72d98ce8d8030e5a6788d89d0606042130f404f894823c9a",
     "internal/executor/intrusion_action_recipe_linux.go": "1daf5ff006515a95a32ec1e523b56a597067370ec30a6ff9fff2484043f2fa39",
     "internal/executor/intrusion_action_recipe_linux_test.go": "a40fe4dbe65eadd34aba5f644e8de3c2bec37d8afd416df06a15aaf79f97d4b5",
     "internal/executor/intrusion_configuration_child_linux_test.go": "fe73538a79de738d777050b94ec07438302e897b5c93f96246f0b2cb00b45a71",

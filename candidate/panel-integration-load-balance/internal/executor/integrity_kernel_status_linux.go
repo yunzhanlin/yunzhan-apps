@@ -66,7 +66,7 @@ func (s *Service) integrityKernelStatus(ctx context.Context, site string, applic
 	} else if !errors.Is(baselineErr, os.ErrNotExist) {
 		out.Error = integrityKernelBoundedError(baselineErr)
 	}
-	rows, err := s.integrityKernelOperations()
+	rows, err := s.integrityKernelOperationSnapshot()
 	if err != nil {
 		return out, err
 	}
