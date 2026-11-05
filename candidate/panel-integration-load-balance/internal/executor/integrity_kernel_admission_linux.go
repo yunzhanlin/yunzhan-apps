@@ -41,7 +41,7 @@ func integrityKernelNoNativeEvidence(d *modulePrivateDirectory) error {
 }
 
 func integrityKernelClosureOperation(closure core.IntegrityKernelClosure, request core.IntegrityKernelRequest) (core.IntegrityKernelOperation, error) {
-	if closure.Request.ID != request.ID || closure.Request.ActorID != request.ActorID || closure.Request.Action != request.Action || !reflect.DeepEqual(closure.Request.Input, request.Input) || closure.OriginalRequestSHA != core.IntegrityKernelRequestSHA(request) {
+	if closure.Request.ID != request.ID || closure.Request.ActorID != request.ActorID || closure.Request.Action != request.Action || core.IntegrityKernelRequestApplication(closure.Request) != core.IntegrityKernelRequestApplication(request) || !reflect.DeepEqual(closure.Request.Input, request.Input) || closure.OriginalRequestSHA != core.IntegrityKernelRequestSHA(request) {
 		return core.IntegrityKernelOperation{}, errors.New("原排队请求与独立封存见证不符")
 	}
 	return core.IntegrityKernelOperation{Request: request, RequestSHA: core.IntegrityKernelRequestSHA(request), State: "cancelled", Revision: request.Input.ExpectedRevision + 1, Error: "原排队提交已独立封存，未派发内核操作；原有保护、文件和记录保留", FinishedAt: closure.SealedAt}, nil
@@ -95,7 +95,7 @@ func (s *Service) integrityKernelSealAdmission(request core.IntegrityKernelClose
 		return out, errors.New("独立封存身份无效")
 	}
 	if existing, err := s.integrityKernelAdmission(original.ID); err == nil && existing.State == "sealed" {
-		if existing.Closure.Request.ActorID != original.ActorID || existing.Closure.Request.Action != original.Action || !reflect.DeepEqual(existing.Closure.Request.Input, original.Input) {
+		if existing.Closure.Request.ActorID != original.ActorID || existing.Closure.Request.Action != original.Action || core.IntegrityKernelRequestApplication(existing.Closure.Request) != core.IntegrityKernelRequestApplication(original) || !reflect.DeepEqual(existing.Closure.Request.Input, original.Input) {
 			return out, errors.New("原提交标识已封存不同的输入或操作者")
 		}
 		return existing, nil
@@ -122,7 +122,7 @@ func (s *Service) integrityKernelSealAdmission(request core.IntegrityKernelClose
 	var previous *core.IntegrityKernelRequest
 	op, err := s.integrityKernelReadOperation(original.ID)
 	if err == nil {
-		if op.Request.ActorID != original.ActorID || op.Request.Action != original.Action || !reflect.DeepEqual(op.Request.Input, original.Input) {
+		if op.Request.ActorID != original.ActorID || op.Request.Action != original.Action || core.IntegrityKernelRequestApplication(op.Request) != core.IntegrityKernelRequestApplication(original) || !reflect.DeepEqual(op.Request.Input, original.Input) {
 			return out, errors.New("原提交键绑定不同的输入或操作者")
 		}
 		if op.State != "queued" {
@@ -214,12 +214,13 @@ func (s *Service) integrityKernelCloseAdmission(ctx context.Context, request cor
 	if err := s.integrityKernelAuthority(ctx, request.Request); err != nil {
 		return core.IntegrityKernelAdmission{}, err
 	}
-	if err := s.moduleRetrospectivePreflight(integrityKernelModule); err != nil {
+	application := core.IntegrityKernelRequestApplication(request.Request)
+	if err := s.moduleRetrospectivePreflight(application); err != nil {
 		return core.IntegrityKernelAdmission{}, err
 	}
 	out, err := s.integrityKernelSealAdmission(request)
 	if err == nil && out.State == "sealed" {
-		if historyErr := s.appendModuleEvent(integrityKernelModule, "kernel-admission-close", "manual", core.AppModuleInput{SiteID: request.Request.Input.SiteID}, out, nil); historyErr != nil {
+		if historyErr := s.appendModuleEvent(application, "kernel-admission-close", "manual", core.AppModuleInput{SiteID: request.Request.Input.SiteID}, out, nil); historyErr != nil {
 			return out, errors.New("原未开始提交可能已封存，但摘要历史保存失败；只读核对原提交，不重新执行")
 		}
 	}
@@ -227,7 +228,13 @@ func (s *Service) integrityKernelCloseAdmission(ctx context.Context, request cor
 }
 
 func (s *Service) integrityKernelAdmissionRoutes(m *http.ServeMux) {
-	m.HandleFunc("GET /v1/integrity-kernel/admissions/{id}", func(w http.ResponseWriter, r *http.Request) {
+	for _, route := range core.IntegrityKernelApplicationRoutes() {
+		s.integrityKernelApplicationAdmissionRoutes(m, route)
+	}
+}
+
+func (s *Service) integrityKernelApplicationAdmissionRoutes(m *http.ServeMux, route core.IntegrityKernelApplicationRoute) {
+	m.HandleFunc("GET "+route.Executor+"/admissions/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if !core.ValidID(r.PathValue("id")) || len(r.URL.Query()) != 0 {
 			respond(w, 400, map[string]string{"error": "原提交核对标识无效"})
 			return
@@ -237,12 +244,16 @@ func (s *Service) integrityKernelAdmissionRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
 		}
+		if !core.IntegrityKernelAdmissionApplicationMatches(out, route.Application) {
+			respond(w, 409, map[string]string{"error": "原提交属于另一应用；没有接管、封存或改变原结果"})
+			return
+		}
 		respond(w, 200, out)
 	})
-	m.HandleFunc("POST /v1/integrity-kernel/close-admission", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("POST "+route.Executor+"/close-admission", func(w http.ResponseWriter, r *http.Request) {
 		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 16384))
 		var request core.IntegrityKernelCloseRequest
-		if err != nil || integrityKernelJSON(raw, &request) != nil || !core.ValidID(request.ID) || core.ValidateIntegrityKernelRequest(request.Request) != nil {
+		if err != nil || integrityKernelJSON(raw, &request) != nil || !core.ValidID(request.ID) || core.ValidateIntegrityKernelRequest(request.Request) != nil || core.IntegrityKernelRequestApplication(request.Request) != route.Application {
 			respond(w, 400, map[string]string{"error": "原提交封存请求无效"})
 			return
 		}

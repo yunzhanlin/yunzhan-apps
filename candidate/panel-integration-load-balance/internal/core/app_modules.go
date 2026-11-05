@@ -404,7 +404,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = "1.2.1"
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
-			if d.ID == "website-tamper-proof" {
+			if ValidIntegrityKernelApplication(d.ID) {
 				version = IntegrityKernelAppVersion
 			}
 			if d.ID == "files-sync" {

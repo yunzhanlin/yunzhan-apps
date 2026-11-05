@@ -7,6 +7,12 @@ export function beforeLoadBalanceStreamBuild(text) {
     assert.equal(text.split(current).length, 2, 'missing or duplicate L4 build contract');
     text = text.replace(current, () => previous);
   };
+  // C61's enterprise gate must follow the original website gate exactly.
+  // Remove only that new command before the unchanged historical comparison.
+  const websiteKernelGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-integrity-kernel-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  const enterpriseKernelGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-enterprise-kernel-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+  assert.equal(text.split(enterpriseKernelGate).length,2,'missing or duplicate enterprise kernel build gate');
+  once(websiteKernelGate+enterpriseKernelGate,websiteKernelGate);
   // C60's fixed inode protection UI/unknown-admission gate is mandatory.
   // Normalize only this exact addition for historical whole-script pins.
   once('(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-integrity-kernel-workspace.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n','');

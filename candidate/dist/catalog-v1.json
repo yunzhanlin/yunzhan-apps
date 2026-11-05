@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-05T01:14:04Z",
+  "generated_at": "2026-11-05T03:53:31Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -177,29 +177,29 @@
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
-      "version": "1.4.1",
-      "summary": "签名基线、Linux 文件事件检测与写入后自动恢复；资源超限显示降级，保留定时补查、暂停恢复和持久历史。不是内核写入拦截。 支持签名 Webhook 脱敏通知、持久队列、失败重试与实际送达记录。 接收端慢响应时仍可及时停用并中止旧连接。",
+      "version": "1.5.0",
+      "summary": "签名基线、实时检测与可选自动恢复；可明确启用 Linux inode 写保护。两个防篡改应用共用网站保护所有权，保留原数据、排除目录和原有标记。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
       "target": "enterprise-tamper-proof",
       "manage_route": "app-modules",
       "capabilities": [
-        "HMAC 签名基线",
-        "内容备份",
-        "变更检测与监控降级",
-        "分钟级自动恢复",
-        "实时事件后恢复",
-        "策略修订保护",
+        "HMAC 签名基线与内容备份",
+        "实时检测与可选自动恢复",
+        "原生 inode 内核写保护",
+        "原应用独立启用与解除",
+        "跨应用网站修订与所有权",
+        "旧可写句柄内核阻写",
+        "保留排除目录及原有标记",
+        "中断原记录与明确后续解除",
         "365 天有界历史分页",
-        "恢复前留存",
-        "专用流程与执行历史",
-        "签名 Webhook 脱敏推送",
-        "持久队列与退避重试",
-        "实际送达记录"
+        "恢复前留存与原数据保留",
+        "签名 Webhook 与持久退避队列",
+        "实际执行与送达记录"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/enterprise-tamper-proof/1.4.1/manifest.json",
-      "sha256": "fd55df7b5e18d6dce9d094a2de63e5344b0ac458067917c911516b7af442793e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/enterprise-tamper-proof/1.5.0/manifest.json",
+      "sha256": "a0f68f0f1e521c1bd3cc565c928cf4d00976f32cf5719247ba1573c8a4ed747f"
     },
     {
       "id": "file-monitor",

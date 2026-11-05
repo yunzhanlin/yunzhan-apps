@@ -253,7 +253,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			return errors.New("维护应用安装须使用签名应用的明确版本，未把旧接口升级为新授权")
 		}
 		selectedVersion = core.SoftwareImplementationVersion(id)
-		if id == integrityKernelModule && action == "install" {
+		if core.ValidIntegrityKernelApplication(id) && action == "install" {
 			// The legacy unversioned endpoint never selected the new signed
 			// kernel-write ABI. Keep its old, monitor-only installation.
 			selectedVersion = "1.4.1"
@@ -271,7 +271,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	if originalModuleErr != nil && !errors.Is(originalModuleErr, os.ErrNotExist) {
 		return errors.New("原安装记录身份、权限或内容无法核对，未执行安装、配置或卸载")
 	}
-	if id == integrityKernelModule {
+	if core.ValidIntegrityKernelApplication(id) {
 		if action == "install" && originalModuleErr == nil {
 			return errors.New("应用已安装，请使用签名更新流程；安装不能覆盖原版本、基线或内核任务")
 		}
@@ -525,7 +525,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 }
 
 func (s *Service) updateSoftware(ctx context.Context, id, version string, add func(string)) error {
-	if id == integrityKernelModule {
+	if core.ValidIntegrityKernelApplication(id) {
 		if err := s.integrityKernelReference(""); err != nil {
 			return err
 		}
@@ -1033,7 +1033,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 	}
 	results := []any{}
 	for _, site := range ids {
-		if action == "baseline" && id == integrityKernelModule {
+		if action == "baseline" && core.ValidIntegrityKernelApplication(id) {
 			if e := s.integrityKernelReference(site); e != nil {
 				return nil, e
 			}

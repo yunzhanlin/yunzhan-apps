@@ -17,11 +17,16 @@ import (
 	"local/panel/internal/core"
 )
 
-func integrityKernelFixture(t *testing.T) (*Service, core.IntegrityKernelRequest, integrityKernelPlan, *modulePrivateDirectory) {
+func integrityKernelFixture(t *testing.T, applications ...string) (*Service, core.IntegrityKernelRequest, integrityKernelPlan, *modulePrivateDirectory) {
 	t.Helper()
 	s, site, _ := appReliabilityFixture(t)
 	fixtureWrite(t, s, site, "data.txt", "original website bytes")
 	request := core.IntegrityKernelRequest{Format: 1, ID: core.ID(), ActorID: core.ID(), AccessRevision: 1, AppSHA: strings.Repeat("a", 64), Action: "enable", CreatedAt: core.Now(), Input: core.IntegrityKernelInput{SiteID: site, ExpectedAppVersion: core.IntegrityKernelAppVersion, BaselineSHA: strings.Repeat("b", 64), Confirm: "PROTECT SITE " + site}}
+	application, err := integrityKernelApplicationArgument(applications)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request = core.NewIntegrityKernelApplicationRequest(application, request)
 	files, _, err := s.openIntegrityWatchFiles(site)
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +50,7 @@ func integrityKernelFixture(t *testing.T) (*Service, core.IntegrityKernelRequest
 	if err != nil {
 		t.Fatal(err)
 	}
-	plan := integrityKernelPlan{Format: 1, OperationID: request.ID, SiteID: site, BaselineSHA: request.Input.BaselineSHA, Site: parent, Public: public, Excludes: []string{}, Targets: []integrityKernelTarget{{Path: ".", Directory: true, Original: integrityInodeFlagState{Identity: public}}, {Path: "data.txt", Original: integrityInodeFlagState{Identity: integrityInodeIdentityOf(st)}, SHA: core.Hash("original website bytes")}}}
+	plan := integrityKernelPlan{Format: request.Format, AppID: request.AppID, OperationID: request.ID, SiteID: site, BaselineSHA: request.Input.BaselineSHA, Site: parent, Public: public, Excludes: []string{}, Targets: []integrityKernelTarget{{Path: ".", Directory: true, Original: integrityInodeFlagState{Identity: public}}, {Path: "data.txt", Original: integrityInodeFlagState{Identity: integrityInodeIdentityOf(st)}, SHA: core.Hash("original website bytes")}}}
 	if err = validateIntegrityKernelPlan(plan); err != nil {
 		t.Fatal(err)
 	}
@@ -416,10 +421,18 @@ func TestIntegrityKernelUnsignedVersionLabelDoesNotGrantKernelControls(t *testin
 }
 
 func TestIntegrityKernelProgramUpgradeFenceRetainsOriginalReadonlyQueues(t *testing.T) {
+	runIntegrityKernelApplicationProgramUpgradeFence(t, core.IntegrityKernelWebsiteApplication)
+}
+
+func TestIntegrityKernelEnterpriseProgramUpgradeFenceRetainsOriginalReadonlyQueues(t *testing.T) {
+	runIntegrityKernelApplicationProgramUpgradeFence(t, core.IntegrityKernelEnterpriseApplication)
+}
+
+func runIntegrityKernelApplicationProgramUpgradeFence(t *testing.T, application string) {
 	if os.Geteuid() != 0 {
 		t.Skip("actual Root programme inventory fixture required")
 	}
-	s, request, _, original := integrityKernelFixture(t)
+	s, request, _, original := integrityKernelFixture(t, application)
 	root := programQueueFixture(t)
 	security := filepath.Join(root, "etc/panel/security-apps")
 	if err := os.MkdirAll(filepath.Dir(security), 0755); err != nil {

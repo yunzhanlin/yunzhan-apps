@@ -13,7 +13,11 @@ import (
 
 const integrityKernelScope = "Linux 原生不可变标记保护实际受管网站：阻止受保护文件写入及保护目录内的新增、改名和删除。按 inode 核对，不跟随符号链接、硬链接或其他挂载。原有标记和数字所有者保留。排除项仅为现存目录，目录内部可写，其名称仍受父目录保护。不是进程白名单或对抗具备相同内核权限的 Root；执行器需要 CAP_LINUX_IMMUTABLE。启停逐项执行，未完成或中断不会宣称整体成功；不会自动重跑、清理旧记录或删除用户数据。"
 
-func (s *Service) integrityKernelAppReceipt(ctx context.Context) (string, error) {
+func (s *Service) integrityKernelAppReceipt(ctx context.Context, applications ...string) (string, error) {
+	application, err := integrityKernelApplicationArgument(applications)
+	if err != nil {
+		return "", err
+	}
 	unknown := errors.New("当前签名应用收据不能核对；未授权内核控制，监控、原保护和数据保留")
 	if s.Config.SystemRoot != "/" || s.Config.SecurityDir != "/etc/panel/security-apps" || s.Config.SitesDir != "/srv/panel/sites" {
 		return "", unknown
@@ -27,27 +31,34 @@ func (s *Service) integrityKernelAppReceipt(ctx context.Context) (string, error)
 		return "", unknown
 	}
 	var version, sha, target string
-	if reader.db.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='website-tamper-proof' AND scope='website-tamper-proof'").Scan(&version, &sha, &target) != nil || version != core.IntegrityKernelAppVersion || target != integrityKernelModule || !phpValidSHA(sha) || !reader.current() {
+	if reader.db.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id=? AND scope=?", application, application).Scan(&version, &sha, &target) != nil || version != core.IntegrityKernelAppVersion || target != application || !phpValidSHA(sha) || !reader.current() {
 		return "", unknown
 	}
 	return sha, nil
 }
 
-func (s *Service) integrityKernelStatus(ctx context.Context, site string) (core.IntegrityKernelStatus, error) {
+func (s *Service) integrityKernelStatus(ctx context.Context, site string, applications ...string) (core.IntegrityKernelStatus, error) {
 	out := core.IntegrityKernelStatus{SiteID: site, State: "needs-baseline", Operations: []core.IntegrityKernelOperation{}, Capability: integrityKernelHasCapability(), Scope: integrityKernelScope}
+	application, err := integrityKernelApplicationArgument(applications)
+	if err != nil {
+		return out, err
+	}
+	if application == core.IntegrityKernelEnterpriseApplication {
+		out.AppID = application
+	}
 	if !core.ValidID(site) {
 		return out, errors.New("内核保护网站标识无效")
 	}
-	installed, err := s.moduleInstalledRecord(integrityKernelModule)
+	installed, err := s.moduleInstalledRecord(application)
 	var receiptErr error
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return out, err
 	}
 	if err == nil && installed["version"] == core.IntegrityKernelAppVersion {
 		out.AppVersion = core.IntegrityKernelAppVersion
-		out.AppSHA, receiptErr = s.integrityKernelAppReceipt(ctx)
+		out.AppSHA, receiptErr = s.integrityKernelAppReceipt(ctx, application)
 	}
-	baseline, baselineErr := s.readIntegrityBaseline(integrityKernelModule, site)
+	baseline, baselineErr := s.readIntegrityBaseline(application, site)
 	if baselineErr == nil {
 		out.BaselineSHA = baseline.Signature
 		out.BaselineFiles = len(baseline.Files)
@@ -65,6 +76,7 @@ func (s *Service) integrityKernelStatus(ctx context.Context, site string) (core.
 		}
 	}
 	latest := integrityKernelLatest(rows, site)
+	baselineState := out.State
 	if latest != nil {
 		out.Latest = latest
 		out.Revision = latest.Revision
@@ -97,10 +109,19 @@ func (s *Service) integrityKernelStatus(ctx context.Context, site string) (core.
 				}
 			}
 		}
+		if core.IntegrityKernelRequestApplication(latest.Request) != application {
+			// Keep the common revision and all original evidence visible, but
+			// never offer another application's protected inode for release.
+			out.State = baselineState
+			if !core.IntegrityKernelOperationReleased(*latest) {
+				out.State = "other-application"
+				out.Error = "该网站仍由另一防篡改应用保护或核对原结果；请从原应用处理，不能在这里重复启用或解除"
+			}
+		}
 	}
 	if out.AppVersion == "" {
 		out.State = "upgrade-required"
-		if latest != nil {
+		if latest != nil && core.IntegrityKernelRequestApplication(latest.Request) == application {
 			out.Error = "原内核保护记录仍保留；当前应用身份不支持控制，请先恢复对应签名版本"
 		}
 	}
@@ -114,11 +135,15 @@ func (s *Service) integrityKernelStatus(ctx context.Context, site string) (core.
 	}
 	if receiptErr != nil {
 		out.Error = receiptErr.Error()
-		if latest != nil && !(latest.State == "succeeded" && latest.Request.Action == "release" || (latest.State == "declined" || latest.State == "cancelled") && latest.Request.Action == "enable") {
+		if latest != nil && !core.IntegrityKernelOperationReleased(*latest) && core.IntegrityKernelRequestApplication(latest.Request) == application {
 			out.State = "needs-attention"
 		} else {
 			out.State = "upgrade-required"
 		}
+	}
+	if latest != nil && core.IntegrityKernelRequestApplication(latest.Request) != application && !core.IntegrityKernelOperationReleased(*latest) {
+		out.State = "other-application"
+		out.Error = "该网站仍由另一防篡改应用保护或核对原结果；请从原应用处理，不能在这里重复启用或解除"
 	}
 	out.VerifiedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	return out, nil

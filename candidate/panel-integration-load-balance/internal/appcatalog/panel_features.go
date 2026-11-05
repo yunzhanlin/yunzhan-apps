@@ -57,7 +57,7 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == IntegrityKernelFeature {
+	if feature == IntegrityKernelFeature || feature == EnterpriseKernelFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == ApacheNativeCCSiteFeature || feature == ApacheCCLogArchiveFeature {
@@ -76,6 +76,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateEnterpriseKernelRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateIntegrityKernelRequirement(manifest, available); handled {
 		return err
 	}

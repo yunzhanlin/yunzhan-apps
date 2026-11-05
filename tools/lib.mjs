@@ -4,7 +4,7 @@ import { exactPHPSecurityPackage, phpSecurityErrors, phpSecurityFeature } from '
 import { exactPHPBoundedPackage, phpBoundedErrors, phpBoundedFeature } from './php-bounded-contract.mjs';
 import { loadBalanceStreamErrors, loadBalanceStreamFeature } from './load-balance-stream-contract.mjs';
 import { apacheNativeBodyErrors, apacheNativeBodyFeature, apacheNativeCCFeature, apacheCCArchiveFeature } from './apache-native-body-contract.mjs';
-import { integrityKernelErrors, integrityKernelFeature } from './integrity-kernel-manifest.mjs';
+import { integrityKernelErrors, integrityKernelFeature, enterpriseKernelErrors, enterpriseKernelFeature } from './integrity-kernel-manifest.mjs';
 
 export function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
@@ -32,6 +32,7 @@ export const allowedProbes = new Set(["binary", "systemd", "tcp", "http", "panel
 export function validateManifest(app) {
   const errors = [];
   const kernelErrors=integrityKernelErrors(app);if(kernelErrors!==null)errors.push(...kernelErrors);
+  const enterpriseErrors=enterpriseKernelErrors(app);if(enterpriseErrors!==null)errors.push(...enterpriseErrors);
   if (app.schema_version !== 1) errors.push("schema_version must be 1");
   if (!idPattern.test(app.id || "")) errors.push("invalid id");
   if (typeof app.version !== "string" || app.version.length > 80 || !/^[0-9]+(?:\.[0-9]+){0,3}(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$/.test(app.version)) errors.push("invalid version");
@@ -76,7 +77,7 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==integrityKernelFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===intrusion||feature===intrusion0112)&&!intrusionScope)errors.push("intrusion handlers require the exact reviewed version, fixed target and complete ordered feature declaration");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");

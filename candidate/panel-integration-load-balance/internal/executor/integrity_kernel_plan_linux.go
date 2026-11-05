@@ -28,6 +28,7 @@ type integrityKernelTarget struct {
 
 type integrityKernelPlan struct {
 	Format      int                     `json:"format"`
+	AppID       string                  `json:"app_id,omitempty"`
 	OperationID string                  `json:"operation_id"`
 	SiteID      string                  `json:"site_id"`
 	BaselineSHA string                  `json:"baseline_sha"`
@@ -116,8 +117,12 @@ func integrityKernelExcluded(path string, excludes []string) bool {
 // usability. The excluded directory itself remains fixed under its protected
 // parent; creation and writes within it remain available to its original UID.
 func (s *Service) integrityKernelPrepare(ctx context.Context, request core.IntegrityKernelRequest) (integrityKernelPlan, error) {
-	plan := integrityKernelPlan{Format: 1, OperationID: request.ID, SiteID: request.Input.SiteID, Targets: []integrityKernelTarget{}, Excludes: []string{}}
-	baseline, err := s.readIntegrityBaseline(integrityKernelModule, plan.SiteID)
+	plan := integrityKernelPlan{Format: request.Format, AppID: request.AppID, OperationID: request.ID, SiteID: request.Input.SiteID, Targets: []integrityKernelTarget{}, Excludes: []string{}}
+	application := core.IntegrityKernelRequestApplication(request)
+	if application == "" {
+		return plan, errors.New("原启用应用身份无效")
+	}
+	baseline, err := s.readIntegrityBaseline(application, plan.SiteID)
 	if err != nil {
 		return plan, err
 	}
@@ -261,7 +266,7 @@ func (s *Service) integrityKernelPrepare(ctx context.Context, request core.Integ
 }
 
 func validateIntegrityKernelPlan(plan integrityKernelPlan) error {
-	if plan.Format != 1 || !core.ValidID(plan.OperationID) || !core.ValidID(plan.SiteID) || !phpValidSHA(plan.BaselineSHA) || plan.Site.Inode == 0 || plan.Public.Inode == 0 || len(plan.Targets) < 1 || len(plan.Targets) > integrityKernelTargets || len(plan.Excludes) > 128 {
+	if integrityKernelPlanApplication(plan) == "" || !core.ValidID(plan.OperationID) || !core.ValidID(plan.SiteID) || !phpValidSHA(plan.BaselineSHA) || plan.Site.Inode == 0 || plan.Public.Inode == 0 || len(plan.Targets) < 1 || len(plan.Targets) > integrityKernelTargets || len(plan.Excludes) > 128 {
 		return errors.New("内核保护原计划格式、容量或身份无效")
 	}
 	for i, p := range plan.Excludes {

@@ -25,6 +25,14 @@ import (
 // actual kernel ioctls. Its internal authority callback isolates filesystem
 // behavior; it is not a substitute for signed-install/current-actor/GUI tests.
 func TestIntegrityKernelOwnedNativeRoundTrip(t *testing.T) {
+	runIntegrityKernelOwnedNativeRoundTrip(t, core.IntegrityKernelWebsiteApplication)
+}
+
+func TestIntegrityKernelEnterpriseOwnedNativeRoundTrip(t *testing.T) {
+	runIntegrityKernelOwnedNativeRoundTrip(t, core.IntegrityKernelEnterpriseApplication)
+}
+
+func runIntegrityKernelOwnedNativeRoundTrip(t *testing.T, application string) {
 	if os.Getenv("PANEL_INTEGRITY_KERNEL_NATIVE") != "1" {
 		t.Skip("explicit owned native inode fixture required")
 	}
@@ -172,14 +180,15 @@ print(json.dumps({'original_held_writer_resumed':True,'legitimate_directory_crea
 					t.Fatal("actual UID33 positive control failed", line, e, childErrors.String())
 				}
 			}
-			if _, err = s.moduleIntegrity(context.Background(), integrityKernelModule, "baseline", core.AppModuleInput{SiteID: site, Excludes: []string{"uploads"}}); err != nil {
+			if _, err = s.moduleIntegrity(context.Background(), application, "baseline", core.AppModuleInput{SiteID: site, Excludes: []string{"uploads"}}); err != nil {
 				t.Fatal(err)
 			}
-			baseline, err := s.readIntegrityBaseline(integrityKernelModule, site)
+			baseline, err := s.readIntegrityBaseline(application, site)
 			if err != nil {
 				t.Fatal(err)
 			}
 			request := core.IntegrityKernelRequest{Format: 1, ID: core.ID(), ActorID: core.ID(), AccessRevision: 1, AppSHA: strings.Repeat("a", 64), Action: "enable", CreatedAt: core.Now(), Input: core.IntegrityKernelInput{SiteID: site, ExpectedAppVersion: core.IntegrityKernelAppVersion, BaselineSHA: baseline.Signature, Confirm: "PROTECT SITE " + site}}
+			request = core.NewIntegrityKernelApplicationRequest(application, request)
 			plan, err := s.integrityKernelPrepare(context.Background(), request)
 			if err != nil {
 				t.Fatal(err)
@@ -305,8 +314,26 @@ print(json.dumps({'original_held_writer_resumed':True,'legitimate_directory_crea
 				j := integrityKernelFixtureStart(t, root, r, plan)
 				return r, root, j
 			}
-			release, _, releaseJournal := makeRelease(request, 1)
+			release, releaseDir, releaseJournal := makeRelease(request, 1)
 			released, releaseAttempted := 0, false
+			other := core.IntegrityKernelEnterpriseApplication
+			if application == other {
+				other = core.IntegrityKernelWebsiteApplication
+			}
+			borrowed := core.NewIntegrityKernelApplicationRequest(other, release)
+			beforeForeign, e := integrityKernelRead(releaseDir, "progress.jsonl", integrityKernelRecordBytes)
+			if e != nil {
+				t.Fatal(e)
+			}
+			foreignCount, foreignAttempted, foreignAuthority := 0, false, false
+			if e = s.integrityKernelRelease(context.Background(), borrowed, plan, releaseJournal, &foreignCount, &foreignAttempted, func() error { foreignAuthority = true; return nil }); e == nil || foreignCount != 0 || foreignAttempted || foreignAuthority {
+				t.Fatal("foreign application reached an inode mutation or adopted another plan", e, foreignCount, foreignAttempted, foreignAuthority)
+			}
+			afterForeign, e := integrityKernelRead(releaseDir, "progress.jsonl", integrityKernelRecordBytes)
+			rootAfterForeign, flagErr := readIntegrityInodeFlags(public, true)
+			if e != nil || flagErr != nil || !bytes.Equal(beforeForeign, afterForeign) || rootAfterForeign.Flags&integrityImmutableFlag == 0 {
+				t.Fatal("foreign release changed the original progress or native protection", e, flagErr)
+			}
 			if err = s.integrityKernelRelease(context.Background(), release, plan, releaseJournal, &released, &releaseAttempted, func() error { return nil }); err != nil || released != len(plan.Targets) || !releaseAttempted {
 				t.Fatal("fresh original-plan release failed", released, releaseAttempted, err)
 			}

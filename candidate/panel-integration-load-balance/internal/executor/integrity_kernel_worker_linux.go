@@ -243,7 +243,7 @@ func (s *Service) integrityKernelVerify(ctx context.Context, plan integrityKerne
 }
 
 func (s *Service) integrityKernelApply(ctx context.Context, request core.IntegrityKernelRequest, plan integrityKernelPlan, j *integrityKernelJournal, completed *int, attempted *bool, authority func() error) error {
-	if authority == nil {
+	if authority == nil || core.IntegrityKernelRequestApplication(request) == "" || core.IntegrityKernelRequestApplication(request) != integrityKernelPlanApplication(plan) {
 		return errors.New("缺少原内核任务授权见证")
 	}
 	site, public, err := s.integrityKernelOpenPlan(plan)
@@ -299,7 +299,7 @@ func (s *Service) integrityKernelApply(ctx context.Context, request core.Integri
 	if err = authority(); err != nil {
 		return err
 	}
-	baseline, err := s.readIntegrityBaseline(integrityKernelModule, plan.SiteID)
+	baseline, err := s.readIntegrityBaseline(integrityKernelPlanApplication(plan), plan.SiteID)
 	if err != nil || baseline.Signature != plan.BaselineSHA {
 		return errors.New("原签名基线在启用期间变化，未宣称完整启用")
 	}
@@ -311,7 +311,7 @@ func integrityKernelSameReleaseInode(a, b integrityInodeIdentity) bool {
 }
 
 func (s *Service) integrityKernelRelease(ctx context.Context, request core.IntegrityKernelRequest, plan integrityKernelPlan, j *integrityKernelJournal, completed *int, attempted *bool, authority func() error) error {
-	if authority == nil {
+	if authority == nil || core.IntegrityKernelRequestApplication(request) == "" || core.IntegrityKernelRequestApplication(request) != integrityKernelPlanApplication(plan) {
 		return errors.New("缺少原解除任务授权见证")
 	}
 	original, err := s.integrityKernelOperationDirectory(plan.OperationID)
@@ -322,6 +322,9 @@ func (s *Service) integrityKernelRelease(ctx context.Context, request core.Integ
 	source, err := s.integrityKernelReadOperation(plan.OperationID)
 	if err != nil {
 		return err
+	}
+	if core.IntegrityKernelRequestApplication(source.Request) != core.IntegrityKernelRequestApplication(request) || source.Request.AppID != plan.AppID || source.Request.Format != plan.Format {
+		return errors.New("原启用计划属于另一应用；未解除任何标记")
 	}
 	progress, err := readIntegrityKernelProgress(original, source.Request, plan)
 	if err != nil {
@@ -408,6 +411,10 @@ func (s *Service) integrityKernelRelease(ctx context.Context, request core.Integ
 }
 
 func (s *Service) integrityKernelExecute(parent context.Context, request core.IntegrityKernelRequest) {
+	application := core.IntegrityKernelRequestApplication(request)
+	if application == "" {
+		return
+	}
 	if _, loaded := s.integrityKernelRunning.LoadOrStore(request.ID, true); loaded {
 		return
 	}
@@ -426,7 +433,7 @@ func (s *Service) integrityKernelExecute(parent context.Context, request core.In
 		return
 	}
 	defer d.Close()
-	installed, err := s.integrityKernelInstalled()
+	installed, err := s.integrityKernelInstalled(application)
 	var authority func() error
 	var closeAuthority func()
 	if err == nil {
@@ -436,7 +443,7 @@ func (s *Service) integrityKernelExecute(parent context.Context, request core.In
 		}
 	}
 	if err == nil {
-		err = s.moduleRetrospectivePreflight(integrityKernelModule)
+		err = s.moduleRetrospectivePreflight(application)
 	}
 	if err == nil {
 		err = integrityKernelCreate(d, "started.json", integrityKernelStarted{Format: 1, ID: request.ID, RequestSHA: integrityKernelDigest(request), InstalledAt: installed["installed_at"].(string), StartedAt: time.Now().UTC().Format(time.RFC3339Nano)})
@@ -512,7 +519,7 @@ func (s *Service) integrityKernelExecute(parent context.Context, request core.In
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if historyErr := s.appendModuleEvent(integrityKernelModule, "kernel-"+request.Action, "durable-worker", core.AppModuleInput{SiteID: request.Input.SiteID}, out, err); historyErr != nil {
+	if historyErr := s.appendModuleEvent(application, "kernel-"+request.Action, "durable-worker", core.AppModuleInput{SiteID: request.Input.SiteID}, out, err); historyErr != nil {
 		out.State = "needs-attention"
 		if request.Action == "enable" && !attempted {
 			out.State = "declined"

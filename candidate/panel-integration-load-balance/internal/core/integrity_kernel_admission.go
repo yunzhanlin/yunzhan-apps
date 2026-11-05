@@ -49,7 +49,13 @@ func ValidIntegrityKernelAdmission(v IntegrityKernelAdmission) bool {
 }
 
 func (a *Server) integrityKernelAdmissionRoutes(m *http.ServeMux) {
-	const api = "/api/app-modules/website-tamper-proof/kernel"
+	for _, route := range IntegrityKernelApplicationRoutes() {
+		a.integrityKernelApplicationAdmissionRoutes(m, route)
+	}
+}
+
+func (a *Server) integrityKernelApplicationAdmissionRoutes(m *http.ServeMux, route IntegrityKernelApplicationRoute) {
+	api := route.API
 	m.HandleFunc("GET "+api+"/admissions/{id}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id := r.PathValue("id")
 		if !ValidID(id) || len(r.URL.Query()) != 0 {
@@ -57,11 +63,11 @@ func (a *Server) integrityKernelAdmissionRoutes(m *http.ServeMux) {
 			return
 		}
 		var out IntegrityKernelAdmission
-		if err := a.Executor.Call(r.Context(), "GET", "/v1/integrity-kernel/admissions/"+id, nil, &out); err != nil {
+		if err := a.Executor.Call(r.Context(), "GET", route.Executor+"/admissions/"+id, nil, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
 		}
-		if !ValidIntegrityKernelAdmission(out) || out.ID != id {
+		if !ValidIntegrityKernelAdmission(out) || out.ID != id || !IntegrityKernelAdmissionApplicationMatches(out, route.Application) {
 			fail(w, 502, "原提交核对回执身份无效")
 			return
 		}
@@ -124,22 +130,22 @@ func (a *Server) integrityKernelAdmissionRoutes(m *http.ServeMux) {
 			return
 		}
 		var appSHA string
-		if a.Store.DB.QueryRowContext(r.Context(), "SELECT sha256 FROM app_registry_receipts WHERE app_id='website-tamper-proof' AND scope='website-tamper-proof' AND version=? AND target='website-tamper-proof'", IntegrityKernelAppVersion).Scan(&appSHA) != nil || !integrityKernelSHA(appSHA) {
+		if a.Store.DB.QueryRowContext(r.Context(), "SELECT sha256 FROM app_registry_receipts WHERE app_id=? AND scope=? AND version=? AND target=?", route.Application, route.Application, IntegrityKernelAppVersion, route.Application).Scan(&appSHA) != nil || !integrityKernelSHA(appSHA) {
 			fail(w, 409, "原签名应用收据不能核对，未封存")
 			return
 		}
-		request := IntegrityKernelRequest{Format: 1, ID: Hash("integrity-kernel-operation-v1\x00" + u.ID + "\x00" + in.OriginalKey)[:32], ActorID: u.ID, AccessRevision: access.Revision, AppSHA: appSHA, Action: in.Action, Input: input, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+		request := NewIntegrityKernelApplicationRequest(route.Application, IntegrityKernelRequest{ID: IntegrityKernelSubmissionID(u.ID, in.OriginalKey, route.Application, false), ActorID: u.ID, AccessRevision: access.Revision, AppSHA: appSHA, Action: in.Action, Input: input, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)})
 		if err = a.Store.ValidateIntegrityKernelAuthority(r.Context(), request); err != nil {
 			fail(w, 409, err.Error())
 			return
 		}
-		closeRequest := IntegrityKernelCloseRequest{ID: Hash("integrity-kernel-close-v1\x00" + u.ID + "\x00" + key)[:32], Request: request}
+		closeRequest := IntegrityKernelCloseRequest{ID: IntegrityKernelSubmissionID(u.ID, key, route.Application, true), Request: request}
 		var out IntegrityKernelAdmission
-		if err = a.Executor.Call(r.Context(), "POST", "/v1/integrity-kernel/close-admission", closeRequest, &out); err != nil {
+		if err = a.Executor.Call(r.Context(), "POST", route.Executor+"/close-admission", closeRequest, &out); err != nil {
 			fail(w, 409, "封存结果仍待核对；保留原提交标识，只读核对："+err.Error())
 			return
 		}
-		if !ValidIntegrityKernelAdmission(out) || out.ID != request.ID || out.State == "absent" {
+		if !ValidIntegrityKernelAdmission(out) || out.ID != request.ID || out.State == "absent" || !IntegrityKernelAdmissionApplicationMatches(out, route.Application) {
 			fail(w, 502, "原提交封存回执无效，未宣称已封存")
 			return
 		}

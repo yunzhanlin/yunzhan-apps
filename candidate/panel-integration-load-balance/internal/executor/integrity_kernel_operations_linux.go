@@ -26,13 +26,17 @@ type integrityKernelStarted struct {
 	StartedAt   string `json:"started_at"`
 }
 
-func (s *Service) integrityKernelInstalled() (map[string]any, error) {
-	record, err := s.moduleInstalledRecord(integrityKernelModule)
+func (s *Service) integrityKernelInstalled(applications ...string) (map[string]any, error) {
+	application, err := integrityKernelApplicationArgument(applications)
+	if err != nil {
+		return nil, err
+	}
+	record, err := s.moduleInstalledRecord(application)
 	if err != nil {
 		return nil, err
 	}
 	if record["version"] != core.IntegrityKernelAppVersion {
-		return nil, errors.New("请先通过签名应用商店更新网站防篡改至 1.5.0；旧版未获得内核权限")
+		return nil, errors.New("请先通过签名应用商店更新对应防篡改应用至 1.5.0；旧版未获得内核权限")
 	}
 	installed, ok := record["installed_at"].(string)
 	if !ok {
@@ -57,10 +61,14 @@ func (s *Service) integrityKernelAuthority(ctx context.Context, request core.Int
 // Each mutation still rechecks current authority, app identity and database
 // inode; no long read transaction delays permission changes or Core writes.
 func (s *Service) integrityKernelAuthorityGuard(ctx context.Context, request core.IntegrityKernelRequest) (func() error, func(), error) {
+	application := core.IntegrityKernelRequestApplication(request)
+	if application == "" {
+		return nil, nil, errors.New("原内核操作应用身份无效")
+	}
 	if os.Geteuid() != 0 || s.Config.SystemRoot != "/" || s.Config.SecurityDir != "/etc/panel/security-apps" || s.Config.SitesDir != "/srv/panel/sites" || upgradeguard.Blocked() {
 		return nil, nil, errors.New("内核保护仅在实际受管 Linux 执行器环境执行")
 	}
-	installed, err := s.integrityKernelInstalled()
+	installed, err := s.integrityKernelInstalled(application)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -76,7 +84,7 @@ func (s *Service) integrityKernelAuthorityGuard(ctx context.Context, request cor
 		if upgradeguard.Blocked() || !reader.current() {
 			return errors.New("原数据库身份或程序升级状态变化，停止内核操作")
 		}
-		current, err := s.integrityKernelInstalled()
+		current, err := s.integrityKernelInstalled(application)
 		if err != nil || current["installed_at"] != installed["installed_at"] {
 			return errors.New("原应用安装身份变化，停止内核操作")
 		}
@@ -170,7 +178,7 @@ func (s *Service) integrityKernelReadOperation(id string) (core.IntegrityKernelO
 	}
 	if raw, err = integrityKernelRead(d, "plan.json", integrityKernelRecordBytes); err == nil {
 		var plan integrityKernelPlan
-		if integrityKernelJSON(raw, &plan) != nil || validateIntegrityKernelPlan(plan) != nil || plan.SiteID != out.Request.Input.SiteID {
+		if integrityKernelJSON(raw, &plan) != nil || validateIntegrityKernelPlan(plan) != nil || plan.SiteID != out.Request.Input.SiteID || integrityKernelPlanApplication(plan) != core.IntegrityKernelRequestApplication(out.Request) {
 			return out, errors.New("内核保护原计划无效")
 		}
 		out.PlanSHA = integrityKernelDigest(plan)
@@ -219,7 +227,7 @@ func (s *Service) integrityKernelOperations() ([]core.IntegrityKernelOperation, 
 		}
 		if row.Request.Action == "release" {
 			prior, ok := previousRows[site]
-			if !ok || row.Request.Input.SourceOperation != prior.Request.ID || row.Request.Input.SourceSHA != core.IntegrityKernelRequestSHA(prior.Request) {
+			if !ok || row.Request.Input.SourceOperation != prior.Request.ID || row.Request.Input.SourceSHA != core.IntegrityKernelRequestSHA(prior.Request) || core.IntegrityKernelRequestApplication(row.Request) != core.IntegrityKernelRequestApplication(prior.Request) {
 				return nil, errors.New("内核保护原解除来源链缺失或被改变")
 			}
 		}
@@ -254,7 +262,7 @@ func (s *Service) integrityKernelSourcePlan(rows []core.IntegrityKernelOperation
 			defer d.Close()
 			raw, err := integrityKernelRead(d, "plan.json", integrityKernelRecordBytes)
 			var plan integrityKernelPlan
-			if err != nil || integrityKernelJSON(raw, &plan) != nil || validateIntegrityKernelPlan(plan) != nil || plan.OperationID != current.Request.ID || plan.SiteID != current.Request.Input.SiteID || plan.BaselineSHA != current.Request.Input.BaselineSHA {
+			if err != nil || integrityKernelJSON(raw, &plan) != nil || validateIntegrityKernelPlan(plan) != nil || plan.OperationID != current.Request.ID || plan.SiteID != current.Request.Input.SiteID || plan.BaselineSHA != current.Request.Input.BaselineSHA || integrityKernelPlanApplication(plan) != core.IntegrityKernelRequestApplication(current.Request) {
 				return plan, errors.New("原启用计划缺失或无法核对；未猜测原路径、标记或所有者")
 			}
 			if current.PlanSHA != "" && current.PlanSHA != integrityKernelDigest(plan) {
@@ -278,7 +286,7 @@ func (s *Service) integrityKernelSourcePlan(rows []core.IntegrityKernelOperation
 			return plan, nil
 		}
 		previous, ok := byID[current.Request.Input.SourceOperation]
-		if !ok || previous.Request.Input.SiteID != latest.Request.Input.SiteID || previous.Revision+1 != current.Revision || integrityKernelDigest(previous.Request) != current.Request.Input.SourceSHA {
+		if !ok || previous.Request.Input.SiteID != latest.Request.Input.SiteID || previous.Revision+1 != current.Revision || integrityKernelDigest(previous.Request) != current.Request.Input.SourceSHA || core.IntegrityKernelRequestApplication(previous.Request) != core.IntegrityKernelRequestApplication(current.Request) {
 			return integrityKernelPlan{}, errors.New("原解除任务来源链不能核对")
 		}
 		current = previous
@@ -290,6 +298,7 @@ func (s *Service) integrityKernelSubmit(ctx context.Context, request core.Integr
 	if err := core.ValidateIntegrityKernelRequest(request); err != nil {
 		return core.IntegrityKernelOperation{}, err
 	}
+	application := core.IntegrityKernelRequestApplication(request)
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// Existing identity wins before revision checks: observing the exact
@@ -308,7 +317,7 @@ func (s *Service) integrityKernelSubmit(ctx context.Context, request core.Integr
 	if err := s.integrityKernelAuthority(ctx, request); err != nil {
 		return core.IntegrityKernelOperation{}, err
 	}
-	if err := s.moduleRetrospectivePreflight(integrityKernelModule); err != nil {
+	if err := s.moduleRetrospectivePreflight(application); err != nil {
 		return core.IntegrityKernelOperation{}, err
 	}
 	rows, err := s.integrityKernelOperations()
@@ -339,11 +348,14 @@ func (s *Service) integrityKernelSubmit(ctx context.Context, request core.Integr
 		if latest != nil && !(latest.State == "succeeded" && latest.Request.Action == "release" || latest.State == "declined" || latest.State == "cancelled" && latest.Request.Action == "enable") {
 			return core.IntegrityKernelOperation{}, errors.New("原保护仍启用或结果待核对；先选择原任务解除，不能覆盖基线或重新启用")
 		}
-		baseline, e := s.readIntegrityBaseline(integrityKernelModule, request.Input.SiteID)
+		baseline, e := s.readIntegrityBaseline(application, request.Input.SiteID)
 		if e != nil || baseline.Signature != request.Input.BaselineSHA {
 			return core.IntegrityKernelOperation{}, errors.New("当前原签名基线不能核对")
 		}
 	} else {
+		if latest != nil && core.IntegrityKernelRequestApplication(latest.Request) != application {
+			return core.IntegrityKernelOperation{}, errors.New("该保护属于另一防篡改应用；请从原应用和原任务解除，不能接管或清除其标记")
+		}
 		if latest == nil || latest.Request.ID != request.Input.SourceOperation || integrityKernelDigest(latest.Request) != request.Input.SourceSHA {
 			return core.IntegrityKernelOperation{}, errors.New("请选择最新原任务和精确摘要解除保护")
 		}
@@ -392,23 +404,29 @@ func (s *Service) integrityKernelSubmit(ctx context.Context, request core.Integr
 
 func (s *Service) integrityKernelRoutes(m *http.ServeMux) {
 	s.integrityKernelAdmissionRoutes(m)
-	m.HandleFunc("GET /v1/integrity-kernel", func(w http.ResponseWriter, r *http.Request) {
+	for _, route := range core.IntegrityKernelApplicationRoutes() {
+		s.integrityKernelApplicationRoutes(m, route)
+	}
+}
+
+func (s *Service) integrityKernelApplicationRoutes(m *http.ServeMux, route core.IntegrityKernelApplicationRoute) {
+	m.HandleFunc("GET "+route.Executor, func(w http.ResponseWriter, r *http.Request) {
 		query := r.URL.Query()
 		if len(query) != 1 || len(query["site_id"]) != 1 || !core.ValidID(query.Get("site_id")) {
 			respond(w, 400, map[string]string{"error": "内核保护状态须明确选择网站"})
 			return
 		}
-		out, err := s.integrityKernelStatus(r.Context(), query.Get("site_id"))
+		out, err := s.integrityKernelStatus(r.Context(), query.Get("site_id"), route.Application)
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
 		}
 		respond(w, 200, out)
 	})
-	m.HandleFunc("POST /v1/integrity-kernel/operations/{operation}", func(w http.ResponseWriter, r *http.Request) {
+	m.HandleFunc("POST "+route.Executor+"/operations/{operation}", func(w http.ResponseWriter, r *http.Request) {
 		raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 8192))
 		var request core.IntegrityKernelRequest
-		if err != nil || integrityKernelJSON(raw, &request) != nil || request.ID != r.PathValue("operation") || core.ValidateIntegrityKernelRequest(request) != nil {
+		if err != nil || integrityKernelJSON(raw, &request) != nil || request.ID != r.PathValue("operation") || core.ValidateIntegrityKernelRequest(request) != nil || core.IntegrityKernelRequestApplication(request) != route.Application {
 			respond(w, 400, map[string]string{"error": "内核保护原请求无效"})
 			return
 		}

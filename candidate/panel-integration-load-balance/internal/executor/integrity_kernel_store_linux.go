@@ -18,6 +18,7 @@ import (
 	"local/panel/internal/core"
 )
 
+// Stable shared journal anchor: never rename or rewrite published originals.
 const integrityKernelModule = "website-tamper-proof"
 const integrityKernelRecords = 512
 const integrityKernelTargets = 14097 // Existing 10000-file and 4096-directory budgets, plus public root.
@@ -27,6 +28,11 @@ const integrityKernelRecordBytes = 16 << 20
 // the append-only progress file grows while its original worker owns it.
 // An incomplete file is an unknown outcome, never permission to replay.
 func (s *Service) integrityKernelStore(create bool) (*modulePrivateDirectory, error) {
+	if create {
+		if err := s.integrityKernelEnsureSharedAnchor(); err != nil {
+			return nil, err
+		}
+	}
 	d, err := s.moduleRecordDirectory(integrityKernelModule)
 	if err != nil {
 		return nil, err
@@ -254,7 +260,10 @@ func integrityKernelJSON(raw []byte, value any) error {
 	}
 	d = json.NewDecoder(bytes.NewReader(raw))
 	d.DisallowUnknownFields()
-	return d.Decode(value)
+	if err := d.Decode(value); err != nil {
+		return err
+	}
+	return integrityKernelApplicationJSON(raw, value)
 }
 
 func (s *Service) integrityKernelOperationIDs() ([]string, error) {

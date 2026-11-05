@@ -27,6 +27,7 @@ type IntegrityKernelInput struct {
 
 type IntegrityKernelRequest struct {
 	Format         int                  `json:"format"`
+	AppID          string               `json:"app_id,omitempty"`
 	ID             string               `json:"id"`
 	ActorID        string               `json:"actor_id"`
 	AccessRevision int64                `json:"access_revision"`
@@ -51,6 +52,7 @@ type IntegrityKernelOperation struct {
 }
 
 type IntegrityKernelStatus struct {
+	AppID         string                     `json:"app_id,omitempty"`
 	SiteID        string                     `json:"site_id"`
 	AppVersion    string                     `json:"app_version"`
 	AppSHA        string                     `json:"app_sha"`
@@ -91,7 +93,7 @@ func ValidateIntegrityKernelInput(action string, in IntegrityKernelInput) error 
 }
 
 func ValidateIntegrityKernelRequest(in IntegrityKernelRequest) error {
-	if in.Format != 1 || !ValidID(in.ID) || !ValidID(in.ActorID) || in.AccessRevision < 1 || !integrityKernelSHA(in.AppSHA) || ValidateIntegrityKernelInput(in.Action, in.Input) != nil {
+	if IntegrityKernelRequestApplication(in) == "" || !ValidID(in.ID) || !ValidID(in.ActorID) || in.AccessRevision < 1 || !integrityKernelSHA(in.AppSHA) || ValidateIntegrityKernelInput(in.Action, in.Input) != nil {
 		return errors.New("内核保护原请求身份无效")
 	}
 	t, err := time.Parse(time.RFC3339Nano, in.CreatedAt)
@@ -113,7 +115,8 @@ func (s *Store) ValidateIntegrityKernelAuthority(ctx context.Context, request In
 		return errors.New("原操作者完整管理权限已变化，未执行内核保护")
 	}
 	var version, sha, target string
-	if err = s.DB.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='website-tamper-proof' AND scope='website-tamper-proof'").Scan(&version, &sha, &target); err != nil || version != IntegrityKernelAppVersion || sha != request.AppSHA || target != "website-tamper-proof" {
+	application := IntegrityKernelRequestApplication(request)
+	if err = s.DB.QueryRowContext(ctx, "SELECT version,sha256,target FROM app_registry_receipts WHERE app_id=? AND scope=?", application, application).Scan(&version, &sha, &target); err != nil || version != IntegrityKernelAppVersion || sha != request.AppSHA || target != application {
 		return errors.New("原签名应用收据已变化或不能核对，未执行内核保护")
 	}
 	return nil
@@ -194,6 +197,10 @@ func ValidIntegrityKernelOperation(out IntegrityKernelOperation) bool {
 }
 
 func ValidIntegrityKernelStatus(out IntegrityKernelStatus) bool {
+	application := IntegrityKernelStatusApplication(out)
+	if application == "" {
+		return false
+	}
 	if out.AppSHA != "" && !integrityKernelSHA(out.AppSHA) {
 		return false
 	}
@@ -204,7 +211,7 @@ func ValidIntegrityKernelStatus(out IntegrityKernelStatus) bool {
 		return false
 	}
 	switch out.State {
-	case "needs-baseline", "ready", "upgrade-required", "unsupported", "queued", "running", "enabled", "released", "needs-attention":
+	case "needs-baseline", "ready", "upgrade-required", "unsupported", "queued", "running", "enabled", "released", "needs-attention", "other-application":
 	default:
 		return false
 	}
@@ -212,7 +219,7 @@ func ValidIntegrityKernelStatus(out IntegrityKernelStatus) bool {
 		if !ValidIntegrityKernelOperation(op) || op.Request.Input.SiteID != out.SiteID || op.Revision != int64(i+1) {
 			return false
 		}
-		if op.Request.Action == "release" && (i == 0 || op.Request.Input.SourceOperation != out.Operations[i-1].Request.ID || op.Request.Input.SourceSHA != out.Operations[i-1].RequestSHA) {
+		if op.Request.Action == "release" && (i == 0 || op.Request.Input.SourceOperation != out.Operations[i-1].Request.ID || op.Request.Input.SourceSHA != out.Operations[i-1].RequestSHA || IntegrityKernelRequestApplication(op.Request) != IntegrityKernelRequestApplication(out.Operations[i-1].Request)) {
 			return false
 		}
 	}
@@ -222,10 +229,13 @@ func ValidIntegrityKernelStatus(out IntegrityKernelStatus) bool {
 	if out.Latest != nil && !reflect.DeepEqual(*out.Latest, out.Operations[len(out.Operations)-1]) {
 		return false
 	}
-	if out.State == "enabled" && (out.AppVersion != IntegrityKernelAppVersion || !integrityKernelSHA(out.AppSHA) || out.Latest == nil || out.Latest.State != "succeeded" || out.Latest.Request.Action != "enable") {
+	if out.State == "enabled" && (out.AppVersion != IntegrityKernelAppVersion || !integrityKernelSHA(out.AppSHA) || out.Latest == nil || out.Latest.State != "succeeded" || out.Latest.Request.Action != "enable" || IntegrityKernelRequestApplication(out.Latest.Request) != application) {
 		return false
 	}
-	if out.State == "released" && (out.Latest == nil || out.Latest.State != "succeeded" || out.Latest.Request.Action != "release") {
+	if out.State == "released" && (out.Latest == nil || out.Latest.State != "succeeded" || out.Latest.Request.Action != "release" || IntegrityKernelRequestApplication(out.Latest.Request) != application) {
+		return false
+	}
+	if out.State == "other-application" && (out.Latest == nil || IntegrityKernelOperationReleased(*out.Latest) || IntegrityKernelRequestApplication(out.Latest.Request) == application) {
 		return false
 	}
 	return true
@@ -233,7 +243,13 @@ func ValidIntegrityKernelStatus(out IntegrityKernelStatus) bool {
 
 func (a *Server) integrityKernelRoutes(m *http.ServeMux) {
 	a.integrityKernelAdmissionRoutes(m)
-	const api = "/api/app-modules/website-tamper-proof/kernel"
+	for _, route := range IntegrityKernelApplicationRoutes() {
+		a.integrityKernelApplicationRoutes(m, route)
+	}
+}
+
+func (a *Server) integrityKernelApplicationRoutes(m *http.ServeMux, route IntegrityKernelApplicationRoute) {
+	api := route.API
 	m.HandleFunc("GET "+api, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		query := r.URL.Query()
 		if len(query) != 1 || len(query["site_id"]) != 1 || !ValidID(query.Get("site_id")) {
@@ -241,11 +257,11 @@ func (a *Server) integrityKernelRoutes(m *http.ServeMux) {
 			return
 		}
 		var out IntegrityKernelStatus
-		if err := a.Executor.Call(r.Context(), "GET", "/v1/integrity-kernel?site_id="+query.Get("site_id"), nil, &out); err != nil {
+		if err := a.Executor.Call(r.Context(), "GET", route.Executor+"?site_id="+query.Get("site_id"), nil, &out); err != nil {
 			fail(w, 409, err.Error())
 			return
 		}
-		if out.SiteID != query.Get("site_id") || !ValidIntegrityKernelStatus(out) {
+		if out.SiteID != query.Get("site_id") || !ValidIntegrityKernelStatus(out) || IntegrityKernelStatusApplication(out) != route.Application {
 			fail(w, 502, "内核保护状态身份不能核对")
 			return
 		}
@@ -263,30 +279,30 @@ func (a *Server) integrityKernelRoutes(m *http.ServeMux) {
 			fail(w, 400, "内核保护输入缺失、重复、未知或身份无效")
 			return
 		}
-		id := Hash("integrity-kernel-operation-v1\x00" + u.ID + "\x00" + key)[:32]
+		id := IntegrityKernelSubmissionID(u.ID, key, route.Application, false)
 		access, accessErr := a.Store.UserAccess(u.ID)
 		if accessErr != nil || !fullAdministrator(access) {
 			fail(w, 403, "内核写保护需要当前完整管理员权限")
 			return
 		}
 		var appSHA string
-		if err = a.Store.DB.QueryRowContext(r.Context(), "SELECT sha256 FROM app_registry_receipts WHERE app_id='website-tamper-proof' AND scope='website-tamper-proof' AND version=? AND target='website-tamper-proof'", IntegrityKernelAppVersion).Scan(&appSHA); err != nil || !integrityKernelSHA(appSHA) {
+		if err = a.Store.DB.QueryRowContext(r.Context(), "SELECT sha256 FROM app_registry_receipts WHERE app_id=? AND scope=? AND version=? AND target=?", route.Application, route.Application, IntegrityKernelAppVersion, route.Application).Scan(&appSHA); err != nil || !integrityKernelSHA(appSHA) {
 			fail(w, 409, "请先通过签名商店安装支持内核写保护的应用")
 			return
 		}
-		request := IntegrityKernelRequest{Format: 1, ID: id, ActorID: u.ID, AccessRevision: access.Revision, AppSHA: appSHA, Action: action, Input: in, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)}
+		request := NewIntegrityKernelApplicationRequest(route.Application, IntegrityKernelRequest{ID: id, ActorID: u.ID, AccessRevision: access.Revision, AppSHA: appSHA, Action: action, Input: in, CreatedAt: time.Now().UTC().Format(time.RFC3339Nano)})
 		if err = a.Store.ValidateIntegrityKernelAuthority(r.Context(), request); err != nil {
 			fail(w, 409, err.Error())
 			return
 		}
 		var out IntegrityKernelOperation
-		if err = a.Executor.Call(r.Context(), "POST", "/v1/integrity-kernel/operations/"+id, request, &out); err != nil {
+		if err = a.Executor.Call(r.Context(), "POST", route.Executor+"/operations/"+id, request, &out); err != nil {
 			fail(w, 409, "提交结果待核对，请保留原键和原请求："+err.Error())
 			return
 		}
 		// CreatedAt belongs to the first accepted request; a retry returns it
 		// unchanged, with exactly the original actor/action/input identity.
-		if !ValidIntegrityKernelOperation(out) || out.Request.ID != id || out.Request.ActorID != u.ID || out.Request.AccessRevision != access.Revision || out.Request.AppSHA != appSHA || out.Request.Action != action || !reflect.DeepEqual(out.Request.Input, in) {
+		if !ValidIntegrityKernelOperation(out) || IntegrityKernelRequestApplication(out.Request) != route.Application || out.Request.ID != id || out.Request.ActorID != u.ID || out.Request.AccessRevision != access.Revision || out.Request.AppSHA != appSHA || out.Request.Action != action || !reflect.DeepEqual(out.Request.Input, in) {
 			fail(w, 502, "内核保护提交回执身份无效，未宣称完成")
 			return
 		}

@@ -1197,8 +1197,8 @@ defineExpose({ show });
         <el-tab-pane v-if="definition.id==='load-balance'" label="TCP / UDP 入口" name="stream">
           <LoadBalanceStreamWorkspace :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='stream'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
         </el-tab-pane>
-        <el-tab-pane v-if="definition.id==='website-tamper-proof'" label="内核写保护" name="kernel">
-          <IntegrityKernelWorkspace :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />
+        <el-tab-pane v-if="['website-tamper-proof','enterprise-tamper-proof'].includes(definition.id)" label="内核写保护" name="kernel">
+          <IntegrityKernelWorkspace :module-id="definition.id" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <el-alert :title="section.help" type="info" :closable="false" />

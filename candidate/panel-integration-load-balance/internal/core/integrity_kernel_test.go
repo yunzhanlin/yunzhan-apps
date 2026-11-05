@@ -16,6 +16,17 @@ func integrityKernelInputFixture() IntegrityKernelInput {
 }
 
 func TestIntegrityKernelHTTPKeepsAuthCSRFActorAndReceiptBoundary(t *testing.T) {
+	runIntegrityKernelApplicationHTTPBoundary(t, IntegrityKernelWebsiteApplication)
+}
+func TestIntegrityKernelEnterpriseHTTPKeepsAuthCSRFActorAndReceiptBoundary(t *testing.T) {
+	runIntegrityKernelApplicationHTTPBoundary(t, IntegrityKernelEnterpriseApplication)
+}
+func runIntegrityKernelApplicationHTTPBoundary(t *testing.T, application string) {
+	executor := "/v1/integrity-kernel"
+	if application == IntegrityKernelEnterpriseApplication {
+		executor = "/v1/enterprise-integrity-kernel"
+	}
+
 	s := testStore(t)
 	master := accessUser(t, s, "kernel-http-admin", "", nil)
 	viewer := accessUser(t, s, "kernel-http-viewer", "viewer", nil)
@@ -27,22 +38,30 @@ func TestIntegrityKernelHTTPKeepsAuthCSRFActorAndReceiptBoundary(t *testing.T) {
 	input := integrityKernelInputFixture()
 	body, _ := json.Marshal(input)
 	appSHA := strings.Repeat("b", 64)
-	if _, err = s.DB.Exec(`INSERT INTO app_registry_receipts VALUES('website-tamper-proof','website-tamper-proof',?,?,'website-tamper-proof',?)`, IntegrityKernelAppVersion, appSHA, Now()); err != nil {
+	if _, err = s.DB.Exec(`INSERT INTO app_registry_receipts VALUES(?,?,?,?,?,?)`, application, application, IntegrityKernelAppVersion, appSHA, application, Now()); err != nil {
 		t.Fatal(err)
 	}
 	calls := 0
 	wrongReply := false
+	wrongApplicationReply := false
 	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
 		calls++
-		if r.Method != "POST" || !strings.HasPrefix(r.URL.Path, "/v1/integrity-kernel/operations/") {
+		if r.Method != "POST" || !strings.HasPrefix(r.URL.Path, executor+"/operations/") {
 			t.Fatal("unexpected executor call", r.Method, r.URL.Path)
 		}
 		var request IntegrityKernelRequest
-		if json.NewDecoder(r.Body).Decode(&request) != nil || ValidateIntegrityKernelRequest(request) != nil || request.ActorID != master.ID || request.AppSHA != appSHA || request.ID != Hash("integrity-kernel-operation-v1\x00" + master.ID + "\x00http-original-key")[:32] {
+		if json.NewDecoder(r.Body).Decode(&request) != nil || ValidateIntegrityKernelRequest(request) != nil || request.ActorID != master.ID || request.AppSHA != appSHA || request.ID != IntegrityKernelSubmissionID(master.ID, "http-original-key", application, false) || IntegrityKernelRequestApplication(request) != application {
 			t.Fatal("Core changed original request identity", request)
 		}
 		if wrongReply {
 			request.ActorID = ID()
+		}
+		if wrongApplicationReply {
+			other := IntegrityKernelEnterpriseApplication
+			if application == other {
+				other = IntegrityKernelWebsiteApplication
+			}
+			request = NewIntegrityKernelApplicationRequest(other, request)
 		}
 		out := IntegrityKernelOperation{Request: request, RequestSHA: IntegrityKernelRequestSHA(request), Revision: 1, State: "queued"}
 		raw, _ := json.Marshal(out)
@@ -72,7 +91,7 @@ func TestIntegrityKernelHTTPKeepsAuthCSRFActorAndReceiptBoundary(t *testing.T) {
 		}
 		return w.Result().Cookies()[0], session.CSRF
 	}
-	path := "/api/app-modules/website-tamper-proof/kernel/enable"
+	path := "/api/app-modules/" + application + "/kernel/enable"
 	if w := request("POST", path, string(body), "", "http-original-key", nil); w.Code != 401 || calls != 0 {
 		t.Fatal("anonymous native dispatch", w.Code, calls)
 	}
@@ -99,8 +118,12 @@ func TestIntegrityKernelHTTPKeepsAuthCSRFActorAndReceiptBoundary(t *testing.T) {
 	if w := request("POST", path, string(body), csrf, "http-original-key", cookie); w.Code != 502 || calls != 2 {
 		t.Fatal("foreign actor receipt accepted", w.Code, w.Body.String())
 	}
+	wrongReply, wrongApplicationReply = false, true
+	if w := request("POST", path, string(body), csrf, "http-original-key", cookie); w.Code != 502 || calls != 3 {
+		t.Fatal("foreign application receipt accepted", w.Code, w.Body.String())
+	}
 	for _, query := range []string{"", "?site_id=../outside", "?site_id=" + input.SiteID + "&path=/etc", "?site_id=" + input.SiteID + "&site_id=" + input.SiteID} {
-		if w := request("GET", "/api/app-modules/website-tamper-proof/kernel"+query, "", "", "", cookie); w.Code != 400 || calls != 2 {
+		if w := request("GET", "/api/app-modules/"+application+"/kernel"+query, "", "", "", cookie); w.Code != 400 || calls != 3 {
 			t.Fatal("unclosed status query reached executor", query, w.Code, calls)
 		}
 	}
@@ -266,15 +289,17 @@ func TestIntegrityKernelOriginalOutcomeCannotBeRelabelled(t *testing.T) {
 }
 
 func TestIntegrityKernelSoftwareVersionCannotRelabelAnOlderHandler(t *testing.T) {
-	for _, validate := range []func(string, string) error{ValidateSoftwareUpdate, ValidateSoftwareInstallVersion} {
-		for _, version := range []string{"1.4.1", IntegrityKernelAppVersion} {
-			if err := validate("website-tamper-proof", version); err != nil {
-				t.Fatal(version, err)
+	for _, application := range []string{IntegrityKernelWebsiteApplication, IntegrityKernelEnterpriseApplication} {
+		for _, validate := range []func(string, string) error{ValidateSoftwareUpdate, ValidateSoftwareInstallVersion} {
+			for _, version := range []string{"1.4.1", IntegrityKernelAppVersion} {
+				if err := validate(application, version); err != nil {
+					t.Fatal(version, err)
+				}
 			}
-		}
-		for _, version := range []string{"1.5.0-compat1", "1.5.0+build", "1.5.1", "2.0.0", "01.5.0", "future"} {
-			if validate("website-tamper-proof", version) == nil {
-				t.Fatal("unimplemented kernel version or alias accepted", version)
+			for _, version := range []string{"1.5.0-compat1", "1.5.0+build", "1.5.1", "2.0.0", "01.5.0", "future"} {
+				if validate(application, version) == nil {
+					t.Fatal("unimplemented kernel version or alias accepted", version)
+				}
 			}
 		}
 	}

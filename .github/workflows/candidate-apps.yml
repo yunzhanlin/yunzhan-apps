@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2]
   workflow_dispatch:
 
 permissions:
@@ -46,6 +46,8 @@ jobs:
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-apache-cc-archive-schema.mjs
       - name: Independent exact website150 native kernel feature schema and historical manifests
         run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-integrity-kernel-schema.mjs
+      - name: Independent enterprise150 ownership ABI and all exact negative schema fixtures
+        run: YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/yunzhan-schema-c35/bin/python3" node tools/check-enterprise-kernel-schema.mjs
       - name: Bind every backup directory source witness before long native suites
         run: python3 -I -B -c "import runpy; runpy.run_path('tools/run-backup-directory-native.py')['source_files']()"
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
@@ -92,7 +94,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='9094cdf97a7919cef2bea17ebc5315a20205b8d2e3f86bca6431d0f79529dd28' and len(index['files'])==2405
+          assert index['release']['frozen_inputs_sha256']=='26deb47c0cf04d18c7e6462cfae39c3111f1d7faf717cf0f1e7e4ac5430f36f7' and len(index['files'])==2413
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -128,16 +130,16 @@ jobs:
       - name: Actual kernel authority and owned UID33 immutable inode fixtures with exact nonempty execution
         working-directory: candidate/panel-integration-load-balance
         run: |
-          sudo "$(command -v go)" test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^TestIntegrityKernel' > "$RUNNER_TEMP/integrity-kernel-core.jsonl"
+          sudo "$(command -v go)" test -json -race -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/core ./internal/appcatalog -run '^(TestIntegrityKernel|TestEnterpriseKernel)' > "$RUNNER_TEMP/integrity-kernel-core.jsonl"
           sudo env PANEL_INTEGRITY_KERNEL_NATIVE=1 "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -run '^(TestIntegrity(Kernel|Flag)|TestAppReliabilityIntegrity)' > "$RUNNER_TEMP/integrity-kernel-executor.jsonl"
-          node ../../tools/check-integrity-kernel-execution.mjs "$RUNNER_TEMP/integrity-kernel-core.jsonl" "$RUNNER_TEMP/integrity-kernel-executor.jsonl" "$(uname -m)"
+          node ../../tools/check-enterprise-kernel-execution.mjs "$RUNNER_TEMP/integrity-kernel-core.jsonl" "$RUNNER_TEMP/integrity-kernel-executor.jsonl" "$(uname -m)"
       - name: Original predecessor source for the real old compiled handler boundary
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: 393f808e2d10d639d02cb669d3b34b00aaf6efb4
+          ref: 34efafed267e00d860710b339310d386b24381f7
           path: predecessor-kernel
           persist-credentials: false
-      - name: Actual old compiled signed50 ABI must refuse only website150
+      - name: Actual immediate C60 compiled ABI must retain website150 and refuse only enterprise150
         working-directory: predecessor-kernel/candidate/panel-integration-load-balance
         run: |
           set +e
@@ -145,7 +147,22 @@ jobs:
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          node "$GITHUB_WORKSPACE/tools/check-integrity-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json"
+          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json" immediate-C60
+      - name: Preserve the original C59 compiled source for the two later kernel scopes
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 393f808e2d10d639d02cb669d3b34b00aaf6efb4
+          path: legacy-predecessor-kernel
+          persist-credentials: false
+      - name: Actual unchanged C59 compiled ABI must refuse both later kernel applications and retain other48
+        working-directory: legacy-predecessor-kernel/candidate/panel-integration-load-balance
+        run: |
+          set +e
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate" > "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl"
+          original_exit=$?
+          set -e
+          test "$original_exit" -eq 1
+          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl" "$GITHUB_WORKSPACE/candidate/dist/catalog-v1.json" legacy-C59
       - name: Actual native backup retention reservation, starvation and read-only API regressions
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -172,6 +189,7 @@ jobs:
           node --experimental-strip-types --test scripts/test-analytics-performance.mjs
           node --experimental-strip-types --test scripts/test-apache-cc-archives.mjs
           node --test scripts/test-integrity-kernel-workspace.mjs
+          node --test scripts/test-enterprise-kernel-workspace.mjs
       - name: Native regression must preserve the exact exported source cohort
         run: git diff --exit-code -- candidate/panel-integration-load-balance
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
@@ -242,5 +260,6 @@ jobs:
             ${{ runner.temp }}/integrity-kernel-core.jsonl
             ${{ runner.temp }}/integrity-kernel-executor.jsonl
             ${{ runner.temp }}/integrity-kernel-predecessor.jsonl
+            ${{ runner.temp }}/integrity-kernel-legacy-predecessor.jsonl
           retention-days: 7
           if-no-files-found: error
