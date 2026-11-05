@@ -40,6 +40,40 @@ def copy_bounded(source, destination, limit):
             stable.write(block)
 
 
+def copy_root_private_condition(source, destination):
+    """Preserve one explicit Root condition; never follow a caller link."""
+    source = pathlib.Path(source)
+    if not source.is_absolute() or '..' in source.parts or str(source).startswith('//'):
+        raise ValueError('recovery condition must be a canonical absolute Root-private file')
+    for parent in reversed(source.parents):
+        info = parent.lstat()
+        if parent == pathlib.Path('/tmp'):
+            relative = source.relative_to(parent)
+            if not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or stat.S_IMODE(info.st_mode) != 0o1777 or len(relative.parts) < 2:
+                raise ValueError('unsafe temporary recovery condition parent')
+            private = (parent/relative.parts[0]).lstat()
+            if not stat.S_ISDIR(private.st_mode) or private.st_uid != 0 or stat.S_IMODE(private.st_mode) != 0o700:
+                raise ValueError('recovery condition temporary scope is not Root-private')
+        elif not stat.S_ISDIR(info.st_mode) or info.st_uid != 0 or info.st_mode & 0o022:
+            raise ValueError('recovery condition has an unsafe or linked parent')
+    descriptor = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISREG(before.st_mode) or before.st_uid != 0 or before.st_nlink != 1 or stat.S_IMODE(before.st_mode) != 0o600 or not 1 <= before.st_size <= 2048:
+            raise ValueError('recovery condition must be a bounded Root0600 independent file')
+        raw = os.read(descriptor, 2049)
+        identity = lambda s:(s.st_dev,s.st_ino,s.st_mode,s.st_uid,s.st_gid,s.st_nlink,s.st_size,s.st_mtime_ns,s.st_ctime_ns)
+        if len(raw) != before.st_size or identity(before) != identity(os.fstat(descriptor)) or identity(before) != identity(source.lstat()):
+            raise ValueError('original recovery condition changed during its one bounded copy')
+    finally:
+        os.close(descriptor)
+    descriptor = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(descriptor, 'wb') as stable:
+        stable.write(raw)
+        stable.flush()
+        os.fsync(stable.fileno())
+
+
 def archive_identity(archive):
     match = ARCHIVE_NAME.fullmatch(archive.name)
     if match is None:
@@ -86,7 +120,7 @@ def verify(args):
     description = subprocess.check_output([args.openssl, "pkey", "-pubin", "-in", str(public_key), "-text_pub", "-noout"], stderr=subprocess.DEVNULL)
     if not description.startswith(b"ED25519 Public-Key:"):
         raise ValueError("release trust key must be Ed25519")
-    if args.action == "install":
+    if args.action in ("install", "recover-filesync"):
         key_info = args.public_key.lstat()
         if not stat.S_ISREG(key_info.st_mode) or key_info.st_uid != 0 or key_info.st_mode & 0o022:
             raise ValueError("installer trust key must be a root-owned regular file without group/other write")
@@ -143,7 +177,7 @@ def main():
     signer = actions.add_parser("sign")
     signer.add_argument("archive", type=pathlib.Path)
     signer.add_argument("--private-key", type=pathlib.Path, required=True)
-    for action in ("verify", "install"):
+    for action in ("verify", "install", "recover-filesync"):
         sub = actions.add_parser(action)
         sub.add_argument("archive", type=pathlib.Path)
         sub.add_argument("--public-key", type=pathlib.Path, required=True)
@@ -153,6 +187,8 @@ def main():
             sub.add_argument("--root", type=pathlib.Path)
             sub.add_argument("--no-services", action="store_true")
             sub.add_argument("--preflight-only", action="store_true")
+        elif action == "recover-filesync":
+            sub.add_argument("--condition", type=pathlib.Path, required=True)
     args = parser.parse_args()
     try:
         if args.action == "sign":
@@ -182,6 +218,14 @@ def main():
             if (release / "RELEASE").read_text(encoding="ascii") != expected_release:
                 raise ValueError("archive metadata does not match signed archive name")
             subprocess.run(["bash", str(release / "verify-release.sh"), str(release)], check=True)
+            if args.action == "recover-filesync":
+                if not sys.platform.startswith('linux'):
+                    raise ValueError('signed filesync recovery requires the actual Linux host')
+                condition = staging / "filesync-original-condition.json"
+                copy_root_private_condition(args.condition, condition)
+                recovered = subprocess.run(["/usr/bin/python3", "-I", "-B", str(release / "upgrade-release.py"),
+                                            "recover-filesync", str(release), "--condition", str(condition)], check=False)
+                return recovered.returncode
             installer_args = []
             if args.root:
                 installer_args.extend(["--root", str(args.root)])

@@ -117,3 +117,33 @@ export function beforeApacheBuildDependencyAdmission(text) {
  }
  return text;
 }
+
+// Reverse only C65's exact, private offline-reader parameterization. The
+// ordinary entry still supplies nil; all previous full-file hashes stay intact.
+export function beforeFilesyncOfflineReaderHook(text) {
+  {
+    const current="func CheckProgramUpgradeQueues() error {\n\treturn checkCompleteProgramUpgradeQueues(nil)\n}\n\n// A nonnil reader is package-private and used only by the explicit signed\n// offline recovery protocol. Ordinary upgrades and all existing controllers\n// always pass nil and retain their complete pending-copy refusal.\nfunc checkCompleteProgramUpgradeQueues(remoteReader func(*Service) error) error {\n\tif err := checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader); err != nil {\n\t\treturn err\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tif err := checkApacheNumericLogUpgrade(ctx, \"/\"); err != nil {\n\t\treturn err\n\t}\n\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n}\n\n// Preserves all existing application, recovery and filesystem checks. The\n// private L4 controllers call this PLUS their independently self-bound fence;\n// they never pass a general native-unit prefix or selected-ID exemption here.\nfunc checkLegacyProgramUpgradeQueues() error {\n\treturn checkLegacyProgramUpgradeQueuesWithRemoteReader(nil)\n}\n\nfunc checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service) error) error {\n";
+    const previous="func CheckProgramUpgradeQueues() error {\n\tif err := checkLegacyProgramUpgradeQueues(); err != nil {\n\t\treturn err\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tif err := checkApacheNumericLogUpgrade(ctx, \"/\"); err != nil {\n\t\treturn err\n\t}\n\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n}\n\n// Preserves all existing application, recovery and filesystem checks. The\n// private L4 controllers call this PLUS their independently self-bound fence;\n// they never pass a general native-unit prefix or selected-ID exemption here.\nfunc checkLegacyProgramUpgradeQueues() error {\n";
+    assert.equal(text.split(current).length,2,'missing, duplicate or altered offline-reader hook');
+    text=text.split(current).join(previous);
+  }
+  {
+    const current="checkProgramUpgradeQueuesWithRemoteReader(ctx, \"/\", remoteReader)";
+    const previous="checkProgramUpgradeQueues(ctx, \"/\")";
+    assert.equal(text.split(current).length,3,'missing, duplicate or altered offline-reader hook');
+    text=text.split(current).join(previous);
+  }
+  {
+    const current="func checkProgramUpgradeQueues(ctx context.Context, root string) error {\n\treturn checkProgramUpgradeQueuesWithRemoteReader(ctx, root, nil)\n}\n\nfunc checkProgramUpgradeQueuesWithRemoteReader(ctx context.Context, root string, remoteReader func(*Service) error) error {\n";
+    const previous="func checkProgramUpgradeQueues(ctx context.Context, root string) error {\n";
+    assert.equal(text.split(current).length,2,'missing, duplicate or altered offline-reader hook');
+    text=text.split(current).join(previous);
+  }
+  {
+    const current="\tif remoteReader == nil {\n\t\tif pending, err := protected.remoteCopyPending(\"\", \"\"); err != nil {\n\t\t\treturn err\n\t\t} else if pending {\n\t\t\treturn errors.New(\"独立备份原操作待核对，保留副本和片段并拒绝升级\")\n\t\t}\n\t} else if err := remoteReader(protected); err != nil {\n\t\treturn err\n\t}\n";
+    const previous="\tif pending, err := protected.remoteCopyPending(\"\", \"\"); err != nil {\n\t\treturn err\n\t} else if pending {\n\t\treturn errors.New(\"独立备份原操作待核对，保留副本和片段并拒绝升级\")\n\t}\n";
+    assert.equal(text.split(current).length,2,'missing, duplicate or altered offline-reader hook');
+    text=text.split(current).join(previous);
+  }
+  return text;
+}

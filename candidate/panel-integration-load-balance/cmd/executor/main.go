@@ -75,6 +75,9 @@ func main() {
 	apacheBodyCacheCheck := flag.Bool("check-apache-body-cache-mount", false, "read-only fixed pre-mount guard; never hide existing cache contents or replace unknown mounts")
 	apacheBodyCachePreflight := flag.Bool("check-apache-body-cache-upgrade", false, "read-only fixed installer preflight before host or service changes; missing cache is not provisioned")
 	programQueuePreflight := flag.Bool("check-program-upgrade-queues", false, "read-only fixed-path pending native-operation guard; never repairs or replays records")
+	offlineFragmentReview := flag.Bool("review-filesync-unpublished-offline", false, "Root-only fixed-path read of original unpublished fragments; grants no write or upgrade permission")
+	offlineFragmentAdmission := flag.Bool("check-filesync-unpublished-upgrade", false, "Root-only complete recovery admission observation bound to original conditions; grants no write permission")
+	offlineFragmentRetention := flag.Bool("retain-filesync-unpublished-offline", false, "Root-only original signed-upgrade writer; requires the fixed stopped-writer plan and inherited leases")
 	idsRecover := flag.Bool("recover-network-ids", false, "recover the fixed private IDS two-file configuration before capture")
 	idsAuthorize := flag.Bool("authorize-network-ids-start", false, "verify private IDS committed configuration or live executor candidate")
 	pm2Serve := flag.String("serve-pm2", "", "serve one isolated PM2 application")
@@ -89,6 +92,51 @@ func main() {
 	flag.Parse()
 	if err := validateExecutorCLIArguments(flag.CommandLine, os.Args[1:]); err != nil {
 		log.Fatal(err)
+	}
+	offlineFragmentReviewEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "review-filesync-unpublished-offline" {
+			offlineFragmentReviewEntry = true
+		}
+	})
+	if offlineFragmentReviewEntry {
+		if os.Geteuid() != 0 || !*offlineFragmentReview || flag.NFlag() != 1 || len(os.Args) != 2 || os.Args[1] != "--review-filesync-unpublished-offline" {
+			log.Fatal("offline fragment review requires Root and one exact flag; mixed, empty and alias invocations are refused")
+		}
+		if err := executor.RunFilesSyncUnpublishedOfflineReview(os.Stdin, os.Stdout); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	offlineFragmentAdmissionEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "check-filesync-unpublished-upgrade" {
+			offlineFragmentAdmissionEntry = true
+		}
+	})
+	if offlineFragmentAdmissionEntry {
+		if os.Geteuid() != 0 || !*offlineFragmentAdmission || flag.NFlag() != 1 || len(os.Args) != 2 || os.Args[1] != "--check-filesync-unpublished-upgrade" {
+			log.Fatal("offline recovery admission requires Root and one exact flag; mixed, empty and alias invocations are refused")
+		}
+		if err := executor.CheckFilesSyncUnpublishedUpgradeAdmission(os.Stdin, os.Stdout); err != nil {
+			log.Fatal(executor.ProgramUpgradeQueueFailureText(err))
+		}
+		return
+	}
+	offlineFragmentRetentionEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "retain-filesync-unpublished-offline" {
+			offlineFragmentRetentionEntry = true
+		}
+	})
+	if offlineFragmentRetentionEntry {
+		if os.Geteuid() != 0 || !*offlineFragmentRetention || flag.NFlag() != 1 || len(os.Args) != 2 || os.Args[1] != "--retain-filesync-unpublished-offline" {
+			log.Fatal("offline retention requires Root and one exact flag; mixed, empty and alias invocations are refused")
+		}
+		if err := executor.RunFilesSyncUnpublishedOfflineRetention(os.Stdin, os.Stdout); err != nil {
+			log.Fatal(executor.ProgramUpgradeQueueFailureText(err))
+		}
+		return
 	}
 	countryAccountEntry := false
 	flag.Visit(func(f *flag.Flag) {

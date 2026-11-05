@@ -29,7 +29,14 @@ import (
 // The exported entrypoint has only fixed production paths. Tests instantiate
 // the unexported reader on a private root; there is no alternate-root CLI.
 func CheckProgramUpgradeQueues() error {
-	if err := checkLegacyProgramUpgradeQueues(); err != nil {
+	return checkCompleteProgramUpgradeQueues(nil)
+}
+
+// A nonnil reader is package-private and used only by the explicit signed
+// offline recovery protocol. Ordinary upgrades and all existing controllers
+// always pass nil and retain their complete pending-copy refusal.
+func checkCompleteProgramUpgradeQueues(remoteReader func(*Service) error) error {
+	if err := checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader); err != nil {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -44,6 +51,10 @@ func CheckProgramUpgradeQueues() error {
 // private L4 controllers call this PLUS their independently self-bound fence;
 // they never pass a general native-unit prefix or selected-ID exemption here.
 func checkLegacyProgramUpgradeQueues() error {
+	return checkLegacyProgramUpgradeQueuesWithRemoteReader(nil)
+}
+
+func checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service) error) error {
 	if os.Geteuid() != 0 {
 		return errors.New("program queue preflight requires root")
 	}
@@ -81,7 +92,7 @@ func checkLegacyProgramUpgradeQueues() error {
 	if err := coreQueue(); err != nil {
 		return err
 	}
-	if err := checkProgramUpgradeQueues(ctx, "/"); err != nil {
+	if err := checkProgramUpgradeQueuesWithRemoteReader(ctx, "/", remoteReader); err != nil {
 		return err
 	}
 	if err := diskjob.CheckRootJobs(); err != nil {
@@ -96,7 +107,7 @@ func checkLegacyProgramUpgradeQueues() error {
 	// Native commands cannot turn an earlier filesystem snapshot into a lease.
 	// Recheck both authorities before returning; installer repeats under locks
 	// and after strict stops. No claim covers a hostile root ignoring leases.
-	if err := checkProgramUpgradeQueues(ctx, "/"); err != nil {
+	if err := checkProgramUpgradeQueuesWithRemoteReader(ctx, "/", remoteReader); err != nil {
 		return err
 	}
 	if err := diskjob.CheckRootJobs(); err != nil {
@@ -650,6 +661,10 @@ func decodeProgramQueueJSON(data []byte, out any) error {
 }
 
 func checkProgramUpgradeQueues(ctx context.Context, root string) error {
+	return checkProgramUpgradeQueuesWithRemoteReader(ctx, root, nil)
+}
+
+func checkProgramUpgradeQueuesWithRemoteReader(ctx context.Context, root string, remoteReader func(*Service) error) error {
 	if os.Geteuid() != 0 || !filepath.IsAbs(root) || filepath.Clean(root) != root || ruleFeedStoreParents(root) != nil {
 		return errors.New("untrusted program queue root")
 	}
@@ -671,10 +686,14 @@ func checkProgramUpgradeQueues(ctx context.Context, root string) error {
 	// controller while its protection or original transition needs attention.
 	// This literal constructs no worker and performs no recovery or writes.
 	protected := &Service{Config: Config{SecurityDir: filepath.Join(root, "etc/panel/security-apps")}}
-	if pending, err := protected.remoteCopyPending("", ""); err != nil {
+	if remoteReader == nil {
+		if pending, err := protected.remoteCopyPending("", ""); err != nil {
+			return err
+		} else if pending {
+			return errors.New("独立备份原操作待核对，保留副本和片段并拒绝升级")
+		}
+	} else if err := remoteReader(protected); err != nil {
 		return err
-	} else if pending {
-		return errors.New("独立备份原操作待核对，保留副本和片段并拒绝升级")
 	}
 	if err := protected.integrityKernelReference(""); err != nil {
 		return err

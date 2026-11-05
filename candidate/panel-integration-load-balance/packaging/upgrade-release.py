@@ -216,8 +216,13 @@ def original_statistics_reader_can_be_observed_again(error):
              ('deactivating','stop-post')))
 
 
-def command(*args, timeout=60):
-    result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+def command(*args, timeout=60, input_text=None, pass_fds=()):
+    options = {'capture_output': True, 'text': True, 'timeout': timeout}
+    if input_text is not None:
+        options['input'] = input_text
+    if pass_fds:
+        options['pass_fds'] = pass_fds
+    result = subprocess.run(args, **options)
     if result.returncode:
         # No raw unit, credential, configuration or database output is exposed.
         raise CommandFailure(args[0], result.returncode, result.stdout, result.stderr)
@@ -241,8 +246,33 @@ def rename_noreplace(source, target):
         raise OSError(ctypes.get_errno(),'atomic exclusive maintenance marker refused')
 
 
+def decode_filesync_unpublished_condition(raw):
+    """An explicit observation, never a generic queue or path exception."""
+    if not isinstance(raw, bytes) or not 1 <= len(raw) <= 2048 or b'\\' in raw:
+        raise ValueError('filesync recovery condition exceeds its closed input contract')
+    def closed(pairs):
+        values = {}
+        for key, value in pairs:
+            if key in values:
+                raise ValueError('duplicate filesync recovery condition field')
+            values[key] = value
+        return values
+    value = json.loads(raw.decode('utf8', 'strict'), object_pairs_hook=closed)
+    keys = {'format', 'remote_target_id', 'backup_transaction_id', 'revision', 'installed_record_sha256',
+            'config_spec_sha256', 'snapshot_sha256', 'census_sha256', 'confirm'}
+    if (not isinstance(value, dict) or set(value) != keys or type(value['format']) is not int or value['format'] != 1
+            or type(value['revision']) is not int or not 1 <= value['revision'] <= 10**9
+            or not isinstance(value['remote_target_id'], str) or not re.fullmatch('[a-z0-9][a-z0-9-]{2,63}', value['remote_target_id'])
+            or not isinstance(value['backup_transaction_id'], str) or not re.fullmatch('[a-f0-9]{32}', value['backup_transaction_id'])
+            or value['confirm'] != 'RETAIN FRAGMENTS ' + value['backup_transaction_id']
+            or any(not isinstance(value[key], str) or not re.fullmatch('[a-f0-9]{64}', value[key])
+                   for key in ('installed_record_sha256', 'config_spec_sha256', 'snapshot_sha256', 'census_sha256'))):
+        raise ValueError('filesync recovery condition is stale, incomplete or not canonical')
+    return value
+
+
 class Upgrade:
-    def __init__(self, release, root=pathlib.Path('/'), runner=command):
+    def __init__(self, release, root=pathlib.Path('/'), runner=command, *, filesync_unpublished=None):
         self.release = pathlib.Path(release)
         self.root = pathlib.Path(root)
         self.run_command = runner
@@ -264,6 +294,9 @@ class Upgrade:
         self.layout = 'production'
         self.database_mutations = {}
         self.timer_deferred = False
+        self.filesync_unpublished = (None if filesync_unpublished is None else
+                                    decode_filesync_unpublished_condition(json.dumps(filesync_unpublished).encode('utf8')))
+        self.filesync_retention_observed = False
 
     def path(self, value):
         value = pathlib.Path(value)
@@ -747,6 +780,10 @@ class Upgrade:
             plan.update(previous=self.previous,original_pointer=self.original_pointer,previous_inventory=self.previous_inventory)
         else:
             plan.update(original_trees=self.original_tree_identities)
+        if self.filesync_unpublished is not None:
+            if self.layout != 'production':
+                raise ValueError('filesync offline recovery belongs only to the fixed production transaction')
+            plan['filesync_unpublished'] = self.filesync_unpublished
         raw = (json.dumps(plan,sort_keys=True)+'\n').encode()
         if len(raw)>8*1024*1024:
             raise ValueError('recovery plan exceeds complete metadata budget')
@@ -820,13 +857,85 @@ class Upgrade:
         # Repeated at preflight, under the leases, after strict writer stop,
         # after candidate readiness and before any database rollback.
         try:
-            self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+            if self.filesync_unpublished is not None and not self.filesync_retention_observed:
+                observed = self.run_command(str(self.release/'bin/panel-executor'), '--check-filesync-unpublished-upgrade',
+                                            input_text=json.dumps(self.filesync_unpublished, sort_keys=True), timeout=10)
+                witness = self.validate_filesync_witness(observed)
+                if witness['state'] == 'observed-original-retained-receipt':
+                    self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+                    self.filesync_retention_observed = True
+            else:
+                self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
         except CommandFailure as error:
             # A later read may succeed and cannot explain this ORIGINAL refusal.
             # Preserve that exact child's bounded output only in the already
             # owned private transaction; ordinary preflight remains write-free.
             self.record_native_queue_refusal(error)
             raise
+
+    def validate_filesync_witness(self, raw):
+        if not isinstance(raw, str) or not 1 <= len(raw.encode('utf8')) <= 65536 or self.filesync_unpublished is None:
+            raise ValueError('filesync offline observation exceeds its complete contract')
+        def closed(pairs):
+            result = {}
+            for name, value in pairs:
+                if name in result:
+                    raise ValueError('duplicate filesync offline observation field')
+                result[name] = value
+            return result
+        value = json.loads(raw, object_pairs_hook=closed)
+        fields = {'format', 'state', 'original_census_sha256', 'observed_census_sha256', 'review', 'read_only', 'writer_permitted'}
+        if (not isinstance(value, dict) or set(value) != fields or type(value['format']) is not int or value['format'] != 1
+                or value['state'] not in ('original-unpublished', 'observed-original-retained-receipt')
+                or value['read_only'] is not True or value['writer_permitted'] is not False
+                or value['original_census_sha256'] != self.filesync_unpublished['census_sha256']
+                or not isinstance(value['observed_census_sha256'], str) or not re.fullmatch('[a-f0-9]{64}', value['observed_census_sha256'])):
+            raise ValueError('filesync original observation grants no recovery permission')
+        review = value['review']
+        if (not isinstance(review, dict) or type(review.get('format')) is not int or review['format'] != 1
+                or review.get('kind') != 'files-sync-offline-unpublished-review'
+                or review.get('installed_version') not in ('2.0.0', '2.0.1')
+                or review.get('read_only') is not True or review.get('requires_writer_barrier') is not True
+                or any(review.get(key) is not False for key in ('backup_complete', 'source_authority', 'downloadable'))
+                or review.get('census_sha256') != value['observed_census_sha256']
+                or any(review.get(key) != self.filesync_unpublished[key] for key in
+                       ('remote_target_id', 'backup_transaction_id', 'revision', 'installed_record_sha256', 'config_spec_sha256', 'snapshot_sha256'))
+                or (value['state'] == 'original-unpublished') != (value['observed_census_sha256'] == value['original_census_sha256'])):
+            raise ValueError('filesync original installation, configuration or full census changed')
+        return value
+
+    def retain_filesync_unpublished(self):
+        if self.filesync_unpublished is None or self.filesync_retention_observed:
+            return
+        if self.layout != 'production' or not self.stopping or not self.pending_created or self.changed or len(self.locks) != 2:
+            raise ValueError('filesync retention requires the original stopped production upgrade before any program mutation')
+        for unit in PROGRAMS:
+            if self.stopped_program(unit)['ActiveState'] != 'inactive':
+                raise ValueError('filesync retention has an original program writer still present')
+        self.no_program_jobs()
+        self.queue_check()
+        if self.filesync_retention_observed:
+            return
+        raw, _ = self.file(self.backup/'recovery-plan.json', mode=0o600, limit=8*1024*1024)
+        if self.read_record(self.backup/'recovery-plan.json').get('filesync_unpublished') != self.filesync_unpublished:
+            raise ValueError('filesync original condition is not bound to the retained upgrade plan')
+        request = {'format': 1, 'version': self.version, 'plan_sha256': hashlib.sha256(raw).hexdigest(), 'lease_fds': self.locks}
+        result = self.run_command(str(self.private_candidate/'bin/panel-executor'), '--retain-filesync-unpublished-offline',
+                                  input_text=json.dumps(request, sort_keys=True), pass_fds=tuple(self.locks), timeout=30)
+        if not isinstance(result, str) or not 1 <= len(result.encode('utf8')) <= 65536:
+            raise ValueError('original filesync retention reply is missing or exceeds its complete budget; never replay automatically')
+        # A missing/invalid reply stays unknown. Compensation and interrupted
+        # recovery only READ the original condition/receipt; no writer replay.
+        value = json.loads(result)
+        if (not isinstance(value, dict) or set(value) != {'format', 'new_retention', 'witness', 'original_fragments_preserved'}
+                or type(value['format']) is not int or value['format'] != 1
+                or type(value['new_retention']) is not bool or value['original_fragments_preserved'] is not True):
+            raise ValueError('original filesync retention reply is incomplete; no automatic replay')
+        witness = self.validate_filesync_witness(json.dumps(value['witness']))
+        if witness['state'] != 'observed-original-retained-receipt':
+            raise ValueError('original filesync retention has no matched durable receipt')
+        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+        self.filesync_retention_observed = True
 
     def preflight_admission_is_readonly(self):
         if (self.layout not in ('production','development')
@@ -1773,6 +1882,11 @@ class Upgrade:
         fields = {'format','layout','version','backup_device','backup_inode','owner','services','nginx_pid',
                   'database_owner','database_group','database_inode','candidate','original_units','original_marker'}
         fields |= {'previous','original_pointer','previous_inventory'} if self.layout=='production' else {'original_trees'}
+        if 'filesync_unpublished' in plan:
+            if self.layout != 'production':
+                raise ValueError('offline filesync recovery cannot extend another layout plan')
+            self.filesync_unpublished = decode_filesync_unpublished_condition(json.dumps(plan['filesync_unpublished']).encode('utf8'))
+            fields.add('filesync_unpublished')
         if (set(plan)!=fields or type(plan['format'])is not int or plan['format']!=1
                 or plan['layout']!=self.layout or plan['version']!=version
                 or type(plan['backup_device'])is not int or type(plan['backup_inode'])is not int
@@ -1933,6 +2047,8 @@ class Upgrade:
         self.run_command('/usr/sbin/nginx','-t')
         self.queue_check()
         pending = self.validate_managed_file(self.pending)
+        if self.filesync_unpublished is not None and self.changed and not self.filesync_retention_observed:
+            raise ValueError('changed program transaction has no matched original filesync retention receipt')
         self.pending_created = pending is not None
         if self.pending_created:
             self.pending_bytes,self.pending_identity = self.file(self.pending,mode=0o644,limit=2048)
@@ -2176,6 +2292,7 @@ class Upgrade:
         self.queue_check()
         self.create_pending()
         self.stop_writers()
+        self.retain_filesync_unpublished()
         self.queue_check()
         self.journal('writers-stopped')
         with self.connect() as source, contextlib.closing(sqlite3.connect(self.backup/'panel.db')) as destination:
@@ -2306,17 +2423,24 @@ class Upgrade:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=('check', 'run', 'recover-check', 'recover'))
+    parser.add_argument('action', choices=('check', 'run', 'recover-check', 'recover', 'recover-filesync'))
     parser.add_argument('release', type=pathlib.Path)
+    parser.add_argument('--condition', type=pathlib.Path)
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.exit(1, 'production upgrade must run as root\n')
     transaction = Upgrade(args.release)
+    if (args.action == 'recover-filesync') != (args.condition is not None):
+        parser.exit(1, 'only explicit filesync recovery accepts and requires a Root-private original condition\n')
     def interrupted(signum, frame):
         raise RuntimeError('production upgrade interrupted')
     signal.signal(signal.SIGTERM, interrupted)
     signal.signal(signal.SIGINT, interrupted)
     try:
+        if args.condition is not None:
+            transaction.parents(args.condition)
+            raw, _ = transaction.file(args.condition, mode=0o600, limit=2048)
+            transaction.filesync_unpublished = decode_filesync_unpublished_condition(raw)
         if args.action in ('recover-check','recover'):
             result = transaction.recover(args.release,check=args.action=='recover-check')
             print(json.dumps({'recovery':args.action,**result},sort_keys=True))

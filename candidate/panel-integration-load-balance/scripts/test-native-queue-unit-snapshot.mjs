@@ -1,9 +1,9 @@
 // Static frozen-input contracts only. Linux behavior has a separate real QA gate.
-import {beforeApacheBuildDependencyAdmission} from './release-build-baseline.mjs';
+import {beforeApacheBuildDependencyAdmission,beforeFilesyncOfflineReaderHook} from './release-build-baseline.mjs';
 import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash}from'node:crypto';
 const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>{const value=fs.readFileSync(path.join(root,n),'utf8');return n==='internal/executor/install_linux.go'?beforeApacheBuildDependencyAdmission(value):value;},sha=b=>createHash('sha256').update(b).digest('hex');
 test('all original13-property predicates and legacy5s reader stay exact beneath the additional L4 fence',()=>{
- const ids=read('internal/executor/program_upgrade_ids_linux.go'),queues=read('internal/executor/program_upgrade_queues_linux.go');
+ const ids=read('internal/executor/program_upgrade_ids_linux.go'),queues=beforeFilesyncOfflineReaderHook(read('internal/executor/program_upgrade_queues_linux.go'));
  assert.equal(sha(ids.slice(ids.indexOf('func programQueueIDSIdleUnit('))),"c6180dba37d9036f10ea0ad032ac9885a9c6306519bf23e2a10e46d3cb094488");
 	const entry='func CheckProgramUpgradeQueues() error {\n';
 	const fencedEntry=entry+'\tif err := checkLegacyProgramUpgradeQueues(); err != nil {\n\t\treturn err\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n}\n\n// Preserves all existing application, recovery and filesystem checks. The\n// private L4 controllers call this PLUS their independently self-bound fence;\n// they never pass a general native-unit prefix or selected-ID exemption here.\nfunc checkLegacyProgramUpgradeQueues() error {\n';
@@ -116,3 +116,18 @@ test('real QA observes the entire original5s entrypoint three times and is not i
  assert(!text.includes('time.Sleep')&&!text.includes('context.WithoutCancel')&&!text.includes('reset-failed'));
 });
 
+
+// The historical comparisons keep their original digests. Reversal is limited
+// to the exact new private hook, including both original complete observations.
+test('offline reader reversal requires exact nil ordinary wrappers and both complete observations',()=>{
+ const current=read('internal/executor/program_upgrade_queues_linux.go');
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('return checkCompleteProgramUpgradeQueues(nil)','return checkCompleteProgramUpgradeQueues(remoteReader)')));
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('checkProgramUpgradeQueuesWithRemoteReader(ctx, "/", remoteReader)','checkProgramUpgradeQueuesWithRemoteReader(ctx, "/", nil)')));
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('else if err := remoteReader(protected); err != nil','else if err := remoteReader(protected); false')));
+});
+test('offline reader reversal cannot hide changed original predicates or deadlines',()=>{
+ const current=read('internal/executor/program_upgrade_queues_linux.go');
+ const ordinary=beforeFilesyncOfflineReaderHook(current);
+ assert.notEqual(sha(beforeFilesyncOfflineReaderHook(current.replace('CheckHostDiskUpgrade(ctx)','CheckHostDiskUpgrade(context.Background())'))),sha(ordinary));
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('context.WithTimeout(context.Background(), 5*time.Second)','context.WithTimeout(context.Background(), 6*time.Second)')));
+});

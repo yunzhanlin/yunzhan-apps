@@ -22,9 +22,9 @@
     "packaging/install.sh": "243ab2541561ed242de9d9586a95311af6e1c2c79b55efadabe99d3128efa590",
     "packaging/test_apache_body_cache_budget.py": "ce60fe339f30b21cb9dedfda08df5e8e328249df610ee1997c46dffe91b79fb1",
     "packaging/test_backup_directories.py": "941eeeacdca3a2fcd1ef357189fb085f7cd6868ebd7915b4df04257bfe7fb9a1",
-    "scripts/release-build-baseline.mjs": "e316c2c58b9b3cc277e4951f4b1c55a19408743522751e7da4c221d1f0cfa6a7",
+    "scripts/release-build-baseline.mjs": "eb28f9d810f54c4070ff7242140c828180d758b088920e6b91ecc4e0d75e4f76",
     "scripts/test-apache-numeric-logs.mjs": "b567045cce0fda93e3f65d59a6e64d9d5a859dd18d6dfd17d89dbd44616a4a89",
     "scripts/test-load-balance-stream-account-entry.mjs": "1678331a166f834b8a7f9462af673b48b98bdf7c5374e4af288f28212a9eeec0"
   },
-  "source_inputs_sha256": "7cd6fe286200d0a3ec53edc54c917f2c1e03dfff662b280c9a054a0371bf8686"
+  "source_inputs_sha256": "c164d9a0871e10d1aceb01076c86e8dadbd51bc7f8faa1e2b7342660064a5cf3"
 }
