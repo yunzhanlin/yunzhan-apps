@@ -76,7 +76,7 @@ final class NativeBusinessUITests: XCTestCase {
         // guarantee. A second received file exercises actual UIKit concealment.
         download.tap();tap("确认",app);XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled)
         XCUIDevice.shared.press(.home);app.activate()
-        XCTAssertTrue(app.staticTexts["面板已锁定"].waitForExistence(timeout:30));XCTAssertEqual(app.webViews.count,0);XCTAssertFalse(save.exists)
+        XCTAssertTrue(app.staticTexts["面板已锁定"].waitForExistence(timeout:30));attach("original-background-state-before-privacy-assertions",app);XCTAssertEqual(app.webViews.count,0);XCTAssertFalse(save.exists)
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format:"label CONTAINS %@",filename)).firstMatch.exists);attach("background-original-WebView-and-filename-hidden",app)
         tap("退出并重新登录",app);XCTAssertFalse(app.webViews.firstMatch.exists)
         XCTAssertTrue(endpoint.waitForExistence(timeout:20));endpoint.tap()
