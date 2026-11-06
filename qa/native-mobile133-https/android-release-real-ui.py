@@ -26,7 +26,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 api=int(os.environ['C68_UI_API']);assert api in(30,37)and command('shell','getprop','ro.build.version.sdk').strip()==str(api)
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA4'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA5'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -174,16 +174,22 @@ try:
   assert not nodes(root,lambda n:n.get('class')=='android.webkit.WebView');tap('OK',root)
   before_pid=owned_app_pid();assert before_pid is not None;before_uid=command('shell','cmd','package','list','packages','-U',package).strip()
   save('original83-native-compatibility-refusal.json',{'ok':True,'original_OS_API':30,'original_WebView':'83.0.4103.120','actual_explanatory_native_UI':True,'actual_WebViews':0,'no_automatic_provider_update':True,'native_PID':before_pid,'native_UID_line':before_uid})
-  # An independently acquired official AOSP prebuilt is used only in this
+  # An independently read official SDK provider is used only in this
   # disposable CI emulator. Ordinary package installation enforces its
-  # original signing identity; never root, replace system files or switch a
+  # same original signing identity as the API30 provider; never root, replace system files or switch a
   # provider through debug settings. This old fixture is not a recommended
   # production browser or a current security-patch claim.
-  args=[adb,'-s',serial,'install','-r',str(private/'original-owned-AOSP-WebView128.apk')]
+  fixture=json.loads((private/'original-official-SDK-WebView35-provenance.json').read_bytes());assert fixture['ok']and fixture['min_sdk']<=30
+  old_paths=command('shell','pm','path','com.android.webview').strip().splitlines();assert len(old_paths)==1 and old_paths[0].startswith(('package:/system/','package:/product/'))
+  old_apk=private/'original-owned-WebView83.apk';command('pull',old_paths[0].removeprefix('package:'),str(old_apk))
+  with(private/'original-owned-WebView83-signature.stdout').open('xb')as out,(private/'original-owned-WebView83-signature.stderr').open('xb')as err:old_signer=subprocess.run([os.environ['ANDROID_HOME']+'/build-tools/36.0.0/apksigner','verify','--print-certs',str(old_apk)],stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=90)
+  assert old_signer.returncode==0
+  assert 'Signer #1 certificate SHA-256 digest: '+fixture['certificate_sha256']in(private/'original-owned-WebView83-signature.stdout').read_text(),'Original official SDK provider issuer differs; do not install or bypass'
+  args=[adb,'-s',serial,'install','-r',str(private/'original-owned-SDK-WebView35.apk')]
   save('one-owned-normal-WebView-update-intent.json',{'args':args,'maximum_submissions':1,'owned_CI_only':True,'no_product_code_or_APK_overlay':True})
   with(private/'one-owned-normal-WebView-update.stdout').open('xb')as out,(private/'one-owned-normal-WebView-update.stderr').open('xb')as err:result=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=180)
   assert result.returncode==0 and 'Success'in(private/'one-owned-normal-WebView-update.stdout').read_text()
-  provider=command('shell','dumpsys','webviewupdate');assert '(com.android.webview, 128.0.6613.88)'in provider
+  provider=command('shell','dumpsys','webviewupdate');assert '(com.android.webview, '+fixture['version']+')'in provider
   with(private/'original-owned-WebView-after-normal-update.stdout').open('x')as f:f.write(provider)
   deadline=time.monotonic()+20
   while owned_app_pid()is not None:assert time.monotonic()<deadline,'Original WebView provider update did not settle the dependent process';time.sleep(.2)
