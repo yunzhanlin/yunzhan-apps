@@ -8,8 +8,7 @@ def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2);f.write('\n')
 proof={'ok':False,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False,'original_outcomes_replayed':False}
 try:
- setup=json.loads((private/'real-panel-setup.json').read_bytes());ui=json.loads((private/'original-device-UI-proof.json').read_bytes());assert setup['ok']and ui['ok'] and ui['source_inputs_sha256']==pins['native_source_inputs_sha256']
- assert ui['actual_native_readback']and ui['no_export_before_device_unlock']and ui['actual_Activity_destroyed_late_OS_result_does_not_export']and all(ui['cleanup'].values())
+ setup=json.loads((private/'real-panel-setup.json').read_bytes());assert setup['ok']
  old=json.loads((private/'original-installed-204-entries.json').read_bytes());installed=pathlib.Path('/opt/panel/current').resolve(strict=True);assert len(old)==204
  for name,value in old.items():
   f=installed/name;s=f.lstat();assert s.st_uid==0 and not s.st_mode&0o022
@@ -19,8 +18,13 @@ try:
  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
   db.row_factory=sqlite3.Row;db.execute('PRAGMA query_only=ON');sites=[dict(r)for r in db.execute('SELECT *FROM sites')];jobs=[dict(r)for r in db.execute('SELECT *FROM jobs')];runtimes=[dict(r)for r in db.execute('SELECT *FROM runtime_jobs')];audit=[dict(r)for r in db.execute('SELECT *FROM audit_logs')]
  assert len(sites)==1 and sites[0]['id']==setup['site']and sites[0]['status']=='running';assert len(jobs)==1 and jobs[0]['state']=='succeeded'and not runtimes
- downloads=[r for r in audit if r['action']=='file.download'and r['target']==setup['site']+':'+setup['filename']and r['result']=='success'];assert len(downloads)>=2
+ downloads=[r for r in audit if r['action']=='file.download'and r['target']==setup['site']+':'+setup['filename']and r['result']=='success']
  save('original-backend-after-device-UI.json',{'sites':sites,'jobs':jobs,'runtime_jobs':runtimes,'audit_logs':audit,'original_site_file':{'bytes':st.st_size,'sha256':sha(original),'inode':st.st_ino,'dev':st.st_dev,'uid':st.st_uid,'gid':st.st_gid,'mode':stat.S_IMODE(st.st_mode)},'original_programme_204_entries_unchanged':True})
+ # Preserve the independent original backend observations even when the
+ # native UI failed. A failed UI never prevents diagnosis or becomes a pass.
+ ui=json.loads((private/'original-device-UI-proof.json').read_bytes());assert ui['ok'] and ui['source_inputs_sha256']==pins['native_source_inputs_sha256']
+ assert ui['actual_native_readback']and ui['no_export_before_device_unlock']and ui['actual_Activity_destroyed_late_OS_result_does_not_export']and all(ui['cleanup'].values())
+ assert len(downloads)>=2
  proof.update(ok=True,actual_Android_emulator_API=37,debug_loopback_real_file_management_UI=True,exact_original_attachment_bytes_exported_and_native_readback=True,actual_device_credential_gate_and_late_OS_result_refusal=True,native_source_inputs_sha256=pins['native_source_inputs_sha256'],programme_source_inputs_sha256=pins['programme_source_inputs_sha256'],normal_signed_programme_installs=1,owned_site_and_original_attachment_retained=True)
 except BaseException:save('original-independent-reconciliation-failure.json',{'traceback':traceback.format_exc()})
 finally:
