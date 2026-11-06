@@ -314,9 +314,6 @@ systemctl enable --now panel-mysql-overwrite-recovery.timer || FAILED=1
 install -d -m 0755 /run/panel-nginx
 /usr/sbin/nginx -t || FAILED=1
 systemctl restart panel-nginx-recovery panel-firewall-recovery panel-firewall || FAILED=1
-if systemctl cat docker.service >/dev/null 2>&1; then
-  systemctl restart panel-compose-recovery || FAILED=1
-fi
 restart_release_services || FAILED=1
 if ((FRESH));then
   systemctl enable --now fail2ban || FAILED=1
@@ -328,6 +325,13 @@ if ((FRESH));then
 fi
 for _ in {1..30};do curl -fsS --max-time 2 http://127.0.0.1:19100/api/ready >/dev/null 2>&1&&break;sleep 1;done
 curl -fsS --max-time 3 http://127.0.0.1:19100/api/ready >/dev/null||FAILED=1
+# Compose recovery uses the initialized core database to admit mutations.
+# A fresh host with Docker already installed must first start the API and
+# finish its migrations. Keep the recovery and health failures fatal; never
+# bypass its transaction checks or run it after another startup check failed.
+if ((FAILED==0)) && systemctl cat docker.service >/dev/null 2>&1; then
+  systemctl restart panel-compose-recovery || FAILED=1
+fi
 if ((FRESH))&&((FAILED==0));then
   python3 "$HERE/first-install.py" || FAILED=1
 fi

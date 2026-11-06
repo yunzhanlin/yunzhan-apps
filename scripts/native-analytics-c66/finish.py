@@ -11,7 +11,7 @@ proof={'ok':False,'all50_commercial':False,'Main_changed':False,'evidence_profil
 try:
  preparation=read(private/'original-preparation-proof.json');browser=read(private/'browser-original-proof.json');setup=read(private/'browser-setup.json')
  assert preparation['ok']and browser['ok']and browser['actual_BFCache']and browser['actual_narrow_viewport']and browser['BFCache_restored_documents']==2
- assert preparation['source_inputs_sha256']==browser['source_inputs_sha256']==setup['source_inputs_sha256']=='eba559f9773a13be628ff2c70a496da245dec82ebdf8d94fc3e2bf93c20932d3'
+ assert preparation['source_inputs_sha256']==browser['source_inputs_sha256']==setup['source_inputs_sha256']=='0c12d2b6b910298a16e8bcfc4658a45c94a6b63a99385c186f07a5dfdf7f280f'
  capture=subprocess.run(['/usr/bin/python3','-I','-B',str(source/'snapshot.py'),str(private/'original-after-browser.json')],capture_output=True,timeout=60)
  save('original-after-browser-capture-outcome.json',{'exit':capture.returncode,'stdout_hex':capture.stdout.hex(),'stderr_hex':capture.stderr.hex()});assert capture.returncode==0
  a=read(private/'original-before-browser.json');b=read(private/'original-after-browser.json')

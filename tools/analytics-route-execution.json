@@ -1,5 +1,5 @@
 {
-  "source_inputs_sha256": "eba559f9773a13be628ff2c70a496da245dec82ebdf8d94fc3e2bf93c20932d3",
+  "source_inputs_sha256": "0c12d2b6b910298a16e8bcfc4658a45c94a6b63a99385c186f07a5dfdf7f280f",
   "source_file_count": 2451,
   "packages": [
     "local/panel/internal/core",

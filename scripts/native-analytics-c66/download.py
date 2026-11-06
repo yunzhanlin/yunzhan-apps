@@ -5,7 +5,7 @@ assert os.environ.get('GITHUB_ACTIONS')=='true' and os.environ.get('GITHUB_REPOS
 assert len(sys.argv)==3
 source=pathlib.Path(__file__).resolve().parent
 dispatch=json.loads((source/'dispatch.json').read_bytes())
-assert dispatch['format']==1 and dispatch['source_inputs_sha256']=='eba559f9773a13be628ff2c70a496da245dec82ebdf8d94fc3e2bf93c20932d3'
+assert dispatch['format']==1 and dispatch['source_inputs_sha256']=='0c12d2b6b910298a16e8bcfc4658a45c94a6b63a99385c186f07a5dfdf7f280f'
 assert subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()==dispatch['source_head']
 assert subprocess.check_output(['git','diff','--name-only','HEAD^','HEAD'],text=True).strip()=='scripts/native-analytics-c66/dispatch.json'
 arch={'x86_64':'amd64','aarch64':'arm64'}[platform.machine()]
