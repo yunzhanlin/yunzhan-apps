@@ -30,6 +30,7 @@ import UIKit
     private var exportPicker: UIDocumentPickerViewController?
     private var exportTicket: SessionCallbackTicket?
     private weak var downloadPrivacyView: UIView?
+    private weak var webPrivacyHost: PanelWebPrivacyHost?
     var hasDownload: Bool { downloadIdentity != nil }
     var canExportDownload: Bool { callbacks.interactive && downloadedFile != nil && exportPicker == nil && exportTicket == nil }
 
@@ -61,6 +62,7 @@ import UIKit
         discardDownload()
         callbacks.end()
         connectionTicket = nil
+        webPrivacyHost?.conceal();webPrivacyHost=nil
         let previous = web; web = nil; address = nil
         previous?.isHidden = true; previous?.accessibilityElementsHidden = true
         previous?.stopLoading(); previous?.navigationDelegate = nil; previous?.uiDelegate = nil
@@ -84,10 +86,16 @@ import UIKit
         // Cover the actual UIKit view synchronously, not only its SwiftUI overlay.
         let concealed = locked || privacyCover
         web?.isHidden = concealed; web?.accessibilityElementsHidden = concealed
+        webPrivacyHost?.display(web,visible:!concealed)
         downloadPrivacyView?.isHidden = concealed || !hasDownload
         downloadPrivacyView?.accessibilityElementsHidden = concealed || !hasDownload
     }
     func bindDownloadPrivacyView(_ view:UIView) { downloadPrivacyView=view;view.isHidden = !callbacks.interactive || !hasDownload;view.accessibilityElementsHidden = view.isHidden }
+    func bindWebPrivacyHost(_ host:PanelWebPrivacyHost,view:WKWebView) {
+        guard currentWeb(view) else { host.conceal();return }
+        if webPrivacyHost !== host { webPrivacyHost?.conceal();webPrivacyHost=host }
+        host.display(view,visible:callbacks.interactive)
+    }
     func activate() { callbacks.activate(); syncPrivacy(); deliverUpload(); deliverExport() }
     private func currentWeb(_ view: WKWebView) -> Bool {
         guard view === web, let ticket = connectionTicket else { return false }
@@ -283,10 +291,39 @@ import UIKit
     }
 }
 
+/// SwiftUI owns this stable container, rather than the WKWebView itself.
+/// Concealment detaches the real child synchronously so SwiftUI's next layout
+/// cannot reset its hidden flag and leave remote WebKit accessibility nodes.
+@MainActor final class PanelWebPrivacyHost: UIView {
+    private weak var represented: WKWebView?
+    private var pins:[NSLayoutConstraint]=[]
+    func conceal() {
+        represented?.isHidden=true;represented?.accessibilityElementsHidden=true
+        NSLayoutConstraint.deactivate(pins);pins=[];represented?.removeFromSuperview()
+        accessibilityElementsHidden=true
+    }
+    func display(_ view:WKWebView?,visible:Bool) {
+        if represented !== view { conceal();represented=view }
+        guard visible,let view else { conceal();return }
+        accessibilityElementsHidden=false
+        if view.superview !== self {
+            view.removeFromSuperview();view.translatesAutoresizingMaskIntoConstraints=false
+            addSubview(view)
+            pins=[view.leadingAnchor.constraint(equalTo:leadingAnchor),view.trailingAnchor.constraint(equalTo:trailingAnchor),view.topAnchor.constraint(equalTo:topAnchor),view.bottomAnchor.constraint(equalTo:bottomAnchor)]
+            NSLayoutConstraint.activate(pins)
+        }
+        view.isHidden=false;view.accessibilityElementsHidden=false
+    }
+}
+
 struct PanelWebView: UIViewRepresentable {
+    @ObservedObject var session:PanelSession
     let web: WKWebView
-    func makeUIView(context: Context) -> WKWebView { web }
-    func updateUIView(_ view: WKWebView, context: Context) {}
+    func makeUIView(context: Context) -> PanelWebPrivacyHost {
+        let host=PanelWebPrivacyHost();session.bindWebPrivacyHost(host,view:web);return host
+    }
+    func updateUIView(_ host:PanelWebPrivacyHost,context:Context) { session.bindWebPrivacyHost(host,view:web) }
+    static func dismantleUIView(_ host:PanelWebPrivacyHost,coordinator:()) { host.conceal() }
 }
 
 /// Hide the native filename synchronously with the WKWebView when the app
@@ -334,7 +371,7 @@ struct PanelHome: View {
                 NativeDownloadControls(session:session).privacySensitive()
             }
             ZStack {
-                if let web = session.web { PanelWebView(web: web).allowsHitTesting(!session.locked && !session.privacyCover).accessibilityHidden(session.locked || session.privacyCover) }
+                if let web = session.web { PanelWebView(session:session,web:web).allowsHitTesting(!session.locked && !session.privacyCover).accessibilityHidden(session.locked || session.privacyCover) }
                 else { ContentUnavailableView("连接你的云栈服务器", systemImage: "server.rack", description: Text("沿用面板登录、双重验证、网站范围和角色权限。正式包仅连接可信 HTTPS。")) }
                 if session.locked || session.privacyCover {
                     VStack(spacing: 20) {

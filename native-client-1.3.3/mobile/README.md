@@ -39,7 +39,7 @@ Android 使用 `ACTION_CREATE_DOCUMENT` 创建用户选择的新文档，并重�
 
 临时缓存只清理由本应用创建、私有权限正确且无额外硬链接的已知文件；符号链接、权限异常和未知文件保留并拒绝继续。一个原生 IO 工作未真正收尾时，不排队启动新工作。文件名、网页及其辅助功能元素在后台锁定时隐藏。iOS 隐私清单声明应用容器文件元数据、写入前空间检查及本应用地址偏好的必要 API 用途；空间信息不发送到服务器。以上实现、模型/传输测试、平台 UI、外部文件提供方和真机验收分别记录，不能互相替代。
 
-锁定时不仅绘制遮罩：Android 将 WebView 设为不可见并从辅助功能树隐藏其后代；iOS 在同一次隐私状态同步中隐藏原生 WKWebView 及其辅助功能元素，并同步 SwiftUI 辅助功能隐藏。断开时立即隐藏旧原生视图。恢复必须在原连接的一次性认证成功、当前会话已解锁且回到前台后进行。文件选择返回不自动恢复网页。两个平台都需要各自的真实平台交互验收，Android 模拟器结果不能代替 iOS VoiceOver 或真机验收。
+锁定时不仅绘制遮罩：Android 将 WebView 设为不可见并从辅助功能树隐藏其后代；iOS 在同一次隐私状态同步中隐藏原生 WKWebView，并将它从稳定容器中移出，避免后续 SwiftUI 布局重新暴露网页辅助功能节点。断开时立即移出旧原生视图。恢复必须在原连接的一次性认证成功、当前会话已解锁且回到前台后进行，容器才重新挂载原网页。文件选择返回不自动恢复网页。两个平台都需要各自的真实平台交互验收，Android 模拟器结果不能代替 iOS VoiceOver 或真机验收。
 
 面板是需要 JavaScript 的 Vue 业务页面。Android 仅在固定 WebSettings 配置方法中确认这一条必需的 lint 提示，不全局关闭安全检查；正式包仍要求 HTTPS、证书错误取消连接，不提供 JavaScript/原生桥，禁用文件和 content URL 访问、混合内容及第三方 Cookie。面板服务端必须继续发送自身的严格 CSP（包括 `default-src 'self'`、`script-src 'self'` 和 `connect-src 'self'`），不能加载不受信任的外站脚本。Android 官方明确说明，资源回调只收到重定向的初始 URL，且不覆盖 `blob:` 和 `javascript:`；因此原生回调不能被表述为覆盖全部流量的网络防火墙。参见 [WebViewClient 资源回调](https://developer.android.com/reference/android/webkit/WebViewClient) 和 [WebView 原生桥安全指南](https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges)。
 

@@ -8,7 +8,7 @@ const root=path.resolve(import.meta.dirname,'..'),scope=path.join(root,'native-c
 const sha=b=>createHash('sha256').update(b).digest('hex');
 const index=JSON.parse(fs.readFileSync(path.join(scope,'SOURCE_INPUTS.json')));
 test('native133 has its complete immutable independent source with zero overlays',()=>{
- assert.equal(index.format,1);assert.equal(index.version,'1.3.3');assert.equal(index.inputs_sha256,'4e3d1a6d24574476c657bcd5fce7457d6df6010b22fa120a95bde3ea7ef7e621');assert.equal(sha(JSON.stringify(index.files)),index.inputs_sha256);assert.equal(Object.keys(index.files).length,40);assert.deepEqual(index.source_overlays,{});
+ assert.equal(index.format,1);assert.equal(index.version,'1.3.3');assert.equal(index.inputs_sha256,'335ed1f5e6060cf6859b79e2b12ff32290277b9158c4a10afd0f16122d3271e8');assert.equal(sha(JSON.stringify(index.files)),index.inputs_sha256);assert.equal(Object.keys(index.files).length,40);assert.deepEqual(index.source_overlays,{});
  for(const[name,record]of Object.entries(index.files)){
   assert(name.startsWith('mobile/')&&path.posix.normalize(name)===name&&!name.split('/').some(v=>['..','.local','.build','.gradle','build','local.properties'].includes(v)));
   const file=path.join(scope,name),s=fs.lstatSync(file),bytes=fs.readFileSync(file);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&fs.realpathSync(file)===file);assert.equal(s.mode&0o777,record.mode);assert.equal(bytes.length,record.bytes);assert.equal(sha(bytes),record.sha256,name);
