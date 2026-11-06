@@ -21,6 +21,7 @@ try:
  original('original-Xcode-version',['/usr/bin/xcodebuild','-version'])
  runtimes=json.loads(subprocess.check_output(['xcrun','simctl','list','runtimes','--json']))['runtimes'];runtime=next(v for v in runtimes if v['identifier']=='com.apple.CoreSimulator.SimRuntime.iOS-18-5'and v['isAvailable'])
  device=subprocess.check_output(['xcrun','simctl','create','C68_owned_iOS_'+os.environ['GITHUB_RUN_ID'],'com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro',runtime['identifier']],text=True).strip();save('original-owned-simulator.json',{'UDID':device,'runtime':runtime,'one_new_CI_simulator':True,'no_local_or_retained_guest_changed':True})
+ original('original-owned-software-keyboard-policy',['defaults','write','com.apple.iphonesimulator','ConnectHardwareKeyboard','-bool','NO'])
  original('one-owned-simulator-boot',['xcrun','simctl','boot',device]);original('original-owned-simulator-boot-status',['xcrun','simctl','bootstatus',device,'-b'],600)
  original('original-source-integrity-before',['node','--test','tests/mobile-client-133.test.mjs'])
  client=private/'client-build';harness=private/'harness-build';destination='platform=iOS Simulator,id='+device

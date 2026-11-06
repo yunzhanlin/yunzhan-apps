@@ -144,7 +144,16 @@ final class NativeBusinessUITests: XCTestCase {
             if !existing.isEmpty && existing != "管理员用户名" { XCTAssertLessThanOrEqual(existing.count,64);user.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:existing.count)) }
             user.typeText(username)
         }
-        secret.tap();secret.typeText(password)
+        // Original QA21 failed before authentication: the AX password
+        // target existed but keystroke dispatch had no keyboard focus.
+        // Scroll to the real field and wait for the actual system keyboard
+        // before this one password entry; no DOM input or login bypass.
+        reveal(secret,in:web);waitForEnabled(secret,app,"real-login-password")
+        secret.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout:30),"Actual login system keyboard must be visible before password input")
+        XCTAssertTrue(secret.isHittable && secret.isEnabled)
+        RunLoop.current.run(until:Date().addingTimeInterval(0.5))
+        secret.typeText(password)
         let enter=web.buttons["进入工作台"];reveal(enter,in:web);enter.tap()
         let navigation=web.buttons["展开导航"];XCTAssertTrue(navigation.waitForExistence(timeout:60));revealTop(navigation,in:web);attach("real-HTTPS-panel-authenticated",app)
         tap("展开导航",app);tap("文件",app)
