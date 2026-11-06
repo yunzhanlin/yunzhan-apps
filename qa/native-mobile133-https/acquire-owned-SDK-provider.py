@@ -34,7 +34,15 @@ try:
  observe('original-owned-provider35-adb-version',[adb,'version'])
  observe('original-owned-provider35-file-metadata',[adb,'-s','emulator-5554','shell','ls','-l',original_path])
  observe('original-owned-provider35-file-digest',[adb,'-s','emulator-5554','shell','sha256sum',original_path])
- apk=private/'original-owned-SDK-WebView35.apk';observe('original-owned-provider35-APK-read',[adb,'-s','emulator-5554','pull','-Z',original_path,apk]);assert apk.is_file()and not apk.is_symlink()and apk.stat().st_nlink==1 and 0<apk.stat().st_size<512<<20
+ apk=private/'original-owned-SDK-WebView35.apk';available=os.statvfs(private);before_available=available.f_bavail*available.f_frsize
+ assert before_available>512<<20,'Owned CI host has insufficient space for this read-only fixture'
+ # The SDK sync pull intermittently ended with exit1 and a partial progress
+ # line. Read the same ordinary shell-readable bytes through exec-out and
+ # independently require the original on-device digest below.
+ with apk.open('xb')as output,(private/'original-owned-provider35-APK-read.stderr').open('xb')as error:copied=subprocess.run([str(adb),'-s','emulator-5554','exec-out','cat',original_path],stdin=subprocess.DEVNULL,stdout=output,stderr=error,env=env,timeout=180)
+ available=os.statvfs(private)
+ with(private/'original-owned-provider35-APK-read-outcome.json').open('x')as f:json.dump({'exit':copied.returncode,'bytes_read':apk.stat().st_size,'host_available_before':before_available,'host_available_after':available.f_bavail*available.f_frsize,'original_readonly_shell_stream':True,'maximum_submissions':1},f)
+ assert copied.returncode==0 and apk.is_file()and not apk.is_symlink()and apk.stat().st_nlink==1 and 0<apk.stat().st_size<512<<20
  tools=sdk/'build-tools/36.0.0';signer=observe('original-owned-provider35-signature',[tools/'apksigner','verify','--min-sdk-version','30','--max-sdk-version','37','--verbose','--print-certs',apk]);cert=re.findall(r'^Signer #1 certificate SHA-256 digest: ([a-f0-9]{64})$',signer,re.M);assert len(cert)==1
  metadata=observe('original-owned-provider35-metadata',[tools/'aapt2','dump','badging',apk]);version=re.search(r"package: name='com.android.webview' versionCode='([0-9]+)' versionName='([0-9.]+)'",metadata);minimum=re.search(r"minSdkVersion:'([0-9]+)'",metadata);assert version and minimum
  digest=hashlib.sha256()

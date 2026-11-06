@@ -2,7 +2,7 @@
 import hashlib,json,os,pathlib,subprocess,sys,time
 os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
-private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA7';api=int(os.environ['C68_UI_API']);assert api in(30,37);platform={30:'android-30',37:'android-37.0'}[api];name='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
+private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA8';api=int(os.environ['C68_UI_API']);assert api in(30,37);platform={30:'android-30',37:'android-37.0'}[api];name='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 env=dict(os.environ);env['ANDROID_AVD_HOME']=str(private/'owned-avds');env['ANDROID_USER_HOME']=str(private/'owned-android-user');env['ANDROID_EMULATOR_HOME']=str(private/'owned-emulator-home')
 for key in('ANDROID_AVD_HOME','ANDROID_USER_HOME','ANDROID_EMULATOR_HOME'):pathlib.Path(env[key]).mkdir(mode=0o700)
 adb=str(sdk/'platform-tools/adb')
