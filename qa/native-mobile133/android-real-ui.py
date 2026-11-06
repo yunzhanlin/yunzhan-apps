@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA5'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA6'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -75,7 +75,7 @@ def point(n):
 def tap_node(n,label):
  x,y=point(n);command('shell','input','tap',str(x),str(y));events.append({'action':label,'one_tap':True})
 def tap(text,root=None):
- root=root or snapshot();found=nodes(root,lambda n:matches(n,text));assert len(found)==1,'Observed UI target must be unique: '+text;tap_node(found[0],text)
+ root=snapshot()if root is None else root;found=nodes(root,lambda n:matches(n,text));assert len(found)==1,'Observed UI target must be unique: '+text;tap_node(found[0],text)
 def type_ascii(value):
  assert re.fullmatch('[A-Za-z0-9_:/.-]+',value),'Only owned ASCII fixture input'
  command('shell','input','text',value)
@@ -87,7 +87,14 @@ def web_scroll():
  b=re.findall(r'\d+',views[0].attrib['bounds']);x1,y1,x2,y2=map(int,b);command('shell','input','swipe',str((x1+x2)//2),str(y2-30),str((x1+x2)//2),str(y1+30),'350')
 def login():
  root=wait('real-panel-login-form',lambda r:bool(nodes(r,lambda n:n.get('resource-id')=='username'or n.get('text')=='管理员用户名')))
- user=nodes(root,lambda n:n.get('resource-id')=='username'or n.get('text')=='管理员用户名');assert len(user)==1;tap_node(user[0],'owned-web-username');type_ascii(access['username'])
+ user=nodes(root,lambda n:n.get('resource-id')=='username'or n.get('text')=='管理员用户名');assert len(user)==1
+ existing=user[0].attrib.get('text','')
+ if existing!=access['username']:
+  tap_node(user[0],'owned-web-username')
+  if existing not in('','管理员用户名'):
+   assert len(existing)<=64;key(123);command('shell','input','keyevent',*(['67']*(len(existing)+1)))
+  type_ascii(access['username'])
+ else:events.append({'action':'original-prefilled-username-already-exact','extra_characters_entered':0})
  root=snapshot();passwords=nodes(root,lambda n:n.get('password')=='true'and n.get('class')=='android.widget.EditText');assert len(passwords)==1;tap_node(passwords[0],'owned-web-password');type_ascii(access['password']);key(4)
  for _ in range(5):
   root=snapshot();buttons=nodes(root,lambda n:matches(n,'进入工作台'))

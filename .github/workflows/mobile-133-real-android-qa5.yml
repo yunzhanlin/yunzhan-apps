@@ -1,7 +1,7 @@
 name: C68 original API37 real panel file download and system provider QA5
 on:
   push:
-    branches: [codex/mobile-native-download-c68]
+    branches: [codex/mobile-native-download-c68-original-ui-qa5]
     paths: ['qa/native-mobile133/**', '.github/workflows/mobile-133-real-android-qa5.yml']
 permissions:
   contents: read
