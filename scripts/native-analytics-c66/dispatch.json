@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "source_head": "5f8457971e3ca4868d85c70d3f854d5773f25c8f",
+  "source_sdk_tree": "c07c9c047359fa6696fa3eb73eef721ec0429ab0",
+  "source_inputs_sha256": "22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894",
+  "source_ci_run": 42178972660,
+  "release_id": 436223911,
+  "tag": "qa-inheritedaclpreflightcandidate67-20261106-qa1",
+  "version": "0.1.0-dev.proapps24inheritedaclpreflightcandidate67",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz": {
+      "id": 716360504,
+      "bytes": 23691651,
+      "sha256": "7e069f9e7db65009bb4e732282d857964192e8d0a75d5895874442d04d3dd66e"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz.manifest": {
+      "id": 716335184,
+      "bytes": 191,
+      "sha256": "0c6edf66924f6a1e96343861d85c72b84c281b47a1bf918c364a5321802ecaee"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz.sig": {
+      "id": 716335171,
+      "bytes": 64,
+      "sha256": "b1e5a717fda51e2c77a23cf1f6b526241adffda0cde86c65248cb7c9cc8b8ed3"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-arm64.tar.gz": {
+      "id": 716335170,
+      "bytes": 21918757,
+      "sha256": "b85f62ddb4933f005e64f6ad903b4c00961c5a0c4ac8e536d1fd10e8a36f82ca"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-arm64.tar.gz.manifest": {
+      "id": 716335189,
+      "bytes": 191,
+      "sha256": "dde088c25ccae0c92e9d716f07b92be801e7e9cf5b157bba370b28e7fe835b27"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-arm64.tar.gz.sig": {
+      "id": 716335255,
+      "bytes": 64,
+      "sha256": "ef0480f31d8086cc5799212c4e46443f896adda689938006668a920e0a07cd81"
+    },
+    "release-signing-dev.pub": {
+      "id": 716335261,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "filesync-recovery-signed-release.py": {
+      "id": 716335271,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-arm64.tar.gz"
+    }
+  },
+  "analytics242_sha256": "704ed57b5d353411debf2dbedc283bab8df45df9cf692411e2f6705b49c91254",
+  "normal_installed_BFCache_and_narrow_acceptance_pending": true,
+  "all50_commercial": false,
+  "qa8_payload_files": {
+    ".github/workflows/native-inherited-acl-c67-browser-qa3.yml": "ecf05fbc380ccaee7a481b1938a0a7e676d797e44d56fb8920a3dca8e31d87cd",
+    "scripts/native-analytics-c66/browser-qa8.mjs": "523a5dc8ef6d13270d03dd58cfcb7482a51ecccc6ddd01bde16a1bdc7af672c7",
+    "scripts/native-analytics-c66/download-qa8.py": "23ae8f5ac92beca487b1088e3395e4587d1fcb1edc7f6d1b07b4eddc29731217",
+    "scripts/native-analytics-c66/finish-qa8.py": "0bd68d8ad9fd1811cccf3674512754799d0f92236b5c237f465bb3ee6281de3b",
+    "scripts/native-analytics-c66/prepare-qa8.py": "45321a8a0a790369c00a2c64c6d7ccb79064ac46f9ee643f8f3e1971bed7c9f6",
+    "scripts/native-analytics-c66/renderer-witness-qa8.py": "8034a5f525c73879b09059612ede048754914f66d1123cce38e3fa1297a9f51b",
+    "scripts/native-analytics-c66/transport-observer-qa3.go": "c3d040cced9d291f811a70ee84e4c723037cedc656dcd81df5dde0974ca79290",
+    "scripts/native-analytics-c66/wire-observer-qa8.mjs": "23b75298272b7dee3fda00682262da75ffaa00edb01b79f3761cc1a20bfa73a5"
+  },
+  "original_failed_runs_retained": [
+    42184455571,
+    42186619766
+  ],
+  "normal_successful_install_receipt_and_actual_distribution_discovery_qualified_before_full_preservation_baseline": true,
+  "no_business_or_background_qualification_rule_relaxed": true,
+  "C66r2_original_native_browser_green_run_retained": 42171804714,
+  "normal_original_signed_negative_ACL_preflight_required": true,
+  "normal_original_signed_real_host_negative_ACL_preflight_required": true,
+  "original_installed_panel_user_transport_observation_required": true
+}
