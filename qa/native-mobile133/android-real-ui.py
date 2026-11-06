@@ -21,17 +21,25 @@ def command(*args,raw=False):
    return value
   save('original-adb-command-%05d.json'%commands,{'operation':args[0],'exit':r.returncode,'original_stdout_redacted':redacted(r.stdout),'original_stderr_redacted':redacted(r.stderr)})
  assert r.returncode==0,'Owned emulator command failed: '+args[0]
+ if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA3'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA4'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
 def snapshot(label=None):
  global sequence,reads
  reads+=1;original=private/('original-UI-read-%05d.xml'%reads)
- outcome=command('shell','uiautomator','dump','/data/local/tmp/c68-owned-UI.xml')
- assert 'dumped to:'in outcome,'Original UI dump did not report a completed document'
+ end=time.monotonic()+45
+ while True:
+  outcome,error=command('shell','uiautomator','dump','/data/local/tmp/c68-owned-UI.xml')
+  if 'dumped to:'in outcome:break
+  # A cold activity can still be in its SplashScreen transition. Preserve the
+  # actual null-root observation and repeat only this read; never manufacture
+  # a hierarchy, authorize a tap, or relaunch the app as a substitute.
+  assert not outcome.strip()and error.strip()=='ERROR: null root node returned by UiTestAutomationBridge.','Original UI dump failed for an unqualified reason'
+  assert time.monotonic()<end,'Original activity never produced a real UI root';time.sleep(.5)
  # File-sync transport preserves the actual XML bytes, rather than combining
  # an exec-out shell's diagnostics with its file content. Keep every original.
  command('pull','/data/local/tmp/c68-owned-UI.xml',str(original));original.chmod(0o600)
@@ -67,7 +75,7 @@ def type_ascii(value):
  assert re.fullmatch('[A-Za-z0-9_:/.-]+',value),'Only owned ASCII fixture input'
  command('shell','input','text',value)
 def key(code):command('shell','input','keyevent',str(code))
-def start():command('shell','am','start','-n',package+'/icu.yunzhan.panel.PanelActivity')
+def start():command('shell','am','start','-W','-n',package+'/icu.yunzhan.panel.PanelActivity')
 def has(root,text):return bool(nodes(root,lambda n:matches(n,text)))
 def web_scroll():
  root=snapshot();views=nodes(root,lambda n:n.get('class')=='android.webkit.WebView');assert views
