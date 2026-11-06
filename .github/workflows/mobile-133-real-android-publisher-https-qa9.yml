@@ -1,7 +1,7 @@
 name: C68 original publisher Release APK real HTTPS management and provider QA9
 on:
   push:
-    branches: [codex/mobile-native-download-c68]
+    branches: [codex/mobile-c68-historical-qa9]
     paths: ['qa/native-mobile133-https/**', '.github/workflows/mobile-133-real-android-publisher-https-qa9.yml']
 permissions:
   contents: read

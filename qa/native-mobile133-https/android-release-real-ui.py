@@ -26,7 +26,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 api=int(os.environ['C68_UI_API']);assert api in(30,37)and command('shell','getprop','ro.build.version.sdk').strip()==str(api)
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA9'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA10'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -87,9 +87,23 @@ def has(root,text):return bool(nodes(root,lambda n:matches(n,text)))
 def web_scroll():
  root=snapshot();views=nodes(root,lambda n:n.get('class')=='android.webkit.WebView');assert views
  b=re.findall(r'\d+',views[0].attrib['bounds']);x1,y1,x2,y2=map(int,b);command('shell','input','swipe',str((x1+x2)//2),str(y2-30),str((x1+x2)//2),str(y1+30),'350')
+def login_username(root):
+ # WebView124 exposes the real HTML label and input value but omits the
+ # HTML id/placeholder. Bind the input to the observed username/password
+ # labels inside the unique WebView, excluding native address and OTP fields.
+ views=nodes(root,lambda n:n.get('class')=='android.webkit.WebView')
+ # Chromium may expose nested WebView containers for the same document.
+ views=[v for v in views if not any(n is not v and n.get('class')=='android.webkit.WebView'for n in v.iter('node'))]
+ if len(views)!=1:return []
+ elements=list(views[0].iter('node'))
+ starts=[i for i,n in enumerate(elements)if n.get('text')=='用户名']
+ ends=[i for i,n in enumerate(elements)if n.get('text')=='密码']
+ if len(starts)==len(ends)==1 and starts[0]<ends[0]:
+  return [n for n in elements[starts[0]+1:ends[0]]if n.get('class')=='android.widget.EditText'and n.get('password')=='false'and n.get('enabled')=='true']
+ return [n for n in elements if n.get('resource-id')=='username'or n.get('text')=='管理员用户名']
 def login():
- root=wait('real-panel-login-form',lambda r:bool(nodes(r,lambda n:n.get('resource-id')=='username'or n.get('text')=='管理员用户名')))
- user=nodes(root,lambda n:n.get('resource-id')=='username'or n.get('text')=='管理员用户名');assert len(user)==1
+ root=wait('real-panel-login-form',lambda r:len(login_username(r))==1)
+ user=login_username(root);assert len(user)==1
  existing=user[0].attrib.get('text','')
  if existing!=access['username']:
   tap_node(user[0],'owned-web-username')

@@ -60,22 +60,17 @@ final class NativeBusinessUITests: XCTestCase {
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)
         let save=app.buttons["选择保存位置"];XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled);attach("original-native-attachment-received",app)
         save.tap()
-        let cancel=app.buttons["Cancel"]
-        if cancel.waitForExistence(timeout:5) && cancel.isHittable { cancel.tap() }
-        else {
-            // Some Files presentations expose an inaccessible parent "Cancel"
-            // AX node beneath their More button. Dismiss the real system sheet
-            // with its ordinary navigation-bar drag; require the same actual
-            // cancellation callback and retained native file afterwards.
-            attach("original-system-document-sheet-before-user-dismissal",app)
-            // The container's private AX identifier and hittability differ
-            // between the system browser's initial locations. Anchor the
-            // ordinary sheet dismissal drag to its observed Save control.
-            // The actual cancellation callback and retained copy are still
-            // required below; no success is inferred from a gesture alone.
-            let systemSave=visible("Save",app)
-            XCTAssertTrue(systemSave.waitForExistence(timeout:20));XCTAssertTrue(systemSave.isHittable)
-            systemSave.swipeDown()
+        // In the real Files browser, a remembered On My iPhone directory
+        // exposes Browse as its back control and hides Cancel at the root.
+        // Navigate the observed system hierarchy with ordinary taps, then
+        // require the native cancellation callback and retained file below.
+        for step in 0..<3 {
+            let cancel=visible("Cancel",app)
+            if cancel.exists && cancel.isHittable { cancel.tap();break }
+            attach("original-system-document-sheet-before-back-"+String(step),app)
+            let browse=visible("Browse",app)
+            XCTAssertTrue(browse.waitForExistence(timeout:20));XCTAssertTrue(browse.isHittable)
+            browse.tap()
         }
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH %@","已取消保存，接收的文件仍可重新选择保存位置。")).firstMatch.waitForExistence(timeout:30))
         XCTAssertTrue(save.isEnabled);save.tap()
