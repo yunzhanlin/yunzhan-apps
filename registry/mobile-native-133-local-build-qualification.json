@@ -3,7 +3,7 @@
   "actual_native_UI_acceptance": false,
   "agp": "9.1.1",
   "all50_commercial": false,
-  "android_actual_host_tests_each": 39,
+  "android_actual_host_tests_each": 43,
   "android_lint_issues_each": 0,
   "android_min_sdk": 30,
   "android_target_sdk": 37,
@@ -20,7 +20,7 @@
   "server_SDK_tree": "c07c9c047359fa6696fa3eb73eef721ec0429ab0",
   "server_source_parent": "5f8457971e3ca4868d85c70d3f854d5773f25c8f",
   "source_files": 40,
-  "source_inputs_sha256": "335ed1f5e6060cf6859b79e2b12ff32290277b9158c4a10afd0f16122d3271e8",
+  "source_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
   "source_overrides": 0,
   "source_scope": "native-client-1.3.3",
   "version": "1.3.3",
@@ -37,5 +37,10 @@
   "iOS_original_R6_privacy_host_device_compile_passed": true,
   "iOS_background_AX_refusal_original_QA6_retained": 42240896502,
   "iOS_actual_R6_platform_UI_pending": true,
-  "original_Android_R5_component_bytes_unchanged": true
+  "original_Android_R5_component_bytes_unchanged": false,
+  "iOS_R6_component_bytes_unchanged": true,
+  "original_API30_WebView83_blank_page_preserved": 42249387904,
+  "Android_actual_new_engine_guard_UI_pending": true,
+  "Android_minimum_compatible_Chromium_engine": 111,
+  "Android_runtime_updates_automatically": false
 }

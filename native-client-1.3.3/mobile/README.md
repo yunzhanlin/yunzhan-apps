@@ -6,6 +6,8 @@
 
 Android 最低 API 30（Android 11），构建使用 JDK 17、Gradle 9.3.1、Android Gradle Plugin 9.1.1、SDK 37.0，目标 API 37：
 
+系统版本与 WebView 内核分别检查。当前前端至少需要 Chromium 111；连接前读取系统实际 WebView 包版本，旧版、缺失或无法识别的版本显示更新提示，不创建面板网页、不发送连接请求、不替换当前连接，也不下载或切换系统 WebView。用户应通过系统应用商店更新到最新稳定版；最低兼容版本并非安全补丁保证。该要求对应 [Vite 8 的正式构建浏览器基线](https://vite.dev/guide/build)。
+
 Android 源码使用 Java，保留模块级 `enableKotlin = false`、Debug/Release 两套单元测试及严格 lint。AndroidX Activity 负责结果注册和系统返回调度；它所需的 Kotlin 与 Jetpack 运行库随 APK 提供，第三方许可位于 APK 的 `assets/third_party_licenses.txt`。
 
 ```sh

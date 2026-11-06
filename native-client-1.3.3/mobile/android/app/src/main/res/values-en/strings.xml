@@ -19,6 +19,7 @@
     <string name="navigation_blocked">Navigation to another origin was blocked. Open it separately in a browser; the panel session is not forwarded.</string>
     <string name="tls_failed">Certificate verification failed. Configure a trusted HTTPS certificate for the panel before reconnecting.</string>
     <string name="connection_failed">Connection failed. Check the panel URL, network and certificate before trying again.</string>
+    <string name="webview_update_required">System WebView is outdated or unavailable. The panel has not been connected. Update Android System WebView to the latest stable version through your system app store, then reopen this app. The page requires Chromium 111 or newer.</string>
     <string name="file_picker_unavailable">The document picker is unavailable.</string>
     <string name="download_notice">This download type is unavailable. Use Download in the panel file manager.</string>
     <string name="download_title">Download file</string>

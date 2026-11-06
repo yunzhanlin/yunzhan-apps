@@ -67,14 +67,15 @@ public final class PanelActivity extends ComponentActivity {
     private Button saveDownload;
     private TextView downloadState;
     private final SessionCallbacks<Uri[]> session = new SessionCallbacks<>();
-    private boolean clearing, closed;
+    private boolean clearing, closed, webRuntimeUnavailable;
     private final AtomicBoolean resetting = new AtomicBoolean(false);
 
     @Override public void onCreate(Bundle saved) {
         super.onCreate(saved);
         // Never expose panel data in recents, screenshots, recording or Android backups.
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
-        WebView.setWebContentsDebuggingEnabled(false);
+        try { WebView.setWebContentsDebuggingEnabled(false); }
+        catch (RuntimeException unavailable) { webRuntimeUnavailable = true; }
         root = new LinearLayout(this); root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.WHITE);
         root.setOnApplyWindowInsetsListener((v, insets) -> {
             android.graphics.Insets safe = insets.getInsets(android.view.WindowInsets.Type.systemBars() | android.view.WindowInsets.Type.displayCutout());
@@ -106,7 +107,8 @@ public final class PanelActivity extends ComponentActivity {
         lock.addView(button(R.string.unlock, this::unlock)); lock.addView(button(R.string.logout, this::disconnect));
         setContentView(root);
         // Process restart requires fresh web login. No persisted native password or session.
-        clearLocal(null);
+        if (webRuntimeUnavailable) state.setText(R.string.webview_update_required);
+        else clearLocal(null);
         getOnBackPressedDispatcher().addCallback(this,new OnBackPressedCallback(true){@Override public void handleOnBackPressed(){goBack();}});
     }
     private void goBack() { if (web != null && session.interactive() && web.canGoBack()) web.goBack(); else if (web != null) disconnect(); else finish(); }
@@ -139,6 +141,16 @@ public final class PanelActivity extends ComponentActivity {
         final PanelAddress target;
         try { target = PanelAddress.parse(raw, BuildConfig.DEBUG); } catch (IllegalArgumentException e) { tell(R.string.invalid_panel_address); return; }
         if (clearing) { tell(R.string.clearing_old_session); return; }
+        if (webRuntimeUnavailable) { tell(R.string.webview_update_required); return; }
+        // API30's original default image still ships Chromium83. The OS API
+        // level does not establish compatibility with the panel's JS build.
+        // Refuse before networking or replacing an existing connection.
+        final boolean compatible;
+        try {
+            android.content.pm.PackageInfo provider = WebView.getCurrentWebViewPackage();
+            compatible = provider != null && supportsWebViewVersion(provider.versionName);
+        } catch (RuntimeException unavailable) { tell(R.string.webview_update_required); return; }
+        if (!compatible) { tell(R.string.webview_update_required); return; }
         destroyWeb(); address = null;
         clearLocal(() -> {
             if (closed) return;
@@ -208,6 +220,12 @@ public final class PanelActivity extends ComponentActivity {
             if (session.locked()) coverWeb();
             web.loadUrl(target.uri.toString());
         });
+    }
+    // Compatibility only, not a security-patch or certificate assessment.
+    static boolean supportsWebViewVersion(String version) {
+        if (version == null || !version.matches("[1-9][0-9]{1,3}(\\.[0-9]{1,9}){3}")) return false;
+        int major = Integer.parseInt(version.substring(0, version.indexOf('.')));
+        return major >= 111;
     }
     private boolean jsDialog(WebView view, SessionCallbacks.Ticket ticket, String url, String message, JsResult result, boolean confirm) {
         if (!currentView(view, ticket) || !session.interactive() || address == null || !address.allows(url)) { result.cancel(); return true; }
@@ -396,11 +414,21 @@ public final class PanelActivity extends ComponentActivity {
         clearLocal(() -> { if (!closed) state.setText(R.string.session_cleared); });
     }
     private void clearLocal(Runnable done) {
+        if (webRuntimeUnavailable) return;
         if (!resetting.compareAndSet(false, true)) return;
-        clearing = true; WebStorage.getInstance().deleteAllData();
-        CookieManager.getInstance().removeAllCookies(success -> {
-            CookieManager.getInstance().flush(); clearing = false; resetting.set(false); if (done != null) done.run();
-        });
+        clearing = true;
+        try {
+            WebStorage.getInstance().deleteAllData();
+            CookieManager.getInstance().removeAllCookies(success -> {
+                try { CookieManager.getInstance().flush(); }
+                catch (RuntimeException unavailable) { unavailableWebRuntime(); return; }
+                clearing = false; resetting.set(false); if (done != null) done.run();
+            });
+        } catch (RuntimeException unavailable) { unavailableWebRuntime(); }
+    }
+    private void unavailableWebRuntime() {
+        webRuntimeUnavailable = true; clearing = false; resetting.set(false);
+        state.setText(R.string.webview_update_required);
     }
     private void destroyWeb() {
         discardDownload(false);
