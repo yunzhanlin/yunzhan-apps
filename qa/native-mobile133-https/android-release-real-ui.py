@@ -25,9 +25,9 @@ def command(*args,raw=False):
  assert r.returncode==0,'Owned emulator command failed: '+args[0]
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
-assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA2'
-assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
+api=int(os.environ['C68_UI_API']);assert api in(30,37)and command('shell','getprop','ro.build.version.sdk').strip()==str(api)
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA3'
+assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
 def snapshot(label=None):
@@ -161,8 +161,34 @@ def choose_downloads(root):
  def roots(r):return nodes(r,lambda n:n.get('package')=='com.android.documentsui'and n.get('resource-id')=='android:id/title'and n.get('text')=='Downloads')
  root=wait('system-downloads-root',lambda r:len(roots(r))==1);tap_node(roots(root)[0],'system-Downloads-directory-item')
  return wait('system-downloads-save',lambda r:not roots(r)and(has(r,'SAVE')or has(r,'Save')))
-proof={'ok':False,'actual_Android_emulator_API':37,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'debug_loopback_real_business_acceptance':False,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False}
+proof={'ok':False,'actual_Android_emulator_API':api,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'debug_loopback_real_business_acceptance':False,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False}
 try:
+ if api==30:
+  original_provider=(private/'original-owned-WebView-before-UI.stdout').read_text();assert '(com.android.webview, 83.0.4103.120)'in original_provider
+  start();root=wait('original-native-old-engine-start',lambda r:has(r,'Connect'))
+  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')==''
+  tap_node(fields[0],'owned-HTTPS-endpoint-for-old-engine-refusal');type_ascii(setup['panel_origin']+'/');key(4);tap('Connect')
+  root=wait('original83-native-update-explanation-before-WebView',lambda r:any(n.get('text','').startswith('System WebView is outdated or unavailable.')for n in r.iter('node')))
+  assert not nodes(root,lambda n:n.get('class')=='android.webkit.WebView');tap('OK',root)
+  before_pid=owned_app_pid();assert before_pid is not None;before_uid=command('shell','cmd','package','list','packages','-U',package).strip()
+  save('original83-native-compatibility-refusal.json',{'ok':True,'original_OS_API':30,'original_WebView':'83.0.4103.120','actual_explanatory_native_UI':True,'actual_WebViews':0,'no_automatic_provider_update':True,'native_PID':before_pid,'native_UID_line':before_uid})
+  # An independently acquired official AOSP prebuilt is used only in this
+  # disposable CI emulator. Ordinary package installation enforces its
+  # original signing identity; never root, replace system files or switch a
+  # provider through debug settings. This old fixture is not a recommended
+  # production browser or a current security-patch claim.
+  args=[adb,'-s',serial,'install','-r',str(private/'original-owned-AOSP-WebView128.apk')]
+  save('one-owned-normal-WebView-update-intent.json',{'args':args,'maximum_submissions':1,'owned_CI_only':True,'no_product_code_or_APK_overlay':True})
+  with(private/'one-owned-normal-WebView-update.stdout').open('xb')as out,(private/'one-owned-normal-WebView-update.stderr').open('xb')as err:result=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=180)
+  assert result.returncode==0 and 'Success'in(private/'one-owned-normal-WebView-update.stdout').read_text()
+  provider=command('shell','dumpsys','webviewupdate');assert '(com.android.webview, 128.0.6613.88)'in provider
+  with(private/'original-owned-WebView-after-normal-update.stdout').open('x')as f:f.write(provider)
+  deadline=time.monotonic()+20
+  while owned_app_pid()is not None:assert time.monotonic()<deadline,'Original WebView provider update did not settle the dependent process';time.sleep(.2)
+  start();root=wait('original-native-after-ordinary-system-provider-update',lambda r:has(r,'Connect')and not nodes(r,lambda n:n.get('class')=='android.webkit.WebView'))
+  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')==''
+  after_uid=command('shell','cmd','package','list','packages','-U',package).strip();assert after_uid==before_uid
+  save('original-owned-normal-provider-update-preserves-native-app.json',{'ok':True,'same_native_UID_line':before_uid,'native_old_PID':before_pid,'native_new_PID':owned_app_pid(),'endpoint_not_persisted_by_refused_connection':True,'provider_update_submissions':1,'product_APK_uninstalled_or_replaced':False,'current_security_patch_or_production_runtime_claim':False})
  start()
  for label,args in [('window',('shell','dumpsys','window')),('activities',('shell','dumpsys','activity','activities')),('logcat',('logcat','-d','-t','200'))]:
   observation=command(*args);assert len(observation)<2<<20

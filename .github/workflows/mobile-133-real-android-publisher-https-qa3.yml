@@ -1,0 +1,106 @@
+name: C68 original publisher Release APK real HTTPS management and provider QA3
+on:
+  push:
+    branches: [codex/mobile-native-download-c68]
+    paths: ['qa/native-mobile133-https/**', '.github/workflows/mobile-133-real-android-publisher-https-qa3.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: c68-original-retained-publisher-HTTPS-qa3-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  original-publisher-real-file-management:
+    # GitHub only exposes owned draft releases to a token with push access.
+    # The acquisition helper performs GETs only and never changes the draft.
+    permissions:
+      contents: write
+      actions: read
+    env:
+      C68_UI_COHORT: HTTPSQA3
+      C68_UI_API: ${{ matrix.api }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - api: 30
+            image: android-30
+          - api: 37
+            image: android-37.0
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Require immutable native source and preserve original server SDK
+        run: |
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          node --test tests/mobile-client-133.test.mjs
+      - name: Acquire original signed programme and the exact retained-publisher draft APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/c68-private" "$RUNNER_TEMP/c68-public"
+          python3 -I -B qa/native-mobile133/download-programme.py "$RUNNER_TEMP/c68-assets"
+          python3 -I -B qa/native-mobile133-https/download-original-publisher-APK.py "$RUNNER_TEMP/c68-private"
+      - name: Prepare the exact official Android${{ matrix.api }} system image and owned KVM access
+        run: |
+          set -eu
+          umask 077
+          "${ANDROID_HOME:?}/cmdline-tools/latest/bin/sdkmanager" 'platforms;android-37.0' 'build-tools;36.0.0' 'system-images;${{ matrix.image }};default;x86_64' 'emulator' 'platform-tools' > "$RUNNER_TEMP/c68-private/SDK-preparation.stdout" 2> "$RUNNER_TEMP/c68-private/SDK-preparation.stderr"
+          sudo setfacl -m "u:$(id -u):rw" /dev/kvm
+      - name: Acquire an original official AOSP provider for the owned API30 compatibility case only
+        if: matrix.api == 30
+        run: python3 -I -B qa/native-mobile133-https/acquire-owned-api30-WebView.py "$RUNNER_TEMP/c68-private"
+      - name: One normal original signed fresh Linux install and real owned file-management site
+        run: |
+          set -eu
+          umask 077
+          sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B qa/native-mobile133/prepare-real-panel.py "$RUNNER_TEMP/c68-assets" "$RUNNER_TEMP/c68-private" > "$RUNNER_TEMP/c68-private/real-panel-preparation.stdout" 2> "$RUNNER_TEMP/c68-private/real-panel-preparation.stderr"
+      - name: One ordinary public HTTPS endpoint for this exact fresh CI panel
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B qa/native-mobile133-https/start-real-HTTPS-panel.py "$RUNNER_TEMP/c68-private" > "$RUNNER_TEMP/c68-private/HTTPS-preparation.stdout" 2> "$RUNNER_TEMP/c68-private/HTTPS-preparation.stderr"
+      - name: Boot one isolated emulator and install only the unchanged retained-publisher Release APK
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B qa/native-mobile133-https/start-owned-emulator.py "$RUNNER_TEMP/c68-private" > "$RUNNER_TEMP/c68-private/emulator-preparation.stdout" 2> "$RUNNER_TEMP/c68-private/emulator-preparation.stderr"
+      - name: Actual native controls real login download provider readback privacy and stale OS results
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B qa/native-mobile133-https/android-release-real-ui.py "$RUNNER_TEMP/c68-private" > "$RUNNER_TEMP/c68-private/device-UI.stdout" 2> "$RUNNER_TEMP/c68-private/device-UI.stderr"
+          node --test tests/mobile-client-133.test.mjs
+      - name: Preserve original failures and independently reconcile the real attachment then seal evidence
+        if: always()
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 -p "$RUNNER_TEMP/c68-private" "$RUNNER_TEMP/c68-public"
+          sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps C68_UI_API=${{ matrix.api }} python3 -I -B qa/native-mobile133-https/finish-evidence.py "$RUNNER_TEMP/c68-private" "$RUNNER_TEMP/c68-public"
+      - name: Stop only this disposable owned emulator
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/c68-private/owned-emulator-intent.json" ]; then
+            "${ANDROID_HOME:?}/platform-tools/adb" -s emulator-5554 emu kill
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c68-original-retained-publisher-HTTPS-API${{ matrix.api }}-QA3-${{ github.run_id }}
+          path: ${{ runner.temp }}/c68-public/
+          retention-days: 14
+          if-no-files-found: error
