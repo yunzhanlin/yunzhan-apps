@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "programme_release_id": 436223911,
+  "programme_tag": "qa-inheritedaclpreflightcandidate67-20261106-qa1",
+  "programme_source_head": "5f8457971e3ca4868d85c70d3f854d5773f25c8f",
+  "programme_source_inputs_sha256": "22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894",
+  "programme_archive": "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz",
+  "programme_version": "0.1.0-dev.proapps24inheritedaclpreflightcandidate67",
+  "programme_assets": {
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz": {
+      "id": 716360504,
+      "bytes": 23691651,
+      "sha256": "7e069f9e7db65009bb4e732282d857964192e8d0a75d5895874442d04d3dd66e"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz.manifest": {
+      "id": 716335184,
+      "bytes": 191,
+      "sha256": "0c6edf66924f6a1e96343861d85c72b84c281b47a1bf918c364a5321802ecaee"
+    },
+    "panel-0.1.0-dev.proapps24inheritedaclpreflightcandidate67-linux-amd64.tar.gz.sig": {
+      "id": 716335171,
+      "bytes": 64,
+      "sha256": "b1e5a717fda51e2c77a23cf1f6b526241adffda0cde86c65248cb7c9cc8b8ed3"
+    },
+    "release-signing-dev.pub": {
+      "id": 716335261,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "recipient_sha256": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+  "native_source_inputs_sha256": "e13d646a155ced14f16ed6d7bc7b5247a3012c28035e503ccd1d6f645a5f881b",
+  "physical_device_acceptance": false,
+  "Main_changed": false,
+  "native_source_CI_run": 42211708759,
+  "native_source_CI_head": "4fe63a1a17b3df01cd90685d5601bd2260dd1019",
+  "native_Android_artifact": {
+    "artifact_id": 13499381113,
+    "original_server_digest_verified": "e33707d28eb515cccefd6e1bdddf40d82d5e3c153be130e5288d2c2eaef22d51",
+    "bytes": 4280477
+  },
+  "native_APKs": {
+    "app/build/outputs/apk/debug/app-debug.apk": {
+      "bytes": 6923029,
+      "sha256": "508813a727f86b7d73cb9c55e05812264d023e61a0b4849b4bb9ec032e9d0b0a"
+    },
+    "app/build/outputs/apk/release/app-release-unsigned.apk": {
+      "bytes": 5591913,
+      "sha256": "cff6a84c1129473af7668920e531356b9fc1f586f10280fc5a75da62d4bcc29a"
+    }
+  }
+}
