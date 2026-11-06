@@ -96,6 +96,8 @@ finally:
      for child in value:visit(child)
    visit(tree);assert len(identifiers)==1,'Original test identifier must be unique'
    read_result('original-XCTest-final-details',['xcrun','xcresulttool','get','test-results','test-details','--path',str(result),'--test-id',next(iter(identifiers))])
+   legacy=read_result('original-XCTest-final-legacy-object',['xcrun','xcresulttool','get','object','--legacy','--format','json','--path',str(result)])
+   save('derived-original-XCTest-failure-locations.json',{'original_legacy_tool_stdout_sha256':sha(private/'original-XCTest-final-legacy-object.stdout'),'issues':legacy.get('issues',{})})
    exports=private/'original-AX-exports'
    read_result('original-XCTest-export-attachments',['xcrun','xcresulttool','export','attachments','--path',str(result),'--output-path',str(exports)],False)
    attachment_index=json.loads((exports/'manifest.json').read_bytes());copied=[];total=0
