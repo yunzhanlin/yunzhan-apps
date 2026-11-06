@@ -10,7 +10,8 @@ private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.envir
 for variable,directory in [('ANDROID_AVD_HOME','provider35-avds'),('ANDROID_USER_HOME','provider35-user'),('ANDROID_EMULATOR_HOME','provider35-home')]:
  env[variable]=str(private/directory);pathlib.Path(env[variable]).mkdir(mode=0o700)
 def observe(label,args,input=None,timeout=90):
- with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:result=subprocess.run([str(v)for v in args],input=input,env=env,stdout=out,stderr=err,timeout=timeout)
+ stream={'input':input}if input is not None else{'stdin':subprocess.DEVNULL}
+ with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:result=subprocess.run([str(v)for v in args],env=env,stdout=out,stderr=err,timeout=timeout,**stream)
  with(private/(label+'-outcome.json')).open('x')as f:json.dump({'exit':result.returncode,'maximum_submissions':1},f)
  assert result.returncode==0,label+' failed; retain original'
  return(private/(label+'.stdout')).read_text()
@@ -29,13 +30,18 @@ try:
  assert subprocess.check_output([str(adb),'-s','emulator-5554','emu','avd','name'],env=env,text=True).splitlines()[0]==name
  observe('original-owned-provider35-runtime',[adb,'-s','emulator-5554','shell','dumpsys','webviewupdate'])
  source=observe('original-owned-provider35-APK-path',[adb,'-s','emulator-5554','shell','pm','path','com.android.webview']).strip().splitlines();assert len(source)==1 and source[0].startswith(('package:/system/','package:/product/'))and source[0].endswith('.apk')
- apk=private/'original-owned-SDK-WebView35.apk';observe('original-owned-provider35-APK-read',[adb,'-s','emulator-5554','pull',source[0].removeprefix('package:'),apk]);assert apk.is_file()and not apk.is_symlink()and apk.stat().st_nlink==1 and 0<apk.stat().st_size<512<<20
+ original_path=source[0].removeprefix('package:')
+ observe('original-owned-provider35-adb-version',[adb,'version'])
+ observe('original-owned-provider35-file-metadata',[adb,'-s','emulator-5554','shell','ls','-l',original_path])
+ observe('original-owned-provider35-file-digest',[adb,'-s','emulator-5554','shell','sha256sum',original_path])
+ apk=private/'original-owned-SDK-WebView35.apk';observe('original-owned-provider35-APK-read',[adb,'-s','emulator-5554','pull','-Z',original_path,apk]);assert apk.is_file()and not apk.is_symlink()and apk.stat().st_nlink==1 and 0<apk.stat().st_size<512<<20
  tools=sdk/'build-tools/36.0.0';signer=observe('original-owned-provider35-signature',[tools/'apksigner','verify','--min-sdk-version','30','--max-sdk-version','37','--verbose','--print-certs',apk]);cert=re.findall(r'^Signer #1 certificate SHA-256 digest: ([a-f0-9]{64})$',signer,re.M);assert len(cert)==1
  metadata=observe('original-owned-provider35-metadata',[tools/'aapt2','dump','badging',apk]);version=re.search(r"package: name='com.android.webview' versionCode='([0-9]+)' versionName='([0-9.]+)'",metadata);minimum=re.search(r"minSdkVersion:'([0-9]+)'",metadata);assert version and minimum
  digest=hashlib.sha256()
  with apk.open('rb')as f:
   for block in iter(lambda:f.read(1<<20),b''):digest.update(block)
  record={'ok':int(minimum[1])<=30 and int(version[2].split('.')[0])>=111,'original_official_SDK_package':'system-images;android-35;default;x86_64','source_properties':(sdk/'system-images/android-35/default/x86_64/source.properties').read_text(),'package':'com.android.webview','version_code':version[1],'version':version[2],'min_sdk':int(minimum[1]),'bytes':apk.stat().st_size,'sha256':digest.hexdigest(),'certificate_sha256':cert[0],'original_provider_only_read_not_changed':True,'owned_CI_fixture_only_not_production_browser_recommendation':True,'no_resigning_or_provider_selection_or_root_adb':True}
+ assert record['sha256']==(private/'original-owned-provider35-file-digest.stdout').read_text().split()[0]
  with(private/'original-official-SDK-WebView35-provenance.json').open('x')as f:json.dump(record,f,indent=2)
  assert record['ok'],'Official SDK provider is not compatible with this API30 test'
 finally:
