@@ -7,6 +7,7 @@ def sha(f):return hashlib.sha256(pathlib.Path(f).read_bytes()).hexdigest()
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,sort_keys=True);f.write('\n')
 def original(label,args,timeout=180):
+ proof['last_original_stage']=label
  save(label+'-intent.json',{'args':args,'maximum_submissions':1})
  with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:r=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=timeout,cwd=repo)
  save(label+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(private/(label+'.stdout')),'stderr_sha256':sha(private/(label+'.stderr'))});assert r.returncode==0,label+' failed; retain original without replay'
@@ -44,7 +45,10 @@ try:
  save('original-independent-system-provider-bytes.json',{'bytes':exported.stat().st_size,'sha256':sha(exported),'original_receiver_marker_preserved':True,'product_private_cache_empty_after_explicit_disconnect':True,'ordinary_system_file_provider':True,'public_TLS_real_signed_Linux_panel':True,'native_product_source_overlays':0,'iOS_provider_ack_is_not_product_readback_or_cloud_sync_guarantee':True})
  original('original-source-integrity-after',['node','--test','tests/mobile-client-133.test.mjs'])
  proof.update(ok=True,actual_iOS_UI_acceptance=True,actual_iOS_simulator='18.5',original_Release_client=True,ordinary_OS_public_TLS_real_panel_login=True,actual_file_manager_download_and_system_provider_export=True,independent_provider_original_bytes_verified=True,cancel_and_resave_and_actual_background_accessibility_concealment=True,actual_release_HTTP_refusal=True,source_inputs_sha256=pins['native_source_inputs_sha256'],original_XCTest_total=1,original_XCTest_passed=1,original_XCTest_skipped=0)
-except BaseException:save('original-client-UI-failure.json',{'traceback':traceback.format_exc()});raise
+except BaseException:
+ save('original-client-UI-failure.json',{'traceback':traceback.format_exc()})
+ print(json.dumps({'original_failure_stage':proof.get('last_original_stage','original-peer-or-platform-preparation'),'original_outcome_replayed':False}),flush=True)
+ raise
 finally:
  try:
   if 'receiver_data'in locals()and receiver_data.is_dir():

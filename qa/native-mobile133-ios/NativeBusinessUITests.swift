@@ -26,7 +26,14 @@ final class NativeBusinessUITests: XCTestCase {
         let endpoint=app.textFields["https://你的面板地址/安全入口/"];XCTAssertTrue(endpoint.waitForExistence(timeout:30));endpoint.tap();endpoint.typeText(origin+"/");tap("连接",app)
         let web=app.webViews.firstMatch;XCTAssertTrue(web.waitForExistence(timeout:60))
         let user=web.textFields["管理员用户名"],secret=web.secureTextFields["输入管理员密码"]
-        XCTAssertTrue(user.waitForExistence(timeout:60));user.tap();user.typeText(username);secret.tap();secret.typeText(password)
+        XCTAssertTrue(user.waitForExistence(timeout:60))
+        let existing=(user.value as?String) ?? ""
+        if existing != username {
+            user.tap()
+            if !existing.isEmpty && existing != "管理员用户名" { XCTAssertLessThanOrEqual(existing.count,64);user.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:existing.count)) }
+            user.typeText(username)
+        }
+        secret.tap();secret.typeText(password)
         let enter=web.buttons["进入工作台"];reveal(enter,in:web);enter.tap()
         XCTAssertTrue(web.buttons["展开导航"].waitForExistence(timeout:60));attach("real-HTTPS-panel-authenticated",app)
         tap("展开导航",app);tap("文件",app)

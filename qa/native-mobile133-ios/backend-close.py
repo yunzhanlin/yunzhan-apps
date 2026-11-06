@@ -8,7 +8,7 @@ def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,sort_keys=True);f.write('\n')
 try:
  assert(private/'original-backend-dispatch-issued.json').is_file(),'No original HTTPS dispatch was issued; preserve failure and close without waiting for UI'
- exchange=runpy.run_path(str(base/'exchange.py'));peer=exchange['wait']('c68-ios-client-result-'+os.environ['GITHUB_RUN_ID'],private/'original-client-result',{'client-finished.json','original-public-proof.json','original-private-evidence.cms'},seconds=1600)
+ exchange=runpy.run_path(str(base/'exchange.py'));peer=exchange['wait']('c68-ios-client-result-'+os.environ['GITHUB_RUN_ID'],private/'original-client-result',{'client-finished.json','original-public-proof.json','original-private-evidence.cms','original-diagnostics.cms'},seconds=1600)
  result=json.loads((peer/'client-finished.json').read_bytes());assert result['finished']and result['head']==os.environ['GITHUB_SHA']and result['run_id']==os.environ['GITHUB_RUN_ID']
  setup=json.loads((private/'real-panel-setup.json').read_bytes());site=pathlib.Path('/srv/panel/sites')/setup['site']/'public'/setup['filename'];s=site.lstat();assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and s.st_size==setup['bytes']and sha(site)==setup['sha256']
  old=json.loads((private/'original-installed-204-entries.json').read_bytes());installed=pathlib.Path('/opt/panel/current').resolve(strict=True);assert len(old)==204

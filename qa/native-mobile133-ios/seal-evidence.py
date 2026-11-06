@@ -1,5 +1,5 @@
 """Seal CI originals to the existing user recipient; no private keys shipped."""
-import hashlib,json,os,pathlib,stat,subprocess,sys,tarfile,traceback
+import hashlib,io,json,os,pathlib,stat,subprocess,sys,tarfile,traceback
 os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
 base=pathlib.Path(__file__).resolve().parent;private=pathlib.Path(sys.argv[1]).resolve(strict=True);public=pathlib.Path(sys.argv[2]).resolve(strict=True);owner=public.stat();role=sys.argv[3];assert role in('client','backend')
@@ -20,6 +20,18 @@ try:
  sealed=public/'original-private-evidence.cms';r=subprocess.run([openssl,'cms','-encrypt','-binary','-aes-256-gcm','-in',str(envelope),'-outform','DER','-out',str(sealed),'-recip',str(cert),'-keyopt','rsa_padding_mode:oaep','-keyopt','rsa_oaep_md:sha256'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=120);assert r.returncode==0
  proof['private_evidence']={'encrypted':True,'sha256':hashlib.sha256(sealed.read_bytes()).hexdigest(),'bytes':sealed.stat().st_size,'plaintext_sha256':hashlib.sha256(envelope.read_bytes()).hexdigest(),'original_files':len(included),'private_keys_and_credential_envelopes_excluded':True}
  if os.geteuid()==0:os.chown(sealed,owner.st_uid,owner.st_gid)
+ # A small diagnostic envelope contains exact members of the full originals.
+ # The complete xcresult, screenshots and all failures remain retained above.
+ wanted={v['name']:v for v in included if len(pathlib.PurePosixPath(v['name']).parts)==1 and pathlib.PurePosixPath(v['name']).suffix in('.json','.stdout','.stderr')and v['bytes']<1<<20}
+ diagnostics=private/'original-diagnostics.tar.gz';selected=[];total=0
+ with tarfile.open(envelope,'r:gz')as source,tarfile.open(diagnostics,'x:gz')as dest:
+  for member in source:
+   if member.name not in wanted:continue
+   raw=source.extractfile(member).read();pin=wanted[member.name];assert len(raw)==pin['bytes']and hashlib.sha256(raw).hexdigest()==pin['sha256'];total+=len(raw);assert total<8<<20;dest.addfile(member,io.BytesIO(raw));selected.append(pin)
+  index=json.dumps({'original_full_plaintext_sha256':proof['private_evidence']['plaintext_sha256'],'exact_original_members':selected},indent=2).encode();member=tarfile.TarInfo('original-diagnostic-members.json');member.mode=0o600;member.size=len(index);dest.addfile(member,io.BytesIO(index))
+ diagnostic_cipher=public/'original-diagnostics.cms';r=subprocess.run([openssl,'cms','-encrypt','-binary','-aes-256-gcm','-in',str(diagnostics),'-outform','DER','-out',str(diagnostic_cipher),'-recip',str(cert),'-keyopt','rsa_padding_mode:oaep','-keyopt','rsa_oaep_md:sha256'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=60);assert r.returncode==0
+ proof['original_diagnostics']={'sha256':hashlib.sha256(diagnostic_cipher.read_bytes()).hexdigest(),'bytes':diagnostic_cipher.stat().st_size,'plaintext_sha256':hashlib.sha256(diagnostics.read_bytes()).hexdigest(),'exact_original_members':len(selected),'full_original_evidence_retained':True}
+ if os.geteuid()==0:os.chown(diagnostic_cipher,owner.st_uid,owner.st_gid)
 except BaseException:
  proof['ok']=False
  with(private/'original-evidence-sealing-failure.json').open('x')as f:json.dump({'traceback':traceback.format_exc()},f)
