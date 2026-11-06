@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Provision fixed root native directories before systemd confinement."""
 import argparse
+import errno
 import grp
 import os
 import pathlib
 import stat
+import struct
 
 
 def prepare(root, create):
@@ -13,6 +15,10 @@ def prepare(root, create):
     root = pathlib.Path(root)
     if root.anchor != "/" or str(root) != os.path.normpath(str(root)):
         raise ValueError("target root must be an absolute normalized ordinary directory")
+    if create:
+        # Validate every namespace before making even the first directory.
+        # A later /opt refusal must not leave new /var directories behind.
+        prepare(root, False)
     for parts, mode in (
         (("var", "cache", "panel-runtime-build"), 0o755),
         (("var", "cache", "panel-analytics-html-build"), 0o755),
@@ -42,6 +48,8 @@ def prepare_target(root, parts, create, mode=0o755):
         except FileNotFoundError:
             if current == root:
                 raise ValueError("target root does not exist")
+            if not missing:
+                check_inherited_default_acl(current.parent)
             if not create:
                 missing = True
                 continue
@@ -62,6 +70,54 @@ def prepare_target(root, parts, create, mode=0o755):
             raise ValueError("native build cache ancestor is foreign, linked or writable; not repaired")
         if current == target and (stat.S_IMODE(info.st_mode) != mode or info.st_gid != 0):
             raise ValueError("existing native build cache permissions/group differ; not repaired")
+
+
+def inherited_acl_mode(raw):
+    # Linux's POSIX ACL xattr ABI: little-endian version 2 and <tag,perm,id>.
+    # The group mode bits reflect ACL_MASK when present, not GROUP_OBJ.
+    if len(raw) < 28 or len(raw) > 65536 or (len(raw) - 4) % 8 or struct.unpack_from("<I", raw)[0] != 2:
+        raise ValueError("invalid inherited default ACL; not repaired")
+    ranks = {1: 0, 2: 1, 4: 2, 8: 3, 16: 4, 32: 5}
+    basic, named, previous = {}, set(), -1
+    for tag, permission, identity in struct.iter_unpack("<HHI", raw[4:]):
+        if tag not in ranks or permission & ~7 or ranks[tag] < previous:
+            raise ValueError("invalid inherited default ACL entry; not repaired")
+        previous = ranks[tag]
+        if tag in (2, 8):
+            if identity == 0xffffffff or (tag, identity) in named:
+                raise ValueError("invalid inherited default ACL identity; not repaired")
+            named.add((tag, identity))
+        else:
+            if identity != 0xffffffff or tag in basic:
+                raise ValueError("invalid inherited default ACL base; not repaired")
+            basic[tag] = permission
+    if not {1, 4, 32}.issubset(basic) or named and 16 not in basic:
+        raise ValueError("incomplete inherited default ACL; not repaired")
+    return basic[1] << 6 | basic.get(16, basic[4]) << 3 | basic[32]
+
+
+def check_inherited_default_acl(parent):
+    # Read only the nearest existing parent, when a descendant is missing.
+    # An existing tree does not inherit an unrelated ancestor's current ACL.
+    descriptor = os.open(parent, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+    try:
+        before = os.fstat(descriptor)
+        if not stat.S_ISDIR(before.st_mode) or before.st_uid != 0 or before.st_mode & 0o022:
+            raise ValueError("native build cache parent is foreign or writable; not repaired")
+        try:
+            raw = os.getxattr(descriptor, "system.posix_acl_default")
+        except OSError as error:
+            if error.errno not in (errno.ENODATA, errno.ENOTSUP, errno.EOPNOTSUPP):
+                raise
+            raw = None
+        after = os.fstat(descriptor)
+        identity = lambda value: (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid, value.st_ctime_ns)
+        if identity(before) != identity(after):
+            raise ValueError("native build cache parent changed during ACL check; not repaired")
+        if raw is not None and inherited_acl_mode(raw) & 0o022:
+            raise ValueError("native build cache parent default ACL would inherit writable permissions; not repaired")
+    finally:
+        os.close(descriptor)
 
 
 def prepare_build_lock(root, create):

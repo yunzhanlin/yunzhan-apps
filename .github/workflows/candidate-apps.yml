@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67]
   workflow_dispatch:
 
 permissions:
@@ -100,13 +100,15 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='0c12d2b6b910298a16e8bcfc4658a45c94a6b63a99385c186f07a5dfdf7f280f' and len(index['files'])==2451
+          assert index['release']['frozen_inputs_sha256']=='22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894' and len(index['files'])==2451
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
         run: |
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_geodata_upgrade_lease.py
           sudo python3 -I -B -m unittest discover -s candidate/panel-integration-load-balance/packaging -p test_statistics_stop_barrier.py
+      - name: Actual twenty Root inherited ACL preflight fixtures with original exit and zero skips
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B tools/run-inherited-acl-preflight-native.py "$RUNNER_TEMP/inherited-acl-preflight-original"
       - name: Actual seven first-install startup process fixtures with original exit and zero skips
         run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B tools/run-first-install-startup-native.py "$RUNNER_TEMP/first-install-startup-original"
       - name: Actual thirteen private backup directory source fixtures with nonempty Root execution proof
@@ -316,6 +318,14 @@ jobs:
       - name: Native signed fifty manifest ABI, not installation or all-fifty commercial acceptance
         working-directory: candidate/panel-integration-load-balance
         run: go test -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/candidate"
+      - name: Retain original twenty inherited ACL fixtures including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: inherited-acl-preflight-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/inherited-acl-preflight-original/
+          retention-days: 7
+          if-no-files-found: error
       - name: Retain original seven startup process fixtures including failures
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9

@@ -1,7 +1,10 @@
 import importlib.util
+import errno
 import os
 import pathlib
 import stat
+import struct
+import subprocess
 import sys
 import tempfile
 import types
@@ -13,6 +16,44 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
+def default_acl(mask=5, other=5, named=True):
+    entries = [(1, 7, 0xffffffff)]
+    if named:
+        entries.append((2, 7, 65534))
+    entries.append((4, 7 if named else mask, 0xffffffff))
+    if named:
+        entries.append((16, mask, 0xffffffff))
+    entries.append((32, other, 0xffffffff))
+    return struct.pack('<I', 2) + b''.join(struct.pack('<HHI', *entry) for entry in entries)
+
+
+def unchanged_metadata(path):
+    value = path.lstat()
+    return (value.st_dev, value.st_ino, value.st_mode, value.st_uid, value.st_gid,
+            value.st_nlink, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+
+
+class NativeBuildACLDecoderTests(unittest.TestCase):
+    def test_linux_mask_controls_group_mode_even_when_named_user_or_group_has_write(self):
+        self.assertEqual(module.inherited_acl_mode(default_acl()), 0o755)
+        self.assertEqual(module.inherited_acl_mode(default_acl(mask=7)), 0o775)
+        self.assertEqual(module.inherited_acl_mode(default_acl(other=7)), 0o757)
+        self.assertEqual(module.inherited_acl_mode(default_acl(named=False)), 0o755)
+
+    def test_invalid_acl_layouts_and_duplicate_identities_are_rejected(self):
+        valid = default_acl()
+        entries = list(struct.iter_unpack('<HHI', valid[4:]))
+        encode = lambda rows: struct.pack('<I', 2) + b''.join(struct.pack('<HHI', *entry) for entry in rows)
+        malformed = [b'', valid[:4], valid[:-1], struct.pack('<I', 3) + valid[4:], b'x' * 65540,
+                     encode(entries + [entries[-1]]), encode([entry for entry in entries if entry[0] != 16]),
+                     encode(entries[:2] + [entries[1]] + entries[2:]), encode(list(reversed(entries))),
+                     encode([(1, 7, 123)] + entries[1:]), encode([entries[0], (2, 7, 0xffffffff)] + entries[2:]),
+                     encode([entries[0], (2, 8, 65534)] + entries[2:]), encode([entries[0], (64, 5, 65534)] + entries[2:])]
+        for raw in malformed:
+            with self.subTest(raw=raw.hex()[:64]), self.assertRaises(ValueError):
+                module.inherited_acl_mode(raw)
+
+
 class NativeBuildPackagingTests(unittest.TestCase):
     def test_verified_helper_is_bundled_and_preflighted_before_upgrade_writes(self):
         root = pathlib.Path(__file__).resolve().parents[1]
@@ -20,6 +61,8 @@ class NativeBuildPackagingTests(unittest.TestCase):
         check = 'python3 "$HERE/native-build-directories.py" check --root "$TARGET_ROOT"'
         create = 'python3 "$HERE/native-build-directories.py" create --root "$TARGET_ROOT"'
         self.assertLess(installer.index(check), installer.index('if ((PREFLIGHT_ONLY));then'))
+        self.assertLess(installer.index(check), installer.index('fresh_apt_acquire apt-get update'))
+        self.assertLess(installer.index(check), installer.index('useradd --system --gid panel'))
         self.assertLess(installer.index(create), installer.index('systemctl stop panel panel-executor'))
         self.assertLess(installer.index(create), installer.index('ln -sfn "$RELEASE_DIR" "$CURRENT.new"'))
         copy = next(line for line in installer.splitlines() if line.startswith('cp -a "$HERE/bin"'))
@@ -106,6 +149,102 @@ class NativeBuildPackagingTests(unittest.TestCase):
 
 @unittest.skipUnless(sys.platform == "linux" and os.geteuid() == 0, "actual root Linux private fixture required")
 class NativeBuildDirectoryTests(unittest.TestCase):
+    def test_inherited_writable_acl_refuses_all_checks_and_creation_without_any_repairs(self):
+        for raw in (default_acl(mask=7), default_acl(other=7), default_acl(mask=7, named=False)):
+            with self.subTest(acl=raw.hex()), tempfile.TemporaryDirectory(prefix='panel-native-inherited-acl-') as directory:
+                root = pathlib.Path(directory)
+                parent = root / 'opt'
+                parent.mkdir(mode=0o755)
+                os.setxattr(parent, 'system.posix_acl_default', raw)
+                witness = unchanged_metadata(parent)
+                for create in (False, True):
+                    with self.assertRaisesRegex(ValueError, 'default ACL would inherit writable'):
+                        module.prepare(root, create)
+                    self.assertEqual(list(root.iterdir()), [parent])
+                    self.assertEqual(list(parent.iterdir()), [])
+                    self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), raw)
+                    self.assertEqual(unchanged_metadata(parent), witness)
+
+    def test_masked_read_only_default_acl_is_preserved_through_normal_creation(self):
+        with tempfile.TemporaryDirectory(prefix='panel-native-safe-inherited-acl-') as directory:
+            root = pathlib.Path(directory)
+            parent = root / 'opt'
+            parent.mkdir(mode=0o755)
+            raw = default_acl(mask=5)
+            os.setxattr(parent, 'system.posix_acl_default', raw)
+            before = unchanged_metadata(parent)
+            module.prepare(root, False)
+            self.assertEqual(unchanged_metadata(parent), before)
+            module.prepare(root, True)
+            self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), raw)
+            created = root / 'opt/panel/network-rule-feeds'
+            self.assertEqual(stat.S_IMODE(created.stat().st_mode), 0o755)
+            self.assertEqual(os.getxattr(created, 'system.posix_acl_default'), raw)
+            marker = created / 'retained-build'
+            marker.write_bytes(b'original private build evidence')
+            marker.chmod(0o600)
+            original = unchanged_metadata(marker)
+            for create in (False, True):
+                module.prepare(root, create)
+                self.assertEqual(unchanged_metadata(marker), original)
+                self.assertEqual(marker.read_bytes(), b'original private build evidence')
+                self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), raw)
+
+    def test_existing_complete_tree_does_not_inherit_ancestor_acl_or_repair_it(self):
+        with tempfile.TemporaryDirectory(prefix='panel-native-existing-acl-') as directory:
+            root = pathlib.Path(directory)
+            module.prepare(root, True)
+            parent = root / 'opt'
+            raw = default_acl(mask=7)
+            os.setxattr(parent, 'system.posix_acl_default', raw)
+            before = unchanged_metadata(parent)
+            for create in (False, True):
+                module.prepare(root, create)
+                self.assertEqual(unchanged_metadata(parent), before)
+                self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), raw)
+
+    def test_only_nearest_existing_parent_can_supply_missing_descendant_acl(self):
+        with tempfile.TemporaryDirectory(prefix='panel-native-nearest-acl-') as directory:
+            root = pathlib.Path(directory)
+            (root / 'var').mkdir(mode=0o755)
+            (root / 'opt').mkdir(mode=0o755)
+            raw = default_acl(mask=7)
+            os.setxattr(root, 'system.posix_acl_default', raw)
+            module.prepare(root, False)
+            self.assertEqual(sorted(p.name for p in root.iterdir()), ['opt', 'var'])
+            module.prepare(root, True)
+            self.assertEqual(os.getxattr(root, 'system.posix_acl_default'), raw)
+            self.assertEqual(stat.S_IMODE((root / 'opt/panel/network-rule-feeds').stat().st_mode), 0o755)
+
+    def test_acl_permission_errors_or_invalid_bytes_fail_closed_without_directories(self):
+        for outcome in (OSError(errno.EACCES, 'fixture ACL read denied'), b'corrupt ACL'):
+            with self.subTest(outcome=str(outcome)), tempfile.TemporaryDirectory(prefix='panel-native-unreadable-acl-') as directory:
+                root = pathlib.Path(directory)
+                before = unchanged_metadata(root)
+                patched = mock.patch.object(module.os, 'getxattr', side_effect=outcome) if isinstance(outcome, OSError) else mock.patch.object(module.os, 'getxattr', return_value=outcome)
+                with patched:
+                    for create in (False, True):
+                        with self.assertRaises((ValueError, OSError)):
+                            module.prepare(root, create)
+                        self.assertEqual(list(root.iterdir()), [])
+                        self.assertEqual(unchanged_metadata(root), before)
+
+    def test_real_cli_acl_refusal_precedes_any_directory_creation(self):
+        with tempfile.TemporaryDirectory(prefix='panel-native-ACL-process-') as directory:
+            root = pathlib.Path(directory)
+            parent = root / 'opt'
+            parent.mkdir(mode=0o755)
+            raw = default_acl(mask=7)
+            os.setxattr(parent, 'system.posix_acl_default', raw)
+            before = unchanged_metadata(parent)
+            for operation in ('check', 'create'):
+                child = subprocess.run([sys.executable, '-I', '-B', module.__file__, operation, '--root', str(root)], capture_output=True, text=True, timeout=15)
+                self.assertEqual(child.returncode, 1, child.stdout + child.stderr)
+                self.assertIn('default ACL would inherit writable', child.stderr)
+                self.assertEqual(list(root.iterdir()), [parent])
+                self.assertEqual(unchanged_metadata(parent), before)
+                self.assertEqual(os.getxattr(parent, 'system.posix_acl_default'), raw)
+
     def test_legacy_root_panel_private_lock_preserves_inode_group_and_content_without_repairs(self):
         with tempfile.TemporaryDirectory(prefix='panel-fixed-runtime-group-') as directory:
             root=pathlib.Path(directory)

@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "source_inputs_sha256": "22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894",
+  "source_sdk_files": 2451,
+  "source_files": {
+    "packaging/native-build-directories.py": "f03e653abf6c46a7b9473b02362b69da093551eb7cd3239f780b39efc33c1a7d",
+    "packaging/test_native_build_directories.py": "bfd2144471fb7d65aa9c6c4cd4167b4c045e34d6bbc25f69f99465dbe6a601cb",
+    "packaging/install.sh": "da99ebb49adad80a1cdbbf053207b1242c2ddd101a3a3be7f94b19c830bf6d72"
+  },
+  "python_methods": [
+    "NativeBuildACLDecoderTests.test_invalid_acl_layouts_and_duplicate_identities_are_rejected",
+    "NativeBuildACLDecoderTests.test_linux_mask_controls_group_mode_even_when_named_user_or_group_has_write",
+    "NativeBuildDirectoryTests.test_acl_permission_errors_or_invalid_bytes_fail_closed_without_directories",
+    "NativeBuildDirectoryTests.test_apache_paths_refuse_links_foreign_permissions_and_shared_lock",
+    "NativeBuildDirectoryTests.test_apache_private_namespaces_and_shared_lock_preserve_existing_evidence",
+    "NativeBuildDirectoryTests.test_check_is_read_only_and_creation_does_not_repair_or_change_contents",
+    "NativeBuildDirectoryTests.test_existing_complete_tree_does_not_inherit_ancestor_acl_or_repair_it",
+    "NativeBuildDirectoryTests.test_foreign_paths_and_linked_ancestors_are_refused_without_repair",
+    "NativeBuildDirectoryTests.test_ids_parent_preflight_refuses_external_state_without_repairs",
+    "NativeBuildDirectoryTests.test_inherited_writable_acl_refuses_all_checks_and_creation_without_any_repairs",
+    "NativeBuildDirectoryTests.test_legacy_root_panel_private_lock_preserves_inode_group_and_content_without_repairs",
+    "NativeBuildDirectoryTests.test_masked_read_only_default_acl_is_preserved_through_normal_creation",
+    "NativeBuildDirectoryTests.test_only_nearest_existing_parent_can_supply_missing_descendant_acl",
+    "NativeBuildDirectoryTests.test_real_cli_acl_refusal_precedes_any_directory_creation",
+    "NativeBuildDirectoryTests.test_rule_feed_parent_refuses_foreign_state_without_repairs",
+    "NativeBuildDirectoryTests.test_runtime_root_refuses_foreign_paths_and_preserves_legacy_and_completed_work",
+    "NativeBuildPackagingTests.test_native_compiler_scope_and_serialization_are_closed",
+    "NativeBuildPackagingTests.test_non_root_cannot_initialize_any_directory",
+    "NativeBuildPackagingTests.test_runtime_cache_is_root_managed_without_reowning_legacy_compiler_output",
+    "NativeBuildPackagingTests.test_verified_helper_is_bundled_and_preflighted_before_upgrade_writes"
+  ],
+  "actual_Root_Linux_tests_per_architecture": 20,
+  "skips": 0,
+  "actual_kernel_xattrs_and_original_CLI_fixtures": true,
+  "native_fresh_install_acceptance_separate": true
+}
