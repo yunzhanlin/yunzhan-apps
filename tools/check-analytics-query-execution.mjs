@@ -17,10 +17,11 @@ export function verifyAnalyticsQueryExecution(rows,tap,architecture){
  assert.equal(rows.filter(row=>row.Action==='pass'&&!row.Test).length,1);
  const names=JSON.parse(fs.readFileSync(root+'tools/analytics-query-execution.json')).Node_test_names;
  const executed=[...tap.matchAll(/^ok \d+ - (.+)$/gm)].map(m=>m[1]);
- assert.equal(names.length,8);assert.equal(executed.length,8);assert.deepEqual(executed,names);
- for(const pattern of [/^# tests 8$/m,/^# pass 8$/m,/^# fail 0$/m,/^# cancelled 0$/m,/^# skipped 0$/m,/^# todo 0$/m])assert(pattern.test(tap));
+ assert.equal(names.length,12);assert.equal(names.filter(name=>name.startsWith('actual Vue ')).length,8);
+ assert.equal(executed.length,12);assert.deepEqual(executed,names);
+ for(const pattern of [/^# tests 12$/m,/^# pass 12$/m,/^# fail 0$/m,/^# cancelled 0$/m,/^# skipped 0$/m,/^# todo 0$/m])assert(pattern.test(tap));
  assert(!/^not ok|# SKIP|# TODO/m.test(tap));
- return {ok:true,architecture,actual_Go_PASS:13,actual_Node_PASS:8,actual_Vue_component_cases:4,skips:0,not_installed_acceptance:true};
+ return {ok:true,architecture,actual_Go_PASS:13,actual_Node_PASS:12,actual_Vue_component_cases:8,skips:0,not_installed_acceptance:true};
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux');assert.equal(process.argv.length,5);

@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "source_inputs_sha256": "c164d9a0871e10d1aceb01076c86e8dadbd51bc7f8faa1e2b7342660064a5cf3",
+  "source_inputs_sha256": "eba559f9773a13be628ff2c70a496da245dec82ebdf8d94fc3e2bf93c20932d3",
   "source_sdk_files": 2451,
   "Node_test_names": [
     "an unfinished or reversed time range cannot silently become a default query",
@@ -10,10 +10,14 @@
     "actual Vue date edits hide the old report and block its export until the current query completes",
     "actual Vue discards an old response after dates change A to B to A",
     "actual Vue rejects an unrelated returned time range and does not send an incomplete range",
-    "actual Vue funnel export requires the requested paths and window as well as the current dates"
+    "actual Vue funnel export requires the requested paths and window as well as the current dates",
+    "actual Vue heatmap exposes selected-page totals and readable frequency-ordered coordinates without changing the report",
+    "actual Vue bounds heatmap details to twenty cells and resets pagination when the page changes",
+    "actual Vue hides heatmap totals, old page labels and details as soon as its query changes",
+    "actual Vue distinguishes an unqueried heatmap from a current report with no clicks"
   ],
   "actual_Go_PASS_per_arch": 13,
-  "actual_Node_PASS_per_arch": 8,
-  "actual_Vue_component_cases": 4,
+  "actual_Node_PASS_per_arch": 12,
+  "actual_Vue_component_cases": 8,
   "not_installed_acceptance": true
 }

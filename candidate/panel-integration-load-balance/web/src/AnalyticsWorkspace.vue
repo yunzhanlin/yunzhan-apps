@@ -25,7 +25,7 @@ const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=r
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
 const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2"].includes(props.installedVersion||""));
-const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref("");
+const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1);
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
 const report=computed(()=>reportTicket.value && reportFence.current(reportTicket.value,query.value.key) && !query.value.problem ? reportValue.value : undefined);
@@ -36,7 +36,11 @@ let funnelSequence=0;
 let sequence=0;
 let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
-const heat=computed(()=>report.value?.heatmap.filter(p=>p.path===heatPath.value)||[]);
+const heatPaths=computed(()=>[...new Set(report.value?.heatmap.map(p=>p.path)||[])]);
+const heat=computed(()=>(report.value?.heatmap.filter(p=>p.path===heatPath.value)||[]).sort((a,b)=>b.count-a.count||a.x-b.x||a.y-b.y));
+const heatClicks=computed(()=>heat.value.reduce((total,p)=>total+p.count,0));
+const heatRows=computed(()=>heat.value.slice((heatPage.value-1)*20,heatPage.value*20));
+watch([heatPath,report],()=>{heatPage.value=1;},{flush:"sync"});
 const snippet=computed(()=>settings.value?.key ? `<script defer src="/__yunzhan/analytics/tracker.js?site=${settings.value.site_id}&amp;key=${settings.value.key}"><\/script>` : "先保存采集配置，再生成代码。");
 async function load(){
   const current=++sequence,selection=query.value,id=selected.value;
@@ -166,9 +170,26 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
       </el-tab-pane>
       <el-tab-pane label="点击热图" name="heatmap">
         <p>需在采集设置单独开启。只采集百分比坐标，不读取表单、输入内容或网页截图。</p>
-        <el-select v-model="heatPath" placeholder="选择页面" aria-label="热图页面"><el-option v-for="p in [...new Set(report?.heatmap.map(p=>p.path)||[])]" :key="p" :value="p" :label="p" /></el-select>
-        <svg v-if="heat.length" class="analytics-heatmap" viewBox="0 0 100 100" role="img" :aria-label="`${heatPath} 点击坐标分布`"><rect width="100" height="100" fill="#f3f6fa"/><circle v-for="(p,i) in heat" :key="i" :cx="p.x+2.5" :cy="p.y+2.5" :r="Math.min(5,1+Math.log2(1+p.count))" fill="#f97316" fill-opacity="0.55"><title>{{p.count}} 次点击</title></circle></svg>
-        <el-empty v-else :description="report ? '暂无点击数据；此图不是网页截图覆盖热图' : '刷新统计后查看当前范围的点击数据。'" />
+        <template v-if="report">
+          <el-select v-model="heatPath" :disabled="!heatPaths.length" placeholder="选择页面" aria-label="热图页面"><el-option v-for="p in heatPaths" :key="p" :value="p" :label="p" /></el-select>
+          <dl class="analytics-heat-summary" aria-label="当前页面点击热图摘要" role="status">
+            <div><dt>记录点击</dt><dd data-testid="heatmap-clicks">{{heatClicks}}</dd></div>
+            <div><dt>有点击的网格</dt><dd data-testid="heatmap-cells">{{heat.length}}</dd></div>
+          </dl>
+          <template v-if="heat.length">
+            <p class="analytics-intro">位置为文档百分比范围，圆点大小表示该网格记录的点击次数。</p>
+            <svg class="analytics-heatmap" viewBox="0 0 100 100" role="img" :aria-label="`${heatPath} 点击坐标分布，共 ${heatClicks} 次点击，${heat.length} 个网格`"><rect width="100" height="100" fill="#f3f6fa"/><circle v-for="(p,i) in heat" :key="i" :cx="p.x+2.5" :cy="p.y+2.5" :r="Math.min(5,1+Math.log2(1+p.count))" fill="#f97316" fill-opacity="0.55"><title>水平 {{p.x}}–{{Math.min(100,p.x+5)}}%，垂直 {{p.y}}–{{Math.min(100,p.y+5)}}%：{{p.count}} 次点击</title></circle></svg>
+            <h4>坐标明细</h4>
+            <el-table :data="heatRows" max-height="300" aria-label="点击坐标明细" class="analytics-heat-details">
+              <el-table-column label="水平位置" min-width="88"><template #default="{row}">{{row.x}}–{{Math.min(100,row.x+5)}}%</template></el-table-column>
+              <el-table-column label="垂直位置" min-width="88"><template #default="{row}">{{row.y}}–{{Math.min(100,row.y+5)}}%</template></el-table-column>
+              <el-table-column prop="count" label="点击次数" min-width="88" align="right" />
+            </el-table>
+            <el-pagination v-if="heat.length>20" v-model:current-page="heatPage" :page-size="20" :total="heat.length" :pager-count="5" layout="prev, pager, next" small class="analytics-heat-pages" aria-label="点击坐标明细分页" />
+          </template>
+          <el-empty v-else description="当前网站和时间范围没有点击记录。" />
+        </template>
+        <el-empty v-else :description="selected ? '刷新统计后查看当前范围的点击数据。' : '请选择需要分析的网站。'" />
       </el-tab-pane>
       <el-tab-pane label="转化漏斗" name="funnel">
         <p>每行填写一个本网站页面路径，按顺序分析浏览器会话；精确匹配，不填写域名、查询参数或片段。上方时间范围同时用于漏斗。默认路径只是输入示例，不代表已发生转化。</p>
@@ -201,7 +222,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
   </section>
 </template>
 <style scoped>
-.analytics-toolbar{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 20px}.analytics-toolbar .el-select{width:280px}.analytics-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.analytics-metrics article{border:1px solid var(--el-border-color);border-radius:8px;padding:16px}.analytics-metrics span{display:block;color:var(--el-text-color-secondary);font-size:12px}.analytics-metrics strong{display:block;font-size:28px;margin-top:8px}.analytics-dimension{margin-bottom:24px}.analytics-heatmap{display:block;width:100%;max-height:450px;margin-top:20px}.analytics-settings{display:flex;gap:20px;align-items:end;flex-wrap:wrap;margin-top:16px}pre{padding:16px;background:var(--el-fill-color-light);overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}li{margin-bottom:8px}.analytics-intro{color:var(--el-text-color-secondary)}@media(max-width:650px){.analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-workspace :deep(.el-tabs--left){display:block}.analytics-workspace :deep(.el-tabs__header){float:none}}
+.analytics-toolbar{display:flex;gap:12px;flex-wrap:wrap;margin:10px 0 20px}.analytics-toolbar .el-select{width:280px}.analytics-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:18px 0}.analytics-metrics article{border:1px solid var(--el-border-color);border-radius:8px;padding:16px}.analytics-metrics span{display:block;color:var(--el-text-color-secondary);font-size:12px}.analytics-metrics strong{display:block;font-size:28px;margin-top:8px}.analytics-dimension{margin-bottom:24px}.analytics-heatmap{display:block;width:100%;max-width:450px;height:auto;aspect-ratio:1;margin:20px auto}.analytics-settings{display:flex;gap:20px;align-items:end;flex-wrap:wrap;margin-top:16px}pre{padding:16px;background:var(--el-fill-color-light);overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}li{margin-bottom:8px}.analytics-intro{color:var(--el-text-color-secondary)}@media(max-width:650px){.analytics-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.analytics-workspace :deep(.el-tabs--left){display:block}.analytics-workspace :deep(.el-tabs__header){float:none}}
 </style>
 <style scoped>
 .analytics-workspace :deep(.el-tabs__content){min-width:0}
@@ -210,6 +231,8 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
 .analytics-date-field label{display:block;margin-bottom:6px;font-size:13px;color:var(--el-text-color-regular)}
 .analytics-date-field :deep(.el-date-editor){width:100%;min-width:0}
 .analytics-query-status{font-size:13px;overflow-wrap:anywhere;color:var(--el-text-color-secondary)}
+.analytics-heat-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.analytics-heat-summary>div{min-width:0;border:1px solid var(--el-border-color);border-radius:8px;padding:12px}.analytics-heat-summary dt{font-size:12px;color:var(--el-text-color-secondary)}.analytics-heat-summary dd{margin:6px 0 0;font-size:24px;font-weight:600;overflow-wrap:anywhere}.analytics-heat-details{width:100%;min-width:0}.analytics-heat-pages{display:flex;justify-content:center;margin-top:12px;max-width:100%}
+
 @media(max-width:650px){
   .analytics-date-field{flex-basis:100%;min-width:0}
   .analytics-workspace :deep(.el-tabs__header.is-left){width:100%;height:auto;margin:0 0 12px}

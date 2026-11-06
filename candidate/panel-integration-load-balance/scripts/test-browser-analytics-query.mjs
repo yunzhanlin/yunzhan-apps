@@ -68,7 +68,7 @@ function harness(){
  };
  const app=renderer.createApp(component,{api,installed:true,installedVersion:'2.4.1',sites:[{id:site,name:'Owned query unit site',domain:'owned.example.test'}]});
  app.config.warnHandler=(msg)=>warnings.push(msg);
- for(const name of['el-select','el-option','el-date-picker','el-button','el-tabs','el-tab-pane','el-descriptions','el-descriptions-item','el-table','el-form','el-form-item','el-input','el-input-number','el-switch','el-empty','el-alert']){
+ for(const name of['el-select','el-option','el-date-picker','el-button','el-tabs','el-tab-pane','el-descriptions','el-descriptions-item','el-table','el-form','el-form-item','el-input','el-input-number','el-switch','el-empty','el-alert','el-pagination']){
   app.component(name,defineComponent({inheritAttrs:false,setup(_,{attrs,slots}){return()=>h(name,{...attrs},slots.default?.());}}));
  }
  app.component('el-table-column',defineComponent({inheritAttrs:false,setup(_,{attrs}){return()=>h('el-table-column',{...attrs});}}));
@@ -133,5 +133,46 @@ test('actual Vue funnel export requires the requested paths and window as well a
   assert(ui.all('el-alert').some(n=>String(n.props.title).includes('页面或时限与查询不一致')));
   void ui.button('计算真实漏斗').props.onClick();await flush();ui.requests[2].resolve(response(['/','/checkout','/success']));await flush();assert.equal(ui.button('导出漏斗').props.disabled,false);
   await ui.range(new Date('2026-11-03T00:00:00Z'),new Date('2026-11-04T00:00:00Z'));assert.equal(ui.button('导出漏斗').props.disabled,true);
+ }finally{ui.stop();}
+});
+
+const heatCount=(ui,name)=>{const n=ui.all('dd').find(n=>n.props['data-testid']===name);return n?ui.text(n):undefined;};
+const heatTable=ui=>ui.all('el-table').find(n=>n.props['aria-label']==='点击坐标明细');
+const heatSelect=ui=>ui.all('el-select').find(n=>n.props['aria-label']==='热图页面');
+test('actual Vue heatmap exposes selected-page totals and readable frequency-ordered coordinates without changing the report',async()=>{
+ const ui=harness();try{
+  await ui.select();assert.equal(heatCount(ui,'heatmap-clicks'),undefined);assert.equal(heatSelect(ui),undefined);
+  const points=Object.freeze([{path:'/one',x:0,y:5,count:2},{path:'/two',x:10,y:10,count:99},{path:'/one',x:10,y:15,count:5}].map(Object.freeze));
+  await ui.resolve(0,11,{heatmap:points});
+  assert.equal(heatCount(ui,'heatmap-clicks'),'7');assert.equal(heatCount(ui,'heatmap-cells'),'2');
+  assert.deepEqual(heatTable(ui).props.data.map(p=>[p.x,p.y,p.count]),[[10,15,5],[0,5,2]]);
+  assert.equal(ui.all('svg').find(n=>n.props.class==='analytics-heatmap').props['aria-label'],'/one 点击坐标分布，共 7 次点击，2 个网格');
+  ui.update(heatSelect(ui),'/two');await flush();assert.equal(heatCount(ui,'heatmap-clicks'),'99');assert.equal(heatCount(ui,'heatmap-cells'),'1');
+  assert.deepEqual(heatTable(ui).props.data.map(p=>p.path),['/two']);assert.deepEqual(points.map(p=>p.count),[2,99,5]);
+ }finally{ui.stop();}
+});
+test('actual Vue bounds heatmap details to twenty cells and resets pagination when the page changes',async()=>{
+ const ui=harness();try{
+  await ui.select();const points=Array.from({length:41},(_,i)=>({path:'/many',x:i%20*5,y:Math.floor(i/20)*5,count:i+1}));
+  await ui.resolve(0,11,{heatmap:[...points,{path:'/other',x:95,y:95,count:3}]});
+  assert.equal(heatCount(ui,'heatmap-clicks'),'861');assert.equal(heatCount(ui,'heatmap-cells'),'41');assert.equal(heatTable(ui).props.data.length,20);assert.equal(heatTable(ui).props.data[0].count,41);
+  const pager=ui.all('el-pagination')[0];assert.equal(pager.props.total,41);assert.equal(pager.props['page-size'],20);assert.equal(typeof pager.props['onUpdate:currentPage'],'function');
+  pager.props['onUpdate:currentPage'](3);await flush();assert.deepEqual(heatTable(ui).props.data.map(p=>p.count),[1]);
+  ui.update(heatSelect(ui),'/other');await flush();assert.equal(heatCount(ui,'heatmap-clicks'),'3');assert.equal(ui.all('el-pagination').length,0);assert.equal(heatTable(ui).props.data.length,1);
+  ui.update(heatSelect(ui),'/many');await flush();assert.equal(heatTable(ui).props.data[0].count,41);assert.equal(heatTable(ui).props.data.length,20);
+ }finally{ui.stop();}
+});
+test('actual Vue hides heatmap totals, old page labels and details as soon as its query changes',async()=>{
+ const ui=harness();try{
+  await ui.select();await ui.resolve(0,11,{heatmap:[{path:'/old-page',x:0,y:0,count:7}]});assert.equal(heatCount(ui,'heatmap-clicks'),'7');
+  await ui.range(start,end);assert.equal(heatCount(ui,'heatmap-clicks'),undefined);assert.equal(heatSelect(ui),undefined);assert.equal(heatTable(ui),undefined);assert.equal(ui.all('svg').filter(n=>n.props.class==='analytics-heatmap').length,0);
+  void ui.button('刷新统计').props.onClick();await flush();await ui.resolve(1,11,{heatmap:[{path:'/current-page',x:25,y:25,count:4}]});assert.equal(heatCount(ui,'heatmap-clicks'),'4');assert.equal(heatSelect(ui).props.modelValue,'/current-page');
+ }finally{ui.stop();}
+});
+test('actual Vue distinguishes an unqueried heatmap from a current report with no clicks',async()=>{
+ const ui=harness();try{
+  assert.equal(heatCount(ui,'heatmap-clicks'),undefined);assert.equal(heatTable(ui),undefined);
+  await ui.select();await ui.resolve(0,11);assert.equal(heatCount(ui,'heatmap-clicks'),'0');assert.equal(heatCount(ui,'heatmap-cells'),'0');assert.equal(heatSelect(ui).props.disabled,true);assert.equal(heatTable(ui),undefined);assert.equal(ui.all('el-pagination').length,0);
+  assert(ui.all('el-empty').some(n=>n.props.description==='当前网站和时间范围没有点击记录。'));
  }finally{ui.stop();}
 });
