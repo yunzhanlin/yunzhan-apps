@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "source_head": "5aba68e5c4b4ce9a04c4f938420d9f2ebf3f0292",
+  "source_sdk_tree": "0754086b782f551323285bd885f1901c93b5391d",
+  "source_inputs_sha256": "7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda",
+  "source_ci_run": 42279917119,
+  "release_id": 436951119,
+  "tag": "qa-nativedownloadcandidate68r3-20261107-qa1",
+  "version": "0.1.0-dev.proapps24nativedownloadcandidate68r3",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-amd64.tar.gz.manifest": {
+      "id": 718397902,
+      "bytes": 186,
+      "sha256": "5d7ad44e55a0123a332d2cb2516f9ab444e9979f9e205654347701e2e8575558"
+    },
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-amd64.tar.gz": {
+      "id": 718397904,
+      "bytes": 23701535,
+      "sha256": "71fa47af8607e1ea1f123a0d8fae1727bf76238313ec70038c477075f59537da"
+    },
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-arm64.tar.gz.manifest": {
+      "id": 718397905,
+      "bytes": 186,
+      "sha256": "473ddc3b490a4e9b6b2039971448a5ce9aa768468a7200a7b589840c75df440c"
+    },
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-amd64.tar.gz.sig": {
+      "id": 718397912,
+      "bytes": 64,
+      "sha256": "f7da44770208c8d8ca91287e605e72f977007072ffa8d91faf01b476c27c5471"
+    },
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-arm64.tar.gz": {
+      "id": 718397913,
+      "bytes": 21927162,
+      "sha256": "f40cb735b789b8caeaffae4952d5c37fcbc57ed546cf858e6079f21f539e1154"
+    },
+    "release-signing-dev.pub": {
+      "id": 718398021,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "filesync-recovery-signed-release.py": {
+      "id": 718398062,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-arm64.tar.gz.sig": {
+      "id": 718398066,
+      "bytes": 64,
+      "sha256": "15097f146c886f862115799594029b87b058711498cd9228d679d069485f29bb"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-arm64.tar.gz"
+    }
+  },
+  "analytics242_sha256": "704ed57b5d353411debf2dbedc283bab8df45df9cf692411e2f6705b49c91254",
+  "normal_installed_BFCache_and_narrow_acceptance_pending": true,
+  "all50_commercial": false,
+  "qa8_payload_files": {
+    ".github/workflows/native-download-c68r3-browser-qa1.yml": "f8a642ec1d790c03f88bb630ed0f445098cab657c7f4e426f3c13db73d515585",
+    "scripts/native-analytics-c66/browser-qa8.mjs": "523a5dc8ef6d13270d03dd58cfcb7482a51ecccc6ddd01bde16a1bdc7af672c7",
+    "scripts/native-analytics-c66/download-qa8.py": "2df8f96b3503c4311516c85e69cbce295e9f4956f38eca65c72f7fdd64bc0963",
+    "scripts/native-analytics-c66/finish-qa8.py": "20a3f8d4423ef1691c6c4563c2eafff9c0fb997356249e7cfc075c83589bf2ae",
+    "scripts/native-analytics-c66/prepare-qa8.py": "e23c96380be6a89963ea781be82d3169fbef2a7f2c29cd81cff4a292ea68570b",
+    "scripts/native-analytics-c66/renderer-witness-qa8.py": "8034a5f525c73879b09059612ede048754914f66d1123cce38e3fa1297a9f51b",
+    "scripts/native-analytics-c66/transport-observer-qa3.go": "c3d040cced9d291f811a70ee84e4c723037cedc656dcd81df5dde0974ca79290",
+    "scripts/native-analytics-c66/wire-observer-qa8.mjs": "23b75298272b7dee3fda00682262da75ffaa00edb01b79f3761cc1a20bfa73a5"
+  },
+  "original_failed_runs_retained": [],
+  "normal_successful_install_receipt_and_actual_distribution_discovery_qualified_before_full_preservation_baseline": true,
+  "no_business_or_background_qualification_rule_relaxed": true,
+  "C66r2_original_native_browser_green_run_retained": 42171804714,
+  "normal_original_signed_negative_ACL_preflight_required": true,
+  "normal_original_signed_real_host_negative_ACL_preflight_required": true,
+  "original_installed_panel_user_transport_observation_required": true,
+  "original_C67_native_qualified_run_retained": 42192037784,
+  "current133_and_retained132_source_execution_separate": true
+}
