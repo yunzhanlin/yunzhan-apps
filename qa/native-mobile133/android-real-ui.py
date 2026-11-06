@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA10'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA11'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -142,6 +142,12 @@ def chosen_file(name):
  assert name in(setup['filename'],'C68-late-result.bin')
  listing=command('shell','find','/sdcard/Download','-maxdepth','1','-type','f').splitlines();paths=[s for s in listing if pathlib.PurePosixPath(s).name==name];assert len(paths)<=1
  return None if not paths else command('exec-out','cat',paths[0],raw=True)
+def owned_app_pid():
+ r=subprocess.run([adb,'-s',serial,'shell','pidof',package],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=15)
+ value=r.stdout.decode().strip();assert r.returncode in(0,1)and not r.stderr.strip()
+ if not value:assert r.returncode==1;return None
+ assert r.returncode==0 and re.fullmatch('[1-9][0-9]*',value),'Only one exact owned app process is allowed'
+ return value
 def picker():
  tap('Choose save location');root=wait('system-create-document',lambda r:bool(nodes(r,lambda n:'documentsui'in n.get('package',''))))
  return root
@@ -181,26 +187,30 @@ try:
  unlock();wait('native-readback-confirmed',lambda r:any(n.get('text','').startswith('Saved and read back with the same digest.')for n in r.iter('node')))
  original=chosen_file(setup['filename']);assert len(original)==setup['bytes']and hashlib.sha256(original).hexdigest()==setup['sha256']
  save('actual-original-system-provider-file.json',{'bytes':len(original),'sha256':hashlib.sha256(original).hexdigest(),'same_as_real_site_attachment':True,'native_readback_status_observed':True})
- # A real OS result delivered after Activity destruction must not export into
- # a newly created Activity, even with the same saved endpoint preference.
- download();command('shell','settings','put','global','always_finish_activities','1');root=choose_downloads(picker())
+ # A real pending OS result delivered after process death must not export
+ # into a new Activity. A developer setting is not proof of destruction.
+ download();root=choose_downloads(picker())
  edits=nodes(root,lambda n:n.get('class')=='android.widget.EditText');assert len(edits)==1;tap_node(edits[0],'distinct-late-result-filename');key(123);command('shell','input','keyevent',*(['67']*64));type_ascii('C68-late-result.bin')
- root=snapshot();assert has(root,'C68-late-result.bin');tap('SAVE'if has(root,'SAVE')else'Save',root)
+ root=snapshot();assert has(root,'C68-late-result.bin')
+ original_pid=owned_app_pid();assert original_pid is not None
+ command('shell','am','kill',package)
+ deadline=time.monotonic()+20
+ while owned_app_pid()is not None:assert time.monotonic()<deadline,'Original owned background app was not killed by the OS';time.sleep(.2)
+ save('original-owned-app-process-death.json',{'original_pid':original_pid,'exact_package':package,'ordinary_OS_background_kill_submitted_once':True,'original_process_observed_gone':True,'not_a_graceful_onDestroy_claim':True,'product_code_overlays':0})
+ root=snapshot('original-system-picker-survives-owned-app-process-death');assert has(root,'C68-late-result.bin');tap('SAVE'if has(root,'SAVE')else'Save',root)
  root=wait('recreated-Activity-has-no-stale-download-or-WebView',lambda r:has(r,'Connect')and not nodes(r,lambda n:n.get('class')=='android.webkit.WebView'))
  assert not has(root,'Choose save location')and not has(root,setup['filename']);assert chosen_file('C68-late-result.bin')==b''
+ assert owned_app_pid()is not None and owned_app_pid()!=original_pid
  assert chosen_file(setup['filename'])==original
- command('shell','settings','put','global','always_finish_activities','0')
  command('shell','am','start','-n','icu.yunzhan.panel/icu.yunzhan.panel.PanelActivity')
  root=wait('original-release-variant-start',lambda r:has(r,'Connect'))
  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1;tap_node(fields[0],'release-owned-HTTP-negative-input');type_ascii(setup['panel_origin']+'/');key(4);tap('Connect')
  root=wait('release-variant-refuses-cleartext',lambda r:any(n.get('text','').startswith('Enter a complete HTTPS panel URL')for n in r.iter('node')))
  assert not nodes(root,lambda n:n.get('class')=='android.webkit.WebView');tap('OK',root)
- proof.update(ok=True,debug_loopback_real_business_acceptance=True,real_panel_normal_web_login=True,real_file_manager_download_and_exact_exported_bytes=True,cancelled_document_picker_keeps_original_received_file=True,no_export_before_device_unlock=True,actual_system_PIN_unlock=True,actual_native_readback=True,background_WebView_and_filename_removed_from_accessibility=True,actual_Activity_destroyed_late_OS_result_does_not_export=True,original_saved_file_preserved=True,release_variant_with_disposable_test_signature_refuses_cleartext=True,retained_publisher_signature_acceptance=False,source_inputs_sha256=setup['native_source_inputs_sha256'])
+ proof.update(ok=True,debug_loopback_real_business_acceptance=True,real_panel_normal_web_login=True,real_file_manager_download_and_exact_exported_bytes=True,cancelled_document_picker_keeps_original_received_file=True,no_export_before_device_unlock=True,actual_system_PIN_unlock=True,actual_native_readback=True,background_WebView_and_filename_removed_from_accessibility=True,actual_Activity_destroyed_late_OS_result_does_not_export=True,actual_original_process_death_and_new_Activity_verified=True,original_saved_file_preserved=True,release_variant_with_disposable_test_signature_refuses_cleartext=True,retained_publisher_signature_acceptance=False,source_inputs_sha256=setup['native_source_inputs_sha256'])
 except BaseException:save('original-UI-failure.json',{'traceback':traceback.format_exc()});raise
 finally:
- cleanup={}
- try:command('shell','settings','put','global','always_finish_activities','0');cleanup['owned_developer_setting_restored']=True
- except BaseException:cleanup['owned_developer_setting_restored']=False;proof['ok']=False
+ cleanup={'owned_developer_setting_untouched':True}
  if pin:
   try:command('shell','locksettings','clear','--old',pin);cleanup['owned_emulator_PIN_cleared']=True;pin=None
   except BaseException:cleanup['owned_emulator_PIN_cleared']=False;proof['ok']=False
