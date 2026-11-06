@@ -6,9 +6,19 @@ final class NativeBusinessUITests: XCTestCase {
         let picture=XCTAttachment(screenshot:app.screenshot());picture.name=name+"-original-screen";picture.lifetime = .keepAlways;add(picture)
     }
     @MainActor private func visible(_ label:String,_ app:XCUIApplication) -> XCUIElement {
-        let all=app.descendants(matching:.any).matching(NSPredicate(format:"label == %@",label))
-        for element in all.allElementsBoundByIndex where element.exists && element.isHittable { return element }
-        return all.firstMatch
+        // The system Files hierarchy contains an inaccessible Other named
+        // Cancel underneath More. Asking that container for hittability itself
+        // records an XCTest failure. Prefer actual observed controls and reject
+        // empty/offscreen frames before asking the framework for a hit point.
+        let predicate=NSPredicate(format:"label == %@",label)
+        let groups=[app.buttons,app.cells,app.links,app.staticTexts,app.textFields]
+        for group in groups {
+            for element in group.matching(predicate).allElementsBoundByIndex where element.exists {
+                let frame=element.frame
+                if frame.width > 1 && frame.height > 1 && frame.intersects(app.frame) && element.isHittable { return element }
+            }
+        }
+        return app.buttons.matching(predicate).firstMatch
     }
     @MainActor private func tap(_ label:String,_ app:XCUIApplication) {
         let target=visible(label,app)
@@ -65,8 +75,8 @@ final class NativeBusinessUITests: XCTestCase {
         // Navigate the observed system hierarchy with ordinary taps, then
         // require the native cancellation callback and retained file below.
         for step in 0..<3 {
-            let cancel=visible("Cancel",app)
-            if cancel.exists && cancel.isHittable { cancel.tap();break }
+            let cancel=app.buttons.matching(NSPredicate(format:"label == %@","Cancel")).firstMatch
+            if cancel.exists && cancel.frame.width > 1 && cancel.frame.height > 1 && cancel.frame.intersects(app.frame) && cancel.isHittable { cancel.tap();break }
             attach("original-system-document-sheet-before-back-"+String(step),app)
             let browse=visible("Browse",app)
             XCTAssertTrue(browse.waitForExistence(timeout:20));XCTAssertTrue(browse.isHittable)
