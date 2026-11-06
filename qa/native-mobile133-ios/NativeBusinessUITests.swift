@@ -152,14 +152,25 @@ final class NativeBusinessUITests: XCTestCase {
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)
         let save=app.buttons["选择保存位置"];waitForEnabled(save,app,"native-file-save");attach("original-native-attachment-received",app)
         save.tap()
+        // Original QA20: Cancel in the nested Browse chooser returns to
+        // the export folder. Dismiss the outer sheet with an ordinary drag
+        // from its actually observed header, then require the native callback.
         var systemCancellationSubmitted=false
-        for step in 0..<3 {
-            if let point=try visualSystemPoint("Cancel",app,header:true) {
-                tapSystemPoint(point,app);systemCancellationSubmitted=true;break
-            }
-            attach("original-system-document-sheet-before-visual-back-"+String(step),app)
-            try tapSystemText("Browse",app,header:true)
-        }
+        let deadline=Date().addingTimeInterval(20)
+        var exportHeader:CGVector?
+        repeat {
+            exportHeader=try visualSystemPoint("On My iPhone",app,header:true)
+            if exportHeader != nil { break }
+            RunLoop.current.run(until:Date().addingTimeInterval(0.4))
+        } while Date() < deadline
+        let header=try XCTUnwrap(exportHeader,"Original outer export header must be visible")
+        let window=app.windows.firstMatch
+        XCTAssertEqual(window.frame,CGRect(x:0,y:0,width:402,height:874))
+        attach("original-outer-system-export-before-user-dismiss",app)
+        let drag=XCTAttachment(string:"source=actual-original-On-My-iPhone-header; normalizedX="+String(describing:header.dx)+"; normalizedStartTop="+String(describing:header.dy)+"; normalizedEndTop=0.85; maximumOriginalGestures=1; callbackStillRequired=true")
+        drag.name="original-outer-system-export-dismiss-gesture";drag.lifetime = .keepAlways;add(drag)
+        window.coordinate(withNormalizedOffset:header).press(forDuration:0.1,thenDragTo:window.coordinate(withNormalizedOffset:CGVector(dx:header.dx,dy:0.85)))
+        systemCancellationSubmitted=true
         XCTAssertTrue(systemCancellationSubmitted)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH %@","已取消保存，接收的文件仍可重新选择保存位置。")).firstMatch.waitForExistence(timeout:30))
         XCTAssertTrue(save.isEnabled);save.tap()
