@@ -1,9 +1,47 @@
 import XCTest
+import Vision
 
 final class NativeBusinessUITests: XCTestCase {
     @MainActor private func attach(_ name:String,_ app:XCUIApplication) {
         let ax=XCTAttachment(string:app.debugDescription);ax.name=name+"-original-accessibility";ax.lifetime = .keepAlways;add(ax)
         let picture=XCTAttachment(screenshot:app.screenshot());picture.name=name+"-original-screen";picture.lifetime = .keepAlways;add(picture)
+    }
+    @MainActor private func visualSystemPoint(_ label:String,_ app:XCUIApplication,header:Bool) throws -> CGVector? {
+        // The original OS picker is visibly present while its remote AX tree
+        // exposes only an invalid Other/Cancel proxy. Locate actual rendered
+        // system text; never tap that hidden proxy or guessed coordinates.
+        let shot=app.screenshot(),image=try XCTUnwrap(shot.image.cgImage)
+        let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate
+        request.recognitionLanguages=["en-US"];request.usesLanguageCorrection=false
+        try VNImageRequestHandler(cgImage:image,options:[:]).perform([request])
+        var points:[CGVector]=[]
+        for observation in request.results ?? [] {
+            guard let text=observation.topCandidates(1).first,text.confidence >= 0.9,
+                  let range=text.string.range(of:label),let box=try text.boundingBox(for:range)?.boundingBox else {continue}
+            let top=1-box.midY
+            guard box.width > 0 && box.height > 0 && box.midX > 0 && box.midX < 1 && top >= 0.05 && top <= (header ? 0.25 : 0.95) else {continue}
+            points.append(CGVector(dx:box.midX,dy:top))
+        }
+        XCTAssertLessThanOrEqual(points.count,1,"Visible system target must be unique: "+label)
+        if let point=points.first {
+            let picture=XCTAttachment(screenshot:shot);picture.name="original-system-"+label+"-observed-pointer-screen";picture.lifetime = .keepAlways;add(picture)
+            let record=XCTAttachment(string:"label="+label+"; normalizedObservedX="+String(describing:point.dx)+"; normalizedObservedTop="+String(describing:point.dy)+"; minimumConfidence=0.9; actualCallbackStillRequired=true")
+            record.name="original-system-"+label+"-observed-pointer";record.lifetime = .keepAlways;add(record)
+            return point
+        }
+        return nil
+    }
+    @MainActor private func tapSystemText(_ label:String,_ app:XCUIApplication,header:Bool) throws {
+        let deadline=Date().addingTimeInterval(20)
+        repeat {
+            if let point=try visualSystemPoint(label,app,header:header) {
+                app.coordinate(withNormalizedOffset:point).tap()
+                RunLoop.current.run(until:Date().addingTimeInterval(0.4));return
+            }
+            RunLoop.current.run(until:Date().addingTimeInterval(0.4))
+        } while Date() < deadline
+        attach("missing-visible-system-"+label,app)
+        XCTFail("Actual system text was not visibly selectable: "+label)
     }
     @MainActor private func visible(_ label:String,_ app:XCUIApplication) -> XCUIElement {
         // The system Files hierarchy contains an inaccessible Other named
@@ -70,24 +108,21 @@ final class NativeBusinessUITests: XCTestCase {
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)
         let save=app.buttons["选择保存位置"];XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled);attach("original-native-attachment-received",app)
         save.tap()
-        // In the real Files browser, a remembered On My iPhone directory
-        // exposes Browse as its back control and hides Cancel at the root.
-        // Navigate the observed system hierarchy with ordinary taps, then
-        // require the native cancellation callback and retained file below.
+        var systemCancellationSubmitted=false
         for step in 0..<3 {
-            let cancel=app.buttons.matching(NSPredicate(format:"label == %@","Cancel")).firstMatch
-            if cancel.exists && cancel.frame.width > 1 && cancel.frame.height > 1 && cancel.frame.intersects(app.frame) && cancel.isHittable { cancel.tap();break }
-            attach("original-system-document-sheet-before-back-"+String(step),app)
-            let browse=visible("Browse",app)
-            XCTAssertTrue(browse.waitForExistence(timeout:20));XCTAssertTrue(browse.isHittable)
-            browse.tap()
+            if let point=try visualSystemPoint("Cancel",app,header:true) {
+                app.coordinate(withNormalizedOffset:point).tap();systemCancellationSubmitted=true;break
+            }
+            attach("original-system-document-sheet-before-visual-back-"+String(step),app)
+            try tapSystemText("Browse",app,header:true)
         }
+        XCTAssertTrue(systemCancellationSubmitted)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH %@","已取消保存，接收的文件仍可重新选择保存位置。")).firstMatch.waitForExistence(timeout:30))
         XCTAssertTrue(save.isEnabled);save.tap()
-        let browse=visible("Browse",app)
-        if browse.exists && browse.isHittable { browse.tap() }
-        tap("On My iPhone",app);tap("C68 Receiver",app)
-        let systemSave=visible("Save",app);XCTAssertTrue(systemSave.waitForExistence(timeout:30));XCTAssertTrue(systemSave.isHittable);systemSave.tap()
+        if let point=try visualSystemPoint("Browse",app,header:true) {app.coordinate(withNormalizedOffset:point).tap();RunLoop.current.run(until:Date().addingTimeInterval(0.4))}
+        try tapSystemText("On My iPhone",app,header:false)
+        try tapSystemText("C68 Receiver",app,header:false)
+        try tapSystemText("Save",app,header:true)
         let acknowledgement=app.staticTexts["文件已交给所选文件提供方。请在目标位置确认内容和云端同步状态。"]
         XCTAssertTrue(acknowledgement.waitForExistence(timeout:40));XCTAssertFalse(save.exists);attach("system-provider-export-acknowledged",app)
         // The host independently checks the provider's original filesystem
