@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA6'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA7'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -118,7 +118,7 @@ def download():
  root=snapshot();parents={c:p for p in root.iter()for c in p};found=nodes(root,lambda n:matches(n,setup['filename']));assert len(found)==1
  ancestor=found[0];target=None
  while ancestor in parents:
-  ancestor=parents[ancestor];links=nodes(ancestor,lambda n:matches(n,'下载'))
+  ancestor=parents[ancestor];links=nodes(ancestor,lambda n:matches(n,'下载')and n.get('clickable')=='true')
   if len(links)==1:target=links[0];break
  assert target is not None,'Original real file download control must belong to its row';tap_node(target,'real-file-download')
  root=wait('native-download-confirmation',lambda r:has(r,'Confirm'));tap('Confirm',root)
