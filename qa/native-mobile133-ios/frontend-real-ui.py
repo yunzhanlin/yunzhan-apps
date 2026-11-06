@@ -21,7 +21,7 @@ try:
  original('original-Xcode-version',['/usr/bin/xcodebuild','-version'])
  runtimes=json.loads(subprocess.check_output(['xcrun','simctl','list','runtimes','--json']))['runtimes'];runtime=next(v for v in runtimes if v['identifier']=='com.apple.CoreSimulator.SimRuntime.iOS-18-5'and v['isAvailable'])
  device=subprocess.check_output(['xcrun','simctl','create','C68_owned_iOS_'+os.environ['GITHUB_RUN_ID'],'com.apple.CoreSimulator.SimDeviceType.iPhone-16-Pro',runtime['identifier']],text=True).strip();save('original-owned-simulator.json',{'UDID':device,'runtime':runtime,'one_new_CI_simulator':True,'no_local_or_retained_guest_changed':True})
- original('one-owned-simulator-boot',['xcrun','simctl','boot',device]);original('original-owned-simulator-boot-status',['xcrun','simctl','bootstatus',device,'-b'],240)
+ original('one-owned-simulator-boot',['xcrun','simctl','boot',device]);original('original-owned-simulator-boot-status',['xcrun','simctl','bootstatus',device,'-b'],600)
  original('original-source-integrity-before',['node','--test','tests/mobile-client-133.test.mjs'])
  client=private/'client-build';harness=private/'harness-build';destination='platform=iOS Simulator,id='+device
  original('original-Release-client-simulator-build',['xcodebuild','-quiet','-project','native-client-1.3.3/mobile/ios/YunzhanMobile.xcodeproj','-scheme','YunzhanMobile','-configuration','Release','-destination',destination,'-derivedDataPath',str(client),'-jobs','2','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','SWIFT_TREAT_WARNINGS_AS_ERRORS=YES','build'],900)
