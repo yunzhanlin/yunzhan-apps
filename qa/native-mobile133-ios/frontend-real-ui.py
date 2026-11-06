@@ -27,6 +27,8 @@ try:
  original('original-Release-client-simulator-build',['xcodebuild','-quiet','-project','native-client-1.3.3/mobile/ios/YunzhanMobile.xcodeproj','-scheme','YunzhanMobile','-configuration','Release','-destination',destination,'-derivedDataPath',str(client),'-jobs','2','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','SWIFT_TREAT_WARNINGS_AS_ERRORS=YES','build'],900)
  original('original-independent-UI-runner-build',['xcodebuild','-quiet','-project','qa/native-mobile133-ios/C68NativeQA.xcodeproj','-scheme','C68NativeQA','-configuration','Release','-destination',destination,'-derivedDataPath',str(harness),'-jobs','2','CODE_SIGNING_ALLOWED=NO','CODE_SIGNING_REQUIRED=NO','build-for-testing'],900)
  app=client/'Build/Products/Release-iphonesimulator/YunzhanMobile.app';receiver=harness/'Build/Products/Release-iphonesimulator/C68 Receiver.app';info=plistlib.loads((app/'Info.plist').read_bytes());assert info['CFBundleShortVersionString']=='1.3.3'and info['CFBundleVersion']=='133'and info['CFBundleIdentifier']=='icu.yunzhan.panel'
+ receiver_info=plistlib.loads((receiver/'Info.plist').read_bytes());assert receiver_info['CFBundleIdentifier']=='icu.yunzhan.qa.receiver'and receiver_info['CFBundleDisplayName']=='C68 Receiver'and receiver_info['UIFileSharingEnabled']is True and receiver_info['LSSupportsOpeningDocumentsInPlace']is True
+ save('original-compiled-receiver-Info-metadata.json',{'Info_plist_sha256':sha(receiver/'Info.plist'),'CFBundleIdentifier':receiver_info['CFBundleIdentifier'],'CFBundleDisplayName':receiver_info['CFBundleDisplayName'],'UIFileSharingEnabled':receiver_info['UIFileSharingEnabled'],'LSSupportsOpeningDocumentsInPlace':receiver_info['LSSupportsOpeningDocumentsInPlace'],'DTXcode':receiver_info['DTXcode'],'DTSDKName':receiver_info['DTSDKName']})
  original('one-original-product-install',['xcrun','simctl','install',device,str(app)]);original('one-owned-provider-receiver-install',['xcrun','simctl','install',device,str(receiver)]);original('one-owned-provider-receiver-launch',['xcrun','simctl','launch',device,'icu.yunzhan.qa.receiver'])
  receiver_data=pathlib.Path(subprocess.check_output(['xcrun','simctl','get_app_container',device,'icu.yunzhan.qa.receiver','data'],text=True).strip())/'Documents';marker=receiver_data/'C68-original-receiver-marker.txt';end=time.monotonic()+20
  while not marker.exists():assert time.monotonic()<end;time.sleep(.3)
@@ -54,12 +56,13 @@ finally:
  # These are bounded reads of the completed result, never another test run.
  try:
   if 'result'in locals()and result.is_dir():
-   def read_result(label,arguments):
+   def read_result(label,arguments,json_output=True):
     save(label+'-intent.json',{'args':arguments,'readonly_original_result':True,'maximum_submissions':1})
     with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:r=subprocess.run(arguments,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=60,cwd=repo)
     save(label+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(private/(label+'.stdout')),'stderr_sha256':sha(private/(label+'.stderr'))})
     assert r.returncode==0,'Original XCTest diagnostic read failed'
-    return json.loads((private/(label+'.stdout')).read_bytes())
+    raw=(private/(label+'.stdout')).read_bytes()
+    return json.loads(raw)if json_output else raw
    read_result('original-XCTest-final-summary',['xcrun','xcresulttool','get','test-results','summary','--path',str(result)])
    tree=read_result('original-XCTest-final-tree',['xcrun','xcresulttool','get','test-results','tests','--path',str(result)])
    identifiers=set()
@@ -72,6 +75,19 @@ finally:
      for child in value:visit(child)
    visit(tree);assert len(identifiers)==1,'Original test identifier must be unique'
    read_result('original-XCTest-final-details',['xcrun','xcresulttool','get','test-results','test-details','--path',str(result),'--test-id',next(iter(identifiers))])
+   exports=private/'original-AX-exports'
+   read_result('original-XCTest-export-attachments',['xcrun','xcresulttool','export','attachments','--path',str(result),'--output-path',str(exports)],False)
+   attachment_index=json.loads((exports/'manifest.json').read_bytes());copied=[];total=0
+   for test in attachment_index:
+    for attachment in test['attachments']:
+     if 'original-accessibility'not in attachment['suggestedHumanReadableName']:continue
+     name=attachment['exportedFileName'];assert len(pathlib.PurePosixPath(name).parts)==1 and name.endswith('.txt')
+     source=exports/name;assert source.is_file()and not source.is_symlink()and source.stat().st_nlink==1 and source.stat().st_size<1<<20
+     raw=source.read_bytes();total+=len(raw);assert total<4<<20 and len(copied)<64
+     target='original-UI-accessibility-%03d.stdout'%len(copied)
+     with(private/target).open('xb')as f:f.write(raw)
+     copied.append({'original_attachment':attachment,'exact_copied_member':target,'sha256':sha(source),'bytes':len(raw)})
+   save('original-XCTest-accessibility-copies.json',{'original_manifest_sha256':sha(exports/'manifest.json'),'byte_exact_original_attachments':copied})
  except BaseException:save('original-XCTest-final-diagnostic-read-failure.json',{'traceback':traceback.format_exc()})
  try:
   if 'receiver_data'in locals()and receiver_data.is_dir():

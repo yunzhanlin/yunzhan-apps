@@ -14,7 +14,7 @@ try:
  with tarfile.open(envelope,'x:gz')as t:
   for f in sorted(private.rglob('*')):
    relative=f.relative_to(private)
-   if not f.is_file()or any(v in('client-build','harness-build')for v in relative.parts)or f.name in('client-private.key','client-credentials.json','device-credentials.json','client-credential-envelope.json','original-cloudflared-linux-amd64','original-peer-artifact.zip',envelope.name)or f.suffix=='.cms':continue
+   if not f.is_file()or any(v in('client-build','harness-build','original-AX-exports')for v in relative.parts)or f.name in('client-private.key','client-credentials.json','device-credentials.json','client-credential-envelope.json','original-cloudflared-linux-amd64','original-peer-artifact.zip',envelope.name)or f.suffix=='.cms':continue
    s=f.lstat();assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and s.st_size<128<<20;total+=s.st_size;assert total<512<<20 and len(included)<8192
    t.add(f,arcname=str(relative),recursive=False);included.append({'name':str(relative),'bytes':s.st_size,'sha256':hashlib.sha256(f.read_bytes()).hexdigest()})
  sealed=public/'original-private-evidence.cms';r=subprocess.run([openssl,'cms','-encrypt','-binary','-aes-256-gcm','-in',str(envelope),'-outform','DER','-out',str(sealed),'-recip',str(cert),'-keyopt','rsa_padding_mode:oaep','-keyopt','rsa_oaep_md:sha256'],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=120);assert r.returncode==0

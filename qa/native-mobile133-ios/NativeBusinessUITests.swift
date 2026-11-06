@@ -11,7 +11,9 @@ final class NativeBusinessUITests: XCTestCase {
         return all.firstMatch
     }
     @MainActor private func tap(_ label:String,_ app:XCUIApplication) {
-        let target=visible(label,app);XCTAssertTrue(target.waitForExistence(timeout:20),"Original UI label missing: "+label);XCTAssertTrue(target.isHittable,"Original UI label not tappable: "+label);target.tap()
+        let target=visible(label,app),exists=target.waitForExistence(timeout:20)
+        if !exists || !target.isHittable { attach("unreachable-control-"+label,app) }
+        XCTAssertTrue(exists,"Original UI label missing: "+label);XCTAssertTrue(target.isHittable,"Original UI label not tappable: "+label);target.tap()
     }
     @MainActor private func reveal(_ target:XCUIElement,in view:XCUIElement) {
         for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeUp() }
