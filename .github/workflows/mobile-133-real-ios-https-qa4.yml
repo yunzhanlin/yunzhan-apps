@@ -1,7 +1,7 @@
 name: C68 original iOS18.5 Release real HTTPS panel and system provider QA4
 on:
   push:
-    branches: [codex/mobile-native-download-c68]
+    branches: [codex/mobile-native-download-c68-original-ios-qa4]
     paths: ['qa/native-mobile133-ios/**', '.github/workflows/mobile-133-real-ios-https-qa4.yml']
 permissions:
   contents: read

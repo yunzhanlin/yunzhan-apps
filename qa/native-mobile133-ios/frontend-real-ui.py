@@ -52,6 +52,19 @@ except BaseException:
  print(json.dumps({'original_failure_stage':proof.get('last_original_stage','original-peer-or-platform-preparation'),'original_outcome_replayed':False}),flush=True)
  raise
 finally:
+ # Retain owned simulator health even if a preparation command timed out
+ # before XCTest created a result. Never relaunch an app to replace its first
+ # outcome, and never let a diagnostic read prevent the final shutdown.
+ if device:
+  diagnostics=[('original-final-receiver-container',['xcrun','simctl','get_app_container',device,'icu.yunzhan.qa.receiver','data']),('original-final-owned-system-jobs',['xcrun','simctl','spawn',device,'launchctl','list']),('original-final-owned-system-log',['xcrun','simctl','spawn',device,'log','show','--last','2m','--style','compact','--predicate','process == "C68 Receiver" OR process == "SpringBoard" OR process == "runningboardd"']),('original-final-owned-system-screen',['xcrun','simctl','io',device,'screenshot',str(private/'original-final-owned-system-screen.png')])]
+  for label,arguments in diagnostics:
+   try:
+    save(label+'-intent.json',{'args':arguments,'readonly_original_owned_simulator':True,'maximum_submissions':1})
+    with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:r=subprocess.run(arguments,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=30,cwd=repo)
+    save(label+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(private/(label+'.stdout')),'stderr_sha256':sha(private/(label+'.stderr'))})
+    if label=='original-final-receiver-container'and r.returncode==0 and 'receiver_data'not in locals():
+     container=pathlib.Path((private/(label+'.stdout')).read_text().strip());assert container.is_dir();receiver_data=container/'Documents'
+   except BaseException:save(label+'-diagnostic-failure.json',{'traceback':traceback.format_exc()})
  # Keep the original XCTest outcome diagnosable even when xcodebuild failed.
  # These are bounded reads of the completed result, never another test run.
  try:
