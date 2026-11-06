@@ -50,6 +50,29 @@ except BaseException:
  print(json.dumps({'original_failure_stage':proof.get('last_original_stage','original-peer-or-platform-preparation'),'original_outcome_replayed':False}),flush=True)
  raise
 finally:
+ # Keep the original XCTest outcome diagnosable even when xcodebuild failed.
+ # These are bounded reads of the completed result, never another test run.
+ try:
+  if 'result'in locals()and result.is_dir():
+   def read_result(label,arguments):
+    save(label+'-intent.json',{'args':arguments,'readonly_original_result':True,'maximum_submissions':1})
+    with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:r=subprocess.run(arguments,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=60,cwd=repo)
+    save(label+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(private/(label+'.stdout')),'stderr_sha256':sha(private/(label+'.stderr'))})
+    assert r.returncode==0,'Original XCTest diagnostic read failed'
+    return json.loads((private/(label+'.stdout')).read_bytes())
+   read_result('original-XCTest-final-summary',['xcrun','xcresulttool','get','test-results','summary','--path',str(result)])
+   tree=read_result('original-XCTest-final-tree',['xcrun','xcresulttool','get','test-results','tests','--path',str(result)])
+   identifiers=set()
+   def visit(value):
+    if isinstance(value,dict):
+     identity=value.get('nodeIdentifier')
+     if isinstance(identity,str)and 'testOriginalReleaseHTTPSFileManagementExportAndBackgroundPrivacy'in identity:identifiers.add(identity)
+     for child in value.values():visit(child)
+    elif isinstance(value,list):
+     for child in value:visit(child)
+   visit(tree);assert len(identifiers)==1,'Original test identifier must be unique'
+   read_result('original-XCTest-final-details',['xcrun','xcresulttool','get','test-results','test-details','--path',str(result),'--test-id',next(iter(identifiers))])
+ except BaseException:save('original-XCTest-final-diagnostic-read-failure.json',{'traceback':traceback.format_exc()})
  try:
   if 'receiver_data'in locals()and receiver_data.is_dir():
    entries=list(receiver_data.iterdir());assert len(entries)<=128

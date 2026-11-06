@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA8'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA9'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')

@@ -17,6 +17,13 @@ final class NativeBusinessUITests: XCTestCase {
         for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeUp() }
         XCTAssertTrue(target.exists && target.isHittable,"Original business control must be visible")
     }
+    @MainActor private func revealTop(_ target:XCUIElement,in view:XCUIElement) {
+        // The SPA retains the login form's real scroll position. Return with
+        // ordinary user gestures; never tap offscreen AX coordinates or inject
+        // page scrolling/scripts as a substitute for a reachable control.
+        for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeDown() }
+        XCTAssertTrue(target.exists && target.isHittable,"Original top navigation must be reachable")
+    }
     @MainActor func testOriginalReleaseHTTPSFileManagementExportAndBackgroundPrivacy() throws {
         continueAfterFailure=false
         let values=ProcessInfo.processInfo.environment
@@ -35,7 +42,7 @@ final class NativeBusinessUITests: XCTestCase {
         }
         secret.tap();secret.typeText(password)
         let enter=web.buttons["进入工作台"];reveal(enter,in:web);enter.tap()
-        XCTAssertTrue(web.buttons["展开导航"].waitForExistence(timeout:60));attach("real-HTTPS-panel-authenticated",app)
+        let navigation=web.buttons["展开导航"];XCTAssertTrue(navigation.waitForExistence(timeout:60));revealTop(navigation,in:web);attach("real-HTTPS-panel-authenticated",app)
         tap("展开导航",app);tap("文件",app)
         let row=web.otherElements["查看 "+filename+" 的文件信息"];reveal(row,in:web)
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)

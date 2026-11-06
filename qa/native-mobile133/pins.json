@@ -30,24 +30,24 @@
   },
   "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
   "recipient_sha256": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
-  "native_source_inputs_sha256": "e13d646a155ced14f16ed6d7bc7b5247a3012c28035e503ccd1d6f645a5f881b",
+  "native_source_inputs_sha256": "4e3d1a6d24574476c657bcd5fce7457d6df6010b22fa120a95bde3ea7ef7e621",
   "physical_device_acceptance": false,
   "Main_changed": false,
-  "native_source_CI_run": 42211708759,
-  "native_source_CI_head": "4fe63a1a17b3df01cd90685d5601bd2260dd1019",
+  "native_source_CI_run": 42229010812,
+  "native_source_CI_head": "e1a12ab2f016952d2287221c82b40129fb59a958",
   "native_Android_artifact": {
-    "artifact_id": 13499381113,
-    "original_server_digest_verified": "e33707d28eb515cccefd6e1bdddf40d82d5e3c153be130e5288d2c2eaef22d51",
-    "bytes": 4280477
+    "artifact_id": 13507027422,
+    "original_server_digest_verified": "3ded5a33ec0d411208a79a075519225d922ebcaa292441795437bb934274cd34",
+    "bytes": 4280473
   },
   "native_APKs": {
     "app/build/outputs/apk/debug/app-debug.apk": {
-      "bytes": 6923029,
-      "sha256": "508813a727f86b7d73cb9c55e05812264d023e61a0b4849b4bb9ec032e9d0b0a"
+      "bytes": 6923017,
+      "sha256": "41cf77a1a25b25fb88a60a51b92cf4daac29b751362bb7e48294811fd5b4b102"
     },
     "app/build/outputs/apk/release/app-release-unsigned.apk": {
-      "bytes": 5591913,
-      "sha256": "cff6a84c1129473af7668920e531356b9fc1f586f10280fc5a75da62d4bcc29a"
+      "bytes": 5591909,
+      "sha256": "9de20ee85e7430e00c3faa8965f91d698d889a967c3c15cab2f9e1dd0af9263c"
     }
   }
 }

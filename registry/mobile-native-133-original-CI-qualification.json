@@ -1,11 +1,11 @@
 {
   "format": 1,
   "version": "1.3.3",
-  "source_inputs_sha256": "e13d646a155ced14f16ed6d7bc7b5247a3012c28035e503ccd1d6f645a5f881b",
-  "original_run": 42211708759,
-  "original_head": "4fe63a1a17b3df01cd90685d5601bd2260dd1019",
+  "source_inputs_sha256": "4e3d1a6d24574476c657bcd5fce7457d6df6010b22fa120a95bde3ea7ef7e621",
+  "original_run": 42229010812,
+  "original_head": "e1a12ab2f016952d2287221c82b40129fb59a958",
   "original_run_attempt": 1,
-  "original_Android_actual_tests_each": 38,
+  "original_Android_actual_tests_each": 39,
   "original_Android_lint_issues_each": 0,
   "original_Swift_actual_tests": 37,
   "original_Xcode": "16.4",
@@ -13,28 +13,70 @@
   "old_Xcode_strict_unsigned_arm64_device_build": true,
   "native_APKs": {
     "app/build/outputs/apk/debug/app-debug.apk": {
-      "bytes": 6923029,
-      "sha256": "508813a727f86b7d73cb9c55e05812264d023e61a0b4849b4bb9ec032e9d0b0a"
+      "bytes": 6923017,
+      "sha256": "41cf77a1a25b25fb88a60a51b92cf4daac29b751362bb7e48294811fd5b4b102"
     },
     "app/build/outputs/apk/release/app-release-unsigned.apk": {
-      "bytes": 5591913,
-      "sha256": "cff6a84c1129473af7668920e531356b9fc1f586f10280fc5a75da62d4bcc29a"
+      "bytes": 5591909,
+      "sha256": "9de20ee85e7430e00c3faa8965f91d698d889a967c3c15cab2f9e1dd0af9263c"
     }
   },
   "original_artifacts_server_digests": {
-    "c68-original-iOS-native133-42211708759": {
-      "artifact_id": 13500160715,
-      "original_server_digest_verified": "d978e05bd948fb70660a49ecf4daec27d3504a4a7f93059ba0991c9dee113554",
-      "bytes": 158476
+    "c68-original-Android-native133-42229010812": {
+      "artifact_id": 13507027422,
+      "original_server_digest_verified": "3ded5a33ec0d411208a79a075519225d922ebcaa292441795437bb934274cd34",
+      "bytes": 4280473
     },
-    "c68-original-Android-native133-42211708759": {
-      "artifact_id": 13499381113,
-      "original_server_digest_verified": "e33707d28eb515cccefd6e1bdddf40d82d5e3c153be130e5288d2c2eaef22d51",
-      "bytes": 4280477
+    "c68-original-iOS-native133-42229010812": {
+      "artifact_id": 13507406498,
+      "original_server_digest_verified": "ec6e1fc125dd8f44546738a4cf85510c82f74725fa5782c0ef806bc2968eb53c",
+      "bytes": 158485
     }
   },
   "physical_device_acceptance": false,
   "native_UI_acceptance": false,
   "Main_changed": false,
-  "all50_commercial": false
+  "all50_commercial": false,
+  "previous_original_source_cohorts": [
+    {
+      "format": 1,
+      "version": "1.3.3",
+      "source_inputs_sha256": "e13d646a155ced14f16ed6d7bc7b5247a3012c28035e503ccd1d6f645a5f881b",
+      "original_run": 42211708759,
+      "original_head": "4fe63a1a17b3df01cd90685d5601bd2260dd1019",
+      "original_run_attempt": 1,
+      "original_Android_actual_tests_each": 38,
+      "original_Android_lint_issues_each": 0,
+      "original_Swift_actual_tests": 37,
+      "original_Xcode": "16.4",
+      "original_iOS_SDK": "18.5",
+      "old_Xcode_strict_unsigned_arm64_device_build": true,
+      "native_APKs": {
+        "app/build/outputs/apk/debug/app-debug.apk": {
+          "bytes": 6923029,
+          "sha256": "508813a727f86b7d73cb9c55e05812264d023e61a0b4849b4bb9ec032e9d0b0a"
+        },
+        "app/build/outputs/apk/release/app-release-unsigned.apk": {
+          "bytes": 5591913,
+          "sha256": "cff6a84c1129473af7668920e531356b9fc1f586f10280fc5a75da62d4bcc29a"
+        }
+      },
+      "original_artifacts_server_digests": {
+        "c68-original-iOS-native133-42211708759": {
+          "artifact_id": 13500160715,
+          "original_server_digest_verified": "d978e05bd948fb70660a49ecf4daec27d3504a4a7f93059ba0991c9dee113554",
+          "bytes": 158476
+        },
+        "c68-original-Android-native133-42211708759": {
+          "artifact_id": 13499381113,
+          "original_server_digest_verified": "e33707d28eb515cccefd6e1bdddf40d82d5e3c153be130e5288d2c2eaef22d51",
+          "bytes": 4280477
+        }
+      },
+      "physical_device_acceptance": false,
+      "native_UI_acceptance": false,
+      "Main_changed": false,
+      "all50_commercial": false
+    }
+  ]
 }
