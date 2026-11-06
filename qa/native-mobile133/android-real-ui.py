@@ -8,18 +8,25 @@ os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
 private=pathlib.Path(sys.argv[1]).resolve(strict=True);adb=os.environ['ANDROID_HOME']+'/platform-tools/adb';serial='emulator-5554';package='icu.yunzhan.panel.qa'
 setup=json.loads((private/'real-panel-setup.json').read_bytes());access=json.loads((private/'device-credentials.json').read_bytes());assert setup['real_file_manager_backend'] and setup['panel_origin']=='http://127.0.0.1:19100'
-pin=None;events=[];sequence=0
+pin=None;events=[];sequence=0;reads=0
 def command(*args,raw=False):
  r=subprocess.run([adb,'-s',serial,*args],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=40)
  assert r.returncode==0,'Owned emulator command failed: '+args[0]
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_QA1'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA2'
+assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
 def snapshot(label=None):
- global sequence
- command('shell','uiautomator','dump','/sdcard/c68-owned-UI.xml');raw=command('exec-out','cat','/sdcard/c68-owned-UI.xml');root=ET.fromstring(raw)
+ global sequence,reads
+ reads+=1;original=private/('original-UI-read-%05d.xml'%reads)
+ command('shell','uiautomator','dump','/sdcard/c68-owned-UI.xml')
+ # File-sync transport preserves the actual XML bytes, rather than combining
+ # an exec-out shell's diagnostics with its file content. Keep every original.
+ command('pull','/sdcard/c68-owned-UI.xml',str(original));original.chmod(0o600)
+ assert original.is_file()and original.stat().st_nlink==1 and 0<original.stat().st_size<1<<20
+ raw=original.read_bytes();root=ET.fromstring(raw)
  for n in root.iter('node'):
   for key,value in list(n.attrib.items()):
    for secret in [access['password'],pin]:

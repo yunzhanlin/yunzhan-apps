@@ -28,7 +28,7 @@ finally:
   cert=base/'recipient.pem';assert sha(cert)==pins['recipient_sha256'];envelope=private/'original-private-evidence.tar.gz';count=0
   with tarfile.open(envelope,'x:gz')as t:
    for f in sorted(private.iterdir()):
-    if f.name in('device-credentials.json',envelope.name)or not f.is_file():continue
+    if f.name in('device-credentials.json',envelope.name)or not f.is_file()or f.suffix not in('.json','.stdout','.stderr','.xml','.log'):continue
     s=f.lstat();assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and not s.st_mode&0o077 and s.st_size<128<<20;t.add(f,arcname=f.name,recursive=False);count+=1
   sealed=public/'original-private-evidence.cms';r=subprocess.run(['openssl','cms','-encrypt','-binary','-aes-256-gcm','-in',str(envelope),'-outform','DER','-out',str(sealed),'-recip',str(cert),'-keyopt','rsa_padding_mode:oaep','-keyopt','rsa_oaep_md:sha256'],capture_output=True,timeout=90);assert r.returncode==0
   os.chown(sealed,owner.st_uid,owner.st_gid);proof['private_evidence']={'encrypted':True,'sha256':sha(sealed),'bytes':sealed.stat().st_size,'plaintext_sha256':sha(envelope),'original_files':count,'device_credentials_excluded':True,'recipient_sha256':sha(cert)}
