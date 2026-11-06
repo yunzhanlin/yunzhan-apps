@@ -2,7 +2,7 @@
 import hashlib,json,os,pathlib,subprocess,sys,time
 os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
-private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='UPGRADEQA1';api=int(os.environ['C68_UI_API']);assert api in(30,37);platform={30:'android-30',37:'android-37.0'}[api];name='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
+private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='UPGRADEQA2';api=int(os.environ['C68_UI_API']);assert api==30;platform='android-30';name='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 env=dict(os.environ);env['ANDROID_AVD_HOME']=str(private/'owned-avds');env['ANDROID_USER_HOME']=str(private/'owned-android-user');env['ANDROID_EMULATOR_HOME']=str(private/'owned-emulator-home')
 for key in('ANDROID_AVD_HOME','ANDROID_USER_HOME','ANDROID_EMULATOR_HOME'):pathlib.Path(env[key]).mkdir(mode=0o700)
 adb=str(sdk/'platform-tools/adb')
@@ -32,6 +32,7 @@ certificate=(private/'original-publisher-APK-signer-verification.stdout').read_t
 once('original-previous-APK-signer-verification',[str(sdk/'build-tools/36.0.0/apksigner'),'verify','--min-sdk-version','30','--max-sdk-version','37','--verbose','--print-certs',str(private/'original-publisher-132.apk')])
 assert 'Signer #1 certificate SHA-256 digest: 0ba923afca85db94f4bdabd6d235fcf1c7088bb167ace661bf21781d1c7f0bd5'in(private/'original-previous-APK-signer-verification.stdout').read_text()
 once('one-original-publisher-132-install',[adb,'-s','emulator-5554','install',str(private/'original-publisher-132.apk')])
+once('original-owned-WebView-provider-metadata',[adb,'-s','emulator-5554','shell','dumpsys','webviewupdate'])
 # Finish the fresh system launch before beginning any product acceptance.
 # An OS launcher ANR is retained as a failure, never dismissed or counted as an
 # application pass. This changes only the new disposable CI emulator.

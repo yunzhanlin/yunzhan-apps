@@ -28,6 +28,14 @@ final class NativeBusinessUITests: XCTestCase {
         for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeDown() }
         XCTAssertTrue(target.exists && target.isHittable,"Original top navigation must be reachable")
     }
+    @MainActor func testOwnedReceiverStartsBeforeBusiness() {
+        continueAfterFailure=false
+        let receiver=XCUIApplication(bundleIdentifier:"icu.yunzhan.qa.receiver")
+        receiver.launch()
+        XCTAssertTrue(receiver.staticTexts["C68 owned local document receiver"].waitForExistence(timeout:30))
+        attach("original-owned-provider-receiver-ready",receiver)
+        XCUIDevice.shared.press(.home)
+    }
     @MainActor func testOriginalReleaseHTTPSFileManagementExportAndBackgroundPrivacy() throws {
         continueAfterFailure=false
         let values=ProcessInfo.processInfo.environment

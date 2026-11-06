@@ -26,7 +26,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 api=int(os.environ['C68_UI_API']);assert api in(30,37)and command('shell','getprop','ro.build.version.sdk').strip()==str(api)
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='UPGRADEQA1'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='UPGRADEQA2'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -188,5 +188,12 @@ try:
  proof.update(ok=True,actual_132_to133_normal_APK_upgrade=True,private_endpoint_preference_preserved=True,original_device_UID_preserved=True,old_process_gone_and_original_new_process_observed=True,original_login_not_restored_implicitly=True,original_new_APK_and_publisher_same=True,ordinary_public_HTTPS_before_and_after=True,source_inputs_sha256=setup['native_source_inputs_sha256'])
 except BaseException:save('original-UI-failure.json',{'traceback':traceback.format_exc()});raise
 finally:
+ # Read the original platform diagnostics even if the old login page never
+ # renders. Do not inject scripts, enable debugging, replace WebView, or retry
+ # the product operation to manufacture an upgrade acceptance.
+ for label,args in [('original-owned-WebView-after-UI',['shell','dumpsys','webviewupdate']),('original-owned-platform-log-after-UI',['logcat','-d','-v','brief'])]:
+  with(private/(label+'.stdout')).open('xb')as out,(private/(label+'.stderr')).open('xb')as err:
+   observed=subprocess.run([adb,'-s',serial,*args],stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=30)
+  save(label+'-outcome.json',{'exit':observed.returncode,'readonly_original_owned_emulator':True})
  save('original-device-events.json',events);save('original-device-UI-proof.json',proof)
 print(json.dumps(proof));sys.exit(0 if proof['ok']else 1)
