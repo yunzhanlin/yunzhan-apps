@@ -69,6 +69,7 @@ export function validateManifest(app) {
   const wafCountry="waf-country-signed-data-v1";
   const runtimePackage="runtime-package-version-v1";
   const mobileNative="mobile-native-delivery-v132";
+  const mobileNative133="mobile-native-delivery-v133";
   const memcachedImage="memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf";
   const memcachedScope=app.id==="memcached"&&app.version==="1.6.45-compat2"&&app.delivery?.provider==="compose";
   const memcachedUnixScope=app.id==="memcached"&&app.version==="1.6.45-compat4"&&app.delivery?.provider==="compose";
@@ -81,7 +82,7 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==mobileNative133&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===intrusion||feature===intrusion0112)&&!intrusionScope)errors.push("intrusion handlers require the exact reviewed version, fixed target and complete ordered feature declaration");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -100,8 +101,9 @@ export function validateManifest(app) {
   // cannot borrow old delivery metadata or a foreign fixed executor target.
   const mobileScope=app.id==="mobile"||app.delivery?.target==="mobile-pwa";
   const legacyMobile=["1.0","1.0-compat1","1.1.0","1.2.0","1.3.0"];
-  if(mobileScope&&!legacyMobile.includes(app.version)||Array.isArray(requirements)&&requirements.includes(mobileNative)){
-    if(app.id!=="mobile"||app.version!=="1.3.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="mobile-pwa"||app.delivery?.manage_route!=="app-modules"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==mobileNative)errors.push("native mobile1.3.2 requires its exact fixed delivery metadata handler");
+  if(mobileScope&&!legacyMobile.includes(app.version)||Array.isArray(requirements)&&requirements.some(feature=>feature===mobileNative||feature===mobileNative133)){
+    const expected=app.version==="1.3.2"?mobileNative:app.version==="1.3.3"?mobileNative133:"";
+    if(!expected||app.id!=="mobile"||app.delivery?.provider!=="panel-module"||app.delivery?.target!=="mobile-pwa"||app.delivery?.manage_route!=="app-modules"||!Array.isArray(requirements)||requirements.length!==1||requirements[0]!==expected)errors.push("native mobile1.3.2 or1.3.3 requires its own exact fixed delivery metadata handler");
   }
   // An exact native target cannot borrow an old/foreign package label to evade
   // the compiled handler. Keep historical Nginx endpoints immutable, while new

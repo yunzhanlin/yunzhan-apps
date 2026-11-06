@@ -161,6 +161,7 @@
           "waf-bound-health-v1",
           "runtime-package-version-v1",
           "mobile-native-delivery-v132",
+          "mobile-native-delivery-v133",
           "php-security-20261021-v1",
           "php-bounded-native-build-v1",
           "compose-memcached-unix-v1",
@@ -673,6 +674,41 @@
                 "maxItems": 1,
                 "items": {
                   "const": "mobile-native-delivery-v132"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "mobile"
+              },
+              "version": {
+                "const": "1.3.3"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "mobile-pwa"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "mobile-native-delivery-v133"
                 }
               }
             }
@@ -1704,6 +1740,18 @@
                 }
               }
             }
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "mobile-native-delivery-v133"
+                }
+              }
+            }
           }
         ]
       },
@@ -1764,6 +1812,47 @@
                 "maxItems": 1,
                 "items": {
                   "const": "mobile-native-delivery-v132"
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "mobile"
+              },
+              "version": {
+                "const": "1.3.3"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "mobile-pwa"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "mobile-native-delivery-v133"
                 }
               }
             }

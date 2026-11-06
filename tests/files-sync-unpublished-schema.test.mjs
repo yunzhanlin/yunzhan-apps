@@ -24,7 +24,7 @@ test('the original signed C63 fifty, all49 other entries and old200 endpoint rem
  const base='registry/reviewed-catalogs/before-native-filesync201-c64/',receipt=json(base+'snapshot.json');assert.equal(receipt.original_publisher_head,'04555b0f1e102ebf8ad385351784cf33697ee194');assert.equal(Object.keys(receipt.files_sha256).length,105);
  for(const[n,hash]of Object.entries(receipt.files_sha256))assert.equal(sha256(read(base+n)),hash,n);
  assert(verify(null,read(base+'dist/catalog-v1.json'),createPublicKey(read(base+'signatures/catalog-v1.pub.pem')),Buffer.from(read(base+'signatures/catalog-v1.sig').toString().trim(),'base64')));
- const old=json(base+'dist/catalog-v1.json').apps,current=json('candidate/dist/catalog-v1.json').apps;assert.equal(old.length,50);assert.equal(current.length,50);
+ const old=json(base+'dist/catalog-v1.json').apps,current=json('registry/reviewed-catalogs/before-mobile-native133-c68r3/dist/catalog-v1.json').apps;assert.equal(old.length,50);assert.equal(current.length,50);
  const before=new Map(old.map(a=>[a.id,a])),after=new Map(current.map(a=>[a.id,a]));assert.deepEqual([...before.keys()],[...after.keys()]);
  assert.deepEqual([...before.keys()].filter(id=>JSON.stringify(before.get(id))!==JSON.stringify(after.get(id))),['files-sync']);assert.equal(before.get('files-sync').version,'2.0.0');assert.equal(after.get('files-sync').version,'2.0.1');
  for(const a of old){const n='dist/apps/'+a.id+'/'+a.version+'/manifest.json';assert.equal(sha256(read('candidate/'+n)),receipt.files_sha256[n]);}

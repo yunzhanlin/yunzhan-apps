@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "enterprise-tamper-proof",
+  "name": "Tamper-proof for Enterprise",
+  "category": "professional",
+  "version": "1.5.0",
+  "summary": "签名基线、实时检测与可选自动恢复；可明确启用 Linux inode 写保护。两个防篡改应用共用网站保护所有权，保留原数据、排除目录和原有标记。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "enterprise-tamper-proof",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "HMAC 签名基线与内容备份",
+    "实时检测与可选自动恢复",
+    "原生 inode 内核写保护",
+    "原应用独立启用与解除",
+    "跨应用网站修订与所有权",
+    "旧可写句柄内核阻写",
+    "保留排除目录及原有标记",
+    "中断原记录与明确后续解除",
+    "365 天有界历史分页",
+    "恢复前留存与原数据保留",
+    "签名 Webhook 与持久退避队列",
+    "实际执行与送达记录"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/enterprise-tamper-proof"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "enterprise-integrity-kernel-ownership-v1"
+  ]
+}

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import {canonical,sha256}from '../../tools/lib.mjs';
+import {schemaBeforeMobileNative133}from './mobile-native133-schema.mjs';
 const feature='files-sync-unpublished-retention-v1';
 export function schemaBeforeFilesSyncUnpublished(value){
- const s=structuredClone(value),features=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
+ const s=schemaBeforeMobileNative133(value),features=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!features.includes(feature)&&!branches.some(v=>v.properties?.id?.const==='files-sync'&&v.properties?.version?.const==='2.0.1'))return s;
  assert.equal(features.filter(v=>v===feature).length,1);assert.equal(features.at(-1),feature);features.pop();
  assert.equal(sha256(canonical(branches.pop())),'f96b067add2c998cce78c5dce1fe956b5e9dff1ed163f377500e86b17ee4c356');
