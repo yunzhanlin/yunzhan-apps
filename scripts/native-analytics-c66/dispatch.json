@@ -1,0 +1,82 @@
+{
+  "format": 1,
+  "source_head": "17d077c46bf18f5fa1b0cbd0edcf957f79946d80",
+  "source_sdk_tree": "365ade083eae6a06ef4d9629f01e876e5fdd8e22",
+  "source_inputs_sha256": "0c12d2b6b910298a16e8bcfc4658a45c94a6b63a99385c186f07a5dfdf7f280f",
+  "source_ci_run": 42160580494,
+  "release_id": 436101702,
+  "tag": "qa-analyticsheatmapcandidate66r2-20261106-qa1",
+  "version": "0.1.0-dev.proapps24analyticsheatmapcandidate66r2",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-amd64.tar.gz": {
+      "id": 715909245,
+      "bytes": 23690539,
+      "sha256": "f5a82fa3c01f9fb6f17f740e0afb018828160b396309a63ed86ea91e3d8ab984"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-amd64.tar.gz.manifest": {
+      "id": 715909251,
+      "bytes": 188,
+      "sha256": "f2b1fe631643741446b4115b69424d771aac6f30b561932a19c791378d1ceee8"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-amd64.tar.gz.sig": {
+      "id": 715909247,
+      "bytes": 64,
+      "sha256": "40accc7b8e7a860c610421c562bb60b03a0454806a9d2a8034a99aca857e3784"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-arm64.tar.gz": {
+      "id": 715909253,
+      "bytes": 21917071,
+      "sha256": "1b59dd114924dc7208752c35bc2f69b3b68132dddf927f4dd05f29c94641f8e3"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-arm64.tar.gz.manifest": {
+      "id": 715909250,
+      "bytes": 188,
+      "sha256": "700a8ffca37ebf13a9e74eeb68b7f22be20f6335d44b0310c7bf45e04c2ff68f"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-arm64.tar.gz.sig": {
+      "id": 715909507,
+      "bytes": 64,
+      "sha256": "512be3263f9a09608854bb972cc4788443e90b65a34870f4f96caa8fc41215ca"
+    },
+    "release-signing-dev.pub": {
+      "id": 715909496,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "filesync-recovery-signed-release.py": {
+      "id": 715909492,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66r2-linux-arm64.tar.gz"
+    }
+  },
+  "analytics242_sha256": "704ed57b5d353411debf2dbedc283bab8df45df9cf692411e2f6705b49c91254",
+  "normal_installed_BFCache_and_narrow_acceptance_pending": true,
+  "all50_commercial": false,
+  "qa7_payload_files": {
+    ".github/workflows/native-analytics-c66r2-browser-qa7.yml": "6ba48f82ae730dc8fee37056c2cc5e205e45d97174ce55eb53e7ce5eb73e316d",
+    "scripts/native-analytics-c66/browser-qa7.mjs": "8bf19100274dde321b7c005f31b4f91f60fc7adecd4200a8c954cfe8f993523b",
+    "scripts/native-analytics-c66/download-qa7.py": "ccfa13b2322f30d220ffa12feeed45f2f1ebb73412b907d33acda95d20d5876f",
+    "scripts/native-analytics-c66/finish-qa7.py": "b204e3ef485108bc5c66f1ca3e5f7aee0bc1e8b4c7baf7c25098a86936cebecf",
+    "scripts/native-analytics-c66/prepare-qa7.py": "aa8ed4195db4177270353a190f5367f24b3d12109af34c3ccf6a45635d8af47d",
+    "scripts/native-analytics-c66/renderer-witness-qa7.py": "8034a5f525c73879b09059612ede048754914f66d1123cce38e3fa1297a9f51b",
+    "scripts/native-analytics-c66/wire-observer-qa7.mjs": "23b75298272b7dee3fda00682262da75ffaa00edb01b79f3761cc1a20bfa73a5"
+  },
+  "original_failed_runs_retained": [
+    42163457114,
+    42164370091,
+    42165256505,
+    42166414293,
+    42168394839,
+    42169389693
+  ],
+  "native_viewport_390_by844_and_no_horizontal_document_or_workspace_overflow_required": true,
+  "no_scrollbar_hiding_or_product_CSS_changes": true
+}
