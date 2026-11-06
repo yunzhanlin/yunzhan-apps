@@ -26,7 +26,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 api=int(os.environ['C68_UI_API']);assert api in(30,37)and command('shell','getprop','ro.build.version.sdk').strip()==str(api)
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA3'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='HTTPSQA4'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort+'_API'+str(api)
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -166,8 +166,10 @@ try:
  if api==30:
   original_provider=(private/'original-owned-WebView-before-UI.stdout').read_text();assert '(com.android.webview, 83.0.4103.120)'in original_provider
   start();root=wait('original-native-old-engine-start',lambda r:has(r,'Connect'))
-  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')==''
-  tap_node(fields[0],'owned-HTTPS-endpoint-for-old-engine-refusal');type_ascii(setup['panel_origin']+'/');key(4);tap('Connect')
+  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')in('', 'https://your-panel.example/security-entry/')
+  tap_node(fields[0],'owned-HTTPS-endpoint-for-old-engine-refusal');type_ascii(setup['panel_origin']+'/');key(4)
+  root=snapshot('original83-exact-HTTPS-endpoint-before-native-guard');typed=nodes(root,lambda n:n.get('class')=='android.widget.EditText');assert len(typed)==1 and typed[0].attrib.get('text')==setup['panel_origin']+'/'
+  tap('Connect',root)
   root=wait('original83-native-update-explanation-before-WebView',lambda r:any(n.get('text','').startswith('System WebView is outdated or unavailable.')for n in r.iter('node')))
   assert not nodes(root,lambda n:n.get('class')=='android.webkit.WebView');tap('OK',root)
   before_pid=owned_app_pid();assert before_pid is not None;before_uid=command('shell','cmd','package','list','packages','-U',package).strip()
@@ -186,7 +188,7 @@ try:
   deadline=time.monotonic()+20
   while owned_app_pid()is not None:assert time.monotonic()<deadline,'Original WebView provider update did not settle the dependent process';time.sleep(.2)
   start();root=wait('original-native-after-ordinary-system-provider-update',lambda r:has(r,'Connect')and not nodes(r,lambda n:n.get('class')=='android.webkit.WebView'))
-  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')==''
+  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1 and fields[0].attrib.get('text')in('', 'https://your-panel.example/security-entry/')
   after_uid=command('shell','cmd','package','list','packages','-U',package).strip();assert after_uid==before_uid
   save('original-owned-normal-provider-update-preserves-native-app.json',{'ok':True,'same_native_UID_line':before_uid,'native_old_PID':before_pid,'native_new_PID':owned_app_pid(),'endpoint_not_persisted_by_refused_connection':True,'provider_update_submissions':1,'product_APK_uninstalled_or_replaced':False,'current_security_patch_or_production_runtime_claim':False})
  start()
