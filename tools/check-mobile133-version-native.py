@@ -9,8 +9,8 @@ root=pathlib.Path(__file__).resolve().parent.parent
 sdk=root/'candidate/panel-integration-load-balance'
 index=json.loads((sdk/'source-sha256.json').read_bytes())
 assert platform.system()=='Linux' and platform.machine() in ('x86_64','aarch64')
-assert index['release']['frozen_inputs_sha256']=='a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a'
-assert len(index['files'])==2466 and not index.get('test_overrides')
+assert index['release']['frozen_inputs_sha256']=='7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda'
+assert len(index['files'])==2467 and not index.get('test_overrides')
 for name,digest in index['files'].items():
     p=sdk/name
     assert p.is_file() and not p.is_symlink() and hashlib.sha256(p.read_bytes()).hexdigest()==digest,name

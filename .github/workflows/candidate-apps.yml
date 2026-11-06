@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67, codex/mobile-native-download-c68]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67, codex/mobile-native-download-c68, codex/mobile-c68-deterministic-release-r3]
   workflow_dispatch:
 
 permissions:
@@ -61,6 +61,8 @@ jobs:
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo env CGO_ENABLED=0 "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+      - name: Actual native compiler preserves previous signed v4 under inherited Git metadata
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps PATH="$(dirname "$(command -v go)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 -I -B tools/run-release-guard-vcs-native.py "$RUNNER_TEMP/release-guard-vcs-original"
       - name: Actual retained132 and current133 signed Core queue Unix executor and version identities
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -107,7 +109,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a' and len(index['files'])==2466
+          assert index['release']['frozen_inputs_sha256']=='7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda' and len(index['files'])==2467
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -468,5 +470,13 @@ jobs:
         with:
           name: mobile133-version-native-${{ matrix.os }}-${{ github.run_id }}
           path: ${{ runner.temp }}/mobile133-version-native.jsonl
+          retention-days: 14
+          if-no-files-found: error
+      - name: Retain original native compiler and VCS regression including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: release-guard-vcs-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/release-guard-vcs-original/
           retention-days: 14
           if-no-files-found: error

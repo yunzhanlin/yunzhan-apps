@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24nativedownloadcandidate68-linux-amd64.tar.gz",
-    "archive_sha256": "2f64eba9ac2704149e4a945827d0d22d8352ffd47738591b6d5141549cad2fde",
-    "frozen_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a"
+    "archive": "panel-0.1.0-dev.proapps24nativedownloadcandidate68r3-linux-amd64.tar.gz",
+    "archive_sha256": "71fa47af8607e1ea1f123a0d8fae1727bf76238313ec70038c477075f59537da",
+    "frozen_inputs_sha256": "7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2156,7 +2156,7 @@
     "mobile/ios/YunzhanMobile.xcodeproj/project.pbxproj": "b5d02ca9b2816f95654f083f612dd17311dfeb745052b4dc1416746015f0a628",
     "mobile/ios/YunzhanMobile.xcodeproj/xcshareddata/xcschemes/YunzhanMobile.xcscheme": "a4f1382451cc6c5f8dcb261037330d72afef7f42abdbac727ab4b8129ac2422a",
     "packaging/backup-directories.py": "f3cc3d7e09677d572d6c4902a55e06ad6690acf04ba6bfe270dfe58662c6ca13",
-    "packaging/build-release.sh": "9b9836eb9f3063c0ec79c1bbce105c077358769b43662a34dd2a445d91259e2a",
+    "packaging/build-release.sh": "5a6a416b51cb0f0c7844a41c47ff2aa239ba8364ff7475e8b95be286b065cdb2",
     "packaging/development-upgrade.py": "6ef6a7dc19207cb68cf70ef86f9981e3d22e308afce9669a97a9511d95b5dd52",
     "packaging/first-install.py": "88cc028bc716d4ad676c976776a4c4f78eb5d6884939faa0e84efd023c2ea33d",
     "packaging/freeze-source.py": "5aba3c7886c8b9196b56101b8c544b9c240d5f9fd1719d90e0bb6ee12a9bb3a2",
@@ -2192,6 +2192,7 @@
     "packaging/test_prune_releases.py": "56bd2639cd114189c81adaa42ae38628614da5663886128147d05e1e37ad0fba",
     "packaging/test_release_checksums.py": "f3d8140fc403ee21be486a8bd08baa58cc8dd70aa25b9890f41739753c952558",
     "packaging/test_release_file_modes.py": "4c0163b5bae941e2dff1ced73eb6807135d751a74e833abc7f1c2fd861130420",
+    "packaging/test_release_guard_vcs.py": "e4eb4366bf875dcffe8026bc4e0716111153c9a55cd53d7ea04eaf64c1cf826c",
     "packaging/test_release_import_integrity.py": "cb9a85cc73855e523d4c1a65e344a8a568d633318853e3cc3a3a4e44cd9ce0f1",
     "packaging/test_runtime_install_budget.py": "e1d4a8603ce8c95bda869c464a14a70a0b86b4b835b0fb755ebf54b25aaf01bf",
     "packaging/test_signed_release.py": "3361c71f6c9dde0d23ffbfaf9144617e41594c228f019b4f0738a2d18e207b2e",
@@ -2208,7 +2209,7 @@
     "scripts/host-disk-fixture.mjs": "1b0ad9f159053d731ea92ef592b2fc008b987f4d01fb21e6d0c4b68c2825c463",
     "scripts/load-balance-stream-fixture.mjs": "4075571294186cd3861f874cba80c0f2d9172d95f9bebba73357f038619a6ee2",
     "scripts/php-switch-preview-baseline.mjs": "9dc2f6ca5fc443eb4f0ed7d6b726381050525190d7d97e8f47c11b9d220bd20a",
-    "scripts/release-build-baseline.mjs": "eb28f9d810f54c4070ff7242140c828180d758b088920e6b91ecc4e0d75e4f76",
+    "scripts/release-build-baseline.mjs": "b106dcde040f9437753c83c6e224d66175e1768863c3b3e0bd57550f7a19d5f0",
     "scripts/test-analytics-geography.mjs": "7cdbbf36aefac5322e12c82989110ed4d1d5e1cf9c3ce829c7192644db4c408e",
     "scripts/test-analytics-html-filter.mjs": "c03644b866a5c6c18338a37286b01620e9efe575d33356308bd0c1a7b697bbe1",
     "scripts/test-analytics-html-state.mjs": "eb56102af3237ffe1590e6d4dada098c2b9dfd1ae69535e6c307439554bcb44d",
@@ -2241,7 +2242,7 @@
     "scripts/test-load-balance-alerts.mjs": "afb81e54c8177c02c1871ea9093f6aac4b13294fe1bd4bedd5d0aded4280d854",
     "scripts/test-load-balance-report-export.mjs": "222840e1d7de0a6e83d7b658722ee7039f2ce8ac27afe8b7c15b2b79bb938e93",
     "scripts/test-load-balance-routing.mjs": "c5a5ed04ebb21065e172b1319460530ee346c80d125fadadc906416f2efd2afc",
-    "scripts/test-load-balance-stream-account-entry.mjs": "1678331a166f834b8a7f9462af673b48b98bdf7c5374e4af288f28212a9eeec0",
+    "scripts/test-load-balance-stream-account-entry.mjs": "0677c5f76f2bb06d2af77194c8b39ac77881c79c9dcbacab0f410fd819fb3ede",
     "scripts/test-load-balance-stream.mjs": "1278b992675a4cf330f5b171e630af46f509e4979e098d6252121a30b182a612",
     "scripts/test-load-balance-transactions.mjs": "c9f8e04ec61487b679611804f62c9a549cbc0796945a959c7c861f32ea252823",
     "scripts/test-memcached-unix-workspace.mjs": "6a163b905c836f5d3429b6961a87c6461fac5d5e5578287a58bc99dd5492b80b",

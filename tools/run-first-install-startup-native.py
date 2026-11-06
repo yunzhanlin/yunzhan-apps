@@ -21,7 +21,7 @@ SPEC = json.loads((ROOT / 'tools/first-install-startup-execution.json').read_byt
 def source_files():
     index = json.loads((SDK / 'source-sha256.json').read_bytes())
     assert index['release']['frozen_inputs_sha256'] == SPEC['source_inputs_sha256']
-    assert len(index['files']) == SPEC['source_sdk_files'] == 2466
+    assert len(index['files']) == SPEC['source_sdk_files'] == 2467
     actual = {name: hashlib.sha256((SDK / name).read_bytes()).hexdigest()
               for name in SPEC['source_files']}
     assert actual == SPEC['source_files']

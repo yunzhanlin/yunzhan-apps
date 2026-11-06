@@ -16,7 +16,7 @@ function exact(rows,packages){
 }
 export function verifyFilesSyncIndependentExecution(coreRows,rootRows,sftpRows,identity,architecture){
  assert(['x86_64','aarch64'].includes(architecture));const spec=filesSyncIndependentExecution;
- assert.equal(spec.format,1);assert(/^[a-f0-9]{64}$/.test(spec.source_inputs_sha256));assert.equal(spec.source_sdk_files,2466);
+ assert.equal(spec.format,1);assert(/^[a-f0-9]{64}$/.test(spec.source_inputs_sha256));assert.equal(spec.source_sdk_files,2467);
  assert.equal(Object.values(spec.core_packages).reduce((n,cases)=>n+cases.length,0),31);assert.equal(spec.Root_executor_cases.length,8);assert.equal(spec.unprivileged_SFTP_cases.length,72);assert.equal(spec.unprivileged_SFTP_cases.filter(name=>!name.includes('/')).length,61);assert.equal(spec.unprivileged_SFTP_root_cases,61);
  exact(coreRows,spec.core_packages);exact(rootRows,{'local/panel/internal/executor':spec.Root_executor_cases});exact(sftpRows,{'local/panel/internal/executor':spec.unprivileged_SFTP_cases});
  assert(identity&&identity.system==='Linux'&&identity.architecture===architecture&&Number.isSafeInteger(identity.uid)&&identity.uid>0&&identity.euid===identity.uid&&Array.isArray(identity.groups)&&identity.groups.length===0&&typeof identity.status==='string'&&/^[a-f0-9]{64}$/.test(identity.native_sftp_sha256));

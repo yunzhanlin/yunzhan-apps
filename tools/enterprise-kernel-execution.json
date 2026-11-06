@@ -1,7 +1,7 @@
 {
   "format": 1,
-  "source_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a",
-  "source_sdk_files": 2466,
+  "source_inputs_sha256": "7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda",
+  "source_sdk_files": 2467,
   "packages": {
     "local/panel/internal/appcatalog": [
       "TestEnterpriseKernelRequiresIndependentOwnershipABI",

@@ -7,10 +7,11 @@ test('build baseline cannot hide removed gates, missing source binding or unknow
  const digest=v=>createHash('sha256').update(v).digest('hex');
  const baseline=beforeLoadBalanceStreamBuild(text);
  assert.equal(digest(baseline),'af902f50fc54ec540a221761930cecadd721fad248e31de3de456955a9c7e681');
- for(const required of ['APP_CHANNEL="${3:-stable}"', 'APP_CHANNEL" != stable && "$APP_CHANNEL" != candidate', '"$VERSION" != *candidate*', 'PROGRAMME_INPUTS_SHA=', 'PANEL_LDFLAGS=', 'scripts/test-load-balance-stream.mjs', 'scripts/test-load-balance-stream-account-entry.mjs', 'go test -c -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -ldflags="$PANEL_LDFLAGS"']){
+ for(const required of ['APP_CHANNEL="${3:-stable}"', 'APP_CHANNEL" != stable && "$APP_CHANNEL" != candidate', '"$VERSION" != *candidate*', 'PROGRAMME_INPUTS_SHA=', 'PANEL_LDFLAGS=', 'scripts/test-load-balance-stream.mjs', 'scripts/test-load-balance-stream-account-entry.mjs', 'go test -c -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -buildvcs=false -ldflags="$EXECUTOR_LDFLAGS"', 'go build -trimpath -buildvcs=false -ldflags="$PANEL_LDFLAGS"']){
   assert(text.includes(required),'mutation input must exist: '+required);
   assert.throws(()=>beforeLoadBalanceStreamBuild(text.replace(required,'REMOVED')));
  }
+ for(const changed of [text.replace(' -buildvcs=false',''),text.replace(' -buildvcs=false',' -buildvcs=true'),text.replace(' -buildvcs=false',' -buildvcs=false -buildvcs=false')])assert.throws(()=>beforeLoadBalanceStreamBuild(changed));
  assert.notEqual(digest(beforeLoadBalanceStreamBuild(text.replace('go vet ./...','true'))),digest(baseline));
  const nfsGate='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-nfs-report-scope.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
  assert.equal(text.split(nfsGate).length,2);

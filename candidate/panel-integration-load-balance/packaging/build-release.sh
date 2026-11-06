@@ -156,9 +156,13 @@ printf 'Official app catalogue channel: %s (same compiled publisher key; no runt
 printf 'Linux executor tests compiled from frozen inputs; execute separately on the target OS.\n' >> "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT/web" && VITE_PANEL_VERSION="$VERSION" /opt/homebrew/bin/npm run build) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
 (cd "$BUILD_ROOT" && /opt/homebrew/bin/node scripts/web-entry-budget.mjs "$BUILD_ROOT/web/dist") 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"
-(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="$PANEL_LDFLAGS" -o "$STAGE/$NAME/bin/panel" ./cmd/panel)
-(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/$NAME/bin/panel-executor" ./cmd/executor)
-(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -ldflags="-s -w" -o "$STAGE/$NAME/bin/panel-start-guard" ./cmd/startguard)
+# A caller may set GOFLAGS for parallelism or include VCS stamping. The fixed
+# v4 guard must remain byte identical across unrelated repository commits.
+# Make the release policy explicit on the real compiler command so inherited
+# GOFLAGS cannot silently replace scripts/env.sh's default buildvcs setting.
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -buildvcs=false -ldflags="$PANEL_LDFLAGS" -o "$STAGE/$NAME/bin/panel" ./cmd/panel)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -buildvcs=false -ldflags="$EXECUTOR_LDFLAGS" -o "$STAGE/$NAME/bin/panel-executor" ./cmd/executor)
+(cd "$BUILD_ROOT" && CGO_ENABLED=0 GOOS=linux GOARCH="$ARCH" go build -trimpath -buildvcs=false -ldflags="-s -w" -o "$STAGE/$NAME/bin/panel-start-guard" ./cmd/startguard)
 cp -R "$BUILD_ROOT/web/dist/." "$STAGE/$NAME/web/"
 cp "$BUILD_ROOT/SOURCE_INPUTS.json" "$STAGE/$NAME/"
 find "$STAGE/$NAME/web/assets" -type f \( -name '*.js' -o -name '*.css' \) -print0 | while IFS= read -r -d '' asset; do

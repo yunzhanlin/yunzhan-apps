@@ -1,7 +1,7 @@
 {
   "format": 1,
-  "source_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a",
-  "source_sdk_files": 2466,
+  "source_inputs_sha256": "7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda",
+  "source_sdk_files": 2467,
   "source_files": {
     "cmd/executor/main.go": "194f794a61b0e14156623e760fe22ce94d6add95452c9b49ba00d7829437f52c",
     "internal/executor/app_sync_offline_authority_linux.go": "ba0f345fd38eabc1c9dfc0e565db6f2295af31baed9a87eb6e6782f9b0cf100b",
@@ -15,7 +15,7 @@
     "packaging/signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b",
     "packaging/test_filesync_offline_recovery.py": "ea88847857972c58208db0209990e645ce4c26dc38f4ed0b5c4a4415469c0516",
     "packaging/upgrade-release.py": "b361fd5c6923fba037a840e6ed3bc25076158dfd18fb9f75bfaa648cd6ad83b0",
-    "scripts/release-build-baseline.mjs": "eb28f9d810f54c4070ff7242140c828180d758b088920e6b91ecc4e0d75e4f76",
+    "scripts/release-build-baseline.mjs": "b106dcde040f9437753c83c6e224d66175e1768863c3b3e0bd57550f7a19d5f0",
     "scripts/test-native-queue-unit-snapshot.mjs": "41eff2635283a6bc9c27a4ac6e24a266ee0fbd68d3838736f1e0c35695ad64a2"
   },
   "native_package": "local/panel/internal/executor",

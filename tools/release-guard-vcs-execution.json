@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "source_inputs_sha256": "7ae19475cac7a31941533befe97d6288eabcc6f5b8a0ea9b83e3feadc3e8fdda",
+  "source_sdk_files": 2467,
+  "source_files": {
+    "packaging/build-release.sh": "5a6a416b51cb0f0c7844a41c47ff2aa239ba8364ff7475e8b95be286b065cdb2",
+    "packaging/test_release_guard_vcs.py": "e4eb4366bf875dcffe8026bc4e0716111153c9a55cd53d7ea04eaf64c1cf826c"
+  },
+  "python_methods": [
+    "ReleaseGuardVCSDeterminismTests.test_actual_release_command_keeps_v4_identical_with_inherited_vcs_and_new_commit"
+  ],
+  "actual_Root_Linux_tests_per_architecture": 1,
+  "skips": 0,
+  "actual_native_Go_compiler_required": true,
+  "previous_signed_C67_v4_sha256": {
+    "amd64": "0c4ec061e78ed74a509389ee82840780201955f0b76fd72f2212c3370ba40474",
+    "arm64": "f5b30909f37ee48c3b8e1acb493c284108af63ae3a5216b2ad3dd8de9e32a318"
+  },
+  "normal_installed_acceptance_separate": true
+}

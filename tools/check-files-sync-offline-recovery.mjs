@@ -21,7 +21,7 @@ function bounded(file,limit){const s=fs.lstatSync(file);assert(s.isFile()&&!s.is
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.argv.length,5);
  const index=JSON.parse(fs.readFileSync(root+'candidate/panel-integration-load-balance/source-sha256.json','utf8'));
- assert.equal(index.release.frozen_inputs_sha256,offlineRecoveryExecution.source_inputs_sha256);assert.equal(Object.keys(index.files).length,2466);assert.deepEqual(index.test_overrides??{},{});
+ assert.equal(index.release.frozen_inputs_sha256,offlineRecoveryExecution.source_inputs_sha256);assert.equal(Object.keys(index.files).length,2467);assert.deepEqual(index.test_overrides??{},{});
  const rows=bounded(process.argv[2],16<<20).split('\n').filter(Boolean).map(line=>JSON.parse(line));
  console.log(JSON.stringify(validateOfflineRecoveryEvidence(rows,JSON.parse(bounded(process.argv[3],4<<20)),process.argv[4])));
 }

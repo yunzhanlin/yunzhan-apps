@@ -26,7 +26,7 @@ export function verifyUnpublishedExecution(core,executor,tap,architecture){
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux');assert.equal(process.argv.length,6);
  const read=n=>{const st=fs.lstatSync(n);assert(st.isFile()&&!st.isSymbolicLink()&&st.size>0&&st.size<=4*1024*1024);return fs.readFileSync(n,'utf8')};
- const index=JSON.parse(fs.readFileSync(root+'candidate/panel-integration-load-balance/source-sha256.json'));assert.equal(index.release.frozen_inputs_sha256,unpublishedExecution.source_inputs_sha256);assert.equal(Object.keys(index.files).length,2466);assert.deepEqual(index.test_overrides??{},{});
+ const index=JSON.parse(fs.readFileSync(root+'candidate/panel-integration-load-balance/source-sha256.json'));assert.equal(index.release.frozen_inputs_sha256,unpublishedExecution.source_inputs_sha256);assert.equal(Object.keys(index.files).length,2467);assert.deepEqual(index.test_overrides??{},{});
  const rows=n=>read(n).trim().split('\n').map(line=>JSON.parse(line));
  console.log(JSON.stringify({...verifyUnpublishedExecution(rows(process.argv[2]),rows(process.argv[3]),read(process.argv[4]),process.argv[5]),source_inputs_sha256:unpublishedExecution.source_inputs_sha256}));
 }
