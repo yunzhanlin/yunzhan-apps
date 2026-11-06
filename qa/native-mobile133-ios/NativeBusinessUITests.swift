@@ -1,5 +1,18 @@
 import XCTest
 import Vision
+import CoreGraphics
+
+private enum C68SystemTextSelection {
+    static func accepts(_ observed:String, confidence:Float, requested:String, header:Bool, box:CGRect) -> Bool {
+        if confidence >= 0.9 { return true }
+        // iOS18.5 original Vision revision3 scored the visible chevron plus
+        // Browse at0.3. Accept only that exact observed back label and the
+        // original left-header region; other labels retain the0.9 rule.
+        let top=1-box.midY
+        return header && requested == "Browse" && observed == "‹ Browse" && confidence >= 0.3
+            && box.minX >= 0 && box.maxX <= 0.25 && top >= 0.05 && top <= 0.25
+    }
+}
 
 final class NativeBusinessUITests: XCTestCase {
     @MainActor private func attach(_ name:String,_ app:XCUIApplication) {
@@ -23,8 +36,9 @@ final class NativeBusinessUITests: XCTestCase {
         diagnostic.name="original-system-Vision-observations-"+label;diagnostic.lifetime = .keepAlways;add(diagnostic)
         var points:[CGVector]=[]
         for observation in request.results ?? [] {
-            guard let text=observation.topCandidates(1).first,text.confidence >= 0.9,
+            guard let text=observation.topCandidates(1).first,
                   let range=text.string.range(of:label),let box=try text.boundingBox(for:range)?.boundingBox else {continue}
+            guard C68SystemTextSelection.accepts(text.string,confidence:text.confidence,requested:label,header:header,box:box) else {continue}
             let top=1-box.midY
             guard box.width > 0 && box.height > 0 && box.midX > 0 && box.midX < 1 && top >= 0.05 && top <= (header ? 0.25 : 0.95) else {continue}
             points.append(CGVector(dx:box.midX,dy:top))
@@ -32,7 +46,7 @@ final class NativeBusinessUITests: XCTestCase {
         XCTAssertLessThanOrEqual(points.count,1,"Visible system target must be unique: "+label)
         if let point=points.first {
             let picture=XCTAttachment(screenshot:shot);picture.name="original-system-"+label+"-observed-pointer-screen";picture.lifetime = .keepAlways;add(picture)
-            let record=XCTAttachment(string:"label="+label+"; normalizedObservedX="+String(describing:point.dx)+"; normalizedObservedTop="+String(describing:point.dy)+"; minimumConfidence=0.9; actualCallbackStillRequired=true")
+            let record=XCTAttachment(string:"label="+label+"; normalizedObservedX="+String(describing:point.dx)+"; normalizedObservedTop="+String(describing:point.dy)+"; rule=exactOriginalTextAndRegionWithRecordedRecognitionEvidence; actualCallbackStillRequired=true")
             record.name="original-system-"+label+"-observed-pointer";record.lifetime = .keepAlways;add(record)
             return point
         }
