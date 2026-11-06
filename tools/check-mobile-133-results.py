@@ -13,10 +13,10 @@ if a.android:
    suite=ET.parse(report).getroot();rows=suite.findall('testcase');assert rows and len(rows)==int(suite.attrib['tests'])
    assert all(int(suite.attrib.get(name,0))==0 for name in ('failures','errors','skipped'))
    cases.extend(v.attrib['classname']+'.'+v.attrib['name']for v in rows)
-  assert len(cases)==len(set(cases))==38
-  for name,total in [('ForegroundDownloadTest',13),('DownloadMetadataTest',4),('DownloadCacheTest',5),('PanelAddressTest',3),('SessionCallbacksTest',13)]:assert sum('.'+name+'.'in value for value in cases)==total,(name,cases)
+  assert len(cases)==len(set(cases))==39
+  for name,total in [('ForegroundDownloadTest',14),('DownloadMetadataTest',4),('DownloadCacheTest',5),('PanelAddressTest',3),('SessionCallbacksTest',13)]:assert sum('.'+name+'.'in value for value in cases)==total,(name,cases)
   lint=root/'app/build/reports'/('lint-results-'+variant.lower()+'.xml');assert lint.is_file()and not ET.parse(lint).getroot().findall('issue')
-  records[variant]={'tests':38,'failed':0,'skipped':0,'lint_issues':0,'cases':cases,'lint_sha256':sha(lint)}
+  records[variant]={'tests':39,'failed':0,'skipped':0,'lint_issues':0,'cases':cases,'lint_sha256':sha(lint)}
  apks={}
  for name in ['app/build/outputs/apk/debug/app-debug.apk','app/build/outputs/apk/release/app-release-unsigned.apk']:
   f=root/name;assert f.is_file();apks[name]={'bytes':f.stat().st_size,'sha256':sha(f)}

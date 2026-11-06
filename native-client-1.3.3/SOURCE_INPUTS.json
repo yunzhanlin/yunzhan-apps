@@ -41,9 +41,9 @@
       "sha256": "295b60b0ab810c43fbe03b3a236b2873686273f94d61197380d37c976cd81aec"
     },
     "mobile/android/app/src/main/java/icu/yunzhan/panel/ForegroundDownload.java": {
-      "bytes": 10642,
+      "bytes": 11195,
       "mode": 420,
-      "sha256": "c28c17284c0dfac1f54df3dd2ec56e9ec76fbc0a9038fc112490d0dee9c7fa15"
+      "sha256": "de072509e3bdda3beb99a6bf0192e0a9dbe375518fea80dee29741759d396554"
     },
     "mobile/android/app/src/main/java/icu/yunzhan/panel/NativeFileExport.java": {
       "bytes": 5082,
@@ -101,9 +101,9 @@
       "sha256": "7beb2e2ce7253aefc703811e5f3a8f4484dbd81b1f155ccd5e7ae561d2dc25a6"
     },
     "mobile/android/app/src/test/java/icu/yunzhan/panel/ForegroundDownloadTest.java": {
-      "bytes": 13713,
+      "bytes": 14336,
       "mode": 420,
-      "sha256": "0ea5dbf90b839c159856d3418784edcbee7fbfd60e58edf6cfed8c33215bb788"
+      "sha256": "e8703b83d5b947a70530a0108ee63659bf281c9466d8dc1ed5f0449d8c376bfa"
     },
     "mobile/android/app/src/test/java/icu/yunzhan/panel/OwnedDownloadServer.java": {
       "bytes": 5867,
@@ -202,8 +202,8 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "e13d646a155ced14f16ed6d7bc7b5247a3012c28035e503ccd1d6f645a5f881b",
-  "source_commit": "d9341d761f33ec69279b361f51f53de6db58bbf1",
+  "inputs_sha256": "4e3d1a6d24574476c657bcd5fce7457d6df6010b22fa120a95bde3ea7ef7e621",
+  "source_commit": "c4b200eefc5e89cf0518c4271144398116a36f19",
   "source_overlays": {},
   "version": "1.3.3"
 }

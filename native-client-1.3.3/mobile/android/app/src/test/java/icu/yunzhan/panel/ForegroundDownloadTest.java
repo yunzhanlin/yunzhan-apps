@@ -80,6 +80,14 @@ public final class ForegroundDownloadTest {
     @Test public void advertisedCapacityRefusedBeforeBodyIsPublished()throws Exception{
         attachment("/too-large",payload,null,false);Capture c=new Capture();task("/too-large",c,1024).start();c.await();assertNull(c.result.get());assertEquals(ForegroundDownload.Failure.CAPACITY,c.failure.get());noPartial();
     }
+    @Test public void unavailableDiskReserveRefusesBeforeAnyManagementRequest()throws Exception{
+        AtomicInteger reached=new AtomicInteger();
+        server.createContext("/no-space",e->{reached.incrementAndGet();e.sendResponseHeaders(404,-1);e.close();});
+        Capture c=new Capture();
+        new ForegroundDownload(address,origin+"/no-space","panel_session=owned-fixture","OwnedTest/1",directory,Runnable::run,c,1024,Long.MAX_VALUE).start();
+        c.await();assertEquals(ForegroundDownload.Failure.CAPACITY,c.failure.get());
+        assertNull(c.result.get());assertEquals(0,reached.get());noPartial();
+    }
     @Test public void unboundedChunkedBodyCannotCrossItsLimit()throws Exception{
         attachment("/unknown-large",payload,null,true);Capture c=new Capture();task("/unknown-large",c,1024).start();c.await();assertNull(c.result.get());assertNotNull(c.failure.get());noPartial();
     }

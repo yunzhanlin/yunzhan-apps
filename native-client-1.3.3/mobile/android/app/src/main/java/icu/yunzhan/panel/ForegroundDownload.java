@@ -96,6 +96,13 @@ final class ForegroundDownload {
         }
         return value;
     }
+    @android.annotation.SuppressLint("UsableSpace")
+    private long availableStorageBytes() {
+        // Deliberately use currently usable bytes, not StorageManager's larger
+        // allocatable estimate or allocateBytes: receiving a file must not
+        // request eviction of other cached data to satisfy our reserve.
+        return directory.toFile().getUsableSpace();
+    }
     private void receive() {
         Path partial = null; Result completed = null; Failure failure = Failure.NETWORK;
         long deadline = System.nanoTime() + 5L * 60 * 1_000_000_000;
@@ -104,7 +111,10 @@ final class ForegroundDownload {
             if (!Files.isDirectory(directory, LinkOption.NOFOLLOW_LINKS) || Files.isSymbolicLink(directory)) throw new Refused(Failure.STORAGE);
             Set<java.nio.file.attribute.PosixFilePermission> permissions = Files.getPosixFilePermissions(directory, LinkOption.NOFOLLOW_LINKS);
             if (!permissions.equals(PosixFilePermissions.fromString("rwx------"))) throw new Refused(Failure.STORAGE);
-            if (Files.getFileStore(directory).getUsableSpace() <= reserve) throw new Refused(Failure.CAPACITY);
+            // Android refuses Files.getFileStore for ordinary app UIDs. File's
+            // available-space query uses the owned path's statvfs result without
+            // requiring filesystem inventory access. Zero remains a refusal.
+            if (availableStorageBytes() <= reserve) throw new Refused(Failure.CAPACITY);
             URL target = new URL(url); if (!address.allows(target.toString())) throw new Refused(Failure.RESPONSE);
             HttpURLConnection c = (HttpURLConnection)target.openConnection(); connection = c;
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(15000); c.setReadTimeout(15000);
@@ -116,7 +126,7 @@ final class ForegroundDownload {
             DownloadMetadata metadata;
             try { metadata = new DownloadMetadata(header(c,"Content-Disposition"), header(c,"Content-Type"), header(c,"Content-Length"), header(c,"Content-Encoding"), header(c,"X-Content-SHA256")); }
             catch (IllegalArgumentException e) { throw new Refused(Failure.RESPONSE); }
-            if (metadata.length > maximum || metadata.length > Files.getFileStore(directory).getUsableSpace() - reserve) throw new Refused(Failure.CAPACITY);
+            if (metadata.length > maximum || metadata.length > availableStorageBytes() - reserve) throw new Refused(Failure.CAPACITY);
             if (header(c,"Transfer-Encoding") != null && metadata.length >= 0) throw new Refused(Failure.RESPONSE);
             requireActive(deadline);
             partial = directory.resolve("download-" + UUID.randomUUID() + ".part");
@@ -128,7 +138,7 @@ final class ForegroundDownload {
                     requireActive(deadline);
                     if (count > maximum - received) throw new Refused(Failure.CAPACITY);
                     if (metadata.length >= 0 && count > metadata.length - received) throw new Refused(Failure.INTEGRITY);
-                    if (count > Files.getFileStore(directory).getUsableSpace() - reserve) throw new Refused(Failure.CAPACITY);
+                    if (count > availableStorageBytes() - reserve) throw new Refused(Failure.CAPACITY);
                     digest.update(buffer,0,count); ByteBuffer bytes = ByteBuffer.wrap(buffer,0,count);
                     while (bytes.hasRemaining()) file.write(bytes);
                     received += count;
