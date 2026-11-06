@@ -4,6 +4,8 @@ import CoreGraphics
 
 private enum C68SystemTextSelection {
     static func accepts(_ observed:String, confidence:Float, requested:String, header:Bool, box:CGRect) -> Bool {
+        // A centered Browse title is not a back control.
+        if header && requested == "Browse" && (box.minX < 0 || box.maxX > 0.25) { return false }
         if confidence >= 0.9 { return true }
         // iOS18.5 original Vision revision3 scored the visible chevron plus
         // Browse at0.3. Accept only that exact observed back label and the
@@ -23,7 +25,9 @@ final class NativeBusinessUITests: XCTestCase {
         // The original OS picker is visibly present while its remote AX tree
         // exposes only an invalid Other/Cancel proxy. Locate actual rendered
         // system text; never tap that hidden proxy or guessed coordinates.
-        let shot=app.screenshot(),png=shot.pngRepresentation
+        // The OS Files UI is hosted remotely. Application screenshots can
+        // capture its obscured presenting view, as retained in original QA19.
+        let shot=XCUIScreen.main.screenshot(),png=shot.pngRepresentation
         let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate
         request.recognitionLanguages=["en-US"];request.usesLanguageCorrection=false
         // Pass the original encoded screenshot, including image metadata.
@@ -52,11 +56,21 @@ final class NativeBusinessUITests: XCTestCase {
         }
         return nil
     }
+    @MainActor private func tapSystemPoint(_ point:CGVector,_ app:XCUIApplication) {
+        let window=app.windows.firstMatch,frame=app.windows.firstMatch.frame
+        // Original owned iPhone16Pro screenshots are1206x2622 at3x. The
+        // application itself can be transformed below the remote OS sheet.
+        XCTAssertTrue(window.exists)
+        XCTAssertEqual(frame,CGRect(x:0,y:0,width:402,height:874))
+        let geometry=XCTAttachment(string:"actualScreenPointer=true; originalWindowFrame="+String(describing:frame)+"; originalApplicationFrame="+String(describing:app.frame))
+        geometry.name="original-system-screen-window-coordinate-binding";geometry.lifetime = .keepAlways;add(geometry)
+        window.coordinate(withNormalizedOffset:point).tap()
+    }
     @MainActor private func tapSystemText(_ label:String,_ app:XCUIApplication,header:Bool) throws {
         let deadline=Date().addingTimeInterval(20)
         repeat {
             if let point=try visualSystemPoint(label,app,header:header) {
-                app.coordinate(withNormalizedOffset:point).tap()
+                tapSystemPoint(point,app)
                 RunLoop.current.run(until:Date().addingTimeInterval(0.4));return
             }
             RunLoop.current.run(until:Date().addingTimeInterval(0.4))
@@ -141,7 +155,7 @@ final class NativeBusinessUITests: XCTestCase {
         var systemCancellationSubmitted=false
         for step in 0..<3 {
             if let point=try visualSystemPoint("Cancel",app,header:true) {
-                app.coordinate(withNormalizedOffset:point).tap();systemCancellationSubmitted=true;break
+                tapSystemPoint(point,app);systemCancellationSubmitted=true;break
             }
             attach("original-system-document-sheet-before-visual-back-"+String(step),app)
             try tapSystemText("Browse",app,header:true)
@@ -149,7 +163,7 @@ final class NativeBusinessUITests: XCTestCase {
         XCTAssertTrue(systemCancellationSubmitted)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH %@","已取消保存，接收的文件仍可重新选择保存位置。")).firstMatch.waitForExistence(timeout:30))
         XCTAssertTrue(save.isEnabled);save.tap()
-        if let point=try visualSystemPoint("Browse",app,header:true) {app.coordinate(withNormalizedOffset:point).tap();RunLoop.current.run(until:Date().addingTimeInterval(0.4))}
+        if let point=try visualSystemPoint("Browse",app,header:true) {tapSystemPoint(point,app);RunLoop.current.run(until:Date().addingTimeInterval(0.4))}
         try tapSystemText("On My iPhone",app,header:false)
         try tapSystemText("C68 Receiver",app,header:false)
         // Original QA17 exposes a real visible Save button in the receiver folder.
