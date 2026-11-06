@@ -10,10 +10,17 @@ final class NativeBusinessUITests: XCTestCase {
         // The original OS picker is visibly present while its remote AX tree
         // exposes only an invalid Other/Cancel proxy. Locate actual rendered
         // system text; never tap that hidden proxy or guessed coordinates.
-        let shot=app.screenshot(),image=try XCTUnwrap(shot.image.cgImage)
+        let shot=app.screenshot(),png=shot.pngRepresentation
         let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate
         request.recognitionLanguages=["en-US"];request.usesLanguageCorrection=false
-        try VNImageRequestHandler(cgImage:image,options:[:]).perform([request])
+        // Pass the original encoded screenshot, including image metadata.
+        try VNImageRequestHandler(data:png,options:[:]).perform([request])
+        let observations=(request.results ?? []).compactMap { observation -> String? in
+            guard let text=observation.topCandidates(1).first else {return nil}
+            return "confidence="+String(text.confidence)+"; observedText="+text.string+"; box="+String(describing:observation.boundingBox)
+        }
+        let diagnostic=XCTAttachment(string:"requested="+label+"; originalPNGBytes="+String(png.count)+"; UIImageOrientation="+String(shot.image.imageOrientation.rawValue)+"; VisionRevision="+String(request.revision)+"\n"+observations.joined(separator:"\n"))
+        diagnostic.name="original-system-Vision-observations-"+label;diagnostic.lifetime = .keepAlways;add(diagnostic)
         var points:[CGVector]=[]
         for observation in request.results ?? [] {
             guard let text=observation.topCandidates(1).first,text.confidence >= 0.9,
