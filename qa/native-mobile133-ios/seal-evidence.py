@@ -22,7 +22,7 @@ try:
  if os.geteuid()==0:os.chown(sealed,owner.st_uid,owner.st_gid)
  # A small diagnostic envelope contains exact members of the full originals.
  # The complete xcresult, screenshots and all failures remain retained above.
- wanted={v['name']:v for v in included if len(pathlib.PurePosixPath(v['name']).parts)==1 and pathlib.PurePosixPath(v['name']).suffix in('.json','.stdout','.stderr')and v['bytes']<1<<20}
+ wanted={v['name']:v for v in included if len(pathlib.PurePosixPath(v['name']).parts)==1 and pathlib.PurePosixPath(v['name']).suffix in('.json','.stdout','.stderr','.png')and v['bytes']<1<<20}
  diagnostics=private/'original-diagnostics.tar.gz';selected=[];total=0
  with tarfile.open(envelope,'r:gz')as source,tarfile.open(diagnostics,'x:gz')as dest:
   for member in source:

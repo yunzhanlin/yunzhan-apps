@@ -11,9 +11,11 @@ final class NativeBusinessUITests: XCTestCase {
         return all.firstMatch
     }
     @MainActor private func tap(_ label:String,_ app:XCUIApplication) {
-        let target=visible(label,app),exists=target.waitForExistence(timeout:20)
-        if !exists || !target.isHittable { attach("unreachable-control-"+label,app) }
-        XCTAssertTrue(exists,"Original UI label missing: "+label);XCTAssertTrue(target.isHittable,"Original UI label not tappable: "+label);target.tap()
+        let target=visible(label,app)
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == true AND hittable == true"),object:target)
+        let outcome=XCTWaiter.wait(for:[ready],timeout:20)
+        if outcome != .completed { attach("unreachable-control-"+label,app) }
+        XCTAssertEqual(outcome,.completed,"Original UI control must become tappable: "+label);target.tap()
     }
     @MainActor private func reveal(_ target:XCUIElement,in view:XCUIElement) {
         for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeUp() }
@@ -49,7 +51,18 @@ final class NativeBusinessUITests: XCTestCase {
         let row=web.otherElements["查看 "+filename+" 的文件信息"];reveal(row,in:web)
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)
         let save=app.buttons["选择保存位置"];XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled);attach("original-native-attachment-received",app)
-        save.tap();tap("Cancel",app)
+        save.tap()
+        let cancel=app.buttons["Cancel"]
+        if cancel.waitForExistence(timeout:5) && cancel.isHittable { cancel.tap() }
+        else {
+            // Some Files presentations expose an inaccessible parent "Cancel"
+            // AX node beneath their More button. Dismiss the real system sheet
+            // with its ordinary navigation-bar drag; require the same actual
+            // cancellation callback and retained native file afterwards.
+            let navigation=app.navigationBars["FullDocumentManagerViewControllerNavigationBar"]
+            XCTAssertTrue(navigation.waitForExistence(timeout:20));XCTAssertTrue(navigation.isHittable)
+            attach("original-system-document-sheet-before-user-dismissal",app);navigation.swipeDown()
+        }
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label BEGINSWITH %@","已取消保存，接收的文件仍可重新选择保存位置。")).firstMatch.waitForExistence(timeout:30))
         XCTAssertTrue(save.isEnabled);save.tap()
         let browse=visible("Browse",app)
@@ -67,7 +80,7 @@ final class NativeBusinessUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format:"label CONTAINS %@",filename)).firstMatch.exists);attach("background-original-WebView-and-filename-hidden",app)
         tap("退出并重新登录",app);XCTAssertFalse(app.webViews.firstMatch.exists)
         XCTAssertTrue(endpoint.waitForExistence(timeout:20));endpoint.tap()
-        let current=(endpoint.value as?String) ?? "";endpoint.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:current.count));endpoint.typeText("http://127.0.0.1:19100/");tap("连接",app)
+        let current=(endpoint.value as?String) ?? "";endpoint.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:current.count));endpoint.typeText("http://127.0.0.1:19100/");XCTAssertEqual(endpoint.value as?String,"http://127.0.0.1:19100/");tap("连接",app)
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:20));XCTAssertFalse(app.webViews.firstMatch.exists);attach("original-release-refuses-cleartext",app);tap("知道了",app)
     }
 }
