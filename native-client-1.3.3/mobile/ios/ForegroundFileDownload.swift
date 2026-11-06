@@ -2,6 +2,14 @@ import Foundation
 import CryptoKit
 import Darwin
 
+// Xcode 16's paired iOS SDK imports this completion as MainActor-isolated.
+// New SDKs use the ordinary Sendable reply; keep both contracts explicit.
+#if os(iOS) && compiler(<6.2)
+typealias NativeChallengeReply = @MainActor @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+#else
+typealias NativeChallengeReply = @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+#endif
+
 struct NativeDownloadedFile: Sendable {
     let url: URL
     let metadata: NativeDownloadMetadata
@@ -192,8 +200,13 @@ final class ForegroundFileDownload: NSObject, URLSessionDataDelegate, @unchecked
     // SDKs. Foundation still validates server certificates; no trust credential
     // is supplied here. Refuse HTTP authentication rather than letting even an
     // empty credential proposal cause a second authenticated management GET.
-    func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
-        completionHandler(!isCancelled && challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust ? .performDefaultHandling : .cancelAuthenticationChallenge, nil)
+    func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping NativeChallengeReply) {
+        let disposition: URLSession.AuthChallengeDisposition = !isCancelled && challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust ? .performDefaultHandling : .cancelAuthenticationChallenge
+        #if os(iOS) && compiler(<6.2)
+        Task { @MainActor in completionHandler(disposition, nil) }
+        #else
+        completionHandler(disposition, nil)
+        #endif
     }
     private func finish(_ result: Result<NativeDownloadedFile, NativeDownloadFailure>) {
         guard !terminal else { return }; terminal = true
