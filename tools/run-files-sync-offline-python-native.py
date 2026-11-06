@@ -18,7 +18,7 @@ def main():
     source = repository/'candidate/panel-integration-load-balance'
     index = json.loads((source/'source-sha256.json').read_bytes())
     assert index['release']['frozen_inputs_sha256'] == spec['source_inputs_sha256']
-    assert len(index['files']) == spec['source_sdk_files'] == 2451 and not index.get('test_overrides')
+    assert len(index['files']) == spec['source_sdk_files'] == 2466 and not index.get('test_overrides')
     for name, digest in spec['source_files'].items():
         assert index['files'][name] == digest == hashlib.sha256((source/name).read_bytes()).hexdigest()
     output = pathlib.Path(sys.argv[1])

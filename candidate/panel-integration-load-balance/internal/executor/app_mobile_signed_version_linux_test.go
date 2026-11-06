@@ -30,7 +30,11 @@ import (
 )
 
 func TestMobileSelectedVersionSinkPreservesLegacyAndRefusesInstallOverwrite(t *testing.T) {
-	for _, version := range []string{"", "1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", "1.3.2"} {
+	versions := []string{"", "1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", "1.3.2"}
+	if core.NativeMobileAppVersion != "1.3.2" {
+		versions = append(versions, core.NativeMobileAppVersion)
+	}
+	for _, version := range versions {
 		t.Run(version, func(t *testing.T) {
 			s := New(Config{SecurityDir: filepath.Join(t.TempDir(), "security"), Run: func(context.Context, string, ...string) (string, error) {
 				t.Error("mobile record install must not execute host command")
@@ -68,7 +72,7 @@ func TestMobileSelectedVersionSinkPreservesLegacyAndRefusesInstallOverwrite(t *t
 			}
 		})
 	}
-	for _, version := range []string{"1.3.1", "1.3.2-compat1", "01.3.2", "1.3.3", "unknown"} {
+	for _, version := range []string{"1.3.1", "1.3.2-compat1", "01.3.2", "1.3.4", "unknown"} {
 		t.Run("refuse/"+version, func(t *testing.T) {
 			security := filepath.Join(t.TempDir(), "security")
 			s := New(Config{SecurityDir: security})
@@ -82,6 +86,39 @@ func TestMobileSelectedVersionSinkPreservesLegacyAndRefusesInstallOverwrite(t *t
 	}
 }
 
+func TestMobileReportReadsOriginalInstalledVersionWithoutRelabelling(t *testing.T) {
+	for _, version := range []string{"1.3.0", "1.3.2"} {
+		t.Run(version, func(t *testing.T) {
+			s := New(Config{SecurityDir: filepath.Join(t.TempDir(), "security"), Run: func(context.Context, string, ...string) (string, error) {
+				t.Error("a version-bound download report must not execute host commands")
+				return "", errors.New("excluded")
+			}})
+			if err := s.appModuleLifecycleVersion(context.Background(), "mobile-pwa", "install", map[string]any{"enabled": true}, version, func(string) {}); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join(s.moduleDir("mobile-pwa"), "installed.json")
+			before, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, err := s.runAppModule(context.Background(), "mobile-pwa", "run", core.AppModuleInput{})
+			report, ok := out.(map[string]any)
+			if err != nil || !ok || report["version"] != version {
+				t.Fatal("report impersonated a module update", report, err)
+			}
+			for _, download := range report["mobile_downloads"].([]map[string]string) {
+				if !strings.Contains(download["url"], "/mobile-v1.3.2/") {
+					t.Fatal("old module exposed a newer delivery", download)
+				}
+			}
+			after, err := os.ReadFile(path)
+			if err != nil || !bytes.Equal(before, after) {
+				t.Fatal("report changed original installation evidence", err)
+			}
+		})
+	}
+}
+
 // Actual authenticated Core -> verified private Ed25519 catalog/manifest ->
 // immutable SQLite queue -> normal worker -> real Unix executor -> private
 // installed.json -> actual store reconciliation/update. Only runtime/docker
@@ -89,7 +126,11 @@ func TestMobileSelectedVersionSinkPreservesLegacyAndRefusesInstallOverwrite(t *t
 // changed. This proves the integration contract, not live GitHub publication,
 // a physical mobile device or a production application installation.
 func TestSignedMobileCoreUnixExactInstallAndExplicitStoreUpdate(t *testing.T) {
-	for _, initial := range []string{"1.0", "1.3.0", core.NativeMobileAppVersion} {
+	versions := []string{"1.0", "1.3.0", "1.3.2"}
+	if core.NativeMobileAppVersion != "1.3.2" {
+		versions = append(versions, core.NativeMobileAppVersion)
+	}
+	for _, initial := range versions {
 		t.Run(initial, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
@@ -157,7 +198,9 @@ func TestSignedMobileCoreUnixExactInstallAndExplicitStoreUpdate(t *testing.T) {
 				defer mu.Unlock()
 				current = version
 				m := appcatalog.Manifest{SchemaVersion: 1, ID: "mobile", Name: "Private mobile version fixture", Category: "professional", Version: version, Summary: "Private exact signed version identity integration,not production acceptance", Stage: "ready", Risk: "normal", Delivery: appcatalog.Delivery{Provider: "panel-module", Target: "mobile-pwa", ManageRoute: "app-modules"}, Compatibility: appcatalog.Compatibility{OS: []string{runtimecatalog.HostPlatform()}, Architectures: []string{runtime.GOARCH}}, Capabilities: []string{"install", "update"}}
-				if version == core.NativeMobileAppVersion {
+				if version == appcatalog.NativeMobile132Version {
+					m.RequiredPanelFeatures = []string{appcatalog.NativeMobile132Feature}
+				} else if version == core.NativeMobileAppVersion {
 					m.RequiredPanelFeatures = []string{appcatalog.NativeMobileDeliveryFeature}
 				}
 				raw, e := json.Marshal(m)

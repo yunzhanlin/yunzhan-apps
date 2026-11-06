@@ -1,16 +1,49 @@
 package core
 
-import "local/panel/internal/appcatalog"
+import (
+	"errors"
+
+	"local/panel/internal/appcatalog"
+)
 
 const NativeMobileAppVersion = appcatalog.NativeMobileVersion
+
+func NativeMobileSignedVersion(version string) bool {
+	return appcatalog.NativeMobileSignedVersion(version)
+}
 
 // Fixed, built-and-verified artifacts. Never accept download URLs from module
 // settings. Private signing keys are not part of the panel or repository.
 func NativeMobileDelivery() map[string]any {
+	report, _ := NativeMobileDeliveryForVersion(NativeMobileAppVersion)
+	return report
+}
+
+// A programme upgrade must not present a new native artifact as though an old
+// module's immutable signed installation had already been updated.
+func NativeMobileDeliveryForVersion(version string) (map[string]any, error) {
+	if version == appcatalog.NativeMobile132Version {
+		return nativeMobile132Delivery(), nil
+	}
+	if version == appcatalog.NativeMobile133Version {
+		return nativeMobile133Delivery(), nil
+	}
+	if appcatalog.NativeMobileUpdateVersionAllowed(version) && !NativeMobileSignedVersion(version) {
+		report := nativeMobile132Delivery()
+		report["version"] = version
+		report["native_package_version"] = appcatalog.NativeMobile132Version
+		report["legacy_pwa_installation"] = true
+		report["scope"] = "当前安装为旧版 PWA，以下原生下载仍为已发布的1.3.2；更新应用后再获取新版。" + report["scope"].(string)
+		return report, nil
+	}
+	return nil, errors.New("该移动应用版本没有匹配的下载信息；原安装记录未改变")
+}
+
+func nativeMobile132Delivery() map[string]any {
 	const release = "https://github.com/yunzhanlin/yunzhan-apps/releases/download/mobile-v1.3.2/"
 	return map[string]any{
 		"manifest": "/manifest.webmanifest", "installable": true,
-		"version": NativeMobileAppVersion, "delivery_model": "原生安全容器 + 真实面板响应式业务页", "session_model": "HTTPS + HttpOnly + SameSite + CSRF + TOTP + 原角色与网站范围",
+		"version": appcatalog.NativeMobile132Version, "delivery_model": "原生安全容器 + 真实面板响应式业务页", "session_model": "HTTPS + HttpOnly + SameSite + CSRF + TOTP + 原角色与网站范围",
 		"physical_device_acceptance": false, "android_target_sdk": 37, "native_source_inputs_sha256": "2b963086f95fdc30787c7d27ad5680b9fb5802e1dec28f5d824e3670f211a052",
 		"android_emulator_session_acceptance": true, "android_emulator_api": 37, "ios_accessibility_ui_acceptance": false,
 		"android_signer_sha256": "0ba923afca85db94f4bdabd6d235fcf1c7088bb167ace661bf21781d1c7f0bd5",

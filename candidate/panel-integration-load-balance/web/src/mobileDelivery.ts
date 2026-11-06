@@ -17,6 +17,14 @@ const releases: Readonly<Record<string, { prefix: string; files: Readonly<Record
       "yunzhan-mobile-1.3.2-source.tar.gz": "6fcbbaa8d18ba1cb22aa050b849dd8d3e1488e8f845b32c1930cb0eea2cc313f",
     }),
   },
+  "1.3.3": {
+    prefix: "https://github.com/yunzhanlin/yunzhan-apps/releases/download/mobile-v1.3.3/",
+    files: Object.freeze({
+      "yunzhan-mobile-1.3.3-android.apk": "a60a6d022fe932be837807ad27745cc362bb85bd2bf85af89ad2082b6ed9db74",
+      "yunzhan-mobile-1.3.3-ios-unsigned.tar.gz": "7398fc9cd319232d5983dcffebddc2a53a6d6f3705925b1f0d56c5698bb9f882",
+      "yunzhan-mobile-1.3.3-source.tar.gz": "ee40e9c48470a6d1e6f16d895a28be61f2ae045cfd4e5c4dd4e5fe8458f38567",
+    }),
+  },
 });
 
 export function mobileArtifactURL(version: unknown, item: unknown): string | undefined {

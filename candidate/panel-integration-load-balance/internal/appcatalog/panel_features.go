@@ -57,6 +57,11 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 func panelFeatureAvailable(feature string) bool {
+	// Keep the published 1.3.2 ABI available independently of whichever native
+	// delivery revision becomes current in a later programme upgrade.
+	if feature == NativeMobile132Feature || feature == NativeMobile133Feature {
+		return runtime.GOOS == "linux"
+	}
 	if feature == FilesSyncIndependentBackupFeature || feature == FilesSyncUnpublishedRetentionFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}

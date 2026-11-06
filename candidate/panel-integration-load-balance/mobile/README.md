@@ -1,12 +1,14 @@
 # 云栈原生移动客户端
 
-原生 Android Activity / iOS SwiftUI + WKWebView 连接用户自己的云栈面板，业务页面来自已安装面板，不是离线模拟数据。原生层负责地址验证、TLS、后台锁屏、设备认证、会话清除和文件选择；业务操作继续使用面板的 HttpOnly Cookie、CSRF、TOTP、角色和网站范围。不使用 JavaScript 原生桥，不保存账号密码，不将管理会话交给外部浏览器或系统下载器。
+原生 Android Activity / iOS SwiftUI + WKWebView 连接用户自己的云栈面板，业务页面来自已安装面板，不是离线模拟数据。原生层负责地址验证、TLS、后台锁屏、设备认证、会话清除、文件选择及前台附件下载；业务操作继续使用面板的 HttpOnly Cookie、CSRF、TOTP、角色和网站范围。不使用 JavaScript 原生桥，不保存账号密码，不将管理会话交给外部浏览器或系统下载器。
 
 正式构建只接受 HTTPS；安全入口路径可以随地址填写，但不能带临时令牌、查询参数或 URL 用户名密码。不能忽略证书错误。QA 构建只放行模拟器或 adb 回环 HTTP，不能分发为正式包。手机的 `127.0.0.1` 指手机自身，不是电脑；连接实际服务器需要该服务器可达的 HTTPS 面板地址或安全隧道。
 
 Android 最低 API 30（Android 11），构建使用 JDK 17、Gradle 9.3.1、Android Gradle Plugin 9.1.1、SDK 37.0，目标 API 37：
 
-Android 模块是纯 Java，使用模块级 `enableKotlin = false` 避免自动加入无用的 Kotlin 运行库；仍保留现代构建 DSL、Debug/Release 两套单元测试及严格 lint。
+系统版本与 WebView 内核分别检查。当前前端至少需要 Chromium 111；连接前读取系统实际 WebView 包版本，旧版、缺失或无法识别的版本显示更新提示，不创建面板网页、不发送连接请求、不替换当前连接，也不下载或切换系统 WebView。用户应通过系统应用商店更新到最新稳定版；最低兼容版本并非安全补丁保证。该要求对应 [Vite 8 的正式构建浏览器基线](https://vite.dev/guide/build)。
+
+Android 源码使用 Java，保留模块级 `enableKotlin = false`、Debug/Release 两套单元测试及严格 lint。AndroidX Activity 负责结果注册和系统返回调度；它所需的 Kotlin 与 Jetpack 运行库随 APK 提供，第三方许可位于 APK 的 `assets/third_party_licenses.txt`。
 
 ```sh
 cd android
@@ -33,8 +35,14 @@ xcodebuild -project YunzhanMobile.xcodeproj -scheme YunzhanMobile \
 
 1.3.2 为 Android 与 iOS 的网页事件增加原 WebView 与连接凭据绑定。旧连接的进度、网络错误、弹窗、文件选择及下载回调不能操作新连接；网页确认弹窗使用一次性凭据，进入后台、断开、销毁或更换连接时撤销，确认按钮在点击时再次核对归属。网页进程退出后清除本地登录状态，不自动恢复旧页面或会话。Android 原生界面文本使用中英文资源，Debug 与 Release lint 均将警告视为失败。iOS 保留系统真实设备 User-Agent 并附加客户端版本，不再伪装固定 iPhone/iOS 版本。
 
-锁定时不仅绘制遮罩：Android 将 WebView 设为不可见并从辅助功能树隐藏其后代；iOS 在同一次隐私状态同步中隐藏原生 WKWebView 及其辅助功能元素，并同步 SwiftUI 辅助功能隐藏。断开时立即隐藏旧原生视图。恢复必须在原连接的一次性认证成功、当前会话已解锁且回到前台后进行。文件选择返回不自动恢复网页。两个平台都需要各自的真实平台交互验收，Android 模拟器结果不能代替 iOS VoiceOver 或真机验收。
+1.3.3 增加当前面板附件的前台流式下载。用户确认后，原连接的 Cookie 只用于应用内同源请求，不交给系统下载服务；网络跳转、跨源、错误状态、非附件响应、压缩混淆、超限、截断和不符的服务端 SHA-256 均不作为完整文件提供。单个附件最多 2 GiB，最长 5 分钟，保留 128 MiB 磁盘余量。接收完成后计算摘要并关闭写入句柄，再由用户选择保存位置。切到后台停止未完成传输；断开或更换连接会撤销旧回调并丢弃未导出的临时文件，不自动重试。网页生成的 `blob:` 下载暂不走原生接收，文件管理的正常附件接口可用。
+
+Android 使用 `ACTION_CREATE_DOCUMENT` 创建用户选择的新文档，并重新读取核对长度和摘要；文件提供方接受写入但不能重新读取时，会显示未核对状态并保留私有接收副本，不能冒充已验证保存。取消或提供方出错可能在目标位置留下不完整文件，应用不自行删除该位置。每次上传或导出都注册新的 ActivityResultRegistry UUID，Activity 重建或进程恢复后的旧结果不能交给新连接；原连接的结果在锁定时仍须等待认证后处理。iOS 使用系统文档导出器复制已关闭的完整私有文件；系统返回仅代表交给文件提供方，云端同步和目标内容需在所选位置确认。
+
+临时缓存只清理由本应用创建、私有权限正确且无额外硬链接的已知文件；符号链接、权限异常和未知文件保留并拒绝继续。一个原生 IO 工作未真正收尾时，不排队启动新工作。文件名、网页及其辅助功能元素在后台锁定时隐藏。iOS 隐私清单声明应用容器文件元数据、写入前空间检查及本应用地址偏好的必要 API 用途；空间信息不发送到服务器。以上实现、模型/传输测试、平台 UI、外部文件提供方和真机验收分别记录，不能互相替代。
+
+锁定时不仅绘制遮罩：Android 将 WebView 设为不可见并从辅助功能树隐藏其后代；iOS 在同一次隐私状态同步中隐藏原生 WKWebView，并将它从稳定容器中移出，避免后续 SwiftUI 布局重新暴露网页辅助功能节点。断开时立即移出旧原生视图。恢复必须在原连接的一次性认证成功、当前会话已解锁且回到前台后进行，容器才重新挂载原网页。文件选择返回不自动恢复网页。两个平台都需要各自的真实平台交互验收，Android 模拟器结果不能代替 iOS VoiceOver 或真机验收。
 
 面板是需要 JavaScript 的 Vue 业务页面。Android 仅在固定 WebSettings 配置方法中确认这一条必需的 lint 提示，不全局关闭安全检查；正式包仍要求 HTTPS、证书错误取消连接，不提供 JavaScript/原生桥，禁用文件和 content URL 访问、混合内容及第三方 Cookie。面板服务端必须继续发送自身的严格 CSP（包括 `default-src 'self'`、`script-src 'self'` 和 `connect-src 'self'`），不能加载不受信任的外站脚本。Android 官方明确说明，资源回调只收到重定向的初始 URL，且不覆盖 `blob:` 和 `javascript:`；因此原生回调不能被表述为覆盖全部流量的网络防火墙。参见 [WebViewClient 资源回调](https://developer.android.com/reference/android/webkit/WebViewClient) 和 [WebView 原生桥安全指南](https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges)。
 
-边界：业务页使用当前面板的响应式 UI，不是独立重写的所有原生业务表单；无离线管理、系统推送和自动后台运维。管理文件下载暂由可信浏览器登录后完成；移动端不自动导出敏感管理会话。Android 使用 FLAG_SECURE 隐藏截图和最近任务；iOS 遮挡后台快照，但不能承诺阻止系统截图。清除会话删除本地凭据，不替代服务器管理员的会话撤销。设备未设锁屏时，返回已锁定会话需要退出重登或先设置系统锁屏。以上边界不能标记为商业移动端全能力完成。
+边界：业务页使用当前面板的响应式 UI，不是独立重写的所有原生业务表单；无离线管理、系统推送和自动后台运维。前台附件下载不导出管理会话，也不保证云端文件提供方的最终同步。Android 使用 FLAG_SECURE 隐藏截图和最近任务；iOS 遮挡后台快照，但不能承诺阻止系统截图。清除会话删除本地凭据，不替代服务器管理员的会话撤销。设备未设锁屏时，返回已锁定会话需要退出重登或先设置系统锁屏。以上边界不能标记为商业移动端全能力完成。

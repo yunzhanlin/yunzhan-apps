@@ -2,7 +2,7 @@ name: isolated candidate catalogue and native ABI
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67]
+    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67, codex/mobile-native-download-c68]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,9 @@ jobs:
           go-version-file: candidate/panel-integration-load-balance/go.mod
           cache-dependency-path: candidate/panel-integration-load-balance/go.sum
       - name: Actual stable and candidate catalogues, signatures and historical regressions
-        run: npm test
+        run: |
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          npm test
       - name: Candidate build must not modify the stable signed directory
         run: git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures
       - name: Independent Draft202012 schema for signed fifty and exact intrusion111 negatives
@@ -59,6 +61,11 @@ jobs:
       - name: Complete Root filesystem fixtures using the actual compiled candidate channel
         working-directory: candidate/panel-integration-load-balance
         run: sudo env CGO_ENABLED=0 "$(command -v go)" test -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./...
+      - name: Actual retained132 and current133 signed Core queue Unix executor and version identities
+        working-directory: candidate/panel-integration-load-balance
+        run: |
+          sudo env CGO_ENABLED=0 "$(command -v go)" test -json -count=1 -p 1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog ./internal/core ./internal/executor -run '^(TestNativeMobile|TestSignedInstall|TestMobileSelectedVersion|TestMobileReportReads|TestSignedMobileCoreUnix)' > "$RUNNER_TEMP/mobile133-version-native.jsonl"
+          python3 -I -B ../../tools/check-mobile133-version-native.py "$RUNNER_TEMP/mobile133-version-native.jsonl"
       - name: Actual Apache CC source methods and six real native C cases with nonempty execution proof
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -100,7 +107,7 @@ jobs:
               assert len(tests)==len(set(tests))==84 and set(tests)==expected,'Missing, duplicate or foreign Root execution cannot qualify'
           assert sum(row.get('Action')=='pass' and not row.get('Test')for row in rows)==1
           index=json.loads(pathlib.Path('source-sha256.json').read_text())
-          assert index['release']['frozen_inputs_sha256']=='22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894' and len(index['files'])==2451
+          assert index['release']['frozen_inputs_sha256']=='a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a' and len(index['files'])==2466
           print(json.dumps({'ok':True,'architecture':platform.machine(),'actual_Root_methods':2,'PASS':84,'skips':0,'source_inputs_sha256':index['release']['frozen_inputs_sha256'],'normal_installed_acceptance':False}))
           PY
       - name: Actual Root upgrade leases and absent-statistics shared namespace fixtures
@@ -454,4 +461,12 @@ jobs:
             ${{ runner.temp }}/integrity-kernel-legacy-predecessor.jsonl
             ${{ runner.temp }}/integrity-kernel-original-publication-defect.jsonl
           retention-days: 7
+          if-no-files-found: error
+      - name: Retain actual mobile133 version fixtures including original failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: mobile133-version-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/mobile133-version-native.jsonl
+          retention-days: 14
           if-no-files-found: error

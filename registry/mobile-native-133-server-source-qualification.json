@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "source_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a",
+  "source_sdk_files": 2466,
+  "source_index_sha256": "02687f40d60e381b4780a1716fedd979d5a0307e683b23354c0e0250179a9d0b",
+  "archive_sha256": "2f64eba9ac2704149e4a945827d0d22d8352ffd47738591b6d5141549cad2fde",
+  "zero_source_overlays": true,
+  "native133_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
+  "accepted_original_server_commit": "5f8457971e3ca4868d85c70d3f854d5773f25c8f",
+  "accepted_original_server_SDK_tree": "c07c9c047359fa6696fa3eb73eef721ec0429ab0",
+  "native_only_original_qualification_is_historical": true,
+  "retained132_version_and_artifacts_unchanged": true,
+  "actual_C68_Linux_execution_pending": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}

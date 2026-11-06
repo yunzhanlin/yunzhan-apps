@@ -1,6 +1,6 @@
 import Foundation
 
-struct SessionCallbackTicket: Equatable {
+struct SessionCallbackTicket: Equatable, Sendable {
     fileprivate let session: UUID
     fileprivate let nonce = UUID()
 }

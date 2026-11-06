@@ -16,6 +16,9 @@ const props = defineProps<{ id: string; report: Record<string, any> }>();
 const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
+  version: "应用版本",
+  delivery_model: "应用类型",
+  session_model: "登录与权限",
   pm2_version: "PM2 版本",
   configuration_transactions: "配置更新与恢复记录",
   configuration_transaction: "本次配置更新回执",
@@ -532,6 +535,7 @@ const info = computed(() =>
       value !== null &&
       value !== undefined &&
       !["scope", "site_id", "filters", "token"].includes(key) &&
+      (props.id !== "mobile-pwa" || ["version", "delivery_model", "session_model"].includes(key)) &&
       typeof value !== "object" &&
       !metrics.value.some(([k]) => k === key),
   ),
@@ -653,7 +657,10 @@ function directory(name: string) {
   const selected=diskDirectorySelection(props.report.path,name);if(selected)emit("select",selected);
 }
 function mobileDownloadURL(item: unknown): string | undefined {
-  return mobileArtifactURL(props.report.version, item);
+  const originalLegacy = props.report.legacy_pwa_installation === true
+    && ["1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0"].includes(props.report.version)
+    && props.report.native_package_version === "1.3.2";
+  return mobileArtifactURL(originalLegacy ? "1.3.2" : props.report.version, item);
 }
 </script>
 <template>

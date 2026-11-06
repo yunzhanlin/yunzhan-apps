@@ -61,7 +61,11 @@ func TestSignedInstallVersionAllDeclaredModulesKeepExactIdentity(t *testing.T) {
 }
 
 func TestSignedInstallLegacyEmptyVersionOriginalIsResolvedWithoutMutation(t *testing.T) {
-	for _, version := range []string{"1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", NativeMobileAppVersion} {
+	versions := []string{"1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", "1.3.2"}
+	if NativeMobileAppVersion != "1.3.2" {
+		versions = append(versions, NativeMobileAppVersion)
+	}
+	for _, version := range versions {
 		for _, state := range []string{"queued", "failed", "needs_attention", "succeeded"} {
 			t.Run(version+"/"+state, func(t *testing.T) {
 				s, _, j := signedVersionFixture(t, "mobile-pwa", version, "")
@@ -168,12 +172,23 @@ func TestSignedInstallWorkerUsesRetainedVersionOnlyInExecutionEnvelope(t *testin
 }
 
 func TestNativeMobileCannotBorrowUnsignedNoopForeignOrRevokedQueueBinding(t *testing.T) {
+	versions := []string{"1.3.2"}
+	if NativeMobileAppVersion != "1.3.2" {
+		versions = append(versions, NativeMobileAppVersion)
+	}
+	for _, version := range versions {
+		t.Run(version, func(t *testing.T) { nativeMobileQueueBindingChecks(t, version) })
+	}
+}
+
+func nativeMobileQueueBindingChecks(t *testing.T, version string) {
+	t.Helper()
 	for _, action := range []string{"install", "update"} {
 		for _, scenario := range []string{"signed", "nil", "noop", "foreign", "revoked"} {
 			t.Run(action+"/"+scenario, func(t *testing.T) {
 				s := testStore(t)
 				u := accessUser(t, s, "native-admin", "admin", nil)
-				item := appcatalog.CatalogItem{ID: "mobile", Target: "mobile-pwa", Provider: "panel-module", Version: NativeMobileAppVersion, SHA256: strings.Repeat("b", 64)}
+				item := appcatalog.CatalogItem{ID: "mobile", Target: "mobile-pwa", Provider: "panel-module", Version: version, SHA256: strings.Repeat("b", 64)}
 				if scenario == "foreign" {
 					item.ID = "daily-report"
 				}
@@ -192,7 +207,7 @@ func TestNativeMobileCannotBorrowUnsignedNoopForeignOrRevokedQueueBinding(t *tes
 						t.Fatal(err)
 					}
 				}
-				job, err := s.queueSoftwareActionBound("mobile-pwa", action, nil, NativeMobileAppVersion, "native-mobile-original", u.Username, bind)
+				job, err := s.queueSoftwareActionBound("mobile-pwa", action, nil, version, "native-mobile-original", u.Username, bind)
 				if scenario != "signed" {
 					if err == nil || job != "" {
 						t.Fatal("unsigned native delivery queued", job, err)
@@ -214,7 +229,7 @@ func TestNativeMobileCannotBorrowUnsignedNoopForeignOrRevokedQueueBinding(t *tes
 				if _, err := s.DB.Exec(`DELETE FROM app_registry_pending WHERE job_id=?`, job); err != nil {
 					t.Fatal(err)
 				}
-				again, err := s.queueSoftwareActionBound("mobile-pwa", action, nil, NativeMobileAppVersion, "native-mobile-original", u.Username, bind)
+				again, err := s.queueSoftwareActionBound("mobile-pwa", action, nil, version, "native-mobile-original", u.Username, bind)
 				if err != nil || again != job {
 					t.Fatal("completed native request adopted or changed", again, err)
 				}

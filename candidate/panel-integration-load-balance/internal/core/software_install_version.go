@@ -48,7 +48,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 	if count == 0 {
 		// The legacy unbound direct interface remains legacy. It cannot borrow
 		// the independently signed native identities by naming a new version.
-		if j.TargetID == "mobile-pwa" && requested == NativeMobileAppVersion || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) {
+		if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(requested) || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) {
 			return "", bad
 		}
 		if requested != "" && ValidateSoftwareInstallVersion(j.TargetID, requested) != nil {
@@ -66,7 +66,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 		validateRegistryUpdateRequest(app, actor, key, registryUpdateInput{version, digest}) != nil || ValidateSoftwareInstallVersion(j.TargetID, version) != nil || requested != "" && requested != version {
 		return "", bad
 	}
-	if j.TargetID == "mobile-pwa" && version == NativeMobileAppVersion {
+	if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(version) {
 		access, err := readUserAccess(q, actor)
 		if err != nil || access.Role != "admin" || !menuSubset([]string{"runtimes"}, access.MenuIDs) {
 			return "", bad
@@ -79,7 +79,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 // exact registry row after that callback within the SAME queue transaction.
 // Replays validate the original but never recreate consumed pending rows.
 func mobileNativeQueueBinding(q softwareInstallRowQueryer, action, key, job, username, payload string) error {
-	bad := errors.New("移动端1.3.2需要原签名版本、摘要、账户和任务绑定；未提交或重新采用")
+	bad := errors.New("移动端原生交付需要原签名版本、摘要、账户和任务绑定；未提交或重新采用")
 	var actor, app, version, digest, provider, scope, boundJob string
 	table := "app_registry_install_requests"
 	if action == "update" {
@@ -87,7 +87,7 @@ func mobileNativeQueueBinding(q softwareInstallRowQueryer, action, key, job, use
 	} else if action != "install" {
 		return bad
 	}
-	if ensureRegistryRequestOpen(q, key) != nil || q.QueryRow("SELECT actor_id,app_id,version,sha256,provider,scope,job_id FROM "+table+" WHERE idempotency_key=?", key).Scan(&actor, &app, &version, &digest, &provider, &scope, &boundJob) != nil || !ValidID(actor) || app != "mobile" || version != NativeMobileAppVersion || !registryDigestValid(digest) || provider != "panel-module" || scope != "mobile-pwa" || boundJob != job {
+	if ensureRegistryRequestOpen(q, key) != nil || q.QueryRow("SELECT actor_id,app_id,version,sha256,provider,scope,job_id FROM "+table+" WHERE idempotency_key=?", key).Scan(&actor, &app, &version, &digest, &provider, &scope, &boundJob) != nil || !ValidID(actor) || app != "mobile" || !NativeMobileSignedVersion(version) || !registryDigestValid(digest) || provider != "panel-module" || scope != "mobile-pwa" || boundJob != job {
 		return bad
 	}
 	var actualUser string
@@ -107,7 +107,7 @@ func mobileNativeQueueBinding(q softwareInstallRowQueryer, action, key, job, use
 		if err != nil || resolved != version {
 			return bad
 		}
-	} else if payload != `{"settings":null,"version":"`+NativeMobileAppVersion+`"}` {
+	} else if payload != `{"settings":null,"version":"`+version+`"}` {
 		return bad
 	}
 	return nil

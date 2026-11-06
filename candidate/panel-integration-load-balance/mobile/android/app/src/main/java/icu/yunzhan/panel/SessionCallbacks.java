@@ -17,7 +17,9 @@ final class SessionCallbacks<T> {
     private Ticket auth, picker, view, prompt;
     private T selected;
     private boolean active, foreground, locked, selectionReady;
-    // Android activity result codes are never reused in this Activity instance.
+    // Local selection sequences are never reused by this state owner. OS
+    // results additionally use a new ActivityResultRegistry UUID for each
+    // launch, so restored results cannot target a new Activity's selection.
     private int nextRequestCode = 1024;
 
     void start() { end(); active = true; view = new Ticket(session, -1); locked = !foreground; }

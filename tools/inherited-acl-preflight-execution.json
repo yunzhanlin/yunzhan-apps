@@ -1,7 +1,7 @@
 {
   "format": 1,
-  "source_inputs_sha256": "22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894",
-  "source_sdk_files": 2451,
+  "source_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a",
+  "source_sdk_files": 2466,
   "source_files": {
     "packaging/native-build-directories.py": "f03e653abf6c46a7b9473b02362b69da093551eb7cd3239f780b39efc33c1a7d",
     "packaging/test_native_build_directories.py": "bfd2144471fb7d65aa9c6c4cd4167b4c045e34d6bbc25f69f99465dbe6a601cb",

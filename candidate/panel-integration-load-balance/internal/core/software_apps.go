@@ -322,7 +322,7 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 		return "", errors.New("软件生命周期操作无效")
 	}
 	nativeApache := id == "apache-waf" && ApacheWAFNativeVersion(version) && (action == "install" || action == "update")
-	nativeMobile := id == "mobile-pwa" && version == NativeMobileAppVersion && (action == "install" || action == "update")
+	nativeMobile := id == "mobile-pwa" && NativeMobileSignedVersion(version) && (action == "install" || action == "update")
 	if nativeApache && bind == nil {
 		return "", errors.New("Apache2.4原生安装或更新须使用匹配的签名仓库请求，旧直接接口不能提升能力")
 	}

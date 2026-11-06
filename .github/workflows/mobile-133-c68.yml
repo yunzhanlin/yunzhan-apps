@@ -52,7 +52,7 @@ jobs:
           retention-days: 14
           if-no-files-found: error
   original-iOS:
-    runs-on: macos-15
+    runs-on: macos-15-intel
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262

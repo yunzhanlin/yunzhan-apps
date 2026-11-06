@@ -1,7 +1,7 @@
 {
   "format": 1,
-  "source_inputs_sha256": "22887f9f2054290c57ce6af5f55b1021b1a5b9e6ea3dd751e4154ebefdf93894",
-  "source_sdk_files": 2451,
+  "source_inputs_sha256": "a976fe06fadb60fda593f2021fd9429a12de619f0b2af407373e790754df898a",
+  "source_sdk_files": 2466,
   "source_files": {
     "packaging/install.sh": "da99ebb49adad80a1cdbbf053207b1242c2ddd101a3a3be7f94b19c830bf6d72",
     "packaging/test_install_gateway_policy.py": "6f77e98ebcf0a542948ea1c29f86afbcc726aba1f2413be6241dde263d7adeab"

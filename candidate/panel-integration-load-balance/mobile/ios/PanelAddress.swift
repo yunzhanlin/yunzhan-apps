@@ -1,6 +1,6 @@
 import Foundation
 
-struct PanelAddress: Equatable {
+struct PanelAddress: Equatable, Sendable {
     let url: URL
     private static func components(_ raw: String) throws -> URLComponents {
         guard raw.utf8.count <= 2048, !raw.isEmpty,

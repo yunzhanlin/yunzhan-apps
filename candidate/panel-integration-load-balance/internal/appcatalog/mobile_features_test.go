@@ -10,6 +10,21 @@ func mobileDeliveryFixture() Manifest {
 	return Manifest{SchemaVersion: 1, ID: "mobile", Version: NativeMobileVersion, Delivery: Delivery{Provider: "panel-module", Target: "mobile-pwa", ManageRoute: "app-modules"}, RequiredPanelFeatures: []string{NativeMobileDeliveryFeature}}
 }
 
+func TestNativeMobilePublished132RetainsItsOriginalHandler(t *testing.T) {
+	if panelFeatureAvailable("mobile-native-delivery-v132") != (runtime.GOOS == "linux") {
+		t.Fatal("published 1.3.2 compiled handler disappeared on a programme upgrade")
+	}
+	m := mobileDeliveryFixture()
+	m.Version, m.RequiredPanelFeatures = "1.3.2", []string{"mobile-native-delivery-v132"}
+	if !NativeMobileSignedVersion("1.3.2") || validatePanelRequirements(m, func(f string) bool { return f == "mobile-native-delivery-v132" }) != nil {
+		t.Fatal("previously published native identity lost its original handler")
+	}
+	m.RequiredPanelFeatures = []string{"mobile-native-delivery-v133"}
+	if err := validatePanelRequirements(m, func(string) bool { return true }); err == nil {
+		t.Fatal("original 1.3.2 manifest borrowed a different handler")
+	}
+}
+
 func TestNativeMobileDeliveryRequiresExactCompiledHandler(t *testing.T) {
 	if err := validatePanelRequirements(mobileDeliveryFixture(), func(f string) bool { return f == NativeMobileDeliveryFeature }); err != nil {
 		t.Fatal(err)
@@ -63,7 +78,7 @@ func TestNativeMobileLegacyManifestsAndPlatformBoundary(t *testing.T) {
 			t.Fatal("historical manifest lost acceptance", version, err)
 		}
 	}
-	for _, version := range []string{"1.0.0", "1.0-compat2", "1.2.1", "01.3.0", "1.3.1", "1.3.2-compat1", "1.3.3", "18446744073709551616.0.0", "unknown"} {
+	for _, version := range []string{"1.0.0", "1.0-compat2", "1.2.1", "01.3.0", "1.3.1", "1.3.2-compat1", "1.3.4", "18446744073709551616.0.0", "unknown"} {
 		m := mobileDeliveryFixture()
 		m.Version, m.RequiredPanelFeatures = version, nil
 		if NativeMobileUpdateVersionAllowed(version) {
@@ -73,7 +88,7 @@ func TestNativeMobileLegacyManifestsAndPlatformBoundary(t *testing.T) {
 			t.Fatal("unpublished client bypassed the exact mobile handler", version)
 		}
 	}
-	if panelFeatureAvailable(NativeMobileDeliveryFeature) != (runtime.GOOS == "linux") || panelFeatureAvailable("mobile-native-delivery-v133") {
+	if panelFeatureAvailable(NativeMobileDeliveryFeature) != (runtime.GOOS == "linux") || panelFeatureAvailable("mobile-native-delivery-v132") != (runtime.GOOS == "linux") || panelFeatureAvailable("mobile-native-delivery-v134") {
 		t.Fatal("native mobile feature platform or revision scope widened")
 	}
 }

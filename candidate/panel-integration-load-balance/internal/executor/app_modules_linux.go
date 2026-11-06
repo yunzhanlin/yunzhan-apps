@@ -895,7 +895,18 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "apache-waf":
 		return s.apacheWAFReport(ctx)
 	case "mobile-pwa":
-		return core.NativeMobileDelivery(), nil
+		record, err := s.moduleInstalledRecord(id)
+		if err != nil {
+			return nil, err
+		}
+		version, ok := record["version"].(string)
+		if !ok && record["version"] != nil {
+			return nil, errors.New("移动应用的原安装版本无法核对；未改变原记录")
+		}
+		if version == "" {
+			version = "1.0" // original pre-versioned PWA installations
+		}
+		return core.NativeMobileDeliveryForVersion(version)
 	case "user-manager", "platform-ops", "daily-report":
 		return map[string]any{"handler": "panel-api", "ready": true}, nil
 	}
