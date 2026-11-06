@@ -20,13 +20,15 @@ while True:
  if urls:break
  assert time.monotonic()<end;time.sleep(1)
 origin=urls[0];assert all(v==origin for v in urls)
-observations=[];ready=False
-for _ in range(12):
+observations=[];ready=False;deadline=time.monotonic()+180
+while time.monotonic()<deadline:
  try:
   with urllib.request.urlopen(origin+'/',timeout=15)as response:
    raw=response.read((4<<20)+1);assert response.status==200 and len(raw)<4<<20 and response.url==origin+'/'
    assert b'<html'in raw.lower()and b'<div id="app"'in raw;ready=True;observations.append({'status':response.status,'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'ordinary_public_TLS':True});break
- except (OSError,urllib.error.URLError)as error:observations.append({'transport_error_type':type(error).__name__})
+ except (OSError,urllib.error.URLError)as error:
+  reason=getattr(error,'reason',error)
+  observations.append({'transport_error_type':type(error).__name__,'reason_type':type(reason).__name__,'reason':str(reason)[:200],'at':time.time()})
  time.sleep(2)
 with(private/'original-tunnel-GET-observations.json').open('x')as f:json.dump(observations,f,indent=2)
 assert ready,'Original ordinary public HTTPS did not become ready'

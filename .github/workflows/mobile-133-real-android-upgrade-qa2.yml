@@ -1,7 +1,7 @@
 name: C68 original publisher Android132 to133 preserving upgrade API30 original platform diagnosis QA2
 on:
   push:
-    branches: [codex/mobile-native-download-c68]
+    branches: [codex/mobile-c68-historical-upgradeqa2]
     paths: ['qa/native-mobile133-upgrade/**', '.github/workflows/mobile-133-real-android-upgrade-qa2.yml']
 permissions:
   contents: read
