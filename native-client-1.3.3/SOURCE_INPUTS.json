@@ -136,9 +136,9 @@
       "sha256": "f16ebf82cb327054e8bc8b8861445a4a7628dbc04508f100b7d993a10c678287"
     },
     "mobile/ios/ForegroundFileDownload.swift": {
-      "bytes": 14632,
+      "bytes": 14980,
       "mode": 420,
-      "sha256": "d7c4d015c9dd67d4db4979b359ffb81ad1aebdde60bff1afbdc59ca0fab4b000"
+      "sha256": "c9c1e0b413445318015f1a943ea5475bee9a83a99821b17dcaed9fe8807570da"
     },
     "mobile/ios/Info.plist": {
       "bytes": 1591,
@@ -171,9 +171,9 @@
       "sha256": "b7c157d78ecd54c47e30fea7028a60c45d875720dfa338b74488e86cbd612d5b"
     },
     "mobile/ios/Tests/NativeDownloadTests.swift": {
-      "bytes": 17587,
+      "bytes": 18406,
       "mode": 420,
-      "sha256": "bda82fd952a243de58411fec45fbda5a5201bb227643cac7204a6b7ca0fcbf43"
+      "sha256": "24f33368660613273213d5ac2cc657872e576612e9fcf588952e7e9f499be852"
     },
     "mobile/ios/Tests/PanelAddressTests.swift": {
       "bytes": 1490,
@@ -202,8 +202,8 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "99a752fa421819f3ac9fedf2ef75ce40c18114712521018032829f9fbaa2aeb4",
-  "source_commit": "848723269ab63a04b9c057a58884c269e49413ff",
+  "inputs_sha256": "54e82732e17c7fcafa77cdc38966d23719efaf1167a3e8d57674536946496a31",
+  "source_commit": "eaa7f4eb9fb7556436d40e0ae2247523b88189b2",
   "source_overlays": {},
   "version": "1.3.3"
 }

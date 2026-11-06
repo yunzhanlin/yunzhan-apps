@@ -188,7 +188,11 @@ final class ForegroundFileDownload: NSObject, URLSessionDataDelegate, @unchecked
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
         completionHandler(nil); finish(.failure(.response))
     }
-    func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
+    // Task challenges use the Sendable completion contract across supported
+    // SDKs. Foundation still validates server certificates; no trust credential
+    // is supplied here. Refuse HTTP authentication rather than letting even an
+    // empty credential proposal cause a second authenticated management GET.
+    func urlSession(_ session: URLSession, task: URLSessionTask, didReceive challenge: URLAuthenticationChallenge, completionHandler: @escaping @Sendable (URLSession.AuthChallengeDisposition, URLCredential?) -> Void) {
         completionHandler(!isCancelled && challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust ? .performDefaultHandling : .cancelAuthenticationChallenge, nil)
     }
     private func finish(_ result: Result<NativeDownloadedFile, NativeDownloadFailure>) {

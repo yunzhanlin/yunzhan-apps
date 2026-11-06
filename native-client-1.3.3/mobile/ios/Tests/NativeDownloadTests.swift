@@ -57,6 +57,13 @@ final class NativeDownloadTests: XCTestCase {
     func testUnknownSizeCannotCrossItsCapacity() throws { XCTAssertEqual(try transfer("/chunked",maximum:1024).failure,.capacity);try noPartial() }
     func testShortConnectionNeverClaimsComplete() throws { XCTAssertNotNil(try transfer("/short").failure);try noPartial() }
     func testLoginPageIsNotAnAttachment() throws { XCTAssertEqual(try transfer("/login").failure,.response);try noPartial() }
+    func testAuthenticationChallengeDoesNotCreateOrReuseStoredCredentials() throws {
+        XCTAssertNotNil(try transfer("/authenticate").failure)
+        let records=try String(contentsOf:temporary.appendingPathComponent("requests.jsonl"),encoding:.utf8)
+        let rows=try records.split(separator:"\n").map{try JSONSerialization.jsonObject(with:Data($0.utf8))as! [String:Any]}
+        XCTAssertEqual(rows.count,1);XCTAssertEqual(rows.first?["path"]as?String,"/authenticate")
+        XCTAssertEqual(rows.first?["authorization_present"]as?Bool,false);try noPartial()
+    }
     func testRedirectDoesNotReceiveSessionOrReachTarget() throws {
         XCTAssertEqual(try transfer("/redirect").failure,.response)
         let records=try String(contentsOf:temporary.appendingPathComponent("requests.jsonl"),encoding:.utf8);XCTAssertFalse(records.contains("/target"));try noPartial()
@@ -94,9 +101,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
  def log_message(self,*args):pass
  def do_GET(self):
   cookie_ok=self.headers.get('Cookie')=='panel_session=owned-fixture'
-  with(root/'requests.jsonl').open('a')as f:f.write(json.dumps({'path':self.path,'owned_fixture_cookie_only':cookie_ok,'encoding':self.headers.get('Accept-Encoding')})+'\n')
+  with(root/'requests.jsonl').open('a')as f:f.write(json.dumps({'path':self.path,'owned_fixture_cookie_only':cookie_ok,'encoding':self.headers.get('Accept-Encoding'),'authorization_present':'Authorization'in self.headers})+'\n')
   if not cookie_ok:self.send_response(401);self.send_header('Content-Length','0');self.end_headers();return
   if self.path=='/redirect':self.send_response(302);self.send_header('Location','/target');self.send_header('Content-Length','0');self.end_headers();return
+  if self.path=='/authenticate':self.send_response(401);self.send_header('WWW-Authenticate','Basic realm="owned-fixture"');self.send_header('Content-Length','0');self.end_headers();return
   if self.path=='/login':self.send_response(200);self.send_header('Content-Length','1');self.send_header('Content-Type','text/html');self.end_headers();self.wfile.write(b'x');return
   self.send_response(200);self.send_header('Content-Disposition',"attachment; filename*=UTF-8''%E5%A4%87%E4%BB%BD%2B.bin");self.send_header('Content-Type','application/octet-stream')
   if self.path in('/chunked','/slow'):self.send_header('Transfer-Encoding','chunked')
