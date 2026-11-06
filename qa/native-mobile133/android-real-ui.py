@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA9'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA10'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -148,8 +148,11 @@ def picker():
 def choose_downloads(root):
  controls=nodes(root,lambda n:n.get('content-desc')in('Show roots','Open navigation drawer'))
  assert len(controls)==1,'Original DocumentsUI navigation control required';tap_node(controls[0],'system-document-roots')
- root=wait('system-downloads-root',lambda r:has(r,'Downloads'));tap('Downloads',root)
- return wait('system-downloads-save',lambda r:has(r,'SAVE')or has(r,'Save'))
+ # The original OS exposes "Downloads" in its toolbar, breadcrumb and root
+ # drawer. Select the observed drawer item, never an arbitrary text match.
+ def roots(r):return nodes(r,lambda n:n.get('package')=='com.android.documentsui'and n.get('resource-id')=='android:id/title'and n.get('text')=='Downloads')
+ root=wait('system-downloads-root',lambda r:len(roots(r))==1);tap_node(roots(root)[0],'system-Downloads-directory-item')
+ return wait('system-downloads-save',lambda r:not roots(r)and(has(r,'SAVE')or has(r,'Save')))
 proof={'ok':False,'actual_Android_emulator_API':37,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'debug_loopback_real_business_acceptance':False,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False}
 try:
  start()
