@@ -1,0 +1,209 @@
+{
+  "files": {
+    "mobile/.gitignore": {
+      "bytes": 132,
+      "mode": 420,
+      "sha256": "7917ac246bedcb202cadea58e7f8b9a30b418894a6d80904b838ca71c83a794c"
+    },
+    "mobile/README.md": {
+      "bytes": 8179,
+      "mode": 420,
+      "sha256": "5e3340350cb521a5b7ba2b770beffbabd68f700a4d51d55e84baed6ed259827a"
+    },
+    "mobile/android/app/build.gradle": {
+      "bytes": 815,
+      "mode": 420,
+      "sha256": "c2e99776df6ded9c56362849c8b3e15d2d8360def39fc1926db35db7ea39fde2"
+    },
+    "mobile/android/app/src/debug/AndroidManifest.xml": {
+      "bytes": 313,
+      "mode": 420,
+      "sha256": "b35978d816016d6b31abef9dfcee4bbea6532a0d6576c81630febd3f78811fab"
+    },
+    "mobile/android/app/src/main/AndroidManifest.xml": {
+      "bytes": 993,
+      "mode": 420,
+      "sha256": "635d40b157dfbeba6c8a9cef4d3456e95c3d6aa9033dd45b843510e55ba0f49b"
+    },
+    "mobile/android/app/src/main/assets/third_party_licenses.txt": {
+      "bytes": 23258,
+      "mode": 420,
+      "sha256": "2ddfaa807949c7d51f3757c726dc19f2205d1c66478ad732cab0bfe60afdb713"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/DownloadCache.java": {
+      "bytes": 2195,
+      "mode": 420,
+      "sha256": "b136002d025f15a89be00c5ce3e390d052a76acaf1a8aa0b2bf496bfcd072107"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/DownloadMetadata.java": {
+      "bytes": 6503,
+      "mode": 420,
+      "sha256": "295b60b0ab810c43fbe03b3a236b2873686273f94d61197380d37c976cd81aec"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/ForegroundDownload.java": {
+      "bytes": 10642,
+      "mode": 420,
+      "sha256": "c28c17284c0dfac1f54df3dd2ec56e9ec76fbc0a9038fc112490d0dee9c7fa15"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/NativeFileExport.java": {
+      "bytes": 5082,
+      "mode": 420,
+      "sha256": "b593becc679e90cfe3a69a3870ceac1f74a395d6c0baa04b6bd338b034a539ea"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/NativeTransferBudget.java": {
+      "bytes": 397,
+      "mode": 420,
+      "sha256": "7c2242806fb1b45b0bbfbdbed9a4fed447fbbd9f0e775ad8b48aa7e2977117f4"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelActivity.java": {
+      "bytes": 31998,
+      "mode": 420,
+      "sha256": "a8fbbefc62bb8d690fe50ef3fb0c68b9393599f0b5e1d45027bc5ea57c14634b"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/PanelAddress.java": {
+      "bytes": 2639,
+      "mode": 420,
+      "sha256": "b4f6d8456bb07852ab89b59a46e987b5f2146c84db70fd995032fb78a0614855"
+    },
+    "mobile/android/app/src/main/java/icu/yunzhan/panel/SessionCallbacks.java": {
+      "bytes": 3373,
+      "mode": 420,
+      "sha256": "011896283cc6aab3296dd32afae20e079d4a658a4d3047189520c898458f8bcd"
+    },
+    "mobile/android/app/src/main/res/drawable/panel_icon.xml": {
+      "bytes": 449,
+      "mode": 420,
+      "sha256": "77d4a317abd30298ac2984338043602118bea3e80ae949ae8b6acea93be44b6c"
+    },
+    "mobile/android/app/src/main/res/values-en/strings.xml": {
+      "bytes": 5352,
+      "mode": 420,
+      "sha256": "0fccd83d81c407a0f81e6319625a311b97239675b48729ca9ce85a5e68a980be"
+    },
+    "mobile/android/app/src/main/res/values/strings.xml": {
+      "bytes": 5085,
+      "mode": 420,
+      "sha256": "17643e68877b6c52dfd8a98b7360d34b25af3d6657bcb2bb6590562944e307e6"
+    },
+    "mobile/android/app/src/main/res/xml/no_backup.xml": {
+      "bytes": 560,
+      "mode": 420,
+      "sha256": "8be827692b21716f2b24280ccf1970ed9bb9768bc8fd7b59ab30c7e4a37ef489"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/DownloadCacheTest.java": {
+      "bytes": 3981,
+      "mode": 420,
+      "sha256": "b35889589ac2f2fd2019691d7bdd1abf662a4ae03488f183162435afb7d4ddc6"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/DownloadMetadataTest.java": {
+      "bytes": 2201,
+      "mode": 420,
+      "sha256": "7beb2e2ce7253aefc703811e5f3a8f4484dbd81b1f155ccd5e7ae561d2dc25a6"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/ForegroundDownloadTest.java": {
+      "bytes": 13713,
+      "mode": 420,
+      "sha256": "0ea5dbf90b839c159856d3418784edcbee7fbfd60e58edf6cfed8c33215bb788"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/OwnedDownloadServer.java": {
+      "bytes": 5867,
+      "mode": 420,
+      "sha256": "f29bdfbdf6dc865155ff20e68547682768239f334645c8d9f2492a2180fba59f"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/PanelAddressTest.java": {
+      "bytes": 1974,
+      "mode": 420,
+      "sha256": "cb8ed2b0096b7ba1cd744034d9f757ddf2d90a97cd016cdbf3706566bbd7010a"
+    },
+    "mobile/android/app/src/test/java/icu/yunzhan/panel/SessionCallbacksTest.java": {
+      "bytes": 7151,
+      "mode": 420,
+      "sha256": "e42e01f47d59ff32d6f94f394efeeb0c9ba94a745dca1753e3c0500ba6fd2fc3"
+    },
+    "mobile/android/build.gradle": {
+      "bytes": 69,
+      "mode": 420,
+      "sha256": "9de6b514b57274d512554110fdec0d334ffd819cb7d5fe3229d039b4c7de655c"
+    },
+    "mobile/android/gradle.properties": {
+      "bytes": 231,
+      "mode": 420,
+      "sha256": "e3fd9420644536805011eab609291ae6566a6da020fcdba1af632c31c8b6908c"
+    },
+    "mobile/android/settings.gradle": {
+      "bytes": 274,
+      "mode": 420,
+      "sha256": "f16ebf82cb327054e8bc8b8861445a4a7628dbc04508f100b7d993a10c678287"
+    },
+    "mobile/ios/ForegroundFileDownload.swift": {
+      "bytes": 14632,
+      "mode": 420,
+      "sha256": "d7c4d015c9dd67d4db4979b359ffb81ad1aebdde60bff1afbdc59ca0fab4b000"
+    },
+    "mobile/ios/Info.plist": {
+      "bytes": 1591,
+      "mode": 420,
+      "sha256": "6ed11c539951090a27b535b4c5bcf1a69963b2bc1abe6af9abdb869fe1f8c259"
+    },
+    "mobile/ios/NativeDownloadMetadata.swift": {
+      "bytes": 7337,
+      "mode": 420,
+      "sha256": "ab454516a5b0447372f5c92fdfbc4181f4c48c24fad8b4b211da76608e59bf52"
+    },
+    "mobile/ios/Package.swift": {
+      "bytes": 593,
+      "mode": 420,
+      "sha256": "36af928c8ccb6371ed643a13fcaa658271843ac544de93866a99d209af13679d"
+    },
+    "mobile/ios/PanelAddress.swift": {
+      "bytes": 2050,
+      "mode": 420,
+      "sha256": "a36228177bb2b6e70de467b7a5573e0a0259cb34338f7ced2badc3a00a95cfc9"
+    },
+    "mobile/ios/PrivacyInfo.xcprivacy": {
+      "bytes": 919,
+      "mode": 420,
+      "sha256": "1e9ebbe8ba4236343068127c6196b976984ae0e3c2ecdb18c780f802b35e9aea"
+    },
+    "mobile/ios/SessionCallbacks.swift": {
+      "bytes": 3534,
+      "mode": 420,
+      "sha256": "b7c157d78ecd54c47e30fea7028a60c45d875720dfa338b74488e86cbd612d5b"
+    },
+    "mobile/ios/Tests/NativeDownloadTests.swift": {
+      "bytes": 17587,
+      "mode": 420,
+      "sha256": "bda82fd952a243de58411fec45fbda5a5201bb227643cac7204a6b7ca0fcbf43"
+    },
+    "mobile/ios/Tests/PanelAddressTests.swift": {
+      "bytes": 1490,
+      "mode": 420,
+      "sha256": "826e2384e4ee35791e13b91816616eae298f85ce9a6e1698ab335b9e0aaa42f5"
+    },
+    "mobile/ios/Tests/SessionCallbacksTests.swift": {
+      "bytes": 7299,
+      "mode": 420,
+      "sha256": "81a38c8aff0554c5a2d91b0a0df6b42150d0258292c94e0c3a05aaa3f40162ce"
+    },
+    "mobile/ios/YunzhanMobile.swift": {
+      "bytes": 24571,
+      "mode": 420,
+      "sha256": "da0853d3b40d2621ad6adfd484aaa80131c7ea2991fb7b17eb58ebf2cdf2be8a"
+    },
+    "mobile/ios/YunzhanMobile.xcodeproj/project.pbxproj": {
+      "bytes": 5251,
+      "mode": 420,
+      "sha256": "b5d02ca9b2816f95654f083f612dd17311dfeb745052b4dc1416746015f0a628"
+    },
+    "mobile/ios/YunzhanMobile.xcodeproj/xcshareddata/xcschemes/YunzhanMobile.xcscheme": {
+      "bytes": 1342,
+      "mode": 420,
+      "sha256": "a4f1382451cc6c5f8dcb261037330d72afef7f42abdbac727ab4b8129ac2422a"
+    }
+  },
+  "format": 1,
+  "inputs_sha256": "99a752fa421819f3ac9fedf2ef75ce40c18114712521018032829f9fbaa2aeb4",
+  "source_commit": "848723269ab63a04b9c057a58884c269e49413ff",
+  "source_overlays": {},
+  "version": "1.3.3"
+}
