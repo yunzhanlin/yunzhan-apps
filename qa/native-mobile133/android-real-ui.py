@@ -8,23 +8,33 @@ os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
 private=pathlib.Path(sys.argv[1]).resolve(strict=True);adb=os.environ['ANDROID_HOME']+'/platform-tools/adb';serial='emulator-5554';package='icu.yunzhan.panel.qa'
 setup=json.loads((private/'real-panel-setup.json').read_bytes());access=json.loads((private/'device-credentials.json').read_bytes());assert setup['real_file_manager_backend'] and setup['panel_origin']=='http://127.0.0.1:19100'
-pin=None;events=[];sequence=0;reads=0
+pin=None;events=[];sequence=0;reads=0;commands=0
 def command(*args,raw=False):
+ global commands
  r=subprocess.run([adb,'-s',serial,*args],stdin=subprocess.DEVNULL,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=40)
+ if args[0]=='pull'or args[:2]==('shell','uiautomator')or r.returncode!=0:
+  commands+=1
+  def redacted(data):
+   value=data.decode(errors='replace')
+   for secret in[access['password'],pin]:
+    if secret:value=value.replace(secret,'[private]')
+   return value
+  save('original-adb-command-%05d.json'%commands,{'operation':args[0],'exit':r.returncode,'original_stdout_redacted':redacted(r.stdout),'original_stderr_redacted':redacted(r.stderr)})
  assert r.returncode==0,'Owned emulator command failed: '+args[0]
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA2'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA3'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
 def snapshot(label=None):
  global sequence,reads
  reads+=1;original=private/('original-UI-read-%05d.xml'%reads)
- command('shell','uiautomator','dump','/sdcard/c68-owned-UI.xml')
+ outcome=command('shell','uiautomator','dump','/data/local/tmp/c68-owned-UI.xml')
+ assert 'dumped to:'in outcome,'Original UI dump did not report a completed document'
  # File-sync transport preserves the actual XML bytes, rather than combining
  # an exec-out shell's diagnostics with its file content. Keep every original.
- command('pull','/sdcard/c68-owned-UI.xml',str(original));original.chmod(0o600)
+ command('pull','/data/local/tmp/c68-owned-UI.xml',str(original));original.chmod(0o600)
  assert original.is_file()and original.stat().st_nlink==1 and 0<original.stat().st_size<1<<20
  raw=original.read_bytes();root=ET.fromstring(raw)
  for n in root.iter('node'):
@@ -120,10 +130,18 @@ def choose_downloads(root):
  assert len(controls)==1,'Original DocumentsUI navigation control required';tap_node(controls[0],'system-document-roots')
  root=wait('system-downloads-root',lambda r:has(r,'Downloads'));tap('Downloads',root)
  return wait('system-downloads-save',lambda r:has(r,'SAVE')or has(r,'Save'))
-proof={'ok':False,'actual_Android_emulator_API':37,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'debug_loopback_real_business_acceptance':True,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False}
+proof={'ok':False,'actual_Android_emulator_API':37,'physical_device_acceptance':False,'iOS_UI_acceptance':False,'debug_loopback_real_business_acceptance':False,'release_trusted_HTTPS_business_acceptance':False,'Main_changed':False,'all50_commercial':False}
 try:
+ start()
+ for label,args in [('window',('shell','dumpsys','window')),('activities',('shell','dumpsys','activity','activities')),('logcat',('logcat','-d','-t','200'))]:
+  observation=command(*args);assert len(observation)<2<<20
+  with(private/('original-before-credentials-'+label+'.stdout')).open('x')as f:f.write(observation)
+ root=wait('native-original-start',lambda r:has(r,'Connect'))
  pin=str(secrets.randbelow(900000)+100000);command('shell','locksettings','set-pin',pin);events.append({'action':'set-owned-emulator-PIN','PIN_logged':False})
- start();root=wait('native-original-start',lambda r:has(r,'Connect'))
+ root=snapshot('original-after-owned-PIN-setup')
+ keyguard=nodes(root,lambda n:n.get('package')=='com.android.systemui'and n.get('password')=='true')
+ if len(keyguard)==1:tap_node(keyguard[0],'owned-emulator-keyguard-PIN');type_ascii(pin);key(66);root=wait('original-owned-keyguard-unlocked',lambda r:has(r,'Connect'))
+ else:assert has(root,'Connect'),'Owned credential setup left an unobserved OS UI state'
  if has(root,'Optional: allow local network access for a LAN panel'):
   tap('Optional: allow local network access for a LAN panel',root)
   root=wait('explicit-owned-LAN-permission',lambda r:has(r,'Allow')or has(r,'OK'))
@@ -154,7 +172,7 @@ try:
  fields=nodes(root,lambda n:n.get('class')=='android.widget.EditText'and n.get('enabled')=='true');assert len(fields)==1;tap_node(fields[0],'release-owned-HTTP-negative-input');type_ascii(setup['panel_origin']+'/');key(4);tap('Connect')
  root=wait('release-variant-refuses-cleartext',lambda r:any(n.get('text','').startswith('Enter a complete HTTPS panel URL')for n in r.iter('node')))
  assert not nodes(root,lambda n:n.get('class')=='android.webkit.WebView');tap('OK',root)
- proof.update(ok=True,real_panel_normal_web_login=True,real_file_manager_download_and_exact_exported_bytes=True,cancelled_document_picker_keeps_original_received_file=True,no_export_before_device_unlock=True,actual_system_PIN_unlock=True,actual_native_readback=True,background_WebView_and_filename_removed_from_accessibility=True,actual_Activity_destroyed_late_OS_result_does_not_export=True,original_saved_file_preserved=True,release_variant_with_disposable_test_signature_refuses_cleartext=True,retained_publisher_signature_acceptance=False,source_inputs_sha256=setup['native_source_inputs_sha256'])
+ proof.update(ok=True,debug_loopback_real_business_acceptance=True,real_panel_normal_web_login=True,real_file_manager_download_and_exact_exported_bytes=True,cancelled_document_picker_keeps_original_received_file=True,no_export_before_device_unlock=True,actual_system_PIN_unlock=True,actual_native_readback=True,background_WebView_and_filename_removed_from_accessibility=True,actual_Activity_destroyed_late_OS_result_does_not_export=True,original_saved_file_preserved=True,release_variant_with_disposable_test_signature_refuses_cleartext=True,retained_publisher_signature_acceptance=False,source_inputs_sha256=setup['native_source_inputs_sha256'])
 except BaseException:save('original-UI-failure.json',{'traceback':traceback.format_exc()});raise
 finally:
  cleanup={}

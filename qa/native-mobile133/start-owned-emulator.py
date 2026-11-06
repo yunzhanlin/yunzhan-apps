@@ -2,7 +2,7 @@
 import hashlib,json,os,pathlib,subprocess,sys,time
 os.umask(0o077)
 assert os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
-private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA2';name='Yunzhan_C68_owned_'+cohort
+private=pathlib.Path(sys.argv[1]).resolve(strict=True);sdk=pathlib.Path(os.environ['ANDROID_HOME']);cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA3';name='Yunzhan_C68_owned_'+cohort
 env=dict(os.environ);env['ANDROID_AVD_HOME']=str(private/'owned-avds');env['ANDROID_USER_HOME']=str(private/'owned-android-user');env['ANDROID_EMULATOR_HOME']=str(private/'owned-emulator-home')
 for key in('ANDROID_AVD_HOME','ANDROID_USER_HOME','ANDROID_EMULATOR_HOME'):pathlib.Path(env[key]).mkdir(mode=0o700)
 adb=str(sdk/'platform-tools/adb')
@@ -13,7 +13,7 @@ def once(label,args,input=None,timeout=90):
 assert pathlib.Path('/dev/kvm').exists()and os.access('/dev/kvm',os.R_OK|os.W_OK)
 devices=subprocess.check_output([adb,'devices'],env=env,text=True);assert devices.strip()=='List of devices attached'
 once('one-owned-AVD-create',[str(sdk/'cmdline-tools/latest/bin/avdmanager'),'create','avd','--name',name,'--package','system-images;android-37.0;default;x86_64','--device','pixel_6'],input=b'no\n')
-args=[str(sdk/'emulator/emulator'),'-avd',name,'-port','5554','-no-window','-no-audio','-no-boot-anim','-no-snapshot','-no-snapshot-save','-memory','2048','-cores','2','-gpu','swiftshader','-netdelay','none','-netspeed','full']
+args=[str(sdk/'emulator/emulator'),'-avd',name,'-port','5554','-no-window','-no-audio','-no-boot-anim','-no-snapshot','-no-snapshot-save','-no-metrics','-memory','2048','-cores','2','-gpu','swiftshader','-netdelay','none','-netspeed','full']
 with(private/'owned-emulator.stdout').open('xb')as out,(private/'owned-emulator.stderr').open('xb')as err:process=subprocess.Popen(args,env=env,stdin=subprocess.DEVNULL,stdout=out,stderr=err,start_new_session=True)
 with(private/'owned-emulator-intent.json').open('x')as f:json.dump({'args':args,'pid':process.pid,'one_new_CI_emulator_only':True,'no_local_or_retained_guest_changed':True},f,indent=2)
 deadline=time.monotonic()+300;observations=[]
