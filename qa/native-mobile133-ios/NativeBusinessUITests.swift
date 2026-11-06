@@ -86,6 +86,15 @@ final class NativeBusinessUITests: XCTestCase {
         if outcome != .completed { attach("unreachable-control-"+label,app) }
         XCTAssertEqual(outcome,.completed,"Original UI control must become tappable: "+label);target.tap()
     }
+    @MainActor private func waitForEnabled(_ target:XCUIElement,_ app:XCUIApplication,_ name:String) {
+        // The download control exists while verification is still receiving.
+        // Wait for the original actionable state without another download.
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"exists == true AND enabled == true AND hittable == true"),object:target)
+        let outcome=XCTWaiter.wait(for:[ready],timeout:60)
+        if outcome != .completed { attach("not-yet-enabled-"+name,app) }
+        XCTAssertEqual(outcome,.completed,"Actual original control must finish preparation: "+name)
+        XCTAssertTrue(target.exists && target.isEnabled && target.isHittable)
+    }
     @MainActor private func reveal(_ target:XCUIElement,in view:XCUIElement) {
         for _ in 0..<6 { if target.exists && target.isHittable{return};view.swipeUp() }
         XCTAssertTrue(target.exists && target.isHittable,"Original business control must be visible")
@@ -127,7 +136,7 @@ final class NativeBusinessUITests: XCTestCase {
         tap("展开导航",app);tap("文件",app)
         let row=web.otherElements["查看 "+filename+" 的文件信息"];reveal(row,in:web)
         let download=row.links["下载"];XCTAssertTrue(download.exists);download.tap();tap("确认",app)
-        let save=app.buttons["选择保存位置"];XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled);attach("original-native-attachment-received",app)
+        let save=app.buttons["选择保存位置"];waitForEnabled(save,app,"native-file-save");attach("original-native-attachment-received",app)
         save.tap()
         var systemCancellationSubmitted=false
         for step in 0..<3 {
@@ -151,7 +160,7 @@ final class NativeBusinessUITests: XCTestCase {
         // The host independently checks the provider's original filesystem
         // bytes. This app's acknowledgement is never a readback or cloud-sync
         // guarantee. A second received file exercises actual UIKit concealment.
-        download.tap();tap("确认",app);XCTAssertTrue(save.waitForExistence(timeout:60));XCTAssertTrue(save.isEnabled)
+        download.tap();tap("确认",app);waitForEnabled(save,app,"native-file-save")
         XCUIDevice.shared.press(.home);app.activate()
         XCTAssertTrue(app.staticTexts["面板已锁定"].waitForExistence(timeout:30));attach("original-background-state-before-privacy-assertions",app);XCTAssertEqual(app.webViews.count,0);XCTAssertFalse(save.exists)
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format:"label CONTAINS %@",filename)).firstMatch.exists);attach("background-original-WebView-and-filename-hidden",app)
