@@ -88,7 +88,12 @@ final class NativeBusinessUITests: XCTestCase {
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format:"label CONTAINS %@",filename)).firstMatch.exists);attach("background-original-WebView-and-filename-hidden",app)
         tap("退出并重新登录",app);XCTAssertFalse(app.webViews.firstMatch.exists)
         XCTAssertTrue(endpoint.waitForExistence(timeout:20));endpoint.tap()
-        let current=(endpoint.value as?String) ?? "";endpoint.typeText(String(repeating:XCUIKeyboardKey.delete.rawValue,count:current.count));endpoint.typeText("http://127.0.0.1:19100/");XCTAssertEqual(endpoint.value as?String,"http://127.0.0.1:19100/");tap("连接",app)
+        // A tap can put the caret in the middle of a retained address. Use
+        // the real system Select All keystroke and require an actually empty
+        // field before entering the exact cleartext negative input.
+        endpoint.typeKey("a",modifierFlags:.command);endpoint.typeText(XCUIKeyboardKey.delete.rawValue)
+        let cleared=(endpoint.value as?String) ?? "";XCTAssertTrue(cleared.isEmpty || cleared == "https://你的面板地址/安全入口/")
+        endpoint.typeText("http://127.0.0.1:19100/");XCTAssertEqual(endpoint.value as?String,"http://127.0.0.1:19100/");attach("original-release-exact-cleartext-input-before-validation",app);tap("连接",app)
         XCTAssertTrue(app.alerts.firstMatch.waitForExistence(timeout:20));XCTAssertFalse(app.webViews.firstMatch.exists);attach("original-release-refuses-cleartext",app);tap("知道了",app)
     }
 }
