@@ -24,7 +24,7 @@ def command(*args,raw=False):
  if args[:2]==('shell','uiautomator'):return(r.stdout.decode(),r.stderr.decode())
  return r.stdout if raw else r.stdout.decode()
 assert command('shell','getprop','ro.build.version.sdk').strip()=='37'
-cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA4'
+cohort=os.environ['C68_UI_COHORT'];assert cohort=='QA5'
 assert command('emu','avd','name').strip().splitlines()[0]=='Yunzhan_C68_owned_'+cohort
 def save(name,value):
  with(private/name).open('x')as f:json.dump(value,f,indent=2,ensure_ascii=False);f.write('\n')
@@ -55,7 +55,12 @@ def snapshot(label=None):
   sequence+=1;save('%03d-%s-AX.json'%(sequence,label),[n.attrib for n in root.iter('node')])
  return root
 def nodes(root,predicate):return[n for n in root.iter('node')if predicate(n.attrib)]
-def matches(n,text):return n.get('text')==text or n.get('content-desc')==text
+def matches(n,text):
+ if n.get('text')==text or n.get('content-desc')==text:return True
+ # The original Material native Button transforms its English source string
+ # to uppercase in the accessibility tree. Do not fold filenames, URLs, web
+ # fields, or other text; those must still preserve their exact original case.
+ return text.isascii()and n.get('class')=='android.widget.Button'and(n.get('text')==text.upper()or n.get('content-desc')==text.upper())
 def wait(label,predicate,seconds=50):
  end=time.monotonic()+seconds
  while True:
