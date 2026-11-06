@@ -143,7 +143,9 @@ final class NativeBusinessUITests: XCTestCase {
         if let point=try visualSystemPoint("Browse",app,header:true) {app.coordinate(withNormalizedOffset:point).tap();RunLoop.current.run(until:Date().addingTimeInterval(0.4))}
         try tapSystemText("On My iPhone",app,header:false)
         try tapSystemText("C68 Receiver",app,header:false)
-        try tapSystemText("Save",app,header:true)
+        // Original QA17 exposes a real visible Save button in the receiver folder.
+        // Use its exact typed AX control and actual hittability.
+        tap("Save",app)
         let acknowledgement=app.staticTexts["文件已交给所选文件提供方。请在目标位置确认内容和云端同步状态。"]
         XCTAssertTrue(acknowledgement.waitForExistence(timeout:40));XCTAssertFalse(save.exists);attach("system-provider-export-acknowledged",app)
         // The host independently checks the provider's original filesystem

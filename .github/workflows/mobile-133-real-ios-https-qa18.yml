@@ -1,0 +1,133 @@
+name: C68 original iOS18.5 Release real HTTPS panel and system provider QA18
+on:
+  push:
+    branches: [codex/mobile-c68-ios-ui-qa18]
+    paths: ['qa/native-mobile133-ios/**', '.github/workflows/mobile-133-real-ios-https-qa18.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: c68-original-real-iOS-https-qa18-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  original-fresh-Linux-HTTPS-backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Require original client input bytes and acquire the accepted signed programme
+        run: |
+          set -eu
+          umask 077
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          node --test tests/mobile-client-133.test.mjs
+          mkdir -m 700 "$RUNNER_TEMP/c68-ios-backend-private" "$RUNNER_TEMP/c68-ios-backend-public" "$RUNNER_TEMP/c68-ios-dispatch"
+          python3 -I -B qa/native-mobile133/download-programme.py "$RUNNER_TEMP/c68-ios-programme-assets"
+      - name: One normal original signed Linux install and an actual owned binary file
+        run: |
+          set -eu
+          umask 077
+          sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B qa/native-mobile133/prepare-real-panel.py "$RUNNER_TEMP/c68-ios-programme-assets" "$RUNNER_TEMP/c68-ios-backend-private" > "$RUNNER_TEMP/c68-ios-backend-private/original-normal-prepare.stdout" 2> "$RUNNER_TEMP/c68-ios-backend-private/original-normal-prepare.stderr"
+      - name: One temporary standard HTTPS endpoint and encrypted ephemeral peer credentials
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B qa/native-mobile133-ios/backend-tunnel.py "$RUNNER_TEMP/c68-ios-backend-private" "$RUNNER_TEMP/c68-ios-dispatch" > "$RUNNER_TEMP/c68-ios-backend-private/original-tunnel-step.stdout" 2> "$RUNNER_TEMP/c68-ios-backend-private/original-tunnel-step.stderr"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c68-ios-backend-dispatch-${{ github.run_id }}
+          path: ${{ runner.temp }}/c68-ios-dispatch/
+          retention-days: 1
+          if-no-files-found: error
+      - name: Reconcile the original client outcome and close this exact temporary tunnel
+        if: always()
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 -p "$RUNNER_TEMP/c68-ios-backend-private" "$RUNNER_TEMP/c68-ios-backend-public"
+          sudo -n --preserve-env=GH_TOKEN,GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_SHA,GITHUB_RUN_ID python3 -I -B qa/native-mobile133-ios/backend-close.py "$RUNNER_TEMP/c68-ios-backend-private" > "$RUNNER_TEMP/c68-ios-backend-private/original-backend-close.stdout" 2> "$RUNNER_TEMP/c68-ios-backend-private/original-backend-close.stderr"
+      - name: Seal the original backend evidence including any failure
+        if: always()
+        run: |
+          sudo -n --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_SHA,GITHUB_RUN_ID python3 -I -B qa/native-mobile133-ios/seal-evidence.py "$RUNNER_TEMP/c68-ios-backend-private" "$RUNNER_TEMP/c68-ios-backend-public" backend
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c68-ios-backend-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/c68-ios-backend-public/original-diagnostics.cms
+            ${{ runner.temp }}/c68-ios-backend-public/original-public-proof.json
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c68-ios-backend-result-${{ github.run_id }}
+          path: ${{ runner.temp }}/c68-ios-backend-public/
+          retention-days: 14
+          if-no-files-found: error
+  original-iOS18-Release-real-business:
+    runs-on: macos-15-intel
+    timeout-minutes: 40
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Require exact product bytes and create only a disposable CI envelope recipient
+        run: |
+          set -eu
+          umask 077
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          node --test tests/mobile-client-133.test.mjs
+          mkdir -m 700 "$RUNNER_TEMP/c68-ios-client-public"
+          python3 -I -B qa/native-mobile133-ios/init-client-key.py "$RUNNER_TEMP/c68-ios-client-private" "$RUNNER_TEMP/c68-ios-peer-public-key"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c68-ios-public-certificate-${{ github.run_id }}
+          path: ${{ runner.temp }}/c68-ios-peer-public-key/client-public.pem
+          retention-days: 1
+          if-no-files-found: error
+      - name: Actual unchanged Release app and system provider against the original real HTTPS Linux panel
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B qa/native-mobile133-ios/frontend-real-ui.py "$RUNNER_TEMP/c68-ios-client-private" "$RUNNER_TEMP/c68-ios-peer-public-key" > "$RUNNER_TEMP/c68-ios-client-private/original-frontend-step.stdout" 2> "$RUNNER_TEMP/c68-ios-client-private/original-frontend-step.stderr"
+      - name: Preserve product integrity and seal the original client evidence including failures
+        if: always()
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 -p "$RUNNER_TEMP/c68-ios-client-private" "$RUNNER_TEMP/c68-ios-client-public"
+          node --test tests/mobile-client-133.test.mjs
+          python3 -I -B qa/native-mobile133-ios/seal-evidence.py "$RUNNER_TEMP/c68-ios-client-private" "$RUNNER_TEMP/c68-ios-client-public" client
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c68-ios-client-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/c68-ios-client-public/original-diagnostics.cms
+            ${{ runner.temp }}/c68-ios-client-public/original-public-proof.json
+          retention-days: 14
+          if-no-files-found: error
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c68-ios-client-result-${{ github.run_id }}
+          path: ${{ runner.temp }}/c68-ios-client-public/
+          retention-days: 14
+          if-no-files-found: error
