@@ -1,0 +1,69 @@
+{
+  "format": 1,
+  "source_head": "d343090cefbe5406341ad63a9349469c3c1f4d5d",
+  "source_sdk_tree": "7b7b77297d403bb146024f78649c7cdf2ca1c069",
+  "source_inputs_sha256": "eba559f9773a13be628ff2c70a496da245dec82ebdf8d94fc3e2bf93c20932d3",
+  "source_ci_run": 42136062572,
+  "release_id": 435948968,
+  "tag": "qa-analyticsheatmapcandidate66-20261106-qa1",
+  "version": "0.1.0-dev.proapps24analyticsheatmapcandidate66",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-amd64.tar.gz": {
+      "id": 715405606,
+      "bytes": 23693864,
+      "sha256": "922199e85d07af70b3a7f1c46dfefed8166f501e6a8d360af57a53bb1edf7768"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-amd64.tar.gz.manifest": {
+      "id": 715405616,
+      "bytes": 186,
+      "sha256": "3b52dcb72520c53d207ccb2c7e7f6d8f3fbaf491e4409cd745ab2a229f8273c1"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-amd64.tar.gz.sig": {
+      "id": 715405610,
+      "bytes": 64,
+      "sha256": "6e97f41d80edbd047ded677cea9a14beb9d6fc9faea54e40daf75c01c4d78e59"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-arm64.tar.gz": {
+      "id": 715405608,
+      "bytes": 21920010,
+      "sha256": "98273595df52fd257b57fbc92a1c62bb061a34f188390d459ee32225bb9f181e"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-arm64.tar.gz.manifest": {
+      "id": 715405612,
+      "bytes": 186,
+      "sha256": "1bc4175f28aaddc7c219024deafc3b72e074f63a41561533fe76bcef8d13f9cd"
+    },
+    "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-arm64.tar.gz.sig": {
+      "id": 715405780,
+      "bytes": 64,
+      "sha256": "f6221ad46f5f4d629300f3ac82d7f5dcc19f1d80b95c656bc059343df2f7c7b2"
+    },
+    "release-signing-dev.pub": {
+      "id": 715405769,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "filesync-recovery-signed-release.py": {
+      "id": 715405766,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    }
+  },
+  "cohorts": {
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-arm64.tar.gz"
+    },
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsheatmapcandidate66-linux-amd64.tar.gz"
+    }
+  },
+  "analytics242_sha256": "704ed57b5d353411debf2dbedc283bab8df45df9cf692411e2f6705b49c91254",
+  "normal_installed_BFCache_and_narrow_acceptance_pending": true,
+  "all50_commercial": false,
+  "qa2_payload_files": {
+    ".github/workflows/native-analytics-c66-browser-qa2.yml": "f3dd8a20b2c5d0fe253587a55628b35a3711fe02a93ddd6d79a691731ec273fb",
+    "scripts/native-analytics-c66/download-qa2.py": "b8c38c37db2725b6c5aaaf81763791804f799e37a3f742d62886ba762e9cdd9d"
+  },
+  "original_failed_native_run": 42141436612,
+  "original_native_installs_and_browser_launches_before_refusal": 0
+}
