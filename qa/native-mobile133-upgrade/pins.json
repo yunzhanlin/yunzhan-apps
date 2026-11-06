@@ -1,0 +1,37 @@
+{
+  "format": 1,
+  "native_source_inputs_sha256": "335ed1f5e6060cf6859b79e2b12ff32290277b9158c4a10afd0f16122d3271e8",
+  "release_id": 436624050,
+  "release_tag": "mobile-v1.3.3",
+  "release_target": "e1a12ab2f016952d2287221c82b40129fb59a958",
+  "original_publisher_certificate_sha256": "0ba923afca85db94f4bdabd6d235fcf1c7088bb167ace661bf21781d1c7f0bd5",
+  "publisher_APK": {
+    "id": 717496680,
+    "bytes": 5605208,
+    "sha256": "ea35809858d1c72c9a985a5189582dcc01bc263b314380f5651ebaebd4f9f76f"
+  },
+  "cloudflared": {
+    "tag": "2026.10.7",
+    "release_id": 429293203,
+    "asset_id": 692817008,
+    "name": "cloudflared-linux-amd64",
+    "bytes": 40274445,
+    "sha256": "1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872",
+    "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-linux-amd64"
+  },
+  "Main_changed": false,
+  "all50_commercial": false,
+  "original_Android_build_inputs_sha256": "4e3d1a6d24574476c657bcd5fce7457d6df6010b22fa120a95bde3ea7ef7e621",
+  "original_Android_component_sha256": "285acbda0a5a6dc336fcf72bbe32d05b3263a6318519a2ad8ce31d6221ec40bf",
+  "previous_release": {
+    "id": 421413399,
+    "tag": "mobile-v1.3.2",
+    "APK_asset_id": 667814858,
+    "APK_bytes": 53951,
+    "APK_sha256": "a76d4a9a04b4d46c35332b36e04590078a27e25885fd5abe6ede611be55b09e3"
+  },
+  "actual_supported_APIs": [
+    30,
+    37
+  ]
+}
