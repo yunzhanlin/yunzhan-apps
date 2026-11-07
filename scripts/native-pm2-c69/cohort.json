@@ -1,0 +1,100 @@
+{
+  "format": 1,
+  "source_head": "628a2a32ef88993265fa741a07a4a24f8f748d6e",
+  "source_sdk_tree": "8af2e959b6a7a63c3102bb6519161dc949e016aa",
+  "source_inputs_sha256": "9983bbf3986af49b75aba6e06f94a6f43f2e66eb18b2b013895453017cff681e",
+  "source_ci_run": 42328687029,
+  "new_manifest_sha256": "d85fa662c22b2fd9a1e111995c320e39d8e51f4765bfd9ebc226c643b6d8d959",
+  "new_catalogue_sha256": "873393a1637e171c8530aa5dde597fc603495a90c5cfe6a0b1226aaa2894ee51",
+  "new_catalogue_bundle_sha256": "44932b3289b936b5a69c97ab7f2ae3c2272111c670d42994c49c0f2c5c7537dd",
+  "old_catalogue_bundle_sha256": "4173200de85bdcb3187f32ba6ae50b82a91f1e82077df19f4031cb34b68f7714",
+  "files": {
+    "phase1.py": "ff4e7e0f0d9f40d6ed3f3bf2ff48049fba3df7ff47691ce106de0abd3acf943e",
+    "original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "download.py": "152f27e13b005744ff2d633936d0a80b1a3c732405a5998d8b427605da31d64e",
+    "recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "dispatch.json": "d9e6b87373c6d14ae9d128810f00fe72ce9f8e43f467b4d619a58065ca879ca2",
+    "capture.py": "e708f9262a99f439cafdd84b3ffce162a18bddcbeb3268930783f67dfeb908d4",
+    "bootstrap-original-install.py": "85db65fde82f5586ca99f6bae328803497cf54e5887d70d508840e38e441deb3",
+    "phase2.py": "a5941453087b5ec1f88d2dacd33a883394fd8c32f55683913a594b8d46d0a9cd",
+    "finish.py": "74162c12d824b51e81865b6307d817082de223df10134b8bf0626ad2a5c147af",
+    "wait-catalogue.py": "8905321e88fda25b3ac7ddb8f2cf6fc736c908c8258f566277188f5bdd9a20f6"
+  },
+  "payload_files": {
+    ".github/workflows/pm2-maintenance-c69r4-native-qa1.yml": "174d4becfd95d482d368b394f5817024766ed667b5f5c19431a37d5facb1b3e2",
+    "scripts/native-pm2-c69/bootstrap-original-install.py": "85db65fde82f5586ca99f6bae328803497cf54e5887d70d508840e38e441deb3",
+    "scripts/native-pm2-c69/capture.py": "e708f9262a99f439cafdd84b3ffce162a18bddcbeb3268930783f67dfeb908d4",
+    "scripts/native-pm2-c69/dispatch.json": "d9e6b87373c6d14ae9d128810f00fe72ce9f8e43f467b4d619a58065ca879ca2",
+    "scripts/native-pm2-c69/download.py": "152f27e13b005744ff2d633936d0a80b1a3c732405a5998d8b427605da31d64e",
+    "scripts/native-pm2-c69/finish.py": "74162c12d824b51e81865b6307d817082de223df10134b8bf0626ad2a5c147af",
+    "scripts/native-pm2-c69/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-pm2-c69/phase1.py": "ff4e7e0f0d9f40d6ed3f3bf2ff48049fba3df7ff47691ce106de0abd3acf943e",
+    "scripts/native-pm2-c69/phase2.py": "a5941453087b5ec1f88d2dacd33a883394fd8c32f55683913a594b8d46d0a9cd",
+    "scripts/native-pm2-c69/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-pm2-c69/wait-catalogue.py": "8905321e88fda25b3ac7ddb8f2cf6fc736c908c8258f566277188f5bdd9a20f6"
+  },
+  "actual_normal_signed_release_ID_and_asset_pins_pending_upload": false,
+  "store_publication_requires_both_original_phase1_receipts_and_all113_data_qualification": true,
+  "CI_or_installer_or_app_submissions": 0,
+  "Main_changed": false,
+  "all50_commercial": false,
+  "actual_SQL_snapshot_at_and_capture_window_recorded_without_inference": true,
+  "new_release_id": 437271962,
+  "new_release_tag": "qa-pm2maintenancecandidate69r4-20261107-qa1",
+  "new_release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 719362731,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz": {
+      "id": 719362595,
+      "bytes": 23723121,
+      "sha256": "40338c1bf9eb5ffe018ccc9bea83925016771df5eb047d3194612edb061e8b4b"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz.manifest": {
+      "id": 719362605,
+      "bytes": 186,
+      "sha256": "8c4589579c5c78c4a23f5026268f2d20eb17a31af240c73ca29305ed04c2f656"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz.sig": {
+      "id": 719362598,
+      "bytes": 64,
+      "sha256": "8152b06c6be79de1a2088fdf7d519de22ff3db8d0f575826b31820e1175c9264"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz": {
+      "id": 719362592,
+      "bytes": 21944115,
+      "sha256": "68c81cfdfa6774e2e145c2c617da50ef40f951bf4b8fc710491c1fdb402fb1d5"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz.manifest": {
+      "id": 719362591,
+      "bytes": 186,
+      "sha256": "9b46f02a3a5a231b1f843e5f046e86ac0aa058d1a69457ceebe087afd6efa9ef"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz.sig": {
+      "id": 719362726,
+      "bytes": 64,
+      "sha256": "44d7be5f4a1c57ee2bc36dac6dbe9b28e4938ab62d60ac448007aba5ccd4d64f"
+    },
+    "release-signing-dev.pub": {
+      "id": 719362734,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "version": "0.1.0-dev.proapps24pm2maintenancecandidate69r4",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz"
+    }
+  },
+  "original_failed_source_runs_retained": [
+    42324897521,
+    42326746884
+  ],
+  "actual_phase1_original_data_qualification_required_before_store_publication": true
+}
