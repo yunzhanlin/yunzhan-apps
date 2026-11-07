@@ -1,0 +1,11 @@
+**/build/
+**/.gradle/
+**/.build/
+**/.swiftpm/
+**/local.properties
+**/xcuserdata/
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+.DS_Store

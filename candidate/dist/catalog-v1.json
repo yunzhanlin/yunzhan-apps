@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-06T19:41:38Z",
+  "generated_at": "2026-11-07T01:23:52Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -930,8 +930,8 @@
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4-compat9",
-      "summary": "非 root 项目启停、集群、日志、仅写加密环境变量与锁定依赖部署；核对服务和监听归属，检查配置记录的实际读写、同步及关闭结果。停止项目保存配置仍保持停止；中断更新可核对并明确恢复原加密配置。",
+      "version": "7.0.4-compat10",
+      "summary": "非 root 项目集群、锁定依赖部署与加密环境变量；独立只读项目清单。配置或历史损坏时保留原记录，核对原项目与锁后独立停止，分别显示服务结果和记录保存结果。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -939,20 +939,20 @@
       "manage_route": "app-modules",
       "capabilities": [
         "非 root PM2 集群与启停；确切网站账户、服务进程及监听归属核对",
-        "日志与执行历史",
+        "独立只读当前项目与分页；历史或配置记录损坏时仍可核对服务",
         "独立显示当前运行和开机状态，保留开机意图",
         "内存重启阈值",
-        "修订冲突与未知状态拒绝；配置记录读写、同步、关闭错误明确返回；停止保存保持停止",
+        "原项目、修订和独立私有锁核对；拒绝未知身份、链接及冲突操作",
         "加密仅写入环境变量增量管理",
         "锁定 npm 依赖后台部署",
         "网站用户受控安装脚本",
-        "依赖失败回滚；原加密清单及独立持久完成回执，写入未完成时拒绝确认成功",
+        "停止不重放配置或部署；服务停机核对和历史保存结果分别回执",
         "中断部署恢复与取消；未提交配置启动拦截及显式恢复后保持停止",
         "旧部署可恢复归档",
         "最长45秒就绪、调用方取消；拒绝其他进程监听，失败先停候选再恢复旧加密配置"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pm2-manager/7.0.4-compat9/manifest.json",
-      "sha256": "f53bd60c94d4ef5b20af0ed2a44fc1393c7e61811779944855b726872804ba71"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pm2-manager/7.0.4-compat10/manifest.json",
+      "sha256": "d85fa662c22b2fd9a1e111995c320e39d8e51f4765bfd9ebc226c643b6d8d959"
     },
     {
       "id": "pure-ftpd",

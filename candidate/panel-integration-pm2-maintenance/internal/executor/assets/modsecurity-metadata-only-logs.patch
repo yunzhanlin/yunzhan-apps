@@ -1,0 +1,35 @@
+--- a/src/modsecurity.cc
++++ b/src/modsecurity.cc
+@@ -198,7 +198,13 @@
+     }
+ 
+     if (m_logProperties & TextLogProperty) {
+-        auto d = rm.log();
++        // CloudStack privacy patch: never serialize matched request content,
++        // headers, cookies, message expansions or raw client addresses.
++        auto d = std::string("yunzhan_waf_body rule=")
++            + std::to_string(rm.m_rule.m_ruleId)
++            + " phase=" + std::to_string(rm.getPhase())
++            + " severity=" + std::to_string(rm.m_severity)
++            + " disruptive=" + std::to_string(rm.m_isDisruptive ? 1 : 0);
+         auto a = static_cast<const void *>(d.c_str());
+         m_logCb(data, a);
+         return;
+--- a/src/transaction.cc
++++ b/src/transaction.cc
+@@ -955,7 +955,9 @@
+                     intervention::free(&m_it);
+                     m_it.log = strdup("Request body limit is marked to " \
+                             "reject the request");
+-                    m_it.status = 403;
++                    // CloudStack: distinguish bounded request-body overflow
++                    // from a rule match. Do not change response-body handling.
++                    m_it.status = 413;
+                     m_it.disruptive = true;
+                 } else {
+                     ms_dbg(5, "Not rejecting the request as the engine is " \
+@@ -2386,4 +2388,3 @@
+ 
+ 
+ }  // namespace modsecurity
+-

@@ -1,10 +1,11 @@
 // Reverse only the exact independent133 additions before older schema pins.
 // Every original132 predicate and every unrelated current edit stays pinned.
 import assert from 'node:assert/strict';
+import {schemaBeforePM2Maintenance}from './pm2-maintenance-schema.mjs';
 import {canonical,sha256}from '../../tools/lib.mjs';
 const feature='mobile-native-delivery-v133';
 export function schemaBeforeMobileNative133(value){
- const s=structuredClone(value),flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf,guard=s.allOf[1];
+ const s=schemaBeforePM2Maintenance(value),flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf,guard=s.allOf[1];
  if(!flags.includes(feature)&&!branches.some(v=>v.properties?.id?.const==='mobile'&&v.properties?.version?.const==='1.3.3')&&!JSON.stringify(guard).includes(feature))return s;
  assert.equal(flags.filter(v=>v===feature).length,1);assert.equal(flags.indexOf(feature),14);assert.equal(flags[13],'mobile-native-delivery-v132');flags.splice(14,1);
  assert.equal(branches.filter(v=>v.properties?.id?.const==='mobile'&&v.properties?.version?.const==='1.3.3').length,1);

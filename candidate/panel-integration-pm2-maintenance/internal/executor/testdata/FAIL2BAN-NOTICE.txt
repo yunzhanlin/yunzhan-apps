@@ -1,0 +1,40 @@
+Fail2ban configuration observation and interoperability material
+
+The intrusion-effective-stock-{arm64,amd64}.json and
+intrusion-action-stock-{arm64,amd64}.json fixtures retain configuration,
+regular-expression and action-template observations from installed Fail2ban
+1.0.2 and 1.1.0 packages. Distribution package patches may differ from the
+corresponding pristine upstream tags. They are comparison fixtures, not an
+executable configuration stream or permission to replay firewall commands.
+
+The upstream configuration material, including equivalent literal action
+templates used for interoperability checks, retains its upstream GPL-2.0-or-
+later terms. It is not relicensed under the panel's general Apache-2.0 notice.
+The complete upstream COPYING file is supplied alongside this notice as
+FAIL2BAN-COPYING (SHA-256:
+a75fec0260742fe6275d63ff6a5d97b924b28766558306b3fa4069763096929b).
+The COPYING files for tags 1.0.2 and 1.1.0 have identical bytes.
+
+Upstream project and source references:
+https://github.com/fail2ban/fail2ban
+https://github.com/fail2ban/fail2ban/blob/1.0.2/COPYING
+https://github.com/fail2ban/fail2ban/blob/1.1.0/COPYING
+https://github.com/fail2ban/fail2ban/blob/1.0.2/config/filter.d/sshd.conf
+https://github.com/fail2ban/fail2ban/blob/1.1.0/config/filter.d/sshd.conf
+https://github.com/fail2ban/fail2ban/blob/1.0.2/config/action.d/nftables.conf
+https://github.com/fail2ban/fail2ban/blob/1.1.0/config/action.d/nftables.conf
+
+The SSH filter credits Cyril Jaquier, Yaroslav Halchenko, Petr Voralek,
+Daniel Black and Sergey Brester (sebres); its prefregex rewrite credits
+Serg G. Brester. The nftables action credits Daniel Black, Cyril Jaquier,
+Yaroslav O. Halchenko and Alexander Belykh. Additional copyright and exception
+notices in the original distribution continue to apply.
+
+The panel's wire readers use an independent standard-library primitive-only
+adapter; they do not import Fail2ban classes while decoding service replies.
+Fail2ban itself is provided by the operating system's package manager. This
+notice does not replace notices or source obligations for that distribution,
+and does not change the license of independently authored panel code.
+Any mixed-license release must retain the applicable upstream license and
+attribution. This file alone is not acceptance of a completed license audit
+or permission to omit source or notices from a distributed release.

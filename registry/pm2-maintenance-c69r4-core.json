@@ -1,0 +1,31 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24pm2maintenancecandidate69r4",
+  "source_inputs_sha256": "9983bbf3986af49b75aba6e06f94a6f43f2e66eb18b2b013895453017cff681e",
+  "source_sdk_files": 2478,
+  "frozen_inputs": 18181,
+  "source_index_sha256": "09ca0db8c5ed08eab9f8af5c7076c7401723d9ee1bfe5ab75dd04c2113d40bdb",
+  "source_overlays": 0,
+  "native133_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
+  "original_C68r3_SDK_and_all40_native_clients_preserved": true,
+  "new_PM2_version": "7.0.4-compat10",
+  "new_PM2_feature": "pm2-evidence-preserving-stop-v1",
+  "signed_original_archives": {
+    "amd64": {
+      "archive_bytes": 23723121,
+      "archive_sha256": "40338c1bf9eb5ffe018ccc9bea83925016771df5eb047d3194612edb061e8b4b",
+      "manifest_sha256": "8c4589579c5c78c4a23f5026268f2d20eb17a31af240c73ca29305ed04c2f656",
+      "signature_sha256": "8152b06c6be79de1a2088fdf7d519de22ff3db8d0f575826b31820e1175c9264"
+    },
+    "arm64": {
+      "archive_bytes": 21944115,
+      "archive_sha256": "68c81cfdfa6774e2e145c2c617da50ef40f951bf4b8fc710491c1fdb402fb1d5",
+      "manifest_sha256": "9b46f02a3a5a231b1f843e5f046e86ac0aa058d1a69457ceebe087afd6efa9ef",
+      "signature_sha256": "44d7be5f4a1c57ee2bc36dac6dbe9b28e4938ab62d60ac448007aba5ccd4d64f"
+    }
+  },
+  "retained_old_unqualified_PM27_0_4_actual_regression_fail_then_pass": true,
+  "current_node_mocked_fixtures_are_not_installed_PM2_acceptance": true,
+  "native_source_CI_and_installed_business_acceptance_pending": true,
+  "all50_commercial": false
+}

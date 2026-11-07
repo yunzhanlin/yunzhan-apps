@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {validateManifest} from '../tools/lib.mjs';
 import {schemaBeforeMobileNative133}from './helpers/mobile-native133-schema.mjs';
+import {schemaBeforePM2Maintenance}from './helpers/pm2-maintenance-schema.mjs';
 const root=new URL('../',import.meta.url);
 const apps=JSON.parse(fs.readFileSync(new URL('registry/candidate-apps.json',root))).apps;
 const current=apps.find(a=>a.id==='mobile');
@@ -18,7 +19,7 @@ test('only the exact native133 handler can describe current133 while original132
  }
 });
 test('schema preserves every original132 guard and adds only its separate exact133 branch',()=>{
- const schema=JSON.parse(fs.readFileSync(new URL('schema/app.schema.json',root))),old=JSON.parse(fs.readFileSync(new URL('registry/reviewed-catalogs/before-mobile-native133-c68r3/schema/app.schema.json',root)));
+ const schema=schemaBeforePM2Maintenance(JSON.parse(fs.readFileSync(new URL('schema/app.schema.json',root)))),old=JSON.parse(fs.readFileSync(new URL('registry/reviewed-catalogs/before-mobile-native133-c68r3/schema/app.schema.json',root)));
  const guard=schema.allOf[1],previous=old.allOf[1];assert.deepEqual(guard.then.oneOf.slice(0,2),previous.then.oneOf);assert.deepEqual(guard.if.anyOf.slice(0,3),previous.if.anyOf);
  assert.equal(guard.then.oneOf.length,3);assert.equal(guard.if.anyOf.length,4);assert.equal(guard.then.oneOf[2].properties.version.const,'1.3.3');assert.equal(guard.then.oneOf[2].properties.required_panel_features.items.const,'mobile-native-delivery-v133');
  const original=schema.allOf[0].then.oneOf.filter(v=>v.properties.id.const==='mobile');assert.equal(original.length,2);assert.deepEqual(original[0],old.allOf[0].then.oneOf.find(v=>v.properties.id.const==='mobile'));
