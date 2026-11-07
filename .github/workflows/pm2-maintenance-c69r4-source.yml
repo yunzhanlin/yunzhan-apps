@@ -1,7 +1,7 @@
-name: C69r4 exact PM2 source and original historical catalogue regression
+name: C69r4 QA2 original Root logs and exact PM2 source and original historical catalogue regression
 on:
   push:
-    branches: [codex/pm2-maintenance-c69r4]
+    branches: [codex/pm2-maintenance-c69r4-ci2]
     paths: [scripts/pm2-maintenance-c69/dispatch.json]
 permissions:
   contents: read
@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   actual-native-source:
-    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/pm2-maintenance-c69r4'
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/pm2-maintenance-c69r4-ci2'
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -53,12 +53,15 @@ jobs:
         run: |
           set -eu
           sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps PATH="$(dirname "$(command -v go)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 -I -B tools/run-pm2-maintenance-source-native.py "$RUNNER_TEMP/c69r4-original-source"
+      - name: Archive every original Root output with its metadata for the unprivileged artifact uploader
+        if: always()
+        run: sudo python3 -I -B tools/collect-pm2-maintenance-source.py "$RUNNER_TEMP/c69r4-original-source" "$RUNNER_TEMP/c69r4-original-source-public" "$GITHUB_SHA" "$GITHUB_RUN_ID"
       - name: Preserve original native source logs including failures
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
-          name: c69r4-original-PM2-source-${{ matrix.os }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/c69r4-original-source/
+          name: c69r4-qa2-original-PM2-source-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c69r4-original-source-public/
           retention-days: 14
           if-no-files-found: error
 

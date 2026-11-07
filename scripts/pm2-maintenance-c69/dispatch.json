@@ -1,9 +1,11 @@
 {
-  "cohort": "C69r4-original-source-QA1",
+  "cohort": "C69r4-original-source-QA2",
   "source_inputs_sha256": "9983bbf3986af49b75aba6e06f94a6f43f2e66eb18b2b013895453017cff681e",
   "exact_current_PM2_version": "7.0.4-compat10",
   "strict_Root_tests_per_arch": 55,
   "source_overlays": 0,
   "normal_native_install_and_Main_acceptance_separate": true,
-  "all50_commercial": false
+  "all50_commercial": false,
+  "original_failed_run_retained": 42324897521,
+  "Root_output_collection_preserves_original_metadata_in_tar_and_exports_only_runner_readable_copies": true
 }

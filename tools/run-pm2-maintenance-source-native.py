@@ -28,9 +28,6 @@ try:
  go=pathlib.Path(shutil.which('go')).resolve(strict=True)
  env=dict(os.environ,CGO_ENABLED='0',GOMAXPROCS='2',GOFLAGS='-p=1',GOTOOLCHAIN='local')
  assert subprocess.check_output([str(go),'env','GOOS','GOARCH'],env=env,text=True).splitlines()==['linux',{'x86_64':'amd64','aarch64':'arm64'}[platform.machine()]]
- full=run('original-complete-Root-Go',[str(go),'test','-json','-count=1','-p','1','-ldflags=-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate','./...'],sdk,env,1200)
- assert not any(v.get('Action')=='fail'for v in full)
- assert any(v.get('Action')=='pass'and v.get('Package')=='local/panel/internal/executor'and not v.get('Test')for v in full)
  selected=run('original-strict-PM255',[str(go),'test','-json','-count=1','-p','1','-ldflags=-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate','./internal/appcatalog','./internal/core','./internal/executor','-run','^(TestPM2Stop|TestPM2ProjectsGET|TestPM2ProjectReadQuery)'],sdk,env,240)
  assert not any(v.get('Action')in('fail','skip')for v in selected)
  for pkg,wanted in spec['expected_tests'].items():
@@ -41,10 +38,27 @@ try:
  assert all(v.get('Package')in spec['expected_tests']for v in selected)
  text=(out/'original-strict-PM255.stdout').read_text()
  for mode in spec['kernel_modes']:assert 'PM2_STOP_KERNEL_ACCEPTED '+mode+'\\n' in text
+ proof.update(actual_strict_Root_passed=55,strict_skips=0)
+ full=run('original-complete-Root-Go',[str(go),'test','-json','-count=1','-p','1','-ldflags=-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate','./...'],sdk,env,1200)
+ assert not any(v.get('Action')=='fail'for v in full)
+ assert any(v.get('Action')=='pass'and v.get('Package')=='local/panel/internal/executor'and not v.get('Test')for v in full)
  check()
  proof.update(ok=True,architecture=platform.machine(),source_inputs_sha256=spec['source_inputs_sha256'],source_sdk_files=2478,all_source_bytes_unchanged_after_both_processes=True,actual_strict_Root_passed=55,strict_skips=0,complete_Go_passed=sum(v.get('Action')=='pass'and bool(v.get('Test'))for v in full),complete_Go_explicit_skips=[{'package':v.get('Package'),'test':v.get('Test')}for v in full if v.get('Action')=='skip'],actual_private_kernel_modes=spec['kernel_modes'],fixed_mocked_systemctl_only=True)
 except BaseException:
  proof['failure']=traceback.format_exc()
+ diagnostics=[]
+ for name in ['original-complete-Root-Go','original-strict-PM255']:
+  log=out/(name+'.stdout');err=out/(name+'.stderr')
+  if log.exists():
+   rows=[]
+   for line in log.read_text(errors='replace').splitlines():
+    try:rows.append(json.loads(line))
+    except ValueError:pass
+   failed=[{'package':v.get('Package'),'test':v.get('Test')}for v in rows if v.get('Action')=='fail']
+   diagnostics.append({'label':name,'failed':failed,'last_outputs':[v.get('Output','')for v in rows if v.get('Action')=='output'][-12:],'stderr_tail':err.read_text(errors='replace')[-3000:]if err.exists()else''})
+ proof['original_source_failure_diagnostics']=diagnostics
+ print(json.dumps({'original_source_failure':proof['failure'],'diagnostics':diagnostics}),flush=True)
+
 finally:
  save('original-proof.json',proof)
  print(json.dumps({'ok':proof['ok'],'actual_strict_Root_passed':proof.get('actual_strict_Root_passed',0),'out':str(out),'all50_commercial':False}),flush=True)
