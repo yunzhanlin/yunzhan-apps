@@ -8,8 +8,8 @@ def save(n,v):
  with(out/n).open('x')as f:json.dump(v,f,indent=2);f.write('\n');f.flush();os.fsync(f.fileno())
 def sha(p):return hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()
 def run(label,args,cwd,env,timeout):
- save(label+'-intent.json',{'args':args,'cwd':str(cwd),'maximum_submissions':1,'at':time.time()})
- with(out/(label+'.stdout')).open('xb')as a,(out/(label+'.stderr')).open('xb')as b:r=subprocess.run(args,cwd=cwd,env=env,stdout=a,stderr=b,timeout=timeout)
+ save(label+'-intent.json',{'args':args,'cwd':str(cwd),'maximum_submissions':1,'at':time.time(),'Go_test_subprocess_umask':0o022,'private_parent_output_umask':0o077})
+ with(out/(label+'.stdout')).open('xb')as a,(out/(label+'.stderr')).open('xb')as b:r=subprocess.run(args,cwd=cwd,env=env,stdout=a,stderr=b,timeout=timeout,umask=0o022)
  save(label+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(out/(label+'.stdout')),'stderr_sha256':sha(out/(label+'.stderr'))})
  assert r.returncode==0,label+' original failure retained without retry'
  return [json.loads(line)for line in (out/(label+'.stdout')).read_text().splitlines()if line]
@@ -25,6 +25,10 @@ try:
   for n,h in index['files'].items():
    p=sdk/n;s=p.lstat();assert p.is_file()and not p.is_symlink()and s.st_nlink==1 and p.resolve()==p and sha(p)==h,n
  check()
+ probe=subprocess.run(['/usr/bin/python3','-I','-B','-c','import json,os; print(json.dumps({"original_child_umask":os.umask(0o022)}))'],capture_output=True,text=True,timeout=10,umask=0o022)
+ assert probe.returncode==0 and json.loads(probe.stdout)=={'original_child_umask':0o022}
+ parent=os.umask(0o077);assert parent==0o077
+ save('original-Go-test-subprocess-umask.json',{'child_probe':json.loads(probe.stdout),'private_parent_umask':parent,'only_Go_test_subprocesses_use_existing_test_default_022':True,'product_daemon_or_installer_or_archive_policy_changed':False})
  go=pathlib.Path(shutil.which('go')).resolve(strict=True)
  env=dict(os.environ,CGO_ENABLED='0',GOMAXPROCS='2',GOFLAGS='-p=1',GOTOOLCHAIN='local')
  assert subprocess.check_output([str(go),'env','GOOS','GOARCH'],env=env,text=True).splitlines()==['linux',{'x86_64':'amd64','aarch64':'arm64'}[platform.machine()]]
