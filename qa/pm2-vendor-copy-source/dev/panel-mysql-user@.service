@@ -1,0 +1,7 @@
+[Unit]
+Description=Prepare isolated MySQL instance account %i
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --prepare-mysql %i
+PrivateTmp=true
+ProtectHome=true

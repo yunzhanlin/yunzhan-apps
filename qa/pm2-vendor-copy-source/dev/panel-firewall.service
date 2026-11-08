@@ -1,0 +1,12 @@
+[Unit]
+Description=Load panel-managed nftables table
+After=panel-firewall-recovery.service
+Requires=panel-firewall-recovery.service
+Before=network-online.target
+[Service]
+Type=oneshot
+ExecStartPre=-/usr/sbin/nft delete table inet panel
+ExecStart=/usr/sbin/nft -f /etc/panel/firewall.nft
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
