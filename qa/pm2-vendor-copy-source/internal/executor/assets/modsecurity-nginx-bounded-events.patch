@@ -1,0 +1,41 @@
+--- a/src/ngx_http_modsecurity_module.c
++++ b/src/ngx_http_modsecurity_module.c
+@@ -466,6 +466,33 @@
+ }
+ 
+ 
++/* The fixed numerical stream is best-effort, never a complete request log.
++ * A non-blocking POSIX record lock serializes all worker appends with the
++ * privileged copy-and-truncate rotation. Floods cannot grow it past 32 MiB;
++ * contention/storage failures omit metadata, not enforcement. */
++static void
++ngx_http_modsecurity_bounded_writer(ngx_log_t *log, ngx_uint_t level,
++    u_char *buf, size_t len)
++{
++    ngx_file_info_t fi;
++    ngx_fd_t fd;
++    const off_t limit = 32 * 1024 * 1024;
++    if (log->file == NULL || len == 0 || len > 512) {
++        return;
++    }
++    fd = log->file->fd;
++    if (fd == NGX_INVALID_FILE || ngx_trylock_fd(fd) != 0) {
++        return;
++    }
++    if (ngx_fd_info(fd, &fi) != NGX_FILE_ERROR && ngx_is_file(&fi)
++        && fi.st_nlink == 1 && (fi.st_mode & 0022) == 0
++        && fi.st_size >= 0 && fi.st_size <= limit - (off_t) len)
++    {
++        (void) ngx_write_fd(fd, buf, len);
++    }
++    (void) ngx_unlock_fd(fd);
++}
++
+ /* CloudStack: dedicated numerical-event log. This avoids mixing private
+  * Nginx request/body-buffer warnings into the managed WAF event stream. */
+ static char *
+@@ -495,3 +523,4 @@
+     main->metadata_log->log_level = NGX_LOG_WARN;
++    main->metadata_log->writer = ngx_http_modsecurity_bounded_writer;
+     return NGX_CONF_OK;
+ }
