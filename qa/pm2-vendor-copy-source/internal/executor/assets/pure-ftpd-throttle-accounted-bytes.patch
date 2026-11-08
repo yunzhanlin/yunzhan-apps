@@ -1,0 +1,40 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -2893,7 +2893,8 @@
+         ts_now = ts_start;
+     }
+     elapsed = ts_now - ts_start;
+-    would_be_downloaded = dlhandler->total_downloaded + dlhandler->chunk_size;
++    /* Charge bytes already sent, not an unrequested future full chunk. */
++    would_be_downloaded = dlhandler->total_downloaded;
+     if (dlhandler->bandwidth > 0UL) {
+         wanted_ts = (double) would_be_downloaded /
+             (double) dlhandler->bandwidth;
+@@ -2919,7 +2920,7 @@
+     }
+     if (previous_chunk_size != dlhandler->default_chunk_size) {
+         would_be_downloaded =
+-            dlhandler->total_downloaded + dlhandler->chunk_size;
++            dlhandler->total_downloaded;
+         if (dlhandler->bandwidth > 0UL) {
+             wanted_ts = (double) would_be_downloaded /
+                 (double) dlhandler->bandwidth;
+@@ -3744,7 +3745,8 @@
+         ts_now = ts_start;
+     }
+     elapsed = ts_now - ts_start;
+-    would_be_uploaded = ulhandler->total_uploaded + ulhandler->chunk_size;
++    /* A low-rate account must not wait for a future 256 KiB chunk. */
++    would_be_uploaded = ulhandler->total_uploaded;
+     if (ulhandler->bandwidth > 0UL) {
+         wanted_ts = (double) would_be_uploaded / (double) ulhandler->bandwidth;
+     } else {
+@@ -3768,7 +3770,7 @@
+         }
+         if (previous_chunk_size != ulhandler->default_chunk_size) {
+             would_be_uploaded =
+-                ulhandler->total_uploaded + ulhandler->chunk_size;
++                ulhandler->total_uploaded;
+             if (ulhandler->bandwidth > 0UL) {
+                 wanted_ts = (double) would_be_uploaded /
+                     (double) ulhandler->bandwidth;

@@ -1,0 +1,14 @@
+[Unit]
+Description=Recover interrupted CloudStack FTPS configuration
+After=local-fs.target
+Before=panel-pure-ftpd.service
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --recover-ftp
+RemainAfterExit=yes
+TimeoutStartSec=20
+UMask=0077
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc/panel/security-apps/modules/pure-ftpd
