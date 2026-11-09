@@ -1,0 +1,30 @@
+[Unit]
+Description=Panel verified runtime installer %i
+After=network-online.target
+Wants=network-online.target
+[Service]
+Slice=system.slice
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --install-job %i
+TimeoutStartSec=300min
+KillMode=control-group
+NoNewPrivileges=true
+ProtectControlGroups=true
+TasksMax=512
+MemoryAccounting=true
+# Official PHP 8.2 Zend -O2 compilation measured 1004 MiB in native QA.
+# A finite 1 GiB compiler ceiling replaces the inadequate 768 MiB policy.
+# Selected large PHP builds require 1536 MiB available before starting;
+# 512 MiB is reserved for existing services. No swap or unbounded fallback.
+MemoryHigh=1G
+MemoryMax=1G
+MemorySwapMax=0
+OOMPolicy=stop
+OOMScoreAdjust=500
+Environment=GOMEMLIMIT=128MiB
+UMask=0022
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /var/cache/panel-runtime-build /opt/panel/runtimes /opt/panel/php-extensions
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

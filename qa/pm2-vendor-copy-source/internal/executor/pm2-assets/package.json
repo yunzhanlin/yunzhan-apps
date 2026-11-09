@@ -1,0 +1,7 @@
+{
+  "name":"cloudstack-pm2-runtime",
+  "version":"1.0.1",
+  "private":true,
+  "dependencies":{"pm2":"7.0.4"},
+  "overrides":{"chokidar":"4.0.3","js-yaml":"4.3.2","basic-ftp":"6.2.2"}
+}

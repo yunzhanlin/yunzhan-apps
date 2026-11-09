@@ -1,0 +1,10 @@
+[Unit]
+Description=Recover unfinished panel firewall change before boot
+Before=panel-firewall.service network-online.target
+After=local-fs.target
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --recover-firewall
+RemainAfterExit=yes
+[Install]
+WantedBy=multi-user.target
