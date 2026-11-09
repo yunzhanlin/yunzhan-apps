@@ -1,0 +1,394 @@
+//go:build linux
+
+package executor
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"strconv"
+	"strings"
+	"syscall"
+	"testing"
+	"time"
+)
+
+func TestWAFReloadGenerationPermissionRaceRequiresVerifiedWorkerExit(t *testing.T) {
+	for _, name := range []string{"live_permission", "exited", "zombie", "dead", "pid_reused", "parent_changed", "stat_corrupt", "live_fd_missing", "other_error", "missing_error", "exit_metadata_exited", "exit_metadata_zombie", "exit_metadata_pid_reused", "exit_metadata_live", "exit_metadata_parent_changed", "exit_metadata_stat_corrupt", "io_error_after_verified_exit", "known_title_live_stays_undrained", "known_title_verified_exit"} {
+		t.Run(name, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous := g.Workers[0]
+			readErr, wantGone, wantError := error(syscall.EACCES), false, false
+			if strings.HasPrefix(name, "exit_metadata_") {
+				readErr = errors.New("Nginx 工作进程标题不可核对")
+			}
+			if strings.HasPrefix(name, "known_title_") {
+				readErr = errWAFWorkerTitleUnverifiable
+			}
+			switch name {
+			case "exited", "exit_metadata_exited", "io_error_after_verified_exit", "known_title_verified_exit":
+				if err := os.Remove(filepath.Join(root, "101/stat")); err != nil {
+					t.Fatal(err)
+				}
+				wantGone = true
+				if name == "io_error_after_verified_exit" {
+					readErr = syscall.EIO
+				}
+			case "zombie", "dead", "exit_metadata_zombie":
+				state := "Z"
+				if name == "dead" {
+					state = "X"
+				}
+				wafReloadFixtureStat(t, root, 101, 100, 300, state)
+				wantGone = true
+			case "pid_reused", "exit_metadata_pid_reused":
+				wafReloadFixtureStat(t, root, 101, 999, 301, "S")
+				wantGone = true
+			case "parent_changed", "exit_metadata_parent_changed":
+				wafReloadFixtureStat(t, root, 101, 999, 300, "S")
+				wantError = true
+			case "stat_corrupt", "exit_metadata_stat_corrupt":
+				wafReloadFixtureFile(t, root, "101/stat", "corrupt")
+				wantError = true
+			case "live_fd_missing":
+				readErr, wantError = syscall.ENOENT, true
+			case "other_error":
+				readErr, wantError = syscall.EIO, true
+			case "missing_error":
+				readErr, wantError = nil, true
+			case "exit_metadata_live":
+				wantError = true
+			}
+			gone, err := g.workerSocketReadError(previous, readErr)
+			if gone != wantGone || (err != nil) != wantError {
+				t.Fatalf("gone=%v error=%v", gone, err)
+			}
+			if name == "other_error" && !errors.Is(err, syscall.EIO) {
+				t.Fatal("lost original error", err)
+			}
+			if name == "live_permission" {
+				if done, err := g.drained(context.Background()); err != nil || done {
+					t.Fatal("unreadable is not drainage", done, err)
+				}
+				// The formal isolated Linux regression runs UID501 without any
+				// capabilities, so this branch exercises real EACCES, not a mock.
+				if os.Geteuid() != 0 {
+					fd := filepath.Join(root, "101/fd")
+					if err := os.Chmod(fd, 0); err != nil {
+						t.Fatal(err)
+					}
+					defer os.Chmod(fd, 0700)
+					if _, err := wafProcessSockets(context.Background(), root, 101); !errors.Is(err, os.ErrPermission) {
+						t.Fatal("fixture is not actually unreadable", err)
+					}
+					if done, err := g.drained(context.Background()); err != nil || done {
+						t.Fatal("live EACCES was accepted or immediately failed", done, err)
+					}
+					ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+					err := waitWAFReloadGeneration(ctx, g)
+					cancel()
+					if !errors.Is(err, context.DeadlineExceeded) {
+						t.Fatal("unreadable live worker did not fail within context", err)
+					}
+					if err := os.Chmod(fd, 0700); err != nil {
+						t.Fatal(err)
+					}
+					if err := os.Remove(filepath.Join(fd, "7")); err != nil {
+						t.Fatal(err)
+					}
+					if err := waitWAFReloadGeneration(context.Background(), g); err != nil {
+						t.Fatal("actual listener closure did not complete", err)
+					}
+					t.Log("actual UID501 EACCES waited, context expired closed, then readable listener closure verified")
+				}
+			}
+		})
+	}
+}
+
+const wafReloadFixtureBinary = "/usr/sbin/nginx"
+
+func TestWAFReloadGenerationSeparateHandoffAndFingerprintBudgets(t *testing.T) {
+	t.Run("slow_listener_handoff_then_fresh_probe_budget", func(t *testing.T) {
+		root := wafReloadFixture(t)
+		g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+		if err != nil {
+			t.Fatal(err)
+		}
+		// These are bounded /proc-shaped filesystem fixtures, not native
+		// Nginx workers or proof of actual application activation.
+		closed := make(chan error, 1)
+		go func() {
+			time.Sleep(5200 * time.Millisecond)
+			closed <- os.Remove(filepath.Join(root, "101/fd/7"))
+		}()
+		started := time.Now()
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		defer cancel()
+		probes := 0
+		err = verifyWAFReloadAfterHandoff(ctx, g, func(probeCtx context.Context) error {
+			probes++
+			if time.Since(started) < 5*time.Second {
+				return errors.New("probe ran before actual listener closure")
+			}
+			deadline, ok := probeCtx.Deadline()
+			remaining := time.Until(deadline)
+			if !ok || remaining < 4500*time.Millisecond || remaining > 5*time.Second {
+				return fmt.Errorf("fingerprint did not receive its own bounded budget: %s", remaining)
+			}
+			return probeCtx.Err()
+		})
+		if closeErr := <-closed; closeErr != nil {
+			t.Fatal(closeErr)
+		}
+		if err != nil || probes != 1 {
+			t.Fatal("slow handoff failed or probe repeated", probes, err)
+		}
+		if _, err := os.Stat(filepath.Join(root, "101/stat")); err != nil {
+			t.Fatal("waiting must not kill old clients", err)
+		}
+	})
+	for _, name := range []string{"earlier_deadline", "cancelled", "changed_master", "probe_failure", "changed_master_during_probe", "listener_reopened_during_probe", "cancelled_during_probe"} {
+		t.Run(name, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+			defer cancel()
+			probeFailure := errors.New("fresh fingerprint is wrong")
+			wantProbes := 0
+			switch name {
+			case "cancelled":
+				cancel()
+			case "changed_master":
+				wafReloadFixtureStat(t, root, 100, 1, 201, "S")
+			case "probe_failure", "changed_master_during_probe", "listener_reopened_during_probe", "cancelled_during_probe":
+				if err := os.Remove(filepath.Join(root, "101/fd/7")); err != nil {
+					t.Fatal(err)
+				}
+				wantProbes = 1
+			}
+			probes := 0
+			err = verifyWAFReloadAfterHandoff(ctx, g, func(probeCtx context.Context) error {
+				probes++
+				deadline, _ := probeCtx.Deadline()
+				parentDeadline, _ := ctx.Deadline()
+				if deadline.After(parentDeadline) {
+					t.Fatal("probe extended earlier caller deadline")
+				}
+				switch name {
+				case "probe_failure":
+					return probeFailure
+				case "changed_master_during_probe":
+					wafReloadFixtureStat(t, root, 100, 1, 201, "S")
+				case "listener_reopened_during_probe":
+					wafReloadFixtureLink(t, root, "101/fd/7", "socket:[700]")
+				case "cancelled_during_probe":
+					cancel()
+				}
+				return nil
+			})
+			if err == nil || probes != wantProbes {
+				t.Fatal("unknown handoff/fingerprint accepted", probes, err)
+			}
+			if name == "earlier_deadline" && !errors.Is(err, context.DeadlineExceeded) || (name == "cancelled" || name == "cancelled_during_probe") && !errors.Is(err, context.Canceled) || name == "probe_failure" && !errors.Is(err, probeFailure) {
+				t.Fatal("original verification failure was lost", err)
+			}
+		})
+	}
+}
+
+func wafReloadFixtureStat(t *testing.T, root string, pid, parent int, start uint64, state string) {
+	t.Helper()
+	fields := strings.Fields("S 1 1 1 0 0 0 0 0 0 0 1 1 0 0 20 0 1 0 100 1024 1")
+	fields[0], fields[1], fields[19] = state, strconv.Itoa(parent), strconv.FormatUint(start, 10)
+	path := filepath.Join(root, strconv.Itoa(pid))
+	if err := os.MkdirAll(path, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(path, "stat"), []byte(fmt.Sprintf("%d (nginx (worker)) %s\n", pid, strings.Join(fields, " "))), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func wafReloadFixtureFile(t *testing.T, root, path, value string) {
+	t.Helper()
+	path = filepath.Join(root, path)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(value), 0600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func wafReloadFixtureLink(t *testing.T, root, path, value string) {
+	t.Helper()
+	path = filepath.Join(root, path)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(value, path); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func wafReloadFixture(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+	wafReloadFixtureStat(t, root, 100, 1, 200, "S")
+	wafReloadFixtureStat(t, root, 101, 100, 300, "S")
+	wafReloadFixtureStat(t, root, 102, 100, 400, "S")
+	wafReloadFixtureLink(t, root, "100/exe", wafReloadFixtureBinary)
+	wafReloadFixtureLink(t, root, "101/exe", wafReloadFixtureBinary)
+	wafReloadFixtureLink(t, root, "102/exe", wafReloadFixtureBinary)
+	wafReloadFixtureFile(t, root, "100/task/100/children", "101 102\n")
+	wafReloadFixtureFile(t, root, "101/cmdline", "nginx: worker process\x00")
+	wafReloadFixtureFile(t, root, "102/cmdline", "nginx: cache manager process\x00")
+	for _, protocol := range []string{"tcp", "tcp6", "udp", "udp6"} {
+		wafReloadFixtureFile(t, root, "100/net/"+protocol, "sl local_address rem_address st tx_queue rx_queue tr tm->when retrnsmt uid timeout inode\n")
+	}
+	wafReloadFixtureFile(t, root, "100/net/tcp", "header\n0: 0100007F:4A9D 00000000:0000 0A 0:0 00:0 0 0 0 700\n1: 0100007F:4A9D 0100007F:8000 01 0:0 00:0 0 0 0 701\n")
+	wafReloadFixtureFile(t, root, "100/net/udp", "header\n0: 00000000:01BB 00000000:0000 07 0:0 00:0 0 0 0 702\n1: 0100007F:8000 0100007F:0202 01 0:0 00:0 0 0 0 703\n")
+	wafReloadFixtureFile(t, root, "100/net/unix", "Num RefCount Protocol Flags Type St Inode Path\n0000: 00000002 00000000 00010000 0001 01 704 /run/nginx.sock\n0001: 00000002 00000000 00000000 0001 03 705\n")
+	for _, inode := range []string{"700", "701", "702", "703", "704", "705"} {
+		wafReloadFixtureLink(t, root, "100/fd/"+inode, "socket:["+inode+"]")
+	}
+	wafReloadFixtureLink(t, root, "101/fd/7", "socket:[700]")
+	wafReloadFixtureLink(t, root, "101/fd/8", "socket:[701]")
+	wafReloadFixtureLink(t, root, "101/fd/9", "socket:[705]")
+	return root
+}
+
+func TestWAFReloadGenerationWaitsForListenersNotExistingClients(t *testing.T) {
+	root := wafReloadFixture(t)
+	g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.Workers) != 1 || g.Workers[0].PID != 101 || !reflect.DeepEqual(g.Listeners, map[string]bool{"700": true, "702": true, "704": true}) {
+		t.Fatalf("wrong generation: %#v", g)
+	}
+	wafReloadFixtureFile(t, root, "101/cmdline", "nginx: worker process is shutting down\x00")
+	if done, err := g.drained(context.Background()); err != nil || done {
+		t.Fatal("process title is NOT a listener-close acknowledgement", done, err)
+	}
+	if err := os.Remove(filepath.Join(root, "101/fd/7")); err != nil {
+		t.Fatal(err)
+	}
+	if done, err := g.drained(context.Background()); err != nil || !done {
+		t.Fatal("old established clients/control channels must not block reload", done, err)
+	}
+	if err := waitWAFReloadGeneration(context.Background(), g); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(root, "101/stat")); err != nil {
+		t.Fatal("old worker unexpectedly killed", err)
+	}
+}
+
+func TestWAFReloadGenerationRefusesUnverifiedLiveProcesses(t *testing.T) {
+	for _, tc := range []string{"wrong_master_exe", "wrong_worker_exe", "wrong_parent", "duplicate_child", "invalid_child", "no_workers", "broken_stat", "missing_table", "malformed_table", "no_master_listener"} {
+		t.Run(tc, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			switch tc {
+			case "wrong_master_exe", "wrong_worker_exe":
+				path := "100/exe"
+				if tc == "wrong_worker_exe" {
+					path = "101/exe"
+				}
+				os.Remove(filepath.Join(root, path))
+				wafReloadFixtureLink(t, root, path, "/foreign/nginx")
+			case "wrong_parent":
+				wafReloadFixtureStat(t, root, 101, 999, 300, "S")
+			case "duplicate_child":
+				wafReloadFixtureFile(t, root, "100/task/100/children", "101 101")
+			case "invalid_child":
+				wafReloadFixtureFile(t, root, "100/task/100/children", "../101")
+			case "no_workers":
+				wafReloadFixtureFile(t, root, "101/cmdline", "foreign daemon\x00")
+			case "broken_stat":
+				wafReloadFixtureFile(t, root, "101/stat", "101 (broken)")
+			case "missing_table":
+				os.Remove(filepath.Join(root, "100/net/tcp"))
+			case "malformed_table":
+				wafReloadFixtureFile(t, root, "100/net/tcp", "header\ninvalid\n")
+			case "no_master_listener":
+				for _, n := range []string{"700", "702", "704"} {
+					os.Remove(filepath.Join(root, "100/fd", n))
+				}
+			}
+			if _, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100); err == nil {
+				t.Fatal("accepted unverified generation")
+			}
+		})
+	}
+}
+
+func TestWAFReloadGenerationPIDReuseAndFailures(t *testing.T) {
+	for _, tc := range []string{"old_exit", "old_pid_reused", "old_zombie", "master_reused", "master_exe_changed", "live_stat_corrupt", "live_fd_unreadable", "context_cancelled", "listener_still_open"} {
+		t.Run(tc, func(t *testing.T) {
+			root := wafReloadFixture(t)
+			g, err := captureWAFReloadGeneration(context.Background(), root, wafReloadFixtureBinary, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			wantDone, wantError := false, false
+			switch tc {
+			case "old_exit":
+				os.Remove(filepath.Join(root, "101/stat"))
+				wantDone = true
+			case "old_pid_reused":
+				wafReloadFixtureStat(t, root, 101, 999, 301, "S")
+				wantDone = true
+			case "old_zombie":
+				wafReloadFixtureStat(t, root, 101, 100, 300, "Z")
+				wantDone = true
+			case "master_reused":
+				wafReloadFixtureStat(t, root, 100, 1, 201, "S")
+				wantError = true
+			case "master_exe_changed":
+				os.Remove(filepath.Join(root, "100/exe"))
+				wafReloadFixtureLink(t, root, "100/exe", "/foreign/nginx")
+				wantError = true
+			case "live_stat_corrupt":
+				wafReloadFixtureFile(t, root, "101/stat", "foreign")
+				wantError = true
+			case "live_fd_unreadable":
+				wafReloadFixtureFile(t, root, "101/fd/99", "not a proc symlink")
+				wantError = true
+			case "context_cancelled":
+				cancel()
+				wantError = true
+			}
+			done, err := g.drained(ctx)
+			if done != wantDone || (err != nil) != wantError {
+				t.Fatalf("done=%v error=%v", done, err)
+			}
+		})
+	}
+}
+
+func TestWAFListenerTablesRejectUnknownAndInvalidInodes(t *testing.T) {
+	for _, tc := range []struct{ protocol, data string }{
+		{"http", "header\n"}, {"tcp", ""}, {"tcp", "header\n0: 1 2 0A 0 0 0 0 0 invalid\n"}, {"tcp", "header\n0: 1 2 0A 0 0 0 0 0 0\n"}, {"udp", "header\nshort\n"}, {"unix", "header\nshort\n"},
+	} {
+		if _, err := wafListenerTable([]byte(tc.data), tc.protocol); err == nil {
+			t.Fatal("invalid listener table accepted", tc)
+		}
+	}
+	if _, err := wafListenerTable([]byte("header\n"+strings.Repeat("\n", 131073)), "tcp"); err == nil {
+		t.Fatal("unbounded socket table accepted")
+	}
+}
