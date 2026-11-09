@@ -1,0 +1,9 @@
+{
+  "cohort": "C70r2 exact signed programme source",
+  "source_inputs_sha256": "108a09153c7804b68d64f5312d65f85061f636bb3d9b5b6682fce65d4dbb890d",
+  "application_version": "7.0.4-compat11",
+  "strict_Root_tests_per_arch": 221,
+  "original_C70_preview_retained": "62f905bdc18fae41774254db74aa9a7f7825483c",
+  "separate_normal_install_and_Main_update_acceptance": true,
+  "all50_commercial": false
+}

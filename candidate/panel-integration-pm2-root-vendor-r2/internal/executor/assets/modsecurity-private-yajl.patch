@@ -1,0 +1,96 @@
+--- a/build/yajl.m4
++++ b/build/yajl.m4
+@@ -8,7 +8,29 @@
+ dnl  YAJL_FOUND
+ 
+ AC_DEFUN([PROG_YAJL], [
+-MSC_CHECK_LIB([YAJL], [yajl2 yajl], [yajl/yajl_parse.h], [yajl], [-DWITH_YAJL])
++# Yunzhan: the reviewed CVE-patched private archive is mandatory. Never
++# consult a system/pkg-config YAJL or substitute a shared library.
++AC_ARG_WITH([yajl], [AS_HELP_STRING([--with-yajl=PATH],
++    [Mandatory prefix for the pinned private static YAJL])])
++case "$with_yajl" in
++    ""|yes|no) AC_MSG_ERROR([pinned private static YAJL prefix required]) ;;
++esac
++if test ! -f "$with_yajl/lib/libyajl.a" ||
++   test ! -f "$with_yajl/include/yajl/yajl_parse.h"; then
++    AC_MSG_ERROR([pinned private static YAJL is missing])
++fi
++YAJL_VERSION="2.1.0-debian5-yz1"
++YAJL_CFLAGS="-DWITH_YAJL -I$with_yajl/include"
++YAJL_LDADD="$with_yajl/lib/libyajl.a"
++YAJL_LDFLAGS=""
++YAJL_DISPLAY="${YAJL_LDADD}, ${YAJL_CFLAGS}"
++YAJL_FOUND=1
++AC_SUBST(YAJL_VERSION)
++AC_SUBST(YAJL_CFLAGS)
++AC_SUBST(YAJL_LDADD)
++AC_SUBST(YAJL_LDFLAGS)
++AC_SUBST(YAJL_DISPLAY)
++AC_SUBST(YAJL_FOUND)
+ 
+ # FIX: if the include directory in CFLAGS ends with "include/yajl",
+ # remove the suffix "/yajl". The library header files are included
+--- a/configure
++++ b/configure
+@@ -8454,6 +8454,9 @@
+ 
+ 
+ 
++# Yunzhan: disable the original system/pkg-config library detection. The
++# matching m4 source above has the same private-only contract.
++if false; then
+ # Initialize variables
+ YAJL_VERSION=""
+ YAJL_CFLAGS=""
+@@ -8815,6 +8818,21 @@
+ 
+ 
+ 
++fi
++case "$with_yajl" in
++    ""|yes|no) as_fn_error $? "pinned private static YAJL prefix required" "$LINENO" 5 ;;
++esac
++if test ! -f "$with_yajl/lib/libyajl.a" ||
++   test ! -f "$with_yajl/include/yajl/yajl_parse.h"; then
++    as_fn_error $? "pinned private static YAJL is missing" "$LINENO" 5
++fi
++YAJL_VERSION="2.1.0-debian5-yz1"
++YAJL_CFLAGS="-DWITH_YAJL -I$with_yajl/include"
++YAJL_LDADD="$with_yajl/lib/libyajl.a"
++YAJL_LDFLAGS=""
++YAJL_DISPLAY="${YAJL_LDADD}, ${YAJL_CFLAGS}"
++YAJL_FOUND=1
++
+ 
+ # FIX: if the include directory in CFLAGS ends with "include/yajl",
+ # remove the suffix "/yajl". The library header files are included
+@@ -12955,13 +12973,26 @@
+ else case e in #(
+   e) cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+ /* end confdefs.h.  */
++#include <errno.h>
++#include <sys/wait.h>
+ $ac_includes_default
+ int
+ main (void)
+ {
+ 
+-	  /* By R. Kuhlmann. */
+-	  return fork () < 0;
++          /* Yunzhan: test actual fork and wait for its exact child.
++             Do not leave an orphan for the dedicated build subreaper. */
++          pid_t child = fork ();
++          int status = 0;
++          if (child < 0)
++            return 1;
++          if (child == 0)
++            _exit (0);
++          while (waitpid (child, &status, 0) < 0) {
++            if (errno != EINTR)
++              return 1;
++          }
++          return !WIFEXITED (status) || WEXITSTATUS (status) != 0;
+ 
+   ;
+   return 0;

@@ -1,0 +1,53 @@
+--- a/build/find_yajl.m4
++++ b/build/find_yajl.m4
+@@ -17,9 +17,10 @@
+ YAJL_CPPFLAGS=""
+ YAJL_LDADD=""
+ YAJL_LDFLAGS=""
+-YAJL_CONFIG=${PKG_CONFIG}
++# Yunzhan modification 2026-10-11: only the private, patched static YAJL.
++YAJL_CONFIG=""
+ YAJL_PKGNAMES="yajl2 yajl"
+-YAJL_SONAMES="so la sl dll dylib"
++YAJL_SONAMES="a"
+ 
+ AC_ARG_WITH(
+     yajl,
+@@ -132,7 +133,7 @@
+         AC_MSG_RESULT([${yajl_lib_path} ${yajl_inc_path}])
+         YAJL_VERSION="2"
+         YAJL_CFLAGS="-I${yajl_inc_path}"
+-        YAJL_LDADD="-l${yajl_lib_name}"
++        YAJL_LDADD="${yajl_lib_path}libyajl.a"
+         YAJL_LDFLAGS="-L${yajl_lib_path}"
+     else
+         YAJL_VERSION=""
+--- a/configure
++++ b/configure
+@@ -18819,9 +18819,10 @@
+ YAJL_CPPFLAGS=""
+ YAJL_LDADD=""
+ YAJL_LDFLAGS=""
+-YAJL_CONFIG=${PKG_CONFIG}
++# Yunzhan modification 2026-10-11: only the private, patched static YAJL.
++YAJL_CONFIG=""
+ YAJL_PKGNAMES="yajl2 yajl"
+-YAJL_SONAMES="so la sl dll dylib"
++YAJL_SONAMES="a"
+ 
+ 
+ # Check whether --with-yajl was given.
+@@ -18950,7 +18951,7 @@
+ printf '%s\n' "${yajl_lib_path} ${yajl_inc_path}" >&6; }
+         YAJL_VERSION="2"
+         YAJL_CFLAGS="-I${yajl_inc_path}"
+-        YAJL_LDADD="-l${yajl_lib_name}"
++        YAJL_LDADD="${yajl_lib_path}libyajl.a"
+         YAJL_LDFLAGS="-L${yajl_lib_path}"
+     else
+         YAJL_VERSION=""
+@@ -21519,4 +21520,3 @@
+ printf '%s\n' "$as_me: WARNING: unrecognized options: $ac_unrecognized_opts" >&2;}
+ fi
+ 
+-

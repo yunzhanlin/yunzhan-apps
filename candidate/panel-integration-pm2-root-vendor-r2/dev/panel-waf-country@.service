@@ -1,0 +1,39 @@
+[Unit]
+Description=Panel original signed WAF country data operation %i
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/panel/bin/panel-executor --waf-country-job=%i
+TimeoutStartSec=280s
+TimeoutStopSec=5s
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+# The supervisor reads panel-owned Core authorization, then changes the
+# network child's UID/GID and can cancel that same changed-UID child.
+CapabilityBoundingSet=CAP_DAC_READ_SEARCH CAP_KILL CAP_SETGID CAP_SETUID
+AmbientCapabilities=CAP_DAC_READ_SEARCH CAP_KILL CAP_SETGID CAP_SETUID
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=true
+ReadWritePaths=/var/lib/panel-executor/waf-country-data /var/lib/panel-executor/waf-country-jobs
+ReadOnlyPaths=/etc/panel /var/lib/panel
+InaccessiblePaths=-/run/panel-executor/control.sock -/etc/panel/credentials -/etc/nginx -/etc/systemd/system -/srv/panel/sites
+Environment=GOMEMLIMIT=160MiB
+Environment=GOMAXPROCS=2
+MemoryHigh=256M
+MemoryMax=384M
+MemorySwapMax=0
+TasksMax=32
+CPUQuota=70%
+LimitFSIZE=64M
+LimitCORE=0
