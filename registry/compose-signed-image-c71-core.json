@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0-dev.proapps24composesignedimagecandidate71",
+  "source_inputs_sha256": "0fe094ad199b1cadfe7d55725368d3e3498494d774895be05d6979bd4c175768",
+  "source_index_sha256": "56a7dacaa7e3c6a1b47fe1c29f2b84e8b11ba1ac83729cc100e3fc8d7f961520",
+  "original_exact_archives": {
+    "amd64": {
+      "archive_bytes": 23765633,
+      "archive_sha256": "5496d8e184b12dabc137e84aeb2339e393f2041ea86df4c0f51b9911644095c5",
+      "manifest_sha256": "19fc45df781a6d2c69ddc3f0e982e9accfa88344d635451107410ffc70e7f077",
+      "signature_sha256": "f5d7785b635f590ff8e3bcb3b45af9097fc6ce198daac753284190ff95ec6a50"
+    },
+    "arm64": {
+      "archive_bytes": 21983577,
+      "archive_sha256": "f2acf4193337beeb7b51c048e4dac33da0d283503359bc260ca3cc40c8239b8c",
+      "manifest_sha256": "5f40a0e0b6424d081241b8aca6c66820d7ca6c5e74a05a53ba6359f40c59f37a",
+      "signature_sha256": "3c15b0ca4e036a9e845f999af4c191678deb340dd4739730de86511695439eb4"
+    }
+  },
+  "native_source_cases_required": 26,
+  "existing_signed_apps_unchanged": true,
+  "actual_native_business_pending": true,
+  "all50_commercial": false
+}

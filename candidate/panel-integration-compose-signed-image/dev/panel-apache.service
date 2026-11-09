@@ -1,0 +1,23 @@
+[Unit]
+Description=Panel managed Apache website service
+After=network.target panel-executor.service
+RequiresMountsFor=/var/cache/panel-apache-body
+ConditionPathExists=/etc/panel/apache/httpd.conf
+
+[Service]
+Type=simple
+ExecStartPre=/opt/panel/bin/panel-executor --recover-apache-waf-config
+ExecStartPre=/opt/panel/bin/panel-executor --prepare-apache-body-runtime
+ExecStart=/opt/panel/runtimes/apache/2.4.68/bin/httpd -DFOREGROUND -f /etc/panel/apache/httpd.conf
+ExecReload=/bin/kill -USR1 $MAINPID
+Restart=on-failure
+RestartSec=2
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/run /var/log/apache2 /srv/panel/sites /etc/panel/apache /var/cache/panel-apache-body -/etc/panel/security-apps/modules/apache-waf
+ReadWritePaths=/var/lib/panel-apache-body
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

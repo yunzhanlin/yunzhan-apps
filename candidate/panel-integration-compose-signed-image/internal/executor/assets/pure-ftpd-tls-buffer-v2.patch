@@ -1,0 +1,63 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -4036,6 +4036,7 @@
+     off_t uploaded = (off_t) 0;
+     int pollret;
+     int timeout;
++    int tls_buffer_retry = 1;
+     int ret;
+ 
+     if (ulhandler->bandwidth > 0UL && (ts_start = get_usec_time()) <= 0.0) {
+@@ -4043,6 +4044,7 @@
+         return -1;
+     }
+     for (;;) {
++        int buffered_tls = 0;
+         if (ulhandler->idletime >= INT_MAX / 1000) {
+             timeout = INT_MAX;
+         } else {
+@@ -4050,9 +4052,27 @@
+         }
+         ulhandler->pfds[PFD_DATA].revents =
+             ulhandler->pfds[PFD_COMMANDS].revents = 0;
++#ifdef WITH_TLS
++        /* OpenSSL may buffer complete encrypted records as well as decrypted
++         * bytes. Process them without waiting for another socket packet.
++         * After WANT_READ/WRITE, wait for real readiness: an incomplete TLS
++         * record must not turn SSL_has_pending into a CPU busy loop. */
++        if (ulhandler->tls_fd != NULL) {
++            buffered_tls = SSL_pending(ulhandler->tls_fd) > 0 ||
++                (tls_buffer_retry && SSL_has_pending(ulhandler->tls_fd));
++            ulhandler->pfds[PFD_DATA].events = POLLIN | POLLERR | POLLHUP;
++            if (SSL_want_write(ulhandler->tls_fd)) {
++                ulhandler->pfds[PFD_DATA].events |= POLLOUT;
++            }
++        }
++#endif
+         pollret = poll(ulhandler->pfds,
+                        sizeof ulhandler->pfds / sizeof ulhandler->pfds[0],
+-                       timeout);
++                       buffered_tls ? 0 : timeout);
++        if (pollret >= 0 && buffered_tls) {
++            ulhandler->pfds[PFD_DATA].revents |= POLLIN;
++            pollret++;
++        }
+         if (pollret < 0) {
+             addreply_noformat(451, MSG_DATA_READ_FAILED);
+             return -1;
+@@ -4061,8 +4081,14 @@
+             addreply_noformat(421, MSG_TIMEOUT);
+             return -1;
+         }
+-        if ((ulhandler->pfds[PFD_DATA].revents & POLLIN) != 0) {
++        if ((ulhandler->pfds[PFD_DATA].revents & (POLLIN | POLLOUT)) != 0) {
+             ret = ul_handle_data(ulhandler, &uploaded, ts_start);
++#ifdef WITH_TLS
++            if (ulhandler->tls_fd != NULL) {
++                tls_buffer_retry = !SSL_want_read(ulhandler->tls_fd) &&
++                    !SSL_want_write(ulhandler->tls_fd);
++            }
++#endif
+             switch (ret) {
+             case 1:
+                 return 1;
