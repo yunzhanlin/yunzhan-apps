@@ -164,6 +164,8 @@ function beforeCandidateFixtureDependencies(path,bytes){
 }
 export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
+ const vendorAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/pm2-maintenance-contract.mjs','tools/pm2-root-vendor-contract.mjs'","'tools/pm2-maintenance-contract.mjs'"]:path==='tests/versioning.test.mjs'?["'pm2-maintenance-contract.mjs','pm2-root-vendor-contract.mjs'","'pm2-maintenance-contract.mjs'"]:null;
+ if(vendorAddition&&bytes.toString().includes(vendorAddition[0])){const text=bytes.toString();assert.equal(text.split(vendorAddition[0]).length,2);bytes=Buffer.from(text.replace(vendorAddition[0],()=>vendorAddition[1]));}
  // Only the new fixture dependency is reversed; all historical digests and
  // assertions below stay exact, and undeclared edits still fail them.
  const pm2Addition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/lib.mjs','tools/pm2-maintenance-contract.mjs'","'tools/lib.mjs'"]:path==='tests/versioning.test.mjs'?["'lib.mjs','pm2-maintenance-contract.mjs'","'lib.mjs'"]:null;

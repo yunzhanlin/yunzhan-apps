@@ -1,0 +1,66 @@
+name: C70 original signed Root vendor source and preserved historic catalogue ABI
+on:
+  push:
+    branches: [codex/pm2-root-vendor-c70-release]
+    paths: [scripts/pm2-root-vendor-c70/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: c70-pm2-original-source-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  actual-native-source:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/pm2-root-vendor-c70-release'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.2
+          cache: false
+      - name: All publisher regressions and both original signed catalogues
+        run: |
+          set -eu
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          git fetch --no-tags --depth=1 origin fdb6be9f2ee650ca0ed37b213256151f397a7599
+          npm test
+          git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures candidate/panel-integration-load-balance native-client-1.3.3
+      - name: Independent Draft202012 exact PM211 and twelve actual original PM2 versions
+        run: |
+          set -eu
+          python3 -m venv "$RUNNER_TEMP/pm2-schema"
+          "$RUNNER_TEMP/pm2-schema/bin/python3" -m pip install --disable-pip-version-check --no-input --only-binary=:all: 'jsonschema==4.25.1' 'referencing==0.36.2' 'attrs==26.1.0' 'jsonschema-specifications==2025.9.1' 'rpds-py==0.27.1' 'typing-extensions==4.16.0'
+          YUNZHAN_SCHEMA_PYTHON="$RUNNER_TEMP/pm2-schema/bin/python3" node tools/check-pm2-root-vendor-schema.mjs
+      - name: Original compiled PM2 view handles page failure unknown history and a single stop receipt
+        run: |
+          set -eu
+          npm ci --ignore-scripts --no-audit --no-fund --prefix candidate/panel-integration-pm2-root-vendor/web
+          cd candidate/panel-integration-pm2-root-vendor
+          node --experimental-strip-types --test scripts/test-deferred-workspace.mjs scripts/test-pm2-projects.mjs scripts/test-pm2-configuration-receipt.mjs
+      - name: Complete Root Go regression and exact212 PM2 source cases with real private kernel faults
+        run: |
+          set -eu
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps PATH="$(dirname "$(command -v go)"):/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" python3 -I -B tools/run-pm2-root-vendor-source-native.py "$RUNNER_TEMP/c70-original-source"
+      - name: Archive every original Root output with its metadata for the unprivileged artifact uploader
+        if: always()
+        run: sudo python3 -I -B tools/collect-pm2-root-vendor-source.py "$RUNNER_TEMP/c70-original-source" "$RUNNER_TEMP/c70-original-source-public" "$GITHUB_SHA" "$GITHUB_RUN_ID"
+      - name: Preserve original native source logs including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c70-original-PM2-source-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c70-original-source-public/
+          retention-days: 14
+          if-no-files-found: error

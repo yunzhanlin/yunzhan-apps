@@ -1,0 +1,32 @@
+{
+  "format": 1,
+  "version": "0.1.0-dev.proapps24pm2rootvendorcandidate70",
+  "source_inputs_sha256": "44683a15e9b23357ebe34aea11970f6fa90069ef99621d5780aa3749f7d05907",
+  "source_sdk_files": 2489,
+  "frozen_inputs": 18192,
+  "source_index_sha256": "42fec9b1a67d0f82bb67e90e48439839ddbe42bf8e035d7c89ac1c47d8e15887",
+  "source_overlays": 0,
+  "native133_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
+  "original_C68r3_SDK_and_all40_native_clients_preserved": true,
+  "new_PM2_version": "7.0.4-compat11",
+  "new_PM2_feature": "pm2-root-vendor-v1",
+  "signed_original_archives": {
+    "amd64": {
+      "archive_bytes": 23761063,
+      "archive_sha256": "889ceab6ef50dc2d4fa7a31cca71387dbf0a8fa2355ec6d49ca50017133e9f20",
+      "manifest_sha256": "4eaa4343ab27c16b1bbf4716d9f352729de4db49931e78f2c9c2296db4451ffa",
+      "signature_sha256": "715724dd32c5dc1a6cdeede2d4ecaefa3dd62ea13bbae54d9dbc448b44475001"
+    },
+    "arm64": {
+      "archive_bytes": 21979832,
+      "archive_sha256": "204e040ebb8cc414e45dc0dbbc2773d8dd6a12542401b9b38fcab21ac6f6802d",
+      "manifest_sha256": "dd753b8cb6038c75bd926587121050a00144aa1764f1a14e31211c8b51f0ef9e",
+      "signature_sha256": "92da89d00c3231054cc3ca4a78d818baab2229a8a031e8f19b750838cfc24194"
+    }
+  },
+  "native_real_fixed_builder_original_qualified": 42627738771,
+  "original_C69r4_maintenance_SDK_preserved": true,
+  "current_node_mocked_fixtures_are_not_installed_PM2_acceptance": true,
+  "native_source_CI_and_installed_business_acceptance_pending": true,
+  "all50_commercial": false
+}

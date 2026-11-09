@@ -180,7 +180,8 @@
           "files-sync-root-independent-backup-v1",
           "website-analytics-query-context-v1",
           "files-sync-unpublished-retention-v1",
-          "pm2-evidence-preserving-stop-v1"
+          "pm2-evidence-preserving-stop-v1",
+          "pm2-root-vendor-v1"
         ]
       }
     },
@@ -1728,6 +1729,41 @@
                 "maxItems": 1,
                 "items": {
                   "const": "pm2-evidence-preserving-stop-v1"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "pm2-manager"
+              },
+              "version": {
+                "const": "7.0.4-compat11"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "pm2-manager"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "pm2-root-vendor-v1"
                 }
               }
             }
@@ -4791,77 +4827,121 @@
     },
     {
       "if": {
-        "anyOf": [
+        "allOf": [
           {
-            "required": [
-              "required_panel_features"
-            ],
-            "properties": {
-              "required_panel_features": {
-                "contains": {
-                  "const": "pm2-evidence-preserving-stop-v1"
-                }
-              }
-            }
-          },
-          {
-            "required": [
-              "id",
-              "version"
-            ],
-            "properties": {
-              "id": {
-                "const": "pm2-manager"
-              },
-              "version": {
-                "not": {
-                  "anyOf": [
-                    {
-                      "enum": [
-                        "6",
-                        "7.0.4",
-                        "7.0.4-compat1",
-                        "7.0.4-compat2",
-                        "7.0.4-compat3",
-                        "7.0.4-compat4",
-                        "7.0.4-compat5",
-                        "7.0.4-compat6",
-                        "7.0.4-compat7",
-                        "7.0.4-compat8",
-                        "7.0.4-compat9"
-                      ]
-                    },
-                    {
-                      "pattern": "^(?:0*[0-6](?:\\.[0-9]+){0,3}|0*7(?:\\.0+(?:\\.0*[0-3](?:\\.[0-9]+)?)?)?)(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          {
-            "required": [
-              "delivery"
-            ],
-            "properties": {
-              "delivery": {
+            "anyOf": [
+              {
                 "required": [
-                  "target"
+                  "required_panel_features"
                 ],
                 "properties": {
-                  "target": {
+                  "required_panel_features": {
+                    "contains": {
+                      "const": "pm2-evidence-preserving-stop-v1"
+                    }
+                  }
+                }
+              },
+              {
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "properties": {
+                  "id": {
                     "const": "pm2-manager"
+                  },
+                  "version": {
+                    "not": {
+                      "anyOf": [
+                        {
+                          "enum": [
+                            "6",
+                            "7.0.4",
+                            "7.0.4-compat1",
+                            "7.0.4-compat2",
+                            "7.0.4-compat3",
+                            "7.0.4-compat4",
+                            "7.0.4-compat5",
+                            "7.0.4-compat6",
+                            "7.0.4-compat7",
+                            "7.0.4-compat8",
+                            "7.0.4-compat9"
+                          ]
+                        },
+                        {
+                          "pattern": "^(?:0*[0-6](?:\\.[0-9]+){0,3}|0*7(?:\\.0+(?:\\.0*[0-3](?:\\.[0-9]+)?)?)?)(?:-[A-Za-z0-9]+(?:[.-][A-Za-z0-9]+)*)?$"
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              {
+                "required": [
+                  "delivery"
+                ],
+                "properties": {
+                  "delivery": {
+                    "required": [
+                      "target"
+                    ],
+                    "properties": {
+                      "target": {
+                        "const": "pm2-manager"
+                      }
+                    }
+                  }
+                },
+                "not": {
+                  "required": [
+                    "id"
+                  ],
+                  "properties": {
+                    "id": {
+                      "const": "pm2-manager"
+                    }
                   }
                 }
               }
-            },
+            ]
+          },
+          {
             "not": {
               "required": [
-                "id"
+                "required_panel_features"
               ],
               "properties": {
                 "id": {
                   "const": "pm2-manager"
+                },
+                "version": {
+                  "const": "7.0.4-compat11"
+                },
+                "delivery": {
+                  "required": [
+                    "provider",
+                    "target",
+                    "manage_route"
+                  ],
+                  "properties": {
+                    "provider": {
+                      "const": "panel-module"
+                    },
+                    "target": {
+                      "const": "pm2-manager"
+                    },
+                    "manage_route": {
+                      "const": "app-modules"
+                    }
+                  }
+                },
+                "required_panel_features": {
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "const": "pm2-root-vendor-v1"
+                  }
                 }
               }
             }
@@ -4902,6 +4982,101 @@
             "maxItems": 1,
             "items": {
               "const": "pm2-evidence-preserving-stop-v1"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "pm2-root-vendor-v1"
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "version"
+            ],
+            "properties": {
+              "version": {
+                "const": "7.0.4-compat11"
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "const": "pm2-manager"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "delivery"
+                ],
+                "properties": {
+                  "delivery": {
+                    "required": [
+                      "target"
+                    ],
+                    "properties": {
+                      "target": {
+                        "const": "pm2-manager"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "pm2-manager"
+          },
+          "version": {
+            "const": "7.0.4-compat11"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "pm2-manager"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "pm2-root-vendor-v1"
             }
           }
         }

@@ -1,0 +1,9 @@
+{
+  "cohort": "C70 original normal exact source",
+  "source_inputs_sha256": "44683a15e9b23357ebe34aea11970f6fa90069ef99621d5780aa3749f7d05907",
+  "exact_current_PM2_version": "7.0.4-compat11",
+  "strict_Root_tests_per_arch": 212,
+  "native_builder_preflight_scope_only": 42627738771,
+  "normal_native_install_and_Main_acceptance_separate": true,
+  "all50_commercial": false
+}

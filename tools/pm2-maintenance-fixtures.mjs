@@ -3,9 +3,9 @@ import path from 'node:path';
 import {candidateSource} from './candidate-source.mjs';
 export function pm2MaintenanceCases(root){
  const stable=JSON.parse(fs.readFileSync(path.join(root,'registry/apps.json'))),overrides=JSON.parse(fs.readFileSync(path.join(root,'registry/candidate-apps.json')));
- const current=overrides.apps.find(a=>a.id==='pm2-manager'),cases=[{name:'exact10',manifest:structuredClone(current),valid:true}];
+ const current=JSON.parse(fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager/7.0.4-compat10/manifest.json'))),cases=[{name:'exact10',manifest:structuredClone(current),valid:true}];
  for(const name of fs.readdirSync(path.join(root,'candidate/dist/apps/pm2-manager')).sort()){
-  if(name==='7.0.4-compat10')continue;
+  if(name==='7.0.4-compat10'||name==='7.0.4-compat11')continue;
   const manifest=JSON.parse(fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager',name,'manifest.json')));
   cases.push({name:'actual-original-PM2:'+name,manifest,valid:true});
  }

@@ -1,0 +1,25 @@
+[Unit]
+Description=CloudStack isolated TLS FTP service
+After=network.target
+Requires=panel-pure-ftpd-recover.service
+After=panel-pure-ftpd-recover.service
+[Service]
+Type=simple
+ExecStart=/opt/panel/bin/panel-executor --serve-ftp
+Restart=on-failure
+RestartSec=3
+MemoryHigh=384M
+MemoryMax=512M
+TasksMax=256
+CPUQuota=200%
+LimitNOFILE=8192
+UMask=0027
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+RuntimeDirectory=pure-ftpd
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+ReadWritePaths=/srv/panel/sites
+[Install]
+WantedBy=multi-user.target
