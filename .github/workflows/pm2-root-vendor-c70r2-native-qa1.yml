@@ -1,0 +1,78 @@
+name: C70r2 normal original PM2 upgrade and legacy writable descriptor isolation
+on:
+  push:
+    branches: [codex/pm2-c70r2-native-qa1]
+    paths: [scripts/native-pm2-c70/cohort.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: c70r2-native-original-PM2-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  original-native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/pm2-c70r2-native-qa1'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exact source CI and closed immutable programme input retrieval before any installation
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B scripts/native-pm2-c70/download.py "$RUNNER_TEMP/c70-old-inputs" "$RUNNER_TEMP/c70-new-inputs" "$RUNNER_TEMP/c70-private"
+      - name: One original signed C69r4 installation with original negative ACL and full204 member checks
+        run: |
+          set -eu
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c70/bootstrap-original-install.py "$RUNNER_TEMP/c70-old-inputs" "$RUNNER_TEMP/c70-private" > "$RUNNER_TEMP/c70-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/c70-private/bootstrap-step.stderr"
+      - name: One preserving C70r2 upgrade with an active project and five stopped projects
+        run: |
+          set -eu
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c70/phase1.py "$RUNNER_TEMP/c70-new-inputs" "$RUNNER_TEMP/c70-private" > "$RUNNER_TEMP/c70-private/phase1-step.stdout" 2> "$RUNNER_TEMP/c70-private/phase1-step.stderr"
+      - name: Encrypt complete original phase1 evidence including any failure
+        if: always()
+        run: sudo python3 -I -B scripts/native-pm2-c70/finish.py "$RUNNER_TEMP/c70-private" "$RUNNER_TEMP/c70-phase1-public" phase1
+      - name: Retain original phase1 before the qualified catalogue publication
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c70r2-qa1-original-PM2-phase1-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c70-phase1-public/
+          retention-days: 14
+          if-no-files-found: error
+      - name: Wait for the exact independently qualified official signed catalogue
+        if: success()
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B scripts/native-pm2-c70/wait-catalogue.py "$RUNNER_TEMP/c70-private"
+      - name: One normal original-signed PM2 compat10 to compat11 update with an open original descriptor and all six projects retained
+        if: success()
+        run: |
+          set -eu
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c70/phase2.py "$RUNNER_TEMP/c70-private" > "$RUNNER_TEMP/c70-private/phase2-step.stdout" 2> "$RUNNER_TEMP/c70-private/phase2-step.stderr"
+      - name: Encrypt all original phase2 outcomes including failures and unstarted phases
+        if: always()
+        run: sudo python3 -I -B scripts/native-pm2-c70/finish.py "$RUNNER_TEMP/c70-private" "$RUNNER_TEMP/c70-phase2-public" phase2
+      - name: Retain original signed update outcome including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c70r2-qa1-original-PM2-phase2-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c70-phase2-public/
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,92 @@
+{
+  "format": 1,
+  "source_head": "884f09286560dd08f2a24c5dae1d795a40f6a008",
+  "source_sdk_tree": "33b7347c63b21ccc8e83c506422677d3218f43b5",
+  "source_inputs_sha256": "108a09153c7804b68d64f5312d65f85061f636bb3d9b5b6682fce65d4dbb890d",
+  "source_ci_run": 42633017929,
+  "new_manifest_sha256": "80c03d128862e1d54bce0f275025e549d7b1d51f72679cf4d59552e371feb7bc",
+  "new_catalogue_sha256": "1988b2df19d07446c2c78da3b464b786231ceda459615ccdf1d829b3ab1d06aa",
+  "new_catalogue_bundle_sha256": "19673bfa1d894f48a44200bf8adb40833345626317700220879b75ad82b287e9",
+  "old_catalogue_bundle_sha256": "44932b3289b936b5a69c97ab7f2ae3c2272111c670d42994c49c0f2c5c7537dd",
+  "new_release_id": 439233880,
+  "new_release_tag": "qa-pm2rootvendorcandidate70r2-20261109-qa1",
+  "new_release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 727782993,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-amd64.tar.gz": {
+      "id": 727791531,
+      "bytes": 23767148,
+      "sha256": "03f6fc5a1c403d83339c128c51575d670dcbbcd79bc7001c03158b07a85402ad"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-amd64.tar.gz.manifest": {
+      "id": 727782562,
+      "bytes": 185,
+      "sha256": "1a88f8419dac59e3e26d3fd257add8c3407247e9efde7d8b0b4cc83b8edcd066"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-amd64.tar.gz.sig": {
+      "id": 727782844,
+      "bytes": 64,
+      "sha256": "a88bbe2994637ad481e88a431014ad7ff109642dee999f59a9e1e46ad1ca45ee"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-arm64.tar.gz": {
+      "id": 727795692,
+      "bytes": 21985043,
+      "sha256": "2124d3b91d20c9ddd84e8c56c253afb8ada64cda30ae2880e595677570a93d90"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-arm64.tar.gz.manifest": {
+      "id": 727782754,
+      "bytes": 185,
+      "sha256": "053c4dced4d47c02fa8306417b09ec1a125ee804f7ca987fb5065fdec0160bb2"
+    },
+    "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-arm64.tar.gz.sig": {
+      "id": 727782973,
+      "bytes": 64,
+      "sha256": "0bbdbf5290cd98dd1275af3dd2c99fa23ef82fe381b3142024493458e40a7ee6"
+    },
+    "release-signing-dev.pub": {
+      "id": 727782986,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "version": "0.1.0-dev.proapps24pm2rootvendorcandidate70r2",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2rootvendorcandidate70r2-linux-arm64.tar.gz"
+    }
+  },
+  "files": {
+    "bootstrap-original-install.py": "4784af66994751c9ae982bbd5cac71c9aece3c6f48f890fa7d0ba95b17a8bb7a",
+    "capture.py": "b685fe9de07356b56e42e98f8565a7b15e7807105b7aa514b706f71c7cc8a64e",
+    "dispatch.json": "29fa9b9b46106f66d9e29eb6d89be167d5abfb81183df0e91b04aed74e8a6604",
+    "download.py": "98cbd88affb44a87990872bd0deaebc01021bbad8fdf70bd857fdb093403e6c1",
+    "finish.py": "ff04ef425cacee6709b58ea5a6a73a5a5358e94ebcca895b40552fe81b65f80a",
+    "original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "phase1.py": "d8b499353b9fffca762acc4a16e623ea8c50e6c4c7e4e08445414463ed5867f7",
+    "phase2.py": "876bda38ff9817567260c4796b429eb4b839f07b0ca90ed6ab8fce66352311f3",
+    "recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "wait-catalogue.py": "61f84e5d2b0b27b2ca05e09334fc4385f255f8c1666e83b9c86968284fc42d3e"
+  },
+  "payload_files": {
+    "scripts/native-pm2-c70/bootstrap-original-install.py": "4784af66994751c9ae982bbd5cac71c9aece3c6f48f890fa7d0ba95b17a8bb7a",
+    "scripts/native-pm2-c70/capture.py": "b685fe9de07356b56e42e98f8565a7b15e7807105b7aa514b706f71c7cc8a64e",
+    "scripts/native-pm2-c70/dispatch.json": "29fa9b9b46106f66d9e29eb6d89be167d5abfb81183df0e91b04aed74e8a6604",
+    "scripts/native-pm2-c70/download.py": "98cbd88affb44a87990872bd0deaebc01021bbad8fdf70bd857fdb093403e6c1",
+    "scripts/native-pm2-c70/finish.py": "ff04ef425cacee6709b58ea5a6a73a5a5358e94ebcca895b40552fe81b65f80a",
+    "scripts/native-pm2-c70/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-pm2-c70/phase1.py": "d8b499353b9fffca762acc4a16e623ea8c50e6c4c7e4e08445414463ed5867f7",
+    "scripts/native-pm2-c70/phase2.py": "876bda38ff9817567260c4796b429eb4b839f07b0ca90ed6ab8fce66352311f3",
+    "scripts/native-pm2-c70/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-pm2-c70/wait-catalogue.py": "61f84e5d2b0b27b2ca05e09334fc4385f255f8c1666e83b9c86968284fc42d3e",
+    ".github/workflows/pm2-root-vendor-c70r2-native-qa1.yml": "be970534e8987826e724e919f671ab5ae338219a3a2f4011c2d6869ee95b4df7"
+  },
+  "both_actual_original_phase1_results_and_all113_preservation_checks_required_before_serving": true,
+  "Main_changed": false,
+  "all50_commercial": false
+}

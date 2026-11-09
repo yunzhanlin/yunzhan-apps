@@ -1,0 +1,60 @@
+{
+  "format": 1,
+  "source_head": "628a2a32ef88993265fa741a07a4a24f8f748d6e",
+  "source_sdk_tree": "8af2e959b6a7a63c3102bb6519161dc949e016aa",
+  "source_inputs_sha256": "9983bbf3986af49b75aba6e06f94a6f43f2e66eb18b2b013895453017cff681e",
+  "source_ci_run": 42328687029,
+  "release_id": 437271962,
+  "tag": "qa-pm2maintenancecandidate69r4-20261107-qa1",
+  "version": "0.1.0-dev.proapps24pm2maintenancecandidate69r4",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 719362731,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz": {
+      "id": 719362595,
+      "bytes": 23723121,
+      "sha256": "40338c1bf9eb5ffe018ccc9bea83925016771df5eb047d3194612edb061e8b4b"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz.manifest": {
+      "id": 719362605,
+      "bytes": 186,
+      "sha256": "8c4589579c5c78c4a23f5026268f2d20eb17a31af240c73ca29305ed04c2f656"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz.sig": {
+      "id": 719362598,
+      "bytes": 64,
+      "sha256": "8152b06c6be79de1a2088fdf7d519de22ff3db8d0f575826b31820e1175c9264"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz": {
+      "id": 719362592,
+      "bytes": 21944115,
+      "sha256": "68c81cfdfa6774e2e145c2c617da50ef40f951bf4b8fc710491c1fdb402fb1d5"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz.manifest": {
+      "id": 719362591,
+      "bytes": 186,
+      "sha256": "9b46f02a3a5a231b1f843e5f046e86ac0aa058d1a69457ceebe087afd6efa9ef"
+    },
+    "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz.sig": {
+      "id": 719362726,
+      "bytes": 64,
+      "sha256": "44d7be5f4a1c57ee2bc36dac6dbe9b28e4938ab62d60ac448007aba5ccd4d64f"
+    },
+    "release-signing-dev.pub": {
+      "id": 719362734,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2maintenancecandidate69r4-linux-arm64.tar.gz"
+    }
+  }
+}
