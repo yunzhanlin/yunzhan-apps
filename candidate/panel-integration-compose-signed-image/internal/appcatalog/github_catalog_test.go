@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,6 +85,64 @@ func TestOfficialCatalogUsesResolvedImmutableCommitNotStaleMain(t *testing.T) {
 	cached, cacheInfo, err := c.LoadCatalog(context.Background(), cache, time.Hour)
 	if err != nil || cached.Apps[0].Version != "1.1.0" || cacheInfo.Source != "verified-cache" || cacheInfo.CheckedAt != "" || cacheInfo.ResolvedCommit != "" || len(calls) != before {
 		t.Fatal("TTL cache falsely claimed new branch lookup", cached, cacheInfo, err)
+	}
+}
+
+func TestRefreshCatalogRevalidatesOnlyTheOfficialBranchReference(t *testing.T) {
+	c, key := githubCatalogFixture(t)
+	oldCommit := strings.Repeat("a", 40)
+	newCommit := strings.Repeat("b", 40)
+	oldBundle := githubCatalogBundle(t, key, "1.1.0", "2026-10-10T10:00:00Z", strings.Repeat("1", 64))
+	newBundle := githubCatalogBundle(t, key, "1.2.0", "2026-10-10T11:00:00Z", strings.Repeat("2", 64))
+	refURL, err := url.Parse(githubCatalogRefURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	jar.SetCookies(refURL, []*http.Cookie{{Name: "session", Value: "private", Path: "/"}})
+	checks := map[string]bool{}
+	var limit bool
+	c.HTTP = &http.Client{Jar: jar, Transport: githubCatalogTransport(func(r *http.Request) (*http.Response, error) {
+		switch r.URL.String() {
+		case githubCatalogRefURL:
+			return githubCatalogResponse(r, 200, githubCatalogReference(oldCommit)), nil
+		case githubCatalogCommitBase + oldCommit + "/signatures/catalog-v1.bundle.json":
+			return githubCatalogResponse(r, 200, oldBundle), nil
+		case githubCatalogCommitBase + newCommit + "/signatures/catalog-v1.bundle.json":
+			return githubCatalogResponse(r, 200, newBundle), nil
+		}
+		if !officialCatalogReferenceURL(r.URL.String()) || r.URL.Path != refURL.Path ||
+			r.Header.Get("Cache-Control") != "no-cache" || r.Header.Get("Cookie") != "" || r.Header.Get("Authorization") != "" {
+			t.Fatalf("unexpected refresh request: %s", r.URL)
+		}
+		if checks[r.URL.RawQuery] {
+			t.Fatalf("reused a checked reference URL: %s", r.URL)
+		}
+		checks[r.URL.RawQuery] = true
+		if limit {
+			return githubCatalogResponse(r, 429, "limited"), nil
+		}
+		return githubCatalogResponse(r, 200, githubCatalogReference(newCommit)), nil
+	})}
+	ctx, cache := context.Background(), t.TempDir()
+	if old, info, err := c.LoadCatalog(ctx, cache, time.Hour); err != nil || info.ResolvedCommit != oldCommit || old.Apps[0].Version != "1.1.0" {
+		t.Fatal(old, info, err)
+	}
+	for i := 0; i < 2; i++ {
+		updated, info, err := c.RefreshCatalog(ctx, cache)
+		if err != nil || info.Stale || info.ResolvedCommit != newCommit || updated.Apps[0].Version != "1.2.0" || len(checks) != i+1 {
+			t.Fatal(updated, info, err, checks)
+		}
+	}
+	limit = true
+	for i := 0; i < 2; i++ {
+		cached, info, err := c.RefreshCatalog(ctx, cache)
+		if err != nil || !info.Stale || info.RetryAt == "" || info.ResolvedCommit != "" || cached.Apps[0].Version != "1.2.0" || len(checks) != 3 {
+			t.Fatal(cached, info, err, checks)
+		}
 	}
 }
 

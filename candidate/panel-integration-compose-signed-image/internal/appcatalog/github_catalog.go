@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strconv"
 	"time"
 )
 
@@ -22,7 +23,7 @@ var githubCommitPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // main response cannot silently be labelled a successful current-branch check.
 // GitHub metadata is not an authority signature: Ed25519 verification, signed
 // original package URLs, manifest hashes and rollback checks still apply.
-func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
+func (c *Client) resolveCatalogCommit(ctx context.Context, refreshReference bool) (string, error) {
 	source, official := c.officialGitHubSource()
 	if !official {
 		// Custom distribution servers keep their existing signed protocol. They
@@ -43,6 +44,10 @@ func (c *Client) resolveCatalogCommit(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, source.referenceURL, nil)
 	if err != nil {
 		return "", err
+	}
+	if refreshReference {
+		// Some caches reuse the mutable branch response despite no-cache.
+		req.URL.RawQuery = "check=" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("X-GitHub-Api-Version", "2026-03-10")

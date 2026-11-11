@@ -96,11 +96,11 @@ func (a *Server) appRegistryCacheDir() string {
 func (a *Server) loadAppCatalog(ctxTimeout time.Duration, r *http.Request) (appcatalog.Catalog, appcatalog.LoadInfo, error) {
 	ctx, cancel := contextWithTimeout(r.Context(), ctxTimeout)
 	defer cancel()
-	maxAge := 5 * time.Minute
+	cache := filepath.Join(a.appRegistryCacheDir(), "catalog")
 	if r.URL.Query().Get("refresh") == "1" {
-		maxAge = 0
+		return a.AppCatalog.RefreshCatalog(ctx, cache)
 	}
-	return a.AppCatalog.LoadCatalog(ctx, filepath.Join(a.appRegistryCacheDir(), "catalog"), maxAge)
+	return a.AppCatalog.LoadCatalog(ctx, cache, 5*time.Minute)
 }
 
 // contextWithTimeout is a small seam for tests and keeps every GitHub request bounded.

@@ -370,13 +370,13 @@ func (c *Client) verifyCatalog(raw, signature []byte) (Catalog, error) {
 }
 
 func (c *Client) FetchCatalog(ctx context.Context) (Catalog, []byte, []byte, error) {
-	catalog, raw, signature, _, err := c.fetchCatalog(ctx)
+	catalog, raw, signature, _, err := c.fetchCatalog(ctx, false)
 	return catalog, raw, signature, err
 }
 
-func (c *Client) fetchCatalog(ctx context.Context) (Catalog, []byte, []byte, string, error) {
+func (c *Client) fetchCatalog(ctx context.Context, refreshReference bool) (Catalog, []byte, []byte, string, error) {
 	var empty Catalog
-	commit, err := c.resolveCatalogCommit(ctx)
+	commit, err := c.resolveCatalogCommit(ctx, refreshReference)
 	if err != nil {
 		return empty, nil, nil, "", err
 	}
@@ -474,6 +474,16 @@ func (c *Client) cachedCatalog(cacheDir string) (Catalog, time.Time, error) {
 }
 
 func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.Duration) (Catalog, LoadInfo, error) {
+	return c.loadCatalog(ctx, cacheDir, maxAge, false)
+}
+
+// RefreshCatalog requests a fresh official branch lookup and verifies the
+// resulting catalog with the same signature and rollback checks as LoadCatalog.
+func (c *Client) RefreshCatalog(ctx context.Context, cacheDir string) (Catalog, LoadInfo, error) {
+	return c.loadCatalog(ctx, cacheDir, 0, true)
+}
+
+func (c *Client) loadCatalog(ctx context.Context, cacheDir string, maxAge time.Duration, refreshReference bool) (Catalog, LoadInfo, error) {
 	c.cacheMu.Lock()
 	defer c.cacheMu.Unlock()
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
@@ -482,7 +492,7 @@ func (c *Client) LoadCatalog(ctx context.Context, cacheDir string, maxAge time.D
 		}
 		return cached, LoadInfo{Source: "verified-cache", FetchedAt: modified.UTC().Format(time.RFC3339)}, nil
 	}
-	catalog, raw, signature, commit, fetchErr := c.fetchCatalog(ctx)
+	catalog, raw, signature, commit, fetchErr := c.fetchCatalog(ctx, refreshReference)
 	if fetchErr == nil {
 		if previous, _, err := c.cachedCatalog(cacheDir); err == nil {
 			fetchErr = catalogProgress(previous, catalog)

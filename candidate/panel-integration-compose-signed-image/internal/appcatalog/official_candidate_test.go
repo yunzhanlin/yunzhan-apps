@@ -23,7 +23,7 @@ func TestCandidateGitHubUsesOnlyItsFixedRefAndImmutableNamespace(t *testing.T) {
 		}
 		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
 	})}}
-	got, err := client.resolveCatalogCommit(context.Background())
+	got, err := client.resolveCatalogCommit(context.Background(), false)
 	if err != nil || got != commit {
 		t.Fatal("candidate reference not pinned", err)
 	}

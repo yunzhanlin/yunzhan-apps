@@ -1,6 +1,10 @@
 package appcatalog
 
-import "errors"
+import (
+	"errors"
+	"strconv"
+	"strings"
+)
 
 // Both channels belong to the same publisher and use the SAME compiled
 // Ed25519 trust root. This is not a runtime URL/key/capability override.
@@ -31,7 +35,19 @@ func (c *Client) officialGitHubSource() (officialGitHubSource, bool) {
 }
 
 func officialCatalogReferenceURL(raw string) bool {
-	return raw == githubCatalogRefURL || raw == githubCandidateRefURL
+	endpoint, query, hasQuery := strings.Cut(raw, "?")
+	if endpoint != githubCatalogRefURL && endpoint != githubCandidateRefURL {
+		return false
+	}
+	if !hasQuery {
+		return true
+	}
+	check, ok := strings.CutPrefix(query, "check=")
+	if !ok {
+		return false
+	}
+	_, err := strconv.ParseUint(check, 10, 64)
+	return err == nil
 }
 
 func officialCatalogBaseURL(channel string) (string, error) {

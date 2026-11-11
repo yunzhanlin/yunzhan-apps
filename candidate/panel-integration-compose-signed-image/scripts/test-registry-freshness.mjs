@@ -22,7 +22,11 @@ test('catalog freshness is a bounded Git reference followed by immutable signed 
  assert.doesNotMatch(channels,/os\.Getenv|os\.Args|http\.Request|Query\(\)/);
  assert.doesNotMatch(github,/Authorization|\.URL\.Query\(|\.Set\("check"/);
  assert.match(catalog,/transport\.CheckRedirect =/);assert.match(catalog,/http\.ErrUseLastResponse/);
- assert.match(catalog,/c\.resolveCatalogCommit\(ctx\)/);assert.match(catalog,/c\.verifyCatalog\(raw, signature\)/);
+ assert.match(catalog,/c\.resolveCatalogCommit\(ctx, refreshReference\)/);assert.match(catalog,/c\.verifyCatalog\(raw, signature\)/);
+ assert.match(github,/if refreshReference \{[^}]*req\.URL\.RawQuery = "check=" \+ strconv\.FormatInt\(time\.Now\(\)\.UnixNano\(\), 10\)/);
+ const immutable=github.slice(github.indexOf('func (c *Client) getCatalogAtCommit('));
+ assert(immutable.startsWith('func '));assert.doesNotMatch(immutable,/RawQuery|URL\.Query\(\)/);
+ assert.match(read('internal/core/app_registry.go'),/if r\.URL\.Query\(\)\.Get\("refresh"\) == "1" \{\s*return a\.AppCatalog\.RefreshCatalog\(ctx, cache\)/);
  assert.match(catalog,/catalogProgress\(previous, catalog\)/);assert.match(catalog,/catalogFailureInfo\(modified, fetchErr\)/);assert.match(read('internal/appcatalog/github_catalog_rate.go'),/Stale: true/);
  assert.match(catalog,/ResolvedCommit: commit/);
 });

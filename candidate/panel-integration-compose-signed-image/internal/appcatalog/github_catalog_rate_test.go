@@ -131,14 +131,14 @@ func TestGitHubCatalogSecondaryBackoffIncreasesAndSuccessfulLookupResets(t *test
 	})}
 	for i := uint(0); i < 8; i++ {
 		before := time.Now()
-		if _, err := c.resolveCatalogCommit(context.Background()); err == nil {
+		if _, err := c.resolveCatalogCommit(context.Background(), false); err == nil {
 			t.Fatal("quota accepted")
 		}
 		delay := time.Minute * time.Duration(1<<min(i, 5))
 		if c.githubRetry.until.Before(before.Add(delay)) || c.githubFailures != min(i+1, 6) || calls != int(i)+1 {
 			t.Fatal("secondary retry not increasing", c.githubRetry, c.githubFailures, calls)
 		}
-		if _, err := c.resolveCatalogCommit(context.Background()); err == nil || calls != int(i)+1 {
+		if _, err := c.resolveCatalogCommit(context.Background(), false); err == nil || calls != int(i)+1 {
 			t.Fatal("cooldown touched network", err, calls)
 		}
 		c.githubRefMu.Lock()
@@ -148,7 +148,7 @@ func TestGitHubCatalogSecondaryBackoffIncreasesAndSuccessfulLookupResets(t *test
 		c.githubRefMu.Unlock()
 	}
 	limited = false
-	if _, err := c.resolveCatalogCommit(context.Background()); err != nil || c.githubRetry != nil || c.githubFailures != 0 {
+	if _, err := c.resolveCatalogCommit(context.Background(), false); err != nil || c.githubRetry != nil || c.githubFailures != 0 {
 		t.Fatal(err, c.githubRetry, c.githubFailures)
 	}
 }
