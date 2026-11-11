@@ -254,7 +254,7 @@ func (s *Store) QueueDatabase(op DatabaseOperation, key, actor string) (string, 
 			return "", e
 		}
 	case "migrate_database":
-		if !ValidDatabaseServer(op.TargetServer) || op.TargetServer.ID == op.Server.ID || op.Server.ReleaseID != "mysql-8.0.46" || op.TargetServer.ReleaseID != "mysql-8.4.11" || !ValidID(op.Database.ID) || op.Database.ServerID != op.Server.ID || !ValidDatabaseName(op.Database.Name) {
+		if !ValidDatabaseServer(op.TargetServer) || op.TargetServer.ID == op.Server.ID || op.Server.ReleaseID != "mysql-8.0.46" || !runtimecatalog.IsMySQL84MigrationTarget(op.TargetServer.ReleaseID) || !ValidID(op.Database.ID) || op.Database.ServerID != op.Server.ID || !ValidDatabaseName(op.Database.Name) {
 			return "", errors.New("当前迁移支持 MySQL 8.0 到独立 8.4 实例，请选择有效的源数据库")
 		}
 		op.TargetDatabase = Database{ID: ID(), ServerID: op.TargetServer.ID, Name: op.Database.Name, Status: "migrating", CreatedAt: Now()}
