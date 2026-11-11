@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-amd64.tar.gz",
-    "archive_sha256": "bea426b7f3bd71beef0ec18dfb90a508990763bd6220f40d29395664bda499bf",
-    "frozen_inputs_sha256": "2217318de399a83ad65a9364b087b4f1bfcdf8d5e7ecb36712b4c5e786e59b83"
+    "archive": "panel-0.1.0-dev.proapps24redis8211candidate81-linux-amd64.tar.gz",
+    "archive_sha256": "5217efed63b04a3c04759f943a7f8407e17b382075ee8d92f1b98161e1fe57a9",
+    "frozen_inputs_sha256": "38203f5edef6cd5c7a68990d6b7f4a72bb50080de61ef598c0eeeeaec7e7dab2"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2126,12 +2126,12 @@
     "internal/runtimecatalog/mysql.go": "12c652101ffa67ba1105a0e5fc6e97e8071b0ee8d8afc0e1a630b28ee5a71f4a",
     "internal/runtimecatalog/nginx_security_release_test.go": "1e2cf256e3b0b9a870e0968ba581bd7c5569f1de4146d0e12fe471273d764089",
     "internal/runtimecatalog/node.go": "5b1d3e7f99fdd817abcf8c47f81d9d276119add5ab3c8e9083c26cb5f27b91fe",
-    "internal/runtimecatalog/node_redis_test.go": "484c84c62de902eb3a21825b77b5c611555b2a227e901a98e6a867cddd4d5d6e",
+    "internal/runtimecatalog/node_redis_test.go": "f4cfaec33e636af541edbb197abe30682b74f79da5906e2f5be249727c7fb075",
     "internal/runtimecatalog/php_security.go": "44e1f521ac58b3ed24738a8203d3dcddf64aedb272b3d0e464668f3677a2a54b",
     "internal/runtimecatalog/php_security_admission_test.go": "ae83f8f8df8cfca568dff856b704561d5dcd903d7a67a4dafc6ca86300d20252",
     "internal/runtimecatalog/php_security_test.go": "99a525bdc94f8d53d42514524543609fbba293ab1fdee8f3b8d324711bab3115",
     "internal/runtimecatalog/platform_test.go": "e05266e9d1b56b54dd213d0775091d98d2dc1b53596bfd8cc64abfc045e599fe",
-    "internal/runtimecatalog/redis.go": "3a9bdac445b1cf6584a651ee280d51d041a344848beed35b98281b979f140ac4",
+    "internal/runtimecatalog/redis.go": "1877389a2f53d60c8ed4d7eebf7b08d51e91a206729585cea1671b4061143d6f",
     "internal/runtimecatalog/source_archive.go": "17c4f38f284c096d987aa4fc5ab77dcee86bb41e173d0b92fa6225b3546cf48f",
     "internal/runtimecatalog/source_archive_test.go": "33a53336485303c5c0363e3c24600ce0d373b380608aa0f08e04cfbc437915f7",
     "internal/upgradeguard/guard.go": "33c0f62eabbcf787bd9dc7250b1cc64258305eb51236c9c49b77dbb41f1863ba",

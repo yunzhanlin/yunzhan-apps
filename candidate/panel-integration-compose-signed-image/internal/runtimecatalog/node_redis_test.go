@@ -21,8 +21,8 @@ func TestNodeCatalogPinsArchitectureAndDigests(t *testing.T) {
 }
 
 func TestRedisCatalogUsesOfficialPinnedSources(t *testing.T) {
-	if len(Redis) != 2 {
-		t.Fatalf("releases=%d", len(Redis))
+	if len(Redis) != 3 || Redis[2].ID != "redis-8.2.11" {
+		t.Fatalf("unexpected Redis releases: %+v", Redis)
 	}
 	for _, r := range Redis {
 		if r.Family != "redis" || !strings.HasPrefix(r.URL, "https://download.redis.io/releases/") || len(r.SHA256) != 64 {
