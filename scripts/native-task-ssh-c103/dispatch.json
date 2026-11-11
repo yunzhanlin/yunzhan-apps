@@ -1,0 +1,58 @@
+{
+  "source_head": "d8446199d90726372ff22dd1736ed4ceeaaaa84a",
+  "source_inputs_sha256": "1a62de74f5234a6ca9a8429e68c6e6067cf5430c608ae9e9a87fb24bf3a0702a",
+  "source_sdk_tree": "ae4fb1ef511ff18adbab09829deba85dc068746b",
+  "version": "0.1.0-dev.proapps24tasksshcandidate103",
+  "release_id": 442297985,
+  "tag": "qa-tasksshcandidate103-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737264561,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-amd64.tar.gz": {
+      "id": 737267904,
+      "bytes": 23862138,
+      "sha256": "401c109f02f548d50e7492d0505ed2fc090090fd755a3a9bc3973a2a902205ba"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-amd64.tar.gz.manifest": {
+      "id": 737264411,
+      "bytes": 178,
+      "sha256": "14463c9bfce890fef2839b2fbba48119d70d20614d35bb42629ffa88c8830291"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-amd64.tar.gz.sig": {
+      "id": 737264153,
+      "bytes": 64,
+      "sha256": "f250690e3c856796e9908cd1a5f7ba55b386ae88da0d9431fd9b15a02e81109d"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-arm64.tar.gz": {
+      "id": 737264659,
+      "bytes": 22083072,
+      "sha256": "7d5283ecfd8366e945ff141397f7bfdc2b3e7bc296ffbec0aebfb432579c3212"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-arm64.tar.gz.manifest": {
+      "id": 737264467,
+      "bytes": 178,
+      "sha256": "25cd176947cf31ad9e091b09e6c608e3a70fdd14cb9b532a9e5052cf639637e6"
+    },
+    "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-arm64.tar.gz.sig": {
+      "id": 737264261,
+      "bytes": 64,
+      "sha256": "7b774309c7b842bfea0589608098455a4aad69d6bf5f07231d0012bd2129574d"
+    },
+    "release-signing-dev.pub": {
+      "id": 737264329,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24tasksshcandidate103-linux-arm64.tar.gz"
+    }
+  }
+}
