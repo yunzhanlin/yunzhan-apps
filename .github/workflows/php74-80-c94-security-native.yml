@@ -1,0 +1,35 @@
+name: Native PHP 7.4 and 8.0 engine backport compatibility
+on:
+  push:
+    branches: [codex/php74-80-c94-security-native]
+    paths: [scripts/php-c94/proof.sh]
+permissions:
+  contents: read
+jobs:
+  native-php:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        php:
+          - { slot: '74', version: '7.4.33' }
+          - { slot: '80', version: '8.0.30' }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build the reviewed PHP source and execute HTTP, uploads and restart
+        env:
+          PHP_SLOT: ${{ matrix.php.slot }}
+          PHP_VERSION: ${{ matrix.php.version }}
+        run: bash scripts/php-c94/proof.sh "$PHP_SLOT" "$PHP_VERSION"
+      - name: Retain original observations
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c94-php-${{ matrix.php.slot }}-http-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c94-php-proof/
+          if-no-files-found: error
+          retention-days: 14
