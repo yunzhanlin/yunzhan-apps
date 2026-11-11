@@ -761,7 +761,7 @@ async function installRegistryApp(app: RegistryApp) {
       const epoch = accessEpoch;
       let servers: PhpMyAdminServer[] = [];
       let localUnavailable = false;
-      if (canReadPath(accessPlan.value, "/databases")) {
+      if (accessPlan.value?.role === "admin" && canOpenView(accessPlan.value, "databases")) {
         try {
           const result = await api<{ servers: (PhpMyAdminServer & { status: string })[] }>("/databases");
           servers = result.servers.filter(server => server.status === "running" && /^[0-9a-f]{32}$/.test(server.id));
