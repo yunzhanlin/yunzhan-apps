@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "task-manager",
+  "name": "Task manager",
+  "category": "professional",
+  "version": "1.3.1",
+  "summary": "在独立清单中查看 SysV 初始化脚本的有效启动链接和运行级别，并继续查看 systemd、进程、网络、账户、Cron 和已登记的 SSH 会话。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "task-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "实时进程与身份核对",
+    "受管非 root 进程终止",
+    "systemd 服务和开机启动",
+    "TCP 和 UDP 监听与连接",
+    "本地账户",
+    "系统 Cron 时间及执行账户",
+    "logind 已登记的 SSH 会话",
+    "独立 SysV 启动脚本和运行级别",
+    "清单筛选与排序"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/task-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  },
+  "required_panel_features": [
+    "task-sysv-startup-v1"
+  ]
+}

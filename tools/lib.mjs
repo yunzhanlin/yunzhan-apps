@@ -96,6 +96,7 @@ export function validateManifest(app) {
   const wafHealth="waf-bound-health-v1";
   const wafCountry="waf-country-signed-data-v1";
   const runtimePackage="runtime-package-version-v1";
+  const taskSysVFeature="task-sysv-startup-v1";
   const taskInventoryFeature="task-host-inventory-v1";
   const userAccessOverview="user-access-overview-v1";
   const siteDiagnosisIngress="site-diagnosis-ingress-v1";
@@ -114,7 +115,7 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==mobileNative133&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature&&feature!==pm2MaintenanceFeature&&feature!==pm2RootVendorFeature&&feature!==phpProcessPolicy&&feature!==siteDiagnosisIngress&&feature!==userAccessOverview&&feature!==taskInventoryFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==mobileNative133&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature&&feature!==pm2MaintenanceFeature&&feature!==pm2RootVendorFeature&&feature!==phpProcessPolicy&&feature!==siteDiagnosisIngress&&feature!==userAccessOverview&&feature!==taskInventoryFeature&&feature!==taskSysVFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===intrusion||feature===intrusion0112)&&!intrusionScope)errors.push("intrusion handlers require the exact reviewed version, fixed target and complete ordered feature declaration");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -160,6 +161,14 @@ export function validateManifest(app) {
   if ((app.id === "task-manager" && app.version === "1.3.0" ||
        Array.isArray(requirements) && requirements.includes(taskInventoryFeature)) && !taskInventoryScope) {
     errors.push("Task Manager inventories require the exact reviewed 1.3.0 module");
+  }
+  const taskSysVScope = app.id === "task-manager" && app.version === "1.3.1" &&
+    app.delivery?.provider === "panel-module" && app.delivery?.target === app.id &&
+    app.delivery?.manage_route === "app-modules" && Array.isArray(requirements) &&
+    requirements.length === 1 && requirements[0] === taskSysVFeature;
+  if ((app.id === "task-manager" && app.version === "1.3.1" ||
+       Array.isArray(requirements) && requirements.includes(taskSysVFeature)) && !taskSysVScope) {
+    errors.push("Task Manager inventories require the exact reviewed 1.3.1 module");
   }
   // Only exact published mobile identities are legacy-compatible. A new label
   // cannot borrow old delivery metadata or a foreign fixed executor target.
