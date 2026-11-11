@@ -1,0 +1,63 @@
+{
+  "source_head": "faaff78671a14ce7ef68d0be76c18bdad54b83a0",
+  "source_inputs_sha256": "a5c968ac27bec54bbe872827788746da0b61d53ab8298bb4dcb42a0d3d7ca41e",
+  "version": "0.1.0-dev.proapps24legacyphpcandidate86",
+  "items": {
+    "apache": {
+      "id": "apache",
+      "name": "Apache HTTP Server",
+      "category": "deployment",
+      "version": "2.4.68-compat1",
+      "summary": "\u72ec\u7acb\u5b89\u88c5 Apache HTTP Server\uff0c\u652f\u6301\u6a21\u5757\u68c0\u6d4b\u3001\u7ad9\u70b9\u7ed1\u5b9a\u548c\u914d\u7f6e\u6821\u9a8c\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "apache-2.4.68",
+      "manage_route": "sites",
+      "capabilities": [
+        "\u5b98\u65b9\u6e90\u7801",
+        "\u6a21\u5757\u68c0\u6d4b",
+        "\u7ad9\u70b9\u7ed1\u5b9a",
+        "\u5f15\u7528\u4fdd\u62a4"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/apache/2.4.68-compat1/manifest.json",
+      "sha256": "abb627840489dee4ac93f8e3c925d5b6af50454caeb6655d73458aac03f60446"
+    },
+    "php-85": {
+      "id": "php-85",
+      "name": "PHP 8.5",
+      "category": "deployment",
+      "version": "8.5.12-compat2",
+      "summary": "PHP 8.5.12 \u56fa\u5b9a\u5b98\u65b9\u6e90\u7801\u4e0e\u5b89\u5168\u4fee\u8ba2\uff1b\u72ec\u7acb FPM\u3001\u591a\u7248\u672c\u5207\u6362\u548c\u5f15\u7528\u4fdd\u62a4\uff0c\u539f\u751f\u6784\u5efa\u6309\u53ef\u7528\u5185\u5b58\u9650\u5236\u7f16\u8bd1\u5e76\u53d1\u3002\u5b8c\u6574\u7cfb\u7edf\u4e0e\u67b6\u6784\u5b9e\u88c5\u77e9\u9635\u4ecd\u5728\u9a8c\u6536\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "php-8.5.12",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "\u591a\u7248\u672c\u5e76\u5b58",
+        "\u7ad9\u70b9\u72ec\u7acb\u6c60"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-85/8.5.12-compat2/manifest.json",
+      "sha256": "1a519772a2f3c86b90c68e797da67aaa8990cc0375895b1b8d659fd8cfb1d2f8"
+    }
+  },
+  "authorized_catalogues": [
+    "2336f6e7a10538097ee0154eeeffcfb9381ca7a2",
+    "62c055adff834ab13da9045cb969c9e941bc6d4f"
+  ],
+  "payload_files": {
+    ".github/workflows/apache-runtime-c88-native-qa1.yml": "f37b8775be2c8afd356257d10d903b3c41e8a080e9e1209faec13ae69a13def8",
+    "scripts/native-apache-runtime-c88/apache-runtime.py": "a9a0fc9b79129e73886aa6e6b76ea9dfdfc3a98c0ae529984131eb96a5885c70",
+    "scripts/native-apache-runtime-c88/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-apache-runtime-c88/dispatch.json": "a0cb432e286072bced65e23fc37e7e1f2c3717d90b30a4aa7b1600cb08a0a447",
+    "scripts/native-apache-runtime-c88/download.py": "b085b014953fc1094ee5a1a3fb8a950f0b8dcbecfeb30061efe61c3381f211ff",
+    "scripts/native-apache-runtime-c88/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-apache-runtime-c88/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-apache-runtime-c88/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-apache-runtime-c88/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
