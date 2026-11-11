@@ -1,0 +1,12 @@
+--- a/ext/mysqli/mysqli.c
++++ b/ext/mysqli/mysqli.c
+@@ -1035,2 +1035 @@
+-memset(source, 0, LOCAL_INFILE_ERROR_LEN);\
+-memcpy(source, dest, LOCAL_INFILE_ERROR_LEN-1);
++snprintf(source, LOCAL_INFILE_ERROR_LEN, "%s", (dest));
+@@ -1064 +1063 @@
+-		LOCAL_INFILE_ERROR_MSG(data->error_msg, ER(CR_UNKNOWN_ERROR));
++		LOCAL_INFILE_ERROR_MSG(data->error_msg, "Unknown local file client error");
+@@ -1113 +1112 @@
+-			LOCAL_INFILE_ERROR_MSG(data->error_msg, ER(2));
++			LOCAL_INFILE_ERROR_MSG(data->error_msg, "Unable to read local infile");
