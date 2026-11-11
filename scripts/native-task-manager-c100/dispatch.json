@@ -1,0 +1,58 @@
+{
+  "source_head": "043d1894dbd46ad90e844c6f5a5dd034974a5b0f",
+  "source_inputs_sha256": "3710cfc06ef39d293399d09e19c21ef8fccb84a78471aca0ec46f0e19b13a32f",
+  "source_sdk_tree": "2dc501810f20f53acd5ab555914109b33f0557ef",
+  "version": "0.1.0-dev.proapps24taskmanagercandidate100",
+  "release_id": 442258398,
+  "tag": "qa-taskmanagercandidate100-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737132588,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-amd64.tar.gz": {
+      "id": 737136030,
+      "bytes": 23852106,
+      "sha256": "ae16a6b6af8be8ca5754c7288666e76099e1353e36a5572ed2cdcfa5a9c79961"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-amd64.tar.gz.manifest": {
+      "id": 737132312,
+      "bytes": 182,
+      "sha256": "90b1d9e6541cf9bf553a2d6ca467eb2fade3fd4fbb8e1b51945734f8bead86cb"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-amd64.tar.gz.sig": {
+      "id": 737131644,
+      "bytes": 64,
+      "sha256": "87f877fdae115cc6e0e1aaea72d9e2b1e7a4ac81d37ee9b1187988d97a232171"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-arm64.tar.gz": {
+      "id": 737132716,
+      "bytes": 22078551,
+      "sha256": "d3f00c9946dfbc96747c892223057d2c7aaaf0d58dd10e359573c70513bb703c"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-arm64.tar.gz.manifest": {
+      "id": 737132449,
+      "bytes": 182,
+      "sha256": "c0e8bc4190429876e38e305ffa27614203c3080aa91efd3e9d6a98c5efa29e58"
+    },
+    "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-arm64.tar.gz.sig": {
+      "id": 737131986,
+      "bytes": 64,
+      "sha256": "52216480ed54972849303ebf7f5a1e3cac7dc2ceb33409e12c1e4bfbe2fc951f"
+    },
+    "release-signing-dev.pub": {
+      "id": 737132123,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24taskmanagercandidate100-linux-arm64.tar.gz"
+    }
+  }
+}
