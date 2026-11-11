@@ -29,7 +29,7 @@ assert 'exec /entrypoint.sh' in bootstrap and 'CLOUDSTACK_ADMIN_PASSWORD' in boo
 pins = {
     'amd64': ('5.6.40', 'e9716e3c929865087009bea3c922768ed9be0034eef71cc0e0925779bfb66c60',
               '66f18009f001759988bf8210bc60221d1bb6168f64b747f943e1061eac9aa307'),
-    'arm64': ('7.4.30', 'b6b0c67bada79e6c38e1c7d5e91977283595d6c2e1ab7b6482bb793c9d4303c6',
+    'arm64': ('7.4.33', 'b6b0c67bada79e6c38e1c7d5e91977283595d6c2e1ab7b6482bb793c9d4303c6',
               '2a00823656f6054605d1052581a0b1148e0b9a4c7954cbc5c82916a1d9d349d2'),
 }
 admin_version, admin_digest, server_digest = pins[arch]
