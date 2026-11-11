@@ -1,0 +1,46 @@
+name: Native phpMyAdmin 5.2.3 template preflight
+on:
+  push:
+    branches: [codex/phpmyadmin-c91-native-qa1]
+    paths: [scripts/native-phpmyadmin-c91/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  phpmyadmin:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Download the original signed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-phpmyadmin-c91/download.py "$RUNNER_TEMP/pma-inputs" "$RUNNER_TEMP/pma-private"
+      - name: Install the original signed panel
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-phpmyadmin-c91/bootstrap-original-install.py "$RUNNER_TEMP/pma-inputs" "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/pma-private/bootstrap-step.stderr"
+      - name: Install the reviewed official recipes on independent ports
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-phpmyadmin-c91/direct.py "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/template-step.stdout" 2> "$RUNNER_TEMP/pma-private/template-step.stderr"
+      - name: Encrypt the original evidence
+        if: always()
+        run: sudo python3 -I -B scripts/native-phpmyadmin-c91/finish.py "$RUNNER_TEMP/pma-private" "$RUNNER_TEMP/pma-public" phase1
+      - name: Retain the native outcomes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c91-phpmyadmin-native-qa1-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pma-public/
+          if-no-files-found: error
+          retention-days: 14
