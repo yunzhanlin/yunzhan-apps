@@ -1,0 +1,30 @@
+{
+  "source_head": "c19faf1e0146b036c96425412a9e5627f6ca1bbd",
+  "source_inputs_sha256": "08768f5b47be7c371bacc3070d83484016089897a5bd1e2c24b8963e5abb83e9",
+  "version": "0.1.0-dev.proapps24olsadmincandidate74",
+  "application": {
+    "id": "elasticsearch",
+    "name": "Elasticsearch",
+    "version": "9-compat1",
+    "sha256": "0eae4e6cd77a1452a3bb48c952d2e3b31fe47814f631771c469d286ad0ec3827"
+  },
+  "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+  "payload_files": {
+    ".github/workflows/elasticsearch-auth-c75-native-qa2.yml": "50daf6933ba43df5de55c3adcb6816af3516a77063ac01e7a1dfc9c3489dbf62",
+    "scripts/native-elasticsearch-c75/bootstrap-original-install.py": "08a9fbfc1e3553353f90b8afb99927341a48a266667365021be3f02d6ee83d92",
+    "scripts/native-elasticsearch-c75/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
+    "scripts/native-elasticsearch-c75/browser.mjs": "7e9d2728168b430553cf8f2b017ae3b9a116a9c77e1b12bad93732e30a23d513",
+    "scripts/native-elasticsearch-c75/dispatch.json": "0986ba4315bc95207f5257812dffe460c550c1d7c3e4fa814ad3d27a741ed8d8",
+    "scripts/native-elasticsearch-c75/download.py": "c95a17a1627e5142dccf86999205123b1f78ff92f597aeb128898e6473007783",
+    "scripts/native-elasticsearch-c75/elasticsearch.py": "a9269dcc4491613209983f085dbd3e9909a3840cbcc4130cb4f942fb182750ee",
+    "scripts/native-elasticsearch-c75/finish.py": "6d21b7ed84e3a1ab9bd876efe90b1e204c8190726ef22d3d8b6d0a9d69634681",
+    "scripts/native-elasticsearch-c75/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-elasticsearch-c75/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-elasticsearch-c75/package-lock.json": "acec9e987f25e23ae5ead1fba565e9b5df048c4509250f828f64bb5e26f0bcb9",
+    "scripts/native-elasticsearch-c75/package.json": "c43f386e20c33e07a020630f43049acaf6496b584d82ea1e1e1560b66f23e027",
+    "scripts/native-elasticsearch-c75/prepare-browser.py": "3b754cfb7886a713fc0905ac59b8bd2665662654a9456653954f62e81a0cc1ff",
+    "scripts/native-elasticsearch-c75/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-elasticsearch-c75/upgrade.json": "ecae7d9defd0b320e8f0ad21152160e6c60f892e97a3ece63129e23729705942"
+  },
+  "Main_changed": false
+}

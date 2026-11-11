@@ -1,0 +1,58 @@
+{
+  "source_head": "c19faf1e0146b036c96425412a9e5627f6ca1bbd",
+  "source_inputs_sha256": "08768f5b47be7c371bacc3070d83484016089897a5bd1e2c24b8963e5abb83e9",
+  "source_sdk_tree": "005a62038af5f48533aee737106f5d142b7ab15a",
+  "version": "0.1.0-dev.proapps24elasticsearchauthcandidate75",
+  "release_id": 441915855,
+  "tag": "qa-elasticsearchauthcandidate75-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736080019,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-amd64.tar.gz": {
+      "id": 736083179,
+      "bytes": 23780410,
+      "sha256": "91abd9dd2fd7d6668b058a10bca9fdf53ee700005f25ecf9051c4812d0cc03aa"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-amd64.tar.gz.manifest": {
+      "id": 736079816,
+      "bytes": 187,
+      "sha256": "56b44ccb2892b52230438146606fe07494ae5aa7865ca7777318f6d4a992a879"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-amd64.tar.gz.sig": {
+      "id": 736079496,
+      "bytes": 64,
+      "sha256": "f8975eb078f70d52b692a402f2d88f4314b4073924f08fb8c83a91d720c863ad"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-arm64.tar.gz": {
+      "id": 736080068,
+      "bytes": 21998707,
+      "sha256": "52dede51bae208eb8fdc9f51e1ce6d144b68a9b8f037740998215249985f3406"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-arm64.tar.gz.manifest": {
+      "id": 736079899,
+      "bytes": 187,
+      "sha256": "c19034554f03728ad922beaae755b399e4b2d5a5612f5aeaea21bc9e0dea86f6"
+    },
+    "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-arm64.tar.gz.sig": {
+      "id": 736079579,
+      "bytes": 64,
+      "sha256": "74b285156c33e9a144f0f14cc0a135561c86cbb24d4834c2055020e984a073f6"
+    },
+    "release-signing-dev.pub": {
+      "id": 736079712,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-arm64.tar.gz"
+    }
+  }
+}

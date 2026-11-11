@@ -1,0 +1,58 @@
+{
+  "source_head": "2dbd261bf7a8fd714830ebd40ad83394dde0d8f0",
+  "source_inputs_sha256": "2d5551e52d89e6638e836fd69a02dc89779a8565bcdbfb655be8c71c1a50e684",
+  "source_sdk_tree": "23f6c20c25fe00fd2e5123f32972994a88b531c1",
+  "version": "0.1.0-dev.proapps24olsadmincandidate74",
+  "release_id": 441897014,
+  "tag": "qa-olsadmincandidate74-20261111-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736031778,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-amd64.tar.gz": {
+      "id": 736034758,
+      "bytes": 23776742,
+      "sha256": "65ed2e7726670cc93c470c66d834aec7dc5760203b2f189ad56a6687587d2c73"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-amd64.tar.gz.manifest": {
+      "id": 736031687,
+      "bytes": 178,
+      "sha256": "b4d079a94b52759c11befe104b6b470032a669e79fbb748526276ff9c1285917"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-amd64.tar.gz.sig": {
+      "id": 736031467,
+      "bytes": 64,
+      "sha256": "2abad7a8a093ec8de74dd64066f9435491d86b273b6bcd29e4d8169be052ee42"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-arm64.tar.gz": {
+      "id": 736031821,
+      "bytes": 21993627,
+      "sha256": "57a1b2a3627e7d64388de37281fc014f23783011b0bfa8d8627f4d43cf832d77"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-arm64.tar.gz.manifest": {
+      "id": 736031740,
+      "bytes": 178,
+      "sha256": "5b1b5e6d34e4b657e81d1998e723288d7ac34587e7db709dbc1cdaf215671e1c"
+    },
+    "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-arm64.tar.gz.sig": {
+      "id": 736031590,
+      "bytes": 64,
+      "sha256": "d99fa55054bcca9ea0b0931905c5b140da06065b74c1cb2155c9b5e9bcbbd8fe"
+    },
+    "release-signing-dev.pub": {
+      "id": 736031637,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24olsadmincandidate74-linux-arm64.tar.gz"
+    }
+  }
+}
