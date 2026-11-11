@@ -1,0 +1,38 @@
+name: Legacy PHP native isolation matrix
+on:
+  push:
+    branches: [codex/php-legacy-c84-image-qa1]
+    paths: [.github/workflows/php-legacy-c84-image-qa1.yml]
+permissions:
+  contents: read
+jobs:
+  image:
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        php:
+          - { version: '7.3.33', slot: '73' }
+          - { version: '7.2.34', slot: '72' }
+          - { version: '7.1.33', slot: '71' }
+          - { version: '7.0.33', slot: '70' }
+          - { version: '5.6.40', slot: '56' }
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build and run the native compatibility image
+        env:
+          VERSION: ${{ matrix.php.version }}
+          SLOT: ${{ matrix.php.slot }}
+        run: bash scripts/native-legacy-php-c84/native.sh "$RUNNER_TEMP/php-proof" "$VERSION" "$SLOT"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c84-legacy-php-${{ matrix.php.version }}-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/php-proof/
+          if-no-files-found: error
+          retention-days: 14
