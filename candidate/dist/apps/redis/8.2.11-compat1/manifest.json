@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "redis",
+  "name": "Redis",
+  "category": "deployment",
+  "version": "8.2.11-compat1",
+  "summary": "安装 Redis 官方 8.2.11，支持回环监听的独立实例、ACL 凭据、AOF、内存限制和键浏览。现有实例保留原版本及数据。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "redis-8.2.11",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多实例",
+    "AOF",
+    "内存限额",
+    "键浏览"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "redis-server --version"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T17:46:14Z",
+  "generated_at": "2026-11-11T17:53:25Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1006,12 +1006,12 @@
       "id": "redis",
       "name": "Redis",
       "category": "deployment",
-      "version": "8.2.10-compat1",
-      "summary": "安装固定版本 Redis，管理独立实例、AOF、内存上限与键浏览。",
+      "version": "8.2.11-compat1",
+      "summary": "安装 Redis 官方 8.2.11，支持回环监听的独立实例、ACL 凭据、AOF、内存限制和键浏览。现有实例保留原版本及数据。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "redis-8.2.10",
+      "target": "redis-8.2.11",
       "manage_route": "databases",
       "capabilities": [
         "多实例",
@@ -1019,8 +1019,8 @@
         "内存限额",
         "键浏览"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/redis/8.2.10-compat1/manifest.json",
-      "sha256": "b773e66264a45dd55395faeab5b8a627c53d541bc6ae9edebbb79d5f9fa79096"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/redis/8.2.11-compat1/manifest.json",
+      "sha256": "5855414bbdde16d61e9a05d17c056f295d6c9ee9671b865f7789cd3cf830ea03"
     },
     {
       "id": "site-diagnosis",
