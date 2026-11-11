@@ -1,0 +1,135 @@
+name: Publish the reviewed PHP 7.4 and 8.0 native backports
+on:
+  push:
+    branches: [codex/php74-80-c94-image-release]
+    paths: [.github/workflows/php74-80-c94-image-release.yml]
+permissions:
+  contents: read
+jobs:
+  image:
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        php:
+          - { slot: '74', version: '7.4.33', tag: '7.4.33-compat3' }
+          - { slot: '80', version: '8.0.30', tag: '8.0.30-compat2' }
+    runs-on: ${{ matrix.runner }}
+    env:
+      IMAGE: ghcr.io/yunzhanlin/yunzhan-apps-php${{ matrix.php.slot }}
+      RELEASE_TAG: ${{ matrix.php.tag }}
+      PHP_SLOT: ${{ matrix.php.slot }}
+      PHP_VERSION: ${{ matrix.php.version }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exercise patched PHP-FPM, uploads, restart and database drivers
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 6d44c0a11d93102c0d5cfff8376c78ac826eca79
+          bash scripts/php-c94/proof.sh "$PHP_SLOT" "$PHP_VERSION"
+          bash scripts/php-c94/database.sh "$PHP_VERSION"
+      - name: Push the tested architecture image
+        env:
+          PACKAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$(mktemp -d "$RUNNER_TEMP/registry-auth.XXXXXX")"
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          unset PACKAGE_TOKEN
+          case "$(uname -m)" in
+            x86_64) arch=amd64 ;;
+            aarch64) arch=arm64 ;;
+            *) exit 1 ;;
+          esac
+          out="$RUNNER_TEMP/c94-php-proof"
+          tag="$IMAGE:$RELEASE_TAG-$arch"
+          image_id="$(docker image inspect --format '{{.Id}}' local/c94-php:verified)"
+          docker tag local/c94-php:verified "$tag"
+          test "$(docker image inspect --format '{{.Id}}' "$tag")" = "$image_id"
+          docker push "$tag" > "$out/original-registry-push.txt"
+          docker image inspect --format '{{json .RepoDigests}}' "$tag" > "$out/remote-repo-digests.json"
+          docker buildx imagetools inspect --raw "$tag" > "$out/original-remote-image.json"
+          python3 -I -B - "$out" "$IMAGE" "$arch" "$image_id" "$PHP_VERSION" <<'PY'
+          import hashlib, json, pathlib, sys
+          root, image, arch, image_id, php_version = pathlib.Path(sys.argv[1]), *sys.argv[2:]
+          proof = json.loads((root / 'original-proof.json').read_bytes())
+          assert proof['ok'] and proof['architecture'] == arch
+          assert all(proof[key] for key in ('php_fpm_http','multipart_upload','restart_data_preserved','patched_opcache_loaded'))
+          database = json.loads((root / 'original-database.json').read_bytes())
+          assert database == {'php':php_version,'pdo_write_mysqli_read':True,'mysqli_update_pdo_read':True}
+          raw = (root / 'original-remote-image.json').read_bytes()
+          digest = 'sha256:' + hashlib.sha256(raw).hexdigest()
+          assert image + '@' + digest in json.loads((root / 'remote-repo-digests.json').read_bytes())
+          assert json.loads(raw)['config']['digest'] == image_id
+          (root / 'original-published-image.json').write_text(json.dumps({'arch':arch,'digest':digest,'image_id':image_id})+'\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c94-php-${{ matrix.php.slot }}-image-${{ matrix.runner }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c94-php-proof/
+          if-no-files-found: error
+          retention-days: 14
+  index:
+    needs: image
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - { slot: '74', version: '7.4.33', tag: '7.4.33-compat3' }
+          - { slot: '80', version: '8.0.30', tag: '8.0.30-compat2' }
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE: ghcr.io/yunzhanlin/yunzhan-apps-php${{ matrix.php.slot }}
+      RELEASE_TAG: ${{ matrix.php.tag }}
+      PHP_SLOT: ${{ matrix.php.slot }}
+      PHP_VERSION: ${{ matrix.php.version }}
+    timeout-minutes: 10
+    steps:
+      - name: Publish the two tested architecture manifests
+        env:
+          PACKAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$(mktemp -d "$RUNNER_TEMP/registry-auth.XXXXXX")"
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          unset PACKAGE_TOKEN
+          out="$RUNNER_TEMP/c94-php-index"
+          mkdir -m 700 "$out"
+          docker buildx imagetools inspect --raw "$IMAGE:$RELEASE_TAG-amd64" > "$out/amd64.json"
+          docker buildx imagetools inspect --raw "$IMAGE:$RELEASE_TAG-arm64" > "$out/arm64.json"
+          amd="$(sha256sum "$out/amd64.json")"; amd="${amd%% *}"
+          arm="$(sha256sum "$out/arm64.json")"; arm="${arm%% *}"
+          docker buildx imagetools create --tag "$IMAGE:$RELEASE_TAG" "$IMAGE@sha256:$amd" "$IMAGE@sha256:$arm"
+          docker buildx imagetools inspect --raw "$IMAGE:$RELEASE_TAG" > "$out/original-index.json"
+          python3 -I -B - "$out" "$amd" "$arm" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          raw = (root / 'original-index.json').read_bytes()
+          entries = json.loads(raw)['manifests']
+          assert len(entries) == 2 and all(x['platform']['os'] == 'linux' for x in entries)
+          platforms = {x['platform']['architecture']:x['digest'] for x in entries}
+          assert platforms == {'amd64':'sha256:'+sys.argv[2], 'arm64':'sha256:'+sys.argv[3]}
+          (root / 'original-index-proof.json').write_text(json.dumps({'digest':'sha256:'+hashlib.sha256(raw).hexdigest(),'platforms':platforms})+'\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c94-php-${{ matrix.php.slot }}-index-${{ github.run_id }}
+          path: ${{ runner.temp }}/c94-php-index/
+          if-no-files-found: error
+          retention-days: 14
