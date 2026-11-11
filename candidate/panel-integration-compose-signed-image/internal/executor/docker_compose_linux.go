@@ -35,18 +35,20 @@ type composeProjectRequest struct {
 }
 
 type composeMetadata struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Engine     string `json:"engine_name"`
-	TemplateID string `json:"template_id,omitempty"`
-	HostPort   int    `json:"host_port,omitempty"`
-	Services   int    `json:"services"`
-	CreatedAt  string `json:"created_at"`
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	Engine             string `json:"engine_name"`
+	TemplateID         string `json:"template_id,omitempty"`
+	HostPort           int    `json:"host_port,omitempty"`
+	InitialCredentials bool   `json:"initial_credentials,omitempty"`
+	Services           int    `json:"services"`
+	CreatedAt          string `json:"created_at"`
 }
 
 type composeConfig struct {
 	Services map[string]struct {
 		Image          string            `json:"image"`
+		Environment    map[string]string `json:"environment"`
 		Build          json.RawMessage   `json:"build"`
 		ContainerName  string            `json:"container_name"`
 		Privileged     bool              `json:"privileged"`
@@ -440,6 +442,11 @@ func RunComposeJob(id string) (ret error) {
 			}
 		}
 		metadata.Services = len(config.Services)
+		if op.TemplateID == "elasticsearch" {
+			service := config.Services["elasticsearch"]
+			metadata.InitialCredentials = service.Environment["xpack.security.enabled"] == "true" &&
+				service.Environment["ELASTIC_PASSWORD"] != ""
+		}
 		b, _ := json.Marshal(metadata)
 		if e = atomicWrite(filepath.Join(tmpDir, "metadata.json"), b, 0600); e != nil {
 			return e
@@ -622,7 +629,7 @@ func listComposeProjects(ctx context.Context) ([]map[string]any, error) {
 		if running > 0 {
 			state = "running"
 		}
-		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt, "images": images})
+		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt, "images": images, "initial_credentials": metadata.InitialCredentials})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i]["created_at"].(string) > out[j]["created_at"].(string) })
 	return out, nil
@@ -661,6 +668,9 @@ func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 			return
 		}
 		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, "openlitespeed": {"CLOUDSTACK_ADMIN_PASSWORD"}}[metadata.TemplateID]
+		if metadata.TemplateID == "elasticsearch" && metadata.InitialCredentials {
+			fields = []string{"ELASTIC_PASSWORD"}
+		}
 		if len(fields) == 0 {
 			respond(w, 409, map[string]string{"error": "该模板不提供生成的账号凭据"})
 			return

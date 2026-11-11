@@ -119,11 +119,20 @@ func TestRegistryDatabaseTemplatesAreDigestPinnedAndPrivate(t *testing.T) {
 		"mem_limit: 1g",
 		`ES_JAVA_OPTS: "-Xms512m -Xmx512m"`,
 		"node.store.allow_mmap",
+		`xpack.security.enabled: "true"`,
+		`transport.host: "127.0.0.1"`,
+		" = 401",
 		"/_cluster/health",
 	} {
 		if !strings.Contains(elastic, expected) {
 			t.Fatalf("Elasticsearch template missing %q", expected)
 		}
+	}
+	otherElastic, err := dockerTemplate("elasticsearch", 19200)
+	passwordLine := regexp.MustCompile(`ELASTIC_PASSWORD: "[0-9a-f]{32,}"`)
+	first, second := passwordLine.FindString(elastic), passwordLine.FindString(otherElastic)
+	if err != nil || first == "" || second == "" || first == second {
+		t.Fatal("each Elasticsearch installation must generate its own initial password")
 	}
 	if strings.Contains(mongoOne, "0.0.0.0") || strings.Contains(elastic, "0.0.0.0") || strings.Contains(mongoOne, ":latest") || strings.Contains(elastic, ":latest") {
 		t.Fatal("registry template exposed a public port or mutable tag")

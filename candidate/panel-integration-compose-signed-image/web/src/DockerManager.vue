@@ -82,6 +82,7 @@ interface DockerProject {
   running: number;
   state: string;
   template_id?: string;
+  initial_credentials?: boolean;
   healthy?: number;
   host_port?: number;
   site_name?: string;
@@ -91,15 +92,19 @@ interface DockerProject {
 const credentialTemplates = {
   rabbitmq: {
     usernameKey: "RABBITMQ_DEFAULT_USER", passwordKey: "RABBITMQ_DEFAULT_PASS",
-    primary: "管理界面（HTTP）", secondary: "消息连接（AMQP）",
+    defaultUsername: "", primary: "管理界面（HTTP）", secondary: "消息连接（AMQP）",
   },
   mongodb: {
     usernameKey: "MONGO_INITDB_ROOT_USERNAME", passwordKey: "MONGO_INITDB_ROOT_PASSWORD",
-    primary: "数据库连接（MongoDB）", secondary: null,
+    defaultUsername: "", primary: "数据库连接（MongoDB）", secondary: null,
   },
   openlitespeed: {
     usernameKey: null, passwordKey: "CLOUDSTACK_ADMIN_PASSWORD",
-    primary: "网站（HTTP）", secondary: "WebAdmin 管理端口",
+    defaultUsername: "admin", primary: "网站（HTTP）", secondary: "WebAdmin 管理端口",
+  },
+  elasticsearch: {
+    usernameKey: null, passwordKey: "ELASTIC_PASSWORD",
+    defaultUsername: "elastic", primary: "检索接口（HTTP）", secondary: null,
   },
 } as const;
 
@@ -137,7 +142,7 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
     throw new Error("无法核对项目凭据");
   }
   const secrets = fields as Record<string, unknown>;
-  const username = definition.usernameKey ? secrets[definition.usernameKey] : "admin";
+  const username = definition.usernameKey ? secrets[definition.usernameKey] : definition.defaultUsername;
   const password = secrets[definition.passwordKey];
   if (typeof username !== "string" || !username || typeof password !== "string" || !password) {
     throw new Error("项目缺少初始账号或密码");
@@ -1085,7 +1090,7 @@ async function removeVolume(item: DockerVolume) {
             }}</small>
           </div>
           <div class="docker-actions">
-            <el-button v-if="isCredentialTemplate(item.template_id)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
             <el-button
               v-if="canBindDockerProjectSite(item)"
               link

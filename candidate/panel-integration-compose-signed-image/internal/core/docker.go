@@ -206,13 +206,18 @@ volumes:
   data: {}
 `, dockerMongoDBImage, password, port, password), nil
 	case "elasticsearch":
+		password := Token()
 		return fmt.Sprintf(`services:
   elasticsearch:
     image: %s
     restart: unless-stopped
     environment:
       discovery.type: single-node
-      xpack.security.enabled: "false"
+      xpack.security.enabled: "true"
+      xpack.security.autoconfiguration.enabled: "false"
+      xpack.security.http.ssl.enabled: "false"
+      transport.host: "127.0.0.1"
+      ELASTIC_PASSWORD: "%s"
       node.store.allow_mmap: "false"
       ES_JAVA_OPTS: "-Xms512m -Xmx512m"
     mem_limit: 1g
@@ -221,14 +226,14 @@ volumes:
     volumes:
       - data:/usr/share/elasticsearch/data
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:9200/_cluster/health >/dev/null"]
+      test: ["CMD-SHELL", "test \"$$(curl -sS -o /dev/null -w '%%{http_code}' --max-time 10 http://127.0.0.1:9200/_cluster/health)\" = 401"]
       interval: 15s
       timeout: 15s
       retries: 20
       start_period: 15m
 volumes:
   data: {}
-`, dockerElasticsearchImage, port), nil
+`, dockerElasticsearchImage, password, port), nil
 	case "node-service":
 		return "services:\n  app:\n    image: node:24.21.0-alpine\n    restart: unless-stopped\n    command: [\"node\", \"-e\", \"require('http').createServer((q,s)=>s.end('Node.js managed by YunZhan')).listen(3000)\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":3000\"\n", nil
 	case "wordpress-blog":
@@ -469,7 +474,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "memcached-cache", "name": "Memcached 缓存", "image": appcatalog.MemcachedDigestImage, "description": "固定 OCI 摘要、128 MB 缓存，只通过主机回环端口访问", "container_port": 11211},
 			{"id": "phpmyadmin", "name": "phpMyAdmin", "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f…", "description": "固定摘要镜像，只通过主机回环端口访问", "container_port": 80},
 			{"id": "mongodb", "name": "MongoDB", "image": "mongo:8.0@sha256:d0d926f…", "description": "启用认证与持久卷的 MongoDB 8.0 单实例", "container_port": 27017},
-			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "1 GiB 容器上限、512 MiB JVM 的单节点检索服务", "container_port": 9200},
+			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "仅绑定回环端口的单节点检索服务，启用账号认证，1 GiB 容器上限", "container_port": 9200},
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},
 			{"id": "wordpress-blog", "name": "WordPress 博客", "image": "wordpress:7.1.2-php8.3-apache + mariadb:11.8.9", "description": "独立 PHP 8.3 + MariaDB，持久卷保存网站与数据", "container_port": 80},
 			{"id": "rabbitmq", "name": "RabbitMQ", "image": "rabbitmq:4.1.4-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
