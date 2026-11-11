@@ -439,7 +439,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "platform-ops":
 			version = PlatformMaintenanceAppVersion
 		case "task-manager":
-			version = TaskInventoryAppVersion
+			version = TaskSysVStartupAppVersion
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 			if ValidIntegrityKernelApplication(d.ID) {

@@ -64,9 +64,12 @@ const UserAccessOverviewFeature = "user-access-overview-v1"
 const UserAccessOverviewVersion = "1.3.2"
 const TaskInventoryFeature = "task-host-inventory-v1"
 const TaskInventoryVersion = "1.3.0"
+const TaskSysVStartupFeature = "task-sysv-startup-v1"
+const TaskSysVStartupVersion = "1.3.1"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature || feature == TaskInventoryFeature {
+	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature ||
+		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2RootVendorFeature {
@@ -165,10 +168,11 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		return err
 	}
 	if manifest.ID == "task-manager" {
-		base, _, _ := strings.Cut(manifest.Version, "-")
-		comparison, valid := CompareVersions(base, TaskInventoryVersion)
-		if !valid || comparison >= 0 && (manifest.Version != TaskInventoryVersion || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != TaskInventoryFeature) {
-			return errors.New("任务管理器 1.3.0 须声明固定版本的系统清单处理器")
+		comparison, valid := CompareVersions(manifest.Version, "1.2.1")
+		if !valid || comparison > 0 && (len(manifest.RequiredPanelFeatures) != 1 ||
+			!(manifest.Version == TaskInventoryVersion && manifest.RequiredPanelFeatures[0] == TaskInventoryFeature ||
+				manifest.Version == TaskSysVStartupVersion && manifest.RequiredPanelFeatures[0] == TaskSysVStartupFeature)) {
+			return errors.New("任务管理器新版须声明对应版本的系统清单处理器")
 		}
 	}
 	if manifest.ID == "user-manager" {
@@ -348,6 +352,10 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		seen[feature] = true
 		if feature == TaskInventoryFeature && (manifest.ID != "task-manager" || manifest.Version != TaskInventoryVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("系统清单处理器仅属于任务管理器 1.3.0")
+		}
+		if feature == TaskSysVStartupFeature && (manifest.ID != "task-manager" || manifest.Version != TaskSysVStartupVersion ||
+			manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("SysV 启动清单处理器仅属于任务管理器 1.3.1")
 		}
 		if feature == UserAccessOverviewFeature && (manifest.ID != "user-manager" || manifest.Version != UserAccessOverviewVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("账户权限总览仅属于用户管理 1.3.2")

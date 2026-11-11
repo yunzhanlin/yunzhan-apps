@@ -34,9 +34,10 @@ test('signal reply binds the original PID and does not claim exit',()=>{
 const source=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
 test('host inventories require the new signed Task Manager version and preserve the legacy installation path',()=>{
  const definitions=readFileSync(new URL('../internal/core/app_modules.go',import.meta.url),'utf8');
- assert.match(definitions,/case "task-manager":\s+version = TaskInventoryAppVersion/);
+ assert.match(definitions,/case "task-manager":\s+version = TaskSysVStartupAppVersion/);
  const features=readFileSync(new URL('../internal/appcatalog/panel_features.go',import.meta.url),'utf8');
  assert.match(features,/const TaskInventoryVersion = "1\.3\.0"/);
+ assert.match(features,/const TaskSysVStartupVersion = "1\.3\.1"/);
  const executor=readFileSync(new URL('../internal/executor/app_modules_linux.go',import.meta.url),'utf8');
  assert.match(executor,/if id == "task-manager" && action == "install" \{\s+selectedVersion = "1\.2\.1"/);
  const report=readFileSync(new URL('../web/src/AppModuleReport.vue',import.meta.url),'utf8');

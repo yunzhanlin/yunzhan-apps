@@ -298,8 +298,12 @@ func (s *Service) taskInventoryRoutes(m *http.ServeMux) {
 			return
 		}
 		status := s.appModuleStatus(r.Context(), "task-manager")
-		if status.StateUnknown || !status.Installed || status.Version != core.TaskInventoryAppVersion {
+		if status.StateUnknown || !status.Installed || !core.TaskInventoryVersionSupported(status.Version) {
 			respond(w, http.StatusConflict, map[string]string{"error": "请先通过签名应用商店安装或更新任务管理器"})
+			return
+		}
+		if view == "sysv-startup" && status.Version != core.TaskSysVStartupAppVersion {
+			respond(w, http.StatusConflict, map[string]string{"error": "SysV 启动清单需要任务管理器 1.3.1"})
 			return
 		}
 		out := taskInventory{View: view, CheckedAt: core.Now(), Rows: []map[string]string{}}
@@ -307,6 +311,8 @@ func (s *Service) taskInventoryRoutes(m *http.ServeMux) {
 		switch view {
 		case "services", "startup":
 			err = s.taskSystemdInventory(r.Context(), &out)
+		case "sysv-startup":
+			err = s.taskSysVStartup(&out)
 		case "accounts":
 			err = s.taskLocalAccounts(&out)
 		case "cron":

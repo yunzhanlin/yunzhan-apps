@@ -169,9 +169,9 @@ func ValidateSoftwareUpdate(id, version string) error {
 			return errors.New("账户权限总览仅允许固定完整 1.3.2 版本")
 		}
 	}
-	if id == "task-manager" && version != TaskInventoryAppVersion {
+	if id == "task-manager" && !TaskInventoryVersionSupported(version) {
 		if comparison, valid := appcatalog.CompareVersions(version, "1.2.1"); !valid || comparison > 0 {
-			return errors.New("任务管理器版本未经实现，系统清单需要固定完整 1.3.0 版本")
+			return errors.New("任务管理器系统清单仅支持已实现的完整 1.3.0 或 1.3.1 版本")
 		}
 	}
 	if id == "intrusion-prevention" && version != IntrusionAppVersion {
@@ -361,8 +361,8 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if id == "user-manager" && version == appcatalog.UserAccessOverviewVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("用户管理 1.3.2 须通过签名应用商店安装或更新")
 	}
-	if id == "task-manager" && version == TaskInventoryAppVersion && (action == "install" || action == "update") && bind == nil {
-		return "", errors.New("任务管理器 1.3.0 须通过签名应用商店安装或更新")
+	if id == "task-manager" && TaskInventoryVersionSupported(version) && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("任务管理器新版须通过签名应用商店安装或更新")
 	}
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")

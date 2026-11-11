@@ -1307,7 +1307,8 @@ defineExpose({ show });
         <TaskHostInventory v-else-if="definition.id === 'task-manager' && section.id.startsWith('inventory-')"
           :key="section.id + '/' + geoActor" :api="api" :view="section.id.slice('inventory-'.length)"
           :active="visible && activeTab === section.id"
-          :enabled="installed && !installedUnknown && installedVersion === '1.3.0' && (access === undefined || canOpenAppModule(access, 'task-manager'))" />
+          :sysv-startup="installedVersion === '1.3.1'"
+          :enabled="installed && !installedUnknown && ['1.3.0', '1.3.1'].includes(installedVersion) && (access === undefined || canOpenAppModule(access, 'task-manager'))" />
         <template v-else>
         <el-alert :title="section.help" type="info" :closable="false" />
         <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />

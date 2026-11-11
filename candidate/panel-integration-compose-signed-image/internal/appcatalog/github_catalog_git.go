@@ -17,7 +17,6 @@ import (
 const githubCatalogGitRefURL = "https://github.com/yunzhanlin/yunzhan-apps.git/info/refs?service=git-upload-pack"
 const githubGitAdvertisementLimit = 128 << 10
 const githubGitAdvertisementPacketLimit = 8192
-const githubGitAdvertisementRefLimit = 512
 
 func (c *Client) catalogReferenceTransport(commit string) string {
 	if _, official := c.officialGitHubSource(); !official || commit == "" {
@@ -134,19 +133,18 @@ func parseGitCatalogAdvertisementForRef(raw []byte, reference string) (string, e
 	}
 	seen := map[string]bool{}
 	commit := ""
+	// The response byte budget bounds both the number of packets and the
+	// total ref-name storage. Every row must still be checked after a match.
 	for count := 0; ; count++ {
 		value, end, err := packet()
 		if err != nil {
 			return "", bad
 		}
 		if end {
-			if offset != len(raw) || count == 0 || commit == "" {
+			if offset != len(raw) || commit == "" {
 				return "", bad
 			}
 			return commit, nil
-		}
-		if count >= githubGitAdvertisementRefLimit {
-			return "", bad
 		}
 		line := bytes.TrimSuffix(value, []byte("\n"))
 		if bytes.ContainsAny(line, "\r\n") {

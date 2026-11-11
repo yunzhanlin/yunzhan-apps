@@ -89,6 +89,33 @@ func TestUserAccessOverviewManifestKeepsOldVersionAndRequiresItsHandler(t *testi
 	}
 }
 
+func TestTaskSysVStartupKeepsExistingInventoryManifest(t *testing.T) {
+	m := panelRequirementFixture()
+	m.ID, m.Delivery.Target = "task-manager", "task-manager"
+	m.Version = TaskInventoryVersion
+	m.RequiredPanelFeatures = []string{TaskInventoryFeature}
+	oldPanel := func(feature string) bool { return feature == TaskInventoryFeature }
+	if err := validatePanelRequirements(m, oldPanel); err != nil {
+		t.Fatal(err)
+	}
+	m.Version = TaskSysVStartupVersion
+	newPanel := func(feature string) bool { return oldPanel(feature) || feature == TaskSysVStartupFeature }
+	if validatePanelRequirements(m, newPanel) == nil {
+		t.Fatal("the new version reused the prior handler requirement")
+	}
+	m.RequiredPanelFeatures = []string{TaskSysVStartupFeature}
+	if err := validatePanelRequirements(m, newPanel); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, oldPanel) == nil {
+		t.Fatal("the prior panel accepted the new startup inventory")
+	}
+	m.Delivery.Target = "daily-report"
+	if validatePanelRequirements(m, newPanel) == nil {
+		t.Fatal("another application borrowed the startup inventory handler")
+	}
+}
+
 func TestGeographyPackageRequiresBoundedReaderNotEarlierPrototype(t *testing.T) {
 	m := panelRequirementFixture()
 	m.Version = "2.6.0"

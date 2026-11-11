@@ -6,10 +6,15 @@ import (
 )
 
 const TaskInventoryAppVersion = appcatalog.TaskInventoryVersion
+const TaskSysVStartupAppVersion = appcatalog.TaskSysVStartupVersion
+
+func TaskInventoryVersionSupported(version string) bool {
+	return version == TaskInventoryAppVersion || version == TaskSysVStartupAppVersion
+}
 
 func ValidTaskInventoryView(view string) bool {
 	switch view {
-	case "services", "startup", "accounts", "cron", "ssh", "network":
+	case "services", "startup", "sysv-startup", "accounts", "cron", "ssh", "network":
 		return true
 	default:
 		return false

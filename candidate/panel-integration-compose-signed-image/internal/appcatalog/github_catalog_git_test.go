@@ -103,14 +103,9 @@ func TestGitCatalogAdvertisementAllBudgetsApplyBeforeIdentity(t *testing.T) {
 	commit := strings.Repeat("c", 40)
 	preamble := gitCatalogPacket("# service=git-upload-pack\n") + "0000"
 	first := gitCatalogPacket(commit + " HEAD\x00multi_ack\n")
-	tooMany := preamble + first + gitCatalogPacket(commit+" refs/heads/main\n")
-	for i := 0; i < 511; i++ {
-		tooMany += gitCatalogPacket(commit + fmt.Sprintf(" refs/heads/x-%d\n", i))
-	}
 	for name, raw := range map[string]string{
 		"whole-response": strings.Repeat("0", githubGitAdvertisementLimit+1),
 		"packet":         preamble + gitCatalogPacket(commit+" HEAD\x00"+strings.Repeat("a", githubGitAdvertisementPacketLimit)+"\n") + "0000",
-		"ref-count":      tooMany + "0000",
 		"ref-name":       preamble + first + gitCatalogPacket(commit+" refs/heads/"+strings.Repeat("a", 1024)+"\n") + "0000",
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -118,6 +113,26 @@ func TestGitCatalogAdvertisementAllBudgetsApplyBeforeIdentity(t *testing.T) {
 				t.Fatal("budget accepted", got, err)
 			}
 		})
+	}
+}
+
+func TestGitCatalogAcceptsLargeBoundedRepositoryAndChecksLateRows(t *testing.T) {
+	commit := strings.Repeat("c", 40)
+	var advertisement strings.Builder
+	advertisement.WriteString(gitCatalogPacket("# service=git-upload-pack\n") + "0000")
+	advertisement.WriteString(gitCatalogPacket(commit + " HEAD\x00symref=HEAD:refs/heads/main\n"))
+	target := gitCatalogPacket(commit + " refs/heads/codex/app-candidate\n")
+	advertisement.WriteString(target)
+	for i := 0; i < 600; i++ {
+		advertisement.WriteString(gitCatalogPacket(commit + fmt.Sprintf(" refs/heads/codex/other-%d\n", i)))
+	}
+	raw := advertisement.String()
+	got, err := parseGitCatalogAdvertisementForRef([]byte(raw+"0000"), "refs/heads/codex/app-candidate")
+	if err != nil || got != commit {
+		t.Fatal("bounded official advertisement refused", got, err)
+	}
+	if _, err := parseGitCatalogAdvertisementForRef([]byte(raw+target+"0000"), "refs/heads/codex/app-candidate"); err == nil {
+		t.Fatal("a duplicate reference after the first 512 entries was accepted")
 	}
 }
 
