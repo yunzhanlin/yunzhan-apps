@@ -2,10 +2,34 @@ package core
 
 import (
 	"encoding/json"
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/runtimecatalog"
 	"strings"
 	"testing"
 )
+
+func TestPHPProcessPolicyApplicationVersions(t *testing.T) {
+	const id = "php-code-security"
+	if SoftwareImplementationVersion(id) != appcatalog.PHPProcessPolicyVersion {
+		t.Fatal("compiled PHP code security version does not match its policy handler")
+	}
+	for _, version := range []string{"1.3.0", appcatalog.PHPProcessPolicyVersion} {
+		if err := ValidateSoftwareInstallVersion(id, version); err != nil {
+			t.Fatal(version, err)
+		}
+	}
+	for _, version := range []string{"1.3.1-compat1", "01.3.1", "1.3.2"} {
+		if ValidateSoftwareInstallVersion(id, version) == nil {
+			t.Fatal("unreviewed PHP code security version accepted", version)
+		}
+	}
+	s := testStore(t)
+	for _, action := range []string{"install", "update"} {
+		if _, err := s.queueSoftwareAction(id, action, nil, appcatalog.PHPProcessPolicyVersion, ID(), "admin"); err == nil {
+			t.Fatal("new PHP code security package bypassed the signed store", action)
+		}
+	}
+}
 
 func TestPHPSettingsValidationAndLegacyIdentity(t *testing.T) {
 	s := Site{ID: ID(), PHPVersionID: "php-8.4.25", Settings: DefaultSiteSettings(SiteSettings{})}
@@ -25,6 +49,14 @@ func TestPHPSettingsValidationAndLegacyIdentity(t *testing.T) {
 	first := PHPInstanceID(s)
 	if first == original || len("/run/panel-php-"+first+"/fpm.sock") >= 108 {
 		t.Fatal("invalid socket identity", first)
+	}
+	defaults.BlockProcessFunctions = true
+	if first == PHPInstanceID(s) {
+		t.Fatal("process-function policy did not receive a distinct FPM identity")
+	}
+	defaults.BlockProcessFunctions = false
+	if first != PHPInstanceID(s) {
+		t.Fatal("disabled policy changed an existing FPM identity")
 	}
 	defaults.MemoryMB = 256
 	if first == PHPInstanceID(s) {

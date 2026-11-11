@@ -13,6 +13,33 @@ func panelRequirementFixture() Manifest {
 	return Manifest{SchemaVersion: 1, ID: "website-statistics-v2", Name: "Website statistics-v2", Category: "professional", Version: "2.4.1", Stage: "ready", Risk: "maintained", Summary: "owned handler requirements fixture", Delivery: Delivery{Provider: "panel-module", Target: "website-statistics-v2", ManageRoute: "app-modules"}, Capabilities: []string{"owned bounded history"}, RequiredPanelFeatures: []string{StatisticsCursorRetirementFeature}}
 }
 
+func TestPHPProcessPolicyRequiresItsOwnAvailableHandler(t *testing.T) {
+	m := panelRequirementFixture()
+	m.ID = "php-code-security"
+	m.Delivery.Target = m.ID
+	m.Version = "1.3.0"
+	m.RequiredPanelFeatures = nil
+	if err := validatePanelRequirements(m, nil); err != nil {
+		t.Fatal("original PHP code security package was rejected", err)
+	}
+	m.Version = PHPProcessPolicyVersion
+	available := func(feature string) bool { return feature == PHPProcessPolicyFeature }
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("new PHP code security package omitted its handler")
+	}
+	m.RequiredPanelFeatures = []string{PHPProcessPolicyFeature}
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(string) bool { return false }) == nil {
+		t.Fatal("old panel authorized the new PHP code security package")
+	}
+	m.Delivery.Target = "daily-report"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("another target borrowed the PHP-FPM process policy")
+	}
+}
+
 func TestGeographyPackageRequiresBoundedReaderNotEarlierPrototype(t *testing.T) {
 	m := panelRequirementFixture()
 	m.Version = "2.6.0"

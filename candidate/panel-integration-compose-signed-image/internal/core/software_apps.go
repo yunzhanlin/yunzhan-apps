@@ -151,6 +151,12 @@ func ValidateSoftwareUpdate(id, version string) error {
 			return errors.New("原生移动端新交付仅允许固定完整1.3.2或1.3.3，拒绝别名及未审核版本")
 		}
 	}
+	if id == "php-code-security" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, appcatalog.PHPProcessPolicyVersion); valid && comparison >= 0 && version != appcatalog.PHPProcessPolicyVersion {
+			return errors.New("PHP 代码安全进程限制仅允许固定完整 1.3.1 版本")
+		}
+	}
 	if id == "intrusion-prevention" && version != IntrusionAppVersion {
 		return errors.New("防入侵事务更新仅允许固定完整1.1.1，拒绝旧标签、别名及未审核版本")
 	}
@@ -328,6 +334,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	}
 	if nativeMobile && bind == nil {
 		return "", errors.New("移动端1.3.2安装或更新须使用原签名仓库请求；旧直接接口不能提升交付版本")
+	}
+	if id == "php-code-security" && version == appcatalog.PHPProcessPolicyVersion && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("PHP 代码安全 1.3.1 须通过签名应用商店安装或更新")
 	}
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")

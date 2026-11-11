@@ -11,15 +11,16 @@ import (
 )
 
 type PHPSettings struct {
-	Extensions          []string `json:"extensions,omitempty"`
-	MemoryMB            int      `json:"memory_mb"`
-	MaxExecutionSeconds int      `json:"max_execution_seconds"`
-	UploadMB            int      `json:"upload_mb"`
-	PostMB              int      `json:"post_mb"`
-	Timezone            string   `json:"timezone"`
-	DisplayErrors       bool     `json:"display_errors"`
-	MaxChildren         int      `json:"max_children"`
-	MaxRequests         int      `json:"max_requests"`
+	Extensions            []string `json:"extensions,omitempty"`
+	MemoryMB              int      `json:"memory_mb"`
+	MaxExecutionSeconds   int      `json:"max_execution_seconds"`
+	UploadMB              int      `json:"upload_mb"`
+	PostMB                int      `json:"post_mb"`
+	Timezone              string   `json:"timezone"`
+	DisplayErrors         bool     `json:"display_errors"`
+	MaxChildren           int      `json:"max_children"`
+	MaxRequests           int      `json:"max_requests"`
+	BlockProcessFunctions bool     `json:"block_process_functions,omitempty"`
 }
 
 func DefaultPHPSettings() PHPSettings {
@@ -81,5 +82,9 @@ func PHPIniValues(in *PHPSettings) [][2]string {
 	if in.DisplayErrors {
 		show = "1"
 	}
-	return [][2]string{{"memory_limit", fmt.Sprintf("%dM", in.MemoryMB)}, {"max_execution_time", fmt.Sprint(in.MaxExecutionSeconds)}, {"upload_max_filesize", fmt.Sprintf("%dM", in.UploadMB)}, {"post_max_size", fmt.Sprintf("%dM", in.PostMB)}, {"date.timezone", in.Timezone}, {"display_errors", show}}
+	values := [][2]string{{"memory_limit", fmt.Sprintf("%dM", in.MemoryMB)}, {"max_execution_time", fmt.Sprint(in.MaxExecutionSeconds)}, {"upload_max_filesize", fmt.Sprintf("%dM", in.UploadMB)}, {"post_max_size", fmt.Sprintf("%dM", in.PostMB)}, {"date.timezone", in.Timezone}, {"display_errors", show}}
+	if in.BlockProcessFunctions {
+		values = append(values, [2]string{"disable_functions", "exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec"})
+	}
+	return values
 }

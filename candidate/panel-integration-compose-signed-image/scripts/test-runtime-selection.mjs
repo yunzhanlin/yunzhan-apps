@@ -179,6 +179,7 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  one('  if (status?.installed && !parallel) {\n    openRegistryApp(app);',
      '  if (status?.installed) {\n    openRegistryApp(app);');
  one('${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}', '');
+ one(" @php-site-settings=\"openSiteSettings($event, 'php')\"", "");
  // The independent country editor adds only current-actor plumbing here.
  one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
  one('    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",\n', '');

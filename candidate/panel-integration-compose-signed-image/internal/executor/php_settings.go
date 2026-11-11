@@ -14,9 +14,16 @@ func phpSessionProgressGuarded(r runtimecatalog.Release) bool {
 func phpProbeScript(site core.Site) string {
 	code := "<?php header('Content-Type: text/plain'); echo PHP_VERSION;"
 	for _, pair := range core.PHPIniValues(site.Settings.PHP) {
-		if pair[0] == "display_errors" {
+		switch pair[0] {
+		case "display_errors":
 			code += " echo '|', filter_var(ini_get('display_errors'), FILTER_VALIDATE_BOOL) ? '1' : '0';"
-		} else {
+		case "disable_functions":
+			required := strings.ReplaceAll(pair[1], ",", "','")
+			code += " $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));"
+			code += " $protected = true; foreach (array('" + required + "') as $name) {"
+			code += " if (function_exists($name) || !in_array($name, $disabled, true)) { $protected = false; break; } }"
+			code += " echo '|', $protected ? '1' : '0';"
+		default:
 			code += " echo '|', ini_get('" + pair[0] + "');"
 		}
 	}
@@ -35,7 +42,9 @@ func phpProbeExpected(site core.Site) string {
 	expected := phpVersion(site.PHPVersionID)
 	for _, pair := range core.PHPIniValues(site.Settings.PHP) {
 		value := pair[1]
-
+		if pair[0] == "disable_functions" {
+			value = "1"
+		}
 		expected += "|" + value
 	}
 	if r, ok := runtimecatalog.Find(site.PHPVersionID); ok && phpSessionProgressGuarded(r) {

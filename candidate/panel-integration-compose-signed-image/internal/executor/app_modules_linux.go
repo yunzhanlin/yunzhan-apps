@@ -266,6 +266,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			// delivery. Preserve its legacy identity, including retained old jobs.
 			selectedVersion = "1.3.0"
 		}
+		if id == "php-code-security" && action == "install" {
+			selectedVersion = "1.3.0"
+		}
 	}
 	if id == "website-statistics-v2" && action == "install" && (selectedVersion == statisticsIdentityVersion || selectedVersion == statisticsGeographyVersion) {
 		return s.statisticsVersionLifecycle(ctx, selectedVersion, "install", settings, add)
@@ -326,7 +329,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 		defer reader.Close()
 	}
-	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa") && action == "install" && s.moduleInstalled(id) {
+	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa" || id == "php-code-security") && action == "install" && s.moduleInstalled(id) {
 		return errors.New("应用已安装；请使用签名更新流程，安装不能覆盖版本、实例或原历史")
 	}
 	if id == "website-statistics-v2" && action == "install" {

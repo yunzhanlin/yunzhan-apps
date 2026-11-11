@@ -25,6 +25,7 @@ func TestPHPConfigurationChangesCandidateWithoutChangingLegacyHealth(t *testing.
 	options.MemoryMB = 256
 	options.Timezone = "Asia/Shanghai"
 	options.MaxChildren = 5
+	options.BlockProcessFunctions = true
 	site.Settings.PHP = &options
 	configured := phpPoolConfiguration(site, "/srv/panel/sites/"+site.ID)
 	for _, part := range []string{"-cfg-", "pm.max_children = 5\n", "php_admin_value[memory_limit] = 256M", "php_admin_value[date.timezone] = Asia/Shanghai"} {
@@ -37,5 +38,10 @@ func TestPHPConfigurationChangesCandidateWithoutChangingLegacyHealth(t *testing.
 	}
 	if !strings.Contains(phpProbeScript(site), "ini_get('memory_limit')") || !strings.Contains(phpProbeExpected(site), "|256M|60|2M|8M|Asia/Shanghai|0") {
 		t.Fatal("candidate probe does not check configured values")
+	}
+	if !strings.Contains(configured, "php_admin_value[disable_functions] = exec,passthru,shell_exec,system,proc_open,popen,pcntl_exec\n") ||
+		!strings.Contains(phpProbeScript(site), "function_exists($name)") ||
+		!strings.Contains(phpProbeExpected(site), "|Asia/Shanghai|0|1") {
+		t.Fatal("the PHP worker must prove the configured functions are unavailable")
 	}
 }

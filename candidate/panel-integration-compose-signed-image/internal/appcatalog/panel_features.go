@@ -56,7 +56,13 @@ const IntrusionJournalFeature = "intrusion-preserving-journal-v2"
 // A future country manifest cannot borrow this complete, narrower ABI.
 const WAFBoundHealthFeature = "waf-bound-health-v1"
 
+const PHPProcessPolicyFeature = "php-fpm-process-policy-v1"
+const PHPProcessPolicyVersion = "1.3.1"
+
 func panelFeatureAvailable(feature string) bool {
+	if feature == PHPProcessPolicyFeature {
+		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
+	}
 	if feature == PM2RootVendorFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
@@ -151,6 +157,16 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	}
 	if err := validateCountryDataRequirement(manifest); err != nil {
 		return err
+	}
+	if manifest.ID == "php-code-security" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, PHPProcessPolicyVersion)
+		if !valid {
+			return errors.New("PHP 代码安全处理器版本无法核对")
+		}
+		if comparison >= 0 && (manifest.Version != PHPProcessPolicyVersion || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != PHPProcessPolicyFeature) {
+			return errors.New("PHP 代码安全 1.3.1 须声明固定版本的站点 PHP-FPM 进程限制处理器")
+		}
 	}
 	if manifest.ID == "nginx-waf" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
@@ -303,6 +319,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == PHPProcessPolicyFeature && (manifest.ID != "php-code-security" || manifest.Version != PHPProcessPolicyVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("站点 PHP-FPM 进程限制处理器仅属于 PHP 代码安全 1.3.1")
+		}
 		if feature == WAFBoundHealthFeature && (manifest.ID != "nginx-waf" || manifest.Version != "2.5.2" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "security") {
 			return errors.New("站点绑定健康检查处理器仅属于nginx-waf2.5.2的固定安全管理目标")
 		}

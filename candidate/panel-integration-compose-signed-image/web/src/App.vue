@@ -3400,7 +3400,7 @@ onUnmounted(() => {
             ></el-table
           >
         </section>
-        <component :is="appModuleComponent" v-if="appModuleComponent" ref="appModuleManager" :api="appModuleAPI" :on-job="appModuleJob" :on-install="appModuleInstall" :registry="appRegistry" :access="accessPlan" />
+        <component :is="appModuleComponent" v-if="appModuleComponent" ref="appModuleManager" :api="appModuleAPI" :on-job="appModuleJob" :on-install="appModuleInstall" :registry="appRegistry" :access="accessPlan" @php-site-settings="openSiteSettings($event, 'php')" />
         <el-dialog :model-value="appModuleLoading || !!appModuleLoadError" title="加载应用管理界面" width="min(520px, 94vw)" :close-on-click-modal="false" @close="cancelAppModuleLoad">
           <p v-if="appModuleLoading" role="status">正在加载 {{appModuleLoadTarget}} 的实际管理界面，请稍候。此步骤不会安装应用或修改配置。</p>
           <el-alert v-if="appModuleLoadError" :title="appModuleLoadError" type="error" :closable="false"/>

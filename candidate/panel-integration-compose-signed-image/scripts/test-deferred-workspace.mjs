@@ -76,6 +76,7 @@ test('the real compiled show function refuses automatic actions after page, site
  async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
   const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation','platformReadNotice','pm2ProjectOffset'].map(key=>[key,{value:undefined}]));
   refs.installedVersion.value='old-version';refs.installedInstance.value='a'.repeat(32);
+  refs.phpProtectionSite={value:'previous-site'};
   refs.userMutationObservation.value={action:'update',username:'old-account',state:'unverified'};
   refs.platformMutationObservation.value={action:'issue-token',state:'unverified',requiredRead:'token-list'};
   const previousNFSController=new AbortController();
@@ -96,6 +97,7 @@ test('the real compiled show function refuses automatic actions after page, site
   assert.equal(refs.nfsSectionRead.value,undefined);assert.equal(refs.nfsSectionReadError.value,'');
   assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
   assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
+  assert.equal(refs.phpProtectionSite.value,'','new module view adopted a previous PHP site selection');
   return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value,nfs:view.nfsState()};
  }
  for(const [id,path] of [['task-manager','/app-modules/task-manager'],['task-manager','/sites'],['pure-ftpd','/certificates']]){

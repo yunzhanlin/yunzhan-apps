@@ -447,7 +447,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "mobile-pwa":
 			version = NativeMobileAppVersion
 		case "php-code-security":
-			version = "1.3.0"
+			version = appcatalog.PHPProcessPolicyVersion
 		case "load-balance":
 			version = "1.8.5"
 		case "user-manager":

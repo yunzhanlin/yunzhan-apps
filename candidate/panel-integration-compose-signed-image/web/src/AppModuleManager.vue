@@ -67,6 +67,7 @@ interface Versions {
   source: { stale: boolean; fetched_at?: string; error?: string };
 }
 const props = defineProps<{ api: API; onJob: (id: string) => Promise<void>; onInstall: (id: string, settings?: Record<string, unknown>) => Promise<string>; registry?: Versions; access?: AccessPlan | null }>();
+const emit = defineEmits<{ phpSiteSettings: [id: string] }>();
 const geoActor = computed(() => (props.access as (AccessPlan & { user_id?: string }) | null)?.user_id || "");
 const activeTab = ref("manage"), localVersions = ref<Versions>();
 const versions = computed(() => localVersions.value || props.registry);
@@ -163,7 +164,18 @@ const pm2StopOutcome = ref<Record<string, unknown>>();
 const pm2ProjectOffset = ref(0);
 const userErrorAnchor = ref<HTMLElement>();
 const form = ref<Record<string, any>>({}),
-  sites = ref<{ id: string; name: string; domain: string }[]>([]);
+  sites = ref<{ id: string; name: string; domain: string; php_version_id?: string }[]>([]);
+const phpProtectionSite = ref("");
+const phpProtectionSites = computed(() => sites.value.filter(site => site.php_version_id));
+const phpProtectionAvailable = computed(() => installed.value && !installedUnknown.value &&
+  installedVersion.value === "1.3.1" && canReadPath(props.access || null, "/sites/settings"));
+
+function openPHPProtectionSettings() {
+  const id = phpProtectionSite.value;
+  if (!phpProtectionAvailable.value || !phpProtectionSites.value.some(site => site.id === id)) return;
+  visible.value = false;
+  emit("phpSiteSettings", id);
+}
 const nfsFormDrafts = new NFSFormDrafts(value => reactive(value));
 function activateNFSDraft(section: string) {
   if (definition.value?.id !== 'nfs-manager') return;
@@ -495,6 +507,7 @@ async function show(id: string) {
   healthy.value = false;
   form.value = {};
   sites.value = [];
+  phpProtectionSite.value = "";
   certificates.value = [];
   selectedPlanID.value = "";
   pm2ProjectOffset.value=0;
@@ -1255,6 +1268,17 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-if="definition.id==='load-balance'" label="TCP / UDP 入口" name="stream">
           <LoadBalanceStreamWorkspace :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='stream'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        </el-tab-pane>
+        <el-tab-pane v-if="definition.id==='php-code-security' && phpProtectionAvailable" label="PHP 运行保护" name="runtime-protection">
+          <el-form label-position="top" class="module-fields">
+            <el-form-item label="PHP 网站">
+              <el-select v-model="phpProtectionSite" filterable placeholder="选择 PHP 网站" aria-label="PHP 运行保护网站">
+                <el-option v-for="site in phpProtectionSites" :key="site.id" :value="site.id" :label="`${site.name} · ${site.domain}`" />
+              </el-select>
+            </el-form-item>
+          </el-form>
+          <el-button :disabled="!phpProtectionSite" @click="openPHPProtectionSettings">打开网站 PHP 参数</el-button>
+          <p>在 PHP 参数中勾选“使用本站点的独立 PHP 参数”，即可预览并保存进程函数限制。</p>
         </el-tab-pane>
         <el-tab-pane v-if="['website-tamper-proof','enterprise-tamper-proof'].includes(definition.id)" label="内核写保护" name="kernel">
           <IntegrityKernelWorkspace :module-id="definition.id" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />

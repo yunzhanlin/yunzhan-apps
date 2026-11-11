@@ -85,9 +85,6 @@ func TestNativeMobileUpdateVersionCannotBorrowOtherClientBuilds(t *testing.T) {
 			t.Fatal("unreviewed native version accepted", version)
 		}
 	}
-	if SoftwareImplementationVersion("php-code-security") != "1.3.0" {
-		t.Fatal("mobile update changed unrelated PHP security module")
-	}
 }
 
 func TestNativeMobileDeliveryRetainsEachOriginalInstallationIdentity(t *testing.T) {

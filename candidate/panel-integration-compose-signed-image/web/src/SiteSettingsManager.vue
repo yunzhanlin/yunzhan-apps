@@ -18,6 +18,7 @@ interface PHPSettings {
   display_errors: boolean;
   max_children: number;
   max_requests: number;
+  block_process_functions?: boolean;
 }
 interface Settings {
   public_ingress?: boolean;
@@ -714,6 +715,13 @@ const rewriteOptions = [
                 >错误日志仍会保留</small
               ></el-form-item
             >
+            <el-form-item label="限制 PHP 调用系统命令">
+              <el-switch
+                v-model="form.php.block_process_functions"
+                aria-label="限制 PHP 调用系统命令"
+              />
+              <small class="settings-help">禁用 exec、system、shell_exec 等进程函数。保存后应用于此网站的 PHP-FPM。</small>
+            </el-form-item>
             <el-form-item label="FPM 最大子进程"
               ><el-input-number
                 v-model="form.php.max_children"

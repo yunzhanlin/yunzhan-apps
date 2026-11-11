@@ -61,6 +61,7 @@ func TestPHPSessionStartupRealFPM(t *testing.T) {
 					settings := core.DefaultPHPSettings()
 					settings.MemoryMB = 256
 					settings.Extensions = []string{"redis-6.3.0"}
+					settings.BlockProcessFunctions = true
 					site.Settings.PHP = &settings
 				}
 				testPHPSessionPrivatePool(t, site, r, uid, gid, false)
@@ -166,6 +167,17 @@ func testPHPSessionPrivatePool(t *testing.T, site core.Site, r runtimecatalog.Re
 	}
 	if enableControl && fastCGIOnce(ctx, socket, probe, phpProbeExpected(site)) == nil {
 		t.Fatal("candidate accepted an enabled upload-progress setting")
+	}
+	processProbe := filepath.Join(dir, "public", "process.php")
+	if err := writePHPSessionNativeScript(processProbe, []byte(`<?php echo function_exists('exec') ? exec('/usr/bin/printf native-process') : 'blocked';`)); err != nil {
+		t.Fatal(err)
+	}
+	processExpected := "native-process"
+	if site.Settings.PHP != nil && site.Settings.PHP.BlockProcessFunctions {
+		processExpected = "blocked"
+	}
+	if err := fastCGIOnce(ctx, socket, processProbe, processExpected); err != nil {
+		t.Fatalf("actual PHP-FPM process policy did not return %s: %v", processExpected, err)
 	}
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
