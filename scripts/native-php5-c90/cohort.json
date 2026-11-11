@@ -1,0 +1,42 @@
+{
+  "source_head": "2a36daeda70d9133e5c694b6d53ab0cc7746b018",
+  "source_inputs_sha256": "6fa54d8cd15adb26544d29355d0686b8aa191671a036ea5d43faa30537afd8ec",
+  "version": "0.1.0-dev.proapps24legacyphp5candidate90",
+  "recipes": {
+    "55": {
+      "version": "5.5.38",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d",
+      "target": "php-legacy-55-bookworm"
+    },
+    "54": {
+      "version": "5.4.45",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d",
+      "target": "php-legacy-54-bookworm"
+    },
+    "53": {
+      "version": "5.3.29",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53:5.3.29-compat2@sha256:e55568758bc9d63603ba4ede0bedb88e87b173685806fa73c3e795be2350dff1",
+      "target": "php-legacy-53-bookworm"
+    },
+    "52": {
+      "version": "5.2.17",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52:5.2.17-compat2@sha256:0134be0181025424e737318227409208f4be3cc405641e443d839bc46ed7c604",
+      "target": "php-legacy-52-bookworm"
+    }
+  },
+  "mode": "native-template",
+  "apps": null,
+  "served_head": "a6ebb9ab0fd316db852c7726fa2b1a07f9dcf8e8",
+  "payload_files": {
+    ".github/workflows/php5-c90-native-qa1.yml": "11fa3a501db2456d2afb8f6f7614ca446728a24513483e7f9ea1e31862f73c13",
+    "scripts/native-php5-c90/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php5-c90/dispatch.json": "7f58567c20e300af9d14b61138ff37f49c0fabe1a6c1638d49dc053d3a498f60",
+    "scripts/native-php5-c90/download.py": "b82abf4b1725cd07acfc46de52babdb130d0e6c752fbe9529d55e6a37a05a246",
+    "scripts/native-php5-c90/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php5-c90/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php5-c90/legacy-php.py": "6b8f8d8a417a58095c7aefce9b828555d80822ce491b563b9692c1f3b4b21a75",
+    "scripts/native-php5-c90/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php5-c90/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
