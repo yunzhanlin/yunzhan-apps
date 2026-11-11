@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+
+mkdir /tmp/legacy-php-source
+cd /tmp/legacy-php-source
+curl --fail --show-error --silent --proto '=https' --tlsv1.2 --retry 3 \
+    "https://museum.php.net/php5/php-$PHP_VERSION.tar.gz" -o php.tar.gz
+printf '%s  php.tar.gz\n' "$PHP_SOURCE_SHA256" | sha256sum --check -
+tar -xzf php.tar.gz --strip-components=1
+cp /usr/share/misc/config.guess /usr/share/misc/config.sub .
+test "$PHP_VERSION" = 5.4.45
+test "$PHP_SOURCE_SHA256" = 25bc4723955f4e352935258002af14a14a9810b491a19400d76fcdfa9d04b28f
+printf '%s  /opt/php-engine-security.patch\n' 1e1d96466cd330c77f3113fc050176da55e9faaf4e8e7528976712d6e20a1f77 | sha256sum --check
+patch --batch --fuzz=0 -p1 < /opt/php-engine-security.patch
+
+
+# Port PHP's later AArch64 register constraints to the final PHP 5.5 release.
+if [ "$PHP_VERSION" = 5.5.38 ] && [ "$(uname -m)" = aarch64 ]; then
+    patch --batch --fuzz=0 -p1 < /opt/php5538-arm64-multiply.patch
+fi
+
+set -- --prefix=/usr/local --with-config-file-path=/usr/local/etc/php \
+    --with-config-file-scan-dir=/usr/local/etc/php/conf.d \
+    --with-libdir="lib/$(gcc -dumpmachine)" --disable-all --enable-cli \
+    --enable-bcmath --enable-ctype --enable-filter --enable-hash --enable-json --enable-session \
+    --enable-tokenizer --enable-pdo --enable-libxml --enable-dom --enable-simplexml \
+    --enable-xml --with-zlib
+
+set -- "$@" --disable-cgi --enable-fpm --with-fpm-user=www-data --with-fpm-group=www-data \
+    --with-mysql=mysqlnd --with-mysqli=mysqlnd --with-pdo-mysql=mysqlnd
+
+CFLAGS='-O2 -fcommon -std=gnu89' ./configure "$@"
+make -j2
+make install INSTALL_ROOT=/opt/php-root
+prefix=/opt/php-root/usr/local
+mkdir -p "$prefix/etc/php/conf.d" "$prefix/sbin"
+printf '%s\n' 'cgi.fix_pathinfo=0' > "$prefix/etc/php/conf.d/20-fastcgi.ini"
+"$prefix/bin/php" -r 'if (PHP_VERSION !== $argv[1] || !extension_loaded("mysql") || !extension_loaded("mysqli") || !extension_loaded("pdo_mysql") || !extension_loaded("json") || !extension_loaded("hash")) exit(1);' "$PHP_VERSION"
+"$prefix/sbin/php-fpm" -v
