@@ -1,0 +1,35 @@
+{
+  "source_head": "53151ddd776a798cd3825be371fcbe0961680358",
+  "source_inputs_sha256": "f89ee520d5f12de92cb0847f18a28560ac7e9cf0e198736761544324b7e875b5",
+  "version": "0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77",
+  "application": {
+    "id": "phpmyadmin",
+    "name": "phpMyAdmin",
+    "version": "5.2.2-compat1",
+    "sha256": "08e14ede3faa30065f08395da75310bab9ee00bc05e35ab8ea26ec1aaac27392"
+  },
+  "mysql": {
+    "id": "mysql",
+    "version": "8.4.11-compat1",
+    "sha256": "5deba1b6e9da8312e52198089dfaccdaac50dfa7a2c9b67c5934d921a6a428b4",
+    "target": "mysql-8.4.11"
+  },
+  "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
+  "payload_files": {
+    ".github/workflows/phpmyadmin-local-mysql-c77-native-qa1.yml": "53776357c5bc47ef782e6794e78293623bccc277f8a495903f59d51a46b1aaf9",
+    "scripts/native-phpmyadmin-c77/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-phpmyadmin-c77/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
+    "scripts/native-phpmyadmin-c77/browser.mjs": "7a04d247e741d57e8d49dcf8cd51cc0091dc5276dad43d05e3bd9241e7dc6384",
+    "scripts/native-phpmyadmin-c77/dispatch.json": "01150df1b2f2a1d7ecee9d59e94076ceeab85c44b506f7f759c9aa886037e053",
+    "scripts/native-phpmyadmin-c77/download.py": "0103f1d6f29454f23e67d676a2cc79de800eb165a863b6d63b00467c0399445c",
+    "scripts/native-phpmyadmin-c77/finish.py": "a097981f576834dafaa1973273ce8232962d7405367767475fa5c05383a7909f",
+    "scripts/native-phpmyadmin-c77/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-phpmyadmin-c77/mysql.py": "15ac58a6edd27f54df9f6d5d852a4fbd4511fea9a3551d4ad2f0be2ba79f8c29",
+    "scripts/native-phpmyadmin-c77/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-phpmyadmin-c77/package-lock.json": "acec9e987f25e23ae5ead1fba565e9b5df048c4509250f828f64bb5e26f0bcb9",
+    "scripts/native-phpmyadmin-c77/package.json": "c43f386e20c33e07a020630f43049acaf6496b584d82ea1e1e1560b66f23e027",
+    "scripts/native-phpmyadmin-c77/prepare-browser.py": "28f217dad6881cb767ac3cb5301c66f600704810dd8188fd16b4afb772397833",
+    "scripts/native-phpmyadmin-c77/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}

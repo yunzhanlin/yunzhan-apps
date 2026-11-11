@@ -1,0 +1,57 @@
+name: Signed phpMyAdmin connection to a managed MySQL instance
+on:
+  push:
+    branches: [codex/phpmyadmin-local-mysql-c77-native-qa1]
+    paths: [scripts/native-phpmyadmin-c77/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  phpmyadmin:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Download the original signed release and pinned browser
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-phpmyadmin-c77/download.py "$RUNNER_TEMP/pma-inputs" "$RUNNER_TEMP/pma-private"
+          npm ci --ignore-scripts --no-audit --no-fund --prefix scripts/native-phpmyadmin-c77
+      - name: Install the original signed panel and prepare Chromium
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-phpmyadmin-c77/bootstrap-original-install.py "$RUNNER_TEMP/pma-inputs" "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/pma-private/bootstrap-step.stderr"
+          apt_config="$(sudo python3 -I -B -c 'import json,sys;print(json.load(open(sys.argv[1]))["path"])' "$RUNNER_TEMP/pma-private/isolated-ubuntu-apt-config.json")"
+          sudo env APT_CONFIG="$apt_config" "$(command -v node)" scripts/native-phpmyadmin-c77/node_modules/playwright-core/cli.js install-deps chromium > "$RUNNER_TEMP/pma-private/browser-dependencies.stdout" 2> "$RUNNER_TEMP/pma-private/browser-dependencies.stderr"
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-phpmyadmin-c77/prepare-browser.py "$RUNNER_TEMP/c77-chromium.zip" "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/browser-prepare.stdout" 2> "$RUNNER_TEMP/pma-private/browser-prepare.stderr"
+      - name: Install the signed managed MySQL runtime and create an owned database
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-phpmyadmin-c77/mysql.py "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/mysql-step.stdout" 2> "$RUNNER_TEMP/pma-private/mysql-step.stderr"
+      - name: Connect phpMyAdmin to the local MySQL instance, write a row, and restart the database
+        run: |
+          umask 077
+          node scripts/native-phpmyadmin-c77/browser.mjs "$RUNNER_TEMP/pma-private" > "$RUNNER_TEMP/pma-private/browser-step.stdout" 2> "$RUNNER_TEMP/pma-private/browser-step.stderr"
+      - name: Encrypt the original evidence
+        if: always()
+        run: sudo python3 -I -B scripts/native-phpmyadmin-c77/finish.py "$RUNNER_TEMP/pma-private" "$RUNNER_TEMP/pma-public" phase1
+      - name: Retain the native outcomes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c77-phpmyadmin-native-qa1-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pma-public/
+          if-no-files-found: error
+          retention-days: 14
