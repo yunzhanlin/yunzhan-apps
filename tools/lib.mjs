@@ -42,6 +42,10 @@ const nativeLegacyPHPReleases = [
   {"id":"php-72","version":"7.2.34-compat2","target":"php-legacy-72-buster","image":"ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625"},
   {"id":"php-73","version":"7.3.33-compat2","target":"php-legacy-73-buster","image":"ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e"},
   {"id":"php-74","version":"7.4.33-compat2","target":"php-legacy-74-bullseye","image":"ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"},
+  {"id":"php-52","version":"5.2.17-compat2","target":"php-legacy-52-bookworm","image":"ghcr.io/yunzhanlin/yunzhan-apps-php52:5.2.17-compat2@sha256:0134be0181025424e737318227409208f4be3cc405641e443d839bc46ed7c604"},
+  {"id":"php-53","version":"5.3.29-compat2","target":"php-legacy-53-bookworm","image":"ghcr.io/yunzhanlin/yunzhan-apps-php53:5.3.29-compat2@sha256:e55568758bc9d63603ba4ede0bedb88e87b173685806fa73c3e795be2350dff1"},
+  {"id":"php-54","version":"5.4.45-compat2","target":"php-legacy-54-bookworm","image":"ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d"},
+  {"id":"php-55","version":"5.5.38-compat2","target":"php-legacy-55-bookworm","image":"ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d"},
 ];
 
 export function validateManifest(app) {

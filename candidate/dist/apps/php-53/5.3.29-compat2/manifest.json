@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "php-53",
+  "name": "PHP 5.3",
+  "category": "deployment",
+  "version": "5.3.29-compat2",
+  "summary": "PHP 5.3.29 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+  "stage": "ready",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-legacy-53-bookworm",
+    "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53:5.3.29-compat2@sha256:e55568758bc9d63603ba4ede0bedb88e87b173685806fa73c3e795be2350dff1",
+    "manage_route": "docker",
+    "isolation": "legacy-container"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "固定镜像摘要",
+    "独立 PHP-FPM",
+    "独立 Nginx",
+    "网站同步部署",
+    "域名绑定",
+    "数据卷持久化"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/.__cloudstack_health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

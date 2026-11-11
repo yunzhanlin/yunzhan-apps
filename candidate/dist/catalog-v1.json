@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T18:32:12Z",
+  "generated_at": "2026-11-11T19:15:25Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -510,34 +510,34 @@
       "id": "php-52",
       "name": "PHP 5.2",
       "category": "deployment",
-      "version": "5.2.17-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "5.2.17-compat2",
+      "summary": "PHP 5.2.17 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP FastCGI、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-52",
+      "target": "php-legacy-52-bookworm",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
-        "独立 PHP-FPM",
+        "独立 PHP FastCGI",
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-52/5.2.17-compat1/manifest.json",
-      "sha256": "4ccdcb94dea61021d19e73225e6be082cc0512ce3fd8f0443cafb0c1fbf13b8c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-52/5.2.17-compat2/manifest.json",
+      "sha256": "1711295d0bed6548ab37f4bc35aca5e81478db838b87cbae70e6c1f48204616e"
     },
     {
       "id": "php-53",
       "name": "PHP 5.3",
       "category": "deployment",
-      "version": "5.3.29-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "5.3.29-compat2",
+      "summary": "PHP 5.3.29 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-53",
+      "target": "php-legacy-53-bookworm",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -547,19 +547,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-53/5.3.29-compat1/manifest.json",
-      "sha256": "cc42e20aa1b03998eedb47fb12313c59d1c70c3518d91087439e5a8fc5d4e338"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-53/5.3.29-compat2/manifest.json",
+      "sha256": "dfe2fb6a8e16622db25a200c3ec20fe9559e81044c12709d1b8b7133b88aa658"
     },
     {
       "id": "php-54",
       "name": "PHP 5.4",
       "category": "deployment",
-      "version": "5.4.45-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "5.4.45-compat2",
+      "summary": "PHP 5.4.45 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-54",
+      "target": "php-legacy-54-bookworm",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -569,19 +569,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat1/manifest.json",
-      "sha256": "4fc04cdfbf7bb722c6d9dfd88ea1fc1c58a3e228955f81fd53fd397055b9b606"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat2/manifest.json",
+      "sha256": "a59f6a34b03464cf1e60626210ad85ecb470784e30d9da7337f5df9e903f77ed"
     },
     {
       "id": "php-55",
       "name": "PHP 5.5",
       "category": "deployment",
-      "version": "5.5.38-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "5.5.38-compat2",
+      "summary": "PHP 5.5.38 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-55",
+      "target": "php-legacy-55-bookworm",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -591,8 +591,8 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat1/manifest.json",
-      "sha256": "0f9470c99cdaa842286ffbc321c0b5087f04d0c8e6fc2c9f01cf5256a20c466e"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat2/manifest.json",
+      "sha256": "27baa929f9f07c5d568d61c38b35d53d085f185476ba27aec224a84aff54126c"
     },
     {
       "id": "php-56",

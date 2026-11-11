@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "php-52",
+  "name": "PHP 5.2",
+  "category": "deployment",
+  "version": "5.2.17-compat2",
+  "summary": "PHP 5.2.17 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP FastCGI、Nginx、回环端口和数据卷。",
+  "stage": "ready",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-legacy-52-bookworm",
+    "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52:5.2.17-compat2@sha256:0134be0181025424e737318227409208f4be3cc405641e443d839bc46ed7c604",
+    "manage_route": "docker",
+    "isolation": "legacy-container"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "固定镜像摘要",
+    "独立 PHP FastCGI",
+    "独立 Nginx",
+    "网站同步部署",
+    "域名绑定",
+    "数据卷持久化"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/.__cloudstack_health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

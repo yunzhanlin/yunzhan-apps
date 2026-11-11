@@ -30,7 +30,8 @@ test('separate candidate catalogue changes exactly its declared known identities
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
     'anti-intrusion', 'apache-waf', 'disk-analysis', 'enterprise-tamper-proof', 'files-sync',
-    'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'php-56', 'php-70', 'php-71',
+    'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'php-52', 'php-53', 'php-54',
+    'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81',
     'pm2-manager', 'redis', 'website-analytics', 'website-tamper-proof',
   ];
@@ -39,6 +40,10 @@ test('separate candidate catalogue changes exactly its declared known identities
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['php-81', '8.1.34-compat1'], ['php-80', '8.0.30-compat1'],
+    ['php-52', '5.2.17-compat2'],
+    ['php-53', '5.3.29-compat2'],
+    ['php-54', '5.4.45-compat2'],
+    ['php-55', '5.5.38-compat2'],
     ['php-56', '5.6.40-compat2'],
     ['php-70', '7.0.33-compat2'],
     ['php-71', '7.1.33-compat2'],
