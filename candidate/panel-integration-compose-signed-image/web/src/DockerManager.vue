@@ -6,7 +6,6 @@ import { dockerCreateFingerprint, dockerCreateStorageKey, readDockerCreateReques
 import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { canOpenAppModule, type AccessPlan } from "./menuPermissions";
 import { ElMessage, ElMessageBox } from "element-plus";
-const credentialsOpen=ref(false),credentials=ref<unknown>();
 import {
   Box,
   Delete,
@@ -87,6 +86,67 @@ interface DockerProject {
   site_name?: string;
   created_at: string;
 }
+
+const credentialTemplates = {
+  rabbitmq: {
+    usernameKey: "RABBITMQ_DEFAULT_USER", passwordKey: "RABBITMQ_DEFAULT_PASS",
+    primary: "管理界面（HTTP）", secondary: "消息连接（AMQP）",
+  },
+  mongodb: {
+    usernameKey: "MONGO_INITDB_ROOT_USERNAME", passwordKey: "MONGO_INITDB_ROOT_PASSWORD",
+    primary: "数据库连接（MongoDB）", secondary: null,
+  },
+  openlitespeed: {
+    usernameKey: null, passwordKey: "CLOUDSTACK_ADMIN_PASSWORD",
+    primary: "网站（HTTP）", secondary: "WebAdmin 管理端口",
+  },
+} as const;
+
+type CredentialTemplate = keyof typeof credentialTemplates;
+interface CredentialDetails {
+  projectName: string;
+  template: CredentialTemplate;
+  username: string;
+  password: string;
+  endpoints: { label: string; address: string }[];
+}
+
+const credentialsOpen = ref(false);
+const credentials = ref<CredentialDetails>();
+const credentialsLoading = ref(false);
+const credentialsError = ref("");
+const passwordVisible = ref(false);
+
+function isCredentialTemplate(value?: string): value is CredentialTemplate {
+  return value !== undefined && Object.hasOwn(credentialTemplates, value);
+}
+
+function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
+  const template = item.template_id;
+  if (!isCredentialTemplate(template) || !value || typeof value !== "object") {
+    throw new Error("无法核对项目凭据");
+  }
+  const response = value as Record<string, unknown>;
+  const definition = credentialTemplates[template];
+  const port = response.host_port;
+  const fields = response.credentials;
+  if (response.project_id !== item.id || response.template_id !== template ||
+      typeof port !== "number" || !Number.isInteger(port) ||
+      port < 1024 || port > (definition.secondary ? 65534 : 65535) ||
+      (item.host_port && port !== item.host_port) || !fields || typeof fields !== "object") {
+    throw new Error("无法核对项目凭据");
+  }
+  const secrets = fields as Record<string, unknown>;
+  const username = definition.usernameKey ? secrets[definition.usernameKey] : "admin";
+  const password = secrets[definition.passwordKey];
+  if (typeof username !== "string" || !username || typeof password !== "string" || !password) {
+    throw new Error("项目缺少初始账号或密码");
+  }
+  const endpoints: CredentialDetails["endpoints"] = [{ label: definition.primary, address: `127.0.0.1:${port}` }];
+  if (definition.secondary) endpoints.push({ label: definition.secondary, address: `127.0.0.1:${port + 1}` });
+  return { projectName: item.name, template, username, password, endpoints };
+}
+
 interface DockerTemplate {
   id: string;
   name: string;
@@ -177,7 +237,7 @@ function resetManager() {
     managerEpoch++; loadSequence++; logSequence++; credentialSequence++; bindingEpoch++; busySequence++;
     visible.value = false; loading.value = false; busy.value = false;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
-    credentialsOpen.value = false; credentials.value = undefined; logsOpen.value = false; logs.value = ""; logsName.value = "";
+    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = "";
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -189,18 +249,52 @@ function resetManager() {
 }
 watch(() => [props.csrf, JSON.stringify(props.access)], resetManager, { flush: "sync" });
 watch(visible, value => { if (!value) resetManager(); }, { flush: "sync" });
-watch(credentialsOpen, value => { if (!value) { credentialSequence++; credentials.value = undefined; } }, { flush: "sync" });
+function clearCredentials() {
+  credentials.value = undefined;
+  credentialsLoading.value = false;
+  credentialsError.value = "";
+  passwordVisible.value = false;
+}
+watch(credentialsOpen, value => {
+  if (!value) {
+    credentialSequence++;
+    clearCredentials();
+  }
+}, { flush: "sync" });
 watch(logsOpen, value => { if (!value) { logSequence++; logs.value = ""; logsName.value = ""; } }, { flush: "sync" });
 watch(() => [bindingOpen.value, bindingProject.value?.id], () => { bindingEpoch++; }, { flush: "sync" });
 watch(projectOpen,()=>{projectEpoch++;},{flush:"sync"});
 onBeforeUnmount(() => { alive = false; resetManager(); });
 
 async function showCredentials(item: DockerProject) {
-  const token = contextToken(); if (!contextCurrent(token)) return;
-  credentials.value = undefined; credentialsOpen.value = true;
+  const token = contextToken();
+  if (!contextCurrent(token) || !isCredentialTemplate(item.template_id)) return;
+  clearCredentials();
+  credentialsLoading.value = true;
+  credentialsOpen.value = true;
   const sequence = ++credentialSequence, current = () => credentialsOpen.value && sequence === credentialSequence;
-  try { credentials.value = await contextAPI(token, current)<unknown>(`/docker/projects/${item.id}/credentials`, "POST", {}); }
-  catch (e) { if (current()) reportError(token, e); }
+  try {
+    const response = await contextAPI(token, current)<unknown>(`/docker/projects/${item.id}/credentials`, "POST", {});
+    if (contextCurrent(token) && current()) credentials.value = readCredentials(item, response);
+  } catch {
+    if (contextCurrent(token) && current()) credentialsError.value = "无法读取此项目的初始凭据，请重新打开后重试。";
+  } finally {
+    if (contextCurrent(token) && current()) credentialsLoading.value = false;
+  }
+}
+
+async function copyCredential(field: "username" | "password") {
+  const token = contextToken();
+  const sequence = credentialSequence;
+  const current = () => contextCurrent(token) && credentialsOpen.value && sequence === credentialSequence;
+  const details = credentials.value;
+  if (!current() || !details || (field === "password" && !passwordVisible.value)) return;
+  try {
+    await navigator.clipboard.writeText(details[field]);
+    if (current()) ElMessage.success(field === "password" ? "已复制密码" : "已复制用户名");
+  } catch {
+    if (current()) ElMessage.error("无法访问剪贴板，请手动复制。");
+  }
 }
 const taggedImages = computed(() =>
   images.value
@@ -982,7 +1076,7 @@ async function removeVolume(item: DockerVolume) {
             }}</small>
           </div>
           <div class="docker-actions">
-            <el-button v-if="['mongodb','rabbitmq','openlitespeed'].includes(item.template_id||'')" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="isCredentialTemplate(item.template_id)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
             <el-button
               v-if="canBindDockerProjectSite(item)"
               link
@@ -1474,13 +1568,69 @@ async function removeVolume(item: DockerVolume) {
       ><el-button @click="logsOpen = false">关闭</el-button></template
     ></el-dialog
   >
-  <el-dialog v-model="credentialsOpen" title="访问凭据 · 仅管理员可读取" width="640px" destroy-on-close>
-    <el-alert title="凭据不会缓存到浏览器。请妥善保存；面板只记录读取操作，不记录密码内容。" type="warning" :closable="false"/>
-    <pre style="white-space:pre-wrap;overflow-wrap:anywhere">{{JSON.stringify(credentials,null,2)}}</pre>
+  <el-dialog v-model="credentialsOpen" title="连接信息与初始凭据" width="min(640px, 94vw)" destroy-on-close>
+    <p v-if="credentialsLoading" role="status">正在读取项目凭据…</p>
+    <el-alert v-else-if="credentialsError" :title="credentialsError" type="error" :closable="false" />
+    <template v-else-if="credentials">
+      <h3 class="credential-project">{{ credentials.projectName }}</h3>
+      <p>地址仅在服务器本机可用。远程连接请使用 SSH 隧道。</p>
+      <dl class="credential-details">
+        <template v-for="endpoint in credentials.endpoints" :key="endpoint.label">
+          <dt>{{ endpoint.label }}</dt>
+          <dd><code>{{ endpoint.address }}</code></dd>
+        </template>
+        <template v-if="credentials.template === 'mongodb'">
+          <dt>认证数据库</dt>
+          <dd><code>admin</code></dd>
+        </template>
+        <dt>用户名</dt>
+        <dd>
+          <code>{{ credentials.username }}</code>
+          <el-button link type="primary" @click="copyCredential('username')">复制用户名</el-button>
+        </dd>
+        <dt>密码</dt>
+        <dd>
+          <code v-if="passwordVisible">{{ credentials.password }}</code>
+          <span v-else>已隐藏</span>
+          <el-button link type="primary" :aria-pressed="passwordVisible" @click="passwordVisible = !passwordVisible">
+            {{ passwordVisible ? "隐藏密码" : "显示密码" }}
+          </el-button>
+          <el-button v-if="passwordVisible" link type="primary" @click="copyCredential('password')">复制密码</el-button>
+        </dd>
+      </dl>
+      <p>应用内修改过密码时，请使用修改后的密码。</p>
+    </template>
+    <template #footer>
+      <el-button @click="credentialsOpen = false">关闭</el-button>
+    </template>
   </el-dialog>
 </template>
 
 <style scoped>
+.credential-project {
+  margin-top: 0;
+  overflow-wrap: anywhere;
+}
+.credential-details {
+  display: grid;
+  gap: 10px 18px;
+  grid-template-columns: minmax(100px, max-content) minmax(0, 1fr);
+}
+.credential-details dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.credential-details code {
+  min-width: 0;
+}
+@media (max-width: 520px) {
+  .credential-details { grid-template-columns: minmax(0, 1fr); }
+  .credential-details dd { margin-bottom: 6px; }
+}
 .docker-summary {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

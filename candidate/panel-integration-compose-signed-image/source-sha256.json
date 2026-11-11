@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-amd64.tar.gz",
-    "archive_sha256": "5496d8e184b12dabc137e84aeb2339e393f2041ea86df4c0f51b9911644095c5",
-    "frozen_inputs_sha256": "0fe094ad199b1cadfe7d55725368d3e3498494d774895be05d6979bd4c175768"
+    "archive": "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-amd64.tar.gz",
+    "archive_sha256": "eac9224f4b3dcd75eeaf96fef0bcd702a351679bbec60ccb63b7ac933adfe58b",
+    "frozen_inputs_sha256": "b4a9c42a894053f2baff1bf9dea6131609592912e6f7e1e1af66b5e0d0829279"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2252,7 +2252,7 @@
     "scripts/test-disk-scan-lifecycle.mjs": "0ea921bd2865f1f891abd074c1e33c4f1eb4633897c33b21900869c07cc2d864",
     "scripts/test-disk-usage.mjs": "0fe810a10e5943ce728e0405f7f49e2eb1b36db2ef1e12b9e0eb6840aad74750",
     "scripts/test-docker-create-requests.mjs": "82d529f755afc34ee86536c7d294e2a2c1ceb557b4e61be4fd6bad3786e8ba35",
-    "scripts/test-docker-scope.mjs": "39efccb0d55b39902f5262cad77ad57302ff4c0315fa02a0275f0f951fb03334",
+    "scripts/test-docker-scope.mjs": "55f9138b65cb88803cd33c06c500837dba615b24cdd6a9c0ce2e4f159963907b",
     "scripts/test-docker-site-binding.mjs": "c98dbe7555c1ed47bb9b1d2b59c9fce20066a746901b0bc0b93b36c100e93942",
     "scripts/test-enterprise-kernel-workspace.mjs": "202a99862901958067704d74a5a60dbd41ff7130389f55c83d649a1b93f485ff",
     "scripts/test-file-manager-scope.mjs": "89890ff6c51c9c5b4a5700a301476e8de05e26f605c3e0ce656700c6430cf6e9",
@@ -2359,7 +2359,7 @@
     "web/src/DatabaseImportManager.vue": "084288ace391fd5acac263d45e96bf420f7e09b59618a5f8691687ea4d05a8ec",
     "web/src/DatabaseLifecycleDialog.vue": "1c686837f1206cb296271916ae6c7c796000acca5d6559354ffcac3d21addd43",
     "web/src/DatabaseManager.vue": "4fdae1aba1324cf945b6d091059b8359e3efe8490f6a0dfe778028c4eac2164a",
-    "web/src/DockerManager.vue": "f5b22ff4fefdf49748b3d7b19bca91bb3c26ed8ce63fb2e90991e9a26e9a4885",
+    "web/src/DockerManager.vue": "af63c614a2d8f235a053f92b3063ca01dd3a126a295f2ec474c37e8da1168681",
     "web/src/FileManager.vue": "f4ae7a99782e0705d9e7cc34b2b6df130fee5fdf5546afc3cad4d9b1370f92bc",
     "web/src/FileToolsMenu.vue": "eb6e14b7c0f536678e3cdeb75549decfa29d906d039ca4ee8bc08f50d2ba57a9",
     "web/src/HardeningWorkspace.vue": "2f42f7cbf334753ec2c36878028e25819c95749dc5cc6407e1360a9de21eae3a",
