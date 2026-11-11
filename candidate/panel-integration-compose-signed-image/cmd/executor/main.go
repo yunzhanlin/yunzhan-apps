@@ -288,6 +288,16 @@ func main() {
 		}
 		return
 	}
+	// This one service runs with a systemd dynamic UID and has no Root dispatch.
+	if *phpMyAdminRelay != "" {
+		if flag.NFlag() != 1 || len(os.Args) != 3 || os.Args[1] != "--serve-phpmyadmin-db" || os.Args[2] != *phpMyAdminRelay {
+			log.Fatal("phpMyAdmin database relay requires one exact service argument")
+		}
+		if err := executor.ServePhpMyAdminRelay(*phpMyAdminRelay); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	if os.Geteuid() != 0 {
 		log.Fatal("executor must run under its root systemd unit")
 	}
@@ -432,7 +442,7 @@ func main() {
 	for _, op := range []struct {
 		id  string
 		run func(string) error
-	}{{*mysqlPrepare, executor.PrepareMySQLUser}, {*mysqlServe, executor.ServeMySQL}, {*mysqlJob, executor.RunDatabaseJob}, {*phpMyAdminRelay, executor.ServePhpMyAdminRelay}} {
+	}{{*mysqlPrepare, executor.PrepareMySQLUser}, {*mysqlServe, executor.ServeMySQL}, {*mysqlJob, executor.RunDatabaseJob}} {
 		if op.id != "" {
 			if e := op.run(op.id); e != nil {
 				log.Fatal(e)

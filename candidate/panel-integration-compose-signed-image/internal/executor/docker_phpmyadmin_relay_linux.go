@@ -66,7 +66,11 @@ func preparePhpMyAdminRelay(ctx context.Context, relay phpMyAdminRelay) error {
 	if _, err := loadPhpMyAdminRelay(relay.ProjectID); err != nil {
 		return err
 	}
-	_, err = RunCommand(ctx, "/usr/bin/systemctl", "enable", "--now", phpMyAdminRelayUnit(relay.ProjectID, relay.ServerID))
+	unit := phpMyAdminRelayUnit(relay.ProjectID, relay.ServerID)
+	if _, err := RunCommand(ctx, "/usr/bin/systemctl", "start", unit); err != nil {
+		return err
+	}
+	_, err = RunCommand(ctx, "/usr/bin/systemctl", "enable", unit)
 	return err
 }
 
