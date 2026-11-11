@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
+import { renderSiteDiagnosisHTML } from "./siteDiagnosisReport";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
 import StatisticsGeoWorkspace from "./StatisticsGeoWorkspace.vue";
 import { analyticsQueryContext, analyticsQueryMatches, restoreAnalyticsQuery } from "./analyticsQueryContext";
@@ -382,6 +383,7 @@ function historyPage(delta: number) { historyOffset.value = Math.max(0, historyO
 const labels: Record<string, string> = {
   "ids-report":"刷新实际采集与告警", "ids-prepare":"准备或升级引擎（不启用采集）", "ids-config":"保存接口与本机范围", "ids-start":"启动被动采集", "ids-stop":"停止采集（保留日志）", "ids-boot":"保存开机启动选择", "ids-recover":"恢复中断迁移、配置或轮转", "ids-rotate":"立即轮转并保留历史",
   run: "刷新报告",
+  "diagnosis-batch": "开始批量诊断",
   "check-http": "立即执行 HTTP 检查",
   baseline: "建立基线",
   check: "检查变更",
@@ -1135,14 +1137,14 @@ async function refreshIDSAfterTask(id: string) {
 function exportReport() {
   const actual=exportableReport.value;
   if (!actual || actual.token || definition.value?.id==='load-balance') return;
-  const url = URL.createObjectURL(
-    new Blob([JSON.stringify(actual, null, 2)], {
-      type: "application/json",
-    }),
-  );
+  const diagnosis = definition.value?.id === "site-diagnosis";
+  const content = diagnosis ? renderSiteDiagnosisHTML(actual) : JSON.stringify(actual, null, 2);
+  const url = URL.createObjectURL(new Blob([content], {
+    type: diagnosis ? "text/html;charset=utf-8" : "application/json",
+  }));
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${definition.value?.id || "application"}-report.json`;
+  a.download = `${definition.value?.id || "application"}-report.${diagnosis ? "html" : "json"}`;
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -1318,6 +1320,11 @@ defineExpose({ show });
                 :value="site.id"
                 :label="`${site.name} · ${site.domain}`"
             /></el-select>
+            <el-select v-else-if="field.kind === 'site-batch'" v-model="form.site_ids"
+              :teleported="false" :persistent="false" multiple :multiple-limit="4" filterable clearable
+              placeholder="选择需要诊断的网站">
+              <el-option v-for="site in sites" :key="site.id" :value="site.id" :label="`${site.name} · ${site.domain}`" />
+            </el-select>
             <el-select
               v-else-if="field.key === 'site_ids'"
               v-model="form.site_ids"
@@ -1510,6 +1517,14 @@ defineExpose({ show });
                 value="admin"
                 label="admin · 管理员"
             /></el-select>
+            <el-select v-else-if="field.kind === 'diagnosis-symptom'" v-model="form.diagnosis_symptom" clearable placeholder="未确定，检查所有项目">
+              <el-option value="timeout" label="连接超时或域名无法访问" />
+              <el-option value="https" label="HTTPS 或证书错误" />
+              <el-option value="permission" label="403 权限错误" />
+              <el-option value="not-found" label="404 页面不存在" />
+              <el-option value="server-error" label="500、502、503 或 504" />
+              <el-option value="slow" label="网站响应慢" />
+            </el-select>
             <el-select v-else-if="field.kind === 'severity'" v-model="form.severity"><el-option value="" label="全部风险" /><el-option value="high" label="高风险" /><el-option value="warning" label="警告" /></el-select>
             <el-input
               v-else
@@ -1627,7 +1642,7 @@ defineExpose({ show });
         v-if="exportableReport && !exportableReport.token && !['load-balance', 'website-analytics', 'apache-waf'].includes(definition?.id || '')"
         :disabled="busy"
         @click="exportReport"
-        >导出真实报告</el-button
+        >{{ definition?.id === "site-diagnosis" ? "导出 HTML 报告" : "导出真实报告" }}</el-button
       ><el-button
         v-if="installed"
         type="danger"

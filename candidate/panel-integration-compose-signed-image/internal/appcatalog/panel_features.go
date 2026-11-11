@@ -58,9 +58,11 @@ const WAFBoundHealthFeature = "waf-bound-health-v1"
 
 const PHPProcessPolicyFeature = "php-fpm-process-policy-v1"
 const PHPProcessPolicyVersion = "1.3.1"
+const SiteDiagnosisFeature = "site-diagnosis-ingress-v1"
+const SiteDiagnosisVersion = "1.3.0"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == PHPProcessPolicyFeature {
+	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2RootVendorFeature {
@@ -157,6 +159,13 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	}
 	if err := validateCountryDataRequirement(manifest); err != nil {
 		return err
+	}
+	if manifest.ID == "site-diagnosis" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, SiteDiagnosisVersion)
+		if !valid || comparison >= 0 && (manifest.Version != SiteDiagnosisVersion || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != SiteDiagnosisFeature) {
+			return errors.New("网站诊断 1.3.0 须声明固定版本的入口检查处理器")
+		}
 	}
 	if manifest.ID == "php-code-security" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
@@ -319,6 +328,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == SiteDiagnosisFeature && (manifest.ID != "site-diagnosis" || manifest.Version != SiteDiagnosisVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("站点入口检查处理器仅属于网站诊断 1.3.0")
+		}
 		if feature == PHPProcessPolicyFeature && (manifest.ID != "php-code-security" || manifest.Version != PHPProcessPolicyVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("站点 PHP-FPM 进程限制处理器仅属于 PHP 代码安全 1.3.1")
 		}

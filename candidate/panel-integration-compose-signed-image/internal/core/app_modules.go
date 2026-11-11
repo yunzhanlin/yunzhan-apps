@@ -35,6 +35,7 @@ type AppModuleInput struct {
 	SiteIDs              []string                        `json:"site_ids,omitempty"`
 	MenuIDs              []string                        `json:"menu_ids"`
 	Path                 string                          `json:"path,omitempty"`
+	DiagnosisSymptom     string                          `json:"diagnosis_symptom,omitempty"`
 	Excludes             []string                        `json:"excludes,omitempty"`
 	ExpectedSHA          string                          `json:"expected_sha,omitempty"`
 	Username             string                          `json:"username,omitempty"`
@@ -114,7 +115,11 @@ func AppModules() []AppModuleDefinition {
 	site := AppModuleField{"site_id", "网站", "site"}
 	path := AppModuleField{"path", "相对文件路径", "text"}
 	definitions := []AppModuleDefinition{
-		{"site-diagnosis", "网站诊断", []string{"run"}, []AppModuleField{site}},
+		{"site-diagnosis", "网站诊断", []string{"run", "diagnosis-batch"}, []AppModuleField{
+			site, {Key: "site_ids", Label: "诊断网站（最多 4 个）", Kind: "site-batch"},
+			{Key: "path", Label: "测试路径（默认为 /）", Kind: "text"},
+			{Key: "diagnosis_symptom", Label: "故障现象", Kind: "diagnosis-symptom"},
+		}},
 		{"network-threat-detection", "网络威胁检测", []string{"run", "baseline"}, nil},
 		{"website-analytics", "网站分析", []string{"run"}, []AppModuleField{site}},
 		{"files-sync", "文件同步", []string{"preview", "sync"}, []AppModuleField{site, {"target_site_id", "目标网站（与应用项目二选一）", "site"}, {"target_project_id", "目标旧版 PHP 项目 ID", "text"}}},
@@ -448,6 +453,8 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 			version = NativeMobileAppVersion
 		case "php-code-security":
 			version = appcatalog.PHPProcessPolicyVersion
+		case "site-diagnosis":
+			version = appcatalog.SiteDiagnosisVersion
 		case "load-balance":
 			version = "1.8.5"
 		case "user-manager":

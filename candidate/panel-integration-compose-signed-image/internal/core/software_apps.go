@@ -157,6 +157,12 @@ func ValidateSoftwareUpdate(id, version string) error {
 			return errors.New("PHP 代码安全进程限制仅允许固定完整 1.3.1 版本")
 		}
 	}
+	if id == "site-diagnosis" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, appcatalog.SiteDiagnosisVersion); valid && comparison >= 0 && version != appcatalog.SiteDiagnosisVersion {
+			return errors.New("网站诊断入口检查仅允许固定完整 1.3.0 版本")
+		}
+	}
 	if id == "intrusion-prevention" && version != IntrusionAppVersion {
 		return errors.New("防入侵事务更新仅允许固定完整1.1.1，拒绝旧标签、别名及未审核版本")
 	}
@@ -337,6 +343,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	}
 	if id == "php-code-security" && version == appcatalog.PHPProcessPolicyVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("PHP 代码安全 1.3.1 须通过签名应用商店安装或更新")
+	}
+	if id == "site-diagnosis" && version == appcatalog.SiteDiagnosisVersion && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("网站诊断 1.3.0 须通过签名应用商店安装或更新")
 	}
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")

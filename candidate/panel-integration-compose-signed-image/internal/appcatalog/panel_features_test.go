@@ -40,6 +40,30 @@ func TestPHPProcessPolicyRequiresItsOwnAvailableHandler(t *testing.T) {
 	}
 }
 
+func TestSiteDiagnosisRequiresItsReviewedIngressHandler(t *testing.T) {
+	m := panelRequirementFixture()
+	m.ID = "site-diagnosis"
+	m.Delivery.Target = m.ID
+	m.Version = "1.2.0"
+	m.RequiredPanelFeatures = nil
+	if err := validatePanelRequirements(m, nil); err != nil {
+		t.Fatal(err)
+	}
+	available := func(feature string) bool { return feature == SiteDiagnosisFeature }
+	m.Version = SiteDiagnosisVersion
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("the new version omitted its required handler")
+	}
+	m.RequiredPanelFeatures = []string{SiteDiagnosisFeature}
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	m.Delivery.Target = "daily-report"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("another application borrowed the site diagnosis handler")
+	}
+}
+
 func TestGeographyPackageRequiresBoundedReaderNotEarlierPrototype(t *testing.T) {
 	m := panelRequirementFixture()
 	m.Version = "2.6.0"

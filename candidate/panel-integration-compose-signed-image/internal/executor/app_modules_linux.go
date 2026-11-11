@@ -7,7 +7,6 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -17,7 +16,6 @@ import (
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"local/panel/internal/diskjob"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -269,6 +267,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if id == "php-code-security" && action == "install" {
 			selectedVersion = "1.3.0"
 		}
+		if id == "site-diagnosis" && action == "install" {
+			selectedVersion = "1.2.0"
+		}
 	}
 	if id == "website-statistics-v2" && action == "install" && (selectedVersion == statisticsIdentityVersion || selectedVersion == statisticsGeographyVersion) {
 		return s.statisticsVersionLifecycle(ctx, selectedVersion, "install", settings, add)
@@ -329,7 +330,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 		defer reader.Close()
 	}
-	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa" || id == "php-code-security") && action == "install" && s.moduleInstalled(id) {
+	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa" || id == "php-code-security" || id == "site-diagnosis") && action == "install" && s.moduleInstalled(id) {
 		return errors.New("应用已安装；请使用签名更新流程，安装不能覆盖版本、实例或原历史")
 	}
 	if id == "website-statistics-v2" && action == "install" {
@@ -902,7 +903,10 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "disk-analysis":
 		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
-		return s.moduleDiagnosis(ctx, in.SiteID)
+		if action == "diagnosis-batch" {
+			return s.moduleDiagnosisBatch(ctx, in)
+		}
+		return s.moduleDiagnosis(ctx, in)
 	case "website-statistics-v2":
 		return s.moduleStatisticsHistory(ctx, in)
 	case "website-analytics":
@@ -1514,79 +1518,6 @@ scan:
 	}
 	return map[string]any{"site_id": id, "scanned_php": scanned, "findings": findings, "findings_count": len(findings), "severity_counts": severityCounts, "rule_counts": ruleCounts, "excludes": in.Excludes, "checked_at": core.Now(), "partial": partial, "interpretation": "只读静态扫描 PHP / PHTML / INC；注释和合法函数也可能命中，需要结合上下文人工判断；未修改或隔离文件"}, nil
 }
-func (s *Service) moduleDiagnosis(ctx context.Context, id string) (any, error) {
-	f, e := s.openFiles(id)
-	if e != nil {
-		return nil, e
-	}
-	defer f.Close()
-	b, e := f.root.ReadFile(".panel-site.json")
-	if e != nil {
-		return nil, e
-	}
-	var marker map[string]string
-	_ = json.Unmarshal(b, &marker)
-	domain := marker["domain"]
-	if !core.ValidDomain(domain) {
-		return nil, errors.New("站点域名无效")
-	}
-	checks := map[string]any{}
-	dnsctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	addresses, dnserr := net.DefaultResolver.LookupHost(dnsctx, domain)
-	cancel()
-	checks["dns"] = map[string]any{"addresses": addresses, "ok": dnserr == nil}
-	req, _ := http.NewRequestWithContext(ctx, "GET", "http://127.0.0.1:19101/", nil)
-	req.Host = domain
-	client := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	resp, err := client.Do(req)
-	if err == nil {
-		checks["http"] = map[string]any{"status": resp.StatusCode, "ok": resp.StatusCode >= 200 && resp.StatusCode < 400}
-		resp.Body.Close()
-	} else {
-		checks["http"] = map[string]any{"ok": false, "error": err.Error()}
-	}
-	output, configErr := s.Config.Run(ctx, s.Config.NginxBin, "-t")
-	checks["nginx"] = map[string]any{"ok": configErr == nil, "output": output}
-	scan, e := inspectSiteFiles(f)
-	if e != nil {
-		return nil, e
-	}
-	checks["files"] = scan
-	tlsctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	conn, tlsErr := (&tls.Dialer{NetDialer: &net.Dialer{}, Config: &tls.Config{ServerName: domain, MinVersion: tls.VersionTLS12}}).DialContext(tlsctx, "tcp", net.JoinHostPort(domain, "443"))
-	tlsReport := map[string]any{"valid": tlsErr == nil}
-	if tlsErr != nil {
-		tlsReport["error"] = tlsErr.Error()
-	}
-	if secure, ok := conn.(*tls.Conn); ok {
-		state := secure.ConnectionState()
-		if len(state.PeerCertificates) > 0 {
-			tlsReport["not_after"] = state.PeerCertificates[0].NotAfter.UTC().Format(time.RFC3339)
-			tlsReport["issuer"] = state.PeerCertificates[0].Issuer.String()
-		}
-	}
-	if conn != nil {
-		conn.Close()
-	}
-	checks["tls_certificate"] = tlsReport
-	passed := 0
-	recommendations := []map[string]any{}
-	for _, item := range []struct{ key, advice string }{{"dns", "检查域名 A / AAAA、DNS 生效及是否指向预期服务器；本地测试域名可能不具备公网 DNS。"}, {"http", "检查首页、站点绑定、访问权限和应用错误日志；403 / 404 不属于健康首页响应。"}, {"nginx", "运行 Nginx 配置检查，修复语法错误后再重载，不要在校验失败时覆盖线上配置。"}, {"tls_certificate", "检查域名 443、可信证书链、证书有效期和 HTTPS 配置。"}} {
-		check, _ := checks[item.key].(map[string]any)
-		ok, _ := check["ok"].(bool)
-		if item.key == "tls_certificate" {
-			ok, _ = check["valid"].(bool)
-		}
-		if ok {
-			passed++
-		} else {
-			recommendations = append(recommendations, map[string]any{"check": item.key, "advice": item.advice})
-		}
-	}
-	return map[string]any{"site_id": id, "domain": domain, "checked_at": core.Now(), "checks": checks, "passed_checks": passed, "total_checks": 4, "score": passed * 25, "recommendations": recommendations, "scope": "评分仅反映本次四项连通性与配置检查，不代表安全认证或公网可用性承诺"}, nil
-}
-
 func (s *Service) moduleAnalytics(ctx context.Context, id string) (any, error) {
 	return s.moduleAnalyticsFiltered(ctx, core.AppModuleInput{SiteID: id})
 }

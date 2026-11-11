@@ -13,6 +13,17 @@ import {statisticsHistoryNotice} from './statisticsHistory';
 import {diskDirectorySelection,diskFileSelection,diskValueNotice} from './diskUsage';
 import {mobileArtifactURL} from './mobileDelivery';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
+const checks = computed(() => {
+  const entries = Object.entries((props.report.checks || {}) as Record<string, Record<string, any>>);
+  const order: unknown = props.report.check_order;
+  if (props.id !== "site-diagnosis" || !Array.isArray(order)) return entries;
+  return entries.sort(([left], [right]) => order.indexOf(left) - order.indexOf(right));
+});
+const diagnosticVerdicts = {
+  pass: { label: "通过", type: "success" },
+  warn: { label: "需核对", type: "warning" },
+  fail: { label: "失败", type: "danger" },
+} as const;
 const taskQuery=ref(''),taskManagedOnly=ref(false);
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
@@ -452,6 +463,8 @@ const names: Record<string, string> = {
   score: "健康检查得分",
   passed_checks: "通过检查",
   total_checks: "检查总数",
+  binding: "实际域名绑定",
+  response_ms: "首部响应时间（毫秒）",
   recommendations: "处置建议",
   advice: "建议",
   check: "检查项",
@@ -722,27 +735,39 @@ function mobileDownloadURL(item: unknown): string | undefined {
     <AnalyticsLatencyReport v-if="analytics && report.latency !== undefined" :report="report.latency" />
     <AnalyticsGeographyReport v-if="analytics && report.geography !== undefined" :report="report.geography" />
     <el-alert v-if="analytics && report.geography_error" type="warning" :closable="false" :title="String(report.geography_error)" />
+    <template v-if="id === 'site-diagnosis' && Array.isArray(report.diagnoses)">
+      <details v-for="item in report.diagnoses" :key="item.site_id" class="diagnosis-check">
+        <summary>{{ item.report?.domain || item.site_id }}</summary>
+        <AppModuleReport v-if="item.report" id="site-diagnosis" :report="item.report" />
+        <el-alert v-else type="error" :title="item.error || '无法读取站点诊断结果'" :closable="false" />
+      </details>
+    </template>
     <template v-if="report.checks">
       <section
-        v-for="(value, key) in report.checks"
+        v-for="[key, value] in checks"
         :key="key"
         class="diagnosis-check"
       >
         <h4>
           {{ names[String(key)] || key }}
+          <el-tag v-if="id === 'site-diagnosis' && Object.hasOwn(diagnosticVerdicts, value.verdict)"
+            :type="diagnosticVerdicts[value.verdict as keyof typeof diagnosticVerdicts].type"
+          >{{ diagnosticVerdicts[value.verdict as keyof typeof diagnosticVerdicts].label }}</el-tag>
           <el-tag
-            v-if="
+            v-else-if="
               typeof value.ok === 'boolean' || typeof value.valid === 'boolean'
             "
             :type="(value.ok ?? value.valid) ? 'success' : 'danger'"
             >{{ (value.ok ?? value.valid) ? "通过" : "需处理" }}</el-tag
           >
         </h4>
+        <p v-if="id === 'site-diagnosis' && value.detail">{{ value.detail }}</p>
         <dl>
           <template v-for="(v, k) in value" :key="k"
-            ><dt>{{ names[String(k)] || k }}</dt>
-            <dd>{{ format(String(k), v) }}</dd></template
-          >
+            ><template v-if="id !== 'site-diagnosis' || !['verdict','detail','ok','valid'].includes(String(k))">
+              <dt>{{ names[String(k)] || k }}</dt>
+              <dd>{{ format(String(k), v) }}</dd>
+            </template></template>
         </dl>
       </section>
     </template>
