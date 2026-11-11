@@ -1,0 +1,42 @@
+{
+  "source_head": "89a1b515742091880ef4eb2b72277aa311cba976",
+  "source_inputs_sha256": "c6f8cbd5e7a636ff475af3a9070d6ed2b2c67d748ca270d9a72fa6f6b76f584d",
+  "version": "0.1.0-dev.proapps24catalogrefreshcandidate85r2",
+  "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3",
+  "mode": "signed-store",
+  "app": {
+    "id": "php-80",
+    "name": "PHP 8.0",
+    "category": "deployment",
+    "version": "8.0.30-compat1",
+    "summary": "PHP 8.0 \u6700\u7ec8\u7248\u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+    "stage": "ready",
+    "risk": "eol",
+    "provider": "compose",
+    "target": "php-legacy-80-bullseye",
+    "manage_route": "docker",
+    "capabilities": [
+      "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+      "\u72ec\u7acb PHP-FPM",
+      "\u72ec\u7acb Nginx",
+      "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+      "\u57df\u540d\u7ed1\u5b9a",
+      "\u6570\u636e\u5377\u6301\u4e45\u5316"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.30-compat1/manifest.json",
+    "sha256": "5a2bb0e04030c501a05c6d7d29ac743ae7aea0040d61f864a7ee296a2672641a"
+  },
+  "served_head": "2336f6e7a10538097ee0154eeeffcfb9381ca7a2",
+  "payload_files": {
+    ".github/workflows/php8030-c85r2-native-qa2.yml": "213188e0c46adff5adfd750e7cc319064395607eae74959800b27c9861c05293",
+    "scripts/native-php8030-c85r2/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php8030-c85r2/dispatch.json": "74c1214dc059bd567fe15bc2e2a8b554ac2232bf42c44fa90da37f03809f9be4",
+    "scripts/native-php8030-c85r2/download.py": "a297f7d3c9c65dc8b448f21f959709b059bf2da0a0542807a6ae84daa2d2982c",
+    "scripts/native-php8030-c85r2/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php8030-c85r2/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php8030-c85r2/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php8030-c85r2/php80.py": "9991a8775746c4ff33aaf026ab6a4d4d419ec84991e77691c86741057932705b",
+    "scripts/native-php8030-c85r2/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
