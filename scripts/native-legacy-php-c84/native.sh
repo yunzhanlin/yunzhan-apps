@@ -5,7 +5,7 @@ cd -- "$(git -C "$(dirname -- "${BASH_SOURCE[0]}")" rev-parse --show-toplevel)"
 version="$2"
 slot="$3"
 case "$version:$slot" in
-  7.3.33:73|7.2.34:72|7.1.33:71|7.0.33:70|5.6.40:56) ;;
+  7.4.33:74|7.3.33:73|7.2.34:72|7.1.33:71|7.0.33:70|5.6.40:56) ;;
   *) exit 1 ;;
 esac
 case "$(uname -m)" in
@@ -39,7 +39,7 @@ services:
         echo json_encode([
           "version" => PHP_VERSION, "sapi" => PHP_SAPI, "mysqli" => extension_loaded("mysqli"),
           "pdo_mysql" => in_array("mysql", PDO::getAvailableDrivers(), true),
-            "shell_exec" => function_exists("shell_exec") && @shell_exec("printf disabled-probe") !== null,
+          "shell_exec" => function_exists("shell_exec") && @shell_exec("printf disabled-probe") !== null,
           "mysql" => extension_loaded("mysql"), "integer" => bcadd("123456789", "10"),
           "persisted" => is_file(__DIR__ . "/retained.txt") ? file_get_contents(__DIR__ . "/retained.txt") : null
         ]);
@@ -95,6 +95,11 @@ services:
     depends_on:
       php:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
     ports: ["127.0.0.1:26779:8080"]
     volumes: [site-data:/var/www/html:ro]
 volumes:
