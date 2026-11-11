@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-11T22:12:07Z",
+  "generated_at": "2026-11-11T22:32:18Z",
   "apps": [
     {
       "schema_version": 1,
@@ -1527,6 +1527,55 @@
       },
       "required_panel_features": [
         "user-access-overview-v1"
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "task-manager",
+      "name": "Task manager",
+      "category": "professional",
+      "version": "1.3.0",
+      "summary": "实时进程与 Linux 主机清单，查看 systemd 服务和启动项、TCP/UDP 端点、系统账户、Cron 时间和已登记的远程 SSH 会话。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "task-manager",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "实时进程与身份核对",
+        "受管非 root 进程终止",
+        "systemd 服务和开机启动",
+        "TCP 和 UDP 监听与连接",
+        "本地账户",
+        "系统 Cron 时间及执行账户",
+        "logind 已登记的 SSH 会话",
+        "清单筛选与排序"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/task-manager"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
+      },
+      "required_panel_features": [
+        "task-host-inventory-v1"
       ]
     }
   ]
