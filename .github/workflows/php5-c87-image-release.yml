@@ -1,0 +1,128 @@
+name: Publish PHP 5.3 through 5.5 native compatibility images
+on:
+  push:
+    branches: [codex/php5-c87-image-release]
+    paths: [.github/workflows/php5-c87-image-release.yml]
+permissions:
+  contents: read
+jobs:
+  image:
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
+        php:
+          - { version: '5.5.38', slot: '55' }
+          - { version: '5.4.45', slot: '54' }
+          - { version: '5.3.29', slot: '53' }
+    runs-on: ${{ matrix.runner }}
+    env:
+      IMAGE: ghcr.io/yunzhanlin/yunzhan-apps-php${{ matrix.php.slot }}
+      RELEASE_TAG: ${{ matrix.php.version }}-compat2
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Build and test the original image
+        env:
+          PHP_VERSION: ${{ matrix.php.version }}
+          PHP_SLOT: ${{ matrix.php.slot }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = 4e17cee553a09bd77895c83a2cbc0d1369b033e2
+          bash scripts/native-php5-c87/native.sh "$RUNNER_TEMP/php-proof" "$PHP_VERSION" "$PHP_SLOT"
+          bash scripts/native-php5-c87/database.sh "$RUNNER_TEMP/php-proof"
+      - name: Push the exact tested architecture image
+        env:
+          PACKAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$(mktemp -d "$RUNNER_TEMP/registry-auth.XXXXXX")"
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          unset PACKAGE_TOKEN
+          case "$(uname -m)" in
+            x86_64) ARCH=amd64 ;;
+            aarch64) ARCH=arm64 ;;
+            *) exit 1 ;;
+          esac
+          tag="$IMAGE:$RELEASE_TAG-$ARCH"
+          docker tag panel-legacy-php-native:qa "$tag"
+          test "$(docker image inspect -f '{{.Id}}' "$tag")" = "$(cat "$RUNNER_TEMP/php-proof/image-id")"
+          docker push "$tag" > "$RUNNER_TEMP/php-proof/original-registry-push.txt"
+          docker image inspect --format '{{json .RepoDigests}}' "$tag" > "$RUNNER_TEMP/php-proof/remote-repo-digests.json"
+          docker buildx imagetools inspect --raw "$tag" > "$RUNNER_TEMP/php-proof/original-remote-image.json"
+          python3 -I -B - "$RUNNER_TEMP/php-proof" "$IMAGE" "$ARCH" <<'PY'
+          import hashlib, json, pathlib, sys
+          root, image, arch = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+          data = (root/'original-remote-image.json').read_bytes()
+          digest = 'sha256:' + hashlib.sha256(data).hexdigest()
+          assert image+'@'+digest in json.loads((root/'remote-repo-digests.json').read_bytes())
+          config = json.loads(data)['config']['digest']
+          assert config == (root/'image-id').read_text().strip()
+          (root/'original-published-image.json').write_text(json.dumps({'arch':arch,'digest':digest,'image_id':config})+'\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: php5-legacy-${{ matrix.php.version }}-${{ matrix.runner }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/php-proof/
+          if-no-files-found: error
+          retention-days: 14
+  index:
+    needs: image
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        php:
+          - { version: '5.5.38', slot: '55' }
+          - { version: '5.4.45', slot: '54' }
+          - { version: '5.3.29', slot: '53' }
+    runs-on: ubuntu-24.04
+    env:
+      IMAGE: ghcr.io/yunzhanlin/yunzhan-apps-php${{ matrix.php.slot }}
+      RELEASE_TAG: ${{ matrix.php.version }}-compat2
+    timeout-minutes: 10
+    steps:
+      - name: Publish the tested Linux index
+        env:
+          PACKAGE_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$(mktemp -d "$RUNNER_TEMP/registry-auth.XXXXXX")"
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          unset PACKAGE_TOKEN
+          mkdir -m 700 "$RUNNER_TEMP/php-index"
+          docker manifest inspect "$IMAGE:$RELEASE_TAG-amd64" > "$RUNNER_TEMP/php-index/amd64.json"
+          docker manifest inspect "$IMAGE:$RELEASE_TAG-arm64" > "$RUNNER_TEMP/php-index/arm64.json"
+          docker buildx imagetools create -t "$IMAGE:$RELEASE_TAG" "$IMAGE:$RELEASE_TAG-amd64" "$IMAGE:$RELEASE_TAG-arm64"
+          docker buildx imagetools inspect --raw "$IMAGE:$RELEASE_TAG" > "$RUNNER_TEMP/php-index/original-index.json"
+          python3 -I -B - "$RUNNER_TEMP/php-index" <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.argv[1])
+          raw = (root/'original-index.json').read_bytes()
+          entries = json.loads(raw)['manifests']
+          assert len(entries) == 2 and all(x['platform']['os'] == 'linux' for x in entries)
+          cohort = {x['platform']['architecture']:x['digest'] for x in entries}
+          assert cohort.keys() == {'amd64','arm64'}
+          (root/'original-index-proof.json').write_text(json.dumps({'digest':'sha256:'+hashlib.sha256(raw).hexdigest(),'platforms':cohort})+'\n')
+          PY
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: php5-legacy-${{ matrix.php.version }}-index-${{ github.run_id }}
+          path: ${{ runner.temp }}/php-index/
+          if-no-files-found: error
+          retention-days: 14
