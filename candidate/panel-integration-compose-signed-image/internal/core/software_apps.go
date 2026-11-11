@@ -159,8 +159,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "site-diagnosis" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, appcatalog.SiteDiagnosisVersion); valid && comparison >= 0 && version != appcatalog.SiteDiagnosisVersion {
-			return errors.New("网站诊断入口检查仅允许固定完整 1.3.0 版本")
+		if comparison, valid := appcatalog.CompareVersions(base, appcatalog.SiteDiagnosisVersion); valid && comparison >= 0 && !appcatalog.SiteDiagnosisSignedVersion(version) {
+			return errors.New("网站诊断仅支持已实现的完整版本")
 		}
 	}
 	if id == "user-manager" {
@@ -355,8 +355,8 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if id == "php-code-security" && version == appcatalog.PHPProcessPolicyVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("PHP 代码安全 1.3.1 须通过签名应用商店安装或更新")
 	}
-	if id == "site-diagnosis" && version == appcatalog.SiteDiagnosisVersion && (action == "install" || action == "update") && bind == nil {
-		return "", errors.New("网站诊断 1.3.0 须通过签名应用商店安装或更新")
+	if id == "site-diagnosis" && appcatalog.SiteDiagnosisSignedVersion(version) && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("网站诊断新版须通过签名应用商店安装或更新")
 	}
 	if id == "user-manager" && version == appcatalog.UserAccessOverviewVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("用户管理 1.3.2 须通过签名应用商店安装或更新")

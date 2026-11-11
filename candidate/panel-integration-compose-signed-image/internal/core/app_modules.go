@@ -35,6 +35,7 @@ type AppModuleInput struct {
 	SiteIDs              []string                        `json:"site_ids,omitempty"`
 	MenuIDs              []string                        `json:"menu_ids"`
 	Path                 string                          `json:"path,omitempty"`
+	DiagnosisApacheSites map[string]string               `json:"diagnosis_apache_sites,omitempty"`
 	DiagnosisSymptom     string                          `json:"diagnosis_symptom,omitempty"`
 	Excludes             []string                        `json:"excludes,omitempty"`
 	ExpectedSHA          string                          `json:"expected_sha,omitempty"`
@@ -344,6 +345,27 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			fail(w, 409, "应用安装身份或状态待核对；请安装应用或核对原记录，未执行业务")
 			return
 		}
+		if id == "site-diagnosis" {
+			// Only the stored site type and domain can select the Apache checks.
+			in.DiagnosisApacheSites = nil
+			if module.Status.Version == appcatalog.SiteDiagnosisApacheVersion {
+				siteIDs := []string{in.SiteID}
+				if action == "diagnosis-batch" {
+					siteIDs = in.SiteIDs
+					if len(siteIDs) < 1 || len(siteIDs) > 4 {
+						fail(w, 400, "请选择 1 至 4 个站点")
+						return
+					}
+				}
+				in.DiagnosisApacheSites = make(map[string]string, len(siteIDs))
+				for _, siteID := range siteIDs {
+					site, siteErr := a.Store.Site(siteID)
+					if siteErr == nil && site.Settings.WebServer == "apache" {
+						in.DiagnosisApacheSites[site.ID] = site.Domain
+					}
+				}
+			}
+		}
 		if id == "files-sync" && RemoteIndependentBackupAction(action) && (!appcatalog.FilesSyncIndependentBackupSupported(module.Status.Version) || RemoteUnpublishedCopyAction(action) && module.Status.Version != appcatalog.FilesSyncUnpublishedRetentionVersion) {
 			fail(w, 409, "独立备份须用固定2.0.0或2.0.1，未发布原片段核对须先签名更新至2.0.1；旧安装不借用新能力")
 			return
@@ -455,7 +477,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "php-code-security":
 			version = appcatalog.PHPProcessPolicyVersion
 		case "site-diagnosis":
-			version = appcatalog.SiteDiagnosisVersion
+			version = appcatalog.SiteDiagnosisApacheVersion
 		case "load-balance":
 			version = "1.8.5"
 		case "user-manager":

@@ -4,6 +4,8 @@ const labels: Record<string, string> = {
   dns: "域名解析",
   tls_certificate: "HTTPS 证书",
   nginx: "Nginx 配置",
+  apache_config: "Apache 站点配置",
+  apache_listener: "Apache 服务与监听",
   files: "网站文件抽查",
 };
 const verdicts: Record<string, string> = { pass: "通过", warn: "需核对", fail: "失败" };

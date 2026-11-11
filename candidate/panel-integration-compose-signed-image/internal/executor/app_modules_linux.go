@@ -910,6 +910,9 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "disk-analysis":
 		return s.moduleDiskAt(ctx, in.SiteID, in.Path)
 	case "site-diagnosis":
+		if record, err := s.moduleInstalledRecord(id); err != nil || record["version"] != appcatalog.SiteDiagnosisApacheVersion {
+			in.DiagnosisApacheSites = nil
+		}
 		if action == "diagnosis-batch" {
 			return s.moduleDiagnosisBatch(ctx, in)
 		}

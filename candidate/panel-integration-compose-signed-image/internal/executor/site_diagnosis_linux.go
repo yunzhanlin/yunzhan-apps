@@ -157,7 +157,16 @@ func (s *Service) moduleDiagnosis(ctx context.Context, input core.AppModuleInput
 		return nil, errors.New("站点标识或域名无法核对")
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 24*time.Second)
+	apacheDomain, apache := input.DiagnosisApacheSites[marker.ID]
+	if apache && !strings.EqualFold(apacheDomain, marker.Domain) {
+		return nil, errors.New("面板登记的站点域名与执行器站点标识不一致")
+	}
+
+	budget := 24 * time.Second
+	if apache {
+		budget += 6 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(ctx, budget)
 	defer cancel()
 	checks := make(map[string]map[string]any, len(order))
 	dnsCtx, dnsCancel := context.WithTimeout(ctx, 3*time.Second)
@@ -211,6 +220,10 @@ func (s *Service) moduleDiagnosis(ctx context.Context, input core.AppModuleInput
 		nginxVerdict, nginxDetail = "fail", "Nginx 当前配置未通过语法检查。"
 	}
 	checks["nginx"] = map[string]any{"ok": configErr == nil, "verdict": nginxVerdict, "detail": nginxDetail, "output": output}
+	if apache {
+		order = append(order, "apache_config", "apache_listener")
+		checks["apache_config"], checks["apache_listener"] = s.diagnoseApache(ctx, marker.ID, apacheDomain)
+	}
 	checks["tls_certificate"] = diagnosisTLS(ctx, marker.Domain)
 
 	scan, scanErr := inspectSiteFiles(files)
@@ -222,6 +235,10 @@ func (s *Service) moduleDiagnosis(ctx context.Context, input core.AppModuleInput
 	}
 	checks["files"] = map[string]any{"ok": fileVerdict == "pass", "verdict": fileVerdict, "detail": fileDetail, "scan": scan}
 	passed := 0
+	scope := "HTTP 与域名绑定由面板服务器在本机入口验证，TLS 使用该服务器解析到的域名地址。"
+	if _, apache := checks["apache_config"]; apache {
+		scope += " Apache 检查读取磁盘上的受管配置并核对进程监听。所选路径通过 Nginx 入口请求。"
+	}
 	recommendations := []map[string]any{}
 	for _, key := range order {
 		check := checks[key]
@@ -234,7 +251,7 @@ func (s *Service) moduleDiagnosis(ctx context.Context, input core.AppModuleInput
 	return map[string]any{"site_id": marker.ID, "domain": marker.Domain, "path": probePath,
 		"diagnosis_symptom": input.DiagnosisSymptom, "checked_at": core.Now(), "check_order": order, "checks": checks,
 		"passed_checks": passed, "total_checks": len(order), "score": passed * 100 / len(order),
-		"recommendations": recommendations, "scope": "HTTP 与域名绑定由面板服务器在本机入口验证，TLS 使用该服务器解析到的域名地址。"}, nil
+		"recommendations": recommendations, "scope": scope}, nil
 }
 
 func (s *Service) moduleDiagnosisBatch(ctx context.Context, input core.AppModuleInput) (any, error) {
@@ -265,7 +282,8 @@ func (s *Service) moduleDiagnosisBatch(ctx context.Context, input core.AppModule
 		for i := start; i < min(start+2, len(rows)); i++ {
 			workers.Go(func() {
 				id := input.SiteIDs[i]
-				report, err := s.moduleDiagnosis(ctx, core.AppModuleInput{SiteID: id, Path: input.Path, DiagnosisSymptom: input.DiagnosisSymptom})
+				report, err := s.moduleDiagnosis(ctx, core.AppModuleInput{SiteID: id, Path: input.Path, DiagnosisSymptom: input.DiagnosisSymptom,
+					DiagnosisApacheSites: input.DiagnosisApacheSites})
 				rows[i] = batchRow{SiteID: id, Report: report}
 				if err != nil {
 					rows[i].Error = err.Error()

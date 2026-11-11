@@ -109,3 +109,66 @@ func TestSiteDiagnosisPrioritizesRelatedChecksAndLabelsHTTPFailures(t *testing.T
 		}
 	}
 }
+
+func TestSiteDiagnosisApacheListenerChecksExactSocket(t *testing.T) {
+	root := t.TempDir()
+	proc := root + "/proc/4242/fd"
+	if err := os.MkdirAll(proc, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("socket:[5791]", proc+"/4"); err != nil {
+		t.Fatal(err)
+	}
+	s := New(Config{SystemRoot: root})
+	valid := `LISTEN 0 511 127.0.0.1:19080 0.0.0.0:* users:(("httpd",pid=4243,fd=4),("httpd",pid=4242,fd=4)) ino:5791 sk:5`
+	if !s.apacheOwnsDiagnosisListener(valid, "4242") {
+		t.Fatal("the process holding the exact loopback listener was omitted")
+	}
+	for _, unrelated := range []string{
+		strings.Replace(valid, "ino:5791", "ino:5792", 1),
+		strings.Replace(valid, "4242,fd=4", "4242,fd=7", 1),
+		strings.Replace(valid, "4242,fd=4", "14242,fd=4", 1),
+		strings.Replace(valid, "127.0.0.1", "0.0.0.0", 1),
+		strings.Replace(valid, "LISTEN", "ESTAB", 1),
+	} {
+		if s.apacheOwnsDiagnosisListener(unrelated, "4242") {
+			t.Errorf("unrelated socket accepted: %s", unrelated)
+		}
+	}
+}
+
+func TestSiteDiagnosisApacheNative(t *testing.T) {
+	id, domain := os.Getenv("PANEL_SITE_DIAGNOSIS_APACHE_NATIVE_ID"), os.Getenv("PANEL_SITE_DIAGNOSIS_APACHE_NATIVE_DOMAIN")
+	if id == "" || domain == "" {
+		t.Skip("disposable managed Apache site required")
+	}
+	if os.Geteuid() != 0 || !core.ValidID(id) || !core.ValidDomain(domain) {
+		t.Fatal("root and the managed Apache site identity are required")
+	}
+	s := New(Config{SitesDir: "/srv/panel/sites", NginxBin: "/usr/sbin/nginx"})
+	input := core.AppModuleInput{SiteID: id, Path: "/c104.txt", DiagnosisApacheSites: map[string]string{id: domain}}
+	value, err := s.moduleDiagnosis(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := value.(map[string]any)
+	checks := report["checks"].(map[string]map[string]any)
+	for _, key := range []string{"binding", "http", "apache_config", "apache_listener"} {
+		if checks[key]["verdict"] != "pass" {
+			t.Errorf("%s: %v", key, checks[key])
+		}
+	}
+	input.DiagnosisApacheSites[id] = "unrelated.example.test"
+	if _, err = s.moduleDiagnosis(context.Background(), input); err == nil {
+		t.Fatal("site marker mismatch was accepted")
+	}
+	input.DiagnosisApacheSites = nil
+	value, err = s.moduleDiagnosis(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checks = value.(map[string]any)["checks"].(map[string]map[string]any)
+	if checks["apache_config"] != nil || checks["apache_listener"] != nil {
+		t.Fatal("the legacy report contains new Apache checks")
+	}
+}

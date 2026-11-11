@@ -366,6 +366,8 @@ const names: Record<string, string> = {
   dns: "DNS 解析",
   http: "HTTP 入口",
   nginx: "Nginx 配置",
+  apache_config: "Apache 站点配置",
+  apache_listener: "Apache 服务与监听",
   tls_certificate: "TLS 证书",
   enabled: "启用",
   valid: "有效",

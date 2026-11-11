@@ -64,6 +64,25 @@ func TestSiteDiagnosisRequiresItsReviewedIngressHandler(t *testing.T) {
 	}
 }
 
+func TestSiteDiagnosisApacheRequiresItsOwnHandler(t *testing.T) {
+	m := panelRequirementFixture()
+	m.ID, m.Delivery.Target, m.Version = "site-diagnosis", "site-diagnosis", SiteDiagnosisApacheVersion
+	m.RequiredPanelFeatures = []string{SiteDiagnosisApacheFeature}
+	available := func(feature string) bool { return feature == SiteDiagnosisApacheFeature }
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(feature string) bool { return feature == SiteDiagnosisFeature }) == nil {
+		t.Fatal("the older panel handler admitted Apache diagnostics")
+	}
+	for _, version := range []string{SiteDiagnosisVersion, "1.3.1-compat1", "1.3.2"} {
+		m.Version = version
+		if validatePanelRequirements(m, available) == nil {
+			t.Fatalf("%s borrowed the Apache handler", version)
+		}
+	}
+}
+
 func TestUserAccessOverviewManifestKeepsOldVersionAndRequiresItsHandler(t *testing.T) {
 	m := panelRequirementFixture()
 	m.ID, m.Delivery.Target = "user-manager", "user-manager"
