@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T18:04:23Z",
+  "generated_at": "2026-11-11T18:32:12Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -598,12 +598,12 @@
       "id": "php-56",
       "name": "PHP 5.6",
       "category": "deployment",
-      "version": "5.6.40-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "5.6.40-compat2",
+      "summary": "PHP 5.6.40 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-56",
+      "target": "php-legacy-56-stretch",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -613,19 +613,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-56/5.6.40-compat1/manifest.json",
-      "sha256": "368ea2d79c646dc32b2c7e205fc496ccebbfd44a80f8f7ce4e67b37dd26ffc57"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-56/5.6.40-compat2/manifest.json",
+      "sha256": "fcddb3f2660a0b5e213c32a79a16e2e54541d95b09d52781fc8e565f4d9dd6fb"
     },
     {
       "id": "php-70",
       "name": "PHP 7.0",
       "category": "deployment",
-      "version": "7.0.33-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "7.0.33-compat2",
+      "summary": "PHP 7.0.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-70",
+      "target": "php-legacy-70-stretch",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -635,19 +635,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-70/7.0.33-compat1/manifest.json",
-      "sha256": "111ce04a7b3b2378d89109710784303dec9709b2165d0b9c28c9c9d10be3d259"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-70/7.0.33-compat2/manifest.json",
+      "sha256": "02ab25b6735ad22623230bf2bbbf18a31df929f90d597bc045e0e6b8d144fb61"
     },
     {
       "id": "php-71",
       "name": "PHP 7.1",
       "category": "deployment",
-      "version": "7.1.33-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "7.1.33-compat2",
+      "summary": "PHP 7.1.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-71",
+      "target": "php-legacy-71-stretch",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -657,19 +657,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-71/7.1.33-compat1/manifest.json",
-      "sha256": "d2e2b74fd95e343da9585e3c184479056ef76e02a63d5663d7a1afb39f3f1f5a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-71/7.1.33-compat2/manifest.json",
+      "sha256": "d046ba1ea53126781d22878bcc206fd00b961d504b7f51d7a380276241b53e72"
     },
     {
       "id": "php-72",
       "name": "PHP 7.2",
       "category": "deployment",
-      "version": "7.2.34-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "7.2.34-compat2",
+      "summary": "PHP 7.2.34 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-72",
+      "target": "php-legacy-72-buster",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -679,19 +679,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-72/7.2.34-compat1/manifest.json",
-      "sha256": "0a56f60d4b83fea9e8853c9f3ab63f22597ad54dcafef8164fe33ba5e400d882"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-72/7.2.34-compat2/manifest.json",
+      "sha256": "e96906fee5f66c09aa87d7f88a29c670af726176165a79499913dba651d83f16"
     },
     {
       "id": "php-73",
       "name": "PHP 7.3",
       "category": "deployment",
-      "version": "7.3.33-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "7.3.33-compat2",
+      "summary": "PHP 7.3.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-73",
+      "target": "php-legacy-73-buster",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -701,19 +701,19 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-73/7.3.33-compat1/manifest.json",
-      "sha256": "04a63f6bd636647783713cc09e1cd4ce4a76acfa86cd3b5fb8ad7f97f149d9a6"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-73/7.3.33-compat2/manifest.json",
+      "sha256": "9a89ff7b0dfb94318fffce4fc0a5c9e9958df16c2b1b7a3f699ff760487ed839"
     },
     {
       "id": "php-74",
       "name": "PHP 7.4",
       "category": "deployment",
-      "version": "7.4.33-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "7.4.33-compat2",
+      "summary": "PHP 7.4.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-74",
+      "target": "php-legacy-74-bullseye",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -723,8 +723,8 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-74/7.4.33-compat1/manifest.json",
-      "sha256": "cf85610cd2f6bb82e649d1a1baa8c1547c4b3f58fd8ebe97f740e08199cb3614"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-74/7.4.33-compat2/manifest.json",
+      "sha256": "dce7335731a9ec615fed87d5e016a671158996ab5153fb45b1d2719c4a281a41"
     },
     {
       "id": "php-80",

@@ -33,6 +33,17 @@ export const allowedStages = new Set(["ready", "integration", "design"]);
 export const allowedCategories = new Set(["deployment", "professional"]);
 export const allowedProbes = new Set(["binary", "systemd", "tcp", "http", "panel-api"]);
 
+const nativeLegacyPHPReleases = [
+  {"id":"php-81","version":"8.1.34-compat1","target":"php-legacy-81-bookworm","image":"ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"},
+  {"id":"php-80","version":"8.0.30-compat1","target":"php-legacy-80-bullseye","image":"ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3"},
+  {"id":"php-56","version":"5.6.40-compat2","target":"php-legacy-56-stretch","image":"ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8"},
+  {"id":"php-70","version":"7.0.33-compat2","target":"php-legacy-70-stretch","image":"ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e"},
+  {"id":"php-71","version":"7.1.33-compat2","target":"php-legacy-71-stretch","image":"ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9"},
+  {"id":"php-72","version":"7.2.34-compat2","target":"php-legacy-72-buster","image":"ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625"},
+  {"id":"php-73","version":"7.3.33-compat2","target":"php-legacy-73-buster","image":"ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e"},
+  {"id":"php-74","version":"7.4.33-compat2","target":"php-legacy-74-bullseye","image":"ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"},
+];
+
 export function validateManifest(app) {
   const errors = [];
   const pm2Errors=pm2RootVendorErrors(app)??pm2MaintenanceErrors(app);if(pm2Errors!==null)errors.push(...pm2Errors);
@@ -200,11 +211,17 @@ export function validateManifest(app) {
   if (!Array.isArray(app.compatibility?.architectures) || !app.compatibility.architectures.length) errors.push("missing architectures");
   if (typeof app.uninstall?.preserve_data !== "boolean" || typeof app.uninstall?.reference_check !== "boolean") errors.push("invalid uninstall policy");
   if (app.delivery?.provider === "compose" && !app.delivery.image) errors.push("compose package needs an image");
-  const php81Native = app.id === "php-81" && app.version === "8.1.34-compat1" && app.delivery?.target === "php-legacy-81-bookworm" && app.delivery?.manage_route === "docker" && app.delivery?.image === "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d" && Array.isArray(app.compatibility?.architectures) && app.compatibility.architectures.length === 2 && app.compatibility.architectures.includes("amd64") && app.compatibility.architectures.includes("arm64");
-  const php80Native = app.id === "php-80" && app.version === "8.0.30-compat1" && app.delivery?.target === "php-legacy-80-bullseye" && app.delivery?.manage_route === "docker" && app.delivery?.image === "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3" && Array.isArray(app.compatibility?.architectures) && app.compatibility.architectures.length === 2 && app.compatibility.architectures.includes("amd64") && app.compatibility.architectures.includes("arm64");
-  if (app.risk === "eol" && !php81Native && !php80Native && (app.delivery?.provider !== "compose" || app.delivery?.isolation !== "legacy-container" || !/^php-legacy-(52|53|54|55|56|70|71|72|73|74|80|81)$/.test(app.delivery?.target || "") || !/^devilbox\/php-fpm:[0-9.]+-mods@sha256:[a-f0-9]{64}$/.test(app.delivery?.image || ""))) errors.push("EOL PHP requires the fixed isolated container contract");
-  if (app.delivery?.target === "php-legacy-80-bullseye" && (!php80Native || app.risk !== "eol" || app.delivery?.provider !== "compose" || app.delivery?.isolation !== "legacy-container")) errors.push("invalid native PHP 8.0.30 recipe");
-  if (app.delivery?.target === "php-legacy-81-bookworm" && (!php81Native || app.risk !== "eol" || app.delivery?.provider !== "compose" || app.delivery?.isolation !== "legacy-container")) errors.push("invalid native PHP 8.1.34 recipe");
+  const delivery = app.delivery;
+  const recipe = nativeLegacyPHPReleases.find(item =>
+    item.target === delivery?.target || (item.id === app.id && item.version === app.version));
+  const architectures = app.compatibility?.architectures;
+  const nativeLegacyPHP = recipe && app.id === recipe.id && app.version === recipe.version &&
+    app.risk === "eol" && delivery?.target === recipe.target && delivery?.provider === "compose" &&
+    delivery?.manage_route === "docker" && delivery?.isolation === "legacy-container" &&
+    delivery?.image === recipe.image && Array.isArray(architectures) &&
+    architectures.length === 2 && architectures.includes("amd64") && architectures.includes("arm64");
+  if (app.risk === "eol" && !nativeLegacyPHP && (app.delivery?.provider !== "compose" || app.delivery?.isolation !== "legacy-container" || !/^php-legacy-(52|53|54|55|56|70|71|72|73|74|80|81)$/.test(app.delivery?.target || "") || !/^devilbox\/php-fpm:[0-9.]+-mods@sha256:[a-f0-9]{64}$/.test(app.delivery?.image || ""))) errors.push("EOL PHP requires the fixed isolated container contract");
+  if (recipe && !nativeLegacyPHP) errors.push("invalid native legacy PHP recipe");
   if (Object.hasOwn(app, "rule_data_channel")) {
     const channel = app.rule_data_channel;
     if (app.id !== "network-threat-detection" || app.delivery?.provider !== "panel-module" || app.delivery?.target !== app.id || Object.hasOwn(app, "rule_feeds") || !channel || typeof channel !== "object" || Array.isArray(channel) || Object.keys(channel).sort().join(",") !== "engine,format,id" || channel.id !== "et-open-web-bsd-v1" || channel.format !== 1 || channel.engine !== "suricata-8.0") errors.push("rule data channel requires the fixed passive IDS ABI without URLs, scripts or inline feeds");

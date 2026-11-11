@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "php-56",
+  "name": "PHP 5.6",
+  "category": "deployment",
+  "version": "5.6.40-compat2",
+  "summary": "PHP 5.6.40 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+  "stage": "ready",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-legacy-56-stretch",
+    "image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8",
+    "manage_route": "docker",
+    "isolation": "legacy-container"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "固定镜像摘要",
+    "独立 PHP-FPM",
+    "独立 Nginx",
+    "网站同步部署",
+    "域名绑定",
+    "数据卷持久化"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/.__cloudstack_health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

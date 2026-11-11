@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-11T18:04:23Z",
+  "generated_at": "2026-11-11T18:32:12Z",
   "apps": [
     {
       "schema_version": 1,
@@ -784,6 +784,282 @@
         "provider": "compose",
         "target": "php-legacy-80-bullseye",
         "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-56",
+      "name": "PHP 5.6",
+      "category": "deployment",
+      "version": "5.6.40-compat2",
+      "summary": "PHP 5.6.40 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-56-stretch",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-70",
+      "name": "PHP 7.0",
+      "category": "deployment",
+      "version": "7.0.33-compat2",
+      "summary": "PHP 7.0.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-70-stretch",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-71",
+      "name": "PHP 7.1",
+      "category": "deployment",
+      "version": "7.1.33-compat2",
+      "summary": "PHP 7.1.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-71-stretch",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-72",
+      "name": "PHP 7.2",
+      "category": "deployment",
+      "version": "7.2.34-compat2",
+      "summary": "PHP 7.2.34 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-72-buster",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-73",
+      "name": "PHP 7.3",
+      "category": "deployment",
+      "version": "7.3.33-compat2",
+      "summary": "PHP 7.3.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-73-buster",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-74",
+      "name": "PHP 7.4",
+      "category": "deployment",
+      "version": "7.4.33-compat2",
+      "summary": "PHP 7.4.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-74-bullseye",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609",
         "manage_route": "docker",
         "isolation": "legacy-container"
       },
