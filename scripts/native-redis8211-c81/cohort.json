@@ -1,0 +1,23 @@
+{
+  "source_head": "ea925d6c126d44105c462d8800a80e902a3f31f0",
+  "source_inputs_sha256": "38203f5edef6cd5c7a68990d6b7f4a72bb50080de61ef598c0eeeeaec7e7dab2",
+  "version": "0.1.0-dev.proapps24redis8211candidate81",
+  "old_redis": {
+    "id": "redis",
+    "version": "8.2.10-compat1",
+    "sha256": "b773e66264a45dd55395faeab5b8a627c53d541bc6ae9edebbb79d5f9fa79096",
+    "target": "redis-8.2.10"
+  },
+  "payload_files": {
+    ".github/workflows/redis8211-c81-native-qa1.yml": "ff1cf00fbdce1fa9049b1d479b4e744cc95f5d4c8ce97d88f1362fa098efc0c5",
+    "scripts/native-redis8211-c81/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-redis8211-c81/dispatch.json": "e809b7f07b01b7ca0131b02d131bc8fb41dd5073dd6eb966fe3a22bd7c7279e5",
+    "scripts/native-redis8211-c81/download.py": "c2c2e24316b7b169fdb7671867f0e21d670043ee81ae2a1a3fa4f105a071f092",
+    "scripts/native-redis8211-c81/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-redis8211-c81/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-redis8211-c81/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-redis8211-c81/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-redis8211-c81/redis.py": "afc3140a2cffcc66bf1288b3f6c8e991f797f04ca2fe8fcf3f49dab58102b131"
+  },
+  "Main_changed": false
+}

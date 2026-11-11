@@ -1,0 +1,58 @@
+{
+  "source_head": "ea925d6c126d44105c462d8800a80e902a3f31f0",
+  "source_inputs_sha256": "38203f5edef6cd5c7a68990d6b7f4a72bb50080de61ef598c0eeeeaec7e7dab2",
+  "source_sdk_tree": "8079be7fb6671adf775ea418b58fa651b2d82702",
+  "version": "0.1.0-dev.proapps24redis8211candidate81",
+  "release_id": 442027056,
+  "tag": "qa-redis8211candidate81-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736396428,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-amd64.tar.gz": {
+      "id": 736399570,
+      "bytes": 23805780,
+      "sha256": "5217efed63b04a3c04759f943a7f8407e17b382075ee8d92f1b98161e1fe57a9"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-amd64.tar.gz.manifest": {
+      "id": 736396282,
+      "bytes": 179,
+      "sha256": "42e3925897cf233464c08ffbb5a10b5f11ecd5547761514f4c00f59890dc9691"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-amd64.tar.gz.sig": {
+      "id": 736396140,
+      "bytes": 64,
+      "sha256": "937bbb5b426f0bd46caf5ab2f4643d9b3dd5fea71696893bb74aa39a8bd1abf2"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-arm64.tar.gz": {
+      "id": 736396493,
+      "bytes": 22030364,
+      "sha256": "24c8f251e526d0e76f3695e4e8a4d2c389db6a123333de25369fe32e8b9f57bc"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-arm64.tar.gz.manifest": {
+      "id": 736396363,
+      "bytes": 179,
+      "sha256": "9064b0256a9b722cd540484a45c80983b56639a849d2cf588b90ddf9be0fd593"
+    },
+    "panel-0.1.0-dev.proapps24redis8211candidate81-linux-arm64.tar.gz.sig": {
+      "id": 736396184,
+      "bytes": 64,
+      "sha256": "1abe76106f1b331ff245bf239ad8bbdf4fc970c0c7ac711cb38e31f52e4ede18"
+    },
+    "release-signing-dev.pub": {
+      "id": 736396235,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24redis8211candidate81-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24redis8211candidate81-linux-arm64.tar.gz"
+    }
+  }
+}
