@@ -1,0 +1,58 @@
+{
+  "source_head": "c528748446f48d296d4a21cd35b77e6412f88cb5",
+  "source_inputs_sha256": "ac9025054606494578c6f516a331e4a69a327af6f23b10a55683422739a03fce",
+  "source_sdk_tree": "9b1b45affbc1995f19dbf5531cf32517ffb5de51",
+  "version": "0.1.0-dev.proapps24storereferencecandidate101",
+  "release_id": 442264365,
+  "tag": "qa-storereferencecandidate101-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737159635,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-amd64.tar.gz": {
+      "id": 737162550,
+      "bytes": 23852845,
+      "sha256": "2e3e7a41a13ffb10910a926d082bebdece1baa10bf5e1374e10217a2837f5bd8"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-amd64.tar.gz.manifest": {
+      "id": 737159451,
+      "bytes": 185,
+      "sha256": "b5439dba0879bc7c8df461b98fda5a47ac426a51d1886f35cd144a6c0bb848e1"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-amd64.tar.gz.sig": {
+      "id": 737152352,
+      "bytes": 64,
+      "sha256": "cf8f1b83cc6a0f280a29514b67ccd0ff086a2fabef782ad6caa9a05e38c04df6"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-arm64.tar.gz": {
+      "id": 737159715,
+      "bytes": 22078073,
+      "sha256": "510533372ff75f78704d8617d4ae4a215bf5ab64e1f4f80093eb27a01a860c5d"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-arm64.tar.gz.manifest": {
+      "id": 737159579,
+      "bytes": 185,
+      "sha256": "b20d452df858d99d32fde7206c22f3a51925068dfcf092f014e21693d78cf5e5"
+    },
+    "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-arm64.tar.gz.sig": {
+      "id": 737152484,
+      "bytes": 64,
+      "sha256": "5b7bdfee3d2118c125ffb1c96e8a291ac10569d80369bc5759cd038e34ccbbef"
+    },
+    "release-signing-dev.pub": {
+      "id": 737159318,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24storereferencecandidate101-linux-arm64.tar.gz"
+    }
+  }
+}
