@@ -1,0 +1,31 @@
+name: Patched OpenLiteSpeed website and WebAdmin PHP
+on:
+  push:
+    branches: [codex/openlitespeed-c92-php83-native]
+    paths: [scripts/openlitespeed-php83-c92/proof.py]
+permissions:
+  contents: read
+jobs:
+  real-http:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Build the exact patched native image and exercise HTTPS and website PHP
+        run: |
+          docker build --pull -t local/c92-ols-php83:verified scripts/openlitespeed-php83-c92
+          python3 -I -B scripts/openlitespeed-php83-c92/proof.py scripts/openlitespeed-php83-c92/panel-bootstrap.sh
+      - name: Retain original observations
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c92-ols-php83-http-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c92-ols-php83-proof/
+          if-no-files-found: error
+          retention-days: 14
