@@ -1,0 +1,58 @@
+{
+  "source_head": "345d2628143bf0021508e8e7d9ea78c7ff4434a7",
+  "source_inputs_sha256": "5753e7b45a747eb0a30250a5e4670976b0a77e0c7d8303810b87e8fb909346dd",
+  "source_sdk_tree": "390f4e9055ce26277755b5d684aa82bc2acaba6b",
+  "version": "0.1.0-dev.proapps24taskstartupcandidate102r2",
+  "release_id": 442284930,
+  "tag": "qa-taskstartupcandidate102r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737219116,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-amd64.tar.gz": {
+      "id": 737221443,
+      "bytes": 23857620,
+      "sha256": "559ba05a0b43e854d1060e1accb91790e68514b8ec2124e1bf449e2b11496fe5"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-amd64.tar.gz.manifest": {
+      "id": 737218911,
+      "bytes": 184,
+      "sha256": "ce01e089e82c96d8a3f03f15ac850c46fd9d3b4e3811a390b4948c373171d5b1"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-amd64.tar.gz.sig": {
+      "id": 737218616,
+      "bytes": 64,
+      "sha256": "0e11b124bcff3d37d4f6ed50e95f5c8dab260b2989ec70db68b358dbd7bb5f42"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-arm64.tar.gz": {
+      "id": 737219210,
+      "bytes": 22080653,
+      "sha256": "68b33cf66bc16afdf8e7492a7e1de51c649c6a16385c19c7d7354867b40a3720"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-arm64.tar.gz.manifest": {
+      "id": 737219010,
+      "bytes": 184,
+      "sha256": "843b461cf5c9845f611cd75f695300b61dd1eff3b60e3f0c7dbadf81a95d331e"
+    },
+    "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-arm64.tar.gz.sig": {
+      "id": 737218732,
+      "bytes": 64,
+      "sha256": "a242faf228ae82844ee4ab5ecbd33ce1d28fa432db9be57c52df2b931df3a722"
+    },
+    "release-signing-dev.pub": {
+      "id": 737218812,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24taskstartupcandidate102r2-linux-arm64.tar.gz"
+    }
+  }
+}
