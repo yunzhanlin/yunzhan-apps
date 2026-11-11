@@ -121,6 +121,13 @@ func TestPatchedPHPTemplatesRetainBothOlderDeploymentIdentities(t *testing.T) {
 	for template, earlier := range map[string][]string{
 		legacyPHP81BookwormCompat2Template: {LegacyPHP81BookwormTemplate, "php-legacy-81"},
 		legacyPHP80BullseyeCompat2Template: {legacyPHP80BullseyeTemplate, "php-legacy-80"},
+		"php-legacy-54-bookworm-compat3":   {"php-legacy-54-bookworm", "php-legacy-54"},
+		"php-legacy-55-bookworm-compat3":   {"php-legacy-55-bookworm", "php-legacy-55"},
+		"php-legacy-56-stretch-compat3":    {"php-legacy-56-stretch", "php-legacy-56"},
+		"php-legacy-70-stretch-compat3":    {"php-legacy-70-stretch", "php-legacy-70"},
+		"php-legacy-71-stretch-compat3":    {"php-legacy-71-stretch", "php-legacy-71"},
+		"php-legacy-72-buster-compat3":     {"php-legacy-72-buster", "php-legacy-72"},
+		"php-legacy-73-buster-compat3":     {"php-legacy-73-buster", "php-legacy-73"},
 		legacyPHP74BullseyeCompat3Template: {legacyPHP74BullseyeTemplate, "php-legacy-74"},
 	} {
 		release, ok := findFinalLegacyPHPRelease(template)

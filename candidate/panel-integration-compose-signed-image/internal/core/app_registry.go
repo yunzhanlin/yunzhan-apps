@@ -571,6 +571,13 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 					PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081,
 					legacyPHP81BookwormCompat2Template: 18082, legacyPHP80BullseyeCompat2Template: 18083,
 					legacyPHP74BullseyeCompat3Template: 18084,
+					"php-legacy-54-bookworm-compat3":   18085,
+					"php-legacy-55-bookworm-compat3":   18086,
+					"php-legacy-56-stretch-compat3":    18087,
+					"php-legacy-70-stretch-compat3":    18088,
+					"php-legacy-71-stretch-compat3":    18089,
+					"php-legacy-72-buster-compat3":     18090,
+					"php-legacy-73-buster-compat3":     18091,
 					OpenLiteSpeedLegacyTemplate:        18888, OpenLiteSpeed194Template: 18890,
 				}[manifest.Delivery.Target]
 				if in.HostPort == 0 {

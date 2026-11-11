@@ -20,6 +20,20 @@ export function composeHostPortSettings(template: string) {
       return { preferred: 18083, max: 65535, usesNextPort: false, detail: "" };
     case "php-legacy-74-bullseye-compat3":
       return { preferred: 18084, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-54-bookworm-compat3":
+      return { preferred: 18085, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-55-bookworm-compat3":
+      return { preferred: 18086, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-56-stretch-compat3":
+      return { preferred: 18087, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-70-stretch-compat3":
+      return { preferred: 18088, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-71-stretch-compat3":
+      return { preferred: 18089, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-72-buster-compat3":
+      return { preferred: 18090, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-73-buster-compat3":
+      return { preferred: 18091, max: 65535, usesNextPort: false, detail: "" };
     default:
       return { preferred: 18080, max: 65535, usesNextPort: false, detail: "" };
   }
