@@ -1,0 +1,78 @@
+{
+  "source_head": "e0cd90932e4740adc6961768b52a56739aaaea5a",
+  "source_inputs_sha256": "b4a9c42a894053f2baff1bf9dea6131609592912e6f7e1e1af66b5e0d0829279",
+  "version": "0.1.0-dev.proapps24dockercredentialcandidate72",
+  "apps": [
+    {
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "version": "4.1-compat1",
+      "sha256": "c889d9e755fbf317985fcca02367f0a12c500d1343446dcc4451f8828d3d8ad9",
+      "port": 26571,
+      "username": "RABBITMQ_DEFAULT_USER",
+      "password": "RABBITMQ_DEFAULT_PASS",
+      "addresses": [
+        [
+          "\u7ba1\u7406\u754c\u9762\uff08HTTP\uff09",
+          "127.0.0.1:26571"
+        ],
+        [
+          "\u6d88\u606f\u8fde\u63a5\uff08AMQP\uff09",
+          "127.0.0.1:26572"
+        ]
+      ]
+    },
+    {
+      "id": "mongodb",
+      "name": "MongoDB",
+      "version": "8.0-compat1",
+      "sha256": "bede7c7c188d6a6f70f907dbe0574f627287d4346837a7dbe682b2f90a772c1a",
+      "port": 26573,
+      "username": "MONGO_INITDB_ROOT_USERNAME",
+      "password": "MONGO_INITDB_ROOT_PASSWORD",
+      "addresses": [
+        [
+          "\u6570\u636e\u5e93\u8fde\u63a5\uff08MongoDB\uff09",
+          "127.0.0.1:26573"
+        ]
+      ]
+    },
+    {
+      "id": "openlitespeed",
+      "name": "OpenLiteSpeed",
+      "version": "1.8-compat1",
+      "sha256": "5451572c3cf3adf053f8dcdcdc023fdbe5e3a133a2e0b45235bb980d43ff20fa",
+      "port": 26574,
+      "username": null,
+      "password": "CLOUDSTACK_ADMIN_PASSWORD",
+      "addresses": [
+        [
+          "\u7f51\u7ad9\uff08HTTP\uff09",
+          "127.0.0.1:26574"
+        ],
+        [
+          "WebAdmin \u7ba1\u7406\u7aef\u53e3",
+          "127.0.0.1:26575"
+        ]
+      ]
+    }
+  ],
+  "payload_files": {
+    ".github/workflows/docker-credential-c72-native-qa3.yml": "931d53c91b1b4e4b4b38762ff1bca78733a3632372ad41911681735dbed66c4d",
+    "scripts/native-docker-c72/bootstrap-original-install.py": "08a9fbfc1e3553353f90b8afb99927341a48a266667365021be3f02d6ee83d92",
+    "scripts/native-docker-c72/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
+    "scripts/native-docker-c72/browser.mjs": "d221f5ed5de0437bd21ea4e4475207ada8d01be83955eb0f5fb2c324e4d768e2",
+    "scripts/native-docker-c72/dispatch.json": "1d4a9513e0f056f2a4fbadd193e8b898380d3c54c7df18e82c2e75abbb329844",
+    "scripts/native-docker-c72/download.py": "b55039533bf3fb3567c0090acf9333ade3cb22e04f94fdaf1a3ee6bb16cfd46b",
+    "scripts/native-docker-c72/finish.py": "a097981f576834dafaa1973273ce8232962d7405367767475fa5c05383a7909f",
+    "scripts/native-docker-c72/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-docker-c72/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-docker-c72/package-lock.json": "acec9e987f25e23ae5ead1fba565e9b5df048c4509250f828f64bb5e26f0bcb9",
+    "scripts/native-docker-c72/package.json": "c43f386e20c33e07a020630f43049acaf6496b584d82ea1e1e1560b66f23e027",
+    "scripts/native-docker-c72/prepare-browser.py": "9954bdcb9026d45d629abc4bc016fe89923e4272de1544bd3ab69d0437a6c668",
+    "scripts/native-docker-c72/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false,
+  "original_failed_fixture_run": 43042671458,
+  "original_prior_browser_run": 43043191685
+}
