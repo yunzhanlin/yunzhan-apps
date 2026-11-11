@@ -1,0 +1,58 @@
+{
+  "source_head": "362b953b70a42053f62582841b0fdcc27457b3b7",
+  "source_inputs_sha256": "41e92a2025b60e5951910a2e7432d5de1036bf25ef000cb51266ac583b92e3e0",
+  "source_sdk_tree": "6132b6ca1781f08eea7f74d780378dbbe2712fef",
+  "version": "0.1.0-dev.proapps24sitediagnosiscandidate97",
+  "release_id": 442199858,
+  "tag": "qa-sitediagnosiscandidate97-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736940651,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-amd64.tar.gz": {
+      "id": 736944010,
+      "bytes": 23831627,
+      "sha256": "eb827a263572386ac2574a84f6875fe0b48025c91491709feee3e28791c92cd5"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-amd64.tar.gz.manifest": {
+      "id": 736940398,
+      "bytes": 183,
+      "sha256": "88960e2ca53561c6c68029d9de5c0c931ec1739933573681e9d3a65f26960edc"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-amd64.tar.gz.sig": {
+      "id": 736940096,
+      "bytes": 64,
+      "sha256": "08ba7b2e281032534e90f03c383e4f1b12fa65b16a61e128d8177651e6db89e3"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-arm64.tar.gz": {
+      "id": 736940742,
+      "bytes": 22050218,
+      "sha256": "a2f45bc63699aa4ff37742542853edfbadd2a515b82ab1a5346133889d94dfe9"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-arm64.tar.gz.manifest": {
+      "id": 736940533,
+      "bytes": 183,
+      "sha256": "6fb3ae770320ed27a19e61bf790facb8f8a834f10f4acb44b9b78c31a1d600cc"
+    },
+    "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-arm64.tar.gz.sig": {
+      "id": 736940182,
+      "bytes": 64,
+      "sha256": "c85b225a585f14e2a2483b3a8de16e23e1892041bf67b4aaa31025302327d645"
+    },
+    "release-signing-dev.pub": {
+      "id": 736940293,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24sitediagnosiscandidate97-linux-arm64.tar.gz"
+    }
+  }
+}
