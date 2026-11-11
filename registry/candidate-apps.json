@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-09T13:35:51Z",
+  "generated_at": "2026-11-11T17:35:37Z",
   "apps": [
     {
       "schema_version": 1,
@@ -639,6 +639,48 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mysql",
+      "name": "MySQL",
+      "category": "deployment",
+      "version": "8.4.13-compat1",
+      "summary": "安装官方 MySQL 8.4.13 LTS 二进制并创建回环监听的受管实例。运行时并行安装，已有实例继续使用原版本，数据库迁移由管理员单独发起。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "runtime",
+        "target": "mysql-8.4.13",
+        "manage_route": "databases"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多实例",
+        "独立账号",
+        "备份恢复",
+        "导入导出"
+      ],
+      "health": {
+        "probe": "binary",
+        "target": "mysql --version"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
       }
     }
   ]

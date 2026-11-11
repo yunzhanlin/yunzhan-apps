@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-09T13:35:51Z",
+  "generated_at": "2026-11-11T17:35:37Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -365,12 +365,12 @@
       "id": "mysql",
       "name": "MySQL",
       "category": "deployment",
-      "version": "8.4.11-compat1",
-      "summary": "安装官方 MySQL LTS 二进制并创建回环监听的受管数据库实例。",
+      "version": "8.4.13-compat1",
+      "summary": "安装官方 MySQL 8.4.13 LTS 二进制并创建回环监听的受管实例。运行时并行安装，已有实例继续使用原版本，数据库迁移由管理员单独发起。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "mysql-8.4.11",
+      "target": "mysql-8.4.13",
       "manage_route": "databases",
       "capabilities": [
         "多实例",
@@ -378,8 +378,8 @@
         "备份恢复",
         "导入导出"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mysql/8.4.11-compat1/manifest.json",
-      "sha256": "5deba1b6e9da8312e52198089dfaccdaac50dfa7a2c9b67c5934d921a6a428b4"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mysql/8.4.13-compat1/manifest.json",
+      "sha256": "12817abfb781f09e1f28008d6f02ad75d805485139dfea17024bcbc838234fcf"
     },
     {
       "id": "network-threat-detection",
