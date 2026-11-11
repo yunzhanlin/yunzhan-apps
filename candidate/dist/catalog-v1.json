@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T19:30:40Z",
+  "generated_at": "2026-11-11T20:08:59Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -489,12 +489,12 @@
       "id": "openlitespeed",
       "name": "OpenLiteSpeed",
       "category": "deployment",
-      "version": "1.8-compat1",
-      "summary": "部署仅回环端口访问的 OpenLiteSpeed，管理入口须经面板代理。",
+      "version": "1.9.4-compat2",
+      "summary": "OpenLiteSpeed 1.9.4 提供 PHP 8.3.36 网站和回环 HTTPS WebAdmin，使用独立站点、配置和管理卷。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
-      "target": "openlitespeed",
+      "target": "openlitespeed-194",
       "manage_route": "docker",
       "capabilities": [
         "HTTP 网站",
@@ -503,8 +503,8 @@
         "回环 HTTPS 管理",
         "持久配置"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/openlitespeed/1.8-compat1/manifest.json",
-      "sha256": "5451572c3cf3adf053f8dcdcdc023fdbe5e3a133a2e0b45235bb980d43ff20fa"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/openlitespeed/1.9.4-compat2/manifest.json",
+      "sha256": "ae843cdb4ed94dbb00890f69a525fffbce9248038d71f10396a7d5376e8840db"
     },
     {
       "id": "php-52",

@@ -225,6 +225,16 @@ export function validateManifest(app) {
       errors.push("phpMyAdmin 5.2.3 requires its exact official patched dual-architecture recipe");
     }
   }
+  if ((app.id === "openlitespeed" && app.version === "1.9.4-compat2") || app.delivery?.target === "openlitespeed-194") {
+    const d = app.delivery;
+    const arch = app.compatibility?.architectures;
+    if (app.id !== "openlitespeed" || app.version !== "1.9.4-compat2" || app.risk !== "maintained" ||
+        d?.provider !== "compose" || d?.target !== "openlitespeed-194" || d?.manage_route !== "docker" ||
+        d?.image !== "ghcr.io/yunzhanlin/yunzhan-apps-openlitespeed:1.9.4-lsphp83-compat2@sha256:a3f4cdafd5581e83d3deb4d50ef1b003a1164142f545652f7ae540bf18c2fd82" || Object.keys(d).sort().join(",") !== "image,manage_route,provider,target" ||
+        !Array.isArray(arch) || arch.length !== 2 || !arch.includes("amd64") || !arch.includes("arm64")) {
+      errors.push("OpenLiteSpeed 1.9.4 requires its exact patched dual-architecture recipe");
+    }
+  }
   const delivery = app.delivery;
   const recipe = nativeLegacyPHPReleases.find(item =>
     item.target === delivery?.target || (item.id === app.id && item.version === app.version));

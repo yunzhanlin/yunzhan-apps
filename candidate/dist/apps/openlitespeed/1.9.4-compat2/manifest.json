@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "openlitespeed",
+  "name": "OpenLiteSpeed",
+  "category": "deployment",
+  "version": "1.9.4-compat2",
+  "summary": "OpenLiteSpeed 1.9.4 提供 PHP 8.3.36 网站和回环 HTTPS WebAdmin，使用独立站点、配置和管理卷。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "openlitespeed-194",
+    "image": "ghcr.io/yunzhanlin/yunzhan-apps-openlitespeed:1.9.4-lsphp83-compat2@sha256:a3f4cdafd5581e83d3deb4d50ef1b003a1164142f545652f7ae540bf18c2fd82",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "HTTP 网站",
+    "LSAPI",
+    "随机管理密码",
+    "回环 HTTPS 管理",
+    "持久配置"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
