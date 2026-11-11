@@ -1,0 +1,47 @@
+name: Signed MongoDB 8.0 on native Ubuntu 22.04
+on:
+  push:
+    branches: [codex/mongodb-compatible-kernel-c72-qa2]
+    paths: [scripts/native-mongodb-c72/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  mongo:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-22.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Download the exact signed panel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-mongodb-c72/download.py "$RUNNER_TEMP/mongo-inputs" "$RUNNER_TEMP/mongo-private"
+          uname -r > "$RUNNER_TEMP/mongo-private/original-kernel.txt"
+      - name: Install the signed panel normally
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-mongodb-c72/bootstrap-original-install.py "$RUNNER_TEMP/mongo-inputs" "$RUNNER_TEMP/mongo-private" > "$RUNNER_TEMP/mongo-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/mongo-private/bootstrap-step.stderr"
+      - name: Install from the store and verify authenticated MongoDB writes and persistence
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-mongodb-c72/mongodb.py "$RUNNER_TEMP/mongo-private" > "$RUNNER_TEMP/mongo-private/mongodb-step.stdout" 2> "$RUNNER_TEMP/mongo-private/mongodb-step.stderr"
+      - name: Encrypt the original evidence
+        if: always()
+        run: sudo python3 -I -B scripts/native-mongodb-c72/finish.py "$RUNNER_TEMP/mongo-private" "$RUNNER_TEMP/mongo-public" phase1
+      - name: Retain the native outcomes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c72-mongodb-native-jammy-qa2-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/mongo-public/
+          if-no-files-found: error
+          retention-days: 14
