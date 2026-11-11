@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath}from 'node:url';
 export function verifyMobile133Catalogue(rows,ids,mode){
- assert(['current133','retained132','C67-refuses133'].includes(mode));
+ assert(['current133','retained132','C67-refuses133','latest-signed'].includes(mode));
  const prefix='TestPublishedCandidateRepositoryCurrentSignedManifestABI',negative=mode==='C67-refuses133';
  assert.equal(ids.length,50);assert.equal(new Set(ids).size,50);assert(ids.includes('mobile'));
  assert(rows.length>0&&rows.every(r=>r.Package==='local/panel/internal/appcatalog')&&!rows.some(r=>r.Action==='skip'));
