@@ -1,0 +1,58 @@
+{
+  "source_head": "e06657d4fb4c16975695403c0ec4834357593e65",
+  "source_inputs_sha256": "3186b4ae376b1aece387cc21e7d6d2408644f0c960698196f37c2e9563cbe6c7",
+  "source_sdk_tree": "47497d3a77f941d76149f547d17aa9a5791d14b0",
+  "version": "0.1.0-dev.proapps24phpmyadmin523candidate91",
+  "release_id": 442120836,
+  "tag": "qa-phpmyadmin523candidate91-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736690830,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-amd64.tar.gz": {
+      "id": 736693575,
+      "bytes": 23811529,
+      "sha256": "cfb919c4136bf8155cbcb8721adc9e0ddf9c0ef968b1eadb00c7ef38e02434df"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-amd64.tar.gz.manifest": {
+      "id": 736690725,
+      "bytes": 183,
+      "sha256": "b0dd16f0c61a5c6054ce3f71ac7c74ca44beb40024b4f2ce48e83bee56ec06f8"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-amd64.tar.gz.sig": {
+      "id": 736690592,
+      "bytes": 64,
+      "sha256": "7ae18255410ca14260d9fdf2f63afbbea6525401294857f3d3a2c92259217f0c"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-arm64.tar.gz": {
+      "id": 736690900,
+      "bytes": 22032778,
+      "sha256": "ea41f5cce80c2c791a6a859619261c63f39e246cda733b4c1dc2319d3f1102d2"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-arm64.tar.gz.manifest": {
+      "id": 736690768,
+      "bytes": 183,
+      "sha256": "c3e793890d8388a40a51dc9c382c48a8526292f2a47e59156908adca47d1f9c3"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-arm64.tar.gz.sig": {
+      "id": 736690635,
+      "bytes": 64,
+      "sha256": "59898ca6c4b48831642c6fae4fe08e3c457ab338eeeebb13475f22c112730699"
+    },
+    "release-signing-dev.pub": {
+      "id": 736690672,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadmin523candidate91-linux-arm64.tar.gz"
+    }
+  }
+}
