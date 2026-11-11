@@ -41,7 +41,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
-    ['php-81', '8.1.34-compat1'], ['php-80', '8.0.30-compat1'],
+    ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],
     ['php-52', '5.2.17-compat2'],
     ['php-53', '5.3.29-compat2'],
     ['php-54', '5.4.45-compat2'],
@@ -51,7 +51,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     ['php-71', '7.1.33-compat2'],
     ['php-72', '7.2.34-compat2'],
     ['php-73', '7.3.33-compat2'],
-    ['php-74', '7.4.33-compat2'],
+    ['php-74', '7.4.33-compat3'],
   ];
   for (const [id, version] of nativeRuntimes) {
     const app = source.apps.find(a=>a.id===id);

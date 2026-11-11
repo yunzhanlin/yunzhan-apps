@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T20:08:59Z",
+  "generated_at": "2026-11-11T20:29:37Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -708,12 +708,12 @@
       "id": "php-74",
       "name": "PHP 7.4",
       "category": "deployment",
-      "version": "7.4.33-compat2",
-      "summary": "PHP 7.4.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "7.4.33-compat3",
+      "summary": "PHP 7.4.33 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-74-bullseye",
+      "target": "php-legacy-74-bullseye-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -721,21 +721,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-74/7.4.33-compat2/manifest.json",
-      "sha256": "dce7335731a9ec615fed87d5e016a671158996ab5153fb45b1d2719c4a281a41"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-74/7.4.33-compat3/manifest.json",
+      "sha256": "a809644a390a8cbbb31bb427dcaa8c83486364851d4c668cdfd0c1834cec9aa1"
     },
     {
       "id": "php-80",
       "name": "PHP 8.0",
       "category": "deployment",
-      "version": "8.0.30-compat1",
-      "summary": "PHP 8.0 最终版隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "8.0.30-compat2",
+      "summary": "PHP 8.0.30 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-80-bullseye",
+      "target": "php-legacy-80-bullseye-compat2",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -743,21 +744,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.30-compat1/manifest.json",
-      "sha256": "5a2bb0e04030c501a05c6d7d29ac743ae7aea0040d61f864a7ee296a2672641a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.30-compat2/manifest.json",
+      "sha256": "8d9ad48b57dbced18958df2459cbef8b2034d2d6d12e0d02b655e9d7ef95f21a"
     },
     {
       "id": "php-81",
       "name": "PHP 8.1",
       "category": "deployment",
-      "version": "8.1.34-compat1",
-      "summary": "PHP 8.1 最终版隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "8.1.34-compat2",
+      "summary": "PHP 8.1.34 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-81-bookworm",
+      "target": "php-legacy-81-bookworm-compat2",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -765,10 +767,11 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-81/8.1.34-compat1/manifest.json",
-      "sha256": "ed598f5bd20d43431abc784d7f2c67030749cd30fe7bd02d9b3822e5f627be23"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-81/8.1.34-compat2/manifest.json",
+      "sha256": "9f7ce437056bc1370bb6ff16624cdc8844b28ecae037b51b2ee3567518367c5e"
     },
     {
       "id": "php-82",
