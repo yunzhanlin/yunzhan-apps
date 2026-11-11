@@ -1,0 +1,28 @@
+{
+  "source_head": "2d426bd963e8cc20c36f5a347b975e51d85e4259",
+  "source_inputs_sha256": "3cd1533812a1e94a8d28cb54829190ba4d5870088ce97501e3e5ed1fe19e174d",
+  "version": "0.1.0-dev.proapps24composekernelcandidate73r3",
+  "application": {
+    "id": "mongodb",
+    "version": "8.0-compat1",
+    "sha256": "bede7c7c188d6a6f70f907dbe0574f627287d4346837a7dbe682b2f90a772c1a",
+    "provider": "compose",
+    "target": "mongodb"
+  },
+  "image": "mongo:8.0@sha256:d0d926f94df099bff534b7ee5b5986458131a22489dfff8664509af0c1e2ca9c",
+  "payload_files": {
+    ".github/workflows/mongodb-compatible-kernel-c73r3-qa2.yml": "c576afeff55f5d737210bdeaf04189e6fc08a241400363db87f201d47e7df3a4",
+    "scripts/native-mongodb-c73/bootstrap-original-install.py": "51a43694c92f81d9f934e6f0da275fb8fb483f18268c2107272f1a37bafdee42",
+    "scripts/native-mongodb-c73/dispatch.json": "6c7dde9f4b8ddd9b68800724916f3b2eb981291f5324594a78998b8daa9b2de8",
+    "scripts/native-mongodb-c73/download.py": "01b9b2ca46736d7850acd9b9e33dfd768a4250f6999eb3ba3061da733c68688a",
+    "scripts/native-mongodb-c73/finish.py": "a097981f576834dafaa1973273ce8232962d7405367767475fa5c05383a7909f",
+    "scripts/native-mongodb-c73/isolated_ubuntu_apt.py": "6a48ec03c1db7234e39e18901fb19d0e805aceb43240aea35c53e9512078ff66",
+    "scripts/native-mongodb-c73/mongodb.py": "16be3c9dc64b689ab147572413f7340b36be1d008800c2bcc94ec929f5e989c9",
+    "scripts/native-mongodb-c73/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-mongodb-c73/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "baseline_success_run": 43048132886,
+  "Main_changed": false,
+  "prior_original_run": 43049496971,
+  "runner": "ubuntu-22.04-arm"
+}
