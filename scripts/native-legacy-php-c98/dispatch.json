@@ -1,0 +1,58 @@
+{
+  "source_head": "9be0b156414aec7b5688f22fdb87683a2855c2f0",
+  "source_inputs_sha256": "9a509cfce1c541f9577ca7f6a2644408958497b28ca456c604cc92c93825d32d",
+  "source_sdk_tree": "3ad8ea477d1ec4e11c73ced2aec4e590d4db39ab",
+  "version": "0.1.0-dev.proapps24legacyphppatchcandidate98",
+  "release_id": 442231804,
+  "tag": "qa-legacyphppatchcandidate98-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737042557,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-amd64.tar.gz": {
+      "id": 737045394,
+      "bytes": 23835083,
+      "sha256": "0585629c9df09f2c1ba8d452fd4c7da82f8d340255a42c59692ec7b45fc3ebb6"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-amd64.tar.gz.manifest": {
+      "id": 737042390,
+      "bytes": 184,
+      "sha256": "8bbbba68fc7138eef3fdc844c14c302b9d02c650e78d0576e7fe514dc982e8d0"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-amd64.tar.gz.sig": {
+      "id": 737042050,
+      "bytes": 64,
+      "sha256": "9ff5a445fa7f4963a76cc28cf23b4b671352a63ac32fda6c0b4b488d67109968"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-arm64.tar.gz": {
+      "id": 737042656,
+      "bytes": 22051487,
+      "sha256": "e7e9a6ce668b7c91bf693b7ae0d7ab3f0c75e025f0c01220912b9a3f8e33ce29"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-arm64.tar.gz.manifest": {
+      "id": 737042451,
+      "bytes": 184,
+      "sha256": "2e96b6fc05c94202972b890700584796d0a52923482f3caa467f43312adffd85"
+    },
+    "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-arm64.tar.gz.sig": {
+      "id": 737042161,
+      "bytes": 64,
+      "sha256": "27108ce4f994eff51b54a6fde92e6d260569c9943d2b518b1c7df3a9b51dde3d"
+    },
+    "release-signing-dev.pub": {
+      "id": 737042276,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24legacyphppatchcandidate98-linux-arm64.tar.gz"
+    }
+  }
+}
