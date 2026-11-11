@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -190,13 +191,13 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		finalLegacyPHP = finalLegacyPHP && app.ID == phpRelease.appID && app.Version == phpRelease.appVersion
 		phpMyAdminUpgrade := app.ID == "phpmyadmin" && app.Target == PhpMyAdmin523Template && app.Version == phpMyAdmin523AppVersion
 		openLiteSpeedUpgrade := app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && app.Version == openLiteSpeed194AppVersion
-		previousComposeTarget := ""
+		var previousComposeTargets []string
 		if finalLegacyPHP {
-			previousComposeTarget = phpRelease.previous
+			previousComposeTargets = previousLegacyPHPTemplates(phpRelease)
 		} else if phpMyAdminUpgrade {
-			previousComposeTarget = PhpMyAdminLegacyTemplate
+			previousComposeTargets = []string{PhpMyAdminLegacyTemplate}
 		} else if openLiteSpeedUpgrade {
-			previousComposeTarget = OpenLiteSpeedLegacyTemplate
+			previousComposeTargets = []string{OpenLiteSpeedLegacyTemplate}
 		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -222,14 +223,19 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
-			previousComposeInstalled := !status.Installed && previousComposeTarget != "" && compose[previousComposeTarget]
-			if previousComposeInstalled {
-				status.Installed = true
-				status.Healthy = composeHealthy[previousComposeTarget]
-				status.UpdateAvailable = true
+			previousComposeInstalled := false
+			if !status.Installed {
+				for _, target := range previousComposeTargets {
+					if compose[target] {
+						previousComposeInstalled = true
+						status.Installed = true
+						status.Healthy = status.Healthy || composeHealthy[target]
+						status.UpdateAvailable = true
+					}
+				}
 			}
 			for _, project := range projects.Projects {
-				if project.TemplateID != app.Target && !(previousComposeInstalled && project.TemplateID == previousComposeTarget) {
+				if project.TemplateID != app.Target && !(previousComposeInstalled && slices.Contains(previousComposeTargets, project.TemplateID)) {
 					continue
 				}
 				if project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
@@ -359,7 +365,10 @@ func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
 	if app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && len(images) == 1 && images[0] == dockerOpenLiteSpeed194Image {
 		return "1.9.4"
 	}
-	if release, ok := findFinalLegacyPHPRelease(app.Target); ok {
+	for _, release := range finalLegacyPHPReleases {
+		if app.ID != release.appID {
+			continue
+		}
 		for _, image := range images {
 			if image == release.image {
 				return release.version
@@ -557,7 +566,13 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			}
 		} else {
 			if in.HostPort == 0 {
-				in.HostPort = map[string]int{"memcached-cache": 21211, PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, OpenLiteSpeedLegacyTemplate: 18888, OpenLiteSpeed194Template: 18890}[manifest.Delivery.Target]
+				in.HostPort = map[string]int{
+					"memcached-cache": 21211, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672,
+					PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081,
+					legacyPHP81BookwormCompat2Template: 18082, legacyPHP80BullseyeCompat2Template: 18083,
+					legacyPHP74BullseyeCompat3Template: 18084,
+					OpenLiteSpeedLegacyTemplate:        18888, OpenLiteSpeed194Template: 18890,
+				}[manifest.Delivery.Target]
 				if in.HostPort == 0 {
 					in.HostPort = 18080
 				}

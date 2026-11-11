@@ -9,7 +9,11 @@ import (
 const legacyNginxImage = "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5"
 
 const LegacyPHP81BookwormTemplate = "php-legacy-81-bookworm"
+const legacyPHP81BookwormCompat2Template = "php-legacy-81-bookworm-compat2"
 const legacyPHP80BullseyeTemplate = "php-legacy-80-bullseye"
+const legacyPHP80BullseyeCompat2Template = "php-legacy-80-bullseye-compat2"
+const legacyPHP74BullseyeTemplate = "php-legacy-74-bullseye"
+const legacyPHP74BullseyeCompat3Template = "php-legacy-74-bullseye-compat3"
 const legacyPHP52BookwormTemplate = "php-legacy-52-bookworm"
 
 const legacyPHP81BookwormImage = "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"
@@ -36,9 +40,12 @@ type finalLegacyPHPRelease struct {
 }
 
 var finalLegacyPHPReleases = []finalLegacyPHPRelease{
+	{legacyPHP81BookwormCompat2Template, LegacyPHP81BookwormTemplate, "php-81", "8.1.34", "8.1.34-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat2@sha256:afda4abcf8755a50879d77643533d1af624236711c6cdf4e40653b09cbfc0830"},
 	{LegacyPHP81BookwormTemplate, "php-legacy-81", "php-81", "8.1.34", "8.1.34-compat1", legacyPHP81BookwormImage},
+	{legacyPHP80BullseyeCompat2Template, legacyPHP80BullseyeTemplate, "php-80", "8.0.30", "8.0.30-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat2@sha256:6f1ded5a5e08fc7f31efc5416cc0b877d75f94f576ed0d44bbb8d78319da3eed"},
 	{legacyPHP80BullseyeTemplate, "php-legacy-80", "php-80", "8.0.30", "8.0.30-compat1", "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3"},
-	{"php-legacy-74-bullseye", "php-legacy-74", "php-74", "7.4.33", "7.4.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"},
+	{legacyPHP74BullseyeCompat3Template, legacyPHP74BullseyeTemplate, "php-74", "7.4.33", "7.4.33-compat3", "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat3@sha256:cce1df42ef6874ea19eab10615822a4677e44004bfc0b2c3e4ee23db475c3b9d"},
+	{legacyPHP74BullseyeTemplate, "php-legacy-74", "php-74", "7.4.33", "7.4.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"},
 	{"php-legacy-73-buster", "php-legacy-73", "php-73", "7.3.33", "7.3.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e"},
 	{"php-legacy-72-buster", "php-legacy-72", "php-72", "7.2.34", "7.2.34-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625"},
 	{"php-legacy-71-stretch", "php-legacy-71", "php-71", "7.1.33", "7.1.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9"},
@@ -57,6 +64,19 @@ func findFinalLegacyPHPRelease(id string) (finalLegacyPHPRelease, bool) {
 		}
 	}
 	return finalLegacyPHPRelease{}, false
+}
+
+func previousLegacyPHPTemplates(release finalLegacyPHPRelease) []string {
+	var templates []string
+	for previous := release.previous; previous != "" && len(templates) < len(finalLegacyPHPReleases); {
+		templates = append(templates, previous)
+		prior, ok := findFinalLegacyPHPRelease(previous)
+		if !ok {
+			break
+		}
+		previous = prior.previous
+	}
+	return templates
 }
 
 func LegacyPHPImage(id string) (string, bool) {

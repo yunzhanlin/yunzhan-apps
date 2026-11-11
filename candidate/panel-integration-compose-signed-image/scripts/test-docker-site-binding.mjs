@@ -38,7 +38,8 @@ test('a successful old Docker binding cannot delete a different pending browser 
 test('actual template health predicate enables only recognized fully healthy unbound website projects',()=>{
  for(const template_id of [
   'nginx-static','wordpress-blog','openlitespeed','openlitespeed-194','php-legacy-52','php-legacy-81',
-  'php-legacy-81-bookworm','php-legacy-80-bullseye','php-legacy-74-bullseye',
+  'php-legacy-81-bookworm','php-legacy-81-bookworm-compat2','php-legacy-80-bullseye','php-legacy-74-bullseye',
+  'php-legacy-80-bullseye-compat2','php-legacy-74-bullseye-compat3',
   'php-legacy-73-buster','php-legacy-72-buster','php-legacy-71-stretch','php-legacy-70-stretch','php-legacy-56-stretch',
   'php-legacy-55-bookworm','php-legacy-54-bookworm','php-legacy-53-bookworm','php-legacy-52-bookworm',
  ]){

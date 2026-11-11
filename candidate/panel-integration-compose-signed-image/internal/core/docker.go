@@ -450,7 +450,12 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 				}
 			}
 		}
+		seen := make(map[string]bool)
 		for _, release := range finalLegacyPHPReleases {
+			if seen[release.appID] {
+				continue
+			}
+			seen[release.appID] = true
 			worker := "PHP-FPM"
 			if release.template == legacyPHP52BookwormTemplate {
 				worker = "PHP FastCGI"

@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"runtime"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -112,6 +113,24 @@ func TestLegacyPHP52BookwormUsesOnlyTheReviewedFastCGIWorker(t *testing.T) {
 	for _, id := range []string{"php-legacy-52", "php-legacy-53-bookworm", LegacyPHP81BookwormTemplate} {
 		if LegacyPHPBootstrapForTemplate(id) != LegacyPHPBootstrap {
 			t.Fatalf("template %s lost its established PHP-FPM startup", id)
+		}
+	}
+}
+
+func TestPatchedPHPTemplatesRetainBothOlderDeploymentIdentities(t *testing.T) {
+	for template, earlier := range map[string][]string{
+		legacyPHP81BookwormCompat2Template: {LegacyPHP81BookwormTemplate, "php-legacy-81"},
+		legacyPHP80BullseyeCompat2Template: {legacyPHP80BullseyeTemplate, "php-legacy-80"},
+		legacyPHP74BullseyeCompat3Template: {legacyPHP74BullseyeTemplate, "php-legacy-74"},
+	} {
+		release, ok := findFinalLegacyPHPRelease(template)
+		if !ok || !slices.Equal(previousLegacyPHPTemplates(release), earlier) {
+			t.Fatalf("%s omitted an existing template from the update path", template)
+		}
+		if !LegacyPHPArchitectureSupported(template, "arm64") ||
+			!LegacyPHPArchitectureSupported(earlier[0], "arm64") ||
+			LegacyPHPArchitectureSupported(earlier[1], "arm64") {
+			t.Fatalf("%s changed an existing architecture boundary", template)
 		}
 	}
 }

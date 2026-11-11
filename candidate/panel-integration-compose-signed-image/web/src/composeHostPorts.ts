@@ -14,6 +14,12 @@ export function composeHostPortSettings(template: string) {
       return { preferred: 19200, max: 65535, usesNextPort: false, detail: "" };
     case "phpmyadmin-523":
       return { preferred: 18081, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-81-bookworm-compat2":
+      return { preferred: 18082, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-80-bullseye-compat2":
+      return { preferred: 18083, max: 65535, usesNextPort: false, detail: "" };
+    case "php-legacy-74-bullseye-compat3":
+      return { preferred: 18084, max: 65535, usesNextPort: false, detail: "" };
     default:
       return { preferred: 18080, max: 65535, usesNextPort: false, detail: "" };
   }
