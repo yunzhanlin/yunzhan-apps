@@ -96,7 +96,7 @@ func sameComposeUpdateFile(a, b os.FileInfo) bool {
 }
 
 func (d *composeUpdateDirectory) read(name string, limit int64) ([]byte, os.FileInfo, error) {
-	if (name != "metadata.json" && name != "compose.yaml") || limit < 1 || limit > 48*1024 || !d.current() {
+	if (name != "metadata.json" && name != "compose.yaml" && name != openLiteSpeedPreviousCompose) || limit < 1 || limit > 48*1024 || !d.current() {
 		return nil, nil, errors.New("Compose 原项目读取范围或目录身份无效")
 	}
 	before, err := d.root.Lstat(name)

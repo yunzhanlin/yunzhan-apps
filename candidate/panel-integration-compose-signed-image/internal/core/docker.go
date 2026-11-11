@@ -117,26 +117,13 @@ volumes:
 			return "", errors.New("双端口应用的起始端口不能为 65535")
 		}
 		password := Token()
-		bootstrap := `set -eu
-if [ -z "$(ls -A /usr/local/lsws/conf)" ]; then cp -R /usr/local/lsws/.conf/. /usr/local/lsws/conf/; fi
-if [ -z "$(ls -A /usr/local/lsws/admin/conf)" ]; then cp -R /usr/local/lsws/admin/.conf/. /usr/local/lsws/admin/conf/; fi
-if [ ! -d /var/www/vhosts/cloudstack/html ]; then
-  mkdir -p /var/www/vhosts/cloudstack
-  cp -R /usr/local/lsws/Example/. /var/www/vhosts/cloudstack/
-fi
-sed -i 's#vhRoot[[:space:]]*Example/#vhRoot /var/www/vhosts/cloudstack/#' /usr/local/lsws/conf/httpd_config.conf
-HASH=$(/usr/local/lsws/admin/fcgi-bin/admin_php -q /usr/local/lsws/admin/misc/htpasswd.php "$CLOUDSTACK_ADMIN_PASSWORD")
-printf 'admin:%s\n' "$HASH" > /usr/local/lsws/admin/conf/htpasswd
-chmod 600 /usr/local/lsws/admin/conf/htpasswd
-exec /entrypoint.sh
-`
+
 		return fmt.Sprintf(`services:
   openlitespeed:
     image: %s
     restart: unless-stopped
     entrypoint: ["/bin/sh", "-c"]
-    command: [%s]
-    environment:
+%s    environment:
       CLOUDSTACK_ADMIN_PASSWORD: "%s"
     mem_limit: 512m
     ports:
@@ -144,8 +131,7 @@ exec /entrypoint.sh
       - "127.0.0.1:%d:7080"
     volumes:
       - server-conf:/usr/local/lsws/conf
-      - admin-conf:/usr/local/lsws/admin/conf
-      - site-data:/var/www/vhosts
+%s      - site-data:/var/www/vhosts
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8088/ >/dev/null"]
       interval: 15s
@@ -156,7 +142,7 @@ volumes:
   server-conf: {}
   admin-conf: {}
   site-data: {}
-`, dockerOpenLiteSpeedImage, strconv.Quote(strings.ReplaceAll(bootstrap, "$", "$$")), password, port, port+1), nil
+`, dockerOpenLiteSpeedImage, openLiteSpeedComposeCommand(openLiteSpeedBootstrap), password, port, port+1, openLiteSpeedAdminVolume), nil
 	case "nginx-static":
 		return fmt.Sprintf(`services:
   web:

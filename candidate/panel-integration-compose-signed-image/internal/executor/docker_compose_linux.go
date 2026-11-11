@@ -468,6 +468,16 @@ func RunComposeJob(id string) (ret error) {
 	if op.Action == "delete" && op.Name != metadata.Name {
 		return errors.New("Compose 项目名称确认不匹配")
 	}
+	if metadata.TemplateID == "openlitespeed" && (op.Action == "start" || op.Action == "restart" || op.Action == "update") {
+		recreate, err := reconcileOpenLiteSpeedAdmin(ctx, metadata, dir)
+		if err != nil {
+			return err
+		}
+		if recreate && op.Action != "update" {
+			_, err = composeCommand(ctx, composeArgs(metadata, dir, "up", "-d", "--no-deps", "--pull", "never", "openlitespeed")...)
+			return err
+		}
+	}
 	var args []string
 	switch op.Action {
 	case "start":
