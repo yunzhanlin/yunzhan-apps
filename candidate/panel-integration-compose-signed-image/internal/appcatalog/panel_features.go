@@ -62,9 +62,11 @@ const SiteDiagnosisFeature = "site-diagnosis-ingress-v1"
 const SiteDiagnosisVersion = "1.3.0"
 const UserAccessOverviewFeature = "user-access-overview-v1"
 const UserAccessOverviewVersion = "1.3.2"
+const TaskInventoryFeature = "task-host-inventory-v1"
+const TaskInventoryVersion = "1.3.0"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature {
+	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature || feature == TaskInventoryFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2RootVendorFeature {
@@ -161,6 +163,13 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	}
 	if err := validateCountryDataRequirement(manifest); err != nil {
 		return err
+	}
+	if manifest.ID == "task-manager" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, TaskInventoryVersion)
+		if !valid || comparison >= 0 && (manifest.Version != TaskInventoryVersion || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != TaskInventoryFeature) {
+			return errors.New("任务管理器 1.3.0 须声明固定版本的系统清单处理器")
+		}
 	}
 	if manifest.ID == "user-manager" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
@@ -337,6 +346,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == TaskInventoryFeature && (manifest.ID != "task-manager" || manifest.Version != TaskInventoryVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("系统清单处理器仅属于任务管理器 1.3.0")
+		}
 		if feature == UserAccessOverviewFeature && (manifest.ID != "user-manager" || manifest.Version != UserAccessOverviewVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("账户权限总览仅属于用户管理 1.3.2")
 		}

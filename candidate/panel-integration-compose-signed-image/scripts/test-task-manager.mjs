@@ -32,9 +32,13 @@ test('signal reply binds the original PID and does not claim exit',()=>{
  for(const value of [null,[],{}, {...reply,pid:43},{...reply,pid:'42'},{...reply,signal:'SIGKILL'},{...reply,signal_accepted:false},{...reply,exit_verified:true},{...reply,secret:'extra'}, {pid:42,signal:'SIGTERM'}])assert.throws(()=>taskTerminationNotice(value,42),/可能已发送/);
 });
 const source=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
-test('material task snapshot update has an independent app patch version and translated PM2 runtime identity',()=>{
+test('host inventories require the new signed Task Manager version and preserve the legacy installation path',()=>{
  const definitions=readFileSync(new URL('../internal/core/app_modules.go',import.meta.url),'utf8');
- assert.match(definitions,/case "task-manager":\s+version = "1\.2\.1"/);
+ assert.match(definitions,/case "task-manager":\s+version = TaskInventoryAppVersion/);
+ const features=readFileSync(new URL('../internal/appcatalog/panel_features.go',import.meta.url),'utf8');
+ assert.match(features,/const TaskInventoryVersion = "1\.3\.0"/);
+ const executor=readFileSync(new URL('../internal/executor/app_modules_linux.go',import.meta.url),'utf8');
+ assert.match(executor,/if id == "task-manager" && action == "install" \{\s+selectedVersion = "1\.2\.1"/);
  const report=readFileSync(new URL('../web/src/AppModuleReport.vue',import.meta.url),'utf8');
  assert.match(report,/pm2_version:\s*"PM2 版本"/);
 });

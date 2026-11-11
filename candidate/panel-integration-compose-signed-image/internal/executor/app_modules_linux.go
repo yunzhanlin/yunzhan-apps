@@ -273,6 +273,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if id == "user-manager" && action == "install" {
 			selectedVersion = "1.3.1"
 		}
+		if id == "task-manager" && action == "install" {
+			selectedVersion = "1.2.1"
+		}
 	}
 	if id == "website-statistics-v2" && action == "install" && (selectedVersion == statisticsIdentityVersion || selectedVersion == statisticsGeographyVersion) {
 		return s.statisticsVersionLifecycle(ctx, selectedVersion, "install", settings, add)
@@ -333,7 +336,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 		defer reader.Close()
 	}
-	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa" || id == "php-code-security" || id == "site-diagnosis" || id == "user-manager") && action == "install" && s.moduleInstalled(id) {
+	if (id == "website-statistics-v2" || id == "platform-ops" || id == "disk-analysis" || id == "mobile-pwa" || id == "php-code-security" || id == "site-diagnosis" || id == "user-manager" || id == "task-manager") && action == "install" && s.moduleInstalled(id) {
 		return errors.New("应用已安装；请使用签名更新流程，安装不能覆盖版本、实例或原历史")
 	}
 	if id == "website-statistics-v2" && action == "install" {
@@ -727,6 +730,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
+	s.taskInventoryRoutes(m)
 	s.remoteIndependentDownloadRoutes(m)
 	s.pm2ConfigurationReadRoutes(m)
 	s.pm2ProjectsReadRoutes(m)

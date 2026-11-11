@@ -220,6 +220,7 @@ func ValidAppModuleAction(id, action string) bool {
 }
 
 func (a *Server) appModuleRoutes(m *http.ServeMux) {
+	a.taskInventoryRoutes(m)
 	a.remoteIndependentDownloadRoutes(m)
 	a.integrityKernelRoutes(m)
 	a.pm2ConfigurationRoutes(m)
@@ -438,7 +439,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "platform-ops":
 			version = PlatformMaintenanceAppVersion
 		case "task-manager":
-			version = "1.2.1"
+			version = TaskInventoryAppVersion
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
 			version = "1.4.1"
 			if ValidIntegrityKernelApplication(d.ID) {

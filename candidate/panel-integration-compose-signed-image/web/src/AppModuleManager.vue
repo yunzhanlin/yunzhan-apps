@@ -39,6 +39,7 @@ import LoadBalanceStreamWorkspace from './LoadBalanceStreamWorkspace.vue';
 import IntegrityKernelWorkspace from './IntegrityKernelWorkspace.vue';
 import RemoteIndependentBackups from './RemoteIndependentBackups.vue';
 import UserAccessOverview from './UserAccessOverview.vue';
+import TaskHostInventory from './TaskHostInventory.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -242,6 +243,7 @@ async function verifyRemotePlanConnection() {
 }
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 function sectionReport(section:string) {
+  if (definition.value?.id === 'task-manager' && section.startsWith('inventory-')) return undefined;
   if (definition.value?.id === 'nfs-manager') return nfsReportForSection(section, report.value);
   return definition.value?.id==='load-balance' ? loadBalanceReportForSection(section,report.value) : report.value;
 }
@@ -1302,6 +1304,10 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <TaskHostInventory v-else-if="definition.id === 'task-manager' && section.id.startsWith('inventory-')"
+          :key="section.id + '/' + geoActor" :api="api" :view="section.id.slice('inventory-'.length)"
+          :active="visible && activeTab === section.id"
+          :enabled="installed && !installedUnknown && installedVersion === '1.3.0' && (access === undefined || canOpenAppModule(access, 'task-manager'))" />
         <template v-else>
         <el-alert :title="section.help" type="info" :closable="false" />
         <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />

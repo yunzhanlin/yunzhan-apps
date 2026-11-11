@@ -165,3 +165,38 @@ func TestTaskTerminationActualAuthenticatedHTTPUsesAuditedPath(t *testing.T) {
 	denied(cookie, csrf)
 	t.Log("Actual Core HTTP/login/CSRF/SQLite audit behavior with a closed executor response fixture; not native process signaling")
 }
+
+func TestTaskInventoryUsesCurrentSystemToolsPermission(t *testing.T) {
+	s, a, login := wafTaskTestServer(t)
+	user := accessUser(t, s, "task-inventory-admin", "admin", []string{"system-tools"})
+	calls := 0
+	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.Method != http.MethodGet || r.URL.Path != "/v1/app-modules/task-manager/inventory/services" {
+			t.Fatal("unexpected executor request", r.Method, r.URL.Path)
+		}
+		calls++
+		body := `{"view":"services","available":true,"rows":[]}`
+		return &http.Response{StatusCode: 200, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(body))}, nil
+	})}}
+	check := func(view string, cookie *http.Cookie, status, expectedCalls int) {
+		t.Helper()
+		r := httptest.NewRequest(http.MethodGet, "/api/app-modules/task-manager/inventory/"+view, nil)
+		if cookie != nil {
+			r.AddCookie(cookie)
+		}
+		w := httptest.NewRecorder()
+		a.ServeHTTP(w, r)
+		if w.Code != status || calls != expectedCalls {
+			t.Fatal("unexpected response or executor dispatch", view, w.Code, calls)
+		}
+	}
+	check("services", nil, http.StatusUnauthorized, 0)
+	check("services", login("runtime-admin"), http.StatusForbidden, 0)
+	cookie := login("task-inventory-admin")
+	check("unknown", cookie, http.StatusNotFound, 0)
+	check("services", cookie, http.StatusOK, 1)
+	if _, err := s.DB.Exec(`UPDATE app_user_menus SET menu_ids='[]' WHERE user_id=?`, user.ID); err != nil {
+		t.Fatal(err)
+	}
+	check("services", cookie, http.StatusForbidden, 1)
+}

@@ -80,7 +80,16 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
 			section("quarantine-restore", "无覆盖恢复与事务修复", "恢复填写 RESTORE PHP 记录标识；中断事务填写 RECOVER PHP 记录标识。核对网站、父目录、原摘要和修订号，恢复原内容、权限、所有者及扩展属性。原位置已有新文件或备份损坏时拒绝覆盖；备份和执行历史保留。仍有隔离或中断事务时不允许卸载应用或归档网站。", []string{"site_id", "resource_id", "path", "expected_sha", "expected_revision", "confirm"}, []string{"restore-quarantine", "recover-quarantine"}),
 		}
 	case "task-manager":
-		return []AppModuleSection{section("processes", "实时进程", "读取 CPU、内存、IO 和进程启动身份。单击受管进程进入终止操作。", nil, []string{"run"}), section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"})}
+		return []AppModuleSection{
+			section("processes", "实时进程", "读取 CPU、内存、IO 和进程启动身份。单击受管进程进入终止操作。", nil, []string{"run"}),
+			section("inventory-services", "系统服务", "读取 systemd 已加载服务的实际运行状态。", nil, nil),
+			section("inventory-startup", "启动项", "查看已登记服务的开机启动和系统预设。", nil, nil),
+			section("inventory-network", "网络连接", "查看 TCP 和 UDP 的实际监听、连接端点与队列。", nil, nil),
+			section("inventory-accounts", "系统账户", "查看本地账户名、UID、GID、主目录和登录 Shell。", nil, nil),
+			section("inventory-cron", "系统 Cron", "查看系统 crontab 和 cron.d 的执行时间、账户和来源。", nil, nil),
+			section("inventory-ssh", "SSH 会话", "查看系统已登记的远程 SSH 登录。", nil, nil),
+			section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"}),
+		}
 	case "user-manager":
 		return []AppModuleSection{section("users", "账户列表", "查看角色、网站范围、菜单授权、双重验证和有效会话数。", nil, []string{"run"}), section("account", "账户与授权", "使用当前修订号防止覆盖，事务内重新核对菜单和网站范围。账户、旧会话撤销、成功摘要与审计共同提交；其中任一步失败不提交账户改动。断网或提交异常请刷新核对，不重复盲提交。", []string{"username", "password", "role", "site_ids", "menu_ids", "expected_revision"}, []string{"create", "update"}), section("sessions", "会话与删除", "不允许删除当前用户、最后一个完整权限管理员或管理权限高于自身的账户。会话撤销或删除与摘要、审计共同提交，失败保留原账户及会话。", []string{"username", "expected_revision"}, []string{"revoke", "delete"})}
 	case "disk-analysis":
