@@ -1,0 +1,58 @@
+{
+  "source_head": "faaff78671a14ce7ef68d0be76c18bdad54b83a0",
+  "source_inputs_sha256": "a5c968ac27bec54bbe872827788746da0b61d53ab8298bb4dcb42a0d3d7ca41e",
+  "source_sdk_tree": "ee71b5c5001af6500d3cbce704dd0b01976fd4c9",
+  "version": "0.1.0-dev.proapps24legacyphpcandidate86",
+  "release_id": 442066129,
+  "tag": "qa-legacyphpcandidate86-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736519341,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-amd64.tar.gz": {
+      "id": 736522867,
+      "bytes": 23804424,
+      "sha256": "10ff489ced97b2b4422d40a9d7061bc85b6ce1ef2f4d0d5a60851c4093d7d2e7"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-amd64.tar.gz.manifest": {
+      "id": 736519232,
+      "bytes": 179,
+      "sha256": "05c194738905d72c4c13a0b4c209ac9461f073a39c429ec5976fdaffa5440b27"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-amd64.tar.gz.sig": {
+      "id": 736519056,
+      "bytes": 64,
+      "sha256": "b03acb67a762c2ebacc8d22d96bb620032ffeeee29f85922b3884f9fe55c90ff"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-arm64.tar.gz": {
+      "id": 736519437,
+      "bytes": 22028478,
+      "sha256": "6710987c0a969da320854f1566822eba96b8916324539b56a17bef69db2bc1ee"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-arm64.tar.gz.manifest": {
+      "id": 736519280,
+      "bytes": 179,
+      "sha256": "31fc8286238e1780e440f8132d52a46fcf488c75fcd3c0dba583e07ef2959e38"
+    },
+    "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-arm64.tar.gz.sig": {
+      "id": 736519103,
+      "bytes": 64,
+      "sha256": "925432bf547d3825ae084c7331e9ad593b3c7c1a094326c4514dc85868d28438"
+    },
+    "release-signing-dev.pub": {
+      "id": 736519169,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-arm64.tar.gz"
+    }
+  }
+}
