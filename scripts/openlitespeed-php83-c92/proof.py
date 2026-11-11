@@ -1,4 +1,4 @@
-"""Exercise patched PHP in actual OpenLiteSpeed website and WebAdmin requests."""
+"""Exercise the official patched website and WebAdmin components."""
 import contextlib
 import hashlib
 import http.client
@@ -20,12 +20,19 @@ assert os.environ['GITHUB_ACTIONS'] == 'true' and os.environ['GITHUB_REPOSITORY'
 arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}[platform.machine()]
 out = Path(os.environ['RUNNER_TEMP']) / 'c92-ols-php83-proof'
 out.mkdir(mode=0o700)
-image = 'local/c92-ols-php83:verified'
+image = 'litespeedtech/openlitespeed:1.9.4-lsphp83@sha256:e240c9af427fe36e373382384a8eaabd7224412fbb3257a4288525adbd67d19c'
 name = 'c92-ols-php83'
 web, admin = 27081, 27082
 bootstrap = Path(sys.argv[1]).read_text()
 password = secrets.token_urlsafe(28)
 assert 'exec /entrypoint.sh' in bootstrap and 'CLOUDSTACK_ADMIN_PASSWORD' in bootstrap
+pins = {
+    'amd64': ('5.6.40', 'e9716e3c929865087009bea3c922768ed9be0034eef71cc0e0925779bfb66c60',
+              '66f18009f001759988bf8210bc60221d1bb6168f64b747f943e1061eac9aa307'),
+    'arm64': ('7.4.30', 'b6b0c67bada79e6c38e1c7d5e91977283595d6c2e1ab7b6482bb793c9d4303c6',
+              '2a00823656f6054605d1052581a0b1148e0b9a4c7954cbc5c82916a1d9d349d2'),
+}
+admin_version, admin_digest, server_digest = pins[arch]
 
 
 def docker(*arguments, data=None, env=None):
@@ -77,7 +84,10 @@ def webadmin(password, expected, probe):
             return response.status, response.getheader('Location'), response.read(1 << 20)
 
     code, _, body = request('GET', '/login.php')
-    assert code == 200 and b'name="userid"' in body
+    if expected is None:
+        assert b'webadmin console is disabled' in body.lower(), (code, hashlib.sha256(body).hexdigest())
+        return None
+    assert code == 200 and b'name="userid"' in body, (code, hashlib.sha256(body).hexdigest())
     data = urllib.parse.urlencode({'userid': 'admin', 'pass': password}).encode()
     code, location, body = request('POST', '/login.php', data)
     if not expected:
@@ -89,12 +99,13 @@ def webadmin(password, expected, probe):
     index_code, _, html = request('GET', destination.path)
     assert index_code == 200 and b'name="userid"' not in html
     probe_code, _, body = request('GET', probe)
-    assert probe_code == 200 and body == b'8.3.36|litespeed'
+    assert probe_code == 200 and body == (admin_version + '|litespeed').encode()
     return hashlib.sha256(cert).hexdigest()
 
 
 proof = {'ok': False, 'architecture': arch, 'tested_website_php': '8.3.36', 'Main_changed': False}
 try:
+    docker('pull', '--platform', 'linux/' + arch, image)
     assert docker('image', 'inspect', '-f', '{{.Os}}/{{.Architecture}}', image).strip() == ('linux/' + arch).encode()
     docker('run', '-d', '--name', name, '--entrypoint', '/bin/sh',
            '--memory', '512m', '--publish', f'127.0.0.1:{web}:8088', '--publish', f'127.0.0.1:{admin}:7080',
@@ -116,10 +127,22 @@ try:
     payload = b'<?php header("Content-Type: text/plain"); echo PHP_VERSION."|".PHP_SAPI;'
     put_file('/var/www/vhosts/cloudstack/html' + probe, payload)
     assert get_page(probe) == (200, b'8.3.36|litespeed')
+    actual_admin = docker('exec', name, 'sha256sum', '/usr/local/lsws/admin/fcgi-bin/admin_php').split()[0].decode()
+    actual_server = docker('exec', name, 'sha256sum', '/usr/local/lsws/bin/openlitespeed').split()[0].decode()
+    assert actual_admin == admin_digest and actual_server == server_digest, (actual_admin, actual_server)
+    proof.update(official_v194_admin_sha256=admin_digest, official_v194_server_sha256=server_digest)
+    assert webadmin(password, None, probe) is None
+    credential_path = '/usr/local/lsws/admin/conf/htpasswd'
+    credential = docker('exec', name, 'sha256sum', credential_path)
+    docker('exec', name, '/bin/sh', '-c', 'set -eC; umask 077; : > /usr/local/lsws/admin/conf/enable_webadmin')
+    docker('restart', name)
+    assert docker('exec', name, 'sha256sum', credential_path) == credential
     put_file('/usr/local/lsws/admin/html' + probe, payload)
     cert = webadmin(password, True, probe)
     assert webadmin(secrets.token_urlsafe(24), False, probe) is None
-    proof.update(ok=True, website_http=True, actual_webadmin_https=True, webadmin_php_version='8.3.36',
+    assert get_page(probe) == (200, b'8.3.36|litespeed')
+    proof.update(ok=True, website_http=True, actual_webadmin_https=True, webadmin_php_version=admin_version,
+                 original_default_admin_disabled=True, admin_activation_retained_credential_and_site_data=True,
                  invalid_password_refused=True, webadmin_certificate_sha256=cert)
 finally:
     with (out / 'original-proof.json').open('x') as f:
