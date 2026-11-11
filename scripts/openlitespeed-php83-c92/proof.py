@@ -51,7 +51,7 @@ def put_file(path, payload):
     docker('exec', '-i', name, '/bin/sh', '-c', 'umask 022; cat > "$1"', '--', path, data=payload)
 
 
-def webadmin(password, expected, probe):
+def webadmin(password, expected):
     pem = docker('exec', name, '/bin/cat', '/usr/local/lsws/admin/conf/webadmin.crt')
     subject = subprocess.run(['/usr/bin/openssl', 'x509', '-noout', '-subject', '-nameopt', 'RFC2253'],
                              input=pem, capture_output=True, check=True, timeout=10).stdout.decode()
@@ -101,8 +101,6 @@ def webadmin(password, expected, probe):
     assert (destination.scheme, destination.netloc, destination.path) == ('https', authority, '/index.php')
     index_code, _, html = request('GET', destination.path)
     assert index_code == 200 and b'name="userid"' not in html
-    probe_code, _, body = request('GET', probe)
-    assert probe_code == 200 and body == (admin_version + '|litespeed').encode()
     return hashlib.sha256(cert).hexdigest()
 
 
@@ -133,7 +131,7 @@ try:
     actual_server = docker('exec', name, 'sha256sum', '/usr/local/lsws/bin/openlitespeed').split()[0].decode()
     assert actual_admin == admin_digest and actual_server == server_digest, (actual_admin, actual_server)
     proof.update(official_v194_admin_sha256=admin_digest, official_v194_server_sha256=server_digest)
-    assert webadmin(password, None, probe) is None
+    assert webadmin(password, None) is None
     credential_path = '/usr/local/lsws/admin/conf/htpasswd'
     credential = docker('exec', name, 'sha256sum', credential_path)
     docker('exec', name, '/bin/sh', '-c', 'set -eC; umask 077; : > /usr/local/lsws/admin/conf/enable_webadmin')
@@ -148,12 +146,24 @@ try:
         time.sleep(1)
     else:
         raise RuntimeError('The original site did not recover after WebAdmin activation')
-    put_file('/usr/local/lsws/admin/html' + probe, payload)
-    cert = webadmin(password, True, probe)
-    assert webadmin(secrets.token_urlsafe(24), False, probe) is None
+    cert = webadmin(password, True)
+    active_admin = []
+    for pid in docker('top', name, '-eo', 'pid').decode().split()[1:]:
+        assert pid.isdecimal()
+        executable = f'/proc/{pid}/exe'
+        found = subprocess.run(['/usr/bin/sudo', '-n', '/usr/bin/readlink', executable],
+                               capture_output=True, timeout=10)
+        if found.stdout.strip() == b'/usr/local/lsws/admin/fcgi-bin/admin_php':
+            digest = subprocess.check_output(['/usr/bin/sudo', '-n', '/usr/bin/sha256sum', executable], timeout=10)
+            active_admin.append(digest.split()[0].decode())
+    assert active_admin and all(digest == admin_digest for digest in active_admin)
+    observed_version = docker('exec', name, '/usr/local/lsws/admin/fcgi-bin/admin_php', '-v')
+    assert re.match(rb'PHP (\d+\.\d+\.\d+) \(litespeed\)', observed_version)[1].decode() == admin_version
+    assert webadmin(secrets.token_urlsafe(24), False) is None
     assert get_page(probe) == (200, b'8.3.36|litespeed')
     proof.update(ok=True, website_http=True, actual_webadmin_https=True, webadmin_php_version=admin_version,
                  original_default_admin_disabled=True, admin_activation_retained_credential_and_site_data=True,
+                 authenticated_webadmin_worker_official_digest_verified=True,
                  invalid_password_refused=True, webadmin_certificate_sha256=cert)
 finally:
     with (out / 'original-proof.json').open('x') as f:
