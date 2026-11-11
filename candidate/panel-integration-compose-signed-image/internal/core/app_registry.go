@@ -65,10 +65,8 @@ func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool,
 		if !IsDockerTemplate(app.Target) {
 			return false, "当前面板没有该应用的受限安装器"
 		}
-		if arch == "arm64" {
-			if _, legacy := LegacyPHPImages[app.Target]; legacy {
-				return false, "固定应用镜像仅支持 x86_64；ARM64 不启用模拟运行"
-			}
+		if _, legacy := LegacyPHPImage(app.Target); legacy && !legacyPHPArchitectureSupported(app.Target, arch) {
+			return false, "固定应用镜像仅支持 x86_64；ARM64 不启用模拟运行"
 		}
 	case "runtime":
 		if app.Target == "docker-auto" {
@@ -212,8 +210,15 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
+			legacyPHP81Installed := app.ID == "php-81" && app.Target == LegacyPHP81BookwormTemplate &&
+				!status.Installed && compose["php-legacy-81"]
+			if legacyPHP81Installed {
+				status.Installed = true
+				status.Healthy = composeHealthy["php-legacy-81"]
+				status.UpdateAvailable = true
+			}
 			for _, project := range projects.Projects {
-				if project.TemplateID != app.Target {
+				if project.TemplateID != app.Target && !(legacyPHP81Installed && project.TemplateID == "php-legacy-81") {
 					continue
 				}
 				if project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
@@ -232,7 +237,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 					instance.VersionSource = "upstream-image"
 				}
 				hasPackageReceipt := false
-				if receipt, ok := receipts[app.ID+":"+project.ID]; ok && receipt.Target == app.Target {
+				if receipt, ok := receipts[app.ID+":"+project.ID]; ok && receipt.Target == project.TemplateID {
 					instance.Version = receipt.Version
 					instance.VersionSource = "application-receipt"
 					hasPackageReceipt = true
@@ -283,6 +288,10 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			case "compose":
 				status.UpdateKind = "compose-review"
 				status.UpdateDetail = "请在 Docker 管理中逐项目核对镜像和数据迁移；不批量替换容器或重建数据卷"
+				if app.ID == "php-81" && app.Target == LegacyPHP81BookwormTemplate && !compose[app.Target] {
+					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
+					status.UpdateDetail = "在另一个回环端口创建独立的 PHP 8.1.34 容器和数据卷。现有容器继续使用原镜像和原卷。"
+				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
 					status.UpdateSupported = supported
@@ -328,6 +337,13 @@ func versionBranch(version string) string {
 }
 
 func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
+	if app.Target == LegacyPHP81BookwormTemplate {
+		for _, image := range images {
+			if image == legacyPHP81BookwormImage {
+				return "8.1.34"
+			}
+		}
+	}
 	prefix := map[string]string{"memcached": "memcached:", "phpmyadmin": "phpmyadmin:", "mongodb": "mongo:", "elasticsearch": "docker.elastic.co/elasticsearch/elasticsearch:", "rabbitmq": "rabbitmq:", "openlitespeed": "litespeedtech/openlitespeed:"}[app.ID]
 	if strings.HasPrefix(app.ID, "php-") {
 		prefix = "devilbox/php-fpm:"
@@ -732,8 +748,8 @@ func appCompatible(manifest appcatalog.Manifest) error {
 
 func appCompatibleOn(manifest appcatalog.Manifest, osID, architecture string) error {
 	if manifest.Risk == "eol" {
-		image, ok := LegacyPHPImages[manifest.Delivery.Target]
-		if !ok || manifest.ID != strings.Replace(manifest.Delivery.Target, "php-legacy-", "php-", 1) || manifest.Delivery.Provider != "compose" || manifest.Delivery.Isolation != "legacy-container" || manifest.Delivery.Image != image {
+		if manifest.Delivery.Isolation != "legacy-container" || validateRegistryComposeDelivery(manifest) != nil ||
+			!legacyPHPArchitectureSupported(manifest.Delivery.Target, architecture) {
 			return errors.New("旧版 PHP 必须使用本机允许列表中的固定摘要隔离环境")
 		}
 	}

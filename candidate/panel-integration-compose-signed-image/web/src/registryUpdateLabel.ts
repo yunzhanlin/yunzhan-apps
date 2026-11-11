@@ -13,6 +13,7 @@ export function registryUpdateActionLabel(status?: UpdateRecord): string {
   if (status?.update_kind === "memcached-unix-migration") return "查看迁移方案";
   if (status?.update_kind === "waf-config-review") return "核对 WAF 配置";
   if (status?.update_kind === "runtime-host-review") return "核对 Docker 宿主";
+  if (status?.update_supported && status.update_kind === "compose-parallel") return "并行安装新版";
   if (status?.update_supported === true) return status.update_kind === "runtime-package-review" ? "核对应用包" : "更新应用";
   return status?.update_kind === "compose-review" ? "核对容器更新" : "需升级面板";
 }

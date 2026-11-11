@@ -71,14 +71,13 @@ func dockerTemplate(id string, port int) (string, error) {
 }
 
 // Host architecture is compiled, never accepted from an HTTP request. The
-// registry already refuses these reviewed x86-only legacy images on ARM64;
-// the direct Docker template route must enforce the same no-emulation policy.
+// template and registry share a native architecture policy.
 func dockerTemplateOnArchitecture(id string, port int, arch string) (string, error) {
 	if port < 1024 || port > 65535 {
 		return "", errors.New("应用模板主机端口应为 1024–65535")
 	}
-	if _, ok := LegacyPHPImages[id]; ok {
-		if arch != "amd64" {
+	if _, ok := LegacyPHPImage(id); ok {
+		if !legacyPHPArchitectureSupported(id, arch) {
 			return "", errors.New("已审核旧版 PHP 隔离模板仅支持 AMD64；ARM64 和其他架构不启用模拟运行")
 		}
 		return isolatedPHPTemplate(id, port), nil
@@ -477,6 +476,10 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 				}
 			}
 		}
+		templates = append(templates, map[string]any{
+			"id": LegacyPHP81BookwormTemplate, "name": "PHP 8.1.34 隔离环境", "image": legacyPHP81BookwormImage,
+			"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 PHP-FPM、Nginx 和数据卷", "container_port": 8080,
+		})
 		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {
 			if runtime.GOARCH != "amd64" {
 				continue

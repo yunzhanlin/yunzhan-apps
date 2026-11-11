@@ -675,6 +675,10 @@ async function updateRegistryApp(app: RegistryApp) {
   if (status?.update_kind === "memcached-unix-migration") { ElMessage.warning(status.update_detail || "新版使用独立 Socket，不能原地替换旧 TCP 实例；请先查看迁移方案，未提交更新"); return; }
   if (status?.update_kind === "waf-config-review") { ElMessage.warning(status.update_detail || "请先核对 WAF 原配置；尚未提交更新"); return; }
   if (!status?.update_supported) { ElMessage.warning(status?.update_detail || "请先核对应用版本"); return; }
+  if (status.update_kind === "compose-parallel") {
+    await installRegistryApp(app, true);
+    return;
+  }
   if (app.id === "memcached" && status.update_kind === "memcached-original") {
     const manager = memcachedAppUpdate.value;
     if (!manager) { ElMessage.info("更新界面尚在加载，请稍后再打开；尚未提交更新"); return; }
@@ -735,10 +739,11 @@ function openRegistryApp(app: RegistryApp) {
   else if (app.manage_route === "docker") void dockerManager.value?.open();
   else go(app.manage_route || "runtimes");
 }
-async function installRegistryApp(app: RegistryApp) {
+async function installRegistryApp(app: RegistryApp, parallel = false) {
   const status = registryStatus(app.id);
+  if (parallel && (!status?.update_supported || status.update_kind !== "compose-parallel")) return;
   if (status?.state_known === false) { ElMessage.warning("当前安装状态尚未确认，请刷新后再试"); return; }
-  if (status?.installed) {
+  if (status?.installed && !parallel) {
     openRegistryApp(app);
     return;
   }
@@ -776,7 +781,7 @@ async function installRegistryApp(app: RegistryApp) {
       const ports = composeHostPortSettings(app.target);
       const range = `请输入 1024–${ports.max} 之间的本机端口。`;
       const answer = await ElMessageBox.prompt(
-        `应用只会绑定到主机回环地址。${range}${ports.detail}`,
+        `应用只会绑定到主机回环地址。${range}${ports.detail}${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}`,
         `安装 ${app.name}`,
         {
           inputValue: String(ports.preferred),

@@ -166,6 +166,19 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  one('  else if (app.id === "phpmyadmin" && canOpenAppModule(accessPlan.value, "docker-manager")) void dockerManager.value?.open("phpmyadmin");\n', '');
  one('else if (app.provider === "compose") void dockerManager.value?.open(app.id === "phpmyadmin" ? "phpmyadmin" : undefined);',
      'else if (app.provider === "compose") void dockerManager.value?.open();');
+ one(`  if (status.update_kind === "compose-parallel") {
+    await installRegistryApp(app, true);
+    return;
+  }
+`, '');
+ one(`async function installRegistryApp(app: RegistryApp, parallel = false) {
+  const status = registryStatus(app.id);
+  if (parallel && (!status?.update_supported || status.update_kind !== "compose-parallel")) return;`,
+     `async function installRegistryApp(app: RegistryApp) {
+  const status = registryStatus(app.id);`);
+ one('  if (status?.installed && !parallel) {\n    openRegistryApp(app);',
+     '  if (status?.installed) {\n    openRegistryApp(app);');
+ one('${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}', '');
  // The independent country editor adds only current-actor plumbing here.
  one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
  one('    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",\n', '');

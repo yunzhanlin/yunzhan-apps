@@ -36,7 +36,7 @@ func decodeLegacySyncMetadata(raw []byte, id string) (composeMetadata, error) {
 		!core.ValidID(id) || m.ID != id || m.Engine != "panel_"+id[:12] || !dockerResourceNamePattern.MatchString(m.Name) || m.Services != 2 || m.HostPort < 1024 || m.HostPort > 65535 {
 		return m, errLegacySyncAuthority
 	}
-	if _, ok := core.LegacyPHPImages[m.TemplateID]; !ok {
+	if _, ok := core.LegacyPHPImage(m.TemplateID); !ok {
 		return m, errLegacySyncAuthority
 	}
 	if _, e := time.Parse(time.RFC3339, m.CreatedAt); e != nil {
@@ -48,9 +48,6 @@ func decodeLegacySyncMetadata(raw []byte, id string) (composeMetadata, error) {
 // Production passes only dockerProjects. The separate base is a private
 // trusted-root fixture seam, never an HTTP path or environment override.
 func openLegacySyncAuthority(base, id string) (*legacySyncAuthority, error) {
-	if runtime.GOARCH != "amd64" {
-		return nil, errLegacySyncAuthority
-	}
 	d, err := openComposeUpdateDirectory(base, id)
 	if err != nil {
 		return nil, errLegacySyncAuthority
@@ -142,7 +139,8 @@ func legacySyncRuntime(ctx context.Context, m composeMetadata, read composeUpdat
 		return fail()
 	}
 	c, h, n := v.Config, v.HostConfig, v.NetworkSettings
-	if c.Image != core.LegacyPHPImages[m.TemplateID] || !slices.Equal(c.Entrypoint, []string{"/bin/sh", "-c"}) || !slices.Equal(c.Cmd, []string{core.LegacyPHPBootstrap}) || c.Labels["com.docker.compose.project"] != m.Engine || c.Labels["com.docker.compose.service"] != "php" || c.Labels["com.docker.compose.oneoff"] != "False" ||
+	expectedImage, ok := core.LegacyPHPImage(m.TemplateID)
+	if !ok || c.Image != expectedImage || !slices.Equal(c.Entrypoint, []string{"/bin/sh", "-c"}) || !slices.Equal(c.Cmd, []string{core.LegacyPHPBootstrap}) || c.Labels["com.docker.compose.project"] != m.Engine || c.Labels["com.docker.compose.service"] != "php" || c.Labels["com.docker.compose.oneoff"] != "False" ||
 		h.Privileged == nil || *h.Privileged || h.ReadonlyRootfs == nil || !*h.ReadonlyRootfs || h.PidMode != "" || h.IpcMode != "private" || h.UTSMode != "" || h.UsernsMode != "" || h.NetworkMode != m.Engine+"_default" || len(h.CapAdd)+len(h.CapDrop)+len(h.VolumesFrom)+len(h.DeviceCgroupRules)+len(h.Devices)+len(h.Sysctls)+len(h.PortBindings) != 0 ||
 		!slices.Equal(h.SecurityOpt, []string{"no-new-privileges:true"}) || len(h.Tmpfs) != 2 || len(n.Networks) != 1 || h.RestartPolicy.Name != "unless-stopped" || h.RestartPolicy.MaximumRetryCount != 0 {
 		return fail()
@@ -176,7 +174,11 @@ func legacySyncRuntime(ctx context.Context, m composeMetadata, read composeUpdat
 			Env        []string `json:"Env"`
 		} `json:"Config"`
 	}
-	if read(ctx, "/images/"+url.PathEscape(c.Image)+"/json", &image) != nil || image.ID != v.Image || image.OS != "linux" || image.Architecture != "amd64" || image.Config == nil || c.User != image.Config.User || c.WorkingDir != image.Config.WorkingDir {
+	expectedArch := "amd64"
+	if m.TemplateID == core.LegacyPHP81BookwormTemplate {
+		expectedArch = runtime.GOARCH
+	}
+	if read(ctx, "/images/"+url.PathEscape(c.Image)+"/json", &image) != nil || image.ID != v.Image || image.OS != "linux" || image.Architecture != expectedArch || image.Config == nil || c.User != image.Config.User || c.WorkingDir != image.Config.WorkingDir {
 		return fail()
 	}
 	env := map[string]string{}

@@ -8,6 +8,10 @@ import (
 
 const legacyNginxImage = "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5"
 
+const LegacyPHP81BookwormTemplate = "php-legacy-81-bookworm"
+
+const legacyPHP81BookwormImage = "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"
+
 const LegacyPHPPlaceholder = `<?php header("Content-Type: application/json"); echo json_encode(array("version"=>PHP_VERSION,"sapi"=>php_sapi_name(),"mysql"=>extension_loaded("mysql"),"mysqli"=>extension_loaded("mysqli"),"pdo_mysql"=>extension_loaded("pdo_mysql"))); ?>` + "\n"
 
 var LegacyPHPImages = map[string]string{
@@ -25,8 +29,20 @@ var LegacyPHPImages = map[string]string{
 	"php-legacy-81": "devilbox/php-fpm:8.1-mods@sha256:30ed5320f8003e5dde008dfdffa5d3647f0cc41a7004cea6cb40dda005583320",
 }
 
+func LegacyPHPImage(id string) (string, bool) {
+	if id == LegacyPHP81BookwormTemplate {
+		return legacyPHP81BookwormImage, true
+	}
+	image, ok := LegacyPHPImages[id]
+	return image, ok
+}
+
+func legacyPHPArchitectureSupported(id, architecture string) bool {
+	return architecture == "amd64" || (id == LegacyPHP81BookwormTemplate && architecture == "arm64")
+}
+
 func IsDockerTemplate(id string) bool {
-	if _, ok := LegacyPHPImages[id]; ok {
+	if _, ok := LegacyPHPImage(id); ok {
 		return true
 	}
 	switch id {
@@ -39,7 +55,7 @@ func IsDockerTemplate(id string) bool {
 // LegacyPHPTemplate exposes only the compiled-host validated legacy factory to
 // the native sync reader. It cannot render a foreign architecture via input.
 func LegacyPHPTemplate(id string, port int) (string, error) {
-	if _, ok := LegacyPHPImages[id]; !ok {
+	if _, ok := LegacyPHPImage(id); !ok {
 		return "", fmt.Errorf("不是隔离 PHP 模板")
 	}
 	return dockerTemplate(id, port)
@@ -62,6 +78,7 @@ exec /usr/local/sbin/php-fpm
 `
 
 func isolatedPHPTemplate(id string, port int) string {
+	image, _ := LegacyPHPImage(id)
 	phpInit := LegacyPHPBootstrap
 	// Regex locations stop at the first match. Hidden-path denial must precede
 	// PHP dispatch, including hidden files that themselves end in .php.
@@ -146,5 +163,5 @@ networks:
   default:
     internal: true
   edge: {}
-`, LegacyPHPImages[id], strconv.Quote(strings.ReplaceAll(phpInit, "$", "$$")), legacyNginxImage, strconv.Quote(strings.ReplaceAll(nginxInit, "$", "$$")), port)
+`, image, strconv.Quote(strings.ReplaceAll(phpInit, "$", "$$")), legacyNginxImage, strconv.Quote(strings.ReplaceAll(nginxInit, "$", "$$")), port)
 }
