@@ -1,0 +1,254 @@
+{
+  "source_head": "9be0b156414aec7b5688f22fdb87683a2855c2f0",
+  "source_inputs_sha256": "9a509cfce1c541f9577ca7f6a2644408958497b28ca456c604cc92c93825d32d",
+  "version": "0.1.0-dev.proapps24legacyphppatchcandidate98",
+  "recipes": {
+    "54": {
+      "version": "5.4.45",
+      "target": "php-legacy-54-bookworm-compat3",
+      "app_version": "5.4.45-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat3@sha256:bcf1f805ad860b67cf9f17a237fed90c08e7664b499094108c9f955e58e42dff",
+      "previous_target": "php-legacy-54-bookworm",
+      "previous_version": "5.4.45-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d",
+      "preferred_port": 18085
+    },
+    "55": {
+      "version": "5.5.38",
+      "target": "php-legacy-55-bookworm-compat3",
+      "app_version": "5.5.38-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat3@sha256:bd8dd3c8cb2f43613ee2bb4765ab0615f0c7f21554d574a3c519663b0936e4f0",
+      "previous_target": "php-legacy-55-bookworm",
+      "previous_version": "5.5.38-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d",
+      "preferred_port": 18086
+    },
+    "56": {
+      "version": "5.6.40",
+      "target": "php-legacy-56-stretch-compat3",
+      "app_version": "5.6.40-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat3@sha256:7e553b5f2aefc08cf85c3aca8dfc288807788a71e3297c26861ac51a78686756",
+      "previous_target": "php-legacy-56-stretch",
+      "previous_version": "5.6.40-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8",
+      "preferred_port": 18087
+    },
+    "70": {
+      "version": "7.0.33",
+      "target": "php-legacy-70-stretch-compat3",
+      "app_version": "7.0.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat3@sha256:0093801592dcee612cf05b204fab9e9fa01f7d05b32ab502b615d1d05595135c",
+      "previous_target": "php-legacy-70-stretch",
+      "previous_version": "7.0.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e",
+      "preferred_port": 18088
+    },
+    "71": {
+      "version": "7.1.33",
+      "target": "php-legacy-71-stretch-compat3",
+      "app_version": "7.1.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat3@sha256:c6c340bc90ddb39ccf613344894ec9afe6b8ce53518fb273dc3b95923f673ac2",
+      "previous_target": "php-legacy-71-stretch",
+      "previous_version": "7.1.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9",
+      "preferred_port": 18089
+    },
+    "72": {
+      "version": "7.2.34",
+      "target": "php-legacy-72-buster-compat3",
+      "app_version": "7.2.34-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat3@sha256:d65e1fade265eafd758563691161f9cae4895177fd00197aae1116b976c2756c",
+      "previous_target": "php-legacy-72-buster",
+      "previous_version": "7.2.34-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625",
+      "preferred_port": 18090
+    },
+    "73": {
+      "version": "7.3.33",
+      "target": "php-legacy-73-buster-compat3",
+      "app_version": "7.3.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat3@sha256:d105bbce103e6b0bd002c5fe4b6ebfc7c3134af8217310d3e5ce9da6d7435661",
+      "previous_target": "php-legacy-73-buster",
+      "previous_version": "7.3.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e",
+      "preferred_port": 18091
+    }
+  },
+  "mode": "signed-store",
+  "apps": {
+    "php-54": {
+      "id": "php-54",
+      "name": "PHP 5.4",
+      "category": "deployment",
+      "version": "5.4.45-compat3",
+      "summary": "PHP 5.4.45 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-54-bookworm-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat3/manifest.json",
+      "sha256": "a8bc058edef6f8d24a4735fecd1eb68559b8660149c2289889cb9ef7004817fe"
+    },
+    "php-55": {
+      "id": "php-55",
+      "name": "PHP 5.5",
+      "category": "deployment",
+      "version": "5.5.38-compat3",
+      "summary": "PHP 5.5.38 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-55-bookworm-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat3/manifest.json",
+      "sha256": "ea7dedb198f41a760c8f196b94d326ce458317a51a051e92a5403d1dee24b503"
+    },
+    "php-56": {
+      "id": "php-56",
+      "name": "PHP 5.6",
+      "category": "deployment",
+      "version": "5.6.40-compat3",
+      "summary": "PHP 5.6.40 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-56-stretch-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-56/5.6.40-compat3/manifest.json",
+      "sha256": "fab30063e791839a2b07cb4adaae111ded2c622ec2cf9671b4f6b8ac8dd5a96e"
+    },
+    "php-70": {
+      "id": "php-70",
+      "name": "PHP 7.0",
+      "category": "deployment",
+      "version": "7.0.33-compat3",
+      "summary": "PHP 7.0.33 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-70-stretch-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-70/7.0.33-compat3/manifest.json",
+      "sha256": "99ac58e664b23d7f93a8d2c55cea7b52d45f3090c93624c1a16846a9c47fef2a"
+    },
+    "php-71": {
+      "id": "php-71",
+      "name": "PHP 7.1",
+      "category": "deployment",
+      "version": "7.1.33-compat3",
+      "summary": "PHP 7.1.33 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-71-stretch-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-71/7.1.33-compat3/manifest.json",
+      "sha256": "9febd22c9fd930743c24e11733252b509533a7ce2f63924c3c85022336dfc652"
+    },
+    "php-72": {
+      "id": "php-72",
+      "name": "PHP 7.2",
+      "category": "deployment",
+      "version": "7.2.34-compat3",
+      "summary": "PHP 7.2.34 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-72-buster-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-72/7.2.34-compat3/manifest.json",
+      "sha256": "164004d92c52e3a7825853fe8fa6b29a74da705db2025dabecf9bef0dea181eb"
+    },
+    "php-73": {
+      "id": "php-73",
+      "name": "PHP 7.3",
+      "category": "deployment",
+      "version": "7.3.33-compat3",
+      "summary": "PHP 7.3.33 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-73-buster-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-73/7.3.33-compat3/manifest.json",
+      "sha256": "db4d8cfe6fa38508531476d03ac7200af44ef28dee60c1593be2bc457b149495"
+    }
+  },
+  "served_head": "ffe09754838869abf58feffffe220ce7e4c2b397",
+  "payload_files": {
+    ".github/workflows/legacy-php-c98-native-qa2r2.yml": "0ed3aeb86af6da1c916aedd1abcb225ae5f5d69184fa5b6918e0bf92ff10b00e",
+    "scripts/native-legacy-php-c98/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-legacy-php-c98/dispatch.json": "8685d3d38a7de5fb72b69f942fbb44d2ff84afb43ea471a9151d66338772549f",
+    "scripts/native-legacy-php-c98/download.py": "2481d2f03c83c41aacbc57fd4581ab287cfc467e13b9d958bcf578a1b7c35ef3",
+    "scripts/native-legacy-php-c98/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-legacy-php-c98/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-legacy-php-c98/legacy-php.py": "7098d9e5129a794d17e00f7ec60012c7db19fb741b0a8673b95357bb9ab4e380",
+    "scripts/native-legacy-php-c98/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-legacy-php-c98/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
