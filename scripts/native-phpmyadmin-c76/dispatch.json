@@ -1,0 +1,58 @@
+{
+  "source_head": "00aaa31a4a37771f963927ef179fdc93f678fd5a",
+  "source_inputs_sha256": "07e422dceac103b146cfa993ce76beb6b89af0103afaa6875fb84a434edc68c7",
+  "source_sdk_tree": "deb125bc6f4c47637ed7eb428d2082b0ae6d5b90",
+  "version": "0.1.0-dev.proapps24phpmyadminmanagementcandidate76",
+  "release_id": 441930908,
+  "tag": "qa-phpmyadminmanagementcandidate76-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736118954,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-amd64.tar.gz": {
+      "id": 736123900,
+      "bytes": 23781914,
+      "sha256": "cd291a8a15e5fe55ca648178a5de75d4d4e6642229f974ccb1a580684c598b1b"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-amd64.tar.gz.manifest": {
+      "id": 736118834,
+      "bytes": 190,
+      "sha256": "13c367d41c0b0c06f6169833153db148d56d89df8333153a66f19042bc7b19ad"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-amd64.tar.gz.sig": {
+      "id": 736118643,
+      "bytes": 64,
+      "sha256": "ec6929fa826d4e97750178de34ad93fbe985aeb30565be24870eb72bfa0aa679"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-arm64.tar.gz": {
+      "id": 736119039,
+      "bytes": 22001208,
+      "sha256": "6692d15d776497c4b58b8be5651b657c67a59e12b669283b14264c3861bc1018"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-arm64.tar.gz.manifest": {
+      "id": 736118895,
+      "bytes": 190,
+      "sha256": "fae6a08a6a7cfc7106985279558816c3abd1c5f2708a85763dcf215452a055b0"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-arm64.tar.gz.sig": {
+      "id": 736118693,
+      "bytes": 64,
+      "sha256": "ccc601911ef0cc8fe039787d9f5b7d835f74624575f3527d04a5dc35f461f670"
+    },
+    "release-signing-dev.pub": {
+      "id": 736118747,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-arm64.tar.gz"
+    }
+  }
+}
