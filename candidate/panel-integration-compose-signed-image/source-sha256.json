@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz",
-    "archive_sha256": "54ef690ec456de2ae8feaa56d62d61280a68a69b71d1c052496bd528104cc388",
-    "frozen_inputs_sha256": "306f8eb82c6c3552415b76f759ab32d86041eb08a0edf0e6dfced6f23c2105d1"
+    "archive": "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r3-linux-amd64.tar.gz",
+    "archive_sha256": "d54e5011860ec4501c633360e3012cb725b8a0f67505f2c7dc94502ee1c6cd9e",
+    "frozen_inputs_sha256": "9da20d9b5ce5ae4449bb0a807533d6f4463c3bf02aa7c853e636ea5e295978b6"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -1271,7 +1271,7 @@
     "internal/executor/docker_mutation_linux_test.go": "4385a8cca80e185f6366d9dd13f9e3c2e08884e488fd6f548074cb34767344e0",
     "internal/executor/docker_openlitespeed_linux.go": "020506ed49fc4576f663ae902f9ba66ff0ce57b9f125433d607e5ce9919a8783",
     "internal/executor/docker_other.go": "1aa308f42a2b23e3748c5fda7add7f2d1a0229101831bba7885a78ff351a5edb",
-    "internal/executor/docker_phpmyadmin_relay_linux.go": "9853acbe24c7b119d873c7eb8234755d4f34770a435937a07146ae4bcf89aba1",
+    "internal/executor/docker_phpmyadmin_relay_linux.go": "9e9648d1fd3161dd0289d77c2e0f86b886d0d5689caaa452100f4b60bd9c1278",
     "internal/executor/docker_phpmyadmin_relay_linux_test.go": "af03b4734cab2a1a60d69ac890a0c0f24961584f1a52f4b4448fcd0c32347cc4",
     "internal/executor/docker_pull.go": "1c6089ced2088b045592ba0ad521f7e490ba9b4d1a12f626a37c54b4ab4c8a72",
     "internal/executor/docker_pull_test.go": "c188c66d8f6955e384f1774bd573589f13b8cdc048588159389185f95ca84bb1",

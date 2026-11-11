@@ -21,7 +21,8 @@ import (
 	"local/panel/internal/core"
 )
 
-const phpMyAdminRelayRoot = "/etc/panel/phpmyadmin-db"
+// The Docker job can write only to its existing executor state tree.
+const phpMyAdminRelayRoot = "/var/lib/panel-executor/phpmyadmin-db"
 
 func phpMyAdminRelayUnit(id, serverID string) string {
 	return "panel-phpmyadmin-db@" + id + "-" + serverID + ".service"
