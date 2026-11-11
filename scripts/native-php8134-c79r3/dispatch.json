@@ -1,0 +1,58 @@
+{
+  "source_head": "9380141938a83b6967cf36af74881c41ba77cade",
+  "source_inputs_sha256": "2217318de399a83ad65a9364b087b4f1bfcdf8d5e7ecb36712b4c5e786e59b83",
+  "source_sdk_tree": "d9131b9104d4618d80d3f1f5ff354f21ae1a2fc8",
+  "version": "0.1.0-dev.proapps24php8134candidate79r3",
+  "release_id": 442019652,
+  "tag": "qa-php8134candidate79r3-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736372511,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-amd64.tar.gz": {
+      "id": 736376229,
+      "bytes": 23799201,
+      "sha256": "bea426b7f3bd71beef0ec18dfb90a508990763bd6220f40d29395664bda499bf"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-amd64.tar.gz.manifest": {
+      "id": 736372374,
+      "bytes": 179,
+      "sha256": "75aea1999b34fe68503752dd70046a3fd7c1c429c8872f6b637a47beba5b8d7e"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-amd64.tar.gz.sig": {
+      "id": 736372143,
+      "bytes": 64,
+      "sha256": "06e248ec80e0b233b9cf7dd863a750454d237ece46baf389997f8799b00d5df3"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-arm64.tar.gz": {
+      "id": 736372565,
+      "bytes": 22024322,
+      "sha256": "c56854a4321e83a47200e9db3200626f2892892a2ec5b2945067623758899017"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-arm64.tar.gz.manifest": {
+      "id": 736372452,
+      "bytes": 179,
+      "sha256": "4af557f53d61b510270dda90c9fce11a88423ac9b4bd3fdc3f540b8ed626cf9c"
+    },
+    "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-arm64.tar.gz.sig": {
+      "id": 736372189,
+      "bytes": 64,
+      "sha256": "37ef4366a840fc8506cfc9ab21d924aa4a1e48642cec05d6df9f950eaa6d6775"
+    },
+    "release-signing-dev.pub": {
+      "id": 736372280,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24php8134candidate79r3-linux-arm64.tar.gz"
+    }
+  }
+}
