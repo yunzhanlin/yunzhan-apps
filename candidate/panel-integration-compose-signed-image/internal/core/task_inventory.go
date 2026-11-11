@@ -7,9 +7,14 @@ import (
 
 const TaskInventoryAppVersion = appcatalog.TaskInventoryVersion
 const TaskSysVStartupAppVersion = appcatalog.TaskSysVStartupVersion
+const TaskOpenSSHInventoryAppVersion = appcatalog.TaskOpenSSHInventoryVersion
 
 func TaskInventoryVersionSupported(version string) bool {
-	return version == TaskInventoryAppVersion || version == TaskSysVStartupAppVersion
+	return version == TaskInventoryAppVersion || TaskSysVStartupSupported(version)
+}
+
+func TaskSysVStartupSupported(version string) bool {
+	return version == TaskSysVStartupAppVersion || version == TaskOpenSSHInventoryAppVersion
 }
 
 func ValidTaskInventoryView(view string) bool {

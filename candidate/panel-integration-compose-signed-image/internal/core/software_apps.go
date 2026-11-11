@@ -171,7 +171,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "task-manager" && !TaskInventoryVersionSupported(version) {
 		if comparison, valid := appcatalog.CompareVersions(version, "1.2.1"); !valid || comparison > 0 {
-			return errors.New("任务管理器系统清单仅支持已实现的完整 1.3.0 或 1.3.1 版本")
+			return errors.New("任务管理器系统清单仅支持已实现的完整版本")
 		}
 	}
 	if id == "intrusion-prevention" && version != IntrusionAppVersion {

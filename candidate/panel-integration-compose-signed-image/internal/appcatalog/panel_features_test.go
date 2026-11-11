@@ -114,6 +114,19 @@ func TestTaskSysVStartupKeepsExistingInventoryManifest(t *testing.T) {
 	if validatePanelRequirements(m, newPanel) == nil {
 		t.Fatal("another application borrowed the startup inventory handler")
 	}
+	m.Delivery.Target = m.ID
+	m.Version = TaskOpenSSHInventoryVersion
+	sshPanel := func(feature string) bool { return newPanel(feature) || feature == TaskOpenSSHInventoryFeature }
+	if validatePanelRequirements(m, sshPanel) == nil {
+		t.Fatal("the SSH version reused a prior feature")
+	}
+	m.RequiredPanelFeatures = []string{TaskOpenSSHInventoryFeature}
+	if err := validatePanelRequirements(m, sshPanel); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, newPanel) == nil {
+		t.Fatal("the prior panel accepted OpenSSH inventory")
+	}
 }
 
 func TestGeographyPackageRequiresBoundedReaderNotEarlierPrototype(t *testing.T) {

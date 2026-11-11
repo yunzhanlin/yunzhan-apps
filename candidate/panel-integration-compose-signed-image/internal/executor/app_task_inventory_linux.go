@@ -302,7 +302,7 @@ func (s *Service) taskInventoryRoutes(m *http.ServeMux) {
 			respond(w, http.StatusConflict, map[string]string{"error": "请先通过签名应用商店安装或更新任务管理器"})
 			return
 		}
-		if view == "sysv-startup" && status.Version != core.TaskSysVStartupAppVersion {
+		if view == "sysv-startup" && !core.TaskSysVStartupSupported(status.Version) {
 			respond(w, http.StatusConflict, map[string]string{"error": "SysV 启动清单需要任务管理器 1.3.1"})
 			return
 		}
@@ -319,6 +319,15 @@ func (s *Service) taskInventoryRoutes(m *http.ServeMux) {
 			err = s.taskCronInventory(&out)
 		case "ssh":
 			err = s.taskSSHInventory(r.Context(), &out)
+			if status.Version == core.TaskOpenSSHInventoryAppVersion {
+				for _, row := range out.Rows {
+					row["source"] = "systemd-logind"
+				}
+				if len(out.Rows) == 0 {
+					out.Partial = out.Partial || err != nil
+					err = s.taskOpenSSHInventory(r.Context(), &out)
+				}
+			}
 		case "network":
 			err = s.taskNetworkInventory(r.Context(), &out)
 		}

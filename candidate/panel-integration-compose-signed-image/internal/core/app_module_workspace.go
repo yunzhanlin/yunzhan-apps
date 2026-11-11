@@ -87,7 +87,7 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
 			section("inventory-network", "网络连接", "查看 TCP 和 UDP 的实际监听、连接端点与队列。", nil, nil),
 			section("inventory-accounts", "系统账户", "查看本地账户名、UID、GID、主目录和登录 Shell。", nil, nil),
 			section("inventory-cron", "系统 Cron", "查看系统 crontab 和 cron.d 的执行时间、账户和来源。", nil, nil),
-			section("inventory-ssh", "SSH 会话", "查看系统已登记的远程 SSH 登录。", nil, nil),
+			section("inventory-ssh", "SSH 会话", "查看可核对的远程 SSH 登录。", nil, nil),
 			section("terminate", "受控终止", "仅对非 root 云栈受管进程发送 SIGTERM，并再次核对 PID 启动序号。", []string{"pid", "start_time"}, []string{"terminate"}),
 		}
 	case "user-manager":

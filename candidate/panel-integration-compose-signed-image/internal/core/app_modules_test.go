@@ -35,15 +35,15 @@ func TestTaskSnapshotReleaseHasIndependentPatchVersion(t *testing.T) {
 	// A material application UI update must have a new signed app identity.
 	// The normal executor may still read the prior installed 1.2.0 record;
 	// version validation never means an application was actually updated.
-	if version := SoftwareImplementationVersion("task-manager"); version != TaskSysVStartupAppVersion {
+	if version := SoftwareImplementationVersion("task-manager"); version != TaskOpenSSHInventoryAppVersion {
 		t.Fatal("task snapshot change was published under an unchanged version", version)
 	}
-	for _, version := range []string{"1.2.0", "1.2.1", TaskInventoryAppVersion, TaskSysVStartupAppVersion} {
+	for _, version := range []string{"1.2.0", "1.2.1", TaskInventoryAppVersion, TaskSysVStartupAppVersion, TaskOpenSSHInventoryAppVersion} {
 		if err := ValidateSoftwareUpdate("task-manager", version); err != nil {
 			t.Fatal("documented prior/current task release refused", version, err)
 		}
 	}
-	for _, version := range []string{"1.2.2", "1.3.0-compat1", "1.3.1-compat1", "99.0.0", "invalid"} {
+	for _, version := range []string{"1.2.2", "1.3.0-compat1", "1.3.1-compat1", "1.3.2-compat1", "99.0.0", "invalid"} {
 		if err := ValidateSoftwareUpdate("task-manager", version); err == nil {
 			t.Fatal("unimplemented or invalid task version accepted", version)
 		}

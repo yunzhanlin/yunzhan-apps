@@ -11,7 +11,7 @@ type Inventory = {
   available: boolean;
   detail?: string;
 };
-const props = defineProps<{ api: API; view: string; enabled: boolean; active: boolean; sysvStartup: boolean }>();
+const props = defineProps<{ api: API; view: string; enabled: boolean; active: boolean; sysvStartup: boolean; sshSources: boolean }>();
 const columnsByView: Record<string, Record<string, string>> = {
   services: { name: "服务", load_state: "加载", active_state: "运行状态", sub_state: "子状态", description: "说明" },
   startup: { name: "服务", startup_state: "开机启动", preset: "系统预设" },
@@ -25,7 +25,8 @@ const startupSource = ref<"systemd" | "sysv">("systemd");
 const startupSources = [{ label: "systemd 服务", value: "systemd" }, { label: "SysV 初始化脚本", value: "sysv" }];
 const activeView = computed(() => props.view === "startup" && props.sysvStartup && startupSource.value === "sysv"
   ? "sysv-startup" : props.view);
-const columns = computed(() => columnsByView[activeView.value]);
+const columns = computed(() => activeView.value === "ssh" && props.sshSources
+  ? { ...columnsByView.ssh, source: "来源" } : columnsByView[activeView.value]);
 const report = ref<Inventory>();
 const query = ref("");
 const busy = ref(false);
@@ -68,7 +69,7 @@ async function refresh() {
   }
 }
 
-watch([() => props.active, () => props.enabled, activeView], () => {
+watch([() => props.active, () => props.enabled, activeView, () => props.sshSources], () => {
   request?.abort();
   request = undefined;
   report.value = undefined;

@@ -66,10 +66,12 @@ const TaskInventoryFeature = "task-host-inventory-v1"
 const TaskInventoryVersion = "1.3.0"
 const TaskSysVStartupFeature = "task-sysv-startup-v1"
 const TaskSysVStartupVersion = "1.3.1"
+const TaskOpenSSHInventoryFeature = "task-openssh-inventory-v1"
+const TaskOpenSSHInventoryVersion = "1.3.2"
 
 func panelFeatureAvailable(feature string) bool {
 	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature ||
-		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature {
+		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature || feature == TaskOpenSSHInventoryFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2RootVendorFeature {
@@ -171,7 +173,8 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		comparison, valid := CompareVersions(manifest.Version, "1.2.1")
 		if !valid || comparison > 0 && (len(manifest.RequiredPanelFeatures) != 1 ||
 			!(manifest.Version == TaskInventoryVersion && manifest.RequiredPanelFeatures[0] == TaskInventoryFeature ||
-				manifest.Version == TaskSysVStartupVersion && manifest.RequiredPanelFeatures[0] == TaskSysVStartupFeature)) {
+				manifest.Version == TaskSysVStartupVersion && manifest.RequiredPanelFeatures[0] == TaskSysVStartupFeature ||
+				manifest.Version == TaskOpenSSHInventoryVersion && manifest.RequiredPanelFeatures[0] == TaskOpenSSHInventoryFeature)) {
 			return errors.New("任务管理器新版须声明对应版本的系统清单处理器")
 		}
 	}
@@ -356,6 +359,10 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		if feature == TaskSysVStartupFeature && (manifest.ID != "task-manager" || manifest.Version != TaskSysVStartupVersion ||
 			manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("SysV 启动清单处理器仅属于任务管理器 1.3.1")
+		}
+		if feature == TaskOpenSSHInventoryFeature && (manifest.ID != "task-manager" || manifest.Version != TaskOpenSSHInventoryVersion ||
+			manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("OpenSSH 会话清单处理器仅属于任务管理器 1.3.2")
 		}
 		if feature == UserAccessOverviewFeature && (manifest.ID != "user-manager" || manifest.Version != UserAccessOverviewVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("账户权限总览仅属于用户管理 1.3.2")
