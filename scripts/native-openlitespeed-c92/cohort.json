@@ -1,0 +1,46 @@
+{
+  "source_head": "ad5aa28730d4f148a7f26ef1f1c6bbe0fa670403",
+  "source_inputs_sha256": "55c56582e540b70ff9fc5f851741a500494249a432bbfc77ed7d4d49be928ccf",
+  "version": "0.1.0-dev.proapps24openlitespeed194candidate92r2",
+  "item": {
+    "id": "openlitespeed",
+    "name": "OpenLiteSpeed",
+    "category": "deployment",
+    "version": "1.9.4-compat2",
+    "summary": "OpenLiteSpeed 1.9.4 \u63d0\u4f9b PHP 8.3.36 \u7f51\u7ad9\u548c\u56de\u73af HTTPS WebAdmin\uff0c\u4f7f\u7528\u72ec\u7acb\u7ad9\u70b9\u3001\u914d\u7f6e\u548c\u7ba1\u7406\u5377\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "compose",
+    "target": "openlitespeed-194",
+    "manage_route": "docker",
+    "capabilities": [
+      "HTTP \u7f51\u7ad9",
+      "LSAPI",
+      "\u968f\u673a\u7ba1\u7406\u5bc6\u7801",
+      "\u56de\u73af HTTPS \u7ba1\u7406",
+      "\u6301\u4e45\u914d\u7f6e"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/openlitespeed/1.9.4-compat2/manifest.json",
+    "sha256": "ae843cdb4ed94dbb00890f69a525fffbce9248038d71f10396a7d5376e8840db"
+  },
+  "admin_sha256": {
+    "amd64": "e9716e3c929865087009bea3c922768ed9be0034eef71cc0e0925779bfb66c60",
+    "arm64": "b6b0c67bada79e6c38e1c7d5e91977283595d6c2e1ab7b6482bb793c9d4303c6"
+  },
+  "image": "ghcr.io/yunzhanlin/yunzhan-apps-openlitespeed:1.9.4-lsphp83-compat2@sha256:a3f4cdafd5581e83d3deb4d50ef1b003a1164142f545652f7ae540bf18c2fd82",
+  "payload_files": {
+    ".github/workflows/openlitespeed-c92r2-native-qa2.yml": "0117909ce5077a53eca2f8c00e9786610666d80bda2e9d7c31edd9b6dd165202",
+    "scripts/native-openlitespeed-c92/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-openlitespeed-c92/dispatch.json": "8d4a65afd53b3929dc26e4ec29e8aed18c32d75f7eee8a83cd2725bf8b62d39f",
+    "scripts/native-openlitespeed-c92/download.py": "07699785d03c1c0a47addb17aaaeb83135bc7b63ff89e4b7eb34e094e4d4c86c",
+    "scripts/native-openlitespeed-c92/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-openlitespeed-c92/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-openlitespeed-c92/openlitespeed.py": "55ebf5111f77bef2328cc2e6386574b6e6480795204a51109e442a5f33db0ec6",
+    "scripts/native-openlitespeed-c92/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-openlitespeed-c92/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "previous_image": "litespeedtech/openlitespeed:1.8.4-lsphp83@sha256:6f50ba204e66f1c746dd183f3022340ca912124c414669755db7f4701167f268",
+  "mode": "signed-store",
+  "served_head": "fe0f81d4520239b7f915906155d4f035ff23637f",
+  "Main_changed": false
+}
