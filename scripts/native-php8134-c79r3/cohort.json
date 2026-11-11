@@ -1,0 +1,42 @@
+{
+  "source_head": "9380141938a83b6967cf36af74881c41ba77cade",
+  "source_inputs_sha256": "2217318de399a83ad65a9364b087b4f1bfcdf8d5e7ecb36712b4c5e786e59b83",
+  "version": "0.1.0-dev.proapps24php8134candidate79r3",
+  "image": "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d",
+  "mode": "signed-store",
+  "app": {
+    "id": "php-81",
+    "name": "PHP 8.1",
+    "category": "deployment",
+    "version": "8.1.34-compat1",
+    "summary": "PHP 8.1 \u6700\u7ec8\u7248\u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+    "stage": "ready",
+    "risk": "eol",
+    "provider": "compose",
+    "target": "php-legacy-81-bookworm",
+    "manage_route": "docker",
+    "capabilities": [
+      "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+      "\u72ec\u7acb PHP-FPM",
+      "\u72ec\u7acb Nginx",
+      "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+      "\u57df\u540d\u7ed1\u5b9a",
+      "\u6570\u636e\u5377\u6301\u4e45\u5316"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-81/8.1.34-compat1/manifest.json",
+    "sha256": "ed598f5bd20d43431abc784d7f2c67030749cd30fe7bd02d9b3822e5f627be23"
+  },
+  "served_head": "71e177a376bc87208e4d8ecb9db6f8c975904545",
+  "payload_files": {
+    ".github/workflows/php8134-c79r3-native-qa2.yml": "64fba3fd2e9a0cf348ad171aeb3909a3b58ac20d4c9088b6205af624f69c7820",
+    "scripts/native-php8134-c79r3/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php8134-c79r3/dispatch.json": "77b2724b72832cdb7038dbd821bce48bbd5a29408212d74f8a7e2031ad4f8050",
+    "scripts/native-php8134-c79r3/download.py": "b23929760f49a528d9b73095ea1e39ac1e04592b82e477fea17ec7d898c39a36",
+    "scripts/native-php8134-c79r3/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php8134-c79r3/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php8134-c79r3/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php8134-c79r3/php81.py": "38eeee6e2242c01e2765191d5b19495f315814a2ca8b1186b3a67b109efe6797",
+    "scripts/native-php8134-c79r3/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
