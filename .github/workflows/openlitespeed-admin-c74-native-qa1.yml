@@ -1,0 +1,46 @@
+name: Signed OpenLiteSpeed WebAdmin installation and data-preserving upgrade
+on:
+  push:
+    branches: [codex/openlitespeed-admin-c74-native-qa1]
+    paths: [scripts/native-openlitespeed-c74/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  openlitespeed:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 3
+      - name: Download the exact signed baseline and upgrade
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-openlitespeed-c74/download.py "$RUNNER_TEMP/ols-old" "$RUNNER_TEMP/ols-new" "$RUNNER_TEMP/ols-private"
+      - name: Install the original signed panel
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-openlitespeed-c74/bootstrap-original-install.py "$RUNNER_TEMP/ols-old" "$RUNNER_TEMP/ols-private" > "$RUNNER_TEMP/ols-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/ols-private/bootstrap-step.stderr"
+      - name: Verify original credentials, migration, and fresh OpenLiteSpeed installation
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-openlitespeed-c74/openlitespeed.py "$RUNNER_TEMP/ols-private" "$RUNNER_TEMP/ols-new" > "$RUNNER_TEMP/ols-private/openlitespeed-step.stdout" 2> "$RUNNER_TEMP/ols-private/openlitespeed-step.stderr"
+      - name: Encrypt the original evidence
+        if: always()
+        run: sudo python3 -I -B scripts/native-openlitespeed-c74/finish.py "$RUNNER_TEMP/ols-private" "$RUNNER_TEMP/ols-public" phase1
+      - name: Retain the native outcomes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c74-openlitespeed-native-qa1-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/ols-public/
+          if-no-files-found: error
+          retention-days: 14

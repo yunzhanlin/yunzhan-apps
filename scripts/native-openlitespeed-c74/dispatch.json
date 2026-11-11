@@ -1,0 +1,58 @@
+{
+  "source_head": "2d426bd963e8cc20c36f5a347b975e51d85e4259",
+  "source_inputs_sha256": "3cd1533812a1e94a8d28cb54829190ba4d5870088ce97501e3e5ed1fe19e174d",
+  "source_sdk_tree": "948e4eeb460951dfc69bfdabf50666cb331f7b76",
+  "version": "0.1.0-dev.proapps24composekernelcandidate73r3",
+  "release_id": 441873126,
+  "tag": "qa-composekernelcandidate73r3-20261111-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 735969630,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-amd64.tar.gz": {
+      "id": 735972661,
+      "bytes": 23770814,
+      "sha256": "d166bd5a61687a98c4bc630fb4f865387f4d1fa01629340b6044933b6bbe69e1"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-amd64.tar.gz.manifest": {
+      "id": 735969491,
+      "bytes": 185,
+      "sha256": "f5f419fdd7452ffb6d96d11ff882302fcec97778ec821bbf9a6d30400446e017"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-amd64.tar.gz.sig": {
+      "id": 735969299,
+      "bytes": 64,
+      "sha256": "2e4c1763c8e61120dc7151e184dbb138b340403406ef9ac7411afec1fa5d829f"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-arm64.tar.gz": {
+      "id": 735969716,
+      "bytes": 21990173,
+      "sha256": "e0e27b153d74f5d93eb39ae96826ff4e02a673e0d2de875ff79b79e52e511c71"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-arm64.tar.gz.manifest": {
+      "id": 735969560,
+      "bytes": 185,
+      "sha256": "08db1770be788e7bac72e9aa9b36df9710cf44544a40fbf855e9eec12cdb573d"
+    },
+    "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-arm64.tar.gz.sig": {
+      "id": 735969342,
+      "bytes": 64,
+      "sha256": "61e607bd9c300fd6033cdb44339afd2e4c289094aa5c4bd7c32bc433f5c90a83"
+    },
+    "release-signing-dev.pub": {
+      "id": 735969421,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24composekernelcandidate73r3-linux-arm64.tar.gz"
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "source_head": "2dbd261bf7a8fd714830ebd40ad83394dde0d8f0",
+  "source_inputs_sha256": "2d5551e52d89e6638e836fd69a02dc89779a8565bcdbfb655be8c71c1a50e684",
+  "version": "0.1.0-dev.proapps24composekernelcandidate73r3",
+  "application": {
+    "id": "openlitespeed",
+    "name": "OpenLiteSpeed",
+    "version": "1.8-compat1",
+    "sha256": "5451572c3cf3adf053f8dcdcdc023fdbe5e3a133a2e0b45235bb980d43ff20fa"
+  },
+  "image": "litespeedtech/openlitespeed:1.8.4-lsphp83@sha256:6f50ba204e66f1c746dd183f3022340ca912124c414669755db7f4701167f268",
+  "payload_files": {
+    ".github/workflows/openlitespeed-admin-c74-native-qa1.yml": "feac3023cbb4f32a44890dd9976c4c11662c683b1eb141c33db4248586dde1cc",
+    "scripts/native-openlitespeed-c74/bootstrap-original-install.py": "08a9fbfc1e3553353f90b8afb99927341a48a266667365021be3f02d6ee83d92",
+    "scripts/native-openlitespeed-c74/dispatch.json": "4d429df7559bd2f4dc61b7325362e1f49d9f26c39af32cf508d3ae6168ffc000",
+    "scripts/native-openlitespeed-c74/download.py": "2dbff41f07e5127de0a970586af5aa713e1d43c78e828da39c14a5a689beef53",
+    "scripts/native-openlitespeed-c74/finish.py": "a097981f576834dafaa1973273ce8232962d7405367767475fa5c05383a7909f",
+    "scripts/native-openlitespeed-c74/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-openlitespeed-c74/openlitespeed.py": "626063a8706d50665ee2761da2cfe77bc24ce4b3b885bdcbd82f35210bb390cd",
+    "scripts/native-openlitespeed-c74/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-openlitespeed-c74/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-openlitespeed-c74/upgrade.json": "0986ba4315bc95207f5257812dffe460c550c1d7c3e4fa814ad3d27a741ed8d8"
+  },
+  "Main_changed": false
+}
