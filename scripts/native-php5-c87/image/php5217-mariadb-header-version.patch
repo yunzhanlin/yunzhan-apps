@@ -1,0 +1,16 @@
+--- a/ext/mysqli/mysqli_nonapi.c
++++ b/ext/mysqli/mysqli_nonapi.c
+@@ -43 +43,7 @@
+-	if ((MYSQL_VERSION_ID / 100) != (mysql_get_client_version() / 100)) {
++#ifdef MARIADB_PACKAGE_VERSION_ID
++	const unsigned long header_version = MARIADB_PACKAGE_VERSION_ID;
++#else
++	const unsigned long header_version = MYSQL_VERSION_ID;
++#endif
++
++	if ((header_version / 100) != (mysql_get_client_version() / 100)) {
+@@ -45,2 +51,2 @@
+-						"Headers and client library minor version mismatch. Headers:%d Library:%ld",
+-						MYSQL_VERSION_ID, mysql_get_client_version());
++			"Headers and client library minor version mismatch. Headers:%lu Library:%lu",
++			header_version, mysql_get_client_version());

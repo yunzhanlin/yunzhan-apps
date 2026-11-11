@@ -10,6 +10,7 @@ COPY php5538-arm64-multiply.patch /opt/php5538-arm64-multiply.patch
 COPY php5217-libxml-output.patch /opt/php5217-libxml-output.patch
 COPY php5217-mariadb-reconnect.patch /opt/php5217-mariadb-reconnect.patch
 COPY php5217-mariadb-local-infile.patch /opt/php5217-mariadb-local-infile.patch
+COPY php5217-mariadb-header-version.patch /opt/php5217-mariadb-header-version.patch
 RUN /bin/sh /opt/build-php.sh
 
 FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc

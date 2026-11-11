@@ -30,6 +30,7 @@ if [ "$PHP_VERSION" = 5.2.17 ]; then
     patch --batch --fuzz=0 -p1 < /opt/php5217-libxml-output.patch
     patch --batch --fuzz=0 -p1 < /opt/php5217-mariadb-reconnect.patch
     patch --batch --fuzz=0 -p1 < /opt/php5217-mariadb-local-infile.patch
+    patch --batch --fuzz=0 -p1 < /opt/php5217-mariadb-header-version.patch
     set -- "$@" --enable-cgi --enable-fastcgi --with-pcre-regex=/usr --with-mysql=/usr \
         --with-mysqli=/usr/bin/mysql_config --with-pdo-mysql=/usr
 else
