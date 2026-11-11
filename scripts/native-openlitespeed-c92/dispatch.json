@@ -1,0 +1,58 @@
+{
+  "source_head": "ad5aa28730d4f148a7f26ef1f1c6bbe0fa670403",
+  "source_inputs_sha256": "55c56582e540b70ff9fc5f851741a500494249a432bbfc77ed7d4d49be928ccf",
+  "source_sdk_tree": "a135fb1e10e95595385d011222e156a67991a2fe",
+  "version": "0.1.0-dev.proapps24openlitespeed194candidate92r2",
+  "release_id": 442157458,
+  "tag": "qa-openlitespeed194candidate92r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736802081,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-amd64.tar.gz": {
+      "id": 736805746,
+      "bytes": 23820510,
+      "sha256": "1cb647381937693199a5dc3b4f76aa94e14c436bc69a97e27ceb5504b67d0906"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-amd64.tar.gz.manifest": {
+      "id": 736801953,
+      "bytes": 188,
+      "sha256": "7cf9426a7a93a1f0832c6582f38223ffa50e9f2307f2ec335e7029499af889a5"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-amd64.tar.gz.sig": {
+      "id": 736801771,
+      "bytes": 64,
+      "sha256": "1ca6efaddea196030ca803af52fd7a8d01ccf9a4dea5777854fa3e400917d22f"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-arm64.tar.gz": {
+      "id": 736802155,
+      "bytes": 22038669,
+      "sha256": "8337bd90bf567012bd3e44d65461279e94f5c1fde45d355e59a7859823e3076e"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-arm64.tar.gz.manifest": {
+      "id": 736802007,
+      "bytes": 188,
+      "sha256": "c0fc7ee69a5e036e82dba3c2ad4d49415a4c77387e2cf1bccdaf222835f241bf"
+    },
+    "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-arm64.tar.gz.sig": {
+      "id": 736801824,
+      "bytes": 64,
+      "sha256": "5ff63628f212219acbb6297a3cd843ebe1f37421665cd82f28865d2f593e05b2"
+    },
+    "release-signing-dev.pub": {
+      "id": 736801882,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24openlitespeed194candidate92r2-linux-arm64.tar.gz"
+    }
+  }
+}

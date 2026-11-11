@@ -1,0 +1,47 @@
+name: Native OpenLiteSpeed 1.9.4 application
+on:
+  push:
+    branches: [codex/openlitespeed-c92r2-native-qa2r2]
+    paths: [scripts/native-openlitespeed-c92/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  openlitespeed:
+    strategy:
+      fail-fast: false
+      max-parallel: 6
+      matrix:
+        os: [ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Download the original signed programme
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-openlitespeed-c92/download.py "$RUNNER_TEMP/legacy-php-inputs" "$RUNNER_TEMP/legacy-php-private"
+      - name: Install the original signed programme on Linux
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-openlitespeed-c92/bootstrap-original-install.py "$RUNNER_TEMP/legacy-php-inputs" "$RUNNER_TEMP/legacy-php-private" > "$RUNNER_TEMP/legacy-php-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/legacy-php-private/bootstrap-step.stderr"
+      - name: Exercise signed image, site HTTP, WebAdmin HTTPS and original data
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-openlitespeed-c92/openlitespeed.py "$RUNNER_TEMP/legacy-php-private" > "$RUNNER_TEMP/legacy-php-private/openlitespeed-step.stdout" 2> "$RUNNER_TEMP/legacy-php-private/openlitespeed-step.stderr"
+      - name: Encrypt the original evidence
+        if: always()
+        run: sudo python3 -I -B scripts/native-openlitespeed-c92/finish.py "$RUNNER_TEMP/legacy-php-private" "$RUNNER_TEMP/legacy-php-public" phase1
+      - name: Retain the original native results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c92r2-native-openlitespeed-qa2r2-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/legacy-php-public/
+          if-no-files-found: error
+          retention-days: 14
