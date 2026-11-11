@@ -32,7 +32,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     'anti-intrusion', 'apache-waf', 'disk-analysis', 'enterprise-tamper-proof', 'files-sync',
     'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
-    'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'phpmyadmin',
+    'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
     'pm2-manager', 'redis', 'website-analytics', 'website-tamper-proof',
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
