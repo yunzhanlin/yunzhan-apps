@@ -1,0 +1,131 @@
+{
+  "source_head": "2a36daeda70d9133e5c694b6d53ab0cc7746b018",
+  "source_inputs_sha256": "6fa54d8cd15adb26544d29355d0686b8aa191671a036ea5d43faa30537afd8ec",
+  "version": "0.1.0-dev.proapps24legacyphp5candidate90",
+  "recipes": {
+    "55": {
+      "version": "5.5.38",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d",
+      "target": "php-legacy-55-bookworm"
+    },
+    "54": {
+      "version": "5.4.45",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d",
+      "target": "php-legacy-54-bookworm"
+    },
+    "53": {
+      "version": "5.3.29",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53:5.3.29-compat2@sha256:e55568758bc9d63603ba4ede0bedb88e87b173685806fa73c3e795be2350dff1",
+      "target": "php-legacy-53-bookworm"
+    },
+    "52": {
+      "version": "5.2.17",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52:5.2.17-compat2@sha256:0134be0181025424e737318227409208f4be3cc405641e443d839bc46ed7c604",
+      "target": "php-legacy-52-bookworm"
+    }
+  },
+  "mode": "signed-store",
+  "apps": {
+    "php-52": {
+      "id": "php-52",
+      "name": "PHP 5.2",
+      "category": "deployment",
+      "version": "5.2.17-compat2",
+      "summary": "PHP 5.2.17 \u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP FastCGI\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-52-bookworm",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP FastCGI",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-52/5.2.17-compat2/manifest.json",
+      "sha256": "1711295d0bed6548ab37f4bc35aca5e81478db838b87cbae70e6c1f48204616e"
+    },
+    "php-53": {
+      "id": "php-53",
+      "name": "PHP 5.3",
+      "category": "deployment",
+      "version": "5.3.29-compat2",
+      "summary": "PHP 5.3.29 \u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-53-bookworm",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-53/5.3.29-compat2/manifest.json",
+      "sha256": "dfe2fb6a8e16622db25a200c3ec20fe9559e81044c12709d1b8b7133b88aa658"
+    },
+    "php-54": {
+      "id": "php-54",
+      "name": "PHP 5.4",
+      "category": "deployment",
+      "version": "5.4.45-compat2",
+      "summary": "PHP 5.4.45 \u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-54-bookworm",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat2/manifest.json",
+      "sha256": "a59f6a34b03464cf1e60626210ad85ecb470784e30d9da7337f5df9e903f77ed"
+    },
+    "php-55": {
+      "id": "php-55",
+      "name": "PHP 5.5",
+      "category": "deployment",
+      "version": "5.5.38-compat2",
+      "summary": "PHP 5.5.38 \u9694\u79bb\u73af\u5883\uff0c\u9002\u7528\u4e8e AMD64 \u548c ARM64 \u7684\u65e7\u7ad9\u517c\u5bb9\u8fc1\u79fb\u3002\u4f7f\u7528\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-55-bookworm",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat2/manifest.json",
+      "sha256": "27baa929f9f07c5d568d61c38b35d53d085f185476ba27aec224a84aff54126c"
+    }
+  },
+  "served_head": "78e118625594f05e7aab2e342f6ecab1b90f02f2",
+  "payload_files": {
+    ".github/workflows/php5-c90-native-qa2.yml": "535d4c67955c1f194676c9086f28d18db1a2cf9eefa36b94fdb66972509de804",
+    "scripts/native-php5-c90/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php5-c90/dispatch.json": "7f58567c20e300af9d14b61138ff37f49c0fabe1a6c1638d49dc053d3a498f60",
+    "scripts/native-php5-c90/download.py": "b82abf4b1725cd07acfc46de52babdb130d0e6c752fbe9529d55e6a37a05a246",
+    "scripts/native-php5-c90/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php5-c90/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php5-c90/legacy-php.py": "6b8f8d8a417a58095c7aefce9b828555d80822ce491b563b9692c1f3b4b21a75",
+    "scripts/native-php5-c90/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php5-c90/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
