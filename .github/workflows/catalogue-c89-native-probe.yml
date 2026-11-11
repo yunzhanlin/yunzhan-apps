@@ -1,0 +1,38 @@
+name: Historical and current signed catalogue ABI
+on:
+  push:
+    branches: [codex/catalogue-native-regression-c89-qa1]
+    paths: [.github/workflows/catalogue-c89-native-probe.yml]
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version-file: candidate/panel-integration-compose-signed-image/go.mod
+          cache-dependency-path: candidate/panel-integration-compose-signed-image/go.sum
+      - name: Verify both immutable historical revisions and the latest signed catalogue
+        run: |
+          git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
+          python3 -I -B tools/run-mobile133-catalogue-native.py "$RUNNER_TEMP/original"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c89-catalogue-native-${{ matrix.os }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/original/*.json
+            ${{ runner.temp }}/original/*.jsonl
+            ${{ runner.temp }}/original/*.stderr
+          if-no-files-found: error
+          retention-days: 14
