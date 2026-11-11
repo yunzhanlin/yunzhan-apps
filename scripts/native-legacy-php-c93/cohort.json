@@ -1,0 +1,119 @@
+{
+  "source_head": "b999f15337b77eaa05c1f3a086e80fbdc9e42761",
+  "source_inputs_sha256": "c290899c6ce2acf8c13940b7eea166908c7d41fc621a2e840a4c9f96a3bb8c30",
+  "version": "0.1.0-dev.proapps24legacyphpcandidate93",
+  "recipes": {
+    "74": {
+      "version": "7.4.33",
+      "previous_version": "7.4.33-compat2",
+      "app_version": "7.4.33-compat3",
+      "previous_target": "php-legacy-74-bullseye",
+      "target": "php-legacy-74-bullseye-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat3@sha256:cce1df42ef6874ea19eab10615822a4677e44004bfc0b2c3e4ee23db475c3b9d",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"
+    },
+    "80": {
+      "version": "8.0.30",
+      "previous_version": "8.0.30-compat1",
+      "app_version": "8.0.30-compat2",
+      "previous_target": "php-legacy-80-bullseye",
+      "target": "php-legacy-80-bullseye-compat2",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat2@sha256:6f1ded5a5e08fc7f31efc5416cc0b877d75f94f576ed0d44bbb8d78319da3eed",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3"
+    },
+    "81": {
+      "version": "8.1.34",
+      "previous_version": "8.1.34-compat1",
+      "app_version": "8.1.34-compat2",
+      "previous_target": "php-legacy-81-bookworm",
+      "target": "php-legacy-81-bookworm-compat2",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat2@sha256:afda4abcf8755a50879d77643533d1af624236711c6cdf4e40653b09cbfc0830",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"
+    }
+  },
+  "mode": "signed-store",
+  "apps": {
+    "php-74": {
+      "id": "php-74",
+      "name": "PHP 7.4",
+      "category": "deployment",
+      "version": "7.4.33-compat3",
+      "summary": "PHP 7.4.33 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-74-bullseye-compat3",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-74/7.4.33-compat3/manifest.json",
+      "sha256": "a809644a390a8cbbb31bb427dcaa8c83486364851d4c668cdfd0c1834cec9aa1"
+    },
+    "php-80": {
+      "id": "php-80",
+      "name": "PHP 8.0",
+      "category": "deployment",
+      "version": "8.0.30-compat2",
+      "summary": "PHP 8.0.30 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-80-bullseye-compat2",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.30-compat2/manifest.json",
+      "sha256": "8d9ad48b57dbced18958df2459cbef8b2034d2d6d12e0d02b655e9d7ef95f21a"
+    },
+    "php-81": {
+      "id": "php-81",
+      "name": "PHP 8.1",
+      "category": "deployment",
+      "version": "8.1.34-compat2",
+      "summary": "PHP 8.1.34 \u9694\u79bb\u517c\u5bb9\u7248\uff0c\u5305\u542b\u7ecf\u6838\u5bf9\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01\u3002\u901a\u8fc7\u72ec\u7acb PHP-FPM\u3001Nginx\u3001\u56de\u73af\u7aef\u53e3\u548c\u6570\u636e\u5377\u8fd0\u884c\uff0c\u9002\u7528\u4e8e AMD64 \u4e0e ARM64 \u7684\u65e7\u7ad9\u8fc1\u79fb\u3002",
+      "stage": "ready",
+      "risk": "eol",
+      "provider": "compose",
+      "target": "php-legacy-81-bookworm-compat2",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56fa\u5b9a\u955c\u50cf\u6458\u8981",
+        "\u72ec\u7acb PHP-FPM",
+        "\u72ec\u7acb Nginx",
+        "\u7f51\u7ad9\u540c\u6b65\u90e8\u7f72",
+        "\u57df\u540d\u7ed1\u5b9a",
+        "\u6570\u636e\u5377\u6301\u4e45\u5316",
+        "\u5df2\u9a8c\u8bc1\u7684\u5f00\u6e90\u56de\u79fb\u8865\u4e01"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-81/8.1.34-compat2/manifest.json",
+      "sha256": "9f7ce437056bc1370bb6ff16624cdc8844b28ecae037b51b2ee3567518367c5e"
+    }
+  },
+  "served_head": "2e773110fbedb168597dc0656645ad9a8ab95db1",
+  "payload_files": {
+    ".github/workflows/legacy-php-c93-native-qa2.yml": "18a0f1d8a88c6564bc24b6255b56d2762fc844c0693e25999ee33d42bddda8a7",
+    "scripts/native-legacy-php-c93/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-legacy-php-c93/dispatch.json": "7e5c88e403d563c1cb3598127045ec5db243d20a2a97bdaf2302e7ea0780d320",
+    "scripts/native-legacy-php-c93/download.py": "696450442d53dfaaf3a85f77c11ffccb847b79abc41a0dba976498ee48c39b63",
+    "scripts/native-legacy-php-c93/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-legacy-php-c93/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-legacy-php-c93/legacy-php.py": "5de6afb29e8c48dae7a99938afa2d0fb0ceb129cd6465c8eb2838171a3c5c812",
+    "scripts/native-legacy-php-c93/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-legacy-php-c93/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
