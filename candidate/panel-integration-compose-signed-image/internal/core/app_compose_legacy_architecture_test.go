@@ -102,3 +102,16 @@ func TestFinalLegacyPHPTemplatesUseReviewedNativeImages(t *testing.T) {
 		}
 	}
 }
+
+func TestLegacyPHP52BookwormUsesOnlyTheReviewedFastCGIWorker(t *testing.T) {
+	cgi := LegacyPHPBootstrapForTemplate(legacyPHP52BookwormTemplate)
+	if !strings.HasSuffix(cgi, "exec /usr/local/bin/yunzhan-start-php-cgi\n") ||
+		strings.Contains(cgi, "exec /usr/local/sbin/php-fpm") {
+		t.Fatal("PHP 5.2 needs its fixed FastCGI startup")
+	}
+	for _, id := range []string{"php-legacy-52", "php-legacy-53-bookworm", LegacyPHP81BookwormTemplate} {
+		if LegacyPHPBootstrapForTemplate(id) != LegacyPHPBootstrap {
+			t.Fatalf("template %s lost its established PHP-FPM startup", id)
+		}
+	}
+}

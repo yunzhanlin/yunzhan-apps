@@ -477,9 +477,13 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			}
 		}
 		for _, release := range finalLegacyPHPReleases {
+			worker := "PHP-FPM"
+			if release.template == legacyPHP52BookwormTemplate {
+				worker = "PHP FastCGI"
+			}
 			templates = append(templates, map[string]any{
 				"id": release.template, "name": "PHP " + release.version + " 隔离环境", "image": release.image,
-				"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 PHP-FPM、Nginx 和数据卷", "container_port": 8080,
+				"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 " + worker + "、Nginx 和数据卷", "container_port": 8080,
 			})
 		}
 		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {

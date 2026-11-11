@@ -140,7 +140,7 @@ func legacySyncRuntime(ctx context.Context, m composeMetadata, read composeUpdat
 	}
 	c, h, n := v.Config, v.HostConfig, v.NetworkSettings
 	expectedImage, ok := core.LegacyPHPImage(m.TemplateID)
-	if !ok || c.Image != expectedImage || !slices.Equal(c.Entrypoint, []string{"/bin/sh", "-c"}) || !slices.Equal(c.Cmd, []string{core.LegacyPHPBootstrap}) || c.Labels["com.docker.compose.project"] != m.Engine || c.Labels["com.docker.compose.service"] != "php" || c.Labels["com.docker.compose.oneoff"] != "False" ||
+	if !ok || c.Image != expectedImage || !slices.Equal(c.Entrypoint, []string{"/bin/sh", "-c"}) || !slices.Equal(c.Cmd, []string{core.LegacyPHPBootstrapForTemplate(m.TemplateID)}) || c.Labels["com.docker.compose.project"] != m.Engine || c.Labels["com.docker.compose.service"] != "php" || c.Labels["com.docker.compose.oneoff"] != "False" ||
 		h.Privileged == nil || *h.Privileged || h.ReadonlyRootfs == nil || !*h.ReadonlyRootfs || h.PidMode != "" || h.IpcMode != "private" || h.UTSMode != "" || h.UsernsMode != "" || h.NetworkMode != m.Engine+"_default" || len(h.CapAdd)+len(h.CapDrop)+len(h.VolumesFrom)+len(h.DeviceCgroupRules)+len(h.Devices)+len(h.Sysctls)+len(h.PortBindings) != 0 ||
 		!slices.Equal(h.SecurityOpt, []string{"no-new-privileges:true"}) || len(h.Tmpfs) != 2 || len(n.Networks) != 1 || h.RestartPolicy.Name != "unless-stopped" || h.RestartPolicy.MaximumRetryCount != 0 {
 		return fail()

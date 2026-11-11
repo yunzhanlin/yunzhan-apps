@@ -10,6 +10,7 @@ const legacyNginxImage = "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d3219
 
 const LegacyPHP81BookwormTemplate = "php-legacy-81-bookworm"
 const legacyPHP80BullseyeTemplate = "php-legacy-80-bullseye"
+const legacyPHP52BookwormTemplate = "php-legacy-52-bookworm"
 
 const legacyPHP81BookwormImage = "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"
 
@@ -43,6 +44,10 @@ var finalLegacyPHPReleases = []finalLegacyPHPRelease{
 	{"php-legacy-71-stretch", "php-legacy-71", "php-71", "7.1.33", "7.1.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9"},
 	{"php-legacy-70-stretch", "php-legacy-70", "php-70", "7.0.33", "7.0.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e"},
 	{"php-legacy-56-stretch", "php-legacy-56", "php-56", "5.6.40", "5.6.40-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8"},
+	{"php-legacy-55-bookworm", "php-legacy-55", "php-55", "5.5.38", "5.5.38-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d"},
+	{"php-legacy-54-bookworm", "php-legacy-54", "php-54", "5.4.45", "5.4.45-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d"},
+	{"php-legacy-53-bookworm", "php-legacy-53", "php-53", "5.3.29", "5.3.29-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php53:5.3.29-compat2@sha256:e55568758bc9d63603ba4ede0bedb88e87b173685806fa73c3e795be2350dff1"},
+	{legacyPHP52BookwormTemplate, "php-legacy-52", "php-52", "5.2.17", "5.2.17-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php52:5.2.17-compat2@sha256:0134be0181025424e737318227409208f4be3cc405641e443d839bc46ed7c604"},
 }
 
 func findFinalLegacyPHPRelease(id string) (finalLegacyPHPRelease, bool) {
@@ -106,9 +111,17 @@ fi
 exec /usr/local/sbin/php-fpm
 `
 
+// PHP 5.2 predates FPM. Its reviewed image runs the fixed FastCGI worker.
+func LegacyPHPBootstrapForTemplate(id string) string {
+	if id == legacyPHP52BookwormTemplate {
+		return strings.Replace(LegacyPHPBootstrap, "exec /usr/local/sbin/php-fpm\n", "exec /usr/local/bin/yunzhan-start-php-cgi\n", 1)
+	}
+	return LegacyPHPBootstrap
+}
+
 func isolatedPHPTemplate(id string, port int) string {
 	image, _ := LegacyPHPImage(id)
-	phpInit := LegacyPHPBootstrap
+	phpInit := LegacyPHPBootstrapForTemplate(id)
 	// Regex locations stop at the first match. Hidden-path denial must precede
 	// PHP dispatch, including hidden files that themselves end in .php.
 	// https://nginx.org/en/docs/http/ngx_http_core_module.html#location

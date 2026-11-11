@@ -40,6 +40,7 @@ test('actual template health predicate enables only recognized fully healthy unb
   'nginx-static','wordpress-blog','openlitespeed','php-legacy-52','php-legacy-81',
   'php-legacy-81-bookworm','php-legacy-80-bullseye','php-legacy-74-bullseye',
   'php-legacy-73-buster','php-legacy-72-buster','php-legacy-71-stretch','php-legacy-70-stretch','php-legacy-56-stretch',
+  'php-legacy-55-bookworm','php-legacy-54-bookworm','php-legacy-53-bookworm','php-legacy-52-bookworm',
  ]){
   assert(canBindDockerProjectSite({template_id,state:'running',services:1,running:1,healthy:1,host_port:23862}));
  }
