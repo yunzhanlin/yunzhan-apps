@@ -53,7 +53,7 @@ services:
           "multiply" => ($$ordinary * -3 === -51 && is_float($$maximum * 2)),
           "regex" => preg_match("/^abc$/", "abc") === 1,
           "xml" => strpos($$dom->saveXML(), "<x>ok</x>") !== false && strpos($$simple->asXML(), "<x>ok</x>") !== false,
-          "persisted" => is_file(__DIR__ . "/retained.txt") ? file_get_contents(__DIR__ . "/retained.txt") : null
+          "persisted" => is_file(dirname(__FILE__) . "/retained.txt") ? file_get_contents(dirname(__FILE__) . "/retained.txt") : null
         ));
         PHP
           chown 1000:1000 /var/www/html /var/www/html/index.php
