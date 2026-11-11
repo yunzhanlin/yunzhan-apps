@@ -215,6 +215,16 @@ export function validateManifest(app) {
   if (!Array.isArray(app.compatibility?.architectures) || !app.compatibility.architectures.length) errors.push("missing architectures");
   if (typeof app.uninstall?.preserve_data !== "boolean" || typeof app.uninstall?.reference_check !== "boolean") errors.push("invalid uninstall policy");
   if (app.delivery?.provider === "compose" && !app.delivery.image) errors.push("compose package needs an image");
+  if ((app.id === "phpmyadmin" && app.version === "5.2.3-compat2") || app.delivery?.target === "phpmyadmin-523") {
+    const d = app.delivery;
+    const arch = app.compatibility?.architectures;
+    if (app.id !== "phpmyadmin" || app.version !== "5.2.3-compat2" || app.risk !== "maintained" ||
+        d?.provider !== "compose" || d?.target !== "phpmyadmin-523" || d?.manage_route !== "databases" ||
+        d?.image !== "phpmyadmin:5.2.3-apache@sha256:f54a37b908b26caa7032c4eb0c7f3495fdd90208a06eed9c4b2c8e691dd1662c" || Object.keys(d).sort().join(",") !== "image,manage_route,provider,target" ||
+        !Array.isArray(arch) || arch.length !== 2 || !arch.includes("amd64") || !arch.includes("arm64")) {
+      errors.push("phpMyAdmin 5.2.3 requires its exact official patched dual-architecture recipe");
+    }
+  }
   const delivery = app.delivery;
   const recipe = nativeLegacyPHPReleases.find(item =>
     item.target === delivery?.target || (item.id === app.id && item.version === app.version));

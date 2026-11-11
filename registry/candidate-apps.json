@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-11T19:15:25Z",
+  "generated_at": "2026-11-11T19:30:40Z",
   "apps": [
     {
       "schema_version": 1,
@@ -1275,6 +1275,50 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "phpmyadmin",
+      "name": "phpMyAdmin",
+      "category": "deployment",
+      "version": "5.2.3-compat2",
+      "summary": "使用 PHP 8.3.36 的 phpMyAdmin 5.2.3。通过主机回环端口管理云栈 MySQL 或外部数据库，可与旧版并行运行。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "phpmyadmin-523",
+        "image": "phpmyadmin:5.2.3-apache@sha256:f54a37b908b26caa7032c4eb0c7f3495fdd90208a06eed9c4b2c8e691dd1662c",
+        "manage_route": "databases"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "MySQL 管理",
+        "数据库管理界面",
+        "回环绑定",
+        "访问审计",
+        "本机 MySQL 安全连接"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/"
+      },
+      "uninstall": {
+        "preserve_data": false,
+        "reference_check": false
       }
     }
   ]
