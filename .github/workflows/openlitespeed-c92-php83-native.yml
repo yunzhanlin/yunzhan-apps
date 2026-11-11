@@ -1,8 +1,8 @@
 name: Patched OpenLiteSpeed website and WebAdmin PHP
 on:
   push:
-    branches: [codex/openlitespeed-c92-php83-native]
-    paths: [scripts/openlitespeed-php83-c92/proof.py]
+    branches: [codex/openlitespeed-c92-php83-native-r2]
+    paths: [scripts/openlitespeed-php83-c92/Dockerfile]
 permissions:
   contents: read
 jobs:
