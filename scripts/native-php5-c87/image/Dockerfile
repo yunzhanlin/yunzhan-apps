@@ -1,0 +1,21 @@
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS build
+RUN apt-get update && apt-get install --no-install-recommends -y \
+        autotools-dev build-essential ca-certificates curl libcrypt-dev libmariadb-dev-compat \
+        libxml2-dev pkg-config zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+ARG PHP_VERSION
+ARG PHP_SOURCE_SHA256
+COPY build.sh /opt/build-php.sh
+RUN /bin/sh /opt/build-php.sh
+
+FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc
+RUN apt-get update && apt-get install --no-install-recommends -y \
+        ca-certificates libcrypt1 libmariadb3 libxml2 zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=build /opt/php-root/usr/local/ /usr/local/
+COPY php-fpm.conf /usr/local/etc/php-fpm.conf
+COPY start-php-cgi /usr/local/bin/yunzhan-start-php-cgi
+RUN chmod 0755 /usr/local/bin/yunzhan-start-php-cgi \
+    && mkdir -p /var/www/html \
+    && php --version
+WORKDIR /var/www/html

@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+export PHP_FCGI_CHILDREN=4 PHP_FCGI_MAX_REQUESTS=500
+exec /usr/bin/setpriv --reuid=www-data --regid=www-data --clear-groups /usr/local/bin/php-cgi -b 0.0.0.0:9000
