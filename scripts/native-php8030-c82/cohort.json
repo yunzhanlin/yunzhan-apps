@@ -1,0 +1,21 @@
+{
+  "source_head": "de1b68b568efdb769c44b57e0ee25e067d9adbfe",
+  "source_inputs_sha256": "ba9cafac9c5a2aed8311e5334a15a8e520c3a3c9893e1a180c79419f4d191682",
+  "version": "0.1.0-dev.proapps24php8030candidate82",
+  "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3",
+  "mode": "native-template",
+  "app": null,
+  "served_head": "a18611b2f45b9821bc0cc3a8479e2006641d9ba6",
+  "payload_files": {
+    ".github/workflows/php8030-c82-native-qa1.yml": "7d89ac814f48a484d23773185d609c6071ff887544c94dd8a288e22e0aa5a7a3",
+    "scripts/native-php8030-c82/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php8030-c82/dispatch.json": "c99672d603a636a49eddf561e37ad98c1045ee870acd097388456685beda6fcd",
+    "scripts/native-php8030-c82/download.py": "3b3c121f234dadf8bc256f442147259586935dc4bff8796fc89f9cb1d4ea2514",
+    "scripts/native-php8030-c82/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php8030-c82/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php8030-c82/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php8030-c82/php80.py": "0aa024c5d85a720be73e62230f0f5f743bc71b8579546ff7e297184f18066c86",
+    "scripts/native-php8030-c82/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
