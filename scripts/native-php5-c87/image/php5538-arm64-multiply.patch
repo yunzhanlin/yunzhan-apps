@@ -1,0 +1,7 @@
+--- a/Zend/zend_multiply.h
++++ b/Zend/zend_multiply.h
+@@ -65,2 +65,2 @@
+-			: "=X"(__tmpvar), "=X"(usedval)							\
+-			: "X"(a), "X"(b));										\
++			: "=&r"(__tmpvar), "=&r"(usedval)							\
++			: "r"(a), "r"(b));										\
