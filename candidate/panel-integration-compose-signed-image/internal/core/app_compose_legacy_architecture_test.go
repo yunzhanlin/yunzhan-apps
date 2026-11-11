@@ -84,7 +84,8 @@ func TestIsolatedLegacyPHPDirectHTTPEnforcesSameArchitectureBeforeRootDispatch(t
 }
 
 func TestFinalLegacyPHPTemplatesUseReviewedNativeImages(t *testing.T) {
-	for _, id := range []string{LegacyPHP81BookwormTemplate, legacyPHP80BullseyeTemplate} {
+	for _, release := range finalLegacyPHPReleases {
+		id := release.template
 		image, ok := LegacyPHPImage(id)
 		if !ok || !strings.Contains(image, "@sha256:") {
 			t.Fatalf("missing pinned image for %s", id)

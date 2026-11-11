@@ -12,7 +12,8 @@ export interface DockerProjectSiteState {
 export function canBindDockerProjectSite(project: DockerProjectSiteState): boolean {
   const template = project.template_id;
   const known = template === "nginx-static" || template === "wordpress-blog" ||
-    template === "openlitespeed" || template === "php-legacy-81-bookworm" || template === "php-legacy-80-bullseye" || /^php-legacy-(52|53|54|55|56|70|71|72|73|74|80|81)$/.test(template || "");
+    template === "openlitespeed" ||
+    /^php-legacy-(?:52|53|54|55|56|70|71|72|73|74|80|81|81-bookworm|(?:74|80)-bullseye|(?:72|73)-buster|(?:56|70|71)-stretch)$/.test(template || "");
   return known && !project.site_name && project.state === "running" &&
     Number.isSafeInteger(project.services) && project.services! > 0 &&
     project.running === project.services && project.healthy === project.services &&

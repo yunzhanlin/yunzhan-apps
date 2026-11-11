@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24catalogrefreshcandidate85r2-linux-amd64.tar.gz",
-    "archive_sha256": "945750a5c9ffe2c76f80d40a94ca4ebb20f441f72cf2739482508de6463e0a3e",
-    "frozen_inputs_sha256": "c6f8cbd5e7a636ff475af3a9070d6ed2b2c67d748ca270d9a72fa6f6b76f584d"
+    "archive": "panel-0.1.0-dev.proapps24legacyphpcandidate86-linux-amd64.tar.gz",
+    "archive_sha256": "10ff489ced97b2b4422d40a9d7061bc85b6ce1ef2f4d0d5a60851c4093d7d2e7",
+    "frozen_inputs_sha256": "a5c968ac27bec54bbe872827788746da0b61d53ab8298bb4dcb42a0d3d7ca41e"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -241,11 +241,11 @@
     "internal/core/apache_waf_test.go": "95793886f1c3d90cd9cb16fcb65b925e7999562d9c620dd12fd60f6d47b4d1dd",
     "internal/core/apache_waf_version.go": "17e7790b6dc04327c552736786e720784e5b7da345c3d839ebeea3e6d324eaf7",
     "internal/core/apache_waf_version_test.go": "f438dc3c61d08ecbacbbc38000205c0563f0bb7a3152af3ad1af28af2f4c15c9",
-    "internal/core/app_compose_legacy_architecture_test.go": "6d9aadbe5888f203e0e1e8a1437e71ae70969a9a3cee267f760362455c7cd686",
+    "internal/core/app_compose_legacy_architecture_test.go": "6af1f8cdcdaadf2480f2dca76bf59d4dabce8e816f3e719c1b0f10d64e8e2cf0",
     "internal/core/app_compose_legacy_containers_linux_test.go": "92f4d5f586c18a485530926f92751f8ad8adfb559a94765c46bcadd140e716dc",
     "internal/core/app_compose_legacy_native_linux_test.go": "b7691e5abbfea4384ada8d12854e0577587d77a1874d71b454a4a19c80c2ff49",
     "internal/core/app_compose_legacy_routing_test.go": "aca8cd22a303a263a13f7d9987578d95bdc361292ba0794cbaa39f20adc67620",
-    "internal/core/app_compose_templates.go": "00b73ff836f0ca37c22577f063fb204e2c4a41fbe90e22b39a18c93c3c120665",
+    "internal/core/app_compose_templates.go": "78b665d0fea597506fa80622f80f5b67d0c9d7abfcf26998844d84c815e7c34b",
     "internal/core/app_compose_templates_test.go": "ab5b46396c02fb75a55339aa4c515f92c94a773278348f067f598247f5af4066",
     "internal/core/app_history_filter.go": "0122bae3bbd41e7f352a4d28b329a2b41fdd9d05a1b4ac6a1f5ea194942dd3d9",
     "internal/core/app_history_filter_test.go": "53b1e698c8c374796178ae67d495a6d76e821a2a048f22a98909601fe4fe5a49",
@@ -2262,7 +2262,7 @@
     "scripts/test-disk-usage.mjs": "0fe810a10e5943ce728e0405f7f49e2eb1b36db2ef1e12b9e0eb6840aad74750",
     "scripts/test-docker-create-requests.mjs": "82d529f755afc34ee86536c7d294e2a2c1ceb557b4e61be4fd6bad3786e8ba35",
     "scripts/test-docker-scope.mjs": "857c245bc265a93b55ff113ba5caa8ea3fafcc5dece86c564590b900d32e36ef",
-    "scripts/test-docker-site-binding.mjs": "c98dbe7555c1ed47bb9b1d2b59c9fce20066a746901b0bc0b93b36c100e93942",
+    "scripts/test-docker-site-binding.mjs": "3dd4797381c95005e6fd14a3782b7a3fb15d32e40a248c43742349306fff8a92",
     "scripts/test-enterprise-kernel-workspace.mjs": "202a99862901958067704d74a5a60dbd41ff7130389f55c83d649a1b93f485ff",
     "scripts/test-file-manager-scope.mjs": "89890ff6c51c9c5b4a5700a301476e8de05e26f605c3e0ce656700c6430cf6e9",
     "scripts/test-frontend-release.mjs": "51e349162ca42043f9cc538246fe842e231daa765acc7fdd389aed0b123291c1",
@@ -2441,7 +2441,7 @@
     "web/src/deferredWorkspace.ts": "8510254d2df8ad45d52d9d8e25ad383ae915ee483f72af6b8c00472176d80cd9",
     "web/src/diskUsage.ts": "32faf8b56a40aedb70df6c502382e568efa4b797df1e6e2ac7a2f33ed1107260",
     "web/src/dockerCreateRequest.ts": "dcdb928f20bafb7e127869d2f4d40b9db6eea8e1b9328c55f5b1100c36923dff",
-    "web/src/dockerProjectSiteBinding.ts": "397ac133865ccdbf1918409ae9735d0ccb6fd1da0ac554dbb9da717f74a31448",
+    "web/src/dockerProjectSiteBinding.ts": "ffa7eb9b1be1089ee403c06649f507d889f2dafe03076abe927a4fde5481eac6",
     "web/src/epochReadGate.ts": "9a301e512a0fa837fa234806b1fbf3f5c3aa2a007e95355326439dfc7127f0f0",
     "web/src/frontendRelease.ts": "d2b833b25c750a27583b842cb0250dfc3547ed2b5103eac5888aa083b8b6bfd6",
     "web/src/hostDisk.ts": "d9916144714f9c8c9bfa42e22363f82ad248ad19a22e82896d9989c31dd6ced8",

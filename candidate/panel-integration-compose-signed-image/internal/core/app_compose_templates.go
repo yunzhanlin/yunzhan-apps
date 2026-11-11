@@ -37,6 +37,12 @@ type finalLegacyPHPRelease struct {
 var finalLegacyPHPReleases = []finalLegacyPHPRelease{
 	{LegacyPHP81BookwormTemplate, "php-legacy-81", "php-81", "8.1.34", "8.1.34-compat1", legacyPHP81BookwormImage},
 	{legacyPHP80BullseyeTemplate, "php-legacy-80", "php-80", "8.0.30", "8.0.30-compat1", "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3"},
+	{"php-legacy-74-bullseye", "php-legacy-74", "php-74", "7.4.33", "7.4.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609"},
+	{"php-legacy-73-buster", "php-legacy-73", "php-73", "7.3.33", "7.3.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e"},
+	{"php-legacy-72-buster", "php-legacy-72", "php-72", "7.2.34", "7.2.34-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625"},
+	{"php-legacy-71-stretch", "php-legacy-71", "php-71", "7.1.33", "7.1.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9"},
+	{"php-legacy-70-stretch", "php-legacy-70", "php-70", "7.0.33", "7.0.33-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e"},
+	{"php-legacy-56-stretch", "php-legacy-56", "php-56", "5.6.40", "5.6.40-compat2", "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8"},
 }
 
 func findFinalLegacyPHPRelease(id string) (finalLegacyPHPRelease, bool) {

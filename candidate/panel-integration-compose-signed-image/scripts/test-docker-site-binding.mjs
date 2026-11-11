@@ -36,13 +36,17 @@ test('a successful old Docker binding cannot delete a different pending browser 
  const f=fixture(()=>{f.saved.set('panel-pending-app-site','different original pending request');return{id:job,site_id:site,kind:'create_site',state:'succeeded',error:''};});await f.run();assert(f.messages.some(([kind])=>kind==='success'));assert.equal(f.saved.get('panel-pending-app-site'),'different original pending request');assert.equal(f.calls.filter(x=>x[1]==='POST').length,1);
 });
 test('actual template health predicate enables only recognized fully healthy unbound website projects',()=>{
- for(const template_id of ['nginx-static','wordpress-blog','openlitespeed','php-legacy-52','php-legacy-81']){
+ for(const template_id of [
+  'nginx-static','wordpress-blog','openlitespeed','php-legacy-52','php-legacy-81',
+  'php-legacy-81-bookworm','php-legacy-80-bullseye','php-legacy-74-bullseye',
+  'php-legacy-73-buster','php-legacy-72-buster','php-legacy-71-stretch','php-legacy-70-stretch','php-legacy-56-stretch',
+ ]){
   assert(canBindDockerProjectSite({template_id,state:'running',services:1,running:1,healthy:1,host_port:23862}));
  }
 });
 test('actual template health predicate refuses old no-health containers, partial counts, arbitrary IDs and foreign ports',()=>{
  const p={template_id:'nginx-static',state:'running',services:1,running:1,healthy:1,host_port:23862};
- for(const change of [{healthy:undefined},{healthy:0},{healthy:2},{healthy:'1'},{running:0},{services:0},{services:-1},{services:NaN},{host_port:1023},{host_port:65536},{host_port:'23862'},{state:'unknown'},{state:'stopped'},{site_name:'existing site'},{template_id:'php-legacy-99'},{template_id:'redis-cache'},{template_id:''},{template_id:undefined}]){
+ for(const change of [{healthy:undefined},{healthy:0},{healthy:2},{healthy:'1'},{running:0},{services:0},{services:-1},{services:NaN},{host_port:1023},{host_port:65536},{host_port:'23862'},{state:'unknown'},{state:'stopped'},{site_name:'existing site'},{template_id:'php-legacy-99'},{template_id:'php-legacy-74-buster'},{template_id:'redis-cache'},{template_id:''},{template_id:undefined}]){
   assert.equal(canBindDockerProjectSite({...p,...change}),false,JSON.stringify(change));
  }
 });
