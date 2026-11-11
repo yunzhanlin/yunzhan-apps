@@ -1,7 +1,7 @@
 name: Official OpenLiteSpeed 1.9.4 WebAdmin binary and native HTTP
 on:
   push:
-    branches: [codex/openlitespeed-c92-v194-admin-native]
+    branches: [codex/openlitespeed-c92-v194-admin-native-r2]
     paths: [scripts/openlitespeed-php83-c92/proof.py]
 permissions:
   contents: read

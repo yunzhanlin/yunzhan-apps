@@ -85,7 +85,10 @@ def webadmin(password, expected, probe):
 
     code, _, body = request('GET', '/login.php')
     if expected is None:
-        assert b'webadmin console is disabled' in body.lower(), (code, hashlib.sha256(body).hexdigest())
+        root_code, _, root_page = request('GET', '/')
+        disabled_notice = b'webadmin console is disabled' in root_page.lower()
+        assert b'name="userid"' not in body and (code in (403, 404) or disabled_notice)
+        proof['disabled_admin_original_http'] = {'login': code, 'root': root_code, 'notice': disabled_notice}
         return None
     assert code == 200 and b'name="userid"' in body, (code, hashlib.sha256(body).hexdigest())
     data = urllib.parse.urlencode({'userid': 'admin', 'pass': password}).encode()
@@ -136,6 +139,15 @@ try:
     docker('exec', name, '/bin/sh', '-c', 'set -eC; umask 077; : > /usr/local/lsws/admin/conf/enable_webadmin')
     docker('restart', name)
     assert docker('exec', name, 'sha256sum', credential_path) == credential
+    for _ in range(30):
+        try:
+            if get_page(probe) == (200, b'8.3.36|litespeed'):
+                break
+        except (OSError, http.client.HTTPException):
+            pass
+        time.sleep(1)
+    else:
+        raise RuntimeError('The original site did not recover after WebAdmin activation')
     put_file('/usr/local/lsws/admin/html' + probe, payload)
     cert = webadmin(password, True, probe)
     assert webadmin(secrets.token_urlsafe(24), False, probe) is None
