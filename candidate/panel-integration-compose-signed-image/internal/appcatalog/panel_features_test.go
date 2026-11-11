@@ -64,6 +64,31 @@ func TestSiteDiagnosisRequiresItsReviewedIngressHandler(t *testing.T) {
 	}
 }
 
+func TestUserAccessOverviewManifestKeepsOldVersionAndRequiresItsHandler(t *testing.T) {
+	m := panelRequirementFixture()
+	m.ID, m.Delivery.Target = "user-manager", "user-manager"
+	m.Version, m.RequiredPanelFeatures = "1.3.1", nil
+	if err := validatePanelRequirements(m, nil); err != nil {
+		t.Fatal(err)
+	}
+	available := func(feature string) bool { return feature == UserAccessOverviewFeature }
+	m.Version = UserAccessOverviewVersion
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("accepted the new version without the overview handler")
+	}
+	m.RequiredPanelFeatures = []string{UserAccessOverviewFeature}
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(string) bool { return false }) == nil {
+		t.Fatal("an older panel admitted the new account workspace")
+	}
+	m.Delivery.Target = "daily-report"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("another target borrowed the account workspace")
+	}
+}
+
 func TestGeographyPackageRequiresBoundedReaderNotEarlierPrototype(t *testing.T) {
 	m := panelRequirementFixture()
 	m.Version = "2.6.0"

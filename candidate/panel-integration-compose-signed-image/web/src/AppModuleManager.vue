@@ -38,6 +38,7 @@ import { hostDiskSupportedVersion } from './hostDisk';
 import LoadBalanceStreamWorkspace from './LoadBalanceStreamWorkspace.vue';
 import IntegrityKernelWorkspace from './IntegrityKernelWorkspace.vue';
 import RemoteIndependentBackups from './RemoteIndependentBackups.vue';
+import UserAccessOverview from './UserAccessOverview.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -308,7 +309,21 @@ watch([() => props.access, () => visible.value, () => definition.value?.id], () 
 watch(() => definition.value?.id, () => { cancelDiskScan(); cancelPlatformHealthRead(); platformReadNotice.value=""; diskScanNotice.value=""; });
 onBeforeUnmount(clearWriteOnlyFields);
 const menuCatalog = computed(() => (report.value?.menu_catalog || []) as {id:string;label:string;admin_only:boolean}[]);
+const selectedAccountSites = computed(() => Array.isArray(form.value.site_ids) ? [...new Set<string>(form.value.site_ids)] : []);
+const accountSiteChoices = computed(() => {
+  const choices = sites.value.map(site => ({ id: site.id, label: `${site.name} · ${site.domain}` }));
+  const available = new Set(choices.map(site => site.id));
+  for (const id of selectedAccountSites.value) {
+    if (!available.has(id)) choices.push({ id, label: `未列出的网站 · ${id}` });
+  }
+  return choices;
+});
 function roleDefaultMenus() { form.value.menu_ids = menuCatalog.value.filter(menu => (form.value.role === "admin" || !menu.admin_only) && (props.access === undefined || props.access?.menu_ids.includes(menu.id))).map(menu => menu.id); }
+function newManagedAccount() {
+  selectedPlanID.value = "";
+  Object.assign(form.value, { username: "", password: "", role: "viewer", site_ids: [], menu_ids: [], expected_revision: 0 });
+  activeTab.value = "account";
+}
 watch(() => form.value.role, () => {
   if (definition.value?.id === "user-manager" && Array.isArray(form.value.menu_ids) && menuCatalog.value.length)
     form.value.menu_ids = form.value.menu_ids.filter((id: string) => menuCatalog.value.some(menu => menu.id === id && (form.value.role === "admin" || !menu.admin_only)));
@@ -1320,6 +1335,14 @@ defineExpose({ show });
                 :value="site.id"
                 :label="`${site.name} · ${site.domain}`"
             /></el-select>
+            <template v-else-if="field.kind === 'site-scope'">
+              <el-select :model-value="selectedAccountSites" :disabled="form.role === 'admin'"
+                multiple filterable clearable :teleported="false" :persistent="false" collapse-tags
+                aria-label="授权网站" placeholder="选择授权网站" @update:model-value="form.site_ids = $event">
+                <el-option v-for="site in accountSiteChoices" :key="site.id" :value="site.id" :label="site.label" />
+              </el-select>
+              <small v-if="form.role === 'admin'">管理员根据菜单授权访问网站。</small>
+            </template>
             <el-select v-else-if="field.kind === 'site-batch'" v-model="form.site_ids"
               :teleported="false" :persistent="false" multiple :multiple-limit="4" filterable clearable
               placeholder="选择需要诊断的网站">
@@ -1543,6 +1566,9 @@ defineExpose({ show });
           </el-form-item>
         </el-form>
         <div class="module-actions">
+          <el-button v-if="definition.id === 'user-manager' && section.id === 'users'"
+            :disabled="!installed || busy || userMutationNeedsRead(userMutationObservation, 'create')"
+            @click="newManagedAccount">新建账户</el-button>
           <el-button
             v-for="action in section.actions.filter(action=>action!=='ids-rules')"
             :key="action"
@@ -1572,7 +1598,9 @@ defineExpose({ show });
             <AnalyticsQueryContext :report="report" />
           </template>
           <el-alert v-if="definition.id==='load-balance' && section.id==='transactions' && !loadBalanceTransactionQueryMatches(report,form)" type="warning" :closable="false" title="分页参数已修改，尚未刷新：下方仍是已返回分页范围的库存，不是当前表单的结果。" />
-          <AppModuleReport :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
+          <UserAccessOverview v-if="definition.id === 'user-manager' && section.id === 'users'"
+            :report="sectionReport(section.id)" :sites="sites" :busy="busy" @select="selected" />
+          <AppModuleReport v-else :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
         </section>
         <p v-else-if="definition.id==='load-balance'" class="module-report-empty" role="status">此页面尚无对应操作的报告。请执行本页查询或操作；其他页面的缓存结果不会当作本页回执。</p>
         <el-alert v-if="definition.id==='nfs-manager' && nfsSectionReadError" :title="nfsSectionReadError" type="error" :closable="false" role="status" />

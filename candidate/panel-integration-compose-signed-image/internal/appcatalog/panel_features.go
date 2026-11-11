@@ -60,9 +60,11 @@ const PHPProcessPolicyFeature = "php-fpm-process-policy-v1"
 const PHPProcessPolicyVersion = "1.3.1"
 const SiteDiagnosisFeature = "site-diagnosis-ingress-v1"
 const SiteDiagnosisVersion = "1.3.0"
+const UserAccessOverviewFeature = "user-access-overview-v1"
+const UserAccessOverviewVersion = "1.3.2"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature {
+	if feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == UserAccessOverviewFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2RootVendorFeature {
@@ -159,6 +161,13 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 	}
 	if err := validateCountryDataRequirement(manifest); err != nil {
 		return err
+	}
+	if manifest.ID == "user-manager" {
+		base, _, _ := strings.Cut(manifest.Version, "-")
+		comparison, valid := CompareVersions(base, UserAccessOverviewVersion)
+		if !valid || comparison >= 0 && (manifest.Version != UserAccessOverviewVersion || len(manifest.RequiredPanelFeatures) != 1 || manifest.RequiredPanelFeatures[0] != UserAccessOverviewFeature) {
+			return errors.New("用户管理 1.3.2 须声明固定版本的账户权限总览")
+		}
 	}
 	if manifest.ID == "site-diagnosis" {
 		base, _, _ := strings.Cut(manifest.Version, "-")
@@ -328,6 +337,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("应用面板处理器要求无效或重复")
 		}
 		seen[feature] = true
+		if feature == UserAccessOverviewFeature && (manifest.ID != "user-manager" || manifest.Version != UserAccessOverviewVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
+			return errors.New("账户权限总览仅属于用户管理 1.3.2")
+		}
 		if feature == SiteDiagnosisFeature && (manifest.ID != "site-diagnosis" || manifest.Version != SiteDiagnosisVersion || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("站点入口检查处理器仅属于网站诊断 1.3.0")
 		}

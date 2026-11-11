@@ -105,7 +105,12 @@ func (a *Server) manageAppUsers(ctx context.Context, actor identity, action stri
 				return nil, e
 			}
 			var ids []string
-			_ = json.Unmarshal([]byte(scopes), &ids)
+			if err := json.Unmarshal([]byte(scopes), &ids); err != nil {
+				return nil, errors.New("账户网站范围无法核对")
+			}
+			if ids == nil {
+				ids = []string{}
+			}
 			menuIDs, err := parseMenuIDs(role, menus)
 			if err != nil {
 				return nil, err
@@ -231,7 +236,11 @@ func (a *Server) manageAppUsers(ctx context.Context, actor identity, action stri
 			return nil, errors.New("不能删除、降级或限制最后一个完整权限管理员")
 		}
 	}
-	raw, _ := json.Marshal(in.SiteIDs)
+	siteIDs := in.SiteIDs
+	if siteIDs == nil {
+		siteIDs = []string{}
+	}
+	raw, _ := json.Marshal(siteIDs)
 	switch action {
 	case "create":
 		id = ID()

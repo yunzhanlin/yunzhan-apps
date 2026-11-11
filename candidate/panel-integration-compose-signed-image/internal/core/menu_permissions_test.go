@@ -161,6 +161,27 @@ func TestMenuMutationPreservesLegacyAndProtectsLastFullAdmin(t *testing.T) {
 	if err != nil || got.Revision != 2 || !reflect.DeepEqual(got.MenuIDs, []string{"files"}) {
 		t.Fatal(got, err)
 	}
+	// Historical empty grants could be saved as JSON null. Refreshing the
+	// account list must still return an empty site array and keep old rows.
+	if _, err := s.DB.Exec("UPDATE app_user_roles SET site_ids='null' WHERE user_id=?", target.ID); err != nil {
+		t.Fatal(err)
+	}
+	report, err := a.manageAppUsers(context.Background(), master, "run", AppModuleInput{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, row := range report.(map[string]any)["users"].([]map[string]any) {
+		if row["username"] == "reader" {
+			found = true
+			if !reflect.DeepEqual(row["site_ids"], []string{}) {
+				t.Fatal("legacy empty site grant did not serialize as an array", row["site_ids"])
+			}
+		}
+	}
+	if !found {
+		t.Fatal("account overview omitted the existing reader")
+	}
 	if _, err := a.manageAppUsers(context.Background(), master, "update", AppModuleInput{Username: "reader", Role: "viewer", MenuIDs: []string{}, ExpectedRevision: 1}); err == nil {
 		t.Fatal("stale revision accepted")
 	}
@@ -168,7 +189,7 @@ func TestMenuMutationPreservesLegacyAndProtectsLastFullAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err = s.UserAccess(target.ID)
-	if err != nil || len(got.MenuIDs) != 0 || got.Revision != 3 {
+	if err != nil || len(got.MenuIDs) != 0 || !reflect.DeepEqual(got.SiteIDs, []string{}) || got.Revision != 3 {
 		t.Fatal(got, err)
 	}
 	// A second valid full administrator permits reduction of the first.
