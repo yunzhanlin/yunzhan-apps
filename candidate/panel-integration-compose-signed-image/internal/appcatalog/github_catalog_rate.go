@@ -16,7 +16,12 @@ type githubCatalogRetryError struct {
 	status       int
 	rateLimited  bool
 	primaryQuota bool
+	apiNameAlert bool
 	transport    string
+}
+
+func (e *githubCatalogRetryError) allowsGitReference() bool {
+	return e.primaryQuota || e.apiNameAlert
 }
 
 func (e *githubCatalogRetryError) Error() string {
@@ -78,7 +83,7 @@ func (c *Client) githubBackoff() *githubCatalogRetryError {
 	if c.githubRetry == nil || !time.Now().Before(c.githubRetry.until) {
 		return nil
 	}
-	if c.githubRetry.primaryQuota {
+	if c.githubRetry.allowsGitReference() {
 		if c.githubGitRetry != nil && time.Now().Before(c.githubGitRetry.until) {
 			return c.githubGitRetry
 		}

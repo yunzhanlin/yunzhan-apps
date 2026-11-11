@@ -12,9 +12,8 @@ import (
 	"unicode/utf8"
 )
 
-// This is the official repository's documented read-only Git advertisement,
-// not a mirror, external git process, API cooldown override, or mutable-main
-// catalog. It is used only after an explicit REST primary-quota response.
+// The fixed read-only Git advertisement locates the same official repository
+// when the REST service exhausts its primary quota or rejects its TLS name.
 const githubCatalogGitRefURL = "https://github.com/yunzhanlin/yunzhan-apps.git/info/refs?service=git-upload-pack"
 const githubGitAdvertisementLimit = 128 << 10
 const githubGitAdvertisementPacketLimit = 8192
@@ -36,7 +35,7 @@ func (c *Client) catalogReferenceTransport(commit string) string {
 // failed Git request never causes another API request or a redirect/mirror.
 func (c *Client) resolveGitCatalogCommitLocked(ctx context.Context) (string, error) {
 	source, official := c.officialGitHubSource()
-	if !official || c.githubRetry == nil || !c.githubRetry.primaryQuota {
+	if !official || c.githubRetry == nil || !c.githubRetry.allowsGitReference() {
 		return "", errors.New("拒绝未授权的 Git 引用检查")
 	}
 	if err := ctx.Err(); err != nil {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -36,7 +37,7 @@ func (c *Client) resolveCatalogCommit(ctx context.Context, refreshReference bool
 		return "", err
 	}
 	if c.githubRetry != nil && time.Now().Before(c.githubRetry.until) {
-		if c.githubRetry.primaryQuota {
+		if c.githubRetry.allowsGitReference() {
 			return c.resolveGitCatalogCommitLocked(ctx)
 		}
 		return "", c.githubRetry
@@ -56,20 +57,32 @@ func (c *Client) resolveCatalogCommit(ctx context.Context, refreshReference bool
 	raw, err := c.readResponse(req, 16<<10)
 	if err != nil {
 		var retry *githubCatalogRetryError
-		if errors.As(err, &retry) {
-			if c.githubFailures < 6 {
-				c.githubFailures++
+		if !errors.As(err, &retry) {
+			if ctx.Err() != nil {
+				return "", ctx.Err()
 			}
-			minimum := time.Now().Add(time.Minute * time.Duration(1<<(c.githubFailures-1)))
-			if minimum.After(retry.until) {
-				retry.until = minimum
+			var peerAlert *net.OpError
+			// Go wraps this TLS alert from the peer in a remote net.OpError.
+			// Local certificate checks and other TLS failures keep failing closed.
+			if !errors.As(err, &peerAlert) || peerAlert.Op != "remote error" ||
+				peerAlert.Err == nil || peerAlert.Err.Error() != "tls: unrecognized name" {
+				return "", fmt.Errorf("无法定位官方仓库当前提交: %w", err)
 			}
-			c.githubRetry = retry
-			if retry.primaryQuota {
-				return c.resolveGitCatalogCommitLocked(ctx)
-			}
+			now := time.Now()
+			retry = &githubCatalogRetryError{until: now.Add(time.Minute), checkedAt: now, apiNameAlert: true}
 		}
-		return "", fmt.Errorf("无法定位官方仓库当前提交: %w", err)
+		if c.githubFailures < 6 {
+			c.githubFailures++
+		}
+		minimum := time.Now().Add(time.Minute * time.Duration(1<<(c.githubFailures-1)))
+		if minimum.After(retry.until) {
+			retry.until = minimum
+		}
+		c.githubRetry = retry
+		if retry.allowsGitReference() {
+			return c.resolveGitCatalogCommitLocked(ctx)
+		}
+		return "", fmt.Errorf("无法定位官方仓库当前提交: %w", retry)
 	}
 	c.githubRetry = nil
 	c.githubFailures = 0

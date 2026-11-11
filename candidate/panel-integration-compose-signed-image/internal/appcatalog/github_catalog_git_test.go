@@ -3,8 +3,11 @@ package appcatalog
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -162,6 +165,84 @@ func TestGitCatalogPrimaryQuotaUsesOfficialImmutableSignedProtocol(t *testing.T)
 	}
 	if actual.Apps[0].PackageURL != DefaultBaseURL+"/dist/apps/sample-app/1.1.0/manifest.json" {
 		t.Fatal("signed package URL rewritten")
+	}
+}
+
+func TestGitCatalogUsesSignedCommitAfterPeerRejectsRESTTLSName(t *testing.T) {
+	c, key := githubCatalogFixture(t)
+	commit := strings.Repeat("d", 40)
+	bundle := githubCatalogBundle(t, key, "1.1.0", "2026-10-10T10:00:00Z", strings.Repeat("1", 64))
+	names := make(chan string, 1)
+	apiTransport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		local, remote := net.Pipe()
+		go func() {
+			defer remote.Close()
+			server := tls.Server(remote, &tls.Config{GetCertificate: func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				names <- hello.ServerName
+				// With no matching certificate Go's TLS server sends the
+				// unrecognized_name alert to the real HTTPS client.
+				return nil, nil
+			}})
+			_ = server.HandshakeContext(ctx)
+		}()
+		return local, nil
+	}}
+	t.Cleanup(apiTransport.CloseIdleConnections)
+	calls := map[string]int{}
+	c.HTTP = &http.Client{Transport: githubCatalogTransport(func(r *http.Request) (*http.Response, error) {
+		calls[r.URL.String()]++
+		switch r.URL.String() {
+		case githubCatalogRefURL:
+			return apiTransport.RoundTrip(r)
+		case githubCatalogGitRefURL:
+			return gitCatalogResponse(r, 200, gitCatalogAdvertisement(commit)), nil
+		case githubCatalogCommitBase + commit + "/signatures/catalog-v1.bundle.json":
+			return githubCatalogResponse(r, 200, bundle), nil
+		default:
+			t.Fatal("unexpected reference or catalogue URL", r.URL)
+			return nil, errors.New("unexpected URL")
+		}
+	})}
+	cache := t.TempDir()
+	for i := 0; i < 2; i++ {
+		actual, info, err := c.LoadCatalog(context.Background(), cache, 0)
+		if err != nil || info.Stale || info.ResolvedCommit != commit || info.ReferenceTransport != "github-smart-http" ||
+			actual.Apps[0].Version != "1.1.0" {
+			t.Fatal("TLS alert failed to locate and verify the same official commit", info, err)
+		}
+	}
+	select {
+	case name := <-names:
+		if name != "api.github.com" {
+			t.Fatal("unexpected TLS name", name)
+		}
+	default:
+		t.Fatal("HTTPS handshake was not exercised")
+	}
+	if len(calls) != 3 || calls[githubCatalogRefURL] != 1 || calls[githubCatalogGitRefURL] != 2 ||
+		c.githubRetry == nil || !c.githubRetry.apiNameAlert || c.githubRetry.primaryQuota {
+		t.Fatal("unexpected reference attempts or cooldown", calls, c.githubRetry)
+	}
+}
+
+func TestGitCatalogTLSFallbackPreservesCertificateAndOtherAlertErrors(t *testing.T) {
+	for name, responseError := range map[string]error{
+		"hostname verification": x509.HostnameError{Certificate: &x509.Certificate{}, Host: "api.github.com"},
+		"generic TLS alert":     &net.OpError{Op: "remote error", Err: errors.New("tls: internal error")},
+		"untyped message":       errors.New("remote error: tls: unrecognized name"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, _ := githubCatalogFixture(t)
+			c.HTTP = &http.Client{Transport: githubCatalogTransport(func(r *http.Request) (*http.Response, error) {
+				if r.URL.String() != githubCatalogRefURL {
+					t.Fatal("unexpected fallback after TLS failure", r.URL)
+				}
+				return nil, responseError
+			})}
+			if _, _, _, err := c.FetchCatalog(context.Background()); !errors.Is(err, responseError) || c.githubRetry != nil {
+				t.Fatal("TLS failure was altered", err, c.githubRetry)
+			}
+		})
 	}
 }
 
