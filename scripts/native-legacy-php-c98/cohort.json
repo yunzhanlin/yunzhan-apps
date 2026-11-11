@@ -1,0 +1,92 @@
+{
+  "source_head": "9be0b156414aec7b5688f22fdb87683a2855c2f0",
+  "source_inputs_sha256": "9a509cfce1c541f9577ca7f6a2644408958497b28ca456c604cc92c93825d32d",
+  "version": "0.1.0-dev.proapps24legacyphppatchcandidate98",
+  "recipes": {
+    "54": {
+      "version": "5.4.45",
+      "target": "php-legacy-54-bookworm-compat3",
+      "app_version": "5.4.45-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat3@sha256:bcf1f805ad860b67cf9f17a237fed90c08e7664b499094108c9f955e58e42dff",
+      "previous_target": "php-legacy-54-bookworm",
+      "previous_version": "5.4.45-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat2@sha256:25745de343faf6dd3c2fde3bb8729dd5475f42ae1064c178d56d07b9a2d0dd0d",
+      "preferred_port": 18085
+    },
+    "55": {
+      "version": "5.5.38",
+      "target": "php-legacy-55-bookworm-compat3",
+      "app_version": "5.5.38-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat3@sha256:bd8dd3c8cb2f43613ee2bb4765ab0615f0c7f21554d574a3c519663b0936e4f0",
+      "previous_target": "php-legacy-55-bookworm",
+      "previous_version": "5.5.38-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat2@sha256:cec48405f9adb85e86a5aee8f5f4eb3da3396ab57d94a1544bb774b6832cf18d",
+      "preferred_port": 18086
+    },
+    "56": {
+      "version": "5.6.40",
+      "target": "php-legacy-56-stretch-compat3",
+      "app_version": "5.6.40-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat3@sha256:7e553b5f2aefc08cf85c3aca8dfc288807788a71e3297c26861ac51a78686756",
+      "previous_target": "php-legacy-56-stretch",
+      "previous_version": "5.6.40-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8",
+      "preferred_port": 18087
+    },
+    "70": {
+      "version": "7.0.33",
+      "target": "php-legacy-70-stretch-compat3",
+      "app_version": "7.0.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat3@sha256:0093801592dcee612cf05b204fab9e9fa01f7d05b32ab502b615d1d05595135c",
+      "previous_target": "php-legacy-70-stretch",
+      "previous_version": "7.0.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e",
+      "preferred_port": 18088
+    },
+    "71": {
+      "version": "7.1.33",
+      "target": "php-legacy-71-stretch-compat3",
+      "app_version": "7.1.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat3@sha256:c6c340bc90ddb39ccf613344894ec9afe6b8ce53518fb273dc3b95923f673ac2",
+      "previous_target": "php-legacy-71-stretch",
+      "previous_version": "7.1.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9",
+      "preferred_port": 18089
+    },
+    "72": {
+      "version": "7.2.34",
+      "target": "php-legacy-72-buster-compat3",
+      "app_version": "7.2.34-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat3@sha256:d65e1fade265eafd758563691161f9cae4895177fd00197aae1116b976c2756c",
+      "previous_target": "php-legacy-72-buster",
+      "previous_version": "7.2.34-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625",
+      "preferred_port": 18090
+    },
+    "73": {
+      "version": "7.3.33",
+      "target": "php-legacy-73-buster-compat3",
+      "app_version": "7.3.33-compat3",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat3@sha256:d105bbce103e6b0bd002c5fe4b6ebfc7c3134af8217310d3e5ce9da6d7435661",
+      "previous_target": "php-legacy-73-buster",
+      "previous_version": "7.3.33-compat2",
+      "previous_image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e",
+      "preferred_port": 18091
+    }
+  },
+  "mode": "native-template",
+  "apps": null,
+  "served_head": "8d6546660a0c79f3fc33325fae53185ace03d235",
+  "payload_files": {
+    ".github/workflows/legacy-php-c98-native-qa1.yml": "4b3341705547b0d020bae2a2f99b08c028a94b7ad4f75e03866c79e4301a7dd9",
+    "scripts/native-legacy-php-c98/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-legacy-php-c98/dispatch.json": "8685d3d38a7de5fb72b69f942fbb44d2ff84afb43ea471a9151d66338772549f",
+    "scripts/native-legacy-php-c98/download.py": "2481d2f03c83c41aacbc57fd4581ab287cfc467e13b9d958bcf578a1b7c35ef3",
+    "scripts/native-legacy-php-c98/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-legacy-php-c98/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-legacy-php-c98/legacy-php.py": "7098d9e5129a794d17e00f7ec60012c7db19fb741b0a8673b95357bb9ab4e380",
+    "scripts/native-legacy-php-c98/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-legacy-php-c98/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
