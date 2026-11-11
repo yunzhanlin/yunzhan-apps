@@ -1,0 +1,58 @@
+{
+  "source_head": "e0cd90932e4740adc6961768b52a56739aaaea5a",
+  "source_inputs_sha256": "b4a9c42a894053f2baff1bf9dea6131609592912e6f7e1e1af66b5e0d0829279",
+  "version": "0.1.0-dev.proapps24dockercredentialcandidate72",
+  "source_sdk_tree": "b9ac02683f8ae1f689e7a31c9dbaae8186927be2",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-arm64.tar.gz"
+    }
+  },
+  "release_id": 441825082,
+  "tag": "qa-dockercredentialcandidate72-20261111-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 735857678,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-amd64.tar.gz": {
+      "id": 735860519,
+      "bytes": 23767648,
+      "sha256": "eac9224f4b3dcd75eeaf96fef0bcd702a351679bbec60ccb63b7ac933adfe58b"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-amd64.tar.gz.manifest": {
+      "id": 735857515,
+      "bytes": 186,
+      "sha256": "71c4eedae032570d9c7b98f2cd5be0a17bc2e6bbf94cc9cfce3413a3829a623f"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-amd64.tar.gz.sig": {
+      "id": 735857316,
+      "bytes": 64,
+      "sha256": "21a9f15ce94b79aba26d74801702a9db5ff134bd05dccb58f3c3af54ad9ae8e7"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-arm64.tar.gz": {
+      "id": 735857741,
+      "bytes": 21984691,
+      "sha256": "abbe9068db59dc9f30531c1a46a462da46794225855235e3fbeb6aff8dff098e"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-arm64.tar.gz.manifest": {
+      "id": 735857598,
+      "bytes": 186,
+      "sha256": "ff81b37284dfd77d5efd09ddbba5f63cfcf4bab479aa016c30666e96bc852b23"
+    },
+    "panel-0.1.0-dev.proapps24dockercredentialcandidate72-linux-arm64.tar.gz.sig": {
+      "id": 735857376,
+      "bytes": 64,
+      "sha256": "b19cf66ba914c14c41a49364890d07f1130a5732e5b784aff3dceef4f300ac02"
+    },
+    "release-signing-dev.pub": {
+      "id": 735857449,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  }
+}
