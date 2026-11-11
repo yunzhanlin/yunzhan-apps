@@ -20,7 +20,7 @@ assert os.environ['GITHUB_ACTIONS'] == 'true' and os.environ['GITHUB_REPOSITORY'
 arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}[platform.machine()]
 out = Path(os.environ['RUNNER_TEMP']) / 'c92-ols-php83-proof'
 out.mkdir(mode=0o700)
-image = 'litespeedtech/openlitespeed:1.9.4-lsphp83@sha256:e240c9af427fe36e373382384a8eaabd7224412fbb3257a4288525adbd67d19c'
+image = 'local/c92-ols-php83:verified'
 name = 'c92-ols-php83'
 web, admin = 27081, 27082
 bootstrap = Path(sys.argv[1]).read_text()
@@ -105,7 +105,6 @@ def webadmin(password, expected, probe):
 
 proof = {'ok': False, 'architecture': arch, 'tested_website_php': '8.3.36', 'Main_changed': False}
 try:
-    docker('pull', '--platform', 'linux/' + arch, image)
     assert docker('image', 'inspect', '-f', '{{.Os}}/{{.Architecture}}', image).strip() == ('linux/' + arch).encode()
     docker('run', '-d', '--name', name, '--entrypoint', '/bin/sh',
            '--memory', '512m', '--publish', f'127.0.0.1:{web}:8088', '--publish', f'127.0.0.1:{admin}:7080',

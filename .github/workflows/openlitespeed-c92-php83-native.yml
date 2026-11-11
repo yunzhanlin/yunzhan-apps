@@ -1,7 +1,7 @@
-name: Official OpenLiteSpeed 1.9.4 PHP and WebAdmin preservation
+name: Official OpenLiteSpeed 1.9.4 WebAdmin binary and native HTTP
 on:
   push:
-    branches: [codex/openlitespeed-c92-v194-official-native]
+    branches: [codex/openlitespeed-c92-v194-admin-native]
     paths: [scripts/openlitespeed-php83-c92/proof.py]
 permissions:
   contents: read
@@ -17,8 +17,9 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-      - name: Verify the official image and exercise HTTPS and website PHP
+      - name: Build the exact patched native image and exercise HTTPS and website PHP
         run: |
+          docker build --pull -t local/c92-ols-php83:verified scripts/openlitespeed-php83-c92
           python3 -I -B scripts/openlitespeed-php83-c92/proof.py scripts/openlitespeed-php83-c92/panel-bootstrap.sh
       - name: Retain original observations
         if: always()
