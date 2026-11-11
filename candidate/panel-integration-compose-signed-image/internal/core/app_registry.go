@@ -182,6 +182,11 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
 	for _, app := range catalog.Apps {
 		supported, compatibilityDetail := registrySupportOn(app, runtimecatalog.HostPlatform(), runtime.GOARCH)
+		if supported && app.Provider == "compose" && app.Target == "mongodb" {
+			if err := MongoDBKernelCompatibility(); err != nil {
+				supported, compatibilityDetail = false, err.Error()
+			}
+		}
 		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail, LatestVersion: app.Version}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -422,7 +427,11 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 		return
 	}
 	if manifest.Delivery.Provider == "compose" {
-		if err = validateRegistryComposeDelivery(manifest); err != nil {
+		err = validateRegistryComposeDelivery(manifest)
+		if err == nil && manifest.Delivery.Target == "mongodb" {
+			err = MongoDBKernelCompatibility()
+		}
+		if err != nil {
 			if replay() {
 				return
 			}

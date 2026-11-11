@@ -394,6 +394,11 @@ func RunComposeJob(id string) (ret error) {
 			ret = writeErr
 		}
 	}()
+	if op.Action == "create" && op.TemplateID == "mongodb" {
+		if err := core.MongoDBKernelCompatibility(); err != nil {
+			return err
+		}
+	}
 	if e = dockerAvailable(ctx); e != nil {
 		return e
 	}

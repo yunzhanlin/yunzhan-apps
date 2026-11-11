@@ -58,6 +58,8 @@ import {
   VideoPause,
   Timer,
 } from "@element-plus/icons-vue";
+import { composeHostPortSettings, isComposeHostPort } from "./composeHostPorts";
+
 const AccountManager = defineAsyncComponent(() => import("./AccountManager.vue")) as typeof import("./AccountManager.vue")["default"];
 const CertificateManager = defineAsyncComponent(() => import("./CertificateManager.vue")) as typeof import("./CertificateManager.vue")["default"];
 const DatabaseManager = defineAsyncComponent(() => import("./DatabaseManager.vue")) as typeof import("./DatabaseManager.vue")["default"];
@@ -753,14 +755,19 @@ async function installRegistryApp(app: RegistryApp) {
   }
   const body: Record<string, unknown> = { expected_version: app.version, expected_sha256: app.sha256 };
   try {
-	if (app.provider === "compose") {
-	  const defaultPort = ({ "memcached-cache": 21211, mongodb: 27017, elasticsearch: 19200 } as Record<string, number>)[app.target] || 18080;
-      const answer = await ElMessageBox.prompt("应用只会绑定到主机回环地址，请输入 1024–65535 之间的本机端口。", `安装 ${app.name}`, {
-		inputValue: String(defaultPort),
-        inputValidator: (value: string) => Number.isInteger(Number(value)) && Number(value) >= 1024 && Number(value) <= 65535 || "端口必须在 1024–65535 之间",
-        confirmButtonText: "验签并安装",
-        cancelButtonText: "取消",
-      });
+    if (app.provider === "compose") {
+      const ports = composeHostPortSettings(app.target);
+      const range = `请输入 1024–${ports.max} 之间的本机端口。`;
+      const answer = await ElMessageBox.prompt(
+        `应用只会绑定到主机回环地址。${range}${ports.detail}`,
+        `安装 ${app.name}`,
+        {
+          inputValue: String(ports.preferred),
+          inputValidator: (value: string) => isComposeHostPort(app.target, Number(value)) || range,
+          confirmButtonText: "验签并安装",
+          cancelButtonText: "取消",
+        },
+      );
       body.host_port = Number(answer.value);
     } else {
       await ElMessageBox.confirm(`面板将从云栈官方 GitHub 仓库拉取 ${app.name} ${app.version} 清单，验证 Ed25519 目录签名和应用包 SHA-256 后再执行受限安装。`, `安装 ${app.name}`, {

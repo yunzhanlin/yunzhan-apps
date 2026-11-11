@@ -5,12 +5,13 @@ const permissionSource=readFileSync(new URL('../web/src/menuPermissions.ts',impo
 const permissionJS=ts.transpileModule(permissionSource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
 const permissionExports={};new Function('exports',permissionJS)(permissionExports);const {canOpenAppModule}=permissionExports;
 import * as createRequestExports from '../web/src/dockerCreateRequest.ts';
+import * as composePortExports from '../web/src/composeHostPorts.ts';
 const randomExports={};new Function('exports',ts.transpileModule(readFileSync(new URL('../web/src/randomId.ts',import.meta.url),'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText)(randomExports);
 const source=readFileSync(new URL('../web/src/DockerManager.vue',import.meta.url),'utf8').split('<script setup lang="ts">')[1].split('</script>')[0];
 const ast=ts.createSourceFile('DockerManager.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
 const statements=ast.statements.filter(n=>!ts.isImportDeclaration(n)&&!(ts.isExpressionStatement(n)&&n.expression.expression?.getText(ast)==='defineExpose'));
 const js=ts.transpileModule(statements.map(n=>n.getText(ast)).join('\n'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-const names=['visible','busy','loading','credentials','credentialsOpen','credentialsLoading','credentialsError','passwordVisible','copyCredential','logs','logsName','logsOpen','overview','containers','images','projects','networks','volumes','templates','bindingProject','bindingForm','bindingOpen','projectOpen','projectForm','createProject','newProject','pendingCreate','originalCreateJob','createRecoveryError','createBlocked','checkOriginalCreate','acknowledgeFailedCreate','showCredentials','showLogs','showProjectLogs','removeContainer','removeImage','removeProject','removeNetwork','removeVolume','pull','createVolume','load','projectAction','bindProjectSite','waitJob','contextToken'];
+const names=['visible','busy','loading','credentials','credentialsOpen','credentialsLoading','credentialsError','passwordVisible','copyCredential','logs','logsName','logsOpen','overview','containers','images','projects','networks','volumes','templates','bindingProject','bindingForm','bindingOpen','projectOpen','projectForm','createProject','newProject','openTemplate','pendingCreate','originalCreateJob','createRecoveryError','createBlocked','checkOriginalCreate','acknowledgeFailedCreate','showCredentials','showLogs','showProjectLogs','removeContainer','removeImage','removeProject','removeNetwork','removeVolume','pull','createVolume','load','projectAction','bindProjectSite','waitJob','contextToken'];
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b});return{promise,resolve,reject};};
 const project={id:'a'.repeat(32),name:'fixture-project',engine_name:'panel_fixture',template_id:'rabbitmq',host_port:26571},container={Id:'b'.repeat(64),Names:['/fixture-container'],State:'exited',Labels:{}},image={Id:'sha256:'+'c'.repeat(64)},network={Id:'d'.repeat(64),Name:'fixture-network'},volume={Name:'fixture-volume'};
 function credentialResponse(item, password) {
@@ -19,7 +20,7 @@ function credentialResponse(item, password) {
 function response(url){if(url==='/docker')return{available:true,version:'fixture-engine'};const key=url.split('/').at(-1);return{[key]:[]};}
 function fixture(api=async url=>response(url),prompt=async()=>({value:'fixture'})){
  const scope=effectScope(),calls=[],messages=[],clipboard=[],saved=new Map(),timers=[],props=reactive({csrf:'fixture-original-session',access:{role:'admin',user_id:'d'.repeat(32),menu_ids:['system-tools','runtimes']},api:(...args)=>{calls.push(args);return api(...args);}});
- const b={...createRequestExports,navigator:{clipboard:{writeText:async value=>{clipboard.push(value);}}},ref,computed,watch,canOpenAppModule,defineProps:()=>props,ElMessage:Object.fromEntries(['success','warning','error'].map(k=>[k,v=>messages.push([k,v])])),ElMessageBox:{prompt},randomId:randomExports.randomId,formatPanelDateTime:()=> 'fixture-time',sessionStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},setTimeout(fn){timers.push(fn);},onBeforeUnmount(fn){b.dispose=fn;}};
+ const b={...createRequestExports,...composePortExports,navigator:{clipboard:{writeText:async value=>{clipboard.push(value);}}},ref,computed,watch,canOpenAppModule,defineProps:()=>props,ElMessage:Object.fromEntries(['success','warning','error'].map(k=>[k,v=>messages.push([k,v])])),ElMessageBox:{prompt},randomId:randomExports.randomId,formatPanelDateTime:()=> 'fixture-time',sessionStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},setTimeout(fn){timers.push(fn);},onBeforeUnmount(fn){b.dispose=fn;}};
  const x=scope.run(()=>new Function('b','with(b){'+js+';return {'+names.join(',')+'};}')(b));x.visible.value=true;
  return{x,props,calls,messages,clipboard,saved,timers,close(){b.dispose?.();scope.stop();}};
 }
@@ -98,6 +99,45 @@ test('actual Docker job inspector never adopts a foreign response job, kind, pro
 });
 test('actual Docker job inspector completes the same original Compose identity without another submission',async()=>{
  const original={job_id:'1'.repeat(32),state:'running',kind:'compose',project_id:project.id},f=fixture(async()=>({...original,state:'succeeded'}));try{const pending=f.x.waitJob(original,f.x.contextToken(),true,project.id);await flush();f.timers.shift()();const result=await pending;assert.equal(result.job_id,original.job_id);assert.equal(result.state,'succeeded');assert.equal(f.calls.length,1);assert(!f.calls.some(c=>c[1]==='POST'));}finally{f.close();}
+});
+test('dual-port projects reject 65535 before creating or retaining a request', async () => {
+ for (const template of ['rabbitmq', 'openlitespeed']) {
+  const f = fixture(async () => assert.fail('invalid dual-port request was sent'));
+  try {
+   f.x.projectOpen.value = true;
+   f.x.projectForm.value = {name:'invalid-port', mode:'template', templateId:template, hostPort:'65535', compose:''};
+   await f.x.createProject();
+   assert.equal(f.calls.length, 0);
+   assert.equal(f.saved.size, 0);
+   assert(f.messages.some(([level, message]) => level === 'error' && message.includes('65534')));
+  } finally { f.close(); }
+ }
+ assert(composePortExports.isComposeHostPort('rabbitmq', 65534));
+ assert(composePortExports.isComposeHostPort('openlitespeed', 65534));
+ assert(composePortExports.isComposeHostPort('mongodb', 65535));
+});
+test('opening a dual-port template skips an occupied second port', async () => {
+ const f = fixture(async url => {
+  if (url === '/docker/templates') return {templates:[{id:'rabbitmq'}]};
+  if (url === '/docker/containers') return {containers:[{Ports:[{PublicPort:15673}]}]};
+  return response(url);
+ });
+ try {
+  await f.x.openTemplate('rabbitmq');
+  assert.equal(f.x.projectForm.value.hostPort, '15674');
+  assert.equal(f.x.projectForm.value.templateId, 'rabbitmq');
+ } finally { f.close(); }
+});
+test('opening an incompatible MongoDB template shows the kernel reason before creating a project', async () => {
+ const reason = 'MongoDB 8.0 与 Linux 内核 6.19.0-azure 不兼容';
+ const f = fixture(async url => url === '/docker/templates'
+  ? {templates:[{id:'mongodb',compatibility_detail:reason}]} : response(url));
+ try {
+  await f.x.openTemplate('mongodb');
+  assert.equal(f.x.projectOpen.value, false);
+  assert(f.messages.some(([level, message]) => level === 'error' && message === reason));
+  assert(!f.calls.some(([, method]) => method === 'POST'));
+ } finally { f.close(); }
 });
 test('actual create-project callback closes its dialog only after the same original queued Compose job succeeds',async()=>{
  const original={job_id:'f3afa0b3b32fcea11fcafd9fcb90a113',kind:'compose',project_id:'e6d706e3c86fac25f5e00cfd3045609d',state:'queued'};

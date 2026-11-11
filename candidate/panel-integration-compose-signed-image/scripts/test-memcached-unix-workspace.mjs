@@ -93,7 +93,9 @@ test('Socket installation has no port, raw UID, arbitrary image or command, and 
 test('actual store selects the independent Socket workspace before the legacy port prompt',()=>{
  const appSource=readFileSync(new URL('../web/src/App.vue',import.meta.url),'utf8');
  const install=appSource.slice(appSource.indexOf('async function installRegistryApp'),appSource.indexOf('const showPanelRuntime'));
- assert(install.indexOf('app.version === "1.6.45-compat4"')<install.indexOf('const defaultPort'));
+ const socketWorkspace=install.indexOf('app.version === "1.6.45-compat4"');
+ const composePrompt=install.indexOf('ElMessageBox.prompt(');
+ assert(socketWorkspace>=0&&composePrompt>socketWorkspace);
  assert(vue.includes('memcachedUnixVersion'));assert(!/localStorage|sessionStorage|console\.log/.test(vue));
 });
 function pendingReview(owner=actor){return{operation:{format:1,request_id:'1'.repeat(32),project_id:project,actor_id:owner,input:{action:'stop',expected_runtime_sha256:runtime,acknowledge_cache_loss:true}},state:'unknown'};}

@@ -140,7 +140,7 @@ test("all eight current runtime families use server/installed identities, not li
  const selected=choose(data).selected;
  for(const n of names)assert.equal(selected[n],n+"-2.1.0");
 });
-test("actual component wiring has exactly the reviewed UI-only delta from F55",()=>{
+test("actual component wiring preserves the reviewed runtime and Compose port behavior",()=>{
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
@@ -155,7 +155,7 @@ test("actual component wiring has exactly the reviewed UI-only delta from F55",(
  one(block,old);
  one('        applyRuntimeChoices(d);\n','        for (const item of d.catalog) {\n          if (item.releases?.length && !item.releases.some(release => release.id === versions.value[item.family])) {\n            versions.value[item.family] = item.releases[0].id;\n          }\n        }\n');
  one('                        @change="rememberRuntimeVersion(rt.family)"\n',"");
- assert.equal(createHash("sha256").update(text).digest("hex"),"a6fa22dd366905f5f1e7a2c1b7ff14c7802762473a29443323dbd9b5befe483a");
+ assert.equal(createHash("sha256").update(text).digest("hex"),"64c4fcfa384ef1c2465ebbe9c26c86f3dbffa104ef14d8820cda0c4b7b4c7715");
 });
 
 test("ordinary portable release build requires this regression without changing earlier gates",()=>{

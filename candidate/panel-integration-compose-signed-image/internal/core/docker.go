@@ -489,6 +489,14 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "rabbitmq", "name": "RabbitMQ", "image": "rabbitmq:4.1.4-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
 			{"id": "openlitespeed", "name": "OpenLiteSpeed", "image": "litespeedtech/openlitespeed:1.8.4-lsphp83", "description": "独立网站与 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
 		}
+		if err := MongoDBKernelCompatibility(); err != nil {
+			for _, template := range templates {
+				if template["id"] == "mongodb" {
+					template["compatibility_detail"] = err.Error()
+					break
+				}
+			}
+		}
 		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {
 			if runtime.GOARCH != "amd64" {
 				continue

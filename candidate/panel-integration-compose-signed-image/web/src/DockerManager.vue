@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
 import { randomId } from "./randomId";
+import { composeHostPortSettings, isComposeHostPort } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
 import { dockerCreateFingerprint, dockerCreateStorageKey, readDockerCreateRequest, type RetainedDockerCreate } from "./dockerCreateRequest";
 import { computed, ref, watch, onBeforeUnmount } from "vue";
@@ -131,8 +132,7 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
   const port = response.host_port;
   const fields = response.credentials;
   if (response.project_id !== item.id || response.template_id !== template ||
-      typeof port !== "number" || !Number.isInteger(port) ||
-      port < 1024 || port > (definition.secondary ? 65534 : 65535) ||
+      !isComposeHostPort(template, port) ||
       (item.host_port && port !== item.host_port) || !fields || typeof fields !== "object") {
     throw new Error("无法核对项目凭据");
   }
@@ -148,6 +148,7 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
 }
 
 interface DockerTemplate {
+  compatibility_detail?: string;
   id: string;
   name: string;
   image: string;
@@ -196,6 +197,7 @@ const projectForm = ref({
   compose:
     "services:\n  app:\n    image: alpine:3.22\n    restart: unless-stopped\n",
 });
+const projectPorts = computed(() => composeHostPortSettings(projectForm.value.templateId));
 const bindingForm = ref({ name: "", slug: "", domain: "" });
 const networkForm = ref({ name: "", internal: false });
 const form = ref({
@@ -366,16 +368,18 @@ async function openTemplate(templateId: string) {
   const token = contextToken();
   await load();
   if (!contextCurrent(token)) return;
-  if (!templates.value.some((template) => template.id === templateId)) {
-    ElMessage.error("应用模板暂不可用");
+  const template = templates.value.find((item) => item.id === templateId);
+  if (!template || template.compatibility_detail) {
+    ElMessage.error(template?.compatibility_detail || "应用模板暂不可用");
     return;
   }
   newProject();
   projectForm.value.templateId = templateId;
   const occupied = new Set(containers.value.flatMap((item) => item.Ports?.map((port) => port.PublicPort) || []));
-  let port = 18080;
-  while (occupied.has(port) && port < 65535) port++;
-  projectForm.value.hostPort = String(port);
+  const ports = composeHostPortSettings(templateId);
+  let port = ports.preferred;
+  while (port <= ports.max && (occupied.has(port) || (ports.usesNextPort && occupied.has(port + 1)))) port++;
+  projectForm.value.hostPort = port <= ports.max ? String(port) : "";
   projectOpen.value = true;
 }
 defineExpose({ open, openTemplate });
@@ -616,7 +620,7 @@ function newProject() {
   projectForm.value = {
     name: "",
     mode: "template",
-    templateId: templates.value[0]?.id || "nginx-static",
+    templateId: templates.value.find((item) => !item.compatibility_detail)?.id || "nginx-static",
     hostPort: "18080",
     compose:
       "services:\n  app:\n    image: alpine:3.22\n    restart: unless-stopped\n",
@@ -626,6 +630,11 @@ function newProject() {
 async function createProject() {
   const token = contextToken(),epoch=projectEpoch; if (!contextCurrent(token)||!projectOpen.value||busy.value) return;
   restoreCreateRequest();if(pendingCreate.value||createBlocked.value)return;
+  const { mode, templateId, hostPort } = projectForm.value;
+  if (mode === "template" && !isComposeHostPort(templateId, Number(hostPort))) {
+    ElMessage.error(`请输入 1024–${composeHostPortSettings(templateId).max} 之间的本机端口。`);
+    return;
+  }
   const current=()=>projectOpen.value&&projectEpoch===epoch;
   const api = contextAPI(token,current);
   const ticket = startBusy();
@@ -1456,9 +1465,10 @@ async function removeVolume(item: DockerVolume) {
               :key="item.id"
               :label="`${item.name} · ${item.image}`"
               :value="item.id"
+              :disabled="Boolean(item.compatibility_detail)"
               ><strong>{{ item.name }}</strong
               ><span class="template-option">{{
-                item.description
+                item.compatibility_detail || item.description
               }}</span></el-option
             ></el-select
           ></el-form-item
@@ -1470,7 +1480,7 @@ async function removeVolume(item: DockerVolume) {
             placeholder="例如 18080"
           />
           <div class="form-help">
-            只监听 127.0.0.1；需要公网访问时再通过受管 Nginx 站点反向代理。
+            只监听 127.0.0.1。{{ projectPorts.detail }}需要公网访问时可绑定受管 Nginx 站点。
           </div></el-form-item
         >
       </template>
