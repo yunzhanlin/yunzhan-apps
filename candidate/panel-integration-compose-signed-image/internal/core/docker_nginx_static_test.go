@@ -45,7 +45,7 @@ func TestNginxStaticTemplatePinsOfficialIndexHealthAndNamedVolume(t *testing.T) 
 }
 
 func TestDockerSiteBindingOnlyRecognizedFullyHealthyTemplates(t *testing.T) {
-	for _, template := range []string{"nginx-static", "wordpress-blog", "openlitespeed", "php-legacy-52", "php-legacy-81"} {
+	for _, template := range []string{"nginx-static", "wordpress-blog", OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template, "php-legacy-52", "php-legacy-81"} {
 		if !dockerProjectSiteBindingAllowed(template, "running", 1, 1, 1, 23862) {
 			t.Fatal("known healthy refused", template)
 		}

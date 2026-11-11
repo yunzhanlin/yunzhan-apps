@@ -189,11 +189,14 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		phpRelease, finalLegacyPHP := findFinalLegacyPHPRelease(app.Target)
 		finalLegacyPHP = finalLegacyPHP && app.ID == phpRelease.appID && app.Version == phpRelease.appVersion
 		phpMyAdminUpgrade := app.ID == "phpmyadmin" && app.Target == PhpMyAdmin523Template && app.Version == phpMyAdmin523AppVersion
+		openLiteSpeedUpgrade := app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && app.Version == openLiteSpeed194AppVersion
 		previousComposeTarget := ""
 		if finalLegacyPHP {
 			previousComposeTarget = phpRelease.previous
 		} else if phpMyAdminUpgrade {
 			previousComposeTarget = PhpMyAdminLegacyTemplate
+		} else if openLiteSpeedUpgrade {
+			previousComposeTarget = OpenLiteSpeedLegacyTemplate
 		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -304,6 +307,10 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
 					status.UpdateDetail = "在另一个回环端口安装 phpMyAdmin 5.2.3，现有管理入口继续运行。可选择连接同一个 MySQL 实例。"
 				}
+				if openLiteSpeedUpgrade && !compose[app.Target] {
+					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
+					status.UpdateDetail = "在另一对回环端口安装 OpenLiteSpeed 1.9.4。原网站、管理后台和数据卷继续保留。"
+				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
 					status.UpdateSupported = supported
@@ -349,6 +356,9 @@ func versionBranch(version string) string {
 }
 
 func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
+	if app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && len(images) == 1 && images[0] == dockerOpenLiteSpeed194Image {
+		return "1.9.4"
+	}
 	if release, ok := findFinalLegacyPHPRelease(app.Target); ok {
 		for _, image := range images {
 			if image == release.image {
@@ -547,7 +557,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			}
 		} else {
 			if in.HostPort == 0 {
-				in.HostPort = map[string]int{"memcached-cache": 21211, PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, "openlitespeed": 18888}[manifest.Delivery.Target]
+				in.HostPort = map[string]int{"memcached-cache": 21211, PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, OpenLiteSpeedLegacyTemplate: 18888, OpenLiteSpeed194Template: 18890}[manifest.Delivery.Target]
 				if in.HostPort == 0 {
 					in.HostPort = 18080
 				}

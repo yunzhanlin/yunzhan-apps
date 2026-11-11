@@ -109,7 +109,7 @@ const credentialTemplates = {
   },
 } as const;
 
-type CredentialTemplate = keyof typeof credentialTemplates;
+type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194";
 interface CredentialDetails {
   projectName: string;
   template: CredentialTemplate;
@@ -125,7 +125,7 @@ const credentialsError = ref("");
 const passwordVisible = ref(false);
 
 function isCredentialTemplate(value?: string): value is CredentialTemplate {
-  return value !== undefined && Object.hasOwn(credentialTemplates, value);
+  return value === "openlitespeed-194" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
 }
 
 function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
@@ -134,7 +134,7 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
     throw new Error("无法核对项目凭据");
   }
   const response = value as Record<string, unknown>;
-  const definition = credentialTemplates[template];
+  const definition = credentialTemplates[template === "openlitespeed-194" ? "openlitespeed" : template];
   const port = response.host_port;
   const fields = response.credentials;
   if (response.project_id !== item.id || response.template_id !== template ||

@@ -1,9 +1,20 @@
 package core
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
+
+const (
+	OpenLiteSpeedLegacyTemplate = "openlitespeed"
+	OpenLiteSpeed194Template    = "openlitespeed-194"
+	openLiteSpeed194AppVersion  = "1.9.4-compat2"
+)
+
+func IsOpenLiteSpeedTemplate(template string) bool {
+	return template == OpenLiteSpeedLegacyTemplate || template == OpenLiteSpeed194Template
+}
 
 // Docker must leave a new admin volume empty so the image's default password
 // is replaced before the first start. Existing volumes keep their accounts.
@@ -59,8 +70,60 @@ const openLiteSpeedAdminVolume = `      - type: volume
           nocopy: true
 `
 
+// A new managed project publishes WebAdmin only on the host's loopback.
+// Initialize the vendor marker with its credential, then respect its volume
+// state on subsequent boots.
+const openLiteSpeed194AdminMarker = `  marker="$admin_dir/enable_webadmin"
+  [ ! -L "$marker" ] || exit 1
+  if [ ! -e "$marker" ]; then
+    (umask 077; set -C; : > "$marker")
+  fi
+`
+
+var openLiteSpeed194Bootstrap = strings.Replace(openLiteSpeedBootstrap,
+	"  rmdir \"$pending\"\n", openLiteSpeed194AdminMarker+"  rmdir \"$pending\"\n", 1)
+
 func openLiteSpeedComposeCommand(bootstrap string) string {
 	return "    command: [" + strconv.Quote(strings.ReplaceAll(bootstrap, "$", "$$")) + "]\n"
+}
+
+func openLiteSpeedCompose(template string, port int, password string) string {
+	image, bootstrap := dockerOpenLiteSpeedImage, openLiteSpeedBootstrap
+	if template == OpenLiteSpeed194Template {
+		image, bootstrap = dockerOpenLiteSpeed194Image, openLiteSpeed194Bootstrap
+	}
+	return fmt.Sprintf(`services:
+  openlitespeed:
+    image: %s
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+%s    environment:
+      CLOUDSTACK_ADMIN_PASSWORD: "%s"
+    mem_limit: 512m
+    ports:
+      - "127.0.0.1:%d:8088"
+      - "127.0.0.1:%d:7080"
+    volumes:
+      - server-conf:/usr/local/lsws/conf
+%s      - site-data:/var/www/vhosts
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8088/ >/dev/null"]
+      interval: 15s
+      timeout: 10s
+      retries: 18
+      start_period: 60s
+volumes:
+  server-conf: {}
+  admin-conf: {}
+  site-data: {}
+`, image, openLiteSpeedComposeCommand(bootstrap), password, port, port+1, openLiteSpeedAdminVolume)
+}
+
+// The executor uses the reviewed file, including the two loopback bindings,
+// before giving a new project access to the WebAdmin provisioning command.
+func OpenLiteSpeed194ComposeMatches(source string, port int, password string) bool {
+	return port >= 1024 && port < 65535 && len(password) == 64 && ValidID(password[:32]) &&
+		ValidID(password[32:]) && source == openLiteSpeedCompose(OpenLiteSpeed194Template, port, password)
 }
 
 // UpgradeOpenLiteSpeedAdminCompose changes only the known older bootstrap and

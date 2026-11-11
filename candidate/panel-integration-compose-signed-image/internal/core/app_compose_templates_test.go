@@ -29,7 +29,7 @@ func TestIsolatedLegacyPHPTemplates(t *testing.T) {
 	}
 }
 func TestDualServiceTemplates(t *testing.T) {
-	for _, id := range []string{"rabbitmq", "openlitespeed"} {
+	for _, id := range []string{"rabbitmq", OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template} {
 		source, e := dockerTemplate(id, 23000)
 		if e != nil || strings.Count(source, `- "127.0.0.1:`) != 2 || !strings.Contains(source, "@sha256:") {
 			t.Fatal(id, e)

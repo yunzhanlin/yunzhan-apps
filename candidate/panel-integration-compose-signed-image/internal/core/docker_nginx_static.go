@@ -8,6 +8,6 @@ const dockerNginxStaticImage = "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc2
 
 func dockerProjectSiteBindingAllowed(template, state string, services, running, healthy, port int) bool {
 	_, legacy := LegacyPHPImage(template)
-	bindable := template == "nginx-static" || template == "wordpress-blog" || template == "openlitespeed" || legacy
+	bindable := template == "nginx-static" || template == "wordpress-blog" || IsOpenLiteSpeedTemplate(template) || legacy
 	return bindable && state == "running" && services > 0 && running == services && healthy == services && port >= 1024 && port <= 65535
 }

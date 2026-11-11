@@ -112,37 +112,11 @@ func dockerTemplateOnArchitecture(id string, port int, arch string) (string, err
 volumes:
   data: {}
 `, dockerRabbitMQImage, password, port, port+1), nil
-	case "openlitespeed":
+	case OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
 		if port == 65535 {
 			return "", errors.New("双端口应用的起始端口不能为 65535")
 		}
-		password := Token()
-
-		return fmt.Sprintf(`services:
-  openlitespeed:
-    image: %s
-    restart: unless-stopped
-    entrypoint: ["/bin/sh", "-c"]
-%s    environment:
-      CLOUDSTACK_ADMIN_PASSWORD: "%s"
-    mem_limit: 512m
-    ports:
-      - "127.0.0.1:%d:8088"
-      - "127.0.0.1:%d:7080"
-    volumes:
-      - server-conf:/usr/local/lsws/conf
-%s      - site-data:/var/www/vhosts
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8088/ >/dev/null"]
-      interval: 15s
-      timeout: 10s
-      retries: 18
-      start_period: 60s
-volumes:
-  server-conf: {}
-  admin-conf: {}
-  site-data: {}
-`, dockerOpenLiteSpeedImage, openLiteSpeedComposeCommand(openLiteSpeedBootstrap), password, port, port+1, openLiteSpeedAdminVolume), nil
+		return openLiteSpeedCompose(id, port, Token()), nil
 	case "nginx-static":
 		return fmt.Sprintf(`services:
   web:
@@ -466,7 +440,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},
 			{"id": "wordpress-blog", "name": "WordPress 博客", "image": "wordpress:7.1.2-php8.3-apache + mariadb:11.8.9", "description": "独立 PHP 8.3 + MariaDB，持久卷保存网站与数据", "container_port": 80},
 			{"id": "rabbitmq", "name": "RabbitMQ", "image": "rabbitmq:4.1.4-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
-			{"id": "openlitespeed", "name": "OpenLiteSpeed", "image": "litespeedtech/openlitespeed:1.8.4-lsphp83", "description": "独立网站与 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
+			{"id": OpenLiteSpeed194Template, "name": "OpenLiteSpeed 1.9.4", "image": dockerOpenLiteSpeed194Image, "description": "独立网站与回环 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
 		}
 		if err := MongoDBKernelCompatibility(); err != nil {
 			for _, template := range templates {

@@ -90,6 +90,27 @@ func TestOpenLiteSpeedTemplatePreventsDockerCopyUpOfFactoryCredentials(t *testin
 	}
 }
 
+func TestOpenLiteSpeed194TemplateRestrictsThePatchedWebAdmin(t *testing.T) {
+	password := strings.Repeat("a", 64)
+	source := openLiteSpeedCompose(OpenLiteSpeed194Template, 18890, password)
+	if !OpenLiteSpeed194ComposeMatches(source, 18890, password) {
+		t.Fatal("reviewed OpenLiteSpeed template rejected")
+	}
+	for _, changed := range []string{
+		strings.Replace(source, dockerOpenLiteSpeed194Image, dockerOpenLiteSpeedImage, 1),
+		strings.Replace(source, "127.0.0.1:18891:7080", "0.0.0.0:18891:7080", 1),
+		strings.Replace(source, openLiteSpeedComposeCommand(openLiteSpeed194Bootstrap), openLiteSpeedComposeCommand(openLiteSpeedBootstrap), 1),
+	} {
+		if OpenLiteSpeed194ComposeMatches(changed, 18890, password) {
+			t.Fatal("an unreviewed WebAdmin image, binding or bootstrap was accepted")
+		}
+	}
+	if !strings.Contains(openLiteSpeed194Bootstrap, "umask 077; set -C; : > \"$marker\"") ||
+		strings.Contains(openLiteSpeedBootstrap, "enable_webadmin") {
+		t.Fatal("WebAdmin activation changed the original template or lost its first-start guard")
+	}
+}
+
 func TestOpenLiteSpeedAdminComposeUpgradeKeepsOriginalImagePortsAndCredential(t *testing.T) {
 	current, err := dockerTemplate("openlitespeed", 18888)
 	if err != nil {

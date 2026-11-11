@@ -298,13 +298,14 @@ func dualTemplatePort(config composeConfig, id string) (int, error) {
 	if len(config.Services) != 1 {
 		return 0, errors.New("双端口模板服务数量不匹配")
 	}
-	service := config.Services[id]
+	serviceName := id
+	main, other := 15672, 5672
+	if core.IsOpenLiteSpeedTemplate(id) {
+		serviceName, main, other = core.OpenLiteSpeedLegacyTemplate, 8088, 7080
+	}
+	service := config.Services[serviceName]
 	if len(service.Ports) != 2 {
 		return 0, errors.New("双端口模板端口数量不匹配")
-	}
-	main, other := 15672, 5672
-	if id == "openlitespeed" {
-		main, other = 8088, 7080
 	}
 	port, next := 0, 0
 	for _, p := range service.Ports {
@@ -449,7 +450,7 @@ func RunComposeJob(id string) (ret error) {
 			if e != nil {
 				return e
 			}
-		} else if op.TemplateID == "rabbitmq" || op.TemplateID == "openlitespeed" {
+		} else if op.TemplateID == "rabbitmq" || core.IsOpenLiteSpeedTemplate(op.TemplateID) {
 			metadata.HostPort, e = dualTemplatePort(config, op.TemplateID)
 			if e != nil {
 				return e
@@ -461,6 +462,12 @@ func RunComposeJob(id string) (ret error) {
 			}
 		}
 		metadata.Services = len(config.Services)
+		if op.TemplateID == core.OpenLiteSpeed194Template {
+			password := config.Services[core.OpenLiteSpeedLegacyTemplate].Environment["CLOUDSTACK_ADMIN_PASSWORD"]
+			if !core.OpenLiteSpeed194ComposeMatches(op.Compose, metadata.HostPort, password) {
+				return errors.New("OpenLiteSpeed 1.9.4 安装要求使用固定镜像和模板")
+			}
+		}
 		if op.TemplateID == "elasticsearch" {
 			service := config.Services["elasticsearch"]
 			metadata.InitialCredentials = service.Environment["xpack.security.enabled"] == "true" &&
@@ -547,7 +554,7 @@ func RunComposeJob(id string) (ret error) {
 			return err
 		}
 	}
-	if metadata.TemplateID == "openlitespeed" && (op.Action == "start" || op.Action == "restart" || op.Action == "update") {
+	if metadata.TemplateID == core.OpenLiteSpeedLegacyTemplate && (op.Action == "start" || op.Action == "restart" || op.Action == "update") {
 		recreate, err := reconcileOpenLiteSpeedAdmin(ctx, metadata, dir)
 		if err != nil {
 			return err
@@ -753,7 +760,11 @@ func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, "openlitespeed": {"CLOUDSTACK_ADMIN_PASSWORD"}}[metadata.TemplateID]
+		template := metadata.TemplateID
+		if core.IsOpenLiteSpeedTemplate(template) {
+			template = core.OpenLiteSpeedLegacyTemplate
+		}
+		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, core.OpenLiteSpeedLegacyTemplate: {"CLOUDSTACK_ADMIN_PASSWORD"}}[template]
 		if metadata.TemplateID == "elasticsearch" && metadata.InitialCredentials {
 			fields = []string{"ELASTIC_PASSWORD"}
 		}
