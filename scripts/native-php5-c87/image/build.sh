@@ -27,6 +27,7 @@ set -- --prefix=/usr/local --with-config-file-path=/usr/local/etc/php \
     --enable-xml --with-zlib
 
 if [ "$PHP_VERSION" = 5.2.17 ]; then
+    patch --batch --fuzz=0 -p1 < /opt/php5217-libxml-output.patch
     set -- "$@" --enable-cgi --enable-fastcgi --with-pcre-regex=/usr --with-mysql=/usr \
         --with-mysqli=/usr/bin/mysql_config --with-pdo-mysql=/usr
 else
@@ -38,7 +39,7 @@ CFLAGS='-O2 -fcommon -std=gnu89' ./configure "$@"
 make -j2
 make install INSTALL_ROOT=/opt/php-root
 prefix=/opt/php-root/usr/local
-mkdir -p "$prefix/etc/php/conf.d"
+mkdir -p "$prefix/etc/php/conf.d" "$prefix/sbin"
 printf '%s\n' 'cgi.fix_pathinfo=0' > "$prefix/etc/php/conf.d/20-fastcgi.ini"
 "$prefix/bin/php" -r 'if (PHP_VERSION !== $argv[1] || !extension_loaded("mysql") || !extension_loaded("mysqli") || !extension_loaded("pdo_mysql") || !extension_loaded("json")) exit(1);' "$PHP_VERSION"
 if [ "$PHP_VERSION" = 5.2.17 ]; then

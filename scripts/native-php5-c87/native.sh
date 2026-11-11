@@ -40,15 +40,19 @@ services:
           cat > /var/www/html/index.php <<'PHP'
         <?php
         header("Content-Type: application/json");
-        $maximum = PHP_INT_MAX;
-        $ordinary = 17;
+        $$maximum = PHP_INT_MAX;
+        $$ordinary = 17;
+        $$dom = new DOMDocument();
+        $$dom->loadXML("<root><x>ok</x></root>");
+        $$simple = simplexml_load_string("<root><x>ok</x></root>");
         echo json_encode(array(
           "version" => PHP_VERSION, "sapi" => PHP_SAPI, "mysqli" => extension_loaded("mysqli"),
           "pdo_mysql" => in_array("mysql", PDO::getAvailableDrivers(), true),
           "shell_exec" => function_exists("shell_exec") && @shell_exec("printf disabled-probe") !== null,
           "mysql" => extension_loaded("mysql"), "integer" => bcadd("123456789", "10"),
-          "multiply" => ($ordinary * -3 === -51 && is_float($maximum * 2)),
+          "multiply" => ($$ordinary * -3 === -51 && is_float($$maximum * 2)),
           "regex" => preg_match("/^abc$/", "abc") === 1,
+          "xml" => strpos($$dom->saveXML(), "<x>ok</x>") !== false && strpos($$simple->asXML(), "<x>ok</x>") !== false,
           "persisted" => is_file(__DIR__ . "/retained.txt") ? file_get_contents(__DIR__ . "/retained.txt") : null
         ));
         PHP
@@ -152,7 +156,7 @@ before = read('before.json')
 after = read('after.json')
 sapi = 'cgi-fcgi' if version == '5.2.17' else 'fpm-fcgi'
 assert before == {'version': version, 'mysql': True, 'sapi': sapi, 'mysqli': True, 'pdo_mysql': True,
-                  'shell_exec': False, 'integer': '123456799', 'multiply': True, 'regex': True, 'persisted': None}
+                  'shell_exec': False, 'integer': '123456799', 'multiply': True, 'regex': True, 'xml': True, 'persisted': None}
 assert after == {**before, 'persisted': 'kept'}
 php, web = read('containers.json')
 assert php['HostConfig']['ReadonlyRootfs'] and web['HostConfig']['ReadonlyRootfs']
