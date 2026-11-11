@@ -1,0 +1,29 @@
+{
+  "source_head": "00aaa31a4a37771f963927ef179fdc93f678fd5a",
+  "source_inputs_sha256": "07e422dceac103b146cfa993ce76beb6b89af0103afaa6875fb84a434edc68c7",
+  "version": "0.1.0-dev.proapps24phpmyadminmanagementcandidate76",
+  "application": {
+    "id": "phpmyadmin",
+    "name": "phpMyAdmin",
+    "version": "5.2.2-compat1",
+    "sha256": "08e14ede3faa30065f08395da75310bab9ee00bc05e35ab8ea26ec1aaac27392"
+  },
+  "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
+  "payload_files": {
+    ".github/workflows/phpmyadmin-management-c76-native-qa3.yml": "b40cfbd26cae031e2db2d7e4427121c99988d7267a961b66700f538453db1909",
+    "scripts/native-phpmyadmin-c76/bootstrap-original-install.py": "08a9fbfc1e3553353f90b8afb99927341a48a266667365021be3f02d6ee83d92",
+    "scripts/native-phpmyadmin-c76/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
+    "scripts/native-phpmyadmin-c76/browser.mjs": "c067c6508f3b5cb71ad681335c00cb3181679965bcdb2425236ef876f2eb2646",
+    "scripts/native-phpmyadmin-c76/dispatch.json": "5d938d857e77e979dac60f1b97e91691e5c19335c10ceeca76b7fe027aba8496",
+    "scripts/native-phpmyadmin-c76/download.py": "74fd863e316f071c81907374e3b7ffb2b6e269be7c076717560893be8210b630",
+    "scripts/native-phpmyadmin-c76/finish.py": "a097981f576834dafaa1973273ce8232962d7405367767475fa5c05383a7909f",
+    "scripts/native-phpmyadmin-c76/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-phpmyadmin-c76/mysql-fixture-pin.json": "7a232f0454ad67b3c3c571059dcd3aa9026cc6f26dd4ddd7c89f9544d189b72f",
+    "scripts/native-phpmyadmin-c76/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-phpmyadmin-c76/package-lock.json": "acec9e987f25e23ae5ead1fba565e9b5df048c4509250f828f64bb5e26f0bcb9",
+    "scripts/native-phpmyadmin-c76/package.json": "c43f386e20c33e07a020630f43049acaf6496b584d82ea1e1e1560b66f23e027",
+    "scripts/native-phpmyadmin-c76/prepare-browser.py": "fed93e4ba5325e20c6f10869b161e37979acb3ff87792363c72c51cb13a7c314",
+    "scripts/native-phpmyadmin-c76/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
