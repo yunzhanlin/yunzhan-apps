@@ -10,3 +10,6 @@
 @@ -1113 +1112 @@
 -			LOCAL_INFILE_ERROR_MSG(data->error_msg, ER(2));
 +			LOCAL_INFILE_ERROR_MSG(data->error_msg, "Unable to read local infile");
+@@ -1175 +1174 @@
+-	strlcpy(error_msg, ER(CR_OUT_OF_MEMORY), error_msg_len);
++	strlcpy(error_msg, "Out of memory while opening a local file", error_msg_len);
