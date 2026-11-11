@@ -1,0 +1,58 @@
+{
+  "source_head": "6c294d9c85f4b2bf6673c72c843fcb3ea188002f",
+  "source_inputs_sha256": "6f96022db3a5676abd7ec1532a4277ce92887846e321b9775032a453eaf23485",
+  "source_sdk_tree": "f71d8a953b24df6f91d0411a047086c25f25296c",
+  "version": "0.1.0-dev.proapps24mysql8413candidate78r2",
+  "release_id": 441986135,
+  "tag": "qa-mysql8413candidate78r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736283268,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-amd64.tar.gz": {
+      "id": 736286309,
+      "bytes": 23798643,
+      "sha256": "acacf7d4ab3273a745517ee084c9d0159166bf9f3ccdccf4bdf2e9a3d2ee9b8c"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-amd64.tar.gz.manifest": {
+      "id": 736283180,
+      "bytes": 181,
+      "sha256": "b3685876c8bac2c017d789d53105936e6c4ed839a7c3269f7e874f731d524e74"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-amd64.tar.gz.sig": {
+      "id": 736283008,
+      "bytes": 64,
+      "sha256": "6d3ba6f6e52e6bc2cbfe141423cb593fb697141997685c490d96185b94a4bd77"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-arm64.tar.gz": {
+      "id": 736283316,
+      "bytes": 22018365,
+      "sha256": "230ddd4f33c65d16c2b65142a4b632cac535fc6cc04606cb5316e418dc07493a"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-arm64.tar.gz.manifest": {
+      "id": 736283231,
+      "bytes": 181,
+      "sha256": "e5801e8ef6f25b04e632cc406bcda2fdb8f4e5d0b2012940aa95f76f0c355f4e"
+    },
+    "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-arm64.tar.gz.sig": {
+      "id": 736283069,
+      "bytes": 64,
+      "sha256": "26545180b070d8eb54b5019ba1d71a7a6b0a44a7d33a8769b750e54262faf3c6"
+    },
+    "release-signing-dev.pub": {
+      "id": 736283124,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24mysql8413candidate78r2-linux-arm64.tar.gz"
+    }
+  }
+}

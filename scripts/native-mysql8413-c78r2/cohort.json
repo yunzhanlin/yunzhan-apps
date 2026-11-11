@@ -1,0 +1,23 @@
+{
+  "source_head": "6c294d9c85f4b2bf6673c72c843fcb3ea188002f",
+  "source_inputs_sha256": "6f96022db3a5676abd7ec1532a4277ce92887846e321b9775032a453eaf23485",
+  "version": "0.1.0-dev.proapps24mysql8413candidate78r2",
+  "old_mysql": {
+    "id": "mysql",
+    "version": "8.4.11-compat1",
+    "sha256": "5deba1b6e9da8312e52198089dfaccdaac50dfa7a2c9b67c5934d921a6a428b4",
+    "target": "mysql-8.4.11"
+  },
+  "payload_files": {
+    ".github/workflows/mysql8413-c78r2-native-qa1.yml": "cd81000a1fe31df65803295a431d7eda4acc1e38ce115a5677bff3634ca5203a",
+    "scripts/native-mysql8413-c78r2/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-mysql8413-c78r2/dispatch.json": "f95913ff011429c788ccd4371f84eeaead7b7fea670d007f2bdfc2c259487941",
+    "scripts/native-mysql8413-c78r2/download.py": "a008ab84a470d136d3537d479841de0a482fbc0ce616a6bcb7817c7df60002f1",
+    "scripts/native-mysql8413-c78r2/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-mysql8413-c78r2/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-mysql8413-c78r2/mysql.py": "d85ec9ec4f9716eb2dac1982d290820f4df86f9be5c0ea7af027f3e0f008cf07",
+    "scripts/native-mysql8413-c78r2/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-mysql8413-c78r2/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
