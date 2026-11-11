@@ -16,6 +16,7 @@ test('independent PM2 SDK is the exact original signed C69r4 source and retains 
  const native=JSON.parse(fs.readFileSync(path.join(root,'native-client-1.3.3/SOURCE_INPUTS.json')));assert.equal(native.inputs_sha256,proof.native133_inputs_sha256);
  for(const [n,v]of Object.entries(native.files))assert.equal(index.files[n],v.sha256,n);
  assert.equal(execFileSync('git',['rev-parse','HEAD:candidate/panel-integration-load-balance'],{cwd:root,encoding:'utf8'}).trim(),'0754086b782f551323285bd885f1901c93b5391d');
- assert.equal(execFileSync('git',['rev-parse','HEAD:native-client-1.3.3'],{cwd:root,encoding:'utf8'}).trim(),execFileSync('git',['rev-parse','fdb6be9f2ee650ca0ed37b213256151f397a7599:native-client-1.3.3'],{cwd:root,encoding:'utf8'}).trim());
+ // Source tree frozen by the published native WebView compatibility repair.
+ assert.equal(execFileSync('git',['rev-parse','HEAD:native-client-1.3.3'],{cwd:root,encoding:'utf8'}).trim(),'8f06c25869bb223a41ae8c349f9212a808d0b04a');
 });
 

@@ -28,7 +28,27 @@ test('separate candidate catalogue changes exactly its declared known identities
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
-  assert.deepEqual(changes,['pm2-manager','website-analytics','files-sync','nginx-waf','enterprise-tamper-proof','load-balance','mobile','apache-waf','website-tamper-proof','disk-analysis','anti-intrusion','nfs-manager']);assert.deepEqual(patch.apps.map(a=>a.id),['pm2-manager','nginx-waf','load-balance','apache-waf','disk-analysis','anti-intrusion','nfs-manager','website-analytics','website-tamper-proof','enterprise-tamper-proof','files-sync','mobile']);assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
+  const expectedOverrides = [
+    'anti-intrusion', 'apache-waf', 'disk-analysis', 'enterprise-tamper-proof', 'files-sync',
+    'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'php-80', 'php-81',
+    'pm2-manager', 'redis', 'website-analytics', 'website-tamper-proof',
+  ];
+  assert.deepEqual(changes.sort(), expectedOverrides);
+  assert.deepEqual(patch.apps.map(a=>a.id).sort(), expectedOverrides);
+  const nativeRuntimes = [
+    ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
+    ['php-81', '8.1.34-compat1'], ['php-80', '8.0.30-compat1'],
+  ];
+  for (const [id, version] of nativeRuntimes) {
+    const app = source.apps.find(a=>a.id===id);
+    const manifest = await read(`candidate/dist/apps/${id}/${version}/manifest.json`);
+    const item = catalog.apps.find(a=>a.id===id);
+    assert.equal(app.version, version);
+    assert.deepEqual(JSON.parse(manifest), app);
+    assert.equal(item.version, version);
+    assert.equal(item.sha256, createHash('sha256').update(manifest).digest('hex'));
+  }
+  assert.equal(stable.apps.find(a=>a.id==='load-balance').version,'1.8.5');assert.equal(stable.apps.find(a=>a.id==='disk-analysis').version,'1.4.0');assert.equal(source.apps.find(a=>a.id==='disk-analysis').version,'1.4.1');
   const oldMobile=stable.apps.find(a=>a.id==='mobile'),mobile=source.apps.find(a=>a.id==='mobile');assert.equal(oldMobile.version,'1.3.2');assert.equal(mobile.version,'1.3.3');assert.deepEqual(mobile.required_panel_features,['mobile-native-delivery-v133']);assert.deepEqual(mobile.delivery,oldMobile.delivery);assert.deepEqual(mobile.compatibility,oldMobile.compatibility);assert.deepEqual(JSON.parse(await read('dist/apps/mobile/1.3.2/manifest.json')),oldMobile);assert.deepEqual(JSON.parse(await read('candidate/dist/apps/mobile/1.3.3/manifest.json')),mobile);
   const originalTamper=stable.apps.find(a=>a.id==='website-tamper-proof'),tamper=source.apps.find(a=>a.id==='website-tamper-proof');assert.equal(originalTamper.version,'1.4.1');assert.equal(tamper.version,'1.5.0');assert.deepEqual(tamper.required_panel_features,['integrity-kernel-inode-journal-v1']);assert.deepEqual(tamper.delivery,originalTamper.delivery);assert.deepEqual(tamper.compatibility,originalTamper.compatibility);
   const originalEnterprise=stable.apps.find(a=>a.id==='enterprise-tamper-proof'),enterprise=source.apps.find(a=>a.id==='enterprise-tamper-proof');assert.equal(originalEnterprise.version,'1.4.1');assert.equal(enterprise.version,'1.5.0');assert.deepEqual(enterprise.required_panel_features,['enterprise-integrity-kernel-ownership-v1']);assert.deepEqual(enterprise.delivery,originalEnterprise.delivery);assert.deepEqual(enterprise.compatibility,originalEnterprise.compatibility);assert.deepEqual(JSON.parse(await read('dist/apps/enterprise-tamper-proof/1.4.1/manifest.json')),originalEnterprise);
