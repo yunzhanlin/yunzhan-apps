@@ -1,0 +1,52 @@
+{
+  "source_head": "faaff78671a14ce7ef68d0be76c18bdad54b83a0",
+  "source_inputs_sha256": "a5c968ac27bec54bbe872827788746da0b61d53ab8298bb4dcb42a0d3d7ca41e",
+  "version": "0.1.0-dev.proapps24legacyphpcandidate86",
+  "recipes": {
+    "74": {
+      "version": "7.4.33",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat2@sha256:e186cbfc73ab5f3bb305b5be0db073f52e42855dcf8ff959993d4490edcef609",
+      "target": "php-legacy-74-bullseye"
+    },
+    "73": {
+      "version": "7.3.33",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat2@sha256:1eb9e3a0a3e87ed62ed6753d0163434e2f5ac4e25160410636ef8d79522b811e",
+      "target": "php-legacy-73-buster"
+    },
+    "72": {
+      "version": "7.2.34",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat2@sha256:f0912cb90007593fd8eae5ea842c03f536b8d89b770a4f85db75a906b5571625",
+      "target": "php-legacy-72-buster"
+    },
+    "71": {
+      "version": "7.1.33",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat2@sha256:71ba20833894aabe0ed1089ec94fdc098f7fc8979750c84d99cef1ff88f047c9",
+      "target": "php-legacy-71-stretch"
+    },
+    "70": {
+      "version": "7.0.33",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat2@sha256:d5fd374b5226e21940d2517ca0b3d8ecf24a7026a413a7a672b502a092f5b83e",
+      "target": "php-legacy-70-stretch"
+    },
+    "56": {
+      "version": "5.6.40",
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat2@sha256:6899f1a035633574ca09573da446be76a7fcd303566049fa60293ad442c8b9f8",
+      "target": "php-legacy-56-stretch"
+    }
+  },
+  "mode": "native-template",
+  "apps": null,
+  "served_head": "2336f6e7a10538097ee0154eeeffcfb9381ca7a2",
+  "payload_files": {
+    ".github/workflows/legacy-php-c86-native-qa1b.yml": "fdfa73435a66b8d396d9b1beff17baabcc508b202e1d7f8e8cf7b2295afa889e",
+    "scripts/native-legacy-php-c86/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-legacy-php-c86/dispatch.json": "a0cb432e286072bced65e23fc37e7e1f2c3717d90b30a4aa7b1600cb08a0a447",
+    "scripts/native-legacy-php-c86/download.py": "0337e9773370a52bcc3b1ef74ba5b6b8308e2b19583fe909991119902b2cc134",
+    "scripts/native-legacy-php-c86/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-legacy-php-c86/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-legacy-php-c86/legacy-php.py": "6acf5ba801168e239ff6778ea4a62e5ec893429f52ac7334040838dbd83549e7",
+    "scripts/native-legacy-php-c86/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-legacy-php-c86/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "Main_changed": false
+}
