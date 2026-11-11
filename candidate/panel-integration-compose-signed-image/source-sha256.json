@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz",
-    "archive_sha256": "54ef690ec456de2ae8feaa56d62d61280a68a69b71d1c052496bd528104cc388",
-    "frozen_inputs_sha256": "306f8eb82c6c3552415b76f759ab32d86041eb08a0edf0e6dfced6f23c2105d1"
+    "archive": "panel-0.1.0-dev.proapps24mysql8413candidate78-linux-amd64.tar.gz",
+    "archive_sha256": "23bc5d9810d6b8611bf7abe7e5c26eccf9ac1c10a2985a7de9012b545a733658",
+    "frozen_inputs_sha256": "e76581edc9dfb76f90f7a5ae4dd27d527597099c90ee52d26ff842806f299503"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -321,8 +321,8 @@
     "internal/core/database_overwrite_http.go": "79351eb65125686a485e09cf0305a41941575ef1800cbe48da319fbe0fd2c1fe",
     "internal/core/database_overwrite_reconcile.go": "28997c87f4b08fec900cff6452b92ec8722b5835f4a876eda759242014b742d8",
     "internal/core/database_overwrite_test.go": "8fb3d874e0118b7a3c51050e2654348aa039db59a4835939da82e9da4c359a4f",
-    "internal/core/databases.go": "1c81f00af3791b4cdb6bf45eb950191a6bd2ee0386d8c9e44a173139e12b19a5",
-    "internal/core/databases_test.go": "ce38c8ff80bac09509d585d7792bd10a8803b21e4cbe4bd66bb3a937116e8403",
+    "internal/core/databases.go": "c6edec9fedefd4b5fb6fa5ee176158de70f8f0e3e0d0209244a833e3f83f2c12",
+    "internal/core/databases_test.go": "bd752dda357ee17546abf5dfb80cf8492d2f1d4b690d88bcc3a554788205727a",
     "internal/core/disk_host_cancel_close_http_test.go": "40df529468f03c017aed3b207e9a8e480cf80a2e04e9ce4470aec89ea982dc97",
     "internal/core/disk_host_http.go": "e896f78d65cce7eb2b4007931726fd21c4f2e389b5ac54101e24de09009c6b47",
     "internal/core/disk_host_http_test.go": "d1567260ce67df17bedbfffe1d5d69d3f0f3e7b80c90443fa01cbdcad60f740f",
@@ -1709,7 +1709,7 @@
     "internal/executor/mysql_install_linux.go": "05651c075ab199078c6eec60993ac4c89d67a1758c182d22303405b32dc426f5",
     "internal/executor/mysql_install_linux_test.go": "441693392e6e02b5f146e4d4ddfa6bc5a88490b67994421bfb01534e2753695c",
     "internal/executor/mysql_linux.go": "194745636faec7145fe2f10cd26ddb94a00ed01c53b31b5b5d6bc1904368a6a6",
-    "internal/executor/mysql_migrate_linux.go": "2d01c8c441a15926be8c13a64d16092739f9030d291ffdce456f07fd4104d044",
+    "internal/executor/mysql_migrate_linux.go": "ec3665dba9d07bdb35d44c646f7d388c074f70aee6d01ef4ee86fabda0b2e16c",
     "internal/executor/mysql_other.go": "affb8b23489eaebc9e2a06a7e9f743876553ca8aa91b29703591c3ed0508a675",
     "internal/executor/mysql_overwrite_http_linux.go": "117006b7e2eb6277582d18d1823f8c62892d0d47277437b4a75e21a86a43e553",
     "internal/executor/mysql_overwrite_linux.go": "9bdb6d1bcb92401927ffc5375afdcd646f4e897422407c0b9a4f575ef16c4bc4",
@@ -2123,7 +2123,7 @@
     "internal/runtimecatalog/host_os.go": "eb6db904c57721a5a447769ad3820e7b4371a1269f284261827c77f9e9f81e69",
     "internal/runtimecatalog/host_os_test.go": "126d420fc5396a90729ab7e5196ca4d42c75f98fd7125c7d7b5b06c7940dc3fb",
     "internal/runtimecatalog/mariadb.go": "f237582184e4b6f430fbb25aed8aa5680bb6f0fe69630de40ffabbc7991630c1",
-    "internal/runtimecatalog/mysql.go": "a065cd7ac2421b775ed8e946e34e87a51f23b16b7287c7f973ce7db413f61748",
+    "internal/runtimecatalog/mysql.go": "12c652101ffa67ba1105a0e5fc6e97e8071b0ee8d8afc0e1a630b28ee5a71f4a",
     "internal/runtimecatalog/nginx_security_release_test.go": "1e2cf256e3b0b9a870e0968ba581bd7c5569f1de4146d0e12fe471273d764089",
     "internal/runtimecatalog/node.go": "5b1d3e7f99fdd817abcf8c47f81d9d276119add5ab3c8e9083c26cb5f27b91fe",
     "internal/runtimecatalog/node_redis_test.go": "484c84c62de902eb3a21825b77b5c611555b2a227e901a98e6a867cddd4d5d6e",
@@ -2367,7 +2367,7 @@
     "web/src/DatabaseAccountManager.vue": "3d163f209a18848899931635939b5031f646a9086949dc0a5dda63a0d5589955",
     "web/src/DatabaseImportManager.vue": "084288ace391fd5acac263d45e96bf420f7e09b59618a5f8691687ea4d05a8ec",
     "web/src/DatabaseLifecycleDialog.vue": "1c686837f1206cb296271916ae6c7c796000acca5d6559354ffcac3d21addd43",
-    "web/src/DatabaseManager.vue": "4fdae1aba1324cf945b6d091059b8359e3efe8490f6a0dfe778028c4eac2164a",
+    "web/src/DatabaseManager.vue": "f541059ae984a4dd9a26c9a41eabb427ac384427461821b8c3b9a915374e30ad",
     "web/src/DockerManager.vue": "67cfbe05ef9d196cb31af8a619352baa86586168b04a615a7ad63a3f56281b56",
     "web/src/FileManager.vue": "f4ae7a99782e0705d9e7cc34b2b6df130fee5fdf5546afc3cad4d9b1370f92bc",
     "web/src/FileToolsMenu.vue": "eb6e14b7c0f536678e3cdeb75549decfa29d906d039ca4ee8bc08f50d2ba57a9",

@@ -161,7 +161,7 @@ const migrationOpen = ref(false),
 const migrationTargets = computed(() =>
   data.value.servers.filter(
     (s) =>
-      s.release_id === "mysql-8.4.11" &&
+      /^mysql-8\.4\.\d+$/.test(s.release_id) &&
       running(s.id) &&
       !data.value.databases.some(
         (d) => d.server_id === s.id && d.name === migrationSource.value?.name,

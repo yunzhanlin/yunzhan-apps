@@ -9,8 +9,10 @@ import (
 func TestDatabaseInstanceIsolationAndRecovery(t *testing.T) {
 	s := testStore(t)
 	releases := runtimecatalog.MySQL()
-	if len(releases) != 2 {
-		t.Fatal("expected two MySQL releases")
+	if len(releases) < 3 || releases[0].ID != "mysql-8.4.13" ||
+		!runtimecatalog.IsMySQL84MigrationTarget("mysql-8.4.11") ||
+		runtimecatalog.IsMySQL84MigrationTarget("mysql-8.0.46") {
+		t.Fatal("expected the current MySQL 8.4 release and existing compatibility entries")
 	}
 	for _, r := range releases {
 		if e := s.RecordInstallation(r, "arm64"); e != nil {
@@ -101,7 +103,7 @@ func TestMigrationReservesBothInstances(t *testing.T) {
 		}
 	}
 	servers := []DatabaseServer{}
-	for i, release := range []string{"mysql-8.0.46", "mysql-8.4.11"} {
+	for i, release := range []string{"mysql-8.0.46", "mysql-8.4.13"} {
 		id, e := s.QueueDatabase(DatabaseOperation{Action: "create_instance", Server: DatabaseServer{Name: release, ReleaseID: release, Port: 13306 + i}}, release, "admin")
 		if e != nil {
 			t.Fatal(e)

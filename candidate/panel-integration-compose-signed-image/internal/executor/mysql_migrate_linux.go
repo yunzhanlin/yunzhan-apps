@@ -123,7 +123,7 @@ func fingerprintMySQL(ctx context.Context, s core.DatabaseServer, db core.Databa
 }
 func migrateMySQL(ctx context.Context, op core.DatabaseOperation, add func(string)) (core.DatabaseBackup, error) {
 	b := core.DatabaseBackup{ID: core.ID(), ServerID: op.Server.ID, DatabaseID: op.Database.ID, CreatedAt: core.Now()}
-	if op.Server.ReleaseID != "mysql-8.0.46" || op.TargetServer.ReleaseID != "mysql-8.4.11" || op.TargetServer.ID == op.Server.ID || op.TargetDatabase.ServerID != op.TargetServer.ID || op.TargetDatabase.Name != op.Database.Name {
+	if op.Server.ReleaseID != "mysql-8.0.46" || !runtimecatalog.IsMySQL84MigrationTarget(op.TargetServer.ReleaseID) || op.TargetServer.ID == op.Server.ID || op.TargetDatabase.ServerID != op.TargetServer.ID || op.TargetDatabase.Name != op.Database.Name {
 		return b, errors.New("迁移必须使用独立 MySQL 8.0 源与 8.4 空目标数据库")
 	}
 	source, e := readOwnedDatabase(op.Server, op.Database.ID)
