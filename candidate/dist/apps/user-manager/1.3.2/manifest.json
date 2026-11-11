@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "id": "user-manager",
+  "name": "aaPanel user Manager",
+  "category": "professional",
+  "version": "1.3.2",
+  "summary": "按账户、角色和授权菜单筛选真实权限，按网站名称选取范围。支持账户创建、权限修订、会话撤销和执行历史。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "user-manager",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "账户与菜单权限总览",
+    "按账户、网站、角色和菜单筛选",
+    "真实网站授权选择",
+    "账户创建与密码更新",
+    "权限修订校验",
+    "有效会话及双重验证状态",
+    "会话撤销",
+    "完整管理员保护",
+    "执行历史与审计"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/user-manager"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "user-access-overview-v1"
+  ]
+}
