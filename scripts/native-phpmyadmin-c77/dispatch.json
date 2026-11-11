@@ -1,0 +1,58 @@
+{
+  "source_head": "857cc37e46c977c90818ebc9edfc5ba8001f20e7",
+  "source_inputs_sha256": "306f8eb82c6c3552415b76f759ab32d86041eb08a0edf0e6dfced6f23c2105d1",
+  "source_sdk_tree": "beb45bc61c55c150b9a6cfb0a37aaac73c33fcd3",
+  "version": "0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2",
+  "release_id": 441960924,
+  "tag": "qa-phpmyadminlocalmysqlcandidate77r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736202450,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz": {
+      "id": 736206963,
+      "bytes": 23796395,
+      "sha256": "54ef690ec456de2ae8feaa56d62d61280a68a69b71d1c052496bd528104cc388"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz.manifest": {
+      "id": 736202356,
+      "bytes": 192,
+      "sha256": "f7e80a70e591a585e0264d98ca59572f940dbcf5ffe6ad0a422220a7f112d762"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz.sig": {
+      "id": 736202215,
+      "bytes": 64,
+      "sha256": "be3bb0627adacaf6aa9afc964267632363b7a5167474a23c54b91eae46dc542b"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-arm64.tar.gz": {
+      "id": 736202514,
+      "bytes": 22020753,
+      "sha256": "014951866b97fe1436dea8b8bd016cc8d1c9bb4827f870bac90f17091c1023e0"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-arm64.tar.gz.manifest": {
+      "id": 736202401,
+      "bytes": 192,
+      "sha256": "10031e020828b2192aa9dcca55e56ff03d707d9e36043c025d0daa488f512d50"
+    },
+    "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-arm64.tar.gz.sig": {
+      "id": 736202253,
+      "bytes": 64,
+      "sha256": "3f82ce54effaea4b79f560561997e43dcc09d9d243250ec679bb3751b8d145eb"
+    },
+    "release-signing-dev.pub": {
+      "id": 736202312,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpmyadminlocalmysqlcandidate77r2-linux-arm64.tar.gz"
+    }
+  }
+}
