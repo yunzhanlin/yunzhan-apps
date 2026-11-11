@@ -8,6 +8,7 @@ ARG PHP_SOURCE_SHA256
 COPY build.sh /opt/build-php.sh
 COPY php5538-arm64-multiply.patch /opt/php5538-arm64-multiply.patch
 COPY php5217-libxml-output.patch /opt/php5217-libxml-output.patch
+COPY php5217-mariadb-reconnect.patch /opt/php5217-mariadb-reconnect.patch
 RUN /bin/sh /opt/build-php.sh
 
 FROM debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc

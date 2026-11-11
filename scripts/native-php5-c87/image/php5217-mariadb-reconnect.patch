@@ -1,0 +1,22 @@
+--- a/ext/mysqli/mysqli_api.c
++++ b/ext/mysqli/mysqli_api.c
+@@ -1476,0 +1477,5 @@
++	{
++		my_bool reconnect = MyG(reconnect) != 0;
++		mysql_optionsv(mysql->mysql, MYSQL_OPT_RECONNECT, &reconnect);
++	}
++
+@@ -1488,2 +1492,0 @@
+-
+-	mysql->mysql->reconnect = MyG(reconnect);
+--- a/ext/mysqli/mysqli_nonapi.c
++++ b/ext/mysqli/mysqli_nonapi.c
+@@ -118,0 +119,5 @@
++	{
++		my_bool reconnect = MyG(reconnect) != 0;
++		mysql_optionsv(mysql->mysql, MYSQL_OPT_RECONNECT, &reconnect);
++	}
++
+@@ -135,2 +139,0 @@
+-
+-	mysql->mysql->reconnect = MyG(reconnect);
