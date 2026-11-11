@@ -1,0 +1,58 @@
+{
+  "source_head": "30c43d8b8650526d0a6e8b1a72eeaec68c99920b",
+  "source_inputs_sha256": "0949a0aa17f5400e3ea6bcd82ad647fd53f1738d52775e2bc1dfc12882555d9a",
+  "source_sdk_tree": "96ee57d951a6fc1ee0c9948dffe49a36e4e3baec",
+  "version": "0.1.0-dev.proapps24siteapachediagnosiscandidate104",
+  "release_id": 442309991,
+  "tag": "qa-siteapachediagnosiscandidate104-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737312019,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-amd64.tar.gz": {
+      "id": 737314756,
+      "bytes": 23877554,
+      "sha256": "98781b4efca008b43b1b847183dc80993a98c9e25c7da172e5395ef8bd37030f"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-amd64.tar.gz.manifest": {
+      "id": 737311853,
+      "bytes": 190,
+      "sha256": "2a7b86f6d961e3d4753c061dd12289823bb07e797873c7e082cedda2983d2b16"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-amd64.tar.gz.sig": {
+      "id": 737311599,
+      "bytes": 64,
+      "sha256": "d47670712b497b39ed214fb9c764fa9b1910f080cfe15da9ed91b9703e67e852"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-arm64.tar.gz": {
+      "id": 737312111,
+      "bytes": 22094729,
+      "sha256": "bf716e2ec2d44688f6485684f45658e905f84ace86c1df003747c5dcb17b1879"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-arm64.tar.gz.manifest": {
+      "id": 737311933,
+      "bytes": 190,
+      "sha256": "f022777af3d92ada25313b56c012207818a232ce193cb3fa6fed0f89d3d97122"
+    },
+    "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-arm64.tar.gz.sig": {
+      "id": 737311684,
+      "bytes": 64,
+      "sha256": "ac7e5e5ae45f0e381c381de0d0afc122761f9c7411eddcc29c95a5c7fca688ea"
+    },
+    "release-signing-dev.pub": {
+      "id": 737311752,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24siteapachediagnosiscandidate104-linux-arm64.tar.gz"
+    }
+  }
+}
