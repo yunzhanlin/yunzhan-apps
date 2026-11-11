@@ -7,13 +7,14 @@ export interface PhpMyAdminServer {
   name: string;
 }
 
-export async function confirmPhpMyAdminInstall(port: number, servers: PhpMyAdminServer[], localUnavailable: boolean) {
+export async function confirmPhpMyAdminInstall(port: number, servers: PhpMyAdminServer[], localUnavailable: boolean, parallel = false) {
   const hostPort = ref(String(port));
   const serverID = ref("");
   const error = ref("");
   await ElMessageBox({
-    title: "安装 phpMyAdmin",
+    title: parallel ? "并行安装新版 phpMyAdmin" : "安装 phpMyAdmin",
     message: () => h("div", { style: { display: "grid", gap: "8px" } }, [
+      parallel ? h("p", "新版使用独立回环端口。可选择现有 MySQL 实例，原管理入口继续运行。") : null,
       h("label", { for: "pma-install-port" }, "管理端口（服务器回环）"),
       h("input", {
         id: "pma-install-port", type: "number", min: 1024, max: 65535, value: hostPort.value,

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
 import { randomId } from "./randomId";
-import { composeHostPortSettings, isComposeHostPort } from "./composeHostPorts";
+import { composeHostPortSettings, isComposeHostPort, isPhpMyAdminTemplate } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
 import { dockerCreateFingerprint, dockerCreateStorageKey, readDockerCreateRequest, type RetainedDockerCreate } from "./dockerCreateRequest";
 import { computed, ref, watch, onBeforeUnmount } from "vue";
@@ -197,11 +197,11 @@ const visible = ref(false),
   logsName = ref("");
 const managedTemplate = ref<"phpmyadmin">();
 const visibleProjects = computed(() =>
-  managedTemplate.value ? projects.value.filter(project => project.template_id === managedTemplate.value) : projects.value,
+  managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
 
 function phpMyAdminURL(project: DockerProject): string {
-  if (project.template_id !== "phpmyadmin" || project.state !== "running" ||
+  if (!isPhpMyAdminTemplate(project.template_id) || project.state !== "running" ||
       project.services !== 1 || project.running !== 1 || project.healthy !== 1 ||
       !isComposeHostPort("phpmyadmin", project.host_port)) return "";
   return `http://127.0.0.1:${project.host_port}/`;
@@ -1086,7 +1086,7 @@ async function removeVolume(item: DockerVolume) {
             <strong>{{ item.name }}</strong
             ><small>{{ item.engine_name }} · {{ item.id.slice(0, 12) }}</small><small v-if="item.site_name">网站：{{ item.site_name }}</small>
             <small v-if="phpMyAdminURL(item)"><code>{{ phpMyAdminURL(item) }}</code></small>
-            <small v-if="item.template_id === 'phpmyadmin' && item.mysql_server_id">数据库：云栈 MySQL</small>
+            <small v-if="isPhpMyAdminTemplate(item.template_id) && item.mysql_server_id">数据库：云栈 MySQL</small>
           </div>
           <span>{{ item.services }} 个服务</span>
           <span>{{ item.running }} / {{ item.containers }} 运行</span>

@@ -188,6 +188,13 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail, LatestVersion: app.Version}
 		phpRelease, finalLegacyPHP := findFinalLegacyPHPRelease(app.Target)
 		finalLegacyPHP = finalLegacyPHP && app.ID == phpRelease.appID && app.Version == phpRelease.appVersion
+		phpMyAdminUpgrade := app.ID == "phpmyadmin" && app.Target == PhpMyAdmin523Template && app.Version == phpMyAdmin523AppVersion
+		previousComposeTarget := ""
+		if finalLegacyPHP {
+			previousComposeTarget = phpRelease.previous
+		} else if phpMyAdminUpgrade {
+			previousComposeTarget = PhpMyAdminLegacyTemplate
+		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
 			out = append(out, status)
@@ -212,14 +219,14 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
-			previousPHPInstalled := finalLegacyPHP && !status.Installed && compose[phpRelease.previous]
-			if previousPHPInstalled {
+			previousComposeInstalled := !status.Installed && previousComposeTarget != "" && compose[previousComposeTarget]
+			if previousComposeInstalled {
 				status.Installed = true
-				status.Healthy = composeHealthy[phpRelease.previous]
+				status.Healthy = composeHealthy[previousComposeTarget]
 				status.UpdateAvailable = true
 			}
 			for _, project := range projects.Projects {
-				if project.TemplateID != app.Target && !(previousPHPInstalled && project.TemplateID == phpRelease.previous) {
+				if project.TemplateID != app.Target && !(previousComposeInstalled && project.TemplateID == previousComposeTarget) {
 					continue
 				}
 				if project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
@@ -292,6 +299,10 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				if finalLegacyPHP && !compose[app.Target] {
 					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
 					status.UpdateDetail = "在另一个回环端口创建独立的 PHP " + phpRelease.version + " 容器和数据卷。现有容器继续使用原镜像和原卷。"
+				}
+				if phpMyAdminUpgrade && !compose[app.Target] {
+					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
+					status.UpdateDetail = "在另一个回环端口安装 phpMyAdmin 5.2.3，现有管理入口继续运行。可选择连接同一个 MySQL 实例。"
 				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
@@ -536,7 +547,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 			}
 		} else {
 			if in.HostPort == 0 {
-				in.HostPort = map[string]int{"memcached-cache": 21211, "phpmyadmin": 18080, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, "openlitespeed": 18888}[manifest.Delivery.Target]
+				in.HostPort = map[string]int{"memcached-cache": 21211, PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672, "openlitespeed": 18888}[manifest.Delivery.Target]
 				if in.HostPort == 0 {
 					in.HostPort = 18080
 				}
@@ -550,7 +561,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 				return
 			}
 			op = DockerProjectRequest{JobID: ID(), ProjectID: ID(), Action: "create", Name: strings.TrimSpace(in.Name), Compose: compose, TemplateID: manifest.Delivery.Target}
-			if op.TemplateID == "phpmyadmin" && in.Settings["mysql_server_id"] != nil {
+			if IsPhpMyAdminTemplate(op.TemplateID) && in.Settings["mysql_server_id"] != nil {
 				databaseRequest := r.Clone(ctx)
 				databaseRequest.Method, databaseRequest.URL.Path = http.MethodGet, "/api/databases"
 				if !a.appRoleAllowed(u, databaseRequest) {

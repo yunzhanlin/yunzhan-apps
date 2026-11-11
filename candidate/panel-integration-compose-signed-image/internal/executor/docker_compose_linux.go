@@ -103,7 +103,7 @@ func validateComposeRequest(v composeProjectRequest) error {
 	if v.RequestSHA != "" && (v.Action != "create" || !composeRequestSHAPattern.MatchString(v.RequestSHA)) {
 		return errors.New("Compose 原请求摘要无效")
 	}
-	if v.MySQLServerID != "" && (v.Action != "create" || v.TemplateID != "phpmyadmin" || !core.ValidID(v.MySQLServerID)) {
+	if v.MySQLServerID != "" && (v.Action != "create" || !core.IsPhpMyAdminTemplate(v.TemplateID) || !core.ValidID(v.MySQLServerID)) {
 		return errors.New("本机 MySQL 仅适用于新建 phpMyAdmin 实例")
 	}
 	switch v.Action {
@@ -236,7 +236,7 @@ func validateComposeFile(ctx context.Context, metadata composeMetadata, dir, sou
 			}
 		}
 		for _, volume := range service.Volumes {
-			if metadata.TemplateID == "phpmyadmin" && core.ValidID(metadata.MySQLServerID) && name == "phpmyadmin" &&
+			if core.IsPhpMyAdminTemplate(metadata.TemplateID) && core.ValidID(metadata.MySQLServerID) && name == "phpmyadmin" &&
 				len(config.Services) == 1 && len(service.Volumes) == 1 && volume.Type == "bind" &&
 				volume.Source == core.PhpMyAdminSocketDirectory(metadata.ID, metadata.MySQLServerID) && volume.Target == core.PhpMyAdminSocketTarget && volume.ReadOnly {
 				continue
@@ -374,7 +374,7 @@ func readComposeMetadata(id string) (composeMetadata, string, error) {
 	if e != nil || metadata.ID != id || !dockerResourceNamePattern.MatchString(metadata.Name) || metadata.Engine != "panel_"+id[:12] || metadata.TemplateID == "wordpress-blog" && (metadata.HostPort < 1024 || metadata.HostPort > 65535) {
 		return metadata, "", errors.New("Compose 项目元数据无效")
 	}
-	if metadata.MySQLServerID != "" && (metadata.TemplateID != "phpmyadmin" || !core.ValidID(metadata.MySQLServerID)) {
+	if metadata.MySQLServerID != "" && (!core.IsPhpMyAdminTemplate(metadata.TemplateID) || !core.ValidID(metadata.MySQLServerID)) {
 		return metadata, "", errors.New("Compose 项目本机数据库绑定无效")
 	}
 	if e = ordinary(filepath.Join(dir, "compose.yaml"), false); e != nil {
@@ -466,12 +466,14 @@ func RunComposeJob(id string) (ret error) {
 			metadata.InitialCredentials = service.Environment["xpack.security.enabled"] == "true" &&
 				service.Environment["ELASTIC_PASSWORD"] != ""
 		}
-		if op.MySQLServerID != "" {
-			original, err := core.PhpMyAdminCompose(metadata.HostPort, "", "")
+		if core.IsPhpMyAdminTemplate(metadata.TemplateID) {
+			original, err := core.PhpMyAdminCompose(metadata.TemplateID, metadata.HostPort, "", "")
 			if err != nil || op.Compose != original {
-				return errors.New("本机 MySQL 连接要求固定的 phpMyAdmin 模板")
+				return errors.New("phpMyAdmin 安装要求使用固定镜像和模板")
 			}
-			local, err := core.PhpMyAdminCompose(metadata.HostPort, metadata.ID, op.MySQLServerID)
+		}
+		if op.MySQLServerID != "" {
+			local, err := core.PhpMyAdminCompose(metadata.TemplateID, metadata.HostPort, metadata.ID, op.MySQLServerID)
 			if err != nil {
 				return err
 			}

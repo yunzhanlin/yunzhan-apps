@@ -5,7 +5,16 @@ import (
 	"fmt"
 )
 
-const PhpMyAdminSocketTarget = "/run/panel-db"
+const (
+	PhpMyAdminLegacyTemplate = "phpmyadmin"
+	PhpMyAdmin523Template    = "phpmyadmin-523"
+	PhpMyAdminSocketTarget   = "/run/panel-db"
+	phpMyAdmin523AppVersion  = "5.2.3-compat2"
+)
+
+func IsPhpMyAdminTemplate(template string) bool {
+	return template == PhpMyAdminLegacyTemplate || template == PhpMyAdmin523Template
+}
 
 func PhpMyAdminSocketDirectory(projectID, serverID string) string {
 	return "/run/panel-phpmyadmin-db-" + projectID + "-" + serverID
@@ -13,9 +22,13 @@ func PhpMyAdminSocketDirectory(projectID, serverID string) string {
 
 // PhpMyAdminCompose retains the original external-server template. Only the
 // Linux executor renders the mount for a verified local instance.
-func PhpMyAdminCompose(port int, projectID, serverID string) (string, error) {
-	if port < 1024 || port > 65535 || (projectID != "" || serverID != "") && (!ValidID(projectID) || !ValidID(serverID)) {
+func PhpMyAdminCompose(template string, port int, projectID, serverID string) (string, error) {
+	if !IsPhpMyAdminTemplate(template) || port < 1024 || port > 65535 || (projectID != "" || serverID != "") && (!ValidID(projectID) || !ValidID(serverID)) {
 		return "", errors.New("phpMyAdmin 项目或端口无效")
+	}
+	image := dockerPhpMyAdminImage
+	if template == PhpMyAdmin523Template {
+		image = dockerPhpMyAdmin523Image
 	}
 	environment := "      PMA_ARBITRARY: \"1\"\n"
 	mount := ""
@@ -44,5 +57,5 @@ func PhpMyAdminCompose(port int, projectID, serverID string) (string, error) {
       timeout: 5s
       retries: 18
       start_period: 30s
-`, dockerPhpMyAdminImage, environment, port, mount), nil
+`, image, environment, port, mount), nil
 }

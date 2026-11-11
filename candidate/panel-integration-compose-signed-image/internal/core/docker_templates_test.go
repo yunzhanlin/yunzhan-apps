@@ -89,7 +89,7 @@ func TestPhpMyAdminTemplateIsPinnedAndLoopbackOnly(t *testing.T) {
 	}
 
 	project, server := strings.Repeat("1", 32), strings.Repeat("2", 32)
-	local, err := PhpMyAdminCompose(18080, project, server)
+	local, err := PhpMyAdminCompose(PhpMyAdminLegacyTemplate, 18080, project, server)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,6 +108,18 @@ func TestPhpMyAdminTemplateIsPinnedAndLoopbackOnly(t *testing.T) {
 	}
 	if strings.Contains(local, "PMA_ARBITRARY") || strings.Contains(compose, PhpMyAdminSocketTarget) {
 		t.Fatal("phpMyAdmin mixed the external and selected local profiles")
+	}
+	for _, arch := range []string{"amd64", "arm64"} {
+		updated, err := dockerTemplateOnArchitecture(PhpMyAdmin523Template, 18081, arch)
+		if err != nil || !strings.Contains(updated, "    image: "+dockerPhpMyAdmin523Image+"\n") ||
+			!strings.Contains(updated, `"127.0.0.1:18081:80"`) ||
+			!strings.Contains(updated, `PMA_ARBITRARY: "1"`) {
+			t.Fatalf("updated %s image and external-server settings were not applied: %v", arch, err)
+		}
+	}
+	updatedLocal, err := PhpMyAdminCompose(PhpMyAdmin523Template, 18081, project, server)
+	if err != nil || updatedLocal != strings.NewReplacer(dockerPhpMyAdminImage, dockerPhpMyAdmin523Image, "18080:80", "18081:80").Replace(local) {
+		t.Fatal("phpMyAdmin update changed the selected MySQL relay settings", err)
 	}
 }
 

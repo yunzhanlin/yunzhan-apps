@@ -45,6 +45,24 @@ func TestRegistryComposeDeliveryMatchesPublishedRecipes(t *testing.T) {
 	}
 }
 
+func TestRegistryPhpMyAdmin523RequiresItsSignedImageAndVersion(t *testing.T) {
+	manifest := appcatalog.Manifest{
+		ID: "phpmyadmin", Version: phpMyAdmin523AppVersion, Risk: "maintained",
+		Delivery: appcatalog.Delivery{Provider: "compose", Target: PhpMyAdmin523Template,
+			ManageRoute: "databases", Image: dockerPhpMyAdmin523Image},
+	}
+	if err := validateRegistryComposeDelivery(manifest); err != nil {
+		t.Fatal(err)
+	}
+	oldImage := manifest
+	oldImage.Delivery.Image = dockerPhpMyAdminImage
+	oldVersion := manifest
+	oldVersion.Version = "5.2.2-compat1"
+	if validateRegistryComposeDelivery(oldImage) == nil || validateRegistryComposeDelivery(oldVersion) == nil {
+		t.Fatal("phpMyAdmin 5.2.3 accepted an earlier signed image or application version")
+	}
+}
+
 func TestRegistryInstallSignedRabbitMQImageBindsActualSubmission(t *testing.T) {
 	baseline := appcatalog.Manifest{
 		SchemaVersion: 1, ID: "rabbitmq", Name: "RabbitMQ", Category: "deployment", Version: "4.1-compat1",

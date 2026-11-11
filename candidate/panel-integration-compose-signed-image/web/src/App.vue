@@ -773,7 +773,7 @@ async function installRegistryApp(app: RegistryApp, parallel = false) {
         } catch { localUnavailable = true; }
       }
       if (epoch !== accessEpoch) return;
-      const answer = await confirmPhpMyAdminInstall(composeHostPortSettings(app.target).preferred, servers, localUnavailable);
+      const answer = await confirmPhpMyAdminInstall(composeHostPortSettings(app.target).preferred, servers, localUnavailable, parallel);
       if (epoch !== accessEpoch) return;
       body.host_port = answer.hostPort;
       if (answer.serverID) body.settings = { mysql_server_id: answer.serverID };

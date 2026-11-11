@@ -166,8 +166,8 @@ volumes:
 		return "services:\n  redis:\n    image: redis:8.2.9-alpine\n    restart: unless-stopped\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":6379\"\n    volumes:\n      - data:/data\nvolumes:\n  data: {}\n", nil
 	case "memcached-cache":
 		return "services:\n  memcached:\n    image: " + appcatalog.MemcachedDigestImage + "\n    restart: unless-stopped\n    command: [\"memcached\", \"-m\", \"128\", \"-I\", \"4m\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":11211\"\n    healthcheck:\n      test: [\"CMD-SHELL\", \"printf 'version\\r\\n' | nc -w 2 127.0.0.1 11211 | grep -q '^VERSION'\"]\n      interval: 10s\n      timeout: 3s\n      retries: 12\n", nil
-	case "phpmyadmin":
-		return PhpMyAdminCompose(port, "", "")
+	case PhpMyAdminLegacyTemplate, PhpMyAdmin523Template:
+		return PhpMyAdminCompose(id, port, "", "")
 	case "mongodb":
 		password := Token()
 		return fmt.Sprintf(`services:
@@ -273,7 +273,7 @@ func ValidateDockerProject(v DockerProjectRequest) error {
 	if v.RequestSHA != "" && (v.Action != "create" || !dockerRequestDigestPattern.MatchString(v.RequestSHA)) {
 		return errors.New("Compose 原请求摘要无效")
 	}
-	if v.MySQLServerID != "" && (v.Action != "create" || v.TemplateID != "phpmyadmin" || !ValidID(v.MySQLServerID)) {
+	if v.MySQLServerID != "" && (v.Action != "create" || !IsPhpMyAdminTemplate(v.TemplateID) || !ValidID(v.MySQLServerID)) {
 		return errors.New("本机 MySQL 仅适用于新建 phpMyAdmin 实例")
 	}
 	// This closed profile is not an exemption for generic Docker requests.
@@ -460,7 +460,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "nginx-static", "name": "Nginx 静态网站", "image": dockerNginxStaticImage, "description": "固定官方多架构摘要，独立网站持久卷与健康检查；全部健康后可绑定域名，仅回环端口", "container_port": 80},
 			{"id": "redis-cache", "name": "Redis 缓存", "image": "redis:8.2.9-alpine", "description": "带持久命名卷的 Redis 单实例", "container_port": 6379},
 			{"id": "memcached-cache", "name": "Memcached 缓存", "image": appcatalog.MemcachedDigestImage, "description": "固定 OCI 摘要、128 MB 缓存，只通过主机回环端口访问", "container_port": 11211},
-			{"id": "phpmyadmin", "name": "phpMyAdmin", "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f…", "description": "固定摘要镜像，只通过主机回环端口访问", "container_port": 80},
+			{"id": PhpMyAdmin523Template, "name": "phpMyAdmin 5.2.3", "image": dockerPhpMyAdmin523Image, "description": "PHP 8.3.36，固定官方摘要，只通过主机回环端口访问", "container_port": 80},
 			{"id": "mongodb", "name": "MongoDB", "image": "mongo:8.0@sha256:d0d926f…", "description": "启用认证与持久卷的 MongoDB 8.0 单实例", "container_port": 27017},
 			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "仅绑定回环端口的单节点检索服务，启用账号认证，1 GiB 容器上限", "container_port": 9200},
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},

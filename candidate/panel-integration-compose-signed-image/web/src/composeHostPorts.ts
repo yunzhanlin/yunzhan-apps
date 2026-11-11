@@ -10,9 +10,15 @@ export function composeHostPortSettings(template: string) {
       return { preferred: 27017, max: 65535, usesNextPort: false, detail: "" };
     case "elasticsearch":
       return { preferred: 19200, max: 65535, usesNextPort: false, detail: "" };
+    case "phpmyadmin-523":
+      return { preferred: 18081, max: 65535, usesNextPort: false, detail: "" };
     default:
       return { preferred: 18080, max: 65535, usesNextPort: false, detail: "" };
   }
+}
+
+export function isPhpMyAdminTemplate(template?: string): boolean {
+  return template === "phpmyadmin" || template === "phpmyadmin-523";
 }
 
 export function isComposeHostPort(template: string, value: unknown): value is number {
