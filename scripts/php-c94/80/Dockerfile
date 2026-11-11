@@ -8,8 +8,13 @@ RUN set -eux; \
     printf '%s  %s\n' \
       8274d747533a62a27faa6be4d29f6e9a0a89ac56cebe008a8a547ea02094e6d8 /tmp/php-engine-security.patch \
       | sha256sum --check; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends $PHPIZE_DEPS patch python3 \
+    printf '%s\n' \
+      'deb https://deb.debian.org/debian bullseye main' \
+      'deb [check-valid-until=no] https://archive.debian.org/debian-security bullseye-security main' \
+      > /tmp/bullseye-build.list; \
+    apt-get -o Dir::Etc::sourcelist=/tmp/bullseye-build.list -o Dir::Etc::sourceparts=- update; \
+    apt-get -o Dir::Etc::sourcelist=/tmp/bullseye-build.list -o Dir::Etc::sourceparts=- \
+      install -y --no-install-recommends $PHPIZE_DEPS patch python3 \
       libargon2-dev libcurl4-openssl-dev libonig-dev libreadline-dev libsodium-dev \
       libsqlite3-dev libssl-dev libxml2-dev zlib1g-dev; \
     docker-php-source extract; \

@@ -2,7 +2,7 @@ name: Native PHP 7.4 and 8.0 engine backport compatibility
 on:
   push:
     branches: [codex/php74-80-c94-security-native]
-    paths: [scripts/php-c94/proof.sh]
+    paths: ['scripts/php-c94/**']
 permissions:
   contents: read
 jobs:
