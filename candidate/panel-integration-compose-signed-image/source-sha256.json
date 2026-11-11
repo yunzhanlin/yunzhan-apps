@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24elasticsearchauthcandidate75-linux-amd64.tar.gz",
-    "archive_sha256": "91abd9dd2fd7d6668b058a10bca9fdf53ee700005f25ecf9051c4812d0cc03aa",
-    "frozen_inputs_sha256": "08768f5b47be7c371bacc3070d83484016089897a5bd1e2c24b8963e5abb83e9"
+    "archive": "panel-0.1.0-dev.proapps24phpmyadminmanagementcandidate76-linux-amd64.tar.gz",
+    "archive_sha256": "cd291a8a15e5fe55ca648178a5de75d4d4e6642229f974ccb1a580684c598b1b",
+    "frozen_inputs_sha256": "07e422dceac103b146cfa993ce76beb6b89af0103afaa6875fb84a434edc68c7"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2305,7 +2305,7 @@
     "scripts/test-runtime-build-pressure.mjs": "5a6cf5caef62374fe9a51ab428b235f15c53e47aca85f8768391e6db20e055c9",
     "scripts/test-runtime-memory-wait.mjs": "d9800ef3e31971dc87f110452afa3ab787e87e3c6022e6cbaa31d6448386c315",
     "scripts/test-runtime-package-labels.mjs": "58216daa86a8a34c303e7522c035939a336875a6502fb24855060070da3cecca",
-    "scripts/test-runtime-selection.mjs": "ec9c3ff5fd83f806b1c815b22f8b220ec2f66c108c2363c7e4ce6e09cdad6852",
+    "scripts/test-runtime-selection.mjs": "fb0482bc4a981b68d826cb51b56751cfb13122e9a56bc78607d7d9467ea7a5af",
     "scripts/test-software-routing-install-browser.mjs": "d09499404d9875a8764edf444fa0b832095d8dd4642f101a4388f03b2a9ee64b",
     "scripts/test-software-routing.mjs": "af61f168fc62bd8b7d2215ddda30010e53c14e05f9bced0f52ba620b26da983d",
     "scripts/test-software-state.mjs": "c58830439a18c18d2dab2c433cb431f45e6707b8586eb16f86370d84af304977",
@@ -2353,7 +2353,7 @@
     "web/src/ApacheLogAutomation.vue": "5fab3aa16513fabb7950da68558174209f700777acc37d04b600613d0cf81527",
     "web/src/ApacheNumericLogs.vue": "0824b7f51251aca689f38f6b217c31621f725ffe782435214691f9e328d6d277",
     "web/src/ApacheWafTransactions.vue": "b0bcbd43a4c17abf2f9279447717f1aff726dc86a7c96d0bf964233c08df86f6",
-    "web/src/App.vue": "115606b46dccc5d42ced03ba70945138cd2df3df0e705d76b66528c4e039417b",
+    "web/src/App.vue": "e9b2fc48b12548d57a21bbf31a214d40fb7bc0c1e5200708bb1515c9d1d9738a",
     "web/src/AppModuleManager.vue": "54f73d02b7a636838e84d9ed58a36ad30f4cacdf46dbb2879a3e4118c2151da2",
     "web/src/AppModuleReport.vue": "72bb8bf457f74547d6a394077ecb83d67382955d8328475a19ae5f5f7844a725",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
@@ -2364,7 +2364,7 @@
     "web/src/DatabaseImportManager.vue": "084288ace391fd5acac263d45e96bf420f7e09b59618a5f8691687ea4d05a8ec",
     "web/src/DatabaseLifecycleDialog.vue": "1c686837f1206cb296271916ae6c7c796000acca5d6559354ffcac3d21addd43",
     "web/src/DatabaseManager.vue": "4fdae1aba1324cf945b6d091059b8359e3efe8490f6a0dfe778028c4eac2164a",
-    "web/src/DockerManager.vue": "78d9c66e45679b6dc7379875e7d2dc3e23c350ed60fbacc9095b2fe1f50250d2",
+    "web/src/DockerManager.vue": "48f59e1be39d1904808d00d55982bc91a022d27e6a402677027f198ba99b324b",
     "web/src/FileManager.vue": "f4ae7a99782e0705d9e7cc34b2b6df130fee5fdf5546afc3cad4d9b1370f92bc",
     "web/src/FileToolsMenu.vue": "eb6e14b7c0f536678e3cdeb75549decfa29d906d039ca4ee8bc08f50d2ba57a9",
     "web/src/HardeningWorkspace.vue": "2f42f7cbf334753ec2c36878028e25819c95749dc5cc6407e1360a9de21eae3a",

@@ -194,6 +194,18 @@ const visible = ref(false),
   logsOpen = ref(false),
   logs = ref(""),
   logsName = ref("");
+const managedTemplate = ref<"phpmyadmin">();
+const visibleProjects = computed(() =>
+  managedTemplate.value ? projects.value.filter(project => project.template_id === managedTemplate.value) : projects.value,
+);
+
+function phpMyAdminURL(project: DockerProject): string {
+  if (project.template_id !== "phpmyadmin" || project.state !== "running" ||
+      project.services !== 1 || project.running !== 1 || project.healthy !== 1 ||
+      !isComposeHostPort("phpmyadmin", project.host_port)) return "";
+  return `http://127.0.0.1:${project.host_port}/`;
+}
+
 const projectForm = ref({
   name: "",
   mode: "template",
@@ -243,6 +255,7 @@ function resetManager() {
   try {
     managerEpoch++; loadSequence++; logSequence++; credentialSequence++; bindingEpoch++; busySequence++;
     visible.value = false; loading.value = false; busy.value = false;
+    managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
     credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = "";
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
@@ -361,14 +374,17 @@ async function load() {
     if (contextCurrent(token) && sequence === loadSequence) loading.value = false;
   }
 }
-function open() {
+function open(template?: "phpmyadmin") {
   if (!alive || !props.csrf || !canOpenAppModule(props.access, "docker-manager")) return;
+  managedTemplate.value = template;
+  if (template) tab.value = "projects";
   visible.value = true;
   restoreCreateRequest();
   void load();
 }
 async function openTemplate(templateId: string) {
   if (!alive || !props.csrf || !canOpenAppModule(props.access, "docker-manager")) return;
+  managedTemplate.value = undefined;
   visible.value = true;
   const token = contextToken();
   await load();
@@ -971,12 +987,12 @@ async function removeVolume(item: DockerVolume) {
 <template>
   <el-dialog
     v-model="visible"
-    title="Docker 管理"
+    :title="managedTemplate ? 'phpMyAdmin 管理' : 'Docker 管理'"
     width="min(1180px, 96vw)"
     :close-on-click-modal="false"
     class="docker-dialog"
   >
-    <div v-if="overview" class="docker-summary">
+    <div v-if="overview && !managedTemplate" class="docker-summary">
       <div>
         <span>Engine</span><strong>{{ overview.version }}</strong
         ><small>API {{ overview.api_version }}</small>
@@ -995,7 +1011,7 @@ async function removeVolume(item: DockerVolume) {
       </div>
     </div>
     <div class="docker-toolbar">
-      <el-tabs v-model="tab">
+      <el-tabs v-if="!managedTemplate" v-model="tab">
         <el-tab-pane label="Compose 项目" name="projects" />
         <el-tab-pane label="容器" name="containers" />
         <el-tab-pane label="镜像" name="images" />
@@ -1024,7 +1040,7 @@ async function removeVolume(item: DockerVolume) {
           >创建容器</el-button
         >
         <el-button
-          v-if="tab === 'projects'"
+          v-if="tab === 'projects' && !managedTemplate"
           type="primary"
           :icon="Plus"
           :disabled="busy"
@@ -1052,12 +1068,15 @@ async function removeVolume(item: DockerVolume) {
     </div>
     <div v-loading="loading" class="docker-list">
       <template v-if="tab === 'projects'">
+        <p v-if="managedTemplate && visibleProjects.some(project => phpMyAdminURL(project))">
+          管理地址只监听服务器回环端口。远程浏览时，请先将该端口转发到本机，再用数据库账号登录。
+        </p>
         <div class="docker-row project-row docker-columns">
           <span>项目</span><span>服务</span><span>容器</span><span>状态</span
           ><span>操作</span>
         </div>
         <div
-          v-for="item in projects"
+          v-for="item in visibleProjects"
           :key="item.id"
           class="docker-row project-row"
           :data-compose-project="item.name"
@@ -1065,6 +1084,7 @@ async function removeVolume(item: DockerVolume) {
           <div>
             <strong>{{ item.name }}</strong
             ><small>{{ item.engine_name }} · {{ item.id.slice(0, 12) }}</small><small v-if="item.site_name">网站：{{ item.site_name }}</small>
+            <small v-if="phpMyAdminURL(item)"><code>{{ phpMyAdminURL(item) }}</code></small>
           </div>
           <span>{{ item.services }} 个服务</span>
           <span>{{ item.running }} / {{ item.containers }} 运行</span>
@@ -1091,6 +1111,7 @@ async function removeVolume(item: DockerVolume) {
           </div>
           <div class="docker-actions">
             <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-link v-if="phpMyAdminURL(item)" type="primary" :href="phpMyAdminURL(item)" target="_blank" rel="noopener noreferrer">打开 phpMyAdmin</el-link>
             <el-button
               v-if="canBindDockerProjectSite(item)"
               link
@@ -1149,8 +1170,8 @@ async function removeVolume(item: DockerVolume) {
           </div>
         </div>
         <el-empty
-          v-if="!loading && !projects.length"
-          description="还没有 Compose 项目，可使用应用模板或受限 Compose 创建"
+          v-if="!loading && !visibleProjects.length"
+          :description="managedTemplate ? '暂无 phpMyAdmin 实例' : '还没有 Compose 项目，可使用应用模板或受限 Compose 创建'"
           :image-size="72"
         />
       </template>

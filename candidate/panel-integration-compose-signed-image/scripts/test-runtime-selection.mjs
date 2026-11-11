@@ -144,6 +144,11 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
+ one('if (result.provider === "compose") void dockerManager.value?.open(pending.app === "phpmyadmin" ? "phpmyadmin" : undefined);',
+     'if (result.provider === "compose") void dockerManager.value?.open();');
+ one('  else if (app.id === "phpmyadmin" && canOpenAppModule(accessPlan.value, "docker-manager")) void dockerManager.value?.open("phpmyadmin");\n', '');
+ one('else if (app.provider === "compose") void dockerManager.value?.open(app.id === "phpmyadmin" ? "phpmyadmin" : undefined);',
+     'else if (app.provider === "compose") void dockerManager.value?.open();');
  // The independent country editor adds only current-actor plumbing here.
  one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
  one('    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",\n', '');

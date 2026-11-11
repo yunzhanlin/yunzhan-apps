@@ -639,7 +639,7 @@ async function reviewRegistryRequest(pending: RegistryPendingRequest) {
     const finished = registryRequestIdentity.observe(pending, result);
     if (finished) ElMessage.success(result.state === 'closed_without_submission' ? "原请求已安全关闭且未入队，可以修改配置后提交新请求" : `原任务已明确${result.state === 'succeeded' ? '完成' : '失败'}；如需再次安装，请明确提交新任务`);
     else ElMessage.warning(result.state_known ? `原任务状态：${states[result.state] || result.state}；未重复安装` : "原任务结果仍未知，已保留原请求；未重复安装");
-    if (result.provider === "compose") void dockerManager.value?.open();
+    if (result.provider === "compose") void dockerManager.value?.open(pending.app === "phpmyadmin" ? "phpmyadmin" : undefined);
     else if (result.job_id) await revealJob(result.job_id);
     await refresh();
   } catch (e) { if (epoch === accessEpoch) ElMessage.error((e as Error).message); }
@@ -730,6 +730,7 @@ function openRegistryApp(app: RegistryApp) {
     else if (!isSecuritySoftware(app.target)) void openAppModule(app.target);
     else ElMessage.warning("安全软件目录尚未加载，请刷新后重试");
   }
+  else if (app.id === "phpmyadmin" && canOpenAppModule(accessPlan.value, "docker-manager")) void dockerManager.value?.open("phpmyadmin");
   else if (app.manage_route === "docker") void dockerManager.value?.open();
   else go(app.manage_route || "runtimes");
 }
@@ -780,7 +781,7 @@ async function installRegistryApp(app: RegistryApp) {
     const result = await api<{ job_id?: string }>(`/app-registry/${app.id}/install`, "POST", body);
     await refresh();
     if (result.job_id && app.provider !== "compose") await revealJob(result.job_id);
-    else if (app.provider === "compose") void dockerManager.value?.open();
+    else if (app.provider === "compose") void dockerManager.value?.open(app.id === "phpmyadmin" ? "phpmyadmin" : undefined);
     ElMessage.success(`${app.name} 安装任务已提交`);
   } catch (e) {
     if (e instanceof Error && e.message !== "cancel") ElMessage.error(e.message);
