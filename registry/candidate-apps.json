@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-11T17:53:25Z",
+  "generated_at": "2026-11-11T18:04:23Z",
   "apps": [
     {
       "schema_version": 1,
@@ -765,6 +765,52 @@
       "health": {
         "probe": "binary",
         "target": "redis-server --version"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "php-80",
+      "name": "PHP 8.0",
+      "category": "deployment",
+      "version": "8.0.30-compat1",
+      "summary": "PHP 8.0 最终版隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "stage": "ready",
+      "risk": "eol",
+      "delivery": {
+        "provider": "compose",
+        "target": "php-legacy-80-bullseye",
+        "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3",
+        "manage_route": "docker",
+        "isolation": "legacy-container"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "固定镜像摘要",
+        "独立 PHP-FPM",
+        "独立 Nginx",
+        "网站同步部署",
+        "域名绑定",
+        "数据卷持久化"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/.__cloudstack_health"
       },
       "uninstall": {
         "preserve_data": true,

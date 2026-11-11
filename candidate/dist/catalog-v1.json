@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T17:53:25Z",
+  "generated_at": "2026-11-11T18:04:23Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -730,12 +730,12 @@
       "id": "php-80",
       "name": "PHP 8.0",
       "category": "deployment",
-      "version": "8.0.27-compat1",
-      "summary": "停止官方维护的旧版 PHP：固定摘要 PHP-FPM，独立命名卷与只读文件系统；经文件同步部署并绑定受管域名。仅用于兼容迁移。",
+      "version": "8.0.30-compat1",
+      "summary": "PHP 8.0 最终版隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-80",
+      "target": "php-legacy-80-bullseye",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -745,8 +745,8 @@
         "域名绑定",
         "数据卷持久化"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.27-compat1/manifest.json",
-      "sha256": "ff0517e92878b5e62f785643b77b748764d7f78c772d6f477270e717bbee832c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-80/8.0.30-compat1/manifest.json",
+      "sha256": "5a2bb0e04030c501a05c6d7d29ac743ae7aea0040d61f864a7ee296a2672641a"
     },
     {
       "id": "php-81",
