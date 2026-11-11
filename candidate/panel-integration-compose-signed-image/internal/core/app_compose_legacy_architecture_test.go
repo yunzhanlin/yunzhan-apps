@@ -83,15 +83,21 @@ func TestIsolatedLegacyPHPDirectHTTPEnforcesSameArchitectureBeforeRootDispatch(t
 	}
 }
 
-func TestPHP81BookwormTemplateUsesReviewedNativeImage(t *testing.T) {
-	for _, architecture := range []string{"amd64", "arm64"} {
-		config, err := dockerTemplateOnArchitecture(LegacyPHP81BookwormTemplate, 23000, architecture)
-		if err != nil || !strings.Contains(config, legacyPHP81BookwormImage) ||
-			!strings.Contains(config, "127.0.0.1:23000:8080") {
-			t.Fatalf("invalid native PHP 8.1 template on %s: %v", architecture, err)
+func TestFinalLegacyPHPTemplatesUseReviewedNativeImages(t *testing.T) {
+	for _, id := range []string{LegacyPHP81BookwormTemplate, legacyPHP80BullseyeTemplate} {
+		image, ok := LegacyPHPImage(id)
+		if !ok || !strings.Contains(image, "@sha256:") {
+			t.Fatalf("missing pinned image for %s", id)
 		}
-	}
-	if _, err := dockerTemplateOnArchitecture(LegacyPHP81BookwormTemplate, 23000, "ppc64le"); err == nil {
-		t.Fatal("template accepted an unreviewed platform")
+		for _, architecture := range []string{"amd64", "arm64"} {
+			config, err := dockerTemplateOnArchitecture(id, 23000, architecture)
+			if err != nil || !strings.Contains(config, image) ||
+				!strings.Contains(config, "127.0.0.1:23000:8080") {
+				t.Fatalf("invalid native template %s on %s: %v", id, architecture, err)
+			}
+		}
+		if _, err := dockerTemplateOnArchitecture(id, 23000, "ppc64le"); err == nil {
+			t.Fatalf("template %s accepted an unreviewed platform", id)
+		}
 	}
 }

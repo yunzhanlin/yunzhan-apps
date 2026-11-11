@@ -175,7 +175,7 @@ func legacySyncRuntime(ctx context.Context, m composeMetadata, read composeUpdat
 		} `json:"Config"`
 	}
 	expectedArch := "amd64"
-	if m.TemplateID == core.LegacyPHP81BookwormTemplate {
+	if core.LegacyPHPArchitectureSupported(m.TemplateID, "arm64") {
 		expectedArch = runtime.GOARCH
 	}
 	if read(ctx, "/images/"+url.PathEscape(c.Image)+"/json", &image) != nil || image.ID != v.Image || image.OS != "linux" || image.Architecture != expectedArch || image.Config == nil || c.User != image.Config.User || c.WorkingDir != image.Config.WorkingDir {

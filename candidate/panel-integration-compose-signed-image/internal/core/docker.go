@@ -77,7 +77,7 @@ func dockerTemplateOnArchitecture(id string, port int, arch string) (string, err
 		return "", errors.New("应用模板主机端口应为 1024–65535")
 	}
 	if _, ok := LegacyPHPImage(id); ok {
-		if !legacyPHPArchitectureSupported(id, arch) {
+		if !LegacyPHPArchitectureSupported(id, arch) {
 			return "", errors.New("已审核旧版 PHP 隔离模板仅支持 AMD64；ARM64 和其他架构不启用模拟运行")
 		}
 		return isolatedPHPTemplate(id, port), nil
@@ -476,10 +476,12 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 				}
 			}
 		}
-		templates = append(templates, map[string]any{
-			"id": LegacyPHP81BookwormTemplate, "name": "PHP 8.1.34 隔离环境", "image": legacyPHP81BookwormImage,
-			"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 PHP-FPM、Nginx 和数据卷", "container_port": 8080,
-		})
+		for _, release := range finalLegacyPHPReleases {
+			templates = append(templates, map[string]any{
+				"id": release.template, "name": "PHP " + release.version + " 隔离环境", "image": release.image,
+				"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 PHP-FPM、Nginx 和数据卷", "container_port": 8080,
+			})
+		}
 		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {
 			if runtime.GOARCH != "amd64" {
 				continue

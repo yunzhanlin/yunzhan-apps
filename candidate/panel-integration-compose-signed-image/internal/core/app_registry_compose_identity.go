@@ -36,8 +36,9 @@ func registryComposeTemplateIdentity(target string) (registryComposeIdentity, bo
 		return registryComposeIdentity{"elasticsearch", dockerElasticsearchImage, "docker", ""}, true
 	case "memcached-cache":
 		return registryComposeIdentity{"memcached", appcatalog.MemcachedDigestImage, "docker", ""}, true
-	case LegacyPHP81BookwormTemplate:
-		return registryComposeIdentity{"php-81", legacyPHP81BookwormImage, "docker", "legacy-container"}, true
+	}
+	if release, ok := findFinalLegacyPHPRelease(target); ok {
+		return registryComposeIdentity{release.appID, release.image, "docker", "legacy-container"}, true
 	}
 	if image, ok := LegacyPHPImages[target]; ok {
 		id := "php-" + strings.TrimPrefix(target, "php-legacy-")
@@ -53,8 +54,8 @@ func validateRegistryComposeDelivery(manifest appcatalog.Manifest) error {
 		(bound.isolation == "legacy-container") != (manifest.Risk == "eol") {
 		return errors.New("签名应用包与当前面板的容器模板身份不一致，未提交安装")
 	}
-	if d.Target == LegacyPHP81BookwormTemplate && manifest.Version != "8.1.34-compat1" {
-		return errors.New("PHP 8.1.34 隔离模板需要对应的签名应用版本")
+	if release, ok := findFinalLegacyPHPRelease(d.Target); ok && manifest.Version != release.appVersion {
+		return errors.New("PHP 隔离模板需要对应的签名应用版本")
 	}
 	if d.Image != bound.image {
 		return errors.New("签名应用包的镜像或摘要与当前面板模板不一致；请先升级面板，未提交安装或拉取镜像")

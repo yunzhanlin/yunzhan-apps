@@ -65,7 +65,7 @@ func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool,
 		if !IsDockerTemplate(app.Target) {
 			return false, "当前面板没有该应用的受限安装器"
 		}
-		if _, legacy := LegacyPHPImage(app.Target); legacy && !legacyPHPArchitectureSupported(app.Target, arch) {
+		if _, legacy := LegacyPHPImage(app.Target); legacy && !LegacyPHPArchitectureSupported(app.Target, arch) {
 			return false, "固定应用镜像仅支持 x86_64；ARM64 不启用模拟运行"
 		}
 	case "runtime":
@@ -186,6 +186,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			}
 		}
 		status := AppRegistryStatus{ID: app.ID, StateKnown: true, Detail: "未安装", Supported: supported, CompatibilityDetail: compatibilityDetail, LatestVersion: app.Version}
+		phpRelease, finalLegacyPHP := findFinalLegacyPHPRelease(app.Target)
+		finalLegacyPHP = finalLegacyPHP && app.ID == phpRelease.appID && app.Version == phpRelease.appVersion
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
 			out = append(out, status)
@@ -210,15 +212,14 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.StateKnown = composeErr == nil
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
-			legacyPHP81Installed := app.ID == "php-81" && app.Target == LegacyPHP81BookwormTemplate &&
-				!status.Installed && compose["php-legacy-81"]
-			if legacyPHP81Installed {
+			previousPHPInstalled := finalLegacyPHP && !status.Installed && compose[phpRelease.previous]
+			if previousPHPInstalled {
 				status.Installed = true
-				status.Healthy = composeHealthy["php-legacy-81"]
+				status.Healthy = composeHealthy[phpRelease.previous]
 				status.UpdateAvailable = true
 			}
 			for _, project := range projects.Projects {
-				if project.TemplateID != app.Target && !(legacyPHP81Installed && project.TemplateID == "php-legacy-81") {
+				if project.TemplateID != app.Target && !(previousPHPInstalled && project.TemplateID == phpRelease.previous) {
 					continue
 				}
 				if project.TemplateProfile == MemcachedUnixProfile && project.State == "retired" {
@@ -288,9 +289,9 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			case "compose":
 				status.UpdateKind = "compose-review"
 				status.UpdateDetail = "请在 Docker 管理中逐项目核对镜像和数据迁移；不批量替换容器或重建数据卷"
-				if app.ID == "php-81" && app.Target == LegacyPHP81BookwormTemplate && !compose[app.Target] {
+				if finalLegacyPHP && !compose[app.Target] {
 					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
-					status.UpdateDetail = "在另一个回环端口创建独立的 PHP 8.1.34 容器和数据卷。现有容器继续使用原镜像和原卷。"
+					status.UpdateDetail = "在另一个回环端口创建独立的 PHP " + phpRelease.version + " 容器和数据卷。现有容器继续使用原镜像和原卷。"
 				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
@@ -337,10 +338,10 @@ func versionBranch(version string) string {
 }
 
 func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
-	if app.Target == LegacyPHP81BookwormTemplate {
+	if release, ok := findFinalLegacyPHPRelease(app.Target); ok {
 		for _, image := range images {
-			if image == legacyPHP81BookwormImage {
-				return "8.1.34"
+			if image == release.image {
+				return release.version
 			}
 		}
 	}
@@ -749,7 +750,7 @@ func appCompatible(manifest appcatalog.Manifest) error {
 func appCompatibleOn(manifest appcatalog.Manifest, osID, architecture string) error {
 	if manifest.Risk == "eol" {
 		if manifest.Delivery.Isolation != "legacy-container" || validateRegistryComposeDelivery(manifest) != nil ||
-			!legacyPHPArchitectureSupported(manifest.Delivery.Target, architecture) {
+			!LegacyPHPArchitectureSupported(manifest.Delivery.Target, architecture) {
 			return errors.New("旧版 PHP 必须使用本机允许列表中的固定摘要隔离环境")
 		}
 	}

@@ -9,6 +9,7 @@ import (
 const legacyNginxImage = "nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5"
 
 const LegacyPHP81BookwormTemplate = "php-legacy-81-bookworm"
+const legacyPHP80BullseyeTemplate = "php-legacy-80-bullseye"
 
 const legacyPHP81BookwormImage = "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat1@sha256:5afb2145c6441b3a3f524fd7542b35f252d06d81525064ac16d67ae7568a3f2d"
 
@@ -29,16 +30,38 @@ var LegacyPHPImages = map[string]string{
 	"php-legacy-81": "devilbox/php-fpm:8.1-mods@sha256:30ed5320f8003e5dde008dfdffa5d3647f0cc41a7004cea6cb40dda005583320",
 }
 
+type finalLegacyPHPRelease struct {
+	template, previous, appID, version, appVersion, image string
+}
+
+var finalLegacyPHPReleases = []finalLegacyPHPRelease{
+	{LegacyPHP81BookwormTemplate, "php-legacy-81", "php-81", "8.1.34", "8.1.34-compat1", legacyPHP81BookwormImage},
+	{legacyPHP80BullseyeTemplate, "php-legacy-80", "php-80", "8.0.30", "8.0.30-compat1", "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat1@sha256:984e0174e4cfb31348ddc7dbe762de771e16961b20fa23a89779e2e27b3670a3"},
+}
+
+func findFinalLegacyPHPRelease(id string) (finalLegacyPHPRelease, bool) {
+	for _, release := range finalLegacyPHPReleases {
+		if release.template == id {
+			return release, true
+		}
+	}
+	return finalLegacyPHPRelease{}, false
+}
+
 func LegacyPHPImage(id string) (string, bool) {
-	if id == LegacyPHP81BookwormTemplate {
-		return legacyPHP81BookwormImage, true
+	if release, ok := findFinalLegacyPHPRelease(id); ok {
+		return release.image, true
 	}
 	image, ok := LegacyPHPImages[id]
 	return image, ok
 }
 
-func legacyPHPArchitectureSupported(id, architecture string) bool {
-	return architecture == "amd64" || (id == LegacyPHP81BookwormTemplate && architecture == "arm64")
+func LegacyPHPArchitectureSupported(id, architecture string) bool {
+	if _, ok := findFinalLegacyPHPRelease(id); ok {
+		return architecture == "amd64" || architecture == "arm64"
+	}
+	_, known := LegacyPHPImages[id]
+	return known && architecture == "amd64"
 }
 
 func IsDockerTemplate(id string) bool {
