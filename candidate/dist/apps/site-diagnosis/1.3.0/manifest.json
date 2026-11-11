@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "site-diagnosis",
+  "name": "Site Diagnosis",
+  "category": "professional",
+  "version": "1.3.0",
+  "summary": "按网站和路径核验实际 Nginx 绑定、HTTP 响应、DNS、TLS 到期和配置，支持最多四站批量诊断、历史和 HTML 报告。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "site-diagnosis",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "域名 DNS 检查",
+    "受管入口及站点绑定核验",
+    "自定义请求路径与真实状态码",
+    "TLS 证书及到期检查",
+    "Nginx 配置和站点文件检查",
+    "按症状排列诊断建议",
+    "最多四站批量诊断",
+    "分级结论与延迟",
+    "执行历史",
+    "HTML 报告导出"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/site-diagnosis"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  },
+  "required_panel_features": [
+    "site-diagnosis-ingress-v1"
+  ]
+}
