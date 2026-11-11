@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "id": "php-54",
+  "name": "PHP 5.4",
+  "category": "deployment",
+  "version": "5.4.45-compat3",
+  "summary": "PHP 5.4.45 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
+  "stage": "ready",
+  "risk": "eol",
+  "delivery": {
+    "provider": "compose",
+    "target": "php-legacy-54-bookworm-compat3",
+    "image": "ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat3@sha256:bcf1f805ad860b67cf9f17a237fed90c08e7664b499094108c9f955e58e42dff",
+    "manage_route": "docker",
+    "isolation": "legacy-container"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "固定镜像摘要",
+    "独立 PHP-FPM",
+    "独立 Nginx",
+    "网站同步部署",
+    "域名绑定",
+    "数据卷持久化",
+    "已验证的开源回移补丁"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/.__cloudstack_health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

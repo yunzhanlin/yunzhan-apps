@@ -49,6 +49,13 @@ const nativeLegacyPHPReleases = [
   {"id":"php-74","version":"7.4.33-compat3","target":"php-legacy-74-bullseye-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php74:7.4.33-compat3@sha256:cce1df42ef6874ea19eab10615822a4677e44004bfc0b2c3e4ee23db475c3b9d"},
   {"id":"php-80","version":"8.0.30-compat2","target":"php-legacy-80-bullseye-compat2","image":"ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat2@sha256:6f1ded5a5e08fc7f31efc5416cc0b877d75f94f576ed0d44bbb8d78319da3eed"},
   {"id":"php-81","version":"8.1.34-compat2","target":"php-legacy-81-bookworm-compat2","image":"ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat2@sha256:afda4abcf8755a50879d77643533d1af624236711c6cdf4e40653b09cbfc0830"},
+  {"id":"php-54","version":"5.4.45-compat3","target":"php-legacy-54-bookworm-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php54:5.4.45-compat3@sha256:bcf1f805ad860b67cf9f17a237fed90c08e7664b499094108c9f955e58e42dff"},
+  {"id":"php-55","version":"5.5.38-compat3","target":"php-legacy-55-bookworm-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php55:5.5.38-compat3@sha256:bd8dd3c8cb2f43613ee2bb4765ab0615f0c7f21554d574a3c519663b0936e4f0"},
+  {"id":"php-56","version":"5.6.40-compat3","target":"php-legacy-56-stretch-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php56:5.6.40-compat3@sha256:7e553b5f2aefc08cf85c3aca8dfc288807788a71e3297c26861ac51a78686756"},
+  {"id":"php-70","version":"7.0.33-compat3","target":"php-legacy-70-stretch-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php70:7.0.33-compat3@sha256:0093801592dcee612cf05b204fab9e9fa01f7d05b32ab502b615d1d05595135c"},
+  {"id":"php-71","version":"7.1.33-compat3","target":"php-legacy-71-stretch-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php71:7.1.33-compat3@sha256:c6c340bc90ddb39ccf613344894ec9afe6b8ce53518fb273dc3b95923f673ac2"},
+  {"id":"php-72","version":"7.2.34-compat3","target":"php-legacy-72-buster-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php72:7.2.34-compat3@sha256:d65e1fade265eafd758563691161f9cae4895177fd00197aae1116b976c2756c"},
+  {"id":"php-73","version":"7.3.33-compat3","target":"php-legacy-73-buster-compat3","image":"ghcr.io/yunzhanlin/yunzhan-apps-php73:7.3.33-compat3@sha256:d105bbce103e6b0bd002c5fe4b6ebfc7c3134af8217310d3e5ce9da6d7435661"},
 ];
 
 export function validateManifest(app) {

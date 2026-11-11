@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-11T21:23:09Z",
+  "generated_at": "2026-11-11T21:59:51Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -554,12 +554,12 @@
       "id": "php-54",
       "name": "PHP 5.4",
       "category": "deployment",
-      "version": "5.4.45-compat2",
-      "summary": "PHP 5.4.45 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "5.4.45-compat3",
+      "summary": "PHP 5.4.45 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-54-bookworm",
+      "target": "php-legacy-54-bookworm-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -567,21 +567,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat2/manifest.json",
-      "sha256": "a59f6a34b03464cf1e60626210ad85ecb470784e30d9da7337f5df9e903f77ed"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-54/5.4.45-compat3/manifest.json",
+      "sha256": "a8bc058edef6f8d24a4735fecd1eb68559b8660149c2289889cb9ef7004817fe"
     },
     {
       "id": "php-55",
       "name": "PHP 5.5",
       "category": "deployment",
-      "version": "5.5.38-compat2",
-      "summary": "PHP 5.5.38 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "5.5.38-compat3",
+      "summary": "PHP 5.5.38 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-55-bookworm",
+      "target": "php-legacy-55-bookworm-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -589,21 +590,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat2/manifest.json",
-      "sha256": "27baa929f9f07c5d568d61c38b35d53d085f185476ba27aec224a84aff54126c"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-55/5.5.38-compat3/manifest.json",
+      "sha256": "ea7dedb198f41a760c8f196b94d326ce458317a51a051e92a5403d1dee24b503"
     },
     {
       "id": "php-56",
       "name": "PHP 5.6",
       "category": "deployment",
-      "version": "5.6.40-compat2",
-      "summary": "PHP 5.6.40 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "5.6.40-compat3",
+      "summary": "PHP 5.6.40 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-56-stretch",
+      "target": "php-legacy-56-stretch-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -611,21 +613,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-56/5.6.40-compat2/manifest.json",
-      "sha256": "fcddb3f2660a0b5e213c32a79a16e2e54541d95b09d52781fc8e565f4d9dd6fb"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-56/5.6.40-compat3/manifest.json",
+      "sha256": "fab30063e791839a2b07cb4adaae111ded2c622ec2cf9671b4f6b8ac8dd5a96e"
     },
     {
       "id": "php-70",
       "name": "PHP 7.0",
       "category": "deployment",
-      "version": "7.0.33-compat2",
-      "summary": "PHP 7.0.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "7.0.33-compat3",
+      "summary": "PHP 7.0.33 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-70-stretch",
+      "target": "php-legacy-70-stretch-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -633,21 +636,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-70/7.0.33-compat2/manifest.json",
-      "sha256": "02ab25b6735ad22623230bf2bbbf18a31df929f90d597bc045e0e6b8d144fb61"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-70/7.0.33-compat3/manifest.json",
+      "sha256": "99ac58e664b23d7f93a8d2c55cea7b52d45f3090c93624c1a16846a9c47fef2a"
     },
     {
       "id": "php-71",
       "name": "PHP 7.1",
       "category": "deployment",
-      "version": "7.1.33-compat2",
-      "summary": "PHP 7.1.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "7.1.33-compat3",
+      "summary": "PHP 7.1.33 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-71-stretch",
+      "target": "php-legacy-71-stretch-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -655,21 +659,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-71/7.1.33-compat2/manifest.json",
-      "sha256": "d046ba1ea53126781d22878bcc206fd00b961d504b7f51d7a380276241b53e72"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-71/7.1.33-compat3/manifest.json",
+      "sha256": "9febd22c9fd930743c24e11733252b509533a7ce2f63924c3c85022336dfc652"
     },
     {
       "id": "php-72",
       "name": "PHP 7.2",
       "category": "deployment",
-      "version": "7.2.34-compat2",
-      "summary": "PHP 7.2.34 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "7.2.34-compat3",
+      "summary": "PHP 7.2.34 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-72-buster",
+      "target": "php-legacy-72-buster-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -677,21 +682,22 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-72/7.2.34-compat2/manifest.json",
-      "sha256": "e96906fee5f66c09aa87d7f88a29c670af726176165a79499913dba651d83f16"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-72/7.2.34-compat3/manifest.json",
+      "sha256": "164004d92c52e3a7825853fe8fa6b29a74da705db2025dabecf9bef0dea181eb"
     },
     {
       "id": "php-73",
       "name": "PHP 7.3",
       "category": "deployment",
-      "version": "7.3.33-compat2",
-      "summary": "PHP 7.3.33 隔离环境，适用于 AMD64 和 ARM64 的旧站兼容迁移。使用独立 PHP-FPM、Nginx、回环端口和数据卷。",
+      "version": "7.3.33-compat3",
+      "summary": "PHP 7.3.33 隔离兼容版，包含经核对的开源回移补丁。通过独立 PHP-FPM、Nginx、回环端口和数据卷运行，适用于 AMD64 与 ARM64 的旧站迁移。",
       "stage": "ready",
       "risk": "eol",
       "provider": "compose",
-      "target": "php-legacy-73-buster",
+      "target": "php-legacy-73-buster-compat3",
       "manage_route": "docker",
       "capabilities": [
         "固定镜像摘要",
@@ -699,10 +705,11 @@
         "独立 Nginx",
         "网站同步部署",
         "域名绑定",
-        "数据卷持久化"
+        "数据卷持久化",
+        "已验证的开源回移补丁"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-73/7.3.33-compat2/manifest.json",
-      "sha256": "9a89ff7b0dfb94318fffce4fc0a5c9e9958df16c2b1b7a3f699ff760487ed839"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-73/7.3.33-compat3/manifest.json",
+      "sha256": "db4d8cfe6fa38508531476d03ac7200af44ef28dee60c1593be2bc457b149495"
     },
     {
       "id": "php-74",
