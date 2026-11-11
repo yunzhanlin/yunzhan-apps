@@ -144,6 +144,23 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
+ one('import { confirmPhpMyAdminInstall, type PhpMyAdminServer } from "./phpMyAdminInstall";\n', '');
+ one(`    if (app.id === "phpmyadmin" && app.provider === "compose") {
+      const epoch = accessEpoch;
+      let servers: PhpMyAdminServer[] = [];
+      let localUnavailable = false;
+      if (canReadPath(accessPlan.value, "/databases")) {
+        try {
+          const result = await api<{ servers: (PhpMyAdminServer & { status: string })[] }>("/databases");
+          servers = result.servers.filter(server => server.status === "running" && /^[0-9a-f]{32}$/.test(server.id));
+        } catch { localUnavailable = true; }
+      }
+      if (epoch !== accessEpoch) return;
+      const answer = await confirmPhpMyAdminInstall(composeHostPortSettings(app.target).preferred, servers, localUnavailable);
+      if (epoch !== accessEpoch) return;
+      body.host_port = answer.hostPort;
+      if (answer.serverID) body.settings = { mysql_server_id: answer.serverID };
+    } else if (app.provider === "compose") {`, '    if (app.provider === "compose") {');
  one('if (result.provider === "compose") void dockerManager.value?.open(pending.app === "phpmyadmin" ? "phpmyadmin" : undefined);',
      'if (result.provider === "compose") void dockerManager.value?.open();');
  one('  else if (app.id === "phpmyadmin" && canOpenAppModule(accessPlan.value, "docker-manager")) void dockerManager.value?.open("phpmyadmin");\n', '');

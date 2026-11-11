@@ -83,6 +83,7 @@ interface DockerProject {
   state: string;
   template_id?: string;
   initial_credentials?: boolean;
+  mysql_server_id?: string;
   healthy?: number;
   host_port?: number;
   site_name?: string;
@@ -1085,6 +1086,7 @@ async function removeVolume(item: DockerVolume) {
             <strong>{{ item.name }}</strong
             ><small>{{ item.engine_name }} · {{ item.id.slice(0, 12) }}</small><small v-if="item.site_name">网站：{{ item.site_name }}</small>
             <small v-if="phpMyAdminURL(item)"><code>{{ phpMyAdminURL(item) }}</code></small>
+            <small v-if="item.template_id === 'phpmyadmin' && item.mysql_server_id">数据库：云栈 MySQL</small>
           </div>
           <span>{{ item.services }} 个服务</span>
           <span>{{ item.running }} / {{ item.containers }} 运行</span>

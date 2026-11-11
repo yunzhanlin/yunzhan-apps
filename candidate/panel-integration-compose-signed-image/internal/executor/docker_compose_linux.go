@@ -25,13 +25,14 @@ const dockerProjects = "/etc/panel/compose"
 var composeForbiddenKey = regexp.MustCompile(`(?mi)^\s*(?:env_file|extends|include|build|dockerfile|file|configs|secrets)\s*:`)
 
 type composeProjectRequest struct {
-	JobID      string `json:"job_id"`
-	ProjectID  string `json:"project_id"`
-	Action     string `json:"action"`
-	Name       string `json:"name,omitempty"`
-	Compose    string `json:"compose,omitempty"`
-	TemplateID string `json:"template_id,omitempty"`
-	RequestSHA string `json:"request_sha,omitempty"`
+	JobID         string `json:"job_id"`
+	ProjectID     string `json:"project_id"`
+	Action        string `json:"action"`
+	Name          string `json:"name,omitempty"`
+	Compose       string `json:"compose,omitempty"`
+	TemplateID    string `json:"template_id,omitempty"`
+	RequestSHA    string `json:"request_sha,omitempty"`
+	MySQLServerID string `json:"mysql_server_id,omitempty"`
 }
 
 type composeMetadata struct {
@@ -41,6 +42,7 @@ type composeMetadata struct {
 	TemplateID         string `json:"template_id,omitempty"`
 	HostPort           int    `json:"host_port,omitempty"`
 	InitialCredentials bool   `json:"initial_credentials,omitempty"`
+	MySQLServerID      string `json:"mysql_server_id,omitempty"`
 	Services           int    `json:"services"`
 	CreatedAt          string `json:"created_at"`
 }
@@ -74,9 +76,10 @@ type composeConfig struct {
 			Mode      string `json:"mode"`
 		} `json:"ports"`
 		Volumes []struct {
-			Type   string `json:"type"`
-			Source string `json:"source"`
-			Target string `json:"target"`
+			Type     string `json:"type"`
+			Source   string `json:"source"`
+			Target   string `json:"target"`
+			ReadOnly bool   `json:"read_only"`
 		} `json:"volumes"`
 	} `json:"services"`
 	Volumes map[string]struct {
@@ -99,6 +102,9 @@ func validateComposeRequest(v composeProjectRequest) error {
 	}
 	if v.RequestSHA != "" && (v.Action != "create" || !composeRequestSHAPattern.MatchString(v.RequestSHA)) {
 		return errors.New("Compose 原请求摘要无效")
+	}
+	if v.MySQLServerID != "" && (v.Action != "create" || v.TemplateID != "phpmyadmin" || !core.ValidID(v.MySQLServerID)) {
+		return errors.New("本机 MySQL 仅适用于新建 phpMyAdmin 实例")
 	}
 	switch v.Action {
 	case "create":
@@ -230,6 +236,11 @@ func validateComposeFile(ctx context.Context, metadata composeMetadata, dir, sou
 			}
 		}
 		for _, volume := range service.Volumes {
+			if metadata.TemplateID == "phpmyadmin" && core.ValidID(metadata.MySQLServerID) && name == "phpmyadmin" &&
+				len(config.Services) == 1 && len(service.Volumes) == 1 && volume.Type == "bind" &&
+				volume.Source == core.PhpMyAdminSocketDirectory(metadata.ID, metadata.MySQLServerID) && volume.Target == core.PhpMyAdminSocketTarget && volume.ReadOnly {
+				continue
+			}
 			if volume.Type != "volume" || volume.Source == "" || !strings.HasPrefix(volume.Target, "/") {
 				return config, fmt.Errorf("服务 %s 只允许受管命名卷", name)
 			}
@@ -363,6 +374,9 @@ func readComposeMetadata(id string) (composeMetadata, string, error) {
 	if e != nil || metadata.ID != id || !dockerResourceNamePattern.MatchString(metadata.Name) || metadata.Engine != "panel_"+id[:12] || metadata.TemplateID == "wordpress-blog" && (metadata.HostPort < 1024 || metadata.HostPort > 65535) {
 		return metadata, "", errors.New("Compose 项目元数据无效")
 	}
+	if metadata.MySQLServerID != "" && (metadata.TemplateID != "phpmyadmin" || !core.ValidID(metadata.MySQLServerID)) {
+		return metadata, "", errors.New("Compose 项目本机数据库绑定无效")
+	}
 	if e = ordinary(filepath.Join(dir, "compose.yaml"), false); e != nil {
 		return metadata, "", e
 	}
@@ -416,7 +430,12 @@ func RunComposeJob(id string) (ret error) {
 		if e = os.Mkdir(tmpDir, 0700); e != nil {
 			return e
 		}
-		defer os.RemoveAll(tmpDir)
+		retainPending := false
+		defer func() {
+			if !retainPending {
+				_ = os.RemoveAll(tmpDir)
+			}
+		}()
 		metadata := composeMetadata{ID: op.ProjectID, Name: op.Name, Engine: "panel_" + op.ProjectID[:12], TemplateID: op.TemplateID, CreatedAt: core.Now()}
 		if e = atomicWrite(filepath.Join(tmpDir, "compose.yaml"), []byte(op.Compose), 0600); e != nil {
 			return e
@@ -447,6 +466,23 @@ func RunComposeJob(id string) (ret error) {
 			metadata.InitialCredentials = service.Environment["xpack.security.enabled"] == "true" &&
 				service.Environment["ELASTIC_PASSWORD"] != ""
 		}
+		if op.MySQLServerID != "" {
+			original, err := core.PhpMyAdminCompose(metadata.HostPort, "", "")
+			if err != nil || op.Compose != original {
+				return errors.New("本机 MySQL 连接要求固定的 phpMyAdmin 模板")
+			}
+			local, err := core.PhpMyAdminCompose(metadata.HostPort, metadata.ID, op.MySQLServerID)
+			if err != nil {
+				return err
+			}
+			metadata.MySQLServerID = op.MySQLServerID
+			if err := atomicWrite(filepath.Join(tmpDir, "compose.yaml"), []byte(local), 0600); err != nil {
+				return err
+			}
+			if _, err := validateComposeFile(ctx, metadata, tmpDir, local); err != nil {
+				return err
+			}
+		}
 		b, _ := json.Marshal(metadata)
 		if e = atomicWrite(filepath.Join(tmpDir, "metadata.json"), b, 0600); e != nil {
 			return e
@@ -454,18 +490,43 @@ func RunComposeJob(id string) (ret error) {
 		if _, e = composePull(ctx, composeArgs(metadata, tmpDir, "pull")...); e != nil {
 			return e
 		}
+		committed := false
+		if metadata.MySQLServerID != "" {
+			defer func() {
+				if !committed && !retainPending {
+					cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 45*time.Second)
+					defer cancel()
+					if err := removePhpMyAdminRelay(cleanup, metadata); err != nil {
+						retainPending = true
+						ret = errors.Join(ret, err)
+					}
+				}
+			}()
+			if err := preparePhpMyAdminRelay(ctx, phpMyAdminRelay{ProjectID: metadata.ID, ServerID: metadata.MySQLServerID}); err != nil {
+				return err
+			}
+		}
 		if _, e = composeCommand(ctx, composeArgs(metadata, tmpDir, "up", "-d", "--remove-orphans")...); e != nil {
 			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
-			_, _ = composeCommand(cleanup, composeArgs(metadata, tmpDir, "down", "--remove-orphans")...)
+			_, cleanupErr := composeCommand(cleanup, composeArgs(metadata, tmpDir, "down", "--remove-orphans")...)
 			cancel()
+			if cleanupErr != nil && metadata.MySQLServerID != "" {
+				retainPending = true
+				return errors.Join(e, cleanupErr)
+			}
 			return e
 		}
 		if e = os.Rename(tmpDir, finalDir); e != nil {
 			cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 2*time.Minute)
-			_, _ = composeCommand(cleanup, composeArgs(metadata, tmpDir, "down", "--remove-orphans")...)
+			_, cleanupErr := composeCommand(cleanup, composeArgs(metadata, tmpDir, "down", "--remove-orphans")...)
 			cancel()
+			if cleanupErr != nil && metadata.MySQLServerID != "" {
+				retainPending = true
+				return errors.Join(e, cleanupErr)
+			}
 			return e
 		}
+		committed = true
 		return nil
 	}
 	metadata, dir, e := readComposeMetadata(op.ProjectID)
@@ -474,6 +535,15 @@ func RunComposeJob(id string) (ret error) {
 	}
 	if op.Action == "delete" && op.Name != metadata.Name {
 		return errors.New("Compose 项目名称确认不匹配")
+	}
+	if metadata.MySQLServerID != "" && (op.Action == "start" || op.Action == "restart" || op.Action == "update") {
+		relay, err := loadPhpMyAdminRelay(metadata.ID)
+		if err != nil || relay.ServerID != metadata.MySQLServerID {
+			return errors.New("无法核对 phpMyAdmin 本机数据库连接")
+		}
+		if _, err := RunCommand(ctx, "/usr/bin/systemctl", "start", phpMyAdminRelayUnit(metadata.ID, metadata.MySQLServerID)); err != nil {
+			return err
+		}
 	}
 	if metadata.TemplateID == "openlitespeed" && (op.Action == "start" || op.Action == "restart" || op.Action == "update") {
 		recreate, err := reconcileOpenLiteSpeedAdmin(ctx, metadata, dir)
@@ -501,6 +571,11 @@ func RunComposeJob(id string) (ret error) {
 	case "delete":
 		if _, e = composeCommand(ctx, composeArgs(metadata, dir, "down", "--remove-orphans")...); e != nil {
 			return e
+		}
+		if metadata.MySQLServerID != "" {
+			if err := removePhpMyAdminRelay(ctx, metadata); err != nil {
+				return err
+			}
 		}
 		return os.RemoveAll(dir)
 	}
@@ -541,7 +616,16 @@ func RecoverComposeJobs() error {
 		var metadata composeMetadata
 		if b, readErr := os.ReadFile(filepath.Join(dir, "metadata.json")); readErr == nil && json.Unmarshal(b, &metadata) == nil && core.ValidID(metadata.ID) && metadata.Engine == "panel_"+metadata.ID[:12] {
 			cleanup, done := context.WithTimeout(ctx, 2*time.Minute)
-			_, _ = composeCommand(cleanup, composeArgs(metadata, dir, "down", "--remove-orphans")...)
+			_, cleanupErr := composeCommand(cleanup, composeArgs(metadata, dir, "down", "--remove-orphans")...)
+			if metadata.MySQLServerID != "" {
+				if cleanupErr == nil {
+					cleanupErr = removePhpMyAdminRelay(cleanup, metadata)
+				}
+				if cleanupErr != nil {
+					done()
+					return cleanupErr
+				}
+			}
 			done()
 		}
 		if removeErr := os.RemoveAll(dir); removeErr != nil {
@@ -629,7 +713,7 @@ func listComposeProjects(ctx context.Context) ([]map[string]any, error) {
 		if running > 0 {
 			state = "running"
 		}
-		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt, "images": images, "initial_credentials": metadata.InitialCredentials})
+		out = append(out, map[string]any{"id": metadata.ID, "name": metadata.Name, "engine_name": metadata.Engine, "template_id": metadata.TemplateID, "host_port": metadata.HostPort, "services": metadata.Services, "containers": len(containers), "running": running, "healthy": healthy, "state": state, "created_at": metadata.CreatedAt, "images": images, "initial_credentials": metadata.InitialCredentials, "mysql_server_id": metadata.MySQLServerID})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i]["created_at"].(string) > out[j]["created_at"].(string) })
 	return out, nil

@@ -1,0 +1,26 @@
+[Unit]
+Description=Local MySQL connection for phpMyAdmin %i
+Before=docker.service
+
+[Service]
+Type=notify
+DynamicUser=true
+ExecStart=/opt/panel/bin/panel-executor --serve-phpmyadmin-db %i
+RuntimeDirectory=panel-phpmyadmin-db-%i
+RuntimeDirectoryMode=0755
+RuntimeDirectoryPreserve=yes
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=20
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=true
+CapabilityBoundingSet=
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/run/panel-phpmyadmin-db-%i
+RestrictAddressFamilies=AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

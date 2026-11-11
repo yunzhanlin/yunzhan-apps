@@ -16,6 +16,7 @@ import type AppModuleManager from "./AppModuleManager.vue";
 import { DeferredWorkspace, WorkspaceCodeLoadError, scopeWorkspaceAPI, scopeWorkspaceOperation } from "./deferredWorkspace";
 import { isSecuritySoftware, softwareManagerKind } from "./softwareRouting";
 import { normalizeStoreSearch, sortStoreSearchResults } from "./storeSearch";
+import { confirmPhpMyAdminInstall, type PhpMyAdminServer } from "./phpMyAdminInstall";
 import { useMobileNavigation } from "./mobileNavigation";
 import { phpSecurityFor, phpSecurityExposure } from "./phpSecurity";
 import { parsePHPSwitchPreview, samePHPSwitchContext, type PHPSwitchContext, type PHPSwitchPreview } from "./phpSwitchPreview";
@@ -756,7 +757,22 @@ async function installRegistryApp(app: RegistryApp) {
   }
   const body: Record<string, unknown> = { expected_version: app.version, expected_sha256: app.sha256 };
   try {
-    if (app.provider === "compose") {
+    if (app.id === "phpmyadmin" && app.provider === "compose") {
+      const epoch = accessEpoch;
+      let servers: PhpMyAdminServer[] = [];
+      let localUnavailable = false;
+      if (canReadPath(accessPlan.value, "/databases")) {
+        try {
+          const result = await api<{ servers: (PhpMyAdminServer & { status: string })[] }>("/databases");
+          servers = result.servers.filter(server => server.status === "running" && /^[0-9a-f]{32}$/.test(server.id));
+        } catch { localUnavailable = true; }
+      }
+      if (epoch !== accessEpoch) return;
+      const answer = await confirmPhpMyAdminInstall(composeHostPortSettings(app.target).preferred, servers, localUnavailable);
+      if (epoch !== accessEpoch) return;
+      body.host_port = answer.hostPort;
+      if (answer.serverID) body.settings = { mysql_server_id: answer.serverID };
+    } else if (app.provider === "compose") {
       const ports = composeHostPortSettings(app.target);
       const range = `请输入 1024–${ports.max} 之间的本机端口。`;
       const answer = await ElMessageBox.prompt(

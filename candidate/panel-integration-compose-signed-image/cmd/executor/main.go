@@ -38,6 +38,7 @@ func main() {
 	passphraseFile := flag.String("passphrase-file", "", "0600 file containing the system backup passphrase")
 	mysqlPrepare := flag.String("prepare-mysql", "", "create an isolated database account")
 	mysqlServe := flag.String("serve-mysql", "", "serve an isolated database instance")
+	phpMyAdminRelay := flag.String("serve-phpmyadmin-db", "", "serve the verified local MySQL connection for one phpMyAdmin project")
 	mysqlJob := flag.String("database-job", "", "run a managed database operation")
 	mysqlCLI := flag.String("database-cli", "", "run a local root database client; use -- before client arguments")
 	mysqlOverwriteRecovery := flag.Bool("recover-database-overwrites", false, "recover interrupted database replacement operations")
@@ -431,7 +432,7 @@ func main() {
 	for _, op := range []struct {
 		id  string
 		run func(string) error
-	}{{*mysqlPrepare, executor.PrepareMySQLUser}, {*mysqlServe, executor.ServeMySQL}, {*mysqlJob, executor.RunDatabaseJob}} {
+	}{{*mysqlPrepare, executor.PrepareMySQLUser}, {*mysqlServe, executor.ServeMySQL}, {*mysqlJob, executor.RunDatabaseJob}, {*phpMyAdminRelay, executor.ServePhpMyAdminRelay}} {
 		if op.id != "" {
 			if e := op.run(op.id); e != nil {
 				log.Fatal(e)

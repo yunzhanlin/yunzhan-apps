@@ -63,6 +63,7 @@ type DockerProjectRequest struct {
 	TemplateProfile string `json:"template_profile,omitempty"`
 	SiteID          string `json:"site_id,omitempty"`
 	ActorID         string `json:"actor_id,omitempty"`
+	MySQLServerID   string `json:"mysql_server_id,omitempty"`
 }
 
 func dockerTemplate(id string, port int) (string, error) {
@@ -167,22 +168,7 @@ volumes:
 	case "memcached-cache":
 		return "services:\n  memcached:\n    image: " + appcatalog.MemcachedDigestImage + "\n    restart: unless-stopped\n    command: [\"memcached\", \"-m\", \"128\", \"-I\", \"4m\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":11211\"\n    healthcheck:\n      test: [\"CMD-SHELL\", \"printf 'version\\r\\n' | nc -w 2 127.0.0.1 11211 | grep -q '^VERSION'\"]\n      interval: 10s\n      timeout: 3s\n      retries: 12\n", nil
 	case "phpmyadmin":
-		return fmt.Sprintf(`services:
-  phpmyadmin:
-    image: %s
-    restart: unless-stopped
-    environment:
-      PMA_ARBITRARY: "1"
-      UPLOAD_LIMIT: "256M"
-    ports:
-      - "127.0.0.1:%d:80"
-    healthcheck:
-      test: ["CMD-SHELL", "php -r '$$s=@fsockopen(\"127.0.0.1\",80); exit($$s?0:1);'"]
-      interval: 10s
-      timeout: 5s
-      retries: 18
-      start_period: 30s
-`, dockerPhpMyAdminImage, port), nil
+		return PhpMyAdminCompose(port, "", "")
 	case "mongodb":
 		password := Token()
 		return fmt.Sprintf(`services:
@@ -287,6 +273,9 @@ func ValidateDockerProject(v DockerProjectRequest) error {
 	}
 	if v.RequestSHA != "" && (v.Action != "create" || !dockerRequestDigestPattern.MatchString(v.RequestSHA)) {
 		return errors.New("Compose 原请求摘要无效")
+	}
+	if v.MySQLServerID != "" && (v.Action != "create" || v.TemplateID != "phpmyadmin" || !ValidID(v.MySQLServerID)) {
+		return errors.New("本机 MySQL 仅适用于新建 phpMyAdmin 实例")
 	}
 	// This closed profile is not an exemption for generic Docker requests.
 	// Lifecycle operations use their own original-request authority; neither

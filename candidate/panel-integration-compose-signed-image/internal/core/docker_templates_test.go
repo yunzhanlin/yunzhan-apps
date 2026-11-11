@@ -87,6 +87,28 @@ func TestPhpMyAdminTemplateIsPinnedAndLoopbackOnly(t *testing.T) {
 	if strings.Contains(compose, "0.0.0.0") || strings.Contains(compose, ":latest") {
 		t.Fatal("phpMyAdmin template exposed a public port or mutable tag")
 	}
+
+	project, server := strings.Repeat("1", 32), strings.Repeat("2", 32)
+	local, err := PhpMyAdminCompose(18080, project, server)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, expected := range []string{
+		dockerPhpMyAdminImage,
+		"127.0.0.1:18080:80",
+		"PMA_HOST: localhost",
+		"PMA_SOCKET: /run/panel-db/mysql.sock",
+		"source: " + PhpMyAdminSocketDirectory(project, server),
+		"read_only: true",
+		"create_host_path: false",
+	} {
+		if !strings.Contains(local, expected) {
+			t.Fatalf("local phpMyAdmin template missing %q", expected)
+		}
+	}
+	if strings.Contains(local, "PMA_ARBITRARY") || strings.Contains(compose, PhpMyAdminSocketTarget) {
+		t.Fatal("phpMyAdmin mixed the external and selected local profiles")
+	}
 }
 
 func TestRegistryDatabaseTemplatesAreDigestPinnedAndPrivate(t *testing.T) {

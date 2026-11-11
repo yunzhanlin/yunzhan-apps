@@ -533,6 +533,21 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 				return
 			}
 			op = DockerProjectRequest{JobID: ID(), ProjectID: ID(), Action: "create", Name: strings.TrimSpace(in.Name), Compose: compose, TemplateID: manifest.Delivery.Target}
+			if op.TemplateID == "phpmyadmin" && in.Settings["mysql_server_id"] != nil {
+				databaseRequest := r.Clone(ctx)
+				databaseRequest.Method, databaseRequest.URL.Path = http.MethodGet, "/api/databases"
+				if !a.appRoleAllowed(u, databaseRequest) {
+					fail(w, 403, "当前角色无法访问本机 MySQL 实例")
+					return
+				}
+				serverID, valid := in.Settings["mysql_server_id"].(string)
+				server, readErr := a.Store.DatabaseServer(serverID)
+				if !valid || !ValidID(serverID) || readErr != nil || !ValidDatabaseServer(server) || server.Status != "running" {
+					fail(w, 409, "请选择正在运行的云栈 MySQL 实例")
+					return
+				}
+				op.MySQLServerID = serverID
+			}
 		}
 		if err = ValidateDockerProject(op); err != nil {
 			fail(w, 409, err.Error())
