@@ -1,0 +1,58 @@
+{
+  "source_head": "b09d1f466c9e574ec4279d8f0e181358e4bf7f21",
+  "source_inputs_sha256": "37c28faf11e14ec322c6031aa669c5e9bcff42e8f25387a47f6d193e62c444b4",
+  "source_sdk_tree": "de999bbffdafb07709adf2d7388c0712c388461b",
+  "version": "0.1.0-dev.proapps24phpprocesscandidate95r3",
+  "release_id": 442182346,
+  "tag": "qa-phpprocesscandidate95r3-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 736888613,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-amd64.tar.gz": {
+      "id": 736889948,
+      "bytes": 23817832,
+      "sha256": "4d62a5a2fda51381f1b5fa5a00945fd6c3cd0ca8caeb600aa0649233b40918f0"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-amd64.tar.gz.manifest": {
+      "id": 736888575,
+      "bytes": 182,
+      "sha256": "162337bb6d052fab3e4056314269b902493a4bdbbff4d34b90604e6c3af31ffe"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-amd64.tar.gz.sig": {
+      "id": 736888523,
+      "bytes": 64,
+      "sha256": "d74b2b38b39733a12710399235e911d3a73a90dfb0e381c024e1628f9588b188"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-arm64.tar.gz": {
+      "id": 736888629,
+      "bytes": 22036388,
+      "sha256": "d8318f6ff1db03e0f02a2be6361b8a1a5df991f7a549551c5e7e5bb1282e7e3f"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-arm64.tar.gz.manifest": {
+      "id": 736888588,
+      "bytes": 182,
+      "sha256": "23bf03d989e689b77464f5e6d48b11cc01192c9955ac331cac10fd622c136cd2"
+    },
+    "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-arm64.tar.gz.sig": {
+      "id": 736888544,
+      "bytes": 64,
+      "sha256": "b95e7abf3ecf8e1dc28f6ed289d19a66ec6ab77dab912ea397bb552ce3624a4c"
+    },
+    "release-signing-dev.pub": {
+      "id": 736888555,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpprocesscandidate95r3-linux-arm64.tar.gz"
+    }
+  }
+}
