@@ -1,0 +1,15 @@
+{
+  "image": "mysql:8.4.13@sha256:a81d043930e51745522bd5c430961cf8286f0a23f0a9a2a6e0108f7ea71b0902",
+  "platforms": {
+    "amd64": {
+      "manifest": "sha256:72c368d898861f3b3a07af0e6d690400f44f048799ed46822783d9224cc2c86d",
+      "config": "sha256:0f1a0ccadda3a1734d1db557e203ec58621d56fa248525016e85fe4f631311ec"
+    },
+    "arm64": {
+      "manifest": "sha256:f4539b86c82f2c168fc95b439448bde3b9f48e8460344ce41e39081867d2b58e",
+      "config": "sha256:ae113cae2661960c4665a586812ae8150b2a133772a9f3ad63d1f1ae4f9e8ce7"
+    }
+  },
+  "vendor": "docker.io/library/mysql",
+  "fixture_only": true
+}
