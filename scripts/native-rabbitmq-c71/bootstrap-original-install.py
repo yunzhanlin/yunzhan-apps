@@ -49,10 +49,10 @@ def original_fixed_service_observation(label):
   save(prefix+'-outcome.json',{'exit':jr.returncode,'stdout_sha256':sha(private/(prefix+'.stdout')),'stderr_sha256':sha(private/(prefix+'.stderr'))})
  save(label+'-original-fixed-service-observation.json',result)
 
-def run_once(name,args,timeout=60):
+def run_once(name,args,timeout=60,env=None):
  if name=='one-normal-original-signed-first-install':native_fixed_path_observation('before-original-normal-install');original_fixed_service_observation('before-original-normal-install')
  save(name+'-intent.json',{'args':args,'maximum_submissions':1})
- with(private/(name+'.stdout')).open('xb')as out,(private/(name+'.stderr')).open('xb')as err:r=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=timeout)
+ with(private/(name+'.stdout')).open('xb')as out,(private/(name+'.stderr')).open('xb')as err:r=subprocess.run(args,stdin=subprocess.DEVNULL,stdout=out,stderr=err,timeout=timeout,env=env)
  save(name+'-outcome.json',{'exit':r.returncode,'stdout_sha256':sha(private/(name+'.stdout')),'stderr_sha256':sha(private/(name+'.stderr'))})
  if name=='one-normal-original-signed-first-install':native_fixed_path_observation('after-original-normal-install');original_fixed_service_observation('after-original-normal-install')
  assert r.returncode==0,'Original '+name+' failed; retain private output, never replay'
@@ -211,7 +211,14 @@ signer=['/usr/bin/python3','-I','-B',str(assets/'signed-release.py')];key=['--pu
 run_once('original-programme-signature-verify',signer+['verify',str(archive)]+key)
 
 run_once('one-normal-first-install-preflight',signer+['install',str(archive)]+key+['--preflight-only'],900)
-run_once('one-normal-original-signed-first-install',signer+['install',str(archive)]+key,1800)
+# Keep the downloaded program, installer, NSS, and the host's APT files intact.
+# The disposable CI runner alone gets a signed, HTTPS-reachable archive.
+sys.path.insert(0, str(source))
+from isolated_ubuntu_apt import isolated_ubuntu_apt
+
+apt_config = isolated_ubuntu_apt(arch, save)
+run_once('one-normal-original-signed-first-install', signer+['install',str(archive)]+key, 1800,
+         env={**os.environ, 'APT_CONFIG': apt_config})
 assert not pathlib.Path('/opt/panel/DEVELOPMENT_RELEASE').exists()
 version=dispatch['version'];installed=pathlib.Path('/opt/panel/current').resolve(strict=True)
 assert installed==pathlib.Path('/opt/panel/releases')/version

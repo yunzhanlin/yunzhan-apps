@@ -12,18 +12,28 @@
     "target": "rabbitmq"
   },
   "payload_files": {
-    "scripts/native-rabbitmq-c71/bootstrap-original-install.py": "e6896f1ab9cf7dd848812ef7e2c89620999cdac425bf8092b9bdd271d9093cc8",
-    "scripts/native-rabbitmq-c71/download.py": "db724ee3d6485238ad1ef846ec7599f8cc2a1bceca5ad84aa4115225c18387e0",
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py": "d476bdbf1c2ececab8e74ed7a0f2333010fd02ea30a71dbb8e4671a1b0e3d57d",
+    "scripts/native-rabbitmq-c71/download.py": "42327e02df18b4192ff27b9ff110630cf3b906aec059be987096c5f13413ea5e",
     "scripts/native-rabbitmq-c71/finish.py": "dcd209fb59da74323e500b1dae0fa1d5d13563e8f7d655ef082ef01e4d99b075",
     "scripts/native-rabbitmq-c71/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
     "scripts/native-rabbitmq-c71/pika.txt": "82db290a993cdf56c13b14420be0b46c72afb589bf5a99c94739ecbd7e16c97e",
     "scripts/native-rabbitmq-c71/rabbitmq.py": "b24e3fa891de71c4bc479b7b0df24a9806f526b435167f195c34a67f1d70f350",
     "scripts/native-rabbitmq-c71/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     ".github/workflows/rabbitmq-c71-native-qa1.yml": "5c33013ee256192858dadb5bf24a8fc671d022562998995bec093a66aae4fc77",
-    "scripts/native-rabbitmq-c71/dispatch.json": "08e0883dcfc6014f12bfc8e94283e382657721f6060c8d22af5bfba86eb72a9d"
+    "scripts/native-rabbitmq-c71/dispatch.json": "08e0883dcfc6014f12bfc8e94283e382657721f6060c8d22af5bfba86eb72a9d",
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    ".github/workflows/rabbitmq-c71-native-qa2.yml": "561baa72429e07eac9c684340797e325ea3ee54123490facc2b61235d4a5a4f0"
   },
   "existing_Docker_runtime_qualified_only_by_actual_use": true,
   "normal_Docker_fresh_install_remains_separate": true,
   "Main_changed": false,
-  "all50_commercial": false
+  "all50_commercial": false,
+  "native_fixture_parent": "cc91a7bb6b296171ddf2ef99eb1a728d435ad44a",
+  "changed_payload_files": [
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py",
+    "scripts/native-rabbitmq-c71/download.py",
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py",
+    ".github/workflows/rabbitmq-c71-native-qa2.yml"
+  ],
+  "prior_native_run": 43039719154
 }

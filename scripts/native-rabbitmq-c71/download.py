@@ -15,9 +15,9 @@ def gh(path):
  r=subprocess.run(['gh','api','repos/yunzhanlin/yunzhan-apps/'+path],capture_output=True,timeout=90)
  assert r.returncode==0;return json.loads(r.stdout)
 parent=subprocess.check_output(['git','rev-parse','HEAD^'],text=True).strip()
-assert parent==cohort['source_head']
+assert parent==cohort.get('native_fixture_parent', cohort['source_head'])
 changes={os.fsdecode(p)for p in subprocess.check_output(['git','diff','--name-only','-z','HEAD^','HEAD']).split(b'\0')if p}
-assert changes==set(cohort['payload_files'])|{'scripts/native-rabbitmq-c71/cohort.json'}
+assert changes==set(cohort.get('changed_payload_files', cohort['payload_files']))|{'scripts/native-rabbitmq-c71/cohort.json'}
 for n,h in cohort['payload_files'].items():assert sha(n)==h,n
 ci=gh('actions/runs/'+str(dispatch['source_ci_run']))
 assert ci['head_sha']==dispatch['source_head']and ci['status']=='completed'and ci['conclusion']=='success'and ci['run_attempt']==1
