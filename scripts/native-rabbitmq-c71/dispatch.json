@@ -1,0 +1,59 @@
+{
+  "source_head": "4d9b99476ada3bf03151d6d48c7a66c2b8aa298e",
+  "source_inputs_sha256": "0fe094ad199b1cadfe7d55725368d3e3498494d774895be05d6979bd4c175768",
+  "source_sdk_tree": "d6a495e345b52f2a915d86c1cd0113691f7423ee",
+  "source_ci_run": 42640494187,
+  "release_id": 441806617,
+  "tag": "qa-composesignedimagecandidate71-20261109-qa1",
+  "version": "0.1.0-dev.proapps24composesignedimagecandidate71",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 735814180,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-amd64.tar.gz": {
+      "id": 735817343,
+      "bytes": 23765633,
+      "sha256": "5496d8e184b12dabc137e84aeb2339e393f2041ea86df4c0f51b9911644095c5"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-amd64.tar.gz.manifest": {
+      "id": 735814073,
+      "bytes": 188,
+      "sha256": "19fc45df781a6d2c69ddc3f0e982e9accfa88344d635451107410ffc70e7f077"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-amd64.tar.gz.sig": {
+      "id": 735813902,
+      "bytes": 64,
+      "sha256": "f5d7785b635f590ff8e3bcb3b45af9097fc6ce198daac753284190ff95ec6a50"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-arm64.tar.gz": {
+      "id": 735814251,
+      "bytes": 21983577,
+      "sha256": "f2acf4193337beeb7b51c048e4dac33da0d283503359bc260ca3cc40c8239b8c"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-arm64.tar.gz.manifest": {
+      "id": 735814125,
+      "bytes": 188,
+      "sha256": "5f40a0e0b6424d081241b8aca6c66820d7ca6c5e74a05a53ba6359f40c59f37a"
+    },
+    "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-arm64.tar.gz.sig": {
+      "id": 735813954,
+      "bytes": 64,
+      "sha256": "3c15b0ca4e036a9e845f999af4c191678deb340dd4739730de86511695439eb4"
+    },
+    "release-signing-dev.pub": {
+      "id": 735814022,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24composesignedimagecandidate71-linux-arm64.tar.gz"
+    }
+  }
+}
