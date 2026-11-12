@@ -1,0 +1,52 @@
+{
+  "source_head": "e90514d60b9fbc1181b872a21df2170e4de59f27",
+  "source_inputs_sha256": "d4b332b8a78ebcd28ab9388279cc52333b169a349d09c47150e27e9806bbdeb2",
+  "version": "0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2",
+  "items": {
+    "pure-ftpd": {
+      "id": "pure-ftpd",
+      "name": "Pure-FTPd",
+      "category": "deployment",
+      "version": "1.0.54-compat6",
+      "summary": "\u72ec\u7acb Pure-FTPd 1.0.54\uff0c\u7f51\u7ad9 chroot \u4e0e\u53cc\u901a\u9053 FTPS\uff1b\u5b9e\u9645\u8d26\u6237\u9650\u901f\u3001FTP \u8f6f\u914d\u989d\u3001\u5ba2\u6237\u7aef IPv4/CIDR \u548c\u4f1a\u8bdd\u9650\u5236\uff0c\u652f\u6301\u539f\u5b50\u8ba1\u6570\u3001\u8d26\u6237\u4e8b\u52a1\u3001\u914d\u7f6e\u53ca\u8fd0\u884c\u65f6\u5931\u8d25\u6062\u590d\uff1b\u4e0d\u66ff\u6362\u7cfb\u7edf FTP \u6216\u81ea\u52a8\u5f00\u653e\u9632\u706b\u5899\u3002",
+      "stage": "ready",
+      "risk": "privileged",
+      "provider": "panel-module",
+      "target": "pure-ftpd",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u53cc\u901a\u9053 FTPS \u4e0e chroot",
+        "\u865a\u62df\u8d26\u6237\u4e0e\u5bc6\u7801\u8f6e\u6362",
+        "\u8d26\u6237\u4e0a\u4f20\u4e0b\u8f7d\u9650\u901f",
+        "\u4e0a\u4f20\u4e0b\u8f7d",
+        "FTP \u5bb9\u91cf\u4e0e\u6570\u91cf\u8f6f\u914d\u989d",
+        "\u5ba2\u6237\u7aef IPv4/CIDR \u8bbf\u95ee\u63a7\u5236",
+        "\u53cc\u6587\u4ef6\u5931\u8d25\u6062\u590d",
+        "\u88ab\u52a8\u7aef\u53e3\u4e0e NAT \u901a\u544a",
+        "\u7cfb\u7edf\u4fe1\u4efb\u7684\u57df\u540d\u8bc1\u4e66",
+        "\u8d26\u6237\u4f1a\u8bdd\u4e0e\u670d\u52a1\u8fde\u63a5\u9650\u989d",
+        "\u771f\u5b9e TLS\u3001\u5728\u7ebf\u4e8b\u52a1\u9a8c\u8bc1\u4e0e\u914d\u7f6e\u56de\u6eda",
+        "\u72ec\u7acb\u8fd0\u884c\u65f6\u6821\u9a8c\u4e0e\u91cd\u542f\u6062\u590d"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pure-ftpd/1.0.54-compat6/manifest.json",
+      "sha256": "42734c490ac4c08f2040f4f50948f3d01a68aec3fcd38c577f877058d9552e97"
+    }
+  },
+  "payload_files": {
+    ".github/workflows/pure-ftpd-transfer-history-c107r2-native-qa1.yml": "5383359871c10177ed6f7a76842aeed162f6af6d7815d886957b1a1651449d14",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/dispatch.json": "aefd1d9585e9374992e3014d5934f389fd377050924abfaf31d3222e6eb83e12",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/download.py": "901ef2ebf8338e5ed5b21f999ec253d4f7e6afdb12416e9840fa5d84ada959e4",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/pure-ftpd-transfer-history.py": "232b71655de440c911eb5b45fc8eac61ac0218081247c91983a64e012208c8ae",
+    "scripts/native-pure-ftpd-transfer-history-c107r2/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "mode": "old-signed-ftps-transfer",
+  "served_head": "9c4f93029a6ad6009013c067279a14ff767c6dba",
+  "authorized_catalogues": [
+    "9c4f93029a6ad6009013c067279a14ff767c6dba"
+  ],
+  "Main_changed": false
+}
