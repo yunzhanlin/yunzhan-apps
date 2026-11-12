@@ -1,0 +1,45 @@
+{
+  "source_head": "161c72401ff5a634265d1eb5bb4d5b36c5ac8982",
+  "source_inputs_sha256": "cc22a5cdc0f4ccb8ed1c15032a7fe6d3d6201de8379b740ccaf4296fc4b56455",
+  "version": "0.1.0-dev.proapps24dockercontainermetricscandidate106r3",
+  "items": {
+    "docker-manager": {
+      "id": "docker-manager",
+      "name": "Docker Manager",
+      "category": "deployment",
+      "version": "1-compat1",
+      "summary": "\u5b89\u88c5\u56fa\u5b9a Docker Engine/CLI/Compose \u5e76\u7ba1\u7406\u53d7\u9650\u5bb9\u5668\u3001\u955c\u50cf\u3001\u7f51\u7edc\u3001\u5377\u4e0e Compose\u3002",
+      "stage": "ready",
+      "risk": "privileged",
+      "provider": "runtime",
+      "target": "docker-auto",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u5bb9\u5668",
+        "\u955c\u50cf",
+        "Compose",
+        "\u975e\u7279\u6743\u7ea6\u675f"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/docker-manager/1-compat1/manifest.json",
+      "sha256": "9b745cfc51a3b443c1684ac8dc74933efe0cce1e785911f5db1004bbbcc5ce69"
+    }
+  },
+  "payload_files": {
+    ".github/workflows/docker-container-metrics-c106r3-native-qa1.yml": "a7a7613d2ec1f356933c3b689618237f216eea17b1671afa2be8b45e6246c77b",
+    "scripts/native-docker-container-metrics-c106r3/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-docker-container-metrics-c106r3/dispatch.json": "89681be4703a8d445c2a6bc2f2a217df17f98a8eb175d051916eab44b43948bf",
+    "scripts/native-docker-container-metrics-c106r3/docker-container-metrics.py": "8c4929068a1114a02b3980614676576332ef13dbbb3417f174308b411d946ef8",
+    "scripts/native-docker-container-metrics-c106r3/download.py": "35a08ae5ba4a3547190666493c199899862eb9d53c70f026738c8ba7258003eb",
+    "scripts/native-docker-container-metrics-c106r3/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-docker-container-metrics-c106r3/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-docker-container-metrics-c106r3/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-docker-container-metrics-c106r3/prepare-fresh-docker.py": "fe02f702af28f467446f7aae873d1af9a905cc4258ff65396daf5c45e7d92e92",
+    "scripts/native-docker-container-metrics-c106r3/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "mode": "old-docker-package-real-stats",
+  "served_head": "2ed90a7c2d201d7de1b1c98c4b16269d9a0c9068",
+  "authorized_catalogues": [
+    "2ed90a7c2d201d7de1b1c98c4b16269d9a0c9068"
+  ],
+  "Main_changed": false
+}
