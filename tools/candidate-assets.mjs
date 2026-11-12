@@ -1,6 +1,5 @@
 import {lstat,readdir,readFile,mkdir,writeFile,realpath} from 'node:fs/promises';
 import path from 'node:path';
-import { preserveCandidateDataPointer } from './candidate-data-pointers.mjs';
 
 // Copy only the existing PUBLIC application/data trees into the candidate
 // namespace. Preserve original signed data/licence bytes; never credentials,
@@ -33,7 +32,10 @@ export async function candidateAssets(root) {
     const target=path.join(root,'candidate',relative);await parents(relative);
     try{const s=await lstat(target);if(!s.isFile()||s.isSymbolicLink()||s.nlink!==1)throw Error('candidate output asset is not ordinary');}
     catch(error){if(error.code!=='ENOENT')throw error;await writeFile(target,bytes,{flag:'wx',mode:0o644});return;}
-    if(!(await readFile(target)).equals(bytes)&&!await preserveCandidateDataPointer(root,relative))throw Error('changed immutable candidate public asset');
+    if (!(await readFile(target)).equals(bytes)) {
+      const { preserveCandidateDataPointer } = await import('./candidate-data-pointers.mjs');
+      if (!await preserveCandidateDataPointer(root, relative)) throw Error('changed immutable candidate public asset');
+    }
   }
   await walk('dist/apps');await walk('data');return {files,bytes:total};
 }
