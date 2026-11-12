@@ -1,5 +1,6 @@
 import {lstat,readdir,readFile,mkdir,writeFile,realpath} from 'node:fs/promises';
 import path from 'node:path';
+import { preserveCandidateDataPointer } from './candidate-data-pointers.mjs';
 
 // Copy only the existing PUBLIC application/data trees into the candidate
 // namespace. Preserve original signed data/licence bytes; never credentials,
@@ -30,8 +31,9 @@ export async function candidateAssets(root) {
     if(!s.isFile()||s.nlink!==1||s.size>64*1024*1024||++files>8192||(total+=s.size)>256*1024*1024)throw Error('candidate public asset type or bound refused');
     const bytes=await readFile(source);if(bytes.length!==s.size)throw Error('public asset changed during read');
     const target=path.join(root,'candidate',relative);await parents(relative);
-    try{const s=await lstat(target);if(!s.isFile()||s.isSymbolicLink()||s.nlink!==1)throw Error('candidate output asset is not ordinary');if(!(await readFile(target)).equals(bytes))throw Error('changed immutable candidate public asset');}
-    catch(error){if(error.code!=='ENOENT')throw error;await writeFile(target,bytes,{flag:'wx',mode:0o644});}
+    try{const s=await lstat(target);if(!s.isFile()||s.isSymbolicLink()||s.nlink!==1)throw Error('candidate output asset is not ordinary');}
+    catch(error){if(error.code!=='ENOENT')throw error;await writeFile(target,bytes,{flag:'wx',mode:0o644});return;}
+    if(!(await readFile(target)).equals(bytes)&&!await preserveCandidateDataPointer(root,relative))throw Error('changed immutable candidate public asset');
   }
   await walk('dist/apps');await walk('data');return {files,bytes:total};
 }

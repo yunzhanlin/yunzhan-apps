@@ -30,7 +30,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
     'anti-intrusion', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'enterprise-tamper-proof', 'files-sync',
-    'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
+    'load-balance', 'mobile', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
     'pm2-manager', 'pure-ftpd', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
@@ -58,11 +58,19 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.deepEqual(daily.delivery, originalDaily.delivery);
   assert.deepEqual(daily.compatibility, originalDaily.compatibility);
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/daily-report/1.4.0/manifest.json')).digest('hex'), 'd2206cd73effb24c4d5f744b018dbd820416f1b35e5032c8aa46c7997e976126');
+  const oldIDS = stable.apps.find(app => app.id === 'network-threat-detection');
+  const ids = source.apps.find(app => app.id === 'network-threat-detection');
+  assert.equal(oldIDS.version, '1.3.1');
+  assert.deepEqual(ids.rule_data_channel, oldIDS.rule_data_channel);
+  assert.deepEqual(ids.delivery, oldIDS.delivery);
+  assert.deepEqual(ids.compatibility, oldIDS.compatibility);
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/network-threat-detection/1.3.1/manifest.json')).digest('hex'), '2a49e71578193d1e2af1af9364559dda0b8f8ac524f01117cb69de89aea18ebe');
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['docker-manager', '1-compat2'],
     ['pure-ftpd', '1.0.54-compat7'],
     ['daily-report', '1.4.1'],
+    ['network-threat-detection', '1.3.2'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],

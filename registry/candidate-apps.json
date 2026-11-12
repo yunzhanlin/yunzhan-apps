@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-12T01:24:46Z",
+  "generated_at": "2026-11-12T02:10:01Z",
   "apps": [
     {
       "schema_version": 1,
@@ -515,6 +515,61 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "network-threat-detection",
+      "name": "Network Threat Detection",
+      "category": "professional",
+      "version": "1.3.2",
+      "summary": "真实监听基线与独立非 root 被动 IDS，支持签名 ET Open 规则、原生捕获与有界私有告警。采集需使用 Suricata 8.0.8 或同分支更新版。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "network-threat-detection",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "端口基线与新增监听告警",
+        "公网暴露分类",
+        "独立非 root 被动 IDS",
+        "双签名开源规则数据",
+        "显式规则选择与原创回退",
+        "新鲜采集计数核对",
+        "有界私有告警历史",
+        "损坏配置可信停止",
+        "修订幂等与中断不重放",
+        "停止选择优先于恢复",
+        "显式多块缓冲与原生 MTU 核对",
+        "Suricata 8.0.8 版本与维护审核"
+      ],
+      "rule_data_channel": {
+        "id": "et-open-web-bsd-v1",
+        "format": 1,
+        "engine": "suricata-8.0"
+      },
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/network-threat-detection"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": false
       }
     },
     {
