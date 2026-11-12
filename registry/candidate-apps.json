@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-11T23:44:36Z",
+  "generated_at": "2026-11-12T00:07:38Z",
   "apps": [
     {
       "schema_version": 1,
@@ -378,8 +378,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.4.2",
-      "summary": "开发候选：保留真实浏览采集、逐页性能、SPA 就绪耗时、访问序号和受保护同源代理；日期控件适配窄屏，报表、漏斗和导出绑定当前网站及时间区间，日期改变立即清除旧结果，迟到响应不能覆盖当前查询。原记录不改写，完整实装与商用验收仍在进行。",
+      "version": "2.4.3",
+      "summary": "网站访问、会话、来源、点击和页面性能分析。按实际保留的采集数据对比相邻等长周期，分别显示浏览量、访客、会话和点击。",
       "stage": "ready",
       "risk": "maintained",
       "delivery": {
@@ -412,14 +412,15 @@
         "显式SPA就绪耗时；旧标识、后台、超时及重复调用拒绝",
         "按网站隔离的客户端连接地址摘要及来源覆盖率",
         "已知地址与未核实访客的有界独立采集限额",
-        "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出"
+        "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出，支持相邻等长周期对比"
       ],
       "required_panel_features": [
         "analytics-session-lifecycle-v1",
         "analytics-managed-client-address-v1",
         "analytics-route-readiness-v1",
         "analytics-navigation-order-v1",
-        "website-analytics-query-context-v1"
+        "website-analytics-query-context-v1",
+        "website-analytics-period-comparison-v1"
       ],
       "health": {
         "probe": "panel-api",
