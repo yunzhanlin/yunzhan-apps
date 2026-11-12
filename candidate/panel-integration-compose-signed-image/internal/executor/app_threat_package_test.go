@@ -2,6 +2,7 @@ package executor
 
 import (
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -70,6 +71,14 @@ func TestThreatAPTUbuntu8NativeClosureExcludesUnexecutedHelperPackages(t *testin
 		if threatIDSNonEngineDependency(name) || !threatAPTInstallName(name) {
 			t.Fatal("helper package installed or unreviewed library accepted", name)
 		}
+	}
+	// OISF Noble 1:8.0.8-0ubuntu0 AMD64 adds Hyperscan and depends directly
+	// on the reviewed LuaJIT common files instead of the ARM64 Lua library.
+	amd := strings.Replace(raw, "libjansson4", "libhyperscan5 (>= 5.4.2), libjansson4", 1)
+	amd = strings.Replace(amd, "liblua5.1-0", "libluajit-5.1-common", 1)
+	libraries, err = threatIDSDependencies(amd)
+	if err != nil || !slices.Contains(libraries, "libluajit-5.1-common") || !slices.Contains(libraries, "libhyperscan5") {
+		t.Fatal("authenticated AMD64 package dependency closure rejected", libraries, err)
 	}
 	for _, name := range []string{"python3", "python3:any", "python3-yaml", "procps", "lsb-base"} {
 		if !threatIDSNonEngineDependency(name) || threatAPTInstallName(name) {

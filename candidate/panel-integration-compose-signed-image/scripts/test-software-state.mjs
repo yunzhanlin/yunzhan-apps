@@ -10,10 +10,37 @@ const known={id:'task-manager',installed:false,enabled:false,healthy:false};
 const bad=[undefined,null,{...known,state_unknown:true},{...known,installed:true,healthy:true,state_unknown:true},{...known,state_unknown:'false'},{...known,installed:'false'},{...known,enabled:undefined},{...known,healthy:true}];
 const appSource=read('web/src/App.vue'),securitySource=read('web/src/SecurityAppManager.vue');
 const wafSource=read('web/src/WafWorkspace.vue');
+const hardeningSource=read('web/src/HardeningWorkspace.vue');
 const actual=(source,start,end,bindings,name)=>{
  const a=source.indexOf(start),b=source.indexOf(end,a);assert(a>=0&&b>a);
  return new Function('bindings','with(bindings){'+transpile(source.slice(a,b))+';return '+name+';}')(bindings);
 };
+test('system hardening refresh releases a completed request after fresh inspection and retains uncertain requests',async()=>{
+ const entry=securitySource.match(/<HardeningWorkspace\b[^>]+\/>/)?.[0];
+ assert(entry?.includes(':on-job="onJob"'),'Showing the original task must keep its hardening workspace mounted');
+ const job='a'.repeat(32),other='b'.repeat(32),original={action:'configure',key:'c'.repeat(32),job};
+ for(const scenario of [
+  {state:'succeeded',released:true},
+  {state:'running',released:false},
+  {state:'succeeded',different:true,released:false},
+  {state:'succeeded',invalidInspection:true,released:false},
+  {state:'needs_attention',pending:{id:other,recovery_permitted:true},released:false},
+  {state:'needs_attention',pending:{id:job,recovery_permitted:true},released:true},
+ ]){
+  const reads=[];
+  const bindings={disposed:false,generation:0,busy:{value:false},loading:{value:false},ticket:{value:original},reviewed:{value:undefined},
+   profile:{value:'baseline'},view:{value:undefined},error:{value:''},validate:out=>out.valid,props:{api:async(path,method)=>{
+    assert.equal(method,undefined);
+    reads.push(path);
+    if(path.endsWith(job))return{id:scenario.different?other:job,kind:'software_configure',state:scenario.state,error:''};
+    return{valid:!scenario.invalidInspection,profile:'strict',pending:scenario.pending};
+   }}};
+  await actual(hardeningSource,'async function refresh()','const drift=',bindings,'refresh')();
+  assert.deepEqual(reads,['/software/system-hardening/jobs/'+job,...(scenario.different?[]:['/software/system-hardening/inspection'])]);
+  assert.equal(bindings.ticket.value,scenario.released?undefined:original);
+  assert.equal(bindings.loading.value,false);
+ }
+});
 test('missing, untrusted and malformed records stay unknown; known absence and legacy flags stay distinct',()=>{
  for(const row of bad)assert.equal(softwareInstallState(row),'unknown');
  assert.equal(softwareInstallState(known),'absent');
