@@ -11,7 +11,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 // Every command is a closed in-memory sysctl adapter; never the host kernel.
@@ -411,11 +413,11 @@ func TestHardeningChangedOrUnsafeConfigRefusesWithoutRepair(t *testing.T) {
 
 func TestHardeningMutationLockRefusesBusyAndUnsafeWithoutRepair(t *testing.T) {
 	f := newHardeningFixture(t)
-	first, err := f.s.hardeningMutationLock()
+	first, err := f.s.hardeningMutationLock(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if second, err := f.s.hardeningMutationLock(); err == nil {
+	if second, err := f.s.hardeningMutationLock(context.Background()); err == nil {
 		second.Close()
 		t.Fatal("second mutation admitted")
 	}
@@ -464,5 +466,74 @@ func TestHardeningManifestCompensationOnlyRevertsExactOwnCandidate(t *testing.T)
 	raw, _ = os.ReadFile(before.path)
 	if string(raw) != string(foreign) {
 		t.Fatal("foreign manifest overwritten")
+	}
+}
+
+func TestHardeningAdmittedWriterWaitsForReadOnlyInspectionAndRejectsSecondWriter(t *testing.T) {
+	f := newHardeningFixture(t)
+	initial, err := f.s.hardeningMutationLock(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	initial.Close()
+	reader, err := f.s.hardeningObservationLock()
+	if err != nil || reader == nil {
+		t.Fatal("expected a shared observation lock", err)
+	}
+	defer reader.Close()
+	type result struct {
+		lock *hardeningWriteLock
+		err  error
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	defer cancel()
+	first := make(chan result, 1)
+	go func() {
+		lock, err := f.s.hardeningMutationLock(ctx)
+		first <- result{lock, err}
+	}()
+	root, err := f.s.softwareManifestDirectory()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer root.Close()
+	admission, err := root.Open("hardening-writer-admission.lock")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admission.Close()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		err = syscall.Flock(int(admission.Fd()), syscall.LOCK_SH|syscall.LOCK_NB)
+		if errors.Is(err, syscall.EWOULDBLOCK) {
+			break
+		}
+		if err != nil || time.Now().After(deadline) {
+			t.Fatal("first writer did not hold its admission lease", err)
+		}
+		if err = syscall.Flock(int(admission.Fd()), syscall.LOCK_UN); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if second, err := f.s.hardeningMutationLock(ctx); err == nil {
+		second.Close()
+		t.Fatal("another writer entered while the first awaited the inspection")
+	}
+	select {
+	case got := <-first:
+		t.Fatal("first writer finished before the inspection released the shared lock", got.err)
+	default:
+	}
+	if err = reader.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got := <-first
+	if got.err != nil || got.lock == nil {
+		t.Fatal("the original writer did not acquire its exclusive lock", got.err)
+	}
+	got.lock.Close()
+	if f.writes != 0 {
+		t.Fatal("acquiring the lease must not write kernel state")
 	}
 }

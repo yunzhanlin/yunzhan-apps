@@ -9,6 +9,10 @@ import (
 
 const AnalyticsPeriodComparisonAppVersion = "2.4.3"
 
+func analyticsPeriodComparisonSupported(version string) bool {
+	return version == AnalyticsPeriodComparisonAppVersion || version == AnalyticsLayoutHeatmapAppVersion
+}
+
 type analyticsComparisonPeriod struct {
 	From   time.Time `json:"from"`
 	To     time.Time `json:"to"`
@@ -97,7 +101,7 @@ func (a *Server) analyticsComparePeriods(w http.ResponseWriter, r *http.Request,
 		Status SoftwareAppStatus `json:"status"`
 	}
 	if err := a.Executor.Call(ctx, "GET", "/v1/app-modules/website-analytics", nil, &module); err != nil ||
-		!knownInstalledAppModule("website-analytics", module.Status) || module.Status.Version != AnalyticsPeriodComparisonAppVersion {
+		!knownInstalledAppModule("website-analytics", module.Status) || !analyticsPeriodComparisonSupported(module.Status.Version) {
 		fail(w, http.StatusConflict, "请通过签名应用商店更新网站分析后再比较统计周期")
 		return
 	}

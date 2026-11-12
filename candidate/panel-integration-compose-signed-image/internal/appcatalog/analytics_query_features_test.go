@@ -87,3 +87,24 @@ func TestAnalyticsComparisonAddsItsOwnRequiredFeature(t *testing.T) {
 		t.Fatal("previous package borrowed the new handler")
 	}
 }
+
+func TestAnalyticsHeatmapRequiresItsOwnCompiledFeature(t *testing.T) {
+	available := func(string) bool { return true }
+	m := analyticsQueryManifestFixture()
+	m.Version = "2.4.4"
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsPeriodComparisonFeature)
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("previous feature set accepted the responsive heatmap")
+	}
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsLayoutHeatmapFeature)
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(feature string) bool { return feature != AnalyticsLayoutHeatmapFeature }) == nil {
+		t.Fatal("a panel without the heatmap implementation accepted the package")
+	}
+	m.Version = "2.4.4-compat1"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("aliased heatmap manifest accepted")
+	}
+}

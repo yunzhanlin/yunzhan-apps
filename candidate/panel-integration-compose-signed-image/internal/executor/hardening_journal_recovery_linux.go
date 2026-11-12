@@ -23,7 +23,7 @@ func (s *Service) recoverHardeningOperation(ctx context.Context, settings map[st
 	if err != nil {
 		return err
 	}
-	lock, err := s.hardeningMutationLock()
+	lock, err := s.hardeningMutationLock(ctx)
 	if err != nil {
 		return err
 	}

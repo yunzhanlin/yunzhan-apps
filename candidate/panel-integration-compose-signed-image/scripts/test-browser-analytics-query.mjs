@@ -45,11 +45,11 @@ const compiled=compileScript(parse(source).descriptor,{id:'qa-browser-analytics-
 let js=ts.transpileModule(compiled.content,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 js=js.replace(/from ['"]vue['"]/g,'from '+JSON.stringify(new URL('../web/node_modules/vue/index.mjs',import.meta.url).href));
 for(const name of['analyticsHTMLState','randomId','browserAnalyticsQuery'])js=js.replace(new RegExp('from [\'"]\\./'+name+'[\'"]','g'),'from '+JSON.stringify(new URL('../web/src/'+name+'.ts',import.meta.url).href));
-for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
+for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison','AnalyticsHeatmapOverlay'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
 const component=(await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))).default;
 const flush=async()=>{await nextTick();await Promise.resolve();await nextTick();};
 function node(type,text=''){return {type,text,props:{},children:[],parent:null};}
-function harness(){
+function harness(installedVersion='2.4.1'){
  const requests=[],warnings=[];
  const insert=(child,parent,anchor=null)=>{if(child.parent){const n=child.parent.children.indexOf(child);if(n>=0)child.parent.children.splice(n,1);}child.parent=parent;const at=anchor?parent.children.indexOf(anchor):-1;parent.children.splice(at<0?parent.children.length:at,0,child);};
  const renderer=createRenderer({
@@ -66,7 +66,7 @@ function harness(){
   if(path.endsWith('/config'))return {site_id:site,key:'c'.repeat(32),enabled:false,clicks:false,retention_days:30,revision:1};
   return new Promise((resolve,reject)=>requests.push({path,resolve,reject}));
  };
- const app=renderer.createApp(component,{api,installed:true,installedVersion:'2.4.1',sites:[{id:site,name:'Owned query unit site',domain:'owned.example.test'}]});
+ const app=renderer.createApp(component,{api,installed:true,installedVersion,sites:[{id:site,name:'Owned query unit site',domain:'owned.example.test'}]});
  app.config.warnHandler=(msg)=>warnings.push(msg);
  for(const name of['el-select','el-option','el-date-picker','el-button','el-tabs','el-tab-pane','el-descriptions','el-descriptions-item','el-table','el-form','el-form-item','el-input','el-input-number','el-switch','el-empty','el-alert','el-pagination']){
   app.component(name,defineComponent({inheritAttrs:false,setup(_,{attrs,slots}){return()=>h(name,{...attrs},slots.default?.());}}));
@@ -174,5 +174,25 @@ test('actual Vue distinguishes an unqueried heatmap from a current report with n
   assert.equal(heatCount(ui,'heatmap-clicks'),undefined);assert.equal(heatTable(ui),undefined);
   await ui.select();await ui.resolve(0,11);assert.equal(heatCount(ui,'heatmap-clicks'),'0');assert.equal(heatCount(ui,'heatmap-cells'),'0');assert.equal(heatSelect(ui).props.disabled,true);assert.equal(heatTable(ui),undefined);assert.equal(ui.all('el-pagination').length,0);
   assert(ui.all('el-empty').some(n=>n.props.description==='当前网站和时间范围没有点击记录。'));
+ }finally{ui.stop();}
+});
+
+test('actual heatmap isolates responsive layouts and retains unclassified historic clicks',async()=>{
+ const ui=harness('2.4.4');try{
+  await ui.select();
+  const cells=[
+   {path:'/page',viewport:'narrow',x:10,y:5,count:2},
+   {path:'/page',viewport:'wide',x:10,y:5,count:5},
+   {path:'/page',viewport:'unknown',x:10,y:5,count:11},
+   {path:'/other',viewport:'medium',x:25,y:25,count:7},
+  ];
+  await ui.resolve(0,11,{heatmap:[{path:'/page',x:10,y:5,count:18}],heatmap_layouts:{points:cells,partial:true}});
+  const width=()=>ui.all('el-select').find(n=>n.props['aria-label']==='热图屏宽');
+  assert.equal(heatCount(ui,'heatmap-clicks'),'2');
+  ui.update(width(),'wide');await flush();assert.equal(heatCount(ui,'heatmap-clicks'),'5');
+  ui.update(width(),'unknown');await flush();assert.equal(heatCount(ui,'heatmap-clicks'),'11');
+  ui.update(heatSelect(ui),'/other');await flush();
+  assert.equal(width().props.modelValue,'medium');assert.equal(heatCount(ui,'heatmap-clicks'),'7');
+  assert(ui.all('el-alert').some(n=>String(n.props.title).includes('点击热图达到采样或容量上限')));
  }finally{ui.stop();}
 });

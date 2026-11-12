@@ -208,7 +208,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "website-analytics" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, AnalyticsSessionAppVersion); valid && comparison >= 0 && version != AnalyticsSessionAppVersion && version != AnalyticsClientAddressAppVersion && version != AnalyticsRouteAppVersion && version != AnalyticsNavigationOrderAppVersion && version != AnalyticsQueryContextAppVersion && version != AnalyticsPeriodComparisonAppVersion {
+		if comparison, valid := appcatalog.CompareVersions(base, AnalyticsSessionAppVersion); valid && comparison >= 0 && version != AnalyticsSessionAppVersion && version != AnalyticsClientAddressAppVersion && version != AnalyticsRouteAppVersion && version != AnalyticsNavigationOrderAppVersion && version != AnalyticsQueryContextAppVersion && !analyticsPeriodComparisonSupported(version) {
 			return errors.New("浏览器分析仅支持已实现的完整版本")
 		}
 	}
@@ -372,8 +372,8 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if id == "php-code-security" && version == appcatalog.PHPProcessPolicyVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("PHP 代码安全 1.3.1 须通过签名应用商店安装或更新")
 	}
-	if id == "website-analytics" && version == AnalyticsPeriodComparisonAppVersion && (action == "install" || action == "update") && bind == nil {
-		return "", errors.New("网站分析 2.4.3 须通过签名应用商店安装或更新")
+	if id == "website-analytics" && analyticsPeriodComparisonSupported(version) && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("网站分析须通过签名应用商店安装或更新")
 	}
 	if id == "daily-report" && version == appcatalog.DailyReportScheduleVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("日报生成时间版须通过签名应用商店安装或更新")

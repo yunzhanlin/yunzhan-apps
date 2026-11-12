@@ -121,7 +121,7 @@ defineExpose({ show, install });
 <template>
   <el-dialog v-model="open" :title="selected?.id === 'nginx-waf' ? 'Nginx 防火墙管理工作台' : selected?.id === 'system-hardening' ? '系统基线加固工作台' : selected?.id === 'intrusion-prevention' ? 'SSH 防入侵工作台' : `${selected?.name || '安全软件'} · 设置`" :width="selected?.id === 'nginx-waf' || selected?.id === 'system-hardening' || selected?.id === 'intrusion-prevention' ? 'min(1160px, 96vw)' : '560px'" class="security-app-dialog" destroy-on-close>
     <WafWorkspace v-if="selected?.id === 'nginx-waf'" :api="api" :actor="actor" :on-install="onInstall"/>
-    <HardeningWorkspace v-else-if="selected?.id === 'system-hardening'" :api="api" :on-install="onInstall" :on-job="async id => { open = false; await onJob(id); }"/>
+    <HardeningWorkspace v-else-if="selected?.id === 'system-hardening'" :api="api" :on-install="onInstall" :on-job="onJob"/>
     <IntrusionWorkspace v-else-if="selected?.id === 'intrusion-prevention'" :api="api" :on-install="onInstall" :on-job="async id => { open = false; await onJob(id); }"/>
     <template v-else>
     <template v-if="selected">

@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from "vue";
 import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
 import AnalyticsPerformanceReport from "./AnalyticsPerformanceReport.vue";
 import AnalyticsPeriodComparison from "./AnalyticsPeriodComparison.vue";
+import AnalyticsHeatmapOverlay from "./AnalyticsHeatmapOverlay.vue";
 import type {AnalyticsPerformancePages} from "./analyticsPerformance";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
@@ -13,11 +14,19 @@ interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;ret
 interface Dimension {name:string;count:number}
 interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[];page_order_source?:string;page_order_uncertain?:boolean}
 interface Funnel {source:string;from:string;to:string;ordering_uncertain_sessions?:number;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
+interface HeatPoint {path:string;x:number;y:number;count:number}
+const heatViewports = [
+  {value:"narrow",label:"窄屏（小于 768 px）"},
+  {value:"medium",label:"中屏（768–1199 px）"},
+  {value:"wide",label:"宽屏（1200 px 起）"},
+  {value:"unknown",label:"未知屏宽"},
+] as const;
+type HeatViewport = (typeof heatViewports)[number]["value"];
 interface Report {
   source:string;from:string;to:string;partial:boolean;sampled_events:number;ordering_uncertain_sessions?:number;
   overview:{pv:number;uv:number;sessions:number;active_visitors:number;clicks:number;bounce_rate:number;avg_engagement_seconds:number;unique_network_peers:number};
   pages:Dimension[];sources:Dimension[];browsers:Dimension[];devices:Dimension[];entry_pages:Dimension[];exit_pages:Dimension[];hours:Dimension[];campaigns:Dimension[];
-  sessions:Session[];heatmap:{path:string;x:number;y:number;count:number}[];
+  sessions:Session[];heatmap:HeatPoint[];heatmap_layouts?:{points:(HeatPoint & {viewport:HeatViewport})[];partial:boolean};
   performance:Record<string,{samples:number;p75?:number}>;performance_pages?:AnalyticsPerformancePages;limitations:string[];
   client_addresses?:{unique_addresses:number;known_pageviews:number;unknown_pageviews:number;legacy_pageviews:number;sources:Dimension[]};
 }
@@ -25,8 +34,8 @@ const props=defineProps<{api:API;installed:boolean;installedVersion?:string;site
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3"].includes(props.installedVersion||""));
-const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1);
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4"].includes(props.installedVersion||""));
+const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1),heatViewport=ref<HeatViewport>();
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
 const report=computed(()=>reportTicket.value && reportFence.current(reportTicket.value,query.value.key) && !query.value.problem ? reportValue.value : undefined);
@@ -37,11 +46,26 @@ let funnelSequence=0;
 let sequence=0;
 let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
-const heatPaths=computed(()=>[...new Set(report.value?.heatmap.map(p=>p.path)||[])]);
-const heat=computed(()=>(report.value?.heatmap.filter(p=>p.path===heatPath.value)||[]).sort((a,b)=>b.count-a.count||a.x-b.x||a.y-b.y));
+const layoutHeat = computed(()=>props.installedVersion==="2.4.4" ? report.value?.heatmap_layouts : undefined);
+const heatPaths=computed(()=>[...new Set((layoutHeat.value?.points ?? report.value?.heatmap ?? []).map(p=>p.path))]);
+const viewportOptions=computed(()=>heatViewports.filter(option=>layoutHeat.value?.points.some(
+  point=>point.path===heatPath.value && point.viewport===option.value,
+)));
+const heat=computed(()=>{
+  const rows = layoutHeat.value
+    ? layoutHeat.value.points.filter(p=>p.path===heatPath.value && p.viewport===heatViewport.value)
+    : report.value?.heatmap.filter(p=>p.path===heatPath.value) ?? [];
+  return rows.sort((a,b)=>b.count-a.count||a.x-b.x||a.y-b.y);
+});
+watch(heatPaths,paths=>{
+  if(!paths.includes(heatPath.value)) heatPath.value=paths[0] ?? "";
+});
+watch(viewportOptions,options=>{
+  if(!options.some(option=>option.value===heatViewport.value)) heatViewport.value=options[0]?.value;
+});
 const heatClicks=computed(()=>heat.value.reduce((total,p)=>total+p.count,0));
 const heatRows=computed(()=>heat.value.slice((heatPage.value-1)*20,heatPage.value*20));
-watch([heatPath,report],()=>{heatPage.value=1;},{flush:"sync"});
+watch([heatPath,heatViewport,report],()=>{heatPage.value=1;},{flush:"sync"});
 const snippet=computed(()=>settings.value?.key ? `<script defer src="/__yunzhan/analytics/tracker.js?site=${settings.value.site_id}&amp;key=${settings.value.key}"><\/script>` : "先保存采集配置，再生成代码。");
 async function load(){
   const current=++sequence,selection=query.value,id=selected.value;
@@ -146,7 +170,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <template v-if="report">
           <div class="analytics-metrics"><article v-for="m in metrics" :key="m.key"><span>{{m.label}}</span><strong>{{report.overview[m.key]}}</strong></article></div>
           <el-descriptions :column="2" border><el-descriptions-item label="平均前台停留">{{report.overview.avg_engagement_seconds.toFixed(1)}} 秒</el-descriptions-item><el-descriptions-item label="跳出率">{{report.overview.bounce_rate.toFixed(1)}}%</el-descriptions-item><el-descriptions-item label="实际采样事件">{{report.sampled_events}}</el-descriptions-item><el-descriptions-item label="采集状态">{{settings?.enabled ? '已开启，等待/接收浏览器事件' : '未开启'}}</el-descriptions-item></el-descriptions>
-          <AnalyticsPeriodComparison v-if="installedVersion === '2.4.3'" :api="api" :site="selected" :from="report.from" :to="report.to" />
+          <AnalyticsPeriodComparison v-if="installedVersion === '2.4.3' || installedVersion === '2.4.4'" :api="api" :site="selected" :from="report.from" :to="report.to" />
           <section v-if="report.client_addresses" class="analytics-client-addresses" aria-label="客户端连接地址统计">
             <h4>客户端连接地址</h4>
             <p>从直接连接或受保护的本机采集代理取得，只保存按网站隔离的地址摘要。连接地址可能属于 NAT、CDN 或其它代理，不能用来认定真实人数；旧记录和未核实来源单独列出。</p>
@@ -171,9 +195,13 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
       </el-tab-pane>
       <el-tab-pane label="点击热图" name="heatmap">
-        <p>需在采集设置单独开启。只采集百分比坐标，不读取表单、输入内容或网页截图。</p>
+        <p>需在采集设置单独开启。使用文档百分比坐标，支持按采集时的屏宽查看。</p>
         <template v-if="report">
-          <el-select v-model="heatPath" :disabled="!heatPaths.length" placeholder="选择页面" aria-label="热图页面"><el-option v-for="p in heatPaths" :key="p" :value="p" :label="p" /></el-select>
+          <div class="analytics-toolbar">
+            <el-select v-model="heatPath" :disabled="!heatPaths.length" placeholder="选择页面" aria-label="热图页面"><el-option v-for="p in heatPaths" :key="p" :value="p" :label="p" /></el-select>
+            <el-select v-if="layoutHeat" v-model="heatViewport" :disabled="!viewportOptions.length" placeholder="选择屏宽" aria-label="热图屏宽"><el-option v-for="option in viewportOptions" :key="option.value" :value="option.value" :label="option.label" /></el-select>
+          </div>
+          <el-alert v-if="layoutHeat?.partial" title="点击热图达到采样或容量上限，请缩短统计时间范围。" type="warning" :closable="false" />
           <dl class="analytics-heat-summary" aria-label="当前页面点击热图摘要" role="status">
             <div><dt>记录点击</dt><dd data-testid="heatmap-clicks">{{heatClicks}}</dd></div>
             <div><dt>有点击的网格</dt><dd data-testid="heatmap-cells">{{heat.length}}</dd></div>
@@ -181,6 +209,8 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
           <template v-if="heat.length">
             <p class="analytics-intro">位置为文档百分比范围，圆点大小表示该网格记录的点击次数。</p>
             <svg class="analytics-heatmap" viewBox="0 0 100 100" role="img" :aria-label="`${heatPath} 点击坐标分布，共 ${heatClicks} 次点击，${heat.length} 个网格`"><rect width="100" height="100" fill="#f3f6fa"/><circle v-for="(p,i) in heat" :key="i" :cx="p.x+2.5" :cy="p.y+2.5" :r="Math.min(5,1+Math.log2(1+p.count))" fill="#f97316" fill-opacity="0.55"><title>水平 {{p.x}}–{{Math.min(100,p.x+5)}}%，垂直 {{p.y}}–{{Math.min(100,p.y+5)}}%：{{p.count}} 次点击</title></circle></svg>
+            <AnalyticsHeatmapOverlay v-if="layoutHeat && heatViewport && heatViewport!=='unknown'"
+              :key="JSON.stringify([query.key,heatPath,heatViewport])" :points="heat" :page="heatPath" />
             <h4>坐标明细</h4>
             <el-table :data="heatRows" max-height="300" aria-label="点击坐标明细" class="analytics-heat-details">
               <el-table-column label="水平位置" min-width="88"><template #default="{row}">{{row.x}}–{{Math.min(100,row.x+5)}}%</template></el-table-column>

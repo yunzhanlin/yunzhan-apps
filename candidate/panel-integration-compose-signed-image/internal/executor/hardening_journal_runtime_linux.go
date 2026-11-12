@@ -133,7 +133,7 @@ func (s *Service) applyHardeningOperation(ctx context.Context, settings map[stri
 	if err != nil {
 		return err
 	}
-	lock, err := s.hardeningMutationLock()
+	lock, err := s.hardeningMutationLock(ctx)
 	if err != nil {
 		return err
 	}
@@ -245,7 +245,7 @@ func (s *Service) uninstallHardeningTransition(ctx context.Context, add func(str
 	if err != nil {
 		return err
 	}
-	lock, err := s.hardeningMutationLock()
+	lock, err := s.hardeningMutationLock(ctx)
 	if err != nil {
 		return err
 	}

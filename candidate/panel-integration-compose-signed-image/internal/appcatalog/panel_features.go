@@ -101,7 +101,7 @@ func panelFeatureAvailable(feature string) bool {
 	if feature == ApacheNativeCCSiteFeature || feature == ApacheCCLogArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
-	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature || feature == AnalyticsNavigationOrderFeature || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature {
+	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature || feature == AnalyticsNavigationOrderFeature || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature || feature == AnalyticsLayoutHeatmapFeature {
 		return runtime.GOOS == "linux"
 	}
 	if feature == CountryDataFeature {

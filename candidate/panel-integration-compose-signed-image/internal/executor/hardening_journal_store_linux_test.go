@@ -4,6 +4,7 @@ package executor
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -11,7 +12,7 @@ import (
 
 func TestHardeningJournalExclusivePrepareKeepsCompleteOriginalAuthority(t *testing.T) {
 	f, p := hardeningJournalFixturePlan(t, "", "baseline")
-	lock, err := f.s.hardeningMutationLock()
+	lock, err := f.s.hardeningMutationLock(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -73,6 +73,7 @@ type AnalyticsEvent struct {
 	Duration            float64  `json:"duration"`
 	X                   float64  `json:"x"`
 	Y                   float64  `json:"y"`
+	ClickViewport       string   `json:"click_viewport,omitempty"`
 	TTFB                float64  `json:"ttfb"`
 	FCP                 float64  `json:"fcp"`
 	LCP                 float64  `json:"lcp"`
@@ -171,6 +172,9 @@ func validateAnalyticsEvent(v *AnalyticsEvent, clicks bool) error {
 	}
 	if err := validateAnalyticsNavigationSequence(v); err != nil {
 		return err
+	}
+	if v.ClickViewport != "" && (v.Kind != "click" || !analyticsClickViewport(v.ClickViewport)) {
+		return errors.New("点击屏宽分组无效")
 	}
 	if v.Kind != "click" {
 		v.X = 0
@@ -368,7 +372,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 			http.Error(w, "Not found", 404)
 			return
 		}
-		serveAnalyticsTracker(w, c)
+		a.serveAnalyticsTracker(w, r, c)
 	})
 	m.HandleFunc("GET /collect/analytics/auto.js", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("site")
@@ -388,7 +392,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 		}
 		// This is a first-party public browser script, not a management endpoint.
 		// It exposes only the same write-only site key as the manual HTML tag.
-		serveAnalyticsTracker(w, c)
+		a.serveAnalyticsTracker(w, r, c)
 	})
 	m.HandleFunc("POST /collect/analytics/event", a.collectAnalytics)
 }
@@ -414,11 +418,11 @@ func analyticsAutoHost(site Site, raw string) bool {
 	return false
 }
 
-func serveAnalyticsTracker(w http.ResponseWriter, c AnalyticsConfig) {
+func (a *Server) serveAnalyticsTracker(w http.ResponseWriter, r *http.Request, c AnalyticsConfig) {
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks})
+	cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks, "clickViewport": c.Clicks && a.Store.analyticsLayoutInstalled(r.Context())})
 	_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
 }
 
@@ -491,6 +495,9 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	if e = validateAnalyticsEvent(&v, c.Clicks); e != nil {
 		fail(w, 400, e.Error())
 		return
+	}
+	if v.ClickViewport != "" && !a.Store.analyticsLayoutInstalled(r.Context()) {
+		v.ClickViewport = ""
 	}
 	rateIdentity := clientAddress
 	if rateIdentity == "" {
@@ -686,6 +693,8 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	sessions := map[string]*analyticsSession{}
 	sessionPages := map[string][]AnalyticsEvent{}
 	heat := map[analyticsHeatPoint]*analyticsHeatPoint{}
+	var layouts analyticsHeatLayouts
+	layoutEnabled := s.analyticsLayoutInstalled(ctx)
 	// Multiple lifecycle beacons for one navigation are updates, not independent
 	// performance samples. Keep the newest sample per visitor/page navigation.
 	performance := []AnalyticsEvent{}
@@ -751,6 +760,9 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		case "click":
 			clicks++
 			x, y := int(math.Min(v.X, 99.999))/5*5, int(math.Min(v.Y, 99.999))/5*5
+			if layoutEnabled {
+				layouts.observe(v, x, y)
+			}
 			key := analyticsHeatPoint{Path: v.Path, X: x, Y: y}
 			point := heat[key]
 			if point == nil && len(heat) < 2000 {
@@ -842,5 +854,9 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 		bounceRate = float64(bounces) / float64(sessionCount) * 100
 		avgDuration = duration / float64(sessionCount)
 	}
-	return map[string]any{"ordering_uncertain_sessions": orderingUncertainSessions, "source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance_pages": analyticsPerformanceByPage(performance, partial || performancePartial), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "访问旅程在同一浏览器会话拥有完整且无冲突的访问序号时按浏览器报告顺序显示；缺少或冲突的序号保留服务端接收顺序并标为待核对。时间始终为服务器接收时间，网络延迟可能导致其与浏览顺序不同；不改写旧记录，不作为业务审计。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图只记录归一化坐标，不读取表单和页面内容；不包含会话录像或地理位置库。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本。逐页性能按文档或 SPA 分开，最多展示 100 个路径/类型组，达到采样或分组上限明确标记部分结果。SPA 路由就绪耗时仅在网站显式接入后，从路径变更到该网站确认就绪，未接入不生成数值；不冒充 SPA 的 LCP/INP，也不能替代实验室性能测试。"}}, nil
+	report := map[string]any{"ordering_uncertain_sessions": orderingUncertainSessions, "source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance_pages": analyticsPerformanceByPage(performance, partial || performancePartial), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "访问旅程在同一浏览器会话拥有完整且无冲突的访问序号时按浏览器报告顺序显示；缺少或冲突的序号保留服务端接收顺序并标为待核对。时间始终为服务器接收时间，网络延迟可能导致其与浏览顺序不同；不改写旧记录，不作为业务审计。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图记录归一化文档坐标和粗粒度屏宽分组。旧点击保留为未知屏宽。采集器不读取表单、页面内容或截图。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本。逐页性能按文档或 SPA 分开，最多展示 100 个路径/类型组，达到采样或分组上限明确标记部分结果。SPA 路由就绪耗时仅在网站显式接入后，从路径变更到该网站确认就绪，未接入不生成数值；不冒充 SPA 的 LCP/INP，也不能替代实验室性能测试。"}}
+	if layoutEnabled {
+		report["heatmap_layouts"] = layouts.report(partial)
+	}
+	return report, nil
 }

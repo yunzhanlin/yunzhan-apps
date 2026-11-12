@@ -50,13 +50,74 @@ func hardeningProfile(settings map[string]any) (string, error) {
 	return profile, nil
 }
 
-func (s *Service) hardeningMutationLock() (*os.File, error) {
+type hardeningWriteLock struct {
+	configuration *os.File
+	admission     *os.File
+}
+
+func (lock hardeningWriteLock) Close() {
+	lock.configuration.Close()
+	lock.admission.Close()
+}
+
+func (s *Service) hardeningMutationLock(ctx context.Context) (*hardeningWriteLock, error) {
 	root, err := s.softwareManifestDirectory()
 	if err != nil {
 		return nil, err
 	}
 	defer root.Close()
-	name := "hardening-configuration.lock"
+	const admissionName = "hardening-writer-admission.lock"
+	const configurationName = "hardening-configuration.lock"
+	admission, err := s.openHardeningLock(root, admissionName)
+	if err != nil {
+		return nil, err
+	}
+	if err = syscall.Flock(int(admission.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		admission.Close()
+		return nil, fmt.Errorf("系统加固写入尚未结束，未启动另一个事务: %w", err)
+	}
+	configuration, err := s.openHardeningLock(root, configurationName)
+	if err != nil {
+		admission.Close()
+		return nil, err
+	}
+	lock := &hardeningWriteLock{configuration: configuration, admission: admission}
+	if err = waitHardeningConfigurationLock(ctx, configuration); err != nil {
+		lock.Close()
+		return nil, err
+	}
+	if !s.hardeningLockCurrent(root, admissionName, admission) ||
+		!s.hardeningLockCurrent(root, configurationName, configuration) {
+		lock.Close()
+		return nil, errors.New("加固锁命名身份改变，未启动事务")
+	}
+	return lock, nil
+}
+
+// A reader may already hold a shared lock when the sole writer is admitted.
+// Wait only for the initial lease, before reading or changing the journal.
+func waitHardeningConfigurationLock(ctx context.Context, f *os.File) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	ticker := time.NewTicker(25 * time.Millisecond)
+	defer ticker.Stop()
+	for ctx.Err() == nil {
+		err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+		if err == nil {
+			return ctx.Err()
+		}
+		if !errors.Is(err, syscall.EWOULDBLOCK) && !errors.Is(err, syscall.EINTR) {
+			return fmt.Errorf("无法取得系统加固配置锁: %w", err)
+		}
+		select {
+		case <-ctx.Done():
+		case <-ticker.C:
+		}
+	}
+	return fmt.Errorf("等待系统加固状态检查结束超时或已取消，未启动事务: %w", ctx.Err())
+}
+
+func (s *Service) openHardeningLock(root *os.Root, name string) (*os.File, error) {
 	flags := os.O_RDWR | unix.O_NOFOLLOW | unix.O_NONBLOCK | unix.O_CLOEXEC
 	info, err := root.Lstat(name)
 	if errors.Is(err, os.ErrNotExist) {
@@ -70,17 +131,23 @@ func (s *Service) hardeningMutationLock() (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	opened, err := f.Stat()
-	visible, visibleErr := root.Lstat(name)
-	if err != nil || visibleErr != nil || !softwareManifestRecordInfo(opened) || opened.Mode().Perm() != 0600 || !os.SameFile(opened, visible) || info != nil && !os.SameFile(info, opened) || !s.softwareManifestAnchorCurrent(root) {
+	if !s.hardeningLockCurrent(root, name, f) {
 		f.Close()
 		return nil, errors.New("加固变更锁命名身份改变")
 	}
-	if err = syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	opened, err := f.Stat()
+	if err != nil || info != nil && !os.SameFile(info, opened) {
 		f.Close()
-		return nil, errors.New("另一个系统加固变更尚未结束，未等待重放")
+		return nil, errors.New("加固变更锁打开前后身份改变")
 	}
 	return f, nil
+}
+
+func (s *Service) hardeningLockCurrent(root *os.Root, name string, f *os.File) bool {
+	opened, err := f.Stat()
+	visible, visibleErr := root.Lstat(name)
+	return err == nil && visibleErr == nil && softwareManifestRecordInfo(opened) &&
+		opened.Mode().Perm() == 0600 && os.SameFile(opened, visible) && s.softwareManifestAnchorCurrent(root)
 }
 
 func hardeningSorted(values map[string]string) []string {

@@ -141,7 +141,7 @@ func TestHardeningJournalKilledProcessHelper(t *testing.T) {
 	svc := hardeningProcessService(t, root, cut)
 	ctx := context.WithValue(context.Background(), hardeningJobContextKey{}, job)
 	if cut == "prepared" || cut == "terminal" {
-		lock, err := svc.hardeningMutationLock()
+		lock, err := svc.hardeningMutationLock(context.Background())
 		if err != nil {
 			t.Fatal(err)
 		}

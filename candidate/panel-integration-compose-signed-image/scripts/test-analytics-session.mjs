@@ -3,7 +3,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import{readFileSync}from'node:fs';import{webcrypto}from'node:crypto';
 import{computed}from'../web/node_modules/vue/index.mjs';
 const tracker=readFileSync(new URL('../internal/core/analytics_tracker.js',import.meta.url),'utf8'),idle=1800000,start=1792340000000;
-function fixture({seed,wall=start,storage,deny=false,privacy={},namespace}={}){
+function fixture({seed,wall=start,storage,deny=false,privacy={},namespace,layout=false}={}){
  let now=wall,clock=0,writes=0;const sent=[],timers=new Map(),documentEvents=new Map(),windowEvents=new Map();let sequence=0;
  const values=storage??new Map();if(seed!==undefined)values.set('yz.analytics.session',JSON.stringify(seed));
  const sessionStorage={getItem(key){if(deny)throw Error('storage denied');return values.get(key)||null},setItem(key,value){if(deny)throw Error('storage denied');writes++;values.set(key,value)}};
@@ -15,11 +15,16 @@ function fixture({seed,wall=start,storage,deny=false,privacy={},namespace}={}){
  class Observer{static supportedEntryTypes=[];constructor(){}observe(){}}
  class Clock extends Date{static now(){return now}}
  const history={pushState(_a,_b,value){location.pathname=value},replaceState(_a,_b,value){location.pathname=value}};
- const context={config:{site:'a'.repeat(32),key:'b'.repeat(32),clicks:true},navigator:privacy,document,location,history,localStorage,sessionStorage,crypto:webcrypto,Uint8Array,URL,URLSearchParams,Date:Clock,Element,PerformanceObserver:Observer,innerWidth:1000,innerHeight:1000,performance:{now:()=>clock,getEntriesByType:()=>[]},setInterval:callback=>{timers.set(++sequence,callback);return sequence},clearInterval:key=>timers.delete(key),fetch:(url,options)=>{sent.push({url,options,event:JSON.parse(options.body)});return Promise.resolve({status:204})},window:{addEventListener:(name,callback)=>listen(windowEvents,name,callback)}};
+ const context={config:{site:'a'.repeat(32),key:'b'.repeat(32),clicks:true,clickViewport:layout},navigator:privacy,document,location,history,localStorage,sessionStorage,crypto:webcrypto,Uint8Array,URL,URLSearchParams,Date:Clock,Element,PerformanceObserver:Observer,innerWidth:1000,innerHeight:1000,performance:{now:()=>clock,getEntriesByType:()=>[]},setInterval:callback=>{timers.set(++sequence,callback);return sequence},clearInterval:key=>timers.delete(key),fetch:(url,options)=>{sent.push({url,options,event:JSON.parse(options.body)});return Promise.resolve({status:204})},window:{addEventListener:(name,callback)=>listen(windowEvents,name,callback)}};
  if(namespace!==undefined)context.window.yunzhanAnalytics=namespace;
  vm.runInNewContext('(()=>{'+tracker+'})();',context);
  const advance=delta=>{now+=delta;clock+=Math.max(0,delta)},dispatch=(events,name,event={})=>{for(const callback of [...(events.get(name)||[])])callback(event)};
- return{sent,values,context,now:()=>now,writes:()=>writes,advance,tick(delta=30000){advance(delta);for(const callback of [...timers.values()])callback()},visibility(value){document.visibilityState=value;dispatch(documentEvents,'visibilitychange')},windowEvent:(name,event={})=>dispatch(windowEvents,name,event)};
+ return{sent,values,context,now:()=>now,writes:()=>writes,advance,tick(delta=30000){advance(delta);for(const callback of [...timers.values()])callback()},visibility(value){document.visibilityState=value;dispatch(documentEvents,'visibilitychange')},windowEvent:(name,event={})=>dispatch(windowEvents,name,event),
+  click(viewport,{ignore=false,trusted=true}={}){
+   document.documentElement.clientWidth=viewport;
+   const target=new Element();if(ignore)target.closest=()=>target;
+   dispatch(documentEvents,'click',{isTrusted:trusted,target,pageX:275,pageY:600});
+  }};
 }
 test('navigation sequence survives SPA visits and a following full document without changing the session',()=>{
  const f=fixture(),first=f.sent[0].event;assert.equal(first.navigation_seq,1);
@@ -95,11 +100,11 @@ test('session boundary is exact and passive telemetry cannot reset the240-docume
 test('privacy opt-outs do not create sessions or schedule background activity',()=>{
  for(const privacy of[{doNotTrack:'1'},{globalPrivacyControl:true}]){const f=fixture({privacy});assert.equal(f.sent.length,0);assert.equal(f.writes(),0);f.tick();assert.equal(f.sent.length,0);}
 });
-test('actual Vue HTML opt-in retains exact known versions including 2.4.3, rejecting aliases and future revisions',()=>{
+test('actual Vue HTML opt-in retains exact known versions including 2.4.4, rejecting aliases and future revisions',()=>{
  const component=readFileSync(new URL('../web/src/AnalyticsWorkspace.vue',import.meta.url),'utf8'),lines=component.split('\n').filter(line=>line.startsWith('const htmlSupported='));assert.equal(lines.length,1);
  const actual=new Function('props','computed',lines[0]+';return htmlSupported.value;');
- for(const version of['2.3.0','2.3.1','2.3.2','2.4.0','2.4.1','2.4.2','2.4.3']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
- for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1-compat1','2.4.1+build','02.4.1','2.4.4','2.4.3-compat1','2.4.3+build','2.4.2-compat1','2.4.2+build','02.4.2'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
+ for(const version of['2.3.0','2.3.1','2.3.2','2.4.0','2.4.1','2.4.2','2.4.3','2.4.4']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
+ for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1-compat1','2.4.1+build','02.4.1','2.4.5','2.4.4-compat1','2.4.3-compat1','2.4.3+build','2.4.2-compat1','2.4.2+build','02.4.2'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
  assert.equal(actual({installed:true},computed),false);
 });
 
@@ -153,4 +158,17 @@ test('a route is sent at most once even after a transport exception and invalid 
 test('navigation after throttled foreground inactivity creates only one fresh pageview and one route ticket',()=>{
  const f=fixture(),api=f.context.window.yunzhanAnalytics,session=f.sent[0].event.session;f.advance(idle+1);const before=f.sent.length;f.context.history.pushState(null,'','/new-session');
  const added=f.sent.slice(before).map(row=>row.event),visits=added.filter(v=>v.kind==='pageview');assert.equal(visits.length,1);assert.notEqual(visits[0].session,session);assert.equal(visits[0].path,'/new-session');assert.equal(api.currentRoute().path,'/new-session');
+});
+
+test('actual tracker reports a coarse viewport only for enabled, trusted clicks outside excluded content',()=>{
+ const f=fixture({layout:true});
+ f.click(767);f.click(768);f.click(1199);f.click(1200);
+ f.click(390,{ignore:true});f.click(390,{trusted:false});
+ const clicks=f.sent.map(row=>row.event).filter(event=>event.kind==='click');
+ assert.deepEqual(clicks.map(event=>event.click_viewport),['narrow','medium','medium','wide']);
+ assert(clicks.every(event=>Math.abs(event.x-27.5)<1e-8 && event.y===60));
+ assert(clicks.every(event=>!('viewport_width' in event) && !('target' in event)));
+ const old=fixture();old.click(390);
+ assert.equal(old.sent.at(-1).event.kind,'click');
+ assert.equal(old.sent.at(-1).event.click_viewport,undefined);
 });

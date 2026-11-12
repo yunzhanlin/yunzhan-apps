@@ -156,7 +156,10 @@ if(config.clicks)document.addEventListener("click",event=>{
   if(!(target instanceof Element)||target.closest("input,textarea,select,[contenteditable],[data-analytics-ignore]"))return;
   const width=Math.max(document.documentElement.scrollWidth,innerWidth),height=Math.max(document.documentElement.scrollHeight,innerHeight);
   if(!width||!height)return;
-  clicks++;send("click",{x:Math.min(100,Math.max(0,event.pageX/width*100)),y:Math.min(100,Math.max(0,event.pageY/height*100))});
+  const click={x:Math.min(100,Math.max(0,event.pageX/width*100)),y:Math.min(100,Math.max(0,event.pageY/height*100))};
+  const viewport=document.documentElement.clientWidth;
+  if(config.clickViewport&&viewport>0)click.click_viewport=viewport<768?"narrow":viewport<1200?"medium":"wide";
+  clicks++;send("click",click);
 },{passive:true});
 try {
   const navigation=performance.getEntriesByType("navigation")[0];
