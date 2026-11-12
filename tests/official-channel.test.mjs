@@ -29,7 +29,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
-    'anti-intrusion', 'apache-waf', 'disk-analysis', 'enterprise-tamper-proof', 'files-sync',
+    'anti-intrusion', 'apache-waf', 'disk-analysis', 'docker-manager', 'enterprise-tamper-proof', 'files-sync',
     'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
@@ -37,8 +37,16 @@ test('separate candidate catalogue changes exactly its declared known identities
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
   assert.deepEqual(patch.apps.map(a=>a.id).sort(), expectedOverrides);
+  const originalDocker = stable.apps.find(app => app.id === 'docker-manager');
+  const docker = source.apps.find(app => app.id === 'docker-manager');
+  assert.equal(originalDocker.version, '1-compat1');
+  assert.deepEqual(docker.required_panel_features, ['docker-container-metrics-v1']);
+  assert.deepEqual(docker.delivery, originalDocker.delivery);
+  assert.deepEqual(docker.compatibility, originalDocker.compatibility);
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/docker-manager/1-compat1/manifest.json')).digest('hex'), '9b745cfc51a3b443c1684ac8dc74933efe0cce1e785911f5db1004bbbcc5ce69');
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
+    ['docker-manager', '1-compat2'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],

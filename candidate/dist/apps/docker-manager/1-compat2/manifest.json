@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "docker-manager",
+  "name": "Docker Manager",
+  "category": "deployment",
+  "version": "1-compat2",
+  "summary": "管理 Docker 容器、镜像、网络、卷与 Compose，查看运行中容器的 CPU、内存、网络、磁盘读写和进程数。",
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "runtime",
+    "target": "docker-auto",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "容器与镜像",
+    "网络与卷",
+    "Compose",
+    "非特权约束",
+    "运行中容器资源采样"
+  ],
+  "health": {
+    "probe": "systemd",
+    "target": "docker.service"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "docker-container-metrics-v1"
+  ]
+}
