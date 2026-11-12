@@ -291,7 +291,17 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	if err != nil || prior["LoadState"] != "loaded" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
 		return unknown, streamInstallPhaseError("固定父进程未运行状态", errLoadBalanceStreamInstallationJournal)
 	}
-	if err := preflightLoadBalanceStreamInstall(ctx, owner); err != nil {
+	if reason, err := preflightLoadBalanceStreamInstall(ctx, owner); err != nil {
+		// Both leases are still held and no handoff file has been created.
+		// Only explicit prerequisite failures under the original live grant
+		// are definite refusals. Transport loss and other errors stay unknown.
+		if reason != "" && authorize(ctx) == nil {
+			refused := streamInstallResult(in.JobID, core.LoadBalanceStreamInstallRefused)
+			refused.PreflightReason = reason
+			if core.ValidateLoadBalanceStreamInstallResult(refused, in.JobID) == nil {
+				return refused, nil
+			}
+		}
 		return unknown, streamInstallPhaseError("系统前置条件", err)
 	}
 	submission, err := writeLoadBalanceStreamSubmission(ctx, in, authorize)
