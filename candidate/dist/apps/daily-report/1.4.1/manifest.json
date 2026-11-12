@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "id": "daily-report",
+  "name": "aaPanel Daily Report",
+  "category": "professional",
+  "version": "1.4.1",
+  "summary": "按所选时区和当地时间生成资源、任务、流量、安全与证书日报，保留历史与投递记录。支持签名 Webhook 与强制 TLS/STARTTLS 的 SMTP 脱敏通知。SMTP 250 表示中继接收。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "daily-report",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "资源摘要",
+    "任务故障摘要",
+    "流量与安全摘要",
+    "证书到期检查",
+    "每日持久化",
+    "按日期历史日报",
+    "按时区和当地时间生成",
+    "执行历史",
+    "签名 Webhook 脱敏推送",
+    "持久队列与退避重试",
+    "接收端确认与投递记录",
+    "TLS/STARTTLS SMTP 与测试日报"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/daily-report"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  },
+  "required_panel_features": [
+    "daily-report-schedule-v1"
+  ]
+}

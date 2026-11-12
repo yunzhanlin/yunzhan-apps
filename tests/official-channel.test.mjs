@@ -29,7 +29,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
-    'anti-intrusion', 'apache-waf', 'disk-analysis', 'docker-manager', 'enterprise-tamper-proof', 'files-sync',
+    'anti-intrusion', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'enterprise-tamper-proof', 'files-sync',
     'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
@@ -51,10 +51,18 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.deepEqual(ftp.delivery, originalFTP.delivery);
   assert.deepEqual(ftp.compatibility, originalFTP.compatibility);
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pure-ftpd/1.0.54-compat6/manifest.json')).digest('hex'), '42734c490ac4c08f2040f4f50948f3d01a68aec3fcd38c577f877058d9552e97');
+  const originalDaily = stable.apps.find(app => app.id === 'daily-report');
+  const daily = source.apps.find(app => app.id === 'daily-report');
+  assert.equal(originalDaily.version, '1.4.0');
+  assert.deepEqual(daily.required_panel_features, ['daily-report-schedule-v1']);
+  assert.deepEqual(daily.delivery, originalDaily.delivery);
+  assert.deepEqual(daily.compatibility, originalDaily.compatibility);
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/daily-report/1.4.0/manifest.json')).digest('hex'), 'd2206cd73effb24c4d5f744b018dbd820416f1b35e5032c8aa46c7997e976126');
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['docker-manager', '1-compat2'],
     ['pure-ftpd', '1.0.54-compat7'],
+    ['daily-report', '1.4.1'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],

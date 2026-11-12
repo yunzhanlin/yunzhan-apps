@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-12T01:03:19Z",
+  "generated_at": "2026-11-12T01:24:46Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -81,8 +81,8 @@
       "id": "daily-report",
       "name": "aaPanel Daily Report",
       "category": "professional",
-      "version": "1.4.0",
-      "summary": "持久化每日资源、任务、安全、流量和证书摘要，按日期读取历史日报。支持签名 Webhook 与强制 TLS/STARTTLS 的 SMTP 脱敏通知、加密凭据、持久队列和失败重试；SMTP 250 仅代表中继接收，不保证进入收件箱。新邮件通道默认关闭，须管理员配置合法服务。",
+      "version": "1.4.1",
+      "summary": "按所选时区和当地时间生成资源、任务、流量、安全与证书日报，保留历史与投递记录。支持签名 Webhook 与强制 TLS/STARTTLS 的 SMTP 脱敏通知。SMTP 250 表示中继接收。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -95,15 +95,15 @@
         "证书到期检查",
         "每日持久化",
         "按日期历史日报",
-        "专用操作流程",
+        "按时区和当地时间生成",
         "执行历史",
         "签名 Webhook 脱敏推送",
         "持久队列与退避重试",
         "接收端确认与投递记录",
         "TLS/STARTTLS SMTP 与测试日报"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/daily-report/1.4.0/manifest.json",
-      "sha256": "d2206cd73effb24c4d5f744b018dbd820416f1b35e5032c8aa46c7997e976126"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/daily-report/1.4.1/manifest.json",
+      "sha256": "20b7504ac7d0c7b5092d08e7e15f5c0c92a12ecf8b0f158dd8d3ddd5ebf0f747"
     },
     {
       "id": "disk-analysis",
