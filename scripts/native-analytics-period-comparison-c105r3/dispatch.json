@@ -1,0 +1,58 @@
+{
+  "source_head": "ee572b14e27a678d3f285562646839f0945462ac",
+  "source_inputs_sha256": "676a9bd1e84525006a5654dc0257d8199c54fba61dfe20cbdf5eab7c52f16e25",
+  "source_sdk_tree": "6daba2d419015948ff8beefad0f215c7d2d7a5eb",
+  "version": "0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3",
+  "release_id": 442325324,
+  "tag": "qa-analyticsperiodcomparisoncandidate105r3-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737363680,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-amd64.tar.gz": {
+      "id": 737369006,
+      "bytes": 23883396,
+      "sha256": "0f02076ea899e6f0ec4cb191fb40c13e0e7d5afe0c79634decfd8d59c46602d6"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-amd64.tar.gz.manifest": {
+      "id": 737363607,
+      "bytes": 198,
+      "sha256": "b342874d9fc2ef565a1c9cc850230878072f93deb69408ec443c4f0f07f87f99"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-amd64.tar.gz.sig": {
+      "id": 737363485,
+      "bytes": 64,
+      "sha256": "edd8d12ea43020a61165af0b20c2497a71f38948ff05f73d686056cdbdf7e7f9"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-arm64.tar.gz": {
+      "id": 737363702,
+      "bytes": 22096664,
+      "sha256": "da7cbc4f9966727254ce2e598d2f76e313fcecc8349351237b21bb04d262ca7e"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-arm64.tar.gz.manifest": {
+      "id": 737363646,
+      "bytes": 198,
+      "sha256": "05ee3530a0ff9035465c0ee234fe040f22e56ea38e2a333aed00a6d2ba9743a5"
+    },
+    "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-arm64.tar.gz.sig": {
+      "id": 737363518,
+      "bytes": 64,
+      "sha256": "7f42056ac4e44df7c5a184c0e3f0d6ec58a21092e5a013bfd2afbcb2e8d49ee2"
+    },
+    "release-signing-dev.pub": {
+      "id": 737363562,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticsperiodcomparisoncandidate105r3-linux-arm64.tar.gz"
+    }
+  }
+}
