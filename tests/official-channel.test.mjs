@@ -33,7 +33,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     'load-balance', 'mobile', 'mysql', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
-    'pm2-manager', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
+    'pm2-manager', 'pure-ftpd', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
   assert.deepEqual(patch.apps.map(a=>a.id).sort(), expectedOverrides);
@@ -44,9 +44,17 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.deepEqual(docker.delivery, originalDocker.delivery);
   assert.deepEqual(docker.compatibility, originalDocker.compatibility);
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/docker-manager/1-compat1/manifest.json')).digest('hex'), '9b745cfc51a3b443c1684ac8dc74933efe0cce1e785911f5db1004bbbcc5ce69');
+  const originalFTP = stable.apps.find(app => app.id === 'pure-ftpd');
+  const ftp = source.apps.find(app => app.id === 'pure-ftpd');
+  assert.equal(originalFTP.version, '1.0.54-compat6');
+  assert.deepEqual(ftp.required_panel_features, ['pure-ftpd-transfer-history-v1']);
+  assert.deepEqual(ftp.delivery, originalFTP.delivery);
+  assert.deepEqual(ftp.compatibility, originalFTP.compatibility);
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pure-ftpd/1.0.54-compat6/manifest.json')).digest('hex'), '42734c490ac4c08f2040f4f50948f3d01a68aec3fcd38c577f877058d9552e97');
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['docker-manager', '1-compat2'],
+    ['pure-ftpd', '1.0.54-compat7'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],

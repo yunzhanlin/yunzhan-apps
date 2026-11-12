@@ -98,6 +98,7 @@ export function validateManifest(app) {
   const wafCountry="waf-country-signed-data-v1";
   const runtimePackage="runtime-package-version-v1";
   const dockerMetricsFeature = "docker-container-metrics-v1";
+  const ftpHistoryFeature = "pure-ftpd-transfer-history-v1";
   const dockerMetricsScope = app.id === "docker-manager" && app.version === "1-compat2" &&
     app.delivery?.provider === "runtime" && app.delivery?.target === "docker-auto" &&
     app.delivery?.manage_route === "docker" && Array.isArray(requirements) &&
@@ -123,7 +124,7 @@ export function validateManifest(app) {
   errors.push(...(boundedErrors===null?phpSecurityErrors(app):boundedErrors));
   if(Object.hasOwn(app,"required_panel_features")){
     if(!Array.isArray(requirements)||requirements.length<1||requirements.length>8||new Set(requirements).size!==requirements.length||requirements.some(feature=>typeof feature!=="string"||!idPattern.test(feature))||(app.delivery?.provider!=="panel-module"&&!memcachedScope&&!memcachedUnixScope&&!runtimePackageScope&&!dockerMetricsScope&&!phpSecurityScope&&!phpBoundedScope))errors.push("invalid required panel features");
-    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==analyticsComparison&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==mobileNative133&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature&&feature!==pm2MaintenanceFeature&&feature!==pm2RootVendorFeature&&feature!==phpProcessPolicy&&feature!==siteDiagnosisIngress&&feature!==userAccessOverview&&feature!==taskInventoryFeature&&feature!==taskSysVFeature&&feature!==taskOpenSSHFeature&&feature!==siteDiagnosisApacheFeature&&feature!==dockerMetricsFeature))errors.push("required panel feature has no reviewed implementation");
+    if(Array.isArray(requirements)&&requirements.some(feature=>feature!==retirement&&feature!==identity&&feature!==geography&&feature!==maintenance&&feature!==disk&&feature!==hostDisk&&feature!==hostDiskCancelSeal&&feature!==memcached&&feature!==memcachedUnixFeature&&feature!==memcachedUnixRetirementFeature&&feature!==analyticsSession&&feature!==analyticsClient&&feature!==analyticsRoute&&feature!==analyticsNavigation&&feature!==analyticsQuery&&feature!==analyticsComparison&&feature!==integrityKernelFeature&&feature!==enterpriseKernelFeature&&feature!==filesSyncIndependentFeature&&feature!==filesSyncUnpublishedFeature&&feature!==hardening&&feature!==intrusion&&feature!==intrusion0112&&feature!==wafHealth&&feature!==wafCountry&&feature!==runtimePackage&&feature!==mobileNative&&feature!==mobileNative133&&feature!==phpSecurityFeature&&feature!==phpBoundedFeature&&feature!==loadBalanceStreamFeature&&feature!==apacheNativeBodyFeature&&feature!==apacheNativeCCFeature&&feature!==apacheCCArchiveFeature&&feature!==pm2MaintenanceFeature&&feature!==pm2RootVendorFeature&&feature!==phpProcessPolicy&&feature!==siteDiagnosisIngress&&feature!==userAccessOverview&&feature!==taskInventoryFeature&&feature!==taskSysVFeature&&feature!==taskOpenSSHFeature&&feature!==siteDiagnosisApacheFeature&&feature!==dockerMetricsFeature&&feature!==ftpHistoryFeature))errors.push("required panel feature has no reviewed implementation");
     if(Array.isArray(requirements)&&requirements.includes(wafHealth)&&(app.id!=="nginx-waf"||app.version!=="2.5.2"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("site-bound health handler belongs only to exact Nginx WAF2.5.2");
     if(Array.isArray(requirements)&&requirements.some(feature=>feature===intrusion||feature===intrusion0112)&&!intrusionScope)errors.push("intrusion handlers require the exact reviewed version, fixed target and complete ordered feature declaration");
     if(Array.isArray(requirements)&&requirements.includes(hardening)&&(app.id!=="system-hardening"||app.version!=="1.1.0"||app.delivery?.provider!=="panel-module"||app.delivery?.target!==app.id||app.delivery?.manage_route!=="security"||requirements.length!==1))errors.push("reversible hardening journal handler belongs only to exact system-hardening1.1.0");
@@ -198,6 +199,14 @@ export function validateManifest(app) {
   if ((app.id === "docker-manager" && app.version === "1-compat2" ||
        Array.isArray(requirements) && requirements.includes(dockerMetricsFeature)) && !dockerMetricsScope) {
     errors.push("Docker metrics require the exact reviewed 1-compat2 runtime package");
+  }
+  const ftpHistoryScope = app.id === "pure-ftpd" && app.version === "1.0.54-compat7" &&
+    app.delivery?.provider === "panel-module" && app.delivery?.target === app.id &&
+    app.delivery?.manage_route === "app-modules" && Array.isArray(requirements) &&
+    requirements.length === 1 && requirements[0] === ftpHistoryFeature;
+  if ((app.id === "pure-ftpd" && app.version === "1.0.54-compat7" ||
+       Array.isArray(requirements) && requirements.includes(ftpHistoryFeature)) && !ftpHistoryScope) {
+    errors.push("Pure-FTPd history requires the exact reviewed 1.0.54-compat7 module");
   }
   // Only exact published mobile identities are legacy-compatible. A new label
   // cannot borrow old delivery metadata or a foreign fixed executor target.
