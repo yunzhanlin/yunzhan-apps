@@ -1,6 +1,7 @@
 package core
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
@@ -25,6 +26,37 @@ func decodeHardeningRecoveryBody(raw []byte) (map[string]any, error) {
 }
 
 func (a *Server) hardeningRecoveryRoutes(m *http.ServeMux) {
+	m.HandleFunc("GET /api/software/system-hardening/jobs/{job}", a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		id := r.PathValue("job")
+		if !ValidID(id) || r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "系统加固原任务标识或查询字段无效")
+			return
+		}
+		var out struct {
+			ID    string `json:"id"`
+			Kind  string `json:"kind"`
+			State string `json:"state"`
+			Error string `json:"error"`
+		}
+		err := a.Store.DB.QueryRowContext(r.Context(), `SELECT id,kind,state,error FROM runtime_jobs
+			WHERE id=? AND target_id='system-hardening'
+			AND kind IN ('software_install','software_configure','software_uninstall','software_recover')`, id).
+			Scan(&out.ID, &out.Kind, &out.State, &out.Error)
+		if errors.Is(err, sql.ErrNoRows) {
+			fail(w, 404, "未找到系统加固原任务")
+			return
+		}
+		if err != nil {
+			fail(w, 503, "系统加固原任务暂时无法读取")
+			return
+		}
+		if !containsString([]string{"queued", "running", "succeeded", "failed", "needs_attention", "cancelled"}, out.State) || len(out.Error) > 32768 {
+			fail(w, 409, "系统加固原任务状态无法核对")
+			return
+		}
+		send(w, 200, out)
+	}))
 	m.HandleFunc("GET /api/software/system-hardening/inspection", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		w.Header().Set("Cache-Control", "no-store")
 		var out any

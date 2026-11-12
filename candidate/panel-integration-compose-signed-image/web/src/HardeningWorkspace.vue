@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { ElMessageBox } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
 
@@ -9,7 +9,11 @@ interface Transaction { id:string; sha256:string; action:string; started_at:stri
 interface Inspection { format:number; checked_at:string; installed:boolean; healthy:boolean; version:string; profile:string; config_matches:boolean; originals_complete:boolean; parameters:Parameter[]; pending:Transaction|null; history:Transaction[]; retained_temporaries:number; detail:string }
 const props=defineProps<{api:API;onInstall:(id:string,settings:Record<string,unknown>)=>Promise<string>;onJob:(id:string)=>Promise<void>}>();
 const view=ref<Inspection>(), error=ref(""), busy=ref(false), loading=ref(false), profile=ref("baseline"), filter=ref("all"), tab=ref("parameters");
-const ticket=ref<{action:string;key:string;job?:string}>();
+type HardeningAction = "install" | "configure" | "uninstall" | "recover";
+interface Ticket { action: HardeningAction; key: string; job?: string; recoveryID?: string }
+interface OriginalJob { id: string; kind: string; state: string; error: string }
+const ticket = shallowRef<Ticket>();
+const reviewed = shallowRef<{ action: HardeningAction; job: OriginalJob }>();
 let disposed=false, generation=0;
 const id=/^[a-f0-9]{32}$/, hash=/^[a-f0-9]{64}$/;
 const knownKeys=new Set(["fs.protected_fifos","fs.protected_hardlinks","fs.protected_regular","fs.protected_symlinks","kernel.dmesg_restrict","kernel.kptr_restrict","kernel.unprivileged_bpf_disabled","kernel.yama.ptrace_scope","net.ipv4.conf.all.accept_redirects","net.ipv4.conf.all.log_martians","net.ipv4.conf.all.send_redirects","net.ipv4.conf.default.accept_redirects","net.ipv4.conf.default.send_redirects","net.ipv6.conf.all.accept_redirects","net.ipv6.conf.default.accept_redirects"]);
@@ -20,12 +24,37 @@ function validate(v:Inspection):boolean {
     && v.parameters.every(p=>knownKeys.has(p.key) && [p.actual,p.target,p.original,p.detail].every(x=>typeof x==="string") && [p.managed,p.original_known,p.reversible,p.drift].every(x=>typeof x==="boolean"))
     && Array.isArray(v.history) && v.history.length<=128 && v.history.every(transaction) && (v.pending===null || transaction(v.pending));
 }
-async function refresh(){
-  if(disposed || loading.value || busy.value)return;
-  const epoch=++generation;loading.value=true;error.value="";view.value=undefined;
-  try{const out=await props.api<Inspection>("/software/system-hardening/inspection");if(disposed||epoch!==generation)return;if(!validate(out))throw Error("系统加固完整状态不可核对；未把旧状态当作健康");view.value=out;profile.value=out.profile || "baseline";}
-  catch(e){if(!disposed&&epoch===generation)error.value=(e as Error).message;}
-  finally{if(!disposed&&epoch===generation)loading.value=false;}
+async function refresh() {
+  if (disposed || loading.value || busy.value) return;
+  const epoch = ++generation;
+  const original = ticket.value;
+  loading.value = true;
+  error.value = "";
+  view.value = undefined;
+  try {
+    const job = original?.job ? await props.api<OriginalJob>(`/software/system-hardening/jobs/${original.job}`) : undefined;
+    if (disposed || epoch !== generation) return;
+    if (original?.job && (!job || job.id !== original.job || job.kind !== `software_${original.action}` ||
+        typeof job.error !== "string" || !["queued", "running", "succeeded", "failed", "needs_attention", "cancelled"].includes(job.state))) {
+      throw Error("系统加固原任务身份或状态无法核对，原请求已保留");
+    }
+    const out = await props.api<Inspection>("/software/system-hardening/inspection");
+    if (disposed || epoch !== generation) return;
+    if (!validate(out)) throw Error("系统加固完整状态无法核对");
+    view.value = out;
+    profile.value = out.profile || "baseline";
+    if (original && job && ticket.value === original) {
+      reviewed.value = { action: original.action, job };
+      const finished = ["succeeded", "failed", "cancelled"].includes(job.state);
+      const canRecover = job.state === "needs_attention" && out.pending?.recovery_permitted === true &&
+        out.pending.id === (original.recoveryID ?? job.id);
+      if (finished || canRecover) ticket.value = undefined;
+    }
+  } catch (e) {
+    if (!disposed && epoch === generation) error.value = (e as Error).message;
+  } finally {
+    if (!disposed && epoch === generation) loading.value = false;
+  }
 }
 const drift=computed(()=>view.value?.parameters.filter(p=>p.drift).length || 0);
 const rows=computed(()=>view.value?.parameters.filter(p=>filter.value==="all" || filter.value==="managed"&&p.managed || filter.value==="drift"&&p.drift || filter.value==="locked"&&!p.reversible) || []);
@@ -33,7 +62,7 @@ const disabled=computed(()=>!view.value || loading.value || busy.value || !!tick
 const profileName=(p:string)=>p==="strict"?"严格基线":p==="baseline"?"基础基线":"未安装";
 const actionName=(a:string)=>({install:"安装",configure:"配置",uninstall:"卸载",update:"更新",recover:"显式恢复"}[a] || a);
 function newKey(){return Array.from(crypto.getRandomValues(new Uint8Array(16)),v=>v.toString(16).padStart(2,"0")).join("");}
-async function submit(action:"install"|"configure"|"uninstall"|"recover"){
+async function submit(action: HardeningAction){
   const captured=view.value;if(!captured || busy.value || ticket.value || loading.value || disposed)return;
   if(action!=="recover" && captured.pending)return;
   const pending=captured.pending;
@@ -42,15 +71,23 @@ async function submit(action:"install"|"configure"|"uninstall"|"recover"){
     await ElMessageBox.confirm(action==="recover" ? `仅按原事务 ${pending!.id} 和完整 SHA-256 ${pending!.sha256} 核对恢复。若已持久提交，仅收尾记录，不回滚已提交基线；若存在外部修改则拒绝覆盖。` : action==="uninstall" ? "仅恢复完整原值记录，移除云栈受管配置；不重启系统，不猜测系统默认值。" : `应用${profileName(profile.value)}。先记录本次实际值和完整文件，再逐项验证；不可即时撤销的内核锁定值会被拒绝。`,actionName(action)+"系统基线加固",{type:"warning",confirmButtonText:action==="recover"?"按原事务恢复":"确认"});
     if(disposed || captured!==view.value)return;
     busy.value=true;error.value="";
-    const original={action,key:newKey()} as {action:string;key:string;job?:string};ticket.value=original;
+    const original: Ticket = { action, key: newKey(), recoveryID: action === "recover" ? pending?.id : undefined };
+    ticket.value = original;
+    reviewed.value = undefined;
     const job=action==="install" ? await props.onInstall("system-hardening",{profile:profile.value}) : (await props.api<{job_id:string}>(`/software/system-hardening/${action}`,"POST",{settings:action==="recover"?{transaction_id:pending!.id,sha256:pending!.sha256,confirm:pending!.id}:action==="uninstall"?{}:{profile:profile.value}},original.key)).job_id;
-    if(!id.test(job))throw Error("回复缺少有效原任务身份；未自动重发");original.job=job;
-    if(disposed)return;
+    if(!id.test(job))throw Error("回复缺少有效原任务身份；未自动重发");
+    if(disposed || ticket.value !== original)return;
+    ticket.value = { ...original, job };
     await props.onJob(job);
   }catch(e){if(!disposed && (e as Error)?.message!=="cancel" && (e as Error)?.message!=="close")error.value=(e as Error)?.message || "请求结果未确认；请核对原任务，未自动重发";}
-  finally{if(!disposed)busy.value=false;}
+  finally {
+    if (!disposed) {
+      busy.value = false;
+      if (ticket.value?.job) await refresh();
+    }
+  }
 }
-async function showOriginal(){const job=ticket.value?.job;if(job&&!busy.value)await props.onJob(job);}
+async function showOriginal(){const job=ticket.value?.job ?? reviewed.value?.job.id;if(job&&!busy.value)await props.onJob(job);}
 onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;});
 </script>
 
@@ -59,7 +96,10 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;});
     <header><div><h3>系统基线加固</h3><p>内核参数 · 真实原值 · 偏差核对 · 原事务恢复</p></div><el-button :loading="loading" :disabled="busy" @click="refresh">只读刷新</el-button></header>
     <el-alert v-if="error" type="error" :title="error" :closable="false"/>
     <el-alert v-if="ticket" type="warning" :closable="false" :title="`原${actionName(ticket.action)}请求${ticket.job?'已入队 · '+ticket.job:'结果尚未确认 · '+ticket.key}。未自动重发；请保留原身份并核对任务。关闭本工作区不会取消后台任务，也不代表请求未提交。`"/>
-    <el-button v-if="ticket?.job" :disabled="busy" @click="showOriginal">查看原任务</el-button>
+    <el-alert v-if="reviewed && !ticket" :type="reviewed.job.state==='succeeded'?'info':'warning'" :closable="false"
+      :title="`原${actionName(reviewed.action)}任务 ${reviewed.job.id}`"
+      :description="reviewed.job.error || (reviewed.job.state==='succeeded'?'已完成，当前状态以本次内核核对为准。':reviewed.job.state==='cancelled'?'已取消。':'执行失败。')"/>
+    <el-button v-if="ticket?.job || reviewed" :disabled="busy" @click="showOriginal">查看原任务</el-button>
     <el-empty v-if="!view && !loading" description="安装状态尚未核对；未开放变更"/>
     <template v-if="view">
       <div class="hardening-summary"><div><small>安装与当前基线</small><strong>{{ view.installed ? profileName(view.profile) : '未安装' }}</strong><span>{{ view.version ? 'v'+view.version : '—' }}</span></div><div><small>实际参数偏差</small><strong>{{ drift }}</strong><span>共 {{ view.parameters.length }} 项固定核对</span></div><div><small>原值与文件</small><strong>{{ view.originals_complete ? '原值完整' : view.installed ? '待核对' : '尚未记录' }}</strong><span>{{ view.config_matches ? '完整配置一致' : '配置需核对' }}</span></div><div><small>当前结果</small><strong>{{ view.pending ? '事务未闭合' : view.healthy ? '核对通过' : view.installed ? '需要处理' : '未启用' }}</strong><span>{{ formatPanelDateTime(view.checked_at) }}</span></div></div>
