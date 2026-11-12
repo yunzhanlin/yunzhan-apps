@@ -1177,6 +1177,7 @@ const jobNames: Record<string, string> = {
   enable_site: "启用网站",
   disable_site: "停用网站",
   install_runtime: "安装运行环境",
+  docker_metrics_review: "核对 Docker 资源监控应用包",
   software_install: "安装安全软件",
   software_configure: "更新安全软件配置",
   software_uninstall: "卸载安全软件",

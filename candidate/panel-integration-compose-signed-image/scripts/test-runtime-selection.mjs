@@ -144,6 +144,7 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
+ one('  docker_metrics_review: "核对 Docker 资源监控应用包",\n', '');
  one('import { confirmPhpMyAdminInstall, type PhpMyAdminServer } from "./phpMyAdminInstall";\n', '');
  one(`    if (app.id === "phpmyadmin" && app.provider === "compose") {
       const epoch = accessEpoch;

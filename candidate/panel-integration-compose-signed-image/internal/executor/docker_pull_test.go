@@ -211,6 +211,44 @@ func TestDockerPulledImageUsesOpaqueLocalIDAndMatchingRegistryIdentity(t *testin
 	}
 }
 
+func TestDockerPulledImageAcceptsContainerdTaggedRepositoryDigest(t *testing.T) {
+	receipt := dockerPullReceipt{Image: "nginx:1.30.6-alpine@" + dockerPullFixtureDigest, Digest: dockerPullFixtureDigest}
+	for _, entry := range []struct {
+		name string
+		ref  string
+		ok   bool
+	}{
+		{"tag retained", "nginx:1.30.6-alpine@" + dockerPullFixtureDigest, true},
+		{"familiar tag", "docker.io/library/nginx:1.30.6-alpine@" + dockerPullFixtureDigest, true},
+		{"no tag", "nginx@" + dockerPullFixtureDigest, true},
+		{"wrong repository", "other:1.30.6-alpine@" + dockerPullFixtureDigest, false},
+		{"wrong registry", "registry.example/nginx:1.30.6-alpine@" + dockerPullFixtureDigest, false},
+		{"wrong digest", "nginx:1.30.6-alpine@sha256:" + strings.Repeat("c", 64), false},
+		{"invalid tagged identity", "nginx:!@" + dockerPullFixtureDigest, false},
+	} {
+		t.Run(entry.name, func(t *testing.T) {
+			calls := []string{}
+			raw, err := json.Marshal(map[string]any{"Id": receipt.Digest, "RepoDigests": []string{entry.ref}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			id, err := verifyDockerPulledImage(context.Background(), receipt, func(_ context.Context, ref string) ([]byte, error) {
+				calls = append(calls, ref)
+				return raw, nil
+			})
+			if !entry.ok {
+				if !errors.Is(err, errDockerPullIdentity) || id != "" || len(calls) != 1 {
+					t.Fatalf("unverified repository accepted: %s %v %v", id, err, calls)
+				}
+				return
+			}
+			if err != nil || id != receipt.Digest || len(calls) != 2 || calls[0] != receipt.Image || calls[1] != id {
+				t.Fatalf("containerd repository digest not verified twice: %s %v %v", id, err, calls)
+			}
+		})
+	}
+}
+
 func TestDockerPulledImageRejectsUnboundOrChangedIdentityWithoutMutation(t *testing.T) {
 	for _, scenario := range []string{"read-error", "missing", "malformed", "duplicate-id", "case-id", "duplicate-digests", "wrong-digest", "wrong-repository", "missing-digests", "empty-digests", "null-digests", "oversized-digests", "oversized-body", "tag-instead-of-id", "missing-id", "second-id-changed", "second-repo-changed", "second-read-error", "canceled-after-first", "canceled-after-second", "invalid-receipt", "noncanonical-bare-receipt", "pinned-digest-mismatch", "nil-reader", "nil-context"} {
 		t.Run(scenario, func(t *testing.T) {

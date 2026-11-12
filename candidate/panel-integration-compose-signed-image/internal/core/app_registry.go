@@ -290,6 +290,11 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				status.UpdateSupported = supported && ValidateSoftwareUpdate(app.Target, app.Version) == nil
 				status.UpdateDetail = "新版功能由签名面板提供；更新保留配置、数据、基线和历史报告"
 			case "runtime":
+				if status.UpdateKind == "docker-metrics-review" {
+					status.UpdateSupported = supported
+					status.UpdateDetail = "核对现有 Docker Engine 后更新资源监控应用包，保留容器和运行时"
+					break
+				}
 				if status.UpdateKind != "runtime-package-review" {
 					status.UpdateKind = "runtime"
 				}
@@ -742,6 +747,10 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 		bind = a.Store.bindLoadBalanceStreamRegistryRequest(u.ID, key, scope, manifest.Version, bind)
 		job, err = a.Store.queueSoftwareActionBound(scope, "update", nil, manifest.Version, key, u.Username, bind)
 	case "runtime":
+		if dockerMetricsPackage(item) {
+			job, err = a.reviewDockerMetricsPackage(ctx, item, key, u)
+			break
+		}
 		if scope == "docker-auto" {
 			releases := runtimecatalog.DockerReleaseOn(runtimecatalog.HostPlatform())
 			if len(releases) != 1 {
@@ -756,6 +765,9 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 		return
 	}
 	if err != nil {
+		if replay() {
+			return
+		}
 		fail(w, 409, err.Error())
 		return
 	}

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
+import DockerContainerMetrics from "./DockerContainerMetrics.vue";
 import { randomId } from "./randomId";
 import { composeHostPortSettings, isComposeHostPort, isPhpMyAdminTemplate } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
@@ -196,6 +197,7 @@ const visible = ref(false),
   logs = ref(""),
   logsName = ref("");
 const managedTemplate = ref<"phpmyadmin">();
+const metricsContainer = ref<DockerContainer>();
 const visibleProjects = computed(() =>
   managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
@@ -258,7 +260,7 @@ function resetManager() {
     visible.value = false; loading.value = false; busy.value = false;
     managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
-    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = "";
+    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined;
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -1235,6 +1237,8 @@ async function removeVolume(item: DockerVolume) {
               @click="action(item, 'restart')"
               >重启</el-button
             >
+            <el-button v-if="item.State === 'running'" link type="primary" :disabled="busy"
+              @click="metricsContainer = item">资源</el-button>
             <el-button
               link
               type="primary"
@@ -1596,6 +1600,8 @@ async function removeVolume(item: DockerVolume) {
       ></template
     >
   </el-dialog>
+  <DockerContainerMetrics v-if="metricsContainer" :api="api" :id="metricsContainer.Id"
+    :name="nameOf(metricsContainer)" @close="metricsContainer = undefined" />
   <el-dialog
     v-model="logsOpen"
     :title="logsName + ' · 最近日志'"

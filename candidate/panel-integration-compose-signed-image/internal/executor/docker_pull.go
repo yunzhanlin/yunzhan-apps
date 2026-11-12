@@ -265,7 +265,16 @@ func verifyDockerPulledImage(ctx context.Context, receipt dockerPullReceipt, rea
 		}
 		matched := false
 		for _, digest := range digests {
-			matched = matched || dockerFamiliarPullReference(digest) == expected
+			ref := dockerFamiliarPullReference(digest)
+			if ref != expected {
+				// A fresh containerd image store can report repo:tag@digest.
+				// The exact repository and pinned digest remain the identity.
+				if _, err := dockerPullRequestReference(ref); err != nil || dockerPullDigestReference(ref) != expected {
+					continue
+				}
+			}
+			matched = true
+			break
 		}
 		if !matched {
 			return "", errDockerPullIdentity
