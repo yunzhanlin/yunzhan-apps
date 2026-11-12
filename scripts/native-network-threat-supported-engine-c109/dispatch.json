@@ -1,0 +1,58 @@
+{
+  "source_head": "a21fb54bf358a647186fd0e64766e9af1f7518a8",
+  "source_inputs_sha256": "feedc1bd0c43714127d4295cedd02191da09f293d6e7581b8f1c58131973c058",
+  "source_sdk_tree": "efd77df6671b001830f31b0b07bd44ad7e691eab",
+  "version": "0.1.0-dev.proapps24networkthreatsupportedenginecandidate109",
+  "release_id": 442406609,
+  "tag": "qa-networkthreatsupportedenginecandidate109-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737685859,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-amd64.tar.gz": {
+      "id": 737689497,
+      "bytes": 23924160,
+      "sha256": "1195ef5e366f530c9fcdae5a534f61071a4458dd7c6d85e5e417e3918009f45f"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-amd64.tar.gz.manifest": {
+      "id": 737685755,
+      "bytes": 199,
+      "sha256": "b48218dadfdeab51c53ff8b8de16373291117baf81f0cd00877e43f6964fe662"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-amd64.tar.gz.sig": {
+      "id": 737685614,
+      "bytes": 64,
+      "sha256": "d22d21d76414ad1f186fd753569c18a5d0835a8a88997d7a12902c945a89b9a7"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-arm64.tar.gz": {
+      "id": 737685914,
+      "bytes": 22142318,
+      "sha256": "f9a8f538608c49a5a19b2c5bae34b5435cb5c50d483ddb3019daf5c30f3b22f0"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-arm64.tar.gz.manifest": {
+      "id": 737685799,
+      "bytes": 199,
+      "sha256": "3e4728ad7c22ebad673b90ab5b465c13ef58a9580c06f30ac733e9aa7929afb8"
+    },
+    "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-arm64.tar.gz.sig": {
+      "id": 737685670,
+      "bytes": 64,
+      "sha256": "5768f843880b8a4c1aa4a41e7ce9bdb70f66380e5d10dfdba8feefa5bf1fe6b4"
+    },
+    "release-signing-dev.pub": {
+      "id": 737685713,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24networkthreatsupportedenginecandidate109-linux-arm64.tar.gz"
+    }
+  }
+}
