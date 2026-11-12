@@ -1,0 +1,52 @@
+{
+  "source_head": "bd2e5995f0ae2732d5b7a122a2ba5b3f9bd9955b",
+  "source_inputs_sha256": "5e25528ab8fff127d5307b6c73edd7f853cd61fda6bcdc7826db8cc28d021dbf",
+  "version": "0.1.0-dev.proapps24dailyreportschedulecandidate108",
+  "items": {
+    "daily-report": {
+      "id": "daily-report",
+      "name": "aaPanel Daily Report",
+      "category": "professional",
+      "version": "1.4.1",
+      "summary": "\u6309\u6240\u9009\u65f6\u533a\u548c\u5f53\u5730\u65f6\u95f4\u751f\u6210\u8d44\u6e90\u3001\u4efb\u52a1\u3001\u6d41\u91cf\u3001\u5b89\u5168\u4e0e\u8bc1\u4e66\u65e5\u62a5\uff0c\u4fdd\u7559\u5386\u53f2\u4e0e\u6295\u9012\u8bb0\u5f55\u3002\u652f\u6301\u7b7e\u540d Webhook \u4e0e\u5f3a\u5236 TLS/STARTTLS \u7684 SMTP \u8131\u654f\u901a\u77e5\u3002SMTP 250 \u8868\u793a\u4e2d\u7ee7\u63a5\u6536\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "panel-module",
+      "target": "daily-report",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u8d44\u6e90\u6458\u8981",
+        "\u4efb\u52a1\u6545\u969c\u6458\u8981",
+        "\u6d41\u91cf\u4e0e\u5b89\u5168\u6458\u8981",
+        "\u8bc1\u4e66\u5230\u671f\u68c0\u67e5",
+        "\u6bcf\u65e5\u6301\u4e45\u5316",
+        "\u6309\u65e5\u671f\u5386\u53f2\u65e5\u62a5",
+        "\u6309\u65f6\u533a\u548c\u5f53\u5730\u65f6\u95f4\u751f\u6210",
+        "\u6267\u884c\u5386\u53f2",
+        "\u7b7e\u540d Webhook \u8131\u654f\u63a8\u9001",
+        "\u6301\u4e45\u961f\u5217\u4e0e\u9000\u907f\u91cd\u8bd5",
+        "\u63a5\u6536\u7aef\u786e\u8ba4\u4e0e\u6295\u9012\u8bb0\u5f55",
+        "TLS/STARTTLS SMTP \u4e0e\u6d4b\u8bd5\u65e5\u62a5"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/daily-report/1.4.1/manifest.json",
+      "sha256": "20b7504ac7d0c7b5092d08e7e15f5c0c92a12ecf8b0f158dd8d3ddd5ebf0f747"
+    }
+  },
+  "payload_files": {
+    ".github/workflows/daily-report-schedule-c108-native-qa2.yml": "2bb994a94f8024707159932c372dd0bd6a1addb406aca7259d432fb9434671fb",
+    "scripts/native-daily-report-schedule-c108/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-daily-report-schedule-c108/daily-report-schedule.py": "7f4d3f3de811dffc7ca598c8281024b4aba140dddcc1022523328b69f62a5806",
+    "scripts/native-daily-report-schedule-c108/dispatch.json": "e1a66224265acb8180bf4c4bb52176360284e2ab50e55b1eac664e89247cf2eb",
+    "scripts/native-daily-report-schedule-c108/download.py": "25675d0363b0672ca4ed5bc7ad651e4e9da7fc629a5a103486ee1e5f4645d919",
+    "scripts/native-daily-report-schedule-c108/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-daily-report-schedule-c108/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-daily-report-schedule-c108/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-daily-report-schedule-c108/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "mode": "signed-daily-schedule-update",
+  "served_head": "639ecbf3dd473a15e5bab05d4005f8e23ed94bbb",
+  "authorized_catalogues": [
+    "639ecbf3dd473a15e5bab05d4005f8e23ed94bbb"
+  ],
+  "Main_changed": false
+}

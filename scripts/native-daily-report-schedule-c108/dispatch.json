@@ -1,0 +1,58 @@
+{
+  "source_head": "bd2e5995f0ae2732d5b7a122a2ba5b3f9bd9955b",
+  "source_inputs_sha256": "5e25528ab8fff127d5307b6c73edd7f853cd61fda6bcdc7826db8cc28d021dbf",
+  "source_sdk_tree": "8078b8326b439b0ef9371829f51496128062bb19",
+  "version": "0.1.0-dev.proapps24dailyreportschedulecandidate108",
+  "release_id": 442376484,
+  "tag": "qa-dailyreportschedulecandidate108-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737570735,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-amd64.tar.gz": {
+      "id": 737576398,
+      "bytes": 23932702,
+      "sha256": "eb1a6dcee668028fdff0007a800d77b56c9f8493bf2a7f8549cb14bc24f1f9e4"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-amd64.tar.gz.manifest": {
+      "id": 737570613,
+      "bytes": 190,
+      "sha256": "d63502424a473cdc10d35b95f121ffc11f1edb79d1418a8d54cfa45205172a4f"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-amd64.tar.gz.sig": {
+      "id": 737570457,
+      "bytes": 64,
+      "sha256": "fda4de6affd4eac36b1691928c1979d666554a45dfdad23f150a2ca84502b9cf"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-arm64.tar.gz": {
+      "id": 737570780,
+      "bytes": 22147042,
+      "sha256": "14946baa97e79755365bc1c5542d48c2f0ea26635ee6e16f2aa58e0e44f12c97"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-arm64.tar.gz.manifest": {
+      "id": 737570683,
+      "bytes": 190,
+      "sha256": "d609714f879793c51eff81a951551c9ae6542e22c27fc0bf6b8137b218ea700e"
+    },
+    "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-arm64.tar.gz.sig": {
+      "id": 737570511,
+      "bytes": 64,
+      "sha256": "9c24eb4b1c61e0741184ac231a7aeeccc63bbf76644a8d6c6b8567c2f024be3a"
+    },
+    "release-signing-dev.pub": {
+      "id": 737570540,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24dailyreportschedulecandidate108-linux-arm64.tar.gz"
+    }
+  }
+}
