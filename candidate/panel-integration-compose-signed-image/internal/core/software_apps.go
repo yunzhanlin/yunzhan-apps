@@ -95,6 +95,7 @@ const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
 const IntrusionAppVersion = "1.1.1"
 const NFSPrivateClientAppVersion = "1.3.1"
+const NetworkIDSMaintainedEngineAppVersion = "1.3.2"
 
 // Module implementations ship in the signed panel executor, not arbitrary
 // GitHub scripts. A newer catalog cannot claim code this executor lacks.
@@ -104,6 +105,12 @@ func SoftwareImplementationVersion(id string) string {
 }
 
 func ValidateSoftwareUpdate(id, version string) error {
+	if id == "network-threat-detection" {
+		base, _, _ := strings.Cut(version, "-")
+		if comparison, valid := appcatalog.CompareVersions(base, NetworkIDSMaintainedEngineAppVersion); valid && comparison >= 0 && version != NetworkIDSMaintainedEngineAppVersion {
+			return errors.New("网络威胁检测仅支持已实现的完整版本")
+		}
+	}
 	if id == "daily-report" {
 		if comparison, valid := appcatalog.CompareVersions(version, appcatalog.DailyReportScheduleVersion); !valid || comparison >= 0 && version != appcatalog.DailyReportScheduleVersion {
 			return errors.New("日报生成时间仅支持已实现的完整版本")

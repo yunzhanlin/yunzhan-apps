@@ -270,6 +270,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if id == "daily-report" && action == "install" {
 			selectedVersion = "1.4.0"
 		}
+		if id == "network-threat-detection" && action == "install" {
+			selectedVersion = "1.3.1"
+		}
 		if id == "pure-ftpd" && action == "install" {
 			selectedVersion = "1.0.54-compat6"
 		}
