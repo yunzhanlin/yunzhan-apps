@@ -1,0 +1,58 @@
+{
+  "source_head": "3359e2c64b8e384ffb829afe27e2a69250b6073f",
+  "source_inputs_sha256": "c145f8eba3e2fc866b13a6932c7d483c49fb65f214f23422f215eef1a818c14e",
+  "source_sdk_tree": "a39bdef4c202a8ecc9eee86fc999a6b6e0be8bab",
+  "version": "0.1.0-dev.proapps24analyticslayoutheatmapcandidate111",
+  "release_id": 443631482,
+  "tag": "qa-analyticslayoutheatmapcandidate111-20261113-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 741486443,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-amd64.tar.gz": {
+      "id": 741489622,
+      "bytes": 23936058,
+      "sha256": "60fb63d9f3c51539996dfe365086b1a814972a86218f291873bd3fa44cffd92e"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-amd64.tar.gz.manifest": {
+      "id": 741486348,
+      "bytes": 193,
+      "sha256": "3e7a6926253549510cc29be26915a6c2c68c400dba5f83bd81c99206f72e84eb"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-amd64.tar.gz.sig": {
+      "id": 741486251,
+      "bytes": 64,
+      "sha256": "3e70cfc8178a6c19a67d5ff90a07704a1aee522f4a13c921bd196d062ffdd96a"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-arm64.tar.gz": {
+      "id": 741486474,
+      "bytes": 22149410,
+      "sha256": "1c788ee0fdc18a434cbeef9fcc7e7611a9208187608f837ad92ccb3459a41eb7"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-arm64.tar.gz.manifest": {
+      "id": 741486388,
+      "bytes": 193,
+      "sha256": "685150c9aeb731f86e3905c4752008bab4b5a43b5a63a7dccccf1001c44fe8aa"
+    },
+    "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-arm64.tar.gz.sig": {
+      "id": 741486285,
+      "bytes": 64,
+      "sha256": "06842e67d4599620bdfa9971e91e52c8f8bddafc26be27af0db8d219ff3aa279"
+    },
+    "release-signing-dev.pub": {
+      "id": 741486323,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24analyticslayoutheatmapcandidate111-linux-arm64.tar.gz"
+    }
+  }
+}
