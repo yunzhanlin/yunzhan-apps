@@ -165,7 +165,7 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		settings.AnalyticsInjectHTML = false
 	}
 	if settings.AnalyticsInjectHTML && !AnalyticsHTMLAppVersionSupported(module.Status.Version) {
-		fail(w, 409, "请先在应用商店签名升级网站分析到受支持的 2.3.0、2.3.1、2.3.2、2.4.0 或 2.4.1；安装清单不代替新版面板能力")
+		fail(w, 409, "请先通过签名应用商店更新到支持 HTML 自动接入的网站分析版本")
 		return
 	}
 	requestedInjection := settings.AnalyticsInjectHTML

@@ -95,11 +95,11 @@ test('session boundary is exact and passive telemetry cannot reset the240-docume
 test('privacy opt-outs do not create sessions or schedule background activity',()=>{
  for(const privacy of[{doNotTrack:'1'},{globalPrivacyControl:true}]){const f=fixture({privacy});assert.equal(f.sent.length,0);assert.equal(f.writes(),0);f.tick();assert.equal(f.sent.length,0);}
 });
-test('actual Vue HTML opt-in retains exact known versions including2.4.2, rejecting aliases and future revisions',()=>{
+test('actual Vue HTML opt-in retains exact known versions including 2.4.3, rejecting aliases and future revisions',()=>{
  const component=readFileSync(new URL('../web/src/AnalyticsWorkspace.vue',import.meta.url),'utf8'),lines=component.split('\n').filter(line=>line.startsWith('const htmlSupported='));assert.equal(lines.length,1);
  const actual=new Function('props','computed',lines[0]+';return htmlSupported.value;');
- for(const version of['2.3.0','2.3.1','2.3.2','2.4.0','2.4.1','2.4.2']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
- for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1-compat1','2.4.1+build','02.4.1','2.4.3','2.4.2-compat1','2.4.2+build','02.4.2'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
+ for(const version of['2.3.0','2.3.1','2.3.2','2.4.0','2.4.1','2.4.2','2.4.3']){assert.equal(actual({installed:true,installedVersion:version},computed),true);assert.equal(actual({installed:false,installedVersion:version},computed),false);}
+ for(const version of['','2.2.0','2.3','02.3.1','02.3.2','2.3.1-compat1','2.3.2-compat1','2.3.2+build','2.3.3','2.4.0+build','2.4.0-compat1','2.4.1-compat1','2.4.1+build','02.4.1','2.4.4','2.4.3-compat1','2.4.3+build','2.4.2-compat1','2.4.2+build','02.4.2'])assert.equal(actual({installed:true,installedVersion:version},computed),false,version);
  assert.equal(actual({installed:true},computed),false);
 });
 

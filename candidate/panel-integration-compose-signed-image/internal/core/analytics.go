@@ -323,6 +323,7 @@ func (a *Server) analyticsSite(r *http.Request) (Site, AnalyticsConfig, error) {
 
 func (a *Server) analyticsRoutes(m *http.ServeMux) {
 	a.analyticsHTMLEngineRoutes(m)
+	m.HandleFunc("GET /api/analytics/sites/{id}/compare", a.authorize(a.analyticsComparePeriods))
 	m.HandleFunc("GET /api/analytics/sites/{id}/config", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		site, e := a.Store.Site(r.PathValue("id"))
 		if e != nil {

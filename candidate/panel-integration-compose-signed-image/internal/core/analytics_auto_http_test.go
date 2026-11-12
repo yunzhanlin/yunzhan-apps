@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // Exercises the real authenticated HTTP/queue/SQLite/commit paths. The
@@ -155,17 +156,30 @@ func TestAnalyticsAutoHTTPQueuesWithoutPrematurePublicOptInAndAllowsSafeOptOut(t
 	if w := request("POST", path, body2, auth.CSRF, "route-patch-unready", cookie); w.Code != 409 || calls != before+3 || !strings.Contains(w.Body.String(), "actual engine readiness unavailable") {
 		t.Fatal("2.4.0 bypassed actual HTML engine readiness", w.Code, calls)
 	}
-	for _, known := range []string{AnalyticsNavigationOrderAppVersion, AnalyticsQueryContextAppVersion} {
+	for _, known := range []string{AnalyticsNavigationOrderAppVersion, AnalyticsQueryContextAppVersion, AnalyticsPeriodComparisonAppVersion} {
 		version = known
 		before = calls
 		if w := request("POST", path, body2, auth.CSRF, "query-context-unready-"+known, cookie); w.Code != 409 || calls != before+3 || !strings.Contains(w.Body.String(), "actual engine readiness unavailable") {
 			t.Fatal("known ordering/query version bypassed actual HTML engine readiness", known, w.Code, calls)
 		}
 	}
-	version = "2.4.3"
+	version = "2.4.4"
 	before = calls
 	if w := request("POST", path, body2, auth.CSRF, "unknown-future-version", cookie); w.Code != 409 || calls != before+1 {
 		t.Fatal("future unknown module reached an HTML preview", w.Code, calls)
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+	compare := "/api/analytics/sites/" + site.ID + "/compare?from=" + now.Add(-time.Hour).Format(time.RFC3339) + "&to=" + now.Format(time.RFC3339)
+	version = AnalyticsQueryContextAppVersion
+	if w := request("GET", compare, "", "", "", cookie); w.Code != 409 {
+		t.Fatal("older installed app admitted comparison", w.Code)
+	}
+	version = AnalyticsPeriodComparisonAppVersion
+	if w := request("GET", compare, "", "", "", cookie); w.Code != 200 {
+		t.Fatal("comparison did not read the authenticated site's actual data", w.Code, w.Body.String())
+	}
+	if w := request("GET", compare, "", "", "", nil); w.Code != 401 {
+		t.Fatal("comparison admitted an anonymous request", w.Code)
 	}
 	version = "2.2.0"
 	before = calls

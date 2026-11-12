@@ -67,3 +67,23 @@ func TestAnalyticsQueryRequiresExactFiveHandlersAndRetainsOriginalABI(t *testing
 		t.Fatal("compiled query feature availability is not exact")
 	}
 }
+
+func TestAnalyticsComparisonAddsItsOwnRequiredFeature(t *testing.T) {
+	available := func(string) bool { return true }
+	m := analyticsQueryManifestFixture()
+	m.Version = "2.4.3"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("comparison version borrowed the old report handler")
+	}
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsPeriodComparisonFeature)
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(feature string) bool { return feature != AnalyticsPeriodComparisonFeature }) == nil {
+		t.Fatal("previous panel admitted the new package")
+	}
+	m.Version = "2.4.2"
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("previous package borrowed the new handler")
+	}
+}

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
 import AnalyticsPerformanceReport from "./AnalyticsPerformanceReport.vue";
+import AnalyticsPeriodComparison from "./AnalyticsPeriodComparison.vue";
 import type {AnalyticsPerformancePages} from "./analyticsPerformance";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
@@ -24,7 +25,7 @@ const props=defineProps<{api:API;installed:boolean;installedVersion?:string;site
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3"].includes(props.installedVersion||""));
 const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1);
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
@@ -145,6 +146,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <template v-if="report">
           <div class="analytics-metrics"><article v-for="m in metrics" :key="m.key"><span>{{m.label}}</span><strong>{{report.overview[m.key]}}</strong></article></div>
           <el-descriptions :column="2" border><el-descriptions-item label="平均前台停留">{{report.overview.avg_engagement_seconds.toFixed(1)}} 秒</el-descriptions-item><el-descriptions-item label="跳出率">{{report.overview.bounce_rate.toFixed(1)}}%</el-descriptions-item><el-descriptions-item label="实际采样事件">{{report.sampled_events}}</el-descriptions-item><el-descriptions-item label="采集状态">{{settings?.enabled ? '已开启，等待/接收浏览器事件' : '未开启'}}</el-descriptions-item></el-descriptions>
+          <AnalyticsPeriodComparison v-if="installedVersion === '2.4.3'" :api="api" :site="selected" :from="report.from" :to="report.to" />
           <section v-if="report.client_addresses" class="analytics-client-addresses" aria-label="客户端连接地址统计">
             <h4>客户端连接地址</h4>
             <p>从直接连接或受保护的本机采集代理取得，只保存按网站隔离的地址摘要。连接地址可能属于 NAT、CDN 或其它代理，不能用来认定真实人数；旧记录和未核实来源单独列出。</p>

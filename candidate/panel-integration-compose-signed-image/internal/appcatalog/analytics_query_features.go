@@ -6,17 +6,18 @@ import (
 )
 
 const AnalyticsQueryContextFeature = "website-analytics-query-context-v1"
+const AnalyticsPeriodComparisonFeature = "website-analytics-period-comparison-v1"
 
 // A label cannot give an older bundled workspace query-bound reports and
 // exports. Keep all four previously signed 2.4.1 requirements intact.
 func validateAnalyticsQueryRequirement(m Manifest, available func(string) bool) (bool, error) {
 	mentions := false
 	for _, feature := range m.RequiredPanelFeatures {
-		mentions = mentions || feature == AnalyticsQueryContextFeature
+		mentions = mentions || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature
 	}
 	if m.ID != "website-analytics" {
 		if mentions {
-			return true, errors.New("查询上下文处理器仅属于网站分析2.4.2")
+			return true, errors.New("查询上下文和周期对比处理器仅属于网站分析")
 		}
 		return false, nil
 	}
@@ -25,20 +26,27 @@ func validateAnalyticsQueryRequirement(m Manifest, available func(string) bool) 
 	if !mentions && valid && comparison < 0 {
 		return false, nil
 	}
-	if m.Version != "2.4.2" || m.Delivery.Provider != "panel-module" || m.Delivery.Target != m.ID || m.Delivery.ManageRoute != "app-modules" || len(m.RequiredPanelFeatures) != 5 {
-		return true, errors.New("网站分析2.4.2须声明固定完整版本和五个必需处理器")
-	}
 	wanted := map[string]bool{AnalyticsSessionFeature: false, AnalyticsClientAddressFeature: false, AnalyticsRoutePerformanceFeature: false, AnalyticsNavigationOrderFeature: false, AnalyticsQueryContextFeature: false}
+	switch m.Version {
+	case "2.4.2":
+	case "2.4.3":
+		wanted[AnalyticsPeriodComparisonFeature] = false
+	default:
+		return true, errors.New("网站分析须声明固定完整版本")
+	}
+	if m.Delivery.Provider != "panel-module" || m.Delivery.Target != m.ID || m.Delivery.ManageRoute != "app-modules" || len(m.RequiredPanelFeatures) != len(wanted) {
+		return true, errors.New("网站分析须声明对应版本的全部必需处理器")
+	}
 	for _, feature := range m.RequiredPanelFeatures {
 		seen, ok := wanted[feature]
 		if !ok || seen {
-			return true, errors.New("网站分析2.4.2的处理器声明无效或重复")
+			return true, errors.New("网站分析的处理器声明无效或重复")
 		}
 		wanted[feature] = true
 	}
 	for feature, seen := range wanted {
 		if !seen || available == nil || !available(feature) {
-			return true, errors.New("请先升级面板：缺少网站分析查询上下文或原有采集处理器")
+			return true, errors.New("请先升级面板：缺少当前版本所需的网站分析处理器")
 		}
 	}
 	return true, nil
