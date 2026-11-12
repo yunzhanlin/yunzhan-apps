@@ -77,7 +77,7 @@ const TaskOpenSSHInventoryFeature = "task-openssh-inventory-v1"
 const TaskOpenSSHInventoryVersion = "1.3.2"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == DockerMetricsFeature || feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == SiteDiagnosisApacheFeature || feature == UserAccessOverviewFeature ||
+	if feature == FTPTransferHistoryFeature || feature == DockerMetricsFeature || feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == SiteDiagnosisApacheFeature || feature == UserAccessOverviewFeature ||
 		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature || feature == TaskOpenSSHInventoryFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
@@ -165,6 +165,9 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		return err
 	}
 	if handled, err := validatePHPSecurityRequirement(manifest, available); handled {
+		return err
+	}
+	if handled, err := validateFTPTransferHistoryRequirement(manifest, available); handled {
 		return err
 	}
 	if handled, err := validateDockerMetricsRequirement(manifest, available); handled {

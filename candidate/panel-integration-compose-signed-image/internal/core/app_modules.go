@@ -227,6 +227,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 	a.pm2ConfigurationRoutes(m)
 	a.pm2ProjectsRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
+	a.ftpTransferHistoryRoutes(m)
 	a.networkIDSOperationRoutes(m)
 	a.networkIDSRuleFeedRoutes(m)
 	a.statisticsGeoRoutes(m)
@@ -485,7 +486,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "website-analytics":
 			version = AnalyticsPeriodComparisonAppVersion
 		case "pure-ftpd":
-			version = "1.0.54-compat6"
+			version = appcatalog.FTPTransferHistoryVersion
 		case "nfs-manager":
 			version = NFSPrivateClientAppVersion
 		case "network-threat-detection":

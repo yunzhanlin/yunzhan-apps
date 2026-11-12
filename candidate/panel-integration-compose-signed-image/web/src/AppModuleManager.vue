@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
+import FTPTransferHistory from "./FTPTransferHistory.vue";
 import { renderSiteDiagnosisHTML } from "./siteDiagnosisReport";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
 import StatisticsGeoWorkspace from "./StatisticsGeoWorkspace.vue";
@@ -1304,6 +1305,9 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <FTPTransferHistory v-else-if="definition.id === 'pure-ftpd' && section.id === 'transfers'"
+          :key="'ftp-transfers/' + geoActor" :api="api" :sites="sites" :active="visible && activeTab === 'transfers'"
+          :enabled="installed && !installedUnknown && installedVersion === '1.0.54-compat7'" />
         <TaskHostInventory v-else-if="definition.id === 'task-manager' && section.id.startsWith('inventory-')"
           :key="section.id + '/' + geoActor" :api="api" :view="section.id.slice('inventory-'.length)"
           :active="visible && activeTab === section.id"

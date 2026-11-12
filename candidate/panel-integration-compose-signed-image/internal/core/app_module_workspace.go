@@ -109,6 +109,7 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
 	case "pure-ftpd":
 		return []AppModuleSection{
 			section("ftp", "服务与账户", "读取真实服务、证书、配置与账户；启停不删除文件。账户与配置提交均有 root 私有恢复记录。", nil, []string{"run", "probe", "start", "stop", "recover-service"}),
+			section("transfers", "传输日志", "查询当前系统日志保留的受管 FTP 上传和下载，支持时间、站点、账户和方向筛选。", nil, nil),
 			section("listener", "监听与域名证书", "保存使用当前修订号；活跃服务先切换再探测真实 TLS，失败恢复原配置与证书。非回环地址须填写 EXPOSE FTPS IP:端口，并选择系统信任且覆盖 FTP 域名的证书。不会修改防火墙、安全组或路由。配置切换会中断现有连接。", []string{"bind_address", "port", "passive_start", "passive_end", "passive_address", "certificate_id", "domain", "max_clients", "max_per_ip", "idle_minutes", "expected_revision", "confirm"}, []string{"service-config"}),
 			section("account", "网站 FTP 账户", "用户 chroot 到网站目录，控制和数据通道强制 TLS；密码仅写入、不回显、不进入命令参数或历史。变更权限仅用于后续新连接，不强行终止既有会话。", []string{"site_id", "username", "password"}, []string{"create", "password"}),
 			section("account-limits", "账户限制", "从服务与账户列表选择账户后保存。带宽、客户端 IPv4/CIDR 和会话限制由 Pure-FTPd 对新连接执行。容量及文件数量是 FTP 软配额，不是内核硬配额：同网站账户共享目录计数，网站程序或其他通道写入后应停止 FTP 并重新统计。首次启用配额前必须先统计。0 为不限；空允许清单为全部，拒绝优先。", []string{"username", "quota_mb", "quota_files", "upload_kb", "download_kb", "max_sessions", "client_allow", "client_deny", "expected_sha"}, []string{"account-limits"}),

@@ -267,6 +267,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if id == "php-code-security" && action == "install" {
 			selectedVersion = "1.3.0"
 		}
+		if id == "pure-ftpd" && action == "install" {
+			selectedVersion = "1.0.54-compat6"
+		}
 		if id == "site-diagnosis" && action == "install" {
 			selectedVersion = "1.2.0"
 		}
@@ -733,6 +736,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 	return nil
 }
 func (s *Service) appModuleRoutes(m *http.ServeMux) {
+	s.ftpTransferHistoryRoutes(m)
 	s.taskInventoryRoutes(m)
 	s.remoteIndependentDownloadRoutes(m)
 	s.pm2ConfigurationReadRoutes(m)
