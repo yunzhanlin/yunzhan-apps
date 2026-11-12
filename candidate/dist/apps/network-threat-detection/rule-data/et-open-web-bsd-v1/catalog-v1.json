@@ -1,12 +1,12 @@
 {
   "schema_version": 1,
   "channel": "et-open-web-bsd-v1",
-  "sequence": 1,
-  "published_at": "2026-10-21T21:50:00Z",
-  "expires_at": "2026-10-24T21:50:00Z",
+  "sequence": 2,
+  "published_at": "2026-11-12T02:46:50Z",
+  "expires_at": "2026-11-15T02:46:50Z",
   "feed": {
-    "id": "et-open-web-20261021",
-    "manifest_sha256": "37a4214bf8b08dc717215f1afab3da207b9202d0224577beacb3b284e7ab1c03",
+    "id": "et-open-web-20261111",
+    "manifest_sha256": "6e6d1fb81bb129a64e02eca2372b8c79b94f76aee26dc869c207fa1bfc9b7681",
     "assets": [
       {
         "name": "BSD-License.txt",
@@ -25,12 +25,12 @@
       },
       {
         "name": "et-open.rules",
-        "sha256": "19aee50fbd0f39f6d8e97a2f539b32519a89a28532dc299abb9969095cd73225",
-        "bytes": 1398030
+        "sha256": "0c15aa13ba2c39c7e35b57475f6377a780247c196cdef807cfde8913a6fa2f3e",
+        "bytes": 1404960
       },
       {
         "name": "manifest.json",
-        "sha256": "37a4214bf8b08dc717215f1afab3da207b9202d0224577beacb3b284e7ab1c03",
+        "sha256": "6e6d1fb81bb129a64e02eca2372b8c79b94f76aee26dc869c207fa1bfc9b7681",
         "bytes": 1403
       },
       {
