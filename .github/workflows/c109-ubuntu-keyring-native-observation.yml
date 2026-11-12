@@ -1,0 +1,23 @@
+name: Read Ubuntu archive keyring identity on native runners
+on:
+  push:
+    branches: [codex/c109-ubuntu-keyring-native-observation]
+    paths: [.github/workflows/c109-ubuntu-keyring-native-observation.yml]
+permissions:
+  contents: read
+jobs:
+  observe:
+    strategy:
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - name: Read the original distribution keyring and its ownership
+        run: |
+          sudo namei -l /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          sudo stat -c '%A %a %u %g %h %N' / /usr /usr/share /usr/share/keyrings /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          sudo getfacl -p -n /usr/share /usr/share/keyrings /usr/share/keyrings/ubuntu-archive-keyring.gpg || true
+          sudo dpkg-query -S /usr/share/keyrings/ubuntu-archive-keyring.gpg
+          sudo dpkg-query -W ubuntu-keyring
+          sudo gpg --batch --show-keys --with-colons /usr/share/keyrings/ubuntu-archive-keyring.gpg | awk -F: '$1=="fpr" {print $10}'
