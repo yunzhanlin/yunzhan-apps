@@ -1,0 +1,58 @@
+{
+  "source_head": "33cc45b0fb4e840d412108fe390b6dcc039672cb",
+  "source_inputs_sha256": "feb9bc54ae95df5f9b1867a71c4a16594b9b330a843397b86fd410e4bdd35a59",
+  "source_sdk_tree": "d2325cee03435fb89e8b48b0c39c7a7ee1096c48",
+  "version": "0.1.0-dev.proapps24dockercontainermetricscandidate106r2",
+  "release_id": 442343202,
+  "tag": "qa-dockercontainermetricscandidate106r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737435675,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-amd64.tar.gz": {
+      "id": 737438311,
+      "bytes": 23893173,
+      "sha256": "c72ff150724ad336df9d96c241bad0ff98c3bc0a508972ee128d08173a3900bd"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-amd64.tar.gz.manifest": {
+      "id": 737435554,
+      "bytes": 195,
+      "sha256": "efe0eebe1c39d1f8fc08cd62e18195271d555a4f5d47cd4774f31fedafe27d91"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-amd64.tar.gz.sig": {
+      "id": 737435432,
+      "bytes": 64,
+      "sha256": "db2eebfba7e78c2028903e85452c8e03856a7445318f026698c5b833f21068b2"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-arm64.tar.gz": {
+      "id": 737435741,
+      "bytes": 22105248,
+      "sha256": "fbb9c43a94bd7aa53f260b7c0f790c7e7bd3c727d03e395682fe0ecf050a9c52"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-arm64.tar.gz.manifest": {
+      "id": 737435604,
+      "bytes": 195,
+      "sha256": "e0f74d227139f2689a3ecb55641af1ae7e14e89cec359e309ee4f4331b4ff1f2"
+    },
+    "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-arm64.tar.gz.sig": {
+      "id": 737435466,
+      "bytes": 64,
+      "sha256": "17979cc0900da373c398cc9ade7914027fa26917831ca87e3f3468a7a6a19159"
+    },
+    "release-signing-dev.pub": {
+      "id": 737435505,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24dockercontainermetricscandidate106r2-linux-arm64.tar.gz"
+    }
+  }
+}
