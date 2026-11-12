@@ -1,0 +1,58 @@
+{
+  "source_head": "e90514d60b9fbc1181b872a21df2170e4de59f27",
+  "source_inputs_sha256": "d4b332b8a78ebcd28ab9388279cc52333b169a349d09c47150e27e9806bbdeb2",
+  "source_sdk_tree": "a6cb67f18c990e5988aa8bcc2bdcf5462daad6e2",
+  "version": "0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2",
+  "release_id": 442361507,
+  "tag": "qa-pureftpdtransferhistorycandidate107r2-20261112-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 737508289,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-amd64.tar.gz": {
+      "id": 737513458,
+      "bytes": 23911308,
+      "sha256": "f8925c4d1a29af3b9c0efad31d0da9b198298f1ded360c230343248b3e19da39"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-amd64.tar.gz.manifest": {
+      "id": 737508191,
+      "bytes": 196,
+      "sha256": "0639a20fc1ef27288fea2c7d21437ed225849e4b1ddc779433cf9bd2fd19aec3"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-amd64.tar.gz.sig": {
+      "id": 737508077,
+      "bytes": 64,
+      "sha256": "d638d7bf267f3bddd89b14734d73dacb6370dc9a77b09ee37c258e05dd2bb171"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-arm64.tar.gz": {
+      "id": 737508347,
+      "bytes": 22131550,
+      "sha256": "484ea1e93ea274162f753c067e865675d92388429260e51eb7fcf6b29d49fac1"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-arm64.tar.gz.manifest": {
+      "id": 737508245,
+      "bytes": 196,
+      "sha256": "6490f36a7d633b8d8a26bd22ab94b7db07567837725829db67db2cdfb0aa550e"
+    },
+    "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-arm64.tar.gz.sig": {
+      "id": 737508109,
+      "bytes": 64,
+      "sha256": "bdddbacdadd1abfb10877ca9ebd41eaf7ac37a3c01de839d8e13efcc94ccaa27"
+    },
+    "release-signing-dev.pub": {
+      "id": 737508148,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24pureftpdtransferhistorycandidate107r2-linux-arm64.tar.gz"
+    }
+  }
+}
