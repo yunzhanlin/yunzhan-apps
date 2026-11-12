@@ -21,8 +21,8 @@ func threatIDSRuntimeUpgradeFixture(t *testing.T) (*Service, threatIDSRuntimeUpg
 		t.Fatal(err)
 	}
 	nextPackage := oldPackage
-	nextPackage.Version = "1:8.0.7-1~bpo13+1"
-	nextPackage.Filename = "pool/main/s/suricata/suricata_8.0.7-1~bpo13+1_amd64.deb"
+	nextPackage.Version = "1:8.0.8-1~bpo13+1"
+	nextPackage.Filename = "pool/main/s/suricata/suricata_8.0.8-1~bpo13+1_amd64.deb"
 	nextPackage.SHA256 = core.Hash("original supported package")
 	old := threatIDSRuntime{Format: 1, Prefix: threatIDSPackagePrefix(oldPackage), Platform: "debian-13", Package: oldPackage, Files: map[string]string{"bin/suricata": core.Hash("old native"), "licenses/GPL-2.txt": core.Hash("full GPL"), "licenses/suricata-copyright.txt": core.Hash("old copyright")}}
 	next := threatIDSRuntime{Format: 2, Prefix: threatIDSPackagePrefix(nextPackage), Platform: "debian-13", Package: nextPackage, Files: map[string]string{"bin/suricata": core.Hash("supported native"), "licenses/GPL-2.txt": core.Hash("full GPL"), "licenses/suricata-copyright.txt": core.Hash("supported copyright")}, Source: &threatIDSPackageSource{URL: "https://deb.debian.org/debian", Suite: "trixie-backports", KeySHA: core.Hash("key"), CatalogSHA: core.Hash("signed catalog"), MetadataSHA: core.Hash("metadata")}}

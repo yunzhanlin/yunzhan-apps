@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"errors"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -11,9 +11,10 @@ import (
 // manifests readable for stopping capture and recovering retained evidence.
 // Neither an authenticated package nor fresh packet counters establish that
 // an obsolete parser is safe to expose to untrusted network traffic.
-const threatIDSMinimumVersion = "8.0.7"
-const threatIDSSupportReviewed = "2026-10-09"
-const threatIDSSupportReviewDeadline = "2027-01-09"
+// OISF released Suricata 8.0.8 with security fixes on 2026-10-29.
+const threatIDSMinimumVersion = "8.0.8"
+const threatIDSSupportReviewed = "2026-11-12"
+const threatIDSSupportReviewDeadline = "2027-02-12"
 
 type threatIDSEngineSupport struct {
 	Version        string `json:"package_version"`
@@ -67,7 +68,7 @@ func threatIDSSupport(version string, now time.Time) threatIDSEngineSupport {
 
 func threatIDSRequireSupported(version string) error {
 	if !threatIDSSupport(version, time.Now().UTC()).Supported {
-		return errors.New("IDS 引擎已停止维护、低于安全版本下限或维护审核已过期；拒绝启动/启用，不删除日志或替换原生程序。需要受支持的 Suricata 8.0.7 或同分支更新版及有效维护审核")
+		return fmt.Errorf("IDS 引擎需要 Suricata %s 或同分支更新版及有效维护审核，才能启动或设为开机启动", threatIDSMinimumVersion)
 	}
 	return nil
 }

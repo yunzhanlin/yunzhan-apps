@@ -39,8 +39,8 @@ func threatAPTInstallName(name string) bool {
 // the reviewed direct and transitive closure explicit; unknown plans fail.
 var threatIDSAdditionalLibraries = map[string]bool{
 	"libevent-core-2.1-7": true, "libevent-core-2.1-7t64": true,
-	"libluajit-5.1-common": true, "libluajit2-5.1-common": true,
-	"libfdt1": true, "libibverbs1": true, "libnl-3-200": true, "libnl-route-3-200": true,
+	"libluajit2-5.1-common": true,
+	"libfdt1":               true, "libibverbs1": true, "libnl-3-200": true, "libnl-route-3-200": true,
 	"libhwloc-plugins": true, "libpciaccess0": true, "libxnvctrl0": true,
 	"libx11-6": true, "libx11-data": true, "libx11-xcb1": true, "libxcb1": true, "libxau6": true, "libxdmcp6": true,
 	"libatomic1": true, "libstdc++6": true, "libcap2": true, "libdbus-1-3": true,
@@ -101,7 +101,7 @@ var threatIDSAllowedLibraries = map[string]bool{
 	"libbpf1": true, "libbsd0": true, "libc6": true, "libcap-ng0": true, "libevent-2.1-7": true, "libevent-2.1-7t64": true,
 	"libevent-pthreads-2.1-7": true, "libevent-pthreads-2.1-7t64": true, "libgcc-s1": true,
 	"libhiredis0.14": true, "libhiredis1.1.0": true, "libhtp2": true, "libhwloc15": true, "libhyperscan5": true,
-	"libjansson4": true, "liblua5.1-0": true, "libluajit-5.1-2": true, "libluajit2-5.1-2": true, "liblz4-1": true,
+	"libjansson4": true, "liblua5.1-0": true, "libluajit-5.1-2": true, "libluajit-5.1-common": true, "libluajit2-5.1-2": true, "liblz4-1": true,
 	"libmagic1": true, "libmagic1t64": true, "libmaxminddb0": true, "libnet1": true, "libnet9": true,
 	"libnetfilter-log1": true, "libnetfilter-queue1": true, "libnfnetlink0": true, "libnuma1": true,
 	"libpcap0.8": true, "libpcap0.8t64": true, "libpcre2-8-0": true, "libsystemd0": true, "libunwind8": true, "libxdp1": true, "libyaml-0-2": true, "zlib1g": true,
