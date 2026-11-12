@@ -65,6 +65,10 @@ func (s *Store) registryUpdateReplay(appID, actorID, key string, in registryUpda
 		if kind != "software_update" || payload != expected {
 			return out, false, errors.New("原应用更新任务内容不一致，未重发")
 		}
+	} else if out.Provider == "runtime" && oldApp == "docker-manager" && version == appcatalog.DockerMetricsVersion {
+		if kind != dockerMetricsReviewJob || payload != "{}" {
+			return out, false, errors.New("原 Docker 应用包核对任务身份不一致")
+		}
 	} else if out.Provider != "runtime" || kind != "install_runtime" {
 		return out, false, errors.New("原应用更新任务类型不一致，未重发")
 	}

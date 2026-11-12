@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"local/panel/internal/appcatalog"
 )
@@ -332,6 +334,8 @@ func ValidateDockerJob(v DockerJobRequest) error {
 }
 
 func validDockerObjectID(id string) bool { return dockerIDPattern.MatchString(id) }
+
+func ValidDockerContainerID(id string) bool { return len(id) == 64 && validDockerObjectID(id) }
 
 func (a *Server) dockerRoutes(m *http.ServeMux) {
 	a.dockerJobObservationRoutes(m)
@@ -670,6 +674,21 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 		}
 		_ = a.Store.Audit(u.Username, "docker.volume.delete", name, "success")
 		send(w, 200, out)
+	}))
+	m.HandleFunc("GET /api/docker/containers/{id}/stats", a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
+		id := r.PathValue("id")
+		if !ValidDockerContainerID(id) {
+			fail(w, http.StatusBadRequest, "容器标识无效")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
+		defer cancel()
+		var out any
+		if err := a.Executor.Call(ctx, http.MethodGet, "/v1/docker/containers/"+id+"/stats", nil, &out); err != nil {
+			fail(w, http.StatusConflict, err.Error())
+			return
+		}
+		send(w, http.StatusOK, out)
 	}))
 	m.HandleFunc("GET /api/docker/containers/{id}/logs", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id := r.PathValue("id")

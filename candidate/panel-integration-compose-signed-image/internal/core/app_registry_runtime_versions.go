@@ -103,6 +103,9 @@ func applyRegistryRuntimeStatus(status *AppRegistryStatus, app appcatalog.Catalo
 	receipt, exists := receipts[app.ID+":"+target]
 	if !exact || !exists {
 		status.UpdateAvailable, status.UpdateKind = true, "runtime-package-review"
+		if exact && dockerMetricsPackage(app) {
+			status.UpdateKind = "docker-metrics-review"
+		}
 		return
 	}
 	if receipt.AppID != app.ID || receipt.Scope != target || (receipt.Target != target && !(app.Target == "docker-auto" && receipt.Target == "docker-auto")) || !appcatalog.ValidVersion(receipt.Version) || !registryDigestValid(receipt.SHA256) {
@@ -117,6 +120,9 @@ func applyRegistryRuntimeStatus(status *AppRegistryStatus, app appcatalog.Catalo
 	status.InstalledVersion, status.VersionSource = receipt.Version, "application-receipt"
 	cmp, valid = appcatalog.CompareVersions(receipt.Version, app.Version)
 	status.UpdateAvailable = valid && cmp < 0
+	if status.UpdateAvailable && exact && dockerMetricsPackage(app) {
+		status.UpdateKind = "docker-metrics-review"
+	}
 }
 
 // Parse only the presentation identity of a signed runtime announcement.
