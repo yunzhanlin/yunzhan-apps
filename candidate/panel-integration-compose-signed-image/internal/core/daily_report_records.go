@@ -264,6 +264,10 @@ func decodeDailyReportRecord(raw []byte) (map[string]any, error) {
 // Snapshot and deduplicated outbound source event commit together. A failed
 // event insertion rolls the report back instead of losing its automatic push.
 func (s *Store) saveDailyReportRecord(ctx context.Context, day string, report map[string]any) error {
+	return s.saveDailyReportRecordWithSchedule(ctx, day, report, nil, false)
+}
+
+func (s *Store) saveDailyReportRecordWithSchedule(ctx context.Context, day string, report map[string]any, scheduleRevision *int64, automatic bool) error {
 	if !validDailyReportDay(day) {
 		return errors.New("日报保存日期无效")
 	}
@@ -279,8 +283,19 @@ func (s *Store) saveDailyReportRecord(ctx context.Context, day string, report ma
 		return err
 	}
 	defer tx.Rollback()
+	if scheduleRevision != nil {
+		schedule, err := readDailyReportSchedule(ctx, tx)
+		if err != nil {
+			return err
+		}
+		if schedule.Revision != *scheduleRevision {
+			return errDailyReportScheduleChanged
+		}
+	}
 	if _, _, err := readDailyReportRecord(ctx, tx, day); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return errors.New("原日期日报无法核对，未覆盖或自动修复")
+	} else if err == nil && automatic {
+		return nil
 	}
 	if _, err = tx.ExecContext(ctx, `INSERT INTO app_daily_reports(day,report,created_at) VALUES(?,?,?) ON CONFLICT(day) DO UPDATE SET report=excluded.report,created_at=excluded.created_at`, day, string(raw), Now()); err != nil {
 		return err

@@ -227,6 +227,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 	a.pm2ConfigurationRoutes(m)
 	a.pm2ProjectsRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
+	a.dailyReportScheduleRoutes(m)
 	a.ftpTransferHistoryRoutes(m)
 	a.networkIDSOperationRoutes(m)
 	a.networkIDSRuleFeedRoutes(m)
@@ -388,6 +389,8 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			out, err = a.manageAppUsers(ctx, u, action, in)
 		} else if id == "platform-ops" {
 			out, err = a.platformOperation(ctx, u, action, in)
+		} else if id == "daily-report" && action == "run" && module.Status.Version == appcatalog.DailyReportScheduleVersion {
+			out, err = a.configuredDailyReportNow(ctx, time.Now())
 		} else if id == "daily-report" {
 			out, err = a.dailyReportOperation(ctx, action, in)
 		} else {
@@ -472,7 +475,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 				version = appcatalog.FilesSyncUnpublishedRetentionVersion
 			}
 		case "daily-report":
-			version = "1.4.0"
+			version = appcatalog.DailyReportScheduleVersion
 		case "mobile-pwa":
 			version = NativeMobileAppVersion
 		case "php-code-security":

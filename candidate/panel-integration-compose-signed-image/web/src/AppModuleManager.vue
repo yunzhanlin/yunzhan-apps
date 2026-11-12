@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch }
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
 import FTPTransferHistory from "./FTPTransferHistory.vue";
+import DailyReportSchedule from "./DailyReportSchedule.vue";
 import { renderSiteDiagnosisHTML } from "./siteDiagnosisReport";
 import AnalyticsQueryContext from "./AnalyticsQueryContext.vue";
 import StatisticsGeoWorkspace from "./StatisticsGeoWorkspace.vue";
@@ -1305,6 +1306,9 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <DailyReportSchedule v-else-if="definition.id === 'daily-report' && section.id === 'schedule'"
+          :key="'daily-schedule/' + geoActor" :api="api" :active="visible && activeTab === 'schedule'"
+          :enabled="installed && !installedUnknown && installedVersion === '1.4.1'" />
         <FTPTransferHistory v-else-if="definition.id === 'pure-ftpd' && section.id === 'transfers'"
           :key="'ftp-transfers/' + geoActor" :api="api" :sites="sites" :active="visible && activeTab === 'transfers'"
           :enabled="installed && !installedUnknown && installedVersion === '1.0.54-compat7'" />

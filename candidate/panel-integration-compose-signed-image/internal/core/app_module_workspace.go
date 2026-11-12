@@ -55,7 +55,7 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
 			section("independent-copy", "本机独立备份", "从已提交且完整核对的远端归档建立本机 Root 私有独立副本，保留原件、远端归档和检查点。远端旧写入句柄不能改动本机副本；本机完整副本可离线核验和下载。中断只显式恢复，保留原片段；也可明确保留未完成片段，但不会将它标为成功或供完整下载。全连接合计最多 128 份、1 GiB，每份最多 8 次明确尝试，不自动删除历史。", nil, []string{"remote-copy-preview", "remote-copies", "copy-remote-backup", "recover-remote-copy", "verify-remote-copy", "retain-remote-copy", "remote-copy-fragments", "retain-remote-copy-fragments"}),
 		}
 	case "daily-report":
-		return []AppModuleSection{section("daily", "生成今日报告", "汇总资源、网站、任务、安全与证书到期情况；每日报告和唯一推送来源一同提交，损坏原日报不覆盖。", nil, []string{"run"}), section("archive", "历史日报", "只读分页实际保存日期。字节数不证明内容完整，选择日期后严格核对；不会重新检查、修复或重写旧日报。", []string{"resource_id", "limit", "offset"}, []string{"archive", "report"})}
+		return []AppModuleSection{section("daily", "生成今日报告", "汇总资源、网站、任务、安全与证书到期情况；每日报告和唯一推送来源一同提交，损坏原日报不覆盖。", nil, []string{"run"}), section("schedule", "生成时间", "按所选时区和当地时间自动生成日报，每个当地日期最多自动生成一次。", nil, nil), section("archive", "历史日报", "只读分页实际保存日期。字节数不证明内容完整，选择日期后严格核对；不会重新检查、修复或重写旧日报。", []string{"resource_id", "limit", "offset"}, []string{"archive", "report"})}
 	case "enterprise-tamper-proof", "website-tamper-proof", "file-monitor":
 		fields := append([]string{}, integrity...)
 		if id == "enterprise-tamper-proof" {

@@ -24,6 +24,7 @@ export function dailyWorkerMessage(value:unknown,now=Date.now()):{message:string
  const checked=typeof r.checked_at==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(r.checked_at)?Date.parse(r.checked_at):NaN;
  if(r.fresh!==true||!Number.isFinite(now)||!Number.isFinite(checked)||new Date(checked).toISOString().replace(/\.000Z$/,'Z')!==r.checked_at||checked>now||now-checked>130000)return {message:'后台生成状态尚未核对或已过期；保留原报告，不以旧状态认定正常。',observed:false};
  if(r.state==='saved'&&validDay(r.report_day))return {message:`后台已核对 ${r.report_day} 的保存日报；不代表邮件或 Webhook 已送达。`,observed:true};
- const messages:Record<string,string>={starting:'后台生成进程正在准备，尚未完成核对。',status_unknown:'应用身份或运行状态待核对；后台未生成或覆盖日报。',inactive:'应用未安装或未启用；后台不生成日报。',blocked_original:'今日原日报无法核对；已保留原记录，后台未重新生成或覆盖。',generation_failed:'后台生成失败：资源、业务读取或原子保存未完成；没有据此认定日报已生成。',saved_partial:'日报已保存，但部分来源采集失败；查看保存报告，不能据此认定全量采集正常。'};
+ if(r.state==='waiting_schedule'&&validDay(r.report_day))return {message:`后台正等待 ${r.report_day} 的当地生成时间。`,observed:true};
+ const messages:Record<string,string>={starting:'后台生成进程正在准备，尚未完成核对。',status_unknown:'应用身份或运行状态待核对；后台未生成或覆盖日报。',schedule_unknown:'已保存的生成时间无法核对。',schedule_changed:'生成时间刚刚更新，后台将在下次检查时读取。',inactive:'应用未安装或未启用；后台不生成日报。',blocked_original:'今日原日报无法核对；已保留原记录，后台未重新生成或覆盖。',generation_failed:'后台生成失败：资源、业务读取或原子保存未完成；没有据此认定日报已生成。',saved_partial:'日报已保存，但部分来源采集失败；查看保存报告，不能据此认定全量采集正常。'};
  return {message:messages[String(r.state)]||'后台生成状态无法核对；不据此认定成功。',observed:false};
 }

@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"local/panel/internal/appcatalog"
 )
 
 // This is observed process-local worker state, not SMTP delivery or a persisted
@@ -69,7 +71,21 @@ func (a *Server) dailyWorkerTick(parent context.Context, at time.Time) {
 		a.dailyWorkerObserved(at, "status_unknown", "", "应用运行状态无法核对；未生成日报")
 		return
 	}
-	day := at.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
+	local := at.In(time.FixedZone("Asia/Shanghai", 8*3600))
+	var schedule dailyReportSchedule
+	var revision *int64
+	if status.Version == appcatalog.DailyReportScheduleVersion {
+		var err error
+		schedule, err = readDailyReportSchedule(ctx, a.Store.DB)
+		location, locationErr := schedule.location()
+		if err != nil || locationErr != nil {
+			a.dailyWorkerObserved(at, "schedule_unknown", "", "无法核对已保存的日报时间")
+			return
+		}
+		local = at.In(location)
+		revision = &schedule.Revision
+	}
+	day := local.Format("2006-01-02")
 	_, report, err := readDailyReportRecord(ctx, a.Store.DB, day)
 	if err == nil {
 		a.dailyWorkerSaved(at, day, report)
@@ -79,12 +95,23 @@ func (a *Server) dailyWorkerTick(parent context.Context, at time.Time) {
 		a.dailyWorkerObserved(at, "blocked_original", day, "今日原日报无法核对；保留原记录，未重新生成或覆盖")
 		return
 	}
-	generated, err := a.appDailyReportAt(ctx, at)
+	if revision != nil && local.Format("15:04") < schedule.LocalTime {
+		a.dailyWorkerObserved(at, "waiting_schedule", day, "")
+		return
+	}
+	_, err = a.appDailyReportForDay(ctx, at, day, revision, true)
+	if errors.Is(err, errDailyReportScheduleChanged) {
+		a.dailyWorkerObserved(at, "schedule_changed", day, "")
+		return
+	}
+	if err == nil {
+		_, report, err = readDailyReportRecord(ctx, a.Store.DB, day)
+	}
 	if err != nil {
 		a.dailyWorkerObserved(at, "generation_failed", day, "资源、业务记录或原子保存失败；没有据此认定日报已生成")
 		return
 	}
-	a.dailyWorkerSaved(at, day, generated.(map[string]any))
+	a.dailyWorkerSaved(at, day, report)
 }
 
 func (a *Server) dailyWorkerSaved(at time.Time, day string, report map[string]any) {

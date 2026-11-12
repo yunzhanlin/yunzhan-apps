@@ -267,6 +267,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		if id == "php-code-security" && action == "install" {
 			selectedVersion = "1.3.0"
 		}
+		if id == "daily-report" && action == "install" {
+			selectedVersion = "1.4.0"
+		}
 		if id == "pure-ftpd" && action == "install" {
 			selectedVersion = "1.0.54-compat6"
 		}

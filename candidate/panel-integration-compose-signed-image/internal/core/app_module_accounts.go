@@ -19,6 +19,9 @@ func (s *Store) migrateAppModules() error {
  CREATE TABLE IF NOT EXISTS app_platform_hosts(id TEXT PRIMARY KEY,url TEXT NOT NULL,token BLOB NOT NULL,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_platform_tokens(token_hash TEXT PRIMARY KEY,created_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_daily_reports(day TEXT PRIMARY KEY,report TEXT NOT NULL,created_at TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS app_daily_report_schedule(
+   singleton INTEGER PRIMARY KEY CHECK(singleton=1),time_zone TEXT NOT NULL,local_time TEXT NOT NULL,
+   revision INTEGER NOT NULL CHECK(revision>0),updated_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS app_module_events(id TEXT PRIMARY KEY,module_id TEXT NOT NULL,action TEXT NOT NULL,actor TEXT NOT NULL,outcome TEXT NOT NULL,created_at TEXT NOT NULL);
  CREATE INDEX IF NOT EXISTS app_module_events_module ON app_module_events(module_id);
  INSERT OR IGNORE INTO schema_migrations VALUES(38,strftime('%Y-%m-%dT%H:%M:%SZ','now'));
@@ -294,6 +297,11 @@ func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 }
 
 func (a *Server) appDailyReportAt(ctx context.Context, at time.Time) (any, error) {
+	day := at.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
+	return a.appDailyReportForDay(ctx, at, day, nil, false)
+}
+
+func (a *Server) appDailyReportForDay(ctx context.Context, at time.Time, day string, scheduleRevision *int64, automatic bool) (any, error) {
 	out := map[string]any{"created_at": at.UTC().Format(time.RFC3339)}
 	var overview map[string]any
 	if e := a.Executor.Call(ctx, "GET", "/v1/overview", nil, &overview); e != nil {
@@ -331,8 +339,7 @@ func (a *Server) appDailyReportAt(ctx context.Context, at time.Time) (any, error
 	} else {
 		out["certificates_error"] = "保存的证书清单或有效期无法完整核对；未按零个到期证书统计"
 	}
-	day := at.In(time.FixedZone("Asia/Shanghai", 8*3600)).Format("2006-01-02")
-	return out, a.Store.saveDailyReportRecord(ctx, day, out)
+	return out, a.Store.saveDailyReportRecordWithSchedule(ctx, day, out, scheduleRevision, automatic)
 }
 func (a *Server) platformOperation(ctx context.Context, actor identity, action string, in AppModuleInput) (any, error) {
 	access, err := readUserAccessContext(ctx, a.Store.DB, actor.ID)
