@@ -13,17 +13,18 @@ import (
 	"slices"
 	"strings"
 
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 )
 
-const intrusionTransactionVersion = "1.1.1"
+const intrusionTransactionVersion = core.IntrusionAppVersion
 const intrusionJournalBytes = 256 << 10
 
 // The journal format is unchanged. Retained 1.1.0 plans must still derive
 // their original byte-identical targets; reading or recovering them never
 // substitutes the current package version or creates a new operation.
 func intrusionManagedVersion(version string) bool {
-	return version == "1.1.0" || version == intrusionTransactionVersion
+	return version == "1.1.0" || core.IntrusionSignedVersion(version)
 }
 
 // These are identities, not paths, command templates or persisted nft input.
@@ -194,7 +195,7 @@ func intrusionJournalDerive(plan intrusionJournalPlan) (intrusionJournalPlan, er
 			return plan, err
 		}
 		installedAt = old.InstalledAt
-		if plan.TargetVersion == "1.1.0" && old.Version == intrusionTransactionVersion {
+		if cmp, valid := appcatalog.CompareVersions(plan.TargetVersion, old.Version); !valid || cmp < 0 {
 			return plan, errors.New("旧事务不能降级或接管新版防入侵清单")
 		}
 	}

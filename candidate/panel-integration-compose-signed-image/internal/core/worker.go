@@ -349,6 +349,12 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 			}
 			payload.Version = version
 		}
+		if action == "update" && j.TargetID == "intrusion-prevention" && payload.Version == IntrusionAppVersion {
+			if err := s.intrusionUpdateExecutionBinding(j); err != nil {
+				_ = s.FinishRuntime(j, err.Error(), nil)
+				return
+			}
+		}
 		if action == "update" && j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(payload.Version) {
 			if err := mobileNativeExecutionBinding(s.DB, j); err != nil {
 				_ = s.FinishRuntime(j, err.Error(), nil)

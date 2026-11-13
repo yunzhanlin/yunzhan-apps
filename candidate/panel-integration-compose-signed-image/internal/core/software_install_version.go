@@ -48,7 +48,8 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 	if count == 0 {
 		// The legacy unbound direct interface remains legacy. It cannot borrow
 		// the independently signed native identities by naming a new version.
-		if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(requested) || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) {
+		if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(requested) || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) ||
+			j.TargetID == "intrusion-prevention" && requested == IntrusionAppVersion {
 			return "", bad
 		}
 		if requested != "" && ValidateSoftwareInstallVersion(j.TargetID, requested) != nil {
@@ -125,4 +126,22 @@ func mobileNativeExecutionBinding(q softwareInstallRowQueryer, j Job) error {
 		return bad
 	}
 	return mobileNativeQueueBinding(q, "update", key, j.ID, username, j.Payload)
+}
+
+func (s *Store) intrusionUpdateExecutionBinding(j Job) error {
+	bad := errors.New("防入侵更新的原签名任务或软件包摘要无法核对")
+	if j.TargetID != "intrusion-prevention" || j.Kind != "software_update" || !ValidID(j.ID) {
+		return bad
+	}
+	var key, actor, digest string
+	if s.DB.QueryRow(`SELECT j.idempotency_key,r.actor_id,r.sha256
+		FROM runtime_jobs j JOIN app_registry_update_requests r ON r.job_id=j.id
+		WHERE j.id=? AND j.target_id=? AND j.kind=? AND j.payload=?`, j.ID, j.TargetID, j.Kind, j.Payload).Scan(&key, &actor, &digest) != nil {
+		return bad
+	}
+	replay, exists, err := s.registryUpdateReplay("anti-intrusion", actor, key, registryUpdateInput{IntrusionAppVersion, digest})
+	if err != nil || !exists || replay.JobID != j.ID || replay.Provider != "panel-module" {
+		return bad
+	}
+	return nil
 }

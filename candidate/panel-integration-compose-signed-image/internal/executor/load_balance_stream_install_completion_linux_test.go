@@ -92,3 +92,38 @@ func TestLoadBalanceStreamAccountCompletionNativeSystemdGarbageCollection(t *tes
 	}
 	t.Logf("actual post-wait metadata: %#v", state)
 }
+
+func TestLoadBalanceStreamRetainedRefusalRequiresBothOriginalUnitsIdle(t *testing.T) {
+	job := core.LoadBalanceStreamUpgradeJob{
+		Authority: core.LoadBalanceStreamInstallAuthority{JobID: core.ID()},
+		State:     "needs_attention", RefusedBeforeHandoff: core.LoadBalanceStreamInstallNginx,
+	}
+	idle := func() map[string]string {
+		return map[string]string{"LoadState": "loaded", "ActiveState": "inactive", "SubState": "dead", "MainPID": "0", "ControlPID": "0", "ExecMainStatus": "0", "Result": "success", "InvocationID": ""}
+	}
+	var observed []string
+	if err := verifyRetainedLoadBalanceStreamPreflight(t.Context(), job, func(_ context.Context, unit string) (map[string]string, error) {
+		observed = append(observed, unit)
+		return idle(), nil
+	}); err != nil || len(observed) != 2 ||
+		observed[0] != "panel-lbstream-install@"+job.Authority.JobID+".service" ||
+		observed[1] != "panel-lbstream-account-create@"+job.Authority.JobID+".service" {
+		t.Fatal("original unit identities were not both checked", observed, err)
+	}
+	for key, value := range map[string]string{"LoadState": "not-found", "ActiveState": "active", "ControlPID": "42", "InvocationID": strings.Repeat("a", 32)} {
+		t.Run(key, func(t *testing.T) {
+			calls := 0
+			err := verifyRetainedLoadBalanceStreamPreflight(t.Context(), job, func(_ context.Context, _ string) (map[string]string, error) {
+				calls++
+				state := idle()
+				if calls == 2 {
+					state[key] = value
+				}
+				return state, nil
+			})
+			if err == nil || calls != 2 {
+				t.Fatal("unsafe original child unit accepted", key, err)
+			}
+		})
+	}
+}

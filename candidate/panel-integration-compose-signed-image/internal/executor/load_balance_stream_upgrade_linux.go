@@ -181,6 +181,30 @@ func streamUpgradeClearInventory(v map[string]map[string][]byte) {
 	}
 }
 
+// The complete directory census rejects every native record bound to this
+// retained job, including a receipt keyed by an installation nonce. The
+// fixed units must also show that neither original controller is running or
+// retains an invocation. These checks never repair, replay or close the row.
+func verifyRetainedLoadBalanceStreamPreflight(ctx context.Context, job core.LoadBalanceStreamUpgradeJob, read func(context.Context, string) (map[string]string, error)) error {
+	if ctx.Err() != nil || job.State != "needs_attention" ||
+		(job.RefusedBeforeHandoff != core.LoadBalanceStreamInstallMemory && job.RefusedBeforeHandoff != core.LoadBalanceStreamInstallNginx) {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	parent, parentErr := loadbalancestream.AccountParentUnit(job.Authority.JobID)
+	child, childErr := loadbalancestream.AccountCreationUnit(job.Authority.JobID)
+	if parentErr != nil || childErr != nil {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	for _, unit := range []string{parent, child} {
+		state, err := read(ctx, unit)
+		invocation, present := state["InvocationID"]
+		if err != nil || !present || invocation != "" || !streamInstallAccountChildTerminated(state) {
+			return errLoadBalanceStreamInstallationJournal
+		}
+	}
+	return ctx.Err()
+}
+
 func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBalanceStreamUpgradeJob, owner *loadBalanceStreamUpgradeOwner) error {
 	r := &programQueueReader{ctx: ctx, root: "/"}
 	defer func() {
@@ -299,6 +323,11 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 	for id, job := range byID {
 		if id == own {
 			continue
+		}
+		if job.State == "needs_attention" {
+			if err := verifyRetainedLoadBalanceStreamPreflight(ctx, job, streamInstallUnitProperties); err != nil {
+				return err
+			}
 		}
 		if job.State == "succeeded" {
 			for _, path := range []string{loadBalanceStreamInstallationJobsRoot, loadBalanceStreamModulePublicationsRoot, loadBalanceStreamSubmissionsRoot, loadBalanceStreamAccountPermitsRoot, loadBalanceStreamInstallObservationsRoot} {

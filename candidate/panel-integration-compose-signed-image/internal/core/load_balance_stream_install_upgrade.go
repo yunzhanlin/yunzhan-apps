@@ -12,8 +12,9 @@ import (
 // SELECT-only history, not a skip list or effect capability. Root must also
 // verify every original private record, native unit, lease and exit witness.
 type LoadBalanceStreamUpgradeJob struct {
-	Authority LoadBalanceStreamInstallAuthority
-	State     string
+	Authority            LoadBalanceStreamInstallAuthority
+	State                string
+	RefusedBeforeHandoff string
 }
 
 // A revoked administrator, lost grant table, deleted pending row or terminal
@@ -76,23 +77,17 @@ func (s *Store) LoadBalanceStreamInstallUpgradeJobs(ctx context.Context, origina
 	if readErr != nil || len(jobs) != count || nativeJobs != count {
 		return nil, bad
 	}
-	allowed, succeeded := 0, 0
+	allowed, succeeded, retained := 0, 0, 0
 	for i := range jobs {
 		v := jobs[i].Authority
-		if !ValidID(v.JobID) || !ValidID(v.ActorID) || v.AccessRevision < 1 || v.Action != "install" && v.Action != "update" || !streamControlDigest(v.ActorObservationSHA256) || !streamControlDigest(v.PayloadSHA256) || !streamControlDigest(v.ManifestSHA256) || !streamControlDigest(v.OriginalRequestSHA256) || !streamControlDigest(v.KeySHA256) {
-			return nil, bad
-		}
-		var kind, payload, key, created, updated, state string
-		if tx.QueryRowContext(ctx, `SELECT kind,payload,idempotency_key,created_at,updated_at,state FROM runtime_jobs WHERE id=? AND target_id='load-balance'AND length(CAST(payload AS BLOB)) BETWEEN 1 AND 1024 AND length(CAST(idempotency_key AS BLOB)) BETWEEN 1 AND 128 AND length(CAST(created_at AS BLOB)) BETWEEN 1 AND 32 AND length(CAST(updated_at AS BLOB)) BETWEEN 1 AND 32 AND length(CAST(state AS BLOB)) BETWEEN 1 AND 32`, v.JobID).Scan(&kind, &payload, &key, &created, &updated, &state) != nil || kind != "software_"+v.Action || Hash(payload) != v.PayloadSHA256 || Hash(key) != v.KeySHA256 || created != v.JobCreatedAt {
-			return nil, bad
-		}
-		first, a := streamInstallClock(created)
-		last, b := streamInstallClock(updated)
-		expected := `{"settings":{},"version":"` + loadbalancestream.AppVersion + `"}`
-		if v.Action == "update" {
-			expected = `{"settings":null,"version":"` + loadbalancestream.AppVersion + `"}`
-		}
-		if !a || !b || last.Before(first) || payload != expected || streamInstallOriginalRegistryHistory(ctx, tx, v, payload, key) != nil {
+		var kind, payload, key, created, updated, state, detail, steps string
+		if tx.QueryRowContext(ctx, `SELECT kind,payload,idempotency_key,created_at,updated_at,state,substr(error,1,1025),substr(steps,1,5)
+			FROM runtime_jobs WHERE id=? AND target_id='load-balance'
+			AND length(CAST(payload AS BLOB)) BETWEEN 1 AND 1024 AND length(CAST(idempotency_key AS BLOB)) BETWEEN 1 AND 128
+			AND length(CAST(created_at AS BLOB)) BETWEEN 1 AND 32 AND length(CAST(updated_at AS BLOB)) BETWEEN 1 AND 32
+			AND length(CAST(state AS BLOB)) BETWEEN 1 AND 32`, v.JobID).Scan(&kind, &payload, &key, &created, &updated, &state, &detail, &steps) != nil ||
+			kind != "software_"+v.Action || !validLoadBalanceStreamHistory(v, payload, key, created, updated) ||
+			streamInstallOriginalRegistryHistory(ctx, tx, v, payload, key) != nil {
 			return nil, bad
 		}
 		if original != nil && v.JobID == original.JobID {
@@ -101,6 +96,13 @@ func (s *Store) LoadBalanceStreamInstallUpgradeJobs(ctx context.Context, origina
 				return nil, bad
 			}
 			allowed++
+		} else if state == "needs_attention" {
+			reason := retainedLoadBalanceStreamPreflight(ctx, tx, v.JobID, kind, updated, detail, steps)
+			if reason == "" {
+				return nil, bad
+			}
+			jobs[i].RefusedBeforeHandoff = reason
+			retained++
 		} else if state != "succeeded" && state != "failed" && state != "cancelled" {
 			return nil, bad
 		}
@@ -117,11 +119,60 @@ func (s *Store) LoadBalanceStreamInstallUpgradeJobs(ctx context.Context, origina
 	if original != nil && allowed != 1 || original == nil && allowed != 0 ||
 		tx.QueryRowContext(ctx, `SELECT(SELECT count(*)FROM app_registry_install_requests WHERE app_id='load-balance'AND version=?)+(SELECT count(*)FROM app_registry_update_requests WHERE app_id='load-balance'AND version=?)+(SELECT count(*)FROM audit_logs WHERE action='app.load-balance.stream.install-request')`, loadbalancestream.AppVersion, loadbalancestream.AppVersion).Scan(&count) != nil || count != 2*len(jobs) ||
 		tx.QueryRowContext(ctx, `SELECT count(*)FROM app_registry_receipts WHERE app_id='load-balance'AND version=?`, loadbalancestream.AppVersion).Scan(&count) != nil || count != succeeded ||
-		tx.QueryRowContext(ctx, `SELECT count(*)FROM runtime_jobs WHERE target_id='load-balance'AND state NOT IN('succeeded','failed','cancelled')`).Scan(&count) != nil || count != allowed ||
+		tx.QueryRowContext(ctx, `SELECT count(*)FROM runtime_jobs WHERE target_id='load-balance'AND state NOT IN('succeeded','failed','cancelled')`).Scan(&count) != nil || count != allowed+retained ||
 		tx.QueryRowContext(ctx, `SELECT count(*)FROM app_registry_pending WHERE app_id='load-balance'`).Scan(&count) != nil || count != allowed || ctx.Err() != nil || tx.Commit() != nil {
 		return nil, bad
 	}
 	return jobs, nil
+}
+
+func validLoadBalanceStreamHistory(v LoadBalanceStreamInstallAuthority, payload, key, created, updated string) bool {
+	if !ValidID(v.JobID) || !ValidID(v.ActorID) || v.AccessRevision < 1 || v.Action != "install" && v.Action != "update" ||
+		!streamControlDigest(v.ActorObservationSHA256) || !streamControlDigest(v.PayloadSHA256) ||
+		!streamControlDigest(v.ManifestSHA256) || !streamControlDigest(v.OriginalRequestSHA256) || !streamControlDigest(v.KeySHA256) ||
+		Hash(payload) != v.PayloadSHA256 || Hash(key) != v.KeySHA256 || created != v.JobCreatedAt {
+		return false
+	}
+	expected := `{"settings":{},"version":"` + loadbalancestream.AppVersion + `"}`
+	if v.Action == "update" {
+		expected = `{"settings":null,"version":"` + loadbalancestream.AppVersion + `"}`
+	}
+	first, firstOK := streamInstallClock(created)
+	last, lastOK := streamInstallClock(updated)
+	return firstOK && lastOK && !last.Before(first) && payload == expected
+}
+
+func retainedLoadBalanceStreamPreflight(ctx context.Context, q accessReader, job, kind, updated, detail, steps string) string {
+	reason := legacyLoadBalanceStreamInstallRefusal(detail)
+	if reason == "" || steps != "null" {
+		return ""
+	}
+	var audits, pending int
+	if q.QueryRowContext(ctx, `SELECT
+		(SELECT count(*) FROM audit_logs
+		 WHERE actor='executor' AND action=? AND target='load-balance'
+		 AND result='needs_attention' AND created_at=?),
+		(SELECT count(*) FROM app_registry_pending WHERE job_id=?)`, kind, updated, job).Scan(&audits, &pending) != nil ||
+		audits != 1 || pending != 0 {
+		return ""
+	}
+	return reason
+}
+
+// Early builds recorded these two synchronous Root refusals as uncertain.
+// These exact stages occurred before a handoff could be written. Root still
+// verifies the complete native history and both unit identities independently.
+func legacyLoadBalanceStreamInstallRefusal(detail string) string {
+	const prefix = "TCP/UDP 原安装没有可核对的完整原生完成回执；保留原任务，只允许观察，不重新派发；执行服务：TCP/UDP 安装阶段[系统前置条件]: TCP/UDP 安装阶段["
+	const suffix = "]: TCP/UDP 独立服务的完整两代配置、专用身份、内核隔离或可用资源无法核对；未启动或重载服务"
+	switch detail {
+	case prefix + "资源余量" + suffix:
+		return LoadBalanceStreamInstallMemory
+	case prefix + "Nginx 运行时" + suffix:
+		return LoadBalanceStreamInstallNginx
+	default:
+		return ""
+	}
 }
 
 // Terminal history is checked independently of today's actor permissions.

@@ -75,6 +75,14 @@ func TestLoadBalanceStreamInstallRetryNeverResetsRetainedNativeAttempt(t *testin
 					t.Fatal(err)
 				}
 				before := streamInstallSnapshot(t, s)
+				detail, err := s.Job(job)
+				if err != nil || !detail.RetryBlocked {
+					t.Fatal("job details advertised a forbidden replay", err)
+				}
+				list, err := s.Jobs()
+				if err != nil || len(list) != 1 || list[0].ID != job || !list[0].RetryBlocked {
+					t.Fatal("job list advertised a forbidden replay", err)
+				}
 				if err := s.RetryRuntime(job, "admin"); err == nil {
 					t.Fatal("native original accepted replay")
 				}
