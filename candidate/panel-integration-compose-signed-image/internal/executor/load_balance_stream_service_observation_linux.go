@@ -208,7 +208,7 @@ func (w *loadBalanceStreamServiceObservation) current(ctx context.Context) error
 			}
 		}
 	}
-	filter, err := observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms)
+	filter, err := observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms, w.plan.AllowedIPs)
 	if err != nil || filter != w.FilterSHA256 {
 		return loadbalancestream.ErrService
 	}
@@ -280,7 +280,7 @@ func observeLoadBalanceStreamService(ctx context.Context, installed *loadBalance
 	if err != nil {
 		return fail()
 	}
-	w.FilterSHA256, err = observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms)
+	w.FilterSHA256, err = observeStreamFilterPolicySHA256(ctx, w.cgroup, w.IngressPrograms, w.EgressPrograms, w.plan.AllowedIPs)
 	if err != nil || w.current(ctx) != nil {
 		return fail()
 	}

@@ -143,8 +143,37 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
   return text;
 }
 
+// Recognize only the new pre-response PHP source retry. All historical
+// queue/producer checks still compare their original complete pinned inputs.
+function beforePHPSourceResponseRetry(text) {
+ for(const addition of [
+  "\t\"net\"\n",
+  "// sourceResponseTimeout is only constructed before a response or source\n// file exists. A stalled or interrupted body cannot use this retry path.\ntype sourceResponseTimeout struct{ cause error }\n\nfunc (e sourceResponseTimeout) Error() string { return e.cause.Error() }\nfunc (e sourceResponseTimeout) Unwrap() error { return e.cause }\n\n",
+  "\tvar responseTimeout sourceResponseTimeout\n\tif r.Family == \"php\" && strings.HasPrefix(r.URL, \"https://www.php.net/distributions/\") && errors.As(err, &responseTimeout) {\n\t\t// A new GET to the same official URL is safe before any response or\n\t\t// staged bytes. Never retry the install or use another source here.\n\t\terr = download(ctx, r.URL, r.SHA256, dst, limits)\n\t\tif cancelled := ctx.Err(); cancelled != nil {\n\t\t\treturn cancelled\n\t\t}\n\t}\n",
+  "\t\tvar network net.Error\n\t\tif resp == nil && ctx.Err() == nil && errors.As(e, &network) && network.Timeout() {\n\t\t\treturn sourceResponseTimeout{cause: e}\n\t\t}\n",
+ ]) {
+  assert.equal(text.split(addition).length,2,"missing, duplicate or altered PHP source response retry");
+  text=text.replace(addition,()=>'');
+ }
+ return text;
+}
+
+// Reverse only the exact Apache archive budget for the older PHP source pins.
+function beforeApacheSourceArchiveBudget(text) {
+ for (const [current, previous] of [
+  ["const apacheSourceArchiveBudget = 25 * time.Minute\n\nfunc runtimeSourceTotalCeiling(url, digest string) time.Duration {\n\t// This historical release remains pinned in installed manifests. Allow\n\t// its official archive to finish on a slow link without extending the\n\t// budget for primary URLs, different source bytes, or any other runtime.\n\tapache, ok := runtimecatalog.Find(\"apache-2.4.68\")\n\tif ok && url == runtimecatalog.SourceArchiveURL(apache) && digest == apache.SHA256 {\n\t\treturn apacheSourceArchiveBudget\n\t}\n\treturn 20 * time.Minute\n}\n\n", ""],
+  ["\t\t\t// Follow only the exact catalogued Apache archive after relocation.\n\t\t\t// Do not resume partial content or relax its digest or idle budget.\n\t\t\tlimits.Total = runtimeSourceTotalCeiling(archive, r.SHA256)", "\t\t\t// Only this exact catalogued official Apache archive gets 20 minutes.\n\t\t\t// No arbitrary mirrors, URLs, digests, retries or resumed partial bytes.\n\t\t\tlimits.Total = 20 * time.Minute"],
+  ["limits.Total > runtimeSourceTotalCeiling(url, digest)", "limits.Total > 20*time.Minute"],
+ ]) {
+  assert.equal(text.split(current).length,2,'missing, duplicate or altered Apache source archive budget');
+  text=text.replace(current,()=>previous);
+ }
+ return text;
+}
+
 // Reverse only C57's exact Apache dependency admission for historical PHP pins.
 export function beforeApacheBuildDependencyAdmission(text) {
+ text=beforePHPSourceResponseRetry(beforeApacheSourceArchiveBudget(text));
  for(const addition of ["\tif r.Family == \"apache\" && !nativeWAFService().wafBuildPackagesReady([]string{\"libapr1-dev\", \"libaprutil1-dev\", \"libnghttp2-dev\"}) {\n\t\treturn errors.New(\"Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码\")\n\t}\n", "\tif e = add(\"正在从官方站点下载精确版本源码并校验完整性\"); e != nil {\n\t\treturn e\n\t}\n"]) {
   assert.equal(text.split(addition).length,2,"missing, duplicate or altered Apache dependency/progress addition");
   text=text.replace(addition,()=>'');
