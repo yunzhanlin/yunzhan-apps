@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-13T01:20:50Z",
+  "generated_at": "2026-11-13T09:12:56Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -1135,8 +1135,8 @@
       "id": "website-analytics",
       "name": "网站分析 · Website Analytics",
       "category": "professional",
-      "version": "2.4.4",
-      "summary": "网站访问、会话、页面性能与相邻周期对比。按屏宽筛选点击热图，支持在浏览器本地叠加同布局的全页截图。",
+      "version": "2.4.5",
+      "summary": "网站访问、会话、页面性能、周期对比与点击热图。可按站点启用国家或地区分布，地理统计不存储原始 IP。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
@@ -1154,10 +1154,10 @@
         "显式SPA就绪耗时；旧标识、后台、超时及重复调用拒绝",
         "按网站隔离的客户端连接地址摘要及来源覆盖率",
         "已知地址与未核实访客的有界独立采集限额",
-        "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出，支持相邻等长周期对比、按屏宽筛选和全页截图热图"
+        "原始记录与保留期不改写；按网站和实际统计区间隔离报表、漏斗及导出，支持相邻等长周期对比、按屏宽筛选和全页截图热图，并可按站点启用国家或地区分布"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.4.4/manifest.json",
-      "sha256": "f60951200d959ab020351cb5da9838cc18abb1f70641f5c7423a0ab3a6ccdff4"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/website-analytics/2.4.5/manifest.json",
+      "sha256": "ae432d7ee9489177491195cadeeadaf69222ef2d18ba5c5fa55300655b984d2f"
     },
     {
       "id": "website-statistics-v2",
