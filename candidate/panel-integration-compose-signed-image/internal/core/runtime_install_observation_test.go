@@ -66,3 +66,54 @@ func TestRuntimeWorkerUncertainOrInvalidCompletionCannotPublish(t *testing.T) {
 		})
 	}
 }
+
+func TestRuntimeWorkerObservesOriginalAfterTemporaryStatusFailure(t *testing.T) {
+	store := testStore(t)
+	release := runtimecatalog.Apache[0].ID
+	id, err := store.QueueInstall(release, ID(), "admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	job, err := store.nextRuntimeInstallJob()
+	if err != nil || job.ID != id {
+		t.Fatal(err, job)
+	}
+	var starts, polls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/runtimes/install":
+			starts.Add(1)
+			_ = json.NewEncoder(w).Encode(map[string]string{"state": "running"})
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/runtimes/jobs/"+id:
+			if polls.Add(1) == 1 {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				_ = json.NewEncoder(w).Encode(map[string]string{"error": "systemctl: context deadline exceeded"})
+				return
+			}
+			var state string
+			if err := store.DB.QueryRow("SELECT state FROM runtime_jobs WHERE id=?", id).Scan(&state); err != nil || state != "running" {
+				t.Error("temporary read failure changed job state", state, err)
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"job_id": id, "release_id": release, "state": "succeeded", "architecture": "amd64",
+				"steps": []Step{{Time: Now(), Message: "verified native install"}},
+			})
+		default:
+			t.Error("unexpected operation", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+	}))
+	defer server.Close()
+	client := &ExecutorClient{Client: &http.Client{Transport: rewriteExecutorTransport{base: http.DefaultTransport, url: server.URL}}}
+	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
+	defer cancel()
+	runRuntimeJob(ctx, store, client, job)
+	var state, detail, steps string
+	if err := store.DB.QueryRow("SELECT state,error,steps FROM runtime_jobs WHERE id=?", id).Scan(&state, &detail, &steps); err != nil {
+		t.Fatal(err)
+	}
+	if state != "succeeded" || detail != "" || !strings.Contains(steps, "verified native install") ||
+		!store.RuntimeInstalled(release) || starts.Load() != 1 || polls.Load() != 2 {
+		t.Fatal("original native result did not settle exactly once", state, detail, steps, starts.Load(), polls.Load())
+	}
+}

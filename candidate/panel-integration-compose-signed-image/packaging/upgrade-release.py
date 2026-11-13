@@ -8,6 +8,7 @@ An interrupted journal is retained for inspection, not silently retried.
 import argparse
 import contextlib
 import ctypes
+import errno
 import fcntl
 import hashlib
 import importlib.util
@@ -17,8 +18,10 @@ import pathlib
 import re
 import shutil
 import signal
+import socket
 import sqlite3
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -31,8 +34,15 @@ import uuid
 sys.dont_write_bytecode = True
 
 PROGRAMS = ('panel-terminal.service', 'panel-terminal-root.service', 'panel-executor.service', 'panel.service')
+STARTUP_SOCKETS = {
+    PROGRAMS[0]: ('/run/panel-terminal/control.sock', 0o600),
+    PROGRAMS[1]: ('/run/panel-terminal-root/control.sock', 0o600),
+    PROGRAMS[2]: ('/run/panel-executor/control.sock', 0o660),
+}
 TIMER = 'panel-mysql-overwrite-recovery.timer'
 QUEUES = ('jobs', 'runtime_jobs', 'mysql_jobs', 'acme_orders')
+# Legacy + Apache each retain 5 s; ordinary L4 gets 90 s plus child exit margin.
+ORDINARY_QUEUE_TIMEOUT_SECONDS = 105
 NATIVE_PREREQUISITES = ('waf-state-directory.py', 'native-build-directories.py')
 VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+([.-][a-z0-9]+)*\Z')
 UNIT = re.compile(r'(?:panel-[a-z0-9@.-]+|panel|var-cache-panel\\x2dapache\\x2dbody)\.(?:service|timer|mount)\Z')
@@ -862,10 +872,10 @@ class Upgrade:
                                             input_text=json.dumps(self.filesync_unpublished, sort_keys=True), timeout=10)
                 witness = self.validate_filesync_witness(observed)
                 if witness['state'] == 'observed-original-retained-receipt':
-                    self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+                    self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
                     self.filesync_retention_observed = True
             else:
-                self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+                self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
         except CommandFailure as error:
             # A later read may succeed and cannot explain this ORIGINAL refusal.
             # Preserve that exact child's bounded output only in the already
@@ -934,7 +944,7 @@ class Upgrade:
         witness = self.validate_filesync_witness(json.dumps(value['witness']))
         if witness['state'] != 'observed-original-retained-receipt':
             raise ValueError('original filesync retention has no matched durable receipt')
-        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
         self.filesync_retention_observed = True
 
     def preflight_admission_is_readonly(self):
@@ -1455,7 +1465,66 @@ class Upgrade:
     def start_previous_state(self):
         self.release_runtime()
         self.authorize_startup()
-        self.run_command('/usr/bin/systemctl', 'start', *PROGRAMS)
+        # Both terminals must finish their independent kernel-lease checks
+        # before systemd queues the executor. Starting all four as a batch
+        # can run those checks concurrently and cascade a transient timeout
+        # into dependency failures, including during rollback.
+        for unit in PROGRAMS:
+            self.run_command('/usr/bin/systemctl', 'start', unit)
+            state = self.state(unit)
+            if (state['ActiveState'], state['SubState']) != ('active', 'running'):
+                raise RuntimeError('program did not reach the expected running state: ' + unit)
+            if unit in STARTUP_SOCKETS:
+                self.wait_startup_socket(unit)
+
+    def startup_service_pid(self, unit):
+        value = self.run_command('/usr/bin/systemctl', 'show', unit, '--property=MainPID', '--value', timeout=4)
+        if not re.fullmatch(r'[1-9][0-9]{0,9}', value) or not 1 < int(value) <= 2147483647:
+            raise RuntimeError('guarded program lost its systemd PID: ' + unit)
+        return int(value)
+
+    def probe_startup_socket(self, path, mode, expected_pid):
+        # A pathname or an active Type=simple job is not readiness. An actual
+        # connect plus kernel peer PID binds the listener to this start job.
+        try:
+            before = path.lstat()
+        except FileNotFoundError:
+            return False
+        if not stat.S_ISSOCK(before.st_mode) or before.st_nlink != 1:
+            raise ValueError('unexpected guarded startup socket identity')
+        # Go creates its listener before chmod; wait for the final private mode.
+        if stat.S_IMODE(before.st_mode) != mode:
+            return False
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as connection:
+            connection.settimeout(0.25)
+            try:
+                connection.connect(str(path))
+            except OSError as err:
+                if isinstance(err, TimeoutError) or err.errno in (errno.ENOENT, errno.ECONNREFUSED, errno.EAGAIN):
+                    return False
+                raise
+            width = struct.calcsize('3i')
+            pid, uid, gid = struct.unpack('3i', connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, width))
+        try:
+            after = path.lstat()
+        except FileNotFoundError:
+            return False
+        identity = lambda info: (info.st_dev, info.st_ino, info.st_mode, info.st_uid, info.st_gid, info.st_nlink)
+        return pid == expected_pid and uid == before.st_uid and identity(before) == identity(after)
+
+    def wait_startup_socket(self, unit):
+        name, mode = STARTUP_SOCKETS[unit]
+        expected_pid = self.startup_service_pid(unit)
+        deadline = time.monotonic() + 12
+        while time.monotonic() < deadline:
+            if self.probe_startup_socket(self.path(name), mode, expected_pid):
+                if self.startup_service_pid(unit) != expected_pid:
+                    raise RuntimeError('guarded program changed during socket startup: ' + unit)
+                return
+            if self.startup_service_pid(unit) != expected_pid:
+                raise RuntimeError('guarded program restarted before socket startup: ' + unit)
+            time.sleep(0.1)
+        raise RuntimeError('guarded program socket did not become ready: ' + unit)
 
     def timer_declaration(self):
         info=self.directory(self.backup,private=True)
