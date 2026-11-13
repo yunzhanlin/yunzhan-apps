@@ -46,6 +46,14 @@ func streamInstallationPrivateRead(root *os.Root, name string, limit int64) ([]b
 // Initial Core success additionally requires the submitter's once-only actual
 // systemctl --wait exit observation, retained in its separate private record.
 func readLoadBalanceStreamCommittedInstallation(ctx context.Context, job string) (core.LoadBalanceStreamInstallResult, error) {
+	return readLoadBalanceStreamCommittedInstallationWithEngine(ctx, job, nil)
+}
+
+// A live installed context already owns the exact Root-trusted ELF and native
+// manifest descriptors after hashing and executing their fixed -V probe.
+// Reuse that witness only while both held files still match their names and
+// original metadata. Other callers retain the full independent engine probe.
+func readLoadBalanceStreamCommittedInstallationWithEngine(ctx context.Context, job string, engine *loadBalanceStreamHeldEngine) (core.LoadBalanceStreamInstallResult, error) {
 	empty := core.LoadBalanceStreamInstallResult{}
 	if ctx == nil || ctx.Err() != nil || !core.ValidID(job) || os.Geteuid() != 0 {
 		return empty, errLoadBalanceStreamInstallationJournal
@@ -152,15 +160,22 @@ func readLoadBalanceStreamCommittedInstallation(ctx context.Context, job string)
 	if err != nil || accountSHA != receipt.AccountReceiptSHA256 || identity.SHA256 != receipt.NSSSHA256 {
 		return empty, errLoadBalanceStreamAccount
 	}
-	engine, err := holdLoadBalanceStreamRecordedEngine(ctx, receipt.NginxReleaseID)
-	if err != nil {
-		return empty, err
+	if engine == nil {
+		engine, err = holdLoadBalanceStreamRecordedEngine(ctx, receipt.NginxReleaseID)
+		if err != nil {
+			return empty, err
+		}
+		defer engine.close()
 	}
-	defer engine.close()
-	if engine.binary.sha != receipt.NginxSHA256 || engine.manifest.sha != receipt.NginxManifestSHA256 || !engine.current() || !installed.current() || !j.current() || ctx.Err() != nil {
+	if !streamCommittedEngineMatches(engine, receipt) || !installed.current() || !j.current() || ctx.Err() != nil {
 		return empty, errLoadBalanceStreamInstallationJournal
 	}
 	return core.LoadBalanceStreamInstallResult{Format: 1, JobID: job, Version: seed.AppVersion, State: "committed", InstallationID: receipt.InstallationID, SeedSHA256: receipt.SeedSHA256, FinalEventSHA256: receipt.FinalEventSHA256, PublishedModuleSHA256: receipt.PublishedModuleSHA256, AccountReceiptSHA256: receipt.AccountReceiptSHA256}, nil
+}
+
+func streamCommittedEngineMatches(engine *loadBalanceStreamHeldEngine, receipt loadBalanceStreamInstallationReceipt) bool {
+	return engine != nil && engine.release.ID == receipt.NginxReleaseID && engine.current() &&
+		engine.binary.sha == receipt.NginxSHA256 && engine.manifest.sha == receipt.NginxManifestSHA256
 }
 
 // The complete copied bytes are not a substitute for retaining the ORIGINAL

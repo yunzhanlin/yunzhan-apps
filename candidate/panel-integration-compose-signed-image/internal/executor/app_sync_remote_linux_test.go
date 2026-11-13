@@ -56,7 +56,8 @@ func newRemoteSyncFixture(t *testing.T) *remoteSyncFixture {
 		t.Skip("native OpenSSH SFTP fixture requires explicit owned QA opt-in")
 	}
 	host, e := os.ReadFile("/etc/hostname")
-	owned := e == nil && (strings.TrimSpace(string(host)) == "lima-panel-ids24hj-clean-ubuntu24" || strings.TrimSpace(string(host)) == "lima-panel-analytics23t-unit-debian13" || strings.TrimSpace(string(host)) == "lima-panel-nfs-c38-fresh-ubuntu26" || strings.TrimSpace(string(host)) == "lima-p59a")
+	owned := e == nil && (strings.TrimSpace(string(host)) == "lima-panel-ids24hj-clean-ubuntu24" || strings.TrimSpace(string(host)) == "lima-panel-analytics23t-unit-debian13" || strings.TrimSpace(string(host)) == "lima-panel-nfs-c38-fresh-ubuntu26" || strings.TrimSpace(string(host)) == "lima-p59a" ||
+		strings.TrimSpace(string(host)) == "lima-panel-openlitespeed-c92r2-arm64-qa" || strings.TrimSpace(string(host)) == "lima-panel-lb-c132-amd64-d12-qa")
 	// This additional test-only scope is the project's ephemeral GitHub runner,
 	// still non-root, explicitly opted in, exact-binary-pinned and loopback-only.
 	ci := os.Getenv("GITHUB_ACTIONS") == "true" && os.Getenv("GITHUB_REPOSITORY") == "yunzhanlin/yunzhan-apps" && os.Getenv("PANEL_REMOTE_SYNC_CI_SOURCE") == "files-sync-root-independent-backup-v1"
@@ -479,6 +480,99 @@ func TestRemoteSyncRealSSHIncrementalConflictsAndReplay(t *testing.T) {
 	}
 	t.Log("PASS actual SSH/SFTP packets, incremental files, private old-byte backup, external conflict and durable task replay")
 }
+func TestRemoteSyncPreviewDistinguishesActualChanges(t *testing.T) {
+	f := newRemoteSyncFixture(t)
+	fixtureWrite(t, f.s, f.site, "stable.txt", "equal")
+	fixtureWrite(t, f.s, f.site, "update.txt", "previous")
+	fixtureWrite(t, f.s, f.site, "tracked-conflict.txt", "old")
+	initial := f.run(t, core.ID())
+	if initial.State != "succeeded" || initial.Copied != 3 {
+		t.Fatal("native SFTP baseline", initial)
+	}
+
+	fixtureWrite(t, f.s, f.site, "create.txt", "1234567")
+	fixtureWrite(t, f.s, f.site, "update.txt", "newer")
+	fixtureWrite(t, f.s, f.site, "tracked-conflict.txt", "local")
+	fixtureWrite(t, f.s, f.site, "untracked.txt", "source")
+	fixtureWrite(t, f.s, f.site, "excluded.txt", "never")
+	remoteFixtureWrite(t, filepath.Join(f.root, "tracked-conflict.txt"), "remote")
+	remoteFixtureWrite(t, filepath.Join(f.root, "untracked.txt"), "remote original")
+	remoteFixtureWrite(t, filepath.Join(f.root, "target-only.txt"), "keep")
+
+	checkpoint := f.s.remoteCheckpointPath(f.cfg.ID)
+	originalCP, err := os.ReadFile(checkpoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	in := core.AppModuleInput{SiteID: f.site, RemoteTargetID: f.cfg.ID, ExpectedRevision: f.cfg.Revision, Excludes: []string{"excluded.txt"}}
+	out, err := f.s.moduleRemoteSync(context.Background(), "remote-preview", in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := out.(map[string]any)
+	report := result["remote_sync_preview"].(remoteSyncPreview)
+	if report.SiteID != f.site || report.TargetID != f.cfg.ID || report.Revision != f.cfg.Revision || !reflect.DeepEqual(report.Excludes, in.Excludes) ||
+		report.Counts[remoteSyncCreate] != 1 || report.Counts[remoteSyncUpdate] != 1 ||
+		report.Counts[remoteSyncUnchanged] != 1 || report.Counts[remoteSyncConflict] != 2 ||
+		report.SourceFiles != 5 || report.SourceBytes != 28 || report.TransferBytes != 12 || report.RowsLimited ||
+		moduleCount(result, "copied") != 2 || moduleCount(result, "conflicts") != 2 || len(result["deletes"].([]string)) != 0 {
+		t.Fatalf("unexpected remote preview: %#v", report)
+	}
+	type expectedRow struct {
+		path        string
+		action      remoteSyncDecision
+		targetBytes int64
+		reason      string
+	}
+	expected := []expectedRow{
+		{"create.txt", remoteSyncCreate, -1, ""},
+		{"tracked-conflict.txt", remoteSyncConflict, 6, "target_changed"},
+		{"untracked.txt", remoteSyncConflict, 15, "untracked_target"},
+		{"update.txt", remoteSyncUpdate, 8, ""},
+	}
+	if len(report.Rows) != len(expected) {
+		t.Fatalf("unexpected row count: %d", len(report.Rows))
+	}
+	for i, row := range report.Rows {
+		want := expected[i]
+		if row.Path != want.path || row.Action != want.action || row.Reason != want.reason ||
+			(want.targetBytes < 0 && row.TargetBytes != nil) ||
+			(want.targetBytes >= 0 && (row.TargetBytes == nil || *row.TargetBytes != want.targetBytes)) {
+			t.Fatalf("wrong preview row for %s: %#v", want.path, row)
+		}
+	}
+	if after, err := os.ReadFile(checkpoint); err != nil || !bytes.Equal(after, originalCP) {
+		t.Fatal("preview wrote checkpoint", err)
+	}
+	if _, err := os.Stat(filepath.Join(f.root, "create.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("preview created a file", err)
+	}
+	stale := in
+	stale.ExpectedRevision++
+	if _, err = f.s.moduleRemoteSync(context.Background(), "remote-preview", stale); err == nil {
+		t.Fatal("stale connection revision accepted")
+	}
+
+	// Change the target after the preview. Execution must keep the new remote
+	// content rather than treating the prior preview as authority to overwrite.
+	remoteFixtureWrite(t, filepath.Join(f.root, "update.txt"), "written after preview")
+	in.RemoteRequestID = core.ID()
+	if _, err = f.s.moduleRemoteSync(context.Background(), "queue-remote", in); err != nil {
+		t.Fatal(err)
+	}
+	f.s.runOneRemoteSyncJob(context.Background())
+	job, err := f.s.readRemoteJob(in.RemoteRequestID)
+	if err != nil || job.State != "conflicts" || job.Copied != 1 || job.Skipped != 1 || len(job.Conflicts) != 3 ||
+		remoteFixtureRead(t, filepath.Join(f.root, "update.txt")) != "written after preview" ||
+		remoteFixtureRead(t, filepath.Join(f.root, "target-only.txt")) != "keep" ||
+		remoteFixtureRead(t, filepath.Join(f.root, "create.txt")) != "1234567" || f.commands.Load() != 0 {
+		t.Fatal("actual SFTP safety did not survive stale preview", job, err)
+	}
+	if _, err := os.Stat(filepath.Join(f.root, "excluded.txt")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("excluded file copied", err)
+	}
+}
+
 func TestRemoteSyncHostKeyAndPathRefusal(t *testing.T) {
 	f := newRemoteSyncFixture(t)
 	fixtureWrite(t, f.s, f.site, "safe.txt", "safe")

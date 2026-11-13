@@ -4,6 +4,7 @@ import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
 import AnalyticsPerformanceReport from "./AnalyticsPerformanceReport.vue";
 import AnalyticsPeriodComparison from "./AnalyticsPeriodComparison.vue";
 import AnalyticsHeatmapOverlay from "./AnalyticsHeatmapOverlay.vue";
+import AnalyticsSessionActivity from "./AnalyticsSessionActivity.vue";
 import type {AnalyticsPerformancePages} from "./analyticsPerformance";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
@@ -35,7 +36,7 @@ const props=defineProps<{api:API;installed:boolean;installedVersion?:string;site
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","2.4.5"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","2.4.5","2.4.6"].includes(props.installedVersion||""));
 const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1),heatViewport=ref<HeatViewport>();
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
@@ -47,7 +48,8 @@ let funnelSequence=0;
 let sequence=0;
 let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
-const geographySupported = computed(() => props.installedVersion === "2.4.5");
+const activitySupported = computed(() => props.installedVersion === "2.4.6");
+const geographySupported = computed(() => props.installedVersion === "2.4.5" || activitySupported.value);
 const geographyStatus: Record<string, string> = {
   located: "已定位", non_public: "非公网地址", unverified: "地址未核实", unavailable: "地理库暂不可用",
   not_found: "地理库无匹配", not_collected: "未采集地理分布",
@@ -208,7 +210,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
       <el-tab-pane label="访客与会话" name="sessions">
         <el-alert v-if="(report?.ordering_uncertain_sessions||0)>0" title="部分会话缺少访问序号或序号存在冲突，这些旅程按服务端接收顺序估计；旧记录保留原样。" type="warning" :closable="false" />
         <p>标识经服务端按网站隔离后哈希。浏览器标识不等于真实人数，原始 IP 不保留。</p>
-        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
+        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p><AnalyticsSessionActivity v-if="activitySupported && report" :load="api" :site="selected" :session="row.id" :visitor="row.visitor" :from="report.from" :to="report.to" /></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
       </el-tab-pane>
       <el-tab-pane label="点击热图" name="heatmap">
         <p>需在采集设置单独开启。使用文档百分比坐标，支持按采集时的屏宽查看。</p>

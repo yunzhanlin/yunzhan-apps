@@ -131,7 +131,7 @@ class UpgradePolicyTests(unittest.TestCase):
                     before = transaction.database.read_bytes()
                     if state in ('completed', 'failed'):
                         transaction.queue_check()
-                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 10})])
+                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 105})])
                     else:
                         with self.assertRaises(ValueError):
                             transaction.queue_check()

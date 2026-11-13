@@ -21,6 +21,7 @@ const StatisticsGeographyFeature = "statistics-geodata-v2"
 // Separate maintenance grants and original native journals; old health-only
 // handlers and the unversioned prototype must not authorize the1.3 package.
 const PlatformMaintenanceFeature = "platform-maintenance-v1"
+const PlatformMaintenanceFleetFeature = "platform-maintenance-fleet-check-v1"
 
 // Includes bounded FD-relative nofollow traversal, inode-deduplicated block
 // accounting and truthful unknown/partial reporting. Logical-only handlers do
@@ -101,10 +102,10 @@ func panelFeatureAvailable(feature string) bool {
 	if feature == ApacheNativeCCSiteFeature || feature == ApacheCCLogArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
-	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature || feature == AnalyticsNavigationOrderFeature || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature || feature == AnalyticsLayoutHeatmapFeature || feature == AnalyticsGeographyFeature {
+	if feature == AnalyticsClientAddressFeature || feature == AnalyticsRoutePerformanceFeature || feature == AnalyticsNavigationOrderFeature || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature || feature == AnalyticsLayoutHeatmapFeature || feature == AnalyticsGeographyFeature || feature == AnalyticsSessionActivityFeature {
 		return runtime.GOOS == "linux"
 	}
-	if feature == CountryDataFeature {
+	if feature == CountryDataFeature || feature == PlatformMaintenanceFleetFeature {
 		return runtime.GOOS == "linux"
 	}
 	if feature == LoadBalanceStreamFeature {
@@ -308,12 +309,19 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 			return errors.New("维护应用版本无法核对")
 		}
 		if comparison >= 0 {
-			found := false
-			for _, feature := range manifest.RequiredPanelFeatures {
-				found = found || feature == PlatformMaintenanceFeature
+			fleet := manifest.Version == "1.3.1"
+			exact := 1
+			if fleet {
+				exact = 2
 			}
-			if manifest.Version != "1.3.0" || !found {
-				return errors.New("维护1.3仅接受固定完整版本及独立授权、原生原回执处理器声明")
+			foundMaintenance, foundFleet := false, false
+			for _, feature := range manifest.RequiredPanelFeatures {
+				foundMaintenance = foundMaintenance || feature == PlatformMaintenanceFeature
+				foundFleet = foundFleet || feature == PlatformMaintenanceFleetFeature
+			}
+			if (manifest.Version != "1.3.0" && !fleet) ||
+				!foundMaintenance || fleet != foundFleet || len(manifest.RequiredPanelFeatures) != exact {
+				return errors.New("维护应用需要固定版本及匹配的独立授权与批量检查处理器")
 			}
 		}
 	}
@@ -415,8 +423,11 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
 		if feature == DiskHostCancelSealFeature && (manifest.ID != "disk-analysis" || manifest.Version != "1.4.1" || manifest.Delivery.Target != manifest.ID || manifest.Delivery.ManageRoute != "app-modules") {
 			return errors.New("原取消收尾处理器仅属于disk-analysis1.4.1的固定功能管理目标")
 		}
-		if feature == PlatformMaintenanceFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.0" || manifest.Delivery.Target != manifest.ID) {
-			return errors.New("独立维护处理器要求仅属于platform-ops1.3.0")
+		if feature == PlatformMaintenanceFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.0" && manifest.Version != "1.3.1" || manifest.Delivery.Target != manifest.ID) {
+			return errors.New("独立维护处理器仅适用于固定版本的平台运维")
+		}
+		if feature == PlatformMaintenanceFleetFeature && (manifest.ID != "platform-ops" || manifest.Version != "1.3.1" || manifest.Delivery.Target != manifest.ID) {
+			return errors.New("批量检查处理器仅适用于平台运维 1.3.1")
 		}
 		if (feature == StatisticsCursorRetirementFeature || feature == StatisticsRequestIdentityFeature || feature == StatisticsGeographyFeature) && (manifest.ID != "website-statistics-v2" || manifest.Delivery.Target != manifest.ID) {
 			return errors.New("统计历史处理器要求不属于该应用")
