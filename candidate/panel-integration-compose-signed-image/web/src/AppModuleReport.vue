@@ -12,6 +12,7 @@ import {taskProcessColumns,taskProcessRows} from './taskManager';
 import {statisticsHistoryNotice} from './statisticsHistory';
 import {diskDirectorySelection,diskFileSelection,diskValueNotice} from './diskUsage';
 import {mobileArtifactURL} from './mobileDelivery';
+import SiteDiagnosisBatch from './SiteDiagnosisBatch.vue';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const checks = computed(() => {
   const entries = Object.entries((props.report.checks || {}) as Record<string, Record<string, any>>);
@@ -270,6 +271,7 @@ const names: Record<string, string> = {
   not_after: "到期时间",
   issuer: "签发者",
   checked_at: "检查时间（UTC）",
+  site_count: "网站数",
   invalid_lines: "跳过无效日志",
   partial: "结果不完整",
   copied: "已复制",
@@ -544,7 +546,8 @@ const metrics = computed(() =>
 );
 const groups = computed(() =>
   Object.entries({...props.report, ...(props.id==="files-sync" && props.report.job ? {remote_jobs:[props.report.job]} : {}), ...(props.id==="files-sync" && props.report.remote_plan ? {remote_plans:[props.report.remote_plan]} : {}), ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
-    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
+    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key)
+      && !(props.id === "site-diagnosis" && key === "diagnoses"),
   ),
 );
 const distributions = computed(() =>
@@ -737,13 +740,9 @@ function mobileDownloadURL(item: unknown): string | undefined {
     <AnalyticsLatencyReport v-if="analytics && report.latency !== undefined" :report="report.latency" />
     <AnalyticsGeographyReport v-if="analytics && report.geography !== undefined" :report="report.geography" />
     <el-alert v-if="analytics && report.geography_error" type="warning" :closable="false" :title="String(report.geography_error)" />
-    <template v-if="id === 'site-diagnosis' && Array.isArray(report.diagnoses)">
-      <details v-for="item in report.diagnoses" :key="item.site_id" class="diagnosis-check">
-        <summary>{{ item.report?.domain || item.site_id }}</summary>
-        <AppModuleReport v-if="item.report" id="site-diagnosis" :report="item.report" />
-        <el-alert v-else type="error" :title="item.error || '无法读取站点诊断结果'" :closable="false" />
-      </details>
-    </template>
+    <SiteDiagnosisBatch v-if="id === 'site-diagnosis' && Object.hasOwn(report,'diagnoses')" :report="report">
+      <template #default="{ report: siteReport }"><AppModuleReport id="site-diagnosis" :report="siteReport" /></template>
+    </SiteDiagnosisBatch>
     <template v-if="report.checks">
       <section
         v-for="[key, value] in checks"

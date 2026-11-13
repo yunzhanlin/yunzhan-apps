@@ -72,3 +72,37 @@ test('legacy duplicate-reason failed receipts still validate and exact export da
  assert(h.validHostReply(legacy,job));const before=JSON.stringify(legacy);assert.equal(h.hostReasonLabels(legacy.result.report.partial_reasons).length,1);assert.equal(JSON.stringify(legacy),before);assert.equal(legacy.result.report.index_flushed,false);assert.equal(legacy.terminal_verified,true);assert.equal(legacy.job.state,'failed');
  const component=readFileSync(new URL('../web/src/HostDiskWorkspace.vue',import.meta.url),'utf8');assert(component.includes("hostReasonLabels(report.partial_reasons).join('、')"));assert.doesNotMatch(component,/report\.partial_reasons\s*=/);
 });
+
+test('only complete sequential reports from the same original scope compare, with exact 64-bit changes',()=>{
+ const make=(id,date)=>{
+  const r=structuredClone(finishedReply), time=(s)=>'2026-11-'+date+'T00:00:0'+s+'Z';
+  r.job.id=r.job.request.job_id=r.result.request.job_id=id;
+  r.job.state=r.result.state=r.result.report.state='complete';
+  r.job.created_at=time(1);r.job.updated_at=r.result.at=time(3);
+  r.result.report.started_at=time(1);r.result.report.finished_at=time(2);
+  r.result.report.enumeration_complete=true;r.result.report.index_flushed=true;
+  return r;
+ };
+ const old=make('a'.repeat(32),'10'),newer=make('b'.repeat(32),'12');
+ old.result.report.inode_allocated_bytes='9007199254740993';
+ newer.result.report.inode_allocated_bytes='9007199254740994';
+ old.result.report.unique_regular_files='4';newer.result.report.unique_regular_files='2';
+ const original=JSON.stringify([old,newer]),r=h.compareHostReports(old,newer,old.job,newer.job);
+ assert(r);assert.equal(r.metrics.find(m=>m.key==='inode_allocated_bytes').change,'1');
+ assert.equal(r.metrics.find(m=>m.key==='unique_regular_files').change,'-2');
+ assert.equal(JSON.stringify([old,newer]),original);
+ assert.equal(h.formatHostChange('-2','count'),'−2');assert.equal(h.formatHostChange('1024','bytes'),'+1.0 KiB');
+ assert.equal(h.formatHostChange('0','bytes'),'0 B');
+ for(const mutate of [
+  r=>r.result.report.started_at='2026-11-10T00:00:01Z',
+  r=>r.result.report.selected_path='/different-scan',
+  r=>r.result.report.finished_at='2026-11-12T00:00:00Z',
+  r=>r.result.report.index_flushed=false,
+  r=>r.report_unavailable=true,
+  r=>r.result.request.selection.mount_binding_sha256='e'.repeat(64),
+  r=>r.terminal_verified=false
+ ]){const bad=structuredClone(newer);mutate(bad);assert.equal(h.compareHostReports(old,bad,old.job,newer.job),undefined);}
+ assert.equal(h.compareHostReports(newer,old,newer.job,old.job),undefined);
+ assert.equal(h.hostComparableJobs(old.job,{...newer.job,request:{...newer.job.request,actor_id:'9'.repeat(32)}}),false);
+ assert.equal(h.hostComparableJobs(old.job,{...newer.job,request:{...newer.job.request,selection:{...newer.job.request.selection,relative_directory:'other'}}}),false);
+});
