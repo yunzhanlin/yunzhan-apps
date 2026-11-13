@@ -34,7 +34,7 @@ func (g AnalyticsGeography) Valid() bool {
 }
 
 func (s *Store) analyticsGeographyInstalled(ctx context.Context) bool {
-	return s.analyticsHasReceipt(ctx, appcatalog.AnalyticsGeographyVersion)
+	return s.analyticsHasReceipt(ctx, appcatalog.AnalyticsGeographyVersion, appcatalog.AnalyticsSessionActivityVersion)
 }
 
 func (a *Server) analyticsPageGeography(ctx context.Context, siteID, address string) *AnalyticsGeography {

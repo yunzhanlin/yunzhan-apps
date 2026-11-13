@@ -463,7 +463,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "disk-analysis":
 			version = DiskAnalysisAppVersion
 		case "platform-ops":
-			version = PlatformMaintenanceAppVersion
+			version = PlatformMaintenanceFleetAppVersion
 		case "task-manager":
 			version = TaskOpenSSHInventoryAppVersion
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
@@ -487,7 +487,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "user-manager":
 			version = appcatalog.UserAccessOverviewVersion
 		case "website-analytics":
-			version = appcatalog.AnalyticsGeographyVersion
+			version = appcatalog.AnalyticsSessionActivityVersion
 		case "pure-ftpd":
 			version = appcatalog.FTPTransferHistoryVersion
 		case "nfs-manager":

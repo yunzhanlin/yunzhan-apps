@@ -130,4 +130,6 @@ test('offline reader reversal cannot hide changed original predicates or deadlin
  const ordinary=beforeFilesyncOfflineReaderHook(current);
  assert.notEqual(sha(beforeFilesyncOfflineReaderHook(current.replace('CheckHostDiskUpgrade(ctx)','CheckHostDiskUpgrade(context.Background())'))),sha(ordinary));
  assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('context.WithTimeout(context.Background(), 5*time.Second)','context.WithTimeout(context.Background(), 6*time.Second)')));
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('45*time.Second','46*time.Second')));
+ assert.throws(()=>beforeFilesyncOfflineReaderHook(current.replace('checkLoadBalanceStreamUpgrade(trafficCtx, nil)','checkLoadBalanceStreamUpgrade(context.Background(), nil)')));
 });

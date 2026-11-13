@@ -101,6 +101,7 @@ func (s *Store) migrateAnalytics() error {
 CREATE TABLE IF NOT EXISTS analytics_config(site_id TEXT PRIMARY KEY REFERENCES sites(id),public_key TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL,clicks INTEGER NOT NULL,retention INTEGER NOT NULL,revision INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS analytics_events(site_id TEXT NOT NULL REFERENCES sites(id),id TEXT NOT NULL,received INTEGER NOT NULL,visitor TEXT NOT NULL,session TEXT NOT NULL,kind TEXT NOT NULL,path TEXT NOT NULL,ip_hash TEXT NOT NULL,data TEXT NOT NULL,PRIMARY KEY(site_id,id));
 CREATE INDEX IF NOT EXISTS analytics_event_time ON analytics_events(site_id,received);
+CREATE INDEX IF NOT EXISTS analytics_event_session_time ON analytics_events(site_id,session,visitor,received);
 CREATE INDEX IF NOT EXISTS analytics_event_retention ON analytics_events(received);
 CREATE TABLE IF NOT EXISTS analytics_budget(id INTEGER PRIMARY KEY CHECK(id=1),events INTEGER NOT NULL);
 INSERT OR IGNORE INTO analytics_budget SELECT 1,count(*) FROM analytics_events;
@@ -357,6 +358,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 	}))
 	m.HandleFunc("POST /api/analytics/sites/{id}/config", a.authorize(a.configureAnalyticsProxy))
 	m.HandleFunc("GET /api/analytics/sites/{id}/funnel", a.authorize(a.analyticsFunnel))
+	m.HandleFunc("GET /api/analytics/sites/{id}/sessions/{session}/activity", a.authorize(a.analyticsSessionActivity))
 	m.HandleFunc("GET /api/analytics/sites/{id}/report", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		if _, e := a.Store.Site(r.PathValue("id")); e != nil {
 			fail(w, 404, "网站不存在")
@@ -582,7 +584,7 @@ func (s *Store) storeAnalyticsEvent(ctx context.Context, id string, retention in
 		e = tx.QueryRowContext(ctx, `SELECT c.enabled AND json_type(s.settings_json,'$.analytics_geography') IS 'true'
 			FROM analytics_config c JOIN sites s ON s.id=c.site_id
 			JOIN app_registry_receipts r ON r.app_id='website-analytics' AND r.scope=r.app_id AND r.target=r.app_id
-			WHERE c.site_id=? AND r.version=? AND length(r.sha256)=64 AND r.sha256 NOT GLOB '*[^0-9a-f]*'`, id, appcatalog.AnalyticsGeographyVersion).Scan(&allowed)
+			WHERE c.site_id=? AND r.version IN (?,?) AND length(r.sha256)=64 AND r.sha256 NOT GLOB '*[^0-9a-f]*'`, id, appcatalog.AnalyticsGeographyVersion, appcatalog.AnalyticsSessionActivityVersion).Scan(&allowed)
 		if e != nil && !errors.Is(e, sql.ErrNoRows) {
 			return e
 		}
