@@ -507,7 +507,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedRecord := map[string]any{"id": id, "version": selectedVersion, "settings": settings, "installed_at": core.Now()}
-	if id == "platform-ops" && selectedVersion == core.PlatformMaintenanceAppVersion {
+	if id == "platform-ops" && core.PlatformMaintenanceVersionSupported(selectedVersion) {
 		installedRecord["installation_id"] = core.ID()
 	}
 	if id == "disk-analysis" && diskjob.HostAppVersionSupported(selectedVersion) {
@@ -712,7 +712,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 				return errors.New("原全盘应用安装实例不能核对；未补写或恢复授权")
 			}
 		}
-		if id == "platform-ops" && version == core.PlatformMaintenanceAppVersion {
+		if id == "platform-ops" && core.PlatformMaintenanceVersionSupported(version) {
 			// A genuine version transition gets a new installation authority.
 			// Same-version repair preserves a verified existing instance.
 			if status.Version != version {

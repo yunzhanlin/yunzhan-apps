@@ -143,8 +143,37 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
   return text;
 }
 
+// Recognize only the new pre-response PHP source retry. All historical
+// queue/producer checks still compare their original complete pinned inputs.
+function beforePHPSourceResponseRetry(text) {
+ for(const addition of [
+  "\t\"net\"\n",
+  "// sourceResponseTimeout is only constructed before a response or source\n// file exists. A stalled or interrupted body cannot use this retry path.\ntype sourceResponseTimeout struct{ cause error }\n\nfunc (e sourceResponseTimeout) Error() string { return e.cause.Error() }\nfunc (e sourceResponseTimeout) Unwrap() error { return e.cause }\n\n",
+  "\tvar responseTimeout sourceResponseTimeout\n\tif r.Family == \"php\" && strings.HasPrefix(r.URL, \"https://www.php.net/distributions/\") && errors.As(err, &responseTimeout) {\n\t\t// A new GET to the same official URL is safe before any response or\n\t\t// staged bytes. Never retry the install or use another source here.\n\t\terr = download(ctx, r.URL, r.SHA256, dst, limits)\n\t\tif cancelled := ctx.Err(); cancelled != nil {\n\t\t\treturn cancelled\n\t\t}\n\t}\n",
+  "\t\tvar network net.Error\n\t\tif resp == nil && ctx.Err() == nil && errors.As(e, &network) && network.Timeout() {\n\t\t\treturn sourceResponseTimeout{cause: e}\n\t\t}\n",
+ ]) {
+  assert.equal(text.split(addition).length,2,"missing, duplicate or altered PHP source response retry");
+  text=text.replace(addition,()=>'');
+ }
+ return text;
+}
+
+// Reverse only the exact Apache archive budget for the older PHP source pins.
+function beforeApacheSourceArchiveBudget(text) {
+ for (const [current, previous] of [
+  ["const apacheSourceArchiveBudget = 25 * time.Minute\n\nfunc runtimeSourceTotalCeiling(url, digest string) time.Duration {\n\t// This historical release remains pinned in installed manifests. Allow\n\t// its official archive to finish on a slow link without extending the\n\t// budget for primary URLs, different source bytes, or any other runtime.\n\tapache, ok := runtimecatalog.Find(\"apache-2.4.68\")\n\tif ok && url == runtimecatalog.SourceArchiveURL(apache) && digest == apache.SHA256 {\n\t\treturn apacheSourceArchiveBudget\n\t}\n\treturn 20 * time.Minute\n}\n\n", ""],
+  ["\t\t\t// Follow only the exact catalogued Apache archive after relocation.\n\t\t\t// Do not resume partial content or relax its digest or idle budget.\n\t\t\tlimits.Total = runtimeSourceTotalCeiling(archive, r.SHA256)", "\t\t\t// Only this exact catalogued official Apache archive gets 20 minutes.\n\t\t\t// No arbitrary mirrors, URLs, digests, retries or resumed partial bytes.\n\t\t\tlimits.Total = 20 * time.Minute"],
+  ["limits.Total > runtimeSourceTotalCeiling(url, digest)", "limits.Total > 20*time.Minute"],
+ ]) {
+  assert.equal(text.split(current).length,2,'missing, duplicate or altered Apache source archive budget');
+  text=text.replace(current,()=>previous);
+ }
+ return text;
+}
+
 // Reverse only C57's exact Apache dependency admission for historical PHP pins.
 export function beforeApacheBuildDependencyAdmission(text) {
+ text=beforePHPSourceResponseRetry(beforeApacheSourceArchiveBudget(text));
  for(const addition of ["\tif r.Family == \"apache\" && !nativeWAFService().wafBuildPackagesReady([]string{\"libapr1-dev\", \"libaprutil1-dev\", \"libnghttp2-dev\"}) {\n\t\treturn errors.New(\"Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码\")\n\t}\n", "\tif e = add(\"正在从官方站点下载精确版本源码并校验完整性\"); e != nil {\n\t\treturn e\n\t}\n"]) {
   assert.equal(text.split(addition).length,2,"missing, duplicate or altered Apache dependency/progress addition");
   text=text.replace(addition,()=>'');
@@ -155,6 +184,11 @@ export function beforeApacheBuildDependencyAdmission(text) {
 // Reverse only C65's exact, private offline-reader parameterization. The
 // ordinary entry still supplies nil; all previous full-file hashes stay intact.
 export function beforeFilesyncOfflineReaderHook(text) {
+  {
+    const ordinaryL4Budget="\t// The signed offline recovery path retains its original five-second\n\t// combined limit. Only the ordinary, read-only traffic census gets a\n\t// separate bounded window: complete stopped generations must be checked\n\t// against the installed engine, systemd, policy and native socket census.\n\tif remoteReader != nil {\n\t\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n\t}\n\tcancel()\n\ttrafficCtx, cancelTraffic := context.WithTimeout(context.Background(), 45*time.Second)\n\tdefer cancelTraffic()\n\tif err := checkLoadBalanceStreamUpgrade(trafficCtx, nil); err != nil {\n\t\tif errors.Is(trafficCtx.Err(), context.DeadlineExceeded) {\n\t\t\treturn errors.New(\"负载均衡 TCP/UDP 原回执与原生服务在限定时间内无法完成核对，保留状态并拒绝升级\")\n\t\t}\n\t\treturn err\n\t}\n\treturn nil\n";
+    assert.equal(text.split(ordinaryL4Budget).length,2,'missing, duplicate or altered ordinary L4 budget');
+    text=text.replace(ordinaryL4Budget, "\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n");
+  }
   {
     const current="func CheckProgramUpgradeQueues() error {\n\treturn checkCompleteProgramUpgradeQueues(nil)\n}\n\n// A nonnil reader is package-private and used only by the explicit signed\n// offline recovery protocol. Ordinary upgrades and all existing controllers\n// always pass nil and retain their complete pending-copy refusal.\nfunc checkCompleteProgramUpgradeQueues(remoteReader func(*Service) error) error {\n\tif err := checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader); err != nil {\n\t\treturn err\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tif err := checkApacheNumericLogUpgrade(ctx, \"/\"); err != nil {\n\t\treturn err\n\t}\n\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n}\n\n// Preserves all existing application, recovery and filesystem checks. The\n// private L4 controllers call this PLUS their independently self-bound fence;\n// they never pass a general native-unit prefix or selected-ID exemption here.\nfunc checkLegacyProgramUpgradeQueues() error {\n\treturn checkLegacyProgramUpgradeQueuesWithRemoteReader(nil)\n}\n\nfunc checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service) error) error {\n";
     const previous="func CheckProgramUpgradeQueues() error {\n\tif err := checkLegacyProgramUpgradeQueues(); err != nil {\n\t\treturn err\n\t}\n\tctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)\n\tdefer cancel()\n\tif err := checkApacheNumericLogUpgrade(ctx, \"/\"); err != nil {\n\t\treturn err\n\t}\n\treturn checkLoadBalanceStreamUpgrade(ctx, nil)\n}\n\n// Preserves all existing application, recovery and filesystem checks. The\n// private L4 controllers call this PLUS their independently self-bound fence;\n// they never pass a general native-unit prefix or selected-ID exemption here.\nfunc checkLegacyProgramUpgradeQueues() error {\n";

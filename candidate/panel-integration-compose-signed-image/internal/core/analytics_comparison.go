@@ -12,7 +12,7 @@ import (
 const AnalyticsPeriodComparisonAppVersion = "2.4.3"
 
 func analyticsPeriodComparisonSupported(version string) bool {
-	return version == AnalyticsPeriodComparisonAppVersion || version == AnalyticsLayoutHeatmapAppVersion || version == appcatalog.AnalyticsGeographyVersion
+	return version == AnalyticsPeriodComparisonAppVersion || version == AnalyticsLayoutHeatmapAppVersion || appcatalog.AnalyticsVersionSupportsGeography(version)
 }
 
 type analyticsComparisonPeriod struct {
