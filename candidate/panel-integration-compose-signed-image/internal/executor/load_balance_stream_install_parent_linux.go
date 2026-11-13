@@ -12,7 +12,13 @@ import (
 	"local/panel/internal/loadbalancestream"
 )
 
-const loadBalanceStreamInstallChildMemory = int64(256 << 20)
+const (
+	loadBalanceStreamInstallParentTimeout  = 170 * time.Second
+	loadBalanceStreamInstallParentWait     = 185 * time.Second
+	loadBalanceStreamInstallAccountTimeout = 65 * time.Second
+	loadBalanceStreamInstallAccountWait    = 75 * time.Second
+	loadBalanceStreamInstallChildMemory    = int64(256 << 20)
+)
 const loadBalanceStreamInstallHostReserve = int64(512 << 20)
 
 // The original parent and account child have the SAME five minimal permitted

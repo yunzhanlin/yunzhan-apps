@@ -18,7 +18,7 @@ func TestLoadBalanceStreamEgressMissingOriginalCannotExecute(t *testing.T) {
 				t.Fatal("missing or released original selected a native nft command")
 			}
 			for _, batch := range [][]byte{nil, {}, []byte("flush ruleset\n")} {
-				if raw, err := g.command(parent, batch, false); err != loadbalancestream.ErrEgressGuard || raw != nil {
+				if raw, err := g.command(parent, batch, streamEgressTableJSON); err != loadbalancestream.ErrEgressGuard || raw != nil {
 					t.Fatal("unbound data selected a command")
 				}
 			}

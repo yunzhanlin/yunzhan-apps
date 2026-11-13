@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"os"
 	"time"
 )
 
@@ -34,16 +35,66 @@ func loadBalanceStreamPeriodicNativeRead(err error) bool {
 	return false
 }
 
+// The cache worker keeps the shared instance lease for its entire verification.
+// Wait before taking runtime or mutation leases. Once acquired, the same inode
+// excludes another cache verification across parent and account-child checks.
+func holdLoadBalanceStreamGeodataFence(ctx context.Context, current func(context.Context) error) (*os.File, error) {
+	bounded, cancel := context.WithTimeout(ctx, 310*time.Second)
+	defer cancel()
+	return waitLoadBalanceStreamGeodataFence(bounded, current, func() (*os.File, error) {
+		return statisticsGeoInstanceLease(true)
+	}, func(ctx context.Context) error { return pauseLoadBalanceStreamQueue(ctx, time.Second) })
+}
+
+func waitLoadBalanceStreamGeodataFence(ctx context.Context, current func(context.Context) error, acquire func() (*os.File, error), pause func(context.Context) error) (*os.File, error) {
+	for {
+		if ctx.Err() != nil || current(ctx) != nil {
+			return nil, errLoadBalanceStreamInstallationGate
+		}
+		lease, err := acquire()
+		if err == nil {
+			if ctx.Err() != nil || current(ctx) != nil {
+				lease.Close()
+				return nil, errLoadBalanceStreamInstallationGate
+			}
+			return lease, nil
+		}
+		if !errors.Is(err, errStatisticsGeoInstanceBusy) {
+			return nil, err
+		}
+		if pause(ctx) != nil {
+			if ctx.Err() != nil {
+				return nil, errStatisticsGeoInstanceBusy
+			}
+			return nil, errLoadBalanceStreamInstallationGate
+		}
+	}
+}
+
+func streamInstallGeodataFenceCurrent(lease *os.File) bool {
+	if lease == nil {
+		return false
+	}
+	opened, openErr := lease.Stat()
+	named, nameErr := os.Lstat(statisticsGeoInstanceLock)
+	return openErr == nil && nameErr == nil && moduleRecordInfo(opened, false, false) &&
+		opened.Size() == 0 && geoStoreStableInfo(opened, named)
+}
+
+func pauseLoadBalanceStreamQueue(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func observeLoadBalanceStreamLegacyQueues(ctx context.Context, current func(context.Context) error) error {
 	return loadBalanceStreamLegacyQueueObservation(ctx, current, checkLegacyProgramUpgradeQueues, func(ctx context.Context) error {
-		timer := time.NewTimer(250 * time.Millisecond)
-		defer timer.Stop()
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-timer.C:
-			return nil
-		}
+		return pauseLoadBalanceStreamQueue(ctx, 250*time.Millisecond)
 	})
 }
 

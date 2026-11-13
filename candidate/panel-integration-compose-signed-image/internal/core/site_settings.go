@@ -22,6 +22,7 @@ type RewriteRule struct {
 type SiteSettings struct {
 	PublicIngress          bool          `json:"public_ingress,omitempty"`
 	AnalyticsEndpoint      string        `json:"analytics_endpoint,omitempty"`
+	AnalyticsGeography     bool          `json:"analytics_geography,omitempty"`
 	AnalyticsInjectHTML    bool          `json:"analytics_inject_html,omitempty"`
 	AnalyticsProxyIdentity string        `json:"analytics_proxy_identity,omitempty"`
 	WAFEnabled             *bool         `json:"waf_enabled,omitempty"`
@@ -97,6 +98,9 @@ func ValidateSiteSettings(in SiteSettings, primary, php string) error {
 		if in.AnalyticsEndpoint == "" || len(in.AnalyticsProxyIdentity) != 64 || strings.Trim(in.AnalyticsProxyIdentity, "0123456789abcdef") != "" {
 			return errors.New("采集代理身份必须是与启用上游绑定的固定摘要")
 		}
+	}
+	if in.AnalyticsGeography && (in.AnalyticsEndpoint == "" || in.AnalyticsProxyIdentity == "") {
+		return errors.New("地理分布需要开启并核对本站的采集代理")
 	}
 	if in.AnalyticsEndpoint != "" {
 		if e := ValidateAnalyticsEndpoint(in.AnalyticsEndpoint); e != nil {
@@ -279,8 +283,10 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 	if analytics == nil {
 		in.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 		in.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
+		in.AnalyticsGeography = site.Settings.AnalyticsGeography
 		in.AnalyticsProxyIdentity = site.Settings.AnalyticsProxyIdentity
-	} else if analytics.SiteID != site.ID || (analytics.AutoInjectHTML != nil && in.AnalyticsInjectHTML != *analytics.AutoInjectHTML) {
+	} else if analytics.SiteID != site.ID || (analytics.AutoInjectHTML != nil && in.AnalyticsInjectHTML != *analytics.AutoInjectHTML) ||
+		(analytics.Geography != nil && in.AnalyticsGeography != *analytics.Geography) {
 		return "", errors.New("采集任务的网站或自动接入意图与候选配置不一致，未入队")
 	}
 	in = DefaultSiteSettings(in)
@@ -406,6 +412,9 @@ func finishSiteSettings(tx *sql.Tx, j Job) error {
 		if p.Analytics.AutoInjectHTML != nil && p.Settings.AnalyticsInjectHTML != *p.Analytics.AutoInjectHTML {
 			return errors.New("HTML 接入策略与采集任务不一致")
 		}
+		if p.Analytics.Geography != nil && p.Settings.AnalyticsGeography != *p.Analytics.Geography {
+			return errors.New("地理分布策略与采集任务不一致")
+		}
 		if _, e = saveAnalyticsConfigTx(tx, *p.Analytics); e != nil {
 			return e
 		}
@@ -456,6 +465,7 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 		in.Settings = DefaultSiteSettings(in.Settings)
 		in.Settings.AnalyticsEndpoint = site.Settings.AnalyticsEndpoint
 		in.Settings.AnalyticsInjectHTML = site.Settings.AnalyticsInjectHTML
+		in.Settings.AnalyticsGeography = site.Settings.AnalyticsGeography
 		in.Settings.AnalyticsProxyIdentity = site.Settings.AnalyticsProxyIdentity
 		if site.SettingsRevision != in.ExpectedRevision {
 			fail(w, 409, "网站设置已变化，请重新读取")
