@@ -1,0 +1,58 @@
+{
+  "source_head": "defab145028d8b4dbc01842b959c82884161f69c",
+  "source_inputs_sha256": "58827b9c4894fc08f1a12c07848e8a06d523430fea64fcb07d75bb35213f597d",
+  "source_sdk_tree": "119ef96a38b23a62dbce31b05fcdd14d60ef7223",
+  "version": "0.1.0-dev.proapps24loadbalancereceiptcandidate112",
+  "release_id": 443650202,
+  "tag": "qa-loadbalancereceiptcandidate112-20261113-qa1",
+  "release_assets": {
+    "filesync-recovery-signed-release.py": {
+      "id": 741564562,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-amd64.tar.gz": {
+      "id": 741575343,
+      "bytes": 23939690,
+      "sha256": "ec041ed28a6904e21ccb4a9f10ee7fb2db5c0e62611d758d05dfb0406c0fbc79"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-amd64.tar.gz.manifest": {
+      "id": 741564432,
+      "bytes": 189,
+      "sha256": "d877f2a3bd10329f23839fffc3e181a0280bb9e4b2512227f5d8f03bfc2b253e"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-amd64.tar.gz.sig": {
+      "id": 741564312,
+      "bytes": 64,
+      "sha256": "2c4c44801263dbd5e21711f414204fb3615cc99dbf50df132e484e26db433f93"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-arm64.tar.gz": {
+      "id": 741572471,
+      "bytes": 22154683,
+      "sha256": "2725eb01df64967ac2bdea53e3963c870fa68ae54059f37238c263e91043dc3a"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-arm64.tar.gz.manifest": {
+      "id": 741564465,
+      "bytes": 189,
+      "sha256": "add0e1f78b2e23e1dbfc1fef8f493c61ebfab872ff7a693d34e41bce43243ca8"
+    },
+    "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-arm64.tar.gz.sig": {
+      "id": 741564365,
+      "bytes": 64,
+      "sha256": "37159a74e920e39ab99225e83dae2202ee100b92df020d6dc76c9ead64e0d6df"
+    },
+    "release-signing-dev.pub": {
+      "id": 741564409,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24loadbalancereceiptcandidate112-linux-arm64.tar.gz"
+    }
+  }
+}
