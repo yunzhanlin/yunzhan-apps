@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"local/panel/internal/loadbalancestream"
 )
@@ -181,6 +182,42 @@ func streamUpgradeClearInventory(v map[string]map[string][]byte) {
 	}
 }
 
+// The complete directory census rejects any effect journal, account permit,
+// publication or receipt for the retained job. A legacy parent exit also
+// requires its original signed handoff and an idle child.
+func verifyRetainedLoadBalanceStreamPreflight(ctx context.Context, job core.LoadBalanceStreamUpgradeJob, read func(context.Context, string) (map[string]string, error)) error {
+	if ctx.Err() != nil || job.State != "needs_attention" {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	switch job.RetainedRefusal {
+	case core.LoadBalanceStreamInstallMemory, core.LoadBalanceStreamInstallNginx, core.LoadBalanceStreamRetainedQueueRefusal, core.LoadBalanceStreamRetainedParentExit:
+	default:
+		return errLoadBalanceStreamInstallationJournal
+	}
+	parent, parentErr := loadbalancestream.AccountParentUnit(job.Authority.JobID)
+	child, childErr := loadbalancestream.AccountCreationUnit(job.Authority.JobID)
+	if parentErr != nil || childErr != nil {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	for _, unit := range []string{parent, child} {
+		state, err := read(ctx, unit)
+		invocation, present := state["InvocationID"]
+		if err != nil || !present {
+			return errLoadBalanceStreamInstallationJournal
+		}
+		if unit == parent && job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit &&
+			len(state) == 8 && state["LoadState"] == "loaded" && state["ActiveState"] == "failed" && state["SubState"] == "failed" &&
+			state["MainPID"] == "0" && state["ControlPID"] == "0" && state["ExecMainStatus"] == "1" && state["Result"] == "exit-code" &&
+			core.ValidID(invocation) && invocation != strings.Repeat("0", 32) {
+			continue
+		}
+		if invocation != "" || !streamInstallAccountChildTerminated(state) {
+			return errLoadBalanceStreamInstallationJournal
+		}
+	}
+	return ctx.Err()
+}
+
 func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBalanceStreamUpgradeJob, owner *loadBalanceStreamUpgradeOwner) error {
 	r := &programQueueReader{ctx: ctx, root: "/"}
 	defer func() {
@@ -250,7 +287,9 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 		}
 		for id, files := range records {
 			job, ok := byID[id]
-			if !ok || id != own && job.State != "succeeded" {
+			legacyHandoff := ok && path == loadBalanceStreamSubmissionsRoot && job.State == "needs_attention" &&
+				job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit
+			if !ok || id != own && job.State != "succeeded" && !legacyHandoff {
 				return errLoadBalanceStreamInstallationJournal
 			}
 			switch path {
@@ -258,6 +297,13 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 				v, err := core.DecodeLoadBalanceStreamInstallSubmission(files[id+".json"])
 				if err != nil || v.JobID != id {
 					return errLoadBalanceStreamInstallationJournal
+				}
+				if legacyHandoff {
+					grant := job.Authority
+					authority, err := appcatalog.VerifyLoadBalanceStreamReleaseEnvelope(ctx, v.Release, grant.AppVersion, grant.ManifestSHA256)
+					if err != nil || !authority.Matches(grant.AppVersion, grant.ManifestSHA256) {
+						return errLoadBalanceStreamInstallationJournal
+					}
 				}
 			case loadBalanceStreamAccountPermitsRoot:
 				v, err := loadbalancestream.DecodeAccountChildPermit(files[id+".json"])
@@ -299,6 +345,14 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 	for id, job := range byID {
 		if id == own {
 			continue
+		}
+		if job.State == "needs_attention" {
+			if _, handedOff := all[loadBalanceStreamSubmissionsRoot][id]; handedOff != (job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit) {
+				return errLoadBalanceStreamInstallationJournal
+			}
+			if err := verifyRetainedLoadBalanceStreamPreflight(ctx, job, streamInstallUnitProperties); err != nil {
+				return err
+			}
 		}
 		if job.State == "succeeded" {
 			for _, path := range []string{loadBalanceStreamInstallationJobsRoot, loadBalanceStreamModulePublicationsRoot, loadBalanceStreamSubmissionsRoot, loadBalanceStreamAccountPermitsRoot, loadBalanceStreamInstallObservationsRoot} {
@@ -499,10 +553,10 @@ func checkLoadBalanceStreamUpgrade(ctx context.Context, owner *loadBalanceStream
 	if err != nil {
 		return err
 	}
-	if err = checkLoadBalanceStreamNativeQueues(ctx, owner); err != nil {
+	if err = checkLoadBalanceStreamRootUpgrade(ctx, jobs, owner); err != nil {
 		return err
 	}
-	if err = checkLoadBalanceStreamRootUpgrade(ctx, jobs, owner); err != nil {
+	if err = checkLoadBalanceStreamNativeQueues(ctx, owner, jobs); err != nil {
 		return err
 	}
 	traffic, err := holdLoadBalanceStreamTrafficUpgrade(ctx, source)
@@ -510,7 +564,7 @@ func checkLoadBalanceStreamUpgrade(ctx context.Context, owner *loadBalanceStream
 		return err
 	}
 	defer traffic.close()
-	if err = checkLoadBalanceStreamNativeQueues(ctx, owner); err != nil {
+	if err = checkLoadBalanceStreamNativeQueues(ctx, owner, jobs); err != nil {
 		return err
 	}
 	after, err := source.upgradeJobs(ctx, original)

@@ -243,6 +243,19 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	if err != nil || !authority.Matches(grant.AppVersion, grant.ManifestSHA256) {
 		return unknown, streamInstallPhaseError("独立发行签名", errLoadBalanceStreamInstallationGate)
 	}
+	current := func(c context.Context) error {
+		return source.checkInstall(c, grant)
+	}
+	geodata, err := holdLoadBalanceStreamGeodataFence(ctx, current)
+	if err != nil {
+		if errors.Is(err, errStatisticsGeoInstanceBusy) && current(ctx) == nil {
+			refused := streamInstallResult(in.JobID, core.LoadBalanceStreamInstallRefused)
+			refused.PreflightReason = core.LoadBalanceStreamInstallNativeBusy
+			return refused, nil
+		}
+		return unknown, streamInstallPhaseError("地域数据校验租约", err)
+	}
+	defer geodata.Close()
 	bounded, cancel := context.WithTimeout(ctx, 3*time.Second)
 	lifetime, err := acquireMemcachedUnixRuntime(bounded)
 	cancel()
@@ -258,7 +271,7 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	}
 	defer mutation.close()
 	authorize := func(c context.Context) error {
-		if c == nil || c.Err() != nil || !lifetime.current() || !mutation.current() || source.checkInstall(c, grant) != nil {
+		if c == nil || c.Err() != nil || !streamInstallGeodataFenceCurrent(geodata) || !lifetime.current() || !mutation.current() || current(c) != nil {
 			return errLoadBalanceStreamInstallationGate
 		}
 		return nil
@@ -278,6 +291,13 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 		return unknown, streamInstallPhaseError("交接前当前授权", err)
 	}
 	if err := observeLoadBalanceStreamLegacyQueues(ctx, authorize); err != nil {
+		// A closed queue observation occurred before the original handoff write.
+		// This terminal refusal carries no installation or retry authority.
+		if ProgramUpgradeQueueFailureText(err) != err.Error() && authorize(ctx) == nil {
+			refused := streamInstallResult(in.JobID, core.LoadBalanceStreamInstallRefused)
+			refused.PreflightReason = core.LoadBalanceStreamInstallNativeBusy
+			return refused, nil
+		}
 		return unknown, streamInstallPhaseError("已有原生任务", err)
 	}
 	if err := checkLoadBalanceStreamUpgrade(ctx, owner); err != nil {
@@ -291,7 +311,17 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	if err != nil || prior["LoadState"] != "loaded" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
 		return unknown, streamInstallPhaseError("固定父进程未运行状态", errLoadBalanceStreamInstallationJournal)
 	}
-	if err := preflightLoadBalanceStreamInstall(ctx, owner); err != nil {
+	if reason, err := preflightLoadBalanceStreamInstall(ctx, owner); err != nil {
+		// Both leases are still held and no handoff file has been created.
+		// Only explicit prerequisite failures under the original live grant
+		// are definite refusals. Transport loss and other errors stay unknown.
+		if reason != "" && authorize(ctx) == nil {
+			refused := streamInstallResult(in.JobID, core.LoadBalanceStreamInstallRefused)
+			refused.PreflightReason = reason
+			if core.ValidateLoadBalanceStreamInstallResult(refused, in.JobID) == nil {
+				return refused, nil
+			}
+		}
 		return unknown, streamInstallPhaseError("系统前置条件", err)
 	}
 	submission, err := writeLoadBalanceStreamSubmission(ctx, in, authorize)
@@ -309,7 +339,7 @@ func (s *Service) submitLoadBalanceStreamInstall(ctx context.Context, in core.Lo
 	bounded, cancel = context.WithTimeout(ctx, 90*time.Second)
 	_, err = programQueueCommand(bounded, "/usr/bin/systemctl", "--wait", "start", unit)
 	cancel()
-	if err != nil || ctx.Err() != nil || !lifetime.current() || !submission.current() {
+	if err != nil || ctx.Err() != nil || !streamInstallGeodataFenceCurrent(geodata) || !lifetime.current() || !submission.current() {
 		return unknown, streamInstallPhaseError("原生父进程启动与退出", errLoadBalanceStreamInstallationJournal)
 	}
 	submission.nativeParentUnit = unit
@@ -336,7 +366,14 @@ func (s *Service) loadBalanceStreamInstallRoutes(m *http.ServeMux) {
 			respond(w, 400, map[string]string{"error": err.Error()})
 			return
 		}
-		result, err := s.submitLoadBalanceStreamInstall(r.Context(), in)
+		deadline := time.Now().Add(core.LoadBalanceStreamInstallRPCTimeout - 5*time.Second)
+		if err := http.NewResponseController(w).SetWriteDeadline(deadline); err != nil && !errors.Is(err, http.ErrNotSupported) {
+			respond(w, 503, map[string]string{"error": "TCP/UDP 安装响应期限无法设置；未交接原任务"})
+			return
+		}
+		ctx, cancel := context.WithDeadline(r.Context(), deadline)
+		defer cancel()
+		result, err := s.submitLoadBalanceStreamInstall(ctx, in)
 		if err != nil {
 			respond(w, 409, struct {
 				core.LoadBalanceStreamInstallResult

@@ -41,8 +41,12 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 	req.Header.Set("Content-Type", "application/json")
 	countryRPC := path == "/v1/waf/country" || strings.HasPrefix(path, "/v1/waf/country/jobs/")
 	client := e.Client
-	if countryRPC {
+	streamInstallRPC := method == http.MethodPost && path == "/v1/load-balance-stream/install-jobs"
+	if countryRPC || streamInstallRPC {
 		guarded := *e.Client
+		if streamInstallRPC && guarded.Timeout == 90*time.Second {
+			guarded.Timeout = LoadBalanceStreamInstallRPCTimeout
+		}
 		guarded.Jar = nil
 		guarded.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 		client = &guarded
@@ -52,6 +56,9 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 		return fmt.Errorf("执行服务连接失败: %w", err)
 	}
 	defer resp.Body.Close()
+	if streamInstallRPC && resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		return errors.New("TCP/UDP 原安装返回重定向；未跟随或重新提交")
+	}
 	if countryRPC && (resp.StatusCode < 200 || resp.StatusCode >= 300) && resp.StatusCode < 400 {
 		return errors.New("国家数据原控制请求返回重定向或非完整状态；未跟随、改址或重新 POST")
 	}
@@ -348,6 +355,12 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 				return
 			}
 			payload.Version = version
+		}
+		if action == "update" && j.TargetID == "intrusion-prevention" && payload.Version == IntrusionAppVersion {
+			if err := s.intrusionUpdateExecutionBinding(j); err != nil {
+				_ = s.FinishRuntime(j, err.Error(), nil)
+				return
+			}
 		}
 		if action == "update" && j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(payload.Version) {
 			if err := mobileNativeExecutionBinding(s.DB, j); err != nil {

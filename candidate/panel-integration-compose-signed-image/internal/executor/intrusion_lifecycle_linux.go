@@ -48,7 +48,9 @@ func (s *Service) applyIntrusionOperation(ctx context.Context, settings map[stri
 		return err
 	}
 	if previous, exists := inventory.Records[id]; exists {
-		if !intrusionOriginalRequestMatches(previous.Plan, action, settings) || previous.State != "committed" {
+		requestedVersion, _ := ctx.Value(intrusionVersionContextKey{}).(string)
+		if !intrusionOriginalRequestMatches(previous.Plan, action, settings) || previous.State != "committed" ||
+			requestedVersion != "" && previous.Plan.TargetVersion != requestedVersion {
 			return errors.New("原入侵防护任务已绑定不同请求或已恢复闭合；未作为新任务重放")
 		}
 		pending, raw, readErr := s.intrusionJournalPending()

@@ -243,8 +243,11 @@ func RunLoadBalanceStreamInstallJob(job string) error {
 	}
 	defer mutation.close()
 	w := &loadBalanceStreamInstallController{submission: submission, source: source, lifetime: lifetime, mutation: mutation, grant: grant}
-	if source.checkInstall(ctx, grant) != nil || !submission.current() || w.checkQueues(ctx) != nil || checkLoadBalanceStreamInstallParentKernel(ctx, job) != nil {
+	if source.checkInstall(ctx, grant) != nil || !submission.current() || checkLoadBalanceStreamInstallParentKernel(ctx, job) != nil {
 		return errLoadBalanceStreamInstallationGate
+	}
+	if err := w.checkQueues(ctx); err != nil {
+		return streamInstallPhaseError("父进程写入前核对", err)
 	}
 	engine, err := holdLoadBalanceStreamEngine(ctx)
 	if err != nil {

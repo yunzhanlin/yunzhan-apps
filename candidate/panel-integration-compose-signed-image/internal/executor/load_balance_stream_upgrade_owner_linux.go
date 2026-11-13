@@ -103,7 +103,7 @@ func streamUpgradeUnitPrefix(name string) bool {
 
 // Pure parser seam only. Production's active set comes exclusively from the
 // concrete held kernel/lease/Core witness above, not from user JSON or names.
-func decodeLoadBalanceStreamUpgradeUnits(text string, active map[string]bool) error {
+func decodeLoadBalanceStreamUpgradeUnits(text string, active, retained map[string]bool) error {
 	if len(text) > 64<<10 || !utf8.ValidString(text) || strings.ContainsAny(text, "\x00\r") {
 		return errLoadBalanceStreamInstallationGate
 	}
@@ -118,6 +118,9 @@ func decodeLoadBalanceStreamUpgradeUnits(text string, active map[string]bool) er
 		}
 		seen[v[0]] = true
 		if v[2] == "inactive" && v[3] == "dead" {
+			continue
+		}
+		if retained[v[0]] && !active[v[0]] && v[2] == "failed" && v[3] == "failed" {
 			continue
 		}
 		if !active[v[0]] || v[2] != "active" || v[3] != "running" {
@@ -155,13 +158,27 @@ func decodeLoadBalanceStreamUpgradeJobs(text string) error {
 	return nil
 }
 
-func checkLoadBalanceStreamNativeQueues(ctx context.Context, owner *loadBalanceStreamUpgradeOwner) error {
+func checkLoadBalanceStreamNativeQueues(ctx context.Context, owner *loadBalanceStreamUpgradeOwner, history []core.LoadBalanceStreamUpgradeJob) error {
 	active, err := owner.activeUnits(ctx)
 	if err != nil {
 		return err
 	}
 	units, err := programQueueCommand(ctx, "/usr/bin/systemctl", "list-units", "--all", "--plain", "--no-legend", "--no-pager", "--type=service", "panel-lbstream-install@*.service", "panel-lbstream-account-create@*.service")
-	if err != nil || decodeLoadBalanceStreamUpgradeUnits(units, active) != nil {
+	if err != nil {
+		return errLoadBalanceStreamInstallationGate
+	}
+	retained := make(map[string]bool)
+	for _, job := range history {
+		if job.State != "needs_attention" || job.RetainedRefusal != core.LoadBalanceStreamRetainedParentExit {
+			continue
+		}
+		unit, err := loadbalancestream.AccountParentUnit(job.Authority.JobID)
+		if err != nil || verifyRetainedLoadBalanceStreamPreflight(ctx, job, streamInstallUnitProperties) != nil {
+			return errLoadBalanceStreamInstallationGate
+		}
+		retained[unit] = true
+	}
+	if decodeLoadBalanceStreamUpgradeUnits(units, active, retained) != nil {
 		return errLoadBalanceStreamInstallationGate
 	}
 	jobs, err := programQueueCommand(ctx, "/usr/bin/systemctl", "list-jobs", "--no-legend", "--no-pager")
