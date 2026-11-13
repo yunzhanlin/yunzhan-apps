@@ -33,6 +33,8 @@ sys.dont_write_bytecode = True
 PROGRAMS = ('panel-terminal.service', 'panel-terminal-root.service', 'panel-executor.service', 'panel.service')
 TIMER = 'panel-mysql-overwrite-recovery.timer'
 QUEUES = ('jobs', 'runtime_jobs', 'mysql_jobs', 'acme_orders')
+# Legacy + Apache each retain 5 s; ordinary L4 gets 90 s plus child exit margin.
+ORDINARY_QUEUE_TIMEOUT_SECONDS = 105
 NATIVE_PREREQUISITES = ('waf-state-directory.py', 'native-build-directories.py')
 VERSION = re.compile(r'[0-9]+\.[0-9]+\.[0-9]+([.-][a-z0-9]+)*\Z')
 UNIT = re.compile(r'(?:panel-[a-z0-9@.-]+|panel|var-cache-panel\\x2dapache\\x2dbody)\.(?:service|timer|mount)\Z')
@@ -862,10 +864,10 @@ class Upgrade:
                                             input_text=json.dumps(self.filesync_unpublished, sort_keys=True), timeout=10)
                 witness = self.validate_filesync_witness(observed)
                 if witness['state'] == 'observed-original-retained-receipt':
-                    self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+                    self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
                     self.filesync_retention_observed = True
             else:
-                self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+                self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
         except CommandFailure as error:
             # A later read may succeed and cannot explain this ORIGINAL refusal.
             # Preserve that exact child's bounded output only in the already
@@ -934,7 +936,7 @@ class Upgrade:
         witness = self.validate_filesync_witness(json.dumps(value['witness']))
         if witness['state'] != 'observed-original-retained-receipt':
             raise ValueError('original filesync retention has no matched durable receipt')
-        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=10)
+        self.run_command(str(self.release/'bin/panel-executor'), '--check-program-upgrade-queues', timeout=ORDINARY_QUEUE_TIMEOUT_SECONDS)
         self.filesync_retention_observed = True
 
     def preflight_admission_is_readonly(self):
