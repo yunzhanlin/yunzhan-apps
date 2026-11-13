@@ -21,6 +21,11 @@ const (
 
 var ErrEgressGuard = errors.New("TCP/UDP 出站防护的专用身份、完整两代节点或实际内核规则无法核对")
 
+// nftables 1.0.6 can omit table comments in JSON even when the kernel stores
+// the comment. Only a complete otherwise matching JSON observation can request
+// the additional read, and a missing text witness never proves ownership.
+var ErrEgressTableCommentOmitted = errors.New("nftables 1.0.6 JSON 省略了表注释，需要同表文本证据")
+
 type egressListener struct {
 	Protocol string `json:"protocol"`
 	Port     int    `json:"port"`
@@ -423,6 +428,19 @@ func (g EgressGuard) ValidateObservation(o EgressGuardObservation) error {
 // rule/chain read. Handles, order, every predicate, comment, verdict, hook,
 // priority and policy must match. No unknown set/map/chain/rule is ignored.
 func (g EgressGuard) Inspect(raw []byte) (EgressGuardObservation, error) {
+	return g.inspect(raw, nil)
+}
+
+// InspectWithTableComment joins a complete older JSON observation with a
+// separate handle-bearing listing of the same table from the fixed tool.
+func (g EgressGuard) InspectWithTableComment(raw, listing []byte) (EgressGuardObservation, error) {
+	if len(listing) == 0 {
+		return EgressGuardObservation{}, ErrEgressGuard
+	}
+	return g.inspect(raw, listing)
+}
+
+func (g EgressGuard) inspect(raw, listing []byte) (EgressGuardObservation, error) {
 	var empty EgressGuardObservation
 	if !g.valid() {
 		return empty, ErrEgressGuard
@@ -442,8 +460,17 @@ func (g EgressGuard) Inspect(raw []byte) (EgressGuardObservation, error) {
 	}
 	outer, ok := egressObject(list[1], "table")
 	table, tableOK := egressObject(outer["table"], "family", "name", "handle", "comment")
+	legacy := false
+	if !tableOK {
+		meta, _ := egressObject(list[0], "metainfo")
+		fields, _ := egressObject(meta["metainfo"], "version", "release_name", "json_schema_version")
+		if fields["version"] == "1.0.6" {
+			table, legacy = egressObject(outer["table"], "family", "name", "handle")
+		}
+	}
 	tableHandle, handleOK := egressHandle(table["handle"])
-	if !ok || !tableOK || !handleOK || table["family"] != "inet" || table["name"] != EgressTableName || table["comment"] != g.tableComment() {
+	if !ok || !handleOK || table["family"] != "inet" || table["name"] != EgressTableName ||
+		(!legacy && (!tableOK || table["comment"] != g.tableComment())) {
 		return empty, ErrEgressGuard
 	}
 	outer, ok = egressObject(list[2], "chain")
@@ -469,5 +496,41 @@ func (g EgressGuard) Inspect(raw []byte) (EgressGuardObservation, error) {
 		seen[handle] = true
 		out.RuleHandles = append(out.RuleHandles, handle)
 	}
+	if legacy {
+		if listing == nil {
+			return empty, ErrEgressTableCommentOmitted
+		}
+		if !g.legacyTableListingMatches(listing, out) {
+			return empty, ErrEgressGuard
+		}
+	} else if listing != nil {
+		return empty, ErrEgressGuard
+	}
 	return out, nil
+}
+
+func (g EgressGuard) legacyTableListingMatches(listing []byte, observation EgressGuardObservation) bool {
+	if len(listing) > MaxEgressObservationBytes || bytes.ContainsAny(listing, "\x00\r") {
+		return false
+	}
+	lines := strings.Split(string(listing), "\n")
+	rules := len(observation.RuleHandles)
+	if len(lines) != rules+7 {
+		return false
+	}
+	handle := func(value uint64) string { return " # handle " + strconv.FormatUint(value, 10) }
+	if lines[0] != "table inet "+EgressTableName+" {"+handle(observation.TableHandle) ||
+		lines[1] != "\tcomment "+strconv.Quote(g.tableComment()) ||
+		lines[2] != "\tchain "+EgressChainName+" {"+handle(observation.ChainHandle) ||
+		lines[3] != "\t\ttype filter hook output priority filter + 10; policy accept;" ||
+		lines[rules+4] != "\t}" || lines[rules+5] != "}" || lines[rules+6] != "" {
+		return false
+	}
+	for i, value := range observation.RuleHandles {
+		line := lines[i+4]
+		if !strings.HasPrefix(line, "\t\t") || !strings.HasSuffix(line, handle(value)) {
+			return false
+		}
+	}
+	return true
 }

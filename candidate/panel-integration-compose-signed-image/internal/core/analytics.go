@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"local/panel/internal/appcatalog"
 )
 
 // Independently authored, opt-in browser analytics. Reference plugin source is
@@ -51,6 +53,7 @@ type AnalyticsConfig struct {
 	Retention         int    `json:"retention_days"`
 	Revision          int64  `json:"revision"`
 	ProxyEndpoint     string `json:"proxy_endpoint,omitempty"`
+	Geography         *bool  `json:"geography,omitempty"`
 	AutoInjectHTML    *bool  `json:"auto_inject_html,omitempty"`
 	ClientAddressMode string `json:"client_address_mode,omitempty"`
 }
@@ -61,35 +64,36 @@ type analyticsRate struct {
 }
 
 type AnalyticsEvent struct {
-	ID                  string   `json:"id"`
-	PageID              string   `json:"page_id"`
-	Visitor             string   `json:"visitor"`
-	Session             string   `json:"session"`
-	Kind                string   `json:"kind"`
-	Path                string   `json:"path"`
-	Title               string   `json:"title"`
-	Referer             string   `json:"referer"`
-	Campaign            string   `json:"campaign"`
-	Duration            float64  `json:"duration"`
-	X                   float64  `json:"x"`
-	Y                   float64  `json:"y"`
-	ClickViewport       string   `json:"click_viewport,omitempty"`
-	TTFB                float64  `json:"ttfb"`
-	FCP                 float64  `json:"fcp"`
-	LCP                 float64  `json:"lcp"`
-	CLS                 float64  `json:"cls"`
-	CLSAvailable        bool     `json:"cls_available"`
-	INP                 float64  `json:"inp"`
-	INPAvailable        bool     `json:"inp_available"`
-	PerformanceSeq      int      `json:"performance_seq"`
-	NavigationSeq       int64    `json:"navigation_seq,omitempty"`
-	RouteReadyMillis    *float64 `json:"route_ready_ms,omitempty"`
-	Received            int64    `json:"received_at"`
-	IPHash              string   `json:"-"`
-	Browser             string   `json:"browser"`
-	Device              string   `json:"device"`
-	ClientAddressHash   string   `json:"client_address_hash,omitempty"`
-	ClientAddressSource string   `json:"client_address_source,omitempty"`
+	ID                  string              `json:"id"`
+	PageID              string              `json:"page_id"`
+	Visitor             string              `json:"visitor"`
+	Session             string              `json:"session"`
+	Kind                string              `json:"kind"`
+	Path                string              `json:"path"`
+	Title               string              `json:"title"`
+	Referer             string              `json:"referer"`
+	Campaign            string              `json:"campaign"`
+	Duration            float64             `json:"duration"`
+	X                   float64             `json:"x"`
+	Y                   float64             `json:"y"`
+	ClickViewport       string              `json:"click_viewport,omitempty"`
+	TTFB                float64             `json:"ttfb"`
+	FCP                 float64             `json:"fcp"`
+	LCP                 float64             `json:"lcp"`
+	CLS                 float64             `json:"cls"`
+	CLSAvailable        bool                `json:"cls_available"`
+	INP                 float64             `json:"inp"`
+	INPAvailable        bool                `json:"inp_available"`
+	PerformanceSeq      int                 `json:"performance_seq"`
+	NavigationSeq       int64               `json:"navigation_seq,omitempty"`
+	RouteReadyMillis    *float64            `json:"route_ready_ms,omitempty"`
+	Received            int64               `json:"received_at"`
+	IPHash              string              `json:"-"`
+	Browser             string              `json:"browser"`
+	Device              string              `json:"device"`
+	ClientAddressHash   string              `json:"client_address_hash,omitempty"`
+	ClientAddressSource string              `json:"client_address_source,omitempty"`
+	Geography           *AnalyticsGeography `json:"geography,omitempty"`
 }
 
 func (s *Store) migrateAnalytics() error {
@@ -341,6 +345,7 @@ func (a *Server) analyticsRoutes(m *http.ServeMux) {
 		}
 		v.ProxyEndpoint = site.Settings.AnalyticsEndpoint
 		v.AutoInjectHTML = &site.Settings.AnalyticsInjectHTML
+		v.Geography = &site.Settings.AnalyticsGeography
 		v.ClientAddressMode = "disabled"
 		if c := site.Settings; v.Enabled && c.AnalyticsEndpoint != "" {
 			v.ClientAddressMode = "legacy_proxy"
@@ -528,6 +533,11 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	if clientAddress != "" {
 		v.ClientAddressHash = digest("client-address-v1:" + clientAddress)
 	}
+	// Ignore any location fields in an untrusted beacon.
+	v.Geography = nil
+	if site.Settings.AnalyticsGeography && v.Kind == "pageview" {
+		v.Geography = a.analyticsPageGeography(r.Context(), site.ID, clientAddress)
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 	defer cancel()
 	if e = a.Store.storeAnalyticsEvent(ctx, site.ID, c.Retention, v); e != nil {
@@ -563,6 +573,22 @@ func (s *Store) storeAnalyticsEvent(ctx context.Context, id string, retention in
 	}
 	if total >= analyticsCapacity {
 		return errors.New("analytics capacity reached")
+	}
+	if v.Geography != nil && !v.Geography.Valid() {
+		v.Geography = nil
+	}
+	if v.Geography != nil {
+		var allowed bool
+		e = tx.QueryRowContext(ctx, `SELECT c.enabled AND json_type(s.settings_json,'$.analytics_geography') IS 'true'
+			FROM analytics_config c JOIN sites s ON s.id=c.site_id
+			JOIN app_registry_receipts r ON r.app_id='website-analytics' AND r.scope=r.app_id AND r.target=r.app_id
+			WHERE c.site_id=? AND r.version=? AND length(r.sha256)=64 AND r.sha256 NOT GLOB '*[^0-9a-f]*'`, id, appcatalog.AnalyticsGeographyVersion).Scan(&allowed)
+		if e != nil && !errors.Is(e, sql.ErrNoRows) {
+			return e
+		}
+		if !allowed {
+			v.Geography = nil
+		}
 	}
 	data, e := json.Marshal(v)
 	if e != nil {
@@ -695,6 +721,8 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	heat := map[analyticsHeatPoint]*analyticsHeatPoint{}
 	var layouts analyticsHeatLayouts
 	layoutEnabled := s.analyticsLayoutInstalled(ctx)
+	geographyEnabled := s.analyticsGeographyInstalled(ctx)
+	var geography analyticsGeographyReport
 	// Multiple lifecycle beacons for one navigation are updates, not independent
 	// performance samples. Keep the newest sample per visitor/page navigation.
 	performance := []AnalyticsEvent{}
@@ -740,6 +768,9 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 			sessionPages[v.Session] = append(sessionPages[v.Session], v)
 			pv++
 			clientAddresses.Observe(v)
+			if geographyEnabled {
+				geography.observe(v.Geography)
+			}
 			visitors[v.Visitor] = true
 			ips[v.IPHash] = true
 			pages[v.Path]++
@@ -857,6 +888,9 @@ func (s *Store) analyticsReport(ctx context.Context, id, rawFrom, rawTo string, 
 	report := map[string]any{"ordering_uncertain_sessions": orderingUncertainSessions, "source": "browser-telemetry", "from": from.Format(time.RFC3339), "to": to.Format(time.RFC3339), "sampled_events": len(events), "partial": partial, "capacity_events": analyticsCapacity, "overview": map[string]any{"pv": pv, "uv": len(visitors), "unique_network_peers": len(ips), "sessions": sessionCount, "active_visitors": len(active), "clicks": clicks, "bounce_rate": bounceRate, "avg_engagement_seconds": avgDuration}, "pages": analyticsDimensions(pages), "sources": analyticsDimensions(sources), "browsers": analyticsDimensions(browsers), "devices": analyticsDimensions(devices), "entry_pages": analyticsDimensions(entries), "exit_pages": analyticsDimensions(exits), "hours": analyticsDimensions(hours), "campaigns": analyticsDimensions(campaigns), "sessions": ssRows, "heatmap": heatRows, "client_addresses": clientAddresses.Report(), "performance_pages": analyticsPerformanceByPage(performance, partial || performancePartial), "performance": map[string]any{"ttfb": metric(func(v AnalyticsEvent) float64 { return v.TTFB }, nil), "fcp": metric(func(v AnalyticsEvent) float64 { return v.FCP }, nil), "lcp": metric(func(v AnalyticsEvent) float64 { return v.LCP }, nil), "cls": metric(func(v AnalyticsEvent) float64 { return v.CLS }, func(v AnalyticsEvent) bool { return v.CLSAvailable }), "inp": metric(func(v AnalyticsEvent) float64 { return v.INP }, func(v AnalyticsEvent) bool { return v.INPAvailable })}, "limitations": []string{"浏览器标识是伪匿名标识，不等于真实人数；清除存储会成为新访客。", "访问旅程在同一浏览器会话拥有完整且无冲突的访问序号时按浏览器报告顺序显示；缺少或冲突的序号保留服务端接收顺序并标为待核对。时间始终为服务器接收时间，网络延迟可能导致其与浏览顺序不同；不改写旧记录，不作为业务审计。", "报告最多聚合最近 20000 条窗口内事件，截断时明确标记；会话跨窗口或截断会影响跳出和旅程。", "原始 IP 不保留；网络对端数量在反向代理后可能是代理数。客户端地址单独统计直接连接或受保护采集代理传递的站点隔离摘要；未核实和旧数据单列，不补造地址或人数。", "点击热图记录归一化文档坐标和粗粒度屏宽分组。旧点击保留为未知屏宽。采集器不读取表单、页面内容或截图。漏斗在独立页按页面路径计算，不作为支付或业务审计。", "性能按导航去重，最多采样最近 5000 次导航；INP 来自本地打包 web-vitals 6.2.3 标准库，只发送数值；不支持或未测量交互时保持无样本。逐页性能按文档或 SPA 分开，最多展示 100 个路径/类型组，达到采样或分组上限明确标记部分结果。SPA 路由就绪耗时仅在网站显式接入后，从路径变更到该网站确认就绪，未接入不生成数值；不冒充 SPA 的 LCP/INP，也不能替代实验室性能测试。"}}
 	if layoutEnabled {
 		report["heatmap_layouts"] = layouts.report(partial)
+	}
+	if geographyEnabled {
+		report["geography"] = geography.result(partial)
 	}
 	return report, nil
 }

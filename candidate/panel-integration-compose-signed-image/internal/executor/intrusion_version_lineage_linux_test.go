@@ -64,6 +64,7 @@ func intrusionManagedV110UpgradeFixture(t *testing.T) intrusionJournalPlan {
 	}
 	p.ConfigurationBefore = intrusionJournalTreeFixture(p.Files[0].Before)
 	p.TargetPorts = slices.Clone(p.BeforePolicy.Ports)
+	p.TargetVersion = "1.1.1"
 	p, err = intrusionJournalDerive(p)
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +91,7 @@ func TestIntrusionV110ToV111UpgradeKeepsPolicyLimitsAndInstallTime(t *testing.T)
 			case "configure-before-update":
 				bad.Action = "configure"
 			case "unknown-target":
-				bad.TargetVersion = "1.1.2"
+				bad.TargetVersion = "1.1.3"
 			case "missing-old-policy":
 				bad.Files[2].Before = hardeningJournalFile{}
 			case "old-policy-drift":
@@ -114,5 +115,43 @@ func TestIntrusionV110ToV111UpgradeKeepsPolicyLimitsAndInstallTime(t *testing.T)
 	manifest, err := intrusionJournalManifest(p.Files[1].After)
 	if err != nil || manifest.Version != "1.1.0" {
 		t.Fatal("old configure plan implicitly upgraded", err)
+	}
+}
+
+func TestIntrusionV111ToV112PreservesOriginalJournalAndPolicy(t *testing.T) {
+	oldPlan := intrusionManagedV110UpgradeFixture(t)
+	oldBytes, err := intrusionJournalEncode(oldPlan)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := intrusionJournalClone(t, oldPlan)
+	p.Files[1].Before = oldPlan.Files[1].After
+	p.TargetVersion = "1.1.2"
+	p, err = intrusionJournalDerive(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	installed, err := intrusionJournalManifest(p.Files[1].After)
+	if err != nil || installed.Version != "1.1.2" {
+		t.Fatal(installed, err)
+	}
+	for _, i := range []int{0, 2} {
+		if !reflect.DeepEqual(p.Files[i].Before, p.Files[i].After) {
+			t.Fatal("release-only update changed the installed Jail or policy", i)
+		}
+	}
+	original, err := intrusionJournalDecode(oldBytes)
+	if err != nil || original.TargetVersion != "1.1.1" {
+		t.Fatal(err)
+	}
+	roundTrip, err := intrusionJournalEncode(original)
+	if err != nil || !bytes.Equal(oldBytes, roundTrip) {
+		t.Fatal("old complete journal lost its original bytes", err)
+	}
+	p.Files[1].Before = p.Files[1].After
+	p.TargetVersion = "1.1.1"
+	if _, err := intrusionJournalDerive(p); err == nil {
+		t.Fatal("an old package downgraded a newer installation")
 	}
 }

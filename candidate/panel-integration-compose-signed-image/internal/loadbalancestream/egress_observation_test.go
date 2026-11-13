@@ -112,3 +112,55 @@ func TestEgressHistoricalObservationRequiresShapeAndFreshLiveHandleComparison(t 
 		t.Fatal("empty policy accepted typed historical data")
 	}
 }
+
+func TestEgressNft106RequiresMatchingTextCommentAndHandles(t *testing.T) {
+	guard := mustEgress(t, []Entry{fixture()}, nil)
+	complete := string(egressFixtureJSON(t, guard))
+	modern := strings.Replace(complete, `"comment":"panel-lbstream-v1 uid=991",`, "", 1)
+	if modern == complete {
+		t.Fatal("fixture table comment did not change")
+	}
+	old := strings.Replace(modern, `"version":"1.1.3"`, `"version":"1.0.6"`, 1)
+	old = strings.Replace(old, `"family":"inet","handle":1,"name":"panel_lbstream"`, `"family":"inet","handle":9,"name":"panel_lbstream"`, 1)
+	text := "table inet panel_lbstream { # handle 9\n" +
+		"\tcomment \"panel-lbstream-v1 uid=991\"\n" +
+		"\tchain output { # handle 1\n" +
+		"\t\ttype filter hook output priority filter + 10; policy accept;\n" +
+		"\t\tmeta skuid != 991 return # handle 2\n" +
+		"\t\tct state established ct direction reply tcp sport 42000 accept # handle 3\n" +
+		"\t\tct state established ct direction reply tcp sport 43000 accept # handle 4\n" +
+		"\t\tip daddr 192.0.2.10 tcp dport 41001 accept # handle 5\n" +
+		"\t\tip6 daddr 2001:db8::2 tcp dport 41002 accept # handle 6\n" +
+		"\t\tmeta skuid 991 drop comment \"" + guard.policyComment() + "\" # handle 7\n" +
+		"\t}\n}\n"
+	if _, err := guard.Inspect([]byte(old)); err != ErrEgressTableCommentOmitted {
+		t.Fatalf("old JSON must request independent table evidence: %v", err)
+	}
+	actual, err := guard.InspectWithTableComment([]byte(old), []byte(text))
+	if err != nil || actual.TableHandle != 9 || actual.ChainHandle != 1 || len(actual.RuleHandles) != 6 {
+		t.Fatalf("complete joined observation refused: %+v %v", actual, err)
+	}
+	for _, broken := range []string{
+		strings.Replace(text, "# handle 9", "# handle 8", 1),
+		strings.Replace(text, "uid=991", "uid=990", 1),
+		strings.Replace(text, "# handle 7", "# handle 5", 1),
+		strings.Replace(text, "priority filter + 10", "priority filter + 11", 1),
+		strings.Replace(text, "\tcomment ", "\tflags dormant\n\tcomment ", 1),
+		strings.Replace(text, "\tcomment \"panel-lbstream-v1 uid=991\"\n", "", 1),
+		text + "\n",
+	} {
+		if _, err := guard.InspectWithTableComment([]byte(old), []byte(broken)); err != ErrEgressGuard {
+			t.Fatalf("changed text became ownership: %v", err)
+		}
+	}
+	for _, broken := range []string{
+		modern,
+		strings.Replace(old, `"right":"reply"`, `"right":"original"`, 1),
+		strings.Replace(old, `"family":"inet","handle":9,"name":"panel_lbstream"`, `"family":"inet","handle":9,"name":"panel_lbstream","comment":"wrong owner"`, 1),
+		strings.Replace(old, `"family":"inet","handle":9,"name":"panel_lbstream"`, `"family":"inet","handle":9,"name":"panel_lbstream","flags":["dormant"]`, 1),
+	} {
+		if _, err := guard.InspectWithTableComment([]byte(broken), []byte(text)); err != ErrEgressGuard {
+			t.Fatalf("changed JSON became ownership: %v", err)
+		}
+	}
+}

@@ -65,7 +65,7 @@ func (s *Store) LoadBalanceStreamInstallAuthority(ctx context.Context, job strin
 // Same transaction reader for atomic queue issuance and live Root admission.
 // A later grant elevation or restored role may not manufacture an original
 // full-administrator revision that was never reserved with the signed job.
-func readLoadBalanceStreamInstallAuthority(ctx context.Context, tx softwareInstallRowQueryer, job, state string) (LoadBalanceStreamInstallAuthority, error) {
+func readLoadBalanceStreamInstallAuthority(ctx context.Context, tx *sql.Tx, job, state string) (LoadBalanceStreamInstallAuthority, error) {
 	var empty LoadBalanceStreamInstallAuthority
 	bad := errLoadBalanceStreamInstallAuthority
 	if ctx == nil || ctx.Err() != nil || !ValidID(job) || state != "queued" && state != "running" {
@@ -85,8 +85,10 @@ func readLoadBalanceStreamInstallAuthority(ctx context.Context, tx softwareInsta
 	if payload != expected || !firstOK || !lastOK || last.Before(first) || ensureRegistryRequestOpen(tx, key) != nil {
 		return empty, bad
 	}
-	var installs, updates, competing int
-	if tx.QueryRowContext(ctx, `SELECT (SELECT count(*)FROM app_registry_install_requests WHERE job_id=? OR runtime_job_id=? OR idempotency_key=?),(SELECT count(*)FROM app_registry_update_requests WHERE job_id=? OR idempotency_key=?),(SELECT count(*)FROM runtime_jobs WHERE target_id='load-balance' AND id<>? AND state NOT IN ('succeeded','failed','cancelled'))`, job, job, key, job, key, job).Scan(&installs, &updates, &competing) != nil || competing != 0 || action == "install" && (installs != 1 || updates != 0) || action == "update" && (updates != 1 || installs != 0) {
+	var installs, updates int
+	if tx.QueryRowContext(ctx, `SELECT (SELECT count(*)FROM app_registry_install_requests WHERE job_id=? OR runtime_job_id=? OR idempotency_key=?),(SELECT count(*)FROM app_registry_update_requests WHERE job_id=? OR idempotency_key=?)`, job, job, key, job, key).Scan(&installs, &updates) != nil ||
+		action == "install" && (installs != 1 || updates != 0) || action == "update" && (updates != 1 || installs != 0) ||
+		checkCompetingLoadBalanceStreamInstalls(ctx, tx, job) != nil {
 		return empty, bad
 	}
 	var actor, manifest, stamp, requestHash string
@@ -130,4 +132,55 @@ func readLoadBalanceStreamInstallAuthority(ctx context.Context, tx softwareInsta
 	}
 	out := LoadBalanceStreamInstallAuthority{1, job, actor, action, loadbalancestream.AppVersion, manifest, Hash(payload), requestHash, Hash(key), access.Revision, Hash(string(raw)), created}
 	return out, nil
+}
+
+// Core may admit a distinct request after a recorded pre-handoff refusal.
+// Root still checks every original native record and both fixed units before
+// the new request may change host state. No retained job becomes dispatchable.
+func checkCompetingLoadBalanceStreamInstalls(ctx context.Context, tx *sql.Tx, job string) error {
+	type history struct {
+		authority                                           LoadBalanceStreamInstallAuthority
+		kind, payload, key, created, updated, detail, steps string
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT j.id,j.state,j.kind,substr(j.payload,1,1025),substr(j.idempotency_key,1,129),substr(j.created_at,1,33),substr(j.updated_at,1,33),
+		substr(j.error,1,1025),substr(j.steps,1,5),r.kind,r.actor_id,r.access_revision,r.actor_observation_sha256,
+		r.manifest_sha256,r.payload_sha256,r.request_sha256,r.key_sha256,r.created_at
+		FROM runtime_jobs j LEFT JOIN load_balance_stream_install_requests r ON r.job_id=j.id
+		WHERE j.target_id='load-balance' AND j.id<>? AND j.state NOT IN ('succeeded','failed','cancelled')
+		ORDER BY j.id LIMIT 129`, job)
+	if err != nil {
+		return errLoadBalanceStreamInstallAuthority
+	}
+	defer rows.Close()
+	var originals []history
+	for rows.Next() {
+		var h history
+		v := &h.authority
+		var state, originalKind string
+		if len(originals) == 128 ||
+			rows.Scan(&v.JobID, &state, &h.kind, &h.payload, &h.key, &h.created, &h.updated,
+				&h.detail, &h.steps, &originalKind, &v.ActorID, &v.AccessRevision, &v.ActorObservationSHA256,
+				&v.ManifestSHA256, &v.PayloadSHA256, &v.OriginalRequestSHA256, &v.KeySHA256, &v.JobCreatedAt) != nil ||
+			state != "needs_attention" || h.kind != originalKind || len(h.key) > 128 {
+			return errLoadBalanceStreamInstallAuthority
+		}
+		v.Format = 1
+		v.AppVersion = loadbalancestream.AppVersion
+		v.Action = strings.TrimPrefix(h.kind, "software_")
+		if !validLoadBalanceStreamHistory(*v, h.payload, h.key, h.created, h.updated) {
+			return errLoadBalanceStreamInstallAuthority
+		}
+		originals = append(originals, h)
+	}
+	if rows.Err() != nil {
+		return errLoadBalanceStreamInstallAuthority
+	}
+	rows.Close()
+	for _, h := range originals {
+		if streamInstallOriginalRegistryHistory(ctx, tx, h.authority, h.payload, h.key) != nil ||
+			retainedLoadBalanceStreamPreflight(ctx, tx, h.authority.JobID, h.kind, h.updated, h.detail, h.steps) == "" {
+			return errLoadBalanceStreamInstallAuthority
+		}
+	}
+	return ctx.Err()
 }

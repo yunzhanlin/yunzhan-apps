@@ -12,7 +12,7 @@ ExecStart=/opt/panel/bin/panel-executor --load-balance-stream-account-job=%i
 Restart=no
 RemainAfterExit=no
 KillMode=control-group
-RuntimeMaxSec=35s
+RuntimeMaxSec=70s
 TimeoutStartSec=5s
 TimeoutStopSec=5s
 UMask=0077

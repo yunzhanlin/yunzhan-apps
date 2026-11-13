@@ -52,6 +52,23 @@ func loadBalanceStreamInstallFailureDetail(cause error) string {
 	return detail
 }
 
+func loadBalanceStreamInstallRefusalDetail(reason string) string {
+	var detail string
+	switch reason {
+	case LoadBalanceStreamInstallMemory:
+		detail = "当前可用内存至少需要 1 GiB"
+	case LoadBalanceStreamInstallNSS:
+		detail = "系统账号查找配置未通过核对"
+	case LoadBalanceStreamInstallNginx:
+		detail = "需要可核对的云栈原生 Nginx 1.30.6 或 1.31.5，且带有 stream 模块"
+	case LoadBalanceStreamInstallNativeBusy:
+		detail = "本机仍有原生任务在运行或需核对，待其结束后可重新提交"
+	case LoadBalanceStreamInstallAccount:
+		detail = "专用服务账号前置条件未通过核对"
+	}
+	return "TCP/UDP 原安装在原生交接前已拒绝，未启动或重载服务。" + detail + "。处理前置条件后可从商店提交新任务。"
+}
+
 func runLoadBalanceStreamInstallJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 	runLoadBalanceStreamInstallJobWithMetadata(ctx, s, e, j, appcatalog.Default().FetchLoadBalanceStreamReleaseEnvelope)
 }
@@ -95,6 +112,10 @@ func runLoadBalanceStreamInstallJobWithMetadata(ctx context.Context, s *Store, e
 		return
 	}
 	result, decodeErr := DecodeLoadBalanceStreamInstallResult(raw, j.ID)
+	if err == nil && decodeErr == nil && result.State == LoadBalanceStreamInstallRefused {
+		fail(loadBalanceStreamInstallRefusalDetail(result.PreflightReason), false)
+		return
+	}
 	if err != nil || decodeErr != nil || result.State != "committed" {
 		fail(loadBalanceStreamInstallFailureDetail(err), true)
 		return

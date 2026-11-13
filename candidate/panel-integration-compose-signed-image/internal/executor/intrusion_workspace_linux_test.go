@@ -184,6 +184,76 @@ func TestIntrusionWorkspaceUnknownAuthoritiesNeverReturnAHealthyCurrent(t *testi
 	}
 }
 
+func TestIntrusionWorkspaceRebootObservesCurrentWithoutGrantingRecovery(t *testing.T) {
+	for _, stage := range []string{"readable", "foreign-file", "runtime-unavailable", "boot-changed-during-read"} {
+		t.Run(stage, func(t *testing.T) {
+			s, lock, p, raw, d, answers := intrusionAdvanceFixture(t)
+			ctx := context.Background()
+			if err := s.intrusionJournalWriteFile(ctx, lock, p, raw, 0, "committed"); err != nil {
+				t.Fatal(err)
+			}
+			lock.Close()
+			boot := s.systemPath("/proc/sys/kernel/random/boot_id")
+			if err := os.Chmod(boot, 0644); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(boot, []byte("22222222-3333-4444-5555-666666666666\n"), 0644); err != nil {
+				t.Fatal(err)
+			}
+			wantJail := "target"
+			switch stage {
+			case "foreign-file":
+				if err := os.WriteFile(s.intrusionJournalPaths()[0], []byte("# independently changed\n"), 0644); err != nil {
+					t.Fatal(err)
+				}
+				wantJail = "different"
+			case "runtime-unavailable":
+				answers["/usr/bin/systemctl show fail2ban.service --property=MainPID,ActiveState"] = "MainPID=0\nActiveState=inactive\n"
+			case "boot-changed-during-read":
+				run := s.Config.Run
+				s.Config.Run = func(ctx context.Context, program string, args ...string) (string, error) {
+					if err := os.WriteFile(boot, []byte("33333333-4444-5555-6666-777777777777\n"), 0644); err != nil {
+						t.Fatal(err)
+					}
+					return run(ctx, program, args...)
+				}
+			}
+			before := intrusionUpgradeInventory(t, s.Config.SystemRoot)
+			out, err := s.inspectIntrusionWorkspace(ctx)
+			if err != nil || out.StateKnown || out.Current != nil || out.Pending == nil || out.Pending.RecoveryPermitted ||
+				out.Pending.ID != p.ID || out.Pending.SHA256 != hardeningJournalDigest(raw) {
+				t.Fatal("reboot observation changed original authority", out, err)
+			}
+			if len(d.Scalars) != 0 || len(d.Templates) != 0 || d.Checks != 0 || d.Applies != 0 {
+				t.Fatal("read-only reboot view used runtime actuators")
+			}
+			if stage == "boot-changed-during-read" {
+				if out.Pending.Reboot != nil {
+					t.Fatal("published an observation assembled across different boots")
+				}
+				return
+			}
+			if !reflect.DeepEqual(before, intrusionUpgradeInventory(t, s.Config.SystemRoot)) {
+				t.Fatal("reboot view changed filesystem state")
+			}
+			reboot := out.Pending.Reboot
+			if reboot == nil || reboot.Jail != wantJail || reboot.Manifest != "before" || reboot.ManagedPolicy != "before" {
+				t.Fatal("unexpected file comparison", reboot)
+			}
+			if stage == "runtime-unavailable" {
+				if reboot.Runtime != nil {
+					t.Fatal("reported runtime from partial observation", reboot.Runtime)
+				}
+				return
+			}
+			if reboot.Runtime == nil || !reflect.DeepEqual(reboot.Runtime.SSHPorts, []int{2882}) ||
+				!reflect.DeepEqual(reboot.Runtime.ActionPorts, []int{22}) || reboot.Runtime.KernelState != "rules_observed" {
+				t.Fatal("missing current independently observed runtime", reboot.Runtime)
+			}
+		})
+	}
+}
+
 func TestIntrusionWorkspaceReadyReadDoesNotCreateLockArchiveOrRepairSource(t *testing.T) {
 	s, _, calls := intrusionInspectionFixture(t)
 	before := intrusionUpgradeInventory(t, s.Config.SystemRoot)
