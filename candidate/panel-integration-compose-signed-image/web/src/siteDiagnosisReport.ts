@@ -1,4 +1,4 @@
-const labels: Record<string, string> = {
+export const siteDiagnosisCheckLabels: Record<string, string> = {
   binding: "实际域名绑定",
   http: "站点 HTTP",
   dns: "域名解析",
@@ -26,7 +26,7 @@ function diagnosisSection(report: Record<string, unknown>): string {
   const checks = (report.checks || {}) as Record<string, Record<string, unknown>>;
   const keys = Array.isArray(report.check_order) ? report.check_order : Object.keys(checks);
   const rows = keys.filter((key: unknown): key is string =>
-    typeof key === "string" && Object.hasOwn(labels, key) && Object.hasOwn(checks, key),
+    typeof key === "string" && Object.hasOwn(siteDiagnosisCheckLabels, key) && Object.hasOwn(checks, key),
   ).map((key) => {
     const check = checks[key];
     if (!check || typeof check !== "object") return "";
@@ -36,7 +36,7 @@ function diagnosisSection(report: Record<string, unknown>): string {
     const http = typeof check.status === "number" ? `HTTP ${html(check.status)}` : "";
     const milliseconds = typeof check.response_ms === "number" ? `${html(check.response_ms)} 毫秒` : "";
     const metadata = [http, milliseconds].filter(Boolean).join(" · ");
-    return `<tr><th scope="row">${labels[key]}</th><td>${verdict}</td><td>${html(check.detail)}${metadata ? `<p>${metadata}</p>` : ""}</td></tr>`;
+    return `<tr><th scope="row">${siteDiagnosisCheckLabels[key]}</th><td>${verdict}</td><td>${html(check.detail)}${metadata ? `<p>${metadata}</p>` : ""}</td></tr>`;
   });
   return `<section><h2>${html(report.domain)}${html(report.path)}</h2><p>${html(report.checked_at)}</p>
 <table><thead><tr><th scope="col">检查项</th><th scope="col">结果</th><th scope="col">说明</th></tr></thead>
