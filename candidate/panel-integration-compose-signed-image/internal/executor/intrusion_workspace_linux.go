@@ -19,21 +19,35 @@ import (
 	"local/panel/internal/core"
 )
 
+type intrusionRebootObservation struct {
+	Jail          string                  `json:"jail"`
+	Manifest      string                  `json:"manifest"`
+	ManagedPolicy string                  `json:"managed_policy"`
+	Runtime       *intrusionRebootRuntime `json:"runtime"`
+}
+
+type intrusionRebootRuntime struct {
+	SSHPorts    []int  `json:"ssh_ports"`
+	ActionPorts []int  `json:"action_ports"`
+	KernelState string `json:"kernel_state"`
+}
+
 type intrusionTransactionObservation struct {
-	ID                          string         `json:"id"`
-	SHA256                      string         `json:"sha256"`
-	Action                      string         `json:"action"`
-	StartedAt                   string         `json:"started_at"`
-	FinishedAt                  string         `json:"finished_at"`
-	State                       string         `json:"state"`
-	BeforeSettings              map[string]int `json:"before_settings"`
-	TargetSettings              map[string]int `json:"target_settings"`
-	BeforePorts                 []int          `json:"before_ports"`
-	TargetPorts                 []int          `json:"target_ports"`
-	SSHObservedPorts            []int          `json:"ssh_observed_ports"`
-	DurationChangesExistingBans bool           `json:"duration_changes_existing_bans"`
-	RecoveryPermitted           bool           `json:"recovery_permitted"`
-	Detail                      string         `json:"detail"`
+	ID                          string                      `json:"id"`
+	SHA256                      string                      `json:"sha256"`
+	Action                      string                      `json:"action"`
+	StartedAt                   string                      `json:"started_at"`
+	FinishedAt                  string                      `json:"finished_at"`
+	State                       string                      `json:"state"`
+	BeforeSettings              map[string]int              `json:"before_settings"`
+	TargetSettings              map[string]int              `json:"target_settings"`
+	BeforePorts                 []int                       `json:"before_ports"`
+	TargetPorts                 []int                       `json:"target_ports"`
+	SSHObservedPorts            []int                       `json:"ssh_observed_ports"`
+	DurationChangesExistingBans bool                        `json:"duration_changes_existing_bans"`
+	RecoveryPermitted           bool                        `json:"recovery_permitted"`
+	Detail                      string                      `json:"detail"`
+	Reboot                      *intrusionRebootObservation `json:"reboot,omitempty"`
 }
 
 // A pending lifetime deliberately has no current installed/healthy object.
@@ -116,7 +130,7 @@ func (s *Service) intrusionObservationLock() (*os.File, error) {
 
 // Separate READ authority. This never calls the writer's RequireLock (which
 // would convert SH to EX), and cannot authorize a scalar/file/kernel action.
-func (s *Service) intrusionObservationOriginal(file *os.File, original intrusionJournalPlan, raw []byte) error {
+func (s *Service) intrusionObservationPlan(file *os.File, original intrusionJournalPlan, raw []byte) error {
 	if file == nil {
 		return errors.New("原事务观察锁缺失；未创建或修复")
 	}
@@ -131,11 +145,80 @@ func (s *Service) intrusionObservationOriginal(file *os.File, original intrusion
 	if err != nil || plan.ID != original.ID || !bytes.Equal(raw, current) || !bytes.Equal(raw, encoded) {
 		return errors.New("入侵防护只读观察不匹配原完整待恢复记录")
 	}
-	boot, err := os.ReadFile(s.systemPath("/proc/sys/kernel/random/boot_id"))
-	if err != nil || len(boot) > 64 || string(boot) != strings.TrimSpace(string(boot))+"\n" || strings.TrimSpace(string(boot)) != original.BootID {
-		return errors.New("入侵防护启动身份已改变；不能仅凭旧句柄许可恢复")
+	return nil
+}
+
+func (s *Service) intrusionObservationBoot() (string, error) {
+	raw, err := os.ReadFile(s.systemPath("/proc/sys/kernel/random/boot_id"))
+	boot := strings.TrimSpace(string(raw))
+	if err != nil || len(raw) > 64 || string(raw) != boot+"\n" || !hardeningBootID.MatchString(boot) {
+		return "", errors.New("入侵防护当前启动身份无法核对")
+	}
+	return boot, nil
+}
+
+var errIntrusionObservationRebooted = errors.New("主机已在原任务提交后重启，原恢复入口已禁用")
+
+func (s *Service) intrusionObservationOriginal(file *os.File, original intrusionJournalPlan, raw []byte) error {
+	if err := s.intrusionObservationPlan(file, original, raw); err != nil {
+		return err
+	}
+	boot, err := s.intrusionObservationBoot()
+	if err != nil {
+		return err
+	}
+	if boot != original.BootID {
+		return errIntrusionObservationRebooted
 	}
 	return nil
+}
+
+func (s *Service) intrusionObserveAfterReboot(ctx context.Context, lock *os.File, plan intrusionJournalPlan, raw []byte) (*intrusionRebootObservation, error) {
+	if err := s.intrusionObservationPlan(lock, plan, raw); err != nil {
+		return nil, err
+	}
+	boot, err := s.intrusionObservationBoot()
+	if err != nil || boot == plan.BootID {
+		return nil, errors.New("采样期间无法重新核对原任务与当前启动身份")
+	}
+
+	before, beforeErr := s.intrusionJournalCurrentFiles()
+	live, liveErr := s.readIntrusionRuntime(ctx, nil)
+	after, afterErr := s.intrusionJournalCurrentFiles()
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
+	if err = s.intrusionObservationPlan(lock, plan, raw); err != nil {
+		return nil, err
+	}
+	currentBoot, err := s.intrusionObservationBoot()
+	if err != nil || currentBoot != boot {
+		return nil, errors.New("采样期间启动身份改变")
+	}
+
+	classify := func(i int) string {
+		if beforeErr != nil || afterErr != nil || !hardeningBackupSame(before[i], after[i]) {
+			return "unknown"
+		}
+		file := after[i]
+		matchesBefore := hardeningBackupSame(file, plan.Files[i].Before.backup(file.path))
+		matchesTarget := hardeningBackupSame(file, plan.Files[i].After.backup(file.path))
+		switch {
+		case matchesBefore && matchesTarget:
+			return "both"
+		case matchesBefore:
+			return "before"
+		case matchesTarget:
+			return "target"
+		default:
+			return "different"
+		}
+	}
+	out := &intrusionRebootObservation{Jail: classify(0), Manifest: classify(1), ManagedPolicy: classify(2)}
+	if liveErr == nil {
+		out.Runtime = &intrusionRebootRuntime{SSHPorts: live.SSHPorts, ActionPorts: live.Policy.Ports, KernelState: live.KernelState}
+	}
+	return out, nil
 }
 
 func (s *Service) intrusionPendingReadPreflight(ctx context.Context, file *os.File, plan intrusionJournalPlan, raw []byte, state string) error {
@@ -254,6 +337,12 @@ func (s *Service) inspectIntrusionWorkspace(ctx context.Context) (intrusionWorks
 		row.Detail = "当前只读预检通过；显式恢复提交时仍须重新核对原完整记录和实际状态"
 		if check != nil {
 			row.Detail = check.Error()
+		}
+		if errors.Is(check, errIntrusionObservationRebooted) {
+			row.Reboot, err = s.intrusionObserveAfterReboot(ctx, lock, plan, raw)
+			if err != nil {
+				row.Detail += "。重启后的状态采样未完成。"
+			}
 		}
 		out.Pending = &row
 		out.Detail = "原事务尚未闭合；不能把文件缺失当作未安装或把已执行步骤当作整体成功"

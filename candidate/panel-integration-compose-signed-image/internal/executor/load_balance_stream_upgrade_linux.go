@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"local/panel/internal/loadbalancestream"
 )
@@ -181,7 +182,72 @@ func streamUpgradeClearInventory(v map[string]map[string][]byte) {
 	}
 }
 
-func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBalanceStreamUpgradeJob, owner *loadBalanceStreamUpgradeOwner) error {
+// Retained failures stay observe-only. The caller checks their entire
+// private history before allowing a different installation to start.
+func verifyRetainedLoadBalanceStreamPreflight(ctx context.Context, job core.LoadBalanceStreamUpgradeJob, read func(context.Context, string) (map[string]string, error), accountObserved bool) error {
+	if ctx.Err() != nil || job.State != "needs_attention" {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	switch job.RetainedRefusal {
+	case core.LoadBalanceStreamInstallMemory, core.LoadBalanceStreamInstallNginx, core.LoadBalanceStreamRetainedQueueRefusal, core.LoadBalanceStreamRetainedParentExit:
+	default:
+		return errLoadBalanceStreamInstallationJournal
+	}
+	parent, parentErr := loadbalancestream.AccountParentUnit(job.Authority.JobID)
+	child, childErr := loadbalancestream.AccountCreationUnit(job.Authority.JobID)
+	if parentErr != nil || childErr != nil {
+		return errLoadBalanceStreamInstallationJournal
+	}
+	for _, unit := range []string{parent, child} {
+		state, err := read(ctx, unit)
+		invocation, present := state["InvocationID"]
+		if err != nil || !present {
+			return errLoadBalanceStreamInstallationJournal
+		}
+		if (unit == parent || accountObserved) && job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit &&
+			streamRetainedInstallUnitFailed(state) {
+			continue
+		}
+		if invocation != "" || !streamInstallAccountChildTerminated(state) {
+			return errLoadBalanceStreamInstallationJournal
+		}
+	}
+	return ctx.Err()
+}
+
+func streamRetainedInstallUnitFailed(state map[string]string) bool {
+	invocation := state["InvocationID"]
+	return len(state) == 8 && state["LoadState"] == "loaded" && state["ActiveState"] == "failed" && state["SubState"] == "failed" &&
+		state["MainPID"] == "0" && state["ControlPID"] == "0" && state["ExecMainStatus"] == "1" && state["Result"] == "exit-code" &&
+		core.ValidID(invocation) && invocation != strings.Repeat("0", 32)
+}
+
+// This only observes the closed account phase. Publication and full
+// installation receipts remain impossible for this retained old request.
+func verifyLoadBalanceStreamRetainedAccountPermit(j *loadBalanceStreamInstallationJournal, seed, event, submission, permit []byte) bool {
+	if j == nil || j.root == nil {
+		return false
+	}
+	p, err := loadbalancestream.DecodeAccountChildPermit(permit)
+	if err != nil || !loadbalancestream.AccountChildPermitBindsSeed(p, seed) || p.AccountIntentSHA256 != core.Hash(string(event)) {
+		return false
+	}
+	in, err := core.DecodeLoadBalanceStreamInstallSubmission(submission)
+	release, marshalErr := json.Marshal(in.Release)
+	original, seedErr := loadbalancestream.DecodeInstallationSeed(seed)
+	if err != nil || marshalErr != nil || seedErr != nil || in.JobID != p.JobID || core.Hash(string(release)) != original.SubmissionSHA256 {
+		return false
+	}
+	dir, dirErr := j.root.Stat(".")
+	lock, lockErr := j.root.Lstat("run.lock")
+	if dirErr != nil || lockErr != nil || !streamAccountParentLockInfo(lock, p) {
+		return false
+	}
+	native, ok := dir.Sys().(*syscall.Stat_t)
+	return ok && uint64(native.Dev) == p.JournalDevice && native.Ino == p.JournalInode && j.current()
+}
+
+func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBalanceStreamUpgradeJob, owner *loadBalanceStreamUpgradeOwner, retainedUnits map[string]bool) error {
 	r := &programQueueReader{ctx: ctx, root: "/"}
 	defer func() {
 		for _, lease := range r.readLeases {
@@ -244,13 +310,16 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 			return errLoadBalanceStreamInstallationJournal
 		}
 	}
+	accountObserved := make(map[string]bool)
 	for path, records := range all {
 		if path == loadBalanceStreamInstallationsRoot {
 			continue
 		}
 		for id, files := range records {
 			job, ok := byID[id]
-			if !ok || id != own && job.State != "succeeded" {
+			legacyExit := ok && job.State == "needs_attention" && job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit
+			retained := legacyExit && (path == loadBalanceStreamSubmissionsRoot || path == loadBalanceStreamInstallationJobsRoot || path == loadBalanceStreamAccountPermitsRoot)
+			if !ok || id != own && job.State != "succeeded" && !retained {
 				return errLoadBalanceStreamInstallationJournal
 			}
 			switch path {
@@ -258,6 +327,13 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 				v, err := core.DecodeLoadBalanceStreamInstallSubmission(files[id+".json"])
 				if err != nil || v.JobID != id {
 					return errLoadBalanceStreamInstallationJournal
+				}
+				if legacyExit {
+					grant := job.Authority
+					authority, err := appcatalog.VerifyLoadBalanceStreamReleaseEnvelope(ctx, v.Release, grant.AppVersion, grant.ManifestSHA256)
+					if err != nil || !authority.Matches(grant.AppVersion, grant.ManifestSHA256) {
+						return errLoadBalanceStreamInstallationJournal
+					}
 				}
 			case loadBalanceStreamAccountPermitsRoot:
 				v, err := loadbalancestream.DecodeAccountChildPermit(files[id+".json"])
@@ -283,12 +359,23 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 						}
 						r.readLeases = append(r.readLeases, lock)
 					}
-					seed, _, _, err := j.original(ctx)
+					seed, records, chain, err := j.original(ctx)
 					if err != nil || !loadBalanceStreamInstallationGrantMatches(seed, job.Authority) {
 						return errLoadBalanceStreamInstallationJournal
 					}
-					_, err = j.officialAuthority(ctx)
-					return err
+					if _, err = j.officialAuthority(ctx); err != nil {
+						return err
+					}
+					if !legacyExit {
+						return nil
+					}
+					if len(records) != 2 || chain.Complete || !chain.OriginalUnknown ||
+						!verifyLoadBalanceStreamRetainedAccountPermit(j, seed, records[1],
+							all[loadBalanceStreamSubmissionsRoot][id][id+".json"], all[loadBalanceStreamAccountPermitsRoot][id][id+".json"]) {
+						return errLoadBalanceStreamInstallationJournal
+					}
+					accountObserved[id] = true
+					return nil
 				}()
 				if err != nil {
 					return err
@@ -299,6 +386,23 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 	for id, job := range byID {
 		if id == own {
 			continue
+		}
+		if job.State == "needs_attention" {
+			if _, handedOff := all[loadBalanceStreamSubmissionsRoot][id]; handedOff != (job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit) {
+				return errLoadBalanceStreamInstallationJournal
+			}
+			_, permit := all[loadBalanceStreamAccountPermitsRoot][id]
+			if permit != accountObserved[id] {
+				return errLoadBalanceStreamInstallationJournal
+			}
+			if err := verifyRetainedLoadBalanceStreamPreflight(ctx, job, streamInstallUnitProperties, accountObserved[id]); err != nil {
+				return err
+			}
+			if job.RetainedRefusal == core.LoadBalanceStreamRetainedParentExit {
+				parent, _ := loadbalancestream.AccountParentUnit(id)
+				retainedUnits[parent] = true
+
+			}
 		}
 		if job.State == "succeeded" {
 			for _, path := range []string{loadBalanceStreamInstallationJobsRoot, loadBalanceStreamModulePublicationsRoot, loadBalanceStreamSubmissionsRoot, loadBalanceStreamAccountPermitsRoot, loadBalanceStreamInstallObservationsRoot} {
@@ -348,8 +452,21 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 				return err
 			}
 			job, ok := byID[v.JobID]
-			if !ok || job.State != "succeeded" && v.JobID != own || v.ActorID != job.Authority.ActorID || v.ManifestSHA != job.Authority.ManifestSHA256 {
+			if !ok || job.State != "succeeded" && v.JobID != own && !accountObserved[v.JobID] || v.ActorID != job.Authority.ActorID || v.ManifestSHA != job.Authority.ManifestSHA256 {
 				return errLoadBalanceStreamAccount
+			}
+			if accountObserved[v.JobID] {
+				files := all[loadBalanceStreamInstallationJobsRoot][v.JobID]
+				seed, err := loadbalancestream.DecodeInstallationSeed(files["seed.json"])
+				if err != nil || seed.Nonce != v.Nonce || seed.EmptyConfigurationSHA != v.ConfigurationSHA {
+					return errLoadBalanceStreamAccount
+				}
+				child, err := loadbalancestream.AccountCreationUnit(v.JobID)
+				if err != nil {
+					return errLoadBalanceStreamAccount
+				}
+				retainedUnits[child] = true
+				delete(accountObserved, v.JobID)
 			}
 			if v.JobID != own {
 				_, _, err = loadBalanceStreamAccountReceiptHash(ctx)
@@ -372,6 +489,9 @@ func checkLoadBalanceStreamRootUpgrade(ctx context.Context, jobs []core.LoadBala
 			return err
 		}
 	} else if len(receipts) != 0 {
+		return errLoadBalanceStreamAccount
+	}
+	if len(accountObserved) != 0 {
 		return errLoadBalanceStreamAccount
 	}
 	// A native module whose entire original Root history disappeared is NOT
@@ -499,10 +619,11 @@ func checkLoadBalanceStreamUpgrade(ctx context.Context, owner *loadBalanceStream
 	if err != nil {
 		return err
 	}
-	if err = checkLoadBalanceStreamNativeQueues(ctx, owner); err != nil {
+	retainedUnits := make(map[string]bool)
+	if err = checkLoadBalanceStreamRootUpgrade(ctx, jobs, owner, retainedUnits); err != nil {
 		return err
 	}
-	if err = checkLoadBalanceStreamRootUpgrade(ctx, jobs, owner); err != nil {
+	if err = checkLoadBalanceStreamNativeQueues(ctx, owner, retainedUnits); err != nil {
 		return err
 	}
 	traffic, err := holdLoadBalanceStreamTrafficUpgrade(ctx, source)
@@ -510,7 +631,7 @@ func checkLoadBalanceStreamUpgrade(ctx context.Context, owner *loadBalanceStream
 		return err
 	}
 	defer traffic.close()
-	if err = checkLoadBalanceStreamNativeQueues(ctx, owner); err != nil {
+	if err = checkLoadBalanceStreamNativeQueues(ctx, owner, retainedUnits); err != nil {
 		return err
 	}
 	after, err := source.upgradeJobs(ctx, original)

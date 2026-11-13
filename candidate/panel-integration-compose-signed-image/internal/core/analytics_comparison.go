@@ -5,12 +5,14 @@ import (
 	"errors"
 	"net/http"
 	"time"
+
+	"local/panel/internal/appcatalog"
 )
 
 const AnalyticsPeriodComparisonAppVersion = "2.4.3"
 
 func analyticsPeriodComparisonSupported(version string) bool {
-	return version == AnalyticsPeriodComparisonAppVersion || version == AnalyticsLayoutHeatmapAppVersion
+	return version == AnalyticsPeriodComparisonAppVersion || version == AnalyticsLayoutHeatmapAppVersion || version == appcatalog.AnalyticsGeographyVersion
 }
 
 type analyticsComparisonPeriod struct {

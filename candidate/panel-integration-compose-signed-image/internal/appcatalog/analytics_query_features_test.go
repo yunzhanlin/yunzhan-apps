@@ -108,3 +108,20 @@ func TestAnalyticsHeatmapRequiresItsOwnCompiledFeature(t *testing.T) {
 		t.Fatal("aliased heatmap manifest accepted")
 	}
 }
+
+func TestAnalyticsGeographyRequiresDedicatedSignedFeature(t *testing.T) {
+	m := analyticsQueryManifestFixture()
+	m.Version = AnalyticsGeographyVersion
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsPeriodComparisonFeature, AnalyticsLayoutHeatmapFeature)
+	available := func(string) bool { return true }
+	if validatePanelRequirements(m, available) == nil {
+		t.Fatal("previous feature set granted geography")
+	}
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsGeographyFeature)
+	if err := validatePanelRequirements(m, available); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(feature string) bool { return feature != AnalyticsGeographyFeature }) == nil {
+		t.Fatal("older programme accepted geography manifest")
+	}
+}
