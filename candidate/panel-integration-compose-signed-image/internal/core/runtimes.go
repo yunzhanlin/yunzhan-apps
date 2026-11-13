@@ -303,6 +303,15 @@ func (s *Store) nextRuntimeJob(predicate string) (Job, error) {
 	}
 	return j, nil
 }
+
+// The worker's native install and update keep the original signed job as
+// evidence. Treat either the grant or the original version as non-replayable.
+const runtimeLoadBalanceReplayBlocked = `
+r.target_id='load-balance' AND r.kind IN ('software_install','software_update') AND (
+  EXISTS (SELECT 1 FROM load_balance_stream_install_requests g WHERE g.job_id=r.id) OR
+  CASE WHEN json_valid(r.payload) THEN json_extract(r.payload,'$.version') ELSE '' END='1.9.0'
+)`
+
 func (s *Store) RetryRuntime(id, actor string) error {
 	tx, e := s.DB.Begin()
 	if e != nil {
@@ -310,17 +319,16 @@ func (s *Store) RetryRuntime(id, actor string) error {
 	}
 	defer tx.Rollback()
 	var kind, target string
-	if err := tx.QueryRow(`SELECT kind,target_id FROM runtime_jobs WHERE id=?`, id).Scan(&kind, &target); err != nil {
-		return errors.New("任务不存在")
+	var retryBlocked bool
+	if err := tx.QueryRow(`SELECT r.kind,r.target_id,CASE WHEN `+runtimeLoadBalanceReplayBlocked+` THEN 1 ELSE 0 END
+FROM runtime_jobs r WHERE r.id=?`, id).Scan(&kind, &target, &retryBlocked); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New("任务不存在")
+		}
+		return err
 	}
-	if target == "load-balance" && (kind == "software_install" || kind == "software_update") {
-		var count int
-		if tx.QueryRow(`SELECT(SELECT count(*)FROM load_balance_stream_install_requests WHERE job_id=?)+(SELECT count(*)FROM runtime_jobs WHERE id=? AND CASE WHEN json_valid(payload)THEN json_extract(payload,'$.version') ELSE '' END='1.9.0')`, id, id).Scan(&count) != nil {
-			return errLoadBalanceStreamInstallAuthority
-		}
-		if count != 0 {
-			return errors.New("TCP/UDP 原始安装记录不可重放或覆盖；请核对原任务的只读结果，未重新排队")
-		}
+	if retryBlocked {
+		return errors.New("TCP/UDP 原始安装记录不可重放或覆盖；请核对原任务的只读结果，未重新排队")
 	}
 	if kind == "install_runtime" {
 		if release, found := runtimecatalog.Find(target); found {

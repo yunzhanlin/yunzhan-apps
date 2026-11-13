@@ -21,6 +21,8 @@ import (
 
 const statisticsGeoInstanceLock = "/var/lib/panel-executor/statistics-geodata-instance.lock"
 
+var errStatisticsGeoInstanceBusy = errors.New("地域数据与应用生命周期操作不能并行，请核对原任务")
+
 func statisticsGeoInstanceLease(exclusive bool) (*os.File, error) {
 	return statisticsGeoInstanceLeaseAt(statisticsGeoInstanceLock, exclusive)
 }
@@ -56,9 +58,12 @@ func statisticsGeoInstanceLeaseOpen(path string, exclusive, create bool) (*os.Fi
 	if exclusive {
 		mode = unix.LOCK_EX | unix.LOCK_NB
 	}
-	if unix.Flock(int(f.Fd()), mode) != nil {
+	if err := unix.Flock(int(f.Fd()), mode); err != nil {
 		f.Close()
-		return nil, errors.New("地域数据与应用生命周期操作不能并行，请核对原任务")
+		if errors.Is(err, unix.EWOULDBLOCK) {
+			return nil, errStatisticsGeoInstanceBusy
+		}
+		return nil, fmt.Errorf("地域实例锁不可用: %w", err)
 	}
 	return f, nil
 }

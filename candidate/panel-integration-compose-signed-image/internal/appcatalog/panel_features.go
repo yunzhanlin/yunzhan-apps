@@ -77,7 +77,7 @@ const TaskOpenSSHInventoryFeature = "task-openssh-inventory-v1"
 const TaskOpenSSHInventoryVersion = "1.3.2"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == DailyReportScheduleFeature || feature == FTPTransferHistoryFeature || feature == DockerMetricsFeature || feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == SiteDiagnosisApacheFeature || feature == UserAccessOverviewFeature ||
+	if feature == IntrusionDebian12Feature || feature == DailyReportScheduleFeature || feature == FTPTransferHistoryFeature || feature == DockerMetricsFeature || feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == SiteDiagnosisApacheFeature || feature == UserAccessOverviewFeature ||
 		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature || feature == TaskOpenSSHInventoryFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}

@@ -15,6 +15,7 @@ import (
 )
 
 type intrusionJobContextKey struct{}
+type intrusionVersionContextKey struct{}
 
 func intrusionOriginalJob(ctx context.Context) (string, error) {
 	id, _ := ctx.Value(intrusionJobContextKey{}).(string)
@@ -48,6 +49,10 @@ func (s *Service) intrusionPrepareOperation(ctx context.Context, lock *os.File, 
 	if err != nil {
 		return plan, nil, err
 	}
+	targetVersion, _ := ctx.Value(intrusionVersionContextKey{}).(string)
+	if targetVersion == "" {
+		targetVersion = intrusionTransactionVersion
+	}
 	var settings map[string]int
 	if action == "install" {
 		for _, file := range files {
@@ -59,6 +64,9 @@ func (s *Service) intrusionPrepareOperation(ctx context.Context, lock *os.File, 
 		manifest, err := intrusionJournalManifest(hardeningJournalFromBackup(files[1]))
 		if err != nil {
 			return plan, nil, err
+		}
+		if (action == "configure" || action == "uninstall") && core.IntrusionSignedVersion(manifest.Version) {
+			targetVersion = manifest.Version
 		}
 		settings, err = intrusionSettings(manifest.Settings)
 		if err != nil {
@@ -104,7 +112,7 @@ func (s *Service) intrusionPrepareOperation(ctx context.Context, lock *os.File, 
 	if err != nil || len(boot) > 64 || string(boot) != strings.TrimSpace(string(boot))+"\n" || !hardeningBootID.MatchString(strings.TrimSpace(string(boot))) {
 		return plan, nil, errors.New("入侵防护实际启动身份不能完整核对")
 	}
-	plan = intrusionJournalPlan{Format: 1, ID: id, Action: action, StartedAt: core.Now(), BootID: strings.TrimSpace(string(boot)), TargetVersion: intrusionTransactionVersion, TargetSettings: target, TargetPorts: targetPorts, Removal: removal, BeforePolicy: live.Policy, KernelState: live.KernelState, KernelBefore: live.Kernel, KernelDirectory: live.KernelDirectory, BansBefore: []string{}, ConfigurationBefore: tree, ActionBefore: live.Recipe, ProcessBefore: live.Process, ProcessStartBefore: live.ProcessStart, JournalMatchBefore: live.JournalMatch, EffectiveBefore: dump.Identity, Files: []hardeningJournalChange{}}
+	plan = intrusionJournalPlan{Format: 1, ID: id, Action: action, StartedAt: core.Now(), BootID: strings.TrimSpace(string(boot)), TargetVersion: targetVersion, TargetSettings: target, TargetPorts: targetPorts, Removal: removal, BeforePolicy: live.Policy, KernelState: live.KernelState, KernelBefore: live.Kernel, KernelDirectory: live.KernelDirectory, BansBefore: []string{}, ConfigurationBefore: tree, ActionBefore: live.Recipe, ProcessBefore: live.Process, ProcessStartBefore: live.ProcessStart, JournalMatchBefore: live.JournalMatch, EffectiveBefore: dump.Identity, Files: []hardeningJournalChange{}}
 	if action == "install" {
 		plan.InstallBeforeSettings = maps.Clone(settings)
 	}

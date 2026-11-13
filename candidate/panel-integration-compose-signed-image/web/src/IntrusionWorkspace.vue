@@ -2,7 +2,7 @@
 import {computed,onMounted,onUnmounted,ref} from "vue";
 import {ElMessageBox} from "element-plus";
 import {formatPanelDateTime} from "./panelTime";
-import {decodeIntrusionWorkspace,decodeIntrusionRequests,intrusionID,intrusionCurrentVersion,intrusionVersionRequiresUpdate,type IntrusionWorkspace,type IntrusionRequests,type IntrusionRequest} from "./intrusionWorkspace";
+import {decodeIntrusionWorkspace,decodeIntrusionRequests,intrusionID,intrusionCurrentVersion,intrusionVersionRequiresUpdate,type IntrusionWorkspace,type IntrusionRequests,type IntrusionRequest,type IntrusionRebootFile,type IntrusionRebootKernel} from "./intrusionWorkspace";
 type API=<T>(path:string,method?:string,body?:unknown,key?:string)=>Promise<T>;
 const props=defineProps<{api:API;onInstall:(id:string,settings:Record<string,unknown>)=>Promise<string>;onJob:(id:string)=>Promise<void>}>();
 const view=ref<IntrusionWorkspace>(),requests=ref<IntrusionRequests>(),error=ref(""),loading=ref(false),busy=ref(false),tab=ref("overview");
@@ -15,6 +15,18 @@ const blocked=computed(()=>!view.value||!requests.value||loading.value||busy.val
 const legacy=computed(()=>intrusionVersionRequiresUpdate(current.value));
 const actionName=(a:string)=>({install:"安装",configure:"配置",uninstall:"移除受管策略",update:"更新",recover:"显式恢复"}[a]||a);
 const ports=(p:number[]|undefined)=>p?.length?p.join("、"):"尚未核对";
+const rebootFileLabels:Record<IntrusionRebootFile,string> = {
+  before:"与原状态一致",
+  target:"与目标状态一致",
+  both:"原状态与目标状态相同",
+  different:"与原状态及目标状态均不同",
+  unknown:"未能核对"
+};
+const rebootKernelLabels:Record<IntrusionRebootKernel,string> = {
+  rules_observed:"已核对当前规则",
+  scope_absent:"当前规则作用域尚未创建",
+  table_absent:"当前防火墙表尚未创建"
+};
 const label=(name:string)=>({max_retry:"失败次数",find_time_minutes:"统计窗口（分钟）",ban_time_minutes:"封禁时长（分钟）"}[name]||name);
 const limits=computed(()=>Object.entries(form.value).map(([key,value])=>({key,label:label(key),configured:current.value?.settings[key],actual:current.value?.runtime_settings[{max_retry:"maxretry",find_time_minutes:"findtime",ban_time_minutes:"bantime"}[key]||""] ,factor:key==="max_retry"?1:60,value})));
 async function refresh(){
@@ -82,7 +94,22 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;});
       </div>
       <el-alert :type="current?.healthy?'success':'warning'" :title="view.detail" :closable="false"/>
       <el-alert type="info" :title="view.ban_duration_semantics" :closable="false"/>
-      <section v-if="view.pending" class="intrusion-pending"><h4>原事务需要核对</h4><dl><dt>原任务</dt><dd>{{ view.pending.id }}</dd><dt>完整摘要</dt><dd>{{ view.pending.sha256 }}</dd><dt>操作 / 状态</dt><dd>{{ actionName(view.pending.action) }} / {{ view.pending.state }}</dd><dt>动作端口</dt><dd>{{ ports(view.pending.before_ports) }} → {{ ports(view.pending.target_ports) }}</dd><dt>实际 SSH 端口</dt><dd>{{ ports(view.pending.ssh_observed_ports) }}（不会改写监听）</dd></dl><p>{{ view.pending.detail }}</p><div class="intrusion-table-scroll compact" role="region" aria-label="原事务限额变更" tabindex="0"><table><thead><tr><th scope="col">限额</th><th scope="col">原状态</th><th scope="col">目标状态</th></tr></thead><tbody><tr v-for="key in Object.keys(view.pending.before_settings)" :key="key"><th scope="row">{{ label(key) }}</th><td>{{ view.pending.before_settings[key] }}</td><td>{{ view.pending.target_settings[key] }}</td></tr></tbody></table></div><el-button type="warning" :disabled="busy||loading||!!ticket||!requests||!view.pending.recovery_permitted" @click="submit('recover')">按原事务显式恢复</el-button><small>只读预检不是写入许可；提交时仍逐项重新核对。不会重建历史封禁或自动补偿。</small></section>
+      <section v-if="view.pending" class="intrusion-pending"><h4>原事务需要核对</h4><dl><dt>原任务</dt><dd>{{ view.pending.id }}</dd><dt>完整摘要</dt><dd>{{ view.pending.sha256 }}</dd><dt>操作 / 状态</dt><dd>{{ actionName(view.pending.action) }} / {{ view.pending.state }}</dd><dt>动作端口</dt><dd>{{ ports(view.pending.before_ports) }} → {{ ports(view.pending.target_ports) }}</dd><dt>原任务观察的 SSH 端口</dt><dd>{{ ports(view.pending.ssh_observed_ports) }}</dd></dl><p>{{ view.pending.detail }}</p>
+        <section v-if="view.pending.reboot" class="intrusion-reboot" aria-label="重启后只读核对">
+          <h4>重启后只读核对</h4>
+          <dl>
+            <dt>Fail2ban 配置</dt><dd>{{ rebootFileLabels[view.pending.reboot.jail] }}</dd>
+            <dt>应用清单</dt><dd>{{ rebootFileLabels[view.pending.reboot.manifest] }}</dd>
+            <dt>受管策略</dt><dd>{{ rebootFileLabels[view.pending.reboot.managed_policy] }}</dd>
+            <template v-if="view.pending.reboot.runtime">
+              <dt>当前 SSH 监听</dt><dd>{{ ports(view.pending.reboot.runtime.ssh_ports) }}</dd>
+              <dt>当前动作端口</dt><dd>{{ ports(view.pending.reboot.runtime.action_ports) }}</dd>
+              <dt>当前内核状态</dt><dd>{{ rebootKernelLabels[view.pending.reboot.runtime.kernel_state] }}</dd>
+            </template>
+          </dl>
+          <p v-if="!view.pending.reboot.runtime">当前运行状态未能完整核对。</p>
+        </section>
+        <div class="intrusion-table-scroll compact" role="region" aria-label="原事务限额变更" tabindex="0"><table><thead><tr><th scope="col">限额</th><th scope="col">原状态</th><th scope="col">目标状态</th></tr></thead><tbody><tr v-for="key in Object.keys(view.pending.before_settings)" :key="key"><th scope="row">{{ label(key) }}</th><td>{{ view.pending.before_settings[key] }}</td><td>{{ view.pending.target_settings[key] }}</td></tr></tbody></table></div><el-button type="warning" :disabled="busy||loading||!!ticket||!requests||!view.pending.recovery_permitted" @click="submit('recover')">按原事务显式恢复</el-button><small>只读预检不是写入许可；提交时仍逐项重新核对。不会重建历史封禁或自动补偿。</small></section>
       <el-tabs v-model="tab">
         <el-tab-pane label="状态与作用域" name="overview">
           <el-alert v-for="warning in current?.warnings||[]" :key="warning" :title="warning" type="warning" :closable="false"/>

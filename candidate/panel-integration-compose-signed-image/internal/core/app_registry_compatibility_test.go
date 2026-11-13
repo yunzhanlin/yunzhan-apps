@@ -38,3 +38,25 @@ func TestRegistryCompatibilityMatrix(t *testing.T) {
 		t.Fatal("signed OS restriction bypassed")
 	}
 }
+
+func TestRegistryIntrusion111UsesPublishedSignedOSScope(t *testing.T) {
+	item := appcatalog.CatalogItem{
+		ID: "anti-intrusion", Target: "intrusion-prevention", Provider: "panel-module", Stage: "ready",
+		Version: "1.1.1", SHA256: "6d612505ac72ec97fdafdbc0eb8dae999df296e5203bb47058f799dd2aa6f01e",
+	}
+	manifest := appcatalog.Manifest{
+		Compatibility: appcatalog.Compatibility{
+			OS:            []string{"debian-13", "ubuntu-22.04", "ubuntu-24.04"},
+			Architectures: []string{"amd64", "arm64"},
+		},
+	}
+	for _, platform := range []string{"debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"} {
+		for _, arch := range []string{"amd64", "arm64"} {
+			want := appCompatibleOn(manifest, platform, arch) == nil
+			ok, detail := registrySupportOn(item, platform, arch)
+			if ok != want || !want && detail == "" {
+				t.Fatalf("%s/%s: catalogue support=%t detail=%q, signed support=%t", platform, arch, ok, detail, want)
+			}
+		}
+	}
+}

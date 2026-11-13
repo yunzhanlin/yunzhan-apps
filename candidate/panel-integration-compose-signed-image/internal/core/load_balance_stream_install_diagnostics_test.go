@@ -59,3 +59,62 @@ func TestLoadBalanceStreamCoreContractModelRetainsBoundedFailureStage(t *testing
 		})
 	}
 }
+
+func TestLoadBalanceStreamDefinitePreflightRefusalFinishesOnlyOriginalAttempt(t *testing.T) {
+	for _, scenario := range []string{"memory", "engine", "native-busy", "unrecognized", "wrong-job", "http-error", "has-installation", "malformed"} {
+		t.Run(scenario, func(t *testing.T) {
+			s, _, j := streamInstallCoreFixtureJob(t, "install")
+			result := LoadBalanceStreamInstallResult{Format: 1, JobID: j.ID, Version: "1.9.0",
+				State: LoadBalanceStreamInstallRefused, PreflightReason: LoadBalanceStreamInstallMemory}
+			status := http.StatusOK
+			expected := "needs_attention"
+			switch scenario {
+			case "memory":
+				expected = "failed"
+			case "engine":
+				result.PreflightReason = LoadBalanceStreamInstallNginx
+				expected = "failed"
+			case "native-busy":
+				result.PreflightReason = LoadBalanceStreamInstallNativeBusy
+				expected = "failed"
+			case "unrecognized":
+				result.PreflightReason = "other"
+			case "wrong-job":
+				result.JobID = ID()
+			case "http-error":
+				status = http.StatusConflict
+			case "has-installation":
+				result.InstallationID = ID()
+			}
+			raw, err := json.Marshal(result)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if scenario == "malformed" {
+				raw = append(raw, []byte("{}")...)
+			}
+			calls := 0
+			e := &ExecutorClient{Client: &http.Client{Transport: streamInstallCoreRoundTrip(func(r *http.Request) (*http.Response, error) {
+				calls++
+				if r.Method != http.MethodPost || r.URL.Path != "/v1/load-balance-stream/install-jobs" {
+					t.Fatal("unexpected native route", r.Method, r.URL.Path)
+				}
+				return streamInstallCoreResponse(status, raw), nil
+			})}}
+			runLoadBalanceStreamInstallJobWithMetadata(context.Background(), s, e, j, streamInstallCoreModelMetadata)
+			if calls != 1 || streamInstallCoreState(t, s, j) != expected {
+				t.Fatal("unexpected dispatch or original state", calls, streamInstallCoreState(t, s, j))
+			}
+			var detail string
+			if err = s.DB.QueryRow("SELECT error FROM runtime_jobs WHERE id=?", j.ID).Scan(&detail); err != nil {
+				t.Fatal(err)
+			}
+			if expected == "failed" && !strings.Contains(detail, loadBalanceStreamInstallRefusalDetail(result.PreflightReason)) {
+				t.Fatal("typed refusal was not reported with actionable detail", detail)
+			}
+			if err = s.RetryRuntime(j.ID, "admin"); err == nil {
+				t.Fatal("original native installation may not be replayed")
+			}
+		})
+	}
+}
