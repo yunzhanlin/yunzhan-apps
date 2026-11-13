@@ -144,6 +144,19 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  const path=new URL("../web/src/App.vue",import.meta.url);
  let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
+ // The store also provides a read-only entry while intrusion status is pending.
+ one(`                  <el-button
+                    v-if="app.target === 'intrusion-prevention' && registryStatus(app.id)?.state_known === false"
+                    class="runtime-install-button"
+                    @click="openRegistryApp(app)"
+                  >查看防入侵状态</el-button>
+                  <el-button
+                    v-else
+`, '                  <el-button\n');
+ one('  retry_blocked?: boolean;\n', '');
+ one('v-if="canRetryJob(row)"', 'v-if="[\'failed\', \'needs_attention\'].includes(row.state)"');
+ one('function canRetryJob(job: Pick<Job, "kind" | "state" | "retry_blocked">) {\n  return !job.retry_blocked && [',
+     'function canRetryJob(job: Pick<Job, "kind" | "state">) {\n  return [');
  one('  docker_metrics_review: "核对 Docker 资源监控应用包",\n', '');
  one('import { confirmPhpMyAdminInstall, type PhpMyAdminServer } from "./phpMyAdminInstall";\n', '');
  one(`    if (app.id === "phpmyadmin" && app.provider === "compose") {

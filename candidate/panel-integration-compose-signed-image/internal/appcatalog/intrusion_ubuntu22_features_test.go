@@ -63,3 +63,41 @@ func TestIntrusion111RequiresBothExactCompiledHandlers(t *testing.T) {
 		t.Fatal("wrong platform or future version authorized")
 	}
 }
+
+func TestIntrusion112RequiresExactPlatformAndThreeCompiledHandlers(t *testing.T) {
+	fixture := func() Manifest {
+		m := intrusionJournalManifestFixture()
+		m.Version = IntrusionDebian12Version
+		m.RequiredPanelFeatures = []string{IntrusionJournalFeature, IntrusionUbuntu22Feature, IntrusionDebian12Feature}
+		m.Compatibility.OS = []string{"debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04"}
+		m.Compatibility.Architectures = []string{"amd64", "arm64"}
+		return m
+	}
+	available := func(f string) bool {
+		return f == IntrusionJournalFeature || f == IntrusionUbuntu22Feature || f == IntrusionDebian12Feature
+	}
+	if err := validatePanelRequirements(fixture(), available); err != nil {
+		t.Fatal(err)
+	}
+	for name, change := range map[string]func(*Manifest){
+		"missing-feature": func(m *Manifest) { m.RequiredPanelFeatures = m.RequiredPanelFeatures[:2] },
+		"unknown-release": func(m *Manifest) { m.Version = "1.1.3" },
+		"former-release":  func(m *Manifest) { m.Version = "1.1.1" },
+		"missing-debian":  func(m *Manifest) { m.Compatibility.OS = m.Compatibility.OS[1:] },
+		"extra-os":        func(m *Manifest) { m.Compatibility.OS = append(m.Compatibility.OS, "ubuntu-26.04") },
+		"unknown-arch":    func(m *Manifest) { m.Compatibility.Architectures[0] = "386" },
+	} {
+		t.Run(name, func(t *testing.T) {
+			m := fixture()
+			change(&m)
+			if err := validatePanelRequirements(m, available); err == nil {
+				t.Fatal("incompatible manifest accepted")
+			}
+		})
+	}
+	if err := validatePanelRequirements(fixture(), func(f string) bool {
+		return available(f) && f != IntrusionDebian12Feature
+	}); err == nil {
+		t.Fatal("former programme accepted 1.1.2")
+	}
+}

@@ -35,6 +35,14 @@ func decodeLoadBalanceStreamInstallError(raw []byte, job string) (LoadBalanceStr
 
 // A Root observation, not an input capability or a generic module health flag.
 // A successful empty installation does not claim provisioned traffic service.
+const (
+	LoadBalanceStreamInstallRefused = "refused-before-handoff"
+	LoadBalanceStreamInstallMemory  = "insufficient-memory"
+	LoadBalanceStreamInstallNSS     = "unsupported-nss"
+	LoadBalanceStreamInstallNginx   = "nginx-runtime-unavailable"
+	LoadBalanceStreamInstallAccount = "account-precondition"
+)
+
 type LoadBalanceStreamInstallResult struct {
 	Format                int    `json:"format"`
 	JobID                 string `json:"job_id"`
@@ -45,6 +53,7 @@ type LoadBalanceStreamInstallResult struct {
 	FinalEventSHA256      string `json:"final_event_sha256,omitempty"`
 	PublishedModuleSHA256 string `json:"published_module_sha256,omitempty"`
 	AccountReceiptSHA256  string `json:"account_receipt_sha256,omitempty"`
+	PreflightReason       string `json:"preflight_reason,omitempty"`
 	RuntimeProvisioned    bool   `json:"runtime_provisioned"`
 }
 
@@ -52,7 +61,16 @@ func ValidateLoadBalanceStreamInstallResult(v LoadBalanceStreamInstallResult, jo
 	if v.Format != 1 || !ValidID(job) || v.JobID != job || v.Version != loadbalancestream.AppVersion || v.RuntimeProvisioned {
 		return errLoadBalanceStreamInstallAuthority
 	}
-	if v.State != "committed" && v.State != "unknown" && v.State != "not-found" && v.State != "running" {
+	if v.State != "committed" && v.State != "unknown" && v.State != "not-found" && v.State != "running" && v.State != LoadBalanceStreamInstallRefused {
+		return errLoadBalanceStreamInstallAuthority
+	}
+	if v.State == LoadBalanceStreamInstallRefused {
+		switch v.PreflightReason {
+		case LoadBalanceStreamInstallMemory, LoadBalanceStreamInstallNSS, LoadBalanceStreamInstallNginx, LoadBalanceStreamInstallAccount:
+		default:
+			return errLoadBalanceStreamInstallAuthority
+		}
+	} else if v.PreflightReason != "" {
 		return errLoadBalanceStreamInstallAuthority
 	}
 	if v.State == "committed" {
