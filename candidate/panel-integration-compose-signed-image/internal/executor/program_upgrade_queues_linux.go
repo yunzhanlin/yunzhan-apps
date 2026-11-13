@@ -44,7 +44,23 @@ func checkCompleteProgramUpgradeQueues(remoteReader func(*Service) error) error 
 	if err := checkApacheNumericLogUpgrade(ctx, "/"); err != nil {
 		return err
 	}
-	return checkLoadBalanceStreamUpgrade(ctx, nil)
+	// The signed offline recovery path retains its original five-second
+	// combined limit. Only the ordinary, read-only traffic census gets a
+	// separate bounded window: complete stopped generations must be checked
+	// against the installed engine, systemd, policy and native socket census.
+	if remoteReader != nil {
+		return checkLoadBalanceStreamUpgrade(ctx, nil)
+	}
+	cancel()
+	trafficCtx, cancelTraffic := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancelTraffic()
+	if err := checkLoadBalanceStreamUpgrade(trafficCtx, nil); err != nil {
+		if errors.Is(trafficCtx.Err(), context.DeadlineExceeded) {
+			return errors.New("负载均衡 TCP/UDP 原回执与原生服务在限定时间内无法完成核对，保留状态并拒绝升级")
+		}
+		return err
+	}
+	return nil
 }
 
 // Preserves all existing application, recovery and filesystem checks. The
