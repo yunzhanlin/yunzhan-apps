@@ -19,6 +19,8 @@ import { loadBalanceReportExportHref } from "./loadBalanceReportExport";
 import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody,loadBalanceReportForSection,loadBalanceTransactionQueryMatches} from "./loadBalanceTransactions";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
+import RemoteSyncPreview from "./RemoteSyncPreview.vue";
+import {remotePreviewMatches, remoteSyncPreview} from "./remoteSyncPreview";
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
 import {remoteBackupArchiveActions,remoteBackupArchiveBody,remoteBackupArchiveFields} from "./remoteBackupArchive";
 import { canOpenAppModule, canReadPath, type AccessPlan } from "./menuPermissions";
@@ -244,6 +246,8 @@ async function verifyRemotePlanConnection() {
   }catch(e){error.value=(e as Error).message;}finally{busy.value=false;}
 }
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+const syncPreview = computed(() => definition.value?.id === 'files-sync' ? remoteSyncPreview(report.value?.remote_sync_preview) : undefined);
+const syncPreviewStale = computed(() => !!syncPreview.value && !remotePreviewMatches(syncPreview.value, form.value, expectedRevision.value));
 function sectionReport(section:string) {
   if (definition.value?.id === 'task-manager' && section.startsWith('inventory-')) return undefined;
   if (definition.value?.id === 'nfs-manager') return nfsReportForSection(section, report.value);
@@ -879,6 +883,10 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       submitted,
     );
     if(accessGeneration!==idsAccessGeneration)return;
+    if (definition.value.id === 'files-sync' && action === 'remote-preview' && (result as any)?.remote_sync_preview !== undefined) {
+      const preview = remoteSyncPreview((result as any).remote_sync_preview);
+      if (!preview || !remotePreviewMatches(preview, submitted, submitted.expected_revision)) throw Error('服务器返回的预览与本次来源、连接或排除项不符，请重新预览。');
+    }
     if(definition.value.id==='pm2-manager' && action==='stop') {
       if(!pm2StopReplyMatches(submitted.resource_id,result))throw Error('原项目停机回执未能完整核对；请只读刷新当前服务，不要据此重试配置或恢复');
       pm2StopOutcome.value=result;pm2StopAcknowledged=true;
@@ -1072,6 +1080,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   } catch (e) {
     if(accessGeneration!==idsAccessGeneration)return;
     error.value = e instanceof Error ? e.message : String(e);
+    if(definition.value?.id === 'files-sync' && action === 'remote-preview') reportStateUnknown.value = true;
     if(pm2StopAcknowledged)error.value='已收到原项目停止及关闭开机启动的核对回执，但后续列表刷新失败；请手动只读刷新，不要重复提交。'+error.value;
     if (submittedUser) {
       userMutationObservation.value = {...submittedUser,state:submittedUser.state==='acknowledged'?'refresh_failed':'unverified'};
@@ -1320,7 +1329,7 @@ defineExpose({ show });
           :enabled="installed && !installedUnknown && ['1.3.0', '1.3.1', '1.3.2'].includes(installedVersion) && (access === undefined || canOpenAppModule(access, 'task-manager'))" />
         <template v-else>
         <el-alert :title="section.help" type="info" :closable="false" />
-        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />
+        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && ['1.3.0','1.3.1'].includes(installedVersion) && !!installedInstance" :fleet-enabled="installed && installedVersion==='1.3.1' && !!installedInstance" :installation-id="installedInstance" />
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-backups'" :disabled="busy || !/^[0-9a-f]{32}$/.test(form.resource_id || '')" @click="reviewSelectedRemoteBackup">核对所选备份完整摘要（不归档）</el-button>
         <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />
@@ -1614,7 +1623,8 @@ defineExpose({ show });
             <AnalyticsQueryContext :report="report" />
           </template>
           <el-alert v-if="definition.id==='load-balance' && section.id==='transactions' && !loadBalanceTransactionQueryMatches(report,form)" type="warning" :closable="false" title="分页参数已修改，尚未刷新：下方仍是已返回分页范围的库存，不是当前表单的结果。" />
-          <UserAccessOverview v-if="definition.id === 'user-manager' && section.id === 'users'"
+          <RemoteSyncPreview v-if="section.id === 'remote-transfer' && syncPreview" :preview="syncPreview" :stale="syncPreviewStale || reportStateUnknown" />
+          <UserAccessOverview v-else-if="definition.id === 'user-manager' && section.id === 'users'"
             :report="sectionReport(section.id)" :sites="sites" :busy="busy" @select="selected" />
           <AppModuleReport v-else :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
         </section>

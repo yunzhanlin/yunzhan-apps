@@ -21,6 +21,27 @@ func TestLoadBalanceStreamProgrammeReadRequiresAllStrictStoppedWriterFields(t *t
 	}
 }
 
+func TestLoadBalanceStreamProgrammeReadRequiresCompleteWriterBatch(t *testing.T) {
+	writer := func(unit string) string {
+		return "MainPID=0\nControlPID=0\nResult=success\nControlGroup=\nId=" + unit +
+			"\nLoadState=loaded\nActiveState=inactive\nSubState=dead\nUnitFileState=enabled\n\n"
+	}
+	blocks := []string{writer(streamProgrammeWriters[1]), writer(streamProgrammeWriters[0]), writer(streamProgrammeWriters[3]), writer(streamProgrammeWriters[2])}
+	batch := strings.Join(blocks, "")
+	if !streamProgrammeStoppedWriters(batch) {
+		t.Fatal("complete batch in systemd property order refused")
+	}
+	for _, bad := range []string{
+		batch[:len(batch)-1], strings.Join(blocks[:3], ""), strings.Join(blocks[:3], "") + blocks[0],
+		batch + writer("unrelated.service"), strings.Replace(batch, "MainPID=0", "MainPID=8", 1),
+		strings.Replace(batch, "\n\n", "\n", 1),
+	} {
+		if streamProgrammeStoppedWriters(bad) {
+			t.Fatal("partial, duplicate, extra, or live writer batch accepted")
+		}
+	}
+}
+
 func TestLoadBalanceStreamProgrammeReadRefusesScheduledWritersAndRecovery(t *testing.T) {
 	if !streamProgrammeNoWriterJobs("") || !streamProgrammeNoWriterJobs("17 unrelated.service start running\n") {
 		t.Fatal("complete unrelated job inventory refused")
