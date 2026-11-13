@@ -28,8 +28,6 @@ func prepareLoadBalanceStreamSystemAccount(ctx context.Context, parent *loadBala
 		checkLoadBalanceStreamAccountChildKernel(ctx, parent) != nil {
 		return empty, errLoadBalanceStreamAccount
 	}
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
 	configuration, err := holdLoadBalanceStreamNSSConfiguration(ctx)
 	if err != nil {
 		return empty, err

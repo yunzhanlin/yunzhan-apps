@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -131,5 +133,68 @@ func TestLoadBalanceStreamLegacyObservationKeepsOriginalContextAndFailure(t *tes
 	refusal.observation.JobID, refusal.observation.JobType, refusal.observation.JobState = "42", "start", "waiting"
 	if !loadBalanceStreamPeriodicNativeRead(refusal) {
 		t.Fatal("original closed pending periodic start cannot be observed again")
+	}
+}
+
+func TestLoadBalanceStreamGeodataFenceWaitsForOriginalSharedReader(t *testing.T) {
+	fixture := geoStoreRootFixture(t)
+	path := filepath.Join(filepath.Dir(fixture.store.base), "geodata.lock")
+	shared, err := statisticsGeoInstanceLeaseAt(path, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer shared.Close()
+	checks, pauses := 0, 0
+	lease, err := waitLoadBalanceStreamGeodataFence(t.Context(), func(context.Context) error {
+		checks++
+		return nil
+	}, func() (*os.File, error) {
+		return statisticsGeoInstanceLeaseOpen(path, true, false)
+	}, func(context.Context) error {
+		pauses++
+		return shared.Close()
+	})
+	if err != nil || lease == nil || checks != 3 || pauses != 1 {
+		t.Fatal("exclusive acquisition did not wait for the original reader", checks, pauses, err)
+	}
+	defer lease.Close()
+	if other, err := statisticsGeoInstanceLeaseOpen(path, false, false); !errors.Is(err, errStatisticsGeoInstanceBusy) {
+		if other != nil {
+			other.Close()
+		}
+		t.Fatal("new verification entered while the installation fence was held", err)
+	}
+}
+
+func TestLoadBalanceStreamGeodataFenceStopsOnRevocationOrInvalidLock(t *testing.T) {
+	for _, scenario := range []string{"revoked", "invalid-lock", "deadline"} {
+		t.Run(scenario, func(t *testing.T) {
+			calls, pauses := 0, 0
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			lease, err := waitLoadBalanceStreamGeodataFence(ctx, func(context.Context) error {
+				if scenario == "revoked" && calls > 0 {
+					return errors.New("revoked")
+				}
+				return nil
+			}, func() (*os.File, error) {
+				calls++
+				if scenario == "invalid-lock" {
+					return nil, os.ErrPermission
+				}
+				return nil, errStatisticsGeoInstanceBusy
+			}, func(context.Context) error {
+				pauses++
+				if scenario == "deadline" {
+					cancel()
+					return ctx.Err()
+				}
+				return nil
+			})
+			if lease != nil || err == nil || calls != 1 || scenario == "invalid-lock" && pauses != 0 ||
+				scenario == "deadline" && !errors.Is(err, errStatisticsGeoInstanceBusy) {
+				t.Fatal("unsafe wait or failure result", calls, pauses, err)
+			}
+		})
 	}
 }

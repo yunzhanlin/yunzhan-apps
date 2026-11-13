@@ -5,7 +5,6 @@ package executor
 import (
 	"context"
 	"os"
-	"time"
 
 	"local/panel/internal/core"
 )
@@ -19,7 +18,7 @@ func RunLoadBalanceStreamAccountJob(job string) error {
 		!loadBalanceStreamAccountHash(loadBalanceStreamCompiledProgrammeInputsSHA256) {
 		return errLoadBalanceStreamAccount
 	}
-	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, stop := context.WithTimeout(context.Background(), loadBalanceStreamInstallAccountTimeout)
 	defer stop()
 	record, err := readLoadBalanceStreamAccountPermit(job)
 	if err != nil {

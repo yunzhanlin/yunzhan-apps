@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"os/exec"
 	"reflect"
@@ -18,6 +19,14 @@ import (
 )
 
 const streamEgressNFT = "/usr/sbin/nft"
+
+type streamEgressRead uint8
+
+const (
+	streamEgressTableJSON streamEgressRead = iota
+	streamEgressInventory
+	streamEgressTableText
+)
 
 // Held read-only BEFORE witness. Mutation additionally requires the original
 // controller, SH/EX leases, promoted configuration and service-intent phase.
@@ -71,13 +80,15 @@ func (g *loadBalanceStreamHeldEgress) identityCurrent(ctx context.Context) bool 
 
 // Only two fixed read forms and the private pure-policy batch below execute.
 // argv, tool, stdin and output bounds cannot be supplied by Core or browser.
-func (g *loadBalanceStreamHeldEgress) command(ctx context.Context, batch []byte, tables bool) ([]byte, error) {
-	if !g.identityCurrent(ctx) || batch != nil && (g.readOnly || len(batch) == 0 || len(batch) > loadbalancestream.MaxEgressObservationBytes || tables) {
+func (g *loadBalanceStreamHeldEgress) command(ctx context.Context, batch []byte, read streamEgressRead) ([]byte, error) {
+	if !g.identityCurrent(ctx) || batch != nil && (g.readOnly || len(batch) == 0 || len(batch) > loadbalancestream.MaxEgressObservationBytes || read != streamEgressTableJSON) {
 		return nil, loadbalancestream.ErrEgressGuard
 	}
 	args := []string{"-s", "-a", "-j", "list", "table", "inet", loadbalancestream.EgressTableName}
-	if tables {
+	if read == streamEgressInventory {
 		args = []string{"-s", "-a", "-j", "list", "tables"}
+	} else if read == streamEgressTableText {
+		args = []string{"-s", "-a", "list", "table", "inet", loadbalancestream.EgressTableName}
 	} else if batch != nil {
 		args = []string{"-f", "-"}
 	}
@@ -100,20 +111,40 @@ func (g *loadBalanceStreamHeldEgress) command(ctx context.Context, batch []byte,
 	return []byte(output.String()), nil
 }
 
+func (g *loadBalanceStreamHeldEgress) inspectTable(ctx context.Context, policy loadbalancestream.EgressGuard) (loadbalancestream.EgressGuardObservation, error) {
+	var empty loadbalancestream.EgressGuardObservation
+	raw, err := g.command(ctx, nil, streamEgressTableJSON)
+	if err != nil {
+		return empty, err
+	}
+	observation, err := policy.Inspect(raw)
+	if !errors.Is(err, loadbalancestream.ErrEgressTableCommentOmitted) {
+		return observation, err
+	}
+	text, err := g.command(ctx, nil, streamEgressTableText)
+	if err != nil {
+		return empty, err
+	}
+	after, err := g.command(ctx, nil, streamEgressTableJSON)
+	if err != nil || !bytes.Equal(raw, after) {
+		return empty, loadbalancestream.ErrEgressGuard
+	}
+	return policy.InspectWithTableComment(after, text)
+}
+
 func (g *loadBalanceStreamHeldEgress) current(ctx context.Context) error {
 	if !g.identityCurrent(ctx) {
 		return loadbalancestream.ErrEgressGuard
 	}
 	if g.missing {
-		raw, err := g.command(ctx, nil, true)
+		raw, err := g.command(ctx, nil, streamEgressInventory)
 		if err != nil || !loadbalancestream.EgressTableAbsent(raw) {
 			return loadbalancestream.ErrEgressGuard
 		}
 		return nil
 	}
-	raw, err := g.command(ctx, nil, false)
-	actual, e2 := g.policy.Inspect(raw)
-	if err != nil || e2 != nil || !g.receipt.valid(g.policy) || !reflect.DeepEqual(actual, g.receipt.Observation) {
+	actual, err := g.inspectTable(ctx, g.policy)
+	if err != nil || !g.receipt.valid(g.policy) || !reflect.DeepEqual(actual, g.receipt.Observation) {
 		return loadbalancestream.ErrEgressGuard
 	}
 	return nil
@@ -267,13 +298,12 @@ func (g *loadBalanceStreamHeldEgress) replaceOriginal(ctx context.Context, next 
 	if err != nil {
 		return loadbalancestream.ErrEgressGuard
 	}
-	if _, err := g.command(ctx, batch, false); err != nil {
+	if _, err := g.command(ctx, batch, streamEgressTableJSON); err != nil {
 		g.unknown = true
 		return loadbalancestream.ErrEgressGuard
 	}
-	raw, err := g.command(ctx, nil, false)
-	observed, e2 := next.Inspect(raw)
-	if err != nil || e2 != nil || !wasMissing && (observed.TableHandle != previous.TableHandle || observed.ChainHandle != previous.ChainHandle) {
+	observed, err := g.inspectTable(ctx, next)
+	if err != nil || !wasMissing && (observed.TableHandle != previous.TableHandle || observed.ChainHandle != previous.ChainHandle) {
 		g.unknown = true
 		return loadbalancestream.ErrEgressGuard
 	}

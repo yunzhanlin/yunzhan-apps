@@ -16,6 +16,7 @@ import (
 	"io/fs"
 	"local/panel/internal/core"
 	"local/panel/internal/runtimecatalog"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -527,6 +528,13 @@ type sourceHTTPError struct{ Status int }
 
 func (e sourceHTTPError) Error() string { return fmt.Sprintf("源码服务器 HTTP %d", e.Status) }
 
+// sourceResponseTimeout is only constructed before a response or source
+// file exists. A stalled or interrupted body cannot use this retry path.
+type sourceResponseTimeout struct{ cause error }
+
+func (e sourceResponseTimeout) Error() string { return e.cause.Error() }
+func (e sourceResponseTimeout) Unwrap() error { return e.cause }
+
 func downloadRuntimeSource(ctx context.Context, r runtimecatalog.Release, dst string) error {
 	return downloadRuntimeSourceWith(ctx, r, dst, downloadVerifiedWithLimits)
 }
@@ -555,6 +563,15 @@ func downloadRuntimeSourceWith(ctx context.Context, r runtimecatalog.Release, ds
 	err := download(ctx, r.URL, r.SHA256, dst, limits)
 	if cancelled := ctx.Err(); cancelled != nil {
 		return cancelled
+	}
+	var responseTimeout sourceResponseTimeout
+	if r.Family == "php" && strings.HasPrefix(r.URL, "https://www.php.net/distributions/") && errors.As(err, &responseTimeout) {
+		// A new GET to the same official URL is safe before any response or
+		// staged bytes. Never retry the install or use another source here.
+		err = download(ctx, r.URL, r.SHA256, dst, limits)
+		if cancelled := ctx.Err(); cancelled != nil {
+			return cancelled
+		}
 	}
 	var status sourceHTTPError
 	if ctx.Err() == nil && errors.As(err, &status) && (status.Status == 404 || status.Status == 410) {
@@ -617,6 +634,10 @@ func downloadVerifiedWithLimits(ctx context.Context, url, digest, dst string, li
 	}
 	resp, e := client.Do(req)
 	if e != nil {
+		var network net.Error
+		if resp == nil && ctx.Err() == nil && errors.As(e, &network) && network.Timeout() {
+			return sourceResponseTimeout{cause: e}
+		}
 		return e
 	}
 	defer resp.Body.Close()

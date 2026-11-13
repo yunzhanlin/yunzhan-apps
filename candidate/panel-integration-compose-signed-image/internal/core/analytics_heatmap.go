@@ -3,7 +3,10 @@ package core
 import (
 	"context"
 	"encoding/hex"
+	"slices"
 	"sort"
+
+	"local/panel/internal/appcatalog"
 )
 
 const AnalyticsLayoutHeatmapAppVersion = "2.4.4"
@@ -18,10 +21,14 @@ func analyticsClickViewport(value string) bool {
 }
 
 func (s *Store) analyticsLayoutInstalled(ctx context.Context) bool {
-	var digest string
-	if err := s.DB.QueryRowContext(ctx, `SELECT sha256 FROM app_registry_receipts
+	return s.analyticsHasReceipt(ctx, AnalyticsLayoutHeatmapAppVersion, appcatalog.AnalyticsGeographyVersion, appcatalog.AnalyticsSessionActivityVersion)
+}
+
+func (s *Store) analyticsHasReceipt(ctx context.Context, versions ...string) bool {
+	var version, digest string
+	if err := s.DB.QueryRowContext(ctx, `SELECT version, sha256 FROM app_registry_receipts
 		WHERE app_id='website-analytics' AND scope='website-analytics'
-		AND target='website-analytics' AND version=?`, AnalyticsLayoutHeatmapAppVersion).Scan(&digest); err != nil {
+		AND target='website-analytics'`).Scan(&version, &digest); err != nil || !slices.Contains(versions, version) {
 		return false
 	}
 	raw, err := hex.DecodeString(digest)

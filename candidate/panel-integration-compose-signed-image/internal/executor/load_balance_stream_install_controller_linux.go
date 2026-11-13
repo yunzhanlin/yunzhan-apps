@@ -174,7 +174,7 @@ func (w *loadBalanceStreamInstallController) accountChild(ctx context.Context) e
 	// --wait holds the manager reference until this new invocation terminates.
 	// A plain --no-block followed by inactive/dead can see the pre-start state
 	// and incorrectly count an old success before the new child has run.
-	bounded, cancel := context.WithTimeout(ctx, 40*time.Second)
+	bounded, cancel := context.WithTimeout(ctx, loadBalanceStreamInstallAccountWait)
 	_, err = programQueueCommand(bounded, "/usr/bin/systemctl", "--wait", "start", unit)
 	cancel()
 	if err != nil {
@@ -205,7 +205,7 @@ func streamInstallAccountChildTerminated(state map[string]string) bool {
 // signature verifier below cannot authorize this through today's HTTP-only
 // signed package, an ordinary unbound build or a manually named job/CLI.
 func RunLoadBalanceStreamInstallJob(job string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 85*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), loadBalanceStreamInstallParentTimeout)
 	defer cancel()
 	if checkLoadBalanceStreamInstallParentKernel(ctx, job) != nil {
 		return errLoadBalanceStreamInstallationGate
@@ -243,8 +243,11 @@ func RunLoadBalanceStreamInstallJob(job string) error {
 	}
 	defer mutation.close()
 	w := &loadBalanceStreamInstallController{submission: submission, source: source, lifetime: lifetime, mutation: mutation, grant: grant}
-	if source.checkInstall(ctx, grant) != nil || !submission.current() || w.checkQueues(ctx) != nil || checkLoadBalanceStreamInstallParentKernel(ctx, job) != nil {
+	if source.checkInstall(ctx, grant) != nil || !submission.current() || checkLoadBalanceStreamInstallParentKernel(ctx, job) != nil {
 		return errLoadBalanceStreamInstallationGate
+	}
+	if err := w.checkQueues(ctx); err != nil {
+		return streamInstallPhaseError("父进程写入前核对", err)
 	}
 	engine, err := holdLoadBalanceStreamEngine(ctx)
 	if err != nil {

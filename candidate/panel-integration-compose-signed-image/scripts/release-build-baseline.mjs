@@ -143,8 +143,24 @@ EXECUTOR_LDFLAGS="$PANEL_LDFLAGS -X=local/panel/internal/executor.loadBalanceStr
   return text;
 }
 
+// Recognize only the new pre-response PHP source retry. All historical
+// queue/producer checks still compare their original complete pinned inputs.
+function beforePHPSourceResponseRetry(text) {
+ for(const addition of [
+  "\t\"net\"\n",
+  "// sourceResponseTimeout is only constructed before a response or source\n// file exists. A stalled or interrupted body cannot use this retry path.\ntype sourceResponseTimeout struct{ cause error }\n\nfunc (e sourceResponseTimeout) Error() string { return e.cause.Error() }\nfunc (e sourceResponseTimeout) Unwrap() error { return e.cause }\n\n",
+  "\tvar responseTimeout sourceResponseTimeout\n\tif r.Family == \"php\" && strings.HasPrefix(r.URL, \"https://www.php.net/distributions/\") && errors.As(err, &responseTimeout) {\n\t\t// A new GET to the same official URL is safe before any response or\n\t\t// staged bytes. Never retry the install or use another source here.\n\t\terr = download(ctx, r.URL, r.SHA256, dst, limits)\n\t\tif cancelled := ctx.Err(); cancelled != nil {\n\t\t\treturn cancelled\n\t\t}\n\t}\n",
+  "\t\tvar network net.Error\n\t\tif resp == nil && ctx.Err() == nil && errors.As(e, &network) && network.Timeout() {\n\t\t\treturn sourceResponseTimeout{cause: e}\n\t\t}\n",
+ ]) {
+  assert.equal(text.split(addition).length,2,"missing, duplicate or altered PHP source response retry");
+  text=text.replace(addition,()=>'');
+ }
+ return text;
+}
+
 // Reverse only C57's exact Apache dependency admission for historical PHP pins.
 export function beforeApacheBuildDependencyAdmission(text) {
+ text=beforePHPSourceResponseRetry(text);
  for(const addition of ["\tif r.Family == \"apache\" && !nativeWAFService().wafBuildPackagesReady([]string{\"libapr1-dev\", \"libaprutil1-dev\", \"libnghttp2-dev\"}) {\n\t\treturn errors.New(\"Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码\")\n\t}\n", "\tif e = add(\"正在从官方站点下载精确版本源码并校验完整性\"); e != nil {\n\t\treturn e\n\t}\n"]) {
   assert.equal(text.split(addition).length,2,"missing, duplicate or altered Apache dependency/progress addition");
   text=text.replace(addition,()=>'');

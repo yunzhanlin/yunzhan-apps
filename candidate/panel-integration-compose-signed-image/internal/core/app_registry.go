@@ -78,6 +78,17 @@ func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool,
 			return false, "当前系统或架构没有该运行时的已审核安装源"
 		}
 	case "panel-module":
+		if app.ID == "anti-intrusion" && app.Target == "intrusion-prevention" && app.Version == IntrusionAppVersion &&
+			!appcatalog.IntrusionDebian12Supports(platform, arch) {
+			return false, "SSH 防入侵 1.1.2 签名包支持 Debian 12/13、Ubuntu 22.04 和 Ubuntu 24.04"
+		}
+		// The version-1 catalogue has no compatibility field. This exact
+		// published manifest is pinned by its digest and remains lazy-loaded.
+		if app.ID == "anti-intrusion" && app.Target == "intrusion-prevention" &&
+			app.Version == "1.1.1" && app.SHA256 == "6d612505ac72ec97fdafdbc0eb8dae999df296e5203bb47058f799dd2aa6f01e" &&
+			platform != "debian-13" && platform != "ubuntu-22.04" && platform != "ubuntu-24.04" {
+			return false, "SSH 防入侵 1.1.1 签名包支持 Debian 13、Ubuntu 22.04 和 Ubuntu 24.04"
+		}
 		if _, ok := FindAppModule(app.Target); !ok && app.Target != "nginx-waf" && app.Target != "system-hardening" && app.Target != "intrusion-prevention" {
 			return false, "当前面板没有该功能处理器"
 		}

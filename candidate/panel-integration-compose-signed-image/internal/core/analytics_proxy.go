@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"local/panel/internal/appcatalog"
 )
 
 // This value is generated from the panel's actual CLI listen address, never
@@ -58,7 +60,11 @@ func sameAnalyticsRequest(a, b AnalyticsConfig) bool {
 			return false
 		}
 	}
+	if a.Geography != nil && (b.Geography == nil || *a.Geography != *b.Geography) {
+		return false
+	}
 	a.AutoInjectHTML, b.AutoInjectHTML = nil, nil
+	a.Geography, b.Geography = nil, nil
 	a.Key = ""
 	b.Key = ""
 	a.ProxyEndpoint = ""
@@ -116,6 +122,10 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 		fail(w, 400, "保留天数为 1–90，版本必须有效")
 		return
 	}
+	if in.Geography != nil && *in.Geography && !in.Enabled {
+		fail(w, 400, "先开启浏览器采集，再开启地理分布")
+		return
+	}
 	if in.AutoInjectHTML != nil && *in.AutoInjectHTML && !in.Enabled {
 		fail(w, 400, "先开启浏览器采集，再启用 HTML 自动接入")
 		return
@@ -170,6 +180,18 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 	}
 	requestedInjection := settings.AnalyticsInjectHTML
 	in.AutoInjectHTML = &requestedInjection
+	if in.Geography != nil {
+		settings.AnalyticsGeography = *in.Geography
+	}
+	if !in.Enabled {
+		settings.AnalyticsGeography = false
+	}
+	if settings.AnalyticsGeography && !appcatalog.AnalyticsVersionSupportsGeography(module.Status.Version) {
+		fail(w, 409, "请先从签名应用商店更新网站分析，再启用地理分布")
+		return
+	}
+	requestedGeography := settings.AnalyticsGeography
+	in.Geography = &requestedGeography
 	var baseline struct {
 		Current   string `json:"current"`
 		Candidate string `json:"candidate"`

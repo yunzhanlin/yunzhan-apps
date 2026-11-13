@@ -3,11 +3,14 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"local/panel/internal/core"
 	"os"
 	"strings"
+	"time"
+
+	"local/panel/internal/core"
 )
 
 // Never retain request bodies: module inputs can contain passwords and tokens.
@@ -118,7 +121,11 @@ func (s *Service) appendModuleEvent(id, action, trigger string, in core.AppModul
 }
 func (s *Service) moduleHistory(id string, in core.AppModuleInput) (any, error) {
 	if _, err := s.moduleInstalledRecord(id); err != nil && !errors.Is(err, os.ErrNotExist) {
-		return nil, errors.New("安装记录无法核对，未读取或修改原历史")
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if id != "load-balance" || !s.moduleActionInstalled(ctx, id) {
+			return nil, errors.New("安装记录无法核对，未读取或修改原历史")
+		}
 	}
 	events := []moduleEvent{}
 	err := s.moduleRetrospectiveRecord(id, "history.json", &events)

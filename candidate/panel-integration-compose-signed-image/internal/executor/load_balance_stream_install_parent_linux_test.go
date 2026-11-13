@@ -100,7 +100,7 @@ func TestLoadBalanceStreamInstallUnboundParentAndOldOpenerNeverPerformEffects(t 
 
 func TestLoadBalanceStreamInstallPreflightRequiresFreshConcreteOriginalOwner(t *testing.T) {
 	for _, owner := range []*loadBalanceStreamUpgradeOwner{nil, {}, {parent: &loadBalanceStreamInstallController{}}, {child: &loadBalanceStreamAccountParent{}}, {submission: &loadBalanceStreamHeldSubmission{}}, {submission: &loadBalanceStreamHeldSubmission{creator: true}}} {
-		if err := preflightLoadBalanceStreamInstall(context.Background(), owner); err != errLoadBalanceStreamInstallationGate {
+		if reason, err := preflightLoadBalanceStreamInstall(context.Background(), owner); reason != "" || err != errLoadBalanceStreamInstallationGate {
 			t.Fatal("fabricated or old preflight owner reached actual host preflight", err)
 		}
 	}

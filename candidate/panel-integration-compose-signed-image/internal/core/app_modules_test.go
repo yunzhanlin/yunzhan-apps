@@ -55,7 +55,7 @@ func TestAnalyticsGuidanceMatchesImplementedBoundaries(t *testing.T) {
 		t.Fatal("implemented analytics capabilities missing from guidance")
 	}
 	limits := strings.Join(guide.Limitations, " ")
-	for _, boundary := range []string{"会话录像", "地理数据库", "SPA 路由性能", "20000", "8 MiB", "业务审计", "默认关闭", "不会开启任意网站", "未压缩", "UTF-8", "CSP", "原样通过", "ABI", "不改网站模板"} {
+	for _, boundary := range []string{"会话旅程", "已验签的地理库", "国家代码与库版本", "SPA 路由性能", "20000", "8 MiB", "业务审计", "默认关闭", "不会开启任意网站", "未压缩", "UTF-8", "CSP", "原样通过", "ABI", "不改网站模板"} {
 		if !strings.Contains(limits, boundary) {
 			t.Fatal("missing truthful analytics boundary", boundary)
 		}

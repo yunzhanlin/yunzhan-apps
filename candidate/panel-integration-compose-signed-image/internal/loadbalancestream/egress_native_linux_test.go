@@ -339,8 +339,16 @@ func egressNft(t *testing.T, input []byte, args ...string) []byte {
 
 func egressObserved(t *testing.T, g EgressGuard) EgressGuardObservation {
 	t.Helper()
-	raw := egressNft(t, nil, "-s", "-j", "list", "table", "inet", EgressTableName)
+	jsonArgs := []string{"-s", "-a", "-j", "list", "table", "inet", EgressTableName}
+	raw := egressNft(t, nil, jsonArgs...)
 	observed, err := g.Inspect(raw)
+	if err == ErrEgressTableCommentOmitted {
+		text := egressNft(t, nil, "-s", "-a", "list", "table", "inet", EgressTableName)
+		if !bytes.Equal(raw, egressNft(t, nil, jsonArgs...)) {
+			t.Fatal("JSON table changed while reading its text comment")
+		}
+		observed, err = g.InspectWithTableComment(raw, text)
+	}
 	if err != nil {
 		t.Fatalf("complete actual nft rules differ from closed policy: %v\n%s", err, raw)
 	}
