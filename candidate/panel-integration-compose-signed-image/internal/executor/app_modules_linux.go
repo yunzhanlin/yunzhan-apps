@@ -577,7 +577,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return err
 	}
 	if id == "intrusion-prevention" {
-		return s.applyIntrusionOperation(ctx, nil, "update", add)
+		return s.applyIntrusionOperation(context.WithValue(ctx, intrusionVersionContextKey{}, version), nil, "update", add)
 	}
 	if id == "system-hardening" {
 		if version != core.HardeningAppVersion {

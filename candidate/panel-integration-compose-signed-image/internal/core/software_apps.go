@@ -93,12 +93,16 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 // pass its independent signed registry receipt and installation-instance checks.
 const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
-const IntrusionAppVersion = "1.1.1"
+const IntrusionAppVersion = appcatalog.IntrusionDebian12Version
 const NFSPrivateClientAppVersion = "1.3.1"
 const NetworkIDSMaintainedEngineAppVersion = "1.3.2"
 
 // Module implementations ship in the signed panel executor, not arbitrary
 // GitHub scripts. A newer catalog cannot claim code this executor lacks.
+func IntrusionSignedVersion(version string) bool {
+	return version == "1.1.1" || version == IntrusionAppVersion
+}
+
 func SoftwareImplementationVersion(id string) string {
 	app, _ := findSoftwareApp(id)
 	return app.Version
@@ -191,8 +195,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 			return errors.New("任务管理器系统清单仅支持已实现的完整版本")
 		}
 	}
-	if id == "intrusion-prevention" && version != IntrusionAppVersion {
-		return errors.New("防入侵事务更新仅允许固定完整1.1.1，拒绝旧标签、别名及未审核版本")
+	if id == "intrusion-prevention" && !IntrusionSignedVersion(version) {
+		return errors.New("防入侵事务更新仅允许签名版本 1.1.1 和 1.1.2")
 	}
 	if id == "system-hardening" {
 		base, _, _ := strings.Cut(version, "-")
@@ -393,8 +397,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")
 	}
-	if id == "intrusion-prevention" && action == "install" && version != IntrusionAppVersion {
-		return "", errors.New("防入侵1.1.1安装需匹配的签名应用版本，不能直接安装或隐式提升旧包")
+	if id == "intrusion-prevention" && (action == "install" || action == "update") &&
+		(!IntrusionSignedVersion(version) || version == IntrusionAppVersion && bind == nil) {
+		return "", errors.New("防入侵安装或更新需要匹配的签名应用版本")
 	}
 	if action == "install" && version != "" {
 		if err := ValidateSoftwareInstallVersion(id, version); err != nil {

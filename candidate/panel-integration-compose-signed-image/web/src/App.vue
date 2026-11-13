@@ -109,6 +109,7 @@ interface Job {
   site_name: string;
   kind: string;
   database_name?: string;
+  retry_blocked?: boolean;
   state: string;
   error: string;
   created_at: string;
@@ -1210,8 +1211,8 @@ const jobNames: Record<string, string> = {
   restore_site: "恢复网站文件",
   migrate_database: "迁移 MySQL 数据库",
 };
-function canRetryJob(job: Pick<Job, "kind" | "state">) {
-  return ["failed", "needs_attention"].includes(job.state) && Object.hasOwn(jobNames, job.kind) && !["statistics_geodata", "network_ids_rulefeed_install", "waf_engine_build", "apache_body_build", "analytics_html_build"].includes(job.kind);
+function canRetryJob(job: Pick<Job, "kind" | "state" | "retry_blocked">) {
+  return !job.retry_blocked && ["failed", "needs_attention"].includes(job.state) && Object.hasOwn(jobNames, job.kind) && !["statistics_geodata", "network_ids_rulefeed_install", "waf_engine_build", "apache_body_build", "analytics_html_build"].includes(job.kind);
 }
 function emptyJobSteps(job: Pick<Job, "state">) {
   const states: Record<string, string> = {
@@ -2617,6 +2618,12 @@ onUnmounted(() => {
                   <div class="runtime-card-tags"><span v-for="tag in app.capabilities.slice(0, 3)" :key="tag">{{ tag }}</span></div>
                   <div class="registry-card-actions">
                   <el-button
+                    v-if="app.target === 'intrusion-prevention' && registryStatus(app.id)?.state_known === false"
+                    class="runtime-install-button"
+                    @click="openRegistryApp(app)"
+                  >查看防入侵状态</el-button>
+                  <el-button
+                    v-else
                     class="runtime-install-button"
                     :type="app.stage === 'ready' ? 'primary' : 'default'"
                     :disabled="app.stage !== 'ready' || registryStatus(app.id)?.state_known === false || (!registryStatus(app.id)?.installed && registryStatus(app.id)?.supported === false) || registryInstalling.includes(app.id)"
@@ -3354,7 +3361,7 @@ onUnmounted(() => {
                 ><el-button link type="primary" @click="openJob(row)"
                   >详情</el-button
                 ><el-button
-                  v-if="['failed', 'needs_attention'].includes(row.state)"
+                  v-if="canRetryJob(row)"
                   link
                   type="warning"
                   @click="retry(row)"

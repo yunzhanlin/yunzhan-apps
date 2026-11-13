@@ -152,3 +152,76 @@ func TestLoadBalanceStreamInstallUpgradeMissingSchemaCannotHideOtherPendingVersi
 		})
 	}
 }
+
+func TestLoadBalanceStreamLegacyPreflightRetainsOriginalHistory(t *testing.T) {
+	const prefix = "TCP/UDP 原安装没有可核对的完整原生完成回执；保留原任务，只允许观察，不重新派发；执行服务：TCP/UDP 安装阶段[系统前置条件]: TCP/UDP 安装阶段["
+	const suffix = "]: TCP/UDP 独立服务的完整两代配置、专用身份、内核隔离或可用资源无法核对；未启动或重载服务"
+	for stage, want := range map[string]string{"资源余量": LoadBalanceStreamInstallMemory, "Nginx 运行时": LoadBalanceStreamInstallNginx} {
+		t.Run(stage, func(t *testing.T) {
+			s, _, id, _ := streamInstallFixture(t, "install", true)
+			ctx := context.Background()
+			grant, err := s.LoadBalanceStreamInstallAuthority(ctx, id)
+			if err != nil {
+				t.Fatal(err)
+			}
+			detail := prefix + stage + suffix
+			job := Job{ID: id, TargetID: "load-balance", Kind: "software_install", Payload: `{"settings":{},"version":"1.9.0"}`}
+			if err = s.finishRuntime(job, detail, nil, true); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = s.LoadBalanceStreamInstallUpgradeJobs(ctx, nil); err == nil {
+				t.Fatal("still-pending original receipt accepted")
+			}
+			if err = (&Server{Store: s}).reconcileRegistryReceipts(ctx); err != nil {
+				t.Fatal(err)
+			}
+			before := streamInstallSnapshot(t, s)
+			jobs, err := s.LoadBalanceStreamInstallUpgradeJobs(ctx, nil)
+			if err != nil || len(jobs) != 1 || jobs[0].Authority != grant || jobs[0].State != "needs_attention" || jobs[0].RefusedBeforeHandoff != want {
+				t.Fatal("exact retained refusal missing from independent Root census", jobs, err)
+			}
+			if _, err = s.LoadBalanceStreamInstallUpgradeJobs(ctx, &grant); err == nil {
+				t.Fatal("historical refusal obtained live dispatch grant")
+			}
+			if err = s.RetryRuntime(id, "admin"); err == nil || streamInstallSnapshot(t, s) != before {
+				t.Fatal("read-only reconciliation or denied retry changed history")
+			}
+		})
+	}
+}
+
+func TestLoadBalanceStreamLegacyPreflightRefusesIncompleteEvidence(t *testing.T) {
+	for name, mutation := range map[string]string{
+		"extra error":     "UPDATE runtime_jobs SET error=error||' additional detail'",
+		"wrong stage":     "UPDATE runtime_jobs SET error=replace(error,'Nginx 运行时','系统身份源')",
+		"start attempted": "UPDATE runtime_jobs SET steps='[]'",
+		"missing audit":   "DELETE FROM audit_logs WHERE actor='executor'",
+		"duplicate audit": "INSERT INTO audit_logs(actor,action,target,result,created_at) SELECT actor,action,target,result,created_at FROM audit_logs WHERE actor='executor'",
+		"wrong timestamp": "UPDATE audit_logs SET created_at='2026-01-01T00:00:00Z' WHERE actor='executor'",
+		"absent binding":  "DELETE FROM load_balance_stream_install_requests",
+		"false success":   "INSERT INTO app_registry_receipts VALUES('load-balance','load-balance','1.9.0',printf('%064d',1),'load-balance','2026-01-01T00:00:00Z')",
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, _, id, _ := streamInstallFixture(t, "install", true)
+			ctx := context.Background()
+			job := Job{ID: id, TargetID: "load-balance", Kind: "software_install", Payload: `{"settings":{},"version":"1.9.0"}`}
+			const old = "TCP/UDP 原安装没有可核对的完整原生完成回执；保留原任务，只允许观察，不重新派发；执行服务：TCP/UDP 安装阶段[系统前置条件]: TCP/UDP 安装阶段[Nginx 运行时]: TCP/UDP 独立服务的完整两代配置、专用身份、内核隔离或可用资源无法核对；未启动或重载服务"
+			if err := s.finishRuntime(job, old, nil, true); err != nil {
+				t.Fatal(err)
+			}
+			if err := (&Server{Store: s}).reconcileRegistryReceipts(ctx); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := s.DB.Exec(mutation); err != nil {
+				t.Fatal(err)
+			}
+			before := streamInstallSnapshot(t, s)
+			if _, err := s.LoadBalanceStreamInstallUpgradeJobs(ctx, nil); err == nil {
+				t.Fatal("damaged original accepted")
+			}
+			if streamInstallSnapshot(t, s) != before {
+				t.Fatal("failed census changed original evidence")
+			}
+		})
+	}
+}

@@ -14,16 +14,27 @@ test('complete normal, deferred and original pending views do not invent install
  const terminal=transaction();terminal.state='committed';terminal.finished_at=at;const w=workspace();w.history=[terminal];assert.deepEqual(decodeIntrusionWorkspace(w),w);
  for(const change of [{state_known:true},{current:current()},{pending:{...transaction(),duration_changes_existing_bans:false}},{pending:{...transaction(),sha256:'abc'}},{pending:{...transaction(),target_ports:[2882,22]}},{pending:{...transaction(),kernel_before:'private'}}])assert.throws(()=>decodeIntrusionWorkspace({...pending(),...change}));
 });
+test('reboot diagnostics accept bounded current evidence only on a pending non-recoverable original',()=>{
+ const evidence={jail:'target',manifest:'before',managed_policy:'both',runtime:{ssh_ports:[2882],action_ports:[22],kernel_state:'rules_observed'}};
+ const view=pending();view.pending.reboot=evidence;
+ assert.deepEqual(decodeIntrusionWorkspace(view),view);
+ const unknown=structuredClone(view);unknown.pending.reboot.runtime=null;assert.deepEqual(decodeIntrusionWorkspace(unknown),unknown);
+ for(const reboot of [{...evidence,jail:'unexpected'},{...evidence,raw:'private'}, {...evidence,runtime:{...evidence.runtime,ssh_ports:[2882,22]}}, {...evidence,runtime:{...evidence.runtime,kernel_state:'healthy'}}]){
+  assert.throws(()=>decodeIntrusionWorkspace({...view,pending:{...view.pending,reboot}}));
+ }
+ assert.throws(()=>decodeIntrusionWorkspace({...view,pending:{...view.pending,recovery_permitted:true}}));
+ assert.throws(()=>decodeIntrusionWorkspace({...workspace(),history:[{...view.pending,state:'committed',finished_at:at}]}));
+});
 test('unknown/truncated/oversized/contradictory server observations fail closed',()=>{
  for(const v of [null,[],{}, {...workspace(),state_known:false},{...workspace(),current:null},{...workspace(),checked_at:'2026-02-30T00:00:00Z'},{...workspace(),retained_temporaries:129},{...workspace(),history:Array(129).fill(transaction())},{...workspace(),extra:'private authority'}])assert.throws(()=>decodeIntrusionWorkspace(v));
  for(const change of [{version:'1.1.0-fake'},{healthy:true},{ssh_listening_ports:[22]},{active_bans:1.5},{settings:{max_retry:5}},{runtime_settings:{script:'root'}},{warnings:Array(65).fill('x')},{kernel_scope_verified:true},{actions:[{...current().actions[0],actionstart:'root script'}]},{detail:'汉'.repeat(6000)}])assert.throws(()=>decodeIntrusionWorkspace({...workspace(),current:{...current(),...change}}));
 });
-test('111 decodes complete native states and enables only its exact current editor',()=>{
- assert.equal(intrusionCurrentVersion,'1.1.1');
+test('112 retains the 111 editor and accepts only exact implemented versions',()=>{
+ assert.equal(intrusionCurrentVersion,'1.1.2');
  const deferred=workspace();deferred.current.version='1.1.1';assert.deepEqual(decodeIntrusionWorkspace(deferred),deferred);assert.equal(intrusionVersionRequiresUpdate(deferred.current),false);
- const healthy=structuredClone(deferred);Object.assign(healthy.current,{healthy:true,kernel_scope_verified:true,kernel_scope_deferred:false,active_bans:2,warnings:[]});Object.assign(healthy.current.actions[0],{kernel_scope_verified:true,kernel_scope_deferred:false,kernel_ipv4:true,kernel_ipv6:true});assert.deepEqual(decodeIntrusionWorkspace(healthy),healthy);
+ const healthy=structuredClone(deferred);Object.assign(healthy.current,{version:'1.1.2',healthy:true,kernel_scope_verified:true,kernel_scope_deferred:false,active_bans:2,warnings:[]});Object.assign(healthy.current.actions[0],{kernel_scope_verified:true,kernel_scope_deferred:false,kernel_ipv4:true,kernel_ipv6:true});assert.deepEqual(decodeIntrusionWorkspace(healthy),healthy);
  for(const version of ['1.0','1.0.0','1.1.0']){const old=workspace();old.current.version=version;assert.deepEqual(decodeIntrusionWorkspace(old),old);assert.equal(intrusionVersionRequiresUpdate(old.current),true);}
- for(const version of ['1.1.1-fake','1.1.2','v1.1.1','01.1.1'])assert.throws(()=>decodeIntrusionWorkspace({...deferred,current:{...deferred.current,version}}));
+ for(const version of ['1.1.1-fake','1.1.3','v1.1.1','01.1.1'])assert.throws(()=>decodeIntrusionWorkspace({...deferred,current:{...deferred.current,version}}));
  assert.equal(intrusionVersionRequiresUpdate(undefined),false);assert.equal(intrusionVersionRequiresUpdate(null),false);assert.equal(intrusionVersionRequiresUpdate({installed:false,version:''}),false);
  const component=readFileSync(new URL('../web/src/IntrusionWorkspace.vue',import.meta.url),'utf8');assert.match(component,/const legacy=computed\(\(\)=>intrusionVersionRequiresUpdate\(current.value\)\)/);assert(component.includes("+ intrusionCurrentVersion + ' 更新"));
 });
@@ -47,4 +58,9 @@ test('dedicated parent dialog hides both legacy actions and guards the generic s
  const queue=manager.slice(manager.indexOf('async function queue('),manager.indexOf('async function install('));
  assert(queue.indexOf('if (hasDedicatedWorkspace.value) return;')<queue.indexOf('const app = selected.value;'));
  assert.match(manager,/if \(hasDedicatedWorkspace\.value\) return;/);
+});
+
+test('a pending intrusion app remains reachable from the signed store without an install action',()=>{
+ const app=readFileSync(new URL('../web/src/App.vue',import.meta.url),'utf8');
+ assert.match(app,/v-if="app.target === 'intrusion-prevention' && registryStatus\(app.id\)\?\.state_known === false"\s+class="runtime-install-button"\s+@click="openRegistryApp\(app\)"\s+>查看防入侵状态<\/el-button>\s+<el-button\s+v-else/);
 });
