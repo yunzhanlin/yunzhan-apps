@@ -2,6 +2,7 @@ import test from'node:test';
 import assert from'node:assert/strict';
 import fs from'node:fs';
 import {schemaBeforeEnterpriseKernel,schemaBeforeIntegrityKernel}from'./helpers/integrity-kernel-schema.mjs';
+import {schemaBeforeIntrusionDebian12} from './helpers/intrusion-debian12-schema.mjs';
 import {canonical,sha256}from'../tools/lib.mjs';
 const current=JSON.parse(fs.readFileSync(new URL('../schema/app.schema.json',import.meta.url)));
 test('enterprise schema preserves the complete original C60 and pre-kernel predicates',()=>{
@@ -16,4 +17,4 @@ for(const[name,change]of[
  ['missing guard',s=>s.allOf.pop()],
  ['duplicated guard',s=>s.allOf.push(structuredClone(s.allOf.at(-1)))],
  ['old predicate changed',s=>s.properties.version.maxLength=1000],
-])test('enterprise projection refuses '+name,()=>{const s=structuredClone(current);change(s);assert.throws(()=>schemaBeforeEnterpriseKernel(s));});
+])test('enterprise projection refuses '+name,()=>{const s=schemaBeforeIntrusionDebian12(current);change(s);assert.throws(()=>schemaBeforeEnterpriseKernel(s));});

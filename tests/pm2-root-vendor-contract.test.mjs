@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {canonical,sha256,validateManifest} from '../tools/lib.mjs';
 import {pm2RootVendorCases} from '../tools/pm2-root-vendor-fixtures.mjs';
+import {schemaBeforeIntrusionDebian12} from './helpers/intrusion-debian12-schema.mjs';
 import {schemaBeforePM2RootVendor} from './helpers/pm2-root-vendor-schema.mjs';
 const root=path.resolve(import.meta.dirname,'..');
 
@@ -18,7 +19,7 @@ test('PM2 Root vendor release requires exact compiled compat11; original PM2 ver
 test('new Root vendor schema preserves the complete prior publisher schema, and refuses damaged gate structure',()=>{
  const current=JSON.parse(fs.readFileSync(path.join(root,'schema/app.schema.json')));
  assert.equal(sha256(canonical(schemaBeforePM2RootVendor(current))),'02f341da39960324cc8830e02506387b762fce848323dd108b05ff2e50a0f6e7');
- const missing=structuredClone(current);missing.allOf.pop();assert.throws(()=>schemaBeforePM2RootVendor(missing));
- const changed=structuredClone(current);changed.allOf.at(-1).then.properties.version.const='7.0.4-compat12';assert.throws(()=>schemaBeforePM2RootVendor(changed));
- const duplicate=structuredClone(current);duplicate.properties.required_panel_features.items.enum.push('pm2-root-vendor-v1');assert.throws(()=>schemaBeforePM2RootVendor(duplicate));
+ const missing=schemaBeforeIntrusionDebian12(current);missing.allOf.pop();assert.throws(()=>schemaBeforePM2RootVendor(missing));
+ const changed=schemaBeforeIntrusionDebian12(current);changed.allOf.at(-1).then.properties.version.const='7.0.4-compat12';assert.throws(()=>schemaBeforePM2RootVendor(changed));
+ const duplicate=schemaBeforeIntrusionDebian12(current);duplicate.properties.required_panel_features.items.enum.push('pm2-root-vendor-v1');assert.throws(()=>schemaBeforePM2RootVendor(duplicate));
 });

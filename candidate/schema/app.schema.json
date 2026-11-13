@@ -181,7 +181,8 @@
           "website-analytics-query-context-v1",
           "files-sync-unpublished-retention-v1",
           "pm2-evidence-preserving-stop-v1",
-          "pm2-root-vendor-v1"
+          "pm2-root-vendor-v1",
+          "intrusion-debian12-v1"
         ]
       }
     },
@@ -1764,6 +1765,67 @@
                 "maxItems": 1,
                 "items": {
                   "const": "pm2-root-vendor-v1"
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "anti-intrusion"
+              },
+              "version": {
+                "const": "1.1.2"
+              },
+              "delivery": {
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "intrusion-prevention"
+                  },
+                  "manage_route": {
+                    "const": "security"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                  {
+                    "const": "intrusion-preserving-journal-v2"
+                  },
+                  {
+                    "const": "intrusion-upstream0112-v1"
+                  },
+                  {
+                    "const": "intrusion-debian12-v1"
+                  }
+                ],
+                "items": false
+              },
+              "compatibility": {
+                "required": [
+                  "os",
+                  "architectures"
+                ],
+                "properties": {
+                  "os": {
+                    "const": [
+                      "debian-12",
+                      "debian-13",
+                      "ubuntu-22.04",
+                      "ubuntu-24.04"
+                    ]
+                  },
+                  "architectures": {
+                    "const": [
+                      "amd64",
+                      "arm64"
+                    ]
+                  }
                 }
               }
             }
@@ -5077,6 +5139,68 @@
             "maxItems": 1,
             "items": {
               "const": "pm2-root-vendor-v1"
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "id",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "const": "anti-intrusion"
+          },
+          "version": {
+            "const": "1.1.2"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "required_panel_features",
+          "compatibility"
+        ],
+        "properties": {
+          "required_panel_features": {
+            "minItems": 3,
+            "maxItems": 3,
+            "prefixItems": [
+              {
+                "const": "intrusion-preserving-journal-v2"
+              },
+              {
+                "const": "intrusion-upstream0112-v1"
+              },
+              {
+                "const": "intrusion-debian12-v1"
+              }
+            ],
+            "items": false
+          },
+          "compatibility": {
+            "required": [
+              "os",
+              "architectures"
+            ],
+            "properties": {
+              "os": {
+                "const": [
+                  "debian-12",
+                  "debian-13",
+                  "ubuntu-22.04",
+                  "ubuntu-24.04"
+                ]
+              },
+              "architectures": {
+                "const": [
+                  "amd64",
+                  "arm64"
+                ]
+              }
             }
           }
         }

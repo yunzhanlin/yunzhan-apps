@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-12T23:33:23Z",
+  "generated_at": "2026-11-13T01:20:50Z",
   "apps": [
     {
       "schema_version": 1,
       "id": "anti-intrusion",
       "name": "SSH 防入侵 · Anti-intrusion",
       "category": "professional",
-      "version": "1.1.1",
-      "summary": "SSH 失败登录双栈封禁、策略事务、审计解封与原任务恢复；新增 Ubuntu 22.04 的 Fail2ban 0.11.2 支持，升级保留旧事务及现有封禁。须先升级匹配面板，现有 iptables 动作不会自动切换。",
+      "version": "1.1.2",
+      "summary": "SSH 失败登录的双栈封禁、审计解封和原任务恢复。支持 Debian 12/13 与 Ubuntu 22.04/24.04，更新保留现有策略、封禁和原任务。",
       "stage": "ready",
       "risk": "privileged",
       "delivery": {
@@ -19,6 +19,7 @@
       },
       "compatibility": {
         "os": [
+          "debian-12",
           "debian-13",
           "ubuntu-22.04",
           "ubuntu-24.04"
@@ -38,7 +39,8 @@
         "审计解封与并发互斥",
         "原账户请求目录和后端权限约束",
         "Ubuntu22.04 / Fail2ban0.11.2 固定兼容",
-        "1.1.0 原事务和封禁保留，独立1.1.1更新"
+        "Debian 12 / Fail2ban 1.0.2 兼容",
+        "保留旧版本策略与事务回执"
       ],
       "health": {
         "probe": "panel-api",
@@ -50,7 +52,8 @@
       },
       "required_panel_features": [
         "intrusion-preserving-journal-v2",
-        "intrusion-upstream0112-v1"
+        "intrusion-upstream0112-v1",
+        "intrusion-debian12-v1"
       ]
     },
     {

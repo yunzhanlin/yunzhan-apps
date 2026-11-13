@@ -2,9 +2,30 @@ import fs from'node:fs';import path from'node:path';
 export function intrusionUbuntu22Cases(root){
  const read=n=>JSON.parse(fs.readFileSync(path.join(root,n))),catalog=read('candidate/dist/catalog-v1.json');
  const cases=catalog.apps.map(a=>({name:'current50:'+a.id,valid:true,manifest:read('candidate/dist/apps/'+a.id+'/'+a.version+'/manifest.json')}));
- const app=cases.find(c=>c.name==='current50:anti-intrusion').manifest;
- if(app.version!=='1.1.1')throw Error('actual111 manifest required');
+ const current = cases.find(c => c.name === 'current50:anti-intrusion').manifest;
+ if (current.version !== '1.1.2') throw Error('actual112 manifest required');
+ const app = read('candidate/dist/apps/anti-intrusion/1.1.1/manifest.json');
  cases.push({name:'original110',valid:true,manifest:read('dist/apps/anti-intrusion/1.1.0/manifest.json')});
+ cases.push({name:'original111',valid:true,manifest:app});
+ const debian12Changes = [
+  ['previous-version', x => x.version = '1.1.1'],
+  ['unknown-version', x => x.version = '1.1.3'],
+  ['missing-feature', x => x.required_panel_features.pop()],
+  ['reordered-features', x => x.required_panel_features.reverse()],
+  ['missing-debian12', x => x.compatibility.os.shift()],
+  ['unreviewed-os', x => x.compatibility.os.push('ubuntu-26.04')],
+  ['reordered-os', x => x.compatibility.os.reverse()],
+  ['missing-architecture', x => x.compatibility.architectures.pop()],
+  ['reordered-architecture', x => x.compatibility.architectures.reverse()],
+  ['borrowed-app', x => x.id = 'system-hardening'],
+  ['other-target', x => x.delivery.target = 'system-hardening'],
+  ['other-route', x => x.delivery.manage_route = 'app-modules'],
+ ];
+ for (const [name, change] of debian12Changes) {
+  const manifest = structuredClone(current);
+  change(manifest);
+  cases.push({name: '112:' + name, manifest, valid: false});
+ }
  const journal='intrusion-preserving-journal-v2',compat='intrusion-upstream0112-v1';
  const changes=[['missing',x=>delete x.required_panel_features],['empty',x=>x.required_panel_features=[]],['old-only',x=>x.required_panel_features=[journal]],['new-only',x=>x.required_panel_features=[compat]],['reordered',x=>x.required_panel_features=[compat,journal]],['duplicate',x=>x.required_panel_features.push(compat)],['extra',x=>x.required_panel_features.push('hardening-reversible-journal-v1')],['borrowed-app',x=>x.id='system-hardening'],['executor-as-app',x=>x.id='intrusion-prevention'],['other-target',x=>x.delivery.target='system-hardening'],['other-route',x=>x.delivery.manage_route='app-modules'],['runtime',x=>x.delivery.provider='runtime'],['compose',x=>x.delivery.provider='compose'],['old-version',x=>x.version='1.1.0'],['alias',x=>x.version='1.1.1-alias'],['future',x=>x.version='1.1.2'],['leading-zero',x=>x.version='01.1.1']];
  for(const[name,change]of changes){const manifest=structuredClone(app);change(manifest);cases.push({name,manifest,valid:false});}

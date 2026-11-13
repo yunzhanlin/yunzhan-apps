@@ -1,10 +1,11 @@
+import {schemaBeforeIntrusionDebian12} from './intrusion-debian12-schema.mjs';
 import assert from 'node:assert/strict';
 import {canonical,sha256} from '../../tools/lib.mjs';
 import {pm2MaintenanceGuard} from '../../tools/pm2-maintenance-contract.mjs';
 import {pm2RootVendorFeature,pm2RootVendorScope,pm2RootVendorGuard,pm2LegacyMaintenanceWithRootVendor} from '../../tools/pm2-root-vendor-contract.mjs';
 
 export function schemaBeforePM2RootVendor(value){
- const s=structuredClone(value),flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
+ const s=schemaBeforeIntrusionDebian12(value),flags=s.properties.required_panel_features.items.enum,branches=s.allOf[0].then.oneOf;
  if(!flags.includes(pm2RootVendorFeature))return s;
  assert.equal(flags.filter(f=>f===pm2RootVendorFeature).length,1);
  assert.equal(flags.pop(),pm2RootVendorFeature);
