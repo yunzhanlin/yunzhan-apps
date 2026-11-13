@@ -28,7 +28,8 @@ func (s *Service) analyticsGeographyRoutes(m *http.ServeMux) {
 			return
 		}
 		record, err := s.moduleInstalledRecord("website-analytics")
-		if err != nil || record["version"] != appcatalog.AnalyticsGeographyVersion {
+		version, _ := record["version"].(string)
+		if err != nil || !appcatalog.AnalyticsVersionSupportsGeography(version) {
 			respond(w, http.StatusConflict, map[string]string{"error": "网站分析地理分布未安装"})
 			return
 		}

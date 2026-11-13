@@ -200,7 +200,7 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
 	}
 	epoch, present := manifest["installation_id"]
 	installedVersion, _ := manifest["version"].(string)
-	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion || id == "platform-ops" && manifest["version"] == core.PlatformMaintenanceAppVersion || id == "disk-analysis" && diskjob.HostAppVersionSupported(installedVersion) {
+	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion || id == "platform-ops" && core.PlatformMaintenanceVersionSupported(installedVersion) || id == "disk-analysis" && diskjob.HostAppVersionSupported(installedVersion) {
 		value, ok := epoch.(string)
 		if !present || !ok || !core.ValidID(value) {
 			return nil, errors.New("应用安装实例标识缺失或损坏")
