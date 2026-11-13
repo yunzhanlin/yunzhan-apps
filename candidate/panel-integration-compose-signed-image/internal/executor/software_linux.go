@@ -593,9 +593,12 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 				respond(w, 400, map[string]string{"error": err.Error()})
 				return
 			}
-			if install && in.Version != core.IntrusionAppVersion {
-				respond(w, 409, map[string]string{"error": "防入侵1.1.1须通过匹配版本的签名应用安装；未提升旧包或直接安装"})
+			if install && !core.IntrusionSignedVersion(in.Version) {
+				respond(w, 409, map[string]string{"error": "防入侵须通过匹配版本的签名应用安装"})
 				return
+			}
+			if install {
+				ctx = context.WithValue(ctx, intrusionVersionContextKey{}, in.Version)
 			}
 			if !install && action != "update" && in.Version != "" || (action == "update" || action == "uninstall") && len(in.Settings) != 0 {
 				respond(w, 400, map[string]string{"error": "防入侵请求附带未知版本或限额；未忽略额外意图"})

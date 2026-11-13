@@ -1,12 +1,20 @@
 export interface IntrusionAction { name:string; ports:number[]; protocol:string; scope_verified:boolean; kernel_scope_verified:boolean; kernel_scope_deferred:boolean; kernel_ipv4:boolean; kernel_ipv6:boolean; detail:string }
 export interface IntrusionCurrent {format:1;checked_at:string;installed:boolean;version:string;service_active:boolean;config_matches:boolean;healthy:boolean;kernel_scope_verified:boolean;kernel_scope_deferred:boolean;active_bans_known:boolean;active_bans:number;ssh_effective_ports:number[];ssh_listening_ports:number[];ssh_ports_match:boolean;actions:IntrusionAction[];settings:Record<string,number>;runtime_settings:Record<string,number>;warnings:string[];detail:string}
-export interface IntrusionTransaction {id:string;sha256:string;action:string;started_at:string;finished_at:string;state:string;before_settings:Record<string,number>;target_settings:Record<string,number>;before_ports:number[];target_ports:number[];ssh_observed_ports:number[];duration_changes_existing_bans:boolean;recovery_permitted:boolean;detail:string}
+export type IntrusionRebootFile = "before" | "target" | "both" | "different" | "unknown";
+export type IntrusionRebootKernel = "rules_observed" | "scope_absent" | "table_absent";
+export interface IntrusionReboot {
+  jail:IntrusionRebootFile;
+  manifest:IntrusionRebootFile;
+  managed_policy:IntrusionRebootFile;
+  runtime:{ssh_ports:number[];action_ports:number[];kernel_state:IntrusionRebootKernel}|null;
+}
+export interface IntrusionTransaction {id:string;sha256:string;action:string;started_at:string;finished_at:string;state:string;before_settings:Record<string,number>;target_settings:Record<string,number>;before_ports:number[];target_ports:number[];ssh_observed_ports:number[];duration_changes_existing_bans:boolean;recovery_permitted:boolean;detail:string;reboot?:IntrusionReboot}
 export interface IntrusionWorkspace {format:1;checked_at:string;state_known:boolean;current:IntrusionCurrent|null;pending:IntrusionTransaction|null;history:IntrusionTransaction[];retained_temporaries:number;ban_duration_semantics:string;detail:string}
 export interface IntrusionRequest {id:string;action:string;state:string;created_at:string;request_sha256:string}
 export interface IntrusionRequests {actor_id:string;entries:IntrusionRequest[];next_cursor:string;read_only:true}
-export const intrusionCurrentVersion = "1.1.1";
+export const intrusionCurrentVersion = "1.1.2";
 export function intrusionVersionRequiresUpdate(value:Pick<IntrusionCurrent,"installed"|"version">|null|undefined):boolean {
-  return !!value?.installed&&value.version!==intrusionCurrentVersion;
+  return !!value?.installed&&!["1.1.1",intrusionCurrentVersion].includes(value.version);
 }
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==="object"&&!Array.isArray(v)&&[Object.prototype,null].includes(Object.getPrototypeOf(v));
 const keys=(v:Record<string,unknown>,fields:string[])=>Object.keys(v).sort().join(",")===[...fields].sort().join(",");
@@ -23,15 +31,30 @@ function action(v:unknown):boolean {
 }
 function current(v:unknown):boolean {
   if(!object(v)||!keys(v,["format","checked_at","installed","version","service_active","config_matches","healthy","kernel_scope_verified","kernel_scope_deferred","active_bans_known","active_bans","ssh_effective_ports","ssh_listening_ports","ssh_ports_match","actions","settings","runtime_settings","warnings","detail"])||v.format!==1||!stamp(v.checked_at)||!text(v.detail)||!bools(v,["installed","service_active","config_matches","healthy","kernel_scope_verified","kernel_scope_deferred","active_bans_known","ssh_ports_match"])||!text(v.version)||!ports(v.ssh_effective_ports,true)||!ports(v.ssh_listening_ports,true)||!integer(v.active_bans,0,4096)||!settings(v.settings,!v.installed)||!Array.isArray(v.actions)||v.actions.length>16||!v.actions.every(action)||!Array.isArray(v.warnings)||v.warnings.length>64||!v.warnings.every(text)||!object(v.runtime_settings)||Object.keys(v.runtime_settings).some(k=>!["maxretry","findtime","bantime"].includes(k))||!Object.values(v.runtime_settings).every(n=>integer(n,1,604800)))return false;
-  if(v.installed&&!["1.0","1.0.0","1.1.0",intrusionCurrentVersion].includes(v.version))return false;
+  if(v.installed&&!["1.0","1.0.0","1.1.0","1.1.1",intrusionCurrentVersion].includes(v.version))return false;
   if(!v.installed&&(v.version!==""||v.healthy||v.service_active||v.config_matches))return false;
   if(v.ssh_ports_match&&(!v.ssh_effective_ports.length||JSON.stringify(v.ssh_effective_ports)!==JSON.stringify(v.ssh_listening_ports)))return false;
   if(v.healthy&&(!v.actions.length||v.actions.some(a=>!object(a)||a.scope_verified!==true||a.kernel_scope_verified!==true||JSON.stringify(a.ports)!==JSON.stringify(v.ssh_listening_ports))))return false;
   if(v.kernel_scope_verified&&v.kernel_scope_deferred)return false;
   return !v.healthy||(v.installed===true&&v.service_active===true&&v.config_matches===true&&v.ssh_ports_match===true&&v.kernel_scope_verified===true&&v.active_bans_known===true&&v.warnings.length===0&&Object.keys(v.runtime_settings).length===3);
 }
+function reboot(v:unknown):v is IntrusionReboot {
+  if(!object(v)||!keys(v,["jail","manifest","managed_policy","runtime"]))return false;
+  const fileStates = ["before","target","both","different","unknown"];
+  if (![v.jail,v.manifest,v.managed_policy].every(state => typeof state === "string" && fileStates.includes(state))) return false;
+  const runtime = v.runtime;
+  return runtime === null || object(runtime) &&
+    keys(runtime,["ssh_ports","action_ports","kernel_state"]) &&
+    ports(runtime.ssh_ports) && ports(runtime.action_ports) &&
+    typeof runtime.kernel_state === "string" &&
+    ["rules_observed","scope_absent","table_absent"].includes(runtime.kernel_state);
+}
+
 function transaction(v:unknown,pending:boolean):v is IntrusionTransaction {
-  if(!object(v)||!keys(v,["id","sha256","action","started_at","finished_at","state","before_settings","target_settings","before_ports","target_ports","ssh_observed_ports","duration_changes_existing_bans","recovery_permitted","detail"])||!intrusionID(v.id)||!digest(v.sha256)||!["install","configure","update","uninstall"].includes(String(v.action))||!stamp(v.started_at)||!text(v.detail)||!bools(v,["duration_changes_existing_bans","recovery_permitted"])||!settings(v.before_settings)||!settings(v.target_settings)||!ports(v.before_ports)||!ports(v.target_ports)||!ports(v.ssh_observed_ports))return false;
+  if (!object(v)) return false;
+  const hasReboot = Object.hasOwn(v, "reboot");
+  if (hasReboot && (!pending || v.recovery_permitted !== false || !reboot(v.reboot))) return false;
+  if(!keys(v,["id","sha256","action","started_at","finished_at","state","before_settings","target_settings","before_ports","target_ports","ssh_observed_ports","duration_changes_existing_bans","recovery_permitted","detail",...(hasReboot ? ["reboot"] : [])])||!intrusionID(v.id)||!digest(v.sha256)||!["install","configure","update","uninstall"].includes(String(v.action))||!stamp(v.started_at)||!text(v.detail)||!bools(v,["duration_changes_existing_bans","recovery_permitted"])||!settings(v.before_settings)||!settings(v.target_settings)||!ports(v.before_ports)||!ports(v.target_ports)||!ports(v.ssh_observed_ports))return false;
   if(!object(v.before_settings)||!object(v.target_settings)||v.duration_changes_existing_bans!==(v.before_settings.ban_time_minutes!==v.target_settings.ban_time_minutes))return false;
   return pending ? ["pending","committed_pending_cleanup","rolled_back_pending_cleanup"].includes(String(v.state))&&v.finished_at==="" : ["committed","rolled_back"].includes(String(v.state))&&stamp(v.finished_at)&&String(v.finished_at)>=String(v.started_at)&&v.recovery_permitted===false;
 }

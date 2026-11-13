@@ -577,7 +577,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return err
 	}
 	if id == "intrusion-prevention" {
-		return s.applyIntrusionOperation(ctx, nil, "update", add)
+		return s.applyIntrusionOperation(context.WithValue(ctx, intrusionVersionContextKey{}, version), nil, "update", add)
 	}
 	if id == "system-hardening" {
 		if version != core.HardeningAppVersion {
@@ -808,7 +808,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "IDS 原生控制须通过持久化后台任务；同步请求不会执行启停或配置"})
 			return
 		}
-		if !s.moduleInstalled(id) {
+		if !s.moduleActionInstalled(r.Context(), id) {
 			respond(w, 409, map[string]string{"error": "请先安装应用模块"})
 			return
 		}
@@ -843,8 +843,8 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 		// A lifecycle job can uninstall this module while the request waits
 		// for the executor mutex. Recheck inside the same critical section as
 		// the operation so a queued request cannot recreate orphan resources.
-		if !s.moduleInstalled(id) {
-			respond(w, 409, map[string]string{"error": "应用已卸载，未执行排队操作"})
+		if !s.moduleActionInstalled(r.Context(), id) {
+			respond(w, 409, map[string]string{"error": "应用安装状态无法核对，未执行排队操作"})
 			return
 		}
 		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request")) {

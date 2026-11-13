@@ -12,10 +12,24 @@ import (
 	"local/panel/internal/loadbalancestream"
 )
 
-// Native installation status has a separate read-only authority path. The
-// generic module reader must keep refusing a native record: accepting its
-// version/installation_id there would also open legacy lifecycle consumers.
-// Configured private roots never redirect the fixed native host readers.
+// The existing HTTP business actions use the same completed native install
+// evidence. Generic lifecycle handlers keep their legacy-only record reader.
+func (s *Service) moduleActionInstalled(ctx context.Context, id string) bool {
+	if s.moduleInstalled(id) {
+		return true
+	}
+	if id != "load-balance" || s.Config.SystemRoot != "/" || s.Config.SecurityDir != "/etc/panel/security-apps" {
+		return false
+	}
+	installed, err := holdLoadBalanceStreamInstalledContext(ctx)
+	if err != nil {
+		return false
+	}
+	defer installed.close()
+	return installed.current(ctx) == nil
+}
+
+// Native status uses the fixed host readers for the complete installation.
 func (s *Service) loadBalanceStreamAppStatus(ctx context.Context) (core.SoftwareAppStatus, bool) {
 	if s.Config.SystemRoot != "/" || s.Config.SecurityDir != "/etc/panel/security-apps" {
 		return core.SoftwareAppStatus{}, false
