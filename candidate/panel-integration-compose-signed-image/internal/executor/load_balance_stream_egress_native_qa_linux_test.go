@@ -63,7 +63,7 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 	if err != nil || absenceReader == nil || !absenceReader.readOnly || !absenceReader.missing || absenceReader.nft.sha != expectedSHA || absenceReader.current(ctx) != nil {
 		t.Fatal("read-only absence observer failed in actual empty private namespace", err)
 	}
-	if _, err := absenceReader.command(ctx, []byte("add table inet panel_lbstream\n"), false); err != loadbalancestream.ErrEgressGuard || absenceReader.current(ctx) != nil {
+	if _, err := absenceReader.command(ctx, []byte("add table inet panel_lbstream\n"), streamEgressTableJSON); err != loadbalancestream.ErrEgressGuard || absenceReader.current(ctx) != nil {
 		t.Fatal("read-only observer became a firewall writer")
 	}
 	absenceReader.close()
@@ -89,7 +89,7 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 	fixture([]string{"-f", "-"}, "add table inet qa_l4_egress_foreign { flags dormant; comment \"unrelated private QA\"; }\n", true)
 	foreign := fixture([]string{"-s", "-a", "-j", "list", "table", "inet", "qa_l4_egress_foreign"}, "", true)
 	if err := g.current(ctx); err != nil {
-		inventory, readErr := g.command(ctx, nil, true)
+		inventory, readErr := g.command(ctx, nil, streamEgressInventory)
 		t.Fatalf("foreign dormant table must not prevent complete own-table absence proof: current=%v identity=%t read=%v inventory=%.4096s", err, g.identityCurrent(ctx), readErr, inventory)
 	}
 	_, rawSeed, _ := streamServiceReceiptFixture(t, "running")
@@ -108,7 +108,7 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 	first.RuleHandles = append([]uint64(nil), first.RuleHandles...)
 	readOwn := func() []byte {
 		t.Helper()
-		raw, err := g.command(ctx, nil, false)
+		raw, err := g.command(ctx, nil, streamEgressTableJSON)
 		if err != nil {
 			t.Fatal("complete current table read failed", err)
 		}
@@ -134,7 +134,7 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 		}
 	})
 	t.Run("recorded-observer-cannot-issue-even-a-valid-nft-write", func(t *testing.T) {
-		if raw, err := reader.command(ctx, []byte("flush ruleset\n"), false); err != loadbalancestream.ErrEgressGuard || raw != nil ||
+		if raw, err := reader.command(ctx, []byte("flush ruleset\n"), streamEgressTableJSON); err != loadbalancestream.ErrEgressGuard || raw != nil ||
 			!bytes.Equal(initial, readOwn()) || reader.current(ctx) != nil {
 			t.Fatal("read-only observer selected a write or lost its actual original table")
 		}
@@ -182,11 +182,11 @@ func TestLoadBalanceStreamEgressNativePrivateNamespaceHeldOriginalOnly(t *testin
 	})
 	t.Run("failed-command-does-not-mean-absence", func(t *testing.T) {
 		for _, batch := range [][]byte{{}, []byte("this_is_not_a_valid_nft_transaction\n")} {
-			if _, err := g.command(ctx, batch, false); err != loadbalancestream.ErrEgressGuard {
+			if _, err := g.command(ctx, batch, streamEgressTableJSON); err != loadbalancestream.ErrEgressGuard {
 				t.Fatal("invalid or failed fixed-tool command was accepted")
 			}
 		}
-		if _, err := g.command(ctx, []byte("flush ruleset\n"), true); err != loadbalancestream.ErrEgressGuard {
+		if _, err := g.command(ctx, []byte("flush ruleset\n"), streamEgressInventory); err != loadbalancestream.ErrEgressGuard {
 			t.Fatal("invalid read-plus-batch form was accepted")
 		}
 		if !bytes.Equal(initial, readOwn()) || g.current(ctx) != nil {

@@ -10,7 +10,7 @@ import { randomId } from "./randomId";
 import { browserAnalyticsQuery, browserAnalyticsQueryParams, browserAnalyticsReportMatches, browserAnalyticsQueryFence } from "./browserAnalyticsQuery";
 import type { BrowserAnalyticsQueryTicket } from "./browserAnalyticsQuery";
 type API = <T>(path:string,method?:string,body?:unknown,idempotencyKey?:string)=>Promise<T>;
-interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean;client_address_mode?:string}
+interface Settings {site_id:string;key:string;enabled:boolean;clicks:boolean;retention_days:number;revision:number;proxy_endpoint?:string;auto_inject_html?:boolean;geography?:boolean;client_address_mode?:string}
 interface Dimension {name:string;count:number}
 interface Session {id:string;visitor:string;entry:string;exit:string;source:string;first:number;last:number;pages:number;duration:number;journey:string[];page_order_source?:string;page_order_uncertain?:boolean}
 interface Funnel {source:string;from:string;to:string;ordering_uncertain_sessions?:number;window_minutes:number;sampled_pageviews:number;unique_pageviews:number;partial:boolean;completed_sessions:number;duration_seconds:Record<string,number>;steps:{path:string;sessions:number;overall_rate:number;previous_rate:number;drop_off:number}[];limitations:string[]}
@@ -29,12 +29,13 @@ interface Report {
   sessions:Session[];heatmap:HeatPoint[];heatmap_layouts?:{points:(HeatPoint & {viewport:HeatViewport})[];partial:boolean};
   performance:Record<string,{samples:number;p75?:number}>;performance_pages?:AnalyticsPerformancePages;limitations:string[];
   client_addresses?:{unique_addresses:number;known_pageviews:number;unknown_pageviews:number;legacy_pageviews:number;sources:Dimension[]};
+  geography?:{countries:Dimension[];statuses:Dimension[];data_releases:Dimension[];partial:boolean;attribution?:string;attribution_url?:string;license_url?:string};
 }
 const props=defineProps<{api:API;installed:boolean;installedVersion?:string;sites:{id:string;name:string;domain:string}[]}>();
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","2.4.5"].includes(props.installedVersion||""));
 const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1),heatViewport=ref<HeatViewport>();
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
@@ -46,7 +47,20 @@ let funnelSequence=0;
 let sequence=0;
 let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
-const layoutHeat = computed(()=>props.installedVersion==="2.4.4" ? report.value?.heatmap_layouts : undefined);
+const geographySupported = computed(() => props.installedVersion === "2.4.5");
+const geographyStatus: Record<string, string> = {
+  located: "已定位", non_public: "非公网地址", unverified: "地址未核实", unavailable: "地理库暂不可用",
+  not_found: "地理库无匹配", not_collected: "未采集地理分布",
+};
+const regionNames = typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames(["zh-CN"], {type: "region"}) : undefined;
+function regionName(code: string): string {
+  if (!/^[A-Z]{2}$/.test(code)) return code;
+  if (code === "TW") return "中国台湾";
+  if (code === "HK") return "中国香港";
+  if (code === "MO") return "中国澳门";
+  return regionNames?.of(code) || code;
+}
+const layoutHeat = computed(() => (props.installedVersion === "2.4.4" || geographySupported.value) ? report.value?.heatmap_layouts : undefined);
 const heatPaths=computed(()=>[...new Set((layoutHeat.value?.points ?? report.value?.heatmap ?? []).map(p=>p.path))]);
 const viewportOptions=computed(()=>heatViewports.filter(option=>layoutHeat.value?.points.some(
   point=>point.path===heatPath.value && point.viewport===option.value,
@@ -105,6 +119,8 @@ async function save(){
   const id=selected.value,current=sequence;
   try{
     const payload=analyticsCollectorEnabled(settings.value,settings.value.enabled);
+    if (geographySupported.value && !payload.enabled) payload.geography = false;
+    if (!geographySupported.value) delete payload.geography;
     const queued=await props.api<{job_id:string}>(`/analytics/sites/${id}/config`,"POST",payload,randomId());
     let completed=false;
     for(let attempt=0;attempt<120;attempt++){
@@ -117,7 +133,7 @@ async function save(){
     if(!completed)throw new Error("配置任务仍在执行，请到任务列表核对；此处不会提前报告成功。");
     const applied=await props.api<Settings>(`/analytics/sites/${id}/config`);
     if(disposed||current!==sequence)return;
-    if(applied.enabled!==payload.enabled || !!applied.auto_inject_html!==!!payload.auto_inject_html)throw new Error("任务完成后的采集或自动接入状态不匹配，请核对配置；未宣称保存成功。");
+    if(applied.enabled!==payload.enabled || !!applied.auto_inject_html!==!!payload.auto_inject_html || (payload.geography !== undefined && applied.geography !== payload.geography))throw new Error("任务完成后的采集设置与提交值不匹配，请核对配置。");
     settings.value=applied;
     saved.value=applied.enabled ? applied.auto_inject_html ? "已启用：采集代理与 HTML 自动接入已写入对应网站，Nginx 校验和应用成功。" : "采集代理已启用，HTML 自动接入关闭。请使用网站模板中的手动采集标签。" : "已停用：对应网站的采集代理和 HTML 自动接入均已移除，Nginx 校验和应用成功；历史报告保留。";
   }catch(e){if(disposed||current!==sequence)return;error.value=(e as Error).message;try{const actual=await props.api<Settings>(`/analytics/sites/${id}/config`);if(!disposed&&current===sequence)settings.value=actual;}catch{/* Keep the failure visible; never claim an unverified configuration was saved. */}}
@@ -170,7 +186,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <template v-if="report">
           <div class="analytics-metrics"><article v-for="m in metrics" :key="m.key"><span>{{m.label}}</span><strong>{{report.overview[m.key]}}</strong></article></div>
           <el-descriptions :column="2" border><el-descriptions-item label="平均前台停留">{{report.overview.avg_engagement_seconds.toFixed(1)}} 秒</el-descriptions-item><el-descriptions-item label="跳出率">{{report.overview.bounce_rate.toFixed(1)}}%</el-descriptions-item><el-descriptions-item label="实际采样事件">{{report.sampled_events}}</el-descriptions-item><el-descriptions-item label="采集状态">{{settings?.enabled ? '已开启，等待/接收浏览器事件' : '未开启'}}</el-descriptions-item></el-descriptions>
-          <AnalyticsPeriodComparison v-if="installedVersion === '2.4.3' || installedVersion === '2.4.4'" :api="api" :site="selected" :from="report.from" :to="report.to" />
+          <AnalyticsPeriodComparison v-if="installedVersion === '2.4.3' || installedVersion === '2.4.4' || geographySupported" :api="api" :site="selected" :from="report.from" :to="report.to" />
           <section v-if="report.client_addresses" class="analytics-client-addresses" aria-label="客户端连接地址统计">
             <h4>客户端连接地址</h4>
             <p>从直接连接或受保护的本机采集代理取得，只保存按网站隔离的地址摘要。连接地址可能属于 NAT、CDN 或其它代理，不能用来认定真实人数；旧记录和未核实来源单独列出。</p>
@@ -235,6 +251,26 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
           <ul><li v-for="note in funnel.limitations" :key="note">{{note}}</li></ul>
         </template><el-empty v-else-if="!funnelBusy" description="选择网站并输入业务路径后计算；不会生成演示结果" />
       </el-tab-pane>
+      <el-tab-pane v-if="geographySupported" label="地理分布" name="geography">
+        <template v-if="report?.geography">
+          <p>根据已核实连接的 IP 估算国家或地区。报告按浏览量统计，只保留国家代码和所用数据版本。</p>
+          <el-alert v-if="report.geography.partial" title="当前范围只统计已读取的样本。" type="warning" :closable="false" />
+          <el-table :data="report.geography.countries" empty-text="当前时间范围没有已定位的浏览记录" aria-label="国家或地区浏览量">
+            <el-table-column label="国家或地区"><template #default="{row}">{{regionName(row.name)}}</template></el-table-column>
+            <el-table-column label="浏览量" prop="count" width="95" align="right" />
+          </el-table>
+          <el-table :data="report.geography.statuses" empty-text="当前时间范围没有浏览记录" aria-label="地理分布采集结果">
+            <el-table-column label="采集结果"><template #default="{row}">{{geographyStatus[row.name] || row.name}}</template></el-table-column>
+            <el-table-column label="浏览量" prop="count" width="95" align="right" />
+          </el-table>
+          <p v-if="report.geography.data_releases.length && report.geography.attribution_url === 'https://db-ip.com/' && report.geography.license_url === 'https://creativecommons.org/licenses/by/4.0/'">
+            数据版本 {{report.geography.data_releases.map(row => row.name).join('、')}}。
+            <a :href="report.geography.attribution_url" target="_blank" rel="noopener noreferrer">{{report.geography.attribution}}</a>
+            · <a :href="report.geography.license_url" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
+          </p>
+        </template>
+        <el-empty v-else description="选择网站和统计时间范围后刷新。" />
+      </el-tab-pane>
       <el-tab-pane label="页面性能" name="performance">
         <AnalyticsPerformanceReport v-if="report" :document-metrics="report.performance" :pages="report.performance_pages" />
       </el-tab-pane>
@@ -242,7 +278,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <el-alert v-if="settings?.enabled && settings.client_address_mode==='legacy_proxy'" title="当前网站仍使用旧采集代理。保存采集配置后启用受保护的客户端地址传递；历史记录保持原样。" type="info" :closable="false" />
         <AnalyticsHTMLEngine :api="api" :installed="installed" :supported="htmlSupported" @ready="htmlEngineReady=$event" />
         <template v-if="settings"><el-alert title="采集默认关闭。开启前请按你的网站隐私政策设置访客告知或同意机制；采集器尊重 DNT/GPC，且不采集输入内容。" type="info" :closable="false" />
-          <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="setEnabled" /></el-form-item><el-form-item label="HTML 自动接入（立即应用）"><el-switch v-model="settings.auto_inject_html" aria-label="HTML 自动接入" :disabled="!installed || busy || (!settings.auto_inject_html && (!settings.enabled || !htmlSupported || !htmlEngineReady))" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>
+          <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="setEnabled" /></el-form-item><el-form-item label="HTML 自动接入（立即应用）"><el-switch v-model="settings.auto_inject_html" aria-label="HTML 自动接入" :disabled="!installed || busy || (!settings.auto_inject_html && (!settings.enabled || !htmlSupported || !htmlEngineReady))" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item v-if="geographySupported" label="统计访客国家或地区"><el-switch v-model="settings.geography" aria-label="统计访客国家或地区" :disabled="!installed || !settings.enabled || busy" /><p>保存后从网站统计 v2 已验签的地理库读取。旧记录保持原样。</p></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>
           <p>缩短保留天数会在后续采集时清理过期事件，不能恢复；导出统计只包含聚合结果，不是原始事件备份。</p>
           <h4>同源采集代理（自动管理）</h4><p>开启立即自动添加到对应网站配置，关闭立即移除；执行器先备份，再校验 Nginx 并应用，失败恢复旧配置。仅允许 tracker.js、auto.js 和 event，不代理面板管理接口。</p><p>访客入口：{{site?.domain}}/__yunzhan/analytics/ → 本机采集服务。{{settings.proxy_endpoint ? `已应用的内部上游：http://${settings.proxy_endpoint}/collect/analytics/` : '当前没有已应用的受管采集代理。'}}</p>
           <h4>{{settings.auto_inject_html ? '已选择 HTML 自动接入' : '手动添加 JS 采集标签'}}</h4><p v-if="settings.auto_inject_html">无需修改模板。仅本网站启用，关闭自动接入会从 Nginx 配置撤掉响应过滤器，模板文件始终保持原样。已经手动加入的同一采集器会去重，不重复计数。</p><p v-else>将下列代码加入 {{site?.domain}} 的 HTML 模板；或先加载可选引擎，再开启本网站的 HTML 自动接入。</p><p>浏览器始终使用当前网站的域名与协议；内部上游不应换成网站域名，否则可能循环代理。严格 CSP、压缩上游或缺少明确 head 的页面可能需要手动接入；自动接入不改写这些页面。</p><pre v-if="!settings.auto_inject_html">{{snippet}}</pre>

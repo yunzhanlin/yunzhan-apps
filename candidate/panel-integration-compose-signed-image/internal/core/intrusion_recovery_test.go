@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"fmt"
+	"local/panel/internal/appcatalog"
 	"strings"
 	"testing"
 )
@@ -77,7 +78,7 @@ func TestIntrusionRecoveryQueueBindsFullOriginalOnceAndAuditsOnce(t *testing.T) 
 
 func TestIntrusionVersionRequiresExactSignedInstallAndActualUpdate(t *testing.T) {
 	s := testStore(t)
-	for _, version := range []string{"", "1.0", "1.0.0", "1.1", "v1.1.0", "1.1.0-alias", "1.1.0", "1.1.1-alias", "1.1.2", "1.2.0", "01.1.0"} {
+	for _, version := range []string{"", "1.0", "1.0.0", "1.1", "v1.1.0", "1.1.0-alias", "1.1.0", "1.1.1-alias", "1.1.2-alias", "1.1.3", "1.2.0", "01.1.0"} {
 		if ValidateSoftwareUpdate("intrusion-prevention", version) == nil {
 			t.Fatal("unimplemented or ambiguous update accepted", version)
 		}
@@ -88,7 +89,43 @@ func TestIntrusionVersionRequiresExactSignedInstallAndActualUpdate(t *testing.T)
 	if ValidateSoftwareUpdate("intrusion-prevention", IntrusionAppVersion) != nil {
 		t.Fatal("fixed version rejected")
 	}
-	if _, err := s.queueSoftwareAction("intrusion-prevention", "install", nil, IntrusionAppVersion, "intrusion-signed-fixed-version", "admin"); err != nil {
+	if _, err := s.queueSoftwareAction("intrusion-prevention", "install", nil, "1.1.1", "intrusion-retained-version", "admin"); err != nil {
 		t.Fatal(err)
+	}
+	for _, action := range []string{"install", "update"} {
+		if _, err := s.queueSoftwareAction("intrusion-prevention", action, nil, IntrusionAppVersion, "intrusion-new-unbound-"+action, "admin"); err == nil {
+			t.Fatal("new release accepted an unsigned request", action)
+		}
+	}
+}
+
+func TestIntrusion112UpdateRequiresOriginalRegistryBindingAtExecution(t *testing.T) {
+	store := testStore(t)
+	item := appcatalog.CatalogItem{
+		ID: "anti-intrusion", Version: IntrusionAppVersion, SHA256: strings.Repeat("a", 64),
+		Provider: "panel-module", Target: "intrusion-prevention",
+	}
+	key, actor := "intrusion-112-bound-update", ID()
+	id, err := store.queueSoftwareActionBound(item.Target, "update", nil, item.Version, key, "admin", store.bindRegistryUpdate(item, item.Target, key, actor))
+	if err != nil {
+		t.Fatal(err)
+	}
+	job := Job{ID: id, TargetID: item.Target, Kind: "software_update"}
+	if err = store.DB.QueryRow("SELECT payload FROM runtime_jobs WHERE id=?", id).Scan(&job.Payload); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.intrusionUpdateExecutionBinding(job); err != nil {
+		t.Fatal(err)
+	}
+	changed := job
+	changed.Payload = strings.Replace(changed.Payload, "null", "{}", 1)
+	if err = store.intrusionUpdateExecutionBinding(changed); err == nil {
+		t.Fatal("different execution envelope accepted")
+	}
+	if _, err = store.DB.Exec("DELETE FROM app_registry_update_requests WHERE job_id=?", id); err != nil {
+		t.Fatal(err)
+	}
+	if err = store.intrusionUpdateExecutionBinding(job); err == nil {
+		t.Fatal("update without original binding accepted")
 	}
 }

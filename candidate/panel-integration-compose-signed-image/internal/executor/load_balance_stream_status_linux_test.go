@@ -41,8 +41,11 @@ func TestLoadBalanceStreamStatusPrivateRecordsCannotAdoptHostInstallation(t *tes
 				t.Fatal("private configured root reached the fixed native host status reader")
 			}
 			status := s.appModuleStatus(context.Background(), "load-balance")
-			if !status.StateUnknown || status.Installed || status.Healthy || status.Version != "" || status.InstallationID != "" || s.moduleInstalled("load-balance") {
+			if !status.StateUnknown || status.Installed || status.Healthy || status.Version != "" || status.InstallationID != "" || s.moduleInstalled("load-balance") || s.moduleActionInstalled(context.Background(), "load-balance") {
 				t.Fatal("copied native version/epoch became an installation", status)
+			}
+			if _, err := s.moduleHistory("load-balance", core.AppModuleInput{}); err == nil {
+				t.Fatal("a copied native version gained access to legacy history")
 			}
 			for _, action := range []string{"install", "configure", "uninstall"} {
 				if err := s.appModuleLifecycle(context.Background(), "load-balance", action, nil, func(string) {}); err == nil {
@@ -77,7 +80,7 @@ func TestLoadBalanceStreamStatusPreservesGenericLegacyAndAbsence(t *testing.T) {
 		if want == "" {
 			want = "1.0"
 		}
-		if status.StateUnknown || !status.Installed || status.Version != want || status.InstallationID != "" {
+		if status.StateUnknown || !status.Installed || status.Version != want || status.InstallationID != "" || !s.moduleActionInstalled(context.Background(), "load-balance") {
 			t.Fatal("legacy known installation/version changed", status)
 		}
 	}

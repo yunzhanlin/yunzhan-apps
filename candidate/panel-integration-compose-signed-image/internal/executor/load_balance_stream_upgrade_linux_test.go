@@ -34,7 +34,7 @@ func TestLoadBalanceStreamUpgradeNativeUnitCensusNeverUsesPrefixExemption(t *tes
 		{strings.Replace(a, "@", "@alias-", 1) + " loaded inactive dead unknown\n", nil, false},
 		{a + " not-found inactive dead unknown\n", nil, false},
 	} {
-		if got := decodeLoadBalanceStreamUpgradeUnits(v.raw, v.active); (got == nil) != v.ok {
+		if got := decodeLoadBalanceStreamUpgradeUnits(v.raw, v.active, nil); (got == nil) != v.ok {
 			t.Fatal("native current ownership/states not closed", v.raw, got)
 		}
 	}
@@ -110,6 +110,25 @@ func TestLoadBalanceStreamUpgradeFabricatedOwnerHasNoSkipAuthority(t *testing.T)
 	for _, owner := range []*loadBalanceStreamUpgradeOwner{nil, {}, {parent: &loadBalanceStreamInstallController{}}, {child: &loadBalanceStreamAccountParent{}}} {
 		if owner.current(ctx) == nil {
 			t.Fatal("bare owner/parent/child labels became effect authority")
+		}
+	}
+}
+
+func TestLoadBalanceStreamRetainedParentFailureNeverAllowsLiveOrForeignUnits(t *testing.T) {
+	parent := "panel-lbstream-install@" + strings.Repeat("a", 32) + ".service"
+	child := "panel-lbstream-account-create@" + strings.Repeat("a", 32) + ".service"
+	retained := map[string]bool{parent: true}
+	if err := decodeLoadBalanceStreamUpgradeUnits(parent+" loaded failed failed original\n", nil, retained); err != nil {
+		t.Fatal(err)
+	}
+	for _, raw := range []string{
+		child + " loaded failed failed original\n",
+		parent + " loaded active running original\n",
+		parent + " loaded activating start original\n",
+		parent + " not-found failed failed original\n",
+	} {
+		if decodeLoadBalanceStreamUpgradeUnits(raw, nil, retained) == nil {
+			t.Fatal("unsafe retained unit inventory admitted", raw)
 		}
 	}
 }
