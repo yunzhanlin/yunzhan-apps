@@ -40,6 +40,7 @@ type Job struct {
 	Payload      string `json:"-"`
 	DatabaseName string `json:"database_name,omitempty"`
 	BackupBytes  *int64 `json:"backup_bytes,omitempty"`
+	RetryBlocked bool   `json:"retry_blocked,omitempty"`
 	ID           string `json:"id"`
 	SiteID       string `json:"site_id"`
 	SiteName     string `json:"site_name"`
@@ -440,7 +441,14 @@ func (s *Store) QueueSiteAction(id, kind, actor string) (string, error) {
 	return jobID, tx.Commit()
 }
 
-const jobSelect = `SELECT j.id,j.site_id,s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,'' AS target_id,j.payload FROM jobs j JOIN sites s ON j.site_id=s.id UNION ALL SELECT id,'',target_id,kind,state,error,created_at,updated_at,steps,target_id,'{}' FROM runtime_jobs UNION ALL SELECT j.id,'',s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,j.target_id,j.payload FROM mysql_jobs j JOIN mysql_servers s ON s.id=j.target_id UNION ALL SELECT o.id,o.site_id,s.name,'acme_certificate',o.state,o.error,o.created_at,o.updated_at,o.steps,o.site_id,'{}' FROM acme_orders o JOIN sites s ON s.id=o.site_id`
+const jobSelect = `SELECT j.id,j.site_id,s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,'' AS target_id,j.payload,0 AS retry_blocked
+FROM jobs j JOIN sites s ON j.site_id=s.id
+UNION ALL SELECT r.id,'',r.target_id,r.kind,r.state,r.error,r.created_at,r.updated_at,r.steps,r.target_id,'{}',
+CASE WHEN ` + runtimeLoadBalanceReplayBlocked + ` THEN 1 ELSE 0 END FROM runtime_jobs r
+UNION ALL SELECT j.id,'',s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,j.target_id,j.payload,0
+FROM mysql_jobs j JOIN mysql_servers s ON s.id=j.target_id
+UNION ALL SELECT o.id,o.site_id,s.name,'acme_certificate',o.state,o.error,o.created_at,o.updated_at,o.steps,o.site_id,'{}',0
+FROM acme_orders o JOIN sites s ON s.id=o.site_id`
 
 func addDatabaseJobSummary(j *Job) {
 	if j.Kind != "backup_database" {
@@ -466,7 +474,7 @@ func (s *Store) Jobs() ([]Job, error) {
 	for rows.Next() {
 		var j Job
 		var steps string
-		if err = rows.Scan(&j.ID, &j.SiteID, &j.SiteName, &j.Kind, &j.State, &j.Error, &j.CreatedAt, &j.UpdatedAt, &steps, &j.TargetID, &j.Payload); err != nil {
+		if err = rows.Scan(&j.ID, &j.SiteID, &j.SiteName, &j.Kind, &j.State, &j.Error, &j.CreatedAt, &j.UpdatedAt, &steps, &j.TargetID, &j.Payload, &j.RetryBlocked); err != nil {
 			return nil, err
 		}
 		_ = json.Unmarshal([]byte(steps), &j.Steps)
@@ -481,7 +489,7 @@ func (s *Store) Job(id string) (Job, error) {
 		return j, sql.ErrNoRows
 	}
 	var steps string
-	e := s.DB.QueryRow(`SELECT * FROM (`+jobSelect+`) WHERE id=?`, id).Scan(&j.ID, &j.SiteID, &j.SiteName, &j.Kind, &j.State, &j.Error, &j.CreatedAt, &j.UpdatedAt, &steps, &j.TargetID, &j.Payload)
+	e := s.DB.QueryRow(`SELECT * FROM (`+jobSelect+`) WHERE id=?`, id).Scan(&j.ID, &j.SiteID, &j.SiteName, &j.Kind, &j.State, &j.Error, &j.CreatedAt, &j.UpdatedAt, &steps, &j.TargetID, &j.Payload, &j.RetryBlocked)
 	if e == nil {
 		e = json.Unmarshal([]byte(steps), &j.Steps)
 		addDatabaseJobSummary(&j)
