@@ -79,3 +79,29 @@ func TestPlatformMaintenanceManifestBytesCannotBorrowNewHandlerClaim(t *testing.
 		t.Fatal("new app accepted omitted implementation requirement")
 	}
 }
+
+func TestPlatformMaintenanceFleetExactVersionAndFeatureGate(t *testing.T) {
+	m := maintenanceRequirementFixture()
+	m.Version = "1.3.1"
+	m.RequiredPanelFeatures = []string{PlatformMaintenanceFeature, PlatformMaintenanceFleetFeature}
+	all := func(feature string) bool {
+		return feature == PlatformMaintenanceFeature || feature == PlatformMaintenanceFleetFeature
+	}
+	if err := validatePanelRequirements(m, all); err != nil {
+		t.Fatal(err)
+	}
+	if err := validatePanelRequirements(m, func(feature string) bool { return feature == PlatformMaintenanceFeature }); err == nil {
+		t.Fatal("older panel accepted fleet package")
+	}
+	for _, version := range []string{"1.2.0", "1.3.0", "1.3.1-compat1", "1.3.2"} {
+		bad := m
+		bad.Version = version
+		if err := validatePanelRequirements(bad, all); err == nil {
+			t.Fatal("fleet feature escaped exact application version", version)
+		}
+	}
+	m.RequiredPanelFeatures = []string{PlatformMaintenanceFeature}
+	if err := validatePanelRequirements(m, all); err == nil {
+		t.Fatal("fleet package had no fleet feature")
+	}
+}
