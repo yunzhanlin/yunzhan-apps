@@ -270,13 +270,17 @@ func (c elasticsearchSnapshotHTTP) observation(ctx context.Context, in core.Elas
 	default:
 		return "", errors.New("无法识别 Elasticsearch 快照状态")
 	}
-	// A restored index can exist while its primaries are still initializing.
-	// Report its observed health; do not infer that a specific request created it.
+	return observeElasticsearchRestore(ctx, c.call, in.RestoreIndex)
+}
+
+func observeElasticsearchRestore(ctx context.Context, call func(context.Context, string, string, any, any) (int, error), index string) (string, error) {
 	var health struct {
-		Status  string                     `json:"status"`
-		Indices map[string]json.RawMessage `json:"indices"`
+		Indices map[string]struct {
+			Status         string `json:"status"`
+			NumberOfShards int    `json:"number_of_shards"`
+		} `json:"indices"`
 	}
-	status, err = c.call(ctx, http.MethodGet, "/_cluster/health/"+in.RestoreIndex+"?level=indices&timeout=4s", nil, &health)
+	status, err := call(ctx, http.MethodGet, "/_cluster/health/"+index+"?level=indices&timeout=4s", nil, &health)
 	if err != nil {
 		return "", err
 	}
@@ -286,16 +290,52 @@ func (c elasticsearchSnapshotHTTP) observation(ctx context.Context, in core.Elas
 	if status != http.StatusOK || len(health.Indices) > 1 {
 		return "", errors.New("无法核对目标索引健康状态")
 	}
-	if _, ok := health.Indices[in.RestoreIndex]; !ok {
+	indexHealth, ok := health.Indices[index]
+	if !ok {
 		return "missing", nil
 	}
-	if health.Status == "green" || health.Status == "yellow" {
-		return "complete", nil
-	}
-	if health.Status == "red" {
+	switch indexHealth.Status {
+	case "red":
 		return "running", nil
+	case "green", "yellow":
+		if indexHealth.NumberOfShards < 1 {
+			return "", errors.New("目标索引未返回有效的分片数量")
+		}
+	default:
+		return "", errors.New("无法识别目标索引健康状态")
 	}
-	return "", errors.New("无法识别目标索引健康状态")
+
+	// Allocation can become healthy before a search can read every shard.
+	// Fetch at most one hit without its document contents.
+	var search struct {
+		TimedOut *bool `json:"timed_out"`
+		Shards   struct {
+			Total      int  `json:"total"`
+			Successful int  `json:"successful"`
+			Failed     *int `json:"failed"`
+		} `json:"_shards"`
+	}
+	status, err = call(ctx, http.MethodGet, "/"+index+"/_search?allow_partial_search_results=false&size=1&_source=false&track_total_hits=false&terminate_after=1", nil, &search)
+	if err != nil {
+		return "", err
+	}
+	switch status {
+	case http.StatusNotFound:
+		return "missing", nil
+	case http.StatusServiceUnavailable, http.StatusTooManyRequests, http.StatusRequestTimeout, http.StatusGatewayTimeout:
+		return "running", nil
+	case http.StatusOK:
+		if search.TimedOut == nil || search.Shards.Failed == nil || search.Shards.Total < 1 {
+			return "", errors.New("目标索引未返回有效的查询分片状态")
+		}
+		if *search.TimedOut || *search.Shards.Failed != 0 || search.Shards.Total != indexHealth.NumberOfShards ||
+			search.Shards.Successful != indexHealth.NumberOfShards {
+			return "running", nil
+		}
+		return "complete", nil
+	default:
+		return "", errors.New("无法核对目标索引的查询状态")
+	}
 }
 
 func runElasticsearchSnapshotOperation(ctx context.Context, id string, in core.ElasticsearchSnapshotRequest, action string) (string, error) {
