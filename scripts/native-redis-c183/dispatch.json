@@ -4,5 +4,6 @@
   "payload_sha256": "a941ff5c1b2bf7ec63523b0f00f0bb99fff4f34312bd36f0d87f97dd6adc722d",
   "published_head": "450ab4b96d392cab93acc0812354ed43fd3a6601",
   "qa_catalogue_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
-  "tag": "qa-redispersistencecandidate183-20261115-qa1"
+  "tag": "qa-redispersistencecandidate183-20261115-qa1",
+  "workflow_path_revision": 2
 }
