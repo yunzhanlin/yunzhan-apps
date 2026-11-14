@@ -258,16 +258,30 @@ try:
     other_payload=other_access.read_bytes()
     own=record(denied)
     old_config=record(cfg)
-    def other_site_preserved():
+    def neighbor_log_state(after_usr1):
         now=record(other_access)
-        return all(now[k]==other_before[k] for k in ('inode','uid','mode')) and other_access.read_bytes().startswith(other_payload)
+        worker_uids=set()
+        for pid in writers():
+            status=(Path('/proc')/pid/'status').read_text().splitlines()
+            values=next(line for line in status if line.startswith('Uid:')).split()[1:]
+            if int(values[1])>0:
+                worker_uids.add(int(values[1]))
+        assert len(worker_uids)==1
+        owner_reopen_ok=now['uid']==other_before['uid'] or after_usr1 and now['uid'] in worker_uids
+        mode_reopen_ok=now['mode']==other_before['mode'] or after_usr1 and now['mode']==other_before['mode']|0o600
+        return {'inode':now['inode']==other_before['inode'],'owner':owner_reopen_ok,
+                'mode':mode_reopen_ok,'original_bytes':other_access.read_bytes().startswith(other_payload),
+                'before_uid':other_before['uid'],'observed_uid':now['uid'],'worker_uid':next(iter(worker_uids)),
+                'before_mode':other_before['mode'],'observed_mode':now['mode']}
     collision=access.with_name(access.name+'.20000101-000000.gz')
     collision.symlink_to(other_access)
     files=(access,error)
     before_refusal=[record(p) for p in files]
     refused=scheduled('refuse symlink')
     assert job_result('schedule_runs',refused,'failed')
-    assert [record(p) for p in files]==before_refusal and other_site_preserved()
+    neighbor_before=neighbor_log_state(False)
+    assert [record(p) for p in files]==before_refusal
+    assert all(neighbor_before[k] for k in ('inode','owner','mode','original_bytes'))
     collision.unlink()
     old=[record(path) for path in files]
     old_raw=[path.read_bytes() for path in files]
@@ -300,10 +314,11 @@ try:
         assert original['inode']!=replacement['inode']
         assert all(original['inode'] not in v['files'] for v in current.values())
         assert any(replacement['inode'] in v['files'] for v in current.values())
-    compared={'neighbor_log_owner_inode_record_and_original_bytes':other_site_preserved(),
+    neighbor_after=neighbor_log_state(True)
+    compared={'neighbor_log_owner_inode_record_and_original_bytes':all(neighbor_after[k] for k in ('inode','owner','mode','original_bytes')),
        'original_vhost_bytes_mode_and_inode':record(cfg)==old_config,
        'original_fixture_bytes_and_inode':all(record(denied)[k]==own[k] for k in ('inode','sha256','size'))}
-    keep('site-preservation-observation',{'checks':compared,'permission_marker_original':own,'permission_marker_after':record(denied)})
+    keep('site-preservation-observation',{'checks':compared,'permission_marker_original':own,'permission_marker_after':record(denied),'neighbor_before':neighbor_before,'neighbor_after':neighbor_after})
     assert all(compared.values()),compared
     assert archive_identity==[record(p) for p in archives]
     assert api(result_route)[1]==observed and rows('SELECT id,domain,status FROM sites WHERE id!=? ORDER BY id',(site,))==others

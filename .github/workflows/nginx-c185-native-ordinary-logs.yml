@@ -22,7 +22,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
-          fetch-depth: 4
+          fetch-depth: 5
           sparse-checkout: scripts/native-nginx-c185
       - name: Download the exact signed panel
         env:
@@ -36,7 +36,7 @@ jobs:
           mkdir -m 700 "$root"
           tag=$(jq -r '.tag' "$fixture/dispatch.json")
           test "$tag" = qa-redispersistencecandidate183-20261115-qa1
-          test "$(git rev-parse HEAD^^^)" = "$(jq -r .published_head "$fixture/dispatch.json")"
+          test "$(git rev-parse HEAD^^^^)" = "$(jq -r .published_head "$fixture/dispatch.json")"
           release_api="repos/yunzhanlin/yunzhan-apps/releases/tags/$tag"
           for attempt in $(seq 1 20); do
             if gh api "$release_api" --jq '.draft == false and .prerelease == true and (.assets | length) == 8' > "$root/release-ready" && grep -qx true "$root/release-ready"; then
