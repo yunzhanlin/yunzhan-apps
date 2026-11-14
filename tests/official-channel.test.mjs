@@ -30,7 +30,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
     'anti-intrusion', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'enterprise-tamper-proof', 'files-sync',
-    'load-balance', 'mongodb', 'mobile', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
+    'load-balance', 'mobile', 'mongodb', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
     'platform-ops', 'pm2-manager', 'pure-ftpd', 'rabbitmq', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
