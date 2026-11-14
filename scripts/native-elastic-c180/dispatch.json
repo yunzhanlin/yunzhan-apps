@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "cb7668f31708b338752b42f7ecedf5c8a7ae3ca8a7edfe1c71d492a4776374b3",
+  "kvm_sha256": "665069c4c0e264461053e446ff4e943b88d2af883e5eccf3dfb5b3452315c5ca",
+  "payload_sha256": "19d1c49b16156a1f3943ea4fccd15989cf60e317bff7fe293b59bc09ee5999eb",
+  "published_head": "713021440fb723f2e0d3f0a3e36a874a248e701b",
+  "qa_catalogue_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "tag": "qa-elasticinventorycandidate180-20261115-qa1"
+}
