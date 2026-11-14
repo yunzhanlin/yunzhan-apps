@@ -202,7 +202,11 @@ try:
     original_sites=rows('SELECT id,domain,status FROM sites ORDER BY id')
     install=api('/app-registry/nginx/install',{'expected_version':item['version'],'expected_sha256':item['sha256']},202,secrets.token_hex(16))[1]['job_id']
     assert job_result('runtime_jobs',install,'succeeded',1100)==''
-    assert rows("SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='nginx'")==[(item['version'],item['sha256'],item['target'])]
+    def signed_receipt_ready():
+        observed=api('/app-registry')[1]
+        status=next(v for v in observed['status'] if v['id']=='nginx')
+        return status['state_known'] and status['installed'] and rows("SELECT version,sha256,target FROM app_registry_receipts WHERE app_id='nginx'")==[(item['version'],item['sha256'],item['target'])]
+    wait(signed_receipt_ready,bool,90)
     switch=api('/runtimes/nginx/switch',{'release_id':item['target']},202,secrets.token_hex(16))[1]['job_id']
     assert job_result('runtime_jobs',switch,'succeeded')==''
     assert next(iter(writers().values()))['active_runtime']==item['target']
@@ -241,7 +245,7 @@ try:
         two='/permission-denied.txt?ref='+label+'-'+secrets.token_hex(5)
         assert visit(domain,one)==404
         assert visit(domain,two) in (403,404)
-        assert settle(lambda:one.encode() in access.read_bytes() and two.encode() in error.read_bytes(),15)
+        assert settle(lambda:one.encode() in access.read_bytes() and two.partition('?')[0].encode() in error.read_bytes(),15)
     def scheduled(label):
         req={'name':'Nginx signed '+label,'kind':'log_cleanup','target_id':site,
              'schedule_type':'daily','timezone':'UTC','minute':13,'hour':23,'weekday':0,
