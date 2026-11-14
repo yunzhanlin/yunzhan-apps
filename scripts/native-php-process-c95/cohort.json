@@ -1,0 +1,56 @@
+{
+  "source_head": "d6657619caeae953f66ac27af0a3e2712b7517c3",
+  "native_fixture_parent": "d6657619caeae953f66ac27af0a3e2712b7517c3",
+  "source_inputs_sha256": "205a5821815b518019f964ec4c86a3f576c045d6f323e0df06217812c6fd6330",
+  "version": "0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2",
+  "served_head": "3a09dfaa05befb115224a2b7672df09fb1b5f96c",
+  "authorized_catalogues": [
+    "3a09dfaa05befb115224a2b7672df09fb1b5f96c"
+  ],
+  "items": {
+    "php-84": {
+      "id": "php-84",
+      "name": "PHP 8.4",
+      "category": "deployment",
+      "version": "8.4.27-compat2",
+      "summary": "PHP 8.4.27 \u56fa\u5b9a\u5b98\u65b9\u6e90\u7801\u4e0e\u5b89\u5168\u4fee\u8ba2\uff1b\u72ec\u7acb FPM\u3001\u591a\u7248\u672c\u5207\u6362\u548c\u5f15\u7528\u4fdd\u62a4\uff0c\u539f\u751f\u6784\u5efa\u6309\u53ef\u7528\u5185\u5b58\u9650\u5236\u7f16\u8bd1\u5e76\u53d1\u3002\u5b8c\u6574\u7cfb\u7edf\u4e0e\u67b6\u6784\u5b9e\u88c5\u77e9\u9635\u4ecd\u5728\u9a8c\u6536\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "php-8.4.27",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "\u591a\u7248\u672c\u5e76\u5b58",
+        "\u7ad9\u70b9\u72ec\u7acb\u6c60"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-84/8.4.27-compat2/manifest.json",
+      "sha256": "ceb996fd2e78b85ad827c4cd1e5fac20039ffe784271b495f8d845ebc9789a31"
+    }
+  },
+  "payload_files": {
+    "scripts/native-php-process-c95/php-process.py": "43998ff7662e0a99fea0aa45fe1f09718d84003621ccad6f5f895c5ac5595925",
+    "scripts/native-php-process-c95/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php-process-c95/dispatch.json": "e0822598f208b1dc092ece49f976b56f7f4cdb9b0fa56e70e88d21c4dbdb44c5",
+    "scripts/native-php-process-c95/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php-process-c95/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php-process-c95/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-php-process-c95/download.py": "9afd87f490f5f3c9a2ed4423a69415a20fd73a78b8b8330892d6f6a00dd33863",
+    ".github/workflows/php84-c156r2-native-qa1.yml": "792bffc552f808c020f71133b0b5052d53a5952d4dd12ee10593a2804ccebe14",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0"
+  },
+  "changed_payload_files": [
+    ".github/workflows/php84-c156r2-native-qa1.yml",
+    "scripts/native-php-process-c95/bootstrap-original-install.py",
+    "scripts/native-php-process-c95/dispatch.json",
+    "scripts/native-php-process-c95/download.py",
+    "scripts/native-php-process-c95/finish.py",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py",
+    "scripts/native-php-process-c95/original-signed-release.py",
+    "scripts/native-php-process-c95/php-process.py",
+    "scripts/native-php-process-c95/recipient.pem"
+  ],
+  "mode": "signed-current-php84",
+  "Main_changed": false
+}

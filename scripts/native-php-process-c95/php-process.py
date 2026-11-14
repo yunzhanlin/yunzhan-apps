@@ -1,0 +1,235 @@
+"""Exercise actual PHP-FPM website processes through the signed panel."""
+import contextlib
+import hashlib
+import http.cookiejar
+import json
+import os
+from pathlib import Path
+import platform
+import re
+import secrets
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+
+os.umask(0o077)
+assert os.geteuid() == 0 and os.environ['GITHUB_ACTIONS'] == 'true'
+assert os.environ['GITHUB_REPOSITORY'] == 'yunzhanlin/yunzhan-apps'
+evidence = Path(sys.argv[1])
+out = evidence / 'business-phase1'
+out.mkdir(mode=0o700)
+plan = json.loads((Path(__file__).resolve().parent / 'cohort.json').read_bytes())
+arch = {'x86_64': 'amd64', 'aarch64': 'arm64'}[platform.machine()]
+assert json.loads(Path('/opt/panel/current/SOURCE_INPUTS.json').read_bytes())['inputs_sha256'] == plan['source_inputs_sha256']
+origin = 'http://127.0.0.1:19100'
+csrf = ''
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        raise AssertionError('Unexpected local redirect')
+
+
+client = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
+                                    urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+
+def save(name, value):
+    with (out / name).open('x') as f:
+        json.dump(value, f, indent=2)
+        f.write('\n')
+
+
+def api(path, data=None, expected=200):
+    headers = {'Origin': origin, 'Content-Type': 'application/json', 'X-CSRF-Token': csrf}
+    if data is not None:
+        headers['Idempotency-Key'] = secrets.token_hex(16)
+    body = None if data is None else json.dumps(data).encode()
+    try:
+        with client.open(urllib.request.Request(origin + '/api' + path, body, headers), timeout=65) as response:
+            assert response.status == expected
+            return json.loads(response.read(6 << 20))
+    except urllib.error.HTTPError as error:
+        if error.code == expected:
+            return json.loads(error.read(4096))
+        raise
+
+
+def wait(read, valid, limit=600):
+    cutoff = time.monotonic() + limit
+    while time.monotonic() < cutoff:
+        v = read()
+        if valid(v):
+            return v
+        time.sleep(2)
+    raise TimeoutError('Panel job did not settle')
+
+
+
+def job(label, route, payload, limit=2400):
+    save(label + "-original-request.json", {"path": route, "payload": payload, "maximum_posts": 1})
+    response = api(route, payload, 202)
+    identifier = response["job_id"]
+    assert re.fullmatch("[0-9a-f]{32}", identifier)
+    row = wait(lambda: api("/jobs/" + identifier),
+               lambda value: value["state"] in ("succeeded", "failed", "needs_attention"), limit)
+    save(label + "-original-outcome.json", row)
+    assert row["state"] == "succeeded", label
+    return response, row
+
+
+def site_http(domain, path):
+    assert domain in ("c95-guarded.example.test", "c95-control.example.test")
+    assert path in ("/process.php", "/retained.txt")
+    request = urllib.request.Request("http://127.0.0.1:19101" + path, headers={"Host": domain})
+    for delay in (0.25, 0.5, 1, 2, 4, 0):
+        try:
+            with client.open(request, timeout=20) as response:
+                assert response.status == 200
+                return response.read(65537)
+        except urllib.error.HTTPError as error:
+            if error.code not in (502, 503, 504) or not delay:
+                raise
+            time.sleep(delay)
+
+
+def site_by_id(id):
+    rows = api("/sites")
+    row, = [row for row in rows if row["id"] == id]
+    return row
+
+
+def system(*args):
+    return subprocess.check_output(args, text=True, stderr=subprocess.STDOUT, timeout=60).strip()
+
+
+def set_policy(site, enabled):
+    route = "/sites/" + site
+    current = api(route + "/settings")
+    settings = dict(current["settings"])
+    defaults = {"memory_mb": 128, "max_execution_seconds": 30, "upload_mb": 32, "post_mb": 40,
+                "timezone": "UTC", "display_errors": False, "max_children": 4, "max_requests": 500}
+    settings["php"] = {**(settings.get("php") or defaults), "block_process_functions": enabled}
+    payload = {"settings": settings, "expected_revision": current["settings_revision"]}
+    preview = api(route + "/settings/preview", payload)
+    assert re.fullmatch("[0-9a-f]{64}", preview["config_sha"])
+    label = "enable" if enabled else "disable"
+    save(label + "-original-preview.json", preview)
+    _, result = job(label + "-process-policy", route + "/settings",
+                    {**payload, "expected_config_sha": preview["config_sha"]}, 300)
+    assert result["site_id"] == site
+    observed = api(route + "/settings")
+    assert observed["settings_revision"] == current["settings_revision"] + 1
+    assert observed["settings"]["php"].get("block_process_functions", False) == enabled
+    return result["id"]
+
+
+proof = {"ok": False, "architecture": arch, "source_inputs_sha256": plan["source_inputs_sha256"],
+         "Main_changed": False, "all50_commercial": False}
+try:
+    login = json.loads(Path("/etc/panel/first-login.json").read_bytes())
+    csrf = api("/login", {key: login[key] for key in ("username", "password")})["csrf"]
+    login.clear()
+    for delay in (15, 60, 90, 0):
+        try:
+            catalog = api("/app-registry?refresh=1")
+            break
+        except urllib.error.HTTPError as error:
+            raw = error.read(4096)
+            with (out / "catalogue-refusals.jsonl").open("a") as receipt:
+                receipt.write(json.dumps({"status":error.code,"message":raw.decode("utf-8","replace")[:500]}) + "\n")
+            if error.code != 503 or not delay:
+                raise
+            time.sleep(delay)
+    assert not catalog["source"]["stale"]
+    assert catalog["source"]["resolved_commit"] in plan.get("authorized_catalogues", [plan["served_head"]])
+    assert catalog["host"] == {"platform":"ubuntu-24.04","architecture":arch}
+    app = "php-84"
+    item, = [row for row in catalog["catalog"]["apps"] if row["id"] == app]
+    status, = [row for row in catalog["status"] if row["id"] == app]
+    assert item == plan["items"][app] and status["supported"] and status["state_known"] and not status["installed"]
+    receipt, result = job("install-" + app, "/app-registry/" + app + "/install",
+                          {"expected_version": item["version"], "expected_sha256": item["sha256"]}, 4700)
+    assert receipt["provider"] == item["provider"] and receipt["target"] == item["target"]
+    proof[app] = {"job": result["id"], "manifest_sha256": item["sha256"], "version": item["version"]}
+    def current_receipt():
+        after = api("/app-registry")
+        return next(row for row in after["status"] if row["id"] == app)
+    confirmed = wait(current_receipt, lambda value: value["installed"] and value["installed_version"] == item["version"], 180)
+    assert confirmed["state_known"] and not confirmed["update_available"]
+    save("signed-install-confirmed.json", {"original_job": result["id"], "provider": receipt["provider"],
+         "target": receipt["target"], "version": item["version"], "manifest_sha256": item["sha256"]})
+
+    sites = {}
+    script = """<?php
+header('Content-Type: application/json');
+$functions = ['exec','passthru','shell_exec','system','proc_open','popen','pcntl_exec'];
+$available = array_map('function_exists', $functions);
+echo json_encode(['php'=>PHP_VERSION,'sapi'=>PHP_SAPI,'functions'=>$available,
+    'result'=>function_exists('exec') ? exec('/usr/bin/printf native-c95') : 'blocked',
+    'mysqli'=>extension_loaded('mysqli'),'pdo_mysql'=>extension_loaded('pdo_mysql'),'euid'=>posix_geteuid()]);
+"""
+    retained = "C95 retained website file\n"
+    for scope in ("guarded", "control"):
+        slug = "c95-" + scope
+        domain = slug + ".example.test"
+        _, created = job("create-" + scope, "/sites",
+                         {"name": slug, "slug": slug, "domain": domain, "php_version_id": "php-8.4.27"}, 300)
+        site = created["site_id"]
+        assert re.fullmatch("[0-9a-f]{32}", site)
+        sites[scope] = (site, domain)
+        for filename, body in (("process.php", script), ("retained.txt", retained)):
+            saved = api("/sites/" + site + "/files/action", {"action":"create", "path":filename, "content":body})
+            assert saved["sha256"] == hashlib.sha256(body.encode()).hexdigest()
+
+    def probe(scope, enabled):
+        site, domain = sites[scope]
+        data = json.loads(site_http(domain, "/process.php"))
+        assert data["php"] == "8.4.27" and data["sapi"] == "fpm-fcgi"
+        assert data["mysqli"] and data["pdo_mysql"] and data["euid"]>0
+        assert data["result"] == ("blocked" if enabled else "native-c95")
+        assert len(data["functions"]) == 7
+        if enabled:
+            assert not any(data["functions"])
+        else:
+            assert all(data["functions"][:6])
+        assert site_http(domain, "/retained.txt") == retained.encode()
+        return data
+
+    guarded, _ = sites["guarded"]
+    control, _ = sites["control"]
+    prior = {scope: probe(scope, False) for scope in sites}
+    initial = site_by_id(guarded)["runtime_instance_id"]
+    independent = site_by_id(control)["runtime_instance_id"]
+    enable = set_policy(guarded, True)
+    guarded_data = probe("guarded", True)
+    assert probe("control", False) == prior["control"]
+    assert site_by_id(control)["runtime_instance_id"] == independent
+    active = site_by_id(guarded)["runtime_instance_id"]
+    assert active != initial and re.fullmatch("[0-9a-f]{32}-php-8[.]4[.]27-cfg-[0-9a-f]{24}", active)
+    unit = "panel-php@" + active + ".service"
+    pid = system("/usr/bin/systemctl", "show", unit, "--property=MainPID", "--value")
+    assert int(pid) > 1
+    system("/usr/bin/systemctl", "restart", unit)
+    restarted = system("/usr/bin/systemctl", "show", unit, "--property=MainPID", "--value")
+    assert int(restarted) > 1 and restarted != pid
+    assert probe("guarded", True) == guarded_data
+    disable = set_policy(guarded, False)
+    assert probe("guarded", False) == prior["guarded"] and probe("control", False) == prior["control"]
+    assert site_by_id(control)["runtime_instance_id"] == independent
+    save("original-fpm-observations.json", {"prior": prior, "enabled": guarded_data, "after_disable": prior,
+          "restart_pid_changed": True, "control_instance_preserved": True, "enable_job": enable, "disable_job": disable})
+    proof.update(ok=True, actual_site_fpm=True, process_functions_disabled=True, separate_site_unchanged=True,
+                 original_files_retained=True, restart_persistence=True, reversible=True,
+                 current_signed_store_receipt_verified=True, actual_mysql_drivers=True, fpm_worker_nonroot=True)
+except BaseException:
+    import traceback
+    proof["failure"] = traceback.format_exc()
+finally:
+    if csrf:
+        with contextlib.suppress(Exception):
+            api("/logout", {})
+    save("original-proof.json", proof)
+sys.exit(0 if proof["ok"] else 1)

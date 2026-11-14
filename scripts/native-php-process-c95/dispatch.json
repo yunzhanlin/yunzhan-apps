@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2",
+  "source_head": "d6657619caeae953f66ac27af0a3e2712b7517c3",
+  "source_inputs_sha256": "205a5821815b518019f964ec4c86a3f576c045d6f323e0df06217812c6fd6330",
+  "source_sdk_tree": "179c7ac8f8e1252c452f840f6bf9e04c0ed88961",
+  "release_id": 445054936,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-amd64.tar.gz": {
+      "id": 746481636,
+      "bytes": 24053700,
+      "sha256": "d9f026d7d120b457447cde1b7b8f8870fab0965a6c285cd6be9ada0f81052d8c"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-amd64.tar.gz.manifest": {
+      "id": 746476425,
+      "bytes": 194,
+      "sha256": "10ae662de95a184d7ab86fe114c9a87aa6a58d0eb2772b750bb2afedcdaa1db5"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-amd64.tar.gz.sig": {
+      "id": 746476257,
+      "bytes": 64,
+      "sha256": "845e8610586a15c738cf5fcec140485fdb204139eab8f848283f23a8892b6001"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-arm64.tar.gz": {
+      "id": 746476565,
+      "bytes": 22264516,
+      "sha256": "066bf91b7f2f527a9392435e3e63b92f3cd88abbd9655ad5f4130fa645487e7c"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-arm64.tar.gz.manifest": {
+      "id": 746476485,
+      "bytes": 194,
+      "sha256": "b81859e1548be3ac8c7c070cc027b6af7d0b4d9e039384b7647e37b156cb9045"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-arm64.tar.gz.sig": {
+      "id": 746476318,
+      "bytes": 64,
+      "sha256": "81d42c803e116f22ac63c981390ba1943a5222f72f84c334e29c7d0a9da8bd53"
+    },
+    "php-quarantine-recovery-signed-release.py": {
+      "id": 746476528,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 746476373,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-phpquarantinerecoverycandidate156r2-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-arm64.tar.gz"
+    }
+  }
+}
