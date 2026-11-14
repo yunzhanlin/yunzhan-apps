@@ -1,0 +1,68 @@
+name: Current signed Apache CC archive on native AMD64
+on:
+  push:
+    branches: [codex/apache-cc-current-c146-native]
+    paths: [scripts/native-apache-cc-c146/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: native-apache-cc-c146-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native-amd64-install:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/apache-cc-current-c146-native'
+    strategy:
+      fail-fast: false
+      matrix:
+        os_case: [debian12, debian13]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify exact published and signed input
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          root="$RUNNER_TEMP/apache-c146-signed"
+          mkdir -m 700 "$root"
+          gh api repos/yunzhanlin/yunzhan-apps/releases/444914663 > "$root/release.json"
+          gh release download qa-wafcatalogplatformcandidate146-20261114-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --dir "$root"
+          cp scripts/native-apache-cc-c146/{guest,acceptance,archive_acceptance,cold,boot-transition,casebook,capture,preservation}.py "$root/"
+          cp scripts/native-apache-cc-c146/payload.json "$root/assets.json"
+          cp candidate/panel-integration-compose-signed-image/packaging/signed-release.py "$root/signed-release.py"
+          python3 - "$root" <<'PYVERIFY'
+          import hashlib,json,pathlib,sys
+          d=pathlib.Path(sys.argv[1])
+          r=json.loads((d/'release.json').read_bytes())
+          assert r['id']==444914663 and r['target_commitish']=='237ebd1ccb4700a3d7203916c167a5ed0fd0cc0c' and not r['draft'] and r['prerelease']
+          p=json.loads((d/'assets.json').read_bytes())
+          assert p['source_inputs_sha256']=='564e9e7fef0b2e9ca961c0bb9fbfb43a27c0998d49ad6770bfc63c9f49025ff1'
+          for n,sha in p['files'].items():
+              assert pathlib.PurePath(n).name==n and hashlib.sha256((d/n).read_bytes()).hexdigest()==sha
+          PYVERIFY
+      - name: Prepare isolated hardware guest
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Signed Apache and PHP, held writer archive integrity and cold boot
+        env:
+          OS_CASE: ${{ matrix.os_case }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/apache-c146-public"
+          sudo -n python3 -I -B scripts/native-apache-cc-c146/kvm.py "$RUNNER_TEMP/apache-c146-signed" scripts/native-apache-cc-c146 "$RUNNER_TEMP/apache-c146-public" "$OS_CASE"
+      - name: Retain original evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: native-apache-cc-c146-amd64-${{ matrix.os_case }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/apache-c146-public/
+          retention-days: 7
+          if-no-files-found: error

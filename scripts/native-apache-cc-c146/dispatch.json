@@ -1,0 +1,9 @@
+{
+  "release": 444914663,
+  "source": "564e9e7fef0b2e9ca961c0bb9fbfb43a27c0998d49ad6770bfc63c9f49025ff1",
+  "scenarios": [
+    "debian12",
+    "debian13"
+  ],
+  "payload": "18635ebf57fd12f1fb898035010b4dbd59d0b0a1bc535a7fb6e6966b98b06019"
+}

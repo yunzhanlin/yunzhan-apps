@@ -1,0 +1,21 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "acceptance.py": "4391da7041a8ac87c6e3ca7814ff9d82309e074f0600c5ed28612707a2506b77",
+    "archive_acceptance.py": "ea557b3dc2fd8e22b5579409c66374c7b769a5040dbfdaa44786b8f54428f94a",
+    "boot-transition.py": "28381a993e0f580edc70467eb8f447e3dd2a412b5e33e2e353f79176899b05e4",
+    "capture.py": "3f7a4b3f46ca0a869fa1d0c16e6904f26c7bffe8190aa742d30a1cff6ce00b11",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "cold.py": "d654d3586c88b62dbcbaf992db7b2538d69eeda7eee5e666ef3069460ccd9420",
+    "guest.py": "4b23a8bb154300714e089ee3e8a5cd97c8f9fa674fddcbaa05dd74ac33e93e9b",
+    "panel-0.1.0-dev.proapps24wafcatalogplatformcandidate146-linux-amd64.tar.gz": "13936ab1d176999f8b9605113e8819ca2b89d60dda87f4979003ce9a0bf79ee7",
+    "panel-0.1.0-dev.proapps24wafcatalogplatformcandidate146-linux-amd64.tar.gz.manifest": "b5417cad8067fbc747a25d433ebc3d219dd0b4c878fdf85452e27ef350cd2141",
+    "panel-0.1.0-dev.proapps24wafcatalogplatformcandidate146-linux-amd64.tar.gz.sig": "6af388c19f9b0515824cef2d86c37fdb1719bd26caeffe4791a59f36c939c3df",
+    "preservation.py": "e44458017937dbb136fa66813fc0573d1618cd5ae7fc0b87893a546b6590b064",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "normal_signed_original_cohorts": true,
+  "source_inputs_sha256": "564e9e7fef0b2e9ca961c0bb9fbfb43a27c0998d49ad6770bfc63c9f49025ff1",
+  "version": "0.1.0-dev.proapps24wafcatalogplatformcandidate146"
+}
