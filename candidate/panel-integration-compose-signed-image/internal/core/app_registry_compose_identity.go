@@ -40,7 +40,7 @@ func registryComposeTemplateIdentity(target string) (registryComposeIdentity, bo
 		return registryComposeIdentity{"phpmyadmin", dockerPhpMyAdmin523Image, "databases", ""}, true
 	case MongoDBLegacyTemplate, MongoDB8038Template:
 		return registryComposeIdentity{"mongodb", mongoDBTemplateImage(target), "docker", ""}, true
-	case "elasticsearch":
+	case ElasticsearchLegacyTemplate, ElasticsearchSnapshotTemplate:
 		return registryComposeIdentity{"elasticsearch", dockerElasticsearchImage, "docker", ""}, true
 	case "memcached-cache":
 		return registryComposeIdentity{"memcached", appcatalog.MemcachedDigestImage, "docker", ""}, true
@@ -76,6 +76,9 @@ func validateRegistryComposeDelivery(manifest appcatalog.Manifest) error {
 	}
 	if d.Target == MongoDB8038Template && manifest.Version != mongoDB8038AppVersion {
 		return errors.New("MongoDB 8.0.38 模板需要对应的签名应用版本")
+	}
+	if d.Target == ElasticsearchSnapshotTemplate && manifest.Version != elasticsearchSnapshotAppVersion {
+		return errors.New("Elasticsearch 快照模板需要对应的签名应用版本")
 	}
 	if d.Image != bound.image {
 		return errors.New("签名应用包的镜像或摘要与当前面板模板不一致；请先升级面板，未提交安装或拉取镜像")

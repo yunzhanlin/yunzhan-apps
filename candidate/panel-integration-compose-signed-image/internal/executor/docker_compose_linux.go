@@ -480,8 +480,14 @@ func RunComposeJob(id string) (ret error) {
 				return errors.New("MongoDB 8.0.38 安装要求使用固定镜像和模板")
 			}
 		}
-		if op.TemplateID == "elasticsearch" {
-			service := config.Services["elasticsearch"]
+		if op.TemplateID == core.ElasticsearchSnapshotTemplate {
+			password := config.Services[core.ElasticsearchLegacyTemplate].Environment["ELASTIC_PASSWORD"]
+			if !core.ElasticsearchSnapshotComposeMatches(op.Compose, metadata.HostPort, password) {
+				return errors.New("Elasticsearch 快照安装要求使用固定镜像、回环地址和独立命名卷")
+			}
+		}
+		if core.IsElasticsearchTemplate(op.TemplateID) {
+			service := config.Services[core.ElasticsearchLegacyTemplate]
 			metadata.InitialCredentials = service.Environment["xpack.security.enabled"] == "true" &&
 				service.Environment["ELASTIC_PASSWORD"] != ""
 		}
@@ -755,6 +761,7 @@ func composeLogs(ctx context.Context, id string) (string, error) {
 func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 	s.dockerJobObservationRoutes(m)
 	dockerRabbitMQRoutes(m)
+	dockerElasticsearchRoutes(m)
 	m.HandleFunc("GET /v1/docker/project-requests/{id}", func(w http.ResponseWriter, r *http.Request) {
 		out, err := composeCreateStatus(dockerJobs, r.PathValue("id"), readDockerJobResult)
 		if err != nil {
@@ -782,7 +789,7 @@ func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 			template = core.MongoDBLegacyTemplate
 		}
 		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, core.OpenLiteSpeedLegacyTemplate: {"CLOUDSTACK_ADMIN_PASSWORD"}}[template]
-		if metadata.TemplateID == "elasticsearch" && metadata.InitialCredentials {
+		if core.IsElasticsearchTemplate(metadata.TemplateID) && metadata.InitialCredentials {
 			fields = []string{"ELASTIC_PASSWORD"}
 		}
 		if len(fields) == 0 {

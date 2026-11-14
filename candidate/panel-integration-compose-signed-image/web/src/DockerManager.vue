@@ -116,7 +116,7 @@ function isRabbitMQTemplate(value?: string): boolean {
   return value === "rabbitmq" || value === "rabbitmq-440";
 }
 
-type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440" | "mongodb-8038";
+type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440" | "mongodb-8038" | "elasticsearch-snapshot";
 interface CredentialDetails {
   projectName: string;
   template: CredentialTemplate;
@@ -132,7 +132,7 @@ const credentialsError = ref("");
 const passwordVisible = ref(false);
 
 function isCredentialTemplate(value?: string): value is CredentialTemplate {
-  return value === "openlitespeed-194" || value === "rabbitmq-440" || value === "mongodb-8038" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
+  return value === "openlitespeed-194" || value === "rabbitmq-440" || value === "mongodb-8038" || value === "elasticsearch-snapshot" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
 }
 
 function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
@@ -142,7 +142,8 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
   }
   const response = value as Record<string, unknown>;
   const credentialTemplate = template === "openlitespeed-194" ? "openlitespeed" :
-    template === "rabbitmq-440" ? "rabbitmq" : template === "mongodb-8038" ? "mongodb" : template;
+    template === "rabbitmq-440" ? "rabbitmq" : template === "mongodb-8038" ? "mongodb" :
+    template === "elasticsearch-snapshot" ? "elasticsearch" : template;
   const definition = credentialTemplates[credentialTemplate];
   const port = response.host_port;
   const fields = response.credentials;
@@ -211,6 +212,38 @@ const managedTemplate = ref<"phpmyadmin">();
 const metricsContainer = ref<DockerContainer>();
 const rabbitQueues = ref<DockerProject>();
 const rabbitMigration = ref<DockerProject>();
+const elasticSnapshotProject = ref<DockerProject>();
+const elasticSnapshotMode = ref<"create" | "restore">("create");
+const elasticSnapshotForm = ref({ index: "", snapshot: "", restore_index: "", password: "" });
+const elasticSnapshotResult = ref("");
+const elasticSnapshotStatus = ref<"success" | "warning">("success");
+const elasticSnapshotSubmitted = ref<string[]>([]);
+const elasticSnapshotOperation = computed(() => {
+  const { index, snapshot, restore_index } = elasticSnapshotForm.value;
+  return JSON.stringify([elasticSnapshotMode.value, index, snapshot,
+    elasticSnapshotMode.value === "restore" ? restore_index : ""]);
+});
+const canSubmitElasticSnapshot = computed(() =>
+  elasticSnapshotValid.value && !elasticSnapshotSubmitted.value.includes(elasticSnapshotOperation.value));
+const elasticSnapshotOpen = computed({
+  get: () => Boolean(elasticSnapshotProject.value),
+  set: (open: boolean) => { if (!open) closeElasticSnapshots(); },
+});
+const elasticSnapshotName = /^[a-z0-9][a-z0-9_-]{0,79}$/;
+const elasticRestoreIndex = /^restored-[a-z0-9][a-z0-9_-]{0,36}-[a-f0-9]{32}$/;
+function generateElasticRestoreIndex() {
+  const index = elasticSnapshotForm.value.index;
+  if (elasticSnapshotName.test(index)) {
+    elasticSnapshotForm.value.restore_index = `restored-${index.slice(0, 37)}-${randomId().replaceAll("-", "")}`;
+    elasticSnapshotResult.value = "";
+  }
+}
+const elasticSnapshotValid = computed(() => {
+  const { index, snapshot, restore_index, password } = elasticSnapshotForm.value;
+  if (!elasticSnapshotName.test(index) || !elasticSnapshotName.test(snapshot) || !password) return false;
+  return elasticSnapshotMode.value === "create" ||
+    (elasticRestoreIndex.test(restore_index) && restore_index !== index);
+});
 const visibleProjects = computed(() =>
   managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
@@ -224,6 +257,76 @@ function openRabbitQueues(item: DockerProject) {
 function openRabbitMigration(item: DockerProject) {
   if (contextCurrent(contextToken()) && isRabbitMQTemplate(item.template_id) && /^[a-f0-9]{32}$/.test(item.id)) {
     rabbitMigration.value = item;
+  }
+}
+
+function closeElasticSnapshots() {
+  elasticSnapshotProject.value = undefined;
+  elasticSnapshotForm.value = { index: "", snapshot: "", restore_index: "", password: "" };
+  elasticSnapshotResult.value = "";
+  elasticSnapshotMode.value = "create";
+  elasticSnapshotSubmitted.value = [];
+}
+
+function openElasticSnapshots(item: DockerProject) {
+  if (!contextCurrent(contextToken()) || props.canMigrateRabbitMQ !== true ||
+      item.template_id !== "elasticsearch-snapshot" || item.state !== "running" || !/^[a-f0-9]{32}$/.test(item.id)) return;
+  closeElasticSnapshots();
+  elasticSnapshotProject.value = item;
+}
+
+async function submitElasticSnapshot(observe = false) {
+  const item = elasticSnapshotProject.value;
+  const token = contextToken();
+  if (!item || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value ||
+      !(observe ? elasticSnapshotValid : canSubmitElasticSnapshot).value) return;
+  const mode = elasticSnapshotMode.value;
+  const action = observe ? "status" : mode;
+  const form = elasticSnapshotForm.value;
+  const body = {
+    index: form.index, snapshot: form.snapshot, password: form.password,
+    ...(mode === "restore" ? { restore_index: form.restore_index } : {}),
+  };
+  const current = () => elasticSnapshotProject.value === item && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticSnapshotResult.value = "";
+  if (!observe) elasticSnapshotSubmitted.value.push(elasticSnapshotOperation.value);
+  try {
+    const result = await api<{
+      project_id: string; index: string; snapshot: string; restore_index?: string; state: string;
+    }>(`/docker/projects/${item.id}/elasticsearch-snapshots/${action}`, "POST", body);
+    if (result.project_id !== item.id || result.index !== body.index || result.snapshot !== body.snapshot ||
+        (result.restore_index || "") !== (body.restore_index || "") ||
+        (!observe && result.state !== "accepted") ||
+        (observe && !["missing", "running", "complete", "failed"].includes(result.state))) {
+      throw new Error("原请求结果无法核对");
+    }
+    elasticSnapshotStatus.value = "success";
+    if (observe) {
+      const restoring = mode === "restore";
+      const labels: Record<string, string> = {
+        missing: restoring ? "尚无恢复目标索引。" : "尚未发现所选快照。",
+        running: restoring ? "目标索引的主分片尚未全部就绪。" : "快照正在进行。",
+        complete: restoring ? "目标索引的主分片已就绪，请核对内容。" : "所选源索引快照已完成。",
+        failed: "原快照失败或不完整。",
+      };
+      elasticSnapshotStatus.value = result.state === "complete" ? "success" : "warning";
+      elasticSnapshotResult.value = labels[result.state];
+      return;
+    }
+    elasticSnapshotResult.value = mode === "create"
+      ? `已提交快照 ${body.snapshot}。等待 Elasticsearch 完成后再恢复。`
+      : `已提交恢复到 ${body.restore_index}。请在检索接口检查索引及数据。`;
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticSnapshotStatus.value = "warning";
+      elasticSnapshotResult.value = error instanceof Error ? error.message : "原快照请求待核对";
+    }
+  } finally {
+    body.password = "";
+    form.password = "";
+    finishBusy(token, ticket);
   }
 }
 
@@ -286,6 +389,7 @@ function resetManager() {
     managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
     credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined; rabbitQueues.value = undefined; rabbitMigration.value = undefined;
+    closeElasticSnapshots();
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -312,6 +416,7 @@ watch(credentialsOpen, value => {
 watch(logsOpen, value => { if (!value) { logSequence++; logs.value = ""; logsName.value = ""; } }, { flush: "sync" });
 watch(() => [bindingOpen.value, bindingProject.value?.id], () => { bindingEpoch++; }, { flush: "sync" });
 watch(projectOpen,()=>{projectEpoch++;},{flush:"sync"});
+watch(elasticSnapshotOperation, () => { elasticSnapshotResult.value = ""; });
 onBeforeUnmount(() => { alive = false; resetManager(); });
 
 async function showCredentials(item: DockerProject) {
@@ -1180,7 +1285,9 @@ async function removeVolume(item: DockerVolume) {
             }}</small>
           </div>
           <div class="docker-actions">
-            <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="isCredentialTemplate(item.template_id) && (!['elasticsearch', 'elasticsearch-snapshot'].includes(item.template_id) || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="item.template_id === 'elasticsearch-snapshot' && canMigrateRabbitMQ" link type="primary"
+              :disabled="busy || item.state !== 'running'" @click="openElasticSnapshots(item)">索引快照</el-button>
             <el-button v-if="isRabbitMQTemplate(item.template_id)" link type="primary" :disabled="busy || item.state !== 'running'"
               @click="openRabbitQueues(item)">查看队列</el-button>
             <el-button v-if="item.template_id === 'rabbitmq' || item.template_id === 'rabbitmq-440' && canMigrateRabbitMQ" link type="primary"
@@ -1654,6 +1761,34 @@ async function removeVolume(item: DockerVolume) {
         >创建</el-button
       ></template
     >
+  </el-dialog>
+  <el-dialog v-model="elasticSnapshotOpen" :title="`索引快照 · ${elasticSnapshotProject?.name || 'Elasticsearch'}`"
+    width="min(520px, 94vw)" :close-on-click-modal="false" destroy-on-close>
+    <el-form label-position="top" :disabled="busy" @submit.prevent="submitElasticSnapshot()">
+      <el-form-item label="操作">
+        <el-radio-group v-model="elasticSnapshotMode">
+          <el-radio-button value="create">创建快照</el-radio-button>
+          <el-radio-button value="restore">恢复到新索引</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="源索引"><el-input v-model="elasticSnapshotForm.index" maxlength="80" /></el-form-item>
+      <el-form-item label="快照名称"><el-input v-model="elasticSnapshotForm.snapshot" maxlength="80" /></el-form-item>
+      <el-form-item v-if="elasticSnapshotMode === 'restore'" label="恢复目标">
+        <el-input v-model="elasticSnapshotForm.restore_index" maxlength="80" placeholder="restored-…" />
+        <el-button link type="primary" :disabled="!elasticSnapshotName.test(elasticSnapshotForm.index)"
+          @click="generateElasticRestoreIndex">生成新索引名</el-button>
+      </el-form-item>
+      <el-form-item label="当前 elastic 密码">
+        <el-input v-model="elasticSnapshotForm.password" type="password" autocomplete="off" maxlength="512" />
+      </el-form-item>
+      <el-alert v-if="elasticSnapshotResult" :title="elasticSnapshotResult" :type="elasticSnapshotStatus" :closable="false" />
+    </el-form>
+    <template #footer>
+      <el-button @click="closeElasticSnapshots">关闭</el-button>
+      <el-button :disabled="busy || !elasticSnapshotValid" @click="submitElasticSnapshot(true)">核对状态</el-button>
+      <el-button type="primary" :loading="busy" :disabled="!canSubmitElasticSnapshot"
+        @click="submitElasticSnapshot()">{{ elasticSnapshotMode === "create" ? "提交快照" : "提交恢复" }}</el-button>
+    </template>
   </el-dialog>
   <RabbitMQQueues v-if="rabbitQueues" :key="rabbitQueues.id" :api="api" :project="rabbitQueues"
     @close="rabbitQueues = undefined" />

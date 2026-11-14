@@ -218,6 +218,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		openLiteSpeedUpgrade := app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && app.Version == openLiteSpeed194AppVersion
 		rabbitMQUpgrade := app.ID == "rabbitmq" && app.Target == RabbitMQ440Template && app.Version == rabbitMQ440AppVersion
 		mongoDBUpgrade := app.ID == "mongodb" && app.Target == MongoDB8038Template && app.Version == mongoDB8038AppVersion
+		elasticUpgrade := app.ID == "elasticsearch" && app.Target == ElasticsearchSnapshotTemplate && app.Version == elasticsearchSnapshotAppVersion
 		var previousComposeTargets []string
 		if finalLegacyPHP {
 			previousComposeTargets = previousLegacyPHPTemplates(phpRelease)
@@ -229,6 +230,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			previousComposeTargets = []string{RabbitMQLegacyTemplate}
 		} else if mongoDBUpgrade {
 			previousComposeTargets = []string{MongoDBLegacyTemplate}
+		} else if elasticUpgrade {
+			previousComposeTargets = []string{ElasticsearchLegacyTemplate}
 		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -255,7 +258,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
 			previousComposeInstalled := false
-			if !status.Installed || rabbitMQUpgrade || mongoDBUpgrade {
+			if !status.Installed || rabbitMQUpgrade || mongoDBUpgrade || elasticUpgrade {
 				for _, target := range previousComposeTargets {
 					if compose[target] {
 						previousComposeInstalled = true
@@ -361,6 +364,12 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 					if !compose[app.Target] {
 						status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
 						status.UpdateDetail = "可先在另一回环端口安装 MongoDB 8.0.38，用独立卷验证数据迁移。旧实例继续使用原端口和原卷。"
+					}
+				}
+				if elasticUpgrade {
+					status.UpdateDetail = "旧实例继续使用原端口和原卷。新版使用独立快照卷，恢复时请使用新索引名。"
+					if !compose[app.Target] {
+						status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
 					}
 				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
@@ -621,7 +630,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 		} else {
 			if in.HostPort == 0 {
 				in.HostPort = map[string]int{
-					"memcached-cache": 21211, MongoDBLegacyTemplate: 27017, MongoDB8038Template: 27017, "elasticsearch": 19200, RabbitMQLegacyTemplate: 15672, RabbitMQ440Template: 15672,
+					"memcached-cache": 21211, MongoDBLegacyTemplate: 27017, MongoDB8038Template: 27017, ElasticsearchLegacyTemplate: 19200, ElasticsearchSnapshotTemplate: 19201, RabbitMQLegacyTemplate: 15672, RabbitMQ440Template: 15672,
 					PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081,
 					legacyPHP81BookwormCompat2Template: 18082, legacyPHP80BullseyeCompat2Template: 18083,
 					legacyPHP74BullseyeCompat3Template: 18084,

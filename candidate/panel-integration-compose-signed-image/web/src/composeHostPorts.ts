@@ -14,6 +14,8 @@ export function composeHostPortSettings(template: string) {
       return { preferred: 27017, max: 65535, usesNextPort: false, detail: "" };
     case "elasticsearch":
       return { preferred: 19200, max: 65535, usesNextPort: false, detail: "" };
+    case "elasticsearch-snapshot":
+      return { preferred: 19201, max: 65535, usesNextPort: false, detail: "索引数据和快照分别保存到受管卷。" };
     case "phpmyadmin-523":
       return { preferred: 18081, max: 65535, usesNextPort: false, detail: "" };
     case "php-legacy-81-bookworm-compat2":
