@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24rabbitmqcandidate164",
+  "source_head": "3f5e82f793c4598fd4016fd6fda56220d250b416",
+  "source_inputs_sha256": "3956a290d041144b577f96aec2b1905bb0be1c323cb6e64a7cac3532ff2a5bfc",
+  "source_sdk_tree": "91eb9e24c9305032bcb22a1c09ab6d70fe2ed139",
+  "release_id": 445226434,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-amd64.tar.gz": {
+      "id": 747199904,
+      "bytes": 24106809,
+      "sha256": "c100ca00bc91c36e543b43e2a7311d82a3c17ab13743b93c698d696f47f73bf9"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-amd64.tar.gz.manifest": {
+      "id": 747196033,
+      "bytes": 179,
+      "sha256": "caa205bc738b7737816013e6f059c64f774231ab038744db3dd2660587340222"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-amd64.tar.gz.sig": {
+      "id": 747195904,
+      "bytes": 64,
+      "sha256": "92843ce9ae06d0faa4c6d7b1f71aac5ce6ef9322ec0b3971037ab1b00494db10"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-arm64.tar.gz": {
+      "id": 747196153,
+      "bytes": 22315905,
+      "sha256": "f40e9c338e1a0463c6a52a6086ae455615581562fce1006af6cbe5561198f42e"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-arm64.tar.gz.manifest": {
+      "id": 747196058,
+      "bytes": 179,
+      "sha256": "49c5e5537d099df40eba91eb789d8f2a588baa1e9c72372628d1904e8cac015f"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-arm64.tar.gz.sig": {
+      "id": 747195930,
+      "bytes": 64,
+      "sha256": "320a7e64ee18063841f7f42146208666348ac26e2bb854c7bcea135ace0f81cd"
+    },
+    "rabbitmq-workspace-signed-release.py": {
+      "id": 747196113,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 747195993,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-rabbitmqcandidate164-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24rabbitmqcandidate164-linux-arm64.tar.gz"
+    }
+  }
+}
