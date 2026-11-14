@@ -2,9 +2,11 @@
   "release": 444914663,
   "source": "564e9e7fef0b2e9ca961c0bb9fbfb43a27c0998d49ad6770bfc63c9f49025ff1",
   "scenarios": [
-    "debian12",
-    "debian13"
+    "ubuntu22",
+    "ubuntu24",
+    "ubuntu26"
   ],
   "payload": "1d2258819ea3721c658b5e3b559aa63dcc546075e810feb77b2e70898ae74a3e",
-  "previous_failed_ci_run": 43542268952
+  "previous_failed_ci_run": 43542268952,
+  "previous_debian_native_qualification_run": 43542565366
 }

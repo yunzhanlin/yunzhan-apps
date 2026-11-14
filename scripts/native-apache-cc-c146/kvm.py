@@ -19,7 +19,7 @@ assert stat.S_ISCHR(pathlib.Path('/dev/kvm').stat().st_mode), 'Actual KVM requir
 work = pathlib.Path(tempfile.mkdtemp(prefix='native-kvm-', dir=str(public.parent)))
 private = work / 'private'; private.mkdir(mode=0o700)
 cases = json.loads((source / 'cases.json').read_bytes())
-assert set(cases) == {'debian12','debian13'}
+assert set(cases) == {'debian12','debian13','ubuntu22','ubuntu24','ubuntu26'}
 slug = sys.argv[4]; assert slug in cases
 case = cases[slug]; assert case['architecture'] == 'amd64'
 IMAGE = case['image']; algorithm, image_expected = case['digest'].split(':', 1)

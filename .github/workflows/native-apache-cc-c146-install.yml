@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os_case: [debian12, debian13]
+        os_case: [ubuntu22, ubuntu24, ubuntu26]
     runs-on: ubuntu-24.04
     timeout-minutes: 240
     steps:
