@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"local/panel/internal/diskjob"
@@ -973,95 +972,6 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	}
 	return nil, errors.New("模块没有处理器")
 }
-func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snapshot func(string, []byte) error) (map[string]moduleFile, bool, error) {
-	files := map[string]moduleFile{}
-	var total int64
-	partial := false
-	entries, metadataBytes := 0, 0
-	for _, p := range excludes {
-		if !core.ValidFilePath(p, false) {
-			return nil, false, errors.New("排除路径无效")
-		}
-	}
-	e := fs.WalkDir(root.FS(), ".", func(path string, d fs.DirEntry, e error) error {
-		if e != nil {
-			return e
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if path == "." {
-			return nil
-		}
-		entries++
-		if entries > 100000 {
-			partial = true
-			return fs.SkipAll
-		}
-		for _, p := range excludes {
-			if path == p || strings.HasPrefix(path, p+"/") {
-				if d.IsDir() {
-					return fs.SkipDir
-				}
-				return nil
-			}
-		}
-		if d.Type()&os.ModeSymlink != 0 {
-			return errors.New("扫描目录包含符号链接: " + path)
-		}
-		if d.IsDir() {
-			return nil
-		}
-		info, e := d.Info()
-		if e != nil {
-			return e
-		}
-		if !info.Mode().IsRegular() {
-			return errors.New("扫描目录包含特殊文件")
-		}
-		if !core.ValidFilePath(path, false) {
-			return errors.New("扫描发现不支持的文件路径，请配置排除规则")
-		}
-		encoded, _ := json.Marshal(path)
-		if metadataBytes+len(encoded)+160 > 3<<20 {
-			partial = true
-			return nil
-		}
-		if len(files) >= 10000 || info.Size() > 8<<20 || total+info.Size() > moduleMaxBytes {
-			partial = true
-			return nil
-		}
-		f, e := regularFile(root, path)
-		if e != nil {
-			return e
-		}
-		before, e := f.Stat()
-		if e != nil {
-			f.Close()
-			return e
-		}
-		b, e := io.ReadAll(io.LimitReader(f, 8<<20+1))
-		after, statErr := f.Stat()
-		f.Close()
-		if e != nil {
-			return e
-		}
-		current, pathErr := root.Lstat(path)
-		if statErr != nil || pathErr != nil || !os.SameFile(info, before) || !os.SameFile(before, current) || !current.Mode().IsRegular() || int64(len(b)) != info.Size() || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) || before.Mode() != after.Mode() || after.Size() != current.Size() || !after.ModTime().Equal(current.ModTime()) || after.Mode() != current.Mode() {
-			return errors.New("扫描时文件发生变化")
-		}
-		total += int64(len(b))
-		sha := sha256.Sum256(b)
-		hash := hex.EncodeToString(sha[:])
-		files[path] = moduleFile{hash, info.Size(), uint32(info.Mode().Perm())}
-		metadataBytes += len(encoded) + 160
-		if snapshot != nil {
-			return snapshot(hash, b)
-		}
-		return nil
-	})
-	return files, partial, e
-}
 func (s *Service) moduleBaselineKey() ([]byte, error) {
 	path := filepath.Join(s.Config.SecurityDir, "modules", "integrity-key")
 	if b, e := s.existingBaselineKey(); e == nil {
@@ -1159,7 +1069,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 			if e = os.MkdirAll(filepath.Join(dir, "blobs"), 0700); e != nil {
 				return nil, e
 			}
-			files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, func(hash string, b []byte) error { return atomicWrite(filepath.Join(dir, "blobs", hash), b, 0600) })
+			files, partial, e := scanModuleFiles(ctx, f, in.Excludes, func(hash string, b []byte) error { return atomicWrite(filepath.Join(dir, "blobs", hash), b, 0600) })
 			if e != nil {
 				return nil, e
 			}
@@ -1194,7 +1104,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 		if base.SiteID != site || !hmac.Equal([]byte(base.Signature), []byte(baselineSignature(base, key))) {
 			return nil, errors.New("基线签名校验失败")
 		}
-		current, partial, e := scanModuleFiles(ctx, f.public, base.Excludes, nil)
+		current, partial, e := scanModuleFiles(ctx, f, base.Excludes, nil)
 		if e != nil {
 			return nil, e
 		}
@@ -1250,7 +1160,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 					return nil, errors.New("备份摘要不匹配")
 				}
 				if v, ok := current[change.Path]; ok {
-					previous, err := readModuleFile(f.public, change.Path)
+					previous, err := readModuleFile(f, change.Path)
 					if err != nil {
 						return nil, err
 					}
@@ -1293,100 +1203,6 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 	}
 	return map[string]any{"sites": results}, nil
 }
-func readModuleFile(root *os.Root, path string) ([]byte, error) {
-	f, e := regularFile(root, path)
-	if e != nil {
-		return nil, e
-	}
-	defer f.Close()
-	b, e := io.ReadAll(io.LimitReader(f, (8<<20)+1))
-	if len(b) > 8<<20 {
-		return nil, errors.New("文件超过 8MiB")
-	}
-	return b, e
-}
-func moduleWriteSiteFile(f *siteFiles, path string, data []byte, mode os.FileMode) error {
-	return moduleWriteSiteFileGuarded(f, path, data, mode, nil, false)
-}
-func moduleWriteSiteFileGuarded(f *siteFiles, path string, data []byte, mode os.FileMode, expected *moduleFile, enforce bool) error {
-	if !core.ValidFilePath(path, false) {
-		return errors.New("文件路径无效")
-	}
-	parent := ""
-	if filepath.Dir(path) != "." {
-		for _, part := range strings.Split(filepath.Dir(path), "/") {
-			parent = filepath.Join(parent, part)
-			e := f.public.Mkdir(parent, 0755)
-			created := e == nil
-			if e != nil && !errors.Is(e, os.ErrExist) {
-				return e
-			}
-			st, err := f.public.Lstat(parent)
-			if err != nil {
-				return err
-			}
-			if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-				return errors.New("拒绝链接或非目录父路径")
-			}
-			dir, err := f.public.OpenFile(parent, os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NOFOLLOW, 0)
-			if err != nil {
-				return err
-			}
-			if created {
-				err = dir.Chown(f.uid, f.gid)
-			}
-			dir.Close()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	// Replace by a private temporary inode: never truncate a user-created hard link.
-	if st, e := f.public.Lstat(path); e == nil && !st.Mode().IsRegular() {
-		return errors.New("拒绝覆盖链接或特殊文件")
-	} else if e != nil && !errors.Is(e, os.ErrNotExist) {
-		return e
-	}
-	temporary := filepath.Join(filepath.Dir(path), ".cloudstack-"+core.Token())
-	out, e := f.public.OpenFile(temporary, os.O_CREATE|os.O_EXCL|os.O_WRONLY|syscall.O_NOFOLLOW, 0600)
-	if e != nil {
-		return e
-	}
-	defer f.public.Remove(temporary)
-	if e = out.Chown(f.uid, f.gid); e == nil {
-		_, e = out.Write(data)
-	}
-	if e == nil {
-		e = out.Chmod(mode & 0777)
-	}
-	if e == nil {
-		e = out.Sync()
-	}
-	closeErr := out.Close()
-	if e != nil {
-		return e
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if enforce && expected == nil {
-		return renameBetween(f.public, temporary, f.public, path, false)
-	}
-	if enforce {
-		current, err := readModuleFile(f.public, path)
-		if err != nil {
-			return err
-		}
-		info, err := f.public.Lstat(path)
-		if err != nil {
-			return err
-		}
-		if !info.Mode().IsRegular() || core.Hash(string(current)) != expected.SHA || int64(len(current)) != expected.Size || uint32(info.Mode().Perm()) != expected.Mode {
-			return errors.New("写入前目标文件已改变，未覆盖")
-		}
-	}
-	return f.public.Rename(temporary, path)
-}
 func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, preview bool) (any, error) {
 	if in.TargetProjectID != "" {
 		if in.TargetSiteID != "" {
@@ -1407,12 +1223,18 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 		return nil, e
 	}
 	defer target.Close()
-	a, partial, e := scanModuleFiles(ctx, source.public, in.Excludes, nil)
-	if e != nil || partial {
+	a, partial, e := scanModuleFiles(ctx, source, in.Excludes, nil)
+	if e != nil {
+		return nil, fmt.Errorf("来源扫描失败：%w", e)
+	}
+	if partial {
 		return nil, errors.New("来源扫描不完整")
 	}
-	b, partial, e := scanModuleFiles(ctx, target.public, in.Excludes, nil)
-	if e != nil || partial {
+	b, partial, e := scanModuleFiles(ctx, target, in.Excludes, nil)
+	if e != nil {
+		return nil, fmt.Errorf("目标扫描失败：%w", e)
+	}
+	if partial {
 		return nil, errors.New("目标扫描不完整")
 	}
 	checkpointPath := filepath.Join(s.moduleDir("files-sync"), in.SiteID+"-"+in.TargetSiteID+".json")
@@ -1441,7 +1263,7 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
-			data, err := readModuleFile(source.public, p)
+			data, err := readModuleFile(source, p)
 			if err != nil {
 				return nil, err
 			}
@@ -1487,7 +1309,7 @@ func (s *Service) modulePHPScanFiltered(ctx context.Context, in core.AppModuleIn
 		return nil, e
 	}
 	defer f.Close()
-	files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, nil)
+	files, partial, e := scanModuleFiles(ctx, f, in.Excludes, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -1510,7 +1332,7 @@ scan:
 			return nil, ctx.Err()
 		}
 		scanned++
-		b, err := readModuleFile(f.public, p)
+		b, err := readModuleFile(f, p)
 		if err != nil {
 			return nil, err
 		}

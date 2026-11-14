@@ -21,7 +21,6 @@ import (
 const diskUsageEntriesMax = 100000
 const diskUsageDepthMax = 128
 const diskUsageReadBatch = 64
-const diskUsageResolve = unix.RESOLVE_BENEATH | unix.RESOLVE_NO_MAGICLINKS | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_XDEV
 
 type diskUsageInode struct{ device, inode uint64 }
 type diskUsageScan struct {
@@ -44,7 +43,7 @@ func diskUsageOpenDir(parent *os.File, name string, expected *unix.Stat_t, allow
 		return nil, errors.New("目录描述符仅接受一个普通路径分量")
 	}
 	flags := unix.O_RDONLY | unix.O_DIRECTORY | unix.O_NOFOLLOW | unix.O_NONBLOCK | unix.O_CLOEXEC
-	resolve := uint64(diskUsageResolve)
+	resolve := uint64(siteOneMountResolve)
 	if allowMountRoot {
 		resolve &^= unix.RESOLVE_NO_XDEV
 	}
@@ -65,7 +64,7 @@ func diskUsageEntryStat(dir *os.File, name string, out *unix.Stat_t) error {
 	// O_PATH permits metadata inspection of the link itself and blocks all
 	// reads from regular files, devices and FIFOs.
 	fd, err := unix.Openat2(int(dir.Fd()), name, &unix.OpenHow{
-		Flags: unix.O_PATH | unix.O_NOFOLLOW | unix.O_CLOEXEC, Resolve: diskUsageResolve,
+		Flags: unix.O_PATH | unix.O_NOFOLLOW | unix.O_CLOEXEC, Resolve: siteOneMountResolve,
 	})
 	if err != nil {
 		return err

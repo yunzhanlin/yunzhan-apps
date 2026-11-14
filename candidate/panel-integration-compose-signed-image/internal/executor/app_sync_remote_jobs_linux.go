@@ -563,7 +563,7 @@ func (s *Service) previewRemoteSync(ctx context.Context, c *remoteSyncClient, cf
 		return nil, e
 	}
 	defer f.Close()
-	files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, nil)
+	files, partial, e := scanModuleFiles(ctx, f, in.Excludes, nil)
 	if e != nil || partial {
 		return nil, errors.New("源目录扫描不完整，拒绝远端同步")
 	}
@@ -811,7 +811,7 @@ func (s *Service) executeRemoteSync(ctx context.Context, cfg remoteSyncConfig, j
 		return e
 	}
 	defer f.Close()
-	files, partial, e := scanModuleFiles(ctx, f.public, j.Excludes, nil)
+	files, partial, e := scanModuleFiles(ctx, f, j.Excludes, nil)
 	if e != nil || partial {
 		return errors.New("来源扫描不完整，未执行远端复制")
 	}
@@ -857,7 +857,7 @@ func (s *Service) executeRemoteSync(ctx context.Context, cfg remoteSyncConfig, j
 			j.Conflicts = append(j.Conflicts, p)
 			continue
 		}
-		data, e := readModuleFile(f.public, p)
+		data, e := readModuleFile(f, p)
 		info, infoErr := f.public.Lstat(p)
 		if e != nil || infoErr != nil || !info.Mode().IsRegular() || info.Size() != next.Size || uint32(info.Mode().Perm()) != next.Mode || core.Hash(string(data)) != next.SHA || int64(len(data)) != next.Size {
 			return errors.New("来源文件在同步时改变；已完成文件检查点保留")

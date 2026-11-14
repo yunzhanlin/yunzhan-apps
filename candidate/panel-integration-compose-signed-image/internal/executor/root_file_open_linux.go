@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+const siteOneMountResolve = unix.RESOLVE_BENEATH | unix.RESOLVE_NO_MAGICLINKS | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_XDEV
+
 // os.Root confines paths but can resolve contained links, including when its
 // OpenFile receives O_NOFOLLOW. Walk the directory descriptors ourselves when
 // an operation promises to reject links in every path component.
