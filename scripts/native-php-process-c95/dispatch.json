@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24disksitemountboundarycandidate157",
+  "source_head": "22d1c0bf3ce9d7e76499372eda47630d508eb813",
+  "source_inputs_sha256": "01b0886e2ab3f163dbc0c5bc0ca7f06f7be610eb4cc277050675f6be14971a6b",
+  "source_sdk_tree": "a4b465e188497d2354b6e1446a8d30383e9bd695",
+  "release_id": 445091465,
+  "release_assets": {
+    "disk-site-mount-boundary-signed-release.py": {
+      "id": 746626455,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-amd64.tar.gz": {
+      "id": 746631968,
+      "bytes": 24051218,
+      "sha256": "f4d6155aee52f644fdf6702c10ceb7fef53d9447eca6f114b06ed26f78ebefc7"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-amd64.tar.gz.manifest": {
+      "id": 746626343,
+      "bytes": 192,
+      "sha256": "9e8ae37fcd88a2fb757c951ac5a0cedee5afbaff087f2e2d4f947be69b87ffed"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-amd64.tar.gz.sig": {
+      "id": 746626206,
+      "bytes": 64,
+      "sha256": "40bc0ba62d52803ca1513f9bbd72df83030b6ad93bcb638977f39e5e77b7e13a"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-arm64.tar.gz": {
+      "id": 746626502,
+      "bytes": 22264748,
+      "sha256": "8711b7622b0ae220352553d8fb3583e5b7ae9b867436a6d2d9b43453911d1a23"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-arm64.tar.gz.manifest": {
+      "id": 746626397,
+      "bytes": 192,
+      "sha256": "9e29d223d9952bee849dd70bd238912082bfffb1a881384655fac53fc5c998dd"
+    },
+    "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-arm64.tar.gz.sig": {
+      "id": 746626254,
+      "bytes": 64,
+      "sha256": "e26a18f065be13bd92c715ca569d7e9f64dfeb34241eb3c17b993454bd8d8962"
+    },
+    "release-signing-dev.pub": {
+      "id": 746626301,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-disksitemountboundarycandidate157-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-arm64.tar.gz"
+    }
+  }
+}
