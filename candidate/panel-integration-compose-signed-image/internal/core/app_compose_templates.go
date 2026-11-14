@@ -107,7 +107,7 @@ func IsDockerTemplate(id string) bool {
 		return true
 	}
 	switch id {
-	case "nginx-static", "redis-cache", "memcached-cache", PhpMyAdminLegacyTemplate, PhpMyAdmin523Template, "mongodb", "elasticsearch", "node-service", "wordpress-blog", "rabbitmq", OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
+	case "nginx-static", "redis-cache", "memcached-cache", PhpMyAdminLegacyTemplate, PhpMyAdmin523Template, "mongodb", "elasticsearch", "node-service", "wordpress-blog", RabbitMQLegacyTemplate, RabbitMQ440Template, OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
 		return true
 	}
 	return false

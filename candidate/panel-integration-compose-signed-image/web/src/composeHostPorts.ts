@@ -1,6 +1,7 @@
 export function composeHostPortSettings(template: string) {
   switch (template) {
     case "rabbitmq":
+    case "rabbitmq-440":
       return { preferred: 15672, max: 65534, usesNextPort: true, detail: "起始端口用于 RabbitMQ 管理界面，下一个端口用于 AMQP 消息连接。" };
     case "openlitespeed":
       return { preferred: 18888, max: 65534, usesNextPort: true, detail: "起始端口用于网站 HTTP，下一个端口用于 WebAdmin HTTPS。" };

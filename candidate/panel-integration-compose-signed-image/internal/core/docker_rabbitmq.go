@@ -3,6 +3,7 @@ package core
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -10,6 +11,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 )
+
+const RabbitMQLegacyTemplate = "rabbitmq"
+const RabbitMQ440Template = "rabbitmq-440"
+const rabbitMQ440AppVersion = "4.4.0-compat1"
 
 const RabbitMQQueueLimit = 1024
 const RabbitMQVHostLimit = 256
@@ -50,11 +55,67 @@ func RabbitMQQueueVHost(raw string) (string, error) {
 	return values.Get("vhost"), nil
 }
 
-func IsPanelRabbitMQImage(value string) bool {
-	return value == dockerRabbitMQImage
+func IsRabbitMQTemplate(value string) bool {
+	return value == RabbitMQLegacyTemplate || value == RabbitMQ440Template
+}
+
+func rabbitMQTemplateImage(template string) string {
+	switch template {
+	case RabbitMQLegacyTemplate:
+		return dockerRabbitMQImage
+	case RabbitMQ440Template:
+		return dockerRabbitMQ440Image
+	}
+	return ""
+}
+
+func MatchesPanelRabbitMQImage(template, value string) bool {
+	return IsRabbitMQTemplate(template) && value == rabbitMQTemplateImage(template)
+}
+
+func rabbitMQCompose(id string, port int, password string) string {
+	return fmt.Sprintf(`services:
+  rabbitmq:
+    image: %s
+    restart: unless-stopped
+    hostname: cloudstack-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: paneladmin
+      RABBITMQ_DEFAULT_PASS: "%s"
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+S 2:2 +SDcpu 1 +SDio 1"
+    mem_limit: 512m
+    ports:
+      - "127.0.0.1:%d:15672"
+      - "127.0.0.1:%d:5672"
+    volumes:
+      - data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 15s
+      timeout: 20s
+      retries: 20
+      start_period: 120s
+volumes:
+  data: {}
+`, rabbitMQTemplateImage(id), password, port, port+1)
+}
+
+func RabbitMQ440ComposeMatches(content string, port int, password string) bool {
+	return port >= 1024 && port < 65535 && len(password) == 64 &&
+		dockerIDPattern.MatchString(password) && content == rabbitMQCompose(RabbitMQ440Template, port, password)
+}
+
+func IsOriginalRabbitMQCompose(content string, port int) bool {
+	const prefix = "\n      RABBITMQ_DEFAULT_PASS: \""
+	_, after, exists := strings.Cut(content, prefix)
+	password, _, closed := strings.Cut(after, "\"")
+	return exists && closed && port >= 1024 && port < 65535 &&
+		len(password) == 64 && dockerIDPattern.MatchString(password) &&
+		content == rabbitMQCompose(RabbitMQLegacyTemplate, port, password)
 }
 
 func (a *Server) dockerRabbitMQRoutes(m *http.ServeMux) {
+	a.rabbitMQMigrationPreflightRoute(m)
 	m.HandleFunc("GET /api/docker/projects/{id}/rabbitmq-queues", a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
 		id := r.PathValue("id")
 		vhost, err := RabbitMQQueueVHost(r.URL.RawQuery)

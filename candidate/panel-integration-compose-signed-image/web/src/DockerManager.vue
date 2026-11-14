@@ -2,6 +2,7 @@
 import { formatPanelDateTime } from "./panelTime";
 import DockerContainerMetrics from "./DockerContainerMetrics.vue";
 import RabbitMQQueues from "./RabbitMQQueues.vue";
+import RabbitMQMigrationPreflight from "./RabbitMQMigrationPreflight.vue";
 import { randomId } from "./randomId";
 import { composeHostPortSettings, isComposeHostPort, isPhpMyAdminTemplate } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
@@ -111,7 +112,11 @@ const credentialTemplates = {
   },
 } as const;
 
-type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194";
+function isRabbitMQTemplate(value?: string): boolean {
+  return value === "rabbitmq" || value === "rabbitmq-440";
+}
+
+type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440";
 interface CredentialDetails {
   projectName: string;
   template: CredentialTemplate;
@@ -127,7 +132,7 @@ const credentialsError = ref("");
 const passwordVisible = ref(false);
 
 function isCredentialTemplate(value?: string): value is CredentialTemplate {
-  return value === "openlitespeed-194" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
+  return value === "openlitespeed-194" || value === "rabbitmq-440" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
 }
 
 function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
@@ -136,7 +141,9 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
     throw new Error("无法核对项目凭据");
   }
   const response = value as Record<string, unknown>;
-  const definition = credentialTemplates[template === "openlitespeed-194" ? "openlitespeed" : template];
+  const credentialTemplate = template === "openlitespeed-194" ? "openlitespeed" :
+    template === "rabbitmq-440" ? "rabbitmq" : template;
+  const definition = credentialTemplates[credentialTemplate];
   const port = response.host_port;
   const fields = response.credentials;
   if (response.project_id !== item.id || response.template_id !== template ||
@@ -200,13 +207,20 @@ const visible = ref(false),
 const managedTemplate = ref<"phpmyadmin">();
 const metricsContainer = ref<DockerContainer>();
 const rabbitQueues = ref<DockerProject>();
+const rabbitMigration = ref<DockerProject>();
 const visibleProjects = computed(() =>
   managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
 
 function openRabbitQueues(item: DockerProject) {
-  if (contextCurrent(contextToken()) && item.template_id === "rabbitmq" && item.state === "running" && /^[a-f0-9]{32}$/.test(item.id)) {
+  if (contextCurrent(contextToken()) && isRabbitMQTemplate(item.template_id) && item.state === "running" && /^[a-f0-9]{32}$/.test(item.id)) {
     rabbitQueues.value = item;
+  }
+}
+
+function openRabbitMigration(item: DockerProject) {
+  if (contextCurrent(contextToken()) && item.template_id === "rabbitmq" && item.state === "running" && /^[a-f0-9]{32}$/.test(item.id)) {
+    rabbitMigration.value = item;
   }
 }
 
@@ -268,7 +282,7 @@ function resetManager() {
     visible.value = false; loading.value = false; busy.value = false;
     managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
-    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined; rabbitQueues.value = undefined;
+    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined; rabbitQueues.value = undefined; rabbitMigration.value = undefined;
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -1164,8 +1178,10 @@ async function removeVolume(item: DockerVolume) {
           </div>
           <div class="docker-actions">
             <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
-            <el-button v-if="item.template_id === 'rabbitmq'" link type="primary" :disabled="busy || item.state !== 'running'"
+            <el-button v-if="isRabbitMQTemplate(item.template_id)" link type="primary" :disabled="busy || item.state !== 'running'"
               @click="openRabbitQueues(item)">查看队列</el-button>
+            <el-button v-if="item.template_id === 'rabbitmq'" link type="primary" :disabled="busy || item.state !== 'running'"
+              @click="openRabbitMigration(item)">迁移预检</el-button>
             <el-link v-if="phpMyAdminURL(item)" type="primary" :href="phpMyAdminURL(item)" target="_blank" rel="noopener noreferrer">打开 phpMyAdmin</el-link>
             <el-button
               v-if="canBindDockerProjectSite(item)"
@@ -1638,6 +1654,8 @@ async function removeVolume(item: DockerVolume) {
   </el-dialog>
   <RabbitMQQueues v-if="rabbitQueues" :key="rabbitQueues.id" :api="api" :project="rabbitQueues"
     @close="rabbitQueues = undefined" />
+  <RabbitMQMigrationPreflight v-if="rabbitMigration" :key="rabbitMigration.id" :api="api" :project="rabbitMigration"
+    @close="rabbitMigration = undefined" />
   <DockerContainerMetrics v-if="metricsContainer" :key="metricsContainer.Id" :api="api" :id="metricsContainer.Id"
     :name="nameOf(metricsContainer)" @close="metricsContainer = undefined" />
   <el-dialog

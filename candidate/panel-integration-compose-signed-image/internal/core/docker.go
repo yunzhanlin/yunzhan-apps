@@ -85,35 +85,11 @@ func dockerTemplateOnArchitecture(id string, port int, arch string) (string, err
 		return isolatedPHPTemplate(id, port), nil
 	}
 	switch id {
-	case "rabbitmq":
+	case RabbitMQLegacyTemplate, RabbitMQ440Template:
 		if port == 65535 {
 			return "", errors.New("双端口应用的起始端口不能为 65535")
 		}
-		password := Token()
-		return fmt.Sprintf(`services:
-  rabbitmq:
-    image: %s
-    restart: unless-stopped
-    hostname: cloudstack-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: paneladmin
-      RABBITMQ_DEFAULT_PASS: "%s"
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+S 2:2 +SDcpu 1 +SDio 1"
-    mem_limit: 512m
-    ports:
-      - "127.0.0.1:%d:15672"
-      - "127.0.0.1:%d:5672"
-    volumes:
-      - data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
-      interval: 15s
-      timeout: 20s
-      retries: 20
-      start_period: 120s
-volumes:
-  data: {}
-`, dockerRabbitMQImage, password, port, port+1), nil
+		return rabbitMQCompose(id, port, Token()), nil
 	case OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
 		if port == 65535 {
 			return "", errors.New("双端口应用的起始端口不能为 65535")
@@ -457,7 +433,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "仅绑定回环端口的单节点检索服务，启用账号认证，1 GiB 容器上限", "container_port": 9200},
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},
 			{"id": "wordpress-blog", "name": "WordPress 博客", "image": "wordpress:7.1.2-php8.3-apache + mariadb:11.8.9", "description": "独立 PHP 8.3 + MariaDB，持久卷保存网站与数据", "container_port": 80},
-			{"id": "rabbitmq", "name": "RabbitMQ", "image": "rabbitmq:4.1.4-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
+			{"id": RabbitMQ440Template, "name": "RabbitMQ", "image": "rabbitmq:4.4.0-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
 			{"id": OpenLiteSpeed194Template, "name": "OpenLiteSpeed 1.9.4", "image": dockerOpenLiteSpeed194Image, "description": "独立网站与回环 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
 		}
 		if err := MongoDBKernelCompatibility(); err != nil {

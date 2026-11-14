@@ -216,6 +216,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		finalLegacyPHP = finalLegacyPHP && app.ID == phpRelease.appID && app.Version == phpRelease.appVersion
 		phpMyAdminUpgrade := app.ID == "phpmyadmin" && app.Target == PhpMyAdmin523Template && app.Version == phpMyAdmin523AppVersion
 		openLiteSpeedUpgrade := app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && app.Version == openLiteSpeed194AppVersion
+		rabbitMQUpgrade := app.ID == "rabbitmq" && app.Target == RabbitMQ440Template && app.Version == rabbitMQ440AppVersion
 		var previousComposeTargets []string
 		if finalLegacyPHP {
 			previousComposeTargets = previousLegacyPHPTemplates(phpRelease)
@@ -223,6 +224,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			previousComposeTargets = []string{PhpMyAdminLegacyTemplate}
 		} else if openLiteSpeedUpgrade {
 			previousComposeTargets = []string{OpenLiteSpeedLegacyTemplate}
+		} else if rabbitMQUpgrade {
+			previousComposeTargets = []string{RabbitMQLegacyTemplate}
 		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -249,7 +252,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
 			previousComposeInstalled := false
-			if !status.Installed {
+			if !status.Installed || rabbitMQUpgrade {
 				for _, target := range previousComposeTargets {
 					if compose[target] {
 						previousComposeInstalled = true
@@ -346,6 +349,9 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				if openLiteSpeedUpgrade && !compose[app.Target] {
 					status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
 					status.UpdateDetail = "在另一对回环端口安装 OpenLiteSpeed 1.9.4。原网站、管理后台和数据卷继续保留。"
+				}
+				if rabbitMQUpgrade {
+					status.UpdateDetail = "已有 RabbitMQ 4.1 项目需要按 4.1 → 4.2 → 4.4 迁移原数据。请在 Docker 管理逐项目核对。新装使用独立数据卷。"
 				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
@@ -602,7 +608,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 		} else {
 			if in.HostPort == 0 {
 				in.HostPort = map[string]int{
-					"memcached-cache": 21211, "mongodb": 27017, "elasticsearch": 19200, "rabbitmq": 15672,
+					"memcached-cache": 21211, "mongodb": 27017, "elasticsearch": 19200, RabbitMQLegacyTemplate: 15672, RabbitMQ440Template: 15672,
 					PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081,
 					legacyPHP81BookwormCompat2Template: 18082, legacyPHP80BullseyeCompat2Template: 18083,
 					legacyPHP74BullseyeCompat3Template: 18084,

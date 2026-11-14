@@ -20,11 +20,22 @@ import (
 var rabbitMQReadSlots = make(chan struct{}, 3)
 var errRabbitMQIdentity = errors.New("无法唯一核对该项目的原 RabbitMQ 容器，请检查项目运行状态")
 
+type rabbitMQVolumeMount struct {
+	Type        string `json:"Type"`
+	Name        string `json:"Name"`
+	Driver      string `json:"Driver"`
+	Destination string `json:"Destination"`
+	Source      string `json:"Source"`
+	RW          bool   `json:"RW"`
+}
+
 type rabbitMQContainer struct {
-	ID     string `json:"Id"`
+	Mounts []rabbitMQVolumeMount `json:"Mounts"`
+	ID     string                `json:"Id"`
 	Config struct {
-		Image  string            `json:"Image"`
-		Labels map[string]string `json:"Labels"`
+		Image    string            `json:"Image"`
+		Hostname string            `json:"Hostname"`
+		Labels   map[string]string `json:"Labels"`
 	} `json:"Config"`
 	State struct {
 		Status    string `json:"Status"`
@@ -36,7 +47,7 @@ type rabbitMQContainer struct {
 func rabbitMQProject(raw []byte, id string) (composeMetadata, error) {
 	var value composeMetadata
 	if !core.ValidID(id) || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &value) != nil || value.ID != id ||
-		value.Engine != "panel_"+id[:12] || value.TemplateID != "rabbitmq" || value.Services != 1 ||
+		value.Engine != "panel_"+id[:12] || !core.IsRabbitMQTemplate(value.TemplateID) || value.Services != 1 ||
 		!dockerResourceNamePattern.MatchString(value.Name) {
 		return value, errRabbitMQIdentity
 	}
@@ -59,7 +70,7 @@ func inspectRabbitMQ(ctx context.Context, project composeMetadata) (rabbitMQCont
 		result.ID != id || result.Config.Labels["com.docker.compose.project"] != project.Engine ||
 		result.Config.Labels["com.docker.compose.service"] != "rabbitmq" ||
 		!strings.EqualFold(result.Config.Labels["com.docker.compose.oneoff"], "false") ||
-		!core.IsPanelRabbitMQImage(result.Config.Image) || result.State.Status != "running" || result.State.PID < 1 {
+		!core.MatchesPanelRabbitMQImage(project.TemplateID, result.Config.Image) || result.State.Status != "running" || result.State.PID < 1 {
 		return result, errRabbitMQIdentity
 	}
 	if _, err := time.Parse(time.RFC3339Nano, result.State.StartedAt); err != nil {
@@ -186,6 +197,7 @@ func readRabbitMQQueueReport(ctx context.Context, id, vhost string) (core.Rabbit
 }
 
 func dockerRabbitMQRoutes(m *http.ServeMux) {
+	rabbitMQMigrationPreflightRoute(m)
 	m.HandleFunc("GET /v1/docker/projects/{id}/rabbitmq-queues", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		vhost, err := core.RabbitMQQueueVHost(r.URL.RawQuery)

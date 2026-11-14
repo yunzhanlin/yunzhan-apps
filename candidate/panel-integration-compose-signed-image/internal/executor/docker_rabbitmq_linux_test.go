@@ -33,3 +33,49 @@ func TestRabbitMQQueueReportKeepsObservedCountsAndRejectsDamagedRows(t *testing.
 		t.Fatalf("valid empty inventory was not distinguished from failure: %v, %v", empty, err)
 	}
 }
+
+func TestRabbitMQMigrationRequiresSingleOriginalNode(t *testing.T) {
+	const single = `{"disk_nodes":["rabbit@cloudstack-rabbitmq"],"ram_nodes":[],"running_nodes":["rabbit@cloudstack-rabbitmq"],
+		"alarms":[],"partitions":{},"versions":{"rabbit@cloudstack-rabbitmq":{"rabbitmq_version":"4.1.4"}}}`
+	version, alarms, err := rabbitMQMigrationCluster([]byte(single))
+	if err != nil || alarms != 0 || version != "4.1.4" {
+		t.Fatalf("unexpected original cluster: %s, %d, %v", version, alarms, err)
+	}
+	_, alarms, err = rabbitMQMigrationCluster([]byte(strings.Replace(single, `"alarms":[]`,
+		`"alarms":[{"resource":"memory","node":"rabbit@cloudstack-rabbitmq"}]`, 1)))
+	if err != nil || alarms != 1 {
+		t.Fatalf("arrival of an alarm was not visible: %d, %v", alarms, err)
+	}
+	for _, changed := range []string{
+		strings.Replace(single, `"ram_nodes":[]`, `"ram_nodes":["rabbit@different"]`, 1),
+		strings.Replace(single, `"partitions":{}`, `"partitions":{"node":["another"]}`, 1),
+		strings.Replace(single, `"4.1.4"`, `"4.4.0"`, 1),
+		strings.Replace(single, `"alarms":[]`, `"alarms":null`, 1),
+	} {
+		if _, _, err := rabbitMQMigrationCluster([]byte(changed)); err == nil {
+			t.Fatalf("accepted unsupported cluster %s", changed)
+		}
+	}
+}
+
+func TestRabbitMQMigrationReportsDisabledStableFlags(t *testing.T) {
+	raw := []byte(`[
+		{"name":"zz_stable","state":"disabled","stability":"stable"},
+		{"name":"beta","state":"disabled","stability":"experimental"},
+		{"name":"aa_required","state":"unsupported","stability":"required"},
+		{"name":"enabled_required","state":"enabled","stability":"required"}
+	]`)
+	got, err := rabbitMQMigrationFeatures(raw)
+	if err != nil || !slices.Equal(got, []string{"aa_required", "zz_stable"}) {
+		t.Fatalf("wrong features: %v, %v", got, err)
+	}
+	for _, changed := range []string{
+		strings.Replace(string(raw), "beta", "zz_stable", 1),
+		strings.Replace(string(raw), "unsupported", "unknown", 1),
+		strings.Replace(string(raw), "experimental", "pending", 1),
+	} {
+		if _, err := rabbitMQMigrationFeatures([]byte(changed)); err == nil {
+			t.Fatalf("accepted invalid features %s", changed)
+		}
+	}
+}

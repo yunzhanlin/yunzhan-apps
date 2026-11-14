@@ -2,8 +2,10 @@ package core
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
+	"local/panel/internal/appcatalog"
 	"net/http"
 	"net/url"
 	"strings"
@@ -61,5 +63,73 @@ func TestRabbitMQQueueHTTPRejectsUnauthorizedAndForeignReports(t *testing.T) {
 	}
 	if reads != 2 {
 		t.Fatal("unexpected native reads", reads)
+	}
+}
+
+func TestRabbitMQ440RequiresFixedSignedRecipe(t *testing.T) {
+	manifest := appcatalog.Manifest{ID: "rabbitmq", Version: rabbitMQ440AppVersion, Risk: "maintained",
+		Delivery: appcatalog.Delivery{Provider: "compose", Target: RabbitMQ440Template,
+			Image: dockerRabbitMQ440Image, ManageRoute: "docker"}}
+	if err := validateRegistryComposeDelivery(manifest); err != nil {
+		t.Fatal(err)
+	}
+	password := strings.Repeat("a", 64)
+	compose := rabbitMQCompose(RabbitMQ440Template, 15672, password)
+	if !RabbitMQ440ComposeMatches(compose, 15672, password) ||
+		!strings.Contains(compose, "    image: "+manifest.Delivery.Image+"\n") {
+		t.Fatal("store template does not use the signed image")
+	}
+	for _, altered := range []string{
+		strings.Replace(compose, dockerRabbitMQ440Image, dockerRabbitMQImage, 1),
+		strings.Replace(compose, "127.0.0.1:", "0.0.0.0:", 1),
+		strings.Replace(compose, "data:/var/lib/rabbitmq", "earlier_data:/var/lib/rabbitmq", 1),
+	} {
+		if RabbitMQ440ComposeMatches(altered, 15672, password) {
+			t.Fatal("accepted an altered installation recipe")
+		}
+	}
+	manifest.Delivery.Image = dockerRabbitMQImage
+	if validateRegistryComposeDelivery(manifest) == nil ||
+		MatchesPanelRabbitMQImage(RabbitMQ440Template, dockerRabbitMQImage) ||
+		MatchesPanelRabbitMQImage(RabbitMQLegacyTemplate, dockerRabbitMQ440Image) {
+		t.Fatal("matched the wrong broker image to the template")
+	}
+	manifest.Delivery.Image, manifest.Version = dockerRabbitMQ440Image, "4.1-compat1"
+	if validateRegistryComposeDelivery(manifest) == nil {
+		t.Fatal("accepted an earlier application version with the new image")
+	}
+}
+
+func TestRabbitMQRegistryKeepsOldInstanceVisibleAlongside440(t *testing.T) {
+	old, current := ID(), ID()
+	executor := registryTestExecutor(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/runtimes":
+			_, _ = w.Write([]byte(`{"installed":[]}`))
+		case "/v1/software":
+			_, _ = w.Write([]byte(`[]`))
+		case "/v1/docker/projects":
+			_ = json.NewEncoder(w).Encode(map[string]any{"projects": []map[string]any{
+				{"id": old, "template_id": RabbitMQLegacyTemplate, "state": "running",
+					"services": 1, "running": 1, "healthy": 1, "images": []string{dockerRabbitMQImage}},
+				{"id": current, "template_id": RabbitMQ440Template, "state": "running",
+					"services": 1, "running": 1, "healthy": 1, "images": []string{dockerRabbitMQ440Image}},
+			}})
+		default:
+			w.WriteHeader(404)
+		}
+	})
+	server := &Server{Executor: executor, Store: testStore(t)}
+	rows := server.appRegistryStatuses(context.Background(), appcatalog.Catalog{Apps: []appcatalog.CatalogItem{
+		{ID: "rabbitmq", Version: rabbitMQ440AppVersion, Provider: "compose", Target: RabbitMQ440Template, Stage: "ready"},
+	}})
+	got := rows[0]
+	if !got.Installed || !got.Healthy || !got.UpdateAvailable || got.UpdateSupported || got.UpdateKind != "compose-review" {
+		t.Fatal("missing old instance migration notice", got)
+	}
+	if len(got.Instances) != 2 || got.Instances[0].ID != old ||
+		got.Instances[0].Version != "4.1.4" || !got.Instances[0].UpdateAvailable ||
+		got.Instances[1].ID != current || got.Instances[1].Version != "4.4.0" || got.Instances[1].UpdateAvailable {
+		t.Fatal("mixed the old and new broker versions", got.Instances)
 	}
 }

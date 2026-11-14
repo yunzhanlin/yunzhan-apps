@@ -298,7 +298,7 @@ func dualTemplatePort(config composeConfig, id string) (int, error) {
 	if len(config.Services) != 1 {
 		return 0, errors.New("双端口模板服务数量不匹配")
 	}
-	serviceName := id
+	serviceName := core.RabbitMQLegacyTemplate
 	main, other := 15672, 5672
 	if core.IsOpenLiteSpeedTemplate(id) {
 		serviceName, main, other = core.OpenLiteSpeedLegacyTemplate, 8088, 7080
@@ -450,7 +450,7 @@ func RunComposeJob(id string) (ret error) {
 			if e != nil {
 				return e
 			}
-		} else if op.TemplateID == "rabbitmq" || core.IsOpenLiteSpeedTemplate(op.TemplateID) {
+		} else if core.IsRabbitMQTemplate(op.TemplateID) || core.IsOpenLiteSpeedTemplate(op.TemplateID) {
 			metadata.HostPort, e = dualTemplatePort(config, op.TemplateID)
 			if e != nil {
 				return e
@@ -462,6 +462,12 @@ func RunComposeJob(id string) (ret error) {
 			}
 		}
 		metadata.Services = len(config.Services)
+		if op.TemplateID == core.RabbitMQ440Template {
+			password := config.Services[core.RabbitMQLegacyTemplate].Environment["RABBITMQ_DEFAULT_PASS"]
+			if !core.RabbitMQ440ComposeMatches(op.Compose, metadata.HostPort, password) {
+				return errors.New("RabbitMQ 4.4 安装要求使用固定镜像和模板")
+			}
+		}
 		if op.TemplateID == core.OpenLiteSpeed194Template {
 			password := config.Services[core.OpenLiteSpeedLegacyTemplate].Environment["CLOUDSTACK_ADMIN_PASSWORD"]
 			if !core.OpenLiteSpeed194ComposeMatches(op.Compose, metadata.HostPort, password) {
@@ -764,6 +770,8 @@ func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 		template := metadata.TemplateID
 		if core.IsOpenLiteSpeedTemplate(template) {
 			template = core.OpenLiteSpeedLegacyTemplate
+		} else if core.IsRabbitMQTemplate(template) {
+			template = core.RabbitMQLegacyTemplate
 		}
 		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, core.OpenLiteSpeedLegacyTemplate: {"CLOUDSTACK_ADMIN_PASSWORD"}}[template]
 		if metadata.TemplateID == "elasticsearch" && metadata.InitialCredentials {
