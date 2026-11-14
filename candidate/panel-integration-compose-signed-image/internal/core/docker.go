@@ -120,28 +120,8 @@ volumes:
 		return "services:\n  memcached:\n    image: " + appcatalog.MemcachedDigestImage + "\n    restart: unless-stopped\n    command: [\"memcached\", \"-m\", \"128\", \"-I\", \"4m\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":11211\"\n    healthcheck:\n      test: [\"CMD-SHELL\", \"printf 'version\\r\\n' | nc -w 2 127.0.0.1 11211 | grep -q '^VERSION'\"]\n      interval: 10s\n      timeout: 3s\n      retries: 12\n", nil
 	case PhpMyAdminLegacyTemplate, PhpMyAdmin523Template:
 		return PhpMyAdminCompose(id, port, "", "")
-	case "mongodb":
-		password := Token()
-		return fmt.Sprintf(`services:
-  mongodb:
-    image: %s
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: paneladmin
-      MONGO_INITDB_ROOT_PASSWORD: "%s"
-    ports:
-      - "127.0.0.1:%d:27017"
-    volumes:
-      - data:/data/db
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --username paneladmin --password '%s' --authenticationDatabase admin --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 2)'"]
-      interval: 15s
-      timeout: 20s
-      retries: 18
-      start_period: 60s
-volumes:
-  data: {}
-`, dockerMongoDBImage, password, port, password), nil
+	case MongoDBLegacyTemplate, MongoDB8038Template:
+		return mongoDBCompose(id, port, Token()), nil
 	case "elasticsearch":
 		password := Token()
 		return fmt.Sprintf(`services:
@@ -429,16 +409,16 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "redis-cache", "name": "Redis 缓存", "image": "redis:8.2.9-alpine", "description": "带持久命名卷的 Redis 单实例", "container_port": 6379},
 			{"id": "memcached-cache", "name": "Memcached 缓存", "image": appcatalog.MemcachedDigestImage, "description": "固定 OCI 摘要、128 MB 缓存，只通过主机回环端口访问", "container_port": 11211},
 			{"id": PhpMyAdmin523Template, "name": "phpMyAdmin 5.2.3", "image": dockerPhpMyAdmin523Image, "description": "PHP 8.3.36，固定官方摘要，只通过主机回环端口访问", "container_port": 80},
-			{"id": "mongodb", "name": "MongoDB", "image": "mongo:8.0@sha256:d0d926f…", "description": "启用认证与持久卷的 MongoDB 8.0 单实例", "container_port": 27017},
+			{"id": MongoDB8038Template, "name": "MongoDB 8.0.38", "image": dockerMongoDB8038Image, "description": "固定官方摘要，回环连接、认证与独立持久卷", "container_port": 27017},
 			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "仅绑定回环端口的单节点检索服务，启用账号认证，1 GiB 容器上限", "container_port": 9200},
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},
 			{"id": "wordpress-blog", "name": "WordPress 博客", "image": "wordpress:7.1.2-php8.3-apache + mariadb:11.8.9", "description": "独立 PHP 8.3 + MariaDB，持久卷保存网站与数据", "container_port": 80},
 			{"id": RabbitMQ440Template, "name": "RabbitMQ", "image": "rabbitmq:4.4.0-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
 			{"id": OpenLiteSpeed194Template, "name": "OpenLiteSpeed 1.9.4", "image": dockerOpenLiteSpeed194Image, "description": "独立网站与回环 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
 		}
-		if err := MongoDBKernelCompatibility(); err != nil {
+		if err := MongoDBKernelCompatibility(MongoDB8038Template); err != nil {
 			for _, template := range templates {
-				if template["id"] == "mongodb" {
+				if template["id"] == MongoDB8038Template {
 					template["compatibility_detail"] = err.Error()
 					break
 				}

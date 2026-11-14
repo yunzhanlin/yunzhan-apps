@@ -780,12 +780,13 @@ async function installRegistryApp(app: RegistryApp, parallel = false) {
       if (answer.serverID) body.settings = { mysql_server_id: answer.serverID };
     } else if (app.provider === "compose") {
       const ports = composeHostPortSettings(app.target);
+      const preferred = parallel && app.target === "mongodb-8038" ? 27018 : ports.preferred;
       const range = `请输入 1024–${ports.max} 之间的本机端口。`;
       const answer = await ElMessageBox.prompt(
         `应用只会绑定到主机回环地址。${range}${ports.detail}${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}`,
         `安装 ${app.name}`,
         {
-          inputValue: String(ports.preferred),
+          inputValue: String(preferred),
           inputValidator: (value: string) => isComposeHostPort(app.target, Number(value)) || range,
           confirmButtonText: "验签并安装",
           cancelButtonText: "取消",

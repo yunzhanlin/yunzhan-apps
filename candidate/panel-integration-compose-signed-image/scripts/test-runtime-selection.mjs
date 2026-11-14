@@ -193,6 +193,8 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
  one('  if (status?.installed && !parallel) {\n    openRegistryApp(app);',
      '  if (status?.installed) {\n    openRegistryApp(app);');
  one('${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}', '');
+ one('      const preferred = parallel && app.target === "mongodb-8038" ? 27018 : ports.preferred;\n', '');
+ one('inputValue: String(preferred),', 'inputValue: String(ports.preferred),');
  one(" @php-site-settings=\"openSiteSettings($event, 'php')\"", "");
  // Recognize the exact new RabbitMQ store wiring before comparing earlier runtime behavior.
  one(`const rabbitMQMigrationManifestSHA = computed(() => {

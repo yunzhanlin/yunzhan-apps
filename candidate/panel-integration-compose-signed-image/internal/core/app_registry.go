@@ -206,8 +206,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 	out := make([]AppRegistryStatus, 0, len(catalog.Apps))
 	for _, app := range catalog.Apps {
 		supported, compatibilityDetail := registrySupportOn(app, runtimecatalog.HostPlatform(), runtime.GOARCH)
-		if supported && app.Provider == "compose" && app.Target == "mongodb" {
-			if err := MongoDBKernelCompatibility(); err != nil {
+		if supported && app.Provider == "compose" && IsMongoDBTemplate(app.Target) {
+			if err := MongoDBKernelCompatibility(app.Target); err != nil {
 				supported, compatibilityDetail = false, err.Error()
 			}
 		}
@@ -217,6 +217,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 		phpMyAdminUpgrade := app.ID == "phpmyadmin" && app.Target == PhpMyAdmin523Template && app.Version == phpMyAdmin523AppVersion
 		openLiteSpeedUpgrade := app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && app.Version == openLiteSpeed194AppVersion
 		rabbitMQUpgrade := app.ID == "rabbitmq" && app.Target == RabbitMQ440Template && app.Version == rabbitMQ440AppVersion
+		mongoDBUpgrade := app.ID == "mongodb" && app.Target == MongoDB8038Template && app.Version == mongoDB8038AppVersion
 		var previousComposeTargets []string
 		if finalLegacyPHP {
 			previousComposeTargets = previousLegacyPHPTemplates(phpRelease)
@@ -226,6 +227,8 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			previousComposeTargets = []string{OpenLiteSpeedLegacyTemplate}
 		} else if rabbitMQUpgrade {
 			previousComposeTargets = []string{RabbitMQLegacyTemplate}
+		} else if mongoDBUpgrade {
+			previousComposeTargets = []string{MongoDBLegacyTemplate}
 		}
 		if app.Stage != "ready" {
 			status.Detail = map[string]string{"integration": "正在接入安装器", "design": "功能实现中"}[app.Stage]
@@ -252,7 +255,7 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 			status.Installed = compose[app.Target]
 			status.Healthy = composeHealthy[app.Target]
 			previousComposeInstalled := false
-			if !status.Installed || rabbitMQUpgrade {
+			if !status.Installed || rabbitMQUpgrade || mongoDBUpgrade {
 				for _, target := range previousComposeTargets {
 					if compose[target] {
 						previousComposeInstalled = true
@@ -353,6 +356,13 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				if rabbitMQUpgrade {
 					status.UpdateDetail = "已有 RabbitMQ 4.1 项目需要按 4.1 → 4.2 → 4.4 迁移原数据。请在 Docker 管理逐项目核对。新装使用独立数据卷。"
 				}
+				if mongoDBUpgrade {
+					status.UpdateDetail = "旧实例和数据卷继续保留。请备份并核对数据迁移后再切换连接。"
+					if !compose[app.Target] {
+						status.UpdateKind, status.UpdateSupported = "compose-parallel", supported
+						status.UpdateDetail = "可先在另一回环端口安装 MongoDB 8.0.38，用独立卷验证数据迁移。旧实例继续使用原端口和原卷。"
+					}
+				}
 				if app.ID == "memcached" && app.Target == "memcached-cache" && app.Version == appcatalog.MemcachedDigestVersion {
 					status.UpdateKind = "memcached-original"
 					status.UpdateSupported = supported
@@ -403,6 +413,9 @@ func versionBranch(version string) string {
 }
 
 func registryImageVersion(app appcatalog.CatalogItem, images []string) string {
+	if app.ID == "mongodb" && len(images) == 1 && images[0] == dockerMongoDBImage {
+		return "8.0.32"
+	}
 	if app.ID == "openlitespeed" && app.Target == OpenLiteSpeed194Template && len(images) == 1 && images[0] == dockerOpenLiteSpeed194Image {
 		return "1.9.4"
 	}
@@ -516,8 +529,8 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 	}
 	if manifest.Delivery.Provider == "compose" {
 		err = validateRegistryComposeDelivery(manifest)
-		if err == nil && manifest.Delivery.Target == "mongodb" {
-			err = MongoDBKernelCompatibility()
+		if err == nil && IsMongoDBTemplate(manifest.Delivery.Target) {
+			err = MongoDBKernelCompatibility(manifest.Delivery.Target)
 		}
 		if err != nil {
 			if replay() {
@@ -608,7 +621,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 		} else {
 			if in.HostPort == 0 {
 				in.HostPort = map[string]int{
-					"memcached-cache": 21211, "mongodb": 27017, "elasticsearch": 19200, RabbitMQLegacyTemplate: 15672, RabbitMQ440Template: 15672,
+					"memcached-cache": 21211, MongoDBLegacyTemplate: 27017, MongoDB8038Template: 27017, "elasticsearch": 19200, RabbitMQLegacyTemplate: 15672, RabbitMQ440Template: 15672,
 					PhpMyAdminLegacyTemplate: 18080, PhpMyAdmin523Template: 18081,
 					legacyPHP81BookwormCompat2Template: 18082, legacyPHP80BullseyeCompat2Template: 18083,
 					legacyPHP74BullseyeCompat3Template: 18084,

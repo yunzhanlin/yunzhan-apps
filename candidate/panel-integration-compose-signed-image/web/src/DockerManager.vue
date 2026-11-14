@@ -116,7 +116,7 @@ function isRabbitMQTemplate(value?: string): boolean {
   return value === "rabbitmq" || value === "rabbitmq-440";
 }
 
-type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440";
+type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440" | "mongodb-8038";
 interface CredentialDetails {
   projectName: string;
   template: CredentialTemplate;
@@ -132,7 +132,7 @@ const credentialsError = ref("");
 const passwordVisible = ref(false);
 
 function isCredentialTemplate(value?: string): value is CredentialTemplate {
-  return value === "openlitespeed-194" || value === "rabbitmq-440" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
+  return value === "openlitespeed-194" || value === "rabbitmq-440" || value === "mongodb-8038" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
 }
 
 function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
@@ -142,7 +142,7 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
   }
   const response = value as Record<string, unknown>;
   const credentialTemplate = template === "openlitespeed-194" ? "openlitespeed" :
-    template === "rabbitmq-440" ? "rabbitmq" : template;
+    template === "rabbitmq-440" ? "rabbitmq" : template === "mongodb-8038" ? "mongodb" : template;
   const definition = credentialTemplates[credentialTemplate];
   const port = response.host_port;
   const fields = response.credentials;
@@ -1683,7 +1683,7 @@ async function removeVolume(item: DockerVolume) {
           <dt>{{ endpoint.label }}</dt>
           <dd><code>{{ endpoint.address }}</code></dd>
         </template>
-        <template v-if="credentials.template === 'mongodb'">
+        <template v-if="credentials.template === 'mongodb' || credentials.template === 'mongodb-8038'">
           <dt>认证数据库</dt>
           <dd><code>admin</code></dd>
         </template>

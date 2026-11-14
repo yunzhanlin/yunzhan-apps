@@ -10,6 +10,7 @@ export function composeHostPortSettings(template: string) {
     case "memcached-cache":
       return { preferred: 21211, max: 65535, usesNextPort: false, detail: "" };
     case "mongodb":
+    case "mongodb-8038":
       return { preferred: 27017, max: 65535, usesNextPort: false, detail: "" };
     case "elasticsearch":
       return { preferred: 19200, max: 65535, usesNextPort: false, detail: "" };

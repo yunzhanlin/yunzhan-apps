@@ -411,8 +411,8 @@ func RunComposeJob(id string) (ret error) {
 			ret = writeErr
 		}
 	}()
-	if op.Action == "create" && op.TemplateID == "mongodb" {
-		if err := core.MongoDBKernelCompatibility(); err != nil {
+	if op.Action == "create" && core.IsMongoDBTemplate(op.TemplateID) {
+		if err := core.MongoDBKernelCompatibility(op.TemplateID); err != nil {
 			return err
 		}
 	}
@@ -472,6 +472,12 @@ func RunComposeJob(id string) (ret error) {
 			password := config.Services[core.OpenLiteSpeedLegacyTemplate].Environment["CLOUDSTACK_ADMIN_PASSWORD"]
 			if !core.OpenLiteSpeed194ComposeMatches(op.Compose, metadata.HostPort, password) {
 				return errors.New("OpenLiteSpeed 1.9.4 安装要求使用固定镜像和模板")
+			}
+		}
+		if op.TemplateID == core.MongoDB8038Template {
+			password := config.Services[core.MongoDBLegacyTemplate].Environment["MONGO_INITDB_ROOT_PASSWORD"]
+			if !core.MongoDB8038ComposeMatches(op.Compose, metadata.HostPort, password) {
+				return errors.New("MongoDB 8.0.38 安装要求使用固定镜像和模板")
 			}
 		}
 		if op.TemplateID == "elasticsearch" {
@@ -772,6 +778,8 @@ func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 			template = core.OpenLiteSpeedLegacyTemplate
 		} else if core.IsRabbitMQTemplate(template) {
 			template = core.RabbitMQLegacyTemplate
+		} else if core.IsMongoDBTemplate(template) {
+			template = core.MongoDBLegacyTemplate
 		}
 		fields := map[string][]string{"mongodb": {"MONGO_INITDB_ROOT_USERNAME", "MONGO_INITDB_ROOT_PASSWORD"}, "rabbitmq": {"RABBITMQ_DEFAULT_USER", "RABBITMQ_DEFAULT_PASS"}, core.OpenLiteSpeedLegacyTemplate: {"CLOUDSTACK_ADMIN_PASSWORD"}}[template]
 		if metadata.TemplateID == "elasticsearch" && metadata.InitialCredentials {
