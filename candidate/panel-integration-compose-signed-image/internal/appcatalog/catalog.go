@@ -242,6 +242,11 @@ func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
+	// The retry delay and deadline can expire while the scheduler is busy.
+	// Check the absolute deadline even if its cancellation callback has not run.
+	if deadline, ok := ctx.Deadline(); ok && !time.Now().Before(deadline) {
+		return nil, context.DeadlineExceeded
+	}
 	// Preserve the exact resolved commit, URL/query, headers and origin. Do not
 	// re-resolve a branch, switch transports or fall back to mutable main.
 	return c.readResponseOnce(original.Clone(ctx), limit)

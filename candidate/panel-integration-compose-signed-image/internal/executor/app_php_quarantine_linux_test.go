@@ -347,6 +347,115 @@ func TestPHPQuarantineRestoreRecoveryAcrossStageAndPublish(t *testing.T) {
 	}
 }
 
+func TestPHPQuarantineRecoveryRejectsChangedRestoreMetadata(t *testing.T) {
+	for _, location := range []string{"staged", "published"} {
+		for _, change := range []string{"mode", "ownership", "attribute", "extra-attribute"} {
+			t.Run(location+"/"+change, func(t *testing.T) {
+				s, in, site := phpQuarantineFixture(t)
+				publicPath := filepath.Join(site, "public", in.Path)
+				const attribute = "user.qa-php"
+				const extra = "user.qa-extra"
+				expectedAttribute := []byte("original")
+				if err := unix.Setxattr(publicPath, attribute, expectedAttribute, 0); err != nil {
+					t.Fatal(err)
+				}
+				q := phpTestRecord(t, s, in)
+				f, err := s.phpQuarantineFiles(&q, false)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer f.Close()
+				q.StageID = core.ID()
+				name := "restore-" + q.StageID + ".bin"
+				data, _, err := phpReadFile(f.storage, "backup.bin", true)
+				if err != nil {
+					t.Fatal(err)
+				}
+				stage, err := phpWritePrivate(f.storage, name, data)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer stage.Close()
+				if err = stage.Chown(q.UID, q.GID); err != nil {
+					t.Fatal(err)
+				}
+				if err = stage.Chmod(os.FileMode(q.Mode)); err != nil {
+					t.Fatal(err)
+				}
+				if err = unix.Fsetxattr(int(stage.Fd()), attribute, expectedAttribute, 0); err != nil {
+					t.Fatal(err)
+				}
+				info, err := stage.Stat()
+				if err != nil {
+					t.Fatal(err)
+				}
+				q.Restored = phpIdentity(info)
+				if err = s.phpSaveQuarantine(&q, "restoring"); err != nil {
+					t.Fatal(err)
+				}
+				if location == "published" {
+					if err = phpRenameNoReplace(f.storage, name, f.parent, filepath.Base(in.Path)); err != nil {
+						t.Fatal(err)
+					}
+				}
+				var repair func() error
+				switch change {
+				case "mode":
+					err = stage.Chmod(0666)
+					repair = func() error { return stage.Chmod(os.FileMode(q.Mode)) }
+				case "ownership":
+					err = stage.Chown(q.UID+1, q.GID)
+					repair = func() error { return stage.Chown(q.UID, q.GID) }
+				case "attribute":
+					err = unix.Fsetxattr(int(stage.Fd()), attribute, []byte("changed"), 0)
+					repair = func() error { return unix.Fsetxattr(int(stage.Fd()), attribute, expectedAttribute, 0) }
+				case "extra-attribute":
+					err = unix.Fsetxattr(int(stage.Fd()), extra, []byte("added"), 0)
+					repair = func() error { return unix.Fremovexattr(int(stage.Fd()), extra) }
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				recover := phpTestRestoreInput(q, true)
+				if _, err = s.modulePHPQuarantine(context.Background(), "recover-quarantine", recover); err == nil {
+					t.Fatal("accepted changed restore metadata")
+				}
+				unchanged, err := s.phpReadQuarantine(q.ID)
+				if err != nil || unchanged.State != "restoring" || unchanged.Revision != q.Revision {
+					t.Fatalf("recovery record changed: %+v, %v", unchanged, err)
+				}
+				if location == "staged" {
+					if _, err = os.Lstat(publicPath); !os.IsNotExist(err) {
+						t.Fatalf("changed stage was published: %v", err)
+					}
+				} else {
+					published, statErr := os.Lstat(publicPath)
+					if statErr != nil || phpIdentity(published) != q.Restored {
+						t.Fatalf("published file was replaced or removed: %v", statErr)
+					}
+				}
+				if err = repair(); err != nil {
+					t.Fatal(err)
+				}
+				if _, err = s.modulePHPQuarantine(context.Background(), "recover-quarantine", recover); err != nil {
+					t.Fatal(err)
+				}
+				if err = phpVerifyRestoredFile(&q, f.parent, filepath.Base(in.Path)); err != nil {
+					t.Fatal(err)
+				}
+				final, err := s.phpReadQuarantine(q.ID)
+				if err != nil || final.State != "restored" || final.Revision != q.Revision+1 {
+					t.Fatalf("corrected restore not accepted exactly once: %+v, %v", final, err)
+				}
+				retained, _, err := phpReadFile(f.storage, "backup.bin", true)
+				if err != nil || !bytes.Equal(retained, data) {
+					t.Fatalf("private backup changed: %v", err)
+				}
+			})
+		}
+	}
+}
+
 func TestPHPQuarantineDamagedBackupDirectoryAndRevisionFailClosed(t *testing.T) {
 	for _, kind := range []string{"backup", "backup-mode", "revision", "digest", "record", "parent", "site", "module-uninstall", "site-archive"} {
 		t.Run(kind, func(t *testing.T) {
