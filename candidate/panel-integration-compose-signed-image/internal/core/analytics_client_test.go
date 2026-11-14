@@ -100,6 +100,55 @@ func TestAnalyticsManagedClientAddressesStaySeparateAndPrivate(t *testing.T) {
 	}
 }
 
+func TestAnalyticsVerifiedClientRateLimitIsScopedToTheSite(t *testing.T) {
+	a, first, cfg, token := analyticsClientFixture(t)
+	const secondDomain = "other-analytics.example"
+	if _, err := a.Store.CreateSiteAtDomain("Other Analytics", "other-analytics", secondDomain, "", "admin"); err != nil {
+		t.Fatal(err)
+	}
+	sites, err := a.Store.Sites()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var second Site
+	for _, site := range sites {
+		if site.Domain == secondDomain {
+			second = site
+		}
+	}
+	if second.ID == "" || second.ID == first.ID {
+		t.Fatal("independent site missing")
+	}
+	secondConfig, err := a.Store.saveAnalyticsConfig(context.Background(), AnalyticsConfig{
+		SiteID: second.ID, Enabled: true, Clicks: true, Retention: 30,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A verified managed proxy and a direct connection see the same address.
+	// Keep the first site's rate from the real collector before saturating it.
+	managed := map[string][]string{AnalyticsProxyTokenHeader: {token}, AnalyticsProxyClientHeader: {"192.0.2.8"}}
+	if w := analyticsClientRequest(a, cfg, "127.0.0.1:54321", analyticsClientEvent(), managed); w.Code != 204 {
+		t.Fatal("verified event for the first site failed", w.Code, w.Body.String())
+	}
+	if len(a.analyticsRates) != 1 {
+		t.Fatal("first request did not create exactly one client bucket")
+	}
+	for key := range a.analyticsRates {
+		a.analyticsRates[key] = analyticsRate{Window: time.Now().Unix() / 60, Count: analyticsIdentityMinuteLimit}
+	}
+	if w := analyticsRequest(a, cfg, analyticsClientEvent(), "https://"+first.Domain); w.Code != 429 {
+		t.Fatal("direct client bypassed the same site's proxy-established quota", w.Code, w.Body.String())
+	}
+	if w := analyticsRequest(a, secondConfig, analyticsClientEvent(), "https://"+second.Domain); w.Code != 204 {
+		t.Fatal("second site inherited the first site's exhausted client quota", w.Code, w.Body.String())
+	}
+	if len(a.analyticsRates) != 2 || a.analyticsMinute.Count != 3 {
+		t.Fatal("site isolation changed the shared global budget", len(a.analyticsRates), a.analyticsMinute.Count)
+	}
+}
+
 func TestAnalyticsManagedClientRejectsForgedAndAmbiguousIdentity(t *testing.T) {
 	for _, name := range []string{"wrong_token", "wrong_site_token", "missing_token", "missing_client", "duplicate_token", "duplicate_client", "address_chain", "address_port", "address_zone", "invalid_address", "unspecified", "multicast", "nonloopback_peer", "legacy_configuration", "wrong_include_identity"} {
 		t.Run(name, func(t *testing.T) {

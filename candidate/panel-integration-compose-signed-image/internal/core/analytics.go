@@ -506,8 +506,10 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 	if v.ClickViewport != "" && !a.Store.analyticsLayoutInstalled(r.Context()) {
 		v.ClickViewport = ""
 	}
-	rateIdentity := clientAddress
-	if rateIdentity == "" {
+	// A verified address shares a client quota across ingress paths for this
+	// site only. The earlier admission still charges the panel-wide limit.
+	rateIdentity := "verified-client:" + site.ID + ":" + clientAddress
+	if clientAddress == "" {
 		rateIdentity = "unverified-proxy-visitor:" + site.ID + ":" + v.Visitor
 	}
 	if !a.analyticsClientAllowed(rateIdentity, admittedAt, time.Now()) {
