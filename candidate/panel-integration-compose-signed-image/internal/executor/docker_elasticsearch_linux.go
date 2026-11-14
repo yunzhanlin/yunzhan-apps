@@ -17,6 +17,8 @@ import (
 	"local/panel/internal/core"
 )
 
+var errElasticsearchRepositoryMissing = errors.New("尚未初始化 Elasticsearch 快照仓库")
+
 var errElasticsearchProject = errors.New("无法核对原 Elasticsearch 快照项目、容器和卷")
 
 type elasticsearchSnapshotContainer struct {
@@ -144,6 +146,9 @@ func (c elasticsearchSnapshotHTTP) verifyRepository(ctx context.Context, create 
 			return errors.New("Elasticsearch 未确认独立快照仓库")
 		}
 		return nil
+	}
+	if status == http.StatusNotFound {
+		return errElasticsearchRepositoryMissing
 	}
 	repo, ok := response[core.ElasticsearchSnapshotRepository]
 	if status != http.StatusOK || !ok || len(response) != 1 || repo.Type != "fs" ||
@@ -349,57 +354,143 @@ func runElasticsearchSnapshotOperation(ctx context.Context, id string, in core.E
 }
 
 func elasticsearchSnapshotOperation(ctx context.Context, id string, in core.ElasticsearchSnapshotRequest, action string) (string, error) {
+	state := "accepted"
+	err := withElasticsearchSnapshotProject(ctx, id, in.Password, func(client elasticsearchSnapshotHTTP) error {
+		if action == "status" {
+			var err error
+			state, err = client.observation(ctx, in)
+			return err
+		}
+		return client.submit(ctx, in, action == "restore")
+	})
+	if err != nil {
+		return "", err
+	}
+	return state, nil
+}
+
+func withElasticsearchSnapshotProject(ctx context.Context, id, submittedPassword string, use func(elasticsearchSnapshotHTTP) error) error {
 	dir, err := openComposeUpdateDirectory(dockerProjects, id)
 	if err != nil {
-		return "", errElasticsearchProject
+		return errElasticsearchProject
 	}
 	defer dir.Close()
 	metadata, metadataInfo, err := dir.read("metadata.json", 16<<10)
 	var p composeMetadata
 	if err != nil || memcachedDaemonJSON(metadata) != nil || json.Unmarshal(metadata, &p) != nil || p.ID != id ||
 		p.Engine != "panel_"+id[:12] || p.TemplateID != core.ElasticsearchSnapshotTemplate || p.Services != 1 {
-		return "", errElasticsearchProject
+		return errElasticsearchProject
 	}
 	data, info, err := dir.read("compose.yaml", 32<<10)
 	if err != nil {
-		return "", errElasticsearchProject
+		return errElasticsearchProject
 	}
 	source := string(data)
 	_, tail, found := strings.Cut(source, "\n      ELASTIC_PASSWORD: \"")
 	password, _, closed := strings.Cut(tail, "\"")
 	if !found || !closed || !core.ElasticsearchSnapshotComposeMatches(source, p.HostPort, password) {
-		return "", errElasticsearchProject
+		return errElasticsearchProject
 	}
 	_, imageTail, _ := strings.Cut(source, "\n    image: ")
 	image, _, _ := strings.Cut(imageTail, "\n")
 	before, err := inspectElasticsearchSnapshotContainer(ctx, p, image)
 	if err != nil {
-		return "", err
+		return err
 	}
 	current, now, err := dir.read("compose.yaml", 32<<10)
 	meta, metaInfo, metaErr := dir.read("metadata.json", 16<<10)
 	if err != nil || metaErr != nil || !sameComposeUpdateFile(info, now) || !bytes.Equal(current, data) ||
 		!sameComposeUpdateFile(metadataInfo, metaInfo) || !bytes.Equal(meta, metadata) {
-		return "", errElasticsearchProject
+		return errElasticsearchProject
 	}
-	client := elasticsearchSnapshotHTTP{id: before.ID, password: in.Password}
-	state := "accepted"
-	if action == "status" {
-		state, err = client.observation(ctx, in)
-	} else {
-		err = client.submit(ctx, in, action == "restore")
-	}
-	if err != nil {
-		return "", err
+	if err = use(elasticsearchSnapshotHTTP{id: before.ID, password: submittedPassword}); err != nil {
+		return err
 	}
 	after, err := inspectElasticsearchSnapshotContainer(ctx, p, image)
 	if err != nil || before.ID != after.ID || before.State != after.State {
-		return "", errors.New("快照提交期间实例状态已变化，请核对原操作")
+		return errors.New("快照操作期间实例状态已变化，请核对原操作")
 	}
-	return state, nil
+	return nil
+}
+
+func (c elasticsearchSnapshotHTTP) inventory(ctx context.Context, id, cursor string) (core.ElasticsearchSnapshotInventory, error) {
+	out := core.ElasticsearchSnapshotInventory{ProjectID: id, Snapshots: make([]core.ElasticsearchSnapshotInventoryRow, 0)}
+	if err := c.verifyRepository(ctx, false); err != nil {
+		if errors.Is(err, errElasticsearchRepositoryMissing) && cursor == "" {
+			return out, nil
+		}
+		return out, err
+	}
+	out.RepositoryReady = true
+	return readElasticsearchSnapshotPage(ctx, c.call, out, cursor)
+}
+
+func readElasticsearchSnapshotPage(ctx context.Context, call func(context.Context, string, string, any, any) (int, error),
+	out core.ElasticsearchSnapshotInventory, cursor string) (core.ElasticsearchSnapshotInventory, error) {
+	query := url.Values{
+		"sort": {"start_time"}, "order": {"desc"}, "size": {strconv.Itoa(core.ElasticsearchSnapshotInventoryPageSize)},
+		"master_timeout": {"4s"},
+		"filter_path":    {"next,snapshots.snapshot,snapshots.state,snapshots.indices,snapshots.start_time_in_millis"},
+	}
+	if cursor != "" {
+		query.Set("after", cursor)
+	}
+	var page struct {
+		Snapshots []core.ElasticsearchSnapshotInventoryRow `json:"snapshots"`
+		Next      string                                   `json:"next"`
+	}
+	status, err := call(ctx, http.MethodGet, elasticSnapshotRepoAPI+"/_all?"+query.Encode(), nil, &page)
+	if err != nil {
+		return out, err
+	}
+	if status != http.StatusOK || page.Next != "" && (len(page.Snapshots) == 0 || page.Next == cursor) {
+		return out, errors.New("无法读取 Elasticsearch 快照清单")
+	}
+	out.Next = page.Next
+	for _, row := range page.Snapshots {
+		row.IndexCount = len(row.Indices)
+		row.Restorable = row.CanRestore()
+		if len(row.Indices) > 16 {
+			row.Indices = row.Indices[:16]
+		}
+		out.Snapshots = append(out.Snapshots, row)
+	}
+	if !out.ValidForProject(out.ProjectID) {
+		return out, errors.New("Elasticsearch 返回了无法核对的快照")
+	}
+	return out, nil
 }
 
 func dockerElasticsearchRoutes(m *http.ServeMux) {
+	m.HandleFunc("POST /v1/docker/projects/{id}/elasticsearch-snapshots/inventory", func(w http.ResponseWriter, r *http.Request) {
+		id := r.PathValue("id")
+		var in core.ElasticsearchSnapshotInventoryRequest
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
+		if !readJSON(w, r, &in) {
+			return
+		}
+		if !core.ValidID(id) || in.Validate() != nil {
+			respond(w, http.StatusBadRequest, map[string]string{"error": "Elasticsearch 快照清单参数无效"})
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 58*time.Second)
+		defer cancel()
+		var out core.ElasticsearchSnapshotInventory
+		err := withDockerMutation(ctx, func(bound context.Context) error {
+			return withElasticsearchSnapshotProject(bound, id, in.Password, func(client elasticsearchSnapshotHTTP) error {
+				var e error
+				out, e = client.inventory(bound, id, in.Cursor)
+				return e
+			})
+		})
+		if err != nil {
+			respond(w, http.StatusConflict, map[string]string{"error": err.Error()})
+			return
+		}
+		w.Header().Set("Cache-Control", "no-store")
+		respond(w, http.StatusOK, out)
+	})
+
 	for _, action := range []string{"create", "restore", "status"} {
 		m.HandleFunc("POST /v1/docker/projects/{id}/elasticsearch-snapshots/"+action, func(w http.ResponseWriter, r *http.Request) {
 			id := r.PathValue("id")

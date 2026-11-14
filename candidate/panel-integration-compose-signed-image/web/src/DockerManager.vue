@@ -212,6 +212,25 @@ const managedTemplate = ref<"phpmyadmin">();
 const metricsContainer = ref<DockerContainer>();
 const rabbitQueues = ref<DockerProject>();
 const rabbitMigration = ref<DockerProject>();
+type ElasticSnapshotRow = {
+  snapshot: string;
+  indices: string[] | null;
+  index_count: number;
+  state: string;
+  start_time_in_millis: number;
+  restorable: boolean;
+};
+type ElasticSnapshotInventory = {
+  project_id: string;
+  repository_ready: boolean;
+  snapshots: ElasticSnapshotRow[];
+  next?: string;
+};
+const elasticInventory = ref<ElasticSnapshotInventory>();
+const elasticInventoryCursors = ref<string[]>([]);
+const elasticSnapshotStates: Record<string, string> = {
+  IN_PROGRESS: "进行中", SUCCESS: "已完成", FAILED: "失败", PARTIAL: "部分完成", INCOMPATIBLE: "不兼容",
+};
 const elasticSnapshotProject = ref<DockerProject>();
 const elasticSnapshotMode = ref<"create" | "restore">("create");
 const elasticSnapshotForm = ref({ index: "", snapshot: "", restore_index: "", password: "" });
@@ -261,6 +280,8 @@ function openRabbitMigration(item: DockerProject) {
 }
 
 function closeElasticSnapshots() {
+  elasticInventory.value = undefined;
+  elasticInventoryCursors.value = [];
   elasticSnapshotProject.value = undefined;
   elasticSnapshotForm.value = { index: "", snapshot: "", restore_index: "", password: "" };
   elasticSnapshotResult.value = "";
@@ -273,6 +294,48 @@ function openElasticSnapshots(item: DockerProject) {
       item.template_id !== "elasticsearch-snapshot" || item.state !== "running" || !/^[a-f0-9]{32}$/.test(item.id)) return;
   closeElasticSnapshots();
   elasticSnapshotProject.value = item;
+}
+
+async function loadElasticSnapshotInventory(direction: "first" | "next" | "previous" = "first") {
+  const project = elasticSnapshotProject.value;
+  const token = contextToken();
+  const password = elasticSnapshotForm.value.password;
+  const cursors = elasticInventoryCursors.value;
+  const cursor = direction === "next" ? elasticInventory.value?.next :
+    direction === "previous" ? cursors.at(-2) : "";
+  if (!project || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value || !password || (direction === "next" && !cursor) || (direction === "previous" && cursors.length < 2)) return;
+  const current = () => elasticSnapshotProject.value === project && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticSnapshotResult.value = "";
+  try {
+    const page = await api<ElasticSnapshotInventory>(
+      `/docker/projects/${project.id}/elasticsearch-snapshots/inventory`, "POST", { password, cursor },
+    );
+    if (page.project_id !== project.id) throw new Error("快照清单与当前项目不一致");
+    elasticInventory.value = page;
+    elasticInventoryCursors.value = direction === "next" ? [...cursors, cursor || ""] :
+      direction === "previous" ? cursors.slice(0, -1) : [""];
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticSnapshotStatus.value = "warning";
+      elasticSnapshotResult.value = error instanceof Error ? error.message : "无法读取快照清单";
+    }
+  } finally {
+    finishBusy(token, ticket);
+  }
+}
+
+function selectElasticSnapshot(row: ElasticSnapshotRow) {
+  if (busy.value || !row.restorable || !row.indices || row.indices.length !== 1) return;
+  elasticSnapshotMode.value = "restore";
+  elasticSnapshotForm.value.index = row.indices[0];
+  elasticSnapshotForm.value.snapshot = row.snapshot;
+  generateElasticRestoreIndex();
+}
+
+function elasticSnapshotStarted(milliseconds: number) {
+  return milliseconds > 0 ? new Date(milliseconds).toLocaleString() : "—";
 }
 
 async function submitElasticSnapshot(observe = false) {
@@ -1763,7 +1826,7 @@ async function removeVolume(item: DockerVolume) {
     >
   </el-dialog>
   <el-dialog v-model="elasticSnapshotOpen" :title="`索引快照 · ${elasticSnapshotProject?.name || 'Elasticsearch'}`"
-    width="min(520px, 94vw)" :close-on-click-modal="false" destroy-on-close>
+    width="min(790px, 94vw)" :close-on-click-modal="false" destroy-on-close>
     <el-form label-position="top" :disabled="busy" @submit.prevent="submitElasticSnapshot()">
       <el-form-item label="操作">
         <el-radio-group v-model="elasticSnapshotMode">
@@ -1783,6 +1846,40 @@ async function removeVolume(item: DockerVolume) {
       </el-form-item>
       <el-alert v-if="elasticSnapshotResult" :title="elasticSnapshotResult" :type="elasticSnapshotStatus" :closable="false" />
     </el-form>
+    <section aria-label="快照清单">
+      <el-button :disabled="busy || !elasticSnapshotForm.password" @click="loadElasticSnapshotInventory()">
+        {{ elasticInventory ? "刷新快照清单" : "读取快照清单" }}
+      </el-button>
+      <template v-if="elasticInventory">
+        <p v-if="!elasticInventory.repository_ready" role="status">创建首次快照时会初始化仓库。</p>
+        <el-table v-else :data="elasticInventory.snapshots" empty-text="此仓库没有快照" class="elastic-snapshot-inventory">
+          <el-table-column prop="snapshot" label="快照" min-width="145" show-overflow-tooltip />
+          <el-table-column label="索引" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.indices?.join("、") || "—" }}
+              <span v-if="row.index_count > (row.indices?.length || 0)">等 {{ row.index_count }} 个索引</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" min-width="95">
+            <template #default="{ row }">{{ elasticSnapshotStates[row.state] }}</template>
+          </el-table-column>
+          <el-table-column label="开始时间" min-width="140">
+            <template #default="{ row }">{{ elasticSnapshotStarted(row.start_time_in_millis) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="88">
+            <template #default="{ row }">
+              <el-button link type="primary" :disabled="busy || !row.restorable" @click="selectElasticSnapshot(row)">恢复</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="elasticInventoryCursors.length > 1 || elasticInventory.next" class="elastic-snapshot-inventory">
+          <el-button :disabled="busy || !elasticSnapshotForm.password || elasticInventoryCursors.length <= 1"
+            @click="loadElasticSnapshotInventory('previous')">上一页</el-button>
+          <el-button :disabled="busy || !elasticSnapshotForm.password || !elasticInventory.next"
+            @click="loadElasticSnapshotInventory('next')">下一页</el-button>
+        </div>
+      </template>
+    </section>
     <template #footer>
       <el-button @click="closeElasticSnapshots">关闭</el-button>
       <el-button :disabled="busy || !elasticSnapshotValid" @click="submitElasticSnapshot(true)">核对状态</el-button>
@@ -2055,4 +2152,5 @@ async function removeVolume(item: DockerVolume) {
     grid-template-columns: 1fr;
   }
 }
+.elastic-snapshot-inventory { margin-top: 12px; }
 </style>
