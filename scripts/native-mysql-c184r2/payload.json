@@ -1,0 +1,54 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "mysql.py",
+    "guest_sha256": "ba16b14668e2b13386187130a751119656504816bcccf6af614fac4613a5e69f",
+    "hostname": "yunzhan-qa-mysql-c184r2-restore-amd64",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/SHA512SUMS",
+    "os_id": "debian",
+    "platform": "debian-13",
+    "version_id": "13"
+  },
+  "application": {
+    "capabilities": [
+      "\u591a\u5b9e\u4f8b",
+      "\u72ec\u7acb\u8d26\u53f7",
+      "\u5907\u4efd\u6062\u590d",
+      "\u5bfc\u5165\u5bfc\u51fa"
+    ],
+    "category": "deployment",
+    "id": "mysql",
+    "manage_route": "databases",
+    "name": "MySQL",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mysql/8.4.13-compat1/manifest.json",
+    "provider": "runtime",
+    "risk": "maintained",
+    "sha256": "12817abfb781f09e1f28008d6f02ad75d805485139dfea17024bcbc838234fcf",
+    "stage": "ready",
+    "summary": "\u5b89\u88c5\u5b98\u65b9 MySQL 8.4.13 LTS \u4e8c\u8fdb\u5236\u5e76\u521b\u5efa\u56de\u73af\u76d1\u542c\u7684\u53d7\u7ba1\u5b9e\u4f8b\u3002\u8fd0\u884c\u65f6\u5e76\u884c\u5b89\u88c5\uff0c\u5df2\u6709\u5b9e\u4f8b\u7ee7\u7eed\u4f7f\u7528\u539f\u7248\u672c\uff0c\u6570\u636e\u5e93\u8fc1\u79fb\u7531\u7ba1\u7406\u5458\u5355\u72ec\u53d1\u8d77\u3002",
+    "target": "mysql-8.4.13",
+    "version": "8.4.13-compat1"
+  },
+  "architecture": "amd64",
+  "files": {
+    "catalogue.bundle.json": "51784887840f3994dfc69298e236b4a936e1656116e55fa587a61d50ccc754f5",
+    "catalogue.json": "8e95f9bb75c074cf6b7f5f969fafc5ff211962d8015d5f575c6e996677aeddc3",
+    "catalogue.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "catalogue.sig.bin": "e0b64e703ed11e4b9fe0fc43c07f1ccaa449935e853e250c19b721033ab7dba2",
+    "mysql.manifest.json": "12817abfb781f09e1f28008d6f02ad75d805485139dfea17024bcbc838234fcf",
+    "mysql.py": "ba16b14668e2b13386187130a751119656504816bcccf6af614fac4613a5e69f",
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz": "de935a3dd4dda0db0cdbf1e2bf2365ac3400ee5ab53a41f2e6806da97cd8df68",
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz.manifest": "aa65ba6ae95ecd96ef4ca5667a48a583268e41c5602076dcba74fac42910c8f7",
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz.sig": "92f76467b04aa32717ea0fa3b74d5b0cad20068a6aa9b0ba5e3898e9115ad906",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+  "qa_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "served_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "source_inputs_sha256": "72713652a7a0cd45586e9e7d68f39d507be7e5783d3aef5e0aae1c416d77ccfa",
+  "version": "0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2"
+}
