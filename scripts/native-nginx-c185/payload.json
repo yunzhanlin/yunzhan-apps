@@ -1,0 +1,55 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "digest": "sha256:5645d0318ad21f643ebb1ac4567514620e9893380b07b0201fda163baa5b7eb5",
+    "guest": "nginx.py",
+    "guest_sha256": "263f4e1ea89944a1ca404ac1a063577d1de62ddbf93565b09be01f590d2912cb",
+    "hostname": "yunzhan-qa-nginx-c185-restore-amd64",
+    "image": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "489dd5ab1206aba5cb21769e8095e911feb01a313aec448e4bdc291f918b6549",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/SHA256SUMS",
+    "os_id": "ubuntu",
+    "platform": "ubuntu-26.04",
+    "stock_fail2ban": "1.1.0",
+    "version_id": "26.04"
+  },
+  "application": {
+    "capabilities": [
+      "\u6e90\u7801\u6821\u9a8c",
+      "\u7ad9\u70b9\u914d\u7f6e",
+      "\u70ed\u91cd\u8f7d",
+      "\u5931\u8d25\u56de\u6eda"
+    ],
+    "category": "deployment",
+    "id": "nginx",
+    "manage_route": "sites",
+    "name": "Nginx",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx/1.30.6-compat1/manifest.json",
+    "provider": "runtime",
+    "risk": "maintained",
+    "sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8",
+    "stage": "ready",
+    "summary": "\u5b89\u88c5\u53ef\u5e76\u5b58\u7684 Nginx \u8fd0\u884c\u65f6\uff0c\u652f\u6301\u7ad9\u70b9\u7ed1\u5b9a\u3001\u914d\u7f6e\u6821\u9a8c\u548c\u5b89\u5168\u56de\u6eda\u3002",
+    "target": "nginx-1.30.6",
+    "version": "1.30.6-compat1"
+  },
+  "architecture": "amd64",
+  "files": {
+    "catalogue.bundle.json": "51784887840f3994dfc69298e236b4a936e1656116e55fa587a61d50ccc754f5",
+    "catalogue.json": "8e95f9bb75c074cf6b7f5f969fafc5ff211962d8015d5f575c6e996677aeddc3",
+    "catalogue.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "catalogue.sig.bin": "e0b64e703ed11e4b9fe0fc43c07f1ccaa449935e853e250c19b721033ab7dba2",
+    "nginx.manifest.json": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8",
+    "nginx.py": "263f4e1ea89944a1ca404ac1a063577d1de62ddbf93565b09be01f590d2912cb",
+    "panel-0.1.0-dev.proapps24redispersistencecandidate183-linux-amd64.tar.gz": "c0f6859a083cd137abdb33bc95e5743c2cb714254f6456b03f9e950c7c53a452",
+    "panel-0.1.0-dev.proapps24redispersistencecandidate183-linux-amd64.tar.gz.manifest": "32c3a4bdea169469825f7787c21c31ec8c1351f62e11fe84efc406488822fc0b",
+    "panel-0.1.0-dev.proapps24redispersistencecandidate183-linux-amd64.tar.gz.sig": "4d397e70ebc964e3b9d4d9dd17e7c0803ecb0942d6d7701bf8fd64e379f03a15",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+  "qa_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "served_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "source_inputs_sha256": "4780ae12084b418c7e6c089584b83c4c460744b4bc9ff85b59b40a9112898fe0",
+  "version": "0.1.0-dev.proapps24redispersistencecandidate183"
+}
