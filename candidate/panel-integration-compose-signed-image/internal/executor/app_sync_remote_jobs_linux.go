@@ -5,6 +5,7 @@ package executor
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"local/panel/internal/core"
@@ -468,6 +469,81 @@ func remoteParents(c *remoteSyncClient, cfg remoteSyncConfig, p string, owner ui
 	}
 	return nil
 }
+
+type remoteSyncDecision string
+
+const (
+	remoteSyncCreate    remoteSyncDecision = "create"
+	remoteSyncUpdate    remoteSyncDecision = "update"
+	remoteSyncUnchanged remoteSyncDecision = "unchanged"
+	remoteSyncConflict  remoteSyncDecision = "conflict"
+)
+
+func decideRemoteSync(next, current, previous moduleFile, exists, tracked bool) remoteSyncDecision {
+	switch {
+	case !exists:
+		return remoteSyncCreate
+	case current == next:
+		return remoteSyncUnchanged
+	case tracked && previous == current:
+		return remoteSyncUpdate
+	default:
+		return remoteSyncConflict
+	}
+}
+
+type remoteSyncPreviewRow struct {
+	Path        string             `json:"path"`
+	Action      remoteSyncDecision `json:"action"`
+	SourceBytes int64              `json:"source_bytes"`
+	TargetBytes *int64             `json:"target_bytes,omitempty"`
+	Reason      string             `json:"reason,omitempty"`
+}
+
+type remoteSyncPreview struct {
+	Format        int                        `json:"format"`
+	SiteID        string                     `json:"site_id"`
+	TargetID      string                     `json:"remote_target_id"`
+	Revision      int64                      `json:"revision"`
+	Excludes      []string                   `json:"excludes"`
+	Counts        map[remoteSyncDecision]int `json:"counts"`
+	SourceFiles   int                        `json:"source_files"`
+	SourceBytes   int64                      `json:"source_bytes"`
+	TransferBytes int64                      `json:"transfer_bytes"`
+	Rows          []remoteSyncPreviewRow     `json:"rows"`
+	RowsLimited   bool                       `json:"rows_limited"`
+	rowsBudget    int
+}
+
+func (r *remoteSyncPreview) observe(p string, next, current moduleFile, exists, tracked bool, action remoteSyncDecision) {
+	r.SourceFiles++
+	r.SourceBytes += next.Size
+	r.Counts[action]++
+	if action == remoteSyncCreate || action == remoteSyncUpdate {
+		r.TransferBytes += next.Size
+	}
+	if action == remoteSyncUnchanged {
+		return
+	}
+	row := remoteSyncPreviewRow{Path: p, Action: action, SourceBytes: next.Size}
+	if exists {
+		row.TargetBytes = &current.Size
+	}
+	if action == remoteSyncConflict {
+		row.Reason = "untracked_target"
+		if tracked {
+			row.Reason = "target_changed"
+		}
+	}
+	raw, _ := json.Marshal(row)
+	if len(r.Rows) >= 128 || len(raw)+1 > r.rowsBudget {
+		r.RowsLimited = true
+		return
+	}
+	r.rowsBudget -= len(raw) + 1
+	r.Rows = append(r.Rows, row)
+}
+
 func (s *Service) previewRemoteSync(ctx context.Context, c *remoteSyncClient, cfg remoteSyncConfig, in core.AppModuleInput) (any, error) {
 	if len(in.Excludes) > 64 {
 		return nil, errors.New("最多 64 个排除路径")
@@ -493,6 +569,13 @@ func (s *Service) previewRemoteSync(ctx context.Context, c *remoteSyncClient, cf
 		return nil, e
 	}
 	copies, conflicts := []string{}, []string{}
+	report := remoteSyncPreview{
+		Format: 1, SiteID: in.SiteID, TargetID: cfg.ID, Revision: cfg.Revision,
+		Excludes: append([]string{}, in.Excludes...), Rows: []remoteSyncPreviewRow{},
+		Counts:     map[remoteSyncDecision]int{remoteSyncCreate: 0, remoteSyncUpdate: 0, remoteSyncUnchanged: 0, remoteSyncConflict: 0},
+		rowsBudget: 64 << 10,
+	}
+	sort.Strings(report.Excludes)
 	for _, p := range sortedRemoteFiles(files) {
 		if ctx.Err() != nil {
 			return nil, ctx.Err()
@@ -505,13 +588,14 @@ func (s *Service) previewRemoteSync(ctx context.Context, c *remoteSyncClient, cf
 		if e != nil {
 			return nil, e
 		}
-		if exists && current == files[p] {
-			continue
-		}
+		next := files[p]
 		previous, tracked := cp.Files[p]
-		if exists && (!tracked || previous != current) {
+		action := decideRemoteSync(next, current, previous, exists, tracked)
+		report.observe(p, next, current, exists, tracked, action)
+		switch action {
+		case remoteSyncConflict:
 			conflicts = append(conflicts, p)
-		} else {
+		case remoteSyncCreate, remoteSyncUpdate:
 			copies = append(copies, p)
 		}
 	}
@@ -519,6 +603,7 @@ func (s *Service) previewRemoteSync(ctx context.Context, c *remoteSyncClient, cf
 	out["scope"] = remoteSyncScope
 	out["remote_target_id"] = cfg.ID
 	out["revision"] = cfg.Revision
+	out["remote_sync_preview"] = report
 	return out, nil
 }
 
@@ -595,6 +680,9 @@ func remoteSyncDirectory(c *remoteSyncClient, p string) error {
 func (s *Service) commitRemoteFile(ctx context.Context, c *remoteSyncClient, cfg remoteSyncConfig, cp *remoteSyncCheckpoint, j remoteSyncJob, p string, data []byte, next moduleFile, old *moduleFile, owner uint32, guard func() error) error {
 	if e := guard(); e != nil {
 		return e
+	}
+	if err := inspectRemoteBackupSpace(c, cfg.Target.BackupRoot).admit(next.Size); err != nil {
+		return err
 	}
 	if e := remoteParents(c, cfg, p, owner, true); e != nil {
 		return e
@@ -743,12 +831,12 @@ func (s *Service) executeRemoteSync(ctx context.Context, cfg remoteSyncConfig, j
 			return e
 		}
 		next := files[p]
-		if exists && cur == next {
+		old, tracked := cp.Files[p]
+		switch decideRemoteSync(next, cur, old, exists, tracked) {
+		case remoteSyncUnchanged:
 			j.Skipped++
 			continue
-		}
-		old, tracked := cp.Files[p]
-		if exists && (!tracked || cur != old) {
+		case remoteSyncConflict:
 			j.Conflicts = append(j.Conflicts, p)
 			continue
 		}
@@ -1005,6 +1093,12 @@ func safeRemoteSyncError(e error) string {
 	}
 	if errors.Is(e, context.Canceled) || errors.Is(e, context.DeadlineExceeded) {
 		return "任务取消或超时"
+	}
+	if errors.Is(e, errRemoteBackupSpace) {
+		return errRemoteBackupSpace.Error()
+	}
+	if errors.Is(e, errRemoteBackupReadOnly) {
+		return errRemoteBackupReadOnly.Error()
 	}
 	return "连接、文件身份、冲突或持久化核验失败；请使用预览、连接检测或事务恢复定位，未执行不受限命令"
 }

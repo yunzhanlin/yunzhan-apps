@@ -94,7 +94,7 @@ func checkAnalyticsSessionPassiveReport(t *testing.T, now time.Time) {
 }
 
 func TestAnalyticsSessionPatchPreservesOnlyExactKnownHTMLVersions(t *testing.T) {
-	for _, version := range []string{"2.3.0", AnalyticsSessionAppVersion, AnalyticsClientAddressAppVersion, AnalyticsRouteAppVersion, AnalyticsNavigationOrderAppVersion, AnalyticsQueryContextAppVersion, AnalyticsPeriodComparisonAppVersion, AnalyticsLayoutHeatmapAppVersion, appcatalog.AnalyticsGeographyVersion} {
+	for _, version := range []string{"2.3.0", AnalyticsSessionAppVersion, AnalyticsClientAddressAppVersion, AnalyticsRouteAppVersion, AnalyticsNavigationOrderAppVersion, AnalyticsQueryContextAppVersion, AnalyticsPeriodComparisonAppVersion, AnalyticsLayoutHeatmapAppVersion, appcatalog.AnalyticsGeographyVersion, appcatalog.AnalyticsSessionActivityVersion} {
 		if !AnalyticsHTMLAppVersionSupported(version) {
 			t.Fatal("existing explicit HTML behavior lost", version)
 		}
@@ -102,19 +102,19 @@ func TestAnalyticsSessionPatchPreservesOnlyExactKnownHTMLVersions(t *testing.T) 
 			t.Fatal("known signed application version refused", version, err)
 		}
 	}
-	for _, version := range []string{"", "2.2.0", "2.3", "02.3.1", "2.3.1-compat1", "2.3.1+build", "2.3.2-compat1", "2.3.2+build", "2.3.3", "2.4.4-compat1", "2.4.6", "2.4.2-compat1", "2.4.2+build", "02.4.2", "2.4.0+build", "2.4.0-compat1", "../2.3.1"} {
+	for _, version := range []string{"", "2.2.0", "2.3", "02.3.1", "2.3.1-compat1", "2.3.1+build", "2.3.2-compat1", "2.3.2+build", "2.3.3", "2.4.4-compat1", "2.4.7", "2.4.6-compat1", "2.4.2-compat1", "2.4.2+build", "02.4.2", "2.4.0+build", "2.4.0-compat1", "../2.3.1"} {
 		if AnalyticsHTMLAppVersionSupported(version) {
 			t.Fatal("unknown application version silently enabled HTML", version)
 		}
 	}
-	for _, version := range []string{"", "02.3.1", "2.3.1-compat1", "2.3.1+build", "2.3.2-compat1", "2.3.2+build", "2.3.3", "2.4.4-compat1", "2.4.6", "2.4.2-compat1", "2.4.2+build", "02.4.2", "2.4.0+build", "2.4.0-compat1", "../2.3.1"} {
+	for _, version := range []string{"", "02.3.1", "2.3.1-compat1", "2.3.1+build", "2.3.2-compat1", "2.3.2+build", "2.3.3", "2.4.4-compat1", "2.4.7", "2.4.6-compat1", "2.4.2-compat1", "2.4.2+build", "02.4.2", "2.4.0+build", "2.4.0-compat1", "../2.3.1"} {
 		if ValidateSoftwareUpdate("website-analytics", version) == nil {
 			t.Fatal("direct update path accepted unreviewed session revision", version)
 		}
 	}
 	for _, item := range moduleSoftwareCatalog() {
 		if item.ID == "website-analytics" {
-			if item.Version != appcatalog.AnalyticsGeographyVersion {
+			if item.Version != appcatalog.AnalyticsSessionActivityVersion {
 				t.Fatal("application update metadata did not advance with actual handler")
 			}
 			return
