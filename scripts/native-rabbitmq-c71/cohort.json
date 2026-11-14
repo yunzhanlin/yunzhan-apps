@@ -1,0 +1,81 @@
+{
+  "source_head": "3f5e82f793c4598fd4016fd6fda56220d250b416",
+  "native_fixture_parent": "3f5e82f793c4598fd4016fd6fda56220d250b416",
+  "source_inputs_sha256": "3956a290d041144b577f96aec2b1905bb0be1c323cb6e64a7cac3532ff2a5bfc",
+  "version": "0.1.0-dev.proapps24rabbitmqcandidate164",
+  "served_head": "3a09dfaa05befb115224a2b7672df09fb1b5f96c",
+  "authorized_catalogues": [
+    "3a09dfaa05befb115224a2b7672df09fb1b5f96c"
+  ],
+  "items": {
+    "rabbitmq": {
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "deployment",
+      "version": "4.1-compat1",
+      "summary": "\u90e8\u7f72\u5e26\u7ba1\u7406\u754c\u9762\u3001\u968f\u673a\u51ed\u636e\u548c\u6301\u4e45\u5377\u7684 RabbitMQ \u5355\u8282\u70b9\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "compose",
+      "target": "rabbitmq",
+      "manage_route": "docker",
+      "capabilities": [
+        "AMQP",
+        "\u7ba1\u7406\u754c\u9762",
+        "\u968f\u673a\u51ed\u636e",
+        "\u6301\u4e45\u5377"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.1-compat1/manifest.json",
+      "sha256": "c889d9e755fbf317985fcca02367f0a12c500d1343446dcc4451f8828d3d8ad9"
+    }
+  },
+  "application": {
+    "id": "rabbitmq",
+    "name": "RabbitMQ",
+    "category": "deployment",
+    "version": "4.1-compat1",
+    "summary": "\u90e8\u7f72\u5e26\u7ba1\u7406\u754c\u9762\u3001\u968f\u673a\u51ed\u636e\u548c\u6301\u4e45\u5377\u7684 RabbitMQ \u5355\u8282\u70b9\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "compose",
+    "target": "rabbitmq",
+    "manage_route": "docker",
+    "capabilities": [
+      "AMQP",
+      "\u7ba1\u7406\u754c\u9762",
+      "\u968f\u673a\u51ed\u636e",
+      "\u6301\u4e45\u5377"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.1-compat1/manifest.json",
+    "sha256": "c889d9e755fbf317985fcca02367f0a12c500d1343446dcc4451f8828d3d8ad9"
+  },
+  "image": "rabbitmq:4.1.4-management-alpine@sha256:5cbd7145b0306399ad68422c3350b6cbd1bb95704b39f5896480e5b6d4238a04",
+  "payload_files": {
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py": "2239a4f3c06c4043e048677249e2e04e7a7edf6ce72f3ce69fe021e32138c66e",
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-rabbitmq-c71/rabbitmq.py": "443af19a0dec6b21fe10027d1ec4b7e75e9c51961ca9fb40bc20af9652e3cf09",
+    "scripts/native-rabbitmq-c71/download.py": "477f7a8398acc85d205b19342c794fdd44707a766ff1a222e13a04596815dab9",
+    "scripts/native-rabbitmq-c71/dispatch.json": "e6dcc5dad1e16aab049c23109d4b1250dc272c60ddacaea94123a107165dca65",
+    "scripts/native-rabbitmq-c71/pika.txt": "82db290a993cdf56c13b14420be0b46c72afb589bf5a99c94739ecbd7e16c97e",
+    "scripts/native-rabbitmq-c71/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-rabbitmq-c71/finish.py": "dcd209fb59da74323e500b1dae0fa1d5d13563e8f7d655ef082ef01e4d99b075",
+    "scripts/native-rabbitmq-c71/chrome.mjs": "c24f65e73fdd979f2fc8d759b3ae9c2b4b9e992377865a20d2bcf1fd126c44c5",
+    ".github/workflows/rabbitmq-c164-native-qa4.yml": "6b845608da25a563965904633950b4c52d88152206693c3c1a7aa22759a5d848",
+    "scripts/native-rabbitmq-c71/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "changed_payload_files": [
+    ".github/workflows/rabbitmq-c164-native-qa4.yml",
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py",
+    "scripts/native-rabbitmq-c71/chrome.mjs",
+    "scripts/native-rabbitmq-c71/dispatch.json",
+    "scripts/native-rabbitmq-c71/download.py",
+    "scripts/native-rabbitmq-c71/finish.py",
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py",
+    "scripts/native-rabbitmq-c71/original-signed-release.py",
+    "scripts/native-rabbitmq-c71/pika.txt",
+    "scripts/native-rabbitmq-c71/rabbitmq.py",
+    "scripts/native-rabbitmq-c71/recipient.pem"
+  ],
+  "mode": "signed-rabbitmq-workspace",
+  "Main_changed": false
+}
