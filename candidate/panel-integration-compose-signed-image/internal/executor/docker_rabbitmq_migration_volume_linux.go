@@ -93,7 +93,41 @@ func openRabbitMQMigrationVolume(dataRoot string, volume rabbitMQMigrationVolume
 	if err != nil || st.Uid != 0 || st.Mode&0022 != 0 {
 		return nil, errors.New("Docker 命名卷目录不由 Root 独占写入")
 	}
-	return rabbitMQCopyOpen(dir, "_data", unix.O_RDONLY|unix.O_DIRECTORY, 0)
+	data, err := rabbitMQCopyOpen(dir, "_data", unix.O_RDONLY|unix.O_DIRECTORY, 0)
+	if err != nil {
+		return nil, err
+	}
+	volumeStat, err := rabbitMQCopyStat(data)
+	if err == nil && rabbitMQLegacyVolumeRootMode(volumeStat, true) {
+		err = verifyRabbitMQLegacyVolumeParent(root)
+	}
+	if err != nil {
+		data.Close()
+		return nil, err
+	}
+	return data, nil
+}
+
+// Docker's parent directory normally has mode 0710 and is root:root. Require
+// that local unprivileged accounts cannot traverse it to the legacy sticky
+// data root, even when the Docker data path uses a separate filesystem.
+func verifyRabbitMQLegacyVolumeParent(volumes *os.File) error {
+	fd, err := unix.Openat(int(volumes.Fd()), "..", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+	if err != nil {
+		return err
+	}
+	parent := os.NewFile(uintptr(fd), "Docker data root")
+	defer parent.Close()
+	info, err := rabbitMQCopyStat(parent)
+	if err == nil && info.Uid == 0 && info.Gid == 0 && info.Mode&0027 == 0 {
+		// An ACL could grant traversal to a named account despite the
+		// directory's Root ownership and ordinary mode bits.
+		_, aclErr := unix.Fgetxattr(fd, "system.posix_acl_access", nil)
+		if errors.Is(aclErr, unix.ENODATA) || errors.Is(aclErr, unix.ENOTSUP) {
+			return nil
+		}
+	}
+	return errors.New("旧 RabbitMQ 数据卷需要 Root 私有的 Docker 数据目录")
 }
 
 func rabbitMQMigrationVolumeAttachments(ctx context.Context, volume string) ([]string, error) {

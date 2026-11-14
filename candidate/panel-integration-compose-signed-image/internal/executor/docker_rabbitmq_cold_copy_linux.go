@@ -100,19 +100,29 @@ func rabbitMQCopySame(expected, actual unix.Stat_t) bool {
 		expected.Gid == actual.Gid && expected.Mtim == actual.Mtim && expected.Ctim == actual.Ctim
 }
 
-func rabbitMQCopyFileRules(file *os.File, expected unix.Stat_t) error {
+func rabbitMQCopyFileRules(file *os.File, expected unix.Stat_t, isVolumeRoot bool) error {
 	actual, err := rabbitMQCopyStat(file)
 	if err != nil || !rabbitMQCopySame(expected, actual) {
 		return errRabbitMQCopyDrift
 	}
-	if expected.Mode&07000 != 0 || expected.Mode&0002 != 0 {
-		return errRabbitMQCopyType
+	if (expected.Mode&07000 != 0 || expected.Mode&0002 != 0) && !rabbitMQLegacyVolumeRootMode(expected, isVolumeRoot) {
+		return fmt.Errorf("%w (mode %04o)", errRabbitMQCopyType, expected.Mode&07777)
 	}
 	n, err := unix.Flistxattr(int(file.Fd()), nil)
-	if n != 0 || err != nil && !errors.Is(err, unix.ENOTSUP) {
-		return errRabbitMQCopyType
+	if err != nil && !errors.Is(err, unix.ENOTSUP) {
+		return fmt.Errorf("RabbitMQ 冷备份无法读取文件扩展属性: %w", err)
+	}
+	if n != 0 {
+		return fmt.Errorf("%w (source extended attributes)", errRabbitMQCopyType)
 	}
 	return nil
+}
+
+// The pinned 4.1.4 Alpine image seeds an empty Compose volume with this
+// owning account and sticky mode. This exception applies only to the stopped
+// volume root pinned under Docker's protected storage, never to a child.
+func rabbitMQLegacyVolumeRootMode(metadata unix.Stat_t, isVolumeRoot bool) bool {
+	return isVolumeRoot && metadata.Mode == unix.S_IFDIR|01777 && metadata.Uid == 100 && metadata.Gid == 101
 }
 
 func rabbitMQCopyMetadata(file *os.File, metadata unix.Stat_t) error {
@@ -137,12 +147,15 @@ func (c *rabbitMQColdCopy) directory(source, destination *os.File, path string, 
 	if depth > 128 || c.result.Files+c.result.Directories >= 1_000_000 {
 		return errors.New("RabbitMQ 数据卷目录层级或条目数超过冷备份限制")
 	}
-	if err := rabbitMQCopyFileRules(source, original); err != nil {
+	if err := rabbitMQCopyFileRules(source, original, depth == 0); err != nil {
 		return err
 	}
 	n, err := unix.Flistxattr(int(destination.Fd()), nil)
-	if n != 0 || err != nil && !errors.Is(err, unix.ENOTSUP) {
-		return errRabbitMQCopyType
+	if err != nil && !errors.Is(err, unix.ENOTSUP) {
+		return fmt.Errorf("RabbitMQ 冷备份无法读取目标目录扩展属性: %w", err)
+	}
+	if n != 0 {
+		return fmt.Errorf("%w (destination extended attributes)", errRabbitMQCopyType)
 	}
 	entries, err := source.ReadDir(1_000_000 - c.result.Files - c.result.Directories + 1)
 	if err != nil && !errors.Is(err, io.EOF) {
@@ -154,17 +167,21 @@ func (c *rabbitMQColdCopy) directory(source, destination *os.File, path string, 
 	// Deterministic depth-first receipts do not depend on a filesystem's
 	// directory enumeration order.
 	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
+	metadata := original
+	if rabbitMQLegacyVolumeRootMode(original, depth == 0) {
+		metadata.Mode = unix.S_IFDIR | 0700
+	}
 	c.result.Directories++
-	fmt.Fprintf(c.digest, "D %q %o %d %d %d %d\n", path, original.Mode&0777, original.Uid, original.Gid, original.Mtim.Sec, original.Mtim.Nsec)
+	fmt.Fprintf(c.digest, "D %q %o %d %d %d %d\n", path, metadata.Mode&0777, metadata.Uid, metadata.Gid, metadata.Mtim.Sec, metadata.Mtim.Nsec)
 	for _, entry := range entries {
 		if err := c.entry(source, destination, path, entry.Name(), depth); err != nil {
 			return err
 		}
 	}
-	if err := rabbitMQCopyFileRules(source, original); err != nil {
+	if err := rabbitMQCopyFileRules(source, original, depth == 0); err != nil {
 		return err
 	}
-	return rabbitMQCopyMetadata(destination, original)
+	return rabbitMQCopyMetadata(destination, metadata)
 }
 
 func (c *rabbitMQColdCopy) entry(source, destination *os.File, path, name string, depth int) error {
@@ -187,7 +204,7 @@ func (c *rabbitMQColdCopy) entry(source, destination *os.File, path, name string
 	}
 	kind := info.Mode & unix.S_IFMT
 	if kind != unix.S_IFDIR && (kind != unix.S_IFREG || info.Nlink != 1 || info.Size < 0) {
-		return errRabbitMQCopyType
+		return fmt.Errorf("%w (entry type %#o, links %d)", errRabbitMQCopyType, kind, info.Nlink)
 	}
 	openFlags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NONBLOCK | unix.O_NOATIME
 	if kind == unix.S_IFDIR {
@@ -199,7 +216,7 @@ func (c *rabbitMQColdCopy) entry(source, destination *os.File, path, name string
 	}
 	src := os.NewFile(uintptr(fd), pin.Name())
 	defer src.Close()
-	if err := rabbitMQCopyFileRules(src, info); err != nil {
+	if err := rabbitMQCopyFileRules(src, info, false); err != nil {
 		return err
 	}
 	child := path + "/" + name
@@ -256,7 +273,7 @@ func (c *rabbitMQColdCopy) copyFile(source, destination *os.File, name, path str
 	if n != sourceInfo.Size {
 		return errRabbitMQCopyDrift
 	}
-	if err := rabbitMQCopyFileRules(source, sourceInfo); err != nil {
+	if err := rabbitMQCopyFileRules(source, sourceInfo, false); err != nil {
 		return err
 	}
 	if _, err := dst.Seek(0, io.SeekStart); err != nil {

@@ -88,6 +88,71 @@ func TestRabbitMQColdCopyPreservesIndependentBytesAndMetadata(t *testing.T) {
 	}
 }
 
+func TestRabbitMQColdCopySecuresOfficialComposeVolumeRoot(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires native root")
+	}
+	for _, tc := range []struct {
+		name      string
+		uid, gid  int
+		mode      uint32
+		stickySub bool
+		allowed   bool
+	}{
+		{"official root", 100, 101, 01777, false, true},
+		{"different owner", 1234, 101, 01777, false, false},
+		{"different group", 100, 1234, 01777, false, false},
+		{"world writable", 100, 101, 0777, false, false},
+		{"nested sticky mode", 100, 101, 01777, true, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			from := openRabbitMQCopyFixture(t, "source")
+			to := openRabbitMQCopyFixture(t, "next")
+			sub := filepath.Join(from.Name(), "mnesia")
+			if err := os.Mkdir(sub, 0700); err != nil {
+				t.Fatal(err)
+			}
+			source := filepath.Join(sub, "durable")
+			if err := os.WriteFile(source, []byte("retained message"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if tc.stickySub {
+				if err := unix.Chown(sub, 100, 101); err != nil {
+					t.Fatal(err)
+				}
+				if err := unix.Chmod(sub, 01777); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := unix.Fchown(int(from.Fd()), tc.uid, tc.gid); err != nil {
+				t.Fatal(err)
+			}
+			if err := unix.Fchmod(int(from.Fd()), tc.mode); err != nil {
+				t.Fatal(err)
+			}
+			receipt, err := copyRabbitMQColdVolume(t.Context(), from, to)
+			if tc.allowed {
+				if err != nil || receipt.Files != 1 {
+					t.Fatalf("official volume did not copy: %#v %v", receipt, err)
+				}
+				got, err := rabbitMQCopyStat(to)
+				if err != nil || got.Mode&07777 != 0700 || got.Uid != 100 || got.Gid != 101 {
+					t.Fatalf("copied volume root permissions or ownership differ: %#v %v", got, err)
+				}
+				if contents, err := os.ReadFile(filepath.Join(to.Name(), "mnesia", "durable")); err != nil || string(contents) != "retained message" {
+					t.Fatalf("copy differs from original: %v", err)
+				}
+			} else if !errors.Is(err, errRabbitMQCopyType) || receipt != (rabbitMQColdCopyResult{}) {
+				t.Fatalf("unexpected volume was accepted: %#v %v", receipt, err)
+			}
+			got, err := rabbitMQCopyStat(from)
+			if err != nil || got.Mode&07777 != tc.mode || got.Uid != uint32(tc.uid) || got.Gid != uint32(tc.gid) {
+				t.Fatalf("original volume root changed: %#v %v", got, err)
+			}
+		})
+	}
+}
+
 func TestRabbitMQColdCopyRefusesUnsafeObjectsAndLeavesSource(t *testing.T) {
 	if os.Geteuid() != 0 {
 		t.Skip("requires native root")

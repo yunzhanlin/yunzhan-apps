@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"golang.org/x/sys/unix"
 )
 
 func TestRabbitMQMigrationVolumeRequiresPrivateDockerOwnedPath(t *testing.T) {
@@ -36,6 +38,31 @@ func TestRabbitMQMigrationVolumeRequiresPrivateDockerOwnedPath(t *testing.T) {
 	if err := os.Chmod(parent, 0700); err != nil {
 		t.Fatal(err)
 	}
+	if err := unix.Chown(path, 100, 101); err != nil {
+		t.Fatal(err)
+	}
+	if err := unix.Chmod(path, 01777); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(base, 0710); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := openRabbitMQMigrationVolume(base, volume)
+	if err != nil {
+		t.Fatalf("private Docker data root did not admit the official legacy volume: %v", err)
+	}
+	legacy.Close()
+	if err := os.Chmod(base, 0711); err != nil {
+		t.Fatal(err)
+	}
+	if exposed, err := openRabbitMQMigrationVolume(base, volume); err == nil {
+		exposed.Close()
+		t.Fatal("accepted a world-traversable Docker data root around a legacy sticky volume")
+	}
+	if err := os.Chmod(base, 0700); err != nil {
+		t.Fatal(err)
+	}
+
 	alternate := filepath.Join(parent, "different")
 	if err := os.Rename(path, alternate); err != nil {
 		t.Fatal(err)

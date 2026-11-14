@@ -299,13 +299,42 @@ func restoreRabbitMQBeforePublication(ctx context.Context, lease *dockerMutation
 		if _, err := runningRabbitMQMigrationSource(bound, original, plan); err != nil {
 			return err
 		}
-		if err := rabbitMQSetListeners(bound, plan.OriginalContainer, true); err != nil {
+		// A cold restart reopens the listeners. Probe the original published
+		// port rather than issuing a redundant resume operation. In the
+		// quiesce-only phase the old container may still be suspended.
+		if state.Phase == "resume-listeners-intent" &&
+			rabbitMQCheckAMQPEndpoint(bound, original.HostPort+1) != nil {
+			// If the CLI response is lost, the command can still have
+			// succeeded. The original endpoint decides whether to proceed.
+			_ = rabbitMQSetListeners(bound, plan.OriginalContainer, true)
+		}
+		if err := waitRabbitMQRestoredEndpoint(bound, original.HostPort+1); err != nil {
+			return err
+		}
+		if _, err := runningRabbitMQMigrationSource(bound, original, plan); err != nil {
 			return err
 		}
 		state, err = appendRabbitMQMigrationEvent(journal, plan, state, "original-restored", state.VolumeCopy)
 		return err
 	})
 	return state, err
+}
+
+func waitRabbitMQRestoredEndpoint(ctx context.Context, port int) error {
+	bound, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	for {
+		if err := rabbitMQCheckAMQPEndpoint(bound, port); err == nil {
+			return nil
+		}
+		timer := time.NewTimer(time.Second)
+		select {
+		case <-bound.Done():
+			timer.Stop()
+			return errors.New("RabbitMQ 原节点的 AMQP 端口尚未通过恢复检查")
+		case <-timer.C:
+		}
+	}
 }
 
 func removeRabbitMQOfflineCandidates(ctx context.Context, plan rabbitMQMigrationPlan) error {

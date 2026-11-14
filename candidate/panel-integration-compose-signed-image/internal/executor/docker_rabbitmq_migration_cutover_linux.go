@@ -350,7 +350,7 @@ func rabbitMQCheckAMQPEndpoint(ctx context.Context, port int) error {
 	bound, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	conn, err := (&net.Dialer{}).DialContext(bound, "tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(port)))
-	failure := errors.New("RabbitMQ 新实例的原 AMQP 端口尚未通过协议检查")
+	failure := errors.New("RabbitMQ 的 AMQP 端口尚未通过协议检查")
 	if err != nil {
 		return failure
 	}
