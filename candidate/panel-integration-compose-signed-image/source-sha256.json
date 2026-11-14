@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184-linux-amd64.tar.gz",
-    "archive_sha256": "2030cb3f6b91b70aa2703e1032d6bc8b5e5ae60f15065b915bece9d6aef7a63d",
-    "frozen_inputs_sha256": "d3e69559be18cc7d56b72b2ead0a0c94e3aa18179f64159c6e0161492302fe50"
+    "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz",
+    "archive_sha256": "de935a3dd4dda0db0cdbf1e2bf2365ac3400ee5ab53a41f2e6806da97cd8df68",
+    "frozen_inputs_sha256": "72713652a7a0cd45586e9e7d68f39d507be7e5783d3aef5e0aae1c416d77ccfa"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -1781,7 +1781,7 @@
     "internal/executor/mysql_accounts_recycle_linux.go": "62e7a71f5595bc07b786ed68ed14064f25b5d6c3ce4f08bf0b5f4f27c3a48bb0",
     "internal/executor/mysql_database_lifecycle_linux.go": "e38d8a449eeae332e4e17ebe9ee710ad9ad0302ca8119146867ee0a3faa241b1",
     "internal/executor/mysql_database_lifecycle_linux_test.go": "e3d91ae320e2ed108e93b134ced14d0dcb548237cceb76a6227bdeb9f18a7657",
-    "internal/executor/mysql_download_linux.go": "997effbb4bb1d7edd61c2c0c653f80fca0dca958ffb40cf43277fdcca0363d34",
+    "internal/executor/mysql_download_linux.go": "1ccd97c3c11b05e5a266fc58e500fc9b98b8a36bee04467b18835f55423ed3a5",
     "internal/executor/mysql_download_linux_test.go": "a1c00de4b492b35de1a0cf698c247cf431ea7280226d3886593a6e49a7403b32",
     "internal/executor/mysql_import_linux.go": "191ff2820e99b9e44e6aea724e2bf0b93dacbe996ed0dbc1baff9e61a69bb12b",
     "internal/executor/mysql_import_linux_test.go": "16d8092dda99ab5750125e1435f0aabd6119cb648a4decea09ca0a0ffece4433",

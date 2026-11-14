@@ -17,6 +17,8 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 )
 
 func privateBackupEntry(info os.FileInfo, dir bool) error {
@@ -31,38 +33,39 @@ func openVerifiedBackup(ctx context.Context, base string, expected core.Database
 	if !core.ValidID(expected.ID) || !core.ValidID(expected.ServerID) || !core.ValidID(expected.DatabaseID) || expected.Bytes < 0 || expected.Bytes > 4*1024*1024*1024 || len(expected.SHA256) != 64 {
 		return nil, empty, errors.New("备份标识、大小或摘要无效")
 	}
-	if err := ownedRuntimePath(base, true); err != nil {
-		return nil, empty, err
-	}
-	info, err := os.Stat(base)
-	if err != nil {
-		return nil, empty, err
-	}
-	if err = privateBackupEntry(info, true); err != nil {
-		return nil, empty, err
-	}
-	root, err := os.OpenRoot(base)
+	root, err := openStorageDirectory(base)
 	if err != nil {
 		return nil, empty, err
 	}
 	defer root.Close()
-	info, err = root.Lstat(expected.ServerID)
+	info, err := root.Stat()
 	if err != nil {
 		return nil, empty, err
 	}
 	if err = privateBackupEntry(info, true); err != nil {
 		return nil, empty, err
 	}
-	dir, err := root.OpenRoot(expected.ServerID)
+	fd, err := unix.Openat(int(root.Fd()), expected.ServerID, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
 	if err != nil {
 		return nil, empty, err
 	}
+	dir := os.NewFile(uintptr(fd), expected.ServerID)
 	defer dir.Close()
+	info, err = dir.Stat()
+	if err != nil {
+		return nil, empty, err
+	}
+	if err = privateBackupEntry(info, true); err != nil {
+		return nil, empty, err
+	}
 	open := func(name string) (*os.File, error) {
-		f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
+		// os.Root follows links within its root, including O_NOFOLLOW
+		// results. Use the kernel operation for a strict no-link open.
+		fd, err := unix.Openat(int(dir.Fd()), name, unix.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
 		if err != nil {
 			return nil, err
 		}
+		f := os.NewFile(uintptr(fd), name)
 		info, err := f.Stat()
 		if err == nil {
 			err = privateBackupEntry(info, false)
@@ -126,8 +129,19 @@ func openVerifiedBackup(ctx context.Context, base string, expected core.Database
 			return nil, empty, readErr
 		}
 	}
+	after, err := file.Stat()
+	if err != nil {
+		return nil, empty, err
+	}
+	if err := privateBackupEntry(after, false); err != nil {
+		return nil, empty, err
+	}
+	beforeStat, afterStat := info.Sys().(*syscall.Stat_t), after.Sys().(*syscall.Stat_t)
+	if !os.SameFile(info, after) || beforeStat.Size != afterStat.Size || beforeStat.Ctim != afterStat.Ctim {
+		return nil, empty, errors.New("备份文件在校验过程中发生变化")
+	}
 	if hex.EncodeToString(h.Sum(nil)) != actual.SHA256 {
-		return nil, empty, errors.New("备份 SHA-256 不匹配，拒绝下载")
+		return nil, empty, errors.New("备份 SHA-256 不匹配")
 	}
 	if _, err = file.Seek(0, io.SeekStart); err != nil {
 		return nil, empty, err
