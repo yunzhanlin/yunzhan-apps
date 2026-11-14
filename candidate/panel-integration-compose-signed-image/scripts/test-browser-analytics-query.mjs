@@ -45,7 +45,7 @@ const compiled=compileScript(parse(source).descriptor,{id:'qa-browser-analytics-
 let js=ts.transpileModule(compiled.content,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 js=js.replace(/from ['"]vue['"]/g,'from '+JSON.stringify(new URL('../web/node_modules/vue/index.mjs',import.meta.url).href));
 for(const name of['analyticsHTMLState','randomId','browserAnalyticsQuery'])js=js.replace(new RegExp('from [\'"]\\./'+name+'[\'"]','g'),'from '+JSON.stringify(new URL('../web/src/'+name+'.ts',import.meta.url).href));
-for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison','AnalyticsHeatmapOverlay'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
+for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison','AnalyticsHeatmapOverlay','AnalyticsSessionActivity'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
 const component=(await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))).default;
 const flush=async()=>{await nextTick();await Promise.resolve();await nextTick();};
 function node(type,text=''){return {type,text,props:{},children:[],parent:null};}
@@ -195,4 +195,36 @@ test('actual heatmap isolates responsive layouts and retains unclassified histor
   assert.equal(width().props.modelValue,'medium');assert.equal(heatCount(ui,'heatmap-clicks'),'7');
   assert(ui.all('el-alert').some(n=>String(n.props.title).includes('点击热图达到采样或容量上限')));
  }finally{ui.stop();}
+});
+
+test('session activity download keeps the verified scope and only the displayed events', async () => {
+ const source=readFileSync(new URL('../web/src/AnalyticsSessionActivity.vue',import.meta.url),'utf8').split('<script setup lang="ts">')[1].split('</script>')[0];
+ const ast=ts.createSourceFile('Activity.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS);
+ const method=ast.statements.find(n=>ts.isFunctionDeclaration(n)&&n.name?.text==='downloadActivity');
+ assert(method);
+ const script=ts.transpileModule(method.getText(ast),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const session='c'.repeat(32),props={site,session,from:start.toISOString(),to:end.toISOString()};
+ const activity={session_id:session,from:props.from,to:props.to,partial:true,events:[
+  {kind:'click',path:'/a',received_at:1,x:0,y:100,private_value:'not exposed'},
+  {kind:'engagement',path:'/b',received_at:2,duration_seconds:0},
+  {kind:'pageview',path:'/c',received_at:3,x:99},
+ ],visitor:'not exposed'};
+ const calls=[],result={value:activity},busy={value:false},error={value:''};
+ const anchor={click(){calls.push(this.download);},remove(){}};
+ const document={createElement:()=>anchor,body:{append(node){assert.equal(node,anchor);}}};
+ const url={createObjectURL(blob){calls.push(blob);return 'blob:owned-test';},revokeObjectURL(value){calls.push(value);}};
+ const download=new Function('result','busy','error','props','document','URL','Blob','setTimeout',script+'return downloadActivity;')(
+  result,busy,error,props,document,url,Blob,fn=>fn());
+ download();
+ assert.equal(calls[1],'website-analytics-session-'+session+'.json');
+ assert.equal(calls[2],'blob:owned-test');
+ assert.deepEqual(JSON.parse(await calls[0].text()),{site_id:site,session_id:session,from:props.from,to:props.to,partial:true,events:[
+  {kind:'click',path:'/a',received_at:1,x:0,y:100},
+  {kind:'engagement',path:'/b',received_at:2,duration_seconds:0},
+  {kind:'pageview',path:'/c',received_at:3},
+ ]});
+ busy.value=true;download();busy.value=false;
+ error.value='请求失败';download();error.value='';
+ props.from='2026-11-03T00:00:00Z';download();
+ assert.equal(calls.length,3);
 });

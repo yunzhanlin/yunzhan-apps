@@ -25,7 +25,9 @@ func (s *Store) migratePlatformMaintenance() error {
 	}
 	defer tx.Rollback()
 	_, err = tx.Exec(`CREATE TABLE IF NOT EXISTS platform_maintenance_grants(token_hash TEXT PRIMARY KEY,owner_id TEXT NOT NULL,commands TEXT NOT NULL,expires_at INTEGER NOT NULL,revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0,1)),created_at TEXT NOT NULL,installation_id TEXT NOT NULL DEFAULT '');
-CREATE TABLE IF NOT EXISTS platform_maintenance_operations(request_id TEXT PRIMARY KEY,grant_id TEXT NOT NULL,actor_id TEXT NOT NULL,request TEXT NOT NULL,request_sha TEXT NOT NULL,state TEXT NOT NULL,record TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);`)
+CREATE TABLE IF NOT EXISTS platform_maintenance_operations(request_id TEXT PRIMARY KEY,grant_id TEXT NOT NULL,actor_id TEXT NOT NULL,request TEXT NOT NULL,request_sha TEXT NOT NULL,state TEXT NOT NULL,record TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
+CREATE INDEX IF NOT EXISTS platform_maintenance_coordinator_claim ON audit_logs(target)
+WHERE action IN ('platform.maintenance.remote.submit','platform.maintenance.remote.fleet.submit');`)
 	if err != nil {
 		return err
 	}
@@ -152,7 +154,7 @@ func (a *Server) platformMaintenanceInstallation(ctx context.Context) (string, e
 	var m struct {
 		Status SoftwareAppStatus `json:"status"`
 	}
-	if a.Executor.Call(ctx, "GET", "/v1/app-modules/platform-ops", nil, &m) != nil || !knownInstalledAppModule("platform-ops", m.Status) || m.Status.Version != PlatformMaintenanceAppVersion || !ValidID(m.Status.InstallationID) {
+	if a.Executor.Call(ctx, "GET", "/v1/app-modules/platform-ops", nil, &m) != nil || !knownInstalledAppModule("platform-ops", m.Status) || !PlatformMaintenanceVersionSupported(m.Status.Version) || !ValidID(m.Status.InstallationID) {
 		return "", errors.New("需明确更新并核对平台运维1.3.0及安装实例；旧版仅保留健康读取，不签发或执行维护")
 	}
 	return m.Status.InstallationID, nil

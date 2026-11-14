@@ -598,6 +598,9 @@ func (s *Service) moduleRemoteSync(ctx context.Context, action string, in core.A
 			return nil, errors.New("连接修订号改变，请重新选择连接")
 		}
 	}
+	if action == "remote-preview" && in.ExpectedRevision != c.Revision {
+		return nil, errors.New("连接修订号改变，请重新选择远端连接")
+	}
 	if action == "queue-remote" {
 		return s.queueRemoteSync(c, in)
 	}
