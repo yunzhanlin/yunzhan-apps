@@ -1,0 +1,38 @@
+{
+  "source_head": "eecf42b7b3aa148ff7e2bede597475b1da6e6f00",
+  "source_inputs_sha256": "72713652a7a0cd45586e9e7d68f39d507be7e5783d3aef5e0aae1c416d77ccfa",
+  "version": "0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2",
+  "application": {
+    "id": "phpmyadmin",
+    "name": "phpMyAdmin",
+    "version": "5.2.3-compat2",
+    "sha256": "f60c7e5892dea28a647b4323e045fd94c907c618cd327ef97bd515ae0eb76945"
+  },
+  "mysql": {
+    "id": "mysql",
+    "version": "8.4.13-compat1",
+    "sha256": "12817abfb781f09e1f28008d6f02ad75d805485139dfea17024bcbc838234fcf",
+    "target": "mysql-8.4.13"
+  },
+  "image": "phpmyadmin:5.2.3-apache@sha256:f54a37b908b26caa7032c4eb0c7f3495fdd90208a06eed9c4b2c8e691dd1662c",
+  "payload_files": {
+    ".github/workflows/phpmyadmin-c186-native-scope.yml": "06dcacf3a11e66a10659f3926486ae1e421891f95bd819ff7a3a0024df114b8f",
+    "scripts/native-phpmyadmin-c186/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-phpmyadmin-c186/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
+    "scripts/native-phpmyadmin-c186/browser.mjs": "286d3572b48079e6ebdda31316a1b0d4c2da821abaedf3a73e9037cc37b09a03",
+    "scripts/native-phpmyadmin-c186/dispatch.json": "dbb4426ce0baa5750f9564eed9359b5e42a5a4d420c0d0e73fba5874bb514b64",
+    "scripts/native-phpmyadmin-c186/download.py": "c2683452cb757925b20c0eed37aa4d1f84e71494c7146c003603c3cf43398eda",
+    "scripts/native-phpmyadmin-c186/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-phpmyadmin-c186/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-phpmyadmin-c186/mysql.py": "ca07a231f4151691d722018cbb0c5e14611c6def8aed3f42365472d04f4b8c1d",
+    "scripts/native-phpmyadmin-c186/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-phpmyadmin-c186/package-lock.json": "acec9e987f25e23ae5ead1fba565e9b5df048c4509250f828f64bb5e26f0bcb9",
+    "scripts/native-phpmyadmin-c186/package.json": "c43f386e20c33e07a020630f43049acaf6496b584d82ea1e1e1560b66f23e027",
+    "scripts/native-phpmyadmin-c186/prepare-browser.py": "28f217dad6881cb767ac3cb5301c66f600704810dd8188fd16b4afb772397833",
+    "scripts/native-phpmyadmin-c186/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "previous_image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
+  "mode": "store",
+  "served_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "Main_changed": false
+}

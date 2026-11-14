@@ -1,0 +1,22 @@
+{
+  "amd64": {
+    "url": "https://cdn.playwright.dev/builds/cft/158.0.8127.18/linux64/chrome-linux64.zip",
+    "sha256": "c6cb06e1574ac2f6c5c38e31551157fbcaa67e6366c89974084553c5a5772592",
+    "bytes": 207460506,
+    "chrome_path": "chrome-linux64/chrome",
+    "chrome_sha256": "76bcde21a2f8c9d4fbbf42afbeab011817d000552d093e5f5e89c9b8808f4231",
+    "sandbox_path": "chrome-linux64/chrome_sandbox",
+    "sandbox_sha256": "c6733ac7189cd66d34b0dc5715d58b7ae30b01984a7cc814a7cd8f824f81ea7a",
+    "version": "158.0.8127.18"
+  },
+  "arm64": {
+    "url": "https://cdn.playwright.dev/builds/cft/158.0.8127.18/linux-arm64/chrome-linux-arm64.zip",
+    "sha256": "bca07f65a24f7cab8758c18f41b8561a40a2a1e98aa01f01e471399179bb6c61",
+    "bytes": 205182092,
+    "chrome_path": "chrome-linux-arm64/chrome",
+    "chrome_sha256": "40c121f803bd7f2c3dc394a12f064d14af1faea4baf7938dd2a8edd5175086f6",
+    "sandbox_path": "chrome-linux-arm64/chrome_sandbox",
+    "sandbox_sha256": "6a745e22153cb9d6249ef1ef42b48b852f39d0d4ac3e1315f8d20337b794475d",
+    "version": "158.0.8127.18"
+  }
+}

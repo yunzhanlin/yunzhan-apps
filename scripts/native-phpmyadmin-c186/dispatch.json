@@ -1,0 +1,58 @@
+{
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz"
+    }
+  },
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz": {
+      "bytes": 24312110,
+      "id": 748815598,
+      "sha256": "de935a3dd4dda0db0cdbf1e2bf2365ac3400ee5ab53a41f2e6806da97cd8df68"
+    },
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz.manifest": {
+      "bytes": 193,
+      "id": 748822490,
+      "sha256": "aa65ba6ae95ecd96ef4ca5667a48a583268e41c5602076dcba74fac42910c8f7"
+    },
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz.sig": {
+      "bytes": 64,
+      "id": 748822611,
+      "sha256": "92f76467b04aa32717ea0fa3b74d5b0cad20068a6aa9b0ba5e3898e9115ad906"
+    },
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz": {
+      "bytes": 22505229,
+      "id": 748822699,
+      "sha256": "a95da9bfe15dfce852e5b763a22d1e99e462249934a3bf2da175a2e78de4373f"
+    },
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz.manifest": {
+      "bytes": 193,
+      "id": 748825416,
+      "sha256": "f6527a9444f8ab6b8a23c84b33812323d7b582172ca0c07e041a81edfd7f7380"
+    },
+    "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz.sig": {
+      "bytes": 64,
+      "id": 748825540,
+      "sha256": "2ffedf4726224adab76b754b51e3045e028f005109a3145ee1aa82476206ac9f"
+    },
+    "rabbitmq-migration-signed-release.py": {
+      "bytes": 12509,
+      "id": 748825645,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "bytes": 113,
+      "id": 748825752,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "release_id": 445599194,
+  "source_head": "eecf42b7b3aa148ff7e2bede597475b1da6e6f00",
+  "source_inputs_sha256": "72713652a7a0cd45586e9e7d68f39d507be7e5783d3aef5e0aae1c416d77ccfa",
+  "source_sdk_tree": "98dd99b241211ba8d39a4ec4524c3b898dc57a89",
+  "tag": "qa-mysqlverifiedrestorecandidate184r2-20261115-qa1",
+  "version": "0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2"
+}

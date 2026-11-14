@@ -1,0 +1,6 @@
+{
+  "name": "yunzhan-analytics-c66-native-browser-acceptance",
+  "private": true,
+  "type": "module",
+  "dependencies": {"playwright-core": "1.65.0"}
+}
