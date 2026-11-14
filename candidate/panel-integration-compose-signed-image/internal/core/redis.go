@@ -49,6 +49,7 @@ func ValidateRedisInstance(v RedisInstance) error {
 
 func (a *Server) redisRoutes(m *http.ServeMux) {
 	a.redisAuthRoutes(m)
+	a.redisPersistenceRoutes(m)
 	m.HandleFunc("GET /api/redis/instances/{id}/keys/hash-field", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id := r.PathValue("id")
 		db, err := strconv.Atoi(r.URL.Query().Get("db"))
