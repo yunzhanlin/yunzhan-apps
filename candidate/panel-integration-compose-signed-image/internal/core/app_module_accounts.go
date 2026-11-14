@@ -29,6 +29,9 @@ func (s *Store) migrateAppModules() error {
 	if e != nil {
 		return e
 	}
+	if e = s.migrateAppUserRequests(); e != nil {
+		return e
+	}
 	return s.migratePlatformMaintenance()
 }
 func (s *Store) appUserRole(id string) (string, []string, error) {
@@ -86,6 +89,10 @@ func (a *Server) scopeSites(u identity, sites []Site) []Site {
 }
 
 func (a *Server) manageAppUsers(ctx context.Context, actor identity, action string, in AppModuleInput) (any, error) {
+	return a.manageAppUserRequest(ctx, actor, action, in, "")
+}
+
+func (a *Server) manageAppUserRequest(ctx context.Context, actor identity, action string, in AppModuleInput, key string) (any, error) {
 	actorAccess, e := readUserAccessContext(ctx, a.Store.DB, actor.ID)
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -133,6 +140,10 @@ func (a *Server) manageAppUsers(ctx context.Context, actor identity, action stri
 			return nil, errors.New("角色应为 admin/operator/viewer")
 		}
 	}
+	request, e := a.appUserMutationRequest(actor.ID, key, action, in)
+	if e != nil {
+		return nil, e
+	}
 	var passwordHash []byte
 	if action == "create" || (action == "update" && in.Password != "") {
 		if len(in.Password) < 16 || len(in.Password) > 72 {
@@ -157,6 +168,15 @@ func (a *Server) manageAppUsers(ctx context.Context, actor identity, action stri
 	actorAccess, e = readUserAccessContext(ctx, tx, actor.ID)
 	if e != nil || actorAccess.Role != "admin" || !containsMenu(actorAccess.MenuIDs, "panel-access") {
 		return nil, errors.New("账户授权已变化")
+	}
+	if request != nil {
+		found, err := request.preflight(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			return appUserMutationResult(action, in.Username), nil
+		}
 	}
 	if action == "create" || action == "update" {
 		for _, siteID := range in.SiteIDs {
@@ -287,10 +307,15 @@ func (a *Server) manageAppUsers(ctx context.Context, actor identity, action stri
 	if e = recordAppUserOutcomeTx(ctx, tx, actor.Username, action, nil); e != nil {
 		return nil, errors.New("账户改动与审计未共同提交；拒绝提交，请核对原账户及存储")
 	}
+	if request != nil {
+		if e = request.commit(ctx, tx); e != nil {
+			return nil, errors.New("账户改动与请求回执未共同提交，请刷新核对")
+		}
+	}
 	if e = tx.Commit(); e != nil {
 		return nil, e
 	}
-	return map[string]any{"username": in.Username, "action": action, "ok": true}, nil
+	return appUserMutationResult(action, in.Username), nil
 }
 func (a *Server) appDailyReport(ctx context.Context) (any, error) {
 	return a.appDailyReportAt(ctx, time.Now())

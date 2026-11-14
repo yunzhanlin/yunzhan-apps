@@ -194,9 +194,13 @@ func streamFilterKernelMap(ctx context.Context, id uint32, ingress bool) (stream
 		original.BTFKeyID != 0 || original.BTFValueID != 0 || original.BTFVmlinuxID != 0 || original.Extra != 0 {
 		return out, loadbalancestream.ErrService
 	}
-	name, valid := streamFilterObjectName(original.Name)
-	if !valid {
-		return out, loadbalancestream.ErrService
+	name := ""
+	if original.Name != ([16]byte{}) {
+		var valid bool
+		name, valid = streamFilterObjectName(original.Name)
+		if !valid {
+			return out, loadbalancestream.ErrService
+		}
 	}
 	out = streamFilterMap{ID: id, Type: original.Type, Name: name, KeyBytes: original.KeyBytes,
 		ValueBytes: original.ValueBytes, MaxEntries: original.MaxEntries, Flags: original.Flags}
@@ -235,7 +239,7 @@ func streamFilterMapsEqual(a, b streamFilterCanonicalMap) bool {
 	return slices.Equal(a.Entries, b.Entries)
 }
 
-func streamFilterKernelProgram(ctx context.Context, id uint32, ingress bool) (string, error) {
+func streamFilterKernelProgram(ctx context.Context, id uint32, ingress bool, allowed []string) (string, error) {
 	if ctx == nil || ctx.Err() != nil {
 		return "", loadbalancestream.ErrService
 	}
@@ -283,10 +287,13 @@ func streamFilterKernelProgram(ctx context.Context, id uint32, ingress bool) (st
 	if streamFilterObjectInfo(fd, unsafe.Pointer(&end), unsafe.Sizeof(end), 88) != nil || end != original || ctx.Err() != nil {
 		return "", loadbalancestream.ErrService
 	}
+	if !streamFilterAnonymousPolicyMatches(program, allowed) {
+		return "", loadbalancestream.ErrService
+	}
 	return streamFilterProgramSHA256(program, ingress)
 }
 
-func observeStreamFilterPolicySHA256(ctx context.Context, directory *os.File, ingressIDs, egressIDs []uint32) (string, error) {
+func observeStreamFilterPolicySHA256(ctx context.Context, directory *os.File, ingressIDs, egressIDs []uint32, allowed []string) (string, error) {
 	if ctx == nil || ctx.Err() != nil || directory == nil || !streamServiceBPFIDs(ingressIDs) || !streamServiceBPFIDs(egressIDs) {
 		return "", loadbalancestream.ErrService
 	}
@@ -297,7 +304,7 @@ func observeStreamFilterPolicySHA256(ctx context.Context, directory *os.File, in
 	programs := make([][]string, 2)
 	for direction, ids := range [][]uint32{ingressIDs, egressIDs} {
 		for _, id := range ids {
-			hash, err := streamFilterKernelProgram(ctx, id, direction == 0)
+			hash, err := streamFilterKernelProgram(ctx, id, direction == 0, allowed)
 			if err != nil {
 				return "", err
 			}

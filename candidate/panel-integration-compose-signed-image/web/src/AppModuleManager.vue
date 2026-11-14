@@ -19,6 +19,9 @@ import { loadBalanceReportExportHref } from "./loadBalanceReportExport";
 import {loadBalanceTransactionActions,loadBalanceTransactionFields,loadBalanceTransactionBody,loadBalanceReportForSection,loadBalanceTransactionQueryMatches} from "./loadBalanceTransactions";
 import {RemoteRequestIdentity, remoteJobTerminal, remoteQueueReplyMatches, validRemoteJob, type RemoteRequestTicket} from "./remoteSync";
 import {remotePlanActions,remotePlanBody,remotePlanFields} from "./remoteSyncPlans";
+import RemoteSyncPreview from "./RemoteSyncPreview.vue";
+import {remotePreviewMatches, remoteSyncPreview} from "./remoteSyncPreview";
+import {siteDiagnosisBatch} from "./siteDiagnosisBatch";
 import {remoteBackupBody,remoteBackupFields} from "./remoteSyncBackups";
 import {remoteBackupArchiveActions,remoteBackupArchiveBody,remoteBackupArchiveFields} from "./remoteBackupArchive";
 import { canOpenAppModule, canReadPath, type AccessPlan } from "./menuPermissions";
@@ -28,11 +31,12 @@ import { initialModuleInspection } from "./moduleInitialInspection";
 import { NFSFormDrafts } from "./nfsFormDrafts";
 import { nfsReportKind, nfsReportForSection, nfsSectionKind, nfsSectionReadAction, type NFSReportKind } from "./nfsReportScope";
 import {dailyWorkerMessage} from "./dailyReportView";
+import DailyReportArchive from './DailyReportArchive.vue';
 import {moduleReportProvenance,moduleReportProvenanceNotice,type ReportOrigin,type ReportProvenance} from './moduleReportProvenance';
 import { taskSelection, taskTerminationNotice } from "./taskManager";
 import {newPM2ConfigurationID,pm2ConfigurationFields,pm2ConfigurationReplyMatches,pm2ConfigurationReadConfirms,pm2ConfigurationAbsentMatches,type PM2ConfigurationObservation} from './pm2Configuration';
 import {pm2ProjectsReadKnown,pm2StopReplyMatches} from './pm2Projects';
-import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, type UserMutationObservation } from "./userManagementReceipt";
+import { isUserMutation, userMutationReplyMatches, userMutationNeedsRead, userManagementListKnown, parsePendingUserMutation, userMutationStorageKey, type UserMutationObservation, type PendingUserMutation } from "./userManagementReceipt";
 import {isPlatformMutation,platformObservation,platformMutationReplyMatches,platformMutationNeedsRead,platformReadKnown,platformActionBody,platformHostSnapshotSHA,type PlatformObservation} from './platformManagementReceipt';
 import PlatformMaintenance from './PlatformMaintenance.vue';
 import HostDiskWorkspace from './HostDiskWorkspace.vue';
@@ -161,7 +165,30 @@ let nfsSectionReadController: AbortController | undefined, nfsPageReady = false,
 const reportProvenance = ref<ReportProvenance>();
 const reportProvenanceNotice = computed(() => moduleReportProvenanceNotice(reportProvenance.value));
 watch(report, value => { if (value === undefined || value === null) reportProvenance.value = undefined; }, {flush:'sync'});
-const userMutationObservation = ref<UserMutationObservation>();
+const userMutationObservation = ref<PendingUserMutation>();
+const userMutationMarkerUnreadable = ref(false);
+const userMutationKey = computed(() => definition.value?.id === 'user-manager'
+  ? userMutationStorageKey(geoActor.value) : undefined);
+function userMutationBlocked(action: string) {
+  return isUserMutation(action) && (userMutationMarkerUnreadable.value || userMutationNeedsRead(userMutationObservation.value, action));
+}
+function saveUserMutation(pending: PendingUserMutation) {
+  const key = userMutationKey.value;
+  if (key) window.sessionStorage.setItem(key, JSON.stringify({ action: pending.action, state: pending.state }));
+  userMutationObservation.value = pending;
+}
+function restoreUserMutation() {
+  const key = userMutationKey.value;
+  if (!key) return;
+  try { userMutationObservation.value = parsePendingUserMutation(window.sessionStorage.getItem(key)); }
+  catch { userMutationMarkerUnreadable.value = true; }
+}
+function clearUserMutation() {
+  const key = userMutationKey.value;
+  if (key) window.sessionStorage.removeItem(key);
+  userMutationObservation.value = undefined;
+  userMutationMarkerUnreadable.value = false;
+}
 const platformMutationObservation = ref<PlatformObservation>();
 const pm2ConfigurationObservation = ref<PM2ConfigurationObservation>();
 const pm2ConfigurationAbsent = ref(false);
@@ -244,7 +271,10 @@ async function verifyRemotePlanConnection() {
   }catch(e){error.value=(e as Error).message;}finally{busy.value=false;}
 }
 const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
+const syncPreview = computed(() => definition.value?.id === 'files-sync' ? remoteSyncPreview(report.value?.remote_sync_preview) : undefined);
+const syncPreviewStale = computed(() => !!syncPreview.value && !remotePreviewMatches(syncPreview.value, form.value, expectedRevision.value));
 function sectionReport(section:string) {
+  if (definition.value?.id === 'daily-report' && section === 'archive') return undefined;
   if (definition.value?.id === 'task-manager' && section.startsWith('inventory-')) return undefined;
   if (definition.value?.id === 'nfs-manager') return nfsReportForSection(section, report.value);
   return definition.value?.id==='load-balance' ? loadBalanceReportForSection(section,report.value) : report.value;
@@ -307,7 +337,7 @@ function clearWriteOnlyFields() {
 }
 watch([() => props.access, () => visible.value, () => definition.value?.id], cancelVersionRead, {deep:true, flush:'sync'});
 onBeforeUnmount(cancelVersionRead);
-watch(() => props.access, () => { idsAccessGeneration++;cancelDiskScan();cancelPlatformHealthRead();platformHealthSnapshot.clear();platformReadNotice.value="";diskScanNotice.value="";idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;platformMutationObservation.value=undefined;pm2ConfigurationObservation.value=undefined;pm2ConfigurationAbsent.value=false; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
+watch(() => props.access, () => { idsAccessGeneration++;cancelDiskScan();cancelPlatformHealthRead();platformHealthSnapshot.clear();platformReadNotice.value="";diskScanNotice.value="";idsOperationID.value=""; idsOperationPending.value=false; idsPendingSubmission=undefined; clearWriteOnlyFields(); report.value=undefined;history.value=undefined;reportStateUnknown.value=false;userMutationObservation.value=undefined;userMutationMarkerUnreadable.value=false;platformMutationObservation.value=undefined;pm2ConfigurationObservation.value=undefined;pm2ConfigurationAbsent.value=false; remoteRequestIdentity.bind((props.access as (AccessPlan & {user_id?:string})|undefined)?.user_id || ""); }, {deep:true,immediate:true});
 watch(visible, value => { if (!value) { cancelDiskScan(); cancelPlatformHealthRead(); clearWriteOnlyFields(); } });
 watch([() => props.access, () => visible.value, () => definition.value?.id], () => { pm2StopOutcome.value=undefined; }, {deep:true,flush:'sync'});
 watch(() => definition.value?.id, () => { cancelDiskScan(); cancelPlatformHealthRead(); platformReadNotice.value=""; diskScanNotice.value=""; });
@@ -518,6 +548,7 @@ async function show(id: string) {
   reportStateUnknown.value = false;
   definition.value = undefined;
   userMutationObservation.value = undefined;
+  userMutationMarkerUnreadable.value = false;
   platformMutationObservation.value = undefined;
   guidance.value = undefined;
   dailyWorker.value = undefined;
@@ -560,6 +591,7 @@ async function show(id: string) {
     installedInstance.value = installed.value && typeof page.status.installation_id==='string' && /^[a-f0-9]{32}$/.test(page.status.installation_id) ? page.status.installation_id : '';
     if(id==='disk-analysis' && hostDiskSupportedVersion(installedVersion.value)) activeTab.value='host-disk';
     healthy.value = installed.value && page.status.healthy === true;
+    if (id === 'user-manager' && installed.value) restoreUserMutation();
     if (installedUnknown.value) error.value = "应用安装身份或状态无法核对；未自动运行、安装或展示原报告";
     reportStateUnknown.value = page.report_state_unknown === true;
     if (!installedUnknown.value && !reportStateUnknown.value && page.report !== null && page.report !== undefined)
@@ -621,7 +653,8 @@ async function show(id: string) {
     await readPM2Projects();
     return;
   }
-  const inspection = reportStateUnknown.value ? undefined : initialModuleInspection(id, definition.value, installed.value, pageReady);
+  const needsAccountRead = id === 'user-manager' && userMutationBlocked('update');
+  const inspection = reportStateUnknown.value || needsAccountRead ? undefined : initialModuleInspection(id, definition.value, installed.value, pageReady);
   if (inspection) await execute(inspection);
   if (id === 'nfs-manager' && openingGeneration === idsAccessGeneration && visible.value && definition.value?.id === id && pageReady) {
     nfsPageReady = true; nfsNavigationKind = nfsSectionKind(activeTab.value);
@@ -821,7 +854,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   if (definition.value.id === 'disk-analysis' && action === 'run') { await executeDiskScan(); return; }
   if (definition.value.id === 'platform-ops' && action === 'run') { await executePlatformHealthRead(); return; }
   const userMutation = definition.value.id === 'user-manager' && isUserMutation(action);
-  if (userMutation && userMutationNeedsRead(userMutationObservation.value, action)) return;
+  if (userMutation && userMutationBlocked(action)) return;
   const platformMutation = definition.value.id === 'platform-ops' && isPlatformMutation(action);
   if (platformMutation && platformMutationNeedsRead(platformMutationObservation.value,action)) return;
   if (definition.value.id === "network-threat-detection" && idsOperationPending.value && idsBackgroundActions.includes(action)) return;
@@ -866,8 +899,12 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       platformMutationObservation.value=undefined;
     }
     if (userMutation) {
-      submittedUser = {action: action as UserMutationObservation['action'], username: typeof submitted.username === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{2,31}$/.test(submitted.username) ? submitted.username : '', state: 'unverified'};
-      userMutationObservation.value = undefined;
+      if (typeof submitted.username !== 'string' || !/^[A-Za-z][A-Za-z0-9_.-]{2,31}$/.test(submitted.username))
+        throw Error('请输入有效的账户用户名');
+      const original = { action: action as UserMutationObservation['action'], username: submitted.username, state: 'unverified' } as const;
+      try { saveUserMutation(original); }
+      catch { throw Error('无法在当前标签页保存账户操作核对标记，账户变更未提交'); }
+      submittedUser = original;
     }
     if(definition.value.id==="files-sync" && action==="queue-remote") {
       const ticket=remoteRequestIdentity.begin(submitted);
@@ -879,6 +916,16 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       submitted,
     );
     if(accessGeneration!==idsAccessGeneration)return;
+    if (definition.value.id === 'site-diagnosis' && action === 'diagnosis-batch') {
+      const rows = siteDiagnosisBatch(result);
+      const original = submitted.site_ids;
+      if (!rows || !Array.isArray(original) || rows.length !== original.length || rows.some(row => !original.includes(row.id)))
+        throw Error('服务器返回的网站与本次选择不符，请重新运行诊断。');
+    }
+    if (definition.value.id === 'files-sync' && action === 'remote-preview' && (result as any)?.remote_sync_preview !== undefined) {
+      const preview = remoteSyncPreview((result as any).remote_sync_preview);
+      if (!preview || !remotePreviewMatches(preview, submitted, submitted.expected_revision)) throw Error('服务器返回的预览与本次来源、连接或排除项不符，请重新预览。');
+    }
     if(definition.value.id==='pm2-manager' && action==='stop') {
       if(!pm2StopReplyMatches(submitted.resource_id,result))throw Error('原项目停机回执未能完整核对；请只读刷新当前服务，不要据此重试配置或恢复');
       pm2StopOutcome.value=result;pm2StopAcknowledged=true;
@@ -901,11 +948,17 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
     if (submittedUser) {
       if (!userMutationReplyMatches(submittedUser.action, submittedUser.username, result)) throw Error('账户操作回执身份无法核对；原操作可能已执行，请只读刷新账户列表，不重复提交');
       submittedUser = {...submittedUser, state:'acknowledged'};
-      userMutationObservation.value = submittedUser;
+      saveUserMutation({ action: submittedUser.action, state: 'refresh_failed' });
     }
     if (definition.value.id === 'user-manager' && action === 'run') {
       if (!userManagementListKnown(result)) throw Error('账户列表的身份、授权或修订无法核对；未据此解除重复提交保护');
-      userMutationObservation.value = undefined;
+      if (userMutationBlocked('update')) {
+        form.value.username = '';
+        form.value.expected_revision = 0;
+        selectedPlanID.value = '';
+        clearWriteOnlyFields();
+        clearUserMutation();
+      }
     }
     let taskNotice='';
     if(definition.value.id==='task-manager' && action==='terminate')taskNotice=taskTerminationNotice(result,submitted.pid);
@@ -990,7 +1043,7 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
       form.value.expected_revision = 0;
     }
     if(taskNotice)ElMessage.info(taskNotice);
-    else if (!["run", "token-list", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote", "remote-backups", "remote-backup-preview", "remote-backup-archive"].includes(action))
+    else if (!["run", "diagnosis-batch", "token-list", "logs", "probe", "check", "preview", "ids-report", "ids-prepare", "queue-remote", "remote-job", "remote-jobs", "remote-archive", "remote-targets", "remote-preview", "probe-remote", "remote-backups", "remote-backup-preview", "remote-backup-archive"].includes(action))
       ElMessage.success("操作已执行并记录审计");
     for (const f of definition.value.fields || [])
       if (["password", "secret-json", "secret-text"].includes(f.kind)) form.value[f.key] = "";
@@ -1029,7 +1082,10 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
         : await props.api(`/app-modules/${definition.value.id}/${definition.value.id==='nfs-manager' && action!=='mount' && action!=='unmount' ? 'server-report' : 'run'}`, "POST", {});
       if(accessGeneration!==idsAccessGeneration)return;
       if(pm2Read && !pm2ProjectsReadKnown(refreshed))throw Error('PM2 当前只读项目清单身份或完整性无法核对');
-      if (submittedUser && !userManagementListKnown(refreshed)) throw Error('刷新返回的账户列表身份、授权或修订无法核对');
+      if (submittedUser) {
+        if (!userManagementListKnown(refreshed)) throw Error('刷新返回的账户列表身份、授权或修订无法核对');
+        clearUserMutation();
+      }
       if (submittedPlatform && !platformReadKnown('run',refreshed)) throw Error('刷新返回的多主机清单身份或完整性无法核对');
       setReport(refreshed);
       if(pm2Read){pm2ProjectOffset.value=0;if(pm2HadUnknownReport)reportStateUnknown.value=true;}
@@ -1072,9 +1128,12 @@ async function execute(action: string, ruleChoice?: IDSRuleProfile) {
   } catch (e) {
     if(accessGeneration!==idsAccessGeneration)return;
     error.value = e instanceof Error ? e.message : String(e);
+    if(definition.value?.id === 'files-sync' && action === 'remote-preview') reportStateUnknown.value = true;
     if(pm2StopAcknowledged)error.value='已收到原项目停止及关闭开机启动的核对回执，但后续列表刷新失败；请手动只读刷新，不要重复提交。'+error.value;
     if (submittedUser) {
-      userMutationObservation.value = {...submittedUser,state:submittedUser.state==='acknowledged'?'refresh_failed':'unverified'};
+      const pending: PendingUserMutation = { action: submittedUser.action, state: submittedUser.state === 'acknowledged' ? 'refresh_failed' : 'unverified' };
+      userMutationObservation.value = pending;
+      try { saveUserMutation(pending); } catch { userMutationMarkerUnreadable.value = true; }
       if (submittedUser.state === 'acknowledged') error.value = '已收到服务器账户操作成功回执，但账户列表刷新失败；不要重复提交，请手动只读刷新核对。'+error.value;
       form.value.expected_revision = 0; selectedPlanID.value = '';
     }
@@ -1210,7 +1269,7 @@ defineExpose({ show });
       <div v-if="error" ref="userErrorAnchor" tabindex="-1" class="module-error-anchor"><el-alert :title="error" type="error" :closable="false" /></div>
       <el-alert v-if="definition?.id==='disk-analysis' && diskScanNotice" :title="diskScanNotice" type="warning" :closable="false" />
       <el-alert v-if="definition?.id==='platform-ops' && platformReadNotice" :title="platformReadNotice" type="warning" :closable="false" />
-      <el-alert v-if="definition?.id==='user-manager' && userMutationObservation?.state !== 'acknowledged' && userMutationObservation" type="warning" :closable="false" title="账户操作或后续刷新未完全核对。已暂停重复写入；请在账户列表手动刷新核对，不能将断网或刷新失败当作未执行。" />
+      <el-alert v-if="definition?.id==='user-manager' && userMutationBlocked('update')" type="warning" :closable="false" title="账户操作或后续刷新未完全核对。已暂停重复写入；请在账户列表手动刷新核对，不能将断网或刷新失败当作未执行。" />
       <el-alert v-if="definition?.id==='platform-ops' && platformMutationObservation && platformMutationObservation.state!=='acknowledged'" type="warning" :closable="false" :title="`多主机操作或后续刷新未完全核对，已暂停重复写入。请手动${platformMutationObservation.requiredRead==='token-list'?'只读刷新授权清单（可按标识撤销丢失回执的授权）':'刷新主机健康清单'}；断网不等于未执行。`" />
       <div v-if="definition?.id==='pm2-manager' && pm2ConfigurationObservation">
         <el-alert type="warning" :closable="false" title="本次配置保存尚未完整核对，已暂停重复保存。读取原操作后再决定；断网不表示未执行。" />
@@ -1306,6 +1365,9 @@ defineExpose({ show });
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
         <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <DailyReportArchive v-else-if="definition.id === 'daily-report' && section.id === 'archive'"
+          :key="'daily-archive/'+geoActor" :api="api" :active="visible && activeTab==='archive'"
+          :enabled="installed && !installedUnknown" />
         <DailyReportSchedule v-else-if="definition.id === 'daily-report' && section.id === 'schedule'"
           :key="'daily-schedule/' + geoActor" :api="api" :active="visible && activeTab === 'schedule'"
           :enabled="installed && !installedUnknown && installedVersion === '1.4.1'" />
@@ -1320,7 +1382,7 @@ defineExpose({ show });
           :enabled="installed && !installedUnknown && ['1.3.0', '1.3.1', '1.3.2'].includes(installedVersion) && (access === undefined || canOpenAppModule(access, 'task-manager'))" />
         <template v-else>
         <el-alert :title="section.help" type="info" :closable="false" />
-        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && installedVersion==='1.3.0' && !!installedInstance" :installation-id="installedInstance" />
+        <PlatformMaintenance v-if="definition.id==='platform-ops' && section.id==='maintenance' && activeTab==='maintenance'" :api="api" :access="access" :installed="installed && ['1.3.0','1.3.1'].includes(installedVersion) && !!installedInstance" :fleet-enabled="installed && installedVersion==='1.3.1' && !!installedInstance" :installation-id="installedInstance" />
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-plans'" :disabled="busy || !form.remote_target_id" @click="verifyRemotePlanConnection">只读核对所选连接当前修订号（不启用计划）</el-button>
         <el-button v-if="definition.id==='files-sync' && section.id==='remote-backups'" :disabled="busy || !/^[0-9a-f]{32}$/.test(form.resource_id || '')" @click="reviewSelectedRemoteBackup">核对所选备份完整摘要（不归档）</el-button>
         <ThreatIDSRuleFeeds v-if="section.id==='ids-rules' && activeTab==='ids-rules'" :api="api" :installed="installed" :access="access" :on-job="onJob" :revision="expectedRevision" :native-pending="idsOperationPending || busy" :active-profile="report?.rule_profile" :on-select="choice=>execute('ids-rules',choice)" />
@@ -1583,13 +1645,13 @@ defineExpose({ show });
         </el-form>
         <div class="module-actions">
           <el-button v-if="definition.id === 'user-manager' && section.id === 'users'"
-            :disabled="!installed || busy || userMutationNeedsRead(userMutationObservation, 'create')"
+            :disabled="!installed || busy || userMutationBlocked('create')"
             @click="newManagedAccount">新建账户</el-button>
           <el-button
             v-for="action in section.actions.filter(action=>action!=='ids-rules')"
             :key="action"
             :disabled="
-              !installed || busy || !canExecutePHP(action) || (definition.id === 'user-manager' && userMutationNeedsRead(userMutationObservation, action)) || (definition.id==='platform-ops' && platformMutationNeedsRead(platformMutationObservation,action)) || (definition.id === 'network-threat-detection' && idsOperationPending && idsBackgroundActions.includes(action)) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
+              !installed || busy || !canExecutePHP(action) || (definition.id === 'user-manager' && userMutationBlocked(action)) || (definition.id==='platform-ops' && platformMutationNeedsRead(platformMutationObservation,action)) || (definition.id === 'network-threat-detection' && idsOperationPending && idsBackgroundActions.includes(action)) || (action === 'terminate' && !form.pid) || (definition.id === 'pure-ftpd' && ['account-limits','recount-quota'].includes(action) && report?.account_limits_ready === false)
             "
             :type="
               [
@@ -1614,7 +1676,8 @@ defineExpose({ show });
             <AnalyticsQueryContext :report="report" />
           </template>
           <el-alert v-if="definition.id==='load-balance' && section.id==='transactions' && !loadBalanceTransactionQueryMatches(report,form)" type="warning" :closable="false" title="分页参数已修改，尚未刷新：下方仍是已返回分页范围的库存，不是当前表单的结果。" />
-          <UserAccessOverview v-if="definition.id === 'user-manager' && section.id === 'users'"
+          <RemoteSyncPreview v-if="section.id === 'remote-transfer' && syncPreview" :preview="syncPreview" :stale="syncPreviewStale || reportStateUnknown" />
+          <UserAccessOverview v-else-if="definition.id === 'user-manager' && section.id === 'users'"
             :report="sectionReport(section.id)" :sites="sites" :busy="busy" @select="selected" />
           <AppModuleReport v-else :id="definition.id" :report="sectionReport(section.id)!" @select="selected" />
         </section>

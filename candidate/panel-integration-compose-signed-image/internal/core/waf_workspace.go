@@ -15,25 +15,32 @@ type WAFDimension struct {
 	Name  string `json:"name"`
 	Count int    `json:"count"`
 }
+type WAFReportFilters struct {
+	SiteID string `json:"site_id"`
+	IP     string `json:"ip"`
+	Rule   string `json:"rule"`
+	Action string `json:"action"`
+}
 type WAFReport struct {
-	Events                 []WAFEvent     `json:"events"`
-	Total                  int            `json:"total"`
-	Blocked                int            `json:"blocked"`
-	Observed               int            `json:"observed"`
-	Sources                int            `json:"sources"`
-	Partial                bool           `json:"partial"`
-	Scanned                int            `json:"scanned"`
-	Rules                  []WAFDimension `json:"rules"`
-	IPs                    []WAFDimension `json:"ips"`
-	Sites                  []WAFDimension `json:"sites"`
-	Hours                  []WAFDimension `json:"hours"`
-	From                   string         `json:"from"`
-	To                     string         `json:"to"`
-	Page                   int            `json:"page"`
-	Limit                  int            `json:"limit"`
-	MetadataBestEffort     bool           `json:"metadata_best_effort,omitempty"`
-	CCLogCapacityNearLimit bool           `json:"cc_log_capacity_near_limit,omitempty"`
-	CCLogTailIncomplete    bool           `json:"cc_log_tail_incomplete,omitempty"`
+	Filters                WAFReportFilters `json:"filters"`
+	Events                 []WAFEvent       `json:"events"`
+	Total                  int              `json:"total"`
+	Blocked                int              `json:"blocked"`
+	Observed               int              `json:"observed"`
+	Sources                int              `json:"sources"`
+	Partial                bool             `json:"partial"`
+	Scanned                int              `json:"scanned"`
+	Rules                  []WAFDimension   `json:"rules"`
+	IPs                    []WAFDimension   `json:"ips"`
+	Sites                  []WAFDimension   `json:"sites"`
+	Hours                  []WAFDimension   `json:"hours"`
+	From                   string           `json:"from"`
+	To                     string           `json:"to"`
+	Page                   int              `json:"page"`
+	Limit                  int              `json:"limit"`
+	MetadataBestEffort     bool             `json:"metadata_best_effort,omitempty"`
+	CCLogCapacityNearLimit bool             `json:"cc_log_capacity_near_limit,omitempty"`
+	CCLogTailIncomplete    bool             `json:"cc_log_tail_incomplete,omitempty"`
 }
 
 func WAFEventReason(e WAFEvent) string {
@@ -119,6 +126,7 @@ func BuildWAFReport(snapshot WAFEventsPage, q url.Values, now time.Time) (WAFRep
 	page, _ := strconv.Atoi(query.Get("page"))
 	limit, _ := strconv.Atoi(query.Get("limit"))
 	out := WAFReport{Events: []WAFEvent{}, Partial: snapshot.HasMore, Scanned: len(snapshot.Events), From: start.Format(time.RFC3339), To: end.Format(time.RFC3339), Page: page, Limit: limit}
+	out.Filters = WAFReportFilters{SiteID: query.Get("site_id"), IP: query.Get("ip"), Rule: query.Get("rule"), Action: query.Get("action")}
 	out.MetadataBestEffort, out.CCLogCapacityNearLimit = snapshot.MetadataBestEffort, snapshot.CCLogCapacityNearLimit
 	out.CCLogTailIncomplete = snapshot.CCLogTailIncomplete
 	maps := map[string]map[string]int{}
@@ -333,6 +341,7 @@ func (a *Server) wafWorkspaceRoutes(m *http.ServeMux) {
 		send(w, 200, out)
 	}))
 	m.HandleFunc("GET /api/software/nginx-waf/report", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
 		if !admin(u, w) {
 			return
 		}

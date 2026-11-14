@@ -139,6 +139,35 @@ func (a *Server) dailyReportOperation(ctx context.Context, action string, in App
 	if action == "run" {
 		return a.appDailyReport(ctx)
 	}
+	if action == "report-detail" {
+		if !validDailyReportDay(in.ResourceID) {
+			return nil, errors.New("请选择有效的报告日期 YYYY-MM-DD")
+		}
+		tx, err := a.Store.DB.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+		if err != nil {
+			return nil, err
+		}
+		defer tx.Rollback()
+		var savedAt string
+		var bytes int64
+		if err = tx.QueryRowContext(ctx, `SELECT created_at,length(CAST(report AS BLOB)) FROM app_daily_reports WHERE day=?`, in.ResourceID).Scan(&savedAt, &bytes); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, errors.New("该日期没有已保存的日报")
+			}
+			return nil, err
+		}
+		if _, err := time.Parse(time.RFC3339, savedAt); err != nil {
+			return nil, errors.New("日报目录含无效生成时间，保留原记录")
+		}
+		day, report, err := readDailyReportRecord(ctx, tx, in.ResourceID)
+		if err != nil {
+			return nil, err
+		}
+		if err = tx.Commit(); err != nil {
+			return nil, err
+		}
+		return map[string]any{"day": day, "saved_at": savedAt, "bytes": bytes, "report_contents_verified": true, "report": report}, nil
+	}
 	if action == "report" {
 		day, err := time.Parse("2006-01-02", in.ResourceID)
 		if err != nil || day.Format("2006-01-02") != in.ResourceID {

@@ -180,7 +180,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"excludes", "排除路径前缀", "json"}, AppModuleField{"search", "路径或规则筛选", "text"}, AppModuleField{"severity", "风险级别", "severity"})
 			definitions[i].Fields = append(definitions[i].Fields, path, AppModuleField{"resource_id", "隔离记录标识（选择记录自动填写）", "identity"}, AppModuleField{"expected_sha", "已审查文件摘要（自动填写）", "identity"}, AppModuleField{"expected_revision", "隔离记录修订号（自动填写）", "identity"}, AppModuleField{"confirm", "隔离 / 恢复的精确确认", "text"}, AppModuleField{"limit", "隔离清单每页条数（最多 200）", "number"}, AppModuleField{"offset", "隔离清单分页起点", "number"})
 		case "daily-report":
-			definitions[i].Actions = append(definitions[i].Actions, "archive", "report")
+			definitions[i].Actions = append(definitions[i].Actions, "archive", "report", "report-detail")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"resource_id", "报告日期（YYYY-MM-DD）", "text"}, AppModuleField{"limit", "目录每页条数（最多 100）", "number"}, AppModuleField{"offset", "目录起点（最多 100000）", "number"})
 		case "pure-ftpd":
 			definitions[i].Actions = append(definitions[i].Actions, "password", "service-config", "recover-service", "start", "stop", "probe", "account-limits", "recount-quota")
@@ -386,7 +386,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			return
 		}
 		if id == "user-manager" {
-			out, err = a.manageAppUsers(ctx, u, action, in)
+			out, err = a.manageAppUserRequest(ctx, u, action, in, r.Header.Get("Idempotency-Key"))
 		} else if id == "platform-ops" {
 			out, err = a.platformOperation(ctx, u, action, in)
 		} else if id == "daily-report" && action == "run" && module.Status.Version == appcatalog.DailyReportScheduleVersion {
@@ -463,7 +463,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "disk-analysis":
 			version = DiskAnalysisAppVersion
 		case "platform-ops":
-			version = PlatformMaintenanceAppVersion
+			version = PlatformMaintenanceFleetAppVersion
 		case "task-manager":
 			version = TaskOpenSSHInventoryAppVersion
 		case "file-monitor", "website-tamper-proof", "enterprise-tamper-proof", "files-sync":
@@ -487,7 +487,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "user-manager":
 			version = appcatalog.UserAccessOverviewVersion
 		case "website-analytics":
-			version = appcatalog.AnalyticsGeographyVersion
+			version = appcatalog.AnalyticsSessionActivityVersion
 		case "pure-ftpd":
 			version = appcatalog.FTPTransferHistoryVersion
 		case "nfs-manager":

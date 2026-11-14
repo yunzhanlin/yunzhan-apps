@@ -129,6 +129,13 @@ func (s *Store) accountKey(dir string) ([]byte, error) {
 	if n > 0 {
 		return nil, errors.New("账户主密钥缺失，请恢复 credential-key 或使用本机救援命令")
 	}
+	var accountReceipts int
+	if e = s.DB.QueryRow(`SELECT count(*) FROM app_user_request_receipts`).Scan(&accountReceipts); e != nil {
+		return nil, e
+	}
+	if accountReceipts > 0 {
+		return nil, errors.New("凭据主密钥缺失，请恢复 credential-key 以核对原账户请求回执")
+	}
 	data := make([]byte, 32)
 	if _, e = rand.Read(data); e != nil {
 		return nil, e
