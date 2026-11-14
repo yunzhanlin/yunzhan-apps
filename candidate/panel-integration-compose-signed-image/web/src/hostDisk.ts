@@ -166,3 +166,47 @@ export const hostStateLabel = (s: string) => ({queued:'等待派发',dispatching
 // presentation; the original reply, validation and exact JSON export stay intact.
 export const hostReasonLabels = (reasons: readonly string[]): string[] => [...new Set(reasons)].map(hostReasonLabel);
 export const hostReasonLabel = (s: string) => ({child_mount_excluded:'已排除子挂载',inode_or_mount_changed:'文件身份或挂载发生变化',kernel_boundary_unavailable:'无法核对内核隔离边界',metadata_unavailable:'部分元数据无法读取',directory_inode_repeated:'遇到重复目录 inode',entry_budget_reached:'达到元数据数量上限',own_worker_state_excluded:'已排除扫描程序自身状态目录',depth_budget_reached:'达到目录深度上限',canceled:'已取消',deadline_reached:'达到扫描时限',index_unavailable_or_capacity_reached:'索引不可用或达到容量上限',usage_overflow:'统计值超过精确范围',original_index_already_used:'原索引不可重复使用',progress_or_authority_rejected:'进度写入或当前权限无法核对',scope_unavailable:'扫描范围不可用',index_unavailable_or_full:'索引不可用或空间不足',mount_changed_or_boundary:'挂载变化或跨越隔离边界',scan_or_authority_unavailable:'扫描条件或当前权限不可用'}[s] ?? `其他原因（${s}）`);
+
+const hostComparisonMetrics = [
+  ['inode_allocated_bytes','已分配块（inode 去重）','bytes'],
+  ['regular_logical_entry_bytes','逻辑大小（按文件路径累计）','bytes'],
+  ['regular_unique_logical_bytes','唯一普通文件逻辑大小','bytes'],
+  ['unique_regular_files','唯一普通文件','count'],
+  ['directory_entries','目录数','count'],
+  ['symbolic_links','符号链接数','count'],
+] as const;
+
+export function hostComparableJobs(base: HostJob, current: HostJob): boolean {
+  return validHostJob(base) && validHostJob(current) && base.id !== current.id
+    && base.state === 'complete' && current.state === 'complete'
+    && base.request.actor_id === current.request.actor_id
+    && Date.parse(base.created_at) <= Date.parse(current.created_at)
+    && sameHostSelection(base.request.selection, current.request.selection);
+}
+
+export function compareHostReports(before: unknown, after: unknown, base: HostJob, current: HostJob) {
+  if (!hostComparableJobs(base,current) || !validHostReply(before,base) || !validHostReply(after,current)
+    || !before.terminal_verified || !after.terminal_verified || before.report_unavailable || after.report_unavailable) return;
+  const oldReport = hostReport(before), newReport = hostReport(after);
+  if (!oldReport || !newReport || oldReport.state !== 'complete' || newReport.state !== 'complete'
+    || !oldReport.enumeration_complete || !newReport.enumeration_complete || !oldReport.index_flushed || !newReport.index_flushed
+    || !hostPath(oldReport.selected_path) || oldReport.selected_path !== newReport.selected_path) return;
+  const [oldStart,oldEnd,newStart,newEnd] = [oldReport.started_at,oldReport.finished_at,newReport.started_at,newReport.finished_at].map(Date.parse);
+  if (oldStart > oldEnd || oldEnd > newStart || newStart > newEnd) return;
+  return {
+    path: newReport.selected_path,
+    baselineID: base.id, currentID: current.id,
+    oldFinished: oldReport.finished_at, newFinished: newReport.finished_at,
+    metrics: hostComparisonMetrics.map(([key,label,unit]) => ({
+      key,label,unit,before: oldReport[key],after: newReport[key],change: (BigInt(newReport[key])-BigInt(oldReport[key])).toString(),
+    })),
+  };
+}
+
+export function formatHostChange(v: string, unit: 'bytes' | 'count'): string {
+  if (!/^-?(0|[1-9][0-9]{0,19})$/.test(v)) return '未知';
+  const negative = v.startsWith('-'), raw = negative ? v.slice(1) : v;
+  if (!hostInteger(raw)) return '未知';
+  const value = unit === 'bytes' ? hostBytes(raw) : raw;
+  return raw === '0' ? value : (negative ? '−' : '+') + value;
+}

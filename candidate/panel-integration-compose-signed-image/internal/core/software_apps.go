@@ -230,8 +230,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "platform-ops" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && version != PlatformMaintenanceAppVersion {
-			return errors.New("维护新版本仅允许固定完整版本1.3.0，拒绝别名或未审核修订")
+		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && !PlatformMaintenanceVersionSupported(version) {
+			return errors.New("维护新版本仅允许固定完整版本 1.3.0 或 1.3.1")
 		}
 	}
 	if id == "website-statistics-v2" {
@@ -393,6 +393,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	}
 	if id == "task-manager" && TaskInventoryVersionSupported(version) && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("任务管理器新版须通过签名应用商店安装或更新")
+	}
+	if id == "platform-ops" && version == PlatformMaintenanceFleetAppVersion && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("批量配置检查须通过签名应用商店安装或更新")
 	}
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")

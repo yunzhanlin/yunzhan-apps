@@ -414,6 +414,9 @@ func (r *remoteBackupGateReader) Read(p []byte) (int, error) {
 			}
 			old, e1 := readString()
 			match := e1 == nil && r.gate.action == 14 && old == r.gate.destination
+			if r.gate.action == 14 && r.gate.destination == "" {
+				match = e1 == nil && filepath.Dir(old) == r.gate.source && core.ValidID(filepath.Base(old))
+			}
 			if r.gate.action == 18 {
 				next, e2 := readString()
 				match = e1 == nil && e2 == nil && old == r.gate.source && next == r.gate.destination

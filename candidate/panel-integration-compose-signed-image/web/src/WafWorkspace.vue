@@ -25,7 +25,8 @@ import { wafApplyTaskOutcome, wafQueuedApplyID, wafCommittedConfiguration, type 
 import { readWafSites, type WafSiteChoice } from "./wafSites";
 import { softwareInstallState } from "./softwareState";
 import { wafConfigurationVersionMatches } from "./wafConfigurationVersion";
-type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
+import { wafDraft, wafReportSearch, wafReportScope, type WAFDraft, type WAFRange } from "./wafReportScope";
+type API = <T>(path: string, method?: string, body?: unknown, key?: string, signal?: AbortSignal) => Promise<T>;
 interface Entry { id: string; value: string; site_id?: string }
 interface Rule { id: string; name: string; site_id?: string; field: string; operator: string; value: string; action: string; enabled: boolean }
 interface SitePolicy { site_id: string; mode: string; rate_per_second: number; burst: number; cc_enabled?: boolean; groups?: Record<string, boolean> }
@@ -138,6 +139,27 @@ const verifiedEngines = computed(() => engines.value.filter(x => x.state === "re
 const bodyDefault = (): BodyPolicy => ({ mode: "observe", paranoia_level: 1, inbound_threshold: 5, body_limit_kib: 1024, non_file_limit_kib: 256, json_depth: 64, argument_limit: 256 });
 const buildState = (s: string) => ({ queued:"排队", running:"构建中", ready:"程序已验证", succeeded:"构建任务完成", failed:"构建失败", needs_attention:"需要核对" }[s] || s);
 const filter = ref({ site_id: "", ip: "", rule: "", action: "" }), range = ref<[Date, Date]>(), page = ref(1), limit = 50;
+const confirmedReport=ref<{draft:WAFDraft;range:WAFRange}>();
+const reportError=ref("");
+const reportDraft=()=>wafDraft(filter.value,range.value);
+const reportScopeChanged=computed(()=>{
+  if(!confirmedReport.value)return false;
+  try{return JSON.stringify(confirmedReport.value.draft)!==JSON.stringify(reportDraft());}
+  catch{return true;}
+});
+const reportCanExport=computed(()=>!!report.value&&!!confirmedReport.value&&!reportScopeChanged.value&&!reportBusy.value&&status.value?.installed===true);
+const reportEmptyLabel=computed(()=>report.value?'没有符合已返回范围的真实事件':reportBusy.value?'正在读取真实事件…':'尚未取得可核对的事件报告');
+const reportScopeText=computed(()=>{
+  if(!report.value||!confirmedReport.value)return "";
+  const d=confirmedReport.value.draft;
+  return [d.site_id?siteName(d.site_id):"全部站点",d.ip||"全部来源",d.rule?reasonName(d.rule):"全部规则",
+    d.action==="block"?"已阻断":d.action==="observe"?"仅观察":"全部动作"].join(" · ");
+});
+let reportController:AbortController|undefined;
+watch(()=>props.actor,()=>{
+  reportController?.abort();reportController=undefined;reportBusy.value=false;
+  report.value=undefined;confirmedReport.value=undefined;reportError.value="";page.value=1;
+},{flush:"sync"});
 const listKind = ref("ip_deny"), listScope = ref(""), listValue = ref(""), siteSearch = ref(""), selectedSite = ref("");
 const newRule = ref<Omit<Rule, "id">>({ name: "", site_id: "", field: "uri", operator: "contains", value: "", action: "block", enabled: true });
 const newCC = ref<Omit<CCRule, "id">>({ site_id: "", path: "", prefix: false, rate_per_second: 5, burst: 10, enabled: true });
@@ -184,19 +206,28 @@ async function loadConfig() {
   cfg.value = clone(out.settings); applied.value = clone(out.settings); status.value = out.status; implementation.value = out.implementation_version;
   return true;
 }
-function reportURL(exportAll = false) {
-  const q = new URLSearchParams({ page: String(exportAll ? 1 : page.value), limit: String(exportAll ? 5000 : limit) });
-  for (const [k, v] of Object.entries(filter.value)) if (v) q.set(k, v);
-  if (range.value) { q.set("from", range.value[0].toISOString()); q.set("to", range.value[1].toISOString()); }
-  return `${endpoint("report")}?${q}`;
+function reportURL(draft:WAFDraft,page:number,limit:number,window?:WAFRange) {
+  return endpoint("report")+"?"+wafReportSearch(draft,page,limit,window);
 }
-async function refreshReport(reset = false) {
-  if (!status.value?.installed || reportBusy.value) return;
-  if (reset) page.value = 1;
-  reportBusy.value = true;
-  try { report.value = await props.api<Report>(reportURL()); }
-  catch (e) { error.value = (e as Error).message; }
-  finally { reportBusy.value = false; }
+async function refreshReport(reset = false, requestedPage?:number) {
+  if (disposed || !status.value?.installed || reportBusy.value) return;
+  const previous=confirmedReport.value;
+  const changingPage=requestedPage!==undefined;
+  if(changingPage && (!previous || reportScopeChanged.value || requestedPage===page.value))return;
+  const nextPage=changingPage?requestedPage:reset||!previous?1:page.value;
+  const active=new AbortController();reportController=active;reportBusy.value=true;reportError.value="";
+  const actor=props.actor;
+  const window=changingPage?previous?.range:undefined;
+  try {
+    const draft=reportDraft();
+    const result=await props.api<Report>(reportURL(draft,nextPage,limit,window),"GET",undefined,undefined,active.signal);
+    if(disposed||active.signal.aborted||reportController!==active||props.actor!==actor)return;
+    const actual=wafReportScope(result,draft,nextPage,limit,window);
+    if(!actual)throw Error("服务器返回的事件报告与本次筛选、时间或分页不符。");
+    confirmedReport.value={draft,range:actual};report.value=result;page.value=nextPage;
+  }catch(cause){
+    if(reportController===active&&!active.signal.aborted)reportError.value=cause instanceof Error?cause.message:"事件查询失败。";
+  }finally{if(reportController===active){reportController=undefined;reportBusy.value=false;}}
 }
 async function refreshHistory() { try { history.value = (await props.api<{ entries: History[] }>(endpoint("history"))).entries; } catch (e) { error.value = (e as Error).message; } }
 async function refreshEngines() { if (apache) return; engines.value = (await props.api<{entries: EngineStatus[]}>(endpoint("engines"))).entries; }
@@ -389,9 +420,23 @@ async function importConfig() {
   } catch (e) { error.value = (e as Error).message; } finally { busy.value = false; }
 }
 function download(name: string, value: unknown) { const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" })); const a = document.createElement("a"); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 500); }
-async function exportLogs() { if (reportBusy.value) return; reportBusy.value = true; try { download("yunzhan-waf-events.json", await props.api<Report>(reportURL(true))); } catch (e) { error.value = (e as Error).message; } finally { reportBusy.value = false; } }
+async function exportLogs() {
+  if(!reportCanExport.value||!confirmedReport.value||disposed)return;
+  const original=confirmedReport.value;
+  const actor=props.actor;
+  const active=new AbortController();reportController=active;reportBusy.value=true;reportError.value="";
+  try{
+    const result=await props.api<Report>(reportURL(original.draft,1,5000,original.range),"GET",undefined,undefined,active.signal);
+    if(disposed||active.signal.aborted||reportController!==active||props.actor!==actor)return;
+    if(reportScopeChanged.value || !wafReportScope(result,original.draft,1,5000,original.range))
+      throw Error("筛选条件已改变，或导出报告与已核对范围不符；未生成文件。");
+    download("yunzhan-waf-events.json",result);
+  }catch(cause){
+    if(reportController===active&&!active.signal.aborted)reportError.value=cause instanceof Error?cause.message:"事件导出失败。";
+  }finally{if(reportController===active){reportController=undefined;reportBusy.value=false;}}
+}
 onMounted(refresh);
-onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if(bodyRotationTimer)clearTimeout(bodyRotationTimer); });
+onUnmounted(() => { disposed=true; reportController?.abort(); if(engineTimer) clearTimeout(engineTimer); if(bodyRotationTimer)clearTimeout(bodyRotationTimer); });
 </script>
 
 <template>
@@ -411,6 +456,8 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
       <el-tabs v-model="tab" class="waf-tabs">
         <el-tab-pane label="原任务恢复" name="request-recovery"><WafApplyRecovery :api="api" :engine="engine" :active="tab==='request-recovery'" :blocked="!!pendingApply || busy" @restore="recoverOriginalApply"/></el-tab-pane>
         <el-tab-pane label="防护概览" name="overview">
+          <p v-if="reportScopeChanged" role="status">筛选已修改；概览仍显示上次核对的范围。</p>
+          <p v-if="reportScopeText" class="waf-muted">{{reportScopeText}}</p>
           <div class="waf-metrics"><article v-for="m in [{name:'防护事件',value:report?.total},{name:'已阻断',value:report?.blocked},{name:'仅观察',value:report?.observed},{name:'来源 IP',value:report?.sources}]" :key="m.name"><span>{{m.name}}</span><strong>{{m.value ?? '—'}}</strong><small>筛选时间内真实日志</small></article></div>
           <p class="waf-muted">{{ report ? `${formatPanelDateTime(report.from)} — ${formatPanelDateTime(report.to)}；已读取最近 ${report.scanned} 条日志` : '安装后读取真实日志，不使用演示数据' }}。概览与防护日志共用筛选条件。</p>
           <el-alert v-if="report?.partial" title="日志读取达到最近 4 MiB / 5000 条上限；统计不是全历史总数，更早记录仍在服务器日志中。" type="warning" :closable="false" />
@@ -517,12 +564,15 @@ onUnmounted(() => { disposed=true; if(engineTimer) clearTimeout(engineTimer); if
         </el-tab-pane>
         <el-tab-pane label="防护日志" name="logs"><p v-if="!apache&&status?.version==='2.6.0'">地域日志来源：<a href="https://db-ip.com/" target="_blank" rel="noopener noreferrer">IP Geolocation by DB-IP Lite</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>。地区为近似网络归属；悬停查看该条记录使用的原签名数据摘要。</p>
           <div class="waf-filter"><el-select v-model="filter.site_id" filterable aria-label="日志站点"><el-option value="" label="全部站点"/><el-option v-for="s in sites" :key="s.id" :value="s.id" :label="s.domain"/></el-select><el-input v-model="filter.ip" placeholder="精确来源 IP" aria-label="来源 IP"/><el-select v-model="filter.action" aria-label="日志动作"><el-option label="全部动作" value=""/><el-option label="已阻断" value="block"/><el-option label="仅观察" value="observe"/></el-select><el-select v-model="filter.rule" filterable aria-label="命中规则"><el-option label="全部规则" value=""/><el-option v-for="r in [...groups.map(g=>({id:g.id,name:g.name})),...cfg.policy.rules.map(r=>({id:`custom-${r.id}`,name:r.name})),...(!apache ? [{id:'cc',name:'CC 限速'},{id:'country',name:'国家 / 地区策略'}] : apacheCCSupported ? [{id:'cc',name:'CC 限速'},{id:'cc-capacity',name:'CC 计数空间不足'},{id:'cc-unavailable',name:'CC 状态暂不可用'}] : []),{id:'ip-deny',name:'IP 黑名单'},{id:'url-deny',name:'URL 黑名单'},{id:'ua-deny',name:'UA 黑名单'}]" :key="r.id" :label="r.name" :value="r.id"/></el-select></div>
-          <div class="waf-filter"><el-date-picker v-model="range" type="datetimerange" start-placeholder="开始时间" end-placeholder="结束时间"/><el-button :loading="reportBusy" @click="refreshReport(true)">查询</el-button><el-button :disabled="reportBusy || !status?.installed" @click="exportLogs">导出筛选结果</el-button></div>
+          <div class="waf-filter"><el-date-picker v-model="range" type="datetimerange" start-placeholder="开始时间" end-placeholder="结束时间"/><el-button :loading="reportBusy" @click="refreshReport(true)">查询</el-button><el-button :disabled="!reportCanExport" @click="exportLogs">导出筛选结果</el-button></div>
+          <p v-if="reportError" role="alert">{{reportError}}<template v-if="report"> 下方保留上次核对结果。</template></p>
+          <p v-if="reportScopeChanged" role="status">筛选已修改；下方仍为上次核对的结果。请查询后再翻页或导出。</p>
+          <p v-if="reportScopeText && report" class="waf-muted" aria-label="已核对的事件范围">{{reportScopeText}} · {{formatPanelDateTime(report.from)}} 至 {{formatPanelDateTime(report.to)}}</p>
           <el-alert v-if="report?.partial" :title="apache ? '每份日志最多读取最近 4 MiB，合并后最多 5000 条；结果范围有限，导出不等于完整历史备份。' : '此结果来自最近 4 MiB / 5000 条，已截断。导出同样受此上限约束，不等于完整历史备份。'" type="warning" :closable="false"/>
           <el-alert v-if="report?.cc_log_capacity_near_limit" title="CC 日志接近或达到 32 MiB 写入上限，可能已停止记录；防护继续生效。原内容保留，未自动清除。" type="warning" :closable="false"/>
           <el-alert v-if="report?.cc_log_tail_incomplete" title="CC 日志尾部存在不完整记录，追加已停止。原内容保留且未自动修复，防护继续生效。" type="warning" :closable="false"/>
           <p v-if="report?.metadata_best_effort" class="waf-muted">CC 日志采用有界、尽力写入。统计按可用事件计数，写入失败时可能存在缺口，不等同完整流量或独立请求总数。</p>
-          <el-table :data="report?.events || []" v-loading="reportBusy" max-height="350" empty-text="没有符合筛选条件的真实事件"><el-table-column label="时间" width="160"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column prop="site" label="站点" min-width="130" show-overflow-tooltip/><el-table-column prop="ip" label="生效客户端 IP" min-width="130"/><el-table-column v-if="!apache" label="地区 / 数据版本" min-width="170"><template #default="{row}"><el-tooltip v-if="row.country" :content="row.country_data||'未记录原数据摘要'"><span>{{row.country==='--'?'未匹配所选地区':row.country}}</span></el-tooltip><span v-else>未记录</span></template></el-table-column><el-table-column label="原始网络对端" min-width="130"><template #default="{row}">{{row.peer || '未记录'}}</template></el-table-column><el-table-column label="规则" min-width="120"><template #default="{row}">{{reasonName(row.reason)}}</template></el-table-column><el-table-column label="路径" min-width="150" show-overflow-tooltip><template #default="{row}">{{row.path||'—'}}<small v-if="row.path_truncated">（路径已截断）</small></template></el-table-column><el-table-column prop="method" label="方法" width="75"/><el-table-column prop="status" label="状态" width="65"/><el-table-column v-if="!apache || apacheCCSupported" label="CC 结果" min-width="175"><template #default="{row}">{{rateOutcome(row.rate)}}</template></el-table-column><el-table-column label="动作" width="80"><template #default="{row}"><el-tag :type="row.action==='observe'?'info':'danger'">{{row.action==='observe'?'观察':'阻断'}}</el-tag></template></el-table-column></el-table><el-pagination v-model:current-page="page" :page-size="limit" :total="report?.total || 0" layout="total, prev, pager, next" @current-change="refreshReport()"/><p class="waf-muted">默认最近 24 小时，最多查询 90 天。仅记录时间、站点、生效来源 IP、规范化路径和命中原因；Nginx 启用可信代理后、Apache 2.1.0 起额外记录原始网络对端，不保存查询参数、Cookie、UA 或请求体；IPv4 / IPv6 属于敏感运维数据，日志仅管理员可读。</p>
+          <el-table :data="report?.events || []" v-loading="reportBusy" max-height="350" :empty-text="reportEmptyLabel"><el-table-column label="时间" width="160"><template #default="{row}">{{formatPanelDateTime(row.time)}}</template></el-table-column><el-table-column prop="site" label="站点" min-width="130" show-overflow-tooltip/><el-table-column prop="ip" label="生效客户端 IP" min-width="130"/><el-table-column v-if="!apache" label="地区 / 数据版本" min-width="170"><template #default="{row}"><el-tooltip v-if="row.country" :content="row.country_data||'未记录原数据摘要'"><span>{{row.country==='--'?'未匹配所选地区':row.country}}</span></el-tooltip><span v-else>未记录</span></template></el-table-column><el-table-column label="原始网络对端" min-width="130"><template #default="{row}">{{row.peer || '未记录'}}</template></el-table-column><el-table-column label="规则" min-width="120"><template #default="{row}">{{reasonName(row.reason)}}</template></el-table-column><el-table-column label="路径" min-width="150" show-overflow-tooltip><template #default="{row}">{{row.path||'—'}}<small v-if="row.path_truncated">（路径已截断）</small></template></el-table-column><el-table-column prop="method" label="方法" width="75"/><el-table-column prop="status" label="状态" width="65"/><el-table-column v-if="!apache || apacheCCSupported" label="CC 结果" min-width="175"><template #default="{row}">{{rateOutcome(row.rate)}}</template></el-table-column><el-table-column label="动作" width="80"><template #default="{row}"><el-tag :type="row.action==='observe'?'info':'danger'">{{row.action==='observe'?'观察':'阻断'}}</el-tag></template></el-table-column></el-table><el-pagination v-if="report" :current-page="page" :page-size="limit" :total="report.total" :disabled="reportBusy || reportScopeChanged" layout="total, prev, pager, next" @update:current-page="(value:number)=>refreshReport(false,value)"/><p class="waf-muted">默认最近 24 小时，最多查询 90 天。仅记录时间、站点、生效来源 IP、规范化路径和命中原因；Nginx 启用可信代理后、Apache 2.1.0 起额外记录原始网络对端，不保存查询参数、Cookie、UA 或请求体；IPv4 / IPv6 属于敏感运维数据，日志仅管理员可读。</p>
         </el-tab-pane>
         <el-tab-pane label="配置与版本" name="config">
           <el-descriptions :column="3" border><el-descriptions-item label="已安装版本">{{status?.version || '未安装'}}</el-descriptions-item><el-descriptions-item label="处理器版本">{{implementation}}</el-descriptions-item><el-descriptions-item label="配置修订">{{applied?.policy.revision}}</el-descriptions-item></el-descriptions><p>应用商店检查 GitHub 签名目录后提示更新；新版处理器由签名面板提供。WAF 升级会实际迁移并校验规则，不只改版本号。</p>

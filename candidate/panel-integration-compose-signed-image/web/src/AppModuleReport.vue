@@ -8,10 +8,12 @@ import DailyReportSummary from "./DailyReportSummary.vue";
 import PlatformHealthReport from "./PlatformHealthReport.vue";
 import {dailySnapshot} from "./dailyReportView";
 import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } from "./loadBalanceReport";
-import {taskProcessColumns,taskProcessRows} from './taskManager';
+import {taskProcessColumns,taskProcessRows,taskSnapshotExport} from './taskManager';
 import {statisticsHistoryNotice} from './statisticsHistory';
+import StatisticsHistoryCoverage from './StatisticsHistoryCoverage.vue';
 import {diskDirectorySelection,diskFileSelection,diskValueNotice} from './diskUsage';
 import {mobileArtifactURL} from './mobileDelivery';
+import SiteDiagnosisBatch from './SiteDiagnosisBatch.vue';
 const props = defineProps<{ id: string; report: Record<string, any> }>();
 const checks = computed(() => {
   const entries = Object.entries((props.report.checks || {}) as Record<string, Record<string, any>>);
@@ -25,6 +27,21 @@ const diagnosticVerdicts = {
   fail: { label: "失败", type: "danger" },
 } as const;
 const taskQuery=ref(''),taskManagedOnly=ref(false);
+const taskExport = computed(() => props.id === "task-manager"
+  ? taskSnapshotExport(props.report, taskQuery.value, taskManagedOnly.value)
+  : undefined);
+function downloadTaskSnapshot() {
+  if (!taskExport.value?.exported_processes) return;
+  const url = URL.createObjectURL(new Blob([JSON.stringify(taskExport.value, null, 2) + "\n"], { type: "application/json;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "task-manager-process-snapshot.json";
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 const emit = defineEmits<{ select: [row: Record<string, any>] }>();
 const names: Record<string, string> = {
   version: "应用版本",
@@ -270,6 +287,7 @@ const names: Record<string, string> = {
   not_after: "到期时间",
   issuer: "签发者",
   checked_at: "检查时间（UTC）",
+  site_count: "网站数",
   invalid_lines: "跳过无效日志",
   partial: "结果不完整",
   copied: "已复制",
@@ -390,7 +408,10 @@ const names: Record<string, string> = {
   byte_limit: "备份容量上限（字节）",
   transaction_slots_available: "剩余活动事务名额",
   bytes_available: "剩余备份容量",
-  next_transaction_capacity_available: "容量可容纳下次交接（不代表可执行）",
+  next_transaction_capacity_available: "活动备份配额可容纳下次交接",
+  remote_filesystem_capacity_state: "备份文件系统检查",
+  remote_filesystem_available_bytes: "远端文件系统可用空间",
+  remote_filesystem_available_inodes: "远端文件系统可用 inode",
   pending_recovery: "存在待恢复交接",
   pending_archive_recovery: "存在待恢复备份归档（阻止新传输）",
   remote_plans: "远端实时与定时计划",
@@ -544,7 +565,8 @@ const metrics = computed(() =>
 );
 const groups = computed(() =>
   Object.entries({...props.report, ...(props.id==="files-sync" && props.report.job ? {remote_jobs:[props.report.job]} : {}), ...(props.id==="files-sync" && props.report.remote_plan ? {remote_plans:[props.report.remote_plan]} : {}), ...(props.id==="load-balance" && Array.isArray(props.report.http_health) ? {http_transitions:loadBalanceTransitions(props.report.http_health)} : {}), ...(props.id==='nfs-manager' && props.report.config ? {exports:props.report.config.exports} : {}), ...(props.report.deployment ? {deployments: [props.report.deployment]} : {})}).filter(
-    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key),
+    ([key, value]) => Array.isArray(value) && !["site_ids", "mobile_downloads", "menu_catalog"].includes(key)
+      && !(props.id === "site-diagnosis" && key === "diagnoses"),
   ),
 );
 const distributions = computed(() =>
@@ -564,6 +586,7 @@ const info = computed(() =>
       value !== null &&
       value !== undefined &&
       !["scope", "site_id", "filters", "token"].includes(key) &&
+      !(props.id === "website-statistics-v2" && props.report.history_persistent === true && ["history_first_request", "history_last_request", "history_checked_at", "history_worker_checked_at", "history_backlog_bytes", "history_evicted_rows"].includes(key)) &&
       (props.id !== "mobile-pwa" || ["version", "delivery_model", "session_model"].includes(key)) &&
       typeof value !== "object" &&
       !metrics.value.some(([k]) => k === key),
@@ -581,8 +604,12 @@ function format(key: string, value: unknown, row?:Record<string,unknown>): strin
     if(['cpu_percent','read_rate','write_rate'].includes(key) && (typeof value!=='number' || !Number.isFinite(value) || value<0 || !row || row[key==='cpu_percent'?'cpu_available':'io_available']!==true))return '未知';
   }
   if(props.id==="load-balance" && key==="transaction_state")return ({committed:"变更已提交",recovered:"恢复已确认",applying:"变更未完成（不可归档）",restored:"原文件已恢复但原生确认未完成（不可归档）"} as Record<string,string>)[String(value)]||String(value??"—");
+  if (props.id === "files-sync" && key === "remote_filesystem_capacity_state") {
+    return ({available: "已查询", read_only: "文件系统只读", unsupported: "远端未提供容量查询", unavailable: "暂时无法核对"} as Record<string, string>)[String(value)] || "未知";
+  }
   if(props.id==="files-sync" && key==="backup_archive_state")return ({reviewed:"内容已核对（未归档）",prepared:"原归档已持久预留（须显式恢复）",reserved:"原迁移已接受或回执待核对（须显式恢复）",committed:"归档已提交，证据保留"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="backup_files" && Array.isArray(value))return value.map(file=>`${file.name==='previous'?'原文件备份':file.name==='staged'?'保留暂存':file.name} · ${format('bytes',file.bytes)} · ${Number(file.mode).toString(8).padStart(3,'0')}`).join("；")||"空事务目录（仍保留身份）";
+  if (props.id === "files-sync" && key === "outcome" && value === "staging-aborted") return "暂存交接已取消，原目标和暂存证据均保留";
   if(props.id==="files-sync" && key==="last_state")return ({pending:"等待下次定时补查",queueing:"已预留原任务，接受结果待核对",queued:"原任务已排队（未完成）",succeeded:"原任务已完整成功",paused:"已暂停",'paused-error':"异常暂停，需核对原任务",removed:"已移除（证据保留）"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="state")return ({queued:"已排队（未完成）",running:"后台执行中",succeeded:"本次同步已完成",conflicts:"已处理可同步文件，存在保留冲突",failed:"未全部完成或已取消",interrupted:"中断或无法确认，需核对恢复",recovered:"交接已恢复，剩余文件未重传"} as Record<string,string>)[String(value)]||String(value??"—");
   if(props.id==="files-sync" && key==="remote_target" && value && typeof value==="object") {const v=value as Record<string,any>;return `${v.address}:${v.port} · ${v.username} · ${v.root} · 私有备份 ${v.backup_root}`;}
@@ -715,6 +742,7 @@ function mobileDownloadURL(item: unknown): string | undefined {
       <h4>原备份归档与摘要核对</h4>
       <dl><template v-for="(value,key) in report.backup_maintenance" :key="key"><dt>{{ names[String(key)] || key }}</dt><dd>{{ format(String(key),value) }}</dd></template></dl>
     </section>
+    <StatisticsHistoryCoverage v-if="id === 'website-statistics-v2'" :report="report" />
     <el-alert v-if="id === 'website-statistics-v2' && statisticsHistoryNotice(report)"
       type="warning" :title="statisticsHistoryNotice(report)" :closable="false" />
     <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"
@@ -737,13 +765,9 @@ function mobileDownloadURL(item: unknown): string | undefined {
     <AnalyticsLatencyReport v-if="analytics && report.latency !== undefined" :report="report.latency" />
     <AnalyticsGeographyReport v-if="analytics && report.geography !== undefined" :report="report.geography" />
     <el-alert v-if="analytics && report.geography_error" type="warning" :closable="false" :title="String(report.geography_error)" />
-    <template v-if="id === 'site-diagnosis' && Array.isArray(report.diagnoses)">
-      <details v-for="item in report.diagnoses" :key="item.site_id" class="diagnosis-check">
-        <summary>{{ item.report?.domain || item.site_id }}</summary>
-        <AppModuleReport v-if="item.report" id="site-diagnosis" :report="item.report" />
-        <el-alert v-else type="error" :title="item.error || '无法读取站点诊断结果'" :closable="false" />
-      </details>
-    </template>
+    <SiteDiagnosisBatch v-if="id === 'site-diagnosis' && Object.hasOwn(report,'diagnoses')" :report="report">
+      <template #default="{ report: siteReport }"><AppModuleReport id="site-diagnosis" :report="siteReport" /></template>
+    </SiteDiagnosisBatch>
     <template v-if="report.checks">
       <section
         v-for="[key, value] in checks"
@@ -831,6 +855,7 @@ function mobileDownloadURL(item: unknown): string | undefined {
       <div v-if="id==='task-manager'&&key==='processes'" class="task-snapshot-filter" role="region" aria-label="筛选当前进程快照">
         <el-input v-model="taskQuery" aria-label="筛选当前快照的进程名称或 PID" placeholder="进程名称或 PID（当前快照）" maxlength="128" clearable />
         <el-checkbox v-model="taskManagedOnly">仅云栈受管进程（包括不可终止项）</el-checkbox>
+        <el-button :disabled="!taskExport?.exported_processes" @click="downloadTaskSnapshot">下载筛选结果（JSON）</el-button>
         <p role="status">当前筛选 {{taskProcessRows(values,taskQuery,taskManagedOnly).length}} / {{Math.min(values.length,500)}} 条；仅筛选已返回快照，不重新采样，不代表全部进程。点击“刷新报告”核对最新状态。</p>
       </div>
       <p v-if="!values.length">暂无记录。</p>

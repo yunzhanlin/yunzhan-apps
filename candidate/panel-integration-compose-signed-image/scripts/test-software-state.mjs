@@ -41,6 +41,23 @@ test('system hardening refresh releases a completed request after fresh inspecti
   assert.equal(bindings.loading.value,false);
  }
 });
+test('hardening audit export keeps original evidence and distinguishes zero from unknown',async()=>{
+ const { buildHardeningAuditExport: build } = await import('../web/src/hardeningAuditExport.ts');
+ const stamp='2026-11-13T16:40:25+00:00';
+ const row={id:'b'.repeat(32),sha256:'a'.repeat(64),action:'configure',state:'needs_attention',started_at:stamp,
+  from_profile:'baseline',to_profile:'strict',recovery_permitted:true,detail:'original receipt',foreign_secret:'exclude'};
+ const source={format:1,checked_at:stamp,installed:true,healthy:false,version:'1.1.0',profile:'strict',config_matches:false,
+  originals_complete:false,detail:'real readback',retained_temporaries:2,pending:row,history:[row],
+  parameters:[{key:'fs.protected_hardlinks',actual:'0',target:'1',original:'',managed:true,original_known:false,reversible:true,drift:true,detail:''},
+   {key:'kernel.kptr_restrict',actual:'',target:'2',original:'0',managed:false,original_known:true,reversible:true,drift:false,detail:''}]};
+ const result=build(source), report=JSON.parse(result.text);
+ assert.equal(result.filename,'yunzhan-hardening-2026-11-13T164025Z.json');
+ assert.equal(report.checked_at,stamp);assert.equal(report.parameters[0].actual,'0');assert.equal(report.parameters[0].original,null);
+ assert.equal(report.parameters[1].actual,null);assert.equal(report.parameters[1].original,'0');assert.equal(report.parameters[1].target,null);
+ assert.equal(report.pending.id,row.id);assert.equal(report.history[0].sha256,row.sha256);assert.equal(report.pending.finished_at,null);
+ assert(!result.text.includes('foreign_secret'));assert.throws(()=>build({...source,checked_at:'unknown'}),/无法核对/);
+});
+
 test('missing, untrusted and malformed records stay unknown; known absence and legacy flags stay distinct',()=>{
  for(const row of bad)assert.equal(softwareInstallState(row),'unknown');
  assert.equal(softwareInstallState(known),'absent');
@@ -91,6 +108,26 @@ test('store and security dialog expose unknown separately and keep destructive c
  assert(securitySource.includes('不能据此认定未安装'));
  assert(securitySource.includes(':disabled="!stateKnown || busy"'));
  assert(securitySource.includes('v-if="installed" type="danger"'));
+});
+test('firewall paging and export stay within the actual returned time and filter receipt',async()=>{
+ const {wafDraft,wafReportScope,wafReportSearch}=await import('../web/src/wafReportScope.ts');
+ const filters={site_id:'a'.repeat(32),ip:' 192.0.2.2 ',rule:'cc',action:'observe'};
+ const draft=wafDraft(filters);
+ assert.equal(draft.ip,'192.0.2.2');
+ const from='2026-11-12T15:04:09Z',to='2026-11-13T15:04:09Z';
+ const response={from,to,filters:draft,page:1,limit:50,total:60,scanned:80,blocked:0,observed:60,sources:1,partial:true,events:Array(50).fill({})};
+ const window=wafReportScope(response,draft,1,50);
+ assert.deepEqual(window,{from,to});
+ const query=new URLSearchParams(wafReportSearch(draft,2,50,window));
+ assert.equal(query.get('from'),from);assert.equal(query.get('to'),to);assert.equal(query.get('ip'),draft.ip);
+ assert.deepEqual(wafReportScope({...response,page:2,events:Array(10).fill({})},draft,2,50,window),window);
+ assert.deepEqual(wafReportScope({...response,limit:5000,events:Array(60).fill({})},draft,1,5000,window),window);
+ for(const reply of [{...response,filters:{...draft,site_id:'b'.repeat(32)}},{...response,to:'2026-11-13T15:04:10Z'},{...response,observed:0},{...response,limit:5000},{...response,events:[]}]){
+  assert.equal(wafReportScope(reply,draft,1,50,window),undefined);
+ }
+ const explicit=wafDraft(filters,[new Date('2026-11-12T15:04:09.120Z'),new Date('2026-11-13T15:04:09.123Z')]);
+ assert.equal(explicit.from,from);assert.equal(explicit.to,to);
+ assert.throws(()=>wafDraft(filters,[new Date(to),new Date(from)]),/开始时间/);
 });
 test('actual WAF config load refuses unknown health and saved data without starting other reads or dropping original ticket',async()=>{
  for(const row of bad){

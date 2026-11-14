@@ -21,7 +21,7 @@ func analyticsClickViewport(value string) bool {
 }
 
 func (s *Store) analyticsLayoutInstalled(ctx context.Context) bool {
-	return s.analyticsHasReceipt(ctx, AnalyticsLayoutHeatmapAppVersion, appcatalog.AnalyticsGeographyVersion)
+	return s.analyticsHasReceipt(ctx, AnalyticsLayoutHeatmapAppVersion, appcatalog.AnalyticsGeographyVersion, appcatalog.AnalyticsSessionActivityVersion)
 }
 
 func (s *Store) analyticsHasReceipt(ctx context.Context, versions ...string) bool {

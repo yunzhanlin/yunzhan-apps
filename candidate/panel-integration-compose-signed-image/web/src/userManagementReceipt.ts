@@ -11,7 +11,25 @@ export function userMutationReplyMatches(action: UserMutation, username: unknown
     Object.keys(value).length === 3 && Object.hasOwn(value, 'username') && Object.hasOwn(value, 'action') && Object.hasOwn(value, 'ok') &&
     value.username === username && value.action === action && value.ok === true;
 }
-export function userMutationNeedsRead(observation: UserMutationObservation | undefined, action: string): boolean {
+export type PendingUserMutation = {
+  action: UserMutation;
+  state: 'unverified' | 'refresh_failed';
+};
+
+export function userMutationStorageKey(actor: string): string | undefined {
+  if (/^[a-f0-9]{32}$/.test(actor)) return `panel-user-mutation-v1:${actor}`;
+}
+
+export function parsePendingUserMutation(raw: string | null): PendingUserMutation | undefined {
+  if (raw === null) return;
+  if (raw.length > 128) throw Error('原账户操作的核对标记无法读取');
+  const value: unknown = JSON.parse(raw);
+  if (!object(value) || Object.keys(value).length !== 2 || typeof value.action !== 'string' || !isUserMutation(value.action) ||
+      (value.state !== 'unverified' && value.state !== 'refresh_failed')) throw Error('原账户操作的核对标记无法读取');
+  return { action: value.action, state: value.state };
+}
+
+export function userMutationNeedsRead(observation: Pick<UserMutationObservation,'state'> | undefined, action: string): boolean {
   return isUserMutation(action) && !!observation && observation.state !== 'acknowledged';
 }
 export function userManagementListKnown(value: unknown): boolean {
