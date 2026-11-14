@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24modulefilesmountboundarycandidate158",
+  "source_head": "69695eb83cdbca6fa5074964b9b976a211690859",
+  "source_inputs_sha256": "93392be60194f943afb88d0e37764ef1b86262efd1b8c5bb989b0f7edd9a13c5",
+  "source_sdk_tree": "4be6ade61ee4667fd0537283bf8403db2ae9c870",
+  "release_id": 445116261,
+  "release_assets": {
+    "module-site-mount-boundary-signed-release.py": {
+      "id": 746713388,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-amd64.tar.gz": {
+      "id": 746716630,
+      "bytes": 24058444,
+      "sha256": "b5f8750d91ab3683204f3729b0bd98bb214623e90fb2c05e665212a29cb362e0"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-amd64.tar.gz.manifest": {
+      "id": 746713295,
+      "bytes": 195,
+      "sha256": "3175beb25062e736e0888273f86de9ac13b19f837e64025b5bb10c45e6958b2c"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-amd64.tar.gz.sig": {
+      "id": 746713191,
+      "bytes": 64,
+      "sha256": "10bbb89f60855771b078ee6110fe5380b55bd0e226950da3fa3da8cd21172d75"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-arm64.tar.gz": {
+      "id": 746713426,
+      "bytes": 22266218,
+      "sha256": "bb183717d28be6909f23ee0cd9780b592a8e390d60c5d2f63966173af3c19f0b"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-arm64.tar.gz.manifest": {
+      "id": 746713345,
+      "bytes": 195,
+      "sha256": "73bd8952681834573f3780094392d8df7a872378d7d258f08d41369dcb02ad27"
+    },
+    "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-arm64.tar.gz.sig": {
+      "id": 746713225,
+      "bytes": 64,
+      "sha256": "4e5576fcae2bcf23111e7c7a7837cfd3732c1fb8446e3edb85867790e13dd2d6"
+    },
+    "release-signing-dev.pub": {
+      "id": 746713246,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-modulefilesmountboundarycandidate158-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24modulefilesmountboundarycandidate158-linux-arm64.tar.gz"
+    }
+  }
+}
