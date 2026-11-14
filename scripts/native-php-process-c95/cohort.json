@@ -1,0 +1,84 @@
+{
+  "source_head": "c17aa525ad01abd061f22452e706b4e4f3280bde",
+  "native_fixture_parent": "c17aa525ad01abd061f22452e706b4e4f3280bde",
+  "source_inputs_sha256": "0ce544dcd43003d7525e4036ced3b0c59151c71a65e3aa2a6f615a134753318e",
+  "version": "0.1.0-dev.proapps24sitebalancecandidate160",
+  "served_head": "3a09dfaa05befb115224a2b7672df09fb1b5f96c",
+  "authorized_catalogues": [
+    "3a09dfaa05befb115224a2b7672df09fb1b5f96c"
+  ],
+  "items": {
+    "load-balance": {
+      "id": "load-balance",
+      "name": "\u8d1f\u8f7d\u5747\u8861 \u00b7 Load Balance",
+      "category": "professional",
+      "version": "1.9.0",
+      "summary": "\u4fdd\u7559 HTTP/HTTPS \u5065\u5eb7\u8def\u7531\u3001\u4e8b\u52a1\u3001\u5f52\u6863\u548c\u544a\u8b66\uff1b\u65b0\u589e\u4e13\u7528\u65e0\u80fd\u529b\u8eab\u4efd\u7684\u72ec\u7acb TCP/UDP \u56de\u73af\u4ee3\u7406\u3001\u53cc\u4ee3\u6392\u7a7a\u4e0e\u6309\u534f\u8bae/\u5730\u5740/\u7aef\u53e3\u7ea6\u675f\u7684\u51fa\u7ad9\u9632\u706b\u5899\u3002\u4fee\u590d ARM64 nft \u5143\u4fe1\u606f\u8bc6\u522b\u3002\u9700\u5bf9\u5e94\u5b8c\u6574\u7b7e\u540d\u9762\u677f\uff1b\u672c\u7248\u4e0d\u5f00\u653e\u516c\u7f51\u76d1\u542c\u6216\u81ea\u52a8\u5f00\u673a\u542f\u7528\uff0c\u5386\u53f2\u6216\u4e2d\u65ad\u4efb\u52a1\u4ec5\u53ef\u89c2\u5bdf\uff0c\u6062\u590d\u987b\u65b0\u7684\u539f\u59cb\u6388\u6743\u3002",
+      "stage": "ready",
+      "risk": "privileged",
+      "provider": "panel-module",
+      "target": "load-balance",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u4fdd\u7559\u539f HTTP/HTTPS \u52a0\u6743\u8def\u7531\u3001\u5907\u7528\u8282\u70b9\u3001IP \u7c98\u6ede\u548c\u4e25\u683c\u540e\u7aef TLS\uff0c\u4e0d\u6539\u5199\u5df2\u6709\u914d\u7f6e",
+        "\u4fdd\u7559\u8fde\u7eed\u5065\u5eb7\u9608\u503c\u6458\u9664\u6062\u590d\u3001\u663e\u5f0f\u6d41\u91cf\u5f00\u5173\u3001\u79c1\u6709\u5f52\u6863\u4e0e\u4f1a\u8bdd\u7ed1\u5b9a\u62a5\u544a\u4e0b\u8f7d",
+        "\u4fdd\u7559\u5065\u5eb7\u3001\u5207\u6d41/\u540e\u53f0\u53ca\u6765\u6e90\u4e09\u8303\u56f4 HMAC \u6216 TLS SMTP \u544a\u8b66\uff0c\u4e0d\u6269\u5927\u65e7\u901a\u9053\u6388\u6743\u8303\u56f4",
+        "TCP/UDP \u4ec5\u76d1\u542c\u56de\u73af\uff1b\u72ec\u7acb Nginx \u8fdb\u7a0b\uff0c\u8f6e\u8be2\u3001\u6700\u5c11\u8fde\u63a5\u3001\u6e90 IP \u7b56\u7565\u548c\u5907\u7528\u8282\u70b9",
+        "TCP \u4e8c\u8fdb\u5236\u4f20\u8f93\u4e0e\u534a\u5173\u95ed\uff1bUDP \u660e\u786e\u8bf7\u6c42/\u54cd\u5e94\u8fb9\u754c\uff0c\u5931\u8d25\u4e0d\u91cd\u653e\u4e1a\u52a1\u6570\u636e\u62a5",
+        "\u4e13\u7528\u9501\u5b9a\u8d26\u6237\u3001\u96f6\u80fd\u529b\u3001NNP \u548c\u56fa\u5b9a cgroup \u8d44\u6e90\u8fb9\u754c\uff1b\u4e0d\u501f\u7528\u666e\u901a\u7f51\u7ad9\u8fdb\u7a0b\u8eab\u4efd",
+        "\u5b8c\u6574\u5f53\u524d/\u6392\u7a7a\u4e24\u4ee3\u51fa\u7ad9\u6388\u6743\uff0c\u7cbe\u786e\u5339\u914d\u4e13\u7528 UID\u3001\u8fde\u63a5\u65b9\u5411\u3001\u534f\u8bae\u3001\u540e\u7aef IP \u548c\u7aef\u53e3",
+        "\u8bc6\u522b\u4e3b\u6d41 nft \u7248\u672c\u7684\u5143\u4fe1\u606f\u683c\u5f0f\uff0c\u4f46\u81ea\u6709\u8868\u3001\u94fe\u3001\u89c4\u5219\u548c\u53e5\u67c4\u4ecd\u987b\u5b8c\u6574\u4e25\u683c\u6838\u5bf9",
+        "\u539f\u8bf7\u6c42\u3001\u7b7e\u540d\u76ee\u5f55\u548c\u6e05\u5355\u3001\u6267\u884c\u4efb\u52a1\u53ca\u5f53\u524d\u64cd\u4f5c\u8005\u6388\u6743\u7ed1\u5b9a\uff0c\u89c2\u5bdf\u5386\u53f2\u4e0d\u91cd\u653e\u5b89\u88c5\u6216\u6d41\u91cf\u64cd\u4f5c",
+        "\u72ec\u7acb\u914d\u7f6e\u3001\u5185\u6838\u89c2\u5bdf\u548c\u5b89\u88c5\u56de\u6267\uff1b\u4fee\u6539\u3001\u5220\u9664\u3001\u505c\u7528\u548c\u6392\u7a7a\u4fdd\u7559\u9012\u589e\u4fee\u8ba2\u4e0e\u539f\u59cb\u8bc1\u636e",
+        "\u53cc\u4ee3\u539f\u5b50\u89c4\u5219\u66ff\u6362\uff1b\u6392\u7a7a\u5b8c\u6210\u5e76\u6838\u5bf9\u65e7\u8fdb\u7a0b\u9000\u51fa\u540e\u624d\u9000\u5f79\u65e7\u8282\u70b9\uff0c\u65e0\u81ea\u52a8\u65e0\u9650\u91cd\u542f",
+        "\u91cd\u542f\u540e\u5fc5\u987b\u65b0\u6388\u6743\u5e76\u6838\u5bf9\u5b8c\u6574\u8d26\u6237\u8fdb\u7a0b\u53ca\u5185\u6838\u72b6\u6001\uff1b\u4e0d\u81ea\u52a8\u542f\u7528\u516c\u7f51\u6216\u5f00\u673a\u670d\u52a1"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/load-balance/1.9.0/manifest.json",
+      "sha256": "a50afd7d2298a6229dcd0dcebdec8fca9684d9d64ee786b62577c8d3ba21038f"
+    },
+    "nginx": {
+      "id": "nginx",
+      "name": "Nginx",
+      "category": "deployment",
+      "version": "1.30.6-compat1",
+      "summary": "\u5b89\u88c5\u53ef\u5e76\u5b58\u7684 Nginx \u8fd0\u884c\u65f6\uff0c\u652f\u6301\u7ad9\u70b9\u7ed1\u5b9a\u3001\u914d\u7f6e\u6821\u9a8c\u548c\u5b89\u5168\u56de\u6eda\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "nginx-1.30.6",
+      "manage_route": "sites",
+      "capabilities": [
+        "\u6e90\u7801\u6821\u9a8c",
+        "\u7ad9\u70b9\u914d\u7f6e",
+        "\u70ed\u91cd\u8f7d",
+        "\u5931\u8d25\u56de\u6eda"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx/1.30.6-compat1/manifest.json",
+      "sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8"
+    }
+  },
+  "payload_files": {
+    "scripts/native-php-process-c95/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php-process-c95/download.py": "9afd87f490f5f3c9a2ed4423a69415a20fd73a78b8b8330892d6f6a00dd33863",
+    "scripts/native-php-process-c95/php-process.py": "9654adb228bf084dae0f00e44da23701bafcce0f157703a707d9251c9ebb94b8",
+    "scripts/native-php-process-c95/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    ".github/workflows/site-balance-c160-https-qa4.yml": "43665591df77973cda27e5e647411f111dbc8a0c351419595d2a4d4d4c448e9d",
+    "scripts/native-php-process-c95/dispatch.json": "46b714a7fcedab91bc313706c888482af8a39d65d071071910eb2047e07e57fd",
+    "scripts/native-php-process-c95/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php-process-c95/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+  },
+  "changed_payload_files": [
+    ".github/workflows/site-balance-c160-https-qa4.yml",
+    "scripts/native-php-process-c95/bootstrap-original-install.py",
+    "scripts/native-php-process-c95/dispatch.json",
+    "scripts/native-php-process-c95/download.py",
+    "scripts/native-php-process-c95/finish.py",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py",
+    "scripts/native-php-process-c95/original-signed-release.py",
+    "scripts/native-php-process-c95/php-process.py",
+    "scripts/native-php-process-c95/recipient.pem"
+  ],
+  "mode": "signed-site-balance",
+  "Main_changed": false
+}
