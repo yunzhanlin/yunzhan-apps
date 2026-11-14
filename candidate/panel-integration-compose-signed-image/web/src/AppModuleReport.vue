@@ -11,6 +11,7 @@ import { loadBalanceEntryRow, loadBalanceNodeSummary, loadBalanceTransitions } f
 import {taskProcessColumns,taskProcessRows,taskSnapshotExport} from './taskManager';
 import {statisticsHistoryNotice} from './statisticsHistory';
 import StatisticsHistoryCoverage from './StatisticsHistoryCoverage.vue';
+import StatisticsArchiveInventory from './StatisticsArchiveInventory.vue';
 import {diskDirectorySelection,diskFileSelection,diskValueNotice} from './diskUsage';
 import {mobileArtifactURL} from './mobileDelivery';
 import SiteDiagnosisBatch from './SiteDiagnosisBatch.vue';
@@ -746,6 +747,7 @@ function mobileDownloadURL(item: unknown): string | undefined {
       <dl><template v-for="(value,key) in report.backup_maintenance" :key="key"><dt>{{ names[String(key)] || key }}</dt><dd>{{ format(String(key),value) }}</dd></template></dl>
     </section>
     <StatisticsHistoryCoverage v-if="id === 'website-statistics-v2'" :report="report" />
+    <StatisticsArchiveInventory v-if="id === 'website-statistics-v2'" :report="report" />
     <el-alert v-if="id === 'website-statistics-v2' && statisticsHistoryNotice(report)"
       type="warning" :title="statisticsHistoryNotice(report)" :closable="false" />
     <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"

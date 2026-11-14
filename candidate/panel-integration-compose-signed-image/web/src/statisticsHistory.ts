@@ -68,3 +68,53 @@ export function statisticsCoverage(report: Record<string, unknown>): StatisticsC
    worker, workerCheckedAt: workerCheckedAt || '',
  };
 }
+
+export const archiveStates = {
+ pending: '等待校验',
+ deferred: '本轮未完成校验',
+ reading: '已校验，尚未读完',
+ complete: '已读完',
+ changed: '内容变化，已阻断',
+ unreadable: '无法校验，已阻断',
+ missing: '原文件缺失',
+} as const;
+
+type ArchiveState = keyof typeof archiveStates;
+type ArchiveProgress = {read_bytes: number; expanded_bytes: number; skipped_lines: number; sha256: string};
+type ArchiveSource = {name: string; state: ArchiveState; compressed_bytes?: number; verified?: ArchiveProgress};
+type StatisticsArchiveInventory = {site_id: string; checked_at: string; sources: ArchiveSource[]; omitted: number};
+
+function objectRecord(value: unknown): Record<string, unknown> | undefined {
+ if (value && typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>;
+}
+
+export function statisticsArchiveInventory(report: Record<string, unknown>): StatisticsArchiveInventory | undefined {
+ const inventory = objectRecord(report.history_archive_inventory);
+ if (report.history_gzip_import_enabled !== true || !inventory || typeof report.site_id !== 'string' || !/^[0-9a-f]{32}$/.test(report.site_id) || inventory.site_id !== report.site_id) return;
+ const checkedAt = utcTimestamp(inventory.checked_at);
+ const omitted = safeCount(inventory.omitted);
+ if (!checkedAt || checkedAt !== report.history_checked_at || omitted === undefined || !Array.isArray(inventory.sources) || inventory.sources.length > 512) return;
+ const prefix = 'panel-' + report.site_id + '.access.log';
+ const sources: ArchiveSource[] = [];
+ for (const value of inventory.sources) {
+  const row = objectRecord(value);
+  if (!row || typeof row.name !== 'string' || !row.name.startsWith(prefix) ||
+      !/^(?:\.[1-9]\d{0,3}|\.\d{8}-\d{6}|-\d{8})\.gz$/.test(row.name.slice(prefix.length)) ||
+      typeof row.state !== 'string' || !Object.hasOwn(archiveStates, row.state)) return;
+  const state = row.state as ArchiveState;
+  const compressedBytes = safeCount(row.compressed_bytes);
+  if (state === 'missing' ? row.compressed_bytes !== undefined : compressedBytes === undefined) return;
+  const source: ArchiveSource = {name: row.name, state};
+  if (compressedBytes !== undefined) source.compressed_bytes = compressedBytes;
+  if (state === 'complete' || state === 'reading') {
+   const proof = objectRecord(row.verified);
+   const read = safeCount(proof?.read_bytes), expanded = safeCount(proof?.expanded_bytes), skipped = safeCount(proof?.skipped_lines);
+   const sha256 = proof?.sha256;
+   if (read === undefined || expanded === undefined || skipped === undefined || skipped > read ||
+       read > expanded || (state === 'complete') !== (read === expanded) || typeof sha256 !== 'string' || !/^[0-9a-f]{64}$/.test(sha256)) return;
+   source.verified = {read_bytes: read, expanded_bytes: expanded, skipped_lines: skipped, sha256};
+  } else if (row.verified !== undefined) return;
+  sources.push(source);
+ }
+ return {site_id: report.site_id, checked_at: checkedAt, sources, omitted};
+}

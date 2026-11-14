@@ -31,6 +31,7 @@ import (
 const statisticsHistoryDays = 30
 const statisticsHistoryRows = 250000
 const statisticsHistoryStreams = 4096
+const statisticsHistorySiteSources = 512
 const statisticsHistoryBatchBytes int64 = 4 << 20
 const statisticsHistoryBatchRows = 10000
 const statisticsHistoryReceipts = 1000000
@@ -224,6 +225,7 @@ type statisticsIngestion struct {
 	UnsupportedRotations int
 	DeferredArchives     int
 	Updated              string
+	ArchiveInventory     *statisticsArchiveInventory
 }
 
 // Only absent, fully consumed, non-conflicting cursors can retire. A request
@@ -396,7 +398,7 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		return names[i] < names[j]
 	})
 	sort.Strings(archives)
-	if len(names)+len(archives)+result.UnsupportedRotations > 512 {
+	if len(names)+len(archives)+result.UnsupportedRotations > statisticsHistorySiteSources {
 		return result, errors.New("单网站访问日志超过 512 份，未覆盖读取进度")
 	}
 	result.Sources = len(names) + len(archives)
@@ -588,21 +590,24 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		}
 	}
 	if schema == 2 {
+		result.ArchiveInventory = &statisticsArchiveInventory{
+			SiteID: id, CheckedAt: result.Updated, Sources: make([]statisticsArchiveSource, 0, len(archives)),
+		}
 		if err = s.ingestStatisticsGzipArchives(ctx, tx, root, archives, discovered, id, now, &budget, &rowBudget, &receiptCount, &streamCount, seen, &result); err != nil {
 			return result, err
 		}
 	}
 	// Previously unread files removed by an external rotation cannot be
 	// reconstructed. Keep their cursor and report the gap rather than zero.
-	rows, err := tx.QueryContext(ctx, "SELECT identity,offset,size,blocked,invalid FROM access_streams WHERE site=?", id)
+	rows, err := tx.QueryContext(ctx, "SELECT identity,name,offset,size,blocked,invalid FROM access_streams WHERE site=? ORDER BY name,identity", id)
 	if err != nil {
 		return result, err
 	}
 	for rows.Next() {
-		var identity string
+		var identity, name string
 		var offset, size, invalid int64
 		var blocked int
-		if err = rows.Scan(&identity, &offset, &size, &blocked, &invalid); err != nil {
+		if err = rows.Scan(&identity, &name, &offset, &size, &blocked, &invalid); err != nil {
 			rows.Close()
 			return result, err
 		}
@@ -611,6 +616,9 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 			if size > offset || blocked != 0 {
 				result.Blocked++
 				result.Backlog = statisticsAddBacklog(result.Backlog, max(int64(0), size-offset))
+				if result.ArchiveInventory != nil && strings.HasPrefix(identity, "gzip:") {
+					result.ArchiveInventory.add(statisticsArchiveSource{Name: name, State: "missing"})
+				}
 			}
 		}
 	}
@@ -632,6 +640,11 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		if err != nil {
 			return result, err
 		}
+	}
+	if inventory := result.ArchiveInventory; inventory != nil {
+		sort.SliceStable(inventory.Sources, func(i, j int) bool {
+			return inventory.Sources[i].Name < inventory.Sources[j].Name
+		})
 	}
 	for name, original := range discovered {
 		current, e := root.Lstat(name)
@@ -785,6 +798,9 @@ func statisticsHistoryReport(ctx context.Context, db *sql.DB, in core.AppModuleI
 	out["history_unsupported_rotation_sources"] = state.UnsupportedRotations
 	out["history_missing_log"] = state.Missing > 0
 	out["history_invalid_lines"] = state.Invalid
+	if schema == 2 && state.ArchiveInventory != nil && state.ArchiveInventory.SiteID == in.SiteID {
+		out["history_archive_inventory"] = state.ArchiveInventory
+	}
 	out["history_evicted_rows"] = evicted
 	out["history_expired_streams"] = state.ExpiredStreams
 	out["history_duplicate_requests"] = state.Duplicates

@@ -99,19 +99,49 @@ func TestStatisticsArchiveRuntimeBadCacheAllowsLaterSourceAndLegacyGap(t *testin
 	corrupt[len(corrupt)-8] ^= 1
 	statisticsArchiveTestWrite(t, bad, corrupt, now)
 	good := p + "." + now.Format("20060102-150405") + ".gz"
-	statisticsArchiveTestWrite(t, good, statisticsTestGzip(t, []byte(statisticsIDTestLine(now, "/accepted", "00000000000000000000000000000003")+statisticsTestLine(now, "/no-proof-id"))), now)
+	contents := []byte(statisticsIDTestLine(now, "/accepted", "00000000000000000000000000000003") + statisticsTestLine(now, "/no-proof-id"))
+	compressed := statisticsTestGzip(t, contents)
+	statisticsArchiveTestWrite(t, good, compressed, now)
+	findSource := func(state statisticsIngestion, path string) statisticsArchiveSource {
+		t.Helper()
+		if state.ArchiveInventory == nil || state.ArchiveInventory.SiteID != id || state.ArchiveInventory.CheckedAt != state.Updated {
+			t.Fatal("missing current site's archive inventory", state.ArchiveInventory)
+		}
+		for _, source := range state.ArchiveInventory.Sources {
+			if source.Name == filepath.Base(path) {
+				return source
+			}
+		}
+		t.Fatal("expected source missing from inventory", path)
+		return statisticsArchiveSource{}
+	}
 	state := statisticsTestIngest(t, s, db, id, now)
 	if statisticsTestCount(t, db) != 1 || state.Blocked != 1 || state.Compressed != 2 {
 		t.Fatal("CRC accepted tentative rows or lost live log", state)
+	}
+	if dropped, waiting := findSource(state, bad), findSource(state, good); dropped.State != "unreadable" || waiting.State != "pending" || dropped.Verified != nil || waiting.Verified != nil {
+		t.Fatal("uncertified source received progress", dropped, waiting)
 	}
 	state = statisticsTestIngest(t, s, db, id, now)
 	if statisticsTestCount(t, db) != 2 || state.Blocked != 1 || state.Invalid != 1 || state.VerifiedArchives != 1 || statisticsArchiveTestCount(t, db, "access_receipts") != 2 {
 		t.Fatal("corrupt cached source starved later gzip or legacy ID was invented", state)
 	}
+	entry := findSource(state, good)
+	want := statisticsArchiveProgress{ReadBytes: int64(len(contents)), ExpandedBytes: int64(len(contents)), SkippedLines: 1, SHA256: fmt.Sprintf("%x", sha256.Sum256(compressed))}
+	if entry.State != "complete" || entry.CompressedBytes == nil || *entry.CompressedBytes != int64(len(compressed)) || entry.Verified == nil || *entry.Verified != want {
+		t.Fatal("inventory did not describe the verified original archive", entry)
+	}
 	s.statisticsArchiveScanCursor[id] = 1
 	state = statisticsTestIngest(t, s, db, id, now)
 	if statisticsTestCount(t, db) != 2 || state.Invalid != 1 || state.Blocked != 1 || s.statisticsArchiveScanCursor[id] != 0 {
 		t.Fatal("replayed compressed legacy/corrupt source", state)
+	}
+	if err := os.Remove(bad); err != nil {
+		t.Fatal(err)
+	}
+	state = statisticsTestIngest(t, s, db, id, now)
+	if lost := findSource(state, bad); lost.State != "missing" || lost.Verified != nil || lost.CompressedBytes != nil {
+		t.Fatal("absent blocked archive was represented as checked", lost)
 	}
 }
 func TestStatisticsArchiveRuntimeRewriteAndWriteFailureKeepOriginalProgress(t *testing.T) {
