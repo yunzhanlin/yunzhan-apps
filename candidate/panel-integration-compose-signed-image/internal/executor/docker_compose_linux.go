@@ -742,6 +742,7 @@ func composeLogs(ctx context.Context, id string) (string, error) {
 
 func (s *Service) dockerComposeRoutes(m *http.ServeMux) {
 	s.dockerJobObservationRoutes(m)
+	dockerRabbitMQRoutes(m)
 	m.HandleFunc("GET /v1/docker/project-requests/{id}", func(w http.ResponseWriter, r *http.Request) {
 		out, err := composeCreateStatus(dockerJobs, r.PathValue("id"), readDockerJobResult)
 		if err != nil {

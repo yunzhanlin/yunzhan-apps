@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
 import DockerContainerMetrics from "./DockerContainerMetrics.vue";
+import RabbitMQQueues from "./RabbitMQQueues.vue";
 import { randomId } from "./randomId";
 import { composeHostPortSettings, isComposeHostPort, isPhpMyAdminTemplate } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
@@ -198,9 +199,16 @@ const visible = ref(false),
   logsName = ref("");
 const managedTemplate = ref<"phpmyadmin">();
 const metricsContainer = ref<DockerContainer>();
+const rabbitQueues = ref<DockerProject>();
 const visibleProjects = computed(() =>
   managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
+
+function openRabbitQueues(item: DockerProject) {
+  if (contextCurrent(contextToken()) && item.template_id === "rabbitmq" && item.state === "running" && /^[a-f0-9]{32}$/.test(item.id)) {
+    rabbitQueues.value = item;
+  }
+}
 
 function phpMyAdminURL(project: DockerProject): string {
   if (!isPhpMyAdminTemplate(project.template_id) || project.state !== "running" ||
@@ -260,7 +268,7 @@ function resetManager() {
     visible.value = false; loading.value = false; busy.value = false;
     managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
-    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined;
+    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined; rabbitQueues.value = undefined;
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -1156,6 +1164,8 @@ async function removeVolume(item: DockerVolume) {
           </div>
           <div class="docker-actions">
             <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="item.template_id === 'rabbitmq'" link type="primary" :disabled="busy || item.state !== 'running'"
+              @click="openRabbitQueues(item)">查看队列</el-button>
             <el-link v-if="phpMyAdminURL(item)" type="primary" :href="phpMyAdminURL(item)" target="_blank" rel="noopener noreferrer">打开 phpMyAdmin</el-link>
             <el-button
               v-if="canBindDockerProjectSite(item)"
@@ -1626,6 +1636,8 @@ async function removeVolume(item: DockerVolume) {
       ></template
     >
   </el-dialog>
+  <RabbitMQQueues v-if="rabbitQueues" :key="rabbitQueues.id" :api="api" :project="rabbitQueues"
+    @close="rabbitQueues = undefined" />
   <DockerContainerMetrics v-if="metricsContainer" :key="metricsContainer.Id" :api="api" :id="metricsContainer.Id"
     :name="nameOf(metricsContainer)" @close="metricsContainer = undefined" />
   <el-dialog

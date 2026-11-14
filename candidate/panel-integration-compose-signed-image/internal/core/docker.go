@@ -352,6 +352,7 @@ func ValidDockerContainerAction(id, action string) bool {
 
 func (a *Server) dockerRoutes(m *http.ServeMux) {
 	a.dockerJobObservationRoutes(m)
+	a.dockerRabbitMQRoutes(m)
 	m.HandleFunc("POST /api/docker/projects/{id}/credentials", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var out any
 		if e := a.Executor.Call(r.Context(), "GET", "/v1/docker/projects/"+r.PathValue("id")+"/credentials", nil, &out); e != nil {
