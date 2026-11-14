@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24sitebalancecandidate160",
+  "source_head": "c17aa525ad01abd061f22452e706b4e4f3280bde",
+  "source_inputs_sha256": "0ce544dcd43003d7525e4036ced3b0c59151c71a65e3aa2a6f615a134753318e",
+  "source_sdk_tree": "4bc4333b4ab703d7e484674c9042c7b2b11bc9c7",
+  "release_id": 445158588,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-amd64.tar.gz": {
+      "id": 746894470,
+      "bytes": 24081750,
+      "sha256": "7349e84a1d5936af73a2057eae8fa3c07a7f7f67f2986da29ec6d80e0cbbe664"
+    },
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-amd64.tar.gz.manifest": {
+      "id": 746891137,
+      "bytes": 182,
+      "sha256": "b576ff2f8e06f696b2917cf5a50b7b51f6252ad13552441aa6592416f4fc6d64"
+    },
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-amd64.tar.gz.sig": {
+      "id": 746891010,
+      "bytes": 64,
+      "sha256": "40f6c02451b9cc75226d5e4c2ba56bcd4b70ef30f7b53d8a7163a867c21b8a8f"
+    },
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-arm64.tar.gz": {
+      "id": 746891255,
+      "bytes": 22290303,
+      "sha256": "9cabbe9f5abdf7a79d937a94325e0210f705b284636bc895467cd860ac08999f"
+    },
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-arm64.tar.gz.manifest": {
+      "id": 746891209,
+      "bytes": 182,
+      "sha256": "e553a798a4fe9d08effc17d7132dae2b4fcc9702bbec999940a04d0f1d0a4e3e"
+    },
+    "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-arm64.tar.gz.sig": {
+      "id": 746891059,
+      "bytes": 64,
+      "sha256": "4934051dc30b23ef128031c284d73e019689d065a35a0b891e39af2a26d5ee44"
+    },
+    "release-signing-dev.pub": {
+      "id": 746891102,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "site-balance-signed-release.py": {
+      "id": 746891236,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    }
+  },
+  "tag": "qa-sitebalancecandidate160-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-arm64.tar.gz"
+    }
+  }
+}
