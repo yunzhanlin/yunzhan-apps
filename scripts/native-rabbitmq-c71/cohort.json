@@ -1,0 +1,121 @@
+{
+  "source_head": "6d95d1bf589c5c9d96bacd664c44c40638e8456d",
+  "native_fixture_parent": "6d95d1bf589c5c9d96bacd664c44c40638e8456d",
+  "source_inputs_sha256": "1ebd60cb5637b848fb3104017cfb9badf8e5325344d576aa498e319ccae9038c",
+  "version": "0.1.0-dev.proapps24rabbitmqmigrationcandidate168",
+  "served_head": "47e57541656547fed4297e52ea8ab751d515369b",
+  "authorized_catalogues": [
+    "47e57541656547fed4297e52ea8ab751d515369b"
+  ],
+  "items": {
+    "rabbitmq": {
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "deployment",
+      "version": "4.4.0-compat1",
+      "summary": "RabbitMQ 4.4.0 \u5355\u8282\u70b9\u63d0\u4f9b\u6301\u4e45\u6d88\u606f\u961f\u5217\u3001\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0\u3002\u65b0\u88c5\u4f7f\u7528\u72ec\u7acb\u6570\u636e\u5377\uff0c\u65e7\u5b9e\u4f8b\u53ef\u67e5\u770b\u8fc1\u79fb\u9884\u68c0\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "compose",
+      "target": "rabbitmq-440",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0",
+        "\u72ec\u7acb\u6301\u4e45\u6570\u636e\u5377",
+        "\u968f\u673a\u521d\u59cb\u51ed\u636e",
+        "\u6309\u865a\u62df\u4e3b\u673a\u67e5\u770b\u961f\u5217\u4e0e\u79ef\u538b",
+        "\u65e7\u5b9e\u4f8b\u7684\u53ea\u8bfb\u8fc1\u79fb\u9884\u68c0"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json",
+      "sha256": "3ef2fb6eb8bd0bb88f22c8d0883d794e87acd3dff4fe09234ff33b893dbabf43"
+    }
+  },
+  "application": {
+    "id": "rabbitmq",
+    "name": "RabbitMQ",
+    "category": "deployment",
+    "version": "4.4.0-compat1",
+    "summary": "RabbitMQ 4.4.0 \u5355\u8282\u70b9\u63d0\u4f9b\u6301\u4e45\u6d88\u606f\u961f\u5217\u3001\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0\u3002\u65b0\u88c5\u4f7f\u7528\u72ec\u7acb\u6570\u636e\u5377\uff0c\u65e7\u5b9e\u4f8b\u53ef\u67e5\u770b\u8fc1\u79fb\u9884\u68c0\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "compose",
+    "target": "rabbitmq-440",
+    "manage_route": "docker",
+    "capabilities": [
+      "\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0",
+      "\u72ec\u7acb\u6301\u4e45\u6570\u636e\u5377",
+      "\u968f\u673a\u521d\u59cb\u51ed\u636e",
+      "\u6309\u865a\u62df\u4e3b\u673a\u67e5\u770b\u961f\u5217\u4e0e\u79ef\u538b",
+      "\u65e7\u5b9e\u4f8b\u7684\u53ea\u8bfb\u8fc1\u79fb\u9884\u68c0"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json",
+    "sha256": "3ef2fb6eb8bd0bb88f22c8d0883d794e87acd3dff4fe09234ff33b893dbabf43"
+  },
+  "signed_catalogue44": {
+    "head": "47e57541656547fed4297e52ea8ab751d515369b",
+    "files": {
+      "registry/candidate-apps.json": "53d2f0653872b480471787d56ac8cae2838835722f7b4c1630d046e062b1d2f3",
+      "candidate/dist/catalog-v1.json": "ea631cc6316944acd0df227a5ebab154df60bc60b72fad5b3812e5c19eb5a84d",
+      "candidate/dist/catalog-v1.json.sha256": "1d480277e8f8c735a6b3ae10033d43006afa58e21a069041ab404bbeb3ff5175",
+      "candidate/signatures/catalog-v1.sig": "6858c5de7d655aa02c93e55819ffddf9faffb64e7f33005047446782d45a587e",
+      "candidate/signatures/catalog-v1.bundle.json": "16c0613b1bcdab57338d94ddb30f8d8957c8ccf99c6e94953aa16438dd4727cf",
+      "candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json": "3ef2fb6eb8bd0bb88f22c8d0883d794e87acd3dff4fe09234ff33b893dbabf43",
+      "candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json.sha256": "d1549d1535741fd412a6934e85d6918b0223e94c75debad0d29b3e2f0227e36a",
+      "tools/lib.mjs": "6c4111475938e68c587f3c4c9836372669509e32ca251a306a88bd225e407005",
+      "tests/official-channel.test.mjs": "5261f325e2faab41814c7f2803a5a9a03973d15c0a787498f97bdd903be24999"
+    },
+    "item": {
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "deployment",
+      "version": "4.4.0-compat1",
+      "summary": "RabbitMQ 4.4.0 \u5355\u8282\u70b9\u63d0\u4f9b\u6301\u4e45\u6d88\u606f\u961f\u5217\u3001\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0\u3002\u65b0\u88c5\u4f7f\u7528\u72ec\u7acb\u6570\u636e\u5377\uff0c\u65e7\u5b9e\u4f8b\u53ef\u67e5\u770b\u8fc1\u79fb\u9884\u68c0\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "compose",
+      "target": "rabbitmq-440",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u56de\u73af AMQP \u4e0e\u7ba1\u7406\u540e\u53f0",
+        "\u72ec\u7acb\u6301\u4e45\u6570\u636e\u5377",
+        "\u968f\u673a\u521d\u59cb\u51ed\u636e",
+        "\u6309\u865a\u62df\u4e3b\u673a\u67e5\u770b\u961f\u5217\u4e0e\u79ef\u538b",
+        "\u65e7\u5b9e\u4f8b\u7684\u53ea\u8bfb\u8fc1\u79fb\u9884\u68c0"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json",
+      "sha256": "3ef2fb6eb8bd0bb88f22c8d0883d794e87acd3dff4fe09234ff33b893dbabf43"
+    }
+  },
+  "image44": "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267",
+  "image": "rabbitmq:4.1.4-management-alpine@sha256:5cbd7145b0306399ad68422c3350b6cbd1bb95704b39f5896480e5b6d4238a04",
+  "payload_files": {
+    "scripts/native-rabbitmq-c71/chrome.mjs": "9a44f306a97b2e8bbea62e2c8249b05c5673a64a391db1d08f736afc88900676",
+    ".github/workflows/rabbitmq-c168-signed-native.yml": "1b31906b9eb3a355ee787464c087f1a0fa2e7101188493e93f092ea18b8ee046",
+    "scripts/native-rabbitmq-c71/finish.py": "dcd209fb59da74323e500b1dae0fa1d5d13563e8f7d655ef082ef01e4d99b075",
+    "scripts/native-rabbitmq-c71/dispatch.json": "416c354a91d12ac7239d115703efe6f8012572036efaec974308bbb39a5a1d35",
+    "scripts/native-rabbitmq-c71/rabbitmq.py": "cbd9cddc5c07ffa5357672da46712d62b0e6b0131462e79e245eecae21d4b7a8",
+    "scripts/native-rabbitmq-c71/browser-amqp.py": "d99e459bb83f89e72c494236e700e6c8d7cb690622386b526e8b8ceab02b8c2a",
+    "scripts/native-rabbitmq-c71/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-rabbitmq-c71/download.py": "8eaf2ba9061c7b1197aa9139c3330fa3fd8a4ba4ce9c6d72e56dbea1af8d1818",
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py": "2239a4f3c06c4043e048677249e2e04e7a7edf6ce72f3ce69fe021e32138c66e",
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-rabbitmq-c71/pika.txt": "82db290a993cdf56c13b14420be0b46c72afb589bf5a99c94739ecbd7e16c97e",
+    "scripts/native-rabbitmq-c71/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "changed_payload_files": [
+    ".github/workflows/rabbitmq-c168-signed-native.yml",
+    "scripts/native-rabbitmq-c71/bootstrap-original-install.py",
+    "scripts/native-rabbitmq-c71/browser-amqp.py",
+    "scripts/native-rabbitmq-c71/chrome.mjs",
+    "scripts/native-rabbitmq-c71/dispatch.json",
+    "scripts/native-rabbitmq-c71/download.py",
+    "scripts/native-rabbitmq-c71/finish.py",
+    "scripts/native-rabbitmq-c71/isolated_ubuntu_apt.py",
+    "scripts/native-rabbitmq-c71/original-signed-release.py",
+    "scripts/native-rabbitmq-c71/pika.txt",
+    "scripts/native-rabbitmq-c71/rabbitmq.py",
+    "scripts/native-rabbitmq-c71/recipient.pem"
+  ],
+  "mode": "signed-rabbitmq-migration",
+  "Main_changed": false
+}
