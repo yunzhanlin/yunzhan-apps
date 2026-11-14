@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "f85679351963c4a944834ea953607edd264b9bdff60083bc4a553f652d8f5169",
+  "kvm_sha256": "b3051d4d775550b7b31a7b73b4f41f67c98ce5c1bd1fe82663c9c3516ad3e549",
+  "payload_sha256": "58da3c57b13b79ac65e127dfebcb41fa4a50ee772a4c461565f78ee6b8f4b70a",
+  "published_head": "bf90f5a2f2b702279e6776cddbc2f32c7c0680d9",
+  "qa_catalogue_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "tag": "qa-elasticrestorecandidate177r3-20261115-qa1"
+}
