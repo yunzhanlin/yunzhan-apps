@@ -675,21 +675,26 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 		_ = a.Store.Audit(u.Username, "docker.volume.delete", name, "success")
 		send(w, 200, out)
 	}))
-	m.HandleFunc("GET /api/docker/containers/{id}/stats", a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
-		id := r.PathValue("id")
-		if !ValidDockerContainerID(id) {
-			fail(w, http.StatusBadRequest, "容器标识无效")
-			return
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
-		defer cancel()
-		var out any
-		if err := a.Executor.Call(ctx, http.MethodGet, "/v1/docker/containers/"+id+"/stats", nil, &out); err != nil {
-			fail(w, http.StatusConflict, err.Error())
-			return
-		}
-		send(w, http.StatusOK, out)
-	}))
+	for _, observation := range []string{"stats", "state"} {
+		m.HandleFunc("GET /api/docker/containers/{id}/"+observation, a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
+			id := r.PathValue("id")
+			if !ValidDockerContainerID(id) {
+				fail(w, http.StatusBadRequest, "容器标识无效")
+				return
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
+			defer cancel()
+			var out any
+			if err := a.Executor.Call(ctx, http.MethodGet, "/v1/docker/containers/"+id+"/"+observation, nil, &out); err != nil {
+				fail(w, http.StatusConflict, err.Error())
+				return
+			}
+			if observation == "state" {
+				w.Header().Set("Cache-Control", "no-store")
+			}
+			send(w, http.StatusOK, out)
+		}))
+	}
 	m.HandleFunc("GET /api/docker/containers/{id}/logs", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id := r.PathValue("id")
 		if !validDockerObjectID(id) {

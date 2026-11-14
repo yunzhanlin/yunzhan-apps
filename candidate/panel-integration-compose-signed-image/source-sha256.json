@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24sitebalancecandidate160-linux-amd64.tar.gz",
-    "archive_sha256": "7349e84a1d5936af73a2057eae8fa3c07a7f7f67f2986da29ec6d80e0cbbe664",
-    "frozen_inputs_sha256": "0ce544dcd43003d7525e4036ced3b0c59151c71a65e3aa2a6f615a134753318e"
+    "archive": "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-amd64.tar.gz",
+    "archive_sha256": "f3e43c614f44011645e6dec0f08a3c500ffccfb8f742198ede3c710f9cda45c8",
+    "frozen_inputs_sha256": "c242731481d4b522c8fc94929f16ec7ad4874414187bf16408a21c136e1580dd"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -355,7 +355,7 @@
     "internal/core/disk_host_upgrade.go": "af385ec8271cbad570d346ddc1fe4028b45a92cfc9bed4ab6d75b35a25e837b1",
     "internal/core/disk_usage_update_linux_test.go": "9ebc0c310554d09c18cd141b21a96cb7c33ae318a4e73b958f6e20b94d89f384",
     "internal/core/disk_usage_version_test.go": "9e0b778ad8a2559ae9c9e4eaed025a389f93d5a77c0f9aecd78bc52983a85ca1",
-    "internal/core/docker.go": "cea992e0640ae4e9c19d7dfd784cd6c6d26357ce73dcbee8cc67e48325f0343d",
+    "internal/core/docker.go": "cb0fed42445dca905ce7a4e839f638a9e2f95b207c07f081f8e0a9fc80ad812f",
     "internal/core/docker_create_requests.go": "3fcd0aaa555c6f9ee4d51f4aa3ea401e4422ee57cbf198279c35e816bfc15bdd",
     "internal/core/docker_create_requests_test.go": "653cf360683ad870b23ad3c0a6b71e709dc054bcb4dfa848a007f17885a0c6f5",
     "internal/core/docker_job_observations.go": "ffc7fbfc88d5782d2c4e00f837d506c1765ff3c97ec7db5a621477cd5dfb2588",
@@ -1300,12 +1300,14 @@
     "internal/executor/docker_compose_cli_linux_test.go": "07725e166ab8368e6556fcc47c8939d3ff1f433d08542aff91c3d3316bb3408e",
     "internal/executor/docker_compose_linux.go": "c716446606b18c720b077a9b4403c2ccc3a00f6508a75dc4fad472db156a7adc",
     "internal/executor/docker_compose_other.go": "eedea34855d2a594f2ad9df07bedb8e1c9a8cdd2723cdc0638b9b919d9b418f9",
+    "internal/executor/docker_container_state_linux.go": "a8e8d0855c278ac0ca18e192e71354d511e0955947ab7457a5f3d6d64a201063",
+    "internal/executor/docker_container_state_linux_test.go": "490af2d1c86549852bd50e4765b10e7bab4f8d39350639b0c51510ffa0c3b0b1",
     "internal/executor/docker_create_receipts_linux.go": "4292424b6c0f0dd899621654e5a06bdb37dd998916d527ed81db6d0698d6dff1",
     "internal/executor/docker_create_receipts_linux_test.go": "f8db685c7d647fe390154b31da353a1f4c63d3ddeba8cd7fbaae52ed1c3b3f7f",
     "internal/executor/docker_install_linux.go": "d25b2d98be88bb70ecfd060c9f743c8ccd6794437d3b9aa52f7bb2f36a8152da",
     "internal/executor/docker_job_observations_linux.go": "87f7b3219eedabf1c56a36e13a6da1ff6747b8f7ea6ba117d0bb27b1dd6d71a9",
     "internal/executor/docker_job_observations_linux_test.go": "887731abda7511d8f3ec7254010229ce0c2ef2b560b7aafb3e90c5a1a695e2f7",
-    "internal/executor/docker_linux.go": "a90f18790cf801a782a44461ad089259f649a56515444222afac9d3350b66787",
+    "internal/executor/docker_linux.go": "379387d3114276b5c1e37da7e58533a1430fe2755de659b4b7545c86f12cfa43",
     "internal/executor/docker_mutation_linux.go": "8d89dc1b7470574f3fcf5ca6eba508ca0087dd9f673cb94da0b703032853218e",
     "internal/executor/docker_mutation_linux_test.go": "4385a8cca80e185f6366d9dd13f9e3c2e08884e488fd6f548074cb34767344e0",
     "internal/executor/docker_openlitespeed_linux.go": "020506ed49fc4576f663ae902f9ba66ff0ce57b9f125433d607e5ce9919a8783",
@@ -2425,8 +2427,8 @@
     "web/src/DatabaseImportManager.vue": "084288ace391fd5acac263d45e96bf420f7e09b59618a5f8691687ea4d05a8ec",
     "web/src/DatabaseLifecycleDialog.vue": "1c686837f1206cb296271916ae6c7c796000acca5d6559354ffcac3d21addd43",
     "web/src/DatabaseManager.vue": "f541059ae984a4dd9a26c9a41eabb427ac384427461821b8c3b9a915374e30ad",
-    "web/src/DockerContainerMetrics.vue": "4e46cbab9eb13cab74a7871368ab71015be60069bb033db4f100edc741f2b0a4",
-    "web/src/DockerManager.vue": "ef2d9d1de6bd9fc753a11303a744ff1b92419072f6119ad617339f249cc76d0d",
+    "web/src/DockerContainerMetrics.vue": "79171feb14f88ae3ecc2b6520c48cf40d46d91218a7c15e1ff354f5c127ccfc0",
+    "web/src/DockerManager.vue": "0a7c460c3473c74ff2b134f5eb0ec5b1afbc4170a53b05ca4890fde090b928dc",
     "web/src/FTPTransferHistory.vue": "470487197cd8449bf6907a0f064b452119b26b6a41c69d3f4b7ea41004f15952",
     "web/src/FileManager.vue": "f4ae7a99782e0705d9e7cc34b2b6df130fee5fdf5546afc3cad4d9b1370f92bc",
     "web/src/FileToolsMenu.vue": "eb6e14b7c0f536678e3cdeb75549decfa29d906d039ca4ee8bc08f50d2ba57a9",

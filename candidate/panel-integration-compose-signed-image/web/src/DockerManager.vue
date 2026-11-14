@@ -1237,8 +1237,8 @@ async function removeVolume(item: DockerVolume) {
               @click="action(item, 'restart')"
               >重启</el-button
             >
-            <el-button v-if="item.State === 'running'" link type="primary" :disabled="busy"
-              @click="metricsContainer = item">资源</el-button>
+            <el-button link type="primary" :disabled="busy || !/^[a-f0-9]{64}$/.test(item.Id)"
+              @click="metricsContainer = item">诊断</el-button>
             <el-button
               link
               type="primary"
@@ -1600,7 +1600,7 @@ async function removeVolume(item: DockerVolume) {
       ></template
     >
   </el-dialog>
-  <DockerContainerMetrics v-if="metricsContainer" :api="api" :id="metricsContainer.Id"
+  <DockerContainerMetrics v-if="metricsContainer" :key="metricsContainer.Id" :api="api" :id="metricsContainer.Id"
     :name="nameOf(metricsContainer)" @close="metricsContainer = undefined" />
   <el-dialog
     v-model="logsOpen"

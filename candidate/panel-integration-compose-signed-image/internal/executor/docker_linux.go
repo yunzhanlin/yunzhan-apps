@@ -545,6 +545,7 @@ func (s *Service) dockerManagementRoutes(m *http.ServeMux) {
 		respond(w, 200, map[string]bool{"ok": true})
 	})
 	m.HandleFunc("GET /v1/docker/containers/{id}/stats", dockerContainerStats)
+	m.HandleFunc("GET /v1/docker/containers/{id}/state", dockerContainerState)
 	m.HandleFunc("GET /v1/docker/containers/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		logs, e := dockerLogs(r.Context(), r.PathValue("id"))
 		if e != nil {
