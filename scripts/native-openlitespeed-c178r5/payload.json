@@ -1,0 +1,61 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "openlitespeed.py",
+    "guest_sha256": "42e549267a2ae696cc692ab1bb5344ef533906ea9baa76b9230b7246da1a71f5",
+    "hostname": "yunzhan-qa-openlitespeed-c178r5-debian13-amd64",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/SHA512SUMS",
+    "os_id": "debian",
+    "platform": "debian-13",
+    "version_id": "13"
+  },
+  "admin_sha256": {
+    "amd64": "e9716e3c929865087009bea3c922768ed9be0034eef71cc0e0925779bfb66c60",
+    "arm64": "b6b0c67bada79e6c38e1c7d5e91977283595d6c2e1ab7b6482bb793c9d4303c6"
+  },
+  "application": {
+    "capabilities": [
+      "HTTP \u7f51\u7ad9",
+      "LSAPI",
+      "\u968f\u673a\u7ba1\u7406\u5bc6\u7801",
+      "\u56de\u73af HTTPS \u7ba1\u7406",
+      "\u6301\u4e45\u914d\u7f6e"
+    ],
+    "category": "deployment",
+    "id": "openlitespeed",
+    "manage_route": "docker",
+    "name": "OpenLiteSpeed",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/openlitespeed/1.9.4-compat2/manifest.json",
+    "provider": "compose",
+    "risk": "maintained",
+    "sha256": "ae843cdb4ed94dbb00890f69a525fffbce9248038d71f10396a7d5376e8840db",
+    "stage": "ready",
+    "summary": "OpenLiteSpeed 1.9.4 \u63d0\u4f9b PHP 8.3.36 \u7f51\u7ad9\u548c\u56de\u73af HTTPS WebAdmin\uff0c\u4f7f\u7528\u72ec\u7acb\u7ad9\u70b9\u3001\u914d\u7f6e\u548c\u7ba1\u7406\u5377\u3002",
+    "target": "openlitespeed-194",
+    "version": "1.9.4-compat2"
+  },
+  "architecture": "amd64",
+  "files": {
+    "catalogue.bundle.json": "51784887840f3994dfc69298e236b4a936e1656116e55fa587a61d50ccc754f5",
+    "catalogue.json": "8e95f9bb75c074cf6b7f5f969fafc5ff211962d8015d5f575c6e996677aeddc3",
+    "catalogue.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "catalogue.sig.bin": "e0b64e703ed11e4b9fe0fc43c07f1ccaa449935e853e250c19b721033ab7dba2",
+    "docker.manifest.json": "5c72ab50b7e2a19fde5880d4a772badf77f887f5d0518fbffb672bb132e19764",
+    "openlitespeed.manifest.json": "ae843cdb4ed94dbb00890f69a525fffbce9248038d71f10396a7d5376e8840db",
+    "openlitespeed.py": "42e549267a2ae696cc692ab1bb5344ef533906ea9baa76b9230b7246da1a71f5",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz": "3bcd0ca527296dac45ed5f37e71c73bfe2f4c562712288ee053f79e4c5a2ed72",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz.manifest": "7e803baffa4098aeb04bec5151a48f68ba29a1693503afcaed3c6de36613bfb1",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz.sig": "ffcf33eb727f347f237a7f7ce75bed728ef34a02a975dbede4b66b195a43a412",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "image": "ghcr.io/yunzhanlin/yunzhan-apps-openlitespeed:1.9.4-lsphp83-compat2@sha256:a3f4cdafd5581e83d3deb4d50ef1b003a1164142f545652f7ae540bf18c2fd82",
+  "previous_image": "litespeedtech/openlitespeed:1.8.4-lsphp83@sha256:6f50ba204e66f1c746dd183f3022340ca912124c414669755db7f4701167f268",
+  "qa_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "served_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "source_inputs_sha256": "01260fed0626a92d97e146fe1d746a1b439b172db5b77e443ee4e112e9cf95df",
+  "version": "0.1.0-dev.proapps24elasticrestorecandidate177r3"
+}
