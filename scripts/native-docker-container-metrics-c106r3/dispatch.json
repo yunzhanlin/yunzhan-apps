@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24dockerpausecandidate162",
+  "source_head": "9d70edcb684387053b421f0565770afd5bb192db",
+  "source_inputs_sha256": "697eb0e17c0e67c043cda29a79bd3b0975f3fa3e63ae4b3f70ebf4169f99fa30",
+  "source_sdk_tree": "7f2be902ba08d472728896fafe79925436f63b90",
+  "release_id": 445203469,
+  "release_assets": {
+    "docker-pause-signed-release.py": {
+      "id": 747090375,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-amd64.tar.gz": {
+      "id": 747096595,
+      "bytes": 24086203,
+      "sha256": "59608f448da8ac8c176f194cf4ede25ce67c4429d61da44a695fd903f5a5b613"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-amd64.tar.gz.manifest": {
+      "id": 747090305,
+      "bytes": 182,
+      "sha256": "a543f1118d6240ada0ac9524df7077ef0bdb9dd1bf8e2336a456c749523ad3c6"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-amd64.tar.gz.sig": {
+      "id": 747090196,
+      "bytes": 64,
+      "sha256": "c4a8de5280c4c3c45dc8df53db081c54688772f56c53d8c3926122f423537130"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-arm64.tar.gz": {
+      "id": 747090409,
+      "bytes": 22291199,
+      "sha256": "aba7cda88fa1cca6fc200a7998f8d1abb73c82648e67437c9c7aa7e54de5af08"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-arm64.tar.gz.manifest": {
+      "id": 747090336,
+      "bytes": 182,
+      "sha256": "7afc63cbc55bdaec713ede5975dd5dbdc6d3021679bf530397c97284cd25f2de"
+    },
+    "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-arm64.tar.gz.sig": {
+      "id": 747090234,
+      "bytes": 64,
+      "sha256": "a8e0f5d5d5861029ff671021332aaf0ec08229c94d02366332d81bc345b6d618"
+    },
+    "release-signing-dev.pub": {
+      "id": 747090283,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-dockerpausecandidate162-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24dockerpausecandidate162-linux-arm64.tar.gz"
+    }
+  }
+}
