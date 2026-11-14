@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"slices"
 	"sort"
@@ -25,8 +26,16 @@ func (s *Store) analyticsLayoutInstalled(ctx context.Context) bool {
 }
 
 func (s *Store) analyticsHasReceipt(ctx context.Context, versions ...string) bool {
+	return analyticsReceiptVerified(ctx, s.DB, versions...)
+}
+
+type analyticsReceiptReader interface {
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func analyticsReceiptVerified(ctx context.Context, db analyticsReceiptReader, versions ...string) bool {
 	var version, digest string
-	if err := s.DB.QueryRowContext(ctx, `SELECT version, sha256 FROM app_registry_receipts
+	if err := db.QueryRowContext(ctx, `SELECT version, sha256 FROM app_registry_receipts
 		WHERE app_id='website-analytics' AND scope='website-analytics'
 		AND target='website-analytics'`).Scan(&version, &digest); err != nil || !slices.Contains(versions, version) {
 		return false

@@ -36,6 +36,9 @@ const analyticsIdentityMinuteLimit = 1200
 //go:embed analytics_tracker.js
 var analyticsTracker string
 
+//go:embed analytics_replay_tracker.js
+var analyticsReplayTracker string
+
 // Locally bundled standard build, never a third-party network script. Keep the
 // complete upstream Apache-2.0 license in every delivered tracker response.
 //
@@ -64,36 +67,37 @@ type analyticsRate struct {
 }
 
 type AnalyticsEvent struct {
-	ID                  string              `json:"id"`
-	PageID              string              `json:"page_id"`
-	Visitor             string              `json:"visitor"`
-	Session             string              `json:"session"`
-	Kind                string              `json:"kind"`
-	Path                string              `json:"path"`
-	Title               string              `json:"title"`
-	Referer             string              `json:"referer"`
-	Campaign            string              `json:"campaign"`
-	Duration            float64             `json:"duration"`
-	X                   float64             `json:"x"`
-	Y                   float64             `json:"y"`
-	ClickViewport       string              `json:"click_viewport,omitempty"`
-	TTFB                float64             `json:"ttfb"`
-	FCP                 float64             `json:"fcp"`
-	LCP                 float64             `json:"lcp"`
-	CLS                 float64             `json:"cls"`
-	CLSAvailable        bool                `json:"cls_available"`
-	INP                 float64             `json:"inp"`
-	INPAvailable        bool                `json:"inp_available"`
-	PerformanceSeq      int                 `json:"performance_seq"`
-	NavigationSeq       int64               `json:"navigation_seq,omitempty"`
-	RouteReadyMillis    *float64            `json:"route_ready_ms,omitempty"`
-	Received            int64               `json:"received_at"`
-	IPHash              string              `json:"-"`
-	Browser             string              `json:"browser"`
-	Device              string              `json:"device"`
-	ClientAddressHash   string              `json:"client_address_hash,omitempty"`
-	ClientAddressSource string              `json:"client_address_source,omitempty"`
-	Geography           *AnalyticsGeography `json:"geography,omitempty"`
+	ID                  string                `json:"id"`
+	PageID              string                `json:"page_id"`
+	Visitor             string                `json:"visitor"`
+	Session             string                `json:"session"`
+	Kind                string                `json:"kind"`
+	Path                string                `json:"path"`
+	Title               string                `json:"title"`
+	Referer             string                `json:"referer"`
+	Campaign            string                `json:"campaign"`
+	Duration            float64               `json:"duration"`
+	X                   float64               `json:"x"`
+	Y                   float64               `json:"y"`
+	ClickViewport       string                `json:"click_viewport,omitempty"`
+	TTFB                float64               `json:"ttfb"`
+	FCP                 float64               `json:"fcp"`
+	LCP                 float64               `json:"lcp"`
+	CLS                 float64               `json:"cls"`
+	CLSAvailable        bool                  `json:"cls_available"`
+	INP                 float64               `json:"inp"`
+	INPAvailable        bool                  `json:"inp_available"`
+	PerformanceSeq      int                   `json:"performance_seq"`
+	NavigationSeq       int64                 `json:"navigation_seq,omitempty"`
+	RouteReadyMillis    *float64              `json:"route_ready_ms,omitempty"`
+	Received            int64                 `json:"received_at"`
+	IPHash              string                `json:"-"`
+	Browser             string                `json:"browser"`
+	Device              string                `json:"device"`
+	ClientAddressHash   string                `json:"client_address_hash,omitempty"`
+	ClientAddressSource string                `json:"client_address_source,omitempty"`
+	Geography           *AnalyticsGeography   `json:"geography,omitempty"`
+	Replay              *analyticsReplayFrame `json:"replay,omitempty"`
 }
 
 func (s *Store) migrateAnalytics() error {
@@ -107,7 +111,10 @@ CREATE TABLE IF NOT EXISTS analytics_budget(id INTEGER PRIMARY KEY CHECK(id=1),e
 INSERT OR IGNORE INTO analytics_budget SELECT 1,count(*) FROM analytics_events;
 CREATE TRIGGER IF NOT EXISTS analytics_event_insert AFTER INSERT ON analytics_events BEGIN UPDATE analytics_budget SET events=events+1 WHERE id=1; END;
 CREATE TRIGGER IF NOT EXISTS analytics_event_delete AFTER DELETE ON analytics_events BEGIN UPDATE analytics_budget SET events=events-1 WHERE id=1; END;`)
-	return e
+	if e != nil {
+		return e
+	}
+	return s.migrateAnalyticsReplay()
 }
 
 func (s *Store) analyticsConfig(id string) (AnalyticsConfig, error) {
@@ -332,6 +339,7 @@ func (a *Server) analyticsSite(r *http.Request) (Site, AnalyticsConfig, error) {
 
 func (a *Server) analyticsRoutes(m *http.ServeMux) {
 	a.analyticsHTMLEngineRoutes(m)
+	a.analyticsReplayRoutes(m)
 	m.HandleFunc("GET /api/analytics/sites/{id}/compare", a.authorize(a.analyticsComparePeriods))
 	m.HandleFunc("GET /api/analytics/sites/{id}/config", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		site, e := a.Store.Site(r.PathValue("id"))
@@ -429,8 +437,14 @@ func (a *Server) serveAnalyticsTracker(w http.ResponseWriter, r *http.Request, c
 	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	cfg, _ := json.Marshal(map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks, "clickViewport": c.Clicks && a.Store.analyticsLayoutInstalled(r.Context())})
-	_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n})();")
+	configuration := map[string]any{"site": c.SiteID, "key": c.Key, "clicks": c.Clicks, "clickViewport": c.Clicks && a.Store.analyticsLayoutInstalled(r.Context())}
+	replay := ""
+	if sample := a.analyticsReplaySample(r.Context(), c.SiteID); sample > 0 {
+		configuration["replaySample"] = sample
+		replay = analyticsReplayTracker
+	}
+	cfg, _ := json.Marshal(configuration)
+	_, _ = io.WriteString(w, "(()=>{if(navigator.doNotTrack===\"1\"||navigator.globalPrivacyControl===true)return;\n/*\n"+analyticsWebVitalsLicense+"\n*/\n"+analyticsWebVitals+"\nconst config="+string(cfg)+";\n"+analyticsTracker+"\n"+replay+"\n})();")
 }
 
 func analyticsClient(agent string) (string, string) {
@@ -499,7 +513,15 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "采集数据无效")
 		return
 	}
-	if e = validateAnalyticsEvent(&v, c.Clicks); e != nil {
+	if v.Kind == "replay" {
+		if !ValidID(v.ID) || !ValidID(v.PageID) || !ValidID(v.Visitor) || !ValidID(v.Session) || !v.Replay.valid() {
+			fail(w, 400, "会话画面字段无效")
+			return
+		}
+	} else if v.Replay != nil {
+		fail(w, 400, "统计事件不能附带会话画面")
+		return
+	} else if e = validateAnalyticsEvent(&v, c.Clicks); e != nil {
 		fail(w, 400, e.Error())
 		return
 	}
@@ -530,6 +552,26 @@ func (a *Server) collectAnalytics(w http.ResponseWriter, r *http.Request) {
 		return hex.EncodeToString(h.Sum(nil))
 	}
 	v.Visitor = digest(v.Visitor)
+	if v.Kind == "replay" {
+		selection, _ := strconv.ParseUint(v.Session[:8], 16, 32)
+		v.Session = digest(v.Session)
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		err := a.Store.storeAnalyticsReplay(ctx, site.ID, v, selection, time.Now())
+		switch {
+		case err == nil:
+			w.WriteHeader(http.StatusNoContent)
+		case errors.Is(err, errReplayNotActive):
+			fail(w, 403, "会话画面采集已关闭或不在抽样范围")
+		case errors.Is(err, errReplayPageAbsent):
+			fail(w, 409, "页面事件尚未收到")
+		case errors.Is(err, errReplayCapacity):
+			fail(w, 429, "会话画面达到保存上限")
+		default:
+			fail(w, 503, "暂时无法保存会话画面")
+		}
+		return
+	}
 	v.Session = digest(v.Session)
 	v.IPHash = digest(peer.String())
 	v.ClientAddressHash = ""
@@ -609,6 +651,12 @@ func (s *Store) storeAnalyticsEvent(ctx context.Context, id string, retention in
 // bounded so an expired dataset cannot monopolize the control-plane database.
 func (s *Store) cleanupAnalytics(ctx context.Context, now time.Time) error {
 	_, err := s.DB.ExecContext(ctx, `DELETE FROM analytics_events WHERE rowid IN (SELECT e.rowid FROM analytics_events e JOIN analytics_config c ON c.site_id=e.site_id WHERE e.received < ? - c.retention*86400 ORDER BY e.received LIMIT 1000)`, now.Unix())
+	if err != nil {
+		return err
+	}
+	_, err = s.DB.ExecContext(ctx, `DELETE FROM analytics_replay_frames WHERE rowid IN (
+SELECT f.rowid FROM analytics_replay_frames f LEFT JOIN analytics_config c ON c.site_id=f.site_id
+WHERE c.site_id IS NULL OR f.received_ms < ? - min(?,c.retention)*86400000 ORDER BY f.received_ms LIMIT 1000)`, now.UnixMilli(), analyticsReplayDays)
 	return err
 }
 
