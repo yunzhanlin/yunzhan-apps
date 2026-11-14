@@ -1,0 +1,55 @@
+{
+  "architecture": "amd64",
+  "source_inputs_sha256": "13aedc5e3386b49becc76af1adac3d0dcd5fbf6eb84c097b6877ad3cea146e9a",
+  "version": "0.1.0-dev.proapps24mongodb8038candidate173r2",
+  "image": "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c",
+  "served_head": "47e57541656547fed4297e52ea8ab751d515369b",
+  "qa_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "application": {
+    "id": "mongodb",
+    "name": "MongoDB",
+    "category": "deployment",
+    "version": "8.0.38-compat1",
+    "summary": "MongoDB 8.0.38 \u5355\u8282\u70b9\uff0c\u652f\u6301\u56de\u73af\u8fde\u63a5\u3001\u8d26\u53f7\u8ba4\u8bc1\u548c\u6301\u4e45\u5377\u3002\u4fee\u590d Ubuntu 7.0 \u5185\u6838\u8865\u4e01\u7248\u8bc6\u522b\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "compose",
+    "target": "mongodb-8038",
+    "manage_route": "docker",
+    "capabilities": [
+      "\u8ba4\u8bc1\u4e0e\u56de\u73af\u8fde\u63a5",
+      "\u6587\u6863\u589e\u5220\u6539\u67e5\u4e0e\u7d22\u5f15",
+      "\u72ec\u7acb\u6301\u4e45\u6570\u636e\u5377",
+      "\u968f\u673a\u521d\u59cb\u51ed\u636e",
+      "\u53ef\u5728\u72ec\u7acb\u7aef\u53e3\u9a8c\u8bc1\u5907\u4efd\u6062\u590d"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mongodb/8.0.38-compat1/manifest.json",
+    "sha256": "fb290627cd032b2ed575e5e963ed7a2be89301233977f708cc158b775a5b2d02"
+  },
+  "OS_case": {
+    "architecture": "amd64",
+    "digest": "sha256:5645d0318ad21f643ebb1ac4567514620e9893380b07b0201fda163baa5b7eb5",
+    "guest": "mongodb.py",
+    "guest_sha256": "fe74a222f02bd0bc277ac6cabd81a430709d0d9d02985caa3d1069247b2f956a",
+    "hostname": "yunzhan-qa-mongo-c173-amd64",
+    "image": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "489dd5ab1206aba5cb21769e8095e911feb01a313aec448e4bdc291f918b6549",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/SHA256SUMS",
+    "platform": "ubuntu-26.04",
+    "stock_fail2ban": "1.1.0",
+    "version_id": "26.04"
+  },
+  "files": {
+    "catalogue.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b",
+    "mongodb.py": "fe74a222f02bd0bc277ac6cabd81a430709d0d9d02985caa3d1069247b2f956a",
+    "catalogue.bundle.json": "3486fb0f47aad060723005974c38abb3f631266570dc0abfa30de1b0dd6d3f08",
+    "catalogue.json": "ab1eccc9c6f9ef41e0e36015f2c3c29bc053b2152bf3c3cc7da64d9795ed6583",
+    "mongo.manifest.json": "fb290627cd032b2ed575e5e963ed7a2be89301233977f708cc158b775a5b2d02",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "catalogue.sig.bin": "d56043f4a1bcca612afb74643ae4afa88f137da71753e956d25798ec49489a5c",
+    "panel-0.1.0-dev.proapps24mongodb8038candidate173r2-linux-amd64.tar.gz": "a9e15921b88219609f0029170d60fe0139b11e96cbb96093248b5d94e77851cc",
+    "panel-0.1.0-dev.proapps24mongodb8038candidate173r2-linux-amd64.tar.gz.manifest": "a74f0fb66386bc4a8152efec63da6223651f52581d12f6312b85ecd4e4a4ed81",
+    "panel-0.1.0-dev.proapps24mongodb8038candidate173r2-linux-amd64.tar.gz.sig": "227ff9fd58791190c38239cd7de56b15af7872a5d014d059aa3709a6d6bd80ae"
+  }
+}
