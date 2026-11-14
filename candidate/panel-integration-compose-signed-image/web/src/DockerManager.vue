@@ -327,6 +327,48 @@ const taggedImages = computed(() =>
 const short = (id: string) => id.replace(/^sha256:/, "").slice(0, 12);
 const nameOf = (item: DockerContainer) =>
   item.Names?.[0]?.replace(/^\//, "") || short(item.Id);
+type ContainerAction = "start" | "stop" | "restart" | "pause" | "unpause";
+
+const containerStates = {
+  created: { label: "已创建", tone: "info" },
+  running: { label: "运行中", tone: "success" },
+  paused: { label: "已暂停", tone: "warning" },
+  restarting: { label: "重启中", tone: "warning" },
+  exited: { label: "已退出", tone: "info" },
+  dead: { label: "异常停止", tone: "danger" },
+  removing: { label: "正在移除", tone: "warning" },
+} as const;
+
+function containerState(item: DockerContainer) {
+  if (retainedContainer(item)) return { label: "镜像保留（受保护）", tone: "info" as const };
+  if (Object.hasOwn(containerStates, item.State)) return containerStates[item.State as keyof typeof containerStates];
+  return { label: "状态未知", tone: "info" as const };
+}
+
+function containerActions(item: DockerContainer): ContainerAction[] {
+  if (retainedContainer(item)) return [];
+  switch (item.State) {
+    case "running": return ["stop", "restart", "pause"];
+    case "paused": return ["unpause"];
+    case "restarting": return ["stop"];
+    case "created":
+    case "exited": return ["start"];
+    default: return [];
+  }
+}
+
+const containerActionLabels: Record<ContainerAction, { title: string; result: string; tone: "success" | "warning" | "primary" }> = {
+  start: { title: "启动", result: "容器已启动", tone: "success" },
+  stop: { title: "停止", result: "容器已停止", tone: "warning" },
+  restart: { title: "重启", result: "容器已重启", tone: "primary" },
+  pause: { title: "暂停", result: "容器已暂停", tone: "warning" },
+  unpause: { title: "恢复", result: "容器已恢复", tone: "success" },
+};
+
+function canRemoveContainer(item: DockerContainer) {
+  return !retainedContainer(item) && ["created", "exited", "dead"].includes(item.State);
+}
+
 function retainedContainer(item: DockerContainer) {
   return item.PanelProtected === true || item.Names?.some(name => name.replace(/^\//, "").startsWith("yunzhan-retain-memcached-")) || item.Labels?.["io.yunzhan.owner"] === "yunzhan.memcached-image-retention.v1" || Object.hasOwn(item.Labels || {}, "io.yunzhan.retention-sha256");
 }
@@ -533,22 +575,21 @@ async function createContainer() {
 }
 async function action(
   item: DockerContainer,
-  actionName: "start" | "stop" | "restart",
+  actionName: ContainerAction,
 ) {
   if (retainedContainer(item)) { ElMessage.warning(retentionWarning); return; }
+  if (busy.value || !containerActions(item).includes(actionName) || !/^[a-f0-9]{64}$/.test(item.Id)) return;
   const token = contextToken(); if (!contextCurrent(token)) return;
   const api = contextAPI(token);
   const ticket = startBusy();
   try {
     await api(`/docker/containers/${item.Id}/${actionName}`, "POST", {});
-    ElMessage.success(
-      { start: "容器已启动", stop: "容器已停止", restart: "容器已重启" }[
-        actionName
-      ],
-    );
+    if (!contextCurrent(token)) return;
+    ElMessage.success(containerActionLabels[actionName].result);
     await load();
   } catch (e) {
     reportError(token, e);
+    if (contextCurrent(token)) await load();
   } finally {
     finishBusy(token, ticket);
   }
@@ -576,8 +617,8 @@ async function removeContainer(item: DockerContainer) {
   if (retainedContainer(item)) { ElMessage.warning(retentionWarning); return; }
   const token = contextToken(); if (!contextCurrent(token)) return;
   const api = contextAPI(token); let ticket = 0;
-  if (item.State === "running") {
-    ElMessage.warning("请先停止容器，再执行删除");
+  if (!canRemoveContainer(item)) {
+    ElMessage.warning("请确认容器已停止，再执行删除");
     return;
   }
   const id = short(item.Id);
@@ -1206,36 +1247,21 @@ async function removeVolume(item: DockerVolume) {
           }}</span>
           <div>
             <el-tag
-              :type="item.State === 'running' ? 'success' : 'info'"
+              :type="containerState(item).tone"
               size="small"
-              >{{ retainedContainer(item) ? "镜像保留（受保护）" : item.State === "running" ? "运行中" : "已停止" }}</el-tag
+              >{{ containerState(item).label }}</el-tag
             ><small>{{ item.Status }}</small>
           </div>
           <div class="docker-actions">
             <el-button
-              v-if="item.State !== 'running'"
+              v-for="operation in containerActions(item)"
+              :key="operation"
               link
-              type="success"
-              :icon="VideoPlay"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'start')"
-              >启动</el-button
-            >
-            <el-button
-              v-else
-              link
-              type="warning"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'stop')"
-              >停止</el-button
-            >
-            <el-button
-              v-if="item.State === 'running'"
-              link
-              type="primary"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'restart')"
-              >重启</el-button
+              :type="containerActionLabels[operation].tone"
+              :icon="operation === 'start' || operation === 'unpause' ? VideoPlay : undefined"
+              :disabled="busy || !/^[a-f0-9]{64}$/.test(item.Id)"
+              @click="action(item, operation)"
+              >{{ containerActionLabels[operation].title }}</el-button
             >
             <el-button link type="primary" :disabled="busy || !/^[a-f0-9]{64}$/.test(item.Id)"
               @click="metricsContainer = item">诊断</el-button>
@@ -1251,7 +1277,7 @@ async function removeVolume(item: DockerVolume) {
               link
               type="danger"
               :icon="Delete"
-              :disabled="busy || retainedContainer(item)"
+              :disabled="busy || !canRemoveContainer(item)"
               @click="removeContainer(item)"
               >删除</el-button
             >

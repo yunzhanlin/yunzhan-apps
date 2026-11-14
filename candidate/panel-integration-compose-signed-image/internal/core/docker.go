@@ -337,6 +337,19 @@ func validDockerObjectID(id string) bool { return dockerIDPattern.MatchString(id
 
 func ValidDockerContainerID(id string) bool { return len(id) == 64 && validDockerObjectID(id) }
 
+// Existing lifecycle operations accept legacy short IDs. New operations require
+// an exact ID so a resumed browser session cannot affect a different container.
+func ValidDockerContainerAction(id, action string) bool {
+	switch action {
+	case "start", "stop", "restart":
+		return validDockerObjectID(id)
+	case "pause", "unpause":
+		return ValidDockerContainerID(id)
+	default:
+		return false
+	}
+}
+
 func (a *Server) dockerRoutes(m *http.ServeMux) {
 	a.dockerJobObservationRoutes(m)
 	m.HandleFunc("POST /api/docker/projects/{id}/credentials", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
@@ -740,7 +753,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 	}))
 	m.HandleFunc("POST /api/docker/containers/{id}/{action}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id, action := r.PathValue("id"), r.PathValue("action")
-		if !validDockerObjectID(id) || (action != "start" && action != "stop" && action != "restart") {
+		if !ValidDockerContainerAction(id, action) {
 			fail(w, 400, "容器操作无效")
 			return
 		}

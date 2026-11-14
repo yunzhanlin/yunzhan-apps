@@ -630,14 +630,15 @@ func (s *Service) dockerManagementRoutes(m *http.ServeMux) {
 		}
 		respond(w, 200, result)
 	})
-	for _, action := range []string{"start", "stop", "restart"} {
+	for _, action := range []string{"start", "stop", "restart", "pause", "unpause"} {
 		action := action
 		m.HandleFunc("POST /v1/docker/containers/{id}/"+action, func(w http.ResponseWriter, r *http.Request) {
-			if !dockerObjectPattern.MatchString(r.PathValue("id")) {
+			id := r.PathValue("id")
+			if !core.ValidDockerContainerAction(id, action) {
 				respond(w, 400, map[string]string{"error": "Docker 对象标识无效"})
 				return
 			}
-			path := "/containers/" + r.PathValue("id") + "/" + action
+			path := "/containers/" + id + "/" + action
 			if action == "stop" || action == "restart" {
 				path += "?t=10"
 			}
