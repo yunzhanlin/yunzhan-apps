@@ -1,0 +1,8 @@
+{
+  "published_head": "003e6bb06a318b4cb42b3d86b02525521ade1c2f",
+  "tag": "qa-mongodb8038candidate173r2-20261114-qa1",
+  "qa_catalogue_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "payload_sha256": "ba0e71a1155862f0845ffad3e57fc87ae9c4d7183e152fd2921247ccbed06e44",
+  "cases_sha256": "0930dac1e9439d8faef3f71f188a04fc19d0b80fbc2108a58e6df084dfea3401",
+  "kvm_sha256": "da0272d86919f3909c30f559d124c6b5df2dbef56400743878ba3e7460a71daa"
+}
