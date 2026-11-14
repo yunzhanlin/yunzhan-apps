@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "62c9606d128112a1eec3c4b060158d4ab16ed96c05332ed897542d5ed5246891",
+  "kvm_sha256": "2385ce1b4be9d10cdd26a112cb21db12e3b934054b6cbf4e92389c590cb173e3",
+  "payload_sha256": "8c22a98b518362306b95c6c33e06066d16687cdbf6fc59b17f3918f1d08a52a2",
+  "published_head": "1507d2162728a613939e90f53eea46135803b279",
+  "qa_catalogue_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "tag": "qa-mysqlverifiedrestorecandidate184-20261115-qa1"
+}
