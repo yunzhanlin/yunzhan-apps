@@ -2,11 +2,9 @@
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { ElMessageBox } from "element-plus";
 import { formatPanelDateTime } from "./panelTime";
+import { buildHardeningAuditExport, type HardeningInspection as Inspection, type HardeningTransaction as Transaction } from "./hardeningAuditExport";
 
 type API = <T>(path: string, method?: string, body?: unknown, key?: string) => Promise<T>;
-interface Parameter { key:string; actual:string; target:string; original:string; managed:boolean; original_known:boolean; reversible:boolean; drift:boolean; detail:string }
-interface Transaction { id:string; sha256:string; action:string; started_at:string; finished_at?:string; from_profile:string; to_profile:string; state:string; recovery_permitted:boolean; detail:string }
-interface Inspection { format:number; checked_at:string; installed:boolean; healthy:boolean; version:string; profile:string; config_matches:boolean; originals_complete:boolean; parameters:Parameter[]; pending:Transaction|null; history:Transaction[]; retained_temporaries:number; detail:string }
 const props=defineProps<{api:API;onInstall:(id:string,settings:Record<string,unknown>)=>Promise<string>;onJob:(id:string)=>Promise<void>}>();
 const view=ref<Inspection>(), error=ref(""), busy=ref(false), loading=ref(false), profile=ref("baseline"), filter=ref("all"), tab=ref("parameters");
 type HardeningAction = "install" | "configure" | "uninstall" | "recover";
@@ -18,9 +16,14 @@ let disposed=false, generation=0;
 let jobReadbackTimer: ReturnType<typeof setTimeout> | undefined;
 const id=/^[a-f0-9]{32}$/, hash=/^[a-f0-9]{64}$/;
 const knownKeys=new Set(["fs.protected_fifos","fs.protected_hardlinks","fs.protected_regular","fs.protected_symlinks","kernel.dmesg_restrict","kernel.kptr_restrict","kernel.unprivileged_bpf_disabled","kernel.yama.ptrace_scope","net.ipv4.conf.all.accept_redirects","net.ipv4.conf.all.log_martians","net.ipv4.conf.all.send_redirects","net.ipv4.conf.default.accept_redirects","net.ipv4.conf.default.send_redirects","net.ipv6.conf.all.accept_redirects","net.ipv6.conf.default.accept_redirects"]);
-function transaction(v:Transaction){return v && id.test(v.id) && hash.test(v.sha256) && typeof v.recovery_permitted==="boolean" && typeof v.state==="string";}
+function transaction(v:Transaction){
+  return v && id.test(v.id) && hash.test(v.sha256) && typeof v.recovery_permitted==="boolean"
+    && [v.state,v.action,v.from_profile,v.to_profile,v.detail].every(x=>typeof x==="string")
+    && Number.isFinite(Date.parse(v.started_at)) && (!v.finished_at || Number.isFinite(Date.parse(v.finished_at)));
+}
 function validate(v:Inspection):boolean {
-  return v?.format===1 && typeof v.installed==="boolean" && typeof v.healthy==="boolean" && typeof v.originals_complete==="boolean" && typeof v.config_matches==="boolean" && typeof v.detail==="string" && typeof v.checked_at==="string"
+  return v?.format===1 && typeof v.installed==="boolean" && typeof v.healthy==="boolean" && typeof v.originals_complete==="boolean" && typeof v.config_matches==="boolean" && typeof v.detail==="string" && typeof v.checked_at==="string" && Number.isFinite(Date.parse(v.checked_at))
+    && typeof v.version==="string" && typeof v.profile==="string" && Number.isSafeInteger(v.retained_temporaries) && v.retained_temporaries>=0
     && Array.isArray(v.parameters) && v.parameters.length===knownKeys.size && new Set(v.parameters.map(p=>p.key)).size===knownKeys.size
     && v.parameters.every(p=>knownKeys.has(p.key) && [p.actual,p.target,p.original,p.detail].every(x=>typeof x==="string") && [p.managed,p.original_known,p.reversible,p.drift].every(x=>typeof x==="boolean"))
     && Array.isArray(v.history) && v.history.length<=128 && v.history.every(transaction) && (v.pending===null || transaction(v.pending));
@@ -65,6 +68,15 @@ async function refresh() {
 }
 const drift=computed(()=>view.value?.parameters.filter(p=>p.drift).length || 0);
 const rows=computed(()=>view.value?.parameters.filter(p=>filter.value==="all" || filter.value==="managed"&&p.managed || filter.value==="drift"&&p.drift || filter.value==="locked"&&!p.reversible) || []);
+const exportDisabled=computed(()=>!view.value || loading.value || busy.value || !!ticket.value || !!error.value);
+function exportInspection(){
+  const source=view.value;if(!source || exportDisabled.value)return;
+  const {filename,text}=buildHardeningAuditExport(source);
+  const url=URL.createObjectURL(new Blob([text],{type:"application/json;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download=filename;
+  document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 const disabled=computed(()=>!view.value || loading.value || busy.value || !!ticket.value || !!view.value.pending);
 const profileName=(p:string)=>p==="strict"?"严格基线":p==="baseline"?"基础基线":"未安装";
 const actionName=(a:string)=>({install:"安装",configure:"配置",uninstall:"卸载",update:"更新",recover:"显式恢复"}[a] || a);
@@ -99,7 +111,7 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;if(jobReadbackTim
 
 <template>
   <section class="hardening-workspace" aria-label="系统基线加固工作台">
-    <header><div><h3>系统基线加固</h3><p>内核参数 · 真实原值 · 偏差核对 · 原事务恢复</p></div><el-button :loading="loading" :disabled="busy" @click="refresh">只读刷新</el-button></header>
+    <header><div><h3>系统基线加固</h3><p>内核参数 · 真实原值 · 偏差核对 · 原事务恢复</p></div><div class="hardening-inspection-actions"><el-button :loading="loading" :disabled="busy" @click="refresh">只读刷新</el-button><el-button :disabled="exportDisabled" @click="exportInspection">下载核对快照</el-button></div></header>
     <el-alert v-if="error" type="error" :title="error" :closable="false"/>
     <el-alert v-if="ticket" type="warning" :closable="false" :title="`原${actionName(ticket.action)}请求${ticket.job?'已入队 · '+ticket.job:'结果尚未确认 · '+ticket.key}。未自动重发；请保留原身份并核对任务。关闭本工作区不会取消后台任务，也不代表请求未提交。`"/>
     <el-alert v-if="reviewed && !ticket" :type="reviewed.job.state==='succeeded'?'info':'warning'" :closable="false"
@@ -109,6 +121,7 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;if(jobReadbackTim
     <el-empty v-if="!view && !loading" description="安装状态尚未核对；未开放变更"/>
     <template v-if="view">
       <div class="hardening-summary"><div><small>安装与当前基线</small><strong>{{ view.installed ? profileName(view.profile) : '未安装' }}</strong><span>{{ view.version ? 'v'+view.version : '—' }}</span></div><div><small>实际参数偏差</small><strong>{{ drift }}</strong><span>共 {{ view.parameters.length }} 项固定核对</span></div><div><small>原值与文件</small><strong>{{ view.originals_complete ? '原值完整' : view.installed ? '待核对' : '尚未记录' }}</strong><span>{{ view.config_matches ? '完整配置一致' : '配置需核对' }}</span></div><div><small>当前结果</small><strong>{{ view.pending ? '事务未闭合' : view.healthy ? '核对通过' : view.installed ? '需要处理' : '未启用' }}</strong><span>{{ formatPanelDateTime(view.checked_at) }}</span></div></div>
+      <p class="hardening-export-note">快照包含本次核对的全部 {{ view.parameters.length }} 项参数和原事务回执，可用于审计。文件不会应用配置。</p>
       <el-alert :type="view.healthy?'success':'warning'" :title="view.detail" :closable="false"/>
       <section v-if="view.pending" class="hardening-pending"><h4>原事务恢复</h4><dl><dt>原任务</dt><dd>{{ view.pending.id }}</dd><dt>完整摘要</dt><dd>{{ view.pending.sha256 }}</dd><dt>操作与状态</dt><dd>{{ actionName(view.pending.action) }} · {{ view.pending.state }} · {{ profileName(view.pending.from_profile) }} → {{ profileName(view.pending.to_profile) }}</dd></dl><p>{{ view.pending.detail }}</p><el-button type="warning" :disabled="busy || !!ticket || !view.pending.recovery_permitted" @click="submit('recover')">按原事务显式恢复</el-button><small>不是重试安装；提交时重新核对，外部变更不会被覆盖。</small></section>
       <el-tabs v-model="tab">
@@ -121,5 +134,5 @@ onMounted(refresh);onUnmounted(()=>{disposed=true;++generation;if(jobReadbackTim
 </template>
 
 <style scoped>
-.hardening-workspace{display:grid;gap:16px;color:#304960}.hardening-workspace header{display:flex;align-items:center;justify-content:space-between;gap:16px}.hardening-workspace h3,.hardening-workspace h4{margin:0 0 8px}.hardening-workspace p{line-height:1.6;margin:4px 0;color:#61768a}.hardening-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.hardening-summary>div{background:#f5f8fa;border:1px solid #e2e9ee;border-radius:10px;padding:16px;display:grid;gap:8px}.hardening-summary strong{font-size:20px;color:#18362f}.hardening-summary small,.hardening-summary span{color:#61768a;font-size:12px}.hardening-pending{background:#fffbef;border:1px solid #f2db9e;border-radius:10px;padding:18px}.hardening-pending dl{display:grid;grid-template-columns:100px 1fr;gap:10px}.hardening-pending dd{margin:0;overflow-wrap:anywhere;font-family:monospace}.hardening-pending small{display:block;margin-top:10px}.hardening-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.el-radio-group{margin-bottom:14px}.el-select{width:min(600px,100%)}@media(max-width:760px){.hardening-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.hardening-workspace header{align-items:flex-start}.hardening-pending dl{grid-template-columns:1fr}}
+.hardening-workspace{display:grid;gap:16px;color:#304960}.hardening-inspection-actions{display:flex;gap:8px;flex-wrap:wrap}.hardening-inspection-actions .el-button{margin-left:0}.hardening-workspace header{display:flex;align-items:center;justify-content:space-between;gap:16px}.hardening-workspace h3,.hardening-workspace h4{margin:0 0 8px}.hardening-workspace p{line-height:1.6;margin:4px 0;color:#61768a}.hardening-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.hardening-summary>div{background:#f5f8fa;border:1px solid #e2e9ee;border-radius:10px;padding:16px;display:grid;gap:8px}.hardening-summary strong{font-size:20px;color:#18362f}.hardening-summary small,.hardening-summary span{color:#61768a;font-size:12px}.hardening-pending{background:#fffbef;border:1px solid #f2db9e;border-radius:10px;padding:18px}.hardening-pending dl{display:grid;grid-template-columns:100px 1fr;gap:10px}.hardening-pending dd{margin:0;overflow-wrap:anywhere;font-family:monospace}.hardening-pending small{display:block;margin-top:10px}.hardening-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:20px}.el-radio-group{margin-bottom:14px}.el-select{width:min(600px,100%)}@media(max-width:760px){.hardening-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.hardening-workspace header{align-items:flex-start;flex-wrap:wrap}.hardening-pending dl{grid-template-columns:1fr}}
 </style>

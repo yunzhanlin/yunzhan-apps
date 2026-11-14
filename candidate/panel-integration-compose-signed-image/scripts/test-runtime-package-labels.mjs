@@ -44,3 +44,8 @@ test('drifted legacy WAF is a configuration review, not missing-handler advice o
   const f=actualUpdate(status);await f.fn({id:'nginx-waf',name:'Nginx 请求防火墙'});assert.equal(f.events.filter(e=>e[0]==='api').length,0);assert.deepEqual(f.events,[['warning',status.update_detail]]);assert.deepEqual(f.b.registryInstalling.value,[]);
  }
 });
+
+const incompatibleUpdate = {update_available:true,update_supported:false,update_kind:'platform-incompatible'};
+assert.equal(registryUpdateActionLabel(incompatibleUpdate),'新版系统不兼容');
+assert.equal(registryUpdateBadge(incompatibleUpdate),'新版系统不兼容');
+assert.equal(registryManualUpdateReview(incompatibleUpdate),false);

@@ -53,6 +53,17 @@ type AppRegistryHost struct {
 	Architecture string `json:"architecture"`
 }
 
+// Version 1 catalogues omit compatibility. Keep the verified scope of the
+// exact published package visible without loading its manifest in the store.
+func registryPackagePlatformDetail(app appcatalog.CatalogItem, platform string) string {
+	if app.Provider == "panel-module" && app.ID == "nginx-waf" && app.Target == "nginx-waf" &&
+		app.Version == "2.6.0" && app.SHA256 == "465bd0775b41e8d7dd8d02de9497294a815a7467e919786fcae719791314c9f2" &&
+		platform != "debian-13" && platform != "ubuntu-24.04" {
+		return "Nginx 请求防火墙 2.6.0 签名包支持 Debian 13 和 Ubuntu 24.04"
+	}
+	return ""
+}
+
 func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool, string) {
 	supportedOS := platform == "debian-12" || platform == "debian-13" || platform == "ubuntu-22.04" || platform == "ubuntu-24.04" || platform == "ubuntu-26.04"
 	if !supportedOS || (arch != "amd64" && arch != "arm64") {
@@ -88,6 +99,9 @@ func registrySupportOn(app appcatalog.CatalogItem, platform, arch string) (bool,
 			app.Version == "1.1.1" && app.SHA256 == "6d612505ac72ec97fdafdbc0eb8dae999df296e5203bb47058f799dd2aa6f01e" &&
 			platform != "debian-13" && platform != "ubuntu-22.04" && platform != "ubuntu-24.04" {
 			return false, "SSH 防入侵 1.1.1 签名包支持 Debian 13、Ubuntu 22.04 和 Ubuntu 24.04"
+		}
+		if reason := registryPackagePlatformDetail(app, platform); reason != "" {
+			return false, reason
 		}
 		if _, ok := FindAppModule(app.Target); !ok && app.Target != "nginx-waf" && app.Target != "system-hardening" && app.Target != "intrusion-prevention" {
 			return false, "当前面板没有该功能处理器"
@@ -343,8 +357,13 @@ func (a *Server) appRegistryStatuses(ctx context.Context, catalog appcatalog.Cat
 				}
 			}
 			if !status.UpdateSupported && app.Provider != "compose" && status.UpdateKind != "runtime-host-review" {
-				status.UpdateKind = "panel-upgrade"
-				status.UpdateDetail = "仓库已有新版，但当前面板缺少已审核处理器，请先升级面板"
+				if reason := registryPackagePlatformDetail(app, runtimecatalog.HostPlatform()); reason != "" {
+					status.UpdateKind = "platform-incompatible"
+					status.UpdateDetail = reason
+				} else {
+					status.UpdateKind = "panel-upgrade"
+					status.UpdateDetail = "仓库已有新版，但当前面板缺少已审核处理器，请先升级面板"
+				}
 			}
 		} else if status.Installed && !status.VersionKnown {
 			status.UpdateDetail = "旧安装未记录应用包版本，不能据此判定已是最新版；请核对管理页"

@@ -60,3 +60,25 @@ func TestRegistryIntrusion111UsesPublishedSignedOSScope(t *testing.T) {
 		}
 	}
 }
+
+func TestRegistryNginxWAF260UsesPublishedSignedOSScope(t *testing.T) {
+	item := appcatalog.CatalogItem{
+		ID: "nginx-waf", Target: "nginx-waf", Provider: "panel-module", Stage: "ready",
+		Version: "2.6.0", SHA256: "465bd0775b41e8d7dd8d02de9497294a815a7467e919786fcae719791314c9f2",
+	}
+	manifest := appcatalog.Manifest{
+		Compatibility: appcatalog.Compatibility{
+			OS:            []string{"debian-13", "ubuntu-24.04"},
+			Architectures: []string{"amd64", "arm64"},
+		},
+	}
+	for _, platform := range []string{"debian-12", "debian-13", "ubuntu-22.04", "ubuntu-24.04", "ubuntu-26.04"} {
+		for _, arch := range []string{"amd64", "arm64"} {
+			want := appCompatibleOn(manifest, platform, arch) == nil
+			ok, detail := registrySupportOn(item, platform, arch)
+			if ok != want || !want && detail == "" {
+				t.Fatalf("%s/%s: catalogue support=%t detail=%q, signed support=%t", platform, arch, ok, detail, want)
+			}
+		}
+	}
+}
