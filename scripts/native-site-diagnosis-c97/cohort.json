@@ -1,0 +1,58 @@
+{
+  "source_head": "4de9c410c66c7f7a14ef96abea76291e1d73b20b",
+  "native_fixture_parent": "4de9c410c66c7f7a14ef96abea76291e1d73b20b",
+  "source_inputs_sha256": "3a2104e79d937c6a8f9baee9bb0241fbbd8b57fb1a0c6ade8ab6c473ea673fa2",
+  "version": "0.1.0-dev.proapps24diagnosistlscandidate163",
+  "served_head": "3a09dfaa05befb115224a2b7672df09fb1b5f96c",
+  "authorized_catalogues": [
+    "3a09dfaa05befb115224a2b7672df09fb1b5f96c"
+  ],
+  "items": {
+    "site-diagnosis": {
+      "id": "site-diagnosis",
+      "name": "Site Diagnosis",
+      "category": "professional",
+      "version": "1.3.1",
+      "summary": "\u68c0\u67e5\u771f\u5b9e\u7f51\u7ad9\u5165\u53e3\u3001DNS\u3001\u8bc1\u4e66\u548c\u6587\u4ef6\u6743\u9650\u3002Apache \u7f51\u7ad9\u989d\u5916\u6838\u5bf9\u53d7\u7ba1\u865a\u62df\u4e3b\u673a\u914d\u7f6e\u3001\u670d\u52a1\u4e3b\u8fdb\u7a0b\u548c\u56de\u73af\u76d1\u542c\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "panel-module",
+      "target": "site-diagnosis",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u5b9e\u9645\u57df\u540d\u7ed1\u5b9a\u4e0e HTTP \u72b6\u6001",
+        "DNS \u4e0e HTTPS \u8bc1\u4e66\u68c0\u67e5",
+        "Nginx \u914d\u7f6e\u548c\u7ad9\u70b9\u6587\u4ef6\u6743\u9650",
+        "Apache \u865a\u62df\u4e3b\u673a\u548c\u914d\u7f6e\u8bed\u6cd5",
+        "Apache \u4e3b\u8fdb\u7a0b\u4e0e\u76d1\u542c\u5f52\u5c5e",
+        "\u6279\u91cf\u8bca\u65ad\u4e0e HTML \u62a5\u544a"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/site-diagnosis/1.3.1/manifest.json",
+      "sha256": "d0bf2f66f2edd92f423eae1434cc2c9567c43d1d28845d8ada2831929ba1e6e0"
+    }
+  },
+  "payload_files": {
+    "scripts/native-site-diagnosis-c97/dispatch.json": "328e779f8119e14872743763363c0d51a0b5f0471c50c3fc66467435558ef2de",
+    "scripts/native-site-diagnosis-c97/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-site-diagnosis-c97/site-diagnosis.py": "7607117ffe15a16c3e3da3ef541526b5b07c99dbb6d6751da2bad75185222062",
+    "scripts/native-site-diagnosis-c97/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-site-diagnosis-c97/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-site-diagnosis-c97/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-site-diagnosis-c97/download.py": "1f22d4c4419ddeb5023c480d2c971a188cba07b5328d59ba9158e14f7e9bc40c",
+    "scripts/native-site-diagnosis-c97/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    ".github/workflows/site-diagnosis-tls-c163-native-qa1.yml": "ae32c51220c1812a453d19d018c54f61575f72e7c10785fc1f45cb8657d79349"
+  },
+  "changed_payload_files": [
+    ".github/workflows/site-diagnosis-tls-c163-native-qa1.yml",
+    "scripts/native-site-diagnosis-c97/bootstrap-original-install.py",
+    "scripts/native-site-diagnosis-c97/dispatch.json",
+    "scripts/native-site-diagnosis-c97/download.py",
+    "scripts/native-site-diagnosis-c97/finish.py",
+    "scripts/native-site-diagnosis-c97/isolated_ubuntu_apt.py",
+    "scripts/native-site-diagnosis-c97/original-signed-release.py",
+    "scripts/native-site-diagnosis-c97/recipient.pem",
+    "scripts/native-site-diagnosis-c97/site-diagnosis.py"
+  ],
+  "mode": "signed-site-diagnosis-tls",
+  "Main_changed": false
+}

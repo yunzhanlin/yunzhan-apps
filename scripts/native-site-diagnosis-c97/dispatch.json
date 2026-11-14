@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24diagnosistlscandidate163",
+  "source_head": "4de9c410c66c7f7a14ef96abea76291e1d73b20b",
+  "source_inputs_sha256": "3a2104e79d937c6a8f9baee9bb0241fbbd8b57fb1a0c6ade8ab6c473ea673fa2",
+  "source_sdk_tree": "6197394428a7a1b0ff4d34f7a885b947194cc1d5",
+  "release_id": 445208889,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-amd64.tar.gz": {
+      "id": 747119854,
+      "bytes": 24089619,
+      "sha256": "6a98cde57cc138da8eb220fdebc9644d04fb4a1645f94d4d9ce1d19476499f7e"
+    },
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-amd64.tar.gz.manifest": {
+      "id": 747115745,
+      "bytes": 183,
+      "sha256": "cb00023e3ee689fd7f9debe6a6889df1231faa59e36145c939e806880135064f"
+    },
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-amd64.tar.gz.sig": {
+      "id": 747115550,
+      "bytes": 64,
+      "sha256": "75b02d88f5cffbe40896c6f339768ce71056f12a94fe9084f835537ba5ed4b37"
+    },
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-arm64.tar.gz": {
+      "id": 747116003,
+      "bytes": 22294345,
+      "sha256": "f6239c44f279aa5d6903e3cf98b89be8dcdbe52cd1bb51ad143455fe41941df0"
+    },
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-arm64.tar.gz.manifest": {
+      "id": 747115848,
+      "bytes": 183,
+      "sha256": "2d5d8d2b1e905d7c156f560ce70a8429c56a64fa29174018e2cf27ee52adc7d9"
+    },
+    "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-arm64.tar.gz.sig": {
+      "id": 747115609,
+      "bytes": 64,
+      "sha256": "be4c383d672bc3d4311e175f1a78306ff06ab0e4b4f62d23e5b83bb4411353e6"
+    },
+    "release-signing-dev.pub": {
+      "id": 747115679,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    },
+    "site-diagnosis-tls-signed-release.py": {
+      "id": 747115925,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    }
+  },
+  "tag": "qa-diagnosistlscandidate163-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24diagnosistlscandidate163-linux-arm64.tar.gz"
+    }
+  }
+}
