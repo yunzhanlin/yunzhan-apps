@@ -626,3 +626,90 @@ func TestPHPQuarantineRecordCountAndCrossFilesystemAreBounded(t *testing.T) {
 		}
 	})
 }
+
+func TestPHPQuarantineRefusesSameDeviceBindWithoutStarting(t *testing.T) {
+	for _, bind := range []string{"directory", "file"} {
+		t.Run(bind, func(t *testing.T) {
+			s, in, site := phpQuarantineFixture(t)
+			original := filepath.Join(site, "public", in.Path)
+			data, err := os.ReadFile(original)
+			if err != nil {
+				t.Fatal(err)
+			}
+			outside := t.TempDir()
+			shadow := filepath.Join(outside, filepath.Base(original))
+			if err := os.WriteFile(shadow, data, 0640); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Chown(shadow, 54321, 54321); err != nil {
+				t.Fatal(err)
+			}
+			var a, b unix.Stat_t
+			if err := unix.Stat(original, &a); err != nil {
+				t.Fatal(err)
+			}
+			if err := unix.Stat(shadow, &b); err != nil || a.Dev != b.Dev {
+				t.Fatal("requires same-device fixture", err)
+			}
+			if bind == "directory" {
+				moduleTestBind(t, outside, filepath.Dir(original))
+			} else {
+				moduleTestBind(t, shadow, original)
+			}
+			if _, err := s.modulePHPQuarantine(context.Background(), "quarantine", in); err == nil || !strings.Contains(err.Error(), "挂载") {
+				t.Fatal("mounted source was not refused", err)
+			}
+			rows, err := s.phpQuarantineRecords()
+			if err != nil || len(rows) != 0 {
+				t.Fatal("mounted source allocated a quarantine record", rows, err)
+			}
+			if now, err := os.ReadFile(shadow); err != nil || !bytes.Equal(now, data) {
+				t.Fatal("mounted external data changed", err)
+			}
+		})
+	}
+}
+
+func TestPHPQuarantineOriginalRecordSurvivesSameDeviceBind(t *testing.T) {
+	s, in, site := phpQuarantineFixture(t)
+	ctx := context.Background()
+	q := phpTestRecord(t, s, in)
+	path := filepath.Join(site, "public", in.Path)
+	outside := t.TempDir()
+	shadow := filepath.Join(outside, filepath.Base(path))
+	const retained = "external placeholder"
+	if err := os.WriteFile(shadow, []byte(retained), 0600); err != nil {
+		t.Fatal(err)
+	}
+	parent := filepath.Dir(path)
+	run := func() {
+		if err := unix.Mount(outside, parent, "", unix.MS_BIND, ""); err != nil {
+			if err == unix.EPERM {
+				t.Skip("requires a Linux mount-capable test host")
+			}
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := unix.Unmount(parent, 0); err != nil {
+				t.Fatal(err)
+			}
+		}()
+		if _, err := s.modulePHPQuarantine(ctx, "restore-quarantine", phpTestRestoreInput(q, false)); err == nil || !strings.Contains(err.Error(), "挂载") {
+			t.Fatal("restore was attempted on mounted destination", err)
+		}
+		current, err := s.phpReadQuarantine(q.ID)
+		if err != nil || current.State != q.State || current.Revision != q.Revision {
+			t.Fatal("rejected restore changed original record", current, err)
+		}
+		if data, err := os.ReadFile(shadow); err != nil || string(data) != retained {
+			t.Fatal("external file changed", err)
+		}
+	}
+	run()
+	if _, err := s.modulePHPQuarantine(ctx, "restore-quarantine", phpTestRestoreInput(q, false)); err != nil {
+		t.Fatalf("ordinary restore failed after unmount: %v", err)
+	}
+	if data, err := os.ReadFile(path); err != nil || phpSHA(data) != q.SHA256 {
+		t.Fatal("original content was not restored", err)
+	}
+}

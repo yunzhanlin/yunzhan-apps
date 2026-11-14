@@ -103,7 +103,7 @@ func phpPrivateDirectory(parent *os.File, name string, create bool) (*os.File, e
 			return nil, err
 		}
 	}
-	dir, err := phpOpenAt(parent, name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NONBLOCK, 0)
+	dir, err := openModuleMountPath(parent, name, unix.O_RDONLY|unix.O_DIRECTORY, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (s *Service) phpQuarantineFiles(q *phpQuarantineRecord, create bool) (*phpQ
 	if err != nil {
 		return fail(err)
 	}
-	marker, err := phpOpenAt(f.site, ".panel-site.json", unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	marker, err := openModuleRegular(f.site, ".panel-site.json")
 	if err != nil {
 		return fail(err)
 	}
@@ -296,8 +296,13 @@ func (s *Service) phpQuarantineFiles(q *phpQuarantineRecord, create bool) (*phpQ
 	if err != nil {
 		return fail(err)
 	}
-	f.parent, err = phpOpenAt(f.public, filepath.Dir(q.Path), unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NONBLOCK, 0)
+	f.parent, err = openModuleMountPath(f.public, filepath.Dir(q.Path), unix.O_RDONLY|unix.O_DIRECTORY, 0)
 	if err != nil {
+		return fail(fmt.Errorf("文件父目录无法核对，不能跨文件系统或绑定挂载：%w", err))
+	}
+	// Check the file mount before reserving a new transaction, opening a
+	// private backup, or treating an interrupted publication as complete.
+	if _, err = moduleMountInfo(f.parent, filepath.Base(q.Path)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fail(err)
 	}
 	si, err := f.site.Stat()
@@ -366,7 +371,7 @@ func (s *Service) phpAttachQuarantineStorage(q *phpQuarantineRecord, f *phpQuara
 }
 
 func phpReadFile(dir *os.File, name string, private bool) ([]byte, os.FileInfo, error) {
-	f, err := phpOpenAt(dir, name, unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	f, err := openModuleRegular(dir, name)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -445,7 +450,7 @@ func phpAttributes(f *os.File) (map[string][]byte, error) {
 }
 
 func phpWritePrivate(dir *os.File, name string, data []byte) (*os.File, error) {
-	f, err := phpOpenAt(dir, name, unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL|unix.O_NONBLOCK, 0600)
+	f, err := openModuleMountPath(dir, name, unix.O_WRONLY|unix.O_CREAT|unix.O_EXCL, 0600)
 	if err != nil {
 		return nil, err
 	}
@@ -516,7 +521,7 @@ func (s *Service) phpPrepareQuarantine(ctx context.Context, in core.AppModuleInp
 	if bytes+q.Bytes > phpQuarantineMaxBackups {
 		return fail(errors.New("隔离备份已达 256 MiB 安全预算，保留现有数据，未修改文件"))
 	}
-	original, err := phpOpenAt(f.parent, filepath.Base(q.Path), unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	original, err := openModuleRegular(f.parent, filepath.Base(q.Path))
 	if err != nil {
 		return fail(err)
 	}
@@ -622,7 +627,7 @@ func (s *Service) phpFinishQuarantine(q *phpQuarantineRecord, f *phpQuarantineFi
 	if err != nil || !phpOriginalMatches(q, info, data) {
 		return s.phpRollbackMoved(q, f, errors.New("移动后 inode 或摘要不匹配"))
 	}
-	moved, err := phpOpenAt(f.storage, "moved.bin", unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	moved, err := openModuleRegular(f.storage, "moved.bin")
 	if err != nil {
 		return err
 	}
@@ -645,7 +650,7 @@ func phpOriginalMatches(q *phpQuarantineRecord, info os.FileInfo, data []byte) b
 }
 
 func phpVerifyRestoredFile(q *phpQuarantineRecord, dir *os.File, name string) error {
-	f, err := phpOpenAt(dir, name, unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	f, err := openModuleRegular(dir, name)
 	if err != nil {
 		return err
 	}
@@ -802,7 +807,7 @@ func (s *Service) phpRecoverQuarantine(q *phpQuarantineRecord, f *phpQuarantineF
 	if err != nil || phpIdentity(info) != q.Original || phpSHA(data) != q.SHA256 {
 		return s.phpRollbackMoved(q, f, errors.New("中断期间移动文件与已审查身份不符"))
 	}
-	moved, err := phpOpenAt(f.storage, "moved.bin", unix.O_RDONLY|unix.O_NONBLOCK, 0)
+	moved, err := openModuleRegular(f.storage, "moved.bin")
 	if err != nil {
 		return err
 	}
