@@ -115,7 +115,7 @@ func TestPlatformMaintenanceOldInstalledIdentityNeverEnablesNewCommands(t *testi
 			t.Fatal("maintenance version gate", row, e)
 		}
 	}
-	if SoftwareImplementationVersion("platform-ops") != PlatformMaintenanceAppVersion {
+	if SoftwareImplementationVersion("platform-ops") != PlatformMaintenanceFleetAppVersion {
 		t.Fatal("new application lacks independent implementation version")
 	}
 	for _, version := range []string{"1.3", "1.3.0-compat1", "1.4.0"} {
