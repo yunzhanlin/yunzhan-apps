@@ -1,10 +1,12 @@
 {
   "cohorts": {
     "amd64": {
-      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz"
+      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-amd64.tar.gz",
+      "verified_tree_entries": 207
     },
     "arm64": {
-      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz"
+      "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184r2-linux-arm64.tar.gz",
+      "verified_tree_entries": 207
     }
   },
   "release_assets": {

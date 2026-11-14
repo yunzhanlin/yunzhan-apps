@@ -17,10 +17,10 @@
   "image": "phpmyadmin:5.2.3-apache@sha256:f54a37b908b26caa7032c4eb0c7f3495fdd90208a06eed9c4b2c8e691dd1662c",
   "payload_files": {
     ".github/workflows/phpmyadmin-c186-native-scope.yml": "06dcacf3a11e66a10659f3926486ae1e421891f95bd819ff7a3a0024df114b8f",
-    "scripts/native-phpmyadmin-c186/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-phpmyadmin-c186/bootstrap-original-install.py": "e9842332f13d7c9cf452655a293fa52cf98e8ed06624d2aa94f2edae26e31636",
     "scripts/native-phpmyadmin-c186/browser-pins.json": "98d9ca2600d520b2a7e9f51a666b4c9116f266bafce86e066d50a18b333c651e",
     "scripts/native-phpmyadmin-c186/browser.mjs": "286d3572b48079e6ebdda31316a1b0d4c2da821abaedf3a73e9037cc37b09a03",
-    "scripts/native-phpmyadmin-c186/dispatch.json": "dbb4426ce0baa5750f9564eed9359b5e42a5a4d420c0d0e73fba5874bb514b64",
+    "scripts/native-phpmyadmin-c186/dispatch.json": "7c1858c58151d874d3f9d967680a319cff56c6b215d9c6c8cce755d88c57fb4e",
     "scripts/native-phpmyadmin-c186/download.py": "c2683452cb757925b20c0eed37aa4d1f84e71494c7146c003603c3cf43398eda",
     "scripts/native-phpmyadmin-c186/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
     "scripts/native-phpmyadmin-c186/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
@@ -34,5 +34,10 @@
   "previous_image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
   "mode": "store",
   "served_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
-  "Main_changed": false
+  "Main_changed": false,
+  "native_fixture_parent": "2d659ba4c60ccffe4d8dd46ab1078069acdffe6d",
+  "changed_payload_files": [
+    "scripts/native-phpmyadmin-c186/dispatch.json",
+    "scripts/native-phpmyadmin-c186/bootstrap-original-install.py"
+  ]
 }

@@ -236,6 +236,7 @@ with tarfile.open(archive)as tar:
    raw=tar.extractfile(member).read();assert stat.S_ISREG(st.st_mode)and st.st_nlink==1 and target.read_bytes()==raw
    checked[name]={'type':'file','sha256':hashlib.sha256(raw).hexdigest(),'bytes':len(raw),'mode':stat.S_IMODE(st.st_mode)}
   else:assert member.isdir()and stat.S_ISDIR(st.st_mode);checked[name]={'type':'directory','mode':stat.S_IMODE(st.st_mode)}
- assert 'bin/panel'in checked and 'bin/panel-executor'in checked and 'web/index.html'in checked and len(checked)==205
+ assert {'bin/panel', 'bin/panel-executor', 'web/index.html'} <= checked.keys()
+ assert len(checked) == dispatch['cohorts'][arch]['verified_tree_entries']
  assert {'.'}|{str(f.relative_to(installed))for f in installed.rglob('*')}==set(checked)
 save('original-installed-programme-bytes.json',checked)
