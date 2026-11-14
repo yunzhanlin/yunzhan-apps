@@ -158,7 +158,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             with self.subTest(phase=phase),self.fixture()as(transaction,runner,root):
                 before=self.snapshot(transaction,runner,root)
                 backup=support.UpgradeTransactionTests().kill_transaction_at(transaction,runner,root,phase)
-                recovered=development.DevelopmentUpgrade(backup,root,runner)
+                recovered = development.DevelopmentUpgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     result=recovered.recover(backup)
                     self.assertEqual(result['layout'],'development')
@@ -180,7 +181,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
                 info=target.stat();data=target.read_bytes();target.rename(root/'retained-own-code')
                 target.write_bytes(data);target.chmod(info.st_mode&0o777);os.utime(target,ns=(info.st_atime_ns,info.st_mtime_ns))
                 runner.calls.clear()
-                recovered=development.DevelopmentUpgrade(backup,root,runner)
+                recovered = development.DevelopmentUpgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with self.assertRaises(ValueError):recovered.recover(backup)
                     self.assertFalse((backup/'failed-panel.db').exists())
@@ -194,7 +196,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             before={str(path):path.stat().st_ino for base in(root/'opt/panel/bin',root/'opt/panel/web')for path in base.rglob('*')if path.is_file()}
             database_inode=(root/'var/lib/panel/panel.db').stat().st_ino
             runner.calls.clear()
-            recovered=development.DevelopmentUpgrade(backup,root,runner)
+            recovered = development.DevelopmentUpgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 self.assertEqual(recovered.recover(backup)['phase'],'committed')
                 self.assertEqual(before,{str(path):path.stat().st_ino for base in(root/'opt/panel/bin',root/'opt/panel/web')for path in base.rglob('*')if path.is_file()})
@@ -212,7 +215,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
                 backup=support.UpgradeTransactionTests().kill_transaction_at(transaction,runner,root,phase,rollback=True)
                 failed=backup/'failed-panel.db';info=failed.stat();raw=failed.read_bytes()
                 inode=(root/'var/lib/panel/panel.db').stat().st_ino
-                recovered=development.DevelopmentUpgrade(backup,root,runner)
+                recovered = development.DevelopmentUpgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     result=recovered.recover(backup)
                     self.assertEqual(result['phase'],phase)
@@ -229,7 +233,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             target=backup/'failed-web/index.html';info=target.stat();data=target.read_bytes()
             target.rename(root/'retained-failed-web');target.write_bytes(data);target.chmod(info.st_mode&0o777);os.utime(target,ns=(info.st_atime_ns,info.st_mtime_ns))
             runner.calls.clear()
-            recovered=development.DevelopmentUpgrade(backup,root,runner)
+            recovered = development.DevelopmentUpgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 with self.assertRaises(ValueError):recovered.recover(backup)
                 self.assertFalse(any(len(call)>1 and call[1]in('stop','start','daemon-reload','reset-failed')for call in runner.calls))
@@ -250,7 +255,8 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             backup=support.UpgradeTransactionTests().kill_transaction_at(transaction,runner,root,None,rollback=True,hook=hook)
             self.assertFalse((root/'opt/panel/web').exists())
             inode=(backup/'failed-web').stat().st_ino
-            recovered=development.DevelopmentUpgrade(backup,root,runner)
+            recovered = development.DevelopmentUpgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 recovered.recover(backup)
                 self.assert_restored(recovered,runner,root,before)
@@ -280,6 +286,7 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             lock.chmod(0o644)
             runner = DevelopmentRunner(root, gateway_active)
             transaction = development.DevelopmentUpgrade(root/'candidate', root, runner)
+            transaction.wait_startup_socket = runner.wait_startup_socket
             try:
                 yield transaction, runner, root
             finally:
@@ -404,7 +411,7 @@ class DevelopmentUpgradeTransactionTests(unittest.TestCase):
             start_records = []
             command = transaction.run_command
             def observe(*args, **kwargs):
-                if args[0] == '/usr/bin/systemctl' and args[1] == 'start' and 'panel.service' in args:
+                if args == ('/usr/bin/systemctl', 'start', development.PROGRAMS[0]):
                     record = json.loads((root/'opt/panel/.development-upgrade.pending').read_text())
                     self.assertEqual(set(record), {'format','version','pid','start_ticks','boot_id','lock_device','lock_inode','phase','panel_sha256','executor_sha256'})
                     self.assertEqual(record['format'], 2)

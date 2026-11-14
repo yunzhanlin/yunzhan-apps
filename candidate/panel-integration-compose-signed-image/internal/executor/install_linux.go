@@ -16,6 +16,7 @@ import (
 	"io/fs"
 	"local/panel/internal/core"
 	"local/panel/internal/runtimecatalog"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -527,12 +528,32 @@ type sourceHTTPError struct{ Status int }
 
 func (e sourceHTTPError) Error() string { return fmt.Sprintf("源码服务器 HTTP %d", e.Status) }
 
+// sourceResponseTimeout is only constructed before a response or source
+// file exists. A stalled or interrupted body cannot use this retry path.
+type sourceResponseTimeout struct{ cause error }
+
+func (e sourceResponseTimeout) Error() string { return e.cause.Error() }
+func (e sourceResponseTimeout) Unwrap() error { return e.cause }
+
 func downloadRuntimeSource(ctx context.Context, r runtimecatalog.Release, dst string) error {
 	return downloadRuntimeSourceWith(ctx, r, dst, downloadVerifiedWithLimits)
 }
 
 type sourceDownloadLimits struct {
 	Total, BodyIdle time.Duration
+}
+
+const apacheSourceArchiveBudget = 25 * time.Minute
+
+func runtimeSourceTotalCeiling(url, digest string) time.Duration {
+	// This historical release remains pinned in installed manifests. Allow
+	// its official archive to finish on a slow link without extending the
+	// budget for primary URLs, different source bytes, or any other runtime.
+	apache, ok := runtimecatalog.Find("apache-2.4.68")
+	if ok && url == runtimecatalog.SourceArchiveURL(apache) && digest == apache.SHA256 {
+		return apacheSourceArchiveBudget
+	}
+	return 20 * time.Minute
 }
 
 var errRuntimeSourceBodyIdle = errors.New("源码正文传输在有界空闲预算内无进展，未发布不完整运行时")
@@ -556,12 +577,21 @@ func downloadRuntimeSourceWith(ctx context.Context, r runtimecatalog.Release, ds
 	if cancelled := ctx.Err(); cancelled != nil {
 		return cancelled
 	}
+	var responseTimeout sourceResponseTimeout
+	if r.Family == "php" && strings.HasPrefix(r.URL, "https://www.php.net/distributions/") && errors.As(err, &responseTimeout) {
+		// A new GET to the same official URL is safe before any response or
+		// staged bytes. Never retry the install or use another source here.
+		err = download(ctx, r.URL, r.SHA256, dst, limits)
+		if cancelled := ctx.Err(); cancelled != nil {
+			return cancelled
+		}
+	}
 	var status sourceHTTPError
 	if ctx.Err() == nil && errors.As(err, &status) && (status.Status == 404 || status.Status == 410) {
 		if archive := runtimecatalog.SourceArchiveURL(r); archive != "" {
-			// Only this exact catalogued official Apache archive gets 20 minutes.
-			// No arbitrary mirrors, URLs, digests, retries or resumed partial bytes.
-			limits.Total = 20 * time.Minute
+			// Follow only the exact catalogued Apache archive after relocation.
+			// Do not resume partial content or relax its digest or idle budget.
+			limits.Total = runtimeSourceTotalCeiling(archive, r.SHA256)
 			return download(ctx, archive, r.SHA256, dst, limits)
 		}
 	}
@@ -587,7 +617,7 @@ func (r sourceProgressReader) Read(p []byte) (int, error) {
 }
 
 func downloadVerifiedWithLimits(ctx context.Context, url, digest, dst string, limits sourceDownloadLimits) error {
-	if limits.Total <= 0 || limits.Total > 20*time.Minute || limits.BodyIdle <= 0 || limits.BodyIdle > 45*time.Second {
+	if limits.Total <= 0 || limits.Total > runtimeSourceTotalCeiling(url, digest) || limits.BodyIdle <= 0 || limits.BodyIdle > 45*time.Second {
 		return errors.New("源码下载预算不在固定有界范围内")
 	}
 	transferContext, transferCancel := context.WithCancelCause(ctx)
@@ -617,6 +647,10 @@ func downloadVerifiedWithLimits(ctx context.Context, url, digest, dst string, li
 	}
 	resp, e := client.Do(req)
 	if e != nil {
+		var network net.Error
+		if resp == nil && ctx.Err() == nil && errors.As(e, &network) && network.Timeout() {
+			return sourceResponseTimeout{cause: e}
+		}
 		return e
 	}
 	defer resp.Body.Close()

@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import signal
+import socket
 import shutil
 import sqlite3
 import stat
@@ -131,7 +132,7 @@ class UpgradePolicyTests(unittest.TestCase):
                     before = transaction.database.read_bytes()
                     if state in ('completed', 'failed'):
                         transaction.queue_check()
-                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 10})])
+                        self.assertEqual(calls, [((str(root/'bin/panel-executor'), '--check-program-upgrade-queues'), {'timeout': 105})])
                     else:
                         with self.assertRaises(ValueError):
                             transaction.queue_check()
@@ -217,6 +218,77 @@ class UpgradePolicyTests(unittest.TestCase):
             transaction.stopped_program('nginx.service')
 
 
+class GuardedStartupOrderingTests(unittest.TestCase):
+    def run_start(self, failure=''):
+        events = []
+        active = set()
+        def release():
+            events.append('release-runtime')
+        def authorize():
+            events.append('authorize-owned-startup')
+        def command(*args):
+            self.assertEqual(args[:2], ('/usr/bin/systemctl','start'))
+            self.assertEqual(len(args), 3, 'the immutable native checks must not start concurrently')
+            unit = args[2]
+            self.assertEqual(active, set(upgrade.PROGRAMS[:upgrade.PROGRAMS.index(unit)]))
+            events.append(('start',unit))
+            if unit != failure:
+                active.add(unit)
+        def state(unit):
+            events.append(('verify',unit))
+            return dict(ActiveState='active' if unit in active else 'inactive',
+                        SubState='running' if unit in active else 'dead')
+        subject = type('Subject', (), {})()
+        subject.release_runtime, subject.authorize_startup = release, authorize
+        subject.run_command, subject.state = command, state
+        subject.wait_startup_socket = lambda unit: events.append(('socket',unit))
+        if failure:
+            with self.assertRaisesRegex(RuntimeError,'did not reach the expected running state'):
+                upgrade.Upgrade.start_previous_state(subject)
+        else:
+            upgrade.Upgrade.start_previous_state(subject)
+        return events
+
+    def test_upgrades_and_rollbacks_start_and_verify_each_fixed_dependency(self):
+        events = self.run_start()
+        self.assertEqual(events[:2], ['release-runtime','authorize-owned-startup'])
+        self.assertEqual(events[2:], [(verb,unit) for unit in upgrade.PROGRAMS for verb in (('start','verify','socket') if unit in upgrade.STARTUP_SOCKETS else ('start','verify'))])
+
+    def test_successful_systemctl_job_without_running_dependency_stops_before_executor(self):
+        events = self.run_start(upgrade.PROGRAMS[1])
+        self.assertEqual(events[2:], [('start',upgrade.PROGRAMS[0]),('verify',upgrade.PROGRAMS[0]),('socket',upgrade.PROGRAMS[0]),
+                                      ('start',upgrade.PROGRAMS[1]),('verify',upgrade.PROGRAMS[1])])
+
+
+    def test_startup_refuses_replaced_process_before_next_start(self):
+        transaction = upgrade.Upgrade(ROOT)
+        unit = upgrade.PROGRAMS[0]
+        with mock.patch.object(transaction, 'probe_startup_socket', return_value=False), mock.patch.object(
+                transaction, 'startup_service_pid', side_effect=(412,413)):
+            with self.assertRaisesRegex(RuntimeError,'restarted before socket'):
+                transaction.wait_startup_socket(unit)
+
+    @unittest.skipUnless(sys.platform.startswith('linux'), 'kernel Unix peer credentials')
+    def test_startup_needs_live_private_listener_and_the_current_kernel_peer_pid(self):
+        transaction = upgrade.Upgrade(ROOT)
+        with tempfile.TemporaryDirectory(prefix='panel-socket-') as root:
+            p = pathlib.Path(root)/'control.sock'
+            self.assertFalse(transaction.probe_startup_socket(p, 0o600, os.getpid()))
+            with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as listener:
+                listener.bind(str(p))
+                p.chmod(0o600)
+                self.assertFalse(transaction.probe_startup_socket(p, 0o600, os.getpid()))
+                listener.listen(8)
+                self.assertFalse(transaction.probe_startup_socket(p, 0o600, os.getpid()+1))
+                self.assertTrue(transaction.probe_startup_socket(p, 0o600, os.getpid()))
+                p.chmod(0o666)
+                self.assertFalse(transaction.probe_startup_socket(p, 0o600, os.getpid()))
+            p.unlink()
+            p.symlink_to('/dev/null')
+            with self.assertRaises(ValueError):
+                transaction.probe_startup_socket(p, 0o600, os.getpid())
+
+
 class Runner:
     """Scope-owned deterministic service state machine; no host service calls."""
     def __init__(self, root, gateway_active=True):
@@ -236,6 +308,9 @@ class Runner:
         self.stopped_overrides = {}
         self.program_jobs = ''
         self.loaded_guard_dropins = {}
+    def wait_startup_socket(self, unit):
+        assert unit in upgrade.STARTUP_SOCKETS and self.states[unit]['SubState']=='running'
+        self.calls.append(('fixture-owned-socket-ready',unit))
     def __call__(self, *args, **kwargs):
         self.calls.append(args)
         if pathlib.Path(args[0]).name == 'verify-release.sh':
@@ -425,7 +500,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 current.stop_timer = interrupted
             backup = self.kill_transaction_at(transaction,runner,root,None,hook=hook)
             runner.calls.clear()
-            recovered = upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 self.assertEqual(recovered.recover(backup)['phase'], 'prepared')
                 self.assertEqual((database.stat().st_ino, database.read_bytes(), os.readlink(root/'opt/panel/current')), before)
@@ -540,7 +616,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             marker=root/'var/lib/panel-waf/retained-after-crash'
             identity=(marker.stat().st_ino,marker.read_bytes())
             runner.calls.clear()
-            recovered=upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 self.assertEqual(recovered.recover(backup)['phase'],'prepared')
                 self.assertEqual((marker.stat().st_ino,marker.read_bytes()),identity)
@@ -576,7 +653,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 else:value['policy']='delete-on-rollback'
                 receipt.write_text(json.dumps(value))
                 runner.calls.clear()
-                recovered=upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with self.assertRaisesRegex(ValueError,'prerequisite intent'):recovered.recover(backup)
                     self.assertFalse(any(call[0]=='/usr/bin/python3' or len(call)>1 and call[1] in ('stop','start','daemon-reload') for call in runner.calls))
@@ -780,7 +858,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             database.chmod(0o600)
             os.chown(database,1001,1001)
             runner = Runner(root,gateway_active)
-            transaction = upgrade.Upgrade(release,root,runner)
+            transaction = upgrade.Upgrade(release,root, runner)
+            transaction.wait_startup_socket = runner.wait_startup_socket
             try:
                 yield transaction,runner,root
             finally:
@@ -819,7 +898,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 previous = os.readlink(root/'opt/panel/current')
                 states = json.loads(json.dumps(runner.states))
                 backup = self.kill_transaction_at(transaction,runner,root,phase)
-                recovered = upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     result = recovered.recover(backup)
                     self.assertEqual(result['phase'],phase)
@@ -838,7 +918,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             backup = self.kill_transaction_at(transaction,runner,root,'program-swapped')
             before = {str(p):p.read_bytes() for base in (backup,root/'etc/systemd/system',root/'var/lib/panel') for p in base.rglob('*') if p.is_file()}
             runner.calls.clear()
-            recovered = upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 summary = recovered.recover(backup,check=True)
                 self.assertTrue(summary['database_restore'])
@@ -854,7 +935,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 transaction.run()
             runner.calls.clear()
-            recovered = upgrade.Upgrade(transaction.backup,root,runner)
+            recovered = upgrade.Upgrade(transaction.backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 with self.assertRaisesRegex(ValueError,'still alive'):
                     recovered.recover(transaction.backup)
@@ -884,7 +966,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 os.utime(target,ns=(info.st_atime_ns,info.st_mtime_ns),follow_symlinks=False)
                 foreign = target.lstat().st_ino
                 runner.calls.clear()
-                recovered = upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with self.assertRaises(ValueError):
                         recovered.recover(backup)
@@ -915,7 +998,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                             record.pop('unreviewed');record['format']=True
                         path.write_text(json.dumps(record))
                 runner.calls.clear()
-                recovered = upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with self.assertRaises(ValueError):
                         recovered.recover(backup)
@@ -995,7 +1079,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             backup=self.kill_transaction_at(transaction,runner,root,'committed')
             inode=(root/'var/lib/panel/panel.db').stat().st_ino
             runner.calls.clear()
-            recovered=upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 result=recovered.recover(backup)
                 self.assertEqual(result['phase'],'committed')
@@ -1016,7 +1101,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 backup=self.kill_transaction_at(transaction,runner,root,phase,rollback=True)
                 failed=backup/'failed-panel.db';info=failed.stat();raw=failed.read_bytes()
                 database_inode=(root/'var/lib/panel/panel.db').stat().st_ino
-                recovered=upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     result=recovered.recover(backup)
                     self.assertEqual(result['phase'],phase)
@@ -1046,6 +1132,7 @@ class UpgradeTransactionTests(unittest.TestCase):
                         if count<=failures:raise RuntimeError('owned listener starting')
                     return runner(*args,**kwargs)
                 recovered=upgrade.Upgrade(backup,root,delayed)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with mock.patch.object(upgrade.time,'sleep'):
                         if failures==30:
@@ -1074,7 +1161,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 else:
                     path=backup/'failed-database-publish.json';path.write_text('{"format":1,'+path.read_text()[1:])
                 runner.calls.clear()
-                recovered=upgrade.Upgrade(backup,root,runner)
+                recovered = upgrade.Upgrade(backup,root, runner)
+                recovered.wait_startup_socket = runner.wait_startup_socket
                 try:
                     with self.assertRaises(ValueError):recovered.recover(backup)
                     self.assertFalse(any(len(call)>1 and call[1]in('stop','start','daemon-reload','reset-failed')for call in runner.calls))
@@ -1113,7 +1201,8 @@ class UpgradeTransactionTests(unittest.TestCase):
                 upgrade.os.replace=stopped
             backup=self.kill_transaction_at(transaction,runner,root,None,rollback=True,hook=hook)
             inode=(root/'var/lib/panel/panel.db').stat().st_ino
-            recovered=upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 recovered.recover(backup)
                 self.assertEqual((root/'var/lib/panel/panel.db').stat().st_ino,inode)
@@ -1133,7 +1222,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             self.assertFalse((backup/'failed-panel.db').exists())
             record=json.loads((backup/'failed-database-publish.json').read_bytes())
             stage=pathlib.Path(record['stage']);inode=stage.stat().st_ino
-            recovered=upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 recovered.recover(backup)
                 self.assertEqual((backup/'failed-panel.db').stat().st_ino,inode)
@@ -1149,7 +1239,8 @@ class UpgradeTransactionTests(unittest.TestCase):
             backup=self.kill_transaction_at(transaction,runner,root,'program-swapped')
             plan=json.loads((backup/'recovery-plan.json').read_bytes())
             self.assertIn('systemd/'+name,plan['candidate'])
-            recovered=upgrade.Upgrade(backup,root,runner)
+            recovered = upgrade.Upgrade(backup,root, runner)
+            recovered.wait_startup_socket = runner.wait_startup_socket
             try:
                 recovered.recover(backup)
                 self.assertFalse((root/'etc/systemd/system'/name).exists())
