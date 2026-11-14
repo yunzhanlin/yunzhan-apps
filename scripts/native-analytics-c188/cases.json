@@ -1,0 +1,13 @@
+{
+  "debian13": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "guest.py",
+    "guest_sha256": "63066180058c2e6b0a145fd5c6346eb62c43a30efac6efdcf7a15f11d93391d7",
+    "hostname": "yunzhan-qa-analytics-c188-debian13-amd64",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "observation_seconds": 90,
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "platform": "debian-13"
+  }
+}

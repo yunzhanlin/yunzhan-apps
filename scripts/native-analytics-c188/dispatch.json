@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "def6d1ee1e1443d944ef7dd2306e801144132d7dc12bc31b1165833aec9d5e66",
+  "kvm_sha256": "d74e5e530c1dd142314874541e743439bc7fafa3beb1f2f6e48c448329889c82",
+  "payload_sha256": "e6f1b6618b9d27e111f8bfe5b37dc0889c78452bec9feb65c389104b13d270eb",
+  "published_head": "a7873b5e3b9a6c0e997da15dfd6aadbc95607c23",
+  "release_id": 445629354,
+  "tag": "qa-analyticssiteclientbudgetcandidate188-20261115-qa1"
+}
