@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "5d8b8339e592cb1302ec3237c91135f1610cd230483d7c2dae1350daad3508be",
+  "kvm_sha256": "68f8c33cff08736db0070f223cb79f9baf25cf7f57f3a43a9b100ec1ad216d25",
+  "payload_sha256": "2ea6583353e0f3d03ad3d654c644e870f1e5cdb128307f01d7ffc7a74e627788",
+  "published_head": "5e3f8e0569e4e6bf5f624f91091615a1be8b332d",
+  "qa_catalogue_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "tag": "qa-elasticpolicycandidate182-20261115-qa1"
+}
