@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24dockerstatecandidate161",
+  "source_head": "e928ec5affb819bab5155396908d85e31419e6db",
+  "source_inputs_sha256": "c242731481d4b522c8fc94929f16ec7ad4874414187bf16408a21c136e1580dd",
+  "source_sdk_tree": "67363e1de1523ac18f9b734c579fd76d6f6902db",
+  "release_id": 445179533,
+  "release_assets": {
+    "docker-state-signed-release.py": {
+      "id": 746982654,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-amd64.tar.gz": {
+      "id": 746987259,
+      "bytes": 24086736,
+      "sha256": "f3e43c614f44011645e6dec0f08a3c500ffccfb8f742198ede3c710f9cda45c8"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-amd64.tar.gz.manifest": {
+      "id": 746982539,
+      "bytes": 182,
+      "sha256": "43a44ca7a07cacacd856dc47dcfd89ad2323a0558f415df096613290ae99abd9"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-amd64.tar.gz.sig": {
+      "id": 746982367,
+      "bytes": 64,
+      "sha256": "2827c3d1f69a12d0ef176360a46fa6d6ad94f2666f825ce28c612530b805c192"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-arm64.tar.gz": {
+      "id": 746982703,
+      "bytes": 22290963,
+      "sha256": "040e8cfdd414029d5469ff202d88b31fa6afa65013e77af3e45bd4b0068b3b3c"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-arm64.tar.gz.manifest": {
+      "id": 746982603,
+      "bytes": 182,
+      "sha256": "7d7f7279865febedf712e9fa60ac236a8fdd3e2dea1306e3515c97f2d6f712c1"
+    },
+    "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-arm64.tar.gz.sig": {
+      "id": 746982408,
+      "bytes": 64,
+      "sha256": "f26d79212738e1b6bd73f0215f215d9e601462f10c7f7367aaacc303cb7e1900"
+    },
+    "release-signing-dev.pub": {
+      "id": 746982465,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-dockerstatecandidate161-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24dockerstatecandidate161-linux-arm64.tar.gz"
+    }
+  }
+}
