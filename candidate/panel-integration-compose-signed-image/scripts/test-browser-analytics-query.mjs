@@ -45,7 +45,7 @@ const compiled=compileScript(parse(source).descriptor,{id:'qa-browser-analytics-
 let js=ts.transpileModule(compiled.content,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 js=js.replace(/from ['"]vue['"]/g,'from '+JSON.stringify(new URL('../web/node_modules/vue/index.mjs',import.meta.url).href));
 for(const name of['analyticsHTMLState','randomId','browserAnalyticsQuery'])js=js.replace(new RegExp('from [\'"]\\./'+name+'[\'"]','g'),'from '+JSON.stringify(new URL('../web/src/'+name+'.ts',import.meta.url).href));
-for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison','AnalyticsHeatmapOverlay'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
+for(const name of['AnalyticsHTMLEngine','AnalyticsPerformanceReport','AnalyticsPeriodComparison','AnalyticsHeatmapOverlay','AnalyticsSessionActivity'])js=js.replace(new RegExp('import '+name+' from [\'"]\\./'+name+'\\.vue[\'"];?'),'const '+name+'={render(){return null;}};');
 const component=(await import('data:text/javascript;base64,'+Buffer.from(js).toString('base64'))).default;
 const flush=async()=>{await nextTick();await Promise.resolve();await nextTick();};
 function node(type,text=''){return {type,text,props:{},children:[],parent:null};}

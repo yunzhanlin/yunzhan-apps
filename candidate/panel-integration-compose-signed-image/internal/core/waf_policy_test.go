@@ -55,7 +55,7 @@ func TestWAFReportFiltersLegacyAndPagination(t *testing.T) {
 		t.Fatal("unexpected actual report", out)
 	}
 	out, e = BuildWAFReport(snapshot, url.Values{"ip": {"::1"}, "rule": {"cc"}}, now)
-	if e != nil || out.Total != 1 || out.Events[0].Action != "block" {
+	if e != nil || out.Total != 1 || out.Events[0].Action != "block" || out.Filters != (WAFReportFilters{IP: "::1", Rule: "cc"}) {
 		t.Fatal("legacy CC filter failed", out, e)
 	}
 	for _, q := range []url.Values{{"page": {"0"}}, {"limit": {"99999"}}, {"file": {"/etc/shadow"}}, {"ip": {"example.com"}}, {"action": {"fake"}}} {
