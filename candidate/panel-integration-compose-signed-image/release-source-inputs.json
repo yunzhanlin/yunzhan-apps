@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "archive": "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate168-linux-amd64.tar.gz",
-  "archive_sha256": "6dea6e4b9961c3a3a4082fdc162d20d984bf1e132375c90fd71e54e35457bd11",
-  "frozen_inputs_sha256": "1ebd60cb5637b848fb3104017cfb9badf8e5325344d576aa498e319ccae9038c",
+  "archive": "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz",
+  "archive_sha256": "cad5b676530189a5f5e63ded5ae8526058d0a67f0af8ab1ca5ab3f70b14f5d78",
+  "frozen_inputs_sha256": "a62fab92c8682926d309b73684f3e372940e1d3ea46884c915d18ee72199246a",
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
     "cmd/executor/cli_arguments_linux_test.go": "5fb183e621429d186b1fc7e1bcad9fc95d80ade05a6a94c19d3f5adecf68f657",
@@ -2485,7 +2485,7 @@
     "web/src/RemoteSyncPreview.vue": "1a8805769ae02bd14f89e5ec8ce33d6a67e627de85bf664fdf9f9d85aca5d306",
     "web/src/RemoteUnpublishedFragments.vue": "bfce1bbe2a54131c0d07883229d678327eb42baf16fcbdc536975122687d2c82",
     "web/src/RuntimeLifecycleManager.vue": "d7bd898cfe21f2b90de4b647e40e1e75c062e18e2b9528d4f0ba40196bcac947",
-    "web/src/ScheduleManager.vue": "c9cab469544eba2a99a167cd42415b090820deea4cfb31440e2bb95440a19b33",
+    "web/src/ScheduleManager.vue": "6f4ecd00b88554f96d2aef84897bf0dbc97838fef7c064ab2810ffafb552ee5f",
     "web/src/ScheduleRetention.vue": "6226eaf440477e0b8f2d36e60939a7a3dda713e0a83b4f3c446f76b529deb565",
     "web/src/SecurityAppManager.vue": "8b192d20c39495304e05a16b5adc9a10c4147ebc7b79c77852e00bc32576323f",
     "web/src/SecurityManager.vue": "cf9a81ebce120da2c1b2bc52cc155e1bf0bc9fba3e52400ac2ff960abd690200",

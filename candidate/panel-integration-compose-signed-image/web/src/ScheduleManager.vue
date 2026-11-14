@@ -766,13 +766,27 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
       </div>
     </el-dialog>
     <el-dialog v-model="scheduleLogsOpen" :title="`${scheduleLogsTarget?.name || '任务'} · 执行日志`" width="min(720px, 96vw)">
-      <el-table :data="scheduleLogs" max-height="440" empty-text="该任务暂无执行记录">
+      <el-table class="schedule-log-table" :data="scheduleLogs" max-height="440" empty-text="该任务暂无执行记录">
         <el-table-column label="时间" min-width="160"><template #default="{ row }">{{ unixTime(row.started_at || row.scheduled_for) }}</template></el-table-column>
         <el-table-column label="触发" width="80"><template #default="{ row }">{{ row.trigger === 'manual' ? '手动' : '计划' }}</template></el-table-column>
         <el-table-column label="结果" width="90"><template #default="{ row }">{{ stateName[row.state] }}</template></el-table-column>
         <el-table-column label="详情" min-width="220" show-overflow-tooltip><template #default="{ row }">{{ runResult(row) }}</template></el-table-column>
         <el-table-column label="核实" width="110"><template #default="{ row }"><el-button v-if="row.log_cleanup" link type="primary" :disabled="logInspectionBusy" @click="inspectLogRun(row)">日志文件核对</el-button></template></el-table-column>
       </el-table>
+      <div class="schedule-log-cards">
+        <article v-for="run in scheduleLogs" :key="run.id" class="run-card">
+          <div>
+            <strong>{{ stateName[run.state] }}</strong>
+            <span>{{ run.trigger === 'manual' ? '手动' : '计划' }}</span>
+          </div>
+          <p>{{ unixTime(run.started_at || run.scheduled_for) }}</p>
+          <small :class="{ 'run-error': run.error }">{{ runResult(run) }}</small>
+          <el-button v-if="run.log_cleanup" link type="primary" :disabled="logInspectionBusy" @click="inspectLogRun(run)">
+            日志文件核对
+          </el-button>
+        </article>
+        <el-empty v-if="!scheduleLogs.length" description="该任务暂无执行记录" />
+      </div>
       <template #footer><el-button @click="scheduleLogsOpen = false">关闭</el-button></template>
     </el-dialog>
     <el-dialog v-model="logInspectionOpen" title="日志文件核对" width="min(960px, 96vw)" top="4vh" :style="{ maxHeight: '92vh', overflowY: 'auto' }" destroy-on-close @close="closeLogInspection">
@@ -787,14 +801,26 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
         <p v-if="logInspection.result">保存的完成结果：轮转 {{ logInspection.result.rotated }} 个，删除 {{ logInspection.result.deleted }} 个，释放 {{ logInspection.result.deleted_bytes }} 字节。</p>
         <el-alert v-if="logInspection.continuation" :title="`已于 ${formatPanelDateTime(logInspection.continuation.verified_at)} 核实后续新任务可继续；原操作仍未当作成功。新任务按自己的固定标识执行，旧任务不会重放。`" type="info" :closable="false" show-icon />
         <p v-if="logInspection.continuation">核实证据 SHA-256：<code>{{ logInspection.continuation.evidence_sha256 }}</code></p>
-        <el-table :data="logInspection.files" max-height="min(32vh, 240px)" empty-text="没有可核实的持久文件计划">
+        <el-table class="log-inspection-table" :data="logInspection.files" max-height="min(32vh, 240px)" empty-text="没有可核实的持久文件计划">
           <el-table-column prop="name" label="计划文件名" min-width="280" show-overflow-tooltip />
           <el-table-column label="操作" width="90"><template #default="{ row }">{{ row.role === 'rotation' ? '轮转' : '过期清理' }}</template></el-table-column>
           <el-table-column label="当前路径" min-width="180"><template #default="{ row }">{{ logFileState[row.state] || '不可核实' }}</template></el-table-column>
           <el-table-column label="轮转归档" min-width="180"><template #default="{ row }">{{ row.archive_state ? logFileState[row.archive_state] || '不可核实' : '不涉及' }}</template></el-table-column>
           <el-table-column prop="planned_bytes" label="计划时字节" width="115" />
         </el-table>
-        <div v-if="['running','unknown'].includes(logInspection.state) && !logInspection.continuation && logInspectedRunState === 'failed'">
+        <div class="log-inspection-cards">
+          <dl v-for="file in logInspection.files" :key="file.name" class="log-inspection-file">
+            <dt>计划文件</dt><dd><code>{{ file.name }}</code></dd>
+            <dt>操作</dt><dd>{{ file.role === 'rotation' ? '轮转' : '过期清理' }}</dd>
+            <dt>当前路径</dt><dd>{{ logFileState[file.state] || '不可核实' }}</dd>
+            <template v-if="file.archive_state">
+              <dt>轮转归档</dt><dd>{{ logFileState[file.archive_state] || '不可核实' }}</dd>
+            </template>
+            <dt>计划字节</dt><dd>{{ file.planned_bytes }}</dd>
+          </dl>
+          <el-empty v-if="!logInspection.files.length" description="没有可核实的持久文件计划" />
+        </div>
+        <div class="log-continuation" v-if="['running','unknown'].includes(logInspection.state) && !logInspection.continuation && logInspectedRunState === 'failed'">
           <p>执行器将重新验证 Nginx 主进程、当前日志与原归档身份，并检查归档是否仍有写入句柄。条件不满足时保留阻塞；不会补删文件或重新轮转。</p>
           <el-checkbox v-model="logContinuationAcknowledged" :disabled="logContinuationBusy">我确认原操作仍是未知结果，只请求核实后续新任务是否可以继续</el-checkbox>
           <el-button type="primary" :loading="logContinuationBusy" :disabled="!logContinuationAcknowledged || logInspectionBusy" @click="continueLogRun">核实后续可继续条件</el-button>
@@ -1277,8 +1303,24 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
   color: #66756e;
 }
 .schedule-cards,
-.run-cards {
+.run-cards,
+.schedule-log-cards,
+.log-inspection-cards {
   display: none;
+}
+.log-continuation {
+  margin-top: 12px;
+}
+.log-continuation :deep(.el-checkbox) {
+  height: auto;
+  min-height: 32px;
+  max-width: 100%;
+  white-space: normal;
+  align-items: flex-start;
+}
+.log-continuation :deep(.el-checkbox__label) {
+  line-height: 1.45;
+  white-space: normal;
 }
 .schedule-card,
 .run-card {
@@ -1381,6 +1423,45 @@ defineExpose({ refresh, createSchedule, openRunPicker: () => { runPickerOpen.val
   .run-cards {
     display: grid;
     gap: 12px;
+  }
+  .schedule-log-table,
+  .log-inspection-table {
+    display: none;
+  }
+  .schedule-log-cards,
+  .log-inspection-cards {
+    display: grid;
+    gap: 10px;
+    max-height: 44vh;
+    overflow-y: auto;
+  }
+  .schedule-log-cards .run-card {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .schedule-log-cards .run-card :deep(.el-button) {
+    display: flex;
+    min-height: 36px;
+    padding: 6px 0;
+    margin-top: 6px;
+  }
+  .log-inspection-file {
+    display: grid;
+    grid-template-columns: 5em minmax(0, 1fr);
+    gap: 6px 12px;
+    padding: 12px;
+    margin: 0;
+    border: 1px solid #e3eae6;
+    border-radius: 8px;
+  }
+  .log-inspection-file dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+  .log-continuation :deep(.el-button) {
+    min-height: 44px;
+    max-width: 100%;
+    margin-top: 6px;
   }
   .form-grid {
     grid-template-columns: 1fr;
