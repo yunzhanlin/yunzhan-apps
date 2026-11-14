@@ -28,3 +28,38 @@ export function dailyWorkerMessage(value:unknown,now=Date.now()):{message:string
  const messages:Record<string,string>={starting:'后台生成进程正在准备，尚未完成核对。',status_unknown:'应用身份或运行状态待核对；后台未生成或覆盖日报。',schedule_unknown:'已保存的生成时间无法核对。',schedule_changed:'生成时间刚刚更新，后台将在下次检查时读取。',inactive:'应用未安装或未启用；后台不生成日报。',blocked_original:'今日原日报无法核对；已保留原记录，后台未重新生成或覆盖。',generation_failed:'后台生成失败：资源、业务读取或原子保存未完成；没有据此认定日报已生成。',saved_partial:'日报已保存，但部分来源采集失败；查看保存报告，不能据此认定全量采集正常。'};
  return {message:messages[String(r.state)]||'后台生成状态无法核对；不据此认定成功。',observed:false};
 }
+
+export type DailyArchiveRow = {day:string;created_at:string;bytes:number;record_size_valid:boolean};
+export type DailyArchivePage = {reports:DailyArchiveRow[];total:number;offset:number;limit:number};
+const archiveLimitBytes=4*1024*1024;
+function reportTime(value:unknown):value is string {
+ if(typeof value!=='string' || !/^\d{4}-\d{2}-\d{2}T(?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,9})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.test(value)) return false;
+ return validDay(value.slice(0,10)) && Number.isFinite(Date.parse(value));
+}
+export function dailyArchivePage(value:unknown,offset:number,limit:number):DailyArchivePage|undefined {
+ const page=object(value);
+ if(!page || page.read_only!==true || page.report_contents_verified!==false
+   || !Number.isSafeInteger(offset) || offset<0 || offset>100000
+   || !Number.isSafeInteger(limit) || limit<1 || limit>100
+   || page.offset!==offset || page.limit!==limit || count(page.total)===null || !Array.isArray(page.reports)) return;
+ const total=page.total as number;
+ if(page.reports.length!==Math.min(limit,Math.max(0,total-offset)))return;
+ let last='';
+ const reports:DailyArchiveRow[]=[];
+ for(const v of page.reports){
+  const row=object(v);
+  if(!row || !validDay(row.day) || row.resource_id!==row.day || last && last<=row.day ||
+    !reportTime(row.created_at) || typeof row.bytes!=='number' || !Number.isSafeInteger(row.bytes) || row.bytes<0 ||
+    row.record_size_valid!==(row.bytes>0 && row.bytes<=archiveLimitBytes)) return;
+  last=row.day;
+  reports.push({day:row.day,created_at:row.created_at,bytes:row.bytes,record_size_valid:row.record_size_valid as boolean});
+ }
+ return {reports,total,offset,limit};
+}
+export function dailyArchiveDetail(value:unknown,original:DailyArchiveRow):Record<string,unknown>|undefined {
+ const reply=object(value), report=object(reply?.report);
+ if(!reply || !report || !original.record_size_valid || reply.report_contents_verified!==true
+   || reply.day!==original.day || reply.saved_at!==original.created_at || reply.bytes!==original.bytes
+   || Array.isArray(report.reports) || Array.isArray(report.history))return;
+ return report;
+}

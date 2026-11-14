@@ -22,6 +22,8 @@ import (
 	"syscall"
 	"time"
 
+	"golang.org/x/sys/unix"
+
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 )
@@ -267,6 +269,55 @@ func retireStatisticsStreams(ctx context.Context, tx *sql.Tx, id string, present
 	return len(retired), nil
 }
 
+// Access logs belong to the managed site ID. Legacy sites can serve directly
+// from the site directory and do not need a public content subdirectory.
+func (s *Service) verifyStatisticsSite(id string) error {
+	if !core.ValidID(id) {
+		return errors.New("统计网站标识无效")
+	}
+	base, err := os.OpenRoot(s.Config.SitesDir)
+	if err != nil {
+		return err
+	}
+	defer base.Close()
+	site, err := openRootPathNoLinks(base, id, os.O_RDONLY|syscall.O_DIRECTORY, 0)
+	if err != nil {
+		return err
+	}
+	defer site.Close()
+	siteInfo, err := site.Stat()
+	if err != nil || !siteInfo.IsDir() || siteInfo.Mode().Perm()&0022 != 0 {
+		return errors.New("统计网站目录权限异常")
+	}
+	if owner, ok := siteInfo.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Geteuid()) {
+		return errors.New("统计网站目录归属异常")
+	}
+	markerFD, err := unix.Openat(int(site.Fd()), ".panel-site.json", unix.O_RDONLY|unix.O_CLOEXEC|unix.O_NONBLOCK|unix.O_NOFOLLOW, 0)
+	if err != nil {
+		return err
+	}
+	marker := os.NewFile(uintptr(markerFD), ".panel-site.json")
+	defer marker.Close()
+	info, err := marker.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
+		return errors.New("统计网站标识文件权限异常")
+	}
+	if owner, ok := info.Sys().(*syscall.Stat_t); !ok || owner.Uid != uint32(os.Geteuid()) || owner.Nlink != 1 {
+		return errors.New("统计网站标识文件归属异常")
+	}
+	const markerLimit = 4096
+	raw, err := io.ReadAll(io.LimitReader(marker, markerLimit+1))
+	var identity struct {
+		ID string `json:"id"`
+	}
+	current, statErr := base.Lstat(id)
+	if err != nil || len(raw) > markerLimit || json.Unmarshal(raw, &identity) != nil ||
+		identity.ID != id || statErr != nil || !current.IsDir() || !os.SameFile(current, siteInfo) {
+		return errors.New("统计网站目录身份无法核实")
+	}
+	return nil
+}
+
 // Caller holds s.mu (the same lifecycle/rotation lock). Renamed files preserve
 // dev/inode identity and progress. A changed checkpoint or shortened inode is
 // NOT silently reset: doing so could duplicate a copied/truncated archive.
@@ -277,14 +328,9 @@ func (s *Service) ingestStatisticsHistory(ctx context.Context, db *sql.DB, id st
 		return result, err
 	}
 	defer lock.Close()
-	if !core.ValidID(id) {
-		return result, errors.New("统计网站标识无效")
-	}
-	site, err := s.openFiles(id)
-	if err != nil {
+	if err := s.verifyStatisticsSite(id); err != nil {
 		return result, err
 	}
-	site.Close()
 	base := s.systemPath("/var/log/nginx")
 	if err = ownedRuntimePath(base, true); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
