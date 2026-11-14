@@ -227,11 +227,9 @@ try:
     public=Path('/srv/panel/sites')/site/'public'
     denied=public/'permission-denied.txt'
     create_owned(denied,b'isolated QA marker\n')
-    own=record(denied)
     others=rows('SELECT id,domain,status FROM sites WHERE id!=? ORDER BY id',(site,))
     assert sorted([v for v in others if v[0]!=other])==sorted(original_sites)
     cfg=Path('/etc/panel/sites-enabled')/(site+'.conf')
-    old_config=record(cfg)
     site_opener=urllib.request.build_opener(urllib.request.ProxyHandler({}))
     def visit(domain,path):
         req=urllib.request.Request('http://127.0.0.1:19101'+path,headers={'Host':domain,'User-Agent':'Yunzhan QA'})
@@ -257,13 +255,19 @@ try:
     assert visit(other_domain,'/missing-neighbor')==404
     other_access=log_dir/('panel-'+other+'.access.log')
     other_before=record(other_access)
+    other_payload=other_access.read_bytes()
+    own=record(denied)
+    old_config=record(cfg)
+    def other_site_preserved():
+        now=record(other_access)
+        return all(now[k]==other_before[k] for k in ('inode','uid','mode')) and other_access.read_bytes().startswith(other_payload)
     collision=access.with_name(access.name+'.20000101-000000.gz')
     collision.symlink_to(other_access)
     files=(access,error)
     before_refusal=[record(p) for p in files]
     refused=scheduled('refuse symlink')
     assert job_result('schedule_runs',refused,'failed')
-    assert [record(p) for p in files]==before_refusal and record(other_access)==other_before
+    assert [record(p) for p in files]==before_refusal and other_site_preserved()
     collision.unlink()
     old=[record(path) for path in files]
     old_raw=[path.read_bytes() for path in files]
@@ -296,7 +300,11 @@ try:
         assert original['inode']!=replacement['inode']
         assert all(original['inode'] not in v['files'] for v in current.values())
         assert any(replacement['inode'] in v['files'] for v in current.values())
-    assert record(other_access)==other_before and record(cfg)==old_config and record(denied)==own
+    compared={'neighbor_log_owner_inode_record_and_original_bytes':other_site_preserved(),
+       'original_vhost_bytes_mode_and_inode':record(cfg)==old_config,
+       'original_fixture_bytes_and_inode':all(record(denied)[k]==own[k] for k in ('inode','sha256','size'))}
+    keep('site-preservation-observation',{'checks':compared,'permission_marker_original':own,'permission_marker_after':record(denied)})
+    assert all(compared.values()),compared
     assert archive_identity==[record(p) for p in archives]
     assert api(result_route)[1]==observed and rows('SELECT id,domain,status FROM sites WHERE id!=? ORDER BY id',(site,))==others
     keep('nginx-log-observation',{'original':old,'replacement':after,'archive':archive_identity,'operation':observed,'refusal':refused})
