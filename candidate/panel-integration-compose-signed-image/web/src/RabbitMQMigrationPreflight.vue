@@ -139,7 +139,7 @@ async function poll() {
 async function submit() {
   if (!canSubmit.value || !acknowledged.value || !report.value || actionBusy.value) return;
   actionBusy.value = true;
-  const id = randomId();
+  const id = randomId().replaceAll("-", "");
   request.value = id;
   error.value = "";
   try {

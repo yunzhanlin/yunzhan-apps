@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-amd64.tar.gz",
-    "archive_sha256": "1d9ae33e33510bf25f563418df34bab7145e77d7058ede645cfd0e100ff10d59",
-    "frozen_inputs_sha256": "72364d2bef32f403cbf805b2ab18bf599de71ac15d53967139718c727148d46e"
+    "archive": "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate168-linux-amd64.tar.gz",
+    "archive_sha256": "6dea6e4b9961c3a3a4082fdc162d20d984bf1e132375c90fd71e54e35457bd11",
+    "frozen_inputs_sha256": "1ebd60cb5637b848fb3104017cfb9badf8e5325344d576aa498e319ccae9038c"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2480,7 +2480,7 @@
     "web/src/PlatformHealthReport.vue": "287f195af3ba390c0b2741b4262cb1dc35880131c86e0940235e75681b8e68ed",
     "web/src/PlatformMaintenance.vue": "a802620e5b2eec08fbc18a5a50073aa899797965cee1e4d7981662a92ad125b8",
     "web/src/PlatformMaintenanceFleetCheck.vue": "f179dbea6897ef8927b9d39d47d3b27c189374276ebfb7034acb98e9aad9b932",
-    "web/src/RabbitMQMigrationPreflight.vue": "1889fddc4565d3eac6a294bcac3a88ee8c1f2a7e8be8d6650a73494bd0a8469c",
+    "web/src/RabbitMQMigrationPreflight.vue": "f0f5df81915d50db9ca6e8a71a163f1a4a72520272278325ae159622719c6297",
     "web/src/RabbitMQQueues.vue": "00faf9e362ff5fdd17ae28d3fcca1ff29886d3f7e54f1a8901f80394c92917c3",
     "web/src/RedisManager.vue": "4088c42b3af889c276906edd1d41ad17059de0a758fc6e6c4a5032b52bed4360",
     "web/src/RemoteIndependentBackups.vue": "8745f6313e8ddd735854c2df9484b63ba9f3413743720508ceab8b34e31699b7",
