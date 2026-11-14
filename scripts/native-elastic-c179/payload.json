@@ -1,0 +1,56 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "elastic.py",
+    "guest_sha256": "e20da683d426c82f9fc13da34345678efc8be61bd2af7de03a4647d25ee2464a",
+    "hostname": "yunzhan-qa-elastic-c177r3-recovery-amd64",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/SHA512SUMS",
+    "os_id": "debian",
+    "platform": "debian-13",
+    "version_id": "13"
+  },
+  "application": {
+    "capabilities": [
+      "\u8ba4\u8bc1\u4e0e\u56de\u73af\u8fde\u63a5",
+      "\u53ef\u6301\u4e45\u7d22\u5f15\u53ca\u68c0\u7d22",
+      "\u72ec\u7acb\u5feb\u7167\u5377",
+      "\u521b\u5efa\u6307\u5b9a\u7d22\u5f15\u5feb\u7167",
+      "\u6062\u590d\u5230\u65b0\u7d22\u5f15\u5e76\u6838\u5bf9\u5065\u5eb7"
+    ],
+    "category": "deployment",
+    "id": "elasticsearch",
+    "manage_route": "docker",
+    "name": "Elasticsearch",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/elasticsearch/9.1.4-compat2/manifest.json",
+    "provider": "compose",
+    "risk": "maintained",
+    "sha256": "5a71d651d91d7b4e70be47500af3d2aff8a7f085e08355cb338d62efa46ed408",
+    "stage": "ready",
+    "summary": "Elasticsearch 9.1.4 \u5355\u8282\u70b9\u68c0\u7d22\u3002\u6309\u7d22\u5f15\u521b\u5efa\u5feb\u7167\uff0c\u5728\u65b0\u7d22\u5f15\u9a8c\u8bc1\u6062\u590d\uff0c\u7d22\u5f15\u4e0e\u5feb\u7167\u4f7f\u7528\u72ec\u7acb\u547d\u540d\u5377\u3002",
+    "target": "elasticsearch-snapshot",
+    "version": "9.1.4-compat2"
+  },
+  "architecture": "amd64",
+  "files": {
+    "catalogue.bundle.json": "51784887840f3994dfc69298e236b4a936e1656116e55fa587a61d50ccc754f5",
+    "catalogue.json": "8e95f9bb75c074cf6b7f5f969fafc5ff211962d8015d5f575c6e996677aeddc3",
+    "catalogue.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "catalogue.sig.bin": "e0b64e703ed11e4b9fe0fc43c07f1ccaa449935e853e250c19b721033ab7dba2",
+    "docker.manifest.json": "5c72ab50b7e2a19fde5880d4a772badf77f887f5d0518fbffb672bb132e19764",
+    "elastic.manifest.json": "5a71d651d91d7b4e70be47500af3d2aff8a7f085e08355cb338d62efa46ed408",
+    "elastic.py": "e20da683d426c82f9fc13da34345678efc8be61bd2af7de03a4647d25ee2464a",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz": "3bcd0ca527296dac45ed5f37e71c73bfe2f4c562712288ee053f79e4c5a2ed72",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz.manifest": "7e803baffa4098aeb04bec5151a48f68ba29a1693503afcaed3c6de36613bfb1",
+    "panel-0.1.0-dev.proapps24elasticrestorecandidate177r3-linux-amd64.tar.gz.sig": "ffcf33eb727f347f237a7f7ce75bed728ef34a02a975dbede4b66b195a43a412",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+  "qa_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "served_head": "c50c8fa851caeb77e70249cb0730f110bb80391f",
+  "source_inputs_sha256": "01260fed0626a92d97e146fe1d746a1b439b172db5b77e443ee4e112e9cf95df",
+  "version": "0.1.0-dev.proapps24elasticrestorecandidate177r3"
+}
