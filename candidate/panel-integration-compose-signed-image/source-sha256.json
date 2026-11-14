@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24redispersistencecandidate183-linux-amd64.tar.gz",
-    "archive_sha256": "c0f6859a083cd137abdb33bc95e5743c2cb714254f6456b03f9e950c7c53a452",
-    "frozen_inputs_sha256": "4780ae12084b418c7e6c089584b83c4c460744b4bc9ff85b59b40a9112898fe0"
+    "archive": "panel-0.1.0-dev.proapps24mysqlverifiedrestorecandidate184-linux-amd64.tar.gz",
+    "archive_sha256": "2030cb3f6b91b70aa2703e1032d6bc8b5e5ae60f15065b915bece9d6aef7a63d",
+    "frozen_inputs_sha256": "d3e69559be18cc7d56b72b2ead0a0c94e3aa18179f64159c6e0161492302fe50"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -1781,16 +1781,16 @@
     "internal/executor/mysql_accounts_recycle_linux.go": "62e7a71f5595bc07b786ed68ed14064f25b5d6c3ce4f08bf0b5f4f27c3a48bb0",
     "internal/executor/mysql_database_lifecycle_linux.go": "e38d8a449eeae332e4e17ebe9ee710ad9ad0302ca8119146867ee0a3faa241b1",
     "internal/executor/mysql_database_lifecycle_linux_test.go": "e3d91ae320e2ed108e93b134ced14d0dcb548237cceb76a6227bdeb9f18a7657",
-    "internal/executor/mysql_download_linux.go": "015ecd836ebff9d7347ccb1c8ca7eac18676f9cb6321d3e62986cbc9fa969a4b",
-    "internal/executor/mysql_download_linux_test.go": "ca7762e8a43dc2371564173aa9cc272b89fa519a467555c5a8ef29891115ea27",
+    "internal/executor/mysql_download_linux.go": "997effbb4bb1d7edd61c2c0c653f80fca0dca958ffb40cf43277fdcca0363d34",
+    "internal/executor/mysql_download_linux_test.go": "a1c00de4b492b35de1a0cf698c247cf431ea7280226d3886593a6e49a7403b32",
     "internal/executor/mysql_import_linux.go": "191ff2820e99b9e44e6aea724e2bf0b93dacbe996ed0dbc1baff9e61a69bb12b",
     "internal/executor/mysql_import_linux_test.go": "16d8092dda99ab5750125e1435f0aabd6119cb648a4decea09ca0a0ffece4433",
     "internal/executor/mysql_import_release_linux.go": "fbf72f0ba4469fb3a1ef3cf6ba6342072973eee15c922b8a7948003f4451eb6b",
     "internal/executor/mysql_import_release_linux_test.go": "a8720a1e10c00a45e59b49d3b4fd831a099429eb51b528011dca0208ef69ce0a",
     "internal/executor/mysql_install_linux.go": "05651c075ab199078c6eec60993ac4c89d67a1758c182d22303405b32dc426f5",
     "internal/executor/mysql_install_linux_test.go": "441693392e6e02b5f146e4d4ddfa6bc5a88490b67994421bfb01534e2753695c",
-    "internal/executor/mysql_linux.go": "194745636faec7145fe2f10cd26ddb94a00ed01c53b31b5b5d6bc1904368a6a6",
-    "internal/executor/mysql_migrate_linux.go": "ec3665dba9d07bdb35d44c646f7d388c074f70aee6d01ef4ee86fabda0b2e16c",
+    "internal/executor/mysql_linux.go": "b0012a946b36b0cec3b553c9bf51a77b7942787c8a1aff8e5ca9462ca56221d5",
+    "internal/executor/mysql_migrate_linux.go": "ba5eef13bc31a89f2c0fcedaed1100baee45d44e82d814f1bb6188a50419194b",
     "internal/executor/mysql_other.go": "affb8b23489eaebc9e2a06a7e9f743876553ca8aa91b29703591c3ed0508a675",
     "internal/executor/mysql_overwrite_http_linux.go": "117006b7e2eb6277582d18d1823f8c62892d0d47277437b4a75e21a86a43e553",
     "internal/executor/mysql_overwrite_linux.go": "9bdb6d1bcb92401927ffc5375afdcd646f4e897422407c0b9a4f575ef16c4bc4",

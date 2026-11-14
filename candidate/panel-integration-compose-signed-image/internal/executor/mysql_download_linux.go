@@ -59,7 +59,7 @@ func openVerifiedBackup(ctx context.Context, base string, expected core.Database
 	}
 	defer dir.Close()
 	open := func(name string) (*os.File, error) {
-		f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
+		f, err := dir.OpenFile(name, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)
 		if err != nil {
 			return nil, err
 		}

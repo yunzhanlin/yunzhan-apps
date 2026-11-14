@@ -417,7 +417,7 @@ func backupMySQL(ctx context.Context, s core.DatabaseServer, db core.Database, b
 		if old.DatabaseID != db.ID || old.ServerID != s.ID {
 			return b, errors.New("备份记录不匹配")
 		}
-		return old, verifyMySQLBackup(old)
+		return old, verifyMySQLBackup(ctx, old)
 	}
 	f, e := os.OpenFile(path+".part", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0600)
 	if e != nil {
@@ -463,46 +463,28 @@ func (w *limitBackupWriter) Write(b []byte) (int, error) {
 	w.remaining -= int64(n)
 	return n, e
 }
-func verifyMySQLBackup(b core.DatabaseBackup) error {
-	if !core.ValidID(b.ID) || !core.ValidID(b.ServerID) {
-		return errors.New("无效备份标识")
+func verifyMySQLBackup(ctx context.Context, backup core.DatabaseBackup) error {
+	file, _, err := openVerifiedBackup(ctx, mysqlBackups, backup)
+	if err != nil {
+		return err
 	}
-	path := mysqlBackups + "/" + b.ServerID + "/" + b.ID + ".sql"
-	if e := ordinary(path, false); e != nil {
-		return e
-	}
-	f, e := os.Open(path)
-	if e != nil {
-		return e
-	}
-	defer f.Close()
-	h := sha256.New()
-	n, e := io.Copy(h, io.LimitReader(f, 4*1024*1024*1024+1))
-	if e != nil {
-		return e
-	}
-	if n != b.Bytes || hex.EncodeToString(h.Sum(nil)) != b.SHA256 {
-		return errors.New("备份大小或 SHA-256 不匹配，拒绝恢复")
-	}
-	return nil
+	return file.Close()
 }
+
 func restoreMySQL(ctx context.Context, s core.DatabaseServer, db core.Database, b core.DatabaseBackup) error {
 	r, _ := runtimecatalog.Find(s.ReleaseID)
 	if b.DatabaseID != db.ID || b.ServerID != s.ID || b.Version != r.Version {
 		return errors.New("备份不属于该数据库和精确版本；跨版本请走迁移")
 	}
-	if e := verifyMySQLBackup(b); e != nil {
-		return e
-	}
-	_, e := mysqlQuery(ctx, s, "DROP DATABASE `"+db.Name+"`; CREATE DATABASE `"+db.Name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;\n")
-	if e != nil {
-		return e
-	}
-	f, e := os.Open(mysqlBackups + "/" + s.ID + "/" + b.ID + ".sql")
+	f, _, e := openVerifiedBackup(ctx, mysqlBackups, b)
 	if e != nil {
 		return e
 	}
 	defer f.Close()
+	_, e = mysqlQuery(ctx, s, "DROP DATABASE `"+db.Name+"`; CREATE DATABASE `"+db.Name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;\n")
+	if e != nil {
+		return e
+	}
 	return mysqlCommand(ctx, s, "mysql", []string{"--binary-mode", "--database=" + db.Name}, f, io.Discard)
 }
 func readMySQLJob(id string) (mysqlJob, error) {
@@ -669,7 +651,7 @@ func RunDatabaseJob(id string) (ret error) {
 			}
 			add("一致性逻辑备份完成，已记录大小、精确版本与 SHA-256")
 		} else {
-			if e = verifyMySQLBackup(op.Backup); e != nil {
+			if e = verifyMySQLBackup(ctx, op.Backup); e != nil {
 				return e
 			}
 			before := core.DatabaseBackup{ID: id, DatabaseID: db.ID, ServerID: op.Server.ID, CreatedAt: core.Now()}

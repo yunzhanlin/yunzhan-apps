@@ -215,18 +215,15 @@ func migrateMySQL(ctx context.Context, op core.DatabaseOperation, add func(strin
 			return b, e
 		}
 	}
-	if e = verifyMySQLBackup(b); e != nil {
-		return b, e
-	}
-	if _, e = mysqlQuery(ctx, op.TargetServer, "DROP DATABASE `"+source.Name+"`; CREATE DATABASE `"+source.Name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"); e != nil {
-		return b, e
-	}
-	file, e := os.Open(mysqlBackups + "/" + op.Server.ID + "/" + b.ID + ".sql")
+	file, _, e := openVerifiedBackup(ctx, mysqlBackups, b)
 	if e != nil {
 		return b, e
 	}
+	defer file.Close()
+	if _, e = mysqlQuery(ctx, op.TargetServer, "DROP DATABASE `"+source.Name+"`; CREATE DATABASE `"+source.Name+"` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;"); e != nil {
+		return b, e
+	}
 	e = mysqlCommand(ctx, op.TargetServer, "mysql", []string{"--binary-mode", "--database=" + source.Name}, file, io.Discard)
-	file.Close()
 	if e != nil {
 		return b, e
 	}
