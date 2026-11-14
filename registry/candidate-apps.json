@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-14T11:32:38Z",
+  "generated_at": "2026-11-14T15:32:31Z",
   "apps": [
     {
       "schema_version": 1,
@@ -1882,6 +1882,50 @@
       "health": {
         "probe": "http",
         "target": "/api/health/checks/alarms"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mongodb",
+      "name": "MongoDB",
+      "category": "deployment",
+      "version": "8.0.38-compat1",
+      "summary": "MongoDB 8.0.38 单节点，支持回环连接、账号认证和持久卷。修复 Ubuntu 7.0 内核补丁版识别。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "mongodb-8038",
+        "image": "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "认证与回环连接",
+        "文档增删改查与索引",
+        "独立持久数据卷",
+        "随机初始凭据",
+        "可在独立端口验证备份恢复"
+      ],
+      "health": {
+        "probe": "tcp",
+        "target": "127.0.0.1:27017"
       },
       "uninstall": {
         "preserve_data": true,

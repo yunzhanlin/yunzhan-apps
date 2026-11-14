@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-14T11:32:38Z",
+  "generated_at": "2026-11-14T15:32:31Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -347,21 +347,22 @@
       "id": "mongodb",
       "name": "MongoDB",
       "category": "deployment",
-      "version": "8.0-compat1",
-      "summary": "创建回环监听、启用认证与持久命名卷的 MongoDB 受管实例。",
+      "version": "8.0.38-compat1",
+      "summary": "MongoDB 8.0.38 单节点，支持回环连接、账号认证和持久卷。修复 Ubuntu 7.0 内核补丁版识别。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
-      "target": "mongodb",
+      "target": "mongodb-8038",
       "manage_route": "docker",
       "capabilities": [
-        "认证",
-        "持久卷",
-        "回环端口",
-        "备份导出"
+        "认证与回环连接",
+        "文档增删改查与索引",
+        "独立持久数据卷",
+        "随机初始凭据",
+        "可在独立端口验证备份恢复"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mongodb/8.0-compat1/manifest.json",
-      "sha256": "bede7c7c188d6a6f70f907dbe0574f627287d4346837a7dbe682b2f90a772c1a"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/mongodb/8.0.38-compat1/manifest.json",
+      "sha256": "fb290627cd032b2ed575e5e963ed7a2be89301233977f708cc158b775a5b2d02"
     },
     {
       "id": "mysql",

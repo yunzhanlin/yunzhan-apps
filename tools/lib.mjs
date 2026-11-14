@@ -371,6 +371,16 @@ export function validateManifest(app) {
       errors.push("RabbitMQ 4.4 requires its exact official dual-architecture image");
     }
   }
+  if ((app.id === "mongodb" && app.version === "8.0.38-compat1") || app.delivery?.target === "mongodb-8038") {
+    const d = app.delivery;
+    const arch = app.compatibility?.architectures;
+    if (app.id !== "mongodb" || app.version !== "8.0.38-compat1" || app.risk !== "maintained" ||
+        d?.provider !== "compose" || d?.target !== "mongodb-8038" || d?.manage_route !== "docker" ||
+        d?.image !== "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c" || Object.keys(d).sort().join(",") !== "image,manage_route,provider,target" ||
+        !Array.isArray(arch) || arch.length !== 2 || !arch.includes("amd64") || !arch.includes("arm64")) {
+      errors.push("MongoDB 8.0.38 requires its exact official dual-architecture image");
+    }
+  }
   const delivery = app.delivery;
   const recipe = nativeLegacyPHPReleases.find(item =>
     item.target === delivery?.target || (item.id === app.id && item.version === app.version));
