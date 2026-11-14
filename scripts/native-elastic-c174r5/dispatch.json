@@ -1,0 +1,8 @@
+{
+  "published_head": "4da5c904cf8e1388d696abb01072483f906e712b",
+  "tag": "qa-elasticsnapshotscandidate174r5-20261115-qa1",
+  "qa_catalogue_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "payload_sha256": "20062fd938606e553e3cfc139b36df0ce48c41418879eba5f6256ba8e87b60b7",
+  "cases_sha256": "96502f1cdbbabeac6bda3ee012f2615e780daf27686f352c4fe5ee170a00af93",
+  "kvm_sha256": "b240fcc6105dde226df2cca3ef91fe7082ec119007db8eb173bf99657d86734d"
+}

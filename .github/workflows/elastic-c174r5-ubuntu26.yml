@@ -1,0 +1,76 @@
+name: Signed Elasticsearch index snapshots on Ubuntu 26 AMD64
+on:
+  push:
+    branches: [codex/elasticsearch-snapshots-c174r5-native]
+    paths: [scripts/native-elastic-c174r5/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: c174-elasticsearch-ubuntu26-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/elasticsearch-snapshots-c174r5-native'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          sparse-checkout: scripts/native-elastic-c174r5
+      - name: Download the exact signed panel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          fixture=scripts/native-elastic-c174r5
+          root="$RUNNER_TEMP/elastic-c174-signed"
+          mkdir -m 700 "$root"
+          tag=$(jq -r '.tag' "$fixture/dispatch.json")
+          test "$tag" = qa-elasticsnapshotscandidate174r5-20261115-qa1
+          test "$(git rev-parse HEAD^)" = "$(jq -r .published_head "$fixture/dispatch.json")"
+          release_api="repos/yunzhanlin/yunzhan-apps/releases/tags/$tag"
+          for attempt in $(seq 1 20); do
+            if gh api "$release_api" --jq '.draft == false and .prerelease == true and (.assets | length) == 8' > "$root/release-ready" && grep -qx true "$root/release-ready"; then
+              break
+            fi
+            sleep 20
+          done
+          grep -qx true "$root/release-ready"
+          gh release download "$tag" --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --pattern 'rabbitmq-migration-signed-release.py' --dir "$root"
+          mv "$root/rabbitmq-migration-signed-release.py" "$root/signed-release.py"
+          cp "$fixture/elastic.py" "$root/elastic.py"
+          source_head=$(jq -r .qa_catalogue_head "$fixture/dispatch.json")
+          test "$source_head" = f71f1568735713068e1649046950c28a37062c6a
+          catalogue="https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/$source_head/candidate"
+          fetch() {
+            curl --fail --silent --show-error --max-time 60 --retry 2 --output "$root/$1" "$catalogue/$2"
+          }
+          fetch catalogue.json dist/catalog-v1.json
+          fetch catalogue.bundle.json signatures/catalog-v1.bundle.json
+          fetch catalogue.pub.pem signatures/catalog-v1.pub.pem
+          fetch catalogue.sig signatures/catalog-v1.sig
+          fetch elastic.manifest.json dist/apps/elasticsearch/9.1.4-compat2/manifest.json
+          fetch docker.manifest.json dist/apps/docker-manager/1-compat2/manifest.json
+          base64 --decode "$root/catalogue.sig" > "$root/catalogue.sig.bin"
+          cp "$fixture/payload.json" "$root/assets.json"
+      - name: Prepare isolated hardware virtualization
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Verify Elasticsearch snapshot creation, original index and restored search
+        run: |
+          set -eu
+          mkdir -m 700 "$RUNNER_TEMP/elastic-c174-public"
+          sudo -n python3 -I -B scripts/native-elastic-c174r5/kvm.py "$RUNNER_TEMP/elastic-c174-signed" scripts/native-elastic-c174r5 "$RUNNER_TEMP/elastic-c174-public" ubuntu26
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c174-elasticsearch-native-ubuntu26-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/elastic-c174-public/
+          retention-days: 14
+          if-no-files-found: warn
