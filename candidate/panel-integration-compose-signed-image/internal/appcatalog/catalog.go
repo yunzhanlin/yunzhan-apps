@@ -126,7 +126,8 @@ type Client struct {
 	BaseURL                 string
 	PublicKey               ed25519.PublicKey
 	HTTP                    *http.Client
-	cacheMu                 sync.Mutex
+	catalogOnce             sync.Once
+	catalogGate             chan struct{}
 	manifestOnce            sync.Once
 	manifestGate            chan struct{}
 	githubRefMu             sync.Mutex
@@ -184,6 +185,17 @@ func Default() *Client {
 	if err != nil {
 		panic(err)
 	}
+	return client
+}
+
+// NewRegistryClient gives the application store two sequential HTTPS reads
+// within a bounded request, including on slow official connections.
+func NewRegistryClient() *Client {
+	client := Default()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSHandshakeTimeout = 24 * time.Second
+	client.HTTP.Transport = transport
+	client.HTTP.Timeout = 28 * time.Second
 	return client
 }
 
@@ -489,8 +501,16 @@ func (c *Client) RefreshCatalog(ctx context.Context, cacheDir string) (Catalog, 
 }
 
 func (c *Client) loadCatalog(ctx context.Context, cacheDir string, maxAge time.Duration, refreshReference bool) (Catalog, LoadInfo, error) {
-	c.cacheMu.Lock()
-	defer c.cacheMu.Unlock()
+	c.catalogOnce.Do(func() { c.catalogGate = make(chan struct{}, 1) })
+	select {
+	case c.catalogGate <- struct{}{}:
+		defer func() { <-c.catalogGate }()
+	case <-ctx.Done():
+		return Catalog{}, LoadInfo{}, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return Catalog{}, LoadInfo{}, err
+	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
 		if retry := c.githubBackoff(); retry != nil {
 			return cached, catalogFailureInfo(modified, retry), nil

@@ -346,3 +346,32 @@ func TestOfficialCatalogConcurrentCacheRefreshes(t *testing.T) {
 		t.Fatal("atomic cache not verifiable", err)
 	}
 }
+
+func TestRegistryClientAllowsSlowOfficialTLSWithinBound(t *testing.T) {
+	client := NewRegistryClient()
+	transport, ok := client.HTTP.Transport.(*http.Transport)
+	if !ok || transport == http.DefaultTransport || transport.TLSHandshakeTimeout != 24*time.Second ||
+		client.HTTP.Timeout != 28*time.Second {
+		t.Fatal("application store lacks a private, bounded HTTPS transport")
+	}
+	t.Cleanup(transport.CloseIdleConnections)
+	if transport.TLSClientConfig != nil && transport.TLSClientConfig.InsecureSkipVerify {
+		t.Fatal("application store disables certificate validation")
+	}
+	if got := Default().HTTP.Timeout; got != 12*time.Second {
+		t.Fatalf("other catalogue users inherited the app store timeout: %s", got)
+	}
+}
+
+func TestCatalogueCancelledWhileAnotherRefreshOwnsCache(t *testing.T) {
+	client := NewRegistryClient()
+	client.catalogOnce.Do(func() { client.catalogGate = make(chan struct{}, 1) })
+	client.catalogGate <- struct{}{}
+	defer func() { <-client.catalogGate }()
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+	defer cancel()
+	_, _, err := client.RefreshCatalog(ctx, t.TempDir())
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("cancelled refresh started network or cache work: %v", err)
+	}
+}

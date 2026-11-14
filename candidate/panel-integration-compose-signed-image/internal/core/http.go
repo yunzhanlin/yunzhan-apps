@@ -53,7 +53,7 @@ type Server struct {
 type identity struct{ ID, Username, CSRF string }
 
 func NewServer(s *Store, c Config) (*Server, error) {
-	a := &Server{Store: s, Executor: NewExecutorClient(c.Socket), AppCatalog: appcatalog.Default(), Config: c, attempts: map[string][]time.Time{}, terminalGrants: map[string]terminalGrant{}, terminalSessions: map[string]terminalSessionOwner{}}
+	a := &Server{Store: s, Executor: NewExecutorClient(c.Socket), AppCatalog: appcatalog.NewRegistryClient(), Config: c, attempts: map[string][]time.Time{}, terminalGrants: map[string]terminalGrant{}, terminalSessions: map[string]terminalSessionOwner{}}
 	key, err := s.accountKey(c.DataDir)
 	if err != nil {
 		return nil, err

@@ -299,11 +299,16 @@ func (c elasticsearchSnapshotHTTP) observation(ctx context.Context, in core.Elas
 }
 
 func runElasticsearchSnapshotOperation(ctx context.Context, id string, in core.ElasticsearchSnapshotRequest, action string) (string, error) {
-	ctx, unlock, err := composeLock(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer unlock()
+	var state string
+	err := withDockerMutation(ctx, func(bound context.Context) error {
+		var err error
+		state, err = elasticsearchSnapshotOperation(bound, id, in, action)
+		return err
+	})
+	return state, err
+}
+
+func elasticsearchSnapshotOperation(ctx context.Context, id string, in core.ElasticsearchSnapshotRequest, action string) (string, error) {
 	dir, err := openComposeUpdateDirectory(dockerProjects, id)
 	if err != nil {
 		return "", errElasticsearchProject

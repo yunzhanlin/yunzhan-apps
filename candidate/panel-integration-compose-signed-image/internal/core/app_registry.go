@@ -119,6 +119,11 @@ func (a *Server) appRegistryCacheDir() string {
 	return filepath.Join(a.Config.DataDir, "app-registry")
 }
 
+const (
+	registryCatalogTimeout = 60 * time.Second
+	registryPackageTimeout = 30 * time.Second
+)
+
 func (a *Server) loadAppCatalog(ctxTimeout time.Duration, r *http.Request) (appcatalog.Catalog, appcatalog.LoadInfo, error) {
 	ctx, cancel := contextWithTimeout(r.Context(), ctxTimeout)
 	defer cancel()
@@ -496,7 +501,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 	if replay() {
 		return
 	}
-	catalog, _, err := a.loadAppCatalog(15*time.Second, r)
+	catalog, _, err := a.loadAppCatalog(registryCatalogTimeout, r)
 	if err != nil {
 		if replay() {
 			return
@@ -519,7 +524,7 @@ func (a *Server) installRegistryApp(w http.ResponseWriter, r *http.Request, u id
 		fail(w, 409, "应用目录已变化，请刷新后重试")
 		return
 	}
-	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+	ctx, cancel := contextWithTimeout(r.Context(), registryPackageTimeout)
 	defer cancel()
 	manifest, err := a.AppCatalog.FetchManifest(ctx, item, filepath.Join(a.appRegistryCacheDir(), "packages"))
 	if err != nil {
@@ -744,7 +749,7 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 	q := r.URL.Query()
 	q.Set("refresh", "1")
 	r.URL.RawQuery = q.Encode()
-	catalog, source, err := a.loadAppCatalog(15*time.Second, r)
+	catalog, source, err := a.loadAppCatalog(registryCatalogTimeout, r)
 	if err != nil || source.Stale {
 		if replay() {
 			return
@@ -767,7 +772,7 @@ func (a *Server) updateRegistryApp(w http.ResponseWriter, r *http.Request, u ide
 		fail(w, 409, "应用目录已变化，请刷新后重试")
 		return
 	}
-	ctx, cancel := contextWithTimeout(r.Context(), 20*time.Second)
+	ctx, cancel := contextWithTimeout(r.Context(), registryPackageTimeout)
 	defer cancel()
 	var status AppRegistryStatus
 	for _, row := range a.appRegistryStatuses(ctx, catalog) {
@@ -841,7 +846,7 @@ func (a *Server) appRegistryRoutes(m *http.ServeMux) {
 	a.memcachedUnixControlRoutes(m)
 	a.loadBalanceStreamControlRoutes(m)
 	m.HandleFunc("GET /api/app-registry", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
-		catalog, source, err := a.loadAppCatalog(15*time.Second, r)
+		catalog, source, err := a.loadAppCatalog(registryCatalogTimeout, r)
 		if err != nil {
 			fail(w, 503, "加载已签名应用目录失败: "+err.Error())
 			return
