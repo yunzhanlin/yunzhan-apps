@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "8660f0fc99019c2a4239c56048f33a40517267c2481533c7bac3f48f0ea7b4e3",
+  "kvm_sha256": "bd1565701b04bb68f5efc18fd6c8b9fd45be9bbfdaa3bba0cf825827539a8e39",
+  "payload_sha256": "666c17648ce57c1c7f5cbcc59404adc0519fedc799b67c4c12695da956cdd3ed",
+  "published_head": "4da5c904cf8e1388d696abb01072483f906e712b",
+  "qa_catalogue_head": "f71f1568735713068e1649046950c28a37062c6a",
+  "tag": "qa-elasticsnapshotscandidate174r5-20261115-qa1"
+}
