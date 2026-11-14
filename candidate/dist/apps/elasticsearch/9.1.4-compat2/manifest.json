@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "elasticsearch",
+  "name": "Elasticsearch",
+  "category": "deployment",
+  "version": "9.1.4-compat2",
+  "summary": "Elasticsearch 9.1.4 单节点检索。按索引创建快照，在新索引验证恢复，索引与快照使用独立命名卷。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "elasticsearch-snapshot",
+    "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "认证与回环连接",
+    "可持久索引及检索",
+    "独立快照卷",
+    "创建指定索引快照",
+    "恢复到新索引并核对健康"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/_cluster/health"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

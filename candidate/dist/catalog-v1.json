@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-14T15:32:31Z",
+  "generated_at": "2026-11-14T16:44:25Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -159,21 +159,22 @@
       "id": "elasticsearch",
       "name": "Elasticsearch",
       "category": "deployment",
-      "version": "9-compat1",
-      "summary": "部署单节点 Elasticsearch，限制内存并仅通过回环端口提供服务。",
+      "version": "9.1.4-compat2",
+      "summary": "Elasticsearch 9.1.4 单节点检索。按索引创建快照，在新索引验证恢复，索引与快照使用独立命名卷。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
-      "target": "elasticsearch",
+      "target": "elasticsearch-snapshot",
       "manage_route": "docker",
       "capabilities": [
-        "单节点",
-        "内存限额",
-        "持久卷",
-        "HTTP 健康检查"
+        "认证与回环连接",
+        "可持久索引及检索",
+        "独立快照卷",
+        "创建指定索引快照",
+        "恢复到新索引并核对健康"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/elasticsearch/9-compat1/manifest.json",
-      "sha256": "0eae4e6cd77a1452a3bb48c952d2e3b31fe47814f631771c469d286ad0ec3827"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/elasticsearch/9.1.4-compat2/manifest.json",
+      "sha256": "5a71d651d91d7b4e70be47500af3d2aff8a7f085e08355cb338d62efa46ed408"
     },
     {
       "id": "enterprise-tamper-proof",
