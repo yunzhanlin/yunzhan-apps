@@ -1,0 +1,36 @@
+name: RabbitMQ native version and data migration
+on:
+  push:
+    branches: [codex/rabbitmq-migration-c165-rehearsal]
+    paths: [scripts/native-rabbitmq-migration-c165/migration.py]
+permissions:
+  contents: read
+jobs:
+  preserve-data:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/rabbitmq-migration-c165-rehearsal'
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.platform }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Fetch the pinned AMQP test client
+        run: |
+          python3 -m pip download --disable-pip-version-check --no-input --index-url https://pypi.org/simple --require-hashes --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/c165-client" -r scripts/native-rabbitmq-migration-c165/pika.txt
+      - name: Rehearse upgrade and restore with actual durable messages
+        run: |
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-rabbitmq-migration-c165/migration.py "$RUNNER_TEMP/c165-client/pika-1.3.2-py3-none-any.whl" "$RUNNER_TEMP/c165-migration-result"
+      - name: Make the nonsecret receipt readable by the artifact uploader
+        if: always()
+        run: sudo install -m 0644 "$RUNNER_TEMP/c165-migration-result/migration.json" "$RUNNER_TEMP/c165-migration-receipt.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: rabbitmq-c165-migration-${{ matrix.platform }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c165-migration-receipt.json
+          if-no-files-found: error
+          retention-days: 14
