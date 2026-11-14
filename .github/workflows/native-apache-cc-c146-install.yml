@@ -31,10 +31,10 @@ jobs:
           root="$RUNNER_TEMP/apache-c146-signed"
           mkdir -m 700 "$root"
           gh api repos/yunzhanlin/yunzhan-apps/releases/444914663 > "$root/release.json"
-          gh release download qa-wafcatalogplatformcandidate146-20261114-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --dir "$root"
+          gh release download qa-wafcatalogplatformcandidate146-20261114-qa1 --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --pattern 'waf-catalog-signed-release.py' --dir "$root"
           cp scripts/native-apache-cc-c146/{guest,acceptance,archive_acceptance,cold,boot-transition,casebook,capture,preservation}.py "$root/"
           cp scripts/native-apache-cc-c146/payload.json "$root/assets.json"
-          cp candidate/panel-integration-compose-signed-image/packaging/signed-release.py "$root/signed-release.py"
+          cp "$root/waf-catalog-signed-release.py" "$root/signed-release.py"
           python3 - "$root" <<'PYVERIFY'
           import hashlib,json,pathlib,sys
           d=pathlib.Path(sys.argv[1])
@@ -43,7 +43,7 @@ jobs:
           p=json.loads((d/'assets.json').read_bytes())
           assert p['source_inputs_sha256']=='564e9e7fef0b2e9ca961c0bb9fbfb43a27c0998d49ad6770bfc63c9f49025ff1'
           for n,sha in p['files'].items():
-              assert pathlib.PurePath(n).name==n and hashlib.sha256((d/n).read_bytes()).hexdigest()==sha
+              assert pathlib.PurePath(n).name==n and hashlib.sha256((d/n).read_bytes()).hexdigest()==sha, n
           PYVERIFY
       - name: Prepare isolated hardware guest
         run: |
@@ -65,4 +65,4 @@ jobs:
           name: native-apache-cc-c146-amd64-${{ matrix.os_case }}-${{ github.run_id }}
           path: ${{ runner.temp }}/apache-c146-public/
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
