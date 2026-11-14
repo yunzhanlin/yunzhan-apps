@@ -153,7 +153,7 @@ const names: Record<string, string> = {
   sparse_candidates: "稀疏或压缩候选数（inode 去重）",
   ignored_links: "跳过的符号链接",
   ignored_special: "跳过的特殊文件",
-  foreign_filesystems_skipped: "跳过的其他文件系统入口",
+  foreign_filesystems_skipped: "跳过的其他挂载入口",
   directory_cycles_skipped: "跳过的重复目录身份",
   entries_scanned: "已检查目录项",
   entry_limited: "目录项达到上限",

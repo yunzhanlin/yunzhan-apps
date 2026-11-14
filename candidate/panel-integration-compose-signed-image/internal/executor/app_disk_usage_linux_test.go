@@ -140,7 +140,7 @@ func TestDiskUsageReplacedDirectoryAndPublicSymlinkAreRefused(t *testing.T) {
 	if err = os.Symlink(t.TempDir(), filepath.Join(public, "child")); err != nil {
 		t.Fatal(err)
 	}
-	if f, err := diskUsageOpenDir(parent, "child", &expected); err == nil {
+	if f, err := diskUsageOpenDir(parent, "child", &expected, false); err == nil {
 		f.Close()
 		t.Fatal("directory replacement followed link")
 	}
@@ -150,7 +150,7 @@ func TestDiskUsageReplacedDirectoryAndPublicSymlinkAreRefused(t *testing.T) {
 	if err = os.Mkdir(filepath.Join(public, "child"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if f, err := diskUsageOpenDir(parent, "child", &expected); err == nil {
+	if f, err := diskUsageOpenDir(parent, "child", &expected, false); err == nil {
 		f.Close()
 		t.Fatal("different directory inode adopted")
 	}
@@ -165,6 +165,91 @@ func TestDiskUsageReplacedDirectoryAndPublicSymlinkAreRefused(t *testing.T) {
 	}
 	if _, err = New(Config{SitesDir: filepath.Dir(site)}).moduleDiskAt(context.Background(), filepath.Base(site), ""); err == nil {
 		t.Fatal("public symlink accepted even within site root")
+	}
+}
+
+func TestDiskUsageSkipsNestedBindMountsOnTheSameDevice(t *testing.T) {
+	_, site := fileFixture(t)
+	public := filepath.Join(site, "public")
+	external := filepath.Join(filepath.Dir(site), "outside-scan")
+	nested := filepath.Join(public, "nested")
+	fileMount := filepath.Join(public, "mounted-file.bin")
+	for _, dir := range []string{external, nested} {
+		if err := os.Mkdir(dir, 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	externalFile := filepath.Join(external, "outside.bin")
+	for _, path := range []string{externalFile, fileMount, filepath.Join(public, "owned.bin")} {
+		if err := os.WriteFile(path, []byte("evidence"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, paths := range [][2]string{{external, nested}, {externalFile, fileMount}} {
+		if err := unix.Mount(paths[0], paths[1], "", unix.MS_BIND, ""); err != nil {
+			if errors.Is(err, unix.EPERM) {
+				t.Skip("requires a Linux mount-capable test host")
+			}
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := unix.Unmount(paths[1], 0); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+	var p, n unix.Stat_t
+	if err := unix.Stat(public, &p); err != nil {
+		t.Fatal(err)
+	}
+	if err := unix.Stat(nested, &n); err != nil || p.Dev != n.Dev {
+		t.Fatalf("fixture is not a same-device bind mount: %v", err)
+	}
+	svc := New(Config{SitesDir: filepath.Dir(site)})
+	report, err := svc.moduleDiskAt(context.Background(), filepath.Base(site), "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := report.(map[string]any)
+	if out["files"] != 1 || out["foreign_filesystems_skipped"] != 2 || out["scan_complete"] != false {
+		t.Fatalf("unexpected scan report: %v", out)
+	}
+	if row := out["largest_files"].([]map[string]any)[0]; row["path"] != "owned.bin" {
+		t.Fatal(row)
+	}
+	if _, err := svc.moduleDiskAt(context.Background(), filepath.Base(site), "nested"); err == nil {
+		t.Fatal("explicit drill-down crossed the nested mount")
+	}
+}
+
+func TestDiskUsageAllowsADedicatedPublicMount(t *testing.T) {
+	_, site := fileFixture(t)
+	public := filepath.Join(site, "public")
+	if err := unix.Mount("tmpfs", public, "tmpfs", unix.MS_NODEV|unix.MS_NOSUID, "size=4m"); err != nil {
+		if errors.Is(err, unix.EPERM) {
+			t.Skip("requires a Linux mount-capable test host")
+		}
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := unix.Unmount(public, 0); err != nil {
+			t.Error(err)
+		}
+	})
+	subdir := filepath.Join(public, "owned")
+	if err := os.Mkdir(subdir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(subdir, "owned.bin"), []byte("evidence"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	report, err := New(Config{SitesDir: filepath.Dir(site)}).moduleDiskAt(context.Background(), filepath.Base(site), "owned")
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := report.(map[string]any)
+	if out["files"] != 1 || out["foreign_filesystems_skipped"] != 0 || out["scan_complete"] != true {
+		t.Fatalf("dedicated public mount lost its ordinary subtree: %v", out)
 	}
 }
 

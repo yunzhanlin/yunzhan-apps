@@ -21,6 +21,7 @@ import (
 const diskUsageEntriesMax = 100000
 const diskUsageDepthMax = 128
 const diskUsageReadBatch = 64
+const diskUsageResolve = unix.RESOLVE_BENEATH | unix.RESOLVE_NO_MAGICLINKS | unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_XDEV
 
 type diskUsageInode struct{ device, inode uint64 }
 type diskUsageScan struct {
@@ -38,11 +39,16 @@ type diskUsageScan struct {
 // Each component is opened relative to a held directory FD. Never follow a
 // symlink, including a directory replaced between stat and open. File contents,
 // devices and FIFO are never opened. No shell or deletion operation is used.
-func diskUsageOpenDir(parent *os.File, name string, expected *unix.Stat_t) (*os.File, error) {
+func diskUsageOpenDir(parent *os.File, name string, expected *unix.Stat_t, allowMountRoot bool) (*os.File, error) {
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, "/\x00") {
 		return nil, errors.New("目录描述符仅接受一个普通路径分量")
 	}
-	fd, err := unix.Openat(int(parent.Fd()), name, unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
+	flags := unix.O_RDONLY | unix.O_DIRECTORY | unix.O_NOFOLLOW | unix.O_NONBLOCK | unix.O_CLOEXEC
+	resolve := uint64(diskUsageResolve)
+	if allowMountRoot {
+		resolve &^= unix.RESOLVE_NO_XDEV
+	}
+	fd, err := unix.Openat2(int(parent.Fd()), name, &unix.OpenHow{Flags: uint64(flags), Resolve: resolve})
 	if err != nil {
 		return nil, err
 	}
@@ -53,6 +59,19 @@ func diskUsageOpenDir(parent *os.File, name string, expected *unix.Stat_t) (*os.
 		return nil, errors.New("目录身份在扫描时改变；未沿替换路径读取")
 	}
 	return f, nil
+}
+
+func diskUsageEntryStat(dir *os.File, name string, out *unix.Stat_t) error {
+	// O_PATH permits metadata inspection of the link itself and blocks all
+	// reads from regular files, devices and FIFOs.
+	fd, err := unix.Openat2(int(dir.Fd()), name, &unix.OpenHow{
+		Flags: unix.O_PATH | unix.O_NOFOLLOW | unix.O_CLOEXEC, Resolve: diskUsageResolve,
+	})
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fd)
+	return unix.Fstat(fd, out)
 }
 
 func (w *diskUsageScan) addSize(group map[string]int64, key string, size int64) {
@@ -149,7 +168,10 @@ func (w *diskUsageScan) walk(dir *os.File, path, selected string, depth int) err
 			}
 			w.entries++
 			var st unix.Stat_t
-			if err := unix.Fstatat(int(dir.Fd()), entry.Name(), &st, unix.AT_SYMLINK_NOFOLLOW); err != nil {
+			if err := diskUsageEntryStat(dir, entry.Name(), &st); errors.Is(err, unix.EXDEV) {
+				w.foreign++
+				continue
+			} else if err != nil {
 				return err
 			}
 			if st.Mode&unix.S_IFMT == unix.S_IFLNK {
@@ -177,7 +199,11 @@ func (w *diskUsageScan) walk(dir *os.File, path, selected string, depth int) err
 					continue
 				}
 				w.visited[identity] = struct{}{}
-				child, err := diskUsageOpenDir(dir, entry.Name(), &st)
+				child, err := diskUsageOpenDir(dir, entry.Name(), &st, false)
+				if errors.Is(err, unix.EXDEV) {
+					w.foreign++
+					continue
+				}
 				if err != nil {
 					return err
 				}
@@ -225,14 +251,20 @@ func (s *Service) diskUsageReport(ctx context.Context, id, selected string) (any
 		return nil, err
 	}
 	defer site.Close()
-	dir, err := diskUsageOpenDir(site, "public", nil)
+	// An administrator may mount a dedicated filesystem as the site's public
+	// directory. Pin it as the scan root and keep everything below it on that
+	// same mount, including directories reached via an explicit drill-down.
+	dir, err := diskUsageOpenDir(site, "public", nil, true)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { dir.Close() }()
 	if selected != "" && selected != "." {
 		for _, part := range strings.Split(selected, "/") {
-			next, e := diskUsageOpenDir(dir, part, nil)
+			next, e := diskUsageOpenDir(dir, part, nil, false)
+			if errors.Is(e, unix.EXDEV) {
+				return nil, errors.New("所选目录跨越网站扫描根挂载边界")
+			}
 			if e != nil {
 				return nil, e
 			}
@@ -249,7 +281,7 @@ func (s *Service) diskUsageReport(ctx context.Context, id, selected string) (any
 		return nil, err
 	}
 	complete := !w.entryLimited && !w.depthLimited && w.foreign == 0 && w.cycles == 0
-	out := map[string]any{"site_id": id, "path": selected, "total_bytes": w.logical, "unique_logical_bytes": w.uniqueLogical, "allocated_bytes": w.allocated, "files": w.files, "unique_files": len(w.seen), "hardlink_entries": w.hardlinks, "sparse_candidates": w.sparse, "ignored_links": w.links, "ignored_special": w.special, "foreign_filesystems_skipped": w.foreign, "directory_cycles_skipped": w.cycles, "entries_scanned": w.entries, "entry_limited": w.entryLimited, "depth_limited": w.depthLimited, "classification_limited": w.classificationLimited, "scan_complete": complete, "partial": !complete || w.classificationLimited, "read_batch_size": diskUsageReadBatch, "directories": w.dirs, "extensions": w.extensions, "children": w.children, "largest_files": w.rows, "allocation_basis": "st_blocks_512_inode_deduplicated", "snapshot_consistent": false, "scope": "只读扫描所选网站 public 内同一文件系统；不跟随链接、不读文件内容、不删除。逻辑大小按路径相加，分配块只对本次范围内 inode 去重，不包含目录元数据；不等于写时复制共享块、快照或压缩后的独占物理空间。目录/扩展名分布按逻辑大小，不是分配块归属。活动目录不是原子快照。"}
+	out := map[string]any{"site_id": id, "path": selected, "total_bytes": w.logical, "unique_logical_bytes": w.uniqueLogical, "allocated_bytes": w.allocated, "files": w.files, "unique_files": len(w.seen), "hardlink_entries": w.hardlinks, "sparse_candidates": w.sparse, "ignored_links": w.links, "ignored_special": w.special, "foreign_filesystems_skipped": w.foreign, "directory_cycles_skipped": w.cycles, "entries_scanned": w.entries, "entry_limited": w.entryLimited, "depth_limited": w.depthLimited, "classification_limited": w.classificationLimited, "scan_complete": complete, "partial": !complete || w.classificationLimited, "read_batch_size": diskUsageReadBatch, "directories": w.dirs, "extensions": w.extensions, "children": w.children, "largest_files": w.rows, "allocation_basis": "st_blocks_512_inode_deduplicated", "snapshot_consistent": false, "scope": "只读扫描所选网站 public 所在挂载。跳过其中的其他挂载（包括绑定挂载）和符号链接。逻辑大小按路径相加，分配块只对本次范围内 inode 去重，不包含目录元数据。目录和扩展名分布按逻辑大小。活动目录持续变化，独占物理空间取决于底层压缩、快照和写时复制。"}
 	diskUsageFilesystem(dir, out)
 	return out, nil
 }

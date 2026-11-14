@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24phpquarantinerecoverycandidate156r2-linux-amd64.tar.gz",
-    "archive_sha256": "d9f026d7d120b457447cde1b7b8f8870fab0965a6c285cd6be9ada0f81052d8c",
-    "frozen_inputs_sha256": "205a5821815b518019f964ec4c86a3f576c045d6f323e0df06217812c6fd6330"
+    "archive": "panel-0.1.0-dev.proapps24disksitemountboundarycandidate157-linux-amd64.tar.gz",
+    "archive_sha256": "f4d6155aee52f644fdf6702c10ceb7fef53d9447eca6f114b06ed26f78ebefc7",
+    "frozen_inputs_sha256": "01b0886e2ab3f163dbc0c5bc0ca7f06f7be610eb4cc277050675f6be14971a6b"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -269,7 +269,7 @@
     "internal/core/app_module_guidance.go": "1044b9192e02ab3575a4d51a714b4eeeb9b4db79d0bf9cec25193ac5e1f3d677",
     "internal/core/app_module_history.go": "b67396f3cdfe6005ded4da30638443d194e432e60a6341ba5d93e00bc379fb05",
     "internal/core/app_module_identity_test.go": "ccb270bb8e79a245193dc6d930d127543ae7782dc98e79aa01bdb319e3a050cc",
-    "internal/core/app_module_workspace.go": "91f9c39b4e7c9a799908ac5ae54728e3e97baa1d34ef783437adab32989f422c",
+    "internal/core/app_module_workspace.go": "eb57c9ed88e4a72125e0e2624be25694068c3b81f689b4ecf08333e9428821a8",
     "internal/core/app_module_workspace_test.go": "37c266cdae7fb5e9a537651ecc1b5166b02b42c1685dcf5452c49e6ebe7dca69",
     "internal/core/app_modules.go": "7c602f21119ea924cf21a849e70b96cfefc83dc2c2c6c4efad6969ec527c31a0",
     "internal/core/app_modules_test.go": "562e7cf5e0bf3d6de011fd254007577476fb186c224e3ed93f304438cf43570f",
@@ -948,8 +948,8 @@
     "internal/executor/app_disk_host_result.go": "aa6d1fa6ba754dcc0d22a8d1014e9d1e984aff524b4606b8ece96eff42b91ad2",
     "internal/executor/app_disk_host_result_test.go": "d493049185cf6456fd3825633f293f43e0e1b96e60a74e40f918a8604b67c338",
     "internal/executor/app_disk_host_worker_linux.go": "1e16c783733ad3424b244af4b648404deef19bd419a9e04106be0d6015a6eaee",
-    "internal/executor/app_disk_usage_linux.go": "10a083eec71ec21c41c2c1dc1e692e353895a35d65332405a99054edc0f7da69",
-    "internal/executor/app_disk_usage_linux_test.go": "62b8ec9eef364cce092a71e089c17554a6780625d84a339049cc6f48aabc1bcd",
+    "internal/executor/app_disk_usage_linux.go": "c96c50ece12133435e2b29ae97c698e02f46f6da316ab29269dda03a94eb144b",
+    "internal/executor/app_disk_usage_linux_test.go": "0257a54a8222b4b0f0b0524eadfd5531fbf21c607a60198945420ed9ae7e5bd5",
     "internal/executor/app_ftp_accounts_linux.go": "195ccc3e5ae1e12b2d5641007f5b6b6540403882d56d36e3cda417e6ea0c6785",
     "internal/executor/app_ftp_accounts_linux_test.go": "ac3f8b74de097d92b42fa94e674c1764edca4c143bef04ab220b56c95b291794",
     "internal/executor/app_ftp_runtime_linux.go": "12a88c77dec0c6d0a52520514732be57758d057be5d6a436a40c69b8e370cde0",
@@ -2407,7 +2407,7 @@
     "web/src/ApacheWafTransactions.vue": "b0bcbd43a4c17abf2f9279447717f1aff726dc86a7c96d0bf964233c08df86f6",
     "web/src/App.vue": "8c336f8620c31589cde1788e69906d4d3d9ea551ea30841ff9f9c161230490c9",
     "web/src/AppModuleManager.vue": "fc8827232e659d7b65cb05755f40870c99b40420cc6438a4ee228cfa962f6391",
-    "web/src/AppModuleReport.vue": "657ea6486f6843b4e630f5f1c26dc9af07a3490926cac7af40e8f2a98d54e5fc",
+    "web/src/AppModuleReport.vue": "9a89bbc7fd06e82ed5777506fc5c76703ab251b9a7c2c9a79b3decf3f1797b08",
     "web/src/BackupManager.vue": "e9d0c97a5b527fbe6bb879d04db3d7c02edc5d244cd4dfa884a84e100e91989b",
     "web/src/BatchSSLManager.vue": "3fad57eb329e6a91636164fe508c5f3c953d18972c70ab7d9d45443a32baf208",
     "web/src/CertificateManager.vue": "46aabbba8cedf671570cda40c1518a9f4a47d1e07c811cf039579c56df7f2b0c",
