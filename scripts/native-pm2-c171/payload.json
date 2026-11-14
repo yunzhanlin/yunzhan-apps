@@ -1,0 +1,42 @@
+{
+  "architecture": "amd64",
+  "version": "0.1.0-dev.proapps24nginxlogmobilecandidate169",
+  "source_inputs_sha256": "a62fab92c8682926d309b73684f3e372940e1d3ea46884c915d18ee72199246a",
+  "served_head": "47e57541656547fed4297e52ea8ab751d515369b",
+  "pm2": {
+    "id": "pm2-manager",
+    "name": "PM2 Manager",
+    "category": "deployment",
+    "version": "7.0.4-compat11",
+    "summary": "\u56fa\u5b9a PM2 7.0.4 \u5171\u4eab\u8fd0\u884c\u5e93\u4f7f\u7528\u72ec\u7acb Root \u526f\u672c\u3002\u66f4\u65b0\u4fdd\u7559\u539f\u9879\u76ee\u548c\u8fd0\u884c\u8fdb\u7a0b\uff0c\u63d0\u4f9b\u53ea\u8bfb\u6e05\u5355\u3001\u72ec\u7acb\u505c\u673a\u3001\u52a0\u5bc6\u73af\u5883\u53d8\u91cf\u548c\u5931\u8d25\u6062\u590d\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "panel-module",
+    "target": "pm2-manager",
+    "manage_route": "app-modules",
+    "capabilities": [
+      "\u975e root PM2 \u96c6\u7fa4\u4e0e\u542f\u505c\uff1b\u786e\u5207\u7f51\u7ad9\u8d26\u6237\u3001\u670d\u52a1\u8fdb\u7a0b\u53ca\u76d1\u542c\u5f52\u5c5e\u6838\u5bf9",
+      "\u72ec\u7acb\u53ea\u8bfb\u5f53\u524d\u9879\u76ee\u4e0e\u5206\u9875\uff1b\u5386\u53f2\u6216\u914d\u7f6e\u8bb0\u5f55\u635f\u574f\u65f6\u4ecd\u53ef\u6838\u5bf9\u670d\u52a1",
+      "\u72ec\u7acb\u663e\u793a\u5f53\u524d\u8fd0\u884c\u548c\u5f00\u673a\u72b6\u6001\uff0c\u4fdd\u7559\u5f00\u673a\u610f\u56fe\uff1b\u66f4\u65b0\u4fdd\u7559\u539f\u8fdb\u7a0b\uff0c\u6309\u9700\u9010\u4e2a\u91cd\u542f",
+      "\u5185\u5b58\u91cd\u542f\u9608\u503c",
+      "\u539f\u9879\u76ee\u3001\u4fee\u8ba2\u548c\u72ec\u7acb\u79c1\u6709\u9501\u6838\u5bf9\uff1b\u62d2\u7edd\u672a\u77e5\u8eab\u4efd\u3001\u94fe\u63a5\u53ca\u51b2\u7a81\u64cd\u4f5c",
+      "\u52a0\u5bc6\u4ec5\u5199\u5165\u73af\u5883\u53d8\u91cf\u589e\u91cf\u7ba1\u7406",
+      "\u9501\u5b9a npm \u4f9d\u8d56\u540e\u53f0\u90e8\u7f72\uff1b\u5171\u4eab\u8fd0\u884c\u5e93\u5728\u79c1\u6709\u76ee\u5f55\u6784\u5efa\u4e3a\u72ec\u7acb Root \u526f\u672c",
+      "\u7f51\u7ad9\u7528\u6237\u53d7\u63a7\u5b89\u88c5\u811a\u672c",
+      "\u505c\u6b62\u4e0d\u91cd\u653e\u914d\u7f6e\u6216\u90e8\u7f72\uff1b\u670d\u52a1\u505c\u673a\u6838\u5bf9\u548c\u5386\u53f2\u4fdd\u5b58\u7ed3\u679c\u5206\u522b\u56de\u6267",
+      "\u4e2d\u65ad\u90e8\u7f72\u6062\u590d\u4e0e\u53d6\u6d88\uff1b\u672a\u63d0\u4ea4\u914d\u7f6e\u542f\u52a8\u62e6\u622a\u53ca\u663e\u5f0f\u6062\u590d\u540e\u4fdd\u6301\u505c\u6b62",
+      "\u65e7\u90e8\u7f72\u53ef\u6062\u590d\u5f52\u6863",
+      "\u6700\u957f45\u79d2\u5c31\u7eea\u3001\u8c03\u7528\u65b9\u53d6\u6d88\uff1b\u62d2\u7edd\u5176\u4ed6\u8fdb\u7a0b\u76d1\u542c\uff0c\u5931\u8d25\u5148\u505c\u5019\u9009\u518d\u6062\u590d\u65e7\u52a0\u5bc6\u914d\u7f6e"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pm2-manager/7.0.4-compat11/manifest.json",
+    "sha256": "80c03d128862e1d54bce0f275025e549d7b1d51f72679cf4d59552e371feb7bc"
+  },
+  "files": {
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz": "cad5b676530189a5f5e63ded5ae8526058d0a67f0af8ab1ca5ab3f70b14f5d78",
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz.manifest": "27c60f06578ef89e9c984682b73aefb3323dcd93881d1b2be8d8ae318af7551c",
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz.sig": "501a9bb5dd22701657806d5e699fa403eae3a5c61ba2cc4fad0e2a14824c4dbf",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b",
+    "guest.py": "4e9add837e2236cf5ef684a8240bfb19fad2829c9156f2e708cd8a4f080bcb07"
+  }
+}
