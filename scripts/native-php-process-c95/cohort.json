@@ -1,0 +1,64 @@
+{
+  "source_head": "c28538ea6b666932826be86d4b922a37b23e490c",
+  "native_fixture_parent": "c28538ea6b666932826be86d4b922a37b23e490c",
+  "source_inputs_sha256": "a7edfef711976cb81912f8027cd14078670db0a1fa612bc428e7a46adc2e1f61",
+  "version": "0.1.0-dev.proapps24phpquarantinemountcandidate159",
+  "served_head": "3a09dfaa05befb115224a2b7672df09fb1b5f96c",
+  "authorized_catalogues": [
+    "3a09dfaa05befb115224a2b7672df09fb1b5f96c"
+  ],
+  "items": {
+    "php-code-security": {
+      "id": "php-code-security",
+      "name": "PHP code security",
+      "category": "professional",
+      "version": "1.3.1",
+      "summary": "\u626b\u63cf\u548c\u9694\u79bb PHP \u98ce\u9669\u6587\u4ef6\uff0c\u4fdd\u7559\u53ef\u6838\u5bf9\u5907\u4efd\u4e0e\u65e0\u8986\u76d6\u6062\u590d\uff0c\u5e76\u652f\u6301\u6309\u7f51\u7ad9\u5f00\u542f\u6216\u64a4\u9500 PHP-FPM \u8fdb\u7a0b\u51fd\u6570\u9650\u5236\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "panel-module",
+      "target": "php-code-security",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u9ad8\u98ce\u9669\u51fd\u6570\u4e0e\u7f16\u7801\u6df7\u6dc6\u7279\u5f81",
+        "\u771f\u5b9e\u9759\u6001\u626b\u63cf\u3001\u8bc1\u636e\u884c\u53f7\u4e0e\u591a\u6761\u4ef6\u7b5b\u9009",
+        "SHA-256 \u7cbe\u786e\u5ba1\u67e5\u4e0e\u786e\u8ba4",
+        "\u5355\u6587\u4ef6\u539f\u5b50\u9694\u79bb",
+        "\u7ad9\u70b9\u5916 root \u79c1\u6709\u72ec\u7acb\u5907\u4efd",
+        "\u65e0\u8986\u76d6\u5185\u5bb9\u4e0e\u6743\u9650\u6062\u590d",
+        "\u4e2d\u65ad\u4e8b\u52a1\u663e\u5f0f\u4fee\u590d",
+        "\u5206\u9875\u9694\u79bb\u7bb1\u4e0e\u5907\u4efd\u9a8c\u8bc1",
+        "\u7b7e\u540d Webhook \u53ef\u9009\u544a\u8b66",
+        "\u5378\u8f7d\u4e0e\u7f51\u7ad9\u5f52\u6863\u5f15\u7528\u4fdd\u62a4",
+        "\u4e13\u7528\u5de5\u4f5c\u53f0\u4e0e\u79c1\u6709\u6267\u884c\u5386\u53f2",
+        "\u7ad9\u70b9 PHP-FPM \u8fdb\u7a0b\u51fd\u6570\u9650\u5236"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-code-security/1.3.1/manifest.json",
+      "sha256": "2ea02d6f991ab10da613d9c49966fcfd84296fae5fbfcf5e964d57619e978922"
+    }
+  },
+  "payload_files": {
+    "scripts/native-php-process-c95/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php-process-c95/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    ".github/workflows/php-quarantine-mount-c159-native-qa1.yml": "fd15c991ad5d2e6beb8ab8bfd298d7f82c9b6650ccc1ec3715889c18672c60cb",
+    "scripts/native-php-process-c95/php-process.py": "ffd4a70bf8021a480c74e6a7ed66e7c1c5892080bd57eb858a0a578cf0c1e159",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php-process-c95/download.py": "9afd87f490f5f3c9a2ed4423a69415a20fd73a78b8b8330892d6f6a00dd33863",
+    "scripts/native-php-process-c95/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
+    "scripts/native-php-process-c95/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php-process-c95/dispatch.json": "f4a4ca224b590ccd25fd5749e0a1825739310627ef713446b950708695d7aa05"
+  },
+  "changed_payload_files": [
+    ".github/workflows/php-quarantine-mount-c159-native-qa1.yml",
+    "scripts/native-php-process-c95/bootstrap-original-install.py",
+    "scripts/native-php-process-c95/dispatch.json",
+    "scripts/native-php-process-c95/download.py",
+    "scripts/native-php-process-c95/finish.py",
+    "scripts/native-php-process-c95/isolated_ubuntu_apt.py",
+    "scripts/native-php-process-c95/original-signed-release.py",
+    "scripts/native-php-process-c95/php-process.py",
+    "scripts/native-php-process-c95/recipient.pem"
+  ],
+  "mode": "signed-php-quarantine-mount",
+  "Main_changed": false
+}

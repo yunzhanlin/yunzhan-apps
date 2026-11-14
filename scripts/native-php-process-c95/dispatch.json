@@ -1,0 +1,58 @@
+{
+  "version": "0.1.0-dev.proapps24phpquarantinemountcandidate159",
+  "source_head": "c28538ea6b666932826be86d4b922a37b23e490c",
+  "source_inputs_sha256": "a7edfef711976cb81912f8027cd14078670db0a1fa612bc428e7a46adc2e1f61",
+  "source_sdk_tree": "e837eb640b75917a24b201fad3f81e6912507861",
+  "release_id": 445124708,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-amd64.tar.gz": {
+      "id": 746748172,
+      "bytes": 24058901,
+      "sha256": "75b36fe8987d1ccb9c598f0c2e0a0537019b8903173565729017fc8479d0ecef"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-amd64.tar.gz.manifest": {
+      "id": 746742732,
+      "bytes": 189,
+      "sha256": "1da9670466ade98917862535acfba6660366cfc17807f8199972a0968ec3e604"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-amd64.tar.gz.sig": {
+      "id": 746742600,
+      "bytes": 64,
+      "sha256": "fbd846d2c7b47d0f637ee97aab5e25e42a02d1809eff3a7c491e364649ac74e2"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-arm64.tar.gz": {
+      "id": 746742885,
+      "bytes": 22265149,
+      "sha256": "8f1c1b86923b3ce05a5569ed42765660cf2b813ad14e5cc197c46c9f7449a0f0"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-arm64.tar.gz.manifest": {
+      "id": 746742763,
+      "bytes": 189,
+      "sha256": "f6e671614f63d512917d0b30d86a7107e233248f5950592c7bf8e3e7ac0b00df"
+    },
+    "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-arm64.tar.gz.sig": {
+      "id": 746742636,
+      "bytes": 64,
+      "sha256": "cf38598729d3ce24c5b5294b8d7724fc412f58f81a5463becc4baee0f4f99d62"
+    },
+    "php-quarantine-mount-signed-release.py": {
+      "id": 746742826,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 746742675,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-phpquarantinemountcandidate159-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-amd64.tar.gz"
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24phpquarantinemountcandidate159-linux-arm64.tar.gz"
+    }
+  }
+}
