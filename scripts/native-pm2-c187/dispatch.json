@@ -4,5 +4,6 @@
   "payload_sha256": "30dd367edde55c6b2f1492190481bacfae0d081e8ae16ddc900fea512974e6ad",
   "published_head": "eecf42b7b3aa148ff7e2bede597475b1da6e6f00",
   "release_id": 445599194,
-  "tag": "qa-mysqlverifiedrestorecandidate184r2-20261115-qa1"
+  "tag": "qa-mysqlverifiedrestorecandidate184r2-20261115-qa1",
+  "workflow_generation": 2
 }
