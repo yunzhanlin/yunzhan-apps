@@ -50,7 +50,14 @@ func websiteRoot(site core.Site, public string) (string, error) {
 	return root, nil
 }
 func renderSiteConfig(site core.Site, public string) (string, error) {
+	return renderSiteConfigWithUpstream(site, public, "")
+}
+
+func renderSiteConfigWithUpstream(site core.Site, public, upstream string) (string, error) {
 	settings := core.DefaultSiteSettings(site.Settings)
+	if (settings.LoadBalanceDomain == "") != (upstream == "") {
+		return "", errors.New("网站分流配置缺少已核对的入口")
+	}
 	root, e := websiteRoot(site, public)
 	if e != nil {
 		return "", e
@@ -72,7 +79,7 @@ func renderSiteConfig(site core.Site, public string) (string, error) {
 	if !core.SiteWAFEnabled(site.Settings) {
 		wafMarker = "; panel-waf-disabled"
 	}
-	fmt.Fprintf(&out, "# managed by panel; site=%s%s\nserver {\n%s  listen 127.0.0.1:19101;\n  server_name %s;\n  root %s;\n  index %s;\n  disable_symlinks on;\n  access_log /var/log/nginx/panel-%s.access.log panel_site;\n  error_log /var/log/nginx/panel-%s.error.log warn;\n", site.ID, wafMarker, siteWAFInclude(site), strings.Join(domains, " "), strconv.Quote(root), strings.Join(indexFiles, " "), site.ID, site.ID)
+	fmt.Fprintf(&out, "# managed by panel; site=%s%s\n%sserver {\n%s  listen 127.0.0.1:19101;\n  server_name %s;\n  root %s;\n  index %s;\n  disable_symlinks on;\n  access_log /var/log/nginx/panel-%s.access.log panel_site;\n  error_log /var/log/nginx/panel-%s.error.log warn;\n", site.ID, wafMarker, siteLoadBalanceMarker(settings.LoadBalanceDomain), siteWAFInclude(site), strings.Join(domains, " "), strconv.Quote(root), strings.Join(indexFiles, " "), site.ID, site.ID)
 	fmt.Fprintf(&out, "  location = %s { default_type text/plain; access_log off; return 200 %s; }\n", siteHealthPath(site), strconv.Quote(siteHealthBody(site)))
 	fmt.Fprintf(&out, "  add_header X-Panel-Config %s always;\n", strconv.Quote(core.Hash(siteHealthBody(site))))
 	out.WriteString(siteAnalyticsProxy(site))
@@ -84,6 +91,11 @@ func renderSiteConfig(site core.Site, public string) (string, error) {
 	}
 	out.WriteString("  location ~ /\\. { deny all; }\n")
 	out.WriteString(phpProbeConfig(site))
+	if upstream != "" {
+		out.WriteString(upstream)
+		out.WriteString("}\n")
+		return renderSitePublicIngress(site, renderSiteTLS(site, root, out.String())), nil
+	}
 	switch settings.Mode {
 	case "files":
 		out.WriteString(phpConfig(site, filepath.Dir(public)))
@@ -169,7 +181,7 @@ func (s *Service) checkDomainOwners(site core.Site) error {
 				continue
 			}
 			for _, name := range strings.Fields(strings.TrimSuffix(strings.TrimPrefix(line, "server_name "), ";")) {
-				if domains[name] {
+				if domains[name] && !s.siteLoadBalanceSeparateListener(filename, name) {
 					return fmt.Errorf("域名 %s 已出现在其他站点的实际 Nginx 配置中", name)
 				}
 			}
@@ -178,9 +190,17 @@ func (s *Service) checkDomainOwners(site core.Site) error {
 	return nil
 }
 func (s *Service) siteSettingsRoutes(m *http.ServeMux) {
+	s.siteLoadBalanceRoutes(m)
 	m.HandleFunc("POST /v1/sites/preview", func(w http.ResponseWriter, r *http.Request) {
 		var site core.Site
-		if !readJSON(w, r, &site) {
+		var binding core.ApplyRequest
+		bindingChange := r.URL.Query().Get("binding") == "1"
+		if bindingChange {
+			if !readJSON(w, r, &binding) {
+				return
+			}
+			site = binding.Site
+		} else if !readJSON(w, r, &site) {
 			return
 		}
 		if !core.ValidID(site.ID) || !core.ValidDomain(site.Domain) || core.ValidateSite(site.Name, site.Slug) != nil {
@@ -197,26 +217,34 @@ func (s *Service) siteSettingsRoutes(m *http.ServeMux) {
 				return
 			}
 		}
-		public := filepath.Join(s.Config.SitesDir, site.ID, "public")
-		content, e := renderSiteConfig(site, public)
-		if e != nil {
-			respond(w, 409, map[string]string{"error": e.Error()})
-			return
-		}
 		config := filepath.Join(s.Config.ConfDir, site.ID+".conf")
-		if e = ordinary(config, false); e != nil {
-			respond(w, 409, map[string]string{"error": "站点配置尚未就绪"})
-			return
-		}
-		previous, e := os.ReadFile(config)
+		previous, e := readPHPSwitchConfig(config)
 		if e != nil {
-			respond(w, 500, map[string]string{"error": e.Error()})
+			respond(w, 409, map[string]string{"error": "站点配置尚未就绪或超过允许大小"})
 			return
 		}
-		if site.Status == "stopped" || strings.Contains(string(previous), "; disabled") {
-			content = fmt.Sprintf("# managed by panel; site=%s; disabled\n", site.ID)
+		var content, candidateSHA string
+		if bindingChange {
+			upstream, err := s.siteLoadBalanceUpstream(r.Context(), site, binding.Enabled)
+			if err == nil {
+				content, err = s.siteBindingCandidate(binding, string(previous), upstream)
+			}
+			if err != nil {
+				respond(w, 409, map[string]string{"error": err.Error()})
+				return
+			}
+			// Even a stopped site's preview commits to the selected origin.
+			candidateSHA = core.Hash(content + "\x00" + upstream)
 		} else {
-			content, e = s.preserveWAFBodySiteConfig(content, site.ID)
+			public := filepath.Join(s.Config.SitesDir, site.ID, "public")
+			content, e = s.renderManagedSiteConfig(r.Context(), site, public, site.Status != "stopped")
+			if e == nil {
+				if site.Status == "stopped" || strings.Contains(string(previous), "; disabled") {
+					content = disabledSiteConfig(site)
+				} else {
+					content, e = s.preserveWAFBodySiteConfig(content, site.ID)
+				}
+			}
 			if e != nil {
 				respond(w, 409, map[string]string{"error": e.Error()})
 				return
@@ -227,7 +255,11 @@ func (s *Service) siteSettingsRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": e.Error()})
 			return
 		}
-		respond(w, 200, map[string]any{"current": string(previous), "candidate": content, "config_sha": core.Hash(string(previous)), "revision": site.SettingsRevision, "php_current": oldPHP, "php_candidate": newPHP})
+		out := map[string]any{"current": string(previous), "candidate": content, "config_sha": core.Hash(string(previous)), "revision": site.SettingsRevision, "php_current": oldPHP, "php_candidate": newPHP}
+		if candidateSHA != "" {
+			out["candidate_sha"] = candidateSHA
+		}
+		respond(w, 200, out)
 	})
 	m.HandleFunc("GET /v1/sites/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
@@ -311,7 +343,7 @@ func verifySiteHomepage(ctx context.Context, client *http.Client, site core.Site
 	if response.StatusCode < 200 || response.StatusCode >= 500 {
 		return response.StatusCode, fmt.Errorf("网站首页 HTTP %d", response.StatusCode)
 	}
-	if site.Settings.Mode == "redirect" && response.StatusCode != site.Settings.RedirectCode {
+	if site.Settings.LoadBalanceDomain == "" && site.Settings.Mode == "redirect" && response.StatusCode != site.Settings.RedirectCode {
 		return response.StatusCode, fmt.Errorf("重定向 HTTP %d，期望 %d", response.StatusCode, site.Settings.RedirectCode)
 	}
 	return response.StatusCode, nil

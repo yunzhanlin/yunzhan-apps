@@ -69,7 +69,7 @@ func phpSwitchNginxConfig(source string, previous, next core.Site, enabled bool)
 		return "", errPHPSwitchConfig
 	}
 	if !enabled {
-		if source != fmt.Sprintf("# managed by panel; site=%s; disabled\n", next.ID) {
+		if source != disabledSiteConfig(next) {
 			return "", errPHPSwitchConfig
 		}
 		return source, nil
@@ -398,9 +398,9 @@ func (s *Service) phpSwitchPreviewRoutes(m *http.ServeMux) {
 				return
 			}
 			current = string(raw)
-			candidate, err = renderSiteConfig(site, filepath.Join(s.Config.SitesDir, site.ID, "public"))
+			candidate, err = s.renderManagedSiteConfig(r.Context(), site, filepath.Join(s.Config.SitesDir, site.ID, "public"), in.Enabled)
 			if err == nil && !in.Enabled {
-				candidate = fmt.Sprintf("# managed by panel; site=%s; disabled\n", site.ID)
+				candidate = disabledSiteConfig(site)
 			} else if err == nil {
 				candidate, err = s.preserveWAFBodySiteConfig(candidate, site.ID)
 			}

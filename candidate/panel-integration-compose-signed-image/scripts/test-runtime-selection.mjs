@@ -194,6 +194,8 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
      '  if (status?.installed) {\n    openRegistryApp(app);');
  one('${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}', '');
  one(" @php-site-settings=\"openSiteSettings($event, 'php')\"", "");
+ // The website binding adds one permission prop; keep the original hash for the previous wiring.
+ one('          :can-bind-load-balance="canOpenAppModule(accessPlan, \'load-balance\')"\n', "");
  // The independent country editor adds only current-actor plumbing here.
  one('const securityWorkspaceScope = shallowRef<{\n  actor: string;\n', 'const securityWorkspaceScope = shallowRef<{\n');
  one('    actor: (accessPlan.value as (AccessPlan & {user_id?: string}) | null)?.user_id || "",\n', '');

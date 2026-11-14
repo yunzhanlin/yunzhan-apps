@@ -3100,6 +3100,7 @@ onUnmounted(() => {
           v-model="settingsOpen"
           :site-id="settingsSiteID"
           :initial-tab="settingsInitialTab"
+          :can-bind-load-balance="canOpenAppModule(accessPlan, 'load-balance')"
           :api="api"
           :on-job="revealJob"
         />

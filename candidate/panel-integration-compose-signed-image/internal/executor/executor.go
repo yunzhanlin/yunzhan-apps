@@ -287,20 +287,34 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 			return result, e
 		}
 	}
+	upstream, balanceErr := s.siteLoadBalanceUpstream(ctx, in.Site, in.Enabled)
+	if balanceErr != nil {
+		return result, balanceErr
+	}
 	if err := s.checkDomainOwners(in.Site); err != nil {
 		return result, err
 	}
+	var bindingConfig string
+	if in.PreviousBindingSite != nil && (in.ExpectedConfigSHA == "" || in.ExpectedCandidateSHA == "") {
+		return result, errors.New("网站分流变更需要当前和候选配置摘要")
+	}
 	if in.ExpectedConfigSHA != "" {
 		cfg := filepath.Join(s.Config.ConfDir, in.Site.ID+".conf")
-		if err := ordinary(cfg, false); err != nil {
-			return result, err
-		}
-		old, err := os.ReadFile(cfg)
+		old, err := readPHPSwitchConfig(cfg)
 		if err != nil {
 			return result, err
 		}
 		if core.Hash(string(old)) != in.ExpectedConfigSHA {
 			return result, errors.New("实际 Nginx 配置已发生变化，请重新预览")
+		}
+		if in.PreviousBindingSite != nil {
+			bindingConfig, err = s.siteBindingCandidate(in, string(old), upstream)
+			if err != nil {
+				return result, err
+			}
+			if core.Hash(bindingConfig+"\x00"+upstream) != in.ExpectedCandidateSHA {
+				return result, errors.New("候选分流配置已变化，请重新预览")
+			}
 		}
 	}
 	if in.Enabled && in.Site.Settings.AnalyticsProxyIdentity != "" {
@@ -454,19 +468,22 @@ func (s *Service) Apply(ctx context.Context, in core.ApplyRequest) (core.ApplyRe
 	if in.ExpectedConfigSHA != "" && core.Hash(string(old)) != in.ExpectedConfigSHA {
 		return result, errors.New("保存期间实际 Nginx 配置已变化，请重新预览")
 	}
-	content, renderErr := renderSiteConfig(in.Site, public)
+	content, renderErr := renderSiteConfigWithUpstream(in.Site, public, upstream)
 	if phpPlan != nil {
 		if !hadOld || string(old) != phpPlan.original {
 			return result, errors.New("PHP 切换期间实际 Nginx 配置已变化，未覆盖原配置")
 		}
 		content, renderErr = phpPlan.candidate, nil
 	}
+	if !in.Enabled {
+		content, renderErr = disabledSiteConfig(in.Site), nil
+	}
 	if renderErr != nil {
 		return result, renderErr
 	}
-	if !in.Enabled {
-		content = fmt.Sprintf("# managed by panel; site=%s; disabled\n", in.Site.ID)
-	} else if phpPlan == nil {
+	if bindingConfig != "" {
+		content = bindingConfig
+	} else if in.Enabled && phpPlan == nil {
 		content, renderErr = s.preserveWAFBodySiteConfig(content, in.Site.ID)
 		if renderErr != nil {
 			return result, renderErr

@@ -119,13 +119,15 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 }
 
 type ApplyRequest struct {
-	PreserveNginx     bool   `json:"preserve_nginx,omitempty"`
-	PreviousSite      *Site  `json:"previous_site,omitempty"`
-	ExpectedConfigSHA string `json:"expected_config_sha,omitempty"`
-	Site              Site   `json:"site"`
-	Sites             []Site `json:"sites,omitempty"`
-	Enabled           bool   `json:"enabled"`
-	JobID             string `json:"job_id"`
+	PreserveNginx        bool   `json:"preserve_nginx,omitempty"`
+	PreviousSite         *Site  `json:"previous_site,omitempty"`
+	PreviousBindingSite  *Site  `json:"previous_binding_site,omitempty"`
+	ExpectedCandidateSHA string `json:"expected_candidate_sha,omitempty"`
+	ExpectedConfigSHA    string `json:"expected_config_sha,omitempty"`
+	Site                 Site   `json:"site"`
+	Sites                []Site `json:"sites,omitempty"`
+	Enabled              bool   `json:"enabled"`
+	JobID                string `json:"job_id"`
 }
 type ApplyResult struct {
 	Status   string `json:"status"`
@@ -218,7 +220,7 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 					enabled = p.PreviousStatus != "stopped"
 				}
 			}
-			expectedConfigSHA := ""
+			var expectedConfigSHA, expectedCandidateSHA string
 			if j.Kind == "switch_php" {
 				var p JobPayload
 				_ = json.Unmarshal([]byte(j.Payload), &p)
@@ -234,7 +236,7 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				site.Settings = *p.Settings
 				previousStatus = p.PreviousStatus
 				enabled = p.PreviousStatus != "stopped"
-				expectedConfigSHA = p.ExpectedConfigSHA
+				expectedConfigSHA, expectedCandidateSHA = p.ExpectedConfigSHA, p.ExpectedCandidateSHA
 			}
 			if enabled && site.Settings.TLS != nil {
 				material, certErr := s.CertificateMaterial(site.Settings.TLS.CertificateID)
@@ -271,6 +273,10 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				}
 			}
 			request := ApplyRequest{Site: site, Sites: allSites, Enabled: enabled, JobID: j.ID, ExpectedConfigSHA: expectedConfigSHA}
+			if j.Kind == "configure_site" && previousSite.Settings.LoadBalanceDomain != site.Settings.LoadBalanceDomain {
+				request.PreviousBindingSite = &previousSite
+				request.ExpectedCandidateSHA = expectedCandidateSHA
+			}
 			if j.Kind == "switch_php" && previousSite.PHPVersionID != "" && site.PHPVersionID != "" && site.Settings.WebServer == "nginx" {
 				request.PreserveNginx = true
 				request.PreviousSite = &previousSite

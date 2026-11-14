@@ -41,6 +41,7 @@ type SiteSettings struct {
 	RedirectCode           int           `json:"redirect_code"`
 	PreserveURI            bool          `json:"preserve_uri"`
 	WebServer              string        `json:"web_server,omitempty"`
+	LoadBalanceDomain      string        `json:"load_balance_domain,omitempty"`
 }
 
 // A missing value preserves the historical behavior for existing sites.
@@ -106,6 +107,9 @@ func ValidateSiteSettings(in SiteSettings, primary, php string) error {
 		if e := ValidateAnalyticsEndpoint(in.AnalyticsEndpoint); e != nil {
 			return e
 		}
+	}
+	if in.LoadBalanceDomain != "" && (!ValidDomain(in.LoadBalanceDomain) || in.WebServer != "nginx" || in.AnalyticsInjectHTML) {
+		return errors.New("网站分流须选择有效的 HTTP 负载均衡入口，网站使用 Nginx，且关闭 HTML 自动注入")
 	}
 	if in.AnalyticsInjectHTML && (in.AnalyticsEndpoint == "" || in.Mode != "files" || in.WebServer != "nginx") {
 		return errors.New("HTML 自动接入仅支持已开启采集的 Nginx 文件/PHP 网站；代理、Apache 与跳转网站请使用手工标签")
@@ -274,6 +278,10 @@ func (s *Store) QueueSiteSettings(id string, in SiteSettings, revision int64, co
 	return s.queueSiteSettings(id, in, revision, configSHA, key, actor, nil)
 }
 func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, configSHA, key, actor string, analytics *AnalyticsConfig) (string, error) {
+	return s.queueSiteSettingsCandidate(id, in, revision, configSHA, "", key, actor, analytics)
+}
+
+func (s *Store) queueSiteSettingsCandidate(id string, in SiteSettings, revision int64, configSHA, candidateSHA, key, actor string, analytics *AnalyticsConfig) (string, error) {
 	site, e := s.Site(id)
 	if e != nil {
 		return "", errors.New("站点不存在")
@@ -322,13 +330,20 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 		b, _ := json.Marshal(in)
 		other, _ := json.Marshal(p.Settings)
 		analyticsSame := analytics == nil && p.Analytics == nil || analytics != nil && p.Analytics != nil && sameAnalyticsRequest(*analytics, *p.Analytics)
-		if oldSite != id || oldKind != "configure_site" || p.ExpectedRevision != revision || p.ExpectedConfigSHA != configSHA || string(b) != string(other) || !analyticsSame {
+		if oldSite != id || oldKind != "configure_site" || p.ExpectedRevision != revision || p.ExpectedConfigSHA != configSHA || p.ExpectedCandidateSHA != candidateSHA || string(b) != string(other) || !analyticsSame {
 			return "", errors.New("幂等键已被不同请求使用")
 		}
 		return oldID, nil
 	}
 	if !errors.Is(e, sql.ErrNoRows) {
 		return "", e
+	}
+	bindingChanged := site.Settings.LoadBalanceDomain != in.LoadBalanceDomain
+	if bindingChanged && !validLowerSHA256(candidateSHA) {
+		return "", errors.New("更改网站分流入口前请生成新的配置预览")
+	}
+	if !bindingChanged && candidateSHA != "" {
+		return "", errors.New("网站分流设置已变化，请刷新后重新预览")
 	}
 	if analytics != nil {
 		currentAnalytics, err := analyticsConfigInTx(tx, id)
@@ -352,6 +367,9 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 		return "", errors.New("网站设置已被修改，请重新读取并预览")
 	}
 	if status != "running" && status != "stopped" {
+		if bindingChanged {
+			return "", errors.New("请先恢复网站状态，再更改分流入口")
+		}
 		var payload string
 		_ = tx.QueryRow(`SELECT payload FROM jobs WHERE site_id=? ORDER BY created_at DESC,rowid DESC LIMIT 1`, id).Scan(&payload)
 		var p JobPayload
@@ -362,7 +380,7 @@ func (s *Store) queueSiteSettings(id string, in SiteSettings, revision int64, co
 		}
 	}
 	job := ID()
-	p := JobPayload{Settings: &in, ExpectedRevision: revision, ExpectedConfigSHA: configSHA, PreviousStatus: status, Analytics: analytics}
+	p := JobPayload{Settings: &in, ExpectedRevision: revision, ExpectedConfigSHA: configSHA, ExpectedCandidateSHA: candidateSHA, PreviousStatus: status, Analytics: analytics}
 	payload, _ := json.Marshal(p)
 	if _, e = tx.Exec(`INSERT INTO jobs(id,site_id,payload,kind,state,idempotency_key,created_at,updated_at) VALUES(?,?,?,'configure_site','queued',?,?,?)`, job, id, string(payload), key, Now(), Now()); e != nil {
 		return "", errors.New("站点已有执行中的任务")
@@ -441,6 +459,23 @@ func finishSiteSettings(tx *sql.Tx, j Job) error {
 	return finishAppSiteBinding(tx, j.SiteID, *p.Settings)
 }
 func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
+	m.HandleFunc("GET /api/sites/{id}/settings/load-balancers", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		if !a.canBindSiteLoadBalance(u) {
+			fail(w, 403, "绑定入口需要网站和系统工具管理权限")
+			return
+		}
+		if _, err := a.Store.Site(r.PathValue("id")); err != nil {
+			fail(w, 404, "站点不存在")
+			return
+		}
+		var choices SiteLoadBalanceChoices
+		if err := a.Executor.Call(r.Context(), http.MethodGet, "/v1/sites/load-balancers", nil, &choices); err != nil {
+			fail(w, 409, err.Error())
+			return
+		}
+		send(w, 200, choices)
+	}))
+
 	m.HandleFunc("GET /api/sites/{id}/settings", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		site, e := a.Store.Site(r.PathValue("id"))
 		if e != nil {
@@ -460,6 +495,9 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 		site, e := a.Store.Site(r.PathValue("id"))
 		if e != nil {
 			fail(w, 404, "站点不存在")
+			return
+		}
+		if !a.checkSiteLoadBalanceChange(w, u, site, in.Settings) {
 			return
 		}
 		in.Settings = DefaultSiteSettings(in.Settings)
@@ -488,9 +526,19 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 			return
 		}
 		sort.Strings(in.Settings.Domains)
+		previous := site
 		site.Settings = in.Settings
 		var result any
-		if e = a.Executor.Call(r.Context(), "POST", "/v1/sites/preview", site, &result); e != nil {
+		path, request := "/v1/sites/preview", any(site)
+		if previous.Settings.LoadBalanceDomain != site.Settings.LoadBalanceDomain {
+			if previous.Status != "running" && previous.Status != "stopped" {
+				fail(w, 409, "请先恢复网站状态，再更改分流入口")
+				return
+			}
+			path += "?binding=1"
+			request = ApplyRequest{Site: site, Enabled: previous.Status != "stopped", PreviousBindingSite: &previous}
+		}
+		if e = a.Executor.Call(r.Context(), "POST", path, request, &result); e != nil {
 			fail(w, 409, e.Error())
 			return
 		}
@@ -498,14 +546,23 @@ func (a *Server) siteSettingsRoutes(m *http.ServeMux) {
 	}))
 	m.HandleFunc("POST /api/sites/{id}/settings", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var in struct {
-			Settings          SiteSettings `json:"settings"`
-			ExpectedRevision  int64        `json:"expected_revision"`
-			ExpectedConfigSHA string       `json:"expected_config_sha"`
+			Settings             SiteSettings `json:"settings"`
+			ExpectedRevision     int64        `json:"expected_revision"`
+			ExpectedConfigSHA    string       `json:"expected_config_sha"`
+			ExpectedCandidateSHA string       `json:"expected_candidate_sha,omitempty"`
 		}
 		if !decode(w, r, &in) {
 			return
 		}
-		job, e := a.Store.QueueSiteSettings(r.PathValue("id"), in.Settings, in.ExpectedRevision, in.ExpectedConfigSHA, r.Header.Get("Idempotency-Key"), u.Username)
+		site, err := a.Store.Site(r.PathValue("id"))
+		if err != nil {
+			fail(w, 404, "站点不存在")
+			return
+		}
+		if !a.checkSiteLoadBalanceChange(w, u, site, in.Settings) {
+			return
+		}
+		job, e := a.Store.queueSiteSettingsCandidate(site.ID, in.Settings, in.ExpectedRevision, in.ExpectedConfigSHA, in.ExpectedCandidateSHA, r.Header.Get("Idempotency-Key"), u.Username, nil)
 		if e != nil {
 			fail(w, 409, e.Error())
 			return

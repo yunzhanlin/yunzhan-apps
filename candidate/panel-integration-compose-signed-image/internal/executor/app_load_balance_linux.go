@@ -805,6 +805,9 @@ func (s *Service) moduleLoadBalance(ctx context.Context, action string, in core.
 			listener.Close()
 		}
 	}
+	if e = s.checkLoadBalanceWebsiteChange(old, next, entries); e != nil {
+		return nil, e
+	}
 	if e = ctx.Err(); e != nil {
 		return nil, e
 	}

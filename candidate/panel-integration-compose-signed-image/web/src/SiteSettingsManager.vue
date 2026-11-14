@@ -37,6 +37,7 @@ interface Settings {
   redirect_code: number;
   preserve_uri: boolean;
   web_server?: "nginx" | "apache";
+  load_balance_domain?: string;
 }
 interface Site {
   id: string;
@@ -53,11 +54,13 @@ interface Preview {
   current: string;
   candidate: string;
   config_sha: string;
+  candidate_sha?: string;
   revision: number;
 }
 const props = defineProps<{
   siteId: string;
   initialTab?: string;
+  canBindLoadBalance?: boolean;
   api: <T>(path: string, method?: string, body?: unknown) => Promise<T>;
   onJob: (id: string) => Promise<void>;
 }>();
@@ -88,6 +91,41 @@ const certificates = ref<
   }[]
 >([]);
 const certificateError = ref("");
+interface LoadBalanceChoice {
+  domain: string;
+  tls: boolean;
+  sticky: boolean;
+}
+const balanceEntries = ref<LoadBalanceChoice[]>([]),
+  balanceInstalled = ref(false),
+  balanceLoading = ref(false),
+  balanceError = ref("");
+let balanceRequest = 0;
+async function loadBalanceEntries() {
+  const request = ++balanceRequest;
+  balanceEntries.value = [];
+  balanceInstalled.value = false;
+  balanceError.value = "";
+  balanceLoading.value = false;
+  if (!visible.value || !props.siteId || !props.canBindLoadBalance) return;
+  balanceLoading.value = true;
+  try {
+    const result = await props.api<{ installed: boolean; entries: LoadBalanceChoice[] }>(
+      endpoint("/load-balancers"),
+    );
+    if (request !== balanceRequest) return;
+    balanceEntries.value = result.entries;
+    balanceInstalled.value = result.installed;
+  } catch (e) {
+    if (request === balanceRequest) balanceError.value = (e as Error).message;
+  } finally {
+    if (request === balanceRequest) balanceLoading.value = false;
+  }
+}
+const configuredBalance = computed(() =>
+  balanceEntries.value.some((item) => item.domain === form.value?.load_balance_domain),
+);
+
 async function loadCertificates() {
   certificateError.value = "";
   try {
@@ -166,6 +204,14 @@ watch(signature, () => {
   preview.value = null;
 });
 const endpoint = (suffix = "") => `/sites/${props.siteId}/settings${suffix}`;
+watch(
+  () => [visible.value, props.siteId, props.canBindLoadBalance, tab.value],
+  () => {
+    if (tab.value === "routing") void loadBalanceEntries();
+    else balanceRequest++;
+  },
+);
+
 async function load() {
   if (!props.siteId) return;
   loading.value = true;
@@ -250,6 +296,7 @@ async function submit() {
       settings: payload(),
       expected_revision: site.value.settings_revision,
       expected_config_sha: preview.value.config_sha,
+      expected_candidate_sha: preview.value.candidate_sha,
     });
     baseline.value = signature.value;
     visible.value = false;
@@ -480,6 +527,34 @@ const rewriteOptions = [
                 ></el-radio-group
               ></el-form-item
             >
+            <el-form-item v-if="canBindLoadBalance || form.load_balance_domain" label="负载均衡入口">
+              <el-select
+                v-if="canBindLoadBalance"
+                :model-value="form.load_balance_domain || ''"
+                aria-label="负载均衡入口"
+                :loading="balanceLoading"
+                :disabled="form.web_server === 'apache'"
+                @update:model-value="form.load_balance_domain = $event"
+              >
+                <el-option label="无绑定（使用原服务模式）" value="" />
+                <el-option
+                  v-if="form.load_balance_domain && !configuredBalance"
+                  :label="form.load_balance_domain + '（当前绑定）'"
+                  :value="form.load_balance_domain"
+                  disabled
+                />
+                <el-option v-for="entry in balanceEntries" :key="entry.domain"
+                  :label="entry.domain + (entry.tls ? ' · HTTPS' : ' · HTTP')"
+                  :value="entry.domain" />
+              </el-select>
+              <span v-else>{{ form.load_balance_domain }}</span>
+              <el-button v-if="canBindLoadBalance && form.load_balance_domain" link
+                @click="form.load_balance_domain = ''">解除绑定</el-button>
+              <div v-if="balanceError" class="settings-help" role="alert">{{ balanceError }}</div>
+              <div v-else-if="canBindLoadBalance && !balanceLoading && !balanceInstalled" class="settings-help">请先在软件商店安装负载均衡。</div>
+              <div v-else-if="canBindLoadBalance && !balanceLoading && !balanceEntries.length" class="settings-help">请在负载均衡的「入口与节点」保存可用的 HTTP 或 HTTPS 入口。</div>
+              <div v-if="form.load_balance_domain" class="settings-help">绑定期间使用该入口转发业务请求。解除后恢复当前选择的网站服务模式。证书、网站文件和统计采集入口由网站继续管理。</div>
+            </el-form-item>
             <template v-if="form.mode === 'files'"
               ><el-form-item label="伪静态模板"
                 ><el-select v-model="form.rewrite" aria-label="伪静态模板"
