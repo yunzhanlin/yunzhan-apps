@@ -253,6 +253,10 @@ func OpenStore(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = s.migrateRabbitMQMigrationRequests(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = s.migrateMemcachedUpdates(); err != nil {
 		db.Close()
 		return nil, err

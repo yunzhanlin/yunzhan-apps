@@ -19,7 +19,12 @@ const dockerRetentionPrefix = "yunzhan-retain-memcached-"
 const dockerRetentionReason = "应用更新原镜像保留锚点；必须保持未启动，禁止通用操作或删除"
 
 func dockerContainerRetained(name string, labels map[string]string) bool {
-	if strings.HasPrefix(strings.TrimPrefix(name, "/"), dockerRetentionPrefix) || labels["io.yunzhan.owner"] == memcachedRetentionOwner {
+	base := strings.TrimPrefix(name, "/")
+	if strings.HasPrefix(base, dockerRetentionPrefix) || strings.HasPrefix(base, rabbitMQOfflineContainerPrefix) ||
+		labels["io.yunzhan.owner"] == memcachedRetentionOwner {
+		return true
+	}
+	if _, migration := labels[rabbitMQMigrationVolumeJobLabel]; migration {
 		return true
 	}
 	// Even an empty/damaged retention marker is NOT an ordinary container.

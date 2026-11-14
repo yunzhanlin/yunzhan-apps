@@ -14,7 +14,7 @@ const job='a'.repeat(32),site='b'.repeat(32);
 function fixture(response){
  let clock=0;const calls=[],messages=[],saved=new Map(),scope=effectScope();
  const props=reactive({csrf:'fixture-original-session',access:{role:'admin',menu_ids:['system-tools']},async api(...args){calls.push(args);return args[1]==='POST'?{job_id:job}:response(calls.filter(x=>x[1]!=='POST').length);}});
- const env={ref,computed,watch,canOpenAppModule,defineProps:()=>props,randomId:()=> 'c'.repeat(32),formatPanelDateTime:()=>'',Date:{now:()=>clock},setTimeout(fn,ms){clock+=ms;queueMicrotask(fn);},sessionStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},ElMessage:Object.fromEntries(['success','error'].map(k=>[k,v=>messages.push([k,v])])),ElMessageBox:{},onBeforeUnmount(){}};
+ const env={ref,computed,watch,canOpenAppModule,defineProps:()=>props,defineEmits:()=>()=>{},randomId:()=> 'c'.repeat(32),formatPanelDateTime:()=>'',Date:{now:()=>clock},setTimeout(fn,ms){clock+=ms;queueMicrotask(fn);},sessionStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},ElMessage:Object.fromEntries(['success','error'].map(k=>[k,v=>messages.push([k,v])])),ElMessageBox:{},onBeforeUnmount(){}};
  const b=scope.run(()=>new Function('b','with(b){'+js+';return {visible,bindingProject,bindingForm,bindingOpen,busy,bindProjectSite};}')(env));
  b.visible.value=true;b.bindingProject.value={id:'d'.repeat(32)};b.bindingForm.value={name:'binding fixture',slug:'binding-fixture',domain:'fixture.example'};b.bindingOpen.value=true;
  return{b,calls,messages,saved,run:async()=>{try{return await b.bindProjectSite();}finally{scope.stop();}}};

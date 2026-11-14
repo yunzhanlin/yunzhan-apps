@@ -47,6 +47,8 @@ func main() {
 	sftpJob := flag.String("sftp-job", "", "run one root-only SFTP account job")
 	dockerJob := flag.String("docker-job", "", "run one Docker image or container job")
 	composeJob := flag.String("compose-job", "", "run one managed Docker Compose project job")
+	rabbitMQMigration := flag.String("rabbitmq-migration", "", "run exactly one authorized RabbitMQ migration")
+	rabbitMQReconcile := flag.String("rabbitmq-reconcile", "", "reconcile the original RabbitMQ migration")
 	recoverCompose := flag.Bool("recover-compose", false, "clean interrupted Docker Compose operations")
 	redisServe := flag.String("serve-redis", "", "serve one managed Redis instance")
 	mariadbServe := flag.String("serve-mariadb", "", "serve one managed MariaDB instance")
@@ -93,6 +95,24 @@ func main() {
 	flag.Parse()
 	if err := validateExecutorCLIArguments(flag.CommandLine, os.Args[1:]); err != nil {
 		log.Fatal(err)
+	}
+	if *rabbitMQMigration != "" || *rabbitMQReconcile != "" {
+		if os.Geteuid() != 0 || flag.NFlag() != 1 || len(os.Args) != 3 {
+			log.Fatal("RabbitMQ migration requires Root and one fixed job selector")
+		}
+		var err error
+		switch os.Args[1] {
+		case "--rabbitmq-migration":
+			err = executor.RunRabbitMQMigration(*rabbitMQMigration)
+		case "--rabbitmq-reconcile":
+			err = executor.ResumeRabbitMQMigration(*rabbitMQReconcile)
+		default:
+			log.Fatal("RabbitMQ migration selector invalid")
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	offlineFragmentReviewEntry := false
 	flag.Visit(func(f *flag.Flag) {

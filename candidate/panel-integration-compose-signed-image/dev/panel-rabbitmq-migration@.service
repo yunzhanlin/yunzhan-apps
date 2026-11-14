@@ -1,0 +1,20 @@
+[Unit]
+Description=Panel RabbitMQ migration %i
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --rabbitmq-migration %i
+TimeoutStartSec=32min
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /etc/panel/compose
+# Docker owns the writable mountpoint. The worker checks its actual data-root,
+# volume identity and private paths before opening the independent destination.
+ReadWritePaths=-/var/lib/docker/volumes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

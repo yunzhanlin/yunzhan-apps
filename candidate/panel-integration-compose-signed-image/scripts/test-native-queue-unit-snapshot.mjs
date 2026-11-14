@@ -16,6 +16,14 @@ test('all original13-property predicates and legacy5s reader stay exact beneath 
 	const apacheFencedEntry=fencedEntry.replace('\treturn checkLoadBalanceStreamUpgrade(ctx, nil)',apacheAddition+'\treturn checkLoadBalanceStreamUpgrade(ctx, nil)');
 	assert.equal(queues.split(apacheFencedEntry).length,2);
 	let legacyQueues=queues.replace(apacheFencedEntry,()=>entry);
+	// RabbitMQ must add both durable journal checks and both native service
+	// prefixes. Restore only these exact additions to compare old predicates.
+	const rabbitDurableCheck='\tif err := productionRabbitMQMigrationStore().check(ctx); err != nil {\n\t\treturn err\n\t}\n';
+	const rabbitUnits='"panel-rabbitmq-migration@", "panel-rabbitmq-reconcile@", ';
+	assert.equal(legacyQueues.split(rabbitDurableCheck).length,3);
+	assert.equal(legacyQueues.split(rabbitUnits).length,2);
+	legacyQueues=legacyQueues.replaceAll(rabbitDurableCheck,'').replace(rabbitUnits,'');
+
 	// C62 adds only this separate read-only independent-copy pending fence.
 	// Remove the exact addition before checking the unchanged original inode
 	// block and all historical queue hashes. No predicate/digest is weakened.

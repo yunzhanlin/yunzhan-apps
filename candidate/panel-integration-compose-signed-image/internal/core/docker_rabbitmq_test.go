@@ -133,3 +133,20 @@ func TestRabbitMQRegistryKeepsOldInstanceVisibleAlongside440(t *testing.T) {
 		t.Fatal("mixed the old and new broker versions", got.Instances)
 	}
 }
+
+func TestRabbitMQMigrationComposeBindsOriginalEndpointAndExistingVolume(t *testing.T) {
+	password, job := strings.Repeat("3", 64), strings.Repeat("7", 32)
+	original := rabbitMQCompose(RabbitMQLegacyTemplate, 25672, password)
+	got, err := RabbitMQMigratedCompose(original, 25672, job)
+	want := strings.Replace(original, dockerRabbitMQImage, dockerRabbitMQ440Image, 1)
+	want = strings.Replace(want, "  data: {}\n", "  data:\n    external: true\n    name: panel_rabbitmq_"+job+"\n", 1)
+	if err != nil || got != want || RabbitMQ440ComposeMatches(got, 25672, password) {
+		t.Fatal("migrated Compose did not bind the original ports, hostname, credentials, and exact copied volume")
+	}
+	if _, err := RabbitMQMigratedCompose(original, 25673, job); err == nil {
+		t.Fatal("accepted different endpoint")
+	}
+	if _, err := RabbitMQMigratedCompose(original, 25672, "../different-volume"); err == nil {
+		t.Fatal("accepted an external volume override")
+	}
+}

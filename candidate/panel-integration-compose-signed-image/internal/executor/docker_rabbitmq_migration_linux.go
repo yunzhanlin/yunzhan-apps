@@ -103,9 +103,13 @@ func readRabbitMQMigrationPreflight(ctx context.Context, id string) (core.Rabbit
 	if err != nil || still != volume {
 		return report, errors.New("原 RabbitMQ 数据卷在预检期间发生变化")
 	}
+	source := core.RabbitMQMigrationSource{
+		ProjectID: id, ContainerID: before.ID, StartedAt: before.State.StartedAt, Volume: volume,
+		ConfigSHA: core.Hash(string(compose)), MetadataSHA: core.Hash(string(metadata)),
+	}
 	return core.RabbitMQMigrationPreflight{
 		ProjectID: id, ObservedAt: core.Now(), BrokerVersion: version, Node: core.RabbitMQNodeName, DataVolume: volume,
-		DisabledStableFeatures: features, AlarmCount: alarms, ConnectionCount: len(connections),
+		DisabledStableFeatures: features, AlarmCount: alarms, ConnectionCount: len(connections), SourceSHA256: source.SHA256(),
 	}, nil
 }
 
@@ -137,9 +141,13 @@ func rabbitMQOriginalVolume(ctx context.Context, project composeMetadata, broker
 }
 
 func rabbitMQMigrationCluster(raw []byte) (string, int, error) {
+	return rabbitMQClusterVersion(raw, "4.1.4")
+}
+
+func rabbitMQClusterVersion(raw []byte, version string) (string, int, error) {
 	var status struct {
 		DiskNodes    []string                   `json:"disk_nodes"`
-		RAMNodes     []string                   `json:"ram_nodes"`
+		RAMNodes     json.RawMessage            `json:"ram_nodes"`
 		RunningNodes []string                   `json:"running_nodes"`
 		Alarms       []json.RawMessage          `json:"alarms"`
 		Partitions   map[string]json.RawMessage `json:"partitions"`
@@ -150,12 +158,22 @@ func rabbitMQMigrationCluster(raw []byte) (string, int, error) {
 	solo := []string{core.RabbitMQNodeName}
 	if memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &status) != nil ||
 		!slices.Equal(status.DiskNodes, solo) || !slices.Equal(status.RunningNodes, solo) ||
-		status.RAMNodes == nil || len(status.RAMNodes) != 0 || status.Alarms == nil ||
+		!rabbitMQEmptyRAMNodes(status.RAMNodes, version) || status.Alarms == nil ||
 		status.Partitions == nil || len(status.Partitions) != 0 ||
-		len(status.Versions) != 1 || status.Versions[core.RabbitMQNodeName].RabbitMQ != "4.1.4" {
-		return "", 0, errors.New("预检要求原始、无分区的单节点 RabbitMQ 4.1.4")
+		len(status.Versions) != 1 || status.Versions[core.RabbitMQNodeName].RabbitMQ != version {
+		return "", 0, errors.New("无法核对预期版本的无分区单节点 RabbitMQ")
 	}
 	return status.Versions[core.RabbitMQNodeName].RabbitMQ, len(status.Alarms), nil
+}
+
+// RabbitMQ 4.4 removed RAM nodes from the cluster_status schema. Earlier
+// releases still report an explicit empty array for this supported topology.
+func rabbitMQEmptyRAMNodes(raw json.RawMessage, version string) bool {
+	if raw == nil {
+		return version == "4.4.0"
+	}
+	var nodes []string
+	return json.Unmarshal(raw, &nodes) == nil && nodes != nil && len(nodes) == 0
 }
 
 func rabbitMQMigrationFeatures(raw []byte) ([]string, error) {

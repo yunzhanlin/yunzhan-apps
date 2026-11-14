@@ -222,6 +222,21 @@ func (l *dockerMutationLease) use(ctx context.Context, fn func(context.Context) 
 // original app worker. General HTTP/legacy Docker jobs MUST use begin below;
 // a filesystem lease alone never authorizes bypassing an unfinished app job.
 func (s dockerMutationStore) acquire(ctx context.Context) (*dockerMutationLease, error) {
+	l, err := s.lock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stateDir := l.tree.paths[len(l.tree.paths)-2]
+	if err := (rabbitMQMigrationStore{base: filepath.Join(stateDir, rabbitMQMigrationJobDirectory)}).check(ctx); err != nil {
+		l.Close()
+		return nil, err
+	}
+	return l, nil
+}
+
+// The RabbitMQ recovery controller can take this lease for its exact job
+// after rechecking its recorded authority and the other app transaction guards.
+func (s dockerMutationStore) lock(ctx context.Context) (*dockerMutationLease, error) {
 	if ctx == nil || ctx.Err() != nil || s.blocked == nil || s.blocked() {
 		return nil, errDockerMutation
 	}

@@ -194,6 +194,19 @@ test("actual component wiring preserves the reviewed runtime and Compose port be
      '  if (status?.installed) {\n    openRegistryApp(app);');
  one('${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}', '');
  one(" @php-site-settings=\"openSiteSettings($event, 'php')\"", "");
+ // Recognize the exact new RabbitMQ store wiring before comparing earlier runtime behavior.
+ one(`const rabbitMQMigrationManifestSHA = computed(() => {
+  if (appRegistry.value.source.stale) return "";
+  const item = appRegistry.value.catalog.apps.find(entry =>
+    entry.id === "rabbitmq" && entry.target === "rabbitmq-440" && entry.version === "4.4.0-compat1");
+  return item?.sha256 || "";
+});
+
+`, "");
+ one(`          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan"
+            :rabbitMQTargetSHA="rabbitMQMigrationManifestSHA"
+            :canMigrateRabbitMQ="memcachedFullAdmin" @rabbitmq-changed="refresh()" />`,
+     '          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan" />');
  // The website binding adds one permission prop; keep the original hash for the previous wiring.
  one('          :can-bind-load-balance="canOpenAppModule(accessPlan, \'load-balance\')"\n', "");
  // The independent country editor adds only current-actor plumbing here.

@@ -120,6 +120,9 @@ func checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service)
 	if err := checkMemcachedRootTransactions(ctx); err != nil {
 		return err
 	}
+	if err := productionRabbitMQMigrationStore().check(ctx); err != nil {
+		return err
+	}
 	if err := checkProgramUpgradeNativeUnits(ctx, programQueueCommand); err != nil {
 		return err
 	}
@@ -135,13 +138,16 @@ func checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service)
 	if err := checkMemcachedRootTransactions(ctx); err != nil {
 		return err
 	}
+	if err := productionRabbitMQMigrationStore().check(ctx); err != nil {
+		return err
+	}
 	if err := checkProgramUpgradeNativeUnits(ctx, programQueueCommand); err != nil {
 		return err
 	}
 	return coreQueue()
 }
 
-var programQueueUnitPrefixes = []string{"panel-install@", "panel-docker-install@", "panel-pm2-deploy@", "panel-app-dependencies@", "panel-network-rulefeed-install@", "panel-statistics-geodata@", "panel-waf-country@", "panel-waf-country-account@", "panel-waf-engine-build@", "panel-apache-body-build@", "panel-analytics-html-build@", "panel-docker-job@", "panel-compose-job@", "panel-sftp-job@", "panel-mysql-job@", "panel-mariadb-init@", "panel-site-user@", "panel-mysql-user@", "panel-nginx-rollback@", "panel-firewall-rollback@", "panel-own-runtime", "panel-own-apache-runtime", "panel-own-apache-body-worker", "panel-own-waf-engine-build", "panel-own-analytics-html-build", "panel-own-analytics-html-worker"}
+var programQueueUnitPrefixes = []string{"panel-install@", "panel-docker-install@", "panel-pm2-deploy@", "panel-app-dependencies@", "panel-network-rulefeed-install@", "panel-statistics-geodata@", "panel-waf-country@", "panel-waf-country-account@", "panel-waf-engine-build@", "panel-apache-body-build@", "panel-analytics-html-build@", "panel-docker-job@", "panel-compose-job@", "panel-rabbitmq-migration@", "panel-rabbitmq-reconcile@", "panel-sftp-job@", "panel-mysql-job@", "panel-mariadb-init@", "panel-site-user@", "panel-mysql-user@", "panel-nginx-rollback@", "panel-firewall-rollback@", "panel-own-runtime", "panel-own-apache-runtime", "panel-own-apache-body-worker", "panel-own-waf-engine-build", "panel-own-analytics-html-build", "panel-own-analytics-html-worker"}
 var programQueueRecoveryUnits = []string{"panel-compose-recovery.service", "panel-mysql-overwrite-recovery.service", "panel-firewall-recovery.service", "panel-nginx-recovery.service", "panel-nfs-server-recover.service", "panel-pure-ftpd-recover.service"}
 var programQueueUnitName = regexp.MustCompile(`^panel-[a-z0-9@_-]+\.service$`)
 

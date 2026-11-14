@@ -79,3 +79,18 @@ func TestRabbitMQMigrationReportsDisabledStableFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestRabbitMQ44ClusterWithoutRAMNodes(t *testing.T) {
+	const exact = `{"disk_nodes":["rabbit@cloudstack-rabbitmq"],"running_nodes":["rabbit@cloudstack-rabbitmq"],"alarms":[],"partitions":{},"versions":{"rabbit@cloudstack-rabbitmq":{"rabbitmq_version":"4.4.0"}}}`
+	if got, alarms, err := rabbitMQClusterVersion([]byte(exact), "4.4.0"); err != nil || got != "4.4.0" || alarms != 0 {
+		t.Fatalf("4.4 cluster_status schema: version=%q alarms=%d err=%v", got, alarms, err)
+	}
+	if _, _, err := rabbitMQClusterVersion([]byte(strings.Replace(exact, "4.4.0", "4.2.9", 1)), "4.2.9"); err == nil {
+		t.Fatal("missing RAM node information accepted on 4.2")
+	}
+	for _, invalid := range []string{`"ram_nodes":null,`, `"ram_nodes":["rabbit@unexpected"],`, `"ram_nodes":{},`} {
+		if _, _, err := rabbitMQClusterVersion([]byte("{"+invalid+exact[1:]), "4.4.0"); err == nil {
+			t.Fatalf("ambiguous RAM node information accepted: %s", invalid)
+		}
+	}
+}

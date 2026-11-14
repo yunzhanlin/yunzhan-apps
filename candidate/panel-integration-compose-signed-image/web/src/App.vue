@@ -1444,6 +1444,13 @@ async function readAllNotifications() {
     ElMessage.error((e as Error).message);
   }
 }
+const rabbitMQMigrationManifestSHA = computed(() => {
+  if (appRegistry.value.source.stale) return "";
+  const item = appRegistry.value.catalog.apps.find(entry =>
+    entry.id === "rabbitmq" && entry.target === "rabbitmq-440" && entry.version === "4.4.0-compat1");
+  return item?.sha256 || "";
+});
+
 async function api<T>(
   path: string,
   method = "GET",
@@ -2934,7 +2941,9 @@ onUnmounted(() => {
               </section>
             </aside>
           </div>
-          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan" />
+          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan"
+            :rabbitMQTargetSHA="rabbitMQMigrationManifestSHA"
+            :canMigrateRabbitMQ="memcachedFullAdmin" @rabbitmq-changed="refresh()" />
           <MemcachedAppUpdate v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedAppUpdate" :api="api" :actor="memcachedActor" @changed="refresh()" />
           <MemcachedHistory v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedHistory" :api="api" :actor="memcachedActor" />
           <MemcachedUnixManager v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedUnixManager" :api="api" :actor="memcachedActor" :sites="sites" :full-admin="memcachedFullAdmin" @changed="refresh()" @legacy="memcachedHistory?.open((registryStatus('memcached')?.instances||[]).filter(v=>v.version!=='1.6.45-compat4'))" />

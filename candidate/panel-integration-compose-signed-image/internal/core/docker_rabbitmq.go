@@ -105,13 +105,31 @@ func RabbitMQ440ComposeMatches(content string, port int, password string) bool {
 		dockerIDPattern.MatchString(password) && content == rabbitMQCompose(RabbitMQ440Template, port, password)
 }
 
-func IsOriginalRabbitMQCompose(content string, port int) bool {
+func originalRabbitMQPassword(content string, port int) (string, bool) {
 	const prefix = "\n      RABBITMQ_DEFAULT_PASS: \""
 	_, after, exists := strings.Cut(content, prefix)
 	password, _, closed := strings.Cut(after, "\"")
-	return exists && closed && port >= 1024 && port < 65535 &&
+	return password, exists && closed && port >= 1024 && port < 65535 &&
 		len(password) == 64 && dockerIDPattern.MatchString(password) &&
 		content == rabbitMQCompose(RabbitMQLegacyTemplate, port, password)
+}
+
+func IsOriginalRabbitMQCompose(content string, port int) bool {
+	_, ok := originalRabbitMQPassword(content, port)
+	return ok
+}
+
+// Migrated projects retain their endpoint, hostname and original credentials.
+// Their copied volume was provisioned and verified by the system executor,
+// so Compose refers to it as an existing volume and never creates a blank one.
+func RabbitMQMigratedCompose(content string, port int, jobID string) (string, error) {
+	password, ok := originalRabbitMQPassword(content, port)
+	if !ok || !ValidID(jobID) {
+		return "", errors.New("RabbitMQ 原配置或迁移任务身份不符")
+	}
+	target := rabbitMQCompose(RabbitMQ440Template, port, password)
+	return strings.TrimSuffix(target, "  data: {}\n") +
+		"  data:\n    external: true\n    name: panel_rabbitmq_" + jobID + "\n", nil
 }
 
 func (a *Server) dockerRabbitMQRoutes(m *http.ServeMux) {
