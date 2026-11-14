@@ -361,6 +361,16 @@ export function validateManifest(app) {
       errors.push("OpenLiteSpeed 1.9.4 requires its exact patched dual-architecture recipe");
     }
   }
+  if ((app.id === "rabbitmq" && app.version === "4.4.0-compat1") || app.delivery?.target === "rabbitmq-440") {
+    const d = app.delivery;
+    const arch = app.compatibility?.architectures;
+    if (app.id !== "rabbitmq" || app.version !== "4.4.0-compat1" || app.risk !== "maintained" ||
+        d?.provider !== "compose" || d?.target !== "rabbitmq-440" || d?.manage_route !== "docker" ||
+        d?.image !== "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267" || Object.keys(d).sort().join(",") !== "image,manage_route,provider,target" ||
+        !Array.isArray(arch) || arch.length !== 2 || !arch.includes("amd64") || !arch.includes("arm64")) {
+      errors.push("RabbitMQ 4.4 requires its exact official dual-architecture image");
+    }
+  }
   const delivery = app.delivery;
   const recipe = nativeLegacyPHPReleases.find(item =>
     item.target === delivery?.target || (item.id === app.id && item.version === app.version));

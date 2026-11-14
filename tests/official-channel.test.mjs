@@ -33,7 +33,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     'load-balance', 'mobile', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
     'php-55', 'php-56', 'php-70', 'php-71',
     'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
-    'platform-ops', 'pm2-manager', 'pure-ftpd', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
+    'platform-ops', 'pm2-manager', 'pure-ftpd', 'rabbitmq', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
   assert.deepEqual(patch.apps.map(a=>a.id).sort(), expectedOverrides);
@@ -67,6 +67,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/network-threat-detection/1.3.1/manifest.json')).digest('hex'), '2a49e71578193d1e2af1af9364559dda0b8f8ac524f01117cb69de89aea18ebe');
   const nativeRuntimes = [
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
+    ['rabbitmq', '4.4.0-compat1'],
     ['docker-manager', '1-compat2'],
     ['pure-ftpd', '1.0.54-compat7'],
     ['daily-report', '1.4.1'],

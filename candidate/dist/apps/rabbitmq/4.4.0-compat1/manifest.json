@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "id": "rabbitmq",
+  "name": "RabbitMQ",
+  "category": "deployment",
+  "version": "4.4.0-compat1",
+  "summary": "RabbitMQ 4.4.0 单节点提供持久消息队列、回环 AMQP 与管理后台。新装使用独立数据卷，旧实例可查看迁移预检。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "rabbitmq-440",
+    "image": "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267",
+    "manage_route": "docker"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "回环 AMQP 与管理后台",
+    "独立持久数据卷",
+    "随机初始凭据",
+    "按虚拟主机查看队列与积压",
+    "旧实例的只读迁移预检"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/api/health/checks/alarms"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

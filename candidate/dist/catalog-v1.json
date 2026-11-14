@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-13T11:31:38Z",
+  "generated_at": "2026-11-14T11:32:38Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -999,21 +999,22 @@
       "id": "rabbitmq",
       "name": "RabbitMQ",
       "category": "deployment",
-      "version": "4.1-compat1",
-      "summary": "部署带管理界面、随机凭据和持久卷的 RabbitMQ 单节点。",
+      "version": "4.4.0-compat1",
+      "summary": "RabbitMQ 4.4.0 单节点提供持久消息队列、回环 AMQP 与管理后台。新装使用独立数据卷，旧实例可查看迁移预检。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "compose",
-      "target": "rabbitmq",
+      "target": "rabbitmq-440",
       "manage_route": "docker",
       "capabilities": [
-        "AMQP",
-        "管理界面",
-        "随机凭据",
-        "持久卷"
+        "回环 AMQP 与管理后台",
+        "独立持久数据卷",
+        "随机初始凭据",
+        "按虚拟主机查看队列与积压",
+        "旧实例的只读迁移预检"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.1-compat1/manifest.json",
-      "sha256": "c889d9e755fbf317985fcca02367f0a12c500d1343446dcc4451f8828d3d8ad9"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/rabbitmq/4.4.0-compat1/manifest.json",
+      "sha256": "3ef2fb6eb8bd0bb88f22c8d0883d794e87acd3dff4fe09234ff33b893dbabf43"
     },
     {
       "id": "redis",
