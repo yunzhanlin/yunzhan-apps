@@ -1,0 +1,42 @@
+{
+  "debian12": {
+    "architecture": "amd64",
+    "digest": "sha512:3d94c9dd66d8a283fde060b8810373b7ae04038b956ee00d553d1ae564f6fbdeaa2fd6e7404e87e53348b5a9509170f3ea7c0731ba737590c5c4cb8d559a47f8",
+    "guest": "elastic.py",
+    "guest_sha256": "7daf66a60ae1150d56ada63a0411407946d9e12ebcaf0178982fdeaaeda6e0dc",
+    "hostname": "yunzhan-qa-elastic-c179r2-debian12-amd64",
+    "image": "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-genericcloud-amd64-20260923-2610.qcow2",
+    "official_checksums_sha256": "d76594b14771bdbcfe098e5a440a631ce5226cdb9268679a1e2a84ee197b9357",
+    "official_checksums_url": "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/SHA512SUMS",
+    "os_id": "debian",
+    "platform": "debian-12",
+    "version_id": "12"
+  },
+  "ubuntu24": {
+    "architecture": "amd64",
+    "digest": "sha256:6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
+    "guest": "elastic.py",
+    "guest_sha256": "7daf66a60ae1150d56ada63a0411407946d9e12ebcaf0178982fdeaaeda6e0dc",
+    "hostname": "yunzhan-qa-elastic-c179r2-ubuntu24-amd64",
+    "image": "https://cloud-images.ubuntu.com/noble/20260926/noble-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "b61a6497608cdea66f54968d52d3457365b0645ccb2b1371c8f092ecce806183",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/noble/20260926/SHA256SUMS",
+    "os_id": "ubuntu",
+    "platform": "ubuntu-24.04",
+    "version_id": "24.04"
+  },
+  "ubuntu26": {
+    "architecture": "amd64",
+    "digest": "sha256:5645d0318ad21f643ebb1ac4567514620e9893380b07b0201fda163baa5b7eb5",
+    "guest": "elastic.py",
+    "guest_sha256": "7daf66a60ae1150d56ada63a0411407946d9e12ebcaf0178982fdeaaeda6e0dc",
+    "hostname": "yunzhan-qa-elastic-c179r2-ubuntu26-amd64",
+    "image": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64.img",
+    "official_checksums_sha256": "489dd5ab1206aba5cb21769e8095e911feb01a313aec448e4bdc291f918b6549",
+    "official_checksums_url": "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/SHA256SUMS",
+    "os_id": "ubuntu",
+    "platform": "ubuntu-26.04",
+    "stock_fail2ban": "1.1.0",
+    "version_id": "26.04"
+  }
+}
