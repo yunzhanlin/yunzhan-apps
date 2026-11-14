@@ -1,0 +1,2026 @@
+diff --git a/internal/appcatalog/rabbitmq_migration_manifest.go b/internal/appcatalog/rabbitmq_migration_manifest.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..9218a157f19ce7354eb695e74e079abb77b9ad1d
+--- /dev/null
++++ b/internal/appcatalog/rabbitmq_migration_manifest.go
+@@ -0,0 +1,28 @@
++package appcatalog
++
++import (
++	"context"
++	"errors"
++)
++
++// The Root migration executor supplies its compiled official client. The
++// catalog must authorize both the object and its exact bytes before shutdown.
++func (c *Client) FetchRabbitMQMigrationManifest(ctx context.Context, version, manifestSHA string) (Manifest, error) {
++	var empty Manifest
++	if !ruleFeedSHAPattern.MatchString(manifestSHA) || ctx == nil {
++		return empty, errors.New("RabbitMQ 迁移包摘要无效")
++	}
++	catalog, _, _, err := c.FetchCatalog(ctx)
++	if err != nil {
++		return empty, err
++	}
++	item, found := Find(catalog, "rabbitmq")
++	if !found || item.Version != version || item.SHA256 != manifestSHA {
++		return empty, errors.New("RabbitMQ 迁移签名目录已变化，请刷新预检")
++	}
++	raw, err := c.get(ctx, item.PackageURL, maxManifestBytes)
++	if err != nil {
++		return empty, err
++	}
++	return c.verifyManifestData(item, raw)
++}
+diff --git a/internal/executor/docker_app_update_retention_linux.go b/internal/executor/docker_app_update_retention_linux.go
+index 7dc30c9efb60006b65bac56b1e6bf5065310cf7e..7d52661c05d271f8829b9661ae3d9060d2f07f77 100644
+--- a/internal/executor/docker_app_update_retention_linux.go
++++ b/internal/executor/docker_app_update_retention_linux.go
+@@ -106,7 +106,11 @@ func memcachedRetentionDaemon(ctx context.Context, method, path string, input an
+ // Reject duplicate/case-alias keys recursively before permissive Go struct
+ // decoding. Unknown Docker metadata remains forward compatible, not authority.
+ func memcachedDaemonJSON(raw []byte) error {
+-	if len(raw) == 0 || len(raw) > 256<<10 || !utf8.Valid(raw) {
++	return strictDockerJSON(raw, 256<<10)
++}
++
++func strictDockerJSON(raw []byte, limit int) error {
++	if len(raw) == 0 || len(raw) > limit || !utf8.Valid(raw) {
+ 		return errMemcachedRetention
+ 	}
+ 	d := json.NewDecoder(bytes.NewReader(raw))
+diff --git a/internal/executor/docker_linux.go b/internal/executor/docker_linux.go
+index a4b248572f3cac7ee6e785f84540d87532ddbf63..8913ff58c2a02b2ca1a647bcb9789dcd1d7432fa 100644
+--- a/internal/executor/docker_linux.go
++++ b/internal/executor/docker_linux.go
+@@ -150,6 +150,13 @@ func dockerContainers(ctx context.Context) (any, error) {
+ 		out[i].PanelProtected = protected
+ 		if protected {
+ 			out[i].PanelProtectionReason = dockerRetentionReason
++			_, migration := out[i].Labels[rabbitMQMigrationVolumeJobLabel]
++			for _, name := range out[i].Names {
++				migration = migration || strings.HasPrefix(strings.TrimPrefix(name, "/"), rabbitMQOfflineContainerPrefix)
++			}
++			if migration {
++				out[i].PanelProtectionReason = "RabbitMQ 离线迁移容器由原任务管理"
++			}
+ 		}
+ 	}
+ 	return map[string]any{"containers": out}, e
+@@ -227,6 +234,9 @@ func dockerCreateVolume(ctx context.Context, name string) (any, error) {
+ 	if !dockerResourceNamePattern.MatchString(name) {
+ 		return nil, errors.New("Docker 卷名称无效")
+ 	}
++	if strings.HasPrefix(name, rabbitMQMigrationVolumePrefix) {
++		return nil, errors.New("RabbitMQ 迁移数据卷由原任务管理")
++	}
+ 	payload := map[string]any{
+ 		"Name":   name,
+ 		"Driver": "local",
+@@ -262,6 +272,9 @@ func dockerDeleteVolume(ctx context.Context, name string) error {
+ 	if !dockerResourceNamePattern.MatchString(name) {
+ 		return errors.New("Docker 卷名称无效")
+ 	}
++	if strings.HasPrefix(name, rabbitMQMigrationVolumePrefix) {
++		return errors.New("RabbitMQ 迁移数据卷由原任务管理")
++	}
+ 	var inspect struct {
+ 		Labels map[string]string `json:"Labels"`
+ 	}
+diff --git a/internal/executor/docker_rabbitmq_cold_copy_linux.go b/internal/executor/docker_rabbitmq_cold_copy_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..763eed9fd1d5a457823c90e18a60fe571d3a7ccc
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_cold_copy_linux.go
+@@ -0,0 +1,281 @@
++//go:build linux
++
++package executor
++
++import (
++	"bytes"
++	"context"
++	"crypto/sha256"
++	"errors"
++	"fmt"
++	"hash"
++	"io"
++	"os"
++	"slices"
++	"strconv"
++	"strings"
++
++	"golang.org/x/sys/unix"
++)
++
++type rabbitMQColdCopyResult struct {
++	Files       int    `json:"files"`
++	Directories int    `json:"directories"`
++	Bytes       int64  `json:"bytes"`
++	SHA256      string `json:"sha256"`
++}
++
++var errRabbitMQCopyDrift = errors.New("RabbitMQ 冷备份期间目录或文件身份发生变化")
++var errRabbitMQCopyType = errors.New("RabbitMQ 数据卷含符号链接、挂载、硬链接、特殊文件或扩展属性")
++
++// The caller must hold exclusive Docker mutation authority, prove that the
++// source node stopped cleanly, and pin both Docker-owned volume directories
++// before opening these descriptors. The destination must be a new empty
++// volume and must stay detached until the receipt has been durably recorded.
++// On error the original remains intact and the partial volume is retained.
++func copyRabbitMQColdVolume(ctx context.Context, source, destination *os.File) (rabbitMQColdCopyResult, error) {
++	var empty rabbitMQColdCopyResult
++	if os.Geteuid() != 0 || source == nil || destination == nil {
++		return empty, errors.New("RabbitMQ 冷拷贝需要 Root 执行器持有原卷和新卷")
++	}
++	from, fromErr := rabbitMQCopyStat(source)
++	to, toErr := rabbitMQCopyStat(destination)
++	if fromErr != nil || toErr != nil || from.Dev == to.Dev && from.Ino == to.Ino ||
++		from.Mode&unix.S_IFMT != unix.S_IFDIR || to.Mode&unix.S_IFMT != unix.S_IFDIR {
++		return empty, errors.New("RabbitMQ 冷拷贝需要两个不同的数据卷目录")
++	}
++	// Use a new open file description, so caller's directory offset cannot
++	// hide preexisting destination files or part of the source inventory.
++	dst, err := rabbitMQCopyOpen(destination, ".", unix.O_RDONLY|unix.O_DIRECTORY, 0)
++	if err != nil {
++		return empty, err
++	}
++	defer dst.Close()
++	if list, err := dst.ReadDir(1); len(list) != 0 || !errors.Is(err, io.EOF) {
++		return empty, errors.New("RabbitMQ 新数据卷目录已有内容")
++	}
++	src, err := rabbitMQCopyOpen(source, ".", unix.O_RDONLY|unix.O_DIRECTORY|unix.O_NOATIME, 0)
++	if err != nil {
++		return empty, err
++	}
++	defer src.Close()
++	walk := rabbitMQColdCopy{ctx: ctx, digest: sha256.New()}
++	if err := walk.directory(src, dst, ".", from, 0); err != nil {
++		return empty, err
++	}
++	walk.result.SHA256 = fmt.Sprintf("%x", walk.digest.Sum(nil))
++	return walk.result, nil
++}
++
++type rabbitMQColdCopy struct {
++	ctx    context.Context
++	digest hash.Hash
++	result rabbitMQColdCopyResult
++}
++
++func rabbitMQCopyStat(f *os.File) (unix.Stat_t, error) {
++	var stat unix.Stat_t
++	err := unix.Fstat(int(f.Fd()), &stat)
++	return stat, err
++}
++
++func rabbitMQCopyOpen(parent *os.File, name string, flags int, mode uint64) (*os.File, error) {
++	flags |= unix.O_CLOEXEC | unix.O_NOFOLLOW
++	if flags&unix.O_PATH == 0 {
++		flags |= unix.O_NONBLOCK
++	}
++	fd, err := unix.Openat2(int(parent.Fd()), name, &unix.OpenHow{
++		Flags: uint64(flags), Mode: mode,
++		Resolve: siteOneMountResolve,
++	})
++	if err != nil {
++		return nil, fmt.Errorf("RabbitMQ 卷目录项无法安全打开: %w", err)
++	}
++	return os.NewFile(uintptr(fd), "/proc/self/fd/"+strconv.Itoa(fd)), nil
++}
++
++func rabbitMQCopySame(expected, actual unix.Stat_t) bool {
++	return expected.Dev == actual.Dev && expected.Ino == actual.Ino && expected.Nlink == actual.Nlink &&
++		expected.Mode == actual.Mode && expected.Size == actual.Size && expected.Uid == actual.Uid &&
++		expected.Gid == actual.Gid && expected.Mtim == actual.Mtim && expected.Ctim == actual.Ctim
++}
++
++func rabbitMQCopyFileRules(file *os.File, expected unix.Stat_t) error {
++	actual, err := rabbitMQCopyStat(file)
++	if err != nil || !rabbitMQCopySame(expected, actual) {
++		return errRabbitMQCopyDrift
++	}
++	if expected.Mode&07000 != 0 || expected.Mode&0002 != 0 {
++		return errRabbitMQCopyType
++	}
++	n, err := unix.Flistxattr(int(file.Fd()), nil)
++	if n != 0 || err != nil && !errors.Is(err, unix.ENOTSUP) {
++		return errRabbitMQCopyType
++	}
++	return nil
++}
++
++func rabbitMQCopyMetadata(file *os.File, metadata unix.Stat_t) error {
++	fd := int(file.Fd())
++	if err := unix.Fchown(fd, int(metadata.Uid), int(metadata.Gid)); err != nil {
++		return err
++	}
++	if err := unix.Fchmod(fd, metadata.Mode&0777); err != nil {
++		return err
++	}
++	times := []unix.Timespec{metadata.Atim, metadata.Mtim}
++	if err := unix.UtimesNanoAt(unix.AT_FDCWD, file.Name(), times, 0); err != nil {
++		return fmt.Errorf("RabbitMQ 冷备份保留时间戳: %w", err)
++	}
++	return file.Sync()
++}
++
++func (c *rabbitMQColdCopy) directory(source, destination *os.File, path string, original unix.Stat_t, depth int) error {
++	if err := c.ctx.Err(); err != nil {
++		return err
++	}
++	if depth > 128 || c.result.Files+c.result.Directories >= 1_000_000 {
++		return errors.New("RabbitMQ 数据卷目录层级或条目数超过冷备份限制")
++	}
++	if err := rabbitMQCopyFileRules(source, original); err != nil {
++		return err
++	}
++	n, err := unix.Flistxattr(int(destination.Fd()), nil)
++	if n != 0 || err != nil && !errors.Is(err, unix.ENOTSUP) {
++		return errRabbitMQCopyType
++	}
++	entries, err := source.ReadDir(1_000_000 - c.result.Files - c.result.Directories + 1)
++	if err != nil && !errors.Is(err, io.EOF) {
++		return err
++	}
++	if len(entries) > 1_000_000-c.result.Files-c.result.Directories {
++		return errors.New("RabbitMQ 数据卷目录条目数超过冷备份限制")
++	}
++	// Deterministic depth-first receipts do not depend on a filesystem's
++	// directory enumeration order.
++	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
++	c.result.Directories++
++	fmt.Fprintf(c.digest, "D %q %o %d %d %d %d\n", path, original.Mode&0777, original.Uid, original.Gid, original.Mtim.Sec, original.Mtim.Nsec)
++	for _, entry := range entries {
++		if err := c.entry(source, destination, path, entry.Name(), depth); err != nil {
++			return err
++		}
++	}
++	if err := rabbitMQCopyFileRules(source, original); err != nil {
++		return err
++	}
++	return rabbitMQCopyMetadata(destination, original)
++}
++
++func (c *rabbitMQColdCopy) entry(source, destination *os.File, path, name string, depth int) error {
++	if err := c.ctx.Err(); err != nil {
++		return err
++	}
++	if c.result.Files+c.result.Directories >= 1_000_000 {
++		return errors.New("RabbitMQ 数据卷条目数超过冷备份限制")
++	}
++	// Inspect an inert descriptor first. The following read opens that
++	// exact inode even if its name changes after initial inspection.
++	pin, err := rabbitMQCopyOpen(source, name, unix.O_PATH, 0)
++	if err != nil {
++		return err
++	}
++	defer pin.Close()
++	info, err := rabbitMQCopyStat(pin)
++	if err != nil {
++		return err
++	}
++	kind := info.Mode & unix.S_IFMT
++	if kind != unix.S_IFDIR && (kind != unix.S_IFREG || info.Nlink != 1 || info.Size < 0) {
++		return errRabbitMQCopyType
++	}
++	openFlags := unix.O_RDONLY | unix.O_CLOEXEC | unix.O_NONBLOCK | unix.O_NOATIME
++	if kind == unix.S_IFDIR {
++		openFlags |= unix.O_DIRECTORY
++	}
++	fd, err := unix.Open(pin.Name(), openFlags, 0)
++	if err != nil {
++		return err
++	}
++	src := os.NewFile(uintptr(fd), pin.Name())
++	defer src.Close()
++	if err := rabbitMQCopyFileRules(src, info); err != nil {
++		return err
++	}
++	child := path + "/" + name
++	if kind == unix.S_IFDIR {
++		if err := unix.Mkdirat(int(destination.Fd()), name, 0700); err != nil {
++			return err
++		}
++		dst, err := rabbitMQCopyOpen(destination, name, unix.O_RDONLY|unix.O_DIRECTORY, 0)
++		if err != nil {
++			return err
++		}
++		defer dst.Close()
++		if err := c.directory(src, dst, child, info, depth+1); err != nil {
++			return err
++		}
++	} else {
++		if err := c.copyFile(src, destination, name, child, info); err != nil {
++			return err
++		}
++	}
++	var visible unix.Stat_t
++	if err := diskUsageEntryStat(source, name, &visible); err != nil || !rabbitMQCopySame(info, visible) {
++		return errRabbitMQCopyDrift
++	}
++	return nil
++}
++
++type rabbitMQCopyReader struct {
++	context.Context
++	io.Reader
++}
++
++func (r rabbitMQCopyReader) Read(p []byte) (int, error) {
++	if err := r.Context.Err(); err != nil {
++		return 0, err
++	}
++	return r.Reader.Read(p)
++}
++
++func (c *rabbitMQColdCopy) copyFile(source, destination *os.File, name, path string, sourceInfo unix.Stat_t) error {
++	if sourceInfo.Size > 1<<40-c.result.Bytes {
++		return errors.New("RabbitMQ 数据卷逻辑容量超过 1 TiB")
++	}
++	dst, err := rabbitMQCopyOpen(destination, name, unix.O_RDWR|unix.O_CREAT|unix.O_EXCL, 0600)
++	if err != nil {
++		return err
++	}
++	defer dst.Close()
++	sourceHash := sha256.New()
++	n, err := io.Copy(io.MultiWriter(dst, sourceHash), rabbitMQCopyReader{c.ctx, io.LimitReader(source, sourceInfo.Size+1)})
++	if err != nil {
++		return err
++	}
++	if n != sourceInfo.Size {
++		return errRabbitMQCopyDrift
++	}
++	if err := rabbitMQCopyFileRules(source, sourceInfo); err != nil {
++		return err
++	}
++	if _, err := dst.Seek(0, io.SeekStart); err != nil {
++		return err
++	}
++	destinationHash := sha256.New()
++	read, err := io.Copy(destinationHash, rabbitMQCopyReader{c.ctx, io.LimitReader(dst, n+1)})
++	if err != nil {
++		return err
++	}
++	if read != n || !bytes.Equal(sourceHash.Sum(nil), destinationHash.Sum(nil)) {
++		return errors.New("RabbitMQ 冷备份副本的完整内容摘要无法核对")
++	}
++	if err := rabbitMQCopyMetadata(dst, sourceInfo); err != nil {
++		return err
++	}
++	fmt.Fprintf(c.digest, "F %q %o %d %d %d %d %d %x\n", path, sourceInfo.Mode&0777, sourceInfo.Uid,
++		sourceInfo.Gid, sourceInfo.Mtim.Sec, sourceInfo.Mtim.Nsec, n, sourceHash.Sum(nil))
++	c.result.Files++
++	c.result.Bytes += n
++	return nil
++}
+diff --git a/internal/executor/docker_rabbitmq_cold_copy_linux_test.go b/internal/executor/docker_rabbitmq_cold_copy_linux_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..42352c36dc99805c7e569bede96dd898f6d8f51d
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_cold_copy_linux_test.go
+@@ -0,0 +1,139 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"errors"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	"golang.org/x/sys/unix"
++)
++
++func openRabbitMQCopyFixture(t *testing.T, name string) *os.File {
++	t.Helper()
++	path := filepath.Join(t.TempDir(), name)
++	if err := os.Mkdir(path, 0700); err != nil {
++		t.Fatal(err)
++	}
++	fd, err := os.Open(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { fd.Close() })
++	return fd
++}
++
++func TestRabbitMQColdCopyPreservesIndependentBytesAndMetadata(t *testing.T) {
++	if os.Geteuid() != 0 {
++		t.Skip("requires native root")
++	}
++	from := openRabbitMQCopyFixture(t, "source")
++	to := openRabbitMQCopyFixture(t, "next")
++	second := openRabbitMQCopyFixture(t, "next-again")
++	sub := filepath.Join(from.Name(), "mnesia")
++	source := filepath.Join(sub, "durable")
++	if err := os.Mkdir(sub, 0750); err != nil {
++		t.Fatal(err)
++	}
++	opened, err := os.OpenFile(source, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { opened.Close() })
++	if _, err = opened.WriteString("classic and quorum payload"); err != nil {
++		t.Fatal(err)
++	}
++	if err := opened.Chown(31310, 31311); err != nil {
++		t.Fatal(err)
++	}
++	when := time.Unix(1_750_000_000, 123456789)
++	if err := os.Chtimes(source, when, when); err != nil {
++		t.Fatal(err)
++	}
++	one, err := copyRabbitMQColdVolume(t.Context(), from, to)
++	if err != nil {
++		t.Fatal(err)
++	}
++	two, err := copyRabbitMQColdVolume(t.Context(), from, second)
++	if err != nil || one != two || one.Files != 1 || one.Directories != 2 || one.Bytes != int64(len("classic and quorum payload")) || len(one.SHA256) != 64 {
++		t.Fatalf("incorrect receipt %v %v %v", one, two, err)
++	}
++	copied := filepath.Join(to.Name(), "mnesia", "durable")
++	a, err := rabbitMQCopyStat(opened)
++	if err != nil {
++		t.Fatal(err)
++	}
++	target, err := os.Open(copied)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer target.Close()
++	b, err := rabbitMQCopyStat(target)
++	if err != nil || a.Dev == b.Dev && a.Ino == b.Ino || a.Uid != b.Uid || a.Gid != b.Gid ||
++		a.Mode != b.Mode || a.Atim != b.Atim || a.Mtim != b.Mtim {
++		t.Fatalf("copy did not preserve metadata and assign a new inode: %v %v %v", a, b, err)
++	}
++	if _, err := opened.WriteAt([]byte("changed"), 0); err != nil {
++		t.Fatal(err)
++	}
++	if raw, err := os.ReadFile(copied); err != nil || string(raw) != "classic and quorum payload" {
++		t.Fatalf("original writer mutated the independently verified copy: %q %v", raw, err)
++	}
++	if _, err := copyRabbitMQColdVolume(t.Context(), from, to); err == nil {
++		t.Fatal("reused a populated volume")
++	}
++}
++
++func TestRabbitMQColdCopyRefusesUnsafeObjectsAndLeavesSource(t *testing.T) {
++	if os.Geteuid() != 0 {
++		t.Skip("requires native root")
++	}
++	for _, fixture := range []string{"symlink", "hardlink", "fifo", "attributes"} {
++		t.Run(fixture, func(t *testing.T) {
++			src := openRabbitMQCopyFixture(t, "source")
++			dst := openRabbitMQCopyFixture(t, "next")
++			allowed := filepath.Join(src.Name(), "01-original")
++			unsafe := filepath.Join(src.Name(), "99-unexpected")
++			if err := os.WriteFile(allowed, []byte("actual original"), 0600); err != nil {
++				t.Fatal(err)
++			}
++			var err error
++			switch fixture {
++			case "symlink":
++				err = os.Symlink(allowed, unsafe)
++			case "hardlink":
++				err = os.Link(allowed, unsafe)
++			case "fifo":
++				err = unix.Mkfifo(unsafe, 0600)
++			case "attributes":
++				if err := os.WriteFile(unsafe, []byte("with attributes"), 0600); err != nil {
++					t.Fatal(err)
++				}
++				err = unix.Setxattr(unsafe, "user.fixture", []byte("evidence"), 0)
++			}
++			if err != nil {
++				t.Fatal(err)
++			}
++			if result, err := copyRabbitMQColdVolume(t.Context(), src, dst); err == nil || result != (rabbitMQColdCopyResult{}) {
++				t.Fatalf("unsafe input got a successful receipt: %v %v", result, err)
++			}
++			if actual, err := os.ReadFile(allowed); err != nil || string(actual) != "actual original" {
++				t.Fatalf("original data was changed: %q %v", actual, err)
++			}
++			if _, err := os.Lstat(filepath.Join(dst.Name(), "99-unexpected")); !errors.Is(err, os.ErrNotExist) {
++				t.Fatalf("unsafe entry was written: %v", err)
++			}
++		})
++	}
++	from := openRabbitMQCopyFixture(t, "source")
++	to := openRabbitMQCopyFixture(t, "next")
++	ctx, cancel := context.WithCancel(t.Context())
++	cancel()
++	if report, err := copyRabbitMQColdVolume(ctx, from, to); !errors.Is(err, context.Canceled) || report != (rabbitMQColdCopyResult{}) {
++		t.Fatalf("request cancellation yielded a success receipt: %v %v", report, err)
++	}
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_authority_linux.go b/internal/executor/docker_rabbitmq_migration_authority_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..9f64ffea89ae06935b7bd7462bef22b5e0a1b883
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_authority_linux.go
+@@ -0,0 +1,46 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"errors"
++	"runtime"
++	"slices"
++
++	"local/panel/internal/appcatalog"
++	"local/panel/internal/core"
++	"local/panel/internal/runtimecatalog"
++)
++
++const rabbitMQMigrationRelease = "4.4.0-compat1"
++
++type rabbitMQMigrationAuthority struct {
++	manifestSHA string
++}
++
++// Read the exact signed catalog entry through the executor's compiled
++// repository. No browser-supplied URL, key, version, image, or cache qualifies.
++func verifyRabbitMQMigrationRelease(ctx context.Context, plan rabbitMQMigrationPlan) (rabbitMQMigrationAuthority, error) {
++	var empty rabbitMQMigrationAuthority
++	if !plan.valid() {
++		return empty, errRabbitMQIdentity
++	}
++	client := appcatalog.Default()
++	manifest, err := client.FetchRabbitMQMigrationManifest(ctx, rabbitMQMigrationRelease, plan.TargetManifestSHA)
++	if err != nil {
++		return empty, err
++	}
++	delivery := manifest.Delivery
++	if manifest.ID != "rabbitmq" || manifest.Version != rabbitMQMigrationRelease ||
++		manifest.Risk != "maintained" || delivery.Provider != "compose" ||
++		delivery.Target != core.RabbitMQ440Template || delivery.ManageRoute != "docker" ||
++		delivery.Isolation != "" || delivery.Image != rabbitMQTargetImage ||
++		!core.MatchesPanelRabbitMQImage(core.RabbitMQ440Template, delivery.Image) ||
++		!manifest.Uninstall.PreserveData || !manifest.Uninstall.ReferenceCheck ||
++		!slices.Contains(manifest.Compatibility.Architectures, runtime.GOARCH) ||
++		!slices.Contains(manifest.Compatibility.OS, runtimecatalog.HostPlatform()) {
++		return empty, errors.New("RabbitMQ 签名应用的迁移目标和本机环境无法核对")
++	}
++	return rabbitMQMigrationAuthority{manifestSHA: plan.TargetManifestSHA}, nil
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_journal_linux.go b/internal/executor/docker_rabbitmq_migration_journal_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..26fe8db435030cb342bd7f2533dc3d38e2a13cf5
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_journal_linux.go
+@@ -0,0 +1,224 @@
++//go:build linux
++
++package executor
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"io"
++	"os"
++	"regexp"
++
++	"golang.org/x/sys/unix"
++
++	"local/panel/internal/core"
++)
++
++const rabbitMQMigrationEvents = 16
++
++type rabbitMQMigrationPlan struct {
++	JobID             string `json:"job_id"`
++	RequestID         string `json:"request_id"`
++	ActorID           string `json:"actor_id"`
++	ProjectID         string `json:"project_id"`
++	OriginalContainer string `json:"original_container"`
++	OriginalConfigSHA string `json:"original_config_sha256"`
++	OriginalMetaSHA   string `json:"original_metadata_sha256"`
++	TargetManifestSHA string `json:"target_manifest_sha256"`
++	OriginalVolume    string `json:"original_volume"`
++	CandidateVolume   string `json:"candidate_volume"`
++}
++
++type rabbitMQMigrationEvent struct {
++	Sequence    int                    `json:"sequence"`
++	PlanSHA     string                 `json:"plan_sha256"`
++	PreviousSHA string                 `json:"previous_sha256,omitempty"`
++	Phase       string                 `json:"phase"`
++	VolumeCopy  rabbitMQColdCopyResult `json:"volume_copy,omitempty"`
++}
++
++var rabbitMQMigrationDigest = regexp.MustCompile("^[a-f0-9]{64}$")
++
++func (p rabbitMQMigrationPlan) valid() bool {
++	return core.ValidID(p.JobID) && core.ValidID(p.RequestID) && core.ValidID(p.ActorID) && core.ValidID(p.ProjectID) &&
++		core.ValidDockerContainerID(p.OriginalContainer) && rabbitMQMigrationDigest.MatchString(p.OriginalConfigSHA) &&
++		rabbitMQMigrationDigest.MatchString(p.OriginalMetaSHA) && rabbitMQMigrationDigest.MatchString(p.TargetManifestSHA) &&
++		p.OriginalVolume == "panel_"+p.ProjectID[:12]+"_data" && p.CandidateVolume == rabbitMQMigrationVolumePrefix+p.JobID
++}
++
++func rabbitMQMigrationTransition(from, to string) bool {
++	switch from {
++	case "":
++		return to == "prepared"
++	case "prepared":
++		return to == "quiesce-intent" || to == "cancelled-before-stop"
++	case "quiesce-intent":
++		return to == "stop-original-intent" || to == "resume-listeners-intent"
++	case "resume-listeners-intent":
++		return to == "original-restored"
++	case "stop-original-intent":
++		return to == "original-stopped" || to == "restore-original-intent"
++	case "original-stopped":
++		return to == "copy-intent" || to == "restore-original-intent"
++	case "copy-intent":
++		return to == "copy-verified" || to == "restore-original-intent"
++	case "copy-verified":
++		return to == "bridge-intent" || to == "restore-original-intent"
++	case "bridge-intent":
++		return to == "bridge-stopped" || to == "restore-original-intent"
++	case "bridge-stopped":
++		return to == "target-check-intent" || to == "restore-original-intent"
++	case "target-check-intent":
++		return to == "target-verified-offline" || to == "restore-original-intent"
++	case "target-verified-offline":
++		return to == "restore-original-intent" || to == "publish-endpoint-intent"
++	case "restore-original-intent":
++		return to == "restart-original-intent"
++	case "restart-original-intent":
++		return to == "original-restored"
++	case "publish-endpoint-intent":
++		// The new endpoint may already have accepted writes. An unknown
++		// outcome at or after this stage may only be reconciled in place.
++		return to == "target-published"
++	}
++	return false
++}
++
++// The journal binds recovery to one original job and validated private bytes.
++// It records decisions. It never grants access to a broker or Docker effects.
++func readRabbitMQMigrationJournal(root *os.Root, expected rabbitMQMigrationPlan) (rabbitMQMigrationEvent, error) {
++	var last rabbitMQMigrationEvent
++	if !expected.valid() {
++		return last, errors.New("RabbitMQ 原迁移计划无效")
++	}
++	raw, err := geoStoreRead(root, "plan.json", 8<<10)
++	if err != nil {
++		return last, err
++	}
++	actual, _ := json.Marshal(expected)
++	if !bytes.Equal(raw, actual) {
++		return last, errors.New("RabbitMQ 原迁移计划身份或内容变化")
++	}
++	planSHA := core.Hash(string(actual))
++	dir, err := root.Open(".")
++	if err != nil {
++		return last, err
++	}
++	defer dir.Close()
++	items, err := dir.ReadDir(rabbitMQMigrationEvents + 2)
++	if err != nil && !errors.Is(err, io.EOF) || len(items) < 2 || len(items) > rabbitMQMigrationEvents+1 {
++		return last, errors.New("RabbitMQ 原迁移事件数量无效")
++	}
++	names := make(map[string]bool, len(items))
++	for _, item := range items {
++		names[item.Name()] = true
++	}
++	var previousSHA string
++	for i := 0; i < len(items)-1; i++ {
++		name := fmt.Sprintf("event-%02d.json", i)
++		if !names[name] {
++			return rabbitMQMigrationEvent{}, errors.New("RabbitMQ 原迁移事件缺失或目录含未知内容")
++		}
++		raw, err := geoStoreRead(root, name, 8<<10)
++		if err != nil {
++			return rabbitMQMigrationEvent{}, err
++		}
++		var record rabbitMQMigrationEvent
++		if json.Unmarshal(raw, &record) != nil || record.Sequence != i || record.PlanSHA != planSHA ||
++			record.PreviousSHA != previousSHA || !validRabbitMQMigrationEvent(last, record) {
++			return rabbitMQMigrationEvent{}, errors.New("RabbitMQ 原迁移事件顺序、摘要或证据无效")
++		}
++		canonical, _ := json.Marshal(record)
++		if !bytes.Equal(canonical, raw) {
++			return rabbitMQMigrationEvent{}, errors.New("RabbitMQ 原迁移记录字段异常")
++		}
++		last, previousSHA = record, core.Hash(string(raw))
++	}
++	return last, nil
++}
++
++func validRabbitMQMigrationEvent(last, next rabbitMQMigrationEvent) bool {
++	if !rabbitMQMigrationTransition(last.Phase, next.Phase) {
++		return false
++	}
++	if next.Phase == "copy-verified" {
++		copy := next.VolumeCopy
++		return copy.Files > 0 && copy.Directories > 0 && copy.Bytes > 0 && rabbitMQMigrationDigest.MatchString(copy.SHA256)
++	}
++	return next.VolumeCopy == last.VolumeCopy
++}
++
++func prepareRabbitMQMigrationJournal(root *os.Root, plan rabbitMQMigrationPlan) (rabbitMQMigrationEvent, error) {
++	var empty rabbitMQMigrationEvent
++	if !plan.valid() {
++		return empty, errors.New("RabbitMQ 原迁移计划无效")
++	}
++	raw, _ := json.Marshal(plan)
++	if err := writeRabbitMQMigrationRecord(root, "plan.json", raw); err != nil {
++		return empty, err
++	}
++	first := rabbitMQMigrationEvent{PlanSHA: core.Hash(string(raw)), Phase: "prepared"}
++	raw, _ = json.Marshal(first)
++	if err := writeRabbitMQMigrationRecord(root, "event-00.json", raw); err != nil {
++		return empty, err
++	}
++	return readRabbitMQMigrationJournal(root, plan)
++}
++
++// Advance under the job's exclusive execution lease, after independently
++// checking that the actual Docker state agrees with the retained evidence.
++func appendRabbitMQMigrationEvent(root *os.Root, plan rabbitMQMigrationPlan, before rabbitMQMigrationEvent,
++	phase string, copy rabbitMQColdCopyResult) (rabbitMQMigrationEvent, error) {
++	var empty rabbitMQMigrationEvent
++	current, err := readRabbitMQMigrationJournal(root, plan)
++	if err != nil || current != before {
++		return empty, errors.New("RabbitMQ 原迁移事件已变化")
++	}
++	raw, _ := json.Marshal(current)
++	next := rabbitMQMigrationEvent{
++		Sequence: current.Sequence + 1, PlanSHA: current.PlanSHA, PreviousSHA: core.Hash(string(raw)),
++		Phase: phase, VolumeCopy: copy,
++	}
++	if next.Sequence >= rabbitMQMigrationEvents || !validRabbitMQMigrationEvent(current, next) {
++		return empty, errors.New("RabbitMQ 原迁移阶段不允许此操作")
++	}
++	raw, _ = json.Marshal(next)
++	name := fmt.Sprintf("event-%02d.json", next.Sequence)
++	if err := writeRabbitMQMigrationRecord(root, name, raw); err != nil {
++		return empty, err
++	}
++	observed, err := readRabbitMQMigrationJournal(root, plan)
++	if err != nil || observed != next {
++		return empty, errors.New("RabbitMQ 迁移阶段写入后无法核对，保留原事件")
++	}
++	return observed, nil
++}
++
++// An interrupted write cannot leave the next numbered event half-visible.
++// Sync the private inode, publish it without replacing any existing record,
++// then sync the directory before an operation can rely on the event.
++func writeRabbitMQMigrationRecord(root *os.Root, name string, data []byte) error {
++	dir, err := root.Open(".")
++	if err != nil {
++		return err
++	}
++	defer dir.Close()
++	fd, err := unix.Openat(int(dir.Fd()), ".", unix.O_TMPFILE|unix.O_WRONLY|unix.O_CLOEXEC, 0600)
++	if err != nil {
++		return err
++	}
++	file := os.NewFile(uintptr(fd), name)
++	defer file.Close()
++	if n, err := file.Write(data); err != nil || n != len(data) {
++		return errors.New("RabbitMQ 迁移记录未完整写入")
++	}
++	if err := file.Sync(); err != nil {
++		return err
++	}
++	if err := unix.Linkat(fd, "", int(dir.Fd()), name, unix.AT_EMPTY_PATH); err != nil {
++		return err
++	}
++	return dir.Sync()
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_journal_linux_test.go b/internal/executor/docker_rabbitmq_migration_journal_linux_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..c562aa4512a6dff745da89a579b57ffffe078cf9
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_journal_linux_test.go
+@@ -0,0 +1,127 @@
++//go:build linux
++
++package executor
++
++import (
++	"fmt"
++	"os"
++	"strings"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++func rabbitMQJournalFixture(t *testing.T) (*os.Root, rabbitMQMigrationPlan) {
++	t.Helper()
++	root, err := os.OpenRoot(t.TempDir())
++	if err != nil {
++		t.Fatal(err)
++	}
++	t.Cleanup(func() { root.Close() })
++	job, project := core.ID(), core.ID()
++	return root, rabbitMQMigrationPlan{
++		JobID: job, RequestID: core.ID(), ActorID: core.ID(), ProjectID: project, OriginalContainer: strings.Repeat("1", 64),
++		OriginalConfigSHA: strings.Repeat("2", 64), OriginalMetaSHA: strings.Repeat("3", 64),
++		TargetManifestSHA: strings.Repeat("4", 64), OriginalVolume: "panel_" + project[:12] + "_data",
++		CandidateVolume: "panel_rabbitmq_" + job,
++	}
++}
++
++func TestRabbitMQMigrationJournalReopensAndFencesRollbackAtEndpointPublication(t *testing.T) {
++	phaseSequence := []string{"quiesce-intent", "stop-original-intent", "original-stopped", "copy-intent", "copy-verified",
++		"bridge-intent", "bridge-stopped", "target-check-intent", "target-verified-offline", "publish-endpoint-intent"}
++	for _, stage := range []struct {
++		name  string
++		last  int
++		final string
++	}{
++		{"during-copy", 4, "original-restored"},
++		{"after-candidate-verified", 9, "original-restored"},
++		{"endpoint-may-have-accepted-new-messages", 10, "target-published"},
++	} {
++		t.Run(stage.name, func(t *testing.T) {
++			root, plan := rabbitMQJournalFixture(t)
++			state, err := prepareRabbitMQMigrationJournal(root, plan)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if _, err := prepareRabbitMQMigrationJournal(root, plan); err == nil {
++				t.Fatal("second preparation replaced original plan")
++			}
++			var copied rabbitMQColdCopyResult
++			for _, phase := range phaseSequence[:stage.last] {
++				if phase == "copy-verified" {
++					copied = rabbitMQColdCopyResult{Files: 10, Directories: 3, Bytes: 2048, SHA256: strings.Repeat("a", 64)}
++				}
++				state, err = appendRabbitMQMigrationEvent(root, plan, state, phase, copied)
++				if err != nil {
++					t.Fatalf("%s: %v", phase, err)
++				}
++			}
++			// Reopen the job directory from disk as a new process would.
++			second, err := os.OpenRoot(root.Name())
++			if err != nil {
++				t.Fatal(err)
++			}
++			defer second.Close()
++			observed, err := readRabbitMQMigrationJournal(second, plan)
++			if err != nil || observed != state {
++				t.Fatalf("lost original progress after reopen: %v %v", observed, err)
++			}
++			if stage.final == "original-restored" {
++				state, err = appendRabbitMQMigrationEvent(second, plan, state, "restore-original-intent", copied)
++				if err != nil {
++					t.Fatal(err)
++				}
++				state, err = appendRabbitMQMigrationEvent(second, plan, state, "restart-original-intent", copied)
++				if err != nil {
++					t.Fatal(err)
++				}
++			} else if _, err := appendRabbitMQMigrationEvent(second, plan, state, "restore-original-intent", copied); err == nil {
++				t.Fatal("published endpoint allowed return to stale data volume")
++			}
++			state, err = appendRabbitMQMigrationEvent(second, plan, state, stage.final, copied)
++			if err != nil || state.Phase != stage.final {
++				t.Fatalf("failed to record recovery: %v %v", state, err)
++			}
++		})
++	}
++}
++
++func TestRabbitMQMigrationJournalRejectsUnknownOriginalState(t *testing.T) {
++	root, plan := rabbitMQJournalFixture(t)
++	prepared, err := prepareRabbitMQMigrationJournal(root, plan)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, err := appendRabbitMQMigrationEvent(root, plan, prepared, "copy-verified",
++		rabbitMQColdCopyResult{Files: 1, Directories: 1, Bytes: 1, SHA256: strings.Repeat("a", 64)}); err == nil {
++		t.Fatal("record permitted copying without confirmation of original shutdown")
++	}
++	quiesce, err := appendRabbitMQMigrationEvent(root, plan, prepared, "quiesce-intent", rabbitMQColdCopyResult{})
++	if err != nil {
++		t.Fatal(err)
++	}
++	stopped, err := appendRabbitMQMigrationEvent(root, plan, quiesce, "stop-original-intent", rabbitMQColdCopyResult{})
++	if err != nil {
++		t.Fatal(err)
++	}
++	if _, err := appendRabbitMQMigrationEvent(root, plan, quiesce, "stop-original-intent", rabbitMQColdCopyResult{}); err == nil {
++		t.Fatal("second stop was appended from stale initial state")
++	}
++	other := plan
++	other.OriginalContainer = strings.Repeat("e", 64)
++	if _, err := readRabbitMQMigrationJournal(root, other); err == nil {
++		t.Fatal("accepted a replacement source container as the original")
++	}
++	name := fmt.Sprintf("event-%02d.json", stopped.Sequence+1)
++	if err := root.WriteFile(name, []byte("partial-write"), 0600); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := readRabbitMQMigrationJournal(root, plan); err == nil {
++		t.Fatal("ignored an incomplete state file")
++	}
++	if raw, err := root.ReadFile(name); err != nil || string(raw) != "partial-write" {
++		t.Fatalf("damaged evidence was overwritten: %q %v", raw, err)
++	}
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_linux.go b/internal/executor/docker_rabbitmq_migration_linux.go
+index 5740169ee9a3c89ddce6f4601a942f82e8988adf..4d36fe013cae896c1c913d9e0936cb75b2b1b27c 100644
+--- a/internal/executor/docker_rabbitmq_migration_linux.go
++++ b/internal/executor/docker_rabbitmq_migration_linux.go
+@@ -137,6 +137,10 @@ func rabbitMQOriginalVolume(ctx context.Context, project composeMetadata, broker
+ }
+ 
+ func rabbitMQMigrationCluster(raw []byte) (string, int, error) {
++	return rabbitMQClusterVersion(raw, "4.1.4")
++}
++
++func rabbitMQClusterVersion(raw []byte, version string) (string, int, error) {
+ 	var status struct {
+ 		DiskNodes    []string                   `json:"disk_nodes"`
+ 		RAMNodes     []string                   `json:"ram_nodes"`
+@@ -152,8 +156,8 @@ func rabbitMQMigrationCluster(raw []byte) (string, int, error) {
+ 		!slices.Equal(status.DiskNodes, solo) || !slices.Equal(status.RunningNodes, solo) ||
+ 		status.RAMNodes == nil || len(status.RAMNodes) != 0 || status.Alarms == nil ||
+ 		status.Partitions == nil || len(status.Partitions) != 0 ||
+-		len(status.Versions) != 1 || status.Versions[core.RabbitMQNodeName].RabbitMQ != "4.1.4" {
+-		return "", 0, errors.New("预检要求原始、无分区的单节点 RabbitMQ 4.1.4")
++		len(status.Versions) != 1 || status.Versions[core.RabbitMQNodeName].RabbitMQ != version {
++		return "", 0, errors.New("无法核对预期版本的无分区单节点 RabbitMQ")
+ 	}
+ 	return status.Versions[core.RabbitMQNodeName].RabbitMQ, len(status.Alarms), nil
+ }
+diff --git a/internal/executor/docker_rabbitmq_migration_native_linux_test.go b/internal/executor/docker_rabbitmq_migration_native_linux_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..1eb828d1472eeca845ec2bb2a40a613808526ece
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_native_linux_test.go
+@@ -0,0 +1,99 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++)
++
++// Run only by the native fixture on a disposable hosted runner which creates
++// its own project, ports, and data. The executor's exact functions do the work.
++func TestRabbitMQMigrationNativeWorker(t *testing.T) {
++	action := os.Getenv("PANEL_RABBITMQ_NATIVE_ACTION")
++	if action == "" {
++		t.Skip("requires disposable RabbitMQ migration runner")
++	}
++	if os.Geteuid() != 0 || os.Getenv("GITHUB_ACTIONS") != "true" || os.Getenv("GITHUB_REPOSITORY") != "yunzhanlin/yunzhan-apps" {
++		t.Fatal("native fixture requires the isolated application runner")
++	}
++	dirname := os.Getenv("PANEL_RABBITMQ_NATIVE_DIR")
++	if filepath.Dir(dirname) != "/var/lib/panel-rabbitmq-fixture" || filepath.Base(dirname) != "worker" {
++		t.Fatal("native fixture path invalid")
++	}
++	raw, err := os.ReadFile(filepath.Join(dirname, "request.json"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	var plan rabbitMQMigrationPlan
++	if err := json.Unmarshal(raw, &plan); err != nil || !plan.valid() {
++		t.Fatal("invalid native fixture request")
++	}
++	project, err := openComposeUpdateDirectory(filepath.Join(dirname, "compose"), plan.ProjectID)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer project.Close()
++	journal, err := os.OpenRoot(filepath.Join(dirname, "journal"))
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer journal.Close()
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
++	defer cancel()
++	store := dockerMutationStore{state: filepath.Join(dirname, "state"), blocked: func() bool { return false }, pending: func(context.Context) error { return nil }}
++	lease, err := store.begin(ctx)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer lease.Close()
++
++	switch action {
++	case "stage", "reject-connected":
++		if _, err := prepareRabbitMQMigrationJournal(journal, plan); err != nil {
++			t.Fatal(err)
++		}
++		authority, err := verifyRabbitMQMigrationRelease(ctx, plan)
++		if err != nil {
++			t.Fatal(err)
++		}
++		state, err := stageRabbitMQMigration(ctx, lease, project, journal, plan, authority)
++		if action == "reject-connected" {
++			if err == nil || state.Phase != "prepared" {
++				t.Fatalf("connected client did not prevent shutdown: %s %v", state.Phase, err)
++			}
++			return
++		}
++		if err != nil || state.Phase != "target-verified-offline" || state.VolumeCopy.Files == 0 {
++			t.Fatalf("offline upgrade failed: %s %v", state.Phase, err)
++		}
++		t.Logf("isolated target verified, files=%d bytes=%d", state.VolumeCopy.Files, state.VolumeCopy.Bytes)
++	case "restore":
++		state, err := restoreRabbitMQBeforePublication(ctx, lease, project, journal, plan)
++		if err != nil || state.Phase != "original-restored" {
++			t.Fatalf("original recovery failed: %s %v", state.Phase, err)
++		}
++	case "prepare-interrupted-restore":
++		state, err := readRabbitMQMigrationJournal(journal, plan)
++		if err != nil || state.Phase != "target-verified-offline" {
++			t.Fatal("unexpected phase for original restart interruption", err)
++		}
++		err = lease.use(ctx, func(bound context.Context) error {
++			state, err := appendRabbitMQMigrationEvent(journal, plan, state, "restore-original-intent", state.VolumeCopy)
++			if err != nil {
++				return err
++			}
++			_, err = appendRabbitMQMigrationEvent(journal, plan, state, "restart-original-intent", state.VolumeCopy)
++			return err
++		})
++		if err != nil {
++			t.Fatal(err)
++		}
++	default:
++		t.Fatal("unknown fixture action")
++	}
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_volume_linux.go b/internal/executor/docker_rabbitmq_migration_volume_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..c8ee623ed0ae5c08c983338f3b5641bbddd7daea
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_volume_linux.go
+@@ -0,0 +1,272 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"net/url"
++	"os"
++	"path/filepath"
++	"strings"
++
++	"golang.org/x/sys/unix"
++	"local/panel/internal/core"
++)
++
++type rabbitMQMigrationVolume struct {
++	Name       string            `json:"Name"`
++	Driver     string            `json:"Driver"`
++	Scope      string            `json:"Scope"`
++	Mountpoint string            `json:"Mountpoint"`
++	Labels     map[string]string `json:"Labels"`
++	Options    map[string]string `json:"Options"`
++}
++
++const rabbitMQMigrationVolumePrefix = "panel_rabbitmq_"
++
++const rabbitMQMigrationVolumeJobLabel = "io.yunzhan.rabbitmq-migration-job"
++const rabbitMQMigrationVolumeProjectLabel = "io.yunzhan.rabbitmq-migration-project"
++
++func rabbitMQCandidateVolumeLabels(plan rabbitMQMigrationPlan) map[string]string {
++	return map[string]string{
++		rabbitMQMigrationVolumeJobLabel:     plan.JobID,
++		rabbitMQMigrationVolumeProjectLabel: plan.ProjectID,
++	}
++}
++
++func namedRabbitMQMigrationVolume(ctx context.Context, name string, labels map[string]string) (rabbitMQMigrationVolume, error) {
++	var volume rabbitMQMigrationVolume
++	raw, err := dockerRequest(ctx, http.MethodGet, "/volumes/"+name, nil, nil, 64<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &volume) != nil ||
++		volume.Name != name || volume.Driver != "local" || volume.Scope != "local" || len(volume.Options) != 0 {
++		return rabbitMQMigrationVolume{}, errors.New("无法核对 RabbitMQ 的本地数据卷")
++	}
++	for key, expected := range labels {
++		if volume.Labels[key] != expected {
++			return rabbitMQMigrationVolume{}, errors.New("RabbitMQ 数据卷标识与原任务不符")
++		}
++	}
++	return volume, nil
++}
++
++func rabbitMQMigrationDockerRoot(ctx context.Context) (string, error) {
++	var info struct {
++		DataRoot string `json:"DockerRootDir"`
++	}
++	raw, err := dockerRequest(ctx, http.MethodGet, "/info", nil, nil, 256<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &info) != nil ||
++		!filepath.IsAbs(info.DataRoot) || filepath.Clean(info.DataRoot) != info.DataRoot || info.DataRoot == "/" {
++		return "", errors.New("无法核对 Docker 的实际数据目录")
++	}
++	return info.DataRoot, nil
++}
++
++func openRabbitMQMigrationVolume(dataRoot string, volume rabbitMQMigrationVolume) (*os.File, error) {
++	path := filepath.Join(dataRoot, "volumes", volume.Name, "_data")
++	if path != volume.Mountpoint || !dockerResourceNamePattern.MatchString(volume.Name) ||
++		!filepath.IsAbs(dataRoot) || filepath.Clean(dataRoot) != dataRoot || dataRoot == "/" {
++		return nil, errors.New("RabbitMQ 数据卷路径与 Docker 本地卷不符")
++	}
++	parent := filepath.Dir(filepath.Dir(path))
++	fd, err := unix.Openat2(unix.AT_FDCWD, parent, &unix.OpenHow{
++		Flags:   unix.O_RDONLY | unix.O_DIRECTORY | unix.O_NOFOLLOW | unix.O_CLOEXEC,
++		Resolve: unix.RESOLVE_NO_SYMLINKS | unix.RESOLVE_NO_MAGICLINKS,
++	})
++	if err != nil {
++		return nil, err
++	}
++	root := os.NewFile(uintptr(fd), parent)
++	defer root.Close()
++	st, err := rabbitMQCopyStat(root)
++	if err != nil || st.Uid != 0 || st.Mode&0022 != 0 {
++		return nil, errors.New("Docker 数据卷父目录不由 Root 独占写入")
++	}
++	dir, err := rabbitMQCopyOpen(root, volume.Name, unix.O_RDONLY|unix.O_DIRECTORY, 0)
++	if err != nil {
++		return nil, err
++	}
++	defer dir.Close()
++	st, err = rabbitMQCopyStat(dir)
++	if err != nil || st.Uid != 0 || st.Mode&0022 != 0 {
++		return nil, errors.New("Docker 命名卷目录不由 Root 独占写入")
++	}
++	return rabbitMQCopyOpen(dir, "_data", unix.O_RDONLY|unix.O_DIRECTORY, 0)
++}
++
++func rabbitMQMigrationVolumeAttachments(ctx context.Context, volume string) ([]string, error) {
++	var rows []struct {
++		ID     string                `json:"Id"`
++		Mounts []rabbitMQVolumeMount `json:"Mounts"`
++	}
++	// Docker's volume filter is documented for running containers. A
++	// stopped container can still reserve or later start with the volume.
++	raw, err := dockerRequest(ctx, http.MethodGet, "/containers/json?all=1", nil, nil, 8<<20)
++	if err != nil || strictDockerJSON(raw, 8<<20) != nil || json.Unmarshal(raw, &rows) != nil || rows == nil {
++		return nil, errors.New("无法核对 RabbitMQ 数据卷的容器引用")
++	}
++	out := make([]string, 0, len(rows))
++	for _, row := range rows {
++		if !core.ValidDockerContainerID(row.ID) {
++			return nil, errRabbitMQIdentity
++		}
++		for _, mount := range row.Mounts {
++			if mount.Type == "volume" && mount.Name == volume {
++				out = append(out, row.ID)
++				break
++			}
++		}
++	}
++	return out, nil
++}
++
++func stoppedRabbitMQMigrationSource(ctx context.Context, plan rabbitMQMigrationPlan) (rabbitMQMigrationVolume, error) {
++	return rabbitMQVettedMigrationSource(ctx, plan, true)
++}
++
++// A failed graceful shutdown can still be recovered on the original volume.
++// The strict clean-exit check remains mandatory before copying any bytes.
++func rabbitMQVettedMigrationSource(ctx context.Context, plan rabbitMQMigrationPlan, cleanExit bool) (rabbitMQMigrationVolume, error) {
++	var container struct {
++		ID     string                `json:"Id"`
++		Mounts []rabbitMQVolumeMount `json:"Mounts"`
++		Config struct {
++			Image    string            `json:"Image"`
++			Hostname string            `json:"Hostname"`
++			Labels   map[string]string `json:"Labels"`
++		} `json:"Config"`
++		State struct {
++			Status   string `json:"Status"`
++			PID      *int   `json:"Pid"`
++			ExitCode *int   `json:"ExitCode"`
++			OOM      *bool  `json:"OOMKilled"`
++		} `json:"State"`
++	}
++	engine := "panel_" + plan.ProjectID[:12]
++	raw, err := dockerRequest(ctx, http.MethodGet, "/containers/"+plan.OriginalContainer+"/json", nil, nil, 256<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &container) != nil ||
++		container.ID != plan.OriginalContainer || !core.MatchesPanelRabbitMQImage(core.RabbitMQLegacyTemplate, container.Config.Image) ||
++		container.Config.Hostname != "cloudstack-rabbitmq" || container.Config.Labels["com.docker.compose.project"] != engine ||
++		container.Config.Labels["com.docker.compose.service"] != "rabbitmq" ||
++		!strings.EqualFold(container.Config.Labels["com.docker.compose.oneoff"], "false") ||
++		container.State.Status != "exited" || container.State.PID == nil || *container.State.PID != 0 ||
++		container.State.ExitCode == nil || container.State.OOM == nil ||
++		cleanExit && (*container.State.ExitCode != 0 || *container.State.OOM) ||
++		len(container.Mounts) != 1 {
++		return rabbitMQMigrationVolume{}, errors.New("未能确认原 RabbitMQ 容器已干净退出")
++	}
++	mount := container.Mounts[0]
++	volume, err := namedRabbitMQMigrationVolume(ctx, plan.OriginalVolume, map[string]string{
++		"com.docker.compose.project": engine, "com.docker.compose.volume": "data",
++	})
++	if err != nil || mount.Name != volume.Name || mount.Source != volume.Mountpoint || mount.Destination != "/var/lib/rabbitmq" ||
++		mount.Type != "volume" || mount.Driver != "local" || !mount.RW {
++		return rabbitMQMigrationVolume{}, errors.New("关机后原 RabbitMQ 数据卷身份无法核对")
++	}
++	attachments, err := rabbitMQMigrationVolumeAttachments(ctx, plan.OriginalVolume)
++	if err != nil || len(attachments) != 1 || attachments[0] != plan.OriginalContainer {
++		return rabbitMQMigrationVolume{}, errors.New("原 RabbitMQ 数据卷还有其他容器引用")
++	}
++	return volume, nil
++}
++
++func createRabbitMQMigrationVolume(ctx context.Context, plan rabbitMQMigrationPlan) (rabbitMQMigrationVolume, error) {
++	if ctx.Err() != nil || !plan.valid() {
++		return rabbitMQMigrationVolume{}, errors.New("RabbitMQ 候选数据卷任务标识无效")
++	}
++	var list struct {
++		Volumes []struct{ Name string } `json:"Volumes"`
++	}
++	filter, _ := json.Marshal(map[string][]string{"name": {plan.CandidateVolume}})
++	raw, err := dockerRequest(ctx, http.MethodGet, "/volumes?filters="+url.QueryEscape(string(filter)), nil, nil, 128<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &list) != nil || len(list.Volumes) != 0 {
++		return rabbitMQMigrationVolume{}, errors.New("候选数据卷可能已存在，核对原任务而不重新使用或覆盖")
++	}
++	labels := rabbitMQCandidateVolumeLabels(plan)
++	input := struct {
++		Name, Driver string
++		Labels       map[string]string
++	}{plan.CandidateVolume, "local", labels}
++	if _, err := dockerRequestUnlocked(ctx, http.MethodPost, "/volumes/create", input, nil, 64<<10); err != nil {
++		return rabbitMQMigrationVolume{}, err
++	}
++	return namedRabbitMQMigrationVolume(ctx, plan.CandidateVolume, labels)
++}
++
++// The worker enters only after persisted shutdown and copy-intent. It never
++// resumes a partially copied volume. Recovery may restore the original
++// container on a separately authorized original task.
++func prepareRabbitMQMigrationVolume(ctx context.Context, lease *dockerMutationLease, journal *os.Root,
++	plan rabbitMQMigrationPlan, phase rabbitMQMigrationEvent) (rabbitMQMigrationEvent, error) {
++	var empty rabbitMQMigrationEvent
++	if phase.Phase != "copy-intent" || !plan.valid() {
++		return empty, errors.New("RabbitMQ 原任务尚未进入冷备份阶段")
++	}
++	var result rabbitMQMigrationEvent
++	err := lease.use(ctx, func(bound context.Context) error {
++		state, err := readRabbitMQMigrationJournal(journal, plan)
++		if err != nil || state != phase {
++			return errors.New("RabbitMQ 原迁移阶段无法核对")
++		}
++		source, err := stoppedRabbitMQMigrationSource(bound, plan)
++		if err != nil {
++			return err
++		}
++		dataRoot, err := rabbitMQMigrationDockerRoot(bound)
++		if err != nil {
++			return err
++		}
++		from, err := openRabbitMQMigrationVolume(dataRoot, source)
++		if err != nil {
++			return err
++		}
++		defer from.Close()
++		// The active lease is already in use. This typed, fixed candidate
++		// creation takes no client-supplied path, driver or options.
++		target, err := createRabbitMQMigrationVolume(bound, plan)
++		if err != nil {
++			return err
++		}
++		to, err := openRabbitMQMigrationVolume(dataRoot, target)
++		if err != nil {
++			return err
++		}
++		defer to.Close()
++		attachments, err := rabbitMQMigrationVolumeAttachments(bound, target.Name)
++		if err != nil || len(attachments) != 0 {
++			return errors.New("RabbitMQ 候选数据卷已被容器引用")
++		}
++		copy, err := copyRabbitMQColdVolume(bound, from, to)
++		if err != nil {
++			return err
++		}
++		original, err := stoppedRabbitMQMigrationSource(bound, plan)
++		if err != nil || original.Mountpoint != source.Mountpoint {
++			return errors.New("RabbitMQ 冷备份后原卷变化")
++		}
++		for _, item := range []struct {
++			volume rabbitMQMigrationVolume
++			fd     *os.File
++		}{{source, from}, {target, to}} {
++			again, err := openRabbitMQMigrationVolume(dataRoot, item.volume)
++			if err != nil {
++				return err
++			}
++			a, aErr := rabbitMQCopyStat(item.fd)
++			b, bErr := rabbitMQCopyStat(again)
++			again.Close()
++			if aErr != nil || bErr != nil || a.Dev != b.Dev || a.Ino != b.Ino {
++				return errRabbitMQCopyDrift
++			}
++		}
++		attachments, err = rabbitMQMigrationVolumeAttachments(bound, target.Name)
++		if err != nil || len(attachments) != 0 {
++			return errors.New("RabbitMQ 冷备份后候选卷引用异常")
++		}
++		result, err = appendRabbitMQMigrationEvent(journal, plan, phase, "copy-verified", copy)
++		return err
++	})
++	return result, err
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_volume_linux_test.go b/internal/executor/docker_rabbitmq_migration_volume_linux_test.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..ba3473583cb1ba25ad89fb949a22f86eeeb692b5
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_volume_linux_test.go
+@@ -0,0 +1,59 @@
++//go:build linux
++
++package executor
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestRabbitMQMigrationVolumeRequiresPrivateDockerOwnedPath(t *testing.T) {
++	if os.Geteuid() != 0 {
++		t.Skip("requires native root")
++	}
++	const name = "panel_rabbitmq_0123456789abcdef0123456789abcdef"
++	base := t.TempDir()
++	parent := filepath.Join(base, "volumes", name)
++	path := filepath.Join(parent, "_data")
++	if err := os.MkdirAll(path, 0700); err != nil {
++		t.Fatal(err)
++	}
++	volume := rabbitMQMigrationVolume{Name: name, Mountpoint: path}
++	original, err := openRabbitMQMigrationVolume(base, volume)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer original.Close()
++
++	if err := os.Chmod(parent, 0777); err != nil {
++		t.Fatal(err)
++	}
++	if untrusted, err := openRabbitMQMigrationVolume(base, volume); err == nil {
++		untrusted.Close()
++		t.Fatal("accepted a writable parent around the Docker data volume")
++	}
++	if err := os.Chmod(parent, 0700); err != nil {
++		t.Fatal(err)
++	}
++	alternate := filepath.Join(parent, "different")
++	if err := os.Rename(path, alternate); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Symlink(alternate, path); err != nil {
++		t.Fatal(err)
++	}
++	if unsafe, err := openRabbitMQMigrationVolume(base, volume); err == nil {
++		unsafe.Close()
++		t.Fatal("followed a replacement link in the volume mount point")
++	}
++	linkRoot := filepath.Join(t.TempDir(), "linked")
++	if err := os.Symlink(base, linkRoot); err != nil {
++		t.Fatal(err)
++	}
++	volume.Mountpoint = filepath.Join(linkRoot, "volumes", name, "_data")
++	if unsafe, err := openRabbitMQMigrationVolume(linkRoot, volume); err == nil {
++		unsafe.Close()
++		t.Fatal("followed a link in the Docker root")
++	}
++}
+diff --git a/internal/executor/docker_rabbitmq_migration_worker_linux.go b/internal/executor/docker_rabbitmq_migration_worker_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..cb3077d1c49fda7a184ef323c8fc20898a18a854
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_migration_worker_linux.go
+@@ -0,0 +1,364 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"net/url"
++	"os"
++	"os/exec"
++	"strconv"
++	"time"
++
++	"local/panel/internal/core"
++)
++
++var errRabbitMQMigrationPending = errors.New("RabbitMQ 迁移原任务还有未核对的状态，请恢复原任务")
++
++// The caller must own the exclusive Docker and runtime leases and authorize
++// the actor against this exact job. The signed release verifies the target,
++// independently of the caller's permission to take the original offline.
++func stageRabbitMQMigration(ctx context.Context, lease *dockerMutationLease, project *composeUpdateDirectory,
++	journal *os.Root, plan rabbitMQMigrationPlan, authority rabbitMQMigrationAuthority) (rabbitMQMigrationEvent, error) {
++	if !plan.valid() || authority.manifestSHA != plan.TargetManifestSHA {
++		return rabbitMQMigrationEvent{}, errRabbitMQIdentity
++	}
++	var state rabbitMQMigrationEvent
++	err := lease.use(ctx, func(bound context.Context) error {
++		var err error
++		state, err = readRabbitMQMigrationJournal(journal, plan)
++		if err != nil || state.Phase != "prepared" {
++			return errRabbitMQMigrationPending
++		}
++		original, err := rabbitMQMigrationOriginalProject(project, plan)
++		if err != nil {
++			return err
++		}
++		// Pull both exact images while the original still serves traffic.
++		for _, image := range []string{rabbitMQBridgeImage, rabbitMQTargetImage} {
++			pull, cancel := context.WithTimeout(bound, 5*time.Minute)
++			err := dockerPullUnlocked(pull, image)
++			cancel()
++			if err != nil {
++				return err
++			}
++		}
++		state, err = stopRabbitMQMigrationSource(bound, project, journal, plan, original, state)
++		return err
++	})
++	if err != nil {
++		return state, err
++	}
++	for _, step := range []struct {
++		phase string
++		run   func(context.Context, *dockerMutationLease, *os.Root, rabbitMQMigrationPlan, rabbitMQMigrationEvent) (rabbitMQMigrationEvent, error)
++	}{
++		{"copy-intent", prepareRabbitMQMigrationVolume},
++		{"bridge-intent", upgradeRabbitMQOffline},
++		{"target-check-intent", upgradeRabbitMQOffline},
++	} {
++		err = lease.use(ctx, func(bound context.Context) error {
++			if _, err := rabbitMQMigrationOriginalProject(project, plan); err != nil {
++				return err
++			}
++			var err error
++			state, err = appendRabbitMQMigrationEvent(journal, plan, state, step.phase, state.VolumeCopy)
++			return err
++		})
++		if err != nil {
++			return state, err
++		}
++		next, err := step.run(ctx, lease, journal, plan, state)
++		if err != nil {
++			return state, err
++		}
++		state = next
++	}
++	return state, nil
++}
++
++func rabbitMQMigrationOriginalProject(dir *composeUpdateDirectory, plan rabbitMQMigrationPlan) (composeMetadata, error) {
++	if dir == nil || !plan.valid() {
++		return composeMetadata{}, errRabbitMQIdentity
++	}
++	meta, _, err := dir.read("metadata.json", 16<<10)
++	if err != nil || core.Hash(string(meta)) != plan.OriginalMetaSHA {
++		return composeMetadata{}, errRabbitMQIdentity
++	}
++	project, err := rabbitMQProject(meta, plan.ProjectID)
++	if err != nil || project.TemplateID != core.RabbitMQLegacyTemplate {
++		return composeMetadata{}, errRabbitMQIdentity
++	}
++	config, _, err := dir.read("compose.yaml", 48<<10)
++	if err != nil || core.Hash(string(config)) != plan.OriginalConfigSHA ||
++		!core.IsOriginalRabbitMQCompose(string(config), project.HostPort) {
++		return composeMetadata{}, errRabbitMQIdentity
++	}
++	return project, nil
++}
++
++func runningRabbitMQMigrationSource(ctx context.Context, project composeMetadata, plan rabbitMQMigrationPlan) (rabbitMQContainer, error) {
++	broker, err := inspectRabbitMQ(ctx, project)
++	if err != nil || broker.ID != plan.OriginalContainer {
++		return rabbitMQContainer{}, errRabbitMQIdentity
++	}
++	volume, err := rabbitMQOriginalVolume(ctx, project, broker)
++	if err != nil || volume != plan.OriginalVolume {
++		return rabbitMQContainer{}, errRabbitMQIdentity
++	}
++	holders, err := rabbitMQMigrationVolumeAttachments(ctx, volume)
++	if err != nil || len(holders) != 1 || holders[0] != broker.ID {
++		return rabbitMQContainer{}, errRabbitMQIdentity
++	}
++	var actual struct {
++		HostConfig struct {
++			Privileged    *bool
++			PortBindings  map[string][]struct{ HostIP, HostPort string }
++			RestartPolicy struct{ Name string }
++		}
++	}
++	raw, err := dockerRequest(ctx, http.MethodGet, "/containers/"+broker.ID+"/json", nil, nil, 256<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &actual) != nil ||
++		actual.HostConfig.Privileged == nil || *actual.HostConfig.Privileged ||
++		actual.HostConfig.RestartPolicy.Name != "unless-stopped" || len(actual.HostConfig.PortBindings) != 2 {
++		return rabbitMQContainer{}, errRabbitMQIdentity
++	}
++	for containerPort, port := range map[string]int{"15672/tcp": project.HostPort, "5672/tcp": project.HostPort + 1} {
++		binding := actual.HostConfig.PortBindings[containerPort]
++		if len(binding) != 1 || binding[0].HostIP != "127.0.0.1" || binding[0].HostPort != strconv.Itoa(port) {
++			return rabbitMQContainer{}, errRabbitMQIdentity
++		}
++	}
++	return broker, nil
++}
++
++func stopRabbitMQMigrationSource(ctx context.Context, dir *composeUpdateDirectory, journal *os.Root,
++	plan rabbitMQMigrationPlan, original composeMetadata, state rabbitMQMigrationEvent) (rabbitMQMigrationEvent, error) {
++	broker, err := runningRabbitMQMigrationSource(ctx, original, plan)
++	if err != nil {
++		return state, err
++	}
++	if err = checkRabbitMQMigrationBroker(ctx, broker.ID); err != nil {
++		return state, err
++	}
++	next, err := appendRabbitMQMigrationEvent(journal, plan, state, "quiesce-intent", state.VolumeCopy)
++	if err != nil {
++		return state, err
++	}
++	state = next
++	if err = rabbitMQSetListeners(ctx, broker.ID, false); err != nil {
++		return state, err
++	}
++	if err = checkRabbitMQMigrationBroker(ctx, broker.ID); err != nil {
++		return state, err
++	}
++	if _, err = rabbitMQMigrationOriginalProject(dir, plan); err != nil {
++		return state, err
++	}
++	after, err := runningRabbitMQMigrationSource(ctx, original, plan)
++	if err != nil || broker.State != after.State {
++		return state, errRabbitMQIdentity
++	}
++	next, err = appendRabbitMQMigrationEvent(journal, plan, state, "stop-original-intent", state.VolumeCopy)
++	if err != nil {
++		return state, err
++	}
++	state = next
++	if _, err = dockerRequestUnlocked(ctx, http.MethodPost, "/containers/"+broker.ID+"/stop?t=60", nil, nil, 4096); err != nil {
++		return state, err
++	}
++	if _, err = stoppedRabbitMQMigrationSource(ctx, plan); err != nil {
++		return state, err
++	}
++	next, err = appendRabbitMQMigrationEvent(journal, plan, state, "original-stopped", state.VolumeCopy)
++	if err != nil {
++		return state, err
++	}
++	return next, nil
++}
++
++func checkRabbitMQMigrationBroker(ctx context.Context, id string) error {
++	raw, err := rabbitMQRead(ctx, id, "cluster_status")
++	if err != nil {
++		return err
++	}
++	if _, alarms, err := rabbitMQMigrationCluster(raw); err != nil || alarms != 0 {
++		return errors.New("RabbitMQ 原节点存在告警或集群身份不符")
++	}
++	raw, err = rabbitMQRead(ctx, id, "list_feature_flags", "name", "state", "stability")
++	if err != nil {
++		return err
++	}
++	if disabled, err := rabbitMQMigrationFeatures(raw); err != nil || len(disabled) != 0 {
++		return errors.New("RabbitMQ 原节点有未启用的稳定功能标志")
++	}
++	raw, err = rabbitMQRead(ctx, id, "list_connections", "name")
++	if err != nil {
++		return err
++	}
++	var connections []struct{ Name string }
++	if memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &connections) != nil || connections == nil {
++		return errors.New("无法核对 RabbitMQ 原节点连接")
++	}
++	if len(connections) != 0 {
++		return errors.New("RabbitMQ 仍有客户端连接，请先停止发件和消费任务")
++	}
++	return nil
++}
++
++// Reconcile the original job after a failure or process restart. The caller
++// reloads the exact private journal and takes a fresh exclusive lease.
++func restoreRabbitMQBeforePublication(ctx context.Context, lease *dockerMutationLease,
++	dir *composeUpdateDirectory, journal *os.Root, plan rabbitMQMigrationPlan) (rabbitMQMigrationEvent, error) {
++	var state rabbitMQMigrationEvent
++	err := lease.use(ctx, func(bound context.Context) error {
++		var err error
++		state, err = readRabbitMQMigrationJournal(journal, plan)
++		if err != nil {
++			return errRabbitMQMigrationPending
++		}
++		original, err := rabbitMQMigrationOriginalProject(dir, plan)
++		if err != nil {
++			return err
++		}
++		switch state.Phase {
++		case "prepared":
++			state, err = appendRabbitMQMigrationEvent(journal, plan, state, "cancelled-before-stop", state.VolumeCopy)
++			return err
++		case "cancelled-before-stop", "original-restored":
++			return nil
++		case "quiesce-intent":
++			state, err = appendRabbitMQMigrationEvent(journal, plan, state, "resume-listeners-intent", state.VolumeCopy)
++		case "resume-listeners-intent", "restore-original-intent", "restart-original-intent":
++		case "stop-original-intent", "original-stopped", "copy-intent", "copy-verified",
++			"bridge-intent", "bridge-stopped", "target-check-intent", "target-verified-offline":
++			state, err = appendRabbitMQMigrationEvent(journal, plan, state, "restore-original-intent", state.VolumeCopy)
++		default:
++			return errRabbitMQMigrationPending
++		}
++		if err != nil {
++			return err
++		}
++		if state.Phase == "restore-original-intent" {
++			if err := removeRabbitMQOfflineCandidates(bound, plan); err != nil {
++				return err
++			}
++			// A canceled client-side stop can continue in the daemon. Stop
++			// the exact old container and wait for its actual exit before
++			// starting it again or declaring it available.
++			if running, err := runningRabbitMQMigrationSource(bound, original, plan); err == nil {
++				if _, err := dockerRequestUnlocked(bound, http.MethodPost, "/containers/"+running.ID+"/stop?t=60", nil, nil, 4096); err != nil {
++					return err
++				}
++			}
++			if _, err := rabbitMQVettedMigrationSource(bound, plan, false); err != nil {
++				return err
++			}
++			state, err = appendRabbitMQMigrationEvent(journal, plan, state, "restart-original-intent", state.VolumeCopy)
++			if err != nil {
++				return err
++			}
++		}
++		if state.Phase == "restart-original-intent" {
++			if _, err := rabbitMQMigrationOriginalProject(dir, plan); err != nil {
++				return err
++			}
++			if _, err := runningRabbitMQMigrationSource(bound, original, plan); err != nil {
++				if _, err := rabbitMQVettedMigrationSource(bound, plan, false); err != nil {
++					return err
++				}
++				if _, err := dockerRequestUnlocked(bound, http.MethodPost, "/containers/"+plan.OriginalContainer+"/start", nil, nil, 4096); err != nil {
++					return err
++				}
++			}
++		}
++		if err := waitRabbitMQOfflineBroker(bound, plan.OriginalContainer, "4.1.4"); err != nil {
++			return err
++		}
++		if _, err := runningRabbitMQMigrationSource(bound, original, plan); err != nil {
++			return err
++		}
++		if err := rabbitMQSetListeners(bound, plan.OriginalContainer, true); err != nil {
++			return err
++		}
++		state, err = appendRabbitMQMigrationEvent(journal, plan, state, "original-restored", state.VolumeCopy)
++		return err
++	})
++	return state, err
++}
++
++func removeRabbitMQOfflineCandidates(ctx context.Context, plan rabbitMQMigrationPlan) error {
++	filter, _ := json.Marshal(map[string][]string{"label": {rabbitMQMigrationVolumeJobLabel + "=" + plan.JobID}})
++	var rows []struct {
++		ID    string `json:"Id"`
++		Names []string
++	}
++	path := "/containers/json?all=1&filters=" + url.QueryEscape(string(filter))
++	raw, err := dockerRequest(ctx, http.MethodGet, path, nil, nil, 256<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &rows) != nil || rows == nil || len(rows) > 2 {
++		return errRabbitMQMigrationPending
++	}
++	for _, row := range rows {
++		if !core.ValidDockerContainerID(row.ID) || len(row.Names) != 1 {
++			return errRabbitMQIdentity
++		}
++		name := rabbitMQOfflineContainerPrefix + plan.JobID
++		var image string
++		switch row.Names[0] {
++		case "/" + name + "-bridge":
++			name += "-bridge"
++			image = rabbitMQBridgeImage
++		case "/" + name + "-target":
++			name += "-target"
++			image = rabbitMQTargetImage
++		default:
++			return errRabbitMQIdentity
++		}
++		volume, err := namedRabbitMQMigrationVolume(ctx, plan.CandidateVolume, rabbitMQCandidateVolumeLabels(plan))
++		if err != nil {
++			return err
++		}
++		status, err := rabbitMQOfflineInspect(ctx, row.ID, name, image, volume, plan, false)
++		if err != nil {
++			return err
++		}
++		endpoint := "/containers/" + row.ID
++		if status == "running" {
++			if _, err := dockerRequestUnlocked(ctx, http.MethodPost, endpoint+"/stop?t=60", nil, nil, 4096); err != nil {
++				return err
++			}
++			status, err = rabbitMQOfflineInspect(ctx, row.ID, name, image, volume, plan, false)
++			if err != nil || status != "exited" {
++				return errRabbitMQMigrationPending
++			}
++		}
++		if _, err := dockerRequestUnlocked(ctx, http.MethodDelete, endpoint+"?v=0", nil, nil, 4096); err != nil {
++			return err
++		}
++	}
++	return nil
++}
++
++func rabbitMQSetListeners(ctx context.Context, id string, resume bool) error {
++	if !core.ValidDockerContainerID(id) {
++		return errRabbitMQIdentity
++	}
++	action := "suspend_listeners"
++	if resume {
++		action = "resume_listeners"
++	}
++	bound, cancel := context.WithTimeout(ctx, 20*time.Second)
++	defer cancel()
++	cmd := exec.CommandContext(bound, "/usr/bin/docker", "--host", "unix:///run/docker.sock", "exec",
++		"--user", "rabbitmq", "--env", "HOME=/var/lib/rabbitmq", id,
++		"rabbitmqctl", "--quiet", "--timeout", "16", action)
++	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C.UTF-8"}
++	cmd.WaitDelay = time.Second
++	if err := cmd.Run(); err != nil {
++		return errors.New("RabbitMQ 原节点的客户端监听状态无法核对")
++	}
++	return nil
++}
+diff --git a/internal/executor/docker_rabbitmq_offline_migration_linux.go b/internal/executor/docker_rabbitmq_offline_migration_linux.go
+new file mode 100644
+index 0000000000000000000000000000000000000000..0b5a3181694f92866f73ac745d6e375539370c25
+--- /dev/null
++++ b/internal/executor/docker_rabbitmq_offline_migration_linux.go
+@@ -0,0 +1,222 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"net/http"
++	"net/url"
++	"os"
++	"os/exec"
++	"time"
++
++	"local/panel/internal/core"
++)
++
++const rabbitMQBridgeImage = "rabbitmq:4.2.9-management-alpine@sha256:77ca2ba3621a95208918e6e331199a6c81129690bf7fc570dc61b6e64726840a"
++const rabbitMQTargetImage = "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267"
++const rabbitMQOfflineContainerPrefix = "yunzhan-rabbitmq-offline-"
++
++type rabbitMQOfflineContainerConfig struct {
++	Image      string
++	Hostname   string
++	Env        []string
++	Labels     map[string]string
++	HostConfig struct {
++		Memory      int64
++		NetworkMode string
++		ExtraHosts  []string
++		Mounts      []struct {
++			Type, Source, Target string
++			VolumeOptions        struct{ NoCopy bool }
++		}
++	}
++}
++
++func rabbitMQOfflineConfig(plan rabbitMQMigrationPlan, image string) rabbitMQOfflineContainerConfig {
++	config := rabbitMQOfflineContainerConfig{
++		Image: image, Hostname: "cloudstack-rabbitmq", Labels: rabbitMQCandidateVolumeLabels(plan),
++		Env: []string{"RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS=+S 2:2 +SDcpu 1 +SDio 1"},
++	}
++	config.HostConfig.Memory = 512 << 20
++	config.HostConfig.NetworkMode = "none"
++	config.HostConfig.ExtraHosts = []string{"cloudstack-rabbitmq:127.0.0.1"}
++	config.HostConfig.Mounts = append(config.HostConfig.Mounts, struct {
++		Type, Source, Target string
++		VolumeOptions        struct{ NoCopy bool }
++	}{"volume", plan.CandidateVolume, "/var/lib/rabbitmq", struct{ NoCopy bool }{true}})
++	return config
++}
++
++func rabbitMQOfflineInspect(ctx context.Context, id, name, image string, volume rabbitMQMigrationVolume, plan rabbitMQMigrationPlan, cleanExit bool) (string, error) {
++	var got struct {
++		ID, Name string
++		Mounts   []rabbitMQVolumeMount
++		State    struct {
++			Status, StartedAt string
++			Pid, ExitCode     *int
++			OOMKilled         *bool
++		}
++		Config struct {
++			Image, Hostname string
++			Labels          map[string]string
++		}
++		HostConfig struct {
++			NetworkMode   string
++			Privileged    *bool
++			PortBindings  map[string]json.RawMessage
++			RestartPolicy struct {
++				Name string
++			}
++		}
++	}
++	raw, err := dockerRequest(ctx, http.MethodGet, "/containers/"+id+"/json", nil, nil, 256<<10)
++	if err != nil || memcachedDaemonJSON(raw) != nil || json.Unmarshal(raw, &got) != nil ||
++		got.ID != id || got.Name != "/"+name || got.Config.Image != image || got.Config.Hostname != "cloudstack-rabbitmq" ||
++		got.HostConfig.NetworkMode != "none" || got.HostConfig.Privileged == nil || *got.HostConfig.Privileged ||
++		len(got.HostConfig.PortBindings) != 0 || got.HostConfig.RestartPolicy.Name != "no" && got.HostConfig.RestartPolicy.Name != "" ||
++		got.Config.Labels[rabbitMQMigrationVolumeJobLabel] != plan.JobID || got.Config.Labels[rabbitMQMigrationVolumeProjectLabel] != plan.ProjectID ||
++		len(got.Mounts) != 1 {
++		return "", errors.New("RabbitMQ 离线升级容器身份无法核对")
++	}
++	mount := got.Mounts[0]
++	if mount.Type != "volume" || mount.Name != volume.Name || mount.Driver != "local" ||
++		mount.Source != volume.Mountpoint || mount.Destination != "/var/lib/rabbitmq" || !mount.RW {
++		return "", errors.New("RabbitMQ 离线升级容器没有使用原任务的独立数据卷")
++	}
++	switch got.State.Status {
++	case "created", "running":
++		return got.State.Status, nil
++	case "exited":
++		if got.State.Pid != nil && *got.State.Pid == 0 && got.State.ExitCode != nil && got.State.OOMKilled != nil &&
++			(!cleanExit || *got.State.ExitCode == 0 && !*got.State.OOMKilled) {
++			return "exited", nil
++		}
++	}
++	return "", errors.New("RabbitMQ 离线升级容器异常退出")
++}
++
++func waitRabbitMQOfflineBroker(ctx context.Context, id, version string) error {
++	bound, cancel := context.WithTimeout(ctx, 150*time.Second)
++	defer cancel()
++	ticker := time.NewTicker(3 * time.Second)
++	defer ticker.Stop()
++	for {
++		raw, err := rabbitMQRead(bound, id, "cluster_status")
++		if err == nil {
++			if _, alarms, err := rabbitMQClusterVersion(raw, version); err == nil && alarms == 0 {
++				return nil
++			}
++		}
++		select {
++		case <-bound.Done():
++			return errors.New("RabbitMQ 离线升级节点未在期限内返回目标版本和功能标志")
++		case <-ticker.C:
++		}
++	}
++}
++
++func upgradeRabbitMQOffline(ctx context.Context, lease *dockerMutationLease, journal *os.Root,
++	plan rabbitMQMigrationPlan, phase rabbitMQMigrationEvent) (rabbitMQMigrationEvent, error) {
++	var image, version, suffix, finished string
++	switch phase.Phase {
++	case "bridge-intent":
++		image, version, suffix, finished = rabbitMQBridgeImage, "4.2.9", "-bridge", "bridge-stopped"
++	case "target-check-intent":
++		image, version, suffix, finished = rabbitMQTargetImage, "4.4.0", "-target", "target-verified-offline"
++	default:
++		return rabbitMQMigrationEvent{}, errors.New("RabbitMQ 原任务未进入离线镜像升级阶段")
++	}
++	if !plan.valid() || !core.MatchesPanelRabbitMQImage(core.RabbitMQ440Template, rabbitMQTargetImage) {
++		return rabbitMQMigrationEvent{}, errors.New("RabbitMQ 离线升级身份无法核对")
++	}
++	var result rabbitMQMigrationEvent
++	err := lease.use(ctx, func(bound context.Context) error {
++		retained, err := readRabbitMQMigrationJournal(journal, plan)
++		if err != nil || retained != phase {
++			return errors.New("RabbitMQ 离线升级前的原记录已发生变化")
++		}
++		if _, err := stoppedRabbitMQMigrationSource(bound, plan); err != nil {
++			return err
++		}
++		volume, err := namedRabbitMQMigrationVolume(bound, plan.CandidateVolume, rabbitMQCandidateVolumeLabels(plan))
++		if err != nil {
++			return err
++		}
++		attachments, err := rabbitMQMigrationVolumeAttachments(bound, volume.Name)
++		if err != nil || len(attachments) != 0 {
++			return errors.New("RabbitMQ 离线升级发现候选数据卷已有容器引用")
++		}
++		name := rabbitMQOfflineContainerPrefix + plan.JobID + suffix
++		config := rabbitMQOfflineConfig(plan, image)
++		var created struct {
++			ID string `json:"Id"`
++		}
++		if _, err := dockerRequestUnlocked(bound, http.MethodPost, "/containers/create?name="+url.QueryEscape(name), config, &created, 64<<10); err != nil {
++			return err
++		}
++		if !core.ValidDockerContainerID(created.ID) {
++			return errRabbitMQIdentity
++		}
++		observed, err := rabbitMQOfflineInspect(bound, created.ID, name, image, volume, plan, true)
++		if err != nil || observed != "created" {
++			return errRabbitMQIdentity
++		}
++		endpoint := "/containers/" + created.ID
++		if _, err := dockerRequestUnlocked(bound, http.MethodPost, endpoint+"/start", nil, nil, 4096); err != nil {
++			return err
++		}
++		if err := waitRabbitMQOfflineBroker(bound, created.ID, version); err != nil {
++			return err
++		}
++		if err := rabbitMQEnableStableFlags(bound, created.ID); err != nil {
++			return err
++		}
++		if _, err := dockerRequestUnlocked(bound, http.MethodPost, endpoint+"/stop?t=60", nil, nil, 4096); err != nil {
++			return err
++		}
++		observed, err = rabbitMQOfflineInspect(bound, created.ID, name, image, volume, plan, true)
++		if err != nil || observed != "exited" {
++			return errors.New("RabbitMQ 离线升级后容器没有干净退出")
++		}
++		if _, err = dockerRequestUnlocked(bound, http.MethodDelete, endpoint+"?v=0", nil, nil, 4096); err != nil {
++			return err
++		}
++		attachments, err = rabbitMQMigrationVolumeAttachments(bound, volume.Name)
++		if err != nil || len(attachments) != 0 {
++			return errors.New("RabbitMQ 离线升级结束后数据卷仍被引用")
++		}
++		result, err = appendRabbitMQMigrationEvent(journal, plan, phase, finished, phase.VolumeCopy)
++		return err
++	})
++	return result, err
++}
++
++// Only called after the exact offline container and its network policy were
++// verified inside the active lease. This fixed CLI never targets the old node.
++func rabbitMQEnableStableFlags(ctx context.Context, id string) error {
++	if !core.ValidDockerContainerID(id) {
++		return errRabbitMQIdentity
++	}
++	bound, cancel := context.WithTimeout(ctx, 100*time.Second)
++	defer cancel()
++	cmd := exec.CommandContext(bound, "/usr/bin/docker", "--host", "unix:///run/docker.sock", "exec",
++		"--user", "rabbitmq", "--env", "HOME=/var/lib/rabbitmq", id,
++		"rabbitmqctl", "--quiet", "--timeout", "90", "enable_feature_flag", "all")
++	cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C.UTF-8"}
++	cmd.WaitDelay = time.Second
++	if err := cmd.Run(); err != nil {
++		return errors.New("RabbitMQ 离线节点的稳定功能标志未能启用")
++	}
++	raw, err := rabbitMQRead(bound, id, "list_feature_flags", "name", "state", "stability")
++	if err != nil {
++		return err
++	}
++	disabled, err := rabbitMQMigrationFeatures(raw)
++	if err != nil || len(disabled) != 0 {
++		return errors.New("RabbitMQ 离线节点仍有未启用的稳定功能标志")
++	}
++	return nil
++}
+diff --git a/internal/executor/docker_retention_guard_linux.go b/internal/executor/docker_retention_guard_linux.go
+index 86e5302624920da77c8110843beb24f75ea1c866..eb1cb26a672992bbfd079a05e216da7f58c13e35 100644
+--- a/internal/executor/docker_retention_guard_linux.go
++++ b/internal/executor/docker_retention_guard_linux.go
+@@ -19,7 +19,12 @@ const dockerRetentionPrefix = "yunzhan-retain-memcached-"
+ const dockerRetentionReason = "应用更新原镜像保留锚点；必须保持未启动，禁止通用操作或删除"
+ 
+ func dockerContainerRetained(name string, labels map[string]string) bool {
+-	if strings.HasPrefix(strings.TrimPrefix(name, "/"), dockerRetentionPrefix) || labels["io.yunzhan.owner"] == memcachedRetentionOwner {
++	base := strings.TrimPrefix(name, "/")
++	if strings.HasPrefix(base, dockerRetentionPrefix) || strings.HasPrefix(base, rabbitMQOfflineContainerPrefix) ||
++		labels["io.yunzhan.owner"] == memcachedRetentionOwner {
++		return true
++	}
++	if _, migration := labels[rabbitMQMigrationVolumeJobLabel]; migration {
+ 		return true
+ 	}
+ 	// Even an empty/damaged retention marker is NOT an ordinary container.

@@ -1,0 +1,55 @@
+name: RabbitMQ native executor volume migration and recovery
+on:
+  push:
+    branches: [codex/rabbitmq-migration-c166-native]
+    paths: [scripts/native-rabbitmq-migration-c166/inputs.json]
+permissions:
+  contents: read
+jobs:
+  native-worker:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/rabbitmq-migration-c166-native'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 28
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/native-rabbitmq-migration-c166
+            candidate/panel-integration-compose-signed-image
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.2'
+          cache: false
+      - name: Apply the pinned worker source and build the exact native executor tests
+        run: |
+          set -eu
+          fixture=scripts/native-rabbitmq-migration-c166
+          source=candidate/panel-integration-compose-signed-image
+          expected=$(jq -r '.parent_tree' "$fixture/inputs.json")
+          test "$(git rev-parse "HEAD:$source")" = "$expected"
+          expected=$(jq -r '.diff_sha256' "$fixture/inputs.json")
+          printf '%s  %s\n' "$expected" "$fixture/worker.patch" | sha256sum -c
+          git apply --directory="$source" "$fixture/worker.patch"
+          cd "$source"
+          CGO_ENABLED=0 go test -c -ldflags '-X local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/executor -o "$RUNNER_TEMP/rabbitmq-executor.test"
+      - name: Fetch the pinned AMQP fixture client
+        run: |
+          python3 -m pip download --disable-pip-version-check --no-input --index-url https://pypi.org/simple --require-hashes --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/c166-client" -r scripts/native-rabbitmq-migration-c166/pika.txt
+      - name: Exercise the real executor and recover original persistent messages
+        run: |
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-rabbitmq-migration-c166/migration.py "$RUNNER_TEMP/c166-client/pika-1.3.2-py3-none-any.whl" "$RUNNER_TEMP/c166-migration-result" "$RUNNER_TEMP/rabbitmq-executor.test"
+      - name: Read the redacted native proof
+        if: always()
+        run: sudo install -m 0644 "$RUNNER_TEMP/c166-migration-result/migration.json" "$RUNNER_TEMP/c166-migration-receipt.json"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: rabbitmq-c166-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c166-migration-receipt.json
+          if-no-files-found: error
+          retention-days: 14
