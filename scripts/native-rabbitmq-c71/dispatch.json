@@ -1,0 +1,60 @@
+{
+  "version": "0.1.0-dev.proapps24rabbitmqmigrationcandidate167",
+  "source_head": "29e94ff6973ce1073ede7317e26a9ecb358eb06b",
+  "source_inputs_sha256": "72364d2bef32f403cbf805b2ab18bf599de71ac15d53967139718c727148d46e",
+  "source_sdk_tree": "52648630547ff993bd0f03a4496c20863f71a13f",
+  "release_id": 445333046,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-amd64.tar.gz": {
+      "id": 747655485,
+      "bytes": 24249827,
+      "sha256": "1d9ae33e33510bf25f563418df34bab7145e77d7058ede645cfd0e100ff10d59"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-amd64.tar.gz.manifest": {
+      "id": 747660781,
+      "bytes": 188,
+      "sha256": "2aceb9263722503682aed3422d586395071cb34800304cc745ee7d7d425e68d1"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-amd64.tar.gz.sig": {
+      "id": 747660915,
+      "bytes": 64,
+      "sha256": "203c2df80a0e976879afee56a021595e6ab0069c4577e94e92e0c1fe024d42f3"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-arm64.tar.gz": {
+      "id": 747661047,
+      "bytes": 22453325,
+      "sha256": "466ad5a6156f13cb01845873294be52d6dcfe85f42e8b7a533fc6ebe3251f71f"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-arm64.tar.gz.manifest": {
+      "id": 747668009,
+      "bytes": 188,
+      "sha256": "f65c5eb938ea18f0e0be2899e83845fc0d25b51f35d4e9c883aa53cd0e3ae21e"
+    },
+    "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-arm64.tar.gz.sig": {
+      "id": 747668225,
+      "bytes": 64,
+      "sha256": "73f46bf9d1bf766342ed7e6dc64d8bc87ec9c8b695adfbb0268caf218b832ad5"
+    },
+    "rabbitmq-migration-signed-release.py": {
+      "id": 747668383,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 747668554,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-rabbitmqmigrationcandidate167-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-amd64.tar.gz",
+      "archive_entries": 207
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24rabbitmqmigrationcandidate167-linux-arm64.tar.gz",
+      "archive_entries": 207
+    }
+  }
+}

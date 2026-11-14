@@ -1,0 +1,66 @@
+name: Signed panel RabbitMQ original-instance migration
+on:
+  push:
+    branches: [codex/rabbitmq-migration-c167-signed-native]
+    paths: [scripts/native-rabbitmq-c71/cohort.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: c167-rabbitmq-migration-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  original-rabbitmq:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/rabbitmq-migration-c167-signed-native'
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Bind original signed release and standalone AMQP client
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          python3 -I -B scripts/native-rabbitmq-c71/download.py "$RUNNER_TEMP/c71-original-inputs" "$RUNNER_TEMP/c71-private"
+          python3 -m pip download --disable-pip-version-check --no-input --index-url https://pypi.org/simple --require-hashes --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/c71-client" -r scripts/native-rabbitmq-c71/pika.txt
+      - name: Install the original signed panel once with normal platform guards
+        run: |
+          set -eu
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-rabbitmq-c71/bootstrap-original-install.py "$RUNNER_TEMP/c71-original-inputs" "$RUNNER_TEMP/c71-private" > "$RUNNER_TEMP/c71-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/c71-private/bootstrap-step.stderr"
+      - name: Load the pinned browser driver
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          npm install --prefix "$RUNNER_TEMP/c167-chrome" --ignore-scripts --no-audit --no-fund playwright-core@1.62.1
+          google-chrome --version
+      - name: Submit the original signed migration and validate AMQP and store receipts
+        run: |
+          set -eu
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-rabbitmq-c71/rabbitmq.py "$RUNNER_TEMP/c71-private" "$RUNNER_TEMP/c71-client/pika-1.3.2-py3-none-any.whl" > "$RUNNER_TEMP/c71-private/rabbitmq-step.stdout" 2> "$RUNNER_TEMP/c71-private/rabbitmq-step.stderr"
+      - name: Migrate through the actual signed store in Chrome
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps "$(command -v node)" scripts/native-rabbitmq-c71/chrome.mjs "$RUNNER_TEMP/c71-private" "$RUNNER_TEMP/c167-chrome/node_modules/playwright-core/index.mjs"
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-rabbitmq-c71/browser-amqp.py "$RUNNER_TEMP/c71-private" "$RUNNER_TEMP/c71-client/pika-1.3.2-py3-none-any.whl" >> "$RUNNER_TEMP/c71-private/rabbitmq-step.stdout" 2>> "$RUNNER_TEMP/c71-private/rabbitmq-step.stderr"
+      - name: Encrypt original observations including any refusal
+        if: always()
+        run: sudo python3 -I -B scripts/native-rabbitmq-c71/finish.py "$RUNNER_TEMP/c71-private" "$RUNNER_TEMP/c71-public" phase1
+      - name: Retain the original outcomes
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c167-native-rabbitmq-migration-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c71-public/
+          retention-days: 14
+          if-no-files-found: error
