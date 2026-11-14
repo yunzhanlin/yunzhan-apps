@@ -35,7 +35,16 @@ function diagnosisSection(report: Record<string, unknown>): string {
       : (check.ok ?? check.valid) === true ? "通过" : "需核对";
     const http = typeof check.status === "number" ? `HTTP ${html(check.status)}` : "";
     const milliseconds = typeof check.response_ms === "number" ? `${html(check.response_ms)} 毫秒` : "";
-    const metadata = [http, milliseconds].filter(Boolean).join(" · ");
+    const tlsFields = key === "tls_certificate"
+      ? ([
+          ["tls_version", "协议"], ["not_before", "生效时间"], ["not_after", "到期时间"],
+          ["issuer", "签发者"], ["reason_code", "诊断代码"],
+        ] as const).flatMap(([field, label]) => {
+          const value = check[field];
+          return typeof value === "string" && value.length <= 1024 ? [`${label} ${html(value)}`] : [];
+        })
+      : [];
+    const metadata = [http, milliseconds, ...tlsFields].filter(Boolean).join(" · ");
     return `<tr><th scope="row">${siteDiagnosisCheckLabels[key]}</th><td>${verdict}</td><td>${html(check.detail)}${metadata ? `<p>${metadata}</p>` : ""}</td></tr>`;
   });
   return `<section><h2>${html(report.domain)}${html(report.path)}</h2><p>${html(report.checked_at)}</p>
