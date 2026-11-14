@@ -1,0 +1,39 @@
+{
+  "version": "0.1.0-dev.proapps24nginxlogmobilecandidate169",
+  "source_inputs_sha256": "a62fab92c8682926d309b73684f3e372940e1d3ea46884c915d18ee72199246a",
+  "source_head": "6bec4e88a56f19c9869f2b815e13d443a59126a0",
+  "native_fixture_parent": "6bec4e88a56f19c9869f2b815e13d443a59126a0",
+  "served_head": "47e57541656547fed4297e52ea8ab751d515369b",
+  "application": {
+    "id": "nginx",
+    "name": "Nginx",
+    "category": "deployment",
+    "version": "1.30.6-compat1",
+    "summary": "\u5b89\u88c5\u53ef\u5e76\u5b58\u7684 Nginx \u8fd0\u884c\u65f6\uff0c\u652f\u6301\u7ad9\u70b9\u7ed1\u5b9a\u3001\u914d\u7f6e\u6821\u9a8c\u548c\u5b89\u5168\u56de\u6eda\u3002",
+    "stage": "ready",
+    "risk": "maintained",
+    "provider": "runtime",
+    "target": "nginx-1.30.6",
+    "manage_route": "sites",
+    "capabilities": [
+      "\u6e90\u7801\u6821\u9a8c",
+      "\u7ad9\u70b9\u914d\u7f6e",
+      "\u70ed\u91cd\u8f7d",
+      "\u5931\u8d25\u56de\u6eda"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx/1.30.6-compat1/manifest.json",
+    "sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8"
+  },
+  "payload_files": {
+    "scripts/native-nginx-c169/bootstrap-original-install.py": "2239a4f3c06c4043e048677249e2e04e7a7edf6ce72f3ce69fe021e32138c66e",
+    "scripts/native-nginx-c169/chrome.mjs": "3fdad10f2b36a505ab46a578d13f9b64fbd2c3c93c429e96e35b3decab1bfc95",
+    "scripts/native-nginx-c169/download.py": "a0cf080a537e84bd10f216237598eab07fc35a62ba92807d12957a7d557f1221",
+    "scripts/native-nginx-c169/finish.py": "dcd209fb59da74323e500b1dae0fa1d5d13563e8f7d655ef082ef01e4d99b075",
+    "scripts/native-nginx-c169/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-nginx-c169/nginx.py": "b000665a95d8eebcab62f02cf712321b1493fa354556ac43e9fe39fc04df999f",
+    "scripts/native-nginx-c169/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-nginx-c169/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    ".github/workflows/nginx-c169-signed-native.yml": "38c3734df6dd2aa5200640c6666d46d39b3149d1b9549c236aae13280e234d37",
+    "scripts/native-nginx-c169/dispatch.json": "f9d338d916d26f0052a651374546e2b7003c52d096564563fe7fd80d068ada49"
+  }
+}

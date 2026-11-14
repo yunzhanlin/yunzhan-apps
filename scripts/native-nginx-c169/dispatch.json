@@ -1,0 +1,60 @@
+{
+  "version": "0.1.0-dev.proapps24nginxlogmobilecandidate169",
+  "source_inputs_sha256": "a62fab92c8682926d309b73684f3e372940e1d3ea46884c915d18ee72199246a",
+  "source_head": "6bec4e88a56f19c9869f2b815e13d443a59126a0",
+  "source_sdk_tree": "dab6704a460e10fe76d83fc56151ab64fedd8ead",
+  "release_id": 445358751,
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz": {
+      "id": 747768620,
+      "bytes": 24244094,
+      "sha256": "cad5b676530189a5f5e63ded5ae8526058d0a67f0af8ab1ca5ab3f70b14f5d78"
+    },
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz.manifest": {
+      "id": 747772721,
+      "bytes": 185,
+      "sha256": "27c60f06578ef89e9c984682b73aefb3323dcd93881d1b2be8d8ae318af7551c"
+    },
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz.sig": {
+      "id": 747772892,
+      "bytes": 64,
+      "sha256": "501a9bb5dd22701657806d5e699fa403eae3a5c61ba2cc4fad0e2a14824c4dbf"
+    },
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-arm64.tar.gz": {
+      "id": 747773066,
+      "bytes": 22445762,
+      "sha256": "8f31621949ebcf4aadd7dd7083e8e77963c1ca6ff53fba782a18cfe38096518f"
+    },
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-arm64.tar.gz.manifest": {
+      "id": 747778294,
+      "bytes": 185,
+      "sha256": "ace3814cef260b2d542fd8d7719410dc51944177753c9f8205597fc4fe0db56e"
+    },
+    "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-arm64.tar.gz.sig": {
+      "id": 747778479,
+      "bytes": 64,
+      "sha256": "06f3be9f20951a3b9b3649d33a3d431823c59cbd764a79d720b907b08c9d9327"
+    },
+    "rabbitmq-migration-signed-release.py": {
+      "id": 747778672,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 747778810,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "tag": "qa-nginxlogmobilecandidate169-20261114-qa1",
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-amd64.tar.gz",
+      "archive_entries": 207
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24nginxlogmobilecandidate169-linux-arm64.tar.gz",
+      "archive_entries": 207
+    }
+  }
+}
