@@ -169,6 +169,7 @@ func elasticsearchPasswordValid(password string) bool {
 }
 
 func (a *Server) dockerElasticsearchRoutes(m *http.ServeMux) {
+	a.dockerElasticsearchPolicyRoutes(m)
 	m.HandleFunc("POST /api/docker/projects/{id}/elasticsearch-snapshots/inventory", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		access, err := a.Store.UserAccess(u.ID)
 		if err != nil || !fullAdministrator(access) || len(access.SiteIDs) != 0 {

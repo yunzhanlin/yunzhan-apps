@@ -237,6 +237,27 @@ const elasticSnapshotForm = ref({ index: "", snapshot: "", restore_index: "", pa
 const elasticSnapshotResult = ref("");
 const elasticSnapshotStatus = ref<"success" | "warning">("success");
 const elasticSnapshotSubmitted = ref<string[]>([]);
+type ElasticPolicySettings = { daily_time: string; expire_days: number; min_count: number; max_count: number };
+type ElasticPolicy = {
+  project_id: string;
+  index: string;
+  revision?: string;
+  settings?: ElasticPolicySettings;
+  next_execution_millis?: number;
+  last_success?: string;
+  last_failure?: string;
+};
+const elasticPolicy = ref<ElasticPolicy>();
+const elasticPolicySettings = ref<ElasticPolicySettings>({ daily_time: "01:30", expire_days: 30, min_count: 3, max_count: 30 });
+const elasticPolicyMessage = ref("");
+const elasticPolicyAction = ref<"save" | "remove">();
+const elasticPolicyInputValid = computed(() => {
+  const { daily_time, expire_days, min_count, max_count } = elasticPolicySettings.value;
+  return /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(daily_time) &&
+    [expire_days, min_count, max_count].every(Number.isInteger) &&
+    expire_days >= 1 && expire_days <= 3650 && min_count >= 1 && max_count <= 1000 && min_count <= max_count;
+});
+
 const elasticSnapshotOperation = computed(() => {
   const { index, snapshot, restore_index } = elasticSnapshotForm.value;
   return JSON.stringify([elasticSnapshotMode.value, index, snapshot,
@@ -280,6 +301,9 @@ function openRabbitMigration(item: DockerProject) {
 }
 
 function closeElasticSnapshots() {
+  elasticPolicy.value = undefined;
+  elasticPolicyAction.value = undefined;
+  elasticPolicyMessage.value = "";
   elasticInventory.value = undefined;
   elasticInventoryCursors.value = [];
   elasticSnapshotProject.value = undefined;
@@ -332,6 +356,44 @@ function selectElasticSnapshot(row: ElasticSnapshotRow) {
   elasticSnapshotForm.value.index = row.indices[0];
   elasticSnapshotForm.value.snapshot = row.snapshot;
   generateElasticRestoreIndex();
+}
+
+async function changeElasticPolicy(action: "read" | "save" | "remove") {
+  const project = elasticSnapshotProject.value;
+  const token = contextToken();
+  const form = elasticSnapshotForm.value;
+  const { index, password } = form;
+  const previous = elasticPolicy.value;
+  if (!project || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value ||
+      !elasticSnapshotName.test(index) || !password || (action !== "read" && previous?.index !== index)) return;
+  if (action === "save" && !elasticPolicyInputValid.value) return;
+  if (action === "remove" && !previous?.revision) return;
+  const current = () => elasticSnapshotProject.value === project && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticPolicyAction.value = undefined;
+  elasticPolicyMessage.value = "";
+  try {
+    const result = await api<ElasticPolicy>(`/docker/projects/${project.id}/elasticsearch-policies/${action}`, "POST", {
+      index, password,
+      ...(action !== "read" && previous?.revision ? { revision: previous.revision } : {}),
+      ...(action === "save" ? { settings: { ...elasticPolicySettings.value } } : {}),
+    });
+    if (result.project_id !== project.id || result.index !== index) throw new Error("快照策略与当前项目或索引不一致");
+    elasticPolicy.value = result;
+    elasticPolicySettings.value = result.settings ? { ...result.settings } :
+      { daily_time: "01:30", expire_days: 30, min_count: 3, max_count: 30 };
+    if (action === "save") elasticPolicyMessage.value = "快照策略已保存。";
+    if (action === "remove") elasticPolicyMessage.value = "已停止自动创建和保留清理。";
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticPolicy.value = undefined;
+      elasticPolicyMessage.value = error instanceof Error ? error.message : "快照策略结果待核对";
+    }
+  } finally {
+    form.password = "";
+    finishBusy(token, ticket);
+  }
 }
 
 function elasticSnapshotStarted(milliseconds: number) {
@@ -1880,6 +1942,46 @@ async function removeVolume(item: DockerVolume) {
         </div>
       </template>
     </section>
+    <details class="elastic-snapshot-inventory">
+      <summary>自动快照与保留</summary>
+      <p>使用上方的源索引和管理员密码。保留策略只处理此策略生成的快照。</p>
+      <el-button :disabled="busy || !elasticSnapshotName.test(elasticSnapshotForm.index) || !elasticSnapshotForm.password"
+        @click="changeElasticPolicy('read')">读取策略</el-button>
+      <p v-if="elasticPolicyMessage" role="status">{{ elasticPolicyMessage }}</p>
+      <el-form v-if="elasticPolicy?.index === elasticSnapshotForm.index" label-position="top" :disabled="busy"
+        class="elastic-snapshot-inventory" @submit.prevent>
+        <p v-if="!elasticPolicy.settings">尚未启用自动快照。</p>
+        <template v-else>
+          <p v-if="elasticPolicy.next_execution_millis">下次运行 {{ elasticSnapshotStarted(elasticPolicy.next_execution_millis) }}</p>
+          <p v-if="elasticPolicy.last_success">最近成功 {{ elasticPolicy.last_success }}</p>
+          <p v-if="elasticPolicy.last_failure">最近失败 {{ elasticPolicy.last_failure }}</p>
+        </template>
+        <el-form-item label="每天执行时间（UTC）">
+          <el-input v-model="elasticPolicySettings.daily_time" type="time" />
+        </el-form-item>
+        <el-form-item label="保留天数">
+          <el-input-number v-model="elasticPolicySettings.expire_days" :min="1" :max="3650" :step="1" :precision="0" />
+        </el-form-item>
+        <el-form-item label="最少保留份数">
+          <el-input-number v-model="elasticPolicySettings.min_count" :min="1" :max="1000" :step="1" :precision="0" />
+        </el-form-item>
+        <el-form-item label="最多保留份数">
+          <el-input-number v-model="elasticPolicySettings.max_count" :min="1" :max="1000" :step="1" :precision="0" />
+        </el-form-item>
+        <el-button type="primary" :disabled="busy || !elasticPolicyInputValid || !elasticSnapshotForm.password"
+          @click="elasticPolicyAction = 'save'">保存策略</el-button>
+        <el-button v-if="elasticPolicy.settings" :disabled="busy || !elasticSnapshotForm.password"
+          @click="elasticPolicyAction = 'remove'">停用策略</el-button>
+        <div v-if="elasticPolicyAction" class="elastic-snapshot-inventory" role="group" aria-label="确认快照策略">
+          <p>{{ elasticPolicyAction === "save" ? "启用后将定期创建快照，并按所填规则清理该策略生成的快照。" : "停用后保留已有快照。" }}</p>
+          <el-button :disabled="busy" @click="elasticPolicyAction = undefined">取消</el-button>
+          <el-button :disabled="busy || !elasticSnapshotForm.password" type="primary"
+            @click="changeElasticPolicy(elasticPolicyAction)">
+            {{ elasticPolicyAction === "save" ? "确认保存" : "确认停用" }}
+          </el-button>
+        </div>
+      </el-form>
+    </details>
     <template #footer>
       <el-button @click="closeElasticSnapshots">关闭</el-button>
       <el-button :disabled="busy || !elasticSnapshotValid" @click="submitElasticSnapshot(true)">核对状态</el-button>

@@ -462,6 +462,7 @@ func readElasticsearchSnapshotPage(ctx context.Context, call func(context.Contex
 }
 
 func dockerElasticsearchRoutes(m *http.ServeMux) {
+	dockerElasticsearchPolicyRoutes(m)
 	m.HandleFunc("POST /v1/docker/projects/{id}/elasticsearch-snapshots/inventory", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		var in core.ElasticsearchSnapshotInventoryRequest
