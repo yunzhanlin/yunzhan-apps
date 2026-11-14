@@ -1,0 +1,55 @@
+name: Signed Nginx ordinary logs on Ubuntu 26 AMD64
+on:
+  push:
+    branches: [codex/nginx-logs-ubuntu26-c170-native]
+    paths: [scripts/native-nginx-c170/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: c170-nginx-ubuntu26-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/nginx-logs-ubuntu26-c170-native'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          sparse-checkout: scripts/native-nginx-c170
+      - name: Download the exact signed panel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          fixture=scripts/native-nginx-c170
+          root="$RUNNER_TEMP/nginx-c170-signed"
+          mkdir -m 700 "$root"
+          tag=$(jq -r '.tag' "$fixture/dispatch.json")
+          test "$tag" = qa-nginxlogmobilecandidate169-20261114-qa1
+          test "$(git rev-parse HEAD^)" = "$(jq -r .published_head "$fixture/dispatch.json")"
+          gh release download "$tag" --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --pattern 'rabbitmq-migration-signed-release.py' --dir "$root"
+          mv "$root/rabbitmq-migration-signed-release.py" "$root/signed-release.py"
+          cp "$fixture/guest.py" "$root/guest.py"
+          cp "$fixture/payload.json" "$root/assets.json"
+      - name: Prepare isolated hardware virtualization
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Exercise signed Nginx installation and real HTTP log rotation
+        run: |
+          set -eu
+          mkdir -m 700 "$RUNNER_TEMP/nginx-c170-public"
+          sudo -n python3 -I -B scripts/native-nginx-c170/kvm.py "$RUNNER_TEMP/nginx-c170-signed" scripts/native-nginx-c170 "$RUNNER_TEMP/nginx-c170-public" ubuntu26
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c170-nginx-native-ubuntu26-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/nginx-c170-public/
+          retention-days: 14
+          if-no-files-found: warn

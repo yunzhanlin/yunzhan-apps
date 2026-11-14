@@ -1,0 +1,8 @@
+{
+  "published_head": "6bec4e88a56f19c9869f2b815e13d443a59126a0",
+  "tag": "qa-nginxlogmobilecandidate169-20261114-qa1",
+  "release_id": 445358751,
+  "payload_sha256": "d9e86f0f2a7d5aad3c9149e0b845b42d786b973a1bde72c8c32af4675aa7d81f",
+  "cases_sha256": "6357aeb06c6603509ec121bd9026ee53a44e380b5aae47d3fef7f3dfb3e6ac00",
+  "kvm_sha256": "992939d39eddf30591ee273cbc5ff1f83e61c8b54a56b4db5b40977113e5bb4a"
+}
