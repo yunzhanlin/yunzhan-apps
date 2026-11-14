@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "e1b1135bec9f0c3502e3e739f1c667d1a1b955ef304f8f8b320e9464cfbd059a",
+  "kvm_sha256": "163e7c63e27f35f919f5e84ced3a50151ded069d162ae87c31533d564271139d",
+  "payload_sha256": "a941ff5c1b2bf7ec63523b0f00f0bb99fff4f34312bd36f0d87f97dd6adc722d",
+  "published_head": "450ab4b96d392cab93acc0812354ed43fd3a6601",
+  "qa_catalogue_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "tag": "qa-redispersistencecandidate183-20261115-qa1"
+}
