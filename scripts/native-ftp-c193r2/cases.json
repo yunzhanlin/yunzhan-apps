@@ -1,0 +1,24 @@
+{
+  "debian13": {
+    "architecture": "amd64",
+    "digest": "sha512:7ae53e9dbee282bfc16f289dec483dde3a8598769c38a267948310f7a2a52c662620198603bc52c142627efba379863d16079698a10b34102d55bcedd40e8d32",
+    "guest": "guest.py",
+    "guest_sha256": "129441a3b30532d35c15acdab5dda4c5f27c38c00e6982c2ffcec47bebc3e2b7",
+    "hostname": "yunzhan-qa-ftp-c193r2-debian13-amd64",
+    "image": "https://cloud.debian.org/images/cloud/trixie/20260712-2537/debian-13-genericcloud-amd64-20260712-2537.qcow2",
+    "observation_seconds": 90,
+    "official_checksums_sha256": "573ce6bb8820498419dfb51221864cdbceebb5ef59ee00a93c0547137c30ef17",
+    "platform": "debian-13"
+  },
+  "ubuntu22": {
+    "architecture": "amd64",
+    "digest": "sha256:012d81fade7e8ff4428fc35dfeee711d66d1f47d5ea9c5c8ced96a85b959835c",
+    "guest": "guest.py",
+    "guest_sha256": "129441a3b30532d35c15acdab5dda4c5f27c38c00e6982c2ffcec47bebc3e2b7",
+    "hostname": "yunzhan-qa-ftp-c193r2-ubuntu22-amd64",
+    "image": "https://cloud-images.ubuntu.com/jammy/20261004/jammy-server-cloudimg-amd64.img",
+    "observation_seconds": 90,
+    "official_checksums_sha256": "75fa01bb93c2859ca88ab5821fe9ae4eb3ada1ef356d663abfb2f41a7c270e01",
+    "platform": "ubuntu-22.04"
+  }
+}
