@@ -1,0 +1,42 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "97394f4c0c9f00461a86a519d2a06c829c2f85c6ab68524de932a65a21b752b9",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz": "94fc807c781710125c0c8cf62cc1e4c5b136702b578c8abf1412895610601b28",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz.manifest": "a3936a56feae2fd984420ccc5cab222f0b3dd87212b8f004cd4a5de3ca2537c8",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz.sig": "16de7561f76508bda439abc1f09b376ed129b82d837b07cafaf5cd906d92594b",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "ftp": {
+    "capabilities": [
+      "\u53cc\u901a\u9053 FTPS \u4e0e chroot",
+      "\u865a\u62df\u8d26\u6237\u4e0e\u5bc6\u7801\u8f6e\u6362",
+      "\u8d26\u6237\u4e0a\u4f20\u4e0b\u8f7d\u9650\u901f",
+      "\u771f\u5b9e FTPS \u4e0a\u4f20\u4e0b\u8f7d\u4e0e\u4f20\u8f93\u65e5\u5fd7",
+      "FTP \u5bb9\u91cf\u4e0e\u6570\u91cf\u8f6f\u914d\u989d",
+      "\u5ba2\u6237\u7aef IPv4/CIDR \u8bbf\u95ee\u63a7\u5236",
+      "\u53cc\u6587\u4ef6\u5931\u8d25\u6062\u590d",
+      "\u88ab\u52a8\u7aef\u53e3\u4e0e NAT \u901a\u544a",
+      "\u7cfb\u7edf\u4fe1\u4efb\u7684\u57df\u540d\u8bc1\u4e66",
+      "\u8d26\u6237\u4f1a\u8bdd\u4e0e\u670d\u52a1\u8fde\u63a5\u9650\u989d",
+      "\u771f\u5b9e TLS\u3001\u5728\u7ebf\u4e8b\u52a1\u9a8c\u8bc1\u4e0e\u914d\u7f6e\u56de\u6eda",
+      "\u72ec\u7acb\u8fd0\u884c\u65f6\u6821\u9a8c\u4e0e\u91cd\u542f\u6062\u590d"
+    ],
+    "category": "deployment",
+    "id": "pure-ftpd",
+    "manage_route": "app-modules",
+    "name": "Pure-FTPd",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pure-ftpd/1.0.54-compat7/manifest.json",
+    "provider": "panel-module",
+    "risk": "privileged",
+    "sha256": "046dc3ba1f6328c6334532bf92dc504485b59da1d80b8bc1f4bf40edea8be28b",
+    "stage": "ready",
+    "summary": "\u72ec\u7acb Pure-FTPd 1.0.54\uff0c\u7f51\u7ad9 chroot \u4e0e\u53cc\u901a\u9053 FTPS\uff0c\u652f\u6301\u8d26\u6237\u9650\u901f\u3001\u8f6f\u914d\u989d\u3001\u8bbf\u95ee\u548c\u4f1a\u8bdd\u9650\u5236\u3002\u53ef\u6309\u65f6\u95f4\u3001\u7ad9\u70b9\u3001\u8d26\u6237\u548c\u65b9\u5411\u67e5\u8be2\u5f53\u524d\u4fdd\u7559\u7684\u771f\u5b9e\u4f20\u8f93\u65e5\u5fd7\u3002",
+    "target": "pure-ftpd",
+    "version": "1.0.54-compat7"
+  },
+  "served_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "source_inputs_sha256": "ac71d54ab3b7610b5e83956cc043061529c4d06f987c4db1b437c5178fe4c2c1",
+  "version": "0.1.0-dev.proapps24installcrashdurablecandidate192"
+}
