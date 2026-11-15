@@ -140,12 +140,17 @@ func (s *Service) readFTPTransferHistory(ctx context.Context, query core.FTPTran
 	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
 	// Journal executable and unit metadata authenticate both paths across a runtime update.
-	executables := []string{s.ftpRuntimeBinary(ftpLegacyRuntimeVersion, "pure-ftpd"), s.ftpRuntimeBinary(ftpRuntimeVersion, "pure-ftpd")}
-	command := exec.CommandContext(ctx, "/usr/bin/journalctl", "--no-pager", "--quiet", "--reverse",
+	executables := make([]string, 0, len(ftpSupportedRuntimeVersions))
+	args := []string{"--no-pager", "--quiet", "--reverse",
 		"--output=json", "--output-fields=__REALTIME_TIMESTAMP,_SYSTEMD_UNIT,_EXE,SYSLOG_IDENTIFIER,_TRANSPORT,MESSAGE",
-		"--lines="+strconv.Itoa(ftpTransferJournalLimit), "--since="+asJournalTime(from), "--until="+asJournalTime(to),
-		"_SYSTEMD_UNIT="+ftpTransferUnit, "_EXE="+executables[0], "_EXE="+executables[1],
-		"_TRANSPORT=syslog", "SYSLOG_IDENTIFIER=pure-ftpd", "PRIORITY=5")
+		"--lines=" + strconv.Itoa(ftpTransferJournalLimit), "--since=" + asJournalTime(from), "--until=" + asJournalTime(to),
+		"_SYSTEMD_UNIT=" + ftpTransferUnit, "_TRANSPORT=syslog", "SYSLOG_IDENTIFIER=pure-ftpd", "PRIORITY=5"}
+	for _, version := range ftpSupportedRuntimeVersions {
+		executable := s.ftpRuntimeBinary(version, "pure-ftpd")
+		executables = append(executables, executable)
+		args = append(args, "_EXE="+executable)
+	}
+	command := exec.CommandContext(ctx, "/usr/bin/journalctl", args...)
 	command.Env = []string{"PATH=/usr/bin:/bin", "LC_ALL=C"}
 	stdout, stderr := &boundedBuffer{max: 4 << 20}, &boundedBuffer{max: 4096}
 	command.Stdout, command.Stderr = stdout, stderr

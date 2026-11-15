@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24ftpfilequotacandidate195-linux-amd64.tar.gz",
-    "archive_sha256": "aa939e6fb8f9273134066998ae7dd450e2ab86c3f0c66b2c7f8866e2936fa2bd",
-    "frozen_inputs_sha256": "7a54291ec994649c4d6d397e8ceb613fae92cc9bca2f6ce0143da694e13ee476"
+    "archive": "panel-0.1.0-dev.proapps24ftpfilequotacandidate195r2-linux-amd64.tar.gz",
+    "archive_sha256": "ba7d51e295772a605ddd035f65a08e4022c9404073c490c398817d0426334486",
+    "frozen_inputs_sha256": "27b7a4e47ceb9ff09c010849882e28bf6b4aaaec72b7f8e3ef8735c00e5c9aa4"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -970,11 +970,11 @@
     "internal/executor/app_disk_usage_linux_test.go": "0257a54a8222b4b0f0b0524eadfd5531fbf21c607a60198945420ed9ae7e5bd5",
     "internal/executor/app_ftp_accounts_linux.go": "ebf3e80e5afbd3b828fc1b41d68d8678a5fafa57e3065ec9d5f2bf3eca8560d2",
     "internal/executor/app_ftp_accounts_linux_test.go": "ac3f8b74de097d92b42fa94e674c1764edca4c143bef04ab220b56c95b291794",
-    "internal/executor/app_ftp_runtime_linux.go": "2761a6169187090307596ded3ea5228aa1c58eed173472b54961c0a629dfbdc4",
+    "internal/executor/app_ftp_runtime_linux.go": "3bf9dd80dcb0ed4f7260e6d0cedd1082805a73e4b411bce731821680a2920f41",
     "internal/executor/app_ftp_runtime_linux_test.go": "aeaa184b5cdb3a4d1c8dd9686d734d93f55ef877668c80b040cc5d033e823cb0",
     "internal/executor/app_ftp_service_linux.go": "cec889720cac9d0637ea9bbd1ebb544db98e8930d3b33d5a53cc89bf8e9ca9ed",
     "internal/executor/app_ftp_service_linux_test.go": "a51f144bbb64e3d039d722d6f9fb427f4043814edf5c5335cf7d851eeb006371",
-    "internal/executor/app_ftp_transfer_history_linux.go": "b0c3d7c28ea47b40fef685332daa496c9e5fbc7065e87dcc8e164371433de433",
+    "internal/executor/app_ftp_transfer_history_linux.go": "20e5ed3516bca7a709e072794f099c641679bf4d8129d936b73429267a2228e2",
     "internal/executor/app_ftp_transfer_history_linux_test.go": "24e31d7930117771c73f23bbd6d5ec86079df7a98d13ede9dd0df74ae9859d00",
     "internal/executor/app_integrity_policies_linux.go": "4bbeab3360d2bad94e9e24e7df636f819aaf38e99328f4386d8faa9d9d5adeeb",
     "internal/executor/app_integrity_realtime_linux.go": "253610864de5962e20c3a6eb31d42beb6ec1c651aa1154c8999411646ec10dd3",
@@ -1276,6 +1276,7 @@
     "internal/executor/assets/pure-ftpd-NOTICES.txt": "c80b0adca3cd795e58245544a0642f2844d4c45feecab77556d28aa93022c1a6",
     "internal/executor/assets/pure-ftpd-file-only-quota.patch": "ac3dd68fb3c22b419661b6367f7e2ca65772d693d9307a7125be81b777304b40",
     "internal/executor/assets/pure-ftpd-low-rate-chunks.patch": "516aa1d271a7abeb67567adae483589dadfd356178a57e2676251c3bd38b7e0e",
+    "internal/executor/assets/pure-ftpd-preflight-upload-quota.patch": "c8c673d0043d76e3d4c2f81122de76d7dbd4f9aa0fe9df2f4d6bf58e79f4f509",
     "internal/executor/assets/pure-ftpd-throttle-accounted-bytes.patch": "af550e300c5482b6445f59b050c3c2f1f30251b230dde50de4032f407b3cef76",
     "internal/executor/assets/pure-ftpd-tls-buffer-v2.patch": "8a459993b514b5c28f1cce16f4ab338f285273f37ca7d9434faf92c1d1b11763",
     "internal/executor/assets/pure-ftpd-unprivileged-version.patch": "e286b9d50bbe0130c1b76d0a65ae25398a62b9aad15e63084933fef16bcbf398",
