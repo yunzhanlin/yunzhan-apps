@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "2a47a30ed627c2cd6f335e3de925eac4cdbcfac9c391fc37ff8fcd28b40c7978",
+  "kvm_sha256": "15fb9f99dc6267a15fe9e3a8de02f6ef1a6ca45502a36c4e52e497a4c653bef4",
+  "payload_sha256": "a3efd503e5fcbbe7f706c41ffa339c9a0700dd61250980370ddd3422f6784ec0",
+  "published_head": "4195cae94925239802835ca8d888d972b470b24f",
+  "release_id": 445700977,
+  "tag": "qa-installcrashdurablecandidate192-20261115-qa1"
+}

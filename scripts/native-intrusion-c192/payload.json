@@ -1,0 +1,41 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "827f154dd5d31f772f50f37d4b9cf688a3744395b2564595c988b60f7dacee22",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz": "94fc807c781710125c0c8cf62cc1e4c5b136702b578c8abf1412895610601b28",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz.manifest": "a3936a56feae2fd984420ccc5cab222f0b3dd87212b8f004cd4a5de3ca2537c8",
+    "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz.sig": "16de7561f76508bda439abc1f09b376ed129b82d837b07cafaf5cd906d92594b",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "intrusion": {
+    "capabilities": [
+      "\u5b9e\u9645 SSH \u7aef\u53e3\u4e0e IPv4/IPv6 \u5c01\u7981\u6838\u9a8c",
+      "\u56fa\u5b9a systemd \u65e5\u5fd7\u548c\u539f\u751f nftables",
+      "\u6587\u4ef6\u3001\u8fdb\u7a0b\u8d77\u59cb\u8eab\u4efd\u3001\u8fd0\u884c\u7b56\u7565\u53ca\u5185\u6838\u8054\u5408\u6838\u5bf9",
+      "\u4fdd\u7559\u73b0\u6709\u5c01\u7981\u7684\u9650\u989d\u53ca\u7aef\u53e3\u914d\u7f6e",
+      "\u539f\u4efb\u52a1\u4e0e\u5b8c\u6574\u6458\u8981\u7ed1\u5b9a\u7684\u663e\u5f0f\u6062\u590d",
+      "\u672a\u77e5\u7ed3\u679c\u4fdd\u7559\u539f\u8bc1\u636e\u4e14\u7981\u6b62\u9690\u5f0f\u91cd\u8bd5",
+      "\u5ba1\u8ba1\u89e3\u5c01\u4e0e\u5e76\u53d1\u4e92\u65a5",
+      "\u539f\u8d26\u6237\u8bf7\u6c42\u76ee\u5f55\u548c\u540e\u7aef\u6743\u9650\u7ea6\u675f",
+      "Ubuntu22.04 / Fail2ban0.11.2 \u56fa\u5b9a\u517c\u5bb9",
+      "Debian 12 / Fail2ban 1.0.2 \u517c\u5bb9",
+      "\u4fdd\u7559\u65e7\u7248\u672c\u7b56\u7565\u4e0e\u4e8b\u52a1\u56de\u6267"
+    ],
+    "category": "professional",
+    "id": "anti-intrusion",
+    "manage_route": "security",
+    "name": "SSH \u9632\u5165\u4fb5 \u00b7 Anti-intrusion",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/anti-intrusion/1.1.2/manifest.json",
+    "provider": "panel-module",
+    "risk": "privileged",
+    "sha256": "dd15a4efbe4fb8b6e0eff259a7b97a002aeaa14d2d34d3ecb930afa10ab5a0a9",
+    "stage": "ready",
+    "summary": "SSH \u5931\u8d25\u767b\u5f55\u7684\u53cc\u6808\u5c01\u7981\u3001\u5ba1\u8ba1\u89e3\u5c01\u548c\u539f\u4efb\u52a1\u6062\u590d\u3002\u652f\u6301 Debian 12/13 \u4e0e Ubuntu 22.04/24.04\uff0c\u66f4\u65b0\u4fdd\u7559\u73b0\u6709\u7b56\u7565\u3001\u5c01\u7981\u548c\u539f\u4efb\u52a1\u3002",
+    "target": "intrusion-prevention",
+    "version": "1.1.2"
+  },
+  "served_head": "7cd2f7b2d4d03230b7ce24c021b0b462d8fe05c3",
+  "source_inputs_sha256": "ac71d54ab3b7610b5e83956cc043061529c4d06f987c4db1b437c5178fe4c2c1",
+  "version": "0.1.0-dev.proapps24installcrashdurablecandidate192"
+}
