@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "channel": "candidate",
-  "generated_at": "2026-11-14T16:44:25Z",
+  "generated_at": "2026-11-15T01:47:00Z",
   "apps": [
     {
       "schema_version": 1,
@@ -267,6 +267,50 @@
     },
     {
       "schema_version": 1,
+      "id": "elasticsearch",
+      "name": "Elasticsearch",
+      "category": "deployment",
+      "version": "9.1.4-compat2",
+      "summary": "Elasticsearch 9.1.4 单节点检索。按索引创建快照，在新索引验证恢复，索引与快照使用独立命名卷。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "elasticsearch-snapshot",
+        "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "认证与回环连接",
+        "可持久索引及检索",
+        "独立快照卷",
+        "创建指定索引快照",
+        "恢复到新索引并核对健康"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/_cluster/health"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
       "id": "enterprise-tamper-proof",
       "name": "Tamper-proof for Enterprise",
       "category": "professional",
@@ -476,6 +520,50 @@
       "uninstall": {
         "preserve_data": true,
         "reference_check": false
+      }
+    },
+    {
+      "schema_version": 1,
+      "id": "mongodb",
+      "name": "MongoDB",
+      "category": "deployment",
+      "version": "8.0.38-compat1",
+      "summary": "MongoDB 8.0.38 单节点，支持回环连接、账号认证和持久卷。修复 Ubuntu 7.0 内核补丁版识别。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "mongodb-8038",
+        "image": "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "认证与回环连接",
+        "文档增删改查与索引",
+        "独立持久数据卷",
+        "随机初始凭据",
+        "可在独立端口验证备份恢复"
+      ],
+      "health": {
+        "probe": "tcp",
+        "target": "127.0.0.1:27017"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
       }
     },
     {
@@ -1384,6 +1472,60 @@
     },
     {
       "schema_version": 1,
+      "id": "platform-ops",
+      "name": "Platform Ops",
+      "category": "professional",
+      "version": "1.3.1",
+      "summary": "多主机健康检查、单机受控 Nginx 维护，以及 2–8 台独立授权面板的批量配置检查。逐台核对计划及原回执，结果未确认时只读核对。",
+      "stage": "ready",
+      "risk": "privileged",
+      "delivery": {
+        "provider": "panel-module",
+        "target": "platform-ops",
+        "manage_route": "app-modules"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "多主机 HTTPS 健康聚合",
+        "旧只读令牌不升级权限",
+        "加密凭据与令牌撤销",
+        "独立限时可撤销维护授权",
+        "安装实例绑定及重装旧授权失效",
+        "两端管理员与计划摘要核对",
+        "固定 Nginx 配置检查；可按 2–8 台主机批量检查",
+        "主机级受控重载提交",
+        "原任务原生回执核对",
+        "逐台结果与原请求回执；未知状态只读核对",
+        "不执行自由脚本或补丁发布",
+        "执行历史"
+      ],
+      "required_panel_features": [
+        "platform-maintenance-v1",
+        "platform-maintenance-fleet-check-v1"
+      ],
+      "health": {
+        "probe": "panel-api",
+        "target": "/api/app-modules/platform-ops"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
+    },
+    {
+      "schema_version": 1,
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
@@ -1440,8 +1582,8 @@
       "id": "pure-ftpd",
       "name": "Pure-FTPd",
       "category": "deployment",
-      "version": "1.0.54-compat7",
-      "summary": "独立 Pure-FTPd 1.0.54，网站 chroot 与双通道 FTPS，支持账户限速、软配额、访问和会话限制。可按时间、站点、账户和方向查询当前保留的真实传输日志。",
+      "version": "1.0.54-compat8",
+      "summary": "独立 Pure-FTPd 1.0.54，网站 chroot 与双通道 FTPS，支持分别限制文件数量、容量和传输速率。可按时间、站点、账户和方向查看真实传输日志。",
       "stage": "ready",
       "risk": "privileged",
       "delivery": {
@@ -1487,6 +1629,50 @@
       "required_panel_features": [
         "pure-ftpd-transfer-history-v1"
       ]
+    },
+    {
+      "schema_version": 1,
+      "id": "rabbitmq",
+      "name": "RabbitMQ",
+      "category": "deployment",
+      "version": "4.4.0-compat1",
+      "summary": "RabbitMQ 4.4.0 单节点提供持久消息队列、回环 AMQP 与管理后台。新装使用独立数据卷，旧实例可查看迁移预检。",
+      "stage": "ready",
+      "risk": "maintained",
+      "delivery": {
+        "provider": "compose",
+        "target": "rabbitmq-440",
+        "image": "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267",
+        "manage_route": "docker"
+      },
+      "compatibility": {
+        "os": [
+          "debian-12",
+          "debian-13",
+          "ubuntu-22.04",
+          "ubuntu-24.04",
+          "ubuntu-26.04"
+        ],
+        "architectures": [
+          "amd64",
+          "arm64"
+        ]
+      },
+      "capabilities": [
+        "回环 AMQP 与管理后台",
+        "独立持久数据卷",
+        "随机初始凭据",
+        "按虚拟主机查看队列与积压",
+        "旧实例的只读迁移预检"
+      ],
+      "health": {
+        "probe": "http",
+        "target": "/api/health/checks/alarms"
+      },
+      "uninstall": {
+        "preserve_data": true,
+        "reference_check": true
+      }
     },
     {
       "schema_version": 1,
@@ -1789,192 +1975,6 @@
       "required_panel_features": [
         "integrity-kernel-inode-journal-v1"
       ]
-    },
-    {
-      "schema_version": 1,
-      "id": "platform-ops",
-      "name": "Platform Ops",
-      "category": "professional",
-      "version": "1.3.1",
-      "summary": "多主机健康检查、单机受控 Nginx 维护，以及 2–8 台独立授权面板的批量配置检查。逐台核对计划及原回执，结果未确认时只读核对。",
-      "stage": "ready",
-      "risk": "privileged",
-      "delivery": {
-        "provider": "panel-module",
-        "target": "platform-ops",
-        "manage_route": "app-modules"
-      },
-      "compatibility": {
-        "os": [
-          "debian-12",
-          "debian-13",
-          "ubuntu-22.04",
-          "ubuntu-24.04",
-          "ubuntu-26.04"
-        ],
-        "architectures": [
-          "amd64",
-          "arm64"
-        ]
-      },
-      "capabilities": [
-        "多主机 HTTPS 健康聚合",
-        "旧只读令牌不升级权限",
-        "加密凭据与令牌撤销",
-        "独立限时可撤销维护授权",
-        "安装实例绑定及重装旧授权失效",
-        "两端管理员与计划摘要核对",
-        "固定 Nginx 配置检查；可按 2–8 台主机批量检查",
-        "主机级受控重载提交",
-        "原任务原生回执核对",
-        "逐台结果与原请求回执；未知状态只读核对",
-        "不执行自由脚本或补丁发布",
-        "执行历史"
-      ],
-      "required_panel_features": [
-        "platform-maintenance-v1",
-        "platform-maintenance-fleet-check-v1"
-      ],
-      "health": {
-        "probe": "panel-api",
-        "target": "/api/app-modules/platform-ops"
-      },
-      "uninstall": {
-        "preserve_data": true,
-        "reference_check": true
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "rabbitmq",
-      "name": "RabbitMQ",
-      "category": "deployment",
-      "version": "4.4.0-compat1",
-      "summary": "RabbitMQ 4.4.0 单节点提供持久消息队列、回环 AMQP 与管理后台。新装使用独立数据卷，旧实例可查看迁移预检。",
-      "stage": "ready",
-      "risk": "maintained",
-      "delivery": {
-        "provider": "compose",
-        "target": "rabbitmq-440",
-        "image": "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267",
-        "manage_route": "docker"
-      },
-      "compatibility": {
-        "os": [
-          "debian-12",
-          "debian-13",
-          "ubuntu-22.04",
-          "ubuntu-24.04",
-          "ubuntu-26.04"
-        ],
-        "architectures": [
-          "amd64",
-          "arm64"
-        ]
-      },
-      "capabilities": [
-        "回环 AMQP 与管理后台",
-        "独立持久数据卷",
-        "随机初始凭据",
-        "按虚拟主机查看队列与积压",
-        "旧实例的只读迁移预检"
-      ],
-      "health": {
-        "probe": "http",
-        "target": "/api/health/checks/alarms"
-      },
-      "uninstall": {
-        "preserve_data": true,
-        "reference_check": true
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "mongodb",
-      "name": "MongoDB",
-      "category": "deployment",
-      "version": "8.0.38-compat1",
-      "summary": "MongoDB 8.0.38 单节点，支持回环连接、账号认证和持久卷。修复 Ubuntu 7.0 内核补丁版识别。",
-      "stage": "ready",
-      "risk": "maintained",
-      "delivery": {
-        "provider": "compose",
-        "target": "mongodb-8038",
-        "image": "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c",
-        "manage_route": "docker"
-      },
-      "compatibility": {
-        "os": [
-          "debian-12",
-          "debian-13",
-          "ubuntu-22.04",
-          "ubuntu-24.04",
-          "ubuntu-26.04"
-        ],
-        "architectures": [
-          "amd64",
-          "arm64"
-        ]
-      },
-      "capabilities": [
-        "认证与回环连接",
-        "文档增删改查与索引",
-        "独立持久数据卷",
-        "随机初始凭据",
-        "可在独立端口验证备份恢复"
-      ],
-      "health": {
-        "probe": "tcp",
-        "target": "127.0.0.1:27017"
-      },
-      "uninstall": {
-        "preserve_data": true,
-        "reference_check": true
-      }
-    },
-    {
-      "schema_version": 1,
-      "id": "elasticsearch",
-      "name": "Elasticsearch",
-      "category": "deployment",
-      "version": "9.1.4-compat2",
-      "summary": "Elasticsearch 9.1.4 单节点检索。按索引创建快照，在新索引验证恢复，索引与快照使用独立命名卷。",
-      "stage": "ready",
-      "risk": "maintained",
-      "delivery": {
-        "provider": "compose",
-        "target": "elasticsearch-snapshot",
-        "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
-        "manage_route": "docker"
-      },
-      "compatibility": {
-        "os": [
-          "debian-12",
-          "debian-13",
-          "ubuntu-22.04",
-          "ubuntu-24.04",
-          "ubuntu-26.04"
-        ],
-        "architectures": [
-          "amd64",
-          "arm64"
-        ]
-      },
-      "capabilities": [
-        "认证与回环连接",
-        "可持久索引及检索",
-        "独立快照卷",
-        "创建指定索引快照",
-        "恢复到新索引并核对健康"
-      ],
-      "health": {
-        "probe": "http",
-        "target": "/_cluster/health"
-      },
-      "uninstall": {
-        "preserve_data": true,
-        "reference_check": true
-      }
     }
   ]
 }

@@ -51,6 +51,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.deepEqual(ftp.delivery, originalFTP.delivery);
   assert.deepEqual(ftp.compatibility, originalFTP.compatibility);
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pure-ftpd/1.0.54-compat6/manifest.json')).digest('hex'), '42734c490ac4c08f2040f4f50948f3d01a68aec3fcd38c577f877058d9552e97');
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pure-ftpd/1.0.54-compat7/manifest.json')).digest('hex'), '046dc3ba1f6328c6334532bf92dc504485b59da1d80b8bc1f4bf40edea8be28b');
   const originalDaily = stable.apps.find(app => app.id === 'daily-report');
   const daily = source.apps.find(app => app.id === 'daily-report');
   assert.equal(originalDaily.version, '1.4.0');
@@ -71,7 +72,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     ['mongodb', '8.0.38-compat1'],
     ['elasticsearch', '9.1.4-compat2'],
     ['docker-manager', '1-compat2'],
-    ['pure-ftpd', '1.0.54-compat7'],
+    ['pure-ftpd', '1.0.54-compat8'],
     ['daily-report', '1.4.1'],
     ['network-threat-detection', '1.3.2'],
     ['openlitespeed', '1.9.4-compat2'],

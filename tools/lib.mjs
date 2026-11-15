@@ -222,13 +222,13 @@ export function validateManifest(app) {
        Array.isArray(requirements) && requirements.includes(dockerMetricsFeature)) && !dockerMetricsScope) {
     errors.push("Docker metrics require the exact reviewed 1-compat2 runtime package");
   }
-  const ftpHistoryScope = app.id === "pure-ftpd" && app.version === "1.0.54-compat7" &&
+  const ftpHistoryScope = app.id === "pure-ftpd" && ["1.0.54-compat7", "1.0.54-compat8"].includes(app.version) &&
     app.delivery?.provider === "panel-module" && app.delivery?.target === app.id &&
     app.delivery?.manage_route === "app-modules" && Array.isArray(requirements) &&
     requirements.length === 1 && requirements[0] === ftpHistoryFeature;
-  if ((app.id === "pure-ftpd" && app.version === "1.0.54-compat7" ||
+  if ((app.id === "pure-ftpd" && ["1.0.54-compat7", "1.0.54-compat8"].includes(app.version) ||
        Array.isArray(requirements) && requirements.includes(ftpHistoryFeature)) && !ftpHistoryScope) {
-    errors.push("Pure-FTPd history requires the exact reviewed 1.0.54-compat7 module");
+    errors.push("Pure-FTPd history requires the exact reviewed Pure-FTPd module version");
   }
   const dailyReportScheduleScope = app.id === "daily-report" && app.version === "1.4.1" &&
     app.delivery?.provider === "panel-module" && app.delivery?.target === app.id &&
