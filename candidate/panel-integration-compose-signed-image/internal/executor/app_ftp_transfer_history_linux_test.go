@@ -18,7 +18,7 @@ func TestFTPTransferHistoryRejectsOtherServicesAndKeepsRelativePaths(t *testing.
 	const upload = "(qa-user@127.0.0.1) [NOTICE] " + root + "/" + site + "/public//目录/report 01.txt uploaded  (123 bytes, 2.75KB/sec)"
 	base := ftpTransferJournalEntry{Time: "1794441600000000", Unit: ftpTransferUnit, Executable: binary,
 		Identifier: "pure-ftpd", Transport: "syslog", Message: transferMessage(t, upload)}
-	record, ok := parseFTPTransfer(base, binary, root)
+	record, ok := parseFTPTransfer(base, []string{binary}, root)
 	if !ok || record.SiteID != site || record.Path != "/目录/report 01.txt" || record.Username != "qa-user" ||
 		record.ClientIP != "127.0.0.1" || record.Direction != "upload" || record.Bytes != 123 || record.KiBPerSecond != 2.75 {
 		t.Fatalf("unexpected transfer: %+v, %t", record, ok)
@@ -41,7 +41,7 @@ func TestFTPTransferHistoryRejectsOtherServicesAndKeepsRelativePaths(t *testing.
 		t.Run(name, func(t *testing.T) {
 			entry := base
 			change(&entry)
-			if value, ok := parseFTPTransfer(entry, binary, root); ok {
+			if value, ok := parseFTPTransfer(entry, []string{binary}, root); ok {
 				t.Fatalf("accepted unverified transfer: %+v", value)
 			}
 		})
@@ -63,12 +63,23 @@ func TestFTPTransferHistoryFiltersBoundedJournalRecords(t *testing.T) {
 	repeated := append(append([]byte{}, journal...), journal...)
 	at := time.UnixMicro(1794441600000000).UTC()
 	query := core.FTPTransferQuery{Minutes: 15, Limit: 1, Direction: "download", Username: "qa-user", SiteID: site}
-	report, err := ftpTransferRecords(repeated, binary, root, query, at.Add(-time.Minute), at)
+	report, err := ftpTransferRecords(repeated, []string{binary}, root, query, at.Add(-time.Minute), at)
 	if err != nil || len(report.Events) != 1 || !report.HasMore {
 		t.Fatalf("unexpected bounded result: %+v, %v", report, err)
 	}
+	const previous = "/opt/panel/app-modules/pure-ftpd/previous/pure-ftpd"
+	entry.Executable = previous
+	old, err := json.Marshal(entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	query.Limit = 2
+	report, err = ftpTransferRecords(append(journal, append(old, '\n')...), []string{previous, binary}, root, query, at.Add(-time.Minute), at)
+	if err != nil || len(report.Events) != 2 || report.HasMore {
+		t.Fatalf("runtime transition lost existing records: %+v, %v", report, err)
+	}
 	query.Direction = "upload"
-	report, err = ftpTransferRecords(repeated, binary, root, query, at.Add(-time.Minute), at)
+	report, err = ftpTransferRecords(repeated, []string{binary}, root, query, at.Add(-time.Minute), at)
 	if err != nil || len(report.Events) != 0 || report.HasMore {
 		t.Fatalf("unexpected filtered result: %+v, %v", report, err)
 	}

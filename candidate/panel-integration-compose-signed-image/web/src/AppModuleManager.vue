@@ -1373,7 +1373,7 @@ defineExpose({ show });
           :enabled="installed && !installedUnknown && installedVersion === '1.4.1'" />
         <FTPTransferHistory v-else-if="definition.id === 'pure-ftpd' && section.id === 'transfers'"
           :key="'ftp-transfers/' + geoActor" :api="api" :sites="sites" :active="visible && activeTab === 'transfers'"
-          :enabled="installed && !installedUnknown && installedVersion === '1.0.54-compat7'" />
+          :enabled="installed && !installedUnknown && ['1.0.54-compat7', '1.0.54-compat8'].includes(installedVersion)" />
         <TaskHostInventory v-else-if="definition.id === 'task-manager' && section.id.startsWith('inventory-')"
           :key="section.id + '/' + geoActor" :api="api" :view="section.id.slice('inventory-'.length)"
           :active="visible && activeTab === section.id"

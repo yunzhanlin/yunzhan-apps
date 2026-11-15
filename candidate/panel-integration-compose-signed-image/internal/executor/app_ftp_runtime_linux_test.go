@@ -15,11 +15,17 @@ import (
 func ftpRuntimeFixture(t *testing.T) *Service {
 	t.Helper()
 	s, _ := ftpServiceFixture(t)
-	dir := s.systemPath(filepath.Join(appNativeRoot, "pure-ftpd", ftpRuntimeVersion))
+	writeFTPRuntimeFixture(t, s, ftpRuntimeVersion)
+	return s
+}
+
+func writeFTPRuntimeFixture(t *testing.T, s *Service, version string) {
+	t.Helper()
+	dir := s.systemPath(filepath.Join(appNativeRoot, "pure-ftpd", version))
 	if e := os.MkdirAll(dir, 0755); e != nil {
 		t.Fatal(e)
 	}
-	m := ftpRuntimeManifest{ftpRuntimeVersion, runtime.GOARCH, ftpRuntimeSourceSHA, ftpRuntimePatchSHA(), map[string]string{}, core.Now()}
+	m := ftpRuntimeManifest{version, runtime.GOARCH, ftpRuntimeSourceSHA, ftpRuntimePatchSHA(version), map[string]string{}, core.Now()}
 	for _, name := range []string{"pure-ftpd", "pure-pw", "pure-ftpwho", "COPYING"} {
 		b := []byte("reviewed-test-fixture-" + name)
 		mode := os.FileMode(0755)
@@ -34,7 +40,6 @@ func ftpRuntimeFixture(t *testing.T) *Service {
 	if e := moduleWrite(filepath.Join(dir, "manifest.json"), m); e != nil {
 		t.Fatal(e)
 	}
-	return s
 }
 func TestFTPPrivateRuntimeTrustAndSelection(t *testing.T) {
 	s := ftpRuntimeFixture(t)
@@ -45,6 +50,14 @@ func TestFTPPrivateRuntimeTrustAndSelection(t *testing.T) {
 	legacy, e := s.ftpBinary("pure-pw")
 	if e != nil || !strings.HasSuffix(legacy, "/usr/bin/pure-pw") {
 		t.Fatal(legacy, e)
+	}
+	writeFTPRuntimeFixture(t, s, ftpLegacyRuntimeVersion)
+	if e = moduleWrite(filepath.Join(dir, "runtime.json"), map[string]string{"version": ftpLegacyRuntimeVersion}); e != nil {
+		t.Fatal(e)
+	}
+	oldDaemon, e := s.ftpBinary("pure-ftpd")
+	if e != nil || oldDaemon != s.ftpRuntimeBinary(ftpLegacyRuntimeVersion, "pure-ftpd") || !s.ftpManagedDaemon(oldDaemon) {
+		t.Fatal(oldDaemon, e)
 	}
 	if e = moduleWrite(filepath.Join(dir, "runtime.json"), map[string]string{"version": ftpRuntimeVersion}); e != nil {
 		t.Fatal(e)

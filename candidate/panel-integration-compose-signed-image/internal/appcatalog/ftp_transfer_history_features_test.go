@@ -7,8 +7,12 @@ func TestFTPTransferHistoryRequiresItsExactPackageAndFeature(t *testing.T) {
 		Delivery:              Delivery{Provider: "panel-module", Target: "pure-ftpd", ManageRoute: "app-modules"},
 		RequiredPanelFeatures: []string{FTPTransferHistoryFeature}}
 	available := func(feature string) bool { return feature == FTPTransferHistoryFeature }
-	if ok, err := validateFTPTransferHistoryRequirement(valid, available); !ok || err != nil {
-		t.Fatalf("valid package rejected: %v", err)
+	for _, version := range []string{FTPTransferHistoryVersion, FTPFileQuotaVersion} {
+		candidate := valid
+		candidate.Version = version
+		if ok, err := validateFTPTransferHistoryRequirement(candidate, available); !ok || err != nil {
+			t.Fatalf("valid package %s rejected: %v", version, err)
+		}
 	}
 	if ok, err := validateFTPTransferHistoryRequirement(valid, nil); !ok || err == nil {
 		t.Fatal("package admitted without a compiled handler")

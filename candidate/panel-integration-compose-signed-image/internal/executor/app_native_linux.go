@@ -351,7 +351,7 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
 		enabled, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-enabled", "panel-pure-ftpd.service")
 		runtimeBinary, runtimeErr := s.ftpBinary("pure-ftpd")
-		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "soft_quota": true, "shared_home_counter": true, "recovery_pending": s.ftpRecoveryPending(), "runtime_binary": runtimeBinary, "account_limits_ready": runtimeErr == nil && strings.Contains(runtimeBinary, ftpRuntimeVersion)}
+		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "soft_quota": true, "shared_home_counter": true, "recovery_pending": s.ftpRecoveryPending(), "runtime_binary": runtimeBinary, "account_limits_ready": runtimeErr == nil && s.ftpManagedDaemon(runtimeBinary)}
 		if runtimeErr != nil {
 			report["runtime_error"] = runtimeErr.Error()
 		}

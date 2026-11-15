@@ -121,7 +121,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 		}
 	}
 	if id == "pure-ftpd" {
-		if comparison, valid := appcatalog.CompareVersions(version, appcatalog.FTPTransferHistoryVersion); !valid || comparison >= 0 && version != appcatalog.FTPTransferHistoryVersion {
+		if comparison, valid := appcatalog.CompareVersions(version, appcatalog.FTPTransferHistoryVersion); !valid || comparison >= 0 && !appcatalog.FTPTransferHistorySupported(version) {
 			return errors.New("Pure-FTPd 传输日志仅支持已实现的完整版本")
 		}
 	}
@@ -382,7 +382,7 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if id == "daily-report" && version == appcatalog.DailyReportScheduleVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("日报生成时间版须通过签名应用商店安装或更新")
 	}
-	if id == "pure-ftpd" && version == appcatalog.FTPTransferHistoryVersion && (action == "install" || action == "update") && bind == nil {
+	if id == "pure-ftpd" && appcatalog.FTPTransferHistorySupported(version) && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("Pure-FTPd 传输日志版须通过签名应用商店安装或更新")
 	}
 	if id == "site-diagnosis" && appcatalog.SiteDiagnosisSignedVersion(version) && (action == "install" || action == "update") && bind == nil {

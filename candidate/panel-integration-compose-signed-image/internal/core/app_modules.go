@@ -489,7 +489,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "website-analytics":
 			version = appcatalog.AnalyticsSessionActivityVersion
 		case "pure-ftpd":
-			version = appcatalog.FTPTransferHistoryVersion
+			version = appcatalog.FTPFileQuotaVersion
 		case "nfs-manager":
 			version = NFSPrivateClientAppVersion
 		case "network-threat-detection":

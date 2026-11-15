@@ -208,7 +208,7 @@ func (s *Service) mutateFTPAccount(ctx context.Context, action string, in core.A
 	if action == "account-limits" || action == "recount-quota" {
 		if s.Config.SystemRoot == "/" {
 			binary, e := s.ftpBinary("pure-ftpd")
-			if e != nil || !strings.Contains(binary, ftpRuntimeVersion) {
+			if e != nil || !s.ftpManagedDaemon(binary) {
 				return nil, errors.New("账户限额需先在软件商店更新 FTP 到受管独立运行时；旧服务不会静默替换")
 			}
 		}
