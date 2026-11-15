@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "release": {
-    "archive": "panel-0.1.0-dev.proapps24analyticsvisualreplaycandidate190r2-linux-amd64.tar.gz",
-    "archive_sha256": "9fdaa9cce20fb80c2f9cfdd53090a7eaf1cdc96344ac48a51aad32cf2695dbdd",
-    "frozen_inputs_sha256": "f52a00280cbdd4a3be4781e24063de739d4351fecc877f9fb3ff86df82c41261"
+    "archive": "panel-0.1.0-dev.proapps24installcrashdurablecandidate192-linux-amd64.tar.gz",
+    "archive_sha256": "94fc807c781710125c0c8cf62cc1e4c5b136702b578c8abf1412895610601b28",
+    "frozen_inputs_sha256": "ac71d54ab3b7610b5e83956cc043061529c4d06f987c4db1b437c5178fe4c2c1"
   },
   "files": {
     "cmd/executor/cli_arguments.go": "07e738291821fc03b5e605ee165eb735fe06a3b7a901bf34092701e007b9745f",
@@ -2287,7 +2287,7 @@
     "packaging/first-install.py": "88cc028bc716d4ad676c976776a4c4f78eb5d6884939faa0e84efd023c2ea33d",
     "packaging/freeze-source.py": "5aba3c7886c8b9196b56101b8c544b9c240d5f9fd1719d90e0bb6ee12a9bb3a2",
     "packaging/fresh-ssh-policy.py": "f60e8171e4ef15c0c85795d4ecb20d00a2b5cbe881690acffd73b9ce4ab085bb",
-    "packaging/install.sh": "da99ebb49adad80a1cdbbf053207b1242c2ddd101a3a3be7f94b19c830bf6d72",
+    "packaging/install.sh": "22372c7c193d152a9721d21f5150035ceef82f509a787d95601ff035c97c3b33",
     "packaging/native-build-directories.py": "f03e653abf6c46a7b9473b02362b69da093551eb7cd3239f780b39efc33c1a7d",
     "packaging/native_test_oracle.py": "61ea8243e27d706593943f5903fcff9d1643681ea43d3ba769cf11c97419763f",
     "packaging/prune-releases.py": "0fd7436b139ad823167590bef4ae52a778061c9139a969933e974496ddc6c563",
@@ -2307,7 +2307,7 @@
     "packaging/test_geodata_upgrade_lease.py": "6246af57f41d80a2439085ff1f913ff676d4b2d20f5ba1d28aeca43ff8c992e6",
     "packaging/test_install_dependency_policy.py": "89e22c2e105881d5728f08663736fb11a279b6bd68af61763d5f9acbb95bd039",
     "packaging/test_install_development_dispatch.py": "80dc2d805b5c63713581a76b0a2e27ac87fafb7c4865c9ece77c9688bdb19f6c",
-    "packaging/test_install_gateway_policy.py": "6f77e98ebcf0a542948ea1c29f86afbcc726aba1f2413be6241dde263d7adeab",
+    "packaging/test_install_gateway_policy.py": "865621398ff35d0c56c00cec10f570c3c6d551cf664c3e8914f426d5dde9bf0c",
     "packaging/test_native_build_directories.py": "bfd2144471fb7d65aa9c6c4cd4167b4c045e34d6bbc25f69f99465dbe6a601cb",
     "packaging/test_native_compiler_slices.py": "85601b65164b40152259db3a684a66e24a36a75765d23ad7e36f3e63b6b30dcb",
     "packaging/test_native_test_oracle.py": "913e2e59c7421f4e82a58acba15b141fdf004f3dd8742345feb2219c3ea5820e",
