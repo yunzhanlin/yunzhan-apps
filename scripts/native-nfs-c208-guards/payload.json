@@ -1,0 +1,45 @@
+{
+  "architecture": "amd64",
+  "version": "0.1.0-dev.proapps24nfspreflightcandidate208",
+  "source_inputs_sha256": "7de34e3479a9c161e48303178648805bb0e03946e65a76c2445c15a2ccfc04e2",
+  "nfs": {
+    "id": "nfs-manager",
+    "name": "NFS Manager",
+    "category": "professional",
+    "version": "1.3.2",
+    "summary": "\u72ec\u7acb NFSv4 \u7f51\u7ad9\u5bfc\u51fa\u3001\u8eab\u4efd\u6620\u5c04\u3001\u53cc\u6808\u6301\u4e45\u6302\u8f7d\u4e0e\u4e8b\u52a1\u6062\u590d\u3002\u7f51\u7ad9\u5f52\u6863\u524d\u6838\u5bf9\u5171\u4eab\u5f15\u7528\u548c\u5f02\u5e38\u8bb0\u5f55\uff0c\u6267\u884c\u65f6\u518d\u6b21\u4fdd\u62a4\uff1b\u4fdd\u7559\u539f\u6587\u4ef6\u3001\u72ec\u7acb\u8fd0\u884c\u65f6\u53ca\u65e2\u6709\u7cfb\u7edf RPC\u3002",
+    "stage": "ready",
+    "risk": "privileged",
+    "provider": "panel-module",
+    "target": "nfs-manager",
+    "manage_route": "app-modules",
+    "capabilities": [
+      "NFSv4",
+      "\u72ec\u7acb\u670d\u52a1\u7aef\u4e0e\u7f51\u7ad9\u5bfc\u51fa",
+      "\u53ea\u8bfb\u4e0e\u786e\u8ba4\u540e\u7684\u8bfb\u5199\u5171\u4eab",
+      "\u5ba2\u6237\u7aef CIDR \u4e0e\u7f51\u7ad9\u8eab\u4efd\u6620\u5c04",
+      "IPv4/IPv6 \u81ea\u5b9a\u4e49\u7aef\u53e3",
+      "\u5b89\u5168\u6302\u8f7d\u3001\u5916\u90e8\u6302\u8f7d\u4e0d\u63a5\u7ba1\u4e0e\u76ee\u5f55\u8eab\u4efd\u6838\u5bf9",
+      "\u5f00\u673a\u6062\u590d",
+      "\u4fee\u8ba2\u4fdd\u62a4\u4e0e\u5931\u8d25\u56de\u6eda",
+      "\u72ec\u7acb\u6302\u8f7d\u5de5\u5177\u4e0e\u539f RPC \u670d\u52a1\u4fdd\u7559",
+      "\u6d3b\u8dc3\u6302\u8f7d\u5378\u8f7d\u4fdd\u62a4",
+      "\u5f52\u6863\u524d\u5f15\u7528\u68c0\u67e5\u4e0e\u6392\u961f\u4fdd\u62a4",
+      "\u5b8c\u6574\u8bb8\u53ef\u4e0e\u6267\u884c\u5386\u53f2"
+    ],
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nfs-manager/1.3.2/manifest.json",
+    "sha256": "0c4182ae788e7e1a548da46493f1cb1eff29b83c4624ea99f636cb04de541047"
+  },
+  "files": {
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz": "05155d9cee1ecaf981a05c9b2f7a6061b647bad22a721acd40328174f2556b33",
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz.manifest": "3e352b95cef7a9629306af24a3fbc07e7bab3d728996ea352430fe84bc8a2662",
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz.sig": "a358f2581092694f8a8a85d932dd47fc1e8b969a4bfb55bd14b9919649d96887",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "guest.py": "56d35b626c24a2897a56b68929b15052e15cdf1a19a10140411dd96be4ef38ba",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "programmes": {
+    "panel": "bc935d9b6f11651963b27156199e3bcb9df9b5f1628b19b70aa438b103fae842",
+    "panel-executor": "2511e97636849d2861960a8f71dd17a53f0daeeca6800d7e3746af812258163e"
+  }
+}
