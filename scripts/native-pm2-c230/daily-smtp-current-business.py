@@ -158,7 +158,10 @@ try:
    pending=wait(lambda:row(channel,event),lambda v:v is not None and v['state']=='pending'and v['attempts']==1,45);assert len(receiver.messages)==1;save(label+'-original-first-temporary-failure.json',pending)
    before_pid=subprocess.check_output(['/usr/bin/systemctl','show','panel.service','--property=MainPID','--value'],text=True).strip();stored_cipher=cipher(channel);subprocess.run(['/usr/bin/systemctl','restart','panel.service'],check=True,capture_output=True,timeout=60);ready();after_pid=subprocess.check_output(['/usr/bin/systemctl','show','panel.service','--property=MainPID','--value'],text=True).strip();assert before_pid!=after_pid
    first=json.loads(Path('/etc/panel/first-login.json').read_bytes());admin=Client().login(first['username'],first['password']);first.clear();assert cipher(channel)==stored_cipher and report_snapshot()==original_reports
-  want='failed'if policy in('bad-name','permanent')else'succeeded';final=wait(lambda:row(channel,event),lambda v:v is not None and v['state']==want,90);save(label+'-original-delivery.json',final)
+  if policy=='bad-name':
+   rejected=wait(lambda:row(channel,event),lambda v:v is not None and v['state']=='pending'and v['attempts']==1,30);save(label+'-original-TLS-refusal-before-pause.json',rejected);assert rejected['http_status']==0 and not receiver.messages and receiver.records and all(not r['authenticated']and not r['DATA_seen']for r in receiver.records)
+   channel=admin.api('/notification-channels/'+channel['id'],{'name':channel['name'],'enabled':False,'kinds':['daily'],'revision':channel['revision']},method='PUT');assert not channel['enabled']
+  want='cancelled'if policy=='bad-name'else'failed'if policy=='permanent'else'succeeded';final=wait(lambda:row(channel,event),lambda v:v is not None and v['state']==want,90);save(label+'-original-delivery.json',final)
   if policy=='retry':assert final['attempts']==2 and len(receiver.messages)==2 and receiver.messages[0]==receiver.messages[1]
   elif policy=='bad-name':assert final['attempts']==1 and not receiver.messages and receiver.records and all(not r['authenticated']and not r['DATA_seen']for r in receiver.records)
   elif policy=='permanent':assert final['attempts']==1 and final['http_status']==550 and not receiver.messages and not any(r['DATA_seen']for r in receiver.records)
@@ -174,8 +177,12 @@ try:
   channel,receiver=configurations[label];assert row(channel,outcomes[label]['delivery']['event_id'])==outcomes[label]['delivery'];assert len(receiver.messages)==outcomes[label]['messages_received'];assert len(receiver.records)==outcomes[label]['connections']
  assert report_snapshot()==original_reports;save('final-original-reports.json',original_reports)
  for label,(channel,receiver)in configurations.items():admin.api('/notification-channels/'+channel['id'],{'name':channel['name'],'enabled':False,'kinds':['daily'],'revision':channel['revision']},method='PUT')
- proof.update(ok=True,manifest_sha256=item['sha256'],normal_signed_install=True,actual_tls_plain_login_and_no_auth=True,actual_451_persisted_retry_after_new_daemon_PID_same_MessageID_and_bytes=True,DATA250_followed_by_QUIT_loss_not_retried=True,certificate_name_failure_before_AUTH_and_DATA=True,SMTP550_not_automatically_retried=True,SMTP_credentials_encrypted_and_blank_edit_preserves_auth=True,manual_daily_test_marked_and_sensitive_fields_absent=True,original_report_rows_not_overwritten=True,outcomes=outcomes,SQL_writes_by_fixture=0,external_mail_recipients_contacted=0,receiver_private_keys_uploaded=False)
-except BaseException:proof['failure']=traceback.format_exc()
+ proof.update(ok=True,manifest_sha256=item['sha256'],normal_signed_install=True,actual_tls_plain_login_and_no_auth=True,actual_451_persisted_retry_after_new_daemon_PID_same_MessageID_and_bytes=True,DATA250_followed_by_QUIT_loss_not_retried=True,certificate_name_failure_before_AUTH_and_DATA=True,certificate_failure_pending_then_explicit_pause_cancels_retry=True,SMTP550_not_automatically_retried=True,SMTP_credentials_encrypted_and_blank_edit_preserves_auth=True,manual_daily_test_marked_and_sensitive_fields_absent=True,original_report_rows_not_overwritten=True,outcomes=outcomes,SQL_writes_by_fixture=0,external_mail_recipients_contacted=0,receiver_private_keys_uploaded=False)
+except BaseException:
+ proof['failure']=traceback.format_exc()
+ for receiver in servers:
+  save(receiver.label+'-failure-original-receiver.json',{'records':receiver.records,'message_sha256':[hashlib.sha256(m).hexdigest()for m in receiver.messages],'errors':receiver.errors})
+ with contextlib.suppress(Exception):save('failure-original-channel-inventory.json',admin.api('/notification-channels'))
 finally:
  for receiver in servers:receiver.stop()
  save('original-proof.json',proof)
