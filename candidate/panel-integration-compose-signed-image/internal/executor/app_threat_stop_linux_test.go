@@ -109,6 +109,12 @@ func threatIDSSafeStopFixture(t *testing.T) (*Service, []wafConfigChange, *threa
 	if err := moduleWrite(filepath.Join(s.moduleDir("network-threat-detection"), "capture-account.json"), threatIDSAccount{Format: 1, UID: 800, GID: 801}); err != nil {
 		t.Fatal(err)
 	}
+	if err := threatIDSTrustedParents(s.systemPath("/var/lib/panel-network-ids"), true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.prepareThreatIDSLogs(threatIDSAccount{Format: 1, UID: 800, GID: 801}); err != nil {
+		t.Fatal(err)
+	}
 	guard := "/opt/panel/current/bin/panel-executor"
 	unit, e1 := threatIDSGatedUnit(v.Prefix, guard)
 	recovery, e2 := threatIDSRecoveryUnit(guard)

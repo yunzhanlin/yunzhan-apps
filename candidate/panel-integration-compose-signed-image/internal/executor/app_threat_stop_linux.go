@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"errors"
+	"fmt"
 	"local/panel/internal/core"
 	"os"
 	"path/filepath"
@@ -119,7 +120,8 @@ func (s *Service) threatIDSRecoveryStopCapture(ctx context.Context, runtime thre
 	if err != nil || !threatIDSStoppedUnit(state, false) {
 		return errors.New("IDS 恢复停止后并非明确 inactive / PID 0；原恢复记录保留")
 	}
-	return nil
+	_, _, err = s.syncStoppedThreatIDSOutput(ctx, account)
+	return err
 }
 
 // Caller owns the IDS configuration lock. Never parse damaged rule data to
@@ -176,5 +178,9 @@ func (s *Service) stopAttestedThreatIDS(ctx context.Context, expected int64) (an
 	if err != nil || !threatIDSStoppedUnit(state, false) {
 		return nil, errors.New("IDS 停止后并非明确 inactive / PID 0；未宣称已停止")
 	}
-	return map[string]any{"capture_stopped_verified": true, "capture_started": false, "configuration_revision_known": readErr == nil, "expected_revision": expected, "files_preserved": true, "boot_choice_unchanged": true, "passive_only": true, "observation_required": true, "time": core.Now()}, nil
+	synced, bytes, err := s.syncStoppedThreatIDSOutput(ctx, account)
+	if err != nil {
+		return nil, fmt.Errorf("IDS 采集已停止，但保留日志无法确认同步落盘；原文件未改写：%w", err)
+	}
+	return map[string]any{"capture_stopped_verified": true, "capture_started": false, "configuration_revision_known": readErr == nil, "expected_revision": expected, "files_preserved": true, "event_log_synced": synced, "event_log_bytes": bytes, "boot_choice_unchanged": true, "passive_only": true, "observation_required": true, "time": core.Now()}, nil
 }

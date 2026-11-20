@@ -493,7 +493,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "nfs-manager":
 			version = NFSPrivateClientAppVersion
 		case "network-threat-detection":
-			version = NetworkIDSMaintainedEngineAppVersion
+			version = appcatalog.NetworkIDSDurableStopVersion
 		case "pm2-manager":
 			version = PM2RootVendorAppVersion
 		case "website-statistics-v2":
