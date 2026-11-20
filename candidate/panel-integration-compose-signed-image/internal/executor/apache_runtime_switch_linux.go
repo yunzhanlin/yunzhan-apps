@@ -251,7 +251,10 @@ func (s *Service) apacheRuntimeReloadOrRestart(ctx context.Context, release runt
 	if running != release.ID {
 		operation = "restart"
 	}
-	_, err = s.Config.Run(ctx, "/usr/bin/systemctl", operation, "panel-apache")
+	if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", operation, "panel-apache"); err != nil {
+		return err
+	}
+	_, _, err = waitApacheRuntimeExecutable(ctx, release.ID, s.apacheRunningRelease)
 	return err
 }
 
@@ -477,9 +480,11 @@ func (s *Service) switchApacheRuntime(ctx context.Context, request core.ApacheRu
 	if _, err := s.Config.Run(ctx, "/usr/bin/systemctl", "restart", "panel-apache"); err != nil {
 		return result, rollback(err)
 	}
-	afterState, afterID, err := s.apacheRunningRelease(ctx)
-	if err != nil || afterState != "active" || afterID != next.ID {
-		return result, rollback(errors.New("Apache 新主进程未使用目标可执行程序"))
+	// Type=simple reports the launcher as active before its integrity checks
+	// and final execve have completed. Observe the actual executable within a
+	// fixed deadline; never issue another restart or treat the launcher as httpd.
+	if _, _, err := waitApacheRuntimeExecutable(ctx, next.ID, s.apacheRunningRelease); err != nil {
+		return result, rollback(fmt.Errorf("Apache 新主进程未使用目标可执行程序: %w", err))
 	}
 	after, err := apacheRuntimeProbeStatuses(ctx, sites)
 	if err != nil {
