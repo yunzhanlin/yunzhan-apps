@@ -160,7 +160,7 @@ func redisAuthenticatedCommand(ctx context.Context, conn net.Conn, username, pas
 		return nil, errors.New("Redis 命令为空")
 	}
 	switch command[0] {
-	case "PING", "INFO", "EVAL", "UNLINK", "SCAN", "TYPE", "TTL", "STRLEN", "LLEN", "HLEN", "SCARD", "ZCARD", "XLEN":
+	case "PING", "INFO", "BGSAVE", "EVAL", "UNLINK", "SCAN", "TYPE", "TTL", "STRLEN", "LLEN", "HLEN", "SCARD", "ZCARD", "XLEN":
 	default:
 		return nil, errors.New("Redis 管理命令不在固定范围")
 	}

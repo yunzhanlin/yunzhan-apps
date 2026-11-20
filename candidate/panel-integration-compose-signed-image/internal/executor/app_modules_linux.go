@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"local/panel/internal/appcatalog"
 	"local/panel/internal/core"
 	"local/panel/internal/diskjob"
@@ -121,6 +120,15 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	if out.Version == "" {
 		out.Version = "1.0"
 	} // pre-versioned modules
+	if id == "pm2-manager" && out.Version == core.PM2ConfigurationArchiveAppVersion {
+		instance, ok := manifest["installation_id"].(string)
+		if !ok || !core.ValidID(instance) {
+			out.StateUnknown = true
+			out.Detail = "PM2 配置封存安装实例无法核对；未补写授权编号"
+			return out
+		}
+		out.InstallationID = instance
+	}
 	out.Settings, _ = manifest["settings"].(map[string]any)
 	out.Healthy = true
 	out.Detail = "模块已安装，可配置并执行"
@@ -190,7 +198,7 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		}
 	case "nfs-manager":
 		out.Healthy = s.appDependencyReady(id) && !s.nfsPending()
-		if out.Version == core.NFSPrivateClientAppVersion {
+		if core.NFSPrivateClientVersionSupported(out.Version) {
 			out.Healthy = out.Healthy && s.nfsPrivateClientReady()
 		}
 	case "php-code-security":
@@ -424,6 +432,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			}
 		}
 		if id == "pm2-manager" {
+			if err := s.pm2NoPendingConfigurationArchives(); err != nil {
+				return err
+			}
 			records, err := s.pm2ConfigRecords()
 			if err != nil {
 				return err
@@ -476,7 +487,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 	case "nfs-manager":
 		ready := s.appDependencyReady(id)
-		if selectedVersion == core.NFSPrivateClientAppVersion {
+		if core.NFSPrivateClientVersionSupported(selectedVersion) {
 			ready = s.nfsPrivateClientReady()
 		}
 		if !ready {
@@ -484,8 +495,8 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 				return e
 			}
 		}
-		if selectedVersion == core.NFSPrivateClientAppVersion && !s.nfsPrivateClientReady() {
-			return errors.New("NFS1.3.1 独立客户端运行时未完整核对，未写入新版本身份")
+		if core.NFSPrivateClientVersionSupported(selectedVersion) && !s.nfsPrivateClientReady() {
+			return errors.New("NFS 独立客户端运行时未完整核对，未写入新版本身份")
 		}
 		if e := os.MkdirAll(s.systemPath("/var/lib/panel-executor/nfs-server-recovery"), 0700); e != nil {
 			return e
@@ -507,7 +518,10 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedRecord := map[string]any{"id": id, "version": selectedVersion, "settings": settings, "installed_at": core.Now()}
-	if id == "platform-ops" && selectedVersion == core.PlatformMaintenanceAppVersion {
+	if id == "pm2-manager" && selectedVersion == core.PM2ConfigurationArchiveAppVersion {
+		installedRecord["installation_id"] = core.ID()
+	}
+	if id == "platform-ops" && core.PlatformMaintenanceVersionSupported(selectedVersion) {
 		installedRecord["installation_id"] = core.ID()
 	}
 	if id == "disk-analysis" && diskjob.HostAppVersionSupported(selectedVersion) {
@@ -607,7 +621,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		defer reader.Close()
 	}
 	status := s.softwareStatus(ctx, id)
-	if id == "pm2-manager" && version == core.PM2RootVendorAppVersion {
+	if id == "pm2-manager" && (version == core.PM2RootVendorAppVersion || version == core.PM2ConfigurationArchiveAppVersion) {
 		if err := s.preparePM2RootVendorUpdate(ctx, status, add); err != nil {
 			return err
 		}
@@ -673,7 +687,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return s.applyWAF(ctx, manifest.Settings, false, add)
 	}
 	if _, ok := core.FindAppModule(id); ok {
-		if id == "nfs-manager" && version == core.NFSPrivateClientAppVersion {
+		if id == "nfs-manager" && core.NFSPrivateClientVersionSupported(version) {
 			if !s.nfsPrivateClientReady() {
 				return errors.New("NFS 独立客户端未完整准备，保留原应用版本和服务")
 			}
@@ -705,6 +719,13 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			return err
 		}
 		manifest["version"], manifest["updated_at"] = version, core.Now()
+		if id == "pm2-manager" && version == core.PM2ConfigurationArchiveAppVersion {
+			if status.Version != version {
+				manifest["installation_id"] = core.ID()
+			} else if instance, ok := manifest["installation_id"].(string); !ok || !core.ValidID(instance) {
+				return errors.New("原 PM2 封存实例无法核对；未补写或恢复授权")
+			}
+		}
 		if id == "disk-analysis" && diskjob.HostAppVersionSupported(version) {
 			if status.Version != version {
 				manifest["installation_id"] = core.ID()
@@ -712,7 +733,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 				return errors.New("原全盘应用安装实例不能核对；未补写或恢复授权")
 			}
 		}
-		if id == "platform-ops" && version == core.PlatformMaintenanceAppVersion {
+		if id == "platform-ops" && core.PlatformMaintenanceVersionSupported(version) {
 			// A genuine version transition gets a new installation authority.
 			// Same-version repair preserves a verified existing instance.
 			if status.Version != version {
@@ -745,6 +766,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.ftpTransferHistoryRoutes(m)
 	s.taskInventoryRoutes(m)
 	s.remoteIndependentDownloadRoutes(m)
+	s.pm2ConfigurationArchiveReadRoutes(m)
 	s.pm2ConfigurationReadRoutes(m)
 	s.pm2ProjectsReadRoutes(m)
 	s.diskHostObservationRoutes(m)
@@ -836,6 +858,17 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 				respond(w, 400, map[string]string{"error": inputErr.Error()})
 				return
 			}
+		} else if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
+			var raw json.RawMessage
+			if !readJSON(w, r, &raw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = core.DecodePM2ConfigurationArchiveInput(action, raw)
+			if inputErr != nil {
+				respond(w, 400, map[string]string{"error": inputErr.Error()})
+				return
+			}
 		} else if !readJSON(w, r, &in) {
 			return
 		}
@@ -848,7 +881,13 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "应用安装状态无法核对，未执行排队操作"})
 			return
 		}
-		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request")) {
+		if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
+			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
+				respond(w, 409, map[string]string{"error": err.Error()})
+				return
+			}
+		}
+		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request" || action == "recover-configuration-archive" || action == "restore-configuration-archive")) {
 			if err := s.moduleRetrospectivePreflight(id); err != nil {
 				respond(w, 409, map[string]any{"error": err.Error(), "report_state_unknown": true})
 				return
@@ -952,6 +991,11 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "pure-ftpd":
 		return s.moduleFTP(ctx, action, in)
 	case "pm2-manager":
+		if core.PM2ConfigurationArchiveAction(action) {
+			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
+				return nil, err
+			}
+		}
 		return s.modulePM2(ctx, action, in)
 	case "apache-waf":
 		return s.apacheWAFReport(ctx)
@@ -972,95 +1016,6 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 		return map[string]any{"handler": "panel-api", "ready": true}, nil
 	}
 	return nil, errors.New("模块没有处理器")
-}
-func scanModuleFiles(ctx context.Context, root *os.Root, excludes []string, snapshot func(string, []byte) error) (map[string]moduleFile, bool, error) {
-	files := map[string]moduleFile{}
-	var total int64
-	partial := false
-	entries, metadataBytes := 0, 0
-	for _, p := range excludes {
-		if !core.ValidFilePath(p, false) {
-			return nil, false, errors.New("排除路径无效")
-		}
-	}
-	e := fs.WalkDir(root.FS(), ".", func(path string, d fs.DirEntry, e error) error {
-		if e != nil {
-			return e
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if path == "." {
-			return nil
-		}
-		entries++
-		if entries > 100000 {
-			partial = true
-			return fs.SkipAll
-		}
-		for _, p := range excludes {
-			if path == p || strings.HasPrefix(path, p+"/") {
-				if d.IsDir() {
-					return fs.SkipDir
-				}
-				return nil
-			}
-		}
-		if d.Type()&os.ModeSymlink != 0 {
-			return errors.New("扫描目录包含符号链接: " + path)
-		}
-		if d.IsDir() {
-			return nil
-		}
-		info, e := d.Info()
-		if e != nil {
-			return e
-		}
-		if !info.Mode().IsRegular() {
-			return errors.New("扫描目录包含特殊文件")
-		}
-		if !core.ValidFilePath(path, false) {
-			return errors.New("扫描发现不支持的文件路径，请配置排除规则")
-		}
-		encoded, _ := json.Marshal(path)
-		if metadataBytes+len(encoded)+160 > 3<<20 {
-			partial = true
-			return nil
-		}
-		if len(files) >= 10000 || info.Size() > 8<<20 || total+info.Size() > moduleMaxBytes {
-			partial = true
-			return nil
-		}
-		f, e := regularFile(root, path)
-		if e != nil {
-			return e
-		}
-		before, e := f.Stat()
-		if e != nil {
-			f.Close()
-			return e
-		}
-		b, e := io.ReadAll(io.LimitReader(f, 8<<20+1))
-		after, statErr := f.Stat()
-		f.Close()
-		if e != nil {
-			return e
-		}
-		current, pathErr := root.Lstat(path)
-		if statErr != nil || pathErr != nil || !os.SameFile(info, before) || !os.SameFile(before, current) || !current.Mode().IsRegular() || int64(len(b)) != info.Size() || before.Size() != after.Size() || !before.ModTime().Equal(after.ModTime()) || before.Mode() != after.Mode() || after.Size() != current.Size() || !after.ModTime().Equal(current.ModTime()) || after.Mode() != current.Mode() {
-			return errors.New("扫描时文件发生变化")
-		}
-		total += int64(len(b))
-		sha := sha256.Sum256(b)
-		hash := hex.EncodeToString(sha[:])
-		files[path] = moduleFile{hash, info.Size(), uint32(info.Mode().Perm())}
-		metadataBytes += len(encoded) + 160
-		if snapshot != nil {
-			return snapshot(hash, b)
-		}
-		return nil
-	})
-	return files, partial, e
 }
 func (s *Service) moduleBaselineKey() ([]byte, error) {
 	path := filepath.Join(s.Config.SecurityDir, "modules", "integrity-key")
@@ -1159,7 +1114,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 			if e = os.MkdirAll(filepath.Join(dir, "blobs"), 0700); e != nil {
 				return nil, e
 			}
-			files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, func(hash string, b []byte) error { return atomicWrite(filepath.Join(dir, "blobs", hash), b, 0600) })
+			files, partial, e := scanModuleFiles(ctx, f, in.Excludes, func(hash string, b []byte) error { return atomicWrite(filepath.Join(dir, "blobs", hash), b, 0600) })
 			if e != nil {
 				return nil, e
 			}
@@ -1194,7 +1149,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 		if base.SiteID != site || !hmac.Equal([]byte(base.Signature), []byte(baselineSignature(base, key))) {
 			return nil, errors.New("基线签名校验失败")
 		}
-		current, partial, e := scanModuleFiles(ctx, f.public, base.Excludes, nil)
+		current, partial, e := scanModuleFiles(ctx, f, base.Excludes, nil)
 		if e != nil {
 			return nil, e
 		}
@@ -1250,7 +1205,7 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 					return nil, errors.New("备份摘要不匹配")
 				}
 				if v, ok := current[change.Path]; ok {
-					previous, err := readModuleFile(f.public, change.Path)
+					previous, err := readModuleFile(f, change.Path)
 					if err != nil {
 						return nil, err
 					}
@@ -1293,100 +1248,6 @@ func (s *Service) moduleIntegrity(ctx context.Context, id, action string, in cor
 	}
 	return map[string]any{"sites": results}, nil
 }
-func readModuleFile(root *os.Root, path string) ([]byte, error) {
-	f, e := regularFile(root, path)
-	if e != nil {
-		return nil, e
-	}
-	defer f.Close()
-	b, e := io.ReadAll(io.LimitReader(f, (8<<20)+1))
-	if len(b) > 8<<20 {
-		return nil, errors.New("文件超过 8MiB")
-	}
-	return b, e
-}
-func moduleWriteSiteFile(f *siteFiles, path string, data []byte, mode os.FileMode) error {
-	return moduleWriteSiteFileGuarded(f, path, data, mode, nil, false)
-}
-func moduleWriteSiteFileGuarded(f *siteFiles, path string, data []byte, mode os.FileMode, expected *moduleFile, enforce bool) error {
-	if !core.ValidFilePath(path, false) {
-		return errors.New("文件路径无效")
-	}
-	parent := ""
-	if filepath.Dir(path) != "." {
-		for _, part := range strings.Split(filepath.Dir(path), "/") {
-			parent = filepath.Join(parent, part)
-			e := f.public.Mkdir(parent, 0755)
-			created := e == nil
-			if e != nil && !errors.Is(e, os.ErrExist) {
-				return e
-			}
-			st, err := f.public.Lstat(parent)
-			if err != nil {
-				return err
-			}
-			if !st.IsDir() || st.Mode()&os.ModeSymlink != 0 {
-				return errors.New("拒绝链接或非目录父路径")
-			}
-			dir, err := f.public.OpenFile(parent, os.O_RDONLY|syscall.O_DIRECTORY|syscall.O_NOFOLLOW, 0)
-			if err != nil {
-				return err
-			}
-			if created {
-				err = dir.Chown(f.uid, f.gid)
-			}
-			dir.Close()
-			if err != nil {
-				return err
-			}
-		}
-	}
-	// Replace by a private temporary inode: never truncate a user-created hard link.
-	if st, e := f.public.Lstat(path); e == nil && !st.Mode().IsRegular() {
-		return errors.New("拒绝覆盖链接或特殊文件")
-	} else if e != nil && !errors.Is(e, os.ErrNotExist) {
-		return e
-	}
-	temporary := filepath.Join(filepath.Dir(path), ".cloudstack-"+core.Token())
-	out, e := f.public.OpenFile(temporary, os.O_CREATE|os.O_EXCL|os.O_WRONLY|syscall.O_NOFOLLOW, 0600)
-	if e != nil {
-		return e
-	}
-	defer f.public.Remove(temporary)
-	if e = out.Chown(f.uid, f.gid); e == nil {
-		_, e = out.Write(data)
-	}
-	if e == nil {
-		e = out.Chmod(mode & 0777)
-	}
-	if e == nil {
-		e = out.Sync()
-	}
-	closeErr := out.Close()
-	if e != nil {
-		return e
-	}
-	if closeErr != nil {
-		return closeErr
-	}
-	if enforce && expected == nil {
-		return renameBetween(f.public, temporary, f.public, path, false)
-	}
-	if enforce {
-		current, err := readModuleFile(f.public, path)
-		if err != nil {
-			return err
-		}
-		info, err := f.public.Lstat(path)
-		if err != nil {
-			return err
-		}
-		if !info.Mode().IsRegular() || core.Hash(string(current)) != expected.SHA || int64(len(current)) != expected.Size || uint32(info.Mode().Perm()) != expected.Mode {
-			return errors.New("写入前目标文件已改变，未覆盖")
-		}
-	}
-	return f.public.Rename(temporary, path)
-}
 func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, preview bool) (any, error) {
 	if in.TargetProjectID != "" {
 		if in.TargetSiteID != "" {
@@ -1407,12 +1268,18 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 		return nil, e
 	}
 	defer target.Close()
-	a, partial, e := scanModuleFiles(ctx, source.public, in.Excludes, nil)
-	if e != nil || partial {
+	a, partial, e := scanModuleFiles(ctx, source, in.Excludes, nil)
+	if e != nil {
+		return nil, fmt.Errorf("来源扫描失败：%w", e)
+	}
+	if partial {
 		return nil, errors.New("来源扫描不完整")
 	}
-	b, partial, e := scanModuleFiles(ctx, target.public, in.Excludes, nil)
-	if e != nil || partial {
+	b, partial, e := scanModuleFiles(ctx, target, in.Excludes, nil)
+	if e != nil {
+		return nil, fmt.Errorf("目标扫描失败：%w", e)
+	}
+	if partial {
 		return nil, errors.New("目标扫描不完整")
 	}
 	checkpointPath := filepath.Join(s.moduleDir("files-sync"), in.SiteID+"-"+in.TargetSiteID+".json")
@@ -1441,7 +1308,7 @@ func (s *Service) moduleSync(ctx context.Context, in core.AppModuleInput, previe
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
-			data, err := readModuleFile(source.public, p)
+			data, err := readModuleFile(source, p)
 			if err != nil {
 				return nil, err
 			}
@@ -1487,7 +1354,7 @@ func (s *Service) modulePHPScanFiltered(ctx context.Context, in core.AppModuleIn
 		return nil, e
 	}
 	defer f.Close()
-	files, partial, e := scanModuleFiles(ctx, f.public, in.Excludes, nil)
+	files, partial, e := scanModuleFiles(ctx, f, in.Excludes, nil)
 	if e != nil {
 		return nil, e
 	}
@@ -1510,7 +1377,7 @@ scan:
 			return nil, ctx.Err()
 		}
 		scanned++
-		b, err := readModuleFile(f.public, p)
+		b, err := readModuleFile(f, p)
 		if err != nil {
 			return nil, err
 		}

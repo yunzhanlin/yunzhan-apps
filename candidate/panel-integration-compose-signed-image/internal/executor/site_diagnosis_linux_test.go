@@ -4,12 +4,20 @@ package executor
 
 import (
 	"context"
+	"crypto/ed25519"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
 	"local/panel/internal/core"
+	"math/big"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSiteDiagnosisPathStaysOnOwnedIngress(t *testing.T) {
@@ -107,6 +115,120 @@ func TestSiteDiagnosisPrioritizesRelatedChecksAndLabelsHTTPFailures(t *testing.T
 			got["ok"] != (check.verdict == "pass") || got["detail"] == "" {
 			t.Errorf("unexpected result for HTTP %d: %v", check.status, got)
 		}
+	}
+}
+
+func TestSiteDiagnosisTLSUsesVerifiedHandshakeAndReportsSpecificFailure(t *testing.T) {
+	now := time.Now()
+	const name = "diagnosis.example.test"
+	root := &x509.Certificate{
+		SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: "Diagnosis Test CA"},
+		NotBefore: now.Add(-72 * time.Hour), NotAfter: now.Add(90 * 24 * time.Hour),
+		BasicConstraintsValid: true, IsCA: true, KeyUsage: x509.KeyUsageCertSign,
+	}
+	rootPublic, rootKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootDER, err := x509.CreateCertificate(rand.Reader, root, root, rootPublic, rootKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ca, err := x509.ParseCertificate(rootDER)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trusted := x509.NewCertPool()
+	trusted.AddCert(ca)
+
+	for _, tc := range []struct {
+		label, host, reason, verdict string
+		before, after                time.Duration
+		untrusted                    bool
+	}{
+		{"valid", name, "", "pass", -time.Hour, 32 * 24 * time.Hour, false},
+		{"renewal", name, "", "warn", -time.Hour, 4 * time.Hour, false},
+		{"mismatch", "other.example.test", "hostname-mismatch", "fail", -time.Hour, 48 * time.Hour, false},
+		{"chain", name, "untrusted-chain", "fail", -time.Hour, 48 * time.Hour, true},
+		{"expired", name, "certificate-expired", "fail", -48 * time.Hour, -time.Hour, false},
+		{"future", name, "certificate-not-yet-valid", "fail", time.Hour, 48 * time.Hour, false},
+	} {
+		t.Run(tc.label, func(t *testing.T) {
+			public, private, err := ed25519.GenerateKey(rand.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+			leaf := &x509.Certificate{
+				SerialNumber: big.NewInt(2), DNSNames: []string{name},
+				NotBefore: now.Add(tc.before), NotAfter: now.Add(tc.after),
+				ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			}
+			der, err := x509.CreateCertificate(rand.Reader, leaf, ca, public, rootKey)
+			if err != nil {
+				t.Fatal(err)
+			}
+			server, err := tls.Listen("tcp", "127.0.0.1:0", &tls.Config{
+				MinVersion: tls.VersionTLS12, MaxVersion: tls.VersionTLS12,
+				Certificates: []tls.Certificate{{Certificate: [][]byte{der}, PrivateKey: private}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(func() { _ = server.Close() })
+			sni := make(chan string, 1)
+			go func() {
+				conn, err := server.Accept()
+				if err != nil {
+					sni <- ""
+					return
+				}
+				defer conn.Close()
+				_ = conn.SetDeadline(time.Now().Add(4 * time.Second))
+				peer := conn.(*tls.Conn)
+				_ = peer.Handshake()
+				sni <- peer.ConnectionState().ServerName
+			}()
+			roots := trusted
+			if tc.untrusted {
+				roots = x509.NewCertPool()
+			}
+			result := diagnosisTLSProbe(t.Context(), server.Addr().String(), &tls.Config{
+				ServerName: tc.host, RootCAs: roots, MinVersion: tls.VersionTLS12,
+			})
+			select {
+			case actual := <-sni:
+				if actual != tc.host {
+					t.Fatalf("unexpected SNI: %q", actual)
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("TLS fixture did not finish")
+			}
+			if result["verdict"] != tc.verdict || result["valid"] != (tc.verdict != "fail") {
+				t.Fatalf("unexpected verification result: %v", result)
+			}
+			if tc.reason != "" {
+				if result["reason_code"] != tc.reason || result["issuer"] != nil || result["error"] != nil {
+					t.Fatalf("unsafe or incorrect failure result: %v", result)
+				}
+			} else if result["tls_version"] != "TLS 1.2" || result["issuer"] != "CN=Diagnosis Test CA" ||
+				result["not_before"] == nil || result["not_after"] == nil {
+				t.Fatalf("verified TLS metadata missing: %v", result)
+			}
+		})
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 120*time.Millisecond)
+	defer cancel()
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	result := diagnosisTLSProbe(ctx, listener.Addr().String(), &tls.Config{
+		ServerName: name, RootCAs: trusted, MinVersion: tls.VersionTLS12,
+	})
+	if result["valid"] != false || result["reason_code"] != "timeout" {
+		t.Fatalf("unexpected TLS timeout result: %v", result)
 	}
 }
 

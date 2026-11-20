@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import {computed,onMounted,onUnmounted,ref,watch} from 'vue';
 import {menuPermissionIDs,validAccessPlan,type AccessPlan} from './menuPermissions';
+import PlatformMaintenanceFleetCheck from './PlatformMaintenanceFleetCheck.vue';
 type API=<T>(path:string,method?:string,body?:unknown)=>Promise<T>;
 type Grant={grant_id:string;commands:string[];expires_at:number;revoked:boolean;owner_id:string;installation_id:string;legacy_unbound:boolean;revocable:boolean};
 type Plan={plan:{format:number;sha256:string;commands:string[]};grant_id:string;actor_id:string;allowed_commands:string[];expires_at:number};
 type Operation={request_id:string;command:string;expected_plan_sha256:string;confirm:string};
 type Record={format:number;request:{format:number;grant_id:string;actor_id:string;input:Operation};request_sha256:string;state:string;outcome:string};
-const props=defineProps<{api:API;access?:(AccessPlan&{user_id?:string})|null;installed:boolean;installationId:string}>();
+const props=defineProps<{api:API;access?:(AccessPlan&{user_id?:string})|null;installed:boolean;fleetEnabled:boolean;installationId:string}>();
 const reloadAllowed=computed(()=>validAccessPlan(props.access)&&props.access.role==='admin'&&menuPermissionIDs.every(id=>props.access?.menu_ids.includes(id)));
 const base='/app-modules/platform-ops/maintenance';
 const grants=ref<Grant[]>([]),operations=ref<Array<{request_id:string;command:string;state:string;outcome:string;request_sha256:string}>>([]),busy=ref(false),error=ref(''),message=ref(''),secret=ref(''),grantUnknown=ref(false);
@@ -72,6 +73,8 @@ onMounted(refresh);
    <el-button :disabled="busy||!installed||!!pending||command==='nginx-reload'&&(!reloadAllowed||reloadConfirm!==`RELOAD NGINX ${plan.plan.sha256}`)" @click="inspectOrSubmit(false)">执行已授权原命令一次</el-button>
   </template>
   <template v-if="pending"><p>原操作 ID：{{pending.operation.request_id}}。仅原回执核对，不换 ID、不自动重试。页面关闭会清除本机内存秘密；可由目标面板管理员在原操作列表核对。</p><el-button :disabled="busy" @click="inspectOrSubmit(true)">只读核对原远端操作</el-button></template>
+  <PlatformMaintenanceFleetCheck v-if="fleetEnabled" :api="api" :enabled="fleetEnabled" :installation-id="installationId" :actor-id="access?.user_id" />
+  <p v-else-if="installed">更新至平台运维 1.3.1 后可使用批量 Nginx 配置检查。</p>
   <h4>本机维护原操作</h4><div class="table-scroll"><table><thead><tr><th>原操作 ID</th><th>命令</th><th>状态</th><th>结果代码</th><th>操作</th></tr></thead><tbody><tr v-for="o in operations" :key="o.request_id"><td>{{o.request_id}}</td><td>{{o.command}}</td><td>{{o.state}}</td><td>{{o.outcome}}</td><td><el-button text :disabled="busy" @click="reconcile(o.request_id)">只读核对原回执</el-button></td></tr></tbody></table></div>
  </section>
 </template>

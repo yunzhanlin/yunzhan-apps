@@ -94,7 +94,12 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
 const IntrusionAppVersion = appcatalog.IntrusionDebian12Version
-const NFSPrivateClientAppVersion = "1.3.1"
+const NFSPrivateClientAppVersion = appcatalog.NFSSiteArchivePreflightVersion
+
+func NFSPrivateClientVersionSupported(version string) bool {
+	return version == "1.3.1" || version == NFSPrivateClientAppVersion
+}
+
 const NetworkIDSMaintainedEngineAppVersion = "1.3.2"
 
 // Module implementations ship in the signed panel executor, not arbitrary
@@ -111,7 +116,7 @@ func SoftwareImplementationVersion(id string) string {
 func ValidateSoftwareUpdate(id, version string) error {
 	if id == "network-threat-detection" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, NetworkIDSMaintainedEngineAppVersion); valid && comparison >= 0 && version != NetworkIDSMaintainedEngineAppVersion {
+		if comparison, valid := appcatalog.CompareVersions(base, NetworkIDSMaintainedEngineAppVersion); valid && comparison >= 0 && version != NetworkIDSMaintainedEngineAppVersion && version != appcatalog.NetworkIDSDurableStopVersion && version != appcatalog.NetworkIDSIndependentArchiveVersion {
 			return errors.New("网络威胁检测仅支持已实现的完整版本")
 		}
 	}
@@ -121,7 +126,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 		}
 	}
 	if id == "pure-ftpd" {
-		if comparison, valid := appcatalog.CompareVersions(version, appcatalog.FTPTransferHistoryVersion); !valid || comparison >= 0 && version != appcatalog.FTPTransferHistoryVersion {
+		if comparison, valid := appcatalog.CompareVersions(version, appcatalog.FTPTransferHistoryVersion); !valid || comparison >= 0 && !appcatalog.FTPTransferHistorySupported(version) {
 			return errors.New("Pure-FTPd 传输日志仅支持已实现的完整版本")
 		}
 	}
@@ -135,7 +140,7 @@ func ValidateSoftwareUpdate(id, version string) error {
 		base, _, _ := strings.Cut(version, "-")
 		if comparison, valid := appcatalog.CompareVersions(base, "7.0.4"); valid && comparison >= 0 {
 			known := false
-			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion} {
+			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion, PM2ConfigurationArchiveAppVersion} {
 				if version == v {
 					known = true
 					break
@@ -206,8 +211,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "nfs-manager" {
 		base, _, _ := strings.Cut(version, "-")
-		if cmp, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && cmp >= 0 && version != "1.3.0" && version != NFSPrivateClientAppVersion {
-			return errors.New("NFS 独立客户端仅支持固定完整1.3.1或保留的1.3.0，拒绝别名及未审核版本")
+		if cmp, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && cmp >= 0 && version != "1.3.0" && !NFSPrivateClientVersionSupported(version) {
+			return errors.New("NFS 仅支持固定完整1.3.2及保留的1.3.1、1.3.0，拒绝别名及未审核版本")
 		}
 	}
 	if id == "website-analytics" {
@@ -230,8 +235,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "platform-ops" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && version != PlatformMaintenanceAppVersion {
-			return errors.New("维护新版本仅允许固定完整版本1.3.0，拒绝别名或未审核修订")
+		if comparison, valid := appcatalog.CompareVersions(base, PlatformMaintenanceAppVersion); valid && comparison >= 0 && !PlatformMaintenanceVersionSupported(version) {
+			return errors.New("维护新版本仅允许固定完整版本 1.3.0 或 1.3.1")
 		}
 	}
 	if id == "website-statistics-v2" {
@@ -382,7 +387,7 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	if id == "daily-report" && version == appcatalog.DailyReportScheduleVersion && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("日报生成时间版须通过签名应用商店安装或更新")
 	}
-	if id == "pure-ftpd" && version == appcatalog.FTPTransferHistoryVersion && (action == "install" || action == "update") && bind == nil {
+	if id == "pure-ftpd" && appcatalog.FTPTransferHistorySupported(version) && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("Pure-FTPd 传输日志版须通过签名应用商店安装或更新")
 	}
 	if id == "site-diagnosis" && appcatalog.SiteDiagnosisSignedVersion(version) && (action == "install" || action == "update") && bind == nil {
@@ -393,6 +398,9 @@ func (s *Store) queueSoftwareActionBound(id, action string, settings map[string]
 	}
 	if id == "task-manager" && TaskInventoryVersionSupported(version) && (action == "install" || action == "update") && bind == nil {
 		return "", errors.New("任务管理器新版须通过签名应用商店安装或更新")
+	}
+	if id == "platform-ops" && version == PlatformMaintenanceFleetAppVersion && (action == "install" || action == "update") && bind == nil {
+		return "", errors.New("批量配置检查须通过签名应用商店安装或更新")
 	}
 	if action == "install" && id == "platform-ops" && version == "" {
 		return "", errors.New("维护应用安装需签名应用的明确版本，不能由旧直接安装接口启用新授权")

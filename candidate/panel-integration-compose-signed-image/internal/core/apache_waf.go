@@ -171,6 +171,7 @@ func (a *Server) apacheWAFWorkspaceRoutes(m *http.ServeMux) {
 		m.HandleFunc("GET /api/software/apache-waf/"+operation, a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 			path := "/v1/software/apache-waf/" + operation
 			if operation == "report" {
+				w.Header().Set("Cache-Control", "no-store")
 				query, err := WAFReportQuery(r.URL.Query(), time.Now())
 				if err != nil {
 					fail(w, 400, err.Error())

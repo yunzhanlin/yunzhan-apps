@@ -76,7 +76,7 @@ func streamFilterMapCanonical(m streamFilterMap, ingress bool) (streamFilterCano
 		if ingress {
 			prefix = "I_"
 		}
-		if m.Name != streamFilterMapName(prefix) || m.KeyBytes != 4 || m.ValueBytes != 8 ||
+		if (m.Name != "" && m.Name != streamFilterMapName(prefix)) || m.KeyBytes != 4 || m.ValueBytes != 8 ||
 			m.MaxEntries != 2 || m.Flags != 0 || len(m.Entries) != 0 {
 			return out, loadbalancestream.ErrService
 		}
@@ -85,8 +85,8 @@ func streamFilterMapCanonical(m streamFilterMap, ingress bool) (streamFilterCano
 	}
 	if m.Type != 11 || m.Flags != 1 || m.ValueBytes != 8 ||
 		len(m.Entries) == 0 || len(m.Entries) > int(m.MaxEntries) ||
-		!(m.KeyBytes == 8 && m.Name == streamFilterMapName("4_") ||
-			m.KeyBytes == 20 && m.Name == streamFilterMapName("6_")) {
+		!(m.KeyBytes == 8 && (m.Name == "" || m.Name == streamFilterMapName("4_")) ||
+			m.KeyBytes == 20 && (m.Name == "" || m.Name == streamFilterMapName("6_"))) {
 		return out, loadbalancestream.ErrService
 	}
 	seen := map[string]bool{}
@@ -125,6 +125,32 @@ func streamFilterProgramSHA256(p streamFilterProgram, ingress bool) (string, err
 	if p.ID == 0 || p.Type != 8 || p.UID != 0 || p.Flags != 1 || p.Name != name ||
 		p.Tag == ([8]byte{}) || len(p.Instructions) < 8 || len(p.Instructions) > streamFilterMaxInstructions ||
 		len(p.Instructions)%8 != 0 || len(p.Maps) < 1 || len(p.Maps) > streamFilterMaxMaps {
+		return "", loadbalancestream.ErrService
+	}
+	// systemd 252 used anonymous maps for its named ingress/egress programs.
+	// Accept only its complete fixed layout for this unit's policy: one
+	// IPv4 and one IPv6 allow trie, plus the directional accounting array.
+	// Do not normalize names, accept mixed profiles, or accept other maps.
+	anonymous := p.Maps[0].Name == ""
+	shapes := map[[2]uint32]bool{}
+	for _, m := range p.Maps {
+		if (m.Name == "") != anonymous {
+			return "", loadbalancestream.ErrService
+		}
+		if anonymous {
+			shape := [2]uint32{m.Type, m.KeyBytes}
+			if shapes[shape] || m.Type == 11 && (len(m.Entries) == 0 || len(m.Entries) != int(m.MaxEntries)) {
+				return "", loadbalancestream.ErrService
+			}
+			shapes[shape] = true
+			for _, e := range m.Entries {
+				if len(e.Value) != 8 || binary.LittleEndian.Uint64(e.Value) != 1 {
+					return "", loadbalancestream.ErrService
+				}
+			}
+		}
+	}
+	if anonymous && (len(shapes) != 3 || !shapes[[2]uint32{11, 8}] || !shapes[[2]uint32{11, 20}] || !shapes[[2]uint32{2, 4}]) {
 		return "", loadbalancestream.ErrService
 	}
 	mapHashes := map[uint32]string{}
@@ -185,6 +211,48 @@ func streamFilterProgramSHA256(p streamFilterProgram, ingress bool) (string, err
 		return "", loadbalancestream.ErrService
 	}
 	return core.Hash(string(raw)), nil
+}
+
+// Anonymous maps have no unit name to corroborate their origin. Require
+// the actual complete kernel ACL key set to match the held service plan.
+func streamFilterAnonymousPolicyMatches(p streamFilterProgram, wanted []string) bool {
+	if len(p.Maps) == 0 || p.Maps[0].Name != "" {
+		return true
+	}
+	if len(wanted) == 0 || len(wanted) > streamFilterMaxMapEntries {
+		return false
+	}
+	actual := map[string]bool{}
+	for _, m := range p.Maps {
+		if m.Type != 11 {
+			continue
+		}
+		for _, row := range m.Entries {
+			if len(row.Key) != 8 && len(row.Key) != 20 {
+				return false
+			}
+			ip, ok := netip.AddrFromSlice(row.Key[4:])
+			bits := binary.LittleEndian.Uint32(row.Key[:4])
+			if !ok || bits > uint32(ip.BitLen()) {
+				return false
+			}
+			prefix := netip.PrefixFrom(ip, int(bits))
+			if prefix != prefix.Masked() || actual[prefix.String()] {
+				return false
+			}
+			actual[prefix.String()] = true
+		}
+	}
+	if len(actual) != len(wanted) {
+		return false
+	}
+	for _, expected := range wanted {
+		if !actual[expected] {
+			return false
+		}
+		delete(actual, expected)
+	}
+	return true
 }
 
 func streamFilterPolicySHA256(ingress, egress []string) (string, error) {

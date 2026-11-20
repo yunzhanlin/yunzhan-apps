@@ -37,7 +37,11 @@ var Nginx = []Release{
 
 // Apache HTTP Server is built side by side and does not replace the global
 // Nginx ingress. The digest is pinned from the official Apache SHA-256 file.
+// 2.4.71: SHA-256 and detached PGP signature verified against the official
+// httpd/KEYS signer 65B2D44FE74BD5E3DE3AC3F082781DE46D5954FA.
+// Keep historical entries byte-identical so existing manifests remain readable.
 var Apache = []Release{
+	{"apache-2.4.71", "apache", "2.4.71", "2.4", "stable", "https://downloads.apache.org/httpd/httpd-2.4.71.tar.gz", "6b0433674ded858d2ac01e95345935ce127d5d287471762f0a7f10f4969cbfe8", "Apache HTTP Server 官方源码 · SHA-256 / PGP 核对 · 2026-11-11 安全更新"},
 	{"apache-2.4.68", "apache", "2.4.68", "2.4", "stable", "https://downloads.apache.org/httpd/httpd-2.4.68.tar.gz", "ed9a9d4500fb48bb28eaffb3ba71d06ccf86d498fa13ab9f781da010cc488498", "Apache HTTP Server 官方源码 · 官方 SHA-256 清单"},
 }
 

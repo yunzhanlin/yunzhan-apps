@@ -3,6 +3,7 @@
 package executor
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -46,6 +47,55 @@ func runtimeReferences(release string) ([]core.RuntimeReference, error) {
 			}
 			if g.State == "pending" && (g.OldID == release || g.NewID == release) {
 				out = append(out, core.RuntimeReference{Kind: "rollback_guard", ID: g.JobID, Name: "尚未提交的 Nginx 切换恢复", State: g.State})
+			}
+		}
+	}
+	if r.Family == "apache" {
+		source, err := apacheWAFReadStableFile("/etc/panel/apache/httpd.conf", 2<<20)
+		if err == nil {
+			selected, err := apacheSourceRelease(string(source))
+			if err != nil {
+				return nil, err
+			}
+			if selected.ID == release {
+				out = append(out, core.RuntimeReference{Kind: "apache_selection", ID: release, Name: "Apache 共享站点配置", State: "selected"})
+			}
+			state, running, err := nativeWAFService().apacheRunningRelease(context.Background())
+			if err != nil {
+				return nil, err
+			}
+			if state == "active" && running == release {
+				out = append(out, core.RuntimeReference{Kind: "apache_process", ID: release, Name: "Apache 实际主进程", State: "running"})
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		txs := nativeWAFService().apacheWAFTransactionService()
+		if tx, err := txs.readWAFTransaction(); err == nil {
+			if tx.ApacheRuntime != nil && (tx.ApacheRuntime.PreviousID == release || tx.ApacheRuntime.NextID == release) {
+				out = append(out, core.RuntimeReference{Kind: "apache_runtime_recovery", ID: tx.ID, Name: "Apache 原运行版本切换恢复", State: tx.State})
+			}
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		entries, err := os.ReadDir(apacheBodyJobs)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return nil, err
+		}
+		if len(entries) > 64 {
+			return nil, errors.New("Apache 原生构建记录超限，未推断运行时无引用")
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
+				return nil, errors.New("Apache 原生构建库存含未知条目")
+			}
+			id := strings.TrimSuffix(entry.Name(), ".json")
+			record, err := readApacheBodyBuildRecord(id)
+			if err != nil {
+				return nil, err
+			}
+			if record.ApacheVersion == r.Version {
+				out = append(out, core.RuntimeReference{Kind: "apache_engine_record", ID: id, Name: "Apache 保留原生模块与 ABI 证据", State: record.State})
 			}
 		}
 	}

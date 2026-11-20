@@ -47,6 +47,8 @@ func main() {
 	sftpJob := flag.String("sftp-job", "", "run one root-only SFTP account job")
 	dockerJob := flag.String("docker-job", "", "run one Docker image or container job")
 	composeJob := flag.String("compose-job", "", "run one managed Docker Compose project job")
+	rabbitMQMigration := flag.String("rabbitmq-migration", "", "run exactly one authorized RabbitMQ migration")
+	rabbitMQReconcile := flag.String("rabbitmq-reconcile", "", "reconcile the original RabbitMQ migration")
 	recoverCompose := flag.Bool("recover-compose", false, "clean interrupted Docker Compose operations")
 	redisServe := flag.String("serve-redis", "", "serve one managed Redis instance")
 	mariadbServe := flag.String("serve-mariadb", "", "serve one managed MariaDB instance")
@@ -72,6 +74,7 @@ func main() {
 	wafRecover := flag.Bool("recover-waf-config", false, "restore an interrupted WAF configuration before Nginx startup")
 	statisticsLogRecover := flag.Bool("recover-statistics-log-config", false, "recover fixed statistics log configuration and installed record without starting Nginx")
 	apacheWAFRecover := flag.Bool("recover-apache-waf-config", false, "restore interrupted Apache WAF configuration before Apache startup")
+	apacheStart := flag.Bool("start-apache", false, "start only the reviewed Apache selected by the committed managed configuration")
 	apacheBodyPrepare := flag.Bool("prepare-apache-body-runtime", false, "verify committed Apache native body policy and prepare only missing bounded cache leaves at startup")
 	apacheBodyCacheCheck := flag.Bool("check-apache-body-cache-mount", false, "read-only fixed pre-mount guard; never hide existing cache contents or replace unknown mounts")
 	apacheBodyCachePreflight := flag.Bool("check-apache-body-cache-upgrade", false, "read-only fixed installer preflight before host or service changes; missing cache is not provisioned")
@@ -93,6 +96,39 @@ func main() {
 	flag.Parse()
 	if err := validateExecutorCLIArguments(flag.CommandLine, os.Args[1:]); err != nil {
 		log.Fatal(err)
+	}
+	apacheStartEntry := false
+	flag.Visit(func(f *flag.Flag) {
+		if f.Name == "start-apache" {
+			apacheStartEntry = true
+		}
+	})
+	if apacheStartEntry {
+		if os.Geteuid() != 0 || !*apacheStart || flag.NFlag() != 1 || len(os.Args) != 2 || os.Args[1] != "--start-apache" {
+			log.Fatal("Apache startup requires Root and one exact fixed flag")
+		}
+		if err := executor.StartApache(); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *rabbitMQMigration != "" || *rabbitMQReconcile != "" {
+		if os.Geteuid() != 0 || flag.NFlag() != 1 || len(os.Args) != 3 {
+			log.Fatal("RabbitMQ migration requires Root and one fixed job selector")
+		}
+		var err error
+		switch os.Args[1] {
+		case "--rabbitmq-migration":
+			err = executor.RunRabbitMQMigration(*rabbitMQMigration)
+		case "--rabbitmq-reconcile":
+			err = executor.ResumeRabbitMQMigration(*rabbitMQReconcile)
+		default:
+			log.Fatal("RabbitMQ migration selector invalid")
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 	offlineFragmentReviewEntry := false
 	flag.Visit(func(f *flag.Flag) {

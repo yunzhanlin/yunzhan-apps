@@ -13,13 +13,16 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
 	"local/panel/internal/core"
 )
 
-const ftpRuntimeVersion = "1.0.54-yz1"
+const ftpRuntimeVersion = "1.0.54-yz3"
+const ftpFileQuotaPreviewRuntimeVersion = "1.0.54-yz2"
+const ftpLegacyRuntimeVersion = "1.0.54-yz1"
 const ftpRuntimeSource = "https://download.pureftpd.org/pub/pure-ftpd/releases/pure-ftpd-1.0.54.tar.gz"
 
 // Pinned from the upstream HTTPS release download. Not an upstream PGP claim.
@@ -40,6 +43,14 @@ var ftpThirdPartyNotices []byte
 //go:embed assets/pure-ftpd-unprivileged-version.patch
 var ftpCLIVersionPatch []byte
 
+//go:embed assets/pure-ftpd-file-only-quota.patch
+var ftpFileQuotaPatch []byte
+
+//go:embed assets/pure-ftpd-preflight-upload-quota.patch
+var ftpUploadQuotaPatch []byte
+
+var ftpSupportedRuntimeVersions = [...]string{ftpLegacyRuntimeVersion, ftpFileQuotaPreviewRuntimeVersion, ftpRuntimeVersion}
+
 func ensureFTPRuntimeNotices(dir string) error {
 	path := filepath.Join(dir, "THIRD-PARTY-NOTICES")
 	data, e := ftpRuntimeFile(path)
@@ -55,8 +66,28 @@ func ensureFTPRuntimeNotices(dir string) error {
 	return atomicWrite(path, ftpThirdPartyNotices, 0644)
 }
 
-func ftpRuntimePatchSHA() string {
-	return core.Hash(string(ftpThrottlePatch) + string(ftpLowRatePatch) + string(ftpTLSBufferPatch) + string(ftpCLIVersionPatch))
+func ftpRuntimePatchSHA(version string) string {
+	patches := string(ftpThrottlePatch) + string(ftpLowRatePatch) + string(ftpTLSBufferPatch) + string(ftpCLIVersionPatch)
+	if version == ftpFileQuotaPreviewRuntimeVersion || version == ftpRuntimeVersion {
+		patches += string(ftpFileQuotaPatch)
+	}
+	if version == ftpRuntimeVersion {
+		patches += string(ftpUploadQuotaPatch)
+	}
+	return core.Hash(patches)
+}
+
+func (s *Service) ftpRuntimeBinary(version, name string) string {
+	return s.systemPath(filepath.Join(appNativeRoot, "pure-ftpd", version, name))
+}
+
+func (s *Service) ftpManagedDaemon(binary string) bool {
+	for _, version := range ftpSupportedRuntimeVersions {
+		if binary == s.ftpRuntimeBinary(version, "pure-ftpd") {
+			return true
+		}
+	}
+	return false
 }
 
 type ftpRuntimeManifest struct {
@@ -107,7 +138,11 @@ func ftpRuntimeFile(path string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(f, 8<<20+1))
 }
 func (s *Service) validateFTPRuntime() error {
-	dir := s.systemPath(filepath.Join(appNativeRoot, "pure-ftpd", ftpRuntimeVersion))
+	return s.validateFTPRuntimeVersion(ftpRuntimeVersion)
+}
+
+func (s *Service) validateFTPRuntimeVersion(version string) error {
+	dir := filepath.Dir(s.ftpRuntimeBinary(version, "pure-ftpd"))
 	for _, path := range []string{s.systemPath(appNativeRoot), filepath.Dir(dir), dir} {
 		if e := ownedRuntimePath(path, true); e != nil {
 			return e
@@ -118,7 +153,7 @@ func (s *Service) validateFTPRuntime() error {
 		return e
 	}
 	var m ftpRuntimeManifest
-	if decodeFTPPrivateJSON(b, &m) != nil || m.Version != ftpRuntimeVersion || m.Architecture != runtime.GOARCH || m.SourceSHA != ftpRuntimeSourceSHA || m.PatchSHA != ftpRuntimePatchSHA() || len(m.Files) != 4 {
+	if decodeFTPPrivateJSON(b, &m) != nil || m.Version != version || m.Architecture != runtime.GOARCH || m.SourceSHA != ftpRuntimeSourceSHA || m.PatchSHA != ftpRuntimePatchSHA(version) || len(m.Files) != 4 {
 		return errors.New("FTP 独立程序固定来源清单不匹配")
 	}
 	for _, name := range []string{"pure-ftpd", "pure-pw", "pure-ftpwho", "COPYING"} {
@@ -154,13 +189,13 @@ func (s *Service) ftpBinary(name string) (string, error) {
 	var v struct {
 		Version string `json:"version"`
 	}
-	if decodeFTPPrivateJSON(b, &v) != nil || v.Version != ftpRuntimeVersion {
+	if decodeFTPPrivateJSON(b, &v) != nil || !slices.Contains(ftpSupportedRuntimeVersions[:], v.Version) {
 		return "", errors.New("FTP 活动运行时记录无效")
 	}
-	if e = s.validateFTPRuntime(); e != nil {
+	if e = s.validateFTPRuntimeVersion(v.Version); e != nil {
 		return "", e
 	}
-	return s.systemPath(filepath.Join(appNativeRoot, "pure-ftpd", ftpRuntimeVersion, name)), nil
+	return s.ftpRuntimeBinary(v.Version, name), nil
 }
 
 // Executed only by the fixed root dependency unit. Configure and compile run
@@ -195,7 +230,7 @@ func installPrivateFTPRuntime(ctx context.Context) error {
 		return e
 	}
 	source := filepath.Join(work, "pure-ftpd-1.0.54")
-	patches := [][]byte{ftpThrottlePatch, ftpTLSBufferPatch, ftpLowRatePatch, ftpCLIVersionPatch}
+	patches := [][]byte{ftpThrottlePatch, ftpTLSBufferPatch, ftpLowRatePatch, ftpCLIVersionPatch, ftpFileQuotaPatch, ftpUploadQuotaPatch}
 	for i, b := range patches {
 		if e = atomicWrite(filepath.Join(source, fmt.Sprintf(".yunzhan-%d.patch", i)), b, 0644); e != nil {
 			return e
@@ -239,7 +274,7 @@ func installPrivateFTPRuntime(ctx context.Context) error {
 	if e = os.Chmod(stage, 0755); e != nil {
 		return e
 	}
-	m := ftpRuntimeManifest{ftpRuntimeVersion, runtime.GOARCH, ftpRuntimeSourceSHA, ftpRuntimePatchSHA(), map[string]string{}, core.Now()}
+	m := ftpRuntimeManifest{ftpRuntimeVersion, runtime.GOARCH, ftpRuntimeSourceSHA, ftpRuntimePatchSHA(ftpRuntimeVersion), map[string]string{}, core.Now()}
 	for _, name := range []string{"pure-ftpd", "pure-pw", "pure-ftpwho", "COPYING"} {
 		from := filepath.Join(source, "src", name)
 		mode := os.FileMode(0755)

@@ -99,11 +99,11 @@ func TestStreamFilterNativeExistingUnitKernelPolicyReadOnly(t *testing.T) {
 		if e1 != nil || e2 != nil || !streamServiceBPFIDs(ingress) || !streamServiceBPFIDs(egress) {
 			t.Fatal("actual direct kernel filters absent", e1, e2)
 		}
-		first, err := observeStreamFilterPolicySHA256(ctx, directory, ingress, egress)
+		first, err := observeStreamFilterPolicySHA256(ctx, directory, ingress, egress, []string{"127.0.0.0/8", "::1/128"})
 		if err != nil || !streamFilterReceiptFormat(2, first) {
 			t.Fatal("actual kernel instruction/map observation failed", err)
 		}
-		second, err := observeStreamFilterPolicySHA256(ctx, directory, ingress, egress)
+		second, err := observeStreamFilterPolicySHA256(ctx, directory, ingress, egress, []string{"127.0.0.0/8", "::1/128"})
 		if err != nil || first != second {
 			t.Fatal("identical actual policy not stable on independent kernel reads", err)
 		}

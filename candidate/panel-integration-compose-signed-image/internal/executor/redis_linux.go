@@ -325,6 +325,7 @@ func listRedis(ctx context.Context) ([]core.RedisInstance, error) {
 
 func (s *Service) redisRoutes(m *http.ServeMux) {
 	s.redisAuthRoutes(m)
+	redisPersistenceRoutes(m)
 	s.redisKeyRoutes(m)
 	m.HandleFunc("GET /v1/redis/instances", func(w http.ResponseWriter, r *http.Request) {
 		items, e := listRedis(r.Context())

@@ -56,7 +56,7 @@ func appUserTables(t *testing.T, s *Store, tables ...string) []byte {
 func appUserTablesExceptSession(t *testing.T, s *Store, actorID string, tables ...string) []byte {
 	t.Helper()
 	if len(tables) == 0 {
-		tables = []string{"users", "app_user_roles", "app_user_menus", "sessions", "account_security", "account_recovery", "account_profiles", "app_module_events", "audit_logs"}
+		tables = []string{"users", "app_user_roles", "app_user_menus", "sessions", "account_security", "account_recovery", "account_profiles", "app_module_events", "audit_logs", "app_user_request_receipts"}
 	}
 	all := map[string][][]any{}
 	for _, table := range tables {
@@ -114,6 +114,7 @@ func TestAppUserTransactionFaultsRetainAllOriginalRows(t *testing.T) {
 			"success-event":     `BEFORE INSERT ON app_module_events WHEN NEW.module_id='user-manager' AND NEW.outcome='succeeded'`,
 			"history-retention": `BEFORE DELETE ON app_module_events WHEN OLD.module_id='user-manager'`,
 			"success-audit":     `BEFORE INSERT ON audit_logs WHEN NEW.target='user-manager' AND NEW.result='succeeded'`,
+			"request-receipt":   `BEFORE INSERT ON app_user_request_receipts`,
 		} {
 			t.Run(action+"/"+name, func(t *testing.T) {
 				a, actor, _ := appUserTransactionFixture(t)
@@ -121,7 +122,7 @@ func TestAppUserTransactionFaultsRetainAllOriginalRows(t *testing.T) {
 					t.Fatal(err)
 				}
 				before := appUserTables(t, a.Store)
-				if out, err := a.manageAppUsers(context.Background(), actor, action, appUserInput(action)); err == nil || out != nil {
+				if out, err := a.manageAppUserRequest(context.Background(), actor, action, appUserInput(action), "test-fault-key"); err == nil || out != nil {
 					t.Fatal("fault returned committed success", action, name)
 				}
 				if !bytes.Equal(before, appUserTables(t, a.Store)) {
@@ -273,6 +274,7 @@ func TestAppUserTransactionHTTPNoDuplicateOrPartialFailureAudit(t *testing.T) {
 				r.Header.Set("Content-Type", "application/json")
 				r.Header.Set("Origin", a.Config.Origin)
 				r.Header.Set("X-CSRF-Token", csrf)
+				r.Header.Set("Idempotency-Key", "owned-http-account-request")
 				if cookie != nil {
 					r.AddCookie(cookie)
 				}
@@ -303,6 +305,14 @@ func TestAppUserTransactionHTTPNoDuplicateOrPartialFailureAudit(t *testing.T) {
 			tables := []string{"users", "app_user_roles", "app_user_menus", "sessions", "account_security", "account_recovery", "account_profiles"}
 			before := appUserTablesExceptSession(t, a.Store, actor.ID, tables...)
 			out := request("/api/app-modules/user-manager/revoke", `{"username":"atomic-reader","expected_revision":1}`, session.CSRF, cookie)
+			wantCalls := 1
+			if scenario == "success" {
+				duplicate := request("/api/app-modules/user-manager/revoke", `{"username":"atomic-reader","expected_revision":1}`, session.CSRF, cookie)
+				if out.Code != duplicate.Code || !bytes.Equal(out.Body.Bytes(), duplicate.Body.Bytes()) {
+					t.Fatal("redelivery did not return the original HTTP receipt", out.Code, duplicate.Code)
+				}
+				wantCalls++
+			}
 			var events, audits, succeeded int
 			for query, dest := range map[string]*int{
 				`SELECT count(*) FROM app_module_events WHERE module_id='user-manager' AND action='revoke'`:  &events,
@@ -313,7 +323,7 @@ func TestAppUserTransactionHTTPNoDuplicateOrPartialFailureAudit(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			if calls != 1 {
+			if calls != wantCalls {
 				t.Fatal("unexpected executor dispatch", calls)
 			}
 			if scenario == "success" {
@@ -336,5 +346,65 @@ func TestAppUserTransactionHTTPNoDuplicateOrPartialFailureAudit(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestAppUserRequestDuplicateReturnsOriginalWithoutRepeatingWrite(t *testing.T) {
+	for _, action := range []string{"create", "update", "revoke", "delete"} {
+		t.Run(action, func(t *testing.T) {
+			a, actor, target := appUserTransactionFixture(t)
+			other := accessUser(t, a.Store, "atomic-other", "admin", nil)
+			ctx := context.Background()
+			in := appUserInput(action)
+			first, err := a.manageAppUserRequest(ctx, actor, action, in, "owned-original")
+			if err != nil || first == nil {
+				t.Fatal(err)
+			}
+			// A fresh session after a revoke must also survive exact redelivery.
+			if action == "revoke" {
+				if _, err := a.Store.DB.Exec(`INSERT INTO sessions VALUES(?,?,?,?,?)`, Hash("later-untouched-session"), target.ID, "csrf", time.Now().Add(time.Hour).Unix(), time.Now().Unix()); err != nil {
+					t.Fatal(err)
+				}
+			}
+			before := appUserTables(t, a.Store)
+			second, err := a.manageAppUserRequest(ctx, actor, action, in, "owned-original")
+			original, _ := json.Marshal(first)
+			actual, _ := json.Marshal(second)
+			if err != nil || !bytes.Equal(original, actual) || !bytes.Equal(before, appUserTables(t, a.Store)) {
+				t.Fatal("redelivery changed the original result, account state or audits", err)
+			}
+			changed := in
+			changed.SiteIDs = []string{ID()}
+			for _, attempt := range []struct {
+				actor identity
+				in    AppModuleInput
+			}{{other, in}, {actor, changed}} {
+				if out, err := a.manageAppUserRequest(ctx, attempt.actor, action, attempt.in, "owned-original"); err == nil || out != nil {
+					t.Fatal("original key accepted another account or payload")
+				}
+			}
+			if !bytes.Equal(before, appUserTables(t, a.Store)) {
+				t.Fatal("changed redelivery mutated state")
+			}
+			private := appUserTables(t, a.Store, "app_user_request_receipts")
+			if bytes.Contains(private, []byte(in.Username)) || in.Password != "" && (bytes.Contains(private, []byte(in.Password)) || bytes.Contains(private, []byte(Hash(in.Password)))) {
+				t.Fatal("receipt exposes mutation data")
+			}
+		})
+	}
+}
+
+func TestAppUserRequestRedeliveryHonorsCurrentAuthority(t *testing.T) {
+	a, actor, _ := appUserTransactionFixture(t)
+	ctx := context.Background()
+	in := appUserInput("revoke")
+	if _, err := a.manageAppUserRequest(ctx, actor, "revoke", in, "original-before-revocation"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Store.DB.Exec(`INSERT INTO app_user_menus(user_id,menu_ids,revision) VALUES(?,'[]',2) ON CONFLICT(user_id) DO UPDATE SET menu_ids='[]',revision=app_user_menus.revision+1`, actor.ID); err != nil {
+		t.Fatal(err)
+	}
+	if result, err := a.manageAppUserRequest(ctx, actor, "revoke", in, "original-before-revocation"); err == nil || result != nil {
+		t.Fatal("redelivery returned a receipt after authority was revoked")
 	}
 }

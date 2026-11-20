@@ -125,3 +125,24 @@ func TestAnalyticsGeographyRequiresDedicatedSignedFeature(t *testing.T) {
 		t.Fatal("older programme accepted geography manifest")
 	}
 }
+
+func TestAnalyticsSessionActivityRequiresDedicatedSignedFeature(t *testing.T) {
+	m := analyticsQueryManifestFixture()
+	m.Version = AnalyticsSessionActivityVersion
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsPeriodComparisonFeature, AnalyticsLayoutHeatmapFeature, AnalyticsGeographyFeature)
+	all := func(string) bool { return true }
+	if validatePanelRequirements(m, all) == nil {
+		t.Fatal("old package declaration enabled new activity")
+	}
+	m.RequiredPanelFeatures = append(m.RequiredPanelFeatures, AnalyticsSessionActivityFeature)
+	if err := validatePanelRequirements(m, all); err != nil {
+		t.Fatal(err)
+	}
+	if validatePanelRequirements(m, func(feature string) bool { return feature != AnalyticsSessionActivityFeature }) == nil {
+		t.Fatal("old panel accepted 2.4.6")
+	}
+	m.Version = AnalyticsSessionActivityVersion + "-compat1"
+	if validatePanelRequirements(m, all) == nil {
+		t.Fatal("unknown version alias accepted")
+	}
+}

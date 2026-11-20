@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"golang.org/x/sys/unix"
+	"local/panel/internal/core"
 )
 
 // Actual Linux Root file descriptors/flocks, but no daemon operation, service
@@ -461,5 +462,26 @@ func TestDockerMutationProductionHTTPInvalidEffectAndInstallerConflictReadonlyQA
 		if err != nil || !geoStoreStableInfo(st, after) {
 			t.Fatal("actual lock inode, bytes or permissions changed", name, err)
 		}
+	}
+}
+
+func TestElasticsearchSnapshotReusesDockerMutationLease(t *testing.T) {
+	store := dockerMutationFixture(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel()
+	lease, err := store.begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lease.Close()
+	err = lease.use(ctx, func(bound context.Context) error {
+		state, err := runElasticsearchSnapshotOperation(bound, "00000000000000000000000000000000", core.ElasticsearchSnapshotRequest{}, "status")
+		if state != "" {
+			t.Fatalf("returned state for nonexistent project: %q", state)
+		}
+		return err
+	})
+	if !errors.Is(err, errElasticsearchProject) || ctx.Err() != nil {
+		t.Fatalf("snapshot operation failed to enter the project check with its original lease: %v", err)
 	}
 }

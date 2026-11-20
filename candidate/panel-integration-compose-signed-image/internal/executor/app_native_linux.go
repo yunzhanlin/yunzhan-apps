@@ -351,7 +351,7 @@ func (s *Service) moduleFTP(ctx context.Context, action string, in core.AppModul
 		state, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-active", "panel-pure-ftpd.service")
 		enabled, _ := s.Config.Run(ctx, "/usr/bin/systemctl", "is-enabled", "panel-pure-ftpd.service")
 		runtimeBinary, runtimeErr := s.ftpBinary("pure-ftpd")
-		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "soft_quota": true, "shared_home_counter": true, "recovery_pending": s.ftpRecoveryPending(), "runtime_binary": runtimeBinary, "account_limits_ready": runtimeErr == nil && strings.Contains(runtimeBinary, ftpRuntimeVersion)}
+		report := map[string]any{"users": users, "config": config, "service_active": strings.TrimSpace(state) == "active", "boot_enabled": strings.TrimSpace(enabled) == "enabled", "tls_required": true, "data_tls_required": true, "certificate": cert, "firewall_changed": false, "soft_quota": true, "shared_home_counter": true, "recovery_pending": s.ftpRecoveryPending(), "runtime_binary": runtimeBinary, "account_limits_ready": runtimeErr == nil && s.ftpManagedDaemon(runtimeBinary)}
 		if runtimeErr != nil {
 			report["runtime_error"] = runtimeErr.Error()
 		}
@@ -542,6 +542,15 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 	if action == "configuration" {
 		return s.pm2ConfigurationReport(in)
 	}
+	if action == "archive-configurations" {
+		return s.archivePM2Configurations(ctx, in)
+	}
+	if action == "recover-configuration-archive" {
+		return s.recoverPM2ConfigurationArchive(ctx, in)
+	}
+	if action == "restore-configuration-archive" {
+		return s.restorePM2ConfigurationArchive(ctx, in)
+	}
 	if action == "stop" {
 		return s.stopPM2PreservingEvidence(ctx, in)
 	}
@@ -687,6 +696,18 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		return nil, err
 	}
 	defer projectLock.Close()
+	// A generation archive covers every project. Serialize journal mutations
+	// as well as the per-project live manifest; read-only and stop stay independent.
+	if action == "update" || action == "recover-configuration" || action == "cancel-configuration-request" {
+		journalLease, leaseErr := s.lockPM2ConfigurationJournal()
+		if leaseErr != nil {
+			return nil, leaseErr
+		}
+		defer journalLease.Close()
+		if err := s.pm2NoPendingConfigurationArchives(); err != nil {
+			return nil, err
+		}
+	}
 	// Re-read the live manifest after acquiring the interprocess project lock.
 	if e := moduleRead(path, &app); e != nil {
 		return nil, e
@@ -703,7 +724,7 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 		if e != nil {
 			return nil, e
 		}
-		if out, known, e := pm2ConfigurationDuplicate(in, before, configuration); known {
+		if out, known, e := s.pm2ConfigurationDuplicateIncludingArchives(in, before, configuration); known {
 			return out, e
 		}
 	}

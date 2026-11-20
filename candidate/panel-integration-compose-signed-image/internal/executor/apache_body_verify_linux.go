@@ -88,7 +88,7 @@ func verifyApacheBodyBuildContext(parent context.Context, id string) error {
 // activation contract or the closed historical inspection contract. No module
 // executes, no program loads, and no record is migrated or rewritten here.
 func verifyApacheBodyRetainedBytes(ctx context.Context, record apacheBodyBuildRecord) error {
-	r, err := apacheRelease()
+	r, err := apacheRecordRelease(record.ApacheVersion)
 	if err != nil || r.CLI() != record.ApacheBinary {
 		return errors.New("当前 Apache 程序选择与构建记录不匹配")
 	}

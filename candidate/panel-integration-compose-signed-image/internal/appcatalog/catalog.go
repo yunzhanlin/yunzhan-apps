@@ -126,7 +126,8 @@ type Client struct {
 	BaseURL                 string
 	PublicKey               ed25519.PublicKey
 	HTTP                    *http.Client
-	cacheMu                 sync.Mutex
+	catalogOnce             sync.Once
+	catalogGate             chan struct{}
 	manifestOnce            sync.Once
 	manifestGate            chan struct{}
 	githubRefMu             sync.Mutex
@@ -187,6 +188,17 @@ func Default() *Client {
 	return client
 }
 
+// NewRegistryClient gives the application store two sequential HTTPS reads
+// within a bounded request, including on slow official connections.
+func NewRegistryClient() *Client {
+	client := Default()
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.TLSHandshakeTimeout = 24 * time.Second
+	client.HTTP.Transport = transport
+	client.HTTP.Timeout = 28 * time.Second
+	return client
+}
+
 func (c *Client) get(ctx context.Context, rawURL string, limit int64) ([]byte, error) {
 	if rawURL != c.BaseURL+"/dist/catalog-v1.json" && rawURL != c.BaseURL+"/signatures/catalog-v1.sig" && rawURL != c.BaseURL+"/signatures/catalog-v1.bundle.json" && rawURL != c.BaseURL+"/data/geodata/dbip-city-lite-v1/catalog.signed.json" && !strings.HasPrefix(rawURL, c.BaseURL+"/dist/apps/") {
 		return nil, errors.New("拒绝访问未授权的应用仓库地址")
@@ -241,6 +253,11 @@ func (c *Client) readResponse(req *http.Request, limit int64) ([]byte, error) {
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, err
+	}
+	// The retry delay and deadline can expire while the scheduler is busy.
+	// Check the absolute deadline even if its cancellation callback has not run.
+	if deadline, ok := ctx.Deadline(); ok && !time.Now().Before(deadline) {
+		return nil, context.DeadlineExceeded
 	}
 	// Preserve the exact resolved commit, URL/query, headers and origin. Do not
 	// re-resolve a branch, switch transports or fall back to mutable main.
@@ -484,8 +501,16 @@ func (c *Client) RefreshCatalog(ctx context.Context, cacheDir string) (Catalog, 
 }
 
 func (c *Client) loadCatalog(ctx context.Context, cacheDir string, maxAge time.Duration, refreshReference bool) (Catalog, LoadInfo, error) {
-	c.cacheMu.Lock()
-	defer c.cacheMu.Unlock()
+	c.catalogOnce.Do(func() { c.catalogGate = make(chan struct{}, 1) })
+	select {
+	case c.catalogGate <- struct{}{}:
+		defer func() { <-c.catalogGate }()
+	case <-ctx.Done():
+		return Catalog{}, LoadInfo{}, ctx.Err()
+	}
+	if err := ctx.Err(); err != nil {
+		return Catalog{}, LoadInfo{}, err
+	}
 	if cached, modified, err := c.cachedCatalog(cacheDir); err == nil && maxAge > 0 && time.Since(modified) <= maxAge {
 		if retry := c.githubBackoff(); retry != nil {
 			return cached, catalogFailureInfo(modified, retry), nil

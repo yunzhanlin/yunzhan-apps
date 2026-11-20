@@ -170,6 +170,47 @@ func statisticsTestIngest(t *testing.T, s *Service, db *sql.DB, id string, now t
 	return state
 }
 
+func TestStatisticsHistoryRecognizesLegacySiteWithoutPublic(t *testing.T) {
+	s, db, id, log, now := statisticsHistoryFixture(t)
+	site := filepath.Join(s.Config.SitesDir, id)
+	marker := filepath.Join(site, ".panel-site.json")
+	if err := os.Remove(filepath.Join(site, "public")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(site, "index.html"), []byte("original site"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(log, []byte(statisticsTestLine(now, "/legacy")), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if result := statisticsTestIngest(t, s, db, id, now); result.Sources != 1 || statisticsTestCount(t, db) != 1 {
+		t.Fatal("legacy request was not retained", result)
+	}
+	if err := os.Remove(log); err != nil {
+		t.Fatal(err)
+	}
+	if result := statisticsTestIngest(t, s, db, id, now); result.Missing != 1 || statisticsTestCount(t, db) != 1 {
+		t.Fatal("missing source did not preserve original history", result)
+	}
+	identity, err := os.ReadFile(marker)
+	if err != nil {
+		t.Fatal(err)
+	}
+	original := filepath.Join(site, "original-marker")
+	if err := os.Rename(marker, original); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("original-marker", marker); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.ingestStatisticsHistory(context.Background(), db, id, now); err == nil {
+		t.Fatal("followed a symlinked site marker")
+	}
+	if actual, err := os.ReadFile(original); err != nil || string(actual) != string(identity) || statisticsTestCount(t, db) != 1 {
+		t.Fatal("changed original site identity or history", err)
+	}
+}
+
 func TestStatisticsHistoryIncrementalPrivateRestartAndPartialLine(t *testing.T) {
 	s, db, id, path, now := statisticsHistoryFixture(t)
 	line := statisticsTestLine(now, "/page?password=path-secret#fragment-secret")

@@ -4,6 +4,9 @@ import AnalyticsHTMLEngine from "./AnalyticsHTMLEngine.vue";
 import AnalyticsPerformanceReport from "./AnalyticsPerformanceReport.vue";
 import AnalyticsPeriodComparison from "./AnalyticsPeriodComparison.vue";
 import AnalyticsHeatmapOverlay from "./AnalyticsHeatmapOverlay.vue";
+import AnalyticsSessionActivity from "./AnalyticsSessionActivity.vue";
+import AnalyticsVisualReplay from "./AnalyticsVisualReplay.vue";
+import AnalyticsReplaySettings from "./AnalyticsReplaySettings.vue";
 import type {AnalyticsPerformancePages} from "./analyticsPerformance";
 import { analyticsCollectorEnabled } from "./analyticsHTMLState";
 import { randomId } from "./randomId";
@@ -35,7 +38,7 @@ const props=defineProps<{api:API;installed:boolean;installedVersion?:string;site
 const selected=ref(""),tab=ref("overview"),busy=ref(false),error=ref(""),saved=ref("");
 const settings=ref<Settings>(),reportValue=ref<Report>();
 const htmlEngineReady=ref(false);
-const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","2.4.5"].includes(props.installedVersion||""));
+const htmlSupported=computed(()=>props.installed && ["2.3.0","2.3.1","2.3.2","2.4.0","2.4.1","2.4.2","2.4.3","2.4.4","2.4.5","2.4.6"].includes(props.installedVersion||""));
 const rangeStart=ref<Date|null>(),rangeEnd=ref<Date|null>(),heatPath=ref(""),heatPage=ref(1),heatViewport=ref<HeatViewport>();
 const query=computed(()=>browserAnalyticsQuery(selected.value,rangeStart.value,rangeEnd.value));
 const reportFence=browserAnalyticsQueryFence(),reportTicket=ref<BrowserAnalyticsQueryTicket>();
@@ -47,7 +50,8 @@ let funnelSequence=0;
 let sequence=0;
 let disposed=false;
 const site=computed(()=>props.sites.find(s=>s.id===selected.value));
-const geographySupported = computed(() => props.installedVersion === "2.4.5");
+const activitySupported = computed(() => props.installedVersion === "2.4.6");
+const geographySupported = computed(() => props.installedVersion === "2.4.5" || activitySupported.value);
 const geographyStatus: Record<string, string> = {
   located: "已定位", non_public: "非公网地址", unverified: "地址未核实", unavailable: "地理库暂不可用",
   not_found: "地理库无匹配", not_collected: "未采集地理分布",
@@ -208,7 +212,7 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
       <el-tab-pane label="访客与会话" name="sessions">
         <el-alert v-if="(report?.ordering_uncertain_sessions||0)>0" title="部分会话缺少访问序号或序号存在冲突，这些旅程按服务端接收顺序估计；旧记录保留原样。" type="warning" :closable="false" />
         <p>标识经服务端按网站隔离后哈希。浏览器标识不等于真实人数，原始 IP 不保留。</p>
-        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
+        <el-table :data="report?.sessions || []" empty-text="尚无会话数据" max-height="480"><el-table-column type="expand"><template #default="{row}"><p>访问旅程：{{row.journey.join(' → ')}}</p><p>旅程顺序：{{row.page_order_source==='browser-navigation-sequence' && row.page_order_uncertain===false ? '浏览器报告顺序' : '接收顺序（待核对）'}}。接收时间不等于页面发生时间。</p><p>会话标识：{{row.id}}</p><AnalyticsSessionActivity v-if="activitySupported && report" :load="api" :site="selected" :session="row.id" :visitor="row.visitor" :from="report.from" :to="report.to" /><AnalyticsVisualReplay v-if="activitySupported && report" :load="api" :site="selected" :session="row.id" :visitor="row.visitor" :from="report.from" :to="report.to" /></template></el-table-column><el-table-column prop="entry" label="入口" show-overflow-tooltip /><el-table-column prop="exit" label="离开" show-overflow-tooltip /><el-table-column prop="source" label="来源" /><el-table-column prop="pages" label="浏览页数" width="100" /><el-table-column label="前台停留（秒）" width="150"><template #default="{row}">{{row.duration.toFixed(1)}}</template></el-table-column></el-table>
       </el-tab-pane>
       <el-tab-pane label="点击热图" name="heatmap">
         <p>需在采集设置单独开启。使用文档百分比坐标，支持按采集时的屏宽查看。</p>
@@ -279,10 +283,11 @@ const dimensions=[{key:"pages",label:"访问页面"},{key:"entry_pages",label:"�
         <AnalyticsHTMLEngine :api="api" :installed="installed" :supported="htmlSupported" @ready="htmlEngineReady=$event" />
         <template v-if="settings"><el-alert title="采集默认关闭。开启前请按你的网站隐私政策设置访客告知或同意机制；采集器尊重 DNT/GPC，且不采集输入内容。" type="info" :closable="false" />
           <el-form label-position="top" class="analytics-settings"><el-form-item label="启用浏览器采集（立即应用）"><el-switch v-model="settings.enabled" aria-label="启用浏览器采集" :disabled="!installed || busy" @change="setEnabled" /></el-form-item><el-form-item label="HTML 自动接入（立即应用）"><el-switch v-model="settings.auto_inject_html" aria-label="HTML 自动接入" :disabled="!installed || busy || (!settings.auto_inject_html && (!settings.enabled || !htmlSupported || !htmlEngineReady))" @change="save" /></el-form-item><el-form-item label="启用点击坐标（可选）"><el-switch v-model="settings.clicks" :disabled="!installed || busy" /></el-form-item><el-form-item v-if="geographySupported" label="统计访客国家或地区"><el-switch v-model="settings.geography" aria-label="统计访客国家或地区" :disabled="!installed || !settings.enabled || busy" /><p>保存后从网站统计 v2 已验签的地理库读取。旧记录保持原样。</p></el-form-item><el-form-item label="事件保留天数（1–90）"><el-input-number v-model="settings.retention_days" :min="1" :max="90" :disabled="!installed || busy" /></el-form-item><el-button type="primary" :disabled="!installed || busy" @click="save">保存采集设置</el-button></el-form>
+          <AnalyticsReplaySettings v-if="activitySupported" :api="api" :site="selected" :collecting="settings.enabled" />
           <p>缩短保留天数会在后续采集时清理过期事件，不能恢复；导出统计只包含聚合结果，不是原始事件备份。</p>
           <h4>同源采集代理（自动管理）</h4><p>开启立即自动添加到对应网站配置，关闭立即移除；执行器先备份，再校验 Nginx 并应用，失败恢复旧配置。仅允许 tracker.js、auto.js 和 event，不代理面板管理接口。</p><p>访客入口：{{site?.domain}}/__yunzhan/analytics/ → 本机采集服务。{{settings.proxy_endpoint ? `已应用的内部上游：http://${settings.proxy_endpoint}/collect/analytics/` : '当前没有已应用的受管采集代理。'}}</p>
           <h4>{{settings.auto_inject_html ? '已选择 HTML 自动接入' : '手动添加 JS 采集标签'}}</h4><p v-if="settings.auto_inject_html">无需修改模板。仅本网站启用，关闭自动接入会从 Nginx 配置撤掉响应过滤器，模板文件始终保持原样。已经手动加入的同一采集器会去重，不重复计数。</p><p v-else>将下列代码加入 {{site?.domain}} 的 HTML 模板；或先加载可选引擎，再开启本网站的 HTML 自动接入。</p><p>浏览器始终使用当前网站的域名与协议；内部上游不应换成网站域名，否则可能循环代理。严格 CSP、压缩上游或缺少明确 head 的页面可能需要手动接入；自动接入不改写这些页面。</p><pre v-if="!settings.auto_inject_html">{{snippet}}</pre>
-          <h4>能力与边界</h4><ul><li v-for="note in report?.limitations || []" :key="note">{{note}}</li><li>全机最多保留 200000 条事件；每个面板进程每秒最多接收 100 个请求。已核实的客户端地址每分钟最多接收 1200 个通过格式校验的采集请求；未核实地址的旧代理采集按网站和浏览器访客标识分别计数，每个面板进程每分钟最多核准 6000 次采集处理，独立限额表最多保留 6000 个当分钟计数项；跨分钟的延迟请求会重新核对当前总限额。达到上限会拒绝新采集，不伪造统计。</li></ul>
+          <h4>能力与边界</h4><ul><li v-for="note in report?.limitations || []" :key="note">{{note}}</li><li>全机最多保留 200000 条事件；每个面板进程每秒最多接收 100 个请求。已核实的客户端地址在每个网站每分钟最多接收 1200 个通过格式校验的采集请求；未核实地址的旧代理采集按网站和浏览器访客标识分别计数，每个面板进程每分钟最多核准 6000 次采集处理，独立限额表最多保留 6000 个当分钟计数项；跨分钟的延迟请求会重新核对当前总限额。达到上限会拒绝新采集，不伪造统计。</li></ul>
         </template><el-empty v-else description="先选择网站" />
       </el-tab-pane>
       <el-tab-pane label="版本与更新" name="version"><slot name="version" /></el-tab-pane>

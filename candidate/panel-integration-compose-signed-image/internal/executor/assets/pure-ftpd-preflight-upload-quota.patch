@@ -1,0 +1,42 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -4257,4 +4257,18 @@
+         goto end;
+     }
++#ifdef QUOTAS
++    /* Refuse a full quota before creating or truncating the destination.
++       Quota accounting at transfer completion still checks concurrent writes. */
++    if (hasquota() == 0) {
++        if (quota_update(&quota, 0LL, 0LL, NULL) != 0) {
++            addreply_noformat(452, MSG_WRITE_FAILED);
++            goto end;
++        }
++        if (quota.files >= user_quota_files || quota.size > user_quota_size) {
++            addreply(552, MSG_QUOTA_EXCEEDED, name);
++            goto end;
++        }
++    }
++#endif
+     if (autorename != 0) {
+         no_truncate = 1;
+@@ -4335,14 +4349,10 @@
+     }
+ #ifdef QUOTAS
+-    /* A file quota can be active while the byte quota is unlimited.
+-       Keep the upload handler's -1 sentinel in that case. */
+-    if (quota_update(&quota, 0LL, 0LL, &overflow) == 0 &&
+-        (overflow > 0 || quota.files >= user_quota_files ||
+-         quota.size > user_quota_size ||
+-         (user_quota_size != ULONG_LONG_MAX &&
+-          (max_filesize = user_quota_size - quota.size) < (off_t) 0))) {
+-        overflow = 1;
+-        (void) close(f);
+-        goto afterquota;
++    /* Recompute the byte allowance after any existing-file adjustment.
++       The unlimited sentinel must not be cast to a signed offset. */
++    if (user_quota_size != ULONG_LONG_MAX &&
++        quota_update(&quota, 0LL, 0LL, NULL) == 0) {
++        max_filesize = quota.size >= user_quota_size ? (off_t) 0 :
++            (off_t) (user_quota_size - quota.size);
+     }
+ #endif

@@ -67,6 +67,8 @@ const DatabaseManager = defineAsyncComponent(() => import("./DatabaseManager.vue
 const FileManager = defineAsyncComponent(() => import("./FileManager.vue")) as typeof import("./FileManager.vue")["default"];
 const SiteSettingsManager = defineAsyncComponent(() => import("./SiteSettingsManager.vue")) as typeof import("./SiteSettingsManager.vue")["default"];
 const BatchSSLManager = defineAsyncComponent(() => import("./BatchSSLManager.vue")) as typeof import("./BatchSSLManager.vue")["default"];
+const ApacheRuntimeManager = defineAsyncComponent(() => import("./ApacheRuntimeManager.vue")) as typeof import("./ApacheRuntimeManager.vue")["default"];
+const apacheRuntimeManager = ref<InstanceType<typeof ApacheRuntimeManager>|null>(null);
 const RuntimeLifecycleManager = defineAsyncComponent(() => import("./RuntimeLifecycleManager.vue")) as typeof import("./RuntimeLifecycleManager.vue")["default"];
 const PHPExtensionManager = defineAsyncComponent(() => import("./PHPExtensionManager.vue")) as typeof import("./PHPExtensionManager.vue")["default"];
 const MonitoringManager = defineAsyncComponent(() => import("./MonitoringManager.vue")) as typeof import("./MonitoringManager.vue")["default"];
@@ -726,6 +728,7 @@ const filteredRegistryApps = computed(() => {
   ]) : items;
 });
 function openRegistryApp(app: RegistryApp) {
+ if (app.id === "apache") { void apacheRuntimeManager.value?.open(); return; }
   if (app.id === "memcached" && (app.version === "1.6.45-compat4" || registryStatus(app.id)?.instances?.some(v=>v.version==="1.6.45-compat4"))) {
     if (!memcachedUnixManager.value) { ElMessage.info("缓存管理界面正在加载；未提交操作"); return; }
     void memcachedUnixManager.value.open(app);return;
@@ -780,12 +783,13 @@ async function installRegistryApp(app: RegistryApp, parallel = false) {
       if (answer.serverID) body.settings = { mysql_server_id: answer.serverID };
     } else if (app.provider === "compose") {
       const ports = composeHostPortSettings(app.target);
+      const preferred = parallel && app.target === "mongodb-8038" ? 27018 : ports.preferred;
       const range = `请输入 1024–${ports.max} 之间的本机端口。`;
       const answer = await ElMessageBox.prompt(
         `应用只会绑定到主机回环地址。${range}${ports.detail}${parallel ? " 新容器使用独立数据卷，旧容器继续运行。" : ""}`,
         `安装 ${app.name}`,
         {
-          inputValue: String(ports.preferred),
+          inputValue: String(preferred),
           inputValidator: (value: string) => isComposeHostPort(app.target, Number(value)) || range,
           confirmButtonText: "验签并安装",
           cancelButtonText: "取消",
@@ -875,7 +879,7 @@ const phpSecurity = (id: string) => phpSecurityFor(phpReleaseChoices.value, id);
 function runtimeInstallable(id: string) {
   const catalog = runtimes.value.catalog.find(row => row.releases?.some(release => release.id === id));
   const release = catalog?.releases?.find(row => row.id === id);
-  return !!release && (catalog?.family !== "php" || release.installation_allowed === true);
+  return !!release && (!["php", "apache"].includes(catalog?.family || "") || release.installation_allowed === true);
 }
 const versionManagerOpen = ref(false), versionManagerFamily = ref(""), versionManagerSelection = ref("");
 const versionManagerRuntime = computed(() => runtimes.value.catalog.find(item => item.family === versionManagerFamily.value));
@@ -887,7 +891,8 @@ function openVersionManager(family: string) {
 }
 function openRuntimeSettings(family: string, id: string) {
   if (family === "mysql") go("databases");
-  else if (family === "nginx" || family === "apache") go("sites");
+  else if (family === "apache") void apacheRuntimeManager.value?.open();
+  else if (family === "nginx") go("sites");
   else if (family === "php") extensionManager.value?.inspect(id);
   else lifecycleManager.value?.inspect(id);
 }
@@ -1186,6 +1191,7 @@ const jobNames: Record<string, string> = {
   install_php_extension: "安装 PHP 独立扩展",
   switch_php: "切换 PHP 版本",
   switch_nginx: "切换 Nginx 入口",
+  switch_apache: "切换 Apache 运行版本",
   retire_runtime: "卸载运行环境",
   restore_runtime: "恢复运行环境",
   purge_runtime_copy: "清理恢复副本",
@@ -1444,6 +1450,13 @@ async function readAllNotifications() {
     ElMessage.error((e as Error).message);
   }
 }
+const rabbitMQMigrationManifestSHA = computed(() => {
+  if (appRegistry.value.source.stale) return "";
+  const item = appRegistry.value.catalog.apps.find(entry =>
+    entry.id === "rabbitmq" && entry.target === "rabbitmq-440" && entry.version === "4.4.0-compat1");
+  return item?.sha256 || "";
+});
+
 async function api<T>(
   path: string,
   method = "GET",
@@ -2549,6 +2562,7 @@ onUnmounted(() => {
             </section>
           </div>
         </template>
+        <ApacheRuntimeManager ref="apacheRuntimeManager" :api="api" :on-job="revealJob" :on-install="() => { const app=appRegistry.catalog.apps.find(row=>row.id==='apache'); if(app) void installRegistryApp(app); }"/>
         <template v-if="view === 'runtimes'">
           <PHPExtensionManager
             ref="extensionManager"
@@ -2934,7 +2948,9 @@ onUnmounted(() => {
               </section>
             </aside>
           </div>
-          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan" />
+          <DockerManager ref="dockerManager" :api="api" :csrf="csrf" :access="accessPlan"
+            :rabbitMQTargetSHA="rabbitMQMigrationManifestSHA"
+            :canMigrateRabbitMQ="memcachedFullAdmin" @rabbitmq-changed="refresh()" />
           <MemcachedAppUpdate v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedAppUpdate" :api="api" :actor="memcachedActor" @changed="refresh()" />
           <MemcachedHistory v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedHistory" :api="api" :actor="memcachedActor" />
           <MemcachedUnixManager v-if="memcachedActor && canReadPath(accessPlan, '/app-registry')" :key="securityWorkspaceEpoch" ref="memcachedUnixManager" :api="api" :actor="memcachedActor" :sites="sites" :full-admin="memcachedFullAdmin" @changed="refresh()" @legacy="memcachedHistory?.open((registryStatus('memcached')?.instances||[]).filter(v=>v.version!=='1.6.45-compat4'))" />
@@ -3100,6 +3116,7 @@ onUnmounted(() => {
           v-model="settingsOpen"
           :site-id="settingsSiteID"
           :initial-tab="settingsInitialTab"
+          :can-bind-load-balance="canOpenAppModule(accessPlan, 'load-balance')"
           :api="api"
           :on-job="revealJob"
         />

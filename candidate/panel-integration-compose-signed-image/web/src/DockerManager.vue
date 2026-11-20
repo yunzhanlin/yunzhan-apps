@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { formatPanelDateTime } from "./panelTime";
 import DockerContainerMetrics from "./DockerContainerMetrics.vue";
+import RabbitMQQueues from "./RabbitMQQueues.vue";
+import RabbitMQMigrationPreflight from "./RabbitMQMigrationPreflight.vue";
 import { randomId } from "./randomId";
 import { composeHostPortSettings, isComposeHostPort, isPhpMyAdminTemplate } from "./composeHostPorts";
 import { canBindDockerProjectSite } from "./dockerProjectSiteBinding";
@@ -110,7 +112,11 @@ const credentialTemplates = {
   },
 } as const;
 
-type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194";
+function isRabbitMQTemplate(value?: string): boolean {
+  return value === "rabbitmq" || value === "rabbitmq-440";
+}
+
+type CredentialTemplate = keyof typeof credentialTemplates | "openlitespeed-194" | "rabbitmq-440" | "mongodb-8038" | "elasticsearch-snapshot";
 interface CredentialDetails {
   projectName: string;
   template: CredentialTemplate;
@@ -126,7 +132,7 @@ const credentialsError = ref("");
 const passwordVisible = ref(false);
 
 function isCredentialTemplate(value?: string): value is CredentialTemplate {
-  return value === "openlitespeed-194" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
+  return value === "openlitespeed-194" || value === "rabbitmq-440" || value === "mongodb-8038" || value === "elasticsearch-snapshot" || (value !== undefined && Object.hasOwn(credentialTemplates, value));
 }
 
 function readCredentials(item: DockerProject, value: unknown): CredentialDetails {
@@ -135,7 +141,10 @@ function readCredentials(item: DockerProject, value: unknown): CredentialDetails
     throw new Error("无法核对项目凭据");
   }
   const response = value as Record<string, unknown>;
-  const definition = credentialTemplates[template === "openlitespeed-194" ? "openlitespeed" : template];
+  const credentialTemplate = template === "openlitespeed-194" ? "openlitespeed" :
+    template === "rabbitmq-440" ? "rabbitmq" : template === "mongodb-8038" ? "mongodb" :
+    template === "elasticsearch-snapshot" ? "elasticsearch" : template;
+  const definition = credentialTemplates[credentialTemplate];
   const port = response.host_port;
   const fields = response.credentials;
   if (response.project_id !== item.id || response.template_id !== template ||
@@ -176,7 +185,10 @@ const props = defineProps<{
   api: <T>(path: string, method?: string, body?: unknown, idempotencyKey?: string) => Promise<T>;
   csrf: string;
   access: AccessPlan | null;
+  rabbitMQTargetSHA?: string;
+  canMigrateRabbitMQ?: boolean;
 }>();
+const emit = defineEmits<{ "rabbitmq-changed": [] }>();
 const visible = ref(false),
   loading = ref(false),
   busy = ref(false),
@@ -198,9 +210,250 @@ const visible = ref(false),
   logsName = ref("");
 const managedTemplate = ref<"phpmyadmin">();
 const metricsContainer = ref<DockerContainer>();
+const rabbitQueues = ref<DockerProject>();
+const rabbitMigration = ref<DockerProject>();
+type ElasticSnapshotRow = {
+  snapshot: string;
+  indices: string[] | null;
+  index_count: number;
+  state: string;
+  start_time_in_millis: number;
+  restorable: boolean;
+};
+type ElasticSnapshotInventory = {
+  project_id: string;
+  repository_ready: boolean;
+  snapshots: ElasticSnapshotRow[];
+  next?: string;
+};
+const elasticInventory = ref<ElasticSnapshotInventory>();
+const elasticInventoryCursors = ref<string[]>([]);
+const elasticSnapshotStates: Record<string, string> = {
+  IN_PROGRESS: "进行中", SUCCESS: "已完成", FAILED: "失败", PARTIAL: "部分完成", INCOMPATIBLE: "不兼容",
+};
+const elasticSnapshotProject = ref<DockerProject>();
+const elasticSnapshotMode = ref<"create" | "restore">("create");
+const elasticSnapshotForm = ref({ index: "", snapshot: "", restore_index: "", password: "" });
+const elasticSnapshotResult = ref("");
+const elasticSnapshotStatus = ref<"success" | "warning">("success");
+const elasticSnapshotSubmitted = ref<string[]>([]);
+type ElasticPolicySettings = { daily_time: string; expire_days: number; min_count: number; max_count: number };
+type ElasticPolicy = {
+  project_id: string;
+  index: string;
+  revision?: string;
+  settings?: ElasticPolicySettings;
+  next_execution_millis?: number;
+  last_success?: string;
+  last_failure?: string;
+};
+const elasticPolicy = ref<ElasticPolicy>();
+const elasticPolicySettings = ref<ElasticPolicySettings>({ daily_time: "01:30", expire_days: 30, min_count: 3, max_count: 30 });
+const elasticPolicyMessage = ref("");
+const elasticPolicyAction = ref<"save" | "remove">();
+const elasticPolicyInputValid = computed(() => {
+  const { daily_time, expire_days, min_count, max_count } = elasticPolicySettings.value;
+  return /^(0[0-9]|1[0-9]|2[0-3]):[0-5][0-9]$/.test(daily_time) &&
+    [expire_days, min_count, max_count].every(Number.isInteger) &&
+    expire_days >= 1 && expire_days <= 3650 && min_count >= 1 && max_count <= 1000 && min_count <= max_count;
+});
+
+const elasticSnapshotOperation = computed(() => {
+  const { index, snapshot, restore_index } = elasticSnapshotForm.value;
+  return JSON.stringify([elasticSnapshotMode.value, index, snapshot,
+    elasticSnapshotMode.value === "restore" ? restore_index : ""]);
+});
+const canSubmitElasticSnapshot = computed(() =>
+  elasticSnapshotValid.value && !elasticSnapshotSubmitted.value.includes(elasticSnapshotOperation.value));
+const elasticSnapshotOpen = computed({
+  get: () => Boolean(elasticSnapshotProject.value),
+  set: (open: boolean) => { if (!open) closeElasticSnapshots(); },
+});
+const elasticSnapshotName = /^[a-z0-9][a-z0-9_-]{0,79}$/;
+const elasticRestoreIndex = /^restored-[a-z0-9][a-z0-9_-]{0,36}-[a-f0-9]{32}$/;
+function generateElasticRestoreIndex() {
+  const index = elasticSnapshotForm.value.index;
+  if (elasticSnapshotName.test(index)) {
+    elasticSnapshotForm.value.restore_index = `restored-${index.slice(0, 37)}-${randomId().replaceAll("-", "")}`;
+    elasticSnapshotResult.value = "";
+  }
+}
+const elasticSnapshotValid = computed(() => {
+  const { index, snapshot, restore_index, password } = elasticSnapshotForm.value;
+  if (!elasticSnapshotName.test(index) || !elasticSnapshotName.test(snapshot) || !password) return false;
+  return elasticSnapshotMode.value === "create" ||
+    (elasticRestoreIndex.test(restore_index) && restore_index !== index);
+});
 const visibleProjects = computed(() =>
   managedTemplate.value ? projects.value.filter(project => isPhpMyAdminTemplate(project.template_id)) : projects.value,
 );
+
+function openRabbitQueues(item: DockerProject) {
+  if (contextCurrent(contextToken()) && isRabbitMQTemplate(item.template_id) && item.state === "running" && /^[a-f0-9]{32}$/.test(item.id)) {
+    rabbitQueues.value = item;
+  }
+}
+
+function openRabbitMigration(item: DockerProject) {
+  if (contextCurrent(contextToken()) && isRabbitMQTemplate(item.template_id) && /^[a-f0-9]{32}$/.test(item.id)) {
+    rabbitMigration.value = item;
+  }
+}
+
+function closeElasticSnapshots() {
+  elasticPolicy.value = undefined;
+  elasticPolicyAction.value = undefined;
+  elasticPolicyMessage.value = "";
+  elasticInventory.value = undefined;
+  elasticInventoryCursors.value = [];
+  elasticSnapshotProject.value = undefined;
+  elasticSnapshotForm.value = { index: "", snapshot: "", restore_index: "", password: "" };
+  elasticSnapshotResult.value = "";
+  elasticSnapshotMode.value = "create";
+  elasticSnapshotSubmitted.value = [];
+}
+
+function openElasticSnapshots(item: DockerProject) {
+  if (!contextCurrent(contextToken()) || props.canMigrateRabbitMQ !== true ||
+      item.template_id !== "elasticsearch-snapshot" || item.state !== "running" || !/^[a-f0-9]{32}$/.test(item.id)) return;
+  closeElasticSnapshots();
+  elasticSnapshotProject.value = item;
+}
+
+async function loadElasticSnapshotInventory(direction: "first" | "next" | "previous" = "first") {
+  const project = elasticSnapshotProject.value;
+  const token = contextToken();
+  const password = elasticSnapshotForm.value.password;
+  const cursors = elasticInventoryCursors.value;
+  const cursor = direction === "next" ? elasticInventory.value?.next :
+    direction === "previous" ? cursors.at(-2) : "";
+  if (!project || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value || !password || (direction === "next" && !cursor) || (direction === "previous" && cursors.length < 2)) return;
+  const current = () => elasticSnapshotProject.value === project && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticSnapshotResult.value = "";
+  try {
+    const page = await api<ElasticSnapshotInventory>(
+      `/docker/projects/${project.id}/elasticsearch-snapshots/inventory`, "POST", { password, cursor },
+    );
+    if (page.project_id !== project.id) throw new Error("快照清单与当前项目不一致");
+    elasticInventory.value = page;
+    elasticInventoryCursors.value = direction === "next" ? [...cursors, cursor || ""] :
+      direction === "previous" ? cursors.slice(0, -1) : [""];
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticSnapshotStatus.value = "warning";
+      elasticSnapshotResult.value = error instanceof Error ? error.message : "无法读取快照清单";
+    }
+  } finally {
+    finishBusy(token, ticket);
+  }
+}
+
+function selectElasticSnapshot(row: ElasticSnapshotRow) {
+  if (busy.value || !row.restorable || !row.indices || row.indices.length !== 1) return;
+  elasticSnapshotMode.value = "restore";
+  elasticSnapshotForm.value.index = row.indices[0];
+  elasticSnapshotForm.value.snapshot = row.snapshot;
+  generateElasticRestoreIndex();
+}
+
+async function changeElasticPolicy(action: "read" | "save" | "remove") {
+  const project = elasticSnapshotProject.value;
+  const token = contextToken();
+  const form = elasticSnapshotForm.value;
+  const { index, password } = form;
+  const previous = elasticPolicy.value;
+  if (!project || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value ||
+      !elasticSnapshotName.test(index) || !password || (action !== "read" && previous?.index !== index)) return;
+  if (action === "save" && !elasticPolicyInputValid.value) return;
+  if (action === "remove" && !previous?.revision) return;
+  const current = () => elasticSnapshotProject.value === project && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticPolicyAction.value = undefined;
+  elasticPolicyMessage.value = "";
+  try {
+    const result = await api<ElasticPolicy>(`/docker/projects/${project.id}/elasticsearch-policies/${action}`, "POST", {
+      index, password,
+      ...(action !== "read" && previous?.revision ? { revision: previous.revision } : {}),
+      ...(action === "save" ? { settings: { ...elasticPolicySettings.value } } : {}),
+    });
+    if (result.project_id !== project.id || result.index !== index) throw new Error("快照策略与当前项目或索引不一致");
+    elasticPolicy.value = result;
+    elasticPolicySettings.value = result.settings ? { ...result.settings } :
+      { daily_time: "01:30", expire_days: 30, min_count: 3, max_count: 30 };
+    if (action === "save") elasticPolicyMessage.value = "快照策略已保存。";
+    if (action === "remove") elasticPolicyMessage.value = "已停止自动创建和保留清理。";
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticPolicy.value = undefined;
+      elasticPolicyMessage.value = error instanceof Error ? error.message : "快照策略结果待核对";
+    }
+  } finally {
+    form.password = "";
+    finishBusy(token, ticket);
+  }
+}
+
+function elasticSnapshotStarted(milliseconds: number) {
+  return milliseconds > 0 ? new Date(milliseconds).toLocaleString() : "—";
+}
+
+async function submitElasticSnapshot(observe = false) {
+  const item = elasticSnapshotProject.value;
+  const token = contextToken();
+  if (!item || !contextCurrent(token) || props.canMigrateRabbitMQ !== true || busy.value ||
+      !(observe ? elasticSnapshotValid : canSubmitElasticSnapshot).value) return;
+  const mode = elasticSnapshotMode.value;
+  const action = observe ? "status" : mode;
+  const form = elasticSnapshotForm.value;
+  const body = {
+    index: form.index, snapshot: form.snapshot, password: form.password,
+    ...(mode === "restore" ? { restore_index: form.restore_index } : {}),
+  };
+  const current = () => elasticSnapshotProject.value === item && props.canMigrateRabbitMQ === true;
+  const api = contextAPI(token, current);
+  const ticket = startBusy();
+  elasticSnapshotResult.value = "";
+  if (!observe) elasticSnapshotSubmitted.value.push(elasticSnapshotOperation.value);
+  try {
+    const result = await api<{
+      project_id: string; index: string; snapshot: string; restore_index?: string; state: string;
+    }>(`/docker/projects/${item.id}/elasticsearch-snapshots/${action}`, "POST", body);
+    if (result.project_id !== item.id || result.index !== body.index || result.snapshot !== body.snapshot ||
+        (result.restore_index || "") !== (body.restore_index || "") ||
+        (!observe && result.state !== "accepted") ||
+        (observe && !["missing", "running", "complete", "failed"].includes(result.state))) {
+      throw new Error("原请求结果无法核对");
+    }
+    elasticSnapshotStatus.value = "success";
+    if (observe) {
+      const restoring = mode === "restore";
+      const labels: Record<string, string> = {
+        missing: restoring ? "尚无恢复目标索引。" : "尚未发现所选快照。",
+        running: restoring ? "目标索引的主分片尚未全部就绪。" : "快照正在进行。",
+        complete: restoring ? "目标索引的主分片已就绪，请核对内容。" : "所选源索引快照已完成。",
+        failed: "原快照失败或不完整。",
+      };
+      elasticSnapshotStatus.value = result.state === "complete" ? "success" : "warning";
+      elasticSnapshotResult.value = labels[result.state];
+      return;
+    }
+    elasticSnapshotResult.value = mode === "create"
+      ? `已提交快照 ${body.snapshot}。等待 Elasticsearch 完成后再恢复。`
+      : `已提交恢复到 ${body.restore_index}。请在检索接口检查索引及数据。`;
+  } catch (error) {
+    if (contextCurrent(token) && current() && !(error instanceof ObsoleteContext)) {
+      elasticSnapshotStatus.value = "warning";
+      elasticSnapshotResult.value = error instanceof Error ? error.message : "原快照请求待核对";
+    }
+  } finally {
+    body.password = "";
+    form.password = "";
+    finishBusy(token, ticket);
+  }
+}
 
 function phpMyAdminURL(project: DockerProject): string {
   if (!isPhpMyAdminTemplate(project.template_id) || project.state !== "running" ||
@@ -260,7 +513,8 @@ function resetManager() {
     visible.value = false; loading.value = false; busy.value = false;
     managedTemplate.value = undefined;
     overview.value = null; containers.value = []; images.value = []; projects.value = []; networks.value = []; volumes.value = []; templates.value = [];
-    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined;
+    credentialsOpen.value = false; clearCredentials(); logsOpen.value = false; logs.value = ""; logsName.value = ""; metricsContainer.value = undefined; rabbitQueues.value = undefined; rabbitMigration.value = undefined;
+    closeElasticSnapshots();
     createOpen.value = false; projectOpen.value = false; bindingOpen.value = false; networkOpen.value = false; bindingProject.value = null;
     form.value = { name: "", image: "", restart: "unless-stopped", hostPort: "", containerPort: "", protocol: "tcp", command: "", environment: "" };
     projectForm.value = { name: "", mode: "template", templateId: "nginx-static", hostPort: "18080", compose: "" };
@@ -287,6 +541,7 @@ watch(credentialsOpen, value => {
 watch(logsOpen, value => { if (!value) { logSequence++; logs.value = ""; logsName.value = ""; } }, { flush: "sync" });
 watch(() => [bindingOpen.value, bindingProject.value?.id], () => { bindingEpoch++; }, { flush: "sync" });
 watch(projectOpen,()=>{projectEpoch++;},{flush:"sync"});
+watch(elasticSnapshotOperation, () => { elasticSnapshotResult.value = ""; });
 onBeforeUnmount(() => { alive = false; resetManager(); });
 
 async function showCredentials(item: DockerProject) {
@@ -327,6 +582,48 @@ const taggedImages = computed(() =>
 const short = (id: string) => id.replace(/^sha256:/, "").slice(0, 12);
 const nameOf = (item: DockerContainer) =>
   item.Names?.[0]?.replace(/^\//, "") || short(item.Id);
+type ContainerAction = "start" | "stop" | "restart" | "pause" | "unpause";
+
+const containerStates = {
+  created: { label: "已创建", tone: "info" },
+  running: { label: "运行中", tone: "success" },
+  paused: { label: "已暂停", tone: "warning" },
+  restarting: { label: "重启中", tone: "warning" },
+  exited: { label: "已退出", tone: "info" },
+  dead: { label: "异常停止", tone: "danger" },
+  removing: { label: "正在移除", tone: "warning" },
+} as const;
+
+function containerState(item: DockerContainer) {
+  if (retainedContainer(item)) return { label: "镜像保留（受保护）", tone: "info" as const };
+  if (Object.hasOwn(containerStates, item.State)) return containerStates[item.State as keyof typeof containerStates];
+  return { label: "状态未知", tone: "info" as const };
+}
+
+function containerActions(item: DockerContainer): ContainerAction[] {
+  if (retainedContainer(item)) return [];
+  switch (item.State) {
+    case "running": return ["stop", "restart", "pause"];
+    case "paused": return ["unpause"];
+    case "restarting": return ["stop"];
+    case "created":
+    case "exited": return ["start"];
+    default: return [];
+  }
+}
+
+const containerActionLabels: Record<ContainerAction, { title: string; result: string; tone: "success" | "warning" | "primary" }> = {
+  start: { title: "启动", result: "容器已启动", tone: "success" },
+  stop: { title: "停止", result: "容器已停止", tone: "warning" },
+  restart: { title: "重启", result: "容器已重启", tone: "primary" },
+  pause: { title: "暂停", result: "容器已暂停", tone: "warning" },
+  unpause: { title: "恢复", result: "容器已恢复", tone: "success" },
+};
+
+function canRemoveContainer(item: DockerContainer) {
+  return !retainedContainer(item) && ["created", "exited", "dead"].includes(item.State);
+}
+
 function retainedContainer(item: DockerContainer) {
   return item.PanelProtected === true || item.Names?.some(name => name.replace(/^\//, "").startsWith("yunzhan-retain-memcached-")) || item.Labels?.["io.yunzhan.owner"] === "yunzhan.memcached-image-retention.v1" || Object.hasOwn(item.Labels || {}, "io.yunzhan.retention-sha256");
 }
@@ -533,22 +830,21 @@ async function createContainer() {
 }
 async function action(
   item: DockerContainer,
-  actionName: "start" | "stop" | "restart",
+  actionName: ContainerAction,
 ) {
   if (retainedContainer(item)) { ElMessage.warning(retentionWarning); return; }
+  if (busy.value || !containerActions(item).includes(actionName) || !/^[a-f0-9]{64}$/.test(item.Id)) return;
   const token = contextToken(); if (!contextCurrent(token)) return;
   const api = contextAPI(token);
   const ticket = startBusy();
   try {
     await api(`/docker/containers/${item.Id}/${actionName}`, "POST", {});
-    ElMessage.success(
-      { start: "容器已启动", stop: "容器已停止", restart: "容器已重启" }[
-        actionName
-      ],
-    );
+    if (!contextCurrent(token)) return;
+    ElMessage.success(containerActionLabels[actionName].result);
     await load();
   } catch (e) {
     reportError(token, e);
+    if (contextCurrent(token)) await load();
   } finally {
     finishBusy(token, ticket);
   }
@@ -576,8 +872,8 @@ async function removeContainer(item: DockerContainer) {
   if (retainedContainer(item)) { ElMessage.warning(retentionWarning); return; }
   const token = contextToken(); if (!contextCurrent(token)) return;
   const api = contextAPI(token); let ticket = 0;
-  if (item.State === "running") {
-    ElMessage.warning("请先停止容器，再执行删除");
+  if (!canRemoveContainer(item)) {
+    ElMessage.warning("请确认容器已停止，再执行删除");
     return;
   }
   const id = short(item.Id);
@@ -1114,7 +1410,13 @@ async function removeVolume(item: DockerVolume) {
             }}</small>
           </div>
           <div class="docker-actions">
-            <el-button v-if="isCredentialTemplate(item.template_id) && (item.template_id !== 'elasticsearch' || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="isCredentialTemplate(item.template_id) && (!['elasticsearch', 'elasticsearch-snapshot'].includes(item.template_id) || item.initial_credentials)" link type="primary" :disabled="busy" @click="showCredentials(item)">访问凭据</el-button>
+            <el-button v-if="item.template_id === 'elasticsearch-snapshot' && canMigrateRabbitMQ" link type="primary"
+              :disabled="busy || item.state !== 'running'" @click="openElasticSnapshots(item)">索引快照</el-button>
+            <el-button v-if="isRabbitMQTemplate(item.template_id)" link type="primary" :disabled="busy || item.state !== 'running'"
+              @click="openRabbitQueues(item)">查看队列</el-button>
+            <el-button v-if="item.template_id === 'rabbitmq' || item.template_id === 'rabbitmq-440' && canMigrateRabbitMQ" link type="primary"
+              :disabled="busy" @click="openRabbitMigration(item)">RabbitMQ 迁移</el-button>
             <el-link v-if="phpMyAdminURL(item)" type="primary" :href="phpMyAdminURL(item)" target="_blank" rel="noopener noreferrer">打开 phpMyAdmin</el-link>
             <el-button
               v-if="canBindDockerProjectSite(item)"
@@ -1206,39 +1508,24 @@ async function removeVolume(item: DockerVolume) {
           }}</span>
           <div>
             <el-tag
-              :type="item.State === 'running' ? 'success' : 'info'"
+              :type="containerState(item).tone"
               size="small"
-              >{{ retainedContainer(item) ? "镜像保留（受保护）" : item.State === "running" ? "运行中" : "已停止" }}</el-tag
+              >{{ containerState(item).label }}</el-tag
             ><small>{{ item.Status }}</small>
           </div>
           <div class="docker-actions">
             <el-button
-              v-if="item.State !== 'running'"
+              v-for="operation in containerActions(item)"
+              :key="operation"
               link
-              type="success"
-              :icon="VideoPlay"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'start')"
-              >启动</el-button
+              :type="containerActionLabels[operation].tone"
+              :icon="operation === 'start' || operation === 'unpause' ? VideoPlay : undefined"
+              :disabled="busy || !/^[a-f0-9]{64}$/.test(item.Id)"
+              @click="action(item, operation)"
+              >{{ containerActionLabels[operation].title }}</el-button
             >
-            <el-button
-              v-else
-              link
-              type="warning"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'stop')"
-              >停止</el-button
-            >
-            <el-button
-              v-if="item.State === 'running'"
-              link
-              type="primary"
-              :disabled="busy || retainedContainer(item)"
-              @click="action(item, 'restart')"
-              >重启</el-button
-            >
-            <el-button v-if="item.State === 'running'" link type="primary" :disabled="busy"
-              @click="metricsContainer = item">资源</el-button>
+            <el-button link type="primary" :disabled="busy || !/^[a-f0-9]{64}$/.test(item.Id)"
+              @click="metricsContainer = item">诊断</el-button>
             <el-button
               link
               type="primary"
@@ -1251,7 +1538,7 @@ async function removeVolume(item: DockerVolume) {
               link
               type="danger"
               :icon="Delete"
-              :disabled="busy || retainedContainer(item)"
+              :disabled="busy || !canRemoveContainer(item)"
               @click="removeContainer(item)"
               >删除</el-button
             >
@@ -1600,7 +1887,114 @@ async function removeVolume(item: DockerVolume) {
       ></template
     >
   </el-dialog>
-  <DockerContainerMetrics v-if="metricsContainer" :api="api" :id="metricsContainer.Id"
+  <el-dialog v-model="elasticSnapshotOpen" :title="`索引快照 · ${elasticSnapshotProject?.name || 'Elasticsearch'}`"
+    width="min(790px, 94vw)" :close-on-click-modal="false" destroy-on-close>
+    <el-form label-position="top" :disabled="busy" @submit.prevent="submitElasticSnapshot()">
+      <el-form-item label="操作">
+        <el-radio-group v-model="elasticSnapshotMode">
+          <el-radio-button value="create">创建快照</el-radio-button>
+          <el-radio-button value="restore">恢复到新索引</el-radio-button>
+        </el-radio-group>
+      </el-form-item>
+      <el-form-item label="源索引"><el-input v-model="elasticSnapshotForm.index" maxlength="80" /></el-form-item>
+      <el-form-item label="快照名称"><el-input v-model="elasticSnapshotForm.snapshot" maxlength="80" /></el-form-item>
+      <el-form-item v-if="elasticSnapshotMode === 'restore'" label="恢复目标">
+        <el-input v-model="elasticSnapshotForm.restore_index" maxlength="80" placeholder="restored-…" />
+        <el-button link type="primary" :disabled="!elasticSnapshotName.test(elasticSnapshotForm.index)"
+          @click="generateElasticRestoreIndex">生成新索引名</el-button>
+      </el-form-item>
+      <el-form-item label="当前 elastic 密码">
+        <el-input v-model="elasticSnapshotForm.password" type="password" autocomplete="off" maxlength="512" />
+      </el-form-item>
+      <el-alert v-if="elasticSnapshotResult" :title="elasticSnapshotResult" :type="elasticSnapshotStatus" :closable="false" />
+    </el-form>
+    <section aria-label="快照清单">
+      <el-button :disabled="busy || !elasticSnapshotForm.password" @click="loadElasticSnapshotInventory()">
+        {{ elasticInventory ? "刷新快照清单" : "读取快照清单" }}
+      </el-button>
+      <template v-if="elasticInventory">
+        <p v-if="!elasticInventory.repository_ready" role="status">创建首次快照时会初始化仓库。</p>
+        <el-table v-else :data="elasticInventory.snapshots" empty-text="此仓库没有快照" class="elastic-snapshot-inventory">
+          <el-table-column prop="snapshot" label="快照" min-width="145" show-overflow-tooltip />
+          <el-table-column label="索引" min-width="120" show-overflow-tooltip>
+            <template #default="{ row }">
+              {{ row.indices?.join("、") || "—" }}
+              <span v-if="row.index_count > (row.indices?.length || 0)">等 {{ row.index_count }} 个索引</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="状态" min-width="95">
+            <template #default="{ row }">{{ elasticSnapshotStates[row.state] }}</template>
+          </el-table-column>
+          <el-table-column label="开始时间" min-width="140">
+            <template #default="{ row }">{{ elasticSnapshotStarted(row.start_time_in_millis) }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="88">
+            <template #default="{ row }">
+              <el-button link type="primary" :disabled="busy || !row.restorable" @click="selectElasticSnapshot(row)">恢复</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <div v-if="elasticInventoryCursors.length > 1 || elasticInventory.next" class="elastic-snapshot-inventory">
+          <el-button :disabled="busy || !elasticSnapshotForm.password || elasticInventoryCursors.length <= 1"
+            @click="loadElasticSnapshotInventory('previous')">上一页</el-button>
+          <el-button :disabled="busy || !elasticSnapshotForm.password || !elasticInventory.next"
+            @click="loadElasticSnapshotInventory('next')">下一页</el-button>
+        </div>
+      </template>
+    </section>
+    <details class="elastic-snapshot-inventory">
+      <summary>自动快照与保留</summary>
+      <p>使用上方的源索引和管理员密码。保留策略只处理此策略生成的快照。</p>
+      <el-button :disabled="busy || !elasticSnapshotName.test(elasticSnapshotForm.index) || !elasticSnapshotForm.password"
+        @click="changeElasticPolicy('read')">读取策略</el-button>
+      <p v-if="elasticPolicyMessage" role="status">{{ elasticPolicyMessage }}</p>
+      <el-form v-if="elasticPolicy?.index === elasticSnapshotForm.index" label-position="top" :disabled="busy"
+        class="elastic-snapshot-inventory" @submit.prevent>
+        <p v-if="!elasticPolicy.settings">尚未启用自动快照。</p>
+        <template v-else>
+          <p v-if="elasticPolicy.next_execution_millis">下次运行 {{ elasticSnapshotStarted(elasticPolicy.next_execution_millis) }}</p>
+          <p v-if="elasticPolicy.last_success">最近成功 {{ elasticPolicy.last_success }}</p>
+          <p v-if="elasticPolicy.last_failure">最近失败 {{ elasticPolicy.last_failure }}</p>
+        </template>
+        <el-form-item label="每天执行时间（UTC）">
+          <el-input v-model="elasticPolicySettings.daily_time" type="time" />
+        </el-form-item>
+        <el-form-item label="保留天数">
+          <el-input-number v-model="elasticPolicySettings.expire_days" :min="1" :max="3650" :step="1" :precision="0" />
+        </el-form-item>
+        <el-form-item label="最少保留份数">
+          <el-input-number v-model="elasticPolicySettings.min_count" :min="1" :max="1000" :step="1" :precision="0" />
+        </el-form-item>
+        <el-form-item label="最多保留份数">
+          <el-input-number v-model="elasticPolicySettings.max_count" :min="1" :max="1000" :step="1" :precision="0" />
+        </el-form-item>
+        <el-button type="primary" :disabled="busy || !elasticPolicyInputValid || !elasticSnapshotForm.password"
+          @click="elasticPolicyAction = 'save'">保存策略</el-button>
+        <el-button v-if="elasticPolicy.settings" :disabled="busy || !elasticSnapshotForm.password"
+          @click="elasticPolicyAction = 'remove'">停用策略</el-button>
+        <div v-if="elasticPolicyAction" class="elastic-snapshot-inventory" role="group" aria-label="确认快照策略">
+          <p>{{ elasticPolicyAction === "save" ? "启用后将定期创建快照，并按所填规则清理该策略生成的快照。" : "停用后保留已有快照。" }}</p>
+          <el-button :disabled="busy" @click="elasticPolicyAction = undefined">取消</el-button>
+          <el-button :disabled="busy || !elasticSnapshotForm.password" type="primary"
+            @click="changeElasticPolicy(elasticPolicyAction)">
+            {{ elasticPolicyAction === "save" ? "确认保存" : "确认停用" }}
+          </el-button>
+        </div>
+      </el-form>
+    </details>
+    <template #footer>
+      <el-button @click="closeElasticSnapshots">关闭</el-button>
+      <el-button :disabled="busy || !elasticSnapshotValid" @click="submitElasticSnapshot(true)">核对状态</el-button>
+      <el-button type="primary" :loading="busy" :disabled="!canSubmitElasticSnapshot"
+        @click="submitElasticSnapshot()">{{ elasticSnapshotMode === "create" ? "提交快照" : "提交恢复" }}</el-button>
+    </template>
+  </el-dialog>
+  <RabbitMQQueues v-if="rabbitQueues" :key="rabbitQueues.id" :api="api" :project="rabbitQueues"
+    @close="rabbitQueues = undefined" />
+  <RabbitMQMigrationPreflight v-if="rabbitMigration" :key="rabbitMigration.id" :api="api" :project="rabbitMigration"
+    :targetSHA="rabbitMQTargetSHA || ''" :can-migrate="canMigrateRabbitMQ === true"
+    @changed="load(); emit('rabbitmq-changed')" @close="rabbitMigration = undefined" />
+  <DockerContainerMetrics v-if="metricsContainer" :key="metricsContainer.Id" :api="api" :id="metricsContainer.Id"
     :name="nameOf(metricsContainer)" @close="metricsContainer = undefined" />
   <el-dialog
     v-model="logsOpen"
@@ -1623,7 +2017,7 @@ async function removeVolume(item: DockerVolume) {
           <dt>{{ endpoint.label }}</dt>
           <dd><code>{{ endpoint.address }}</code></dd>
         </template>
-        <template v-if="credentials.template === 'mongodb'">
+        <template v-if="credentials.template === 'mongodb' || credentials.template === 'mongodb-8038'">
           <dt>认证数据库</dt>
           <dd><code>admin</code></dd>
         </template>
@@ -1860,4 +2254,5 @@ async function removeVolume(item: DockerVolume) {
     grid-template-columns: 1fr;
   }
 }
+.elastic-snapshot-inventory { margin-top: 12px; }
 </style>

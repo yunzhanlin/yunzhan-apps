@@ -18,13 +18,14 @@ import (
 )
 
 type wafTransaction struct {
-	Format    int                     `json:"format"`
-	ID        string                  `json:"id"`
-	State     string                  `json:"state"`
-	CreatedAt string                  `json:"created_at"`
-	Changes   []wafConfigChange       `json:"changes"`
-	Digests   map[string]string       `json:"backup_sha256"`
-	IDS       *threatIDSRecoveryState `json:"ids,omitempty"`
+	Format        int                      `json:"format"`
+	ID            string                   `json:"id"`
+	State         string                   `json:"state"`
+	CreatedAt     string                   `json:"created_at"`
+	Changes       []wafConfigChange        `json:"changes"`
+	Digests       map[string]string        `json:"backup_sha256"`
+	IDS           *threatIDSRecoveryState  `json:"ids,omitempty"`
+	ApacheRuntime *apacheRuntimeTransition `json:"apache_runtime,omitempty"`
 }
 
 // Returned only before a configuration lock is acquired; no mutation occurred.
@@ -246,6 +247,9 @@ func (s *Service) wafTransactionContract(tx wafTransaction) error {
 	if s.fileTransactionApplication == "apache-waf" && (tx.Format != 2 || len(tx.Changes) != 3) {
 		return errors.New("Apache 防护恢复事务需要三个完整的 UID/GID 文件记录")
 	}
+	if err := s.validateApacheRuntimeTransaction(tx); err != nil {
+		return err
+	}
 	if (tx.Format != 1 && tx.Format != 2) || !core.ValidID(tx.ID) || (tx.State != "applying" && tx.State != "committed" && tx.State != "recovered") || len(tx.Changes) < 1 || len(tx.Changes) > 4096 || len(tx.Digests) != len(tx.Changes)*2 {
 		return errors.New("WAF 恢复记录身份、状态或条目数量异常")
 	}
@@ -283,8 +287,14 @@ func wafWriteTransaction(path string, tx wafTransaction) error {
 }
 
 func (s *Service) readWAFTransaction() (wafTransaction, error) {
+	return s.readWAFTransactionFile(s.wafPendingPath())
+}
+
+func (s *Service) readWAFTransactionFile(path string) (wafTransaction, error) {
 	var tx wafTransaction
-	path := s.wafPendingPath()
+	if path != s.wafPendingPath() && (filepath.Dir(path) != filepath.Dir(s.wafPendingPath()) || !strings.HasSuffix(path, ".json") || !core.ValidID(strings.TrimSuffix(filepath.Base(path), ".json"))) {
+		return tx, errors.New("恢复记录读取只允许原命名空间内的固定任务文件")
+	}
 	if err := s.wafOwnedDirectory(filepath.Dir(path), false); err != nil {
 		return tx, err
 	}

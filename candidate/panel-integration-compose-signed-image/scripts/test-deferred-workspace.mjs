@@ -52,7 +52,7 @@ test('actual manager uses the closed selector only after its complete page and d
  assert.equal((show.match(/pageReady = true/g)||[]).length,1);
  assert(show.indexOf('pageReady = true')>show.indexOf('restoreAnalyticsQuery('));
  assert(show.indexOf('pageReady = true')<show.indexOf('} catch (e)'));
- assert.match(show,/const inspection = reportStateUnknown.value \? undefined : initialModuleInspection\(id, definition.value, installed.value, pageReady\);\s*if \(inspection\) await execute\(inspection\);/);
+ assert.match(show,/const inspection = reportStateUnknown.value \|\| needsAccountRead \? undefined : initialModuleInspection\(id, definition.value, installed.value, pageReady\);\s*if \(inspection\) await execute\(inspection\);/);
  assert.equal((show.match(/await execute\(/g)||[]).length,1);
  assert.doesNotMatch(show,/execute\("(?:run|policies|server-report)"\)/);
  assert.match(manager,/<WafWorkspace v-else-if="definition.id === 'apache-waf'"[^>]+engine="apache-waf"/);
@@ -74,7 +74,7 @@ test('the real compiled show function refuses automatic actions after page, site
  const projectsStart=manager.indexOf('async function readPM2Projects('),projectsEnd=manager.indexOf('async function cancelUnacceptedPM2Configuration(',projectsStart);assert(projectsStart>=0&&projectsEnd>projectsStart);
  const js=ts.transpileModule(manager.slice(activateStart,activateEnd)+'\n'+manager.slice(cancelStart,cancelEnd)+'\n'+manager.slice(projectsStart,projectsEnd)+'\n'+source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
  async function open(id,failedPath,actions=['run'],fields=null,unknown=false,reportUnknown=false,pageChange={}){
-  const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','platformMutationObservation','platformReadNotice','pm2ProjectOffset'].map(key=>[key,{value:undefined}]));
+  const refs=Object.fromEntries(['busy','error','visible','report','reportStateUnknown','definition','guidance','dailyWorker','installed','installedVersion','installedInstance','installedUnknown','healthy','form','sites','certificates','selectedPlanID','selectedQuarantineState','workspace','history','historyFilter','historyOffset','activeTab','localVersions','userMutationObservation','userMutationMarkerUnreadable','platformMutationObservation','platformReadNotice','pm2ProjectOffset'].map(key=>[key,{value:undefined}]));
   refs.installedVersion.value='old-version';refs.installedInstance.value='a'.repeat(32);
   refs.phpProtectionSite={value:'previous-site'};
   refs.userMutationObservation.value={action:'update',username:'old-account',state:'unverified'};
@@ -83,6 +83,7 @@ test('the real compiled show function refuses automatic actions after page, site
   refs.nfsSectionRead={value:{kind:'clients',attempted:true}};refs.nfsSectionReadError={value:'previous read failure'};
   const requests=[],executed=[];
   const bindings={...refs,nfsFormDrafts:new NFSFormDrafts(),initialModuleInspection,nfsSectionKind,canReadPath,pm2ProjectsReadKnown,idsAccessGeneration:1,nfsPageReady:true,nfsNavigationKind:'clients',nfsSectionReadController:previousNFSController,platformHealthSnapshot:new PlatformHealthSnapshot(),platformFleetView,
+   userMutationBlocked:()=>Boolean(refs.userMutationObservation.value),restoreUserMutation:()=>{if(id==='user-manager'&&pageChange.recoveryMarker===true)refs.userMutationObservation.value={action:'update',state:'unverified'};},
    platformSnapshotContext:()=>refs.installed.value&&!refs.installedUnknown.value?{generation:1,installationID:refs.installedInstance.value}:undefined,
    props:{api:async(path,method)=>{requests.push(path);if(path===failedPath)throw new Error('retained read failure '+path);
     if(path==='/app-modules/pm2-manager/projects?limit=32&offset=0'){
@@ -95,7 +96,7 @@ test('the real compiled show function refuses automatic actions after page, site
   const view=new Function(...Object.keys(bindings),js+'\nreturn {show,nfsState:()=>({ready:nfsPageReady,kind:nfsNavigationKind})};')(...Object.values(bindings));await view.show(id);
   assert(previousNFSController.signal.aborted,'opening must cancel the previous NFS read through the actual cancellation function');
   assert.equal(refs.nfsSectionRead.value,undefined);assert.equal(refs.nfsSectionReadError.value,'');
-  assert.equal(refs.userMutationObservation.value,undefined,'new module view adopted an old account observation');
+  assert.deepEqual(refs.userMutationObservation.value,pageChange.recoveryMarker ? {action:'update',state:'unverified'} : undefined,'only the current actor recovery marker may survive opening');
   assert.equal(refs.platformMutationObservation.value,undefined,'new module view adopted an old platform observation');
   assert.equal(refs.phpProtectionSite.value,'','new module view adopted a previous PHP site selection');
   return {requests,executed,error:refs.error.value,installed:refs.installed.value,version:refs.installedVersion.value,instance:refs.installedInstance.value,workspace:refs.workspace.value,unknown:refs.installedUnknown.value,reportUnknown:refs.reportStateUnknown.value,report:refs.report.value,nfs:view.nfsState()};
@@ -127,6 +128,8 @@ test('the real compiled show function refuses automatic actions after page, site
   assert.deepEqual(out.requests,['/app-modules/files-sync','/sites'],'opening the sync workspace uses only its existing GET page and dependent site inventory');
  }
  assert.deepEqual((await open('task-manager')).executed,['run']);
+ assert.deepEqual((await open('user-manager')).executed,['run']);
+ assert.deepEqual((await open('user-manager',undefined,['run'],null,false,false,{recoveryMarker:true})).executed,[],'account recovery requires a manual refresh');
  for(const version of ['1.2.0','1.3.0']){
   const instance=version==='1.3.0'?'d'.repeat(32):undefined;
   const out=await open('platform-ops',undefined,['run'],null,false,false,{status:{id:'platform-ops',installed:true,healthy:true,version,installation_id:instance},workspace:[{id:'maintenance',label:'受限跨主机维护',fields:null,actions:null}]});

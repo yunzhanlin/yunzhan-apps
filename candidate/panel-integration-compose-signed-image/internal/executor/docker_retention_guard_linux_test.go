@@ -12,11 +12,15 @@ import (
 	"testing"
 )
 
-func TestDockerRetentionGuardCannotStartStopRestartOrDeleteNativeAnchor(t *testing.T) {
+func TestDockerRetentionGuardBlocksLifecycleChangesToNativeAnchor(t *testing.T) {
 	for _, scenario := range []string{"reserved-name", "owner-label-renamed", "retention-label-renamed", "empty-retention-marker", "damaged-owner-but-original-name"} {
 		t.Run(scenario, func(t *testing.T) {
-			for _, action := range []string{"start", "stop", "restart", "delete"} {
+			for _, action := range []string{"start", "stop", "restart", "delete", "pause", "unpause"} {
 				id := strings.Repeat("a", 64)
+				requestID := id[:12]
+				if action == "pause" || action == "unpause" {
+					requestID = id
+				}
 				name, labels := "/ordinary", map[string]string{}
 				switch scenario {
 				case "reserved-name":
@@ -35,12 +39,12 @@ func TestDockerRetentionGuardCannotStartStopRestartOrDeleteNativeAnchor(t *testi
 				calls := 0
 				call := func(ctx context.Context, method, path string, in, out any, max int64) ([]byte, error) {
 					calls++
-					if method != http.MethodGet || path != "/containers/"+id[:12]+"/json" || in != nil || out != nil || max != 256<<10 {
+					if method != http.MethodGet || path != "/containers/"+requestID+"/json" || in != nil || out != nil || max != 256<<10 {
 						t.Fatal("protected container reached daemon mutation", method, path)
 					}
 					return raw, nil
 				}
-				method, path := http.MethodPost, "/containers/"+id[:12]+"/"+action
+				method, path := http.MethodPost, "/containers/"+requestID+"/"+action
 				if action == "delete" {
 					method, path = http.MethodDelete, "/containers/"+id[:12]+"?v=false"
 				}
@@ -53,9 +57,13 @@ func TestDockerRetentionGuardCannotStartStopRestartOrDeleteNativeAnchor(t *testi
 }
 
 func TestDockerRetentionGuardOrdinaryOperationsBindFullActualIDAndPreserveRequest(t *testing.T) {
-	for _, action := range []string{"start", "stop", "restart", "delete"} {
+	for _, action := range []string{"start", "stop", "restart", "delete", "pause", "unpause"} {
 		t.Run(action, func(t *testing.T) {
 			id := strings.Repeat("c", 64)
+			requestID := id[:12]
+			if action == "pause" || action == "unpause" {
+				requestID = id
+			}
 			raw := []byte(`{"Id":"` + id + `","Name":"/ordinary","Config":{"Labels":null,"Env":["PRIVATE_DO_NOT_REFLECT=value"]}}`)
 			method, suffix := http.MethodPost, "/"+action
 			if action == "stop" || action == "restart" {
@@ -70,7 +78,7 @@ func TestDockerRetentionGuardOrdinaryOperationsBindFullActualIDAndPreserveReques
 			call := func(ctx context.Context, m, path string, in, out any, max int64) ([]byte, error) {
 				calls++
 				if calls == 1 {
-					if m != http.MethodGet || path != "/containers/"+id[:12]+"/json" {
+					if m != http.MethodGet || path != "/containers/"+requestID+"/json" {
 						t.Fatal("wrong inspection")
 					}
 					return raw, nil
@@ -80,7 +88,7 @@ func TestDockerRetentionGuardOrdinaryOperationsBindFullActualIDAndPreserveReques
 				}
 				return []byte("original-result"), nil
 			}
-			result, err := dockerOrdinaryRequest(t.Context(), method, "/containers/"+id[:12]+suffix, input, output, 8192, call)
+			result, err := dockerOrdinaryRequest(t.Context(), method, "/containers/"+requestID+suffix, input, output, 8192, call)
 			if err != nil || calls != 2 || string(result) != "original-result" {
 				t.Fatal("ordinary operation blocked", calls, err)
 			}
@@ -155,7 +163,7 @@ func TestDockerRetentionGuardUnknownOrAmbiguousEvidenceNeverBecomesAnEffect(t *t
 }
 
 func TestDockerRetentionGuardReservedCreateAndUnreviewedContainerActionsNeverReachDaemon(t *testing.T) {
-	for _, path := range []string{"/containers/create?name=yunzhan-retain-memcached-original", "/containers/prune", "/containers/" + strings.Repeat("a", 12) + "/kill", "/containers/" + strings.Repeat("a", 12) + "/rename?name=other", "http://foreign/containers/create", "/containers/%2f/start"} {
+	for _, path := range []string{"/containers/create?name=yunzhan-retain-memcached-original", "/containers/prune", "/containers/" + strings.Repeat("a", 12) + "/kill", "/containers/" + strings.Repeat("a", 12) + "/rename?name=other", "/containers/" + strings.Repeat("a", 12) + "/pause", "/containers/" + strings.Repeat("a", 12) + "/unpause", "http://foreign/containers/create", "/containers/%2f/start"} {
 		if _, err := dockerOrdinaryRequest(t.Context(), http.MethodPost, path, nil, nil, 1024, func(context.Context, string, string, any, any, int64) ([]byte, error) {
 			t.Fatal("unreviewed/reserved operation reached daemon", path)
 			return nil, nil

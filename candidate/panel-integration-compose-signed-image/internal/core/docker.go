@@ -85,35 +85,11 @@ func dockerTemplateOnArchitecture(id string, port int, arch string) (string, err
 		return isolatedPHPTemplate(id, port), nil
 	}
 	switch id {
-	case "rabbitmq":
+	case RabbitMQLegacyTemplate, RabbitMQ440Template:
 		if port == 65535 {
 			return "", errors.New("双端口应用的起始端口不能为 65535")
 		}
-		password := Token()
-		return fmt.Sprintf(`services:
-  rabbitmq:
-    image: %s
-    restart: unless-stopped
-    hostname: cloudstack-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: paneladmin
-      RABBITMQ_DEFAULT_PASS: "%s"
-      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "+S 2:2 +SDcpu 1 +SDio 1"
-    mem_limit: 512m
-    ports:
-      - "127.0.0.1:%d:15672"
-      - "127.0.0.1:%d:5672"
-    volumes:
-      - data:/var/lib/rabbitmq
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
-      interval: 15s
-      timeout: 20s
-      retries: 20
-      start_period: 120s
-volumes:
-  data: {}
-`, dockerRabbitMQImage, password, port, port+1), nil
+		return rabbitMQCompose(id, port, Token()), nil
 	case OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
 		if port == 65535 {
 			return "", errors.New("双端口应用的起始端口不能为 65535")
@@ -144,57 +120,10 @@ volumes:
 		return "services:\n  memcached:\n    image: " + appcatalog.MemcachedDigestImage + "\n    restart: unless-stopped\n    command: [\"memcached\", \"-m\", \"128\", \"-I\", \"4m\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":11211\"\n    healthcheck:\n      test: [\"CMD-SHELL\", \"printf 'version\\r\\n' | nc -w 2 127.0.0.1 11211 | grep -q '^VERSION'\"]\n      interval: 10s\n      timeout: 3s\n      retries: 12\n", nil
 	case PhpMyAdminLegacyTemplate, PhpMyAdmin523Template:
 		return PhpMyAdminCompose(id, port, "", "")
-	case "mongodb":
-		password := Token()
-		return fmt.Sprintf(`services:
-  mongodb:
-    image: %s
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: paneladmin
-      MONGO_INITDB_ROOT_PASSWORD: "%s"
-    ports:
-      - "127.0.0.1:%d:27017"
-    volumes:
-      - data:/data/db
-    healthcheck:
-      test: ["CMD-SHELL", "mongosh --username paneladmin --password '%s' --authenticationDatabase admin --quiet --eval 'quit(db.adminCommand({ping:1}).ok ? 0 : 2)'"]
-      interval: 15s
-      timeout: 20s
-      retries: 18
-      start_period: 60s
-volumes:
-  data: {}
-`, dockerMongoDBImage, password, port, password), nil
-	case "elasticsearch":
-		password := Token()
-		return fmt.Sprintf(`services:
-  elasticsearch:
-    image: %s
-    restart: unless-stopped
-    environment:
-      discovery.type: single-node
-      xpack.security.enabled: "true"
-      xpack.security.autoconfiguration.enabled: "false"
-      xpack.security.http.ssl.enabled: "false"
-      transport.host: "127.0.0.1"
-      ELASTIC_PASSWORD: "%s"
-      node.store.allow_mmap: "false"
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
-    mem_limit: 1g
-    ports:
-      - "127.0.0.1:%d:9200"
-    volumes:
-      - data:/usr/share/elasticsearch/data
-    healthcheck:
-      test: ["CMD-SHELL", "test \"$$(curl -sS -o /dev/null -w '%%{http_code}' --max-time 10 http://127.0.0.1:9200/_cluster/health)\" = 401"]
-      interval: 15s
-      timeout: 15s
-      retries: 20
-      start_period: 15m
-volumes:
-  data: {}
-`, dockerElasticsearchImage, password, port), nil
+	case MongoDBLegacyTemplate, MongoDB8038Template:
+		return mongoDBCompose(id, port, Token()), nil
+	case ElasticsearchLegacyTemplate, ElasticsearchSnapshotTemplate:
+		return elasticsearchCompose(id, port, Token()), nil
 	case "node-service":
 		return "services:\n  app:\n    image: node:24.21.0-alpine\n    restart: unless-stopped\n    command: [\"node\", \"-e\", \"require('http').createServer((q,s)=>s.end('Node.js managed by YunZhan')).listen(3000)\"]\n    ports:\n      - \"127.0.0.1:" + strconv.Itoa(port) + ":3000\"\n", nil
 	case "wordpress-blog":
@@ -269,6 +198,9 @@ func ValidateDockerProject(v DockerProjectRequest) error {
 	}
 	switch v.Action {
 	case "create":
+		if RetiredLegacyPHPTemplate(v.TemplateID) {
+			return errors.New("PHP 8.0 以下版本已从商店移除，不再提供新部署；原项目和数据保留")
+		}
 		if !validDockerResourceName(v.Name) || len(v.Name) > 40 || len(v.Compose) < 20 || len(v.Compose) > 48*1024 || strings.ContainsRune(v.Compose, 0) {
 			return errors.New("Compose 项目名称或内容无效")
 		}
@@ -337,8 +269,23 @@ func validDockerObjectID(id string) bool { return dockerIDPattern.MatchString(id
 
 func ValidDockerContainerID(id string) bool { return len(id) == 64 && validDockerObjectID(id) }
 
+// Existing lifecycle operations accept legacy short IDs. New operations require
+// an exact ID so a resumed browser session cannot affect a different container.
+func ValidDockerContainerAction(id, action string) bool {
+	switch action {
+	case "start", "stop", "restart":
+		return validDockerObjectID(id)
+	case "pause", "unpause":
+		return ValidDockerContainerID(id)
+	default:
+		return false
+	}
+}
+
 func (a *Server) dockerRoutes(m *http.ServeMux) {
 	a.dockerJobObservationRoutes(m)
+	a.dockerRabbitMQRoutes(m)
+	a.dockerElasticsearchRoutes(m)
 	m.HandleFunc("POST /api/docker/projects/{id}/credentials", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var out any
 		if e := a.Executor.Call(r.Context(), "GET", "/v1/docker/projects/"+r.PathValue("id")+"/credentials", nil, &out); e != nil {
@@ -439,16 +386,16 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			{"id": "redis-cache", "name": "Redis 缓存", "image": "redis:8.2.9-alpine", "description": "带持久命名卷的 Redis 单实例", "container_port": 6379},
 			{"id": "memcached-cache", "name": "Memcached 缓存", "image": appcatalog.MemcachedDigestImage, "description": "固定 OCI 摘要、128 MB 缓存，只通过主机回环端口访问", "container_port": 11211},
 			{"id": PhpMyAdmin523Template, "name": "phpMyAdmin 5.2.3", "image": dockerPhpMyAdmin523Image, "description": "PHP 8.3.36，固定官方摘要，只通过主机回环端口访问", "container_port": 80},
-			{"id": "mongodb", "name": "MongoDB", "image": "mongo:8.0@sha256:d0d926f…", "description": "启用认证与持久卷的 MongoDB 8.0 单实例", "container_port": 27017},
-			{"id": "elasticsearch", "name": "Elasticsearch", "image": "elasticsearch:9.1.4@sha256:62a245d…", "description": "仅绑定回环端口的单节点检索服务，启用账号认证，1 GiB 容器上限", "container_port": 9200},
+			{"id": MongoDB8038Template, "name": "MongoDB 8.0.38", "image": dockerMongoDB8038Image, "description": "固定官方摘要，回环连接、认证与独立持久卷", "container_port": 27017},
+			{"id": ElasticsearchSnapshotTemplate, "name": "Elasticsearch 9.1.4", "image": dockerElasticsearchImage, "description": "回环端口、账号认证、持久数据与独立快照卷", "container_port": 9200},
 			{"id": "node-service", "name": "Node.js 服务", "image": "node:24.21.0-alpine", "description": "可直接访问的 Node.js HTTP 示例", "container_port": 3000},
 			{"id": "wordpress-blog", "name": "WordPress 博客", "image": "wordpress:7.1.2-php8.3-apache + mariadb:11.8.9", "description": "独立 PHP 8.3 + MariaDB，持久卷保存网站与数据", "container_port": 80},
-			{"id": "rabbitmq", "name": "RabbitMQ", "image": "rabbitmq:4.1.4-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
+			{"id": RabbitMQ440Template, "name": "RabbitMQ", "image": "rabbitmq:4.4.0-management-alpine", "description": "认证消息队列与管理后台，持久数据卷", "container_port": 15672},
 			{"id": OpenLiteSpeed194Template, "name": "OpenLiteSpeed 1.9.4", "image": dockerOpenLiteSpeed194Image, "description": "独立网站与回环 HTTPS 管理后台，随机管理员密码", "container_port": 8088},
 		}
-		if err := MongoDBKernelCompatibility(); err != nil {
+		if err := MongoDBKernelCompatibility(MongoDB8038Template); err != nil {
 			for _, template := range templates {
-				if template["id"] == "mongodb" {
+				if template["id"] == MongoDB8038Template {
 					template["compatibility_detail"] = err.Error()
 					break
 				}
@@ -456,7 +403,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 		}
 		seen := make(map[string]bool)
 		for _, release := range finalLegacyPHPReleases {
-			if seen[release.appID] {
+			if RetiredLegacyPHPTemplate(release.template) || seen[release.appID] {
 				continue
 			}
 			seen[release.appID] = true
@@ -469,7 +416,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 				"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 " + worker + "、Nginx 和数据卷", "container_port": 8080,
 			})
 		}
-		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {
+		for _, version := range []string{"80", "81"} {
 			if runtime.GOARCH != "amd64" {
 				continue
 			}
@@ -489,6 +436,10 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			return
 		}
 		compose := in.Compose
+		if RetiredLegacyPHPTemplate(in.TemplateID) {
+			rejectDockerCreateBeforeDispatch(w, "PHP 8.0 以下版本已从商店移除，不再提供新部署；原项目和数据保留")
+			return
+		}
 		if in.TemplateID != "" {
 			if compose != "" {
 				rejectDockerCreateBeforeDispatch(w, "模板和自定义 Compose 不能同时提交")
@@ -675,21 +626,26 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 		_ = a.Store.Audit(u.Username, "docker.volume.delete", name, "success")
 		send(w, 200, out)
 	}))
-	m.HandleFunc("GET /api/docker/containers/{id}/stats", a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
-		id := r.PathValue("id")
-		if !ValidDockerContainerID(id) {
-			fail(w, http.StatusBadRequest, "容器标识无效")
-			return
-		}
-		ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
-		defer cancel()
-		var out any
-		if err := a.Executor.Call(ctx, http.MethodGet, "/v1/docker/containers/"+id+"/stats", nil, &out); err != nil {
-			fail(w, http.StatusConflict, err.Error())
-			return
-		}
-		send(w, http.StatusOK, out)
-	}))
+	for _, observation := range []string{"stats", "state"} {
+		m.HandleFunc("GET /api/docker/containers/{id}/"+observation, a.authorize(func(w http.ResponseWriter, r *http.Request, _ identity) {
+			id := r.PathValue("id")
+			if !ValidDockerContainerID(id) {
+				fail(w, http.StatusBadRequest, "容器标识无效")
+				return
+			}
+			ctx, cancel := context.WithTimeout(r.Context(), 7*time.Second)
+			defer cancel()
+			var out any
+			if err := a.Executor.Call(ctx, http.MethodGet, "/v1/docker/containers/"+id+"/"+observation, nil, &out); err != nil {
+				fail(w, http.StatusConflict, err.Error())
+				return
+			}
+			if observation == "state" {
+				w.Header().Set("Cache-Control", "no-store")
+			}
+			send(w, http.StatusOK, out)
+		}))
+	}
 	m.HandleFunc("GET /api/docker/containers/{id}/logs", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id := r.PathValue("id")
 		if !validDockerObjectID(id) {
@@ -735,7 +691,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 	}))
 	m.HandleFunc("POST /api/docker/containers/{id}/{action}", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		id, action := r.PathValue("id"), r.PathValue("action")
-		if !validDockerObjectID(id) || (action != "start" && action != "stop" && action != "restart") {
+		if !ValidDockerContainerAction(id, action) {
 			fail(w, 400, "容器操作无效")
 			return
 		}

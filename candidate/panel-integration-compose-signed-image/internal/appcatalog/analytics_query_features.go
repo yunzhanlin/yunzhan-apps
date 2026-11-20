@@ -10,13 +10,19 @@ const AnalyticsPeriodComparisonFeature = "website-analytics-period-comparison-v1
 const AnalyticsLayoutHeatmapFeature = "website-analytics-layout-heatmap-v1"
 const AnalyticsGeographyFeature = "website-analytics-geography-v1"
 const AnalyticsGeographyVersion = "2.4.5"
+const AnalyticsSessionActivityFeature = "website-analytics-session-activity-v1"
+const AnalyticsSessionActivityVersion = "2.4.6"
+
+func AnalyticsVersionSupportsGeography(version string) bool {
+	return version == AnalyticsGeographyVersion || version == AnalyticsSessionActivityVersion
+}
 
 // A label cannot give an older bundled workspace query-bound reports and
 // exports. Keep all four previously signed 2.4.1 requirements intact.
 func validateAnalyticsQueryRequirement(m Manifest, available func(string) bool) (bool, error) {
 	mentions := false
 	for _, feature := range m.RequiredPanelFeatures {
-		mentions = mentions || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature || feature == AnalyticsLayoutHeatmapFeature || feature == AnalyticsGeographyFeature
+		mentions = mentions || feature == AnalyticsQueryContextFeature || feature == AnalyticsPeriodComparisonFeature || feature == AnalyticsLayoutHeatmapFeature || feature == AnalyticsGeographyFeature || feature == AnalyticsSessionActivityFeature
 	}
 	if m.ID != "website-analytics" {
 		if mentions {
@@ -34,11 +40,14 @@ func validateAnalyticsQueryRequirement(m Manifest, available func(string) bool) 
 	case "2.4.2":
 	case "2.4.3":
 		wanted[AnalyticsPeriodComparisonFeature] = false
-	case "2.4.4", AnalyticsGeographyVersion:
+	case "2.4.4", AnalyticsGeographyVersion, AnalyticsSessionActivityVersion:
 		wanted[AnalyticsPeriodComparisonFeature] = false
 		wanted[AnalyticsLayoutHeatmapFeature] = false
-		if m.Version == AnalyticsGeographyVersion {
+		if AnalyticsVersionSupportsGeography(m.Version) {
 			wanted[AnalyticsGeographyFeature] = false
+		}
+		if m.Version == AnalyticsSessionActivityVersion {
+			wanted[AnalyticsSessionActivityFeature] = false
 		}
 	default:
 		return true, errors.New("网站分析须声明固定完整版本")

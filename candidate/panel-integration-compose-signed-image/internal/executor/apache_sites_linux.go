@@ -15,14 +15,32 @@ import (
 )
 
 func apacheRelease() (runtimecatalog.Release, error) {
-	r, ok := runtimecatalog.Find("apache-2.4.68")
-	if !ok {
-		return runtimecatalog.Release{}, errors.New("Apache 运行时目录缺少 2.4.68")
+	source, err := apacheWAFReadStableFile("/etc/panel/apache/httpd.conf", 2<<20)
+	if err == nil {
+		r, err := apacheSourceRelease(string(source))
+		if err != nil {
+			return runtimecatalog.Release{}, err
+		}
+		if err := ordinary(r.CLI(), false); err != nil {
+			return runtimecatalog.Release{}, err
+		}
+		return r, nil
 	}
-	if e := ordinary(r.CLI(), false); e != nil {
-		return runtimecatalog.Release{}, errors.New("请先安装 Apache 2.4.68")
+	if !errors.Is(err, os.ErrNotExist) {
+		return runtimecatalog.Release{}, err
 	}
-	return r, nil
+	return apacheBuildRelease()
+}
+
+// A build is independent of activation: use the newest completely installed
+// reviewed runtime, recording its exact version and binary digest in the result.
+func apacheBuildRelease() (runtimecatalog.Release, error) {
+	for _, r := range runtimecatalog.Apache {
+		if _, err := LoadRuntime(r.ID); err == nil {
+			return r, nil
+		}
+	}
+	return runtimecatalog.Release{}, errors.New("请先安装已审核的 Apache 运行时")
 }
 
 func renderApacheSites(sites []core.Site, sitesDir string) (string, int, error) {
@@ -200,6 +218,6 @@ func (s *Service) applyApacheSites(ctx context.Context, sites []core.Site, add f
 		}
 		return nil, fmt.Errorf("Apache 服务启动失败: %w", e)
 	}
-	add(fmt.Sprintf("生成并启动 Apache 2.4.68，共承载 %d 个网站", count))
+	add(fmt.Sprintf("生成并启动 Apache %s，共承载 %d 个网站", r.Version, count))
 	return rollback, nil
 }

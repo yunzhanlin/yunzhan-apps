@@ -44,7 +44,26 @@ func checkCompleteProgramUpgradeQueues(remoteReader func(*Service) error) error 
 	if err := checkApacheNumericLogUpgrade(ctx, "/"); err != nil {
 		return err
 	}
-	return checkLoadBalanceStreamUpgrade(ctx, nil)
+	// The signed offline recovery path retains its original five-second
+	// combined limit. Only the ordinary, read-only traffic census gets a
+	// separate bounded window: complete stopped generations must be checked
+	// against the installed engine, systemd, policy and native socket census.
+	if remoteReader != nil {
+		return checkLoadBalanceStreamUpgrade(ctx, nil)
+	}
+	cancel()
+	// A completed inventory must stay within a fixed deadline, including under
+	// the release leases and on smaller or emulated servers. No retry or reuse
+	// of an earlier read can substitute for this current native observation.
+	trafficCtx, cancelTraffic := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancelTraffic()
+	if err := checkLoadBalanceStreamUpgrade(trafficCtx, nil); err != nil {
+		if errors.Is(trafficCtx.Err(), context.DeadlineExceeded) {
+			return errors.New("负载均衡 TCP/UDP 原回执与原生服务在限定时间内无法完成核对，保留状态并拒绝升级")
+		}
+		return err
+	}
+	return nil
 }
 
 // Preserves all existing application, recovery and filesystem checks. The
@@ -101,6 +120,9 @@ func checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service)
 	if err := checkMemcachedRootTransactions(ctx); err != nil {
 		return err
 	}
+	if err := productionRabbitMQMigrationStore().check(ctx); err != nil {
+		return err
+	}
 	if err := checkProgramUpgradeNativeUnits(ctx, programQueueCommand); err != nil {
 		return err
 	}
@@ -116,13 +138,16 @@ func checkLegacyProgramUpgradeQueuesWithRemoteReader(remoteReader func(*Service)
 	if err := checkMemcachedRootTransactions(ctx); err != nil {
 		return err
 	}
+	if err := productionRabbitMQMigrationStore().check(ctx); err != nil {
+		return err
+	}
 	if err := checkProgramUpgradeNativeUnits(ctx, programQueueCommand); err != nil {
 		return err
 	}
 	return coreQueue()
 }
 
-var programQueueUnitPrefixes = []string{"panel-install@", "panel-docker-install@", "panel-pm2-deploy@", "panel-app-dependencies@", "panel-network-rulefeed-install@", "panel-statistics-geodata@", "panel-waf-country@", "panel-waf-country-account@", "panel-waf-engine-build@", "panel-apache-body-build@", "panel-analytics-html-build@", "panel-docker-job@", "panel-compose-job@", "panel-sftp-job@", "panel-mysql-job@", "panel-mariadb-init@", "panel-site-user@", "panel-mysql-user@", "panel-nginx-rollback@", "panel-firewall-rollback@", "panel-own-runtime", "panel-own-apache-runtime", "panel-own-apache-body-worker", "panel-own-waf-engine-build", "panel-own-analytics-html-build", "panel-own-analytics-html-worker"}
+var programQueueUnitPrefixes = []string{"panel-install@", "panel-docker-install@", "panel-pm2-deploy@", "panel-app-dependencies@", "panel-network-rulefeed-install@", "panel-statistics-geodata@", "panel-waf-country@", "panel-waf-country-account@", "panel-waf-engine-build@", "panel-apache-body-build@", "panel-analytics-html-build@", "panel-docker-job@", "panel-compose-job@", "panel-rabbitmq-migration@", "panel-rabbitmq-reconcile@", "panel-sftp-job@", "panel-mysql-job@", "panel-mariadb-init@", "panel-site-user@", "panel-mysql-user@", "panel-nginx-rollback@", "panel-firewall-rollback@", "panel-own-runtime", "panel-own-apache-runtime", "panel-own-apache-body-worker", "panel-own-waf-engine-build", "panel-own-analytics-html-build", "panel-own-analytics-html-worker"}
 var programQueueRecoveryUnits = []string{"panel-compose-recovery.service", "panel-mysql-overwrite-recovery.service", "panel-firewall-recovery.service", "panel-nginx-recovery.service", "panel-nfs-server-recover.service", "panel-pure-ftpd-recover.service"}
 var programQueueUnitName = regexp.MustCompile(`^panel-[a-z0-9@_-]+\.service$`)
 

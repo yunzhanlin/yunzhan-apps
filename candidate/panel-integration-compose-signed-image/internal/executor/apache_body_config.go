@@ -46,13 +46,18 @@ func apacheBodyGlobalBlock(cfg core.WAFConfig, base string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	unique := "LoadModule unique_id_module /opt/panel/runtimes/apache/2.4.68/modules/mod_unique_id.so\n"
+	release, err := apacheSourceRelease(base)
+	if err != nil {
+		return "", err
+	}
+	uniquePath := filepath.Join(release.Prefix(), "modules/mod_unique_id.so")
+	unique := "LoadModule unique_id_module " + uniquePath + "\n"
 	loads := regexp.MustCompile(`(?mi)^\s*LoadModule\s+unique_id_module\s+([^\n]+)$`).FindAllStringSubmatch(base, -1)
 	if len(loads) > 1 {
 		return "", errors.New("Apache unique_id 模块重复，拒绝猜测修复")
 	}
 	if len(loads) == 1 {
-		if strings.TrimSpace(loads[0][1]) != "/opt/panel/runtimes/apache/2.4.68/modules/mod_unique_id.so" && strings.TrimSpace(loads[0][1]) != `"/opt/panel/runtimes/apache/2.4.68/modules/mod_unique_id.so"` {
+		if strings.TrimSpace(loads[0][1]) != uniquePath && strings.TrimSpace(loads[0][1]) != `"`+uniquePath+`"` {
 			return "", errors.New("Apache unique_id 模块不是受管固定程序")
 		}
 		unique = ""

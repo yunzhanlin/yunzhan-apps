@@ -27,7 +27,7 @@ interface RedisCredentials { host: string; port: number; username: string; passw
 interface KeysPage { db: number; cursor: string; keys: string[]; omitted: number }
 interface KeyInfo { db: number; name: string; kind: string; ttl_seconds: number; size: number }
 interface KeyPreview { db: number; name: string; kind: string; total: number; sampled: boolean; truncated: boolean; items: { name: string; value: string }[] }
-const props = defineProps<{ api: API; installed: Runtime[]; csrf: string; access: { role: string; menu_ids: string[] } | null }>();
+const props = defineProps<{ api: API; installed: Runtime[]; csrf: string; access: { role: string; menu_ids: string[]; site_ids?: string[] } | null }>();
 const emit = defineEmits<{ changed: [] }>();
 const drawer = ref(false),
   loading = ref(false),
@@ -63,6 +63,75 @@ function clearCredentials() {
   credentialsTimer = null;
   if (credentials.value) credentials.value.password = "";
   credentials.value = null; credentialsName.value = ""; credentialsOpen.value = false; credentialsLoading.value = false;
+}
+interface RedisPersistence {
+  instance_id: string;
+  last_snapshot: number;
+  snapshot_duration_seconds: number;
+  changes_since_last_save: number;
+  snapshot_running: boolean;
+  snapshot_status: "ok" | "err";
+  aof_enabled: boolean;
+  aof_rewrite_running: boolean;
+  aof_rewrite_scheduled: boolean;
+  aof_write_status: "ok" | "err";
+}
+const persistenceInstance = ref<Instance | null>(null);
+const persistence = ref<RedisPersistence | null>(null);
+const persistenceOpen = ref(false);
+const persistenceBusy = ref(false);
+const persistenceError = ref("");
+const persistenceNotice = ref("");
+const persistenceConfirm = ref(false);
+let persistenceSequence = 0;
+const canManagePersistence = () => canReadCredentials() && !props.access?.site_ids?.length;
+function resetPersistence() {
+  persistenceSequence++;
+  persistenceInstance.value = null;
+  persistence.value = null;
+  persistenceBusy.value = false;
+  persistenceError.value = "";
+  persistenceNotice.value = "";
+  persistenceConfirm.value = false;
+}
+watch(persistenceOpen, visible => { if (!visible) resetPersistence(); }, { flush: "sync" });
+function openPersistence(item: Instance) {
+  if (!canManagePersistence() || item.status !== "running" || item.auth_mode !== "acl-password-v2") return;
+  resetPersistence();
+  persistenceInstance.value = item;
+  persistenceOpen.value = true;
+  void updatePersistence();
+}
+async function updatePersistence(create = false) {
+  const item = persistenceInstance.value;
+  if (!item || persistenceBusy.value || !canManagePersistence() || !persistenceOpen.value) return;
+  const token = managerToken(), sequence = ++persistenceSequence;
+  const current = () => managerCurrent(token) && persistenceOpen.value && sequence === persistenceSequence;
+  const endpoint = `/redis/instances/${item.id}/persistence`;
+  persistenceBusy.value = true;
+  persistenceError.value = "";
+  persistenceConfirm.value = false;
+  if (create) persistenceNotice.value = "请求结果待核对，请刷新持久化状态。";
+  try {
+    if (create) {
+      const pending = await props.api<{ instance_id: string }>(endpoint, "POST", { confirm_id: item.id });
+      if (!current()) return;
+      if (pending.instance_id !== item.id) throw new Error("Redis 快照结果与实例不一致");
+      persistenceNotice.value = "后台快照已启动。刷新状态可查看保存结果。";
+    }
+    const out = await props.api<RedisPersistence>(endpoint);
+    if (!current()) return;
+    if (out.instance_id !== item.id) throw new Error("Redis 持久化状态与实例不一致");
+    persistence.value = out;
+    if (!create) persistenceNotice.value = "";
+  } catch (error) {
+    if (current()) {
+      persistence.value = null;
+      persistenceError.value = error instanceof Error ? error.message : "读取 Redis 持久化状态失败";
+    }
+  } finally {
+    if (current()) persistenceBusy.value = false;
+  }
 }
 const canReadCredentials = () => props.access?.role === "admin" && props.access.menu_ids.includes("databases") && Boolean(props.csrf);
 async function showCredentials(item: Instance) {
@@ -105,7 +174,7 @@ function resetKeys() { keysLoadSequence++; resetKeyDetails(); keysList.value = [
 function resetManager() {
   if (resetting) return;
   resetting = true;
-  try { managerEpoch++; refreshSequence++; logSequence++; clearCredentials(); resetKeys(); drawer.value = false; keysOpen.value = false; keysInstance.value = null; logsOpen.value = false; logs.value = ""; instances.value = []; createOpen.value = false; loading.value = false; form.value = { name: "", release_id: "", port: 16379, max_memory_mb: 128 }; }
+  try { managerEpoch++; refreshSequence++; logSequence++; clearCredentials(); persistenceOpen.value = false; resetPersistence(); resetKeys(); drawer.value = false; keysOpen.value = false; keysInstance.value = null; logsOpen.value = false; logs.value = ""; instances.value = []; createOpen.value = false; loading.value = false; form.value = { name: "", release_id: "", port: 16379, max_memory_mb: 128 }; }
   finally { resetting = false; }
 }
 watch(() => [props.csrf, JSON.stringify(props.access)], resetManager, { flush: "sync" });
@@ -598,7 +667,7 @@ defineExpose({ open, refresh });
           ></template
         ></el-table-column
       >
-      <el-table-column label="操作" min-width="300" fixed="right"
+      <el-table-column label="操作" min-width="350" fixed="right"
         ><template #default="{ row }"
           ><el-button
             link
@@ -613,6 +682,8 @@ defineExpose({ open, refresh });
             >重启</el-button
           ><el-button link type="primary" @click="showLogs(row)">日志</el-button
           ><el-button link type="primary" :disabled="!canReadCredentials() || row.auth_mode !== 'acl-password-v2'" :loading="credentialsLoading" @click="showCredentials(row)">应用凭据</el-button
+          ><el-button v-if="canManagePersistence() && row.auth_mode === 'acl-password-v2'" link type="primary"
+            :disabled="row.status !== 'running'" @click="openPersistence(row)">持久化</el-button
           ><el-button link type="primary" :disabled="row.status !== 'running'" @click="showKeys(row)">查看键</el-button
           ><el-button link type="danger" @click="remove(row)"
             >删除</el-button
@@ -710,6 +781,29 @@ defineExpose({ open, refresh });
         >创建并启动</el-button
       ></template
     >
+  </el-dialog>
+  <el-dialog v-model="persistenceOpen" :title="`${persistenceInstance?.name || 'Redis'} · 持久化`"
+    width="min(560px, 96vw)" destroy-on-close>
+    <el-alert v-if="persistenceError" :title="persistenceError" type="error" :closable="false" />
+    <p v-if="persistenceNotice" role="status">{{ persistenceNotice }}</p>
+    <el-descriptions v-if="persistence" :column="1" border>
+      <el-descriptions-item label="RDB 最近保存">{{ persistence.last_snapshot ? new Date(persistence.last_snapshot * 1000).toLocaleString()  : "本次启动后暂无保存时间" }}</el-descriptions-item>
+      <el-descriptions-item label="RDB 当前状态">{{ persistence.snapshot_running ? "正在保存" : persistence.snapshot_status === "err" ? "最近保存失败" : persistence.snapshot_duration_seconds >= 0 ? "最近保存正常" : "空闲" }}</el-descriptions-item>
+      <el-descriptions-item label="待快照变更">{{ persistence.changes_since_last_save }}</el-descriptions-item>
+      <el-descriptions-item label="AOF 写入">{{ !persistence.aof_enabled ? "未启用" : persistence.aof_write_status === "ok" ? "正常" : "失败" }}</el-descriptions-item>
+      <el-descriptions-item v-if="persistence.aof_enabled" label="AOF 重写">{{ persistence.aof_rewrite_running ? "进行中" : persistence.aof_rewrite_scheduled ? "已排队" : "空闲" }}</el-descriptions-item>
+    </el-descriptions>
+    <el-alert v-if="persistenceConfirm" title="Redis 将在后台创建 RDB 快照。数据量较大时可能增加内存和磁盘负载。" :closable="false" type="warning" />
+    <template #footer>
+      <el-button @click="persistenceOpen = false">关闭</el-button>
+      <el-button :loading="persistenceBusy" @click="updatePersistence()">刷新状态</el-button>
+      <template v-if="persistenceConfirm">
+        <el-button @click="persistenceConfirm = false">取消</el-button>
+        <el-button :disabled="persistenceBusy" type="primary" @click="updatePersistence(true)">确认创建</el-button>
+      </template>
+      <el-button v-else :disabled="persistenceBusy || !persistence || persistence.snapshot_running || persistence.aof_rewrite_running || persistence.aof_rewrite_scheduled"
+        type="primary" @click="persistenceConfirm = true">创建 RDB 快照</el-button>
+    </template>
   </el-dialog>
   <el-dialog v-model="logsOpen" title="Redis 服务日志" width="760px">
     <pre class="redis-logs">{{ logs || "暂无日志" }}</pre>

@@ -20,6 +20,13 @@ import (
 
 type ExecutorClient struct{ Client *http.Client }
 
+type executorResponseError struct {
+	status int
+	detail string
+}
+
+func (e *executorResponseError) Error() string { return e.detail }
+
 func NewExecutorClient(socket string) *ExecutorClient {
 	return &ExecutorClient{Client: &http.Client{Timeout: 90 * time.Second, Transport: &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 		return (&net.Dialer{Timeout: 5 * time.Second}).DialContext(ctx, "unix", socket)
@@ -97,7 +104,7 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 		if x.Error == "" {
 			x.Error = fmt.Sprintf("执行服务返回 HTTP %d", resp.StatusCode)
 		}
-		return errors.New(x.Error)
+		return &executorResponseError{status: resp.StatusCode, detail: x.Error}
 	}
 	if strings.HasPrefix(path, "/v1/waf/country/jobs/") {
 		if original, ok := out.(*json.RawMessage); ok {
@@ -112,13 +119,15 @@ func (e *ExecutorClient) Call(ctx context.Context, method, path string, in, out 
 }
 
 type ApplyRequest struct {
-	PreserveNginx     bool   `json:"preserve_nginx,omitempty"`
-	PreviousSite      *Site  `json:"previous_site,omitempty"`
-	ExpectedConfigSHA string `json:"expected_config_sha,omitempty"`
-	Site              Site   `json:"site"`
-	Sites             []Site `json:"sites,omitempty"`
-	Enabled           bool   `json:"enabled"`
-	JobID             string `json:"job_id"`
+	PreserveNginx        bool   `json:"preserve_nginx,omitempty"`
+	PreviousSite         *Site  `json:"previous_site,omitempty"`
+	PreviousBindingSite  *Site  `json:"previous_binding_site,omitempty"`
+	ExpectedCandidateSHA string `json:"expected_candidate_sha,omitempty"`
+	ExpectedConfigSHA    string `json:"expected_config_sha,omitempty"`
+	Site                 Site   `json:"site"`
+	Sites                []Site `json:"sites,omitempty"`
+	Enabled              bool   `json:"enabled"`
+	JobID                string `json:"job_id"`
 }
 type ApplyResult struct {
 	Status   string `json:"status"`
@@ -211,7 +220,7 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 					enabled = p.PreviousStatus != "stopped"
 				}
 			}
-			expectedConfigSHA := ""
+			var expectedConfigSHA, expectedCandidateSHA string
 			if j.Kind == "switch_php" {
 				var p JobPayload
 				_ = json.Unmarshal([]byte(j.Payload), &p)
@@ -227,7 +236,7 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				site.Settings = *p.Settings
 				previousStatus = p.PreviousStatus
 				enabled = p.PreviousStatus != "stopped"
-				expectedConfigSHA = p.ExpectedConfigSHA
+				expectedConfigSHA, expectedCandidateSHA = p.ExpectedConfigSHA, p.ExpectedCandidateSHA
 			}
 			if enabled && site.Settings.TLS != nil {
 				material, certErr := s.CertificateMaterial(site.Settings.TLS.CertificateID)
@@ -264,6 +273,10 @@ func RunWorker(ctx context.Context, s *Store, e *ExecutorClient) {
 				}
 			}
 			request := ApplyRequest{Site: site, Sites: allSites, Enabled: enabled, JobID: j.ID, ExpectedConfigSHA: expectedConfigSHA}
+			if j.Kind == "configure_site" && previousSite.Settings.LoadBalanceDomain != site.Settings.LoadBalanceDomain {
+				request.PreviousBindingSite = &previousSite
+				request.ExpectedCandidateSHA = expectedCandidateSHA
+			}
 			if j.Kind == "switch_php" && previousSite.PHPVersionID != "" && site.PHPVersionID != "" && site.Settings.WebServer == "nginx" {
 				request.PreserveNginx = true
 				request.PreviousSite = &previousSite
@@ -368,7 +381,7 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 				return
 			}
 		}
-		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && payload.Version == PM2RootVendorAppVersion)) {
+		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && (payload.Version == PM2RootVendorAppVersion || payload.Version == PM2ConfigurationArchiveAppVersion))) {
 			dependencyCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			err := waitAppDependencies(dependencyCtx, e, j.TargetID)
 			cancel()
@@ -426,6 +439,30 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		return
 	}
 
+	if j.Kind == "switch_apache" {
+		request, err := s.apacheRuntimeDispatch(ctx, j)
+		if err != nil {
+			_ = s.finishRuntime(j, err.Error(), nil, false)
+			return
+		}
+		sites, err := s.Sites()
+		if err != nil {
+			_ = s.finishRuntime(j, err.Error(), nil, false)
+			return
+		}
+		var result ApplyResult
+		err = e.Call(ctx, "POST", "/v1/apache/runtime/switch", map[string]any{"request": request, "sites": sites}, &result)
+		if ctx.Err() != nil {
+			return
+		}
+		detail := ""
+		certain := true
+		if err != nil || result.Status != "running" && result.Status != "unchanged" {
+			result, detail, certain = s.observeApacheRuntimeCompletion(ctx, e, j)
+		}
+		_ = s.finishRuntime(j, detail, result.Steps, !certain)
+		return
+	}
 	if j.Kind == "switch_nginx" {
 		sites, err := s.Sites()
 		if err != nil {
@@ -447,12 +484,13 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		return
 	}
 
-	var st struct {
+	type installStatus struct {
 		State        string `json:"state"`
 		Error        string `json:"error"`
 		Steps        []Step `json:"steps"`
 		Architecture string `json:"architecture"`
 	}
+	var st installStatus
 	endpoint := "/v1/runtimes/install"
 	retry, grantErr := s.takeRuntimeNativeRetry(j)
 	if grantErr != nil {
@@ -473,14 +511,22 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		args["extension_id"] = extension.ExtensionID
 		endpoint = "/v1/php/extensions/install"
 	}
-	err := e.Call(ctx, "POST", endpoint, args, &st)
+	err := e.Call(ctx, http.MethodPost, endpoint, args, &st)
+	var unobservedSince time.Time
 	if err != nil {
 		if ctx.Err() != nil {
 			return
 		}
-		_ = s.FinishRuntime(j, err.Error(), st.Steps)
-		return
+		if !temporaryRuntimeInstallObservation(err) {
+			_ = s.FinishRuntime(j, err.Error(), st.Steps)
+			return
+		}
+		// A lost acknowledgement can follow a successful native submission.
+		// Observe the same ID without issuing another install or retry.
+		unobservedSince = time.Now()
 	}
+	const observationBudget = 2 * time.Minute
+	observationPath := "/v1/runtimes/jobs/" + j.ID
 	tick := time.NewTicker(2 * time.Second)
 	defer tick.Stop()
 	for {
@@ -488,13 +534,31 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 		case <-ctx.Done():
 			return
 		case <-tick.C:
-			if err = e.Call(ctx, "GET", "/v1/runtimes/jobs/"+j.ID, nil, &st); err != nil {
+			var observed installStatus
+			pollCtx := ctx
+			cancel := func() {}
+			if !unobservedSince.IsZero() {
+				pollCtx, cancel = context.WithDeadline(ctx, unobservedSince.Add(observationBudget))
+			}
+			err = e.Call(pollCtx, http.MethodGet, observationPath, nil, &observed)
+			cancel()
+			if err != nil {
 				if ctx.Err() != nil {
 					return
 				}
-				_ = s.FinishRuntime(j, err.Error(), st.Steps)
+				if temporaryRuntimeInstallObservation(err) {
+					if unobservedSince.IsZero() {
+						unobservedSince = time.Now()
+					}
+					if time.Since(unobservedSince) < observationBudget {
+						continue
+					}
+				}
+				_ = s.finishRuntime(j, "无法核实原安装任务的结果，原任务记录已保留："+err.Error(), st.Steps, true)
 				return
 			}
+			unobservedSince = time.Time{}
+			st = observed
 			_ = s.UpdateRuntimeSteps(j.ID, st.Steps)
 			if st.State == "needs_attention" {
 				detail := st.Error
@@ -550,6 +614,16 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 			}
 		}
 	}
+}
+
+func temporaryRuntimeInstallObservation(err error) bool {
+	var response *executorResponseError
+	if errors.As(err, &response) {
+		return response.status == http.StatusServiceUnavailable
+	}
+	var network net.Error
+	return errors.As(err, &network) || errors.Is(err, io.EOF) ||
+		errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, context.DeadlineExceeded)
 }
 
 func waitAppDependencies(ctx context.Context, executor *ExecutorClient, id string) error {

@@ -9,16 +9,17 @@ import (
 )
 
 type JobPayload struct {
-	Analytics         *AnalyticsConfig `json:"analytics,omitempty"`
-	ArchiveDomain     string           `json:"archive_domain,omitempty"`
-	SiteBackup        *SiteBackup      `json:"site_backup,omitempty"`
-	Settings          *SiteSettings    `json:"settings,omitempty"`
-	ExpectedRevision  int64            `json:"expected_revision,omitempty"`
-	ExpectedConfigSHA string           `json:"expected_config_sha,omitempty"`
-	ReleaseID         string           `json:"release_id"`
-	PreviousStatus    string           `json:"previous_status,omitempty"`
-	AppProjectID      string           `json:"app_project_id,omitempty"`
-	AppHostPort       int              `json:"app_host_port,omitempty"`
+	Analytics            *AnalyticsConfig `json:"analytics,omitempty"`
+	ArchiveDomain        string           `json:"archive_domain,omitempty"`
+	SiteBackup           *SiteBackup      `json:"site_backup,omitempty"`
+	Settings             *SiteSettings    `json:"settings,omitempty"`
+	ExpectedRevision     int64            `json:"expected_revision,omitempty"`
+	ExpectedConfigSHA    string           `json:"expected_config_sha,omitempty"`
+	ExpectedCandidateSHA string           `json:"expected_candidate_sha,omitempty"`
+	ReleaseID            string           `json:"release_id"`
+	PreviousStatus       string           `json:"previous_status,omitempty"`
+	AppProjectID         string           `json:"app_project_id,omitempty"`
+	AppHostPort          int              `json:"app_host_port,omitempty"`
 }
 
 // This migration is additive: original sites and jobs remain in place.
@@ -218,6 +219,15 @@ func (s *Store) finishRuntime(j Job, detail string, steps []Step, uncertain bool
 		return e
 	}
 	defer tx.Rollback()
+	if j.Kind == "switch_apache" {
+		var state, target, payload string
+		if tx.QueryRow(`SELECT state,target_id,payload FROM runtime_jobs WHERE id=? AND kind='switch_apache'`, j.ID).Scan(&state, &target, &payload) != nil || target != j.TargetID || payload != j.Payload {
+			return errors.New("Apache 原任务回执身份已变化，未覆盖")
+		}
+		if state != "running" && state != "needs_attention" {
+			return tx.Commit()
+		}
+	}
 	if loadBalanceStreamInstallJobSelected(j) {
 		var state, target, kind, original string
 		if tx.QueryRow(`SELECT state,target_id,kind,payload FROM runtime_jobs WHERE id=?`, j.ID).Scan(&state, &target, &kind, &original) != nil || target != j.TargetID || kind != j.Kind || original != j.Payload {
@@ -342,6 +352,9 @@ FROM runtime_jobs r WHERE r.id=?`, id).Scan(&kind, &target, &retryBlocked); err 
 				}
 			}
 		}
+	}
+	if kind == "switch_apache" {
+		return errors.New("Apache 原切换请求不可重放；请读取原结果，核对恢复状态后以新标识提交")
 	}
 	if kind == "waf_engine_build" || kind == "apache_body_build" || kind == "analytics_html_build" || kind == "network_ids_rulefeed_install" || kind == "statistics_geodata" || kind == "waf_country_data" {
 		return errors.New("原始构建或数据任务证据不可覆盖；请创建新任务，保留原失败记录")

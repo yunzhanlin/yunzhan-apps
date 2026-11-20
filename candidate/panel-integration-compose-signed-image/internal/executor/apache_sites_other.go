@@ -5,8 +5,11 @@ package executor
 import (
 	"context"
 	"local/panel/internal/core"
+	"net/http"
 )
 
 func (s *Service) applyApacheSites(_ context.Context, _ []core.Site, _ func(string)) (func() error, error) {
 	return func() error { return nil }, nil
 }
+
+func (s *Service) apacheRuntimeRoutes(m *http.ServeMux) {}

@@ -24,6 +24,50 @@ import (
 var statisticsArchiveMetadataPattern = regexp.MustCompile(`^[0-9]+:-?[0-9]+:[0-9]{1,9}:-?[0-9]+:[0-9]{1,9}$`)
 var statisticsArchiveIdentityPattern = regexp.MustCompile(`^gzip:[0-9]+:[1-9][0-9]*$`)
 
+type statisticsArchiveSource struct {
+	Name            string                     `json:"name"`
+	State           string                     `json:"state"`
+	CompressedBytes *int64                     `json:"compressed_bytes,omitempty"`
+	Verified        *statisticsArchiveProgress `json:"verified,omitempty"`
+}
+
+type statisticsArchiveProgress struct {
+	ReadBytes     int64  `json:"read_bytes"`
+	ExpandedBytes int64  `json:"expanded_bytes"`
+	SkippedLines  int64  `json:"skipped_lines"`
+	SHA256        string `json:"sha256"`
+}
+
+type statisticsArchiveInventory struct {
+	SiteID    string                    `json:"site_id"`
+	CheckedAt string                    `json:"checked_at"`
+	Sources   []statisticsArchiveSource `json:"sources"`
+	Omitted   int                       `json:"omitted"`
+}
+
+func (i *statisticsArchiveInventory) add(source statisticsArchiveSource) {
+	if len(i.Sources) >= statisticsHistorySiteSources {
+		i.Omitted++
+		return
+	}
+	i.Sources = append(i.Sources, source)
+}
+
+func (s *statisticsArchiveSource) recordVerified(offset, size, invalid int64, digest string) {
+	s.State = "reading"
+	if offset == size {
+		s.State = "complete"
+	}
+	s.Verified = &statisticsArchiveProgress{ReadBytes: offset, ExpandedBytes: size, SkippedLines: invalid, SHA256: digest}
+}
+
+func statisticsArchiveRejectedState(state int) string {
+	if state == 2 {
+		return "changed"
+	}
+	return "unreadable"
+}
+
 type statisticsArchiveEvidence struct {
 	Site, Identity, Name, Metadata, Digest string
 	Offset, Size, Invalid, Seen            int64
@@ -136,6 +180,12 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 			f.Close()
 			return errors.New("压缩访问日志身份或内容改变，未采集")
 		}
+		compressedBytes := info.Size()
+		source := statisticsArchiveSource{Name: name, State: "pending", CompressedBytes: &compressedBytes}
+		// Capture the status from this same read. Retained cache metadata alone
+		// never certifies the original archive's current bytes.
+		result.ArchiveInventory.Sources = append(result.ArchiveInventory.Sources, source)
+		observed := &result.ArchiveInventory.Sources[len(result.ArchiveInventory.Sources)-1]
 		st := info.Sys().(*syscall.Stat_t)
 		identity := fmt.Sprintf("gzip:%d:%d", st.Dev, st.Ino)
 		metadata := statisticsGzipMetadata(info)
@@ -159,6 +209,7 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 			// clock tick. Previously CRC-verified bytes can only be reused after
 			// checking the compressed content hash, not a metadata-only cache hit.
 			if info.Size() > contentBudget || contentCtx.Err() != nil {
+				observed.State = "deferred"
 				result.Invalid += invalid
 				result.DeferredArchives++
 				result.Compressed++
@@ -178,6 +229,7 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 				if ctx.Err() != nil {
 					return ctx.Err()
 				}
+				observed.State = "deferred"
 				result.Invalid += invalid
 				result.DeferredArchives++
 				result.Compressed++
@@ -199,6 +251,7 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 		if !fresh && metadata == cachedMetadata && (state == 0 || state == 2 && !contentMatches || state == 1 && (offset != size || contentMatches)) {
 			result.Invalid += invalid
 			if state != 1 {
+				observed.State = statisticsArchiveRejectedState(state)
 				result.Blocked++
 				result.Compressed++
 				result.Backlog = statisticsAddBacklog(result.Backlog, max(int64(0), info.Size()))
@@ -206,6 +259,7 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 				continue
 			}
 			if offset == size {
+				observed.recordVerified(offset, size, invalid, digest)
 				result.VerifiedArchives++
 				f.Close()
 				continue
@@ -248,6 +302,7 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 			// A slow archive must not roll back this pass's valid live rows or
 			// monopolize later archives. No request, receipt, cursor or CRC cache
 			// from its unverified batch is written. Scheduling is not authority.
+			observed.State = "deferred"
 			result.DeferredArchives++
 			result.Compressed++
 			result.Invalid += invalid
@@ -305,12 +360,16 @@ func (s *Service) ingestStatisticsGzipArchives(ctx context.Context, tx *sql.Tx, 
 		}
 		result.Invalid += invalid
 		if blocked != 0 {
+			observed.State = statisticsArchiveRejectedState(state)
 			result.Blocked++
 			result.Compressed++
 			result.Backlog = statisticsAddBacklog(result.Backlog, max(int64(0), info.Size()))
-		} else if offset < size {
-			result.Compressed++
-			result.Backlog = statisticsAddBacklog(result.Backlog, size-offset)
+		} else {
+			observed.recordVerified(offset, size, invalid, digest)
+			if offset < size {
+				result.Compressed++
+				result.Backlog = statisticsAddBacklog(result.Backlog, size-offset)
+			}
 		}
 		if _, err = tx.ExecContext(ctx, "INSERT INTO access_streams(site,identity,name,offset,anchor,size,seen,blocked,invalid) VALUES(?,?,?,?,?,?,?,?,?) ON CONFLICT(site,identity) DO UPDATE SET name=excluded.name,offset=excluded.offset,anchor=excluded.anchor,size=excluded.size,seen=excluded.seen,blocked=excluded.blocked,invalid=excluded.invalid", id, identity, name, offset, anchor, size, now.Unix(), blocked, invalid); err != nil {
 			return err

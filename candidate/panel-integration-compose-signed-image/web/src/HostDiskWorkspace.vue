@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { hostDiskAllowed, hostDiskBase as base, hostDiskSupportedVersion, hostSelection, validHostState, validHostJob, validHostReply,
-  sameHostSelection, hostTerminal, hostReport, hostBytes, hostCount, hostCapacityValue, hostDrillDirectory, hostStateLabel, hostReasonLabels, hostID,
+  sameHostSelection, hostTerminal, hostReport, hostBytes, hostCount, hostCapacityValue, hostDrillDirectory, hostStateLabel, hostReasonLabels, hostID, hostComparableJobs, compareHostReports, formatHostChange,
   type HostDiskAPI, type HostDiskState, type HostJob, type HostReply, type HostRecovery, type HostSelection, type HostUsageRow } from './hostDisk';
 import type { AccessPlan } from './menuPermissions';
 const props = defineProps<{ api: HostDiskAPI; access?: AccessPlan | null; active: boolean; installed: boolean; installationId: string; installedVersion: string }>();
@@ -10,6 +10,13 @@ const state = ref<HostDiskState>(), jobs = ref<HostJob[]>([]), recovery = ref<Ho
 const mountID = ref(''), directory = ref(''), selectedID = ref(''), tab = ref('scan'), filter = ref(''), mountFilter = ref('');
 const busy = ref(false), error = ref(''), message = ref(''), readKnown = ref(false), checkedAt = ref(''), recoverID = ref(''), confirm = ref('');
 const pending = ref<{ key: string; selection: HostSelection }>();
+const baselineID = ref(''), comparedID = ref(''), comparisonError = ref('');
+const comparison = ref<ReturnType<typeof compareHostReports>>();
+const completeJobs = computed(() => jobs.value.filter(j => j.state === 'complete'));
+const baselineChoices = computed(() => {
+  const selected = completeJobs.value.find(j => j.id === comparedID.value);
+  return selected ? completeJobs.value.filter(j => hostComparableJobs(j,selected)) : [];
+});
 let epoch = 0, timer: ReturnType<typeof setTimeout> | undefined;
 const mounts = computed(() => state.value?.inventory?.inventory.mounts ?? []);
 const visibleMounts = computed(() => mounts.value.filter(m => `${m.mount_point} ${m.filesystem} ${m.mount_id}`.toLocaleLowerCase().includes(mountFilter.value.toLocaleLowerCase())));
@@ -34,6 +41,7 @@ function stopPolling() { if (timer !== undefined) clearTimeout(timer); timer = u
 function clear() {
   epoch++; stopPolling(); state.value = undefined; jobs.value = []; recovery.value = []; reply.value = undefined;
   mountID.value = ''; directory.value = ''; selectedID.value = ''; pending.value = undefined; readKnown.value = false;
+  baselineID.value = ''; comparedID.value = ''; comparison.value = undefined; comparisonError.value = '';
   checkedAt.value = ''; error.value = ''; message.value = ''; recoverID.value = ''; confirm.value = ''; busy.value = false;
 }
 function schedule() {
@@ -53,6 +61,7 @@ async function refresh() {
     if (e !== epoch || !allowed.value) return;
     if (!validHostState(s) || !Array.isArray(own.jobs) || own.jobs.length > 128 || own.jobs.some(j => !validHostJob(j)) || new Set(own.jobs.map(j => j.id)).size !== own.jobs.length
       || active.metadata_only !== true || !Array.isArray(active.jobs) || active.jobs.length > 128 || active.jobs.some(j => !hostID(j.id) || !['queued','dispatching','running','cancel_requested','uncertain'].includes(j.state) || typeof j.created_at !== 'string' || typeof j.updated_at !== 'string')) throw Error('挂载清单或原任务清单无法完整核对；没有使用部分数据');
+    comparison.value = undefined;
     state.value = s; jobs.value = own.jobs; recovery.value = active.jobs; readKnown.value = true; checkedAt.value = new Date().toLocaleString();
     if (!mounts.value.some(m => m.mount_id === mountID.value)) { mountID.value = ''; directory.value = ''; }
     if (reply.value && !own.jobs.some(j => j.id === reply.value?.job.id && sameHostSelection(j.request.selection,reply.value.job.request.selection))) reply.value = undefined;
@@ -147,11 +156,59 @@ function chooseDirectory(row: HostUsageRow, isDirectory: boolean) {
   mountID.value = originalMount.value.mount_id; directory.value = path; tab.value = 'scan';
   message.value = '已选择目录，尚未开始新扫描。确认范围后点击“开始扫描”。';
 }
+function downloadJSON(filename: string, value: unknown) {
+  const blob = new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 function exportResult() {
   if (!allowed.value || !reply.value?.terminal_verified || !result.value || !report.value) return;
-  const blob = new Blob([JSON.stringify({format:1,job:reply.value.job,result:result.value,terminal_verified:true},null,2)], {type:'application/json;charset=utf-8'});
-  const url = URL.createObjectURL(blob), link = document.createElement('a'); link.href = url; link.download = 'disk-analysis-' + reply.value.job.id + '.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000);
+  downloadJSON('disk-analysis-' + reply.value.job.id + '.json', {
+    format: 1, job: reply.value.job, result: result.value, terminal_verified: true,
+  });
 }
+const canExportComparison = computed(() => {
+  const value = comparison.value;
+  return allowed.value && readKnown.value && !busy.value && value?.baselineID === baselineID.value &&
+    value.currentID === comparedID.value && baselineChoices.value.some(job => job.id === value.baselineID) &&
+    completeJobs.value.some(job => job.id === value.currentID);
+});
+function exportComparison() {
+  const value = comparison.value;
+  if (!canExportComparison.value || !value) return;
+  downloadJSON('disk-analysis-comparison-' + value.currentID + '.json', {
+    format: 1, scope: 'verified_scan_comparison', baseline_job_id: value.baselineID, current_job_id: value.currentID,
+    path: value.path, baseline_finished_at: value.oldFinished, current_finished_at: value.newFinished, metrics: value.metrics,
+  });
+}
+async function loadComparison() {
+  const baseJob = baselineChoices.value.find(j => j.id === baselineID.value);
+  const current = completeJobs.value.find(j => j.id === comparedID.value);
+  if (!allowed.value || busy.value || !readKnown.value || !baseJob || !current) return;
+  const e = epoch; busy.value = true; stopPolling();
+  comparison.value = undefined; comparisonError.value = '';
+  try {
+    const [before,after] = await Promise.all([
+      props.api<HostReply>(base + '/jobs/' + baseJob.id),
+      props.api<HostReply>(base + '/jobs/' + current.id),
+    ]);
+    if (e !== epoch || !allowed.value || baselineID.value !== baseJob.id || comparedID.value !== current.id) return;
+    comparison.value = compareHostReports(before,after,baseJob,current);
+    if (!comparison.value) comparisonError.value = '这两份原报告无法比较：须同一范围且完整核对，两个扫描时段不能重叠。';
+  } catch (x) {
+    if (e === epoch) comparisonError.value = x instanceof Error ? x.message : '暂时无法读取原报告。';
+  } finally {
+    if (e === epoch) { busy.value = false; schedule(); }
+  }
+}
+watch([baselineID,comparedID], () => { comparison.value = undefined; comparisonError.value = ''; });
+watch(baselineChoices, options => { if (!options.some(j => j.id === baselineID.value)) baselineID.value = ''; });
 watch(() => [props.active,props.installed,props.installedVersion,props.installationId,props.access] as const, () => { clear(); if (allowed.value) void refresh(); }, {deep:true,immediate:true});
 onBeforeUnmount(clear);
 </script>
@@ -178,6 +235,25 @@ onBeforeUnmount(clear);
         </el-tab-pane>
         <el-tab-pane label="我的任务与报告" name="jobs">
           <div class="disk-table" role="region" aria-label="我的扫描历史，可横向滚动" tabindex="0"><table><thead><tr><th>原任务 / 时间</th><th>扫描选择</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-for="j in jobs" :key="j.id"><td>{{j.id}}<small>{{j.created_at}}</small></td><td>挂载 #{{j.request.selection.mount_id}}<small>{{j.request.selection.relative_directory || '挂载根目录'}}</small></td><td>{{hostStateLabel(j.state)}}</td><td><el-button text :disabled="busy" @click="observe(j.id)">只读核对</el-button></td></tr></tbody></table></div><p v-if="readKnown && !jobs.length">本账户尚无全盘任务记录。</p>
+        </el-tab-pane>
+        <el-tab-pane label="历史对比" name="compare">
+          <section aria-label="历史扫描报告对比">
+            <p>选同一挂载和目录的两份完整报告，核对实际占用变化。对比只读取原任务，不扫描或删除文件。</p>
+            <div class="disk-controls">
+              <label>较新报告<select v-model="comparedID" aria-label="选择较新报告" :disabled="busy || !readKnown"><option value="">请选择</option><option v-for="j in completeJobs" :key="j.id" :value="j.id">{{j.created_at}} · {{j.request.selection.relative_directory || '挂载根目录'}} · {{j.id.slice(0,8)}}</option></select></label>
+              <label>基准报告<select v-model="baselineID" aria-label="选择基准报告" :disabled="busy || !baselineChoices.length"><option value="">请选择</option><option v-for="j in baselineChoices" :key="j.id" :value="j.id">{{j.created_at}} · {{j.id.slice(0,8)}}</option></select></label>
+            </div>
+            <p v-if="readKnown && completeJobs.length < 2" class="disk-notice">至少需要两份完整扫描报告。</p>
+            <p v-else-if="comparedID && !baselineChoices.length" class="disk-notice">找不到同一挂载实例及目录的较早完整报告。</p>
+            <el-button :disabled="busy || !readKnown || !baselineID || !comparedID" @click="loadComparison">只读对比报告</el-button>
+            <el-button :disabled="!canExportComparison" @click="exportComparison">下载对比（JSON）</el-button>
+            <p v-if="comparisonError" role="alert">{{comparisonError}}</p>
+            <div v-if="comparison" role="status">
+              <p class="disk-path">范围：{{comparison.path}}；基准结束：{{comparison.oldFinished}}；较新报告结束：{{comparison.newFinished}}</p>
+              <p class="disk-notice">变化量依据两次扫描记录。已分配块不等于独占物理空间，也不表示可以释放等量磁盘空间。</p>
+              <div class="disk-table" role="region" aria-label="扫描变化量，可横向滚动" tabindex="0"><table><thead><tr><th scope="col">指标</th><th scope="col">基准</th><th scope="col">较新</th><th scope="col">变化量</th></tr></thead><tbody><tr v-for="m in comparison.metrics" :key="m.key"><th scope="row">{{m.label}}</th><td>{{m.unit==='bytes'?hostBytes(m.before):hostCount(m.before)}}</td><td>{{m.unit==='bytes'?hostBytes(m.after):hostCount(m.after)}}</td><td :title="m.unit==='bytes' ? m.change+' B' : m.change">{{formatHostChange(m.change,m.unit)}}</td></tr></tbody></table></div>
+            </div>
+          </section>
         </el-tab-pane>
         <el-tab-pane label="中断恢复" name="recovery">
           <p>维护清单只显示活动任务标识、状态和时间，不显示其他账户的路径与报告。收尾会请求停止原任务，并核对原进程退出、扫描锁释放和执行范围为空；不能核对时继续保留未知状态，绝不重新扫描。</p>

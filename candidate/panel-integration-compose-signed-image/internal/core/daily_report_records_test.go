@@ -185,6 +185,41 @@ func TestDailyReportArchiveByteInventoryAndReadAreNonMutating(t *testing.T) {
 	}
 }
 
+func TestDailyReportDetailBindsOriginalDirectoryIdentityWithoutRegenerating(t *testing.T) {
+	s := testStore(t)
+	a := &Server{Store: s}
+	day, savedAt := "2026-10-10", "2026-10-10T01:01:08Z"
+	raw := `{"created_at":"2026-10-10T01:00:52Z","sites":7,"notes":"原日报"}`
+	for _, row := range [][3]string{{day, raw, savedAt}, {"2026-10-09", `{"sites":9,"sites":2}`, savedAt}} {
+		if _, err := s.DB.Exec(`INSERT INTO app_daily_reports VALUES(?,?,?)`, row[0], row[1], row[2]); err != nil {
+			t.Fatal(err)
+		}
+	}
+	v, err := a.dailyReportOperation(context.Background(), "report-detail", AppModuleInput{ResourceID: day})
+	if err != nil {
+		t.Fatal(err)
+	}
+	detail := v.(map[string]any)
+	report := detail["report"].(map[string]any)
+	if detail["day"] != day || detail["saved_at"] != savedAt || detail["bytes"] != int64(len(raw)) ||
+		detail["report_contents_verified"] != true || report["sites"] != float64(7) || report["created_at"] == savedAt {
+		t.Fatal("detail failed to bind original report and actual directory metadata", detail)
+	}
+	for _, date := range []string{"2026-10-09", "2026-10-08", "2026-02-30"} {
+		if v, err = a.dailyReportOperation(context.Background(), "report-detail", AppModuleInput{ResourceID: date}); err == nil || v != nil {
+			t.Fatal("invalid, corrupt or missing detail must not return contents", date, v)
+		}
+	}
+	var retained string
+	var notifications int
+	if err := s.DB.QueryRow(`SELECT report FROM app_daily_reports WHERE day=?`, day).Scan(&retained); err != nil || retained != raw {
+		t.Fatal("original report was modified", err)
+	}
+	if err := s.DB.QueryRow(`SELECT count(*) FROM notifications`).Scan(&notifications); err != nil || notifications != 0 {
+		t.Fatal("reading reports sent or queued a new notification", notifications, err)
+	}
+}
+
 func TestDailyReportArchivePaginationAndInvalidBounds(t *testing.T) {
 	s := testStore(t)
 	a := &Server{Store: s}

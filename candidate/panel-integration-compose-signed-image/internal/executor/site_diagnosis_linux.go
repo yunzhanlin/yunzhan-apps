@@ -5,6 +5,7 @@ package executor
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -109,26 +110,60 @@ func diagnosisHTTPResult(status int, elapsed int64, err error) map[string]any {
 }
 
 func diagnosisTLS(ctx context.Context, domain string) map[string]any {
+	// Production always uses the registered site name for both SNI and peer
+	// verification. Keep the default root store and never retry unverified.
+	configuration := &tls.Config{ServerName: domain, MinVersion: tls.VersionTLS12}
+	return diagnosisTLSProbe(ctx, net.JoinHostPort(domain, "443"), configuration)
+}
+
+func diagnosisTLSProbe(ctx context.Context, address string, configuration *tls.Config) map[string]any {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	dialer := &tls.Dialer{NetDialer: &net.Dialer{}, Config: &tls.Config{ServerName: domain, MinVersion: tls.VersionTLS12}}
-	conn, err := dialer.DialContext(ctx, "tcp", net.JoinHostPort(domain, "443"))
+	dialer := &tls.Dialer{NetDialer: &net.Dialer{}, Config: configuration}
+	conn, err := dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
-		return map[string]any{"valid": false, "verdict": "fail", "detail": "域名的 HTTPS 握手或证书校验失败。", "error": err.Error()}
+		return diagnosisTLSFailure(err, time.Now())
 	}
 	defer conn.Close()
-	certificates := conn.(*tls.Conn).ConnectionState().PeerCertificates
-	if len(certificates) == 0 {
-		return map[string]any{"valid": false, "verdict": "fail", "detail": "HTTPS 服务未返回可核验的证书。"}
+	state := conn.(*tls.Conn).ConnectionState()
+	if len(state.PeerCertificates) == 0 || len(state.VerifiedChains) == 0 {
+		return diagnosisTLSFailure(errors.New("missing verified peer chain"), time.Now())
 	}
-	certificate := certificates[0]
+	certificate := state.PeerCertificates[0]
 	verdict := "pass"
 	detail := "已验证证书链及站点域名。"
 	if time.Until(certificate.NotAfter) < 14*24*time.Hour {
 		verdict, detail = "warn", "证书在 14 天内到期，请检查续签。"
 	}
 	return map[string]any{"valid": true, "verdict": verdict, "detail": detail,
-		"not_after": certificate.NotAfter.UTC().Format(time.RFC3339), "issuer": certificate.Issuer.String()}
+		"not_before": certificate.NotBefore.UTC().Format(time.RFC3339),
+		"not_after":  certificate.NotAfter.UTC().Format(time.RFC3339),
+		"issuer":     certificate.Issuer.String(), "tls_version": tls.VersionName(state.Version)}
+}
+
+func diagnosisTLSFailure(err error, now time.Time) map[string]any {
+	var host x509.HostnameError
+	var unknown x509.UnknownAuthorityError
+	var invalid x509.CertificateInvalidError
+	var timeout net.Error
+	reason, detail := "handshake-failed", "HTTPS 握手失败。请检查 443 监听、TLS 协议设置和入口日志。"
+	switch {
+	case errors.As(err, &host):
+		reason, detail = "hostname-mismatch", "证书与站点域名不匹配。请核对证书的备用名称和 HTTPS 虚拟主机。"
+	case errors.As(err, &unknown):
+		reason, detail = "untrusted-chain", "证书链无法由服务器信任库验证。请核对中间证书和信任根。"
+	case errors.As(err, &invalid) && invalid.Reason == x509.Expired && invalid.Cert != nil:
+		if now.Before(invalid.Cert.NotBefore) {
+			reason, detail = "certificate-not-yet-valid", "证书尚未生效。请核对证书生效时间和服务器时钟。"
+		} else {
+			reason, detail = "certificate-expired", "证书链中的证书已到期。请核对证书续签和证书链部署。"
+		}
+	case errors.As(err, &invalid):
+		reason, detail = "invalid-certificate", "证书链校验失败。请核对签发方式、证书用途和入口配置。"
+	case errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &timeout) && timeout.Timeout()):
+		reason, detail = "timeout", "连接或 TLS 握手超时。请核对域名解析、443 监听和网络连通性。"
+	}
+	return map[string]any{"valid": false, "verdict": "fail", "reason_code": reason, "detail": detail}
 }
 
 func (s *Service) moduleDiagnosis(ctx context.Context, input core.AppModuleInput) (any, error) {

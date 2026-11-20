@@ -150,6 +150,13 @@ func dockerContainers(ctx context.Context) (any, error) {
 		out[i].PanelProtected = protected
 		if protected {
 			out[i].PanelProtectionReason = dockerRetentionReason
+			_, migration := out[i].Labels[rabbitMQMigrationVolumeJobLabel]
+			for _, name := range out[i].Names {
+				migration = migration || strings.HasPrefix(strings.TrimPrefix(name, "/"), rabbitMQOfflineContainerPrefix)
+			}
+			if migration {
+				out[i].PanelProtectionReason = "RabbitMQ 离线迁移容器由原任务管理"
+			}
 		}
 	}
 	return map[string]any{"containers": out}, e
@@ -227,6 +234,9 @@ func dockerCreateVolume(ctx context.Context, name string) (any, error) {
 	if !dockerResourceNamePattern.MatchString(name) {
 		return nil, errors.New("Docker 卷名称无效")
 	}
+	if strings.HasPrefix(name, rabbitMQMigrationVolumePrefix) {
+		return nil, errors.New("RabbitMQ 迁移数据卷由原任务管理")
+	}
 	payload := map[string]any{
 		"Name":   name,
 		"Driver": "local",
@@ -262,6 +272,9 @@ func dockerDeleteVolume(ctx context.Context, name string) error {
 	if !dockerResourceNamePattern.MatchString(name) {
 		return errors.New("Docker 卷名称无效")
 	}
+	if strings.HasPrefix(name, rabbitMQMigrationVolumePrefix) {
+		return errors.New("RabbitMQ 迁移数据卷由原任务管理")
+	}
 	var inspect struct {
 		Labels map[string]string `json:"Labels"`
 	}
@@ -276,6 +289,10 @@ func dockerDeleteVolume(ctx context.Context, name string) error {
 		return errors.New("拒绝删除非面板创建的 Docker 卷")
 	}
 	if panelCompose {
+		retained, err := productionRabbitMQMigrationStore().retainsOriginalVolume(ctx, name)
+		if err != nil || retained {
+			return errors.New("RabbitMQ 原数据卷由迁移记录保留")
+		}
 		entries, _ := os.ReadDir(dockerProjects)
 		for _, entry := range entries {
 			if !entry.IsDir() || !core.ValidID(entry.Name()) {
@@ -443,6 +460,7 @@ func RunDockerJob(id string) (ret error) {
 }
 
 func (s *Service) dockerRoutes(m *http.ServeMux) {
+	s.rabbitMQMigrationRoutes(m)
 	s.memcachedAppUpdateAdmissionRoutes(m)
 	s.memcachedUnixInstallAdmissionRoutes(m)
 	s.memcachedUnixWorkspaceRoutes(m)
@@ -545,6 +563,7 @@ func (s *Service) dockerManagementRoutes(m *http.ServeMux) {
 		respond(w, 200, map[string]bool{"ok": true})
 	})
 	m.HandleFunc("GET /v1/docker/containers/{id}/stats", dockerContainerStats)
+	m.HandleFunc("GET /v1/docker/containers/{id}/state", dockerContainerState)
 	m.HandleFunc("GET /v1/docker/containers/{id}/logs", func(w http.ResponseWriter, r *http.Request) {
 		logs, e := dockerLogs(r.Context(), r.PathValue("id"))
 		if e != nil {
@@ -629,14 +648,15 @@ func (s *Service) dockerManagementRoutes(m *http.ServeMux) {
 		}
 		respond(w, 200, result)
 	})
-	for _, action := range []string{"start", "stop", "restart"} {
+	for _, action := range []string{"start", "stop", "restart", "pause", "unpause"} {
 		action := action
 		m.HandleFunc("POST /v1/docker/containers/{id}/"+action, func(w http.ResponseWriter, r *http.Request) {
-			if !dockerObjectPattern.MatchString(r.PathValue("id")) {
+			id := r.PathValue("id")
+			if !core.ValidDockerContainerAction(id, action) {
 				respond(w, 400, map[string]string{"error": "Docker 对象标识无效"})
 				return
 			}
-			path := "/containers/" + r.PathValue("id") + "/" + action
+			path := "/containers/" + id + "/" + action
 			if action == "stop" || action == "restart" {
 				path += "?t=10"
 			}

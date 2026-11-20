@@ -9,7 +9,7 @@ const resourcesURL='data:text/javascript;base64,'+Buffer.from(compile('resourceM
 const {resourcePercent,resourceSeries}=await import(resourcesURL);
 const {moduleReportProvenance}=await import('data:text/javascript;base64,'+Buffer.from(compile('moduleReportProvenance.ts')).toString('base64'));
 const dailyJS=compile('dailyReportView.ts').replace(/(['"])\.\/resourceMetrics\1/g,JSON.stringify(resourcesURL));
-const {dailySummary,dailySnapshot,dailyWorkerMessage}=await import('data:text/javascript;base64,'+Buffer.from(dailyJS).toString('base64'));
+const {dailyArchivePage,dailyArchiveDetail,dailySummary,dailySnapshot,dailyWorkerMessage}=await import('data:text/javascript;base64,'+Buffer.from(dailyJS).toString('base64'));
 test('actual dedicated daily view distinguishes missing counters from observed zero and directory inventory',()=>{
  const keys=['sites','running_sites','certificates_due_14_days','failed_site_jobs','failed_runtime_jobs','audit_events_24h'];
  assert(dailySummary(Object.fromEntries(keys.map(key=>[key,0]))).counts.every(v=>v.value===0));
@@ -20,6 +20,24 @@ test('actual dedicated daily view distinguishes missing counters from observed z
  assert.match(reportSource,/<DailyReportSummary v-else-if="id==='daily-report' && dailySnapshot\(report\)"/);
  assert.match(readFileSync(new URL('../web/src/DailyReportSummary.vue',import.meta.url),'utf8'),/缺失数据不表示零值/);
  assert.match(reportSource,/report.report_contents_verified===false/);
+});
+test('daily archive binds detail to the original day, stored time and size; empty differs from invalid',()=>{
+ const row={day:'2026-10-10',resource_id:'2026-10-10',created_at:'2026-10-10T01:00:03Z',bytes:64,record_size_valid:true};
+ const corrupt={...row,day:'2026-10-09',resource_id:'2026-10-09',bytes:4194305,record_size_valid:false};
+ const base={read_only:true,report_contents_verified:false,offset:0,limit:10,total:2,reports:[row,corrupt]};
+ const page=dailyArchivePage(base,0,10);
+ assert.equal(page.reports.length,2);assert.equal(page.reports[1].record_size_valid,false);
+ assert.deepEqual(dailyArchivePage({...base,total:0,reports:[]},0,10).reports,[]);
+ assert.equal(dailyArchivePage({...base,total:3},0,10),undefined);
+ assert.equal(dailyArchivePage({...base,reports:[row,row]},0,10),undefined);
+ assert.equal(dailyArchivePage({...base,reports:[corrupt,row]},0,10),undefined);
+ assert.equal(dailyArchivePage({...base,reports:[{...row,created_at:'2026-02-31T00:00:00Z'},corrupt]},0,10),undefined);
+ assert.equal(dailyArchivePage({...base,reports:[row,{...corrupt,record_size_valid:true}]},0,10),undefined);
+ assert.equal(dailyArchivePage({...base,offset:10},0,10),undefined);
+ const detail={day:row.day,saved_at:row.created_at,bytes:row.bytes,report_contents_verified:true,report:{sites:0,created_at:'2026-10-10T01:00:00Z'}};
+ assert.deepEqual(dailyArchiveDetail(detail,page.reports[0]),detail.report);
+ for(const changes of [{day:corrupt.day},{saved_at:'2026-10-10T01:00:04Z'},{bytes:65},{report_contents_verified:false},{report:{reports:[]}}])
+  assert.equal(dailyArchiveDetail({...detail,...changes},page.reports[0]),undefined);
 });
 test('actual resource presentation preserves unknown first samples, explicit zero and chart gaps',()=>{
  for(const v of [null,undefined,NaN,Infinity,-1,101,'0'])assert.equal(resourcePercent(v,true),null);
@@ -85,5 +103,5 @@ test('actual fresh business result clears report warning while untrusted saved r
  assert.match(source,/reportStateUnknown.value = page.report_state_unknown === true/);
  assert.match(source,/!installedUnknown.value && !reportStateUnknown.value && page.report !== null/);
  assert.match(source,/原报告待核对，未据此认定执行成功、失败或没有执行/);
- assert.match(source,/reportStateUnknown.value \? undefined : initialModuleInspection/);
+ assert.match(source,/reportStateUnknown.value \|\| needsAccountRead \? undefined : initialModuleInspection/);
 });

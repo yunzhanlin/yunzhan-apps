@@ -16,9 +16,9 @@ func (s *Service) apacheBodyRuntimeReady(ctx context.Context) error {
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" {
 		return errors.New("Apache 请求体构建仅支持真实受管环境")
 	}
-	r, err := apacheRelease()
-	if err != nil || r.Version != "2.4.68" {
-		return errors.New("缺少已审核 Apache 2.4.68 选择")
+	r, err := apacheBuildRelease()
+	if err != nil {
+		return errors.New("缺少完整安装的已审核 Apache 运行时")
 	}
 	for _, path := range []string{r.CLI(), filepath.Join(r.Prefix(), "bin/apxs")} {
 		if err := apacheBodyOwnedAncestors(filepath.Dir(path)); err != nil {

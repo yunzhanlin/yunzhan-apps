@@ -12,7 +12,7 @@ const apacheBodyConfigSiteB = "1123456789abcdef0123456789abcdef"
 const apacheBodyConfigEngine = "2123456789abcdef0123456789abcdef"
 
 func apacheBodyConfigFixture() (string, core.WAFConfig, core.WAFConfig) {
-	base := "# managed by panel\n# untouched global comment\nLoadModule mpm_event_module /opt/panel/runtimes/apache/2.4.68/modules/mod_mpm_event.so\n"
+	base := "# managed by panel\nServerRoot \"/opt/panel/runtimes/apache/2.4.68\"\n# untouched global comment\nLoadModule mpm_event_module /opt/panel/runtimes/apache/2.4.68/modules/mod_mpm_event.so\n"
 	for _, site := range []struct{ id, domain string }{{apacheBodyConfigSiteA, "a.localhost"}, {apacheBodyConfigSiteB, "b.localhost"}} {
 		base += "<VirtualHost 127.0.0.1:19080>\n  ServerName " + site.domain + "\n  SetEnvIfExpr \"true\" PANEL_AW_SITE=" + site.id + "\n  " + apacheWAFInclude + "  CustomLog /var/log/apache2/panel-" + site.id + ".access.log combined\n  # untouched site rewrite and PHP handler\n  DocumentRoot /srv/panel/sites/" + site.id + "/public\n</VirtualHost>\n"
 	}

@@ -27,7 +27,7 @@ func queryRuntimeReferences(db interface {
  SELECT 'site',id,name,status FROM sites WHERE php_version_id=?
  UNION ALL SELECT 'mysql_instance',id,name,status FROM mysql_servers WHERE release_id=?
  UNION ALL SELECT 'nginx_ingress',id,name,'selected' FROM runtime_instances WHERE id='nginx-ingress' AND installation_id=?
- UNION ALL SELECT 'apache_site',id,name,status FROM sites WHERE ?='apache-2.4.68' AND COALESCE(json_extract(settings_json,'$.web_server'),'nginx')='apache'
+ UNION ALL SELECT 'apache_site',id,name,status FROM sites WHERE ? IN ('apache-2.4.68','apache-2.4.71') AND COALESCE(json_extract(settings_json,'$.web_server'),'nginx')='apache'
  UNION ALL SELECT 'site_job',j.id,s.name,j.state FROM jobs j JOIN sites s ON s.id=j.site_id WHERE j.state IN ('queued','running','needs_attention') AND json_extract(j.payload,'$.release_id')=?
  UNION ALL SELECT 'runtime_job',id,kind,state FROM runtime_jobs WHERE target_id=? AND state IN ('queued','running','needs_attention')
  ORDER BY 1,2`, release, release, release, release, release, release)

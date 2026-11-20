@@ -42,7 +42,9 @@ func TestNetworkIDSRuleFeedManifestCompatibilityAndHandlerVersion(t *testing.T) 
 }
 
 func networkRuleFeedSelectionFixture() NetworkIDSRuleFeedSelection {
-	return NetworkIDSRuleFeedSelection{FeedID: "et-open-web-20261009", AppVersion: SoftwareImplementationVersion("network-threat-detection"), AppManifestSHA: strings.Repeat("a", 64), RuleManifestSHA: strings.Repeat("b", 64)}
+	// Retain the original signed rule-data ABI independently of newer compiled
+	// module versions and their additional Linux-only feature requirements.
+	return NetworkIDSRuleFeedSelection{FeedID: "et-open-web-20261009", AppVersion: NetworkIDSMaintainedEngineAppVersion, AppManifestSHA: strings.Repeat("a", 64), RuleManifestSHA: strings.Repeat("b", 64)}
 }
 
 func TestNetworkIDSRuleFeedQueueBindingLaneAndImmutableFailures(t *testing.T) {

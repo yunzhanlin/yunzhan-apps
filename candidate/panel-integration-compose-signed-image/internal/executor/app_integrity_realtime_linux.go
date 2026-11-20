@@ -311,6 +311,11 @@ func watchExcluded(path string, plans []integrityWatchPlan) bool {
 }
 
 func (w *integrityWatcher) watchTree(ctx context.Context, site string, state *integrityWatchSite, f *siteFiles) error {
+	root, err := moduleSitePublic(f)
+	if err != nil {
+		return err
+	}
+	defer root.Close()
 	queue, entries := []string{"."}, 0
 	for len(queue) > 0 {
 		if ctx.Err() != nil {
@@ -318,12 +323,12 @@ func (w *integrityWatcher) watchTree(ctx context.Context, site string, state *in
 		}
 		rel := queue[0]
 		queue = queue[1:]
-		dir, err := f.public.OpenFile(rel, os.O_RDONLY|unix.O_DIRECTORY|unix.O_NOFOLLOW|unix.O_CLOEXEC, 0)
+		dir, err := openModuleMountPath(root, rel, unix.O_RDONLY|unix.O_DIRECTORY, 0)
 		if err != nil {
-			return errors.New("目录在建立监听时变化，保留定时补查")
+			return fmt.Errorf("无法安全建立监听，保留定时补查：%w", err)
 		}
 		info, statErr := dir.Stat()
-		current, pathErr := f.public.Lstat(rel)
+		current, pathErr := moduleMountInfo(root, rel)
 		if statErr != nil || pathErr != nil || !current.IsDir() || !os.SameFile(info, current) {
 			dir.Close()
 			return errors.New("监听目录身份发生变化")
@@ -355,11 +360,16 @@ func (w *integrityWatcher) watchTree(ctx context.Context, site string, state *in
 				if watchExcluded(path, state.Plans) {
 					continue
 				}
-				if entry.Type()&os.ModeSymlink != 0 {
+				info, err := moduleMountInfo(dir, entry.Name())
+				if err != nil {
+					dir.Close()
+					return err
+				}
+				if info.Mode()&os.ModeSymlink != 0 {
 					dir.Close()
 					return errors.New("监控范围包含符号链接，请配置排除路径")
 				}
-				if entry.IsDir() {
+				if info.IsDir() {
 					if !core.ValidFilePath(path, false) {
 						dir.Close()
 						return errors.New("监控范围包含不支持的目录名")

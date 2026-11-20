@@ -147,3 +147,29 @@ func TestRegistryInstallSignedRabbitMQImageBindsActualSubmission(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistryMongoDB8038RequiresItsSignedImageAndVersion(t *testing.T) {
+	manifest := appcatalog.Manifest{
+		ID: "mongodb", Version: mongoDB8038AppVersion, Risk: "maintained",
+		Delivery: appcatalog.Delivery{Provider: "compose", Target: MongoDB8038Template, ManageRoute: "docker", Image: dockerMongoDB8038Image},
+	}
+	if err := validateRegistryComposeDelivery(manifest); err != nil {
+		t.Fatal(err)
+	}
+	for _, architecture := range []string{"arm64", "amd64"} {
+		compose, err := dockerTemplateOnArchitecture(MongoDB8038Template, 27018, architecture)
+		if err != nil || strings.Count(compose, "image: "+manifest.Delivery.Image+"\n") != 1 {
+			t.Fatalf("%s did not render the exact signed image: %v", architecture, err)
+		}
+	}
+	oldImage := manifest
+	oldImage.Delivery.Image = dockerMongoDBImage
+	oldVersion := manifest
+	oldVersion.Version = "8.0-compat1"
+	oldTemplate := manifest
+	oldTemplate.Delivery.Target = MongoDBLegacyTemplate
+	if validateRegistryComposeDelivery(oldImage) == nil || validateRegistryComposeDelivery(oldVersion) == nil ||
+		validateRegistryComposeDelivery(oldTemplate) == nil {
+		t.Fatal("MongoDB 8.0.38 accepted an old image, version or template")
+	}
+}

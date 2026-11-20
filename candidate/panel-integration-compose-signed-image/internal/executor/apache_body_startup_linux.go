@@ -28,13 +28,24 @@ func PrepareApacheBodyRuntime() error {
 	} else if err != nil {
 		return err
 	}
-	lock, err := s.apacheWAFTransactionService().lockWAFConfiguration()
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	txs := s.apacheWAFTransactionService()
+	lock, err := txs.lockWAFConfiguration()
+	if errors.Is(err, errWAFConfigurationBusy) {
+		tx, readErr := txs.readWAFTransaction()
+		if readErr != nil {
+			return readErr
+		}
+		if err := txs.authorizeApacheRuntimeCandidate(ctx, tx); err != nil {
+			return err
+		}
+		return s.prepareApacheBodyRuntimeGeneration(ctx, &tx)
+	}
 	if err != nil {
 		return err
 	}
 	defer lock.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-	defer cancel()
 	return s.prepareApacheBodyCommittedRuntime(ctx)
 }
 
@@ -53,10 +64,18 @@ func (s *Service) apacheBodyNoOrphanSource() error {
 }
 
 func (s *Service) prepareApacheBodyCommittedRuntime(ctx context.Context) error {
+	return s.prepareApacheBodyRuntimeGeneration(ctx, nil)
+}
+
+func (s *Service) prepareApacheBodyRuntimeGeneration(ctx context.Context, candidate *wafTransaction) error {
 	if s.Config.SystemRoot != "/" || s.Config.SitesDir != "/srv/panel/sites" || s.Config.ApacheSiteConfig != "/etc/panel/apache/httpd.conf" || os.Geteuid() != 0 {
 		return errors.New("Apache 启动只核验固定真实受管目录")
 	}
-	if err := s.apacheNativeBodyNoPending(); err != nil {
+	if candidate == nil {
+		if err := s.apacheNativeBodyNoPending(); err != nil {
+			return err
+		}
+	} else if err := s.apacheWAFTransactionService().authorizeApacheRuntimeCandidate(ctx, *candidate); err != nil {
 		return err
 	}
 	txs := s.apacheWAFTransactionService()

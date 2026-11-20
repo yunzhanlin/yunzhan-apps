@@ -1,0 +1,17 @@
+--- a/src/ftpd.c
++++ b/src/ftpd.c
+@@ -4089,10 +4089,13 @@
+ #ifdef QUOTAS
++    /* A file quota can be active while the byte quota is unlimited.
++       Keep the upload handler's -1 sentinel in that case. */
+     if (quota_update(&quota, 0LL, 0LL, &overflow) == 0 &&
+         (overflow > 0 || quota.files >= user_quota_files ||
+          quota.size > user_quota_size ||
+-         (max_filesize = user_quota_size - quota.size) < (off_t) 0)) {
++         (user_quota_size != ULONG_LONG_MAX &&
++          (max_filesize = user_quota_size - quota.size) < (off_t) 0))) {
+         overflow = 1;
+         (void) close(f);
+         goto afterquota;
+     }
+ #endif

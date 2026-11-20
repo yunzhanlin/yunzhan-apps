@@ -186,7 +186,7 @@ func (a *Server) configureAnalyticsProxy(w http.ResponseWriter, r *http.Request,
 	if !in.Enabled {
 		settings.AnalyticsGeography = false
 	}
-	if settings.AnalyticsGeography && module.Status.Version != appcatalog.AnalyticsGeographyVersion {
+	if settings.AnalyticsGeography && !appcatalog.AnalyticsVersionSupportsGeography(module.Status.Version) {
 		fail(w, 409, "请先从签名应用商店更新网站分析，再启用地理分布")
 		return
 	}

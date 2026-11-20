@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from '../web/node_modules/typescript/lib/typescript.js';
-import {taskSelection,taskTerminationNotice,taskProcessColumns,taskProcessRows} from '../web/src/taskManager.ts';
+import {taskSelection,taskTerminationNotice,taskProcessColumns,taskProcessRows,taskSnapshotExport} from '../web/src/taskManager.ts';
 test('process columns prioritize operational identity and omit permission/sampling flags without mutating the report',()=>{
  const row={can_terminate:false,cpu_available:false,io_available:false,cpu_percent:null,memory:100,name:'worker',pid:42,read_rate:null,write_rate:null,state:'S',managed:true,start_time:123,token:'never-display'};
  assert.deepEqual(taskProcessColumns([row]),['name','pid','cpu_percent','memory','read_rate','write_rate','state','managed']);
@@ -139,4 +139,36 @@ test('actual monitor refresh retains a stale detail instead of adopting a reused
   assert.equal(bindings.processDetail.value.start_time,100);assert.equal(bindings.processDetail.value.memory,mode==='valid'?8192:4096);
   if(mode==='failed')assert.match(bindings.error.value,/read failed/);
  }
+});
+
+test('task snapshot exports the current filtered rows and never includes termination identity or connection details', () => {
+  const before = {
+    processes: [
+      {pid: 1, name: "systemd", state: "S", managed: false, memory: 2048, io_available: true, read_rate: 0, write_rate: 8},
+      {pid: 42, name: "nginx", state: "S", managed: true, memory: 4096, cpu_available: true, cpu_percent: 0, io_available: false, read_rate: 12, write_rate: 20,
+        start_time: 999, can_terminate: true, token: "unique-sensitive-value", cmdline: "unique-command"},
+    ],
+    partial: true,
+    sampled_processes: 11,
+    displayed_processes: 2,
+    connections: "sensitive-connection",
+  };
+  assert.deepEqual(taskSnapshotExport(before, " nGiNx ", true), {
+    format: 1,
+    scope: "filtered_process_snapshot",
+    partial: true,
+    sampled_processes: 11,
+    displayed_processes: 2,
+    exported_processes: 1,
+    managed_only: true,
+    processes: [{
+      name: "nginx", pid: 42, state: "S", managed: true, memory_bytes: 4096, cpu_percent: 0,
+      read_bytes_per_second: null, write_bytes_per_second: null,
+    }],
+  });
+  assert.equal(taskSnapshotExport(before, "not-present", false).exported_processes, 0);
+  assert.equal(taskSnapshotExport(before, "", false).processes[0].read_bytes_per_second, 0);
+  assert.equal(taskSnapshotExport({...before, displayed_processes: 400}, "", false), undefined);
+  assert.equal(taskSnapshotExport({...before, partial: undefined}, "", false), undefined);
+  assert.equal(taskSnapshotExport({...before, sampled_processes: 2001}, "", false), undefined);
 });

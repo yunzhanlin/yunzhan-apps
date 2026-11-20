@@ -40,6 +40,33 @@ func streamProgrammeStoppedWriter(raw, unit string) bool {
 	return len(seen) == len(want)+1
 }
 
+// A single native query returns one blank-line-delimited property block for
+// each explicitly named unit. Check all four identities and properties; missing,
+// duplicate or unexpected blocks are not an observation of stopped writers.
+func streamProgrammeStoppedWriters(raw string) bool {
+	if len(raw) == 0 || len(raw) > 64<<10 || !strings.HasSuffix(raw, "\n") {
+		return false
+	}
+	// Debian 12 and Debian 13 agree on the inter-unit separator but can
+	// differ on whether a blank line follows the final complete block.
+	body := strings.TrimSuffix(raw, "\n")
+	body = strings.TrimSuffix(body, "\n")
+	blocks := strings.Split(body, "\n\n")
+	if len(blocks) != len(streamProgrammeWriters) {
+		return false
+	}
+	seen := make(map[string]bool, len(streamProgrammeWriters))
+	for _, block := range blocks {
+		for _, unit := range streamProgrammeWriters {
+			if !seen[unit] && streamProgrammeStoppedWriter(block+"\n", unit) {
+				seen[unit] = true
+				break
+			}
+		}
+	}
+	return len(seen) == len(streamProgrammeWriters)
+}
+
 func streamProgrammeNoWriterJobs(raw string) bool {
 	if len(raw) > 1<<20 || !utf8.ValidString(raw) || strings.ContainsAny(raw, "\x00\r") {
 		return false
@@ -75,16 +102,17 @@ func streamProgrammeWritersStopped(ctx context.Context) error {
 	if ctx == nil || ctx.Err() != nil {
 		return loadbalancestream.ErrService
 	}
+	args := []string{"show", "--property=Id,LoadState,ActiveState,SubState,UnitFileState,MainPID,ControlPID,ControlGroup,Result"}
+	raw, err := programQueueCommand(ctx, "/usr/bin/systemctl", append(args, streamProgrammeWriters[:]...)...)
+	if err != nil || !streamProgrammeStoppedWriters(raw) {
+		return loadbalancestream.ErrService
+	}
 	for _, unit := range streamProgrammeWriters {
-		raw, err := programQueueCommand(ctx, "/usr/bin/systemctl", "show", unit, "--property=Id,LoadState,ActiveState,SubState,UnitFileState,MainPID,ControlPID,ControlGroup,Result")
-		if err != nil || !streamProgrammeStoppedWriter(raw, unit) {
-			return loadbalancestream.ErrService
-		}
 		if _, err := os.Lstat("/sys/fs/cgroup/system.slice/" + unit); !errors.Is(err, os.ErrNotExist) {
 			return loadbalancestream.ErrService
 		}
 	}
-	raw, err := programQueueCommand(ctx, "/usr/bin/systemctl", "list-jobs", "--no-legend", "--no-pager")
+	raw, err = programQueueCommand(ctx, "/usr/bin/systemctl", "list-jobs", "--no-legend", "--no-pager")
 	if err != nil || !streamProgrammeNoWriterJobs(raw) {
 		return loadbalancestream.ErrService
 	}

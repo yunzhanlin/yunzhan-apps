@@ -1,0 +1,17 @@
+[Unit]
+Description=Panel RabbitMQ migration recovery %i
+After=docker.service panel-rabbitmq-migration@%i.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/panel/bin/panel-executor --rabbitmq-reconcile %i
+TimeoutStartSec=10min
+KillMode=control-group
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/panel-executor /etc/panel/compose
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

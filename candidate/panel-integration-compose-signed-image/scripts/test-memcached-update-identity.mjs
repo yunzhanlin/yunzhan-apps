@@ -78,8 +78,8 @@ test('actual Docker UI refuses every ordinary operation on native image retentio
  for(const item of [{PanelProtected:true},{Names:['/yunzhan-retain-memcached-original']},{Labels:{'io.yunzhan.owner':'yunzhan.memcached-image-retention.v1'}},{Labels:{'io.yunzhan.retention-sha256':''}}]){
   assert(protectedFn(item));let warnings=0;
   const refs={retainedContainer:protectedFn,ElMessage:{warning:()=>warnings++},retentionWarning:'protected',busy:{value:false},props:{api:()=>assert.fail('retention API write')},ElMessageBox:{prompt:()=>assert.fail('retention delete prompt')}};
-  for(const action of ['start','stop','restart'])await new Function(...Object.keys(refs),actualFunction('DockerManager.vue','action')+';return action;')(...Object.values(refs))(item,action);
-  await new Function(...Object.keys(refs),actualFunction('DockerManager.vue','removeContainer')+';return removeContainer;')(...Object.values(refs))(item);assert.equal(warnings,4);assert.equal(refs.busy.value,false);
+  for(const action of ['start','stop','restart','pause','unpause'])await new Function(...Object.keys(refs),actualFunction('DockerManager.vue','action')+';return action;')(...Object.values(refs))(item,action);
+  await new Function(...Object.keys(refs),actualFunction('DockerManager.vue','removeContainer')+';return removeContainer;')(...Object.values(refs))(item);assert.equal(warnings,6);assert.equal(refs.busy.value,false);
  }
  assert(!protectedFn({PanelProtected:false,Names:['/ordinary'],Labels:{'com.yunzhan.panel.managed':'true'}}));
 });

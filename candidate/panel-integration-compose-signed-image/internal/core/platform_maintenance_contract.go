@@ -9,6 +9,11 @@ import (
 const PlatformMaintenanceGrantLimit = 128
 const PlatformMaintenanceOperationLimit = 1024
 const PlatformMaintenanceAppVersion = "1.3.0"
+const PlatformMaintenanceFleetAppVersion = "1.3.1"
+
+func PlatformMaintenanceVersionSupported(version string) bool {
+	return version == PlatformMaintenanceAppVersion || version == PlatformMaintenanceFleetAppVersion
+}
 
 var platformMaintenanceSHA = regexp.MustCompile(`^[a-f0-9]{64}$`)
 

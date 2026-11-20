@@ -51,7 +51,7 @@ class FirstInstallStartupTest(unittest.TestCase):
     These process stubs exercise startup ordering and failure propagation only;
     normal signed installations on native systemd hosts remain a separate gate.
     """
-    def startup(self, docker=True, core_failure=False, recovery_failure=False):
+    def startup(self, docker=True, core_failure=False, recovery_failure=False, sync_failure=False):
         begin = SOURCE.index('\nsystemctl daemon-reload\n') + 1
         end = SOURCE.index('\nif ((FAILED));then', begin)
         flow = SOURCE[begin:end]
@@ -99,6 +99,16 @@ python3(){
   test "$*" = "$HERE/first-install.py" || return 97
   printf 'bootstrap\n' >> "$QA_EVENTS"
 }
+sync(){
+  test "$1" = -f && test "$2" = -- || return 97
+  shift 2
+  test "$1" = "$RELEASE_DIR" && test "$2" = "$MARKER" || return 98
+  case " $* " in *' /etc/nginx '*) ;; *) return 98;; esac
+  case " $* " in *' /etc/systemd/system '*) ;; *) return 98;; esac
+  case " $* " in *' /var/lib/panel '*) ;; *) return 98;; esac
+  printf 'sync\n' >> "$QA_EVENTS"
+  test "$QA_SYNC_FAILURE" = 0
+}
 '''
         with tempfile.TemporaryDirectory(prefix='panel-first-startup-') as tmp:
             root = pathlib.Path(tmp)
@@ -106,10 +116,11 @@ python3(){
             script.write_text(helper)
             events = root / 'events'
             env = dict(os.environ, FRESH='1', HERE=tmp, FRESH_SSH_PORTS='22',
+                       RELEASE_DIR=str(root / 'release'), MARKER=str(root / 'marker'),
                        QA_DATABASE=str(root / 'panel.db'), QA_EVENTS=str(events),
                        QA_PYTHON=sys.executable, QA_HELPER=str(script),
                        QA_DOCKER=str(int(docker)), QA_CORE_FAILURE=str(int(core_failure)),
-                       QA_RECOVERY_FAILURE=str(int(recovery_failure)))
+                       QA_RECOVERY_FAILURE=str(int(recovery_failure)), QA_SYNC_FAILURE=str(int(sync_failure)))
             result = subprocess.run(['/bin/bash', '-eu', '-c', shims + FUNCTIONS + '\n' + flow + '\nexit "$FAILED"\n'],
                                     env=env, text=True, capture_output=True)
             return result, events.read_text().splitlines()
@@ -119,6 +130,16 @@ python3(){
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(events.count('recovery'), 1)
         self.assertEqual(events.count('bootstrap'), 1)
+
+    def test_first_install_syncs_service_and_database_filesystems_after_bootstrap(self):
+        result, events = self.startup()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(events[-3:], ['recovery', 'bootstrap', 'sync'])
+
+    def test_filesystem_flush_failure_cannot_report_first_install_success(self):
+        result, events = self.startup(sync_failure=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(events[-2:], ['bootstrap', 'sync'])
 
     def test_no_docker_does_not_start_compose_recovery(self):
         result, events = self.startup(docker=False)
@@ -131,12 +152,14 @@ python3(){
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn('recovery', events)
         self.assertNotIn('bootstrap', events)
+        self.assertNotIn('sync', events)
 
     def test_recovery_refusal_remains_an_install_failure(self):
         result, events = self.startup(recovery_failure=True)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(events.count('recovery'), 1)
         self.assertNotIn('bootstrap', events)
+        self.assertNotIn('sync', events)
 
 
 if __name__ == '__main__':

@@ -76,21 +76,51 @@ func (p *loadBalanceStreamConfigurationPublication) activationPlan(ctx context.C
 // paths. The returned evidence proves actual owned processes/resources and
 // configuration markers, NOT upstream health or real TCP/UDP forwarding. Those
 // require independent native traffic tests and honest UI states before release.
+// Fixed stage labels describe where the original observation stopped. They
+// never include raw tool output, service arguments or policy data. Once the
+// start is issued, the error cannot establish that no service was started.
+type streamInitialStartFailure struct {
+	stage  string
+	issued bool
+	cause  error
+}
+
+func (e streamInitialStartFailure) Error() string {
+	state := "before start issuance"
+	if e.issued {
+		state = "after start issuance; original outcome unverified"
+	}
+	if e.cause != nil {
+		return fmt.Sprintf("initial %s (%s, %v)", e.stage, state, e.cause)
+	}
+	return fmt.Sprintf("initial %s (%s)", e.stage, state)
+}
+
+func (e streamInitialStartFailure) Unwrap() error { return loadbalancestream.ErrService }
+
+func streamInitialStartError(ctx context.Context, stage string, issued bool) error {
+	e := streamInitialStartFailure{stage: stage, issued: issued}
+	if ctx != nil {
+		e.cause = ctx.Err()
+	}
+	return e
+}
+
 func (p *loadBalanceStreamConfigurationPublication) startOwnedInitial(ctx context.Context, w *loadBalanceStreamControlOwner) (*loadBalanceStreamServiceObservation, error) {
 	if p == nil || p.serviceIssued || !p.serviceEgressCurrent(ctx) {
-		return nil, fmt.Errorf("initial current original metadata: %w", loadbalancestream.ErrService)
+		return nil, streamInitialStartError(ctx, "original egress and metadata", false)
 	}
 	seed, plan, err := p.servicePlanOwned(ctx, w)
 	if err != nil || !plan.Service.ShouldRun || plan.Service.Retiring.ActiveEntries != 0 || !p.store.first && !p.store.priorStopped && p.store.priorColdBoot == nil {
-		return nil, fmt.Errorf("initial original plan and retiring admission: %w", loadbalancestream.ErrService)
+		return nil, streamInitialStartError(ctx, "original plan and retiring admission", false)
 	}
 	prior, err := streamInstallUnitProperties(ctx, loadbalancestream.ServiceUnitName)
 	if err != nil || prior["LoadState"] != "not-found" || prior["ActiveState"] != "inactive" || prior["SubState"] != "dead" || prior["MainPID"] != "0" || prior["ControlPID"] != "0" || prior["InvocationID"] != "" {
-		return nil, fmt.Errorf("initial fixed unit absence: %w", loadbalancestream.ErrService)
+		return nil, streamInitialStartError(ctx, "fixed unit absence", false)
 	}
 	census, err := observeLoadBalanceStreamHostSockets(ctx)
 	if err != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(ctx, "host socket census", false)
 	}
 	// Keep every observed live/unknown socket blocking. A canonical ownerless
 	// TCP TIME_WAIT row from a closed probe is not a live socket. Actual native
@@ -99,65 +129,65 @@ func (p *loadBalanceStreamConfigurationPublication) startOwnedInitial(ctx contex
 	for _, socket := range census.sockets {
 		if streamInitialSocketConflicts(socket, seed.After) {
 			census.close()
-			return nil, fmt.Errorf("initial observed occupied target: %w", loadbalancestream.ErrService)
+			return nil, streamInitialStartError(ctx, "observed occupied target", false)
 		}
 	}
 	if !census.current() {
 		census.close()
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(ctx, "held network namespace", false)
 	}
 	census.close()
 	if _, err := w.configurationPhase(ctx, "service-intent"); err != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(ctx, "original journal and authority", false)
 	}
 	if _, err := checkStreamConfigurationPublication(p.publication, p.original.root, p.seed, w.gate.installed.identity.GID, true); err != nil || !p.metadataCurrent() {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(ctx, "published configuration", false)
 	}
 	if p.store.priorColdBoot != nil && p.store.priorColdBoot.current(ctx, p.store) != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(ctx, "cold boot evidence", false)
 	}
 	p.serviceIssued = true
 	bounded, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
 	if _, err := programQueueCommand(bounded, "/usr/bin/systemd-run", plan.Start...); err != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(bounded, "native systemd start", true)
 	}
 	// Pin THIS start's manager invocation and actual master pidfd immediately.
 	// A later matching process/unit name cannot stand in for an exited attempt.
 	main, invocation, err := streamServiceManagerFacts(bounded)
 	if err != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(bounded, "manager invocation", true)
 	}
 	master, err := holdLoadBalanceStreamProcess(main, w.gate.installed)
 	if err != nil {
-		return nil, loadbalancestream.ErrService
+		return nil, streamInitialStartError(bounded, "original master process", true)
 	}
 	defer master.close()
 	for {
 		if bounded.Err() != nil || !master.current(w.gate.installed.engine, w.gate.installed.identity.UID, w.gate.installed.identity.GID) {
-			return nil, loadbalancestream.ErrService
+			return nil, streamInitialStartError(bounded, "live original master process", true)
 		}
 		if _, err := w.configurationPhase(bounded, "service-intent"); err != nil {
-			return nil, loadbalancestream.ErrService
+			return nil, streamInitialStartError(bounded, "original journal while observing service", true)
 		}
 		service, err := observeLoadBalanceStreamService(bounded, w.gate.installed, plan.Service, false)
 		if err == nil {
 			if service.MainPID != main || service.InvocationID != invocation {
 				service.close()
-				return nil, loadbalancestream.ErrService
+				return nil, streamInitialStartError(bounded, "original manager invocation changed", true)
 			}
 			if service.MemoryEvents.OOM != 0 || service.MemoryEvents.Kills != 0 || service.MemoryEvents.GroupKills != 0 {
 				service.close()
-				return nil, loadbalancestream.ErrService
+				return nil, streamInitialStartError(bounded, "initial service memory events", true)
 			}
 			if verifyLoadBalanceStreamConfigurationMarkers(bounded, service, seed.After) == nil {
 				if _, err := w.configurationPhase(bounded, "service-intent"); err != nil || !master.current(w.gate.installed.engine, service.AccountUID, service.AccountGID) {
 					service.close()
-					return nil, loadbalancestream.ErrService
+					return nil, streamInitialStartError(bounded, "final journal and master process", true)
 				}
 				if _, err := checkStreamConfigurationPublication(p.publication, p.original.root, p.seed, service.AccountGID, true); err != nil || !p.metadataCurrent() {
 					service.close()
-					return nil, loadbalancestream.ErrService
+					return nil, streamInitialStartError(bounded, "final configuration evidence", true)
 				}
 				return service, nil
 			}
@@ -165,7 +195,7 @@ func (p *loadBalanceStreamConfigurationPublication) startOwnedInitial(ctx contex
 		}
 		select {
 		case <-bounded.Done():
-			return nil, loadbalancestream.ErrService
+			return nil, streamInitialStartError(bounded, "service and configuration marker observation", true)
 		case <-time.After(50 * time.Millisecond):
 		}
 	}

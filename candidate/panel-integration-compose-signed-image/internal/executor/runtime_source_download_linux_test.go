@@ -40,7 +40,7 @@ func TestRuntimeSourceDownloadOfficialArchiveBudget(t *testing.T) {
 					}
 					return sourceHTTPError{Status: status}
 				}
-				if calls != 2 || url != runtimecatalog.SourceArchiveURL(r) || l.Total != 20*time.Minute {
+				if calls != 2 || url != runtimecatalog.SourceArchiveURL(r) || l.Total != 25*time.Minute {
 					t.Fatal("unreviewed fallback/budget")
 				}
 				return nil
@@ -49,6 +49,30 @@ func TestRuntimeSourceDownloadOfficialArchiveBudget(t *testing.T) {
 				t.Fatalf("fallback: calls=%d err=%v", calls, err)
 			}
 		})
+	}
+}
+
+func TestRuntimeSourceExtendedBudgetBoundToExactApacheArchive(t *testing.T) {
+	apache, _ := runtimecatalog.Find("apache-2.4.68")
+	archive := runtimecatalog.SourceArchiveURL(apache)
+	for _, bad := range []struct{ url, digest string }{
+		{apache.URL, apache.SHA256},
+		{archive + "?other=1", apache.SHA256},
+		{archive, strings.Repeat("1", 64)},
+		{"https://example.invalid/httpd-2.4.68.tar.gz", apache.SHA256},
+	} {
+		err := downloadVerifiedWithLimits(context.Background(), bad.url, bad.digest,
+			filepath.Join(t.TempDir(), "source.tar.gz"), sourceDownloadLimits{Total: 25 * time.Minute, BodyIdle: 45 * time.Second})
+		if err == nil || !strings.Contains(err.Error(), "固定有界范围") {
+			t.Fatalf("unreviewed URL or digest inherited Apache budget: %v", err)
+		}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	err := downloadVerifiedWithLimits(ctx, archive, apache.SHA256,
+		filepath.Join(t.TempDir(), "source.tar.gz"), sourceDownloadLimits{Total: 25 * time.Minute, BodyIdle: 45 * time.Second})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("official fixed archive budget or cancellation changed: %v", err)
 	}
 }
 
@@ -97,6 +121,48 @@ func TestRuntimeSourceDownloadCancelledBeforeOrBetweenRequests(t *testing.T) {
 			}
 			if !errors.Is(err, context.Canceled) || calls != want {
 				t.Fatalf("cancelled source contacted again: %d %v", calls, err)
+			}
+		})
+	}
+}
+
+func TestPHPSourceResponseTimeoutRetriesOnlySamePinnedRequest(t *testing.T) {
+	r, _ := runtimecatalog.Find("php-8.2.35")
+	timeout := sourceResponseTimeout{cause: errors.New("TLS handshake timeout")}
+	for _, tt := range []struct {
+		name      string
+		err       error
+		second    error
+		cancel    bool
+		wantCalls int
+		want      error
+	}{
+		{"first TLS timeout", timeout, nil, false, 2, nil},
+		{"repeat TLS timeout is terminal", timeout, timeout, false, 2, timeout},
+		{"request cancelled", timeout, nil, true, 1, context.Canceled},
+		{"certificate failure", x509.UnknownAuthorityError{}, nil, false, 1, x509.UnknownAuthorityError{}},
+		{"interrupted body", io.ErrUnexpectedEOF, nil, false, 1, io.ErrUnexpectedEOF},
+		{"idle body", errRuntimeSourceBodyIdle, nil, false, 1, errRuntimeSourceBodyIdle},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			calls := 0
+			err := downloadRuntimeSourceWith(ctx, r, "private-stage", func(_ context.Context, url, sha, dst string, limits sourceDownloadLimits) error {
+				calls++
+				if url != r.URL || sha != r.SHA256 || dst != "private-stage" || limits != (sourceDownloadLimits{8 * time.Minute, 45 * time.Second}) {
+					t.Fatal("original download identity or limit changed")
+				}
+				if calls > 1 {
+					return tt.second
+				}
+				if tt.cancel {
+					cancel()
+				}
+				return tt.err
+			})
+			if calls != tt.wantCalls || !errors.Is(err, tt.want) {
+				t.Fatalf("calls=%d err=%v", calls, err)
 			}
 		})
 	}
@@ -225,6 +291,23 @@ func TestRuntimeSourceDownloadDigestMismatchHasNoSuccess(t *testing.T) {
 	err := downloadVerifiedWithLimits(context.Background(), server.URL, strings.Repeat("0", 64), dst, sourceDownloadLimits{Total: time.Second, BodyIdle: 500 * time.Millisecond})
 	if err == nil || !strings.Contains(err.Error(), "SHA-256") {
 		t.Fatalf("unverified source was accepted: %v", err)
+	}
+}
+
+func TestRuntimeSourceDownloadResponseTimeoutDoesNotCreateFile(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Accept the request, but never send response headers.
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	dst := filepath.Join(t.TempDir(), "source")
+	err := downloadVerifiedWithLimits(context.Background(), server.URL, strings.Repeat("0", 64), dst, sourceDownloadLimits{Total: 120 * time.Millisecond, BodyIdle: 80 * time.Millisecond})
+	var timedOut sourceResponseTimeout
+	if !errors.As(err, &timedOut) {
+		t.Fatalf("a response timeout was not distinguished from a body failure: %v", err)
+	}
+	if _, err := os.Lstat(dst); !errors.Is(err, os.ErrNotExist) {
+		t.Fatal("a response timeout created a source file")
 	}
 }
 

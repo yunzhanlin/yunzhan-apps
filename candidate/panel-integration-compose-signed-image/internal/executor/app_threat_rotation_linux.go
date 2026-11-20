@@ -24,24 +24,39 @@ const threatIDSHistoryLimit = 4
 const threatIDSRotationThreshold = 1 << 20
 
 type threatIDSArchive struct {
-	ID     string `json:"id"`
-	At     string `json:"at"`
-	SHA    string `json:"sha256"`
-	Bytes  int64  `json:"bytes"`
+	ID     string                  `json:"id"`
+	At     string                  `json:"at"`
+	SHA    string                  `json:"sha256"`
+	Bytes  int64                   `json:"bytes"`
+	Device uint64                  `json:"device"`
+	Inode  uint64                  `json:"inode"`
+	Source *threatIDSArchiveSource `json:"source,omitempty"`
+}
+
+// The producer witness describes the original mutable inode. Only the
+// separate root archive is authoritative after a copy has been committed.
+type threatIDSArchiveSource struct {
 	Device uint64 `json:"device"`
 	Inode  uint64 `json:"inode"`
+	UID    uint32 `json:"uid"`
+	GID    uint32 `json:"gid"`
+	Bytes  int64  `json:"bytes"`
+	SHA    string `json:"sha256"`
 }
+
 type threatIDSRotationPending struct {
-	ID         string            `json:"id"`
-	At         string            `json:"at"`
-	Device     uint64            `json:"device"`
-	Inode      uint64            `json:"inode"`
-	UID        uint32            `json:"uid"`
-	GID        uint32            `json:"gid"`
-	Revision   int64             `json:"revision"`
-	RuntimeSHA string            `json:"runtime_sha256"`
-	UnitSHA    string            `json:"unit_sha256"`
-	Sealed     *threatIDSArchive `json:"sealed,omitempty"`
+	CopyFormat int                     `json:"copy_format,omitempty"`
+	Source     *threatIDSArchiveSource `json:"source,omitempty"`
+	ID         string                  `json:"id"`
+	At         string                  `json:"at"`
+	Device     uint64                  `json:"device"`
+	Inode      uint64                  `json:"inode"`
+	UID        uint32                  `json:"uid"`
+	GID        uint32                  `json:"gid"`
+	Revision   int64                   `json:"revision"`
+	RuntimeSHA string                  `json:"runtime_sha256"`
+	UnitSHA    string                  `json:"unit_sha256"`
+	Sealed     *threatIDSArchive       `json:"sealed,omitempty"`
 }
 type threatIDSRotation struct {
 	Format           int                       `json:"format"`
@@ -53,19 +68,19 @@ type threatIDSRotation struct {
 }
 
 func validateThreatIDSRotation(v threatIDSRotation) error {
-	if v.Format != 1 || v.Archives == nil || v.Retired == nil || len(v.Archives) > threatIDSHistoryLimit+1 || len(v.Retired) > 8 || v.Pending != nil && v.Retiring != nil {
+	if (v.Format != 1 && v.Format != 2) || v.Archives == nil || v.Retired == nil || len(v.Archives) > threatIDSHistoryLimit+1 || len(v.Retired) > 8 || v.Pending != nil && v.Retiring != nil {
 		return errors.New("IDS 轮转记录结构或容量异常")
 	}
 	seen := map[string]bool{}
 	valid := validThreatIDSArchive
 	for _, entry := range append(append([]threatIDSArchive{}, v.Archives...), v.Retired...) {
-		if !valid(entry) || seen[entry.ID] {
+		if !valid(entry) || seen[entry.ID] || v.Format == 1 && entry.Source != nil {
 			return errors.New("IDS 轮转归档身份、摘要或大小无效")
 		}
 		seen[entry.ID] = true
 	}
 	if v.Retiring != nil {
-		if !valid(*v.Retiring) || len(v.Archives) != threatIDSHistoryLimit+1 || v.Archives[0] != *v.Retiring {
+		if !valid(*v.Retiring) || len(v.Archives) != threatIDSHistoryLimit+1 || !sameThreatIDSArchive(v.Archives[0], *v.Retiring) {
 			return errors.New("IDS 退休集合不是已核对最早归档")
 		}
 	}
@@ -77,7 +92,13 @@ func validateThreatIDSRotation(v threatIDSRotation) error {
 		if !core.ValidID(p.ID) || seen[p.ID] || !validWAFRotationTime(p.At) || p.Device == 0 || p.Inode == 0 || validateThreatIDSAccount(threatIDSAccount{Format: 1, UID: p.UID, GID: p.GID}) != nil || p.Revision < 1 || p.Revision >= 1<<60 || !threatPackageSHA.MatchString(p.RuntimeSHA) || !threatPackageSHA.MatchString(p.UnitSHA) || len(v.Archives) > threatIDSHistoryLimit {
 			return errors.New("IDS 待轮转记录来源或范围无效")
 		}
-		if p.Sealed != nil && (!valid(*p.Sealed) || p.Sealed.ID != p.ID || p.Sealed.At != p.At || p.Sealed.Device != p.Device || p.Sealed.Inode != p.Inode) {
+		if v.Format == 1 && (p.CopyFormat != 0 || p.Source != nil) || v.Format == 2 && p.CopyFormat != 2 {
+			return errors.New("IDS 封存格式与轮转记录不符")
+		}
+		if p.CopyFormat == 2 && !validThreatIDSCopyPending(p) {
+			return errors.New("IDS 独立副本的来源见证或准备阶段无效")
+		}
+		if p.CopyFormat == 0 && p.Sealed != nil && (!valid(*p.Sealed) || p.Sealed.Source != nil || p.Sealed.ID != p.ID || p.Sealed.At != p.At || p.Sealed.Device != p.Device || p.Sealed.Inode != p.Inode) {
 			return errors.New("IDS 待提交封存摘要与原始轮转身份不符")
 		}
 	}
@@ -85,7 +106,30 @@ func validateThreatIDSRotation(v threatIDSRotation) error {
 }
 
 func validThreatIDSArchive(entry threatIDSArchive) bool {
-	return core.ValidID(entry.ID) && validWAFRotationTime(entry.At) && threatPackageSHA.MatchString(entry.SHA) && entry.Bytes > 0 && entry.Bytes <= threatEVEByteLimit && entry.Device > 0 && entry.Inode > 0
+	return core.ValidID(entry.ID) && validWAFRotationTime(entry.At) && threatPackageSHA.MatchString(entry.SHA) && entry.Bytes > 0 && entry.Bytes <= threatEVEByteLimit && entry.Device > 0 && entry.Inode > 0 && (entry.Source == nil || validThreatIDSArchiveSource(*entry.Source) && entry.Source.Device == entry.Device && entry.Source.Inode != entry.Inode && entry.Source.Bytes == entry.Bytes && entry.Source.SHA == entry.SHA)
+}
+
+func validThreatIDSArchiveSource(source threatIDSArchiveSource) bool {
+	return source.Device > 0 && source.Inode > 0 && source.Bytes > 0 && source.Bytes <= threatEVEByteLimit && threatPackageSHA.MatchString(source.SHA) && validateThreatIDSAccount(threatIDSAccount{Format: 1, UID: source.UID, GID: source.GID}) == nil
+}
+
+func sameThreatIDSArchive(a, b threatIDSArchive) bool {
+	left, right := a.Source, b.Source
+	a.Source, b.Source = nil, nil
+	return a == b && (left == nil && right == nil || left != nil && right != nil && *left == *right)
+}
+
+func validThreatIDSCopyPending(p *threatIDSRotationPending) bool {
+	if p == nil || p.CopyFormat != 2 {
+		return false
+	}
+	if p.Source == nil {
+		return p.Sealed == nil
+	}
+	if !validThreatIDSArchiveSource(*p.Source) || p.Source.Device != p.Device || p.Source.Inode != p.Inode || p.Source.UID != p.UID || p.Source.GID != p.GID {
+		return false
+	}
+	return p.Sealed == nil || validThreatIDSArchive(*p.Sealed) && p.Sealed.ID == p.ID && p.Sealed.At == p.At && p.Sealed.Source != nil && *p.Sealed.Source == *p.Source
 }
 func (s *Service) threatIDSRotationPath() string {
 	return filepath.Join(s.moduleDir("network-threat-detection"), "output-rotation.json")
@@ -198,6 +242,9 @@ func (s *Service) retireThreatIDSArchiveContext(ctx context.Context, v threatIDS
 	allowed := map[string]bool{}
 	for i, other := range v.Archives {
 		allowed["eve-"+other.ID+".json"] = true
+		if other.Source != nil {
+			allowed[threatIDSProducerName(other.ID)] = true
+		}
 		if i > 0 {
 			if _, err := s.readThreatIDSArchiveSnapshot(ctx, other); err != nil {
 				return v, err
@@ -206,14 +253,17 @@ func (s *Service) retireThreatIDSArchiveContext(ctx context.Context, v threatIDS
 	}
 	if v.Retiring != nil {
 		allowed[filepath.Base(staged)] = true
+		if entry.Source != nil {
+			allowed[threatIDSRetiringProducerName(entry.ID)] = true
+		}
 	}
 	f, err := os.Open(dir)
 	if err != nil {
 		return v, err
 	}
-	files, readErr := f.ReadDir(threatIDSHistoryLimit + 2)
+	files, readErr := f.ReadDir(2*(threatIDSHistoryLimit+1) + 3)
 	f.Close()
-	if readErr != nil && readErr != io.EOF || len(files) > threatIDSHistoryLimit+1 {
+	if readErr != nil && readErr != io.EOF || len(files) > 2*(threatIDSHistoryLimit+1)+1 {
 		return v, errors.New("IDS 退役目录容量或读取异常；未移除")
 	}
 	for _, file := range files {
@@ -255,6 +305,9 @@ func (s *Service) retireThreatIDSArchiveContext(ctx context.Context, v threatIDS
 			return v, err
 		}
 		if !v.RetirementUnlink {
+			if err := threatIDSStageProducerRetirement(ctx, dir, entry); err != nil {
+				return v, err
+			}
 			v.RetirementUnlink = true
 			if err := s.writeThreatIDSRotation(v); err != nil {
 				return v, err
@@ -262,6 +315,9 @@ func (s *Service) retireThreatIDSArchiveContext(ctx context.Context, v threatIDS
 		}
 		if ctx.Err() != nil {
 			return v, ctx.Err()
+		}
+		if err := threatIDSUnlinkRetiringProducer(ctx, dir, entry, v.RetirementUnlink); err != nil {
+			return v, err
 		}
 		if err := os.Remove(staged); err != nil {
 			return v, err
@@ -271,6 +327,8 @@ func (s *Service) retireThreatIDSArchiveContext(ctx context.Context, v threatIDS
 		}
 	} else if !v.RetirementUnlink {
 		return v, errors.New("IDS 归档缺失但没有已核对退役槽的移除意图；未宣称退役成功")
+	} else if err := threatIDSUnlinkRetiringProducer(ctx, dir, entry, true); err != nil {
+		return v, err
 	}
 	v.Archives = append([]threatIDSArchive{}, v.Archives[1:]...)
 	v.Retired = append(v.Retired, entry)
@@ -373,10 +431,16 @@ func (s *Service) threatIDSReopen(ctx context.Context, fd, pid int, start uint64
 	}
 }
 
-// Snapshot a closed archive through a no-follow descriptor, and persist its
-// full digest BEFORE changing ownership. Interrupted sealing never adopts an
-// unknown root-owned inode or recomputes a new digest for changed evidence.
+// New intents publish an independent root inode. Legacy interrupted intents
+// retain their exact digest and ownership protocol; they are never relabelled
+// as independent copies merely because they are root-owned.
 func threatIDSSealArchive(ctx context.Context, path string, p *threatIDSRotationPending, account threatIDSAccount, persist func() error) (threatIDSArchive, error) {
+	if p != nil && p.CopyFormat == 2 {
+		return threatIDSSealIndependentArchive(ctx, path, p, account, persist)
+	}
+	if p == nil || p.CopyFormat != 0 || p.Source != nil {
+		return threatIDSArchive{}, errors.New("IDS 旧封存的格式或来源字段无效")
+	}
 	var empty threatIDSArchive
 	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_NONBLOCK|syscall.O_CLOEXEC, 0)
 	if err != nil {
@@ -470,6 +534,9 @@ func (s *Service) rotateThreatIDSLockedChoice(ctx context.Context, explicit bool
 	}
 	live := s.systemPath("/var/lib/panel-network-ids/logs/eve.json")
 	if v.Pending == nil {
+		if err := threatIDSCopyFilesystemReady(dir); err != nil {
+			return v, err
+		}
 		info, err := threatIDSOutputInfo(live, account)
 		if err != nil {
 			return v, err
@@ -482,7 +549,8 @@ func (s *Service) rotateThreatIDSLockedChoice(ctx context.Context, explicit bool
 		if err != nil {
 			return v, err
 		}
-		v.Pending = &threatIDSRotationPending{ID: core.ID(), At: core.Now(), Device: uint64(st.Dev), Inode: st.Ino, UID: account.UID, GID: account.GID, Revision: in.Revision, RuntimeSHA: digest, UnitSHA: unit.UnitSHA}
+		v.Format = 2
+		v.Pending = &threatIDSRotationPending{CopyFormat: 2, ID: core.ID(), At: core.Now(), Device: uint64(st.Dev), Inode: st.Ino, UID: account.UID, GID: account.GID, Revision: in.Revision, RuntimeSHA: digest, UnitSHA: unit.UnitSHA}
 		if err := s.writeThreatIDSRotation(v); err != nil {
 			return v, err
 		}
@@ -496,8 +564,27 @@ func (s *Service) rotateThreatIDSLockedChoice(ctx context.Context, explicit bool
 		return v, err
 	}
 	archive := filepath.Join(dir, "eve-"+p.ID+".json")
-	old, err := os.Lstat(archive)
+	source := archive
+	if p.CopyFormat == 2 {
+		if p.Sealed != nil {
+			if _, err := s.threatIDSArchiveFile(*p.Sealed); err == nil {
+				return s.commitThreatIDSRotation(ctx, v, *p.Sealed)
+			} else if !os.IsNotExist(err) {
+				return v, err
+			}
+		}
+		producer := filepath.Join(dir, threatIDSProducerName(p.ID))
+		if _, err := os.Lstat(producer); err == nil {
+			source = producer
+		} else if !os.IsNotExist(err) {
+			return v, err
+		}
+	}
+	old, err := os.Lstat(source)
 	if os.IsNotExist(err) {
+		if p.Source != nil || p.Sealed != nil {
+			return v, errors.New("IDS 已记录复制阶段的原来源缺失；未重放改名")
+		}
 		old, err = threatIDSOutputInfo(live, account)
 		if err != nil {
 			return v, err
@@ -532,6 +619,22 @@ func (s *Service) rotateThreatIDSLockedChoice(ctx context.Context, explicit bool
 		return v, err
 	}
 	if _, err := s.threatIDSArchiveFile(entry); err != nil {
+		return v, err
+	}
+	return s.commitThreatIDSRotation(ctx, v, entry)
+}
+
+func (s *Service) commitThreatIDSRotation(ctx context.Context, v threatIDSRotation, entry threatIDSArchive) (threatIDSRotation, error) {
+	if v.Pending == nil || v.Pending.Sealed == nil || !sameThreatIDSArchive(*v.Pending.Sealed, entry) || ctx.Err() != nil {
+		return v, errors.New("IDS 封存提交缺少完整准备记录或请求已取消")
+	}
+	if _, err := s.threatIDSArchiveFile(entry); err != nil {
+		return v, err
+	}
+	if err := threatIDSProtectProducerAfterCopy(ctx, s.systemPath("/var/lib/panel-network-ids/history"), entry); err != nil {
+		return v, err
+	}
+	if _, err := s.threatIDSRotationHistory(v); err != nil {
 		return v, err
 	}
 	v.Archives = append(v.Archives, entry)

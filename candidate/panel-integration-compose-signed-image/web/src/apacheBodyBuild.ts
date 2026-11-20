@@ -25,7 +25,7 @@ export function apacheBodyBuildRow(value:unknown, expectedID?:string):value is A
   if(v.state!=="ready")return true;
   return !v.error && v.historical_integrity_verified!==true && v.integrity_verified===true && v.module_abi_validated===true
     && v.elf_hardening_validated===true && v.compiler_groups_collected===true
-    && ["amd64","arm64"].includes(v.architecture || "") && v.apache_version==="2.4.68"
+    && ["amd64","arm64"].includes(v.architecture || "") && ["2.4.68","2.4.71"].includes(v.apache_version || "")
     && v.engine_version==="2.9.15-yz5" && v.yajl_version==="2.1.0-debian5-yz1" && v.crs_version==="4.30.0";
 }
 export function apacheBodyBuildInventory(value:unknown):value is {entries:ApacheBodyBuild[]} {

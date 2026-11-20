@@ -41,6 +41,11 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 	if err := verifyApacheBodyWorkerCapabilities(); err != nil {
 		return err
 	}
+	runtimeLease, err := runtimeUseLock()
+	if err != nil {
+		return err
+	}
+	defer runtimeLease.Close()
 	// Validate the dedicated read-only cgroup and stable-PID support before
 	// creating any build evidence, fetching source or granting compiler access.
 	scope, err := beginApacheBodyCompilerScope()
@@ -132,10 +137,10 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 		record.Steps = append(record.Steps, core.Step{Time: core.Now(), Message: message})
 		return saveApacheBodyRecord(jobPath, record)
 	}
-	if err := step("核对实际 Apache 2.4.68、固定构建依赖和专用非特权账户"); err != nil {
+	if err := step("核对实际审核的 Apache、固定构建依赖和专用非特权账户"); err != nil {
 		return err
 	}
-	r, err := apacheRelease()
+	r, err := apacheBuildRelease()
 	if err != nil {
 		return err
 	}
@@ -174,7 +179,7 @@ func runApacheBodyBuildContext(parent context.Context, id string) (err error) {
 	if err := os.Chmod(build, 0755); err != nil {
 		return err
 	}
-	paths := apacheBodyPaths(id)
+	paths := apacheBodyPathsForRelease(id, r)
 	for _, p := range []string{paths.Work, paths.Prefix, paths.Assets, filepath.Join(paths.Prefix, "lib"), filepath.Join(paths.Prefix, "include"), filepath.Join(paths.Prefix, "include/yajl")} {
 		if err := os.Mkdir(p, 0755); err != nil {
 			return err

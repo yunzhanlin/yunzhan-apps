@@ -107,7 +107,7 @@ func IsDockerTemplate(id string) bool {
 		return true
 	}
 	switch id {
-	case "nginx-static", "redis-cache", "memcached-cache", PhpMyAdminLegacyTemplate, PhpMyAdmin523Template, "mongodb", "elasticsearch", "node-service", "wordpress-blog", "rabbitmq", OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
+	case "nginx-static", "redis-cache", "memcached-cache", PhpMyAdminLegacyTemplate, PhpMyAdmin523Template, MongoDBLegacyTemplate, MongoDB8038Template, ElasticsearchLegacyTemplate, ElasticsearchSnapshotTemplate, "node-service", "wordpress-blog", RabbitMQLegacyTemplate, RabbitMQ440Template, OpenLiteSpeedLegacyTemplate, OpenLiteSpeed194Template:
 		return true
 	}
 	return false
@@ -233,4 +233,16 @@ networks:
     internal: true
   edge: {}
 `, image, strconv.Quote(strings.ReplaceAll(phpInit, "$", "$$")), legacyNginxImage, strconv.Quote(strings.ReplaceAll(nginxInit, "$", "$$")), port)
+}
+
+// Retired templates remain readable for original project identity, data and lifecycle management.
+// They are no longer offered or admitted for a new managed deployment.
+func RetiredLegacyPHPTemplate(id string) bool {
+	if release, ok := findFinalLegacyPHPRelease(id); ok {
+		return release.appID != "php-80" && release.appID != "php-81"
+	}
+	if _, known := LegacyPHPImages[id]; known {
+		return id != "php-legacy-80" && id != "php-legacy-81"
+	}
+	return false
 }

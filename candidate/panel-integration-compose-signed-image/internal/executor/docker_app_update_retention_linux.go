@@ -106,7 +106,11 @@ func memcachedRetentionDaemon(ctx context.Context, method, path string, input an
 // Reject duplicate/case-alias keys recursively before permissive Go struct
 // decoding. Unknown Docker metadata remains forward compatible, not authority.
 func memcachedDaemonJSON(raw []byte) error {
-	if len(raw) == 0 || len(raw) > 256<<10 || !utf8.Valid(raw) {
+	return strictDockerJSON(raw, 256<<10)
+}
+
+func strictDockerJSON(raw []byte, limit int) error {
+	if len(raw) == 0 || len(raw) > limit || !utf8.Valid(raw) {
 		return errMemcachedRetention
 	}
 	d := json.NewDecoder(bytes.NewReader(raw))

@@ -253,6 +253,10 @@ func OpenStore(path string) (*Store, error) {
 		db.Close()
 		return nil, err
 	}
+	if err = s.migrateRabbitMQMigrationRequests(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if err = s.migrateMemcachedUpdates(); err != nil {
 		db.Close()
 		return nil, err
@@ -443,8 +447,8 @@ func (s *Store) QueueSiteAction(id, kind, actor string) (string, error) {
 
 const jobSelect = `SELECT j.id,j.site_id,s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,'' AS target_id,j.payload,0 AS retry_blocked
 FROM jobs j JOIN sites s ON j.site_id=s.id
-UNION ALL SELECT r.id,'',r.target_id,r.kind,r.state,r.error,r.created_at,r.updated_at,r.steps,r.target_id,'{}',
-CASE WHEN ` + runtimeLoadBalanceReplayBlocked + ` THEN 1 ELSE 0 END FROM runtime_jobs r
+UNION ALL SELECT r.id,'',r.target_id,r.kind,r.state,r.error,r.created_at,r.updated_at,r.steps,r.target_id,CASE WHEN r.kind='switch_apache' THEN r.payload ELSE '{}' END,
+CASE WHEN r.kind='switch_apache' OR (` + runtimeLoadBalanceReplayBlocked + `) THEN 1 ELSE 0 END FROM runtime_jobs r
 UNION ALL SELECT j.id,'',s.name,j.kind,j.state,j.error,j.created_at,j.updated_at,j.steps,j.target_id,j.payload,0
 FROM mysql_jobs j JOIN mysql_servers s ON s.id=j.target_id
 UNION ALL SELECT o.id,o.site_id,s.name,'acme_certificate',o.state,o.error,o.created_at,o.updated_at,o.steps,o.site_id,'{}',0
@@ -502,7 +506,7 @@ func (s *Store) Recover() error {
 	// row byte-for-byte intact on restart; a dedicated observer may only read
 	// its original Root result. Never turn interrupted account creation into a
 	// newly queued install. Legacy HTTP-only jobs keep their existing policy.
-	_, err := s.DB.Exec(`UPDATE sites SET status='needs_attention' WHERE id IN (SELECT site_id FROM jobs WHERE state='running' AND kind!='backup_site'); UPDATE jobs SET state='queued',error='' WHERE state='running' AND kind='backup_site'; UPDATE jobs SET state='needs_attention',error='服务曾中断；请核对并重试，执行器将按资源标识检查已有结果。' WHERE state='running'; UPDATE runtime_jobs SET state='queued' WHERE state='running' AND id NOT IN(SELECT job_id FROM load_balance_stream_install_requests) AND NOT(target_id='load-balance'AND kind IN('software_install','software_update')AND CASE WHEN json_valid(payload)THEN json_extract(payload,'$.version') ELSE '' END='1.9.0'); UPDATE mysql_jobs SET state='queued' WHERE state='running'; UPDATE acme_orders SET state='queued' WHERE state='running'`)
+	_, err := s.DB.Exec(`UPDATE sites SET status='needs_attention' WHERE id IN (SELECT site_id FROM jobs WHERE state='running' AND kind!='backup_site'); UPDATE jobs SET state='queued',error='' WHERE state='running' AND kind='backup_site'; UPDATE jobs SET state='needs_attention',error='服务曾中断；请核对并重试，执行器将按资源标识检查已有结果。' WHERE state='running'; UPDATE runtime_jobs SET state='needs_attention',error='Apache 原切换曾中断；仅核对原生回执，不自动重新排队。' WHERE state='running' AND kind='switch_apache'; UPDATE runtime_jobs SET state='queued' WHERE state='running' AND kind!='switch_apache' AND id NOT IN(SELECT job_id FROM load_balance_stream_install_requests) AND NOT(target_id='load-balance'AND kind IN('software_install','software_update')AND CASE WHEN json_valid(payload)THEN json_extract(payload,'$.version') ELSE '' END='1.9.0'); UPDATE mysql_jobs SET state='queued' WHERE state='running'; UPDATE acme_orders SET state='queued' WHERE state='running'`)
 	return err
 }
 func (s *Store) NextJob() (Job, error) {

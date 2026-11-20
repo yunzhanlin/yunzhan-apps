@@ -99,7 +99,7 @@ func (s *Service) moduleSyncLegacy(ctx context.Context, in core.AppModuleInput, 
 		return nil, e
 	}
 	defer source.Close()
-	a, partial, e := scanModuleFiles(ctx, source.public, in.Excludes, nil)
+	a, partial, e := scanModuleFiles(ctx, source, in.Excludes, nil)
 	if e != nil || partial {
 		return nil, errors.New("来源扫描不完整")
 	}
@@ -140,7 +140,7 @@ func (s *Service) moduleSyncLegacy(ctx context.Context, in core.AppModuleInput, 
 	sort.Strings(conflicts)
 	if !preview {
 		for _, p := range copies {
-			data, err := readModuleFile(source.public, p)
+			data, err := readModuleFile(source, p)
 			if err != nil {
 				return nil, err
 			}

@@ -156,8 +156,16 @@ func (a *Server) platformMaintenanceRemoteRoutes(m *http.ServeMux) {
 			if statusOnly {
 				action = "platform.maintenance.remote.inspect"
 			}
-			if _, e = a.Store.DB.ExecContext(r.Context(), "INSERT INTO audit_logs(actor,action,target,result,created_at) VALUES(?,?,?,?,?)", u.ID, action, op.RequestID, binding, Now()); e != nil {
+			audit, e := a.Store.DB.ExecContext(r.Context(), `INSERT INTO audit_logs(actor,action,target,result,created_at)
+SELECT ?,?,?,?,? WHERE ? OR NOT EXISTS
+(SELECT 1 FROM audit_logs WHERE action='platform.maintenance.remote.fleet.submit' AND target=?)`,
+				u.ID, action, op.RequestID, binding, Now(), statusOnly, op.RequestID)
+			if e != nil {
 				fail(w, 503, "维护请求审计未保存，未发出请求")
+				return
+			}
+			if count, err := audit.RowsAffected(); err != nil || count != 1 {
+				fail(w, 409, "此原请求由批量检查受理，仅允许只读核对")
 				return
 			}
 			client := platformMaintenanceClient()
@@ -206,6 +214,18 @@ func (a *Server) platformMaintenanceRemoteRoutes(m *http.ServeMux) {
 			send(w, 200, out)
 		})
 	}
+	m.HandleFunc("POST "+base+"/fleet/checks", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
+		w.Header().Set("Cache-Control", "no-store")
+		if platformMaintenanceAdmin(r.Context(), a.Store.DB, u.ID) != nil {
+			fail(w, 403, "需要当前维护管理员权限")
+			return
+		}
+		if r.URL.RawQuery != "" || r.URL.ForceQuery {
+			fail(w, 400, "批量检查不接受查询字段")
+			return
+		}
+		a.platformMaintenanceFleetCheckHandler(w, r, u)
+	}))
 	m.HandleFunc("POST "+base+"/commands", command(false))
 	m.HandleFunc("POST "+base+"/commands/status", command(true))
 }

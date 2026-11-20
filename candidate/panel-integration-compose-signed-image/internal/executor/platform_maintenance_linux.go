@@ -249,7 +249,8 @@ func (s *Service) platformMaintenanceStore() platformMaintenanceStore {
 func (s *Service) platformMaintenanceInstallation() (string, error) {
 	record, e := s.moduleInstalledRecord("platform-ops")
 	instance, ok := record["installation_id"].(string)
-	if e != nil || record["version"] != core.PlatformMaintenanceAppVersion || !ok || !core.ValidID(instance) {
+	version, _ := record["version"].(string)
+	if e != nil || !core.PlatformMaintenanceVersionSupported(version) || !ok || !core.ValidID(instance) {
 		return "", errors.New("维护1.3.0安装实例未核对")
 	}
 	return instance, nil

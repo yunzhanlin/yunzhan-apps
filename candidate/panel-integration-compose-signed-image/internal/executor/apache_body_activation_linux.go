@@ -52,8 +52,38 @@ func verifyApacheBodyMetadataDirectory() error {
 // Retained 'ready' flags, a caller-selected DSO, the Nginx v3 manifest and an
 // installed application's version badge cannot authorize a native Apache DSO.
 func (s *Service) verifyApacheBodyTransition(ctx context.Context, previous, next core.WAFConfig) error {
+	if !apacheBodyActive(previous) && previous.ApacheCC == nil && !apacheBodyActive(next) && next.ApacheCC == nil {
+		return s.verifyApacheBodyTransitionForReleases(ctx, previous, next, "", "")
+	}
+	r, err := apacheRelease()
+	if err != nil {
+		return err
+	}
+	return s.verifyApacheBodyTransitionForReleases(ctx, previous, next, r.Version, r.Version)
+}
+
+// Runtime switching verifies each generation against its own reviewed binary;
+// ordinary policy changes still require both generations to match the active one.
+func (s *Service) verifyApacheBodyTransitionForReleases(ctx context.Context, previous, next core.WAFConfig, previousVersion, nextVersion string) error {
 	checked := map[string]bool{}
-	for _, cfg := range []core.WAFConfig{previous, next} {
+	for index, cfg := range []core.WAFConfig{previous, next} {
+		version := []string{previousVersion, nextVersion}[index]
+		ids := []string{}
+		if apacheBodyActive(cfg) {
+			ids = append(ids, cfg.Body.EngineJobID)
+		}
+		if cfg.ApacheCC != nil {
+			ids = append(ids, cfg.ApacheCC.EngineJobID)
+		}
+		for _, id := range ids {
+			record, err := readApacheBodyBuildRecord(id)
+			if err != nil {
+				return err
+			}
+			if record.ApacheVersion != version {
+				return errors.New("Apache 模块构建版本与该配置使用的运行时不匹配，未加载")
+			}
+		}
 		if _, err := core.DecodeApacheWAFNativeCCConfig(core.WAFSettings(cfg)); err != nil {
 			return err
 		}

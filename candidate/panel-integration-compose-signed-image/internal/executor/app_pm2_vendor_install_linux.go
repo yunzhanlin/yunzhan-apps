@@ -294,7 +294,7 @@ func (s *Service) pm2RootVendorPreparationAllowed() error {
 	}
 	version, _ := installed["version"].(string)
 	known := version == "6" || version == "7.0.4"
-	for i := 1; i <= 11; i++ {
+	for i := 1; i <= 12; i++ {
 		known = known || version == "7.0.4-compat"+strconv.Itoa(i)
 	}
 	if !known {
@@ -319,6 +319,9 @@ func (s *Service) preparePM2RootVendorUpdate(ctx context.Context, status core.So
 	}
 	if !status.Installed || status.StateUnknown || !known {
 		return errors.New("PM2 原安装身份或固定历史版本无法核对；未构建或替换共享运行库")
+	}
+	if err := s.pm2NoPendingConfigurationArchives(); err != nil {
+		return err
 	}
 	before, err := s.moduleInstalledRecord("pm2-manager")
 	if err != nil {

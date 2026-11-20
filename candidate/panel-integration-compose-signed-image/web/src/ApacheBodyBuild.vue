@@ -75,7 +75,7 @@ onBeforeUnmount(()=>{disposed=true;epoch++;stopObserving();});
 
 <template>
   <section class="apache-build">
-    <el-alert type="info" :closable="false" title="只构建独立本机程序，不加载模块、不安装应用、不修改网站。固定 ModSecurity v2、私有静态 YAJL 与 OWASP CRS；必须已有受管 Apache 2.4.68。"/>
+    <el-alert type="info" :closable="false" title="只构建独立本机程序，不加载模块、不安装应用、不修改网站。固定 ModSecurity v2、私有静态 YAJL 与 OWASP CRS；使用已完整安装的最新审核 Apache 构建并记录版本；不会自动切换网站。"/>
     <p>新构建同时提供请求体检查与 CC 限流；已有仅请求体引擎保持可用，不会被替换。</p>
     <p>固定单路编译，85% CPU / 640 MiB 内存、576 MiB 回收水位，最长 4 小时；可能等待全局构建锁。不会自动安装 Apache、扩大资源预算或删除失败证据。启用策略还需要明确安装对应的 2.4.0、2.5.0 或 2.5.1 签名应用，并在“请求体站点策略”选择网站、预览及保存；本构建页不启用防护。</p>
     <p>数值事件单独保存在受保护的目录，不修改系统日志目录权限。检测模式不因规则匹配拦截请求；缓存写入不可用时仍应返回 503，不能把已截断的请求体送入网站。此异常行为需通过真实缓存耗尽验收，不以构建成功代替。</p>

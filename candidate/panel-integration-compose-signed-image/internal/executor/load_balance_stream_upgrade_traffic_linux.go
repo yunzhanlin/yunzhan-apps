@@ -23,6 +23,7 @@ import (
 type loadBalanceStreamTrafficUpgrade struct {
 	source     *loadBalanceStreamCoreAuthority
 	history    []byte
+	originals  map[string]core.LoadBalanceStreamControlUpgradeRecord
 	closed     map[string]bool
 	namespaces *programQueueReader
 	installed  *loadBalanceStreamInstalledContext
@@ -55,6 +56,7 @@ func (w *loadBalanceStreamTrafficUpgrade) close() {
 	}
 	clear(w.history)
 	w.history = nil
+	w.originals = nil
 	w.namespaces = nil
 	w.source = nil
 }
@@ -150,7 +152,16 @@ func holdLoadBalanceStreamTrafficUpgrade(ctx context.Context, source *loadBalanc
 	if err != nil {
 		return nil, loadbalancestream.ErrJournal
 	}
-	w := &loadBalanceStreamTrafficUpgrade{source: source, history: raw, closed: closed, namespaces: namespaces}
+	originals := make(map[string]core.LoadBalanceStreamControlUpgradeRecord, len(closed))
+	for _, row := range history {
+		if closed[row.Operation.RequestID] {
+			originals[row.Operation.RequestID] = row
+		}
+	}
+	if len(originals) != len(closed) {
+		return nil, loadbalancestream.ErrJournal
+	}
+	w := &loadBalanceStreamTrafficUpgrade{source: source, history: raw, originals: originals, closed: closed, namespaces: namespaces}
 	fail := func(stage string, cause error) (*loadBalanceStreamTrafficUpgrade, error) {
 		w.close()
 		return nil, fmt.Errorf("native stream upgrade %s: %w", stage, errors.Join(loadbalancestream.ErrJournal, cause))
@@ -183,47 +194,44 @@ func holdLoadBalanceStreamTrafficUpgrade(ctx context.Context, source *loadBalanc
 	return w, nil
 }
 
-// A closed completion is data, never live actor/control authority. Re-read the
-// SAME complete canonical SELECT-only inventory and require byte equality
-// with this programme reader's original observation. Do not disable blocked()
-// on the shared authority, synthesize a completion or accept a selected ID.
+// A closed completion is data, never live actor/control authority. Use the
+// original complete SELECT-only snapshot for the per-generation lookup.
+// Every current() brackets all native reads with a fresh full canonical
+// history comparison. No per-ID query can replace that whole census.
 func (w *loadBalanceStreamTrafficUpgrade) recordedCompletion(ctx context.Context, op loadbalancestream.Operation) (core.LoadBalanceStreamControlCompletion, error) {
 	var empty core.LoadBalanceStreamControlCompletion
+	digest := loadbalancestream.OperationSHA256(op)
 	if w == nil || ctx == nil || ctx.Err() != nil || w.source == nil || w.namespaces == nil ||
-		len(w.history) == 0 || !w.closed[op.RequestID] || w.namespaces.unchanged() != nil || loadbalancestream.OperationSHA256(op) == "" {
+		len(w.history) == 0 || !w.closed[op.RequestID] || w.namespaces.unchanged() != nil || digest == "" {
 		return empty, errLoadBalanceStreamCoreAuthority
+	}
+	row, ok := w.originals[op.RequestID]
+	if !ok || row.State != "completed" || row.ResultState != "committed" ||
+		loadbalancestream.OperationSHA256(row.Operation) != digest || row.Completion.Format != 1 ||
+		row.Completion.RequestID != op.RequestID || row.Completion.OperationSHA256 != digest {
+		return empty, errLoadBalanceStreamCoreAuthority
+	}
+	return row.Completion, nil
+}
+
+func (w *loadBalanceStreamTrafficUpgrade) historyCurrent(ctx context.Context) error {
+	if w == nil || ctx == nil || ctx.Err() != nil || w.source == nil || w.namespaces == nil ||
+		len(w.history) == 0 || w.namespaces.unchanged() != nil {
+		return loadbalancestream.ErrJournal
 	}
 	history, err := w.source.controlUpgradeHistory(ctx, nil)
 	raw, encodeErr := json.Marshal(history)
-	if err != nil || encodeErr != nil || !bytes.Equal(raw, w.history) {
-		return empty, errLoadBalanceStreamCoreAuthority
+	current := &programQueueReader{ctx: ctx, root: "/"}
+	if err != nil || encodeErr != nil || !bytes.Equal(raw, w.history) ||
+		streamUpgradeControlNamespaces(current, w.closed) != nil || w.namespaces.unchanged() != nil {
+		return loadbalancestream.ErrJournal
 	}
-	for _, row := range history {
-		if row.Operation.RequestID != op.RequestID {
-			continue
-		}
-		if row.State != "completed" || row.ResultState != "committed" ||
-			loadbalancestream.OperationSHA256(row.Operation) != loadbalancestream.OperationSHA256(op) ||
-			row.Completion.Format != 1 || row.Completion.RequestID != op.RequestID || ctx.Err() != nil || w.namespaces.unchanged() != nil {
-			return empty, errLoadBalanceStreamCoreAuthority
-		}
-		return row.Completion, nil
-	}
-	return empty, errLoadBalanceStreamCoreAuthority
+	return ctx.Err()
 }
 
 func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
-	if w == nil || ctx == nil || ctx.Err() != nil || w.source == nil || w.namespaces == nil || len(w.history) == 0 || w.namespaces.unchanged() != nil {
-		return loadbalancestream.ErrJournal
-	}
-	history, err := w.source.controlUpgradeHistory(ctx, nil)
-	if err != nil {
+	if err := w.historyCurrent(ctx); err != nil {
 		return err
-	}
-	raw, err := json.Marshal(history)
-	current := &programQueueReader{ctx: ctx, root: "/"}
-	if err != nil || !bytes.Equal(raw, w.history) || streamUpgradeControlNamespaces(current, w.closed) != nil {
-		return loadbalancestream.ErrJournal
 	}
 	if len(w.closed) == 0 {
 		properties, err := streamInstallUnitProperties(ctx, loadbalancestream.ServiceUnitName)
@@ -232,7 +240,7 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 			properties["MainPID"] != "0" || properties["ControlPID"] != "0" {
 			return loadbalancestream.ErrService
 		}
-		return w.namespaces.unchanged()
+		return w.historyCurrent(ctx)
 	}
 	if w.installed == nil || w.store == nil || w.store.released || w.store.generation == nil || w.store.file == nil ||
 		w.installed.current(ctx) != nil || w.store.generation.current(ctx) != nil || !w.store.file.current() ||
@@ -259,7 +267,7 @@ func (w *loadBalanceStreamTrafficUpgrade) current(ctx context.Context) error {
 				return err
 			}
 		}
-		return w.namespaces.unchanged()
+		return w.historyCurrent(ctx)
 	}
 	facts.Validation.PanelControlPorts = ports
 	plan, err := loadbalancestream.RecordedControlServicePlan(w.seed, facts)

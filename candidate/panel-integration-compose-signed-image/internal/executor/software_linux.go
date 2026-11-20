@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strings"
 	"syscall"
+	"time"
 )
 
 const wafEventReadBytes int64 = 1024 * 1024
@@ -529,11 +530,9 @@ func (s *Service) softwareRoutes(m *http.ServeMux) {
 		for _, d := range core.AppModules() {
 			ids = append(ids, d.ID)
 		}
-		out := make([]core.SoftwareAppStatus, 0, len(ids))
-		for _, id := range ids {
-			out = append(out, s.softwareStatus(r.Context(), id))
-		}
-		respond(w, 200, out)
+		// Leave headroom inside the Core's twenty-second caller deadline so
+		// already verified rows survive one slow native application probe.
+		respond(w, 200, collectSoftwareStatus(r.Context(), ids, 15*time.Second, 8*time.Second, softwareStatusSlots, s.softwareStatus))
 	})
 	m.HandleFunc("POST /v1/software/{id}/{action}", func(w http.ResponseWriter, r *http.Request) {
 		id, action := r.PathValue("id"), r.PathValue("action")

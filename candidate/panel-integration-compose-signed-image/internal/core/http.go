@@ -53,7 +53,7 @@ type Server struct {
 type identity struct{ ID, Username, CSRF string }
 
 func NewServer(s *Store, c Config) (*Server, error) {
-	a := &Server{Store: s, Executor: NewExecutorClient(c.Socket), AppCatalog: appcatalog.Default(), Config: c, attempts: map[string][]time.Time{}, terminalGrants: map[string]terminalGrant{}, terminalSessions: map[string]terminalSessionOwner{}}
+	a := &Server{Store: s, Executor: NewExecutorClient(c.Socket), AppCatalog: appcatalog.NewRegistryClient(), Config: c, attempts: map[string][]time.Time{}, terminalGrants: map[string]terminalGrant{}, terminalSessions: map[string]terminalSessionOwner{}}
 	key, err := s.accountKey(c.DataDir)
 	if err != nil {
 		return nil, err
@@ -213,6 +213,22 @@ func NewServer(s *Store, c Config) (*Server, error) {
 			fail(w, 404, "任务不存在")
 			return
 		}
+		if j.Kind == "switch_apache" && j.State == "needs_attention" {
+			result, detail, certain := s.observeApacheRuntimeCompletion(r.Context(), a.Executor, j)
+			if certain {
+				raw, _ := json.Marshal(result.Steps)
+				state := "succeeded"
+				if detail != "" {
+					state = "failed"
+				}
+				_, updateErr := s.DB.ExecContext(r.Context(), `UPDATE runtime_jobs SET state=?,error=?,steps=?,updated_at=? WHERE id=? AND kind='switch_apache' AND payload=? AND state IN ('running','needs_attention')`, state, detail, string(raw), Now(), j.ID, j.Payload)
+				if updateErr == nil {
+					if fresh, readErr := s.Job(j.ID); readErr == nil {
+						j = fresh
+					}
+				}
+			}
+		}
 		send(w, 200, j)
 	}))
 	m.HandleFunc("GET /api/jobs/{id}/log", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
@@ -252,6 +268,7 @@ func NewServer(s *Store, c Config) (*Server, error) {
 	m.HandleFunc("GET /api/audit", a.authorize(a.audit))
 	m.HandleFunc("GET /api/runtimes", a.authorize(a.runtimes))
 	m.HandleFunc("POST /api/runtimes/install", a.authorize(a.installRuntime))
+	a.apacheRuntimeRoutes(m)
 	m.HandleFunc("POST /api/runtimes/install-bundle", a.authorize(a.installRuntimeBundle))
 	m.HandleFunc("POST /api/runtimes/nginx/switch", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
 		var in struct {
@@ -630,7 +647,7 @@ func (a *Server) runtimes(w http.ResponseWriter, r *http.Request, u identity) {
 	}
 	catalog := []map[string]any{
 		{"family": "nginx", "name": "Nginx", "versions": []string{"Stable", "Mainline"}, "description": "全局网站入口 · 切换前校验全部站点与模块", "state": "available", "releases": runtimecatalog.Nginx},
-		{"family": "apache", "name": "Apache", "versions": []string{"2.4 Stable"}, "description": "兼容型 Web 服务 · 独立目录安装，不占用 Nginx 全局入口", "state": "available", "releases": runtimecatalog.Apache},
+		{"family": "apache", "name": "Apache", "versions": []string{"2.4 Stable"}, "description": "兼容型 Web 服务 · 独立目录安装，不占用 Nginx 全局入口", "state": "available", "releases": runtimecatalog.ApacheReleaseChoices()},
 		{"family": "mysql", "name": "MySQL", "versions": []string{"8.0", "8.4"}, "description": "独立实例与数据目录 · 8.4 LTS 优先，8.0 用于兼容迁移", "state": "available", "releases": runtimecatalog.MySQL()},
 	}
 	if releases := runtimecatalog.MariaDB(); len(releases) > 0 {

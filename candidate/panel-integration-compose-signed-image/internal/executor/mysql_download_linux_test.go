@@ -12,6 +12,7 @@ import (
 	"local/panel/internal/core"
 	"os"
 	"path/filepath"
+	"syscall"
 	"testing"
 )
 
@@ -81,11 +82,35 @@ func TestBackupDownloadChecksContentOwnershipAndBoundaries(t *testing.T) {
 	os.Symlink(file+".original", file)
 	rejected(b)
 	os.Remove(file)
+	if err := syscall.Mkfifo(file, 0600); err != nil {
+		t.Fatal(err)
+	}
+	rejected(b)
+	os.Remove(file)
 	os.Rename(file+".original", file)
 	os.Chmod(dir, 0755)
 	rejected(b)
 	os.Chmod(dir, 0700)
 	valid()
+	pinned, _, err := openVerifiedBackup(context.Background(), base, b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pinned.Close()
+	if err := os.Rename(file, file+".pinned"); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(file, modified, 0600); err != nil {
+		t.Fatal(err)
+	}
+	pinnedBytes, err := io.ReadAll(pinned)
+	if err != nil || string(pinnedBytes) != string(data) {
+		t.Fatal("verified file descriptor changed after the original name was replaced", err)
+	}
+	rejected(b)
+	if err := os.Rename(file+".pinned", file); err != nil {
+		t.Fatal(err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	f, _, err := openVerifiedBackup(ctx, base, b)

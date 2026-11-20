@@ -61,13 +61,20 @@ func pm2ConfigSyncDurable(f pm2ConfigSyncer, current func() bool) (err error) {
 // syncs the containing directory before using the complete inventory. This
 // never rewrites a record, manifest or service, and never replays the request.
 func pm2ConfigReadDurable(f pm2ConfigReadable, original os.FileInfo, current func() bool) (raw []byte, err error) {
+	return pm2ConfigReadDurableSized(f, original, current, 1, pm2ConfigRecordLimit)
+}
+
+// Archive metadata has a separate fixed budget; an explicitly observed
+// partial fragment may be empty. The existing configuration reader keeps
+// its original nonempty 128KiB contract through the wrapper above.
+func pm2ConfigReadDurableSized(f pm2ConfigReadable, original os.FileInfo, current func() bool, minimum, maximum int64) (raw []byte, err error) {
 	defer func() {
 		err = errors.Join(err, f.Close())
 		if err != nil {
 			raw = nil
 		}
 	}()
-	if original == nil || original.Size() < 1 || original.Size() > pm2ConfigRecordLimit {
+	if minimum < 0 || minimum > 1 || maximum < minimum || maximum > pm2ConfigurationArchiveIntentLimit || original == nil || original.Size() < minimum || original.Size() > maximum {
 		return nil, errors.New("PM2 private record capacity is invalid")
 	}
 	opened, err := f.Stat()
@@ -77,7 +84,7 @@ func pm2ConfigReadDurable(f pm2ConfigReadable, original os.FileInfo, current fun
 	if !programQueueSame(original, opened) {
 		return nil, errors.New("PM2 private record changed before read")
 	}
-	raw, err = io.ReadAll(io.LimitReader(f, pm2ConfigRecordLimit+1))
+	raw, err = io.ReadAll(io.LimitReader(f, maximum+1))
 	if err != nil {
 		return nil, err
 	}

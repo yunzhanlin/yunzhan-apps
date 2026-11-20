@@ -39,6 +39,9 @@ func (s *Service) siteArchiveRoutes(m *http.ServeMux) {
 				err = s.wafSiteArchiveReference(id)
 			}
 		}
+		if err == nil {
+			err = s.nfsSiteArchiveReference(id)
+		}
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
@@ -94,19 +97,8 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 	if err := s.integrityKernelReference(in.Site.ID); err != nil {
 		return result, err
 	}
-	if s.moduleInstalled("nfs-manager") {
-		v, e := s.nfsServerConfig()
-		if e != nil {
-			return result, e
-		}
-		if s.nfsPending() {
-			return result, errors.New("NFS 有待恢复导出清单，请先恢复再归档网站")
-		}
-		for _, export := range v.Exports {
-			if export.SiteID == in.Site.ID {
-				return result, errors.New("网站仍被 NFS 导出引用，先移除共享导出再归档；网站文件不会删除")
-			}
-		}
+	if err := s.nfsSiteArchiveReference(in.Site.ID); err != nil {
+		return result, err
 	}
 	if !core.ValidID(in.Site.ID) || !core.ValidID(in.JobID) || !core.ValidDomain(in.Site.Domain) || in.Site.Settings.WebServer != "nginx" || in.Site.PHPVersionID != "" {
 		return result, errors.New("归档站点身份或类型无效")
@@ -211,3 +203,28 @@ func (s *Service) ArchiveSite(ctx context.Context, in core.SiteArchiveRequest) (
 }
 
 func exists(path string) bool { _, e := os.Lstat(path); return e == nil }
+
+// Called with s.mu held in both advisory preflight and the actual archive.
+// A missing installation is distinct from an unreadable or invalid receipt.
+// This read-only check creates no NFS lock, config, report or recovery record.
+func (s *Service) nfsSiteArchiveReference(siteID string) error {
+	if _, err := s.moduleInstalledRecord("nfs-manager"); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return fmt.Errorf("NFS 安装记录无法核对，未归档网站: %w", err)
+	}
+	v, err := s.nfsServerConfig()
+	if err != nil {
+		return fmt.Errorf("NFS 导出清单无法核对，未归档网站: %w", err)
+	}
+	if _, err := os.Lstat(filepath.Join(s.moduleDir("nfs-manager"), "pending-server.json")); !errors.Is(err, os.ErrNotExist) {
+		return errors.New("NFS 有待恢复或无法核对的导出清单，请先恢复再归档网站")
+	}
+	for _, export := range v.Exports {
+		if export.SiteID == siteID {
+			return errors.New("网站仍被 NFS 导出引用，先移除共享导出再归档；网站文件不会删除")
+		}
+	}
+	return nil
+}

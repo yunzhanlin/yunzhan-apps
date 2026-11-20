@@ -302,6 +302,15 @@ restart_previous_services(){
   # website gateway. Neither update nor rollback may restart that master.
   systemctl restart panel-terminal panel-terminal-root panel-executor panel
 }
+
+sync_fresh_install(){
+  # Service readiness only proves that the kernel can read its current cache.
+  # Flush the filesystems holding the installed programme, metadata, package
+  # state, and startup configuration before reporting first-install success.
+  sync -f -- "$RELEASE_DIR" "$MARKER" /etc/panel /etc/nginx /etc/fail2ban /etc/ssh \
+    /etc/systemd/system /usr /var/lib/dpkg /var/lib/panel /var/lib/panel-executor \
+    /var/lib/fail2ban /var/cache/panel-nginx /var/log/nginx /srv/panel
+}
 systemctl daemon-reload
 FAILED=0
 enable_program_services
@@ -334,6 +343,9 @@ if ((FAILED==0)) && systemctl cat docker.service >/dev/null 2>&1; then
 fi
 if ((FRESH))&&((FAILED==0));then
   python3 "$HERE/first-install.py" || FAILED=1
+fi
+if ((FRESH))&&((FAILED==0));then
+  sync_fresh_install || FAILED=1
 fi
 if ((FAILED));then
   systemctl stop panel panel-executor panel-terminal panel-terminal-root || true

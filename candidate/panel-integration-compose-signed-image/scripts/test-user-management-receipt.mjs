@@ -2,7 +2,7 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import ts from '../web/node_modules/typescript/lib/typescript.js';
-import {isUserMutation,userMutationReplyMatches,userMutationNeedsRead,userManagementListKnown} from '../web/src/userManagementReceipt.ts';
+import {isUserMutation,userMutationReplyMatches,userMutationNeedsRead,userManagementListKnown,parsePendingUserMutation,userMutationStorageKey} from '../web/src/userManagementReceipt.ts';
 const snapshot={menu_catalog:[{id:'files',label:'文件',admin_only:false},{id:'panel-access',label:'账户授权',admin_only:true}],users:[{id:'a'.repeat(32),username:'test-reader',role:'viewer',site_ids:[],menu_ids:['files'],revision:3,full_admin:false,totp_enabled:false,sessions:2}]};
 test('success acknowledgement binds only the exact current public user/action tuple',()=>{
  for(const action of ['create','update','revoke','delete']) {
@@ -24,16 +24,30 @@ test('unknown outcomes block only writes until a real readonly list is validated
  for(const patch of [{id:'foreign'}, {username:'!'}, {role:{toString:'viewer'}}, {role:'root'}, {revision:0}, {revision:'3'}, {sessions:null}, {sessions:-1}, {full_admin:true}, {totp_enabled:0}, {menu_ids:['foreign']}, {menu_ids:['files','files']}, {menu_ids:['panel-access']}, {site_ids:['foreign']}])assert(!userManagementListKnown({...snapshot,users:[{...snapshot.users[0],...patch}]}));
  assert(!userManagementListKnown({...snapshot,users:[snapshot.users[0],snapshot.users[0]]}));
 });
+test('only public operation status survives a reload in the same account scope',()=>{
+ const actor='a'.repeat(32), other='b'.repeat(32);
+ assert.notEqual(userMutationStorageKey(actor),userMutationStorageKey(other));
+ assert.equal(userMutationStorageKey('not-an-identity'),undefined);
+ assert.equal(parsePendingUserMutation(null),undefined);
+ for(const state of ['unverified','refresh_failed']) {
+  const marker={action:'revoke',state};
+  assert.deepEqual(parsePendingUserMutation(JSON.stringify(marker)),marker);
+  assert(userMutationNeedsRead(parsePendingUserMutation(JSON.stringify(marker)),'delete'));
+ }
+ for(const raw of ['not-json','{}','null','x'.repeat(129),JSON.stringify({action:'run',state:'unverified'}),
+  JSON.stringify({action:'create',state:'acknowledged'}),JSON.stringify({action:'create',state:'unverified',password:'SECRET'})])
+  assert.throws(()=>parsePendingUserMutation(raw));
+});
 const source=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');
 const actual=source.slice(source.indexOf('async function execute('),source.indexOf('async function reviewRemoteTicket('));
 const js=ts.transpileModule(actual,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 test('actual component preserves acknowledgements, forbids blind retries, clears password and focuses the error',async()=>{
- for(const mode of ['success','refused','lost-reply','foreign-reply','refresh-failed','refresh-corrupt','revoked']) {
-  const calls=[],notices=[],anchor=[];const body={username:'test-reader',password:'OWNED-UNIT-ONLY-SECRET',role:'viewer',menu_ids:['files'],expected_revision:3};
-  const bindings={definition:{value:{id:'user-manager',actions:['run','update'],fields:[{key:'password',kind:'password'}]}},installedUnknown:{value:false},busy:{value:false},visible:{value:true},error:{value:''},form:{value:{...body}},report:{value:structuredClone(snapshot)},selectedPlanID:{value:'test-reader'},userMutationObservation:{value:undefined},userErrorAnchor:{value:{scrollIntoView:v=>anchor.push(['scroll',v]),focus:v=>anchor.push(['focus',v])}},idsAccessGeneration:1,integrityModule:{value:false},canExecutePHP:()=>true,isUserMutation,userMutationReplyMatches,userMutationNeedsRead,userManagementListKnown,inputBody:()=>({...body}),nextTick:async()=>{},ElMessage:{info:()=>{},success:message=>notices.push(message)},setReport:value=>{bindings.report.value=value;},clearWriteOnlyFields:()=>{bindings.form.value.password='';},menuCatalog:{value:snapshot.menu_catalog},roleDefaultMenus:()=>assert.fail('explicit current menu grants must not be reset'),props:{api:async(path,method,incoming)=>{
+ for(const mode of ['success','refused','lost-reply','foreign-reply','refresh-failed','refresh-corrupt','revoked','storage-disabled']) {
+  const calls=[],notices=[],anchor=[];const saved=new Map();const key=userMutationStorageKey('a'.repeat(32));const body={username:'test-reader',password:'OWNED-UNIT-ONLY-SECRET',role:'viewer',menu_ids:['files'],expected_revision:3};
+  const bindings={definition:{value:{id:'user-manager',actions:['run','update'],fields:[{key:'password',kind:'password'}]}},installedUnknown:{value:false},busy:{value:false},visible:{value:true},error:{value:''},form:{value:{...body}},report:{value:structuredClone(snapshot)},selectedPlanID:{value:'test-reader'},userMutationObservation:{value:undefined},userErrorAnchor:{value:{scrollIntoView:v=>anchor.push(['scroll',v]),focus:v=>anchor.push(['focus',v])}},userMutationMarkerUnreadable:{value:false},idsAccessGeneration:1,integrityModule:{value:false},canExecutePHP:()=>true,isUserMutation,userMutationReplyMatches,userMutationNeedsRead,userManagementListKnown,userMutationBlocked:action=>userMutationNeedsRead(bindings.userMutationObservation.value,action),saveUserMutation:({action,state})=>{if(mode==='storage-disabled')throw Error('denied');const value={action,state};saved.set(key,JSON.stringify(value));bindings.userMutationObservation.value=value;},clearUserMutation:()=>{saved.delete(key);bindings.userMutationObservation.value=undefined;},inputBody:()=>({...body}),nextTick:async()=>{},ElMessage:{info:()=>{},success:message=>notices.push(message)},setReport:value=>{bindings.report.value=value;},clearWriteOnlyFields:()=>{bindings.form.value.password='';},menuCatalog:{value:snapshot.menu_catalog},roleDefaultMenus:()=>assert.fail('explicit current menu grants must not be reset'),props:{api:async(path,method,incoming)=>{
    calls.push({path,method});
    if(path.endsWith('/update')) {
-    assert.deepEqual(incoming,body);
+    assert.deepEqual(incoming,body);assert.equal(parsePendingUserMutation(saved.get(key)).state,'unverified');
     if(mode==='refused'||mode==='lost-reply')throw Error(mode==='refused'?'账户改动与审计未共同提交':'response unavailable');
     if(mode==='revoked')bindings.idsAccessGeneration++;
     return {username:mode==='foreign-reply'?'foreign-user':body.username,action:'update',ok:true};
@@ -44,16 +58,19 @@ test('actual component preserves acknowledgements, forbids blind retries, clears
   }}};
   const execute=new Function('bindings','with(bindings){'+js+';return execute;}')(bindings);await execute('update');
   assert.equal(bindings.busy.value,false);
-  if(mode==='revoked') {assert.equal(calls.length,1);assert.equal(notices.length,0);assert.equal(bindings.userMutationObservation.value,undefined);continue;}
+  if(mode==='revoked') {assert.equal(calls.length,1);assert.equal(notices.length,0);assert.equal(parsePendingUserMutation(saved.get(key)).state,'unverified');continue;}
+  if(mode==='storage-disabled'){assert.equal(calls.length,0);assert.match(bindings.error.value,/账户变更未提交/);continue;}
   assert.equal(bindings.form.value.password,'');
-  if(mode==='success') {assert.equal(calls.length,2);assert.equal(notices.length,1);assert.equal(bindings.form.value.expected_revision,4);assert.equal(bindings.userMutationObservation.value.state,'acknowledged');assert.equal(anchor.length,0);continue;}
+  if(mode==='success') {assert.equal(calls.length,2);assert.equal(notices.length,1);assert.equal(bindings.form.value.expected_revision,4);assert.equal(bindings.userMutationObservation.value,undefined);assert.equal(saved.has(key),false);assert.equal(anchor.length,0);continue;}
   const committed=mode.startsWith('refresh-');assert.equal(bindings.userMutationObservation.value.state,committed?'refresh_failed':'unverified');assert.equal(notices.length,committed?1:0);assert.equal(calls.length,committed?2:1);assert.equal(bindings.form.value.expected_revision,0);assert.equal(bindings.selectedPlanID.value,'');assert.equal(anchor.length,2);assert(!JSON.stringify(bindings.userMutationObservation.value).includes('SECRET'));
   if(committed)assert.match(bindings.error.value,/已收到服务器账户操作成功回执/);
+  assert.deepEqual(Object.keys(JSON.parse(saved.get(key))),['action','state']);
+  bindings.userMutationObservation.value=parsePendingUserMutation(saved.get(key));
   const count=calls.length;await execute('update');assert.equal(calls.length,count,'blocked mutation auto-retried');
   if(mode==='refresh-corrupt') {await execute('run');assert.equal(bindings.userMutationObservation.value.state,'refresh_failed','malformed readonly list unblocked writes');}
   else {await execute('run');assert.equal(bindings.userMutationObservation.value,undefined,'valid explicit readonly list failed to unblock writes');}
  }
 });
 test('signed component exposes error anchor, pending-write guard and explicit readonly list action',()=>{
- assert.match(source,/ref="userErrorAnchor" tabindex="-1"/);assert.match(source,/userMutationNeedsRead\(userMutationObservation, action\)/);assert.match(source,/只读刷新账户列表/);assert.match(source,/已暂停重复写入/);
+ assert.match(source,/ref="userErrorAnchor" tabindex="-1"/);assert.match(source,/userMutationBlocked\(action\)/);assert.match(source,/reportStateUnknown.value \|\| needsAccountRead/);assert.match(source,/只读刷新账户列表/);assert.match(source,/已暂停重复写入/);
 });

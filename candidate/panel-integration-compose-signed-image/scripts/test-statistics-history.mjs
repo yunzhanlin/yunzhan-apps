@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {statisticsHistoryNotice} from '../web/src/statisticsHistory.ts';
+import {statisticsArchiveInventory, statisticsCoverage, statisticsHistoryNotice} from '../web/src/statisticsHistory.ts';
 import ts from '../web/node_modules/typescript/lib/typescript.js';
 const identitySource=readFileSync(new URL('../web/src/statisticsGeoIdentity.ts',import.meta.url),'utf8');
 const identityJS=ts.transpileModule(identitySource,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -29,6 +29,30 @@ test('real report component uses native flags, Chinese counters and no forged en
  assert.doesNotMatch(helper,/fetch\(|localStorage|sessionStorage|Math.random/);
  const build=readFileSync(new URL('../packaging/build-release.sh',import.meta.url),'utf8');
  assert(build.includes('node --test scripts/test-statistics-history.mjs'));
+});
+test('retained history with no matches differs from an unverified or partial zero',()=>{
+ const base={history_persistent:true,requests:0,partial:false,history_missing_log:false,history_before_retention:false,
+   history_backlog_bytes:0,history_evicted_rows:0,history_blocked_sources:0,history_compressed_sources:0,
+   history_unsupported_rotation_sources:0,history_invalid_lines:0,history_deferred_compressed_sources:0,
+   history_first_request:'',history_last_request:'',history_checked_at:'2026-11-13T15:00:00Z',
+   history_worker_fresh:true,history_worker_error:'',history_worker_checked_at:'2026-11-13T14:59:57Z'};
+ assert.equal(statisticsCoverage(base).state,'empty');
+ assert.equal(statisticsCoverage(base).worker,'fresh');
+ const timestamps={history_first_request:'2026-10-14T01:01:00Z',history_last_request:'2026-11-13T14:22:00Z'};
+ assert.equal(statisticsCoverage({...base,...timestamps}).state,'empty');
+ assert.equal(statisticsCoverage({...base,...timestamps,requests:31}).state,'matched');
+ assert.equal(statisticsCoverage({...base,requests:31}).state,'unknown');
+ for (const missing of ['partial','history_before_retention','history_backlog_bytes','history_checked_at','history_compressed_sources']) {
+  const value={...base};delete value[missing];
+  assert.equal(statisticsCoverage(value).state,'unknown',missing);
+ }
+ for(const partial of [{partial:true},{history_missing_log:true},{history_backlog_bytes:41},{history_evicted_rows:2},
+  {history_before_retention:true},{history_deferred_compressed_sources:1}])assert.equal(statisticsCoverage({...base,...partial}).state,'partial');
+ assert.equal(statisticsCoverage({...base,requests:'0'}).count,undefined);
+ assert.equal(statisticsCoverage({...base,history_checked_at:'2026-02-31T00:00:00Z'}).state,'unknown');
+ assert.equal(statisticsCoverage({...base,history_worker_error:'Read failed'}).worker,'stale');
+ assert.equal(statisticsCoverage({...base,history_worker_checked_at:''}).worker,'unknown');
+ assert.equal(statisticsCoverage({...base,history_persistent:false}),undefined);
 });
 test('geo write-ahead identity commits before use, survives reload and serializes concurrent tabs',async()=>{
  const store=atomicGeoStore();let generated=0;const one=new StatisticsGeoRequestIdentity(store,geoActor,()=>{generated++;return geoKey}),two=new StatisticsGeoRequestIdentity(store,geoActor,()=>{generated++;return'f'.repeat(32)});
@@ -69,3 +93,28 @@ test('actual geo actor reset cancels requests and clears every old private displ
  const parent=readFileSync(new URL('../web/src/AppModuleManager.vue',import.meta.url),'utf8');assert(parent.includes(':key="geoActor" :actor="geoActor"'));
 });
 
+
+test('archive inventory only exports verified progress from the current report and site', () => {
+ const site = 'a'.repeat(32);
+ const checkedAt = '2026-11-15T06:00:00Z';
+ const name = 'panel-' + site + '.access.log.20261115-055959.gz';
+ const result = {site_id:site,history_checked_at:checkedAt,history_gzip_import_enabled:true};
+ const verified = {read_bytes:240,expanded_bytes:240,skipped_lines:2,sha256:'b'.repeat(64)};
+ const complete = {name,state:'complete',compressed_bytes:93,verified};
+ const missing = {name,state:'missing'};
+ const unreadable = {name,state:'unreadable',compressed_bytes:0};
+ const current = {site_id:site,checked_at:checkedAt,sources:[complete,missing,unreadable],omitted:0};
+ const source = value => statisticsArchiveInventory({...result,history_archive_inventory:value});
+ assert.deepEqual(source({...current,sources:[{...complete,raw_request:'ignored'},missing,unreadable]}),current);
+ assert.deepEqual(source({...current,sources:[]}).sources,[]);
+ assert.equal(source({...current,site_id:'c'.repeat(32)}),undefined);
+ assert.equal(source({...current,checked_at:'2026-11-15T05:00:00Z'}),undefined);
+ for (const invalid of [
+  {...complete,name:'../archive.gz'}, {...complete,name:name.replace(site,'c'.repeat(32))},
+  {...complete,verified:{...verified,read_bytes:239}}, {...complete,verified:{...verified,skipped_lines:241}},
+  {...complete,verified:{...verified,sha256:'not-a-digest'}}, {...complete,state:'deferred'},
+  {...missing,compressed_bytes:0},{...unreadable,state:'verified'},
+ ]) {
+  assert.equal(source({...current,sources:[invalid]}),undefined);
+ }
+});

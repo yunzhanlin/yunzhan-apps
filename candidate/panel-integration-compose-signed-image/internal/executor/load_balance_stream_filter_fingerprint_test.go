@@ -141,3 +141,40 @@ func TestStreamFilterPolicyPreservesDirectionAndAttachmentOrder(t *testing.T) {
 		t.Fatal("legacy and new-format identity rules overlap")
 	}
 }
+
+func TestStreamFilterFingerprintRecognizesOnlyCompleteAnonymousSystemdACL(t *testing.T) {
+	for _, ingress := range []bool{true, false} {
+		named := streamFilterFixture(ingress)
+		namedDigest, err := streamFilterProgramSHA256(named, ingress)
+		if err != nil {
+			t.Fatal(err)
+		}
+		anonymous := streamFilterFixture(ingress)
+		for i := range anonymous.Maps {
+			anonymous.Maps[i].Name = ""
+		}
+		digest, err := streamFilterProgramSHA256(anonymous, ingress)
+		if err != nil || digest == namedDigest || !streamFilterAnonymousPolicyMatches(anonymous, []string{"127.0.0.0/8", "::1/128"}) {
+			t.Fatal(digest, err)
+		}
+		for _, allowed := range [][]string{nil, {"127.0.0.0/8"}, {"127.0.0.0/8", "127.0.0.0/8"}, {"127.0.0.0/8", "::2/128"}} {
+			if streamFilterAnonymousPolicyMatches(anonymous, allowed) {
+				t.Fatal("incorrect ACL matched", allowed)
+			}
+		}
+		anonymous.Maps[0].Name = named.Maps[0].Name
+		if _, err = streamFilterProgramSHA256(anonymous, ingress); err == nil {
+			t.Fatal("mixed map identity profiles accepted")
+		}
+		anonymous.Maps[0].Name = ""
+		anonymous.Maps[0].MaxEntries = 2
+		if _, err = streamFilterProgramSHA256(anonymous, ingress); err == nil {
+			t.Fatal("partially populated anonymous map accepted")
+		}
+		anonymous.Maps[0].MaxEntries = 1
+		binary.LittleEndian.PutUint64(anonymous.Maps[0].Entries[0].Value, 2)
+		if _, err = streamFilterProgramSHA256(anonymous, ingress); err == nil {
+			t.Fatal("unexpected deny map accepted")
+		}
+	}
+}

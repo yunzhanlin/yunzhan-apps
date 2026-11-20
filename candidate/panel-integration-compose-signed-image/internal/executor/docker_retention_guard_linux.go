@@ -9,15 +9,22 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"local/panel/internal/core"
 )
 
-var errDockerRetainedContainer = errors.New("容器是应用更新的原镜像保留锚点，或其身份不能核对；禁止通用启动、停止、重启和删除，未执行变更")
+var errDockerRetainedContainer = errors.New("容器是应用更新的原镜像保留锚点，或其身份不能核对；禁止通用容器操作，未执行变更")
 
 const dockerRetentionPrefix = "yunzhan-retain-memcached-"
 const dockerRetentionReason = "应用更新原镜像保留锚点；必须保持未启动，禁止通用操作或删除"
 
 func dockerContainerRetained(name string, labels map[string]string) bool {
-	if strings.HasPrefix(strings.TrimPrefix(name, "/"), dockerRetentionPrefix) || labels["io.yunzhan.owner"] == memcachedRetentionOwner {
+	base := strings.TrimPrefix(name, "/")
+	if strings.HasPrefix(base, dockerRetentionPrefix) || strings.HasPrefix(base, rabbitMQOfflineContainerPrefix) ||
+		labels["io.yunzhan.owner"] == memcachedRetentionOwner {
+		return true
+	}
+	if _, migration := labels[rabbitMQMigrationVolumeJobLabel]; migration {
 		return true
 	}
 	// Even an empty/damaged retention marker is NOT an ordinary container.
@@ -51,7 +58,7 @@ func dockerOrdinaryRequest(ctx context.Context, method, path string, in, out any
 	}
 	parts := strings.Split(u.Path, "/")
 	if len(parts) < 3 || !dockerObjectPattern.MatchString(parts[2]) ||
-		!(method == http.MethodDelete && len(parts) == 3 || method == http.MethodPost && len(parts) == 4 && (parts[3] == "start" || parts[3] == "stop" || parts[3] == "restart")) {
+		!(method == http.MethodDelete && len(parts) == 3 || method == http.MethodPost && len(parts) == 4 && core.ValidDockerContainerAction(parts[2], parts[3])) {
 		return nil, errDockerRetainedContainer
 	}
 	raw, err := call(ctx, http.MethodGet, "/containers/"+parts[2]+"/json", nil, nil, 256<<10)

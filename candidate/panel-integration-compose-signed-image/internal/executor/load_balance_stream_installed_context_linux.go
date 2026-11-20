@@ -140,11 +140,11 @@ func holdLoadBalanceStreamInstalledContext(ctx context.Context) (*loadBalanceStr
 	if err != nil {
 		return fail()
 	}
-	w.result, err = readLoadBalanceStreamCommittedInstallation(ctx, w.receipt.JobID)
+	w.engine, err = holdLoadBalanceStreamRecordedEngine(ctx, w.receipt.NginxReleaseID)
 	if err != nil {
 		return fail()
 	}
-	w.engine, err = holdLoadBalanceStreamRecordedEngine(ctx, w.receipt.NginxReleaseID)
+	w.result, err = readLoadBalanceStreamCommittedInstallationWithEngine(ctx, w.receipt.JobID, w.engine)
 	if err != nil {
 		return fail()
 	}
@@ -193,7 +193,7 @@ func (w *loadBalanceStreamInstalledContext) current(ctx context.Context) error {
 	}
 	// Recheck the named original publication/backup/inode and sealed exit;
 	// parsing them once is not lifetime authority or permission to recover.
-	actual, err := readLoadBalanceStreamCommittedInstallation(ctx, w.receipt.JobID)
+	actual, err := readLoadBalanceStreamCommittedInstallationWithEngine(ctx, w.receipt.JobID, w.engine)
 	if err != nil || actual != w.result || !w.nss.current() || !w.installed.current() || !w.engine.current() {
 		return errLoadBalanceStreamInstallationGate
 	}

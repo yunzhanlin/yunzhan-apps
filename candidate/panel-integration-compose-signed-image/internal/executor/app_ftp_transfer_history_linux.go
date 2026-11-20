@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -39,8 +40,8 @@ type ftpTransferJournalEntry struct {
 	Message    json.RawMessage `json:"MESSAGE"`
 }
 
-func parseFTPTransfer(entry ftpTransferJournalEntry, executable, sitesDir string) (core.FTPTransferRecord, bool) {
-	if entry.Unit != ftpTransferUnit || entry.Executable != executable || entry.Identifier != "pure-ftpd" ||
+func parseFTPTransfer(entry ftpTransferJournalEntry, executables []string, sitesDir string) (core.FTPTransferRecord, bool) {
+	if entry.Unit != ftpTransferUnit || !slices.Contains(executables, entry.Executable) || entry.Identifier != "pure-ftpd" ||
 		entry.Transport != "syslog" || len(entry.Message) > 8192 {
 		return core.FTPTransferRecord{}, false
 	}
@@ -81,7 +82,7 @@ func parseFTPTransfer(entry ftpTransferJournalEntry, executable, sitesDir string
 		ClientIP: address.Unmap().String(), Direction: direction, Path: "/" + file, Bytes: size, KiBPerSecond: speed}, true
 }
 
-func ftpTransferRecords(raw []byte, executable, sitesDir string, query core.FTPTransferQuery, from, to time.Time) (core.FTPTransferHistory, error) {
+func ftpTransferRecords(raw []byte, executables []string, sitesDir string, query core.FTPTransferQuery, from, to time.Time) (core.FTPTransferHistory, error) {
 	report := core.FTPTransferHistory{From: from, To: to, Events: make([]core.FTPTransferRecord, 0, query.Limit), SourceLimit: ftpTransferJournalLimit}
 	scanner := bufio.NewScanner(bytes.NewReader(raw))
 	scanner.Buffer(make([]byte, 4096), 64<<10)
@@ -95,7 +96,7 @@ func ftpTransferRecords(raw []byte, executable, sitesDir string, query core.FTPT
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 			return report, errors.New("传输日志记录格式无法核对")
 		}
-		record, ok := parseFTPTransfer(entry, executable, sitesDir)
+		record, ok := parseFTPTransfer(entry, executables, sitesDir)
 		if !ok || record.Time.Before(from) || record.Time.After(to) ||
 			query.Username != "" && query.Username != record.Username ||
 			query.Direction != "" && query.Direction != record.Direction ||
@@ -117,11 +118,12 @@ func ftpTransferRecords(raw []byte, executable, sitesDir string, query core.FTPT
 
 func (s *Service) readFTPTransferHistory(ctx context.Context, query core.FTPTransferQuery) (core.FTPTransferHistory, error) {
 	record, err := s.moduleInstalledRecord("pure-ftpd")
-	if err != nil || record["version"] != appcatalog.FTPTransferHistoryVersion {
+	version, _ := record["version"].(string)
+	if err != nil || !appcatalog.FTPTransferHistorySupported(version) {
 		return core.FTPTransferHistory{}, errors.New("请先签名安装或更新支持传输日志的 Pure-FTPd")
 	}
 	binary, err := s.ftpBinary("pure-ftpd")
-	if err != nil || binary != s.systemPath(path.Join(appNativeRoot, "pure-ftpd", ftpRuntimeVersion, "pure-ftpd")) {
+	if err != nil || !s.ftpManagedDaemon(binary) {
 		return core.FTPTransferHistory{}, errors.New("受管 FTP 可执行文件无法核对，未读取传输日志")
 	}
 	to := time.Now().UTC().Truncate(time.Microsecond)
@@ -137,17 +139,25 @@ func (s *Service) readFTPTransferHistory(ctx context.Context, query core.FTPTran
 	}
 	ctx, cancel := context.WithTimeout(ctx, 6*time.Second)
 	defer cancel()
-	command := exec.CommandContext(ctx, "/usr/bin/journalctl", "--no-pager", "--quiet", "--reverse",
+	// Journal executable and unit metadata authenticate both paths across a runtime update.
+	executables := make([]string, 0, len(ftpSupportedRuntimeVersions))
+	args := []string{"--no-pager", "--quiet", "--reverse",
 		"--output=json", "--output-fields=__REALTIME_TIMESTAMP,_SYSTEMD_UNIT,_EXE,SYSLOG_IDENTIFIER,_TRANSPORT,MESSAGE",
-		"--lines="+strconv.Itoa(ftpTransferJournalLimit), "--since="+asJournalTime(from), "--until="+asJournalTime(to),
-		"_SYSTEMD_UNIT="+ftpTransferUnit, "_EXE="+binary, "_TRANSPORT=syslog", "SYSLOG_IDENTIFIER=pure-ftpd", "PRIORITY=5")
+		"--lines=" + strconv.Itoa(ftpTransferJournalLimit), "--since=" + asJournalTime(from), "--until=" + asJournalTime(to),
+		"_SYSTEMD_UNIT=" + ftpTransferUnit, "_TRANSPORT=syslog", "SYSLOG_IDENTIFIER=pure-ftpd", "PRIORITY=5"}
+	for _, version := range ftpSupportedRuntimeVersions {
+		executable := s.ftpRuntimeBinary(version, "pure-ftpd")
+		executables = append(executables, executable)
+		args = append(args, "_EXE="+executable)
+	}
+	command := exec.CommandContext(ctx, "/usr/bin/journalctl", args...)
 	command.Env = []string{"PATH=/usr/bin:/bin", "LC_ALL=C"}
 	stdout, stderr := &boundedBuffer{max: 4 << 20}, &boundedBuffer{max: 4096}
 	command.Stdout, command.Stderr = stdout, stderr
 	if err = command.Run(); err != nil || stdout.truncated {
 		return core.FTPTransferHistory{}, errors.New("无法完整读取受管 FTP 日志")
 	}
-	return ftpTransferRecords(stdout.Bytes(), binary, s.Config.SitesDir, query, from, to)
+	return ftpTransferRecords(stdout.Bytes(), executables, s.Config.SitesDir, query, from, to)
 }
 
 func (s *Service) ftpTransferHistoryRoutes(m *http.ServeMux) {

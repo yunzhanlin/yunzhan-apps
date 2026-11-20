@@ -4,6 +4,11 @@ import "errors"
 
 const FTPTransferHistoryFeature = "pure-ftpd-transfer-history-v1"
 const FTPTransferHistoryVersion = "1.0.54-compat7"
+const FTPFileQuotaVersion = "1.0.54-compat8"
+
+func FTPTransferHistorySupported(version string) bool {
+	return version == FTPTransferHistoryVersion || version == FTPFileQuotaVersion
+}
 
 func validateFTPTransferHistoryRequirement(m Manifest, available func(string) bool) (bool, error) {
 	comparison, comparable := CompareVersions(m.Version, FTPTransferHistoryVersion)
@@ -14,7 +19,7 @@ func validateFTPTransferHistoryRequirement(m Manifest, available func(string) bo
 	if !required {
 		return false, nil
 	}
-	if m.ID != "pure-ftpd" || m.Version != FTPTransferHistoryVersion || m.Delivery.Provider != "panel-module" ||
+	if m.ID != "pure-ftpd" || !FTPTransferHistorySupported(m.Version) || m.Delivery.Provider != "panel-module" ||
 		m.Delivery.Target != m.ID || m.Delivery.ManageRoute != "app-modules" || len(m.RequiredPanelFeatures) != 1 ||
 		m.RequiredPanelFeatures[0] != FTPTransferHistoryFeature {
 		return true, errors.New("Pure-FTPd 传输日志须绑定完整版本和独立处理器声明")

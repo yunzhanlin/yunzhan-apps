@@ -66,6 +66,9 @@ func PHPReleaseSecurity(r Release) PHPSecurityStatus {
 // build it again. Existing verified installations may still be observed, and
 // exact old idempotency tickets remain readable without granting a new build.
 func RuntimeInstallAdmission(r Release) error {
+	if r.Family == "apache" {
+		return ApacheInstallAdmission(r)
+	}
 	if r.Family != "php" {
 		return nil
 	}

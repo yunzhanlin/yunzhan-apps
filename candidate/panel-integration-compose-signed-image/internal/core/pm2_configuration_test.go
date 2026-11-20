@@ -26,18 +26,18 @@ func TestPM2ConfigurationReadQueryHasOnlyBoundedCanonicalIdentities(t *testing.T
 }
 
 func TestPM2ConfigurationReleaseKeepsHistoricalRevisionsAndRejectsFutureAliases(t *testing.T) {
-	if SoftwareImplementationVersion("pm2-manager") != PM2RootVendorAppVersion || PM2RootVendorAppVersion != "7.0.4-compat11" || PM2EvidencePreservingStopAppVersion != "7.0.4-compat10" {
+	if SoftwareImplementationVersion("pm2-manager") != PM2ConfigurationArchiveAppVersion || PM2RootVendorAppVersion != "7.0.4-compat11" || PM2EvidencePreservingStopAppVersion != "7.0.4-compat10" {
 		t.Fatal("Root vendor and preserving stop must retain their own exact revisions")
 	}
 	if PM2OwnedListenerAppVersion != "7.0.4-compat8" || PM2IOAcknowledgementAppVersion != "7.0.4-compat9" || PM2ConfigurationAppVersion != PM2IOAcknowledgementAppVersion {
 		t.Fatal("listener and storage acknowledgement revisions must remain exact")
 	}
-	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion} {
+	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion, PM2ConfigurationArchiveAppVersion} {
 		if err := ValidateSoftwareUpdate("pm2-manager", v); err != nil {
 			t.Fatal(v, err)
 		}
 	}
-	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9.0", "7.0.4-compat9-alias", "7.0.4-compat10.0", "7.0.4-compat10-alias", "7.0.4-compat11.0", "7.0.4-compat11-alias", "7.0.4-compat12", "7.0.5", "99.0.0"} {
+	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9.0", "7.0.4-compat9-alias", "7.0.4-compat10.0", "7.0.4-compat10-alias", "7.0.4-compat11.0", "7.0.4-compat11-alias", "7.0.4-compat12.0", "7.0.4-compat12-alias", "7.0.4-compat13", "7.0.5", "99.0.0"} {
 		if err := ValidateSoftwareUpdate("pm2-manager", v); err == nil {
 			t.Fatal("unimplemented alias accepted", v)
 		}

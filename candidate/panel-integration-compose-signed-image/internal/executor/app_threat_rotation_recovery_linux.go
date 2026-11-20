@@ -46,17 +46,23 @@ func (s *Service) threatIDSRotationHistory(v threatIDSRotation) (string, error) 
 			return "", err
 		}
 		allowed["eve-"+entry.ID+".json"] = true
+		if entry.Source != nil {
+			allowed[threatIDSProducerName(entry.ID)] = true
+		}
 	}
 	if v.Pending != nil {
 		allowed["eve-"+v.Pending.ID+".json"] = true
+		if v.Pending.CopyFormat == 2 {
+			allowed[threatIDSProducerName(v.Pending.ID)] = true
+		}
 	}
 	f, err := os.Open(dir)
 	if err != nil {
 		return "", err
 	}
 	defer f.Close()
-	entries, err := f.ReadDir(threatIDSHistoryLimit + 2)
-	if err != nil && err != io.EOF || len(entries) > threatIDSHistoryLimit+1 {
+	entries, err := f.ReadDir(2*(threatIDSHistoryLimit+1) + 2)
+	if err != nil && err != io.EOF || len(entries) > 2*(threatIDSHistoryLimit+1) {
 		return "", errors.New("IDS 归档容量或目录状态异常；不清理未知文件")
 	}
 	for _, entry := range entries {
@@ -192,9 +198,25 @@ func (s *Service) recoverThreatIDSStoppedRotation(ctx context.Context, v threatI
 	}
 	live := s.systemPath("/var/lib/panel-network-ids/logs/eve.json")
 	archive := filepath.Join(dir, "eve-"+p.ID+".json")
-	old, err := os.Lstat(archive)
-	if os.IsNotExist(err) {
+	source := archive
+	if p.CopyFormat == 2 {
 		if p.Sealed != nil {
+			if _, err := s.threatIDSArchiveFile(*p.Sealed); err == nil {
+				return s.commitThreatIDSRotation(ctx, v, *p.Sealed)
+			} else if !os.IsNotExist(err) {
+				return v, err
+			}
+		}
+		producer := filepath.Join(dir, threatIDSProducerName(p.ID))
+		if _, err := os.Lstat(producer); err == nil {
+			source = producer
+		} else if !os.IsNotExist(err) {
+			return v, err
+		}
+	}
+	old, err := os.Lstat(source)
+	if os.IsNotExist(err) {
+		if p.Sealed != nil || p.Source != nil {
 			return v, errors.New("IDS 已记录封存的归档缺失；不当作未开始轮转")
 		}
 		info, err := threatIDSOutputInfo(live, account)
@@ -228,12 +250,7 @@ func (s *Service) recoverThreatIDSStoppedRotation(ctx context.Context, v threatI
 	if _, err := s.threatIDSArchiveFile(sealed); err != nil {
 		return v, err
 	}
-	v.Archives = append(v.Archives, sealed)
-	v.Pending = nil
-	if err := s.writeThreatIDSRotation(v); err != nil {
-		return v, err
-	}
-	return s.retireThreatIDSArchiveContext(ctx, v)
+	return s.commitThreatIDSRotation(ctx, v, sealed)
 }
 
 func (s *Service) recoverThreatIDSOutputLocked(ctx context.Context, expectedRevision int64) (threatIDSRotation, error) {

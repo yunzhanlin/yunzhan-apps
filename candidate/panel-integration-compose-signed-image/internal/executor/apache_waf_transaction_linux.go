@@ -216,7 +216,11 @@ func (s *Service) recoverApacheWAFBeforeMutation(ctx context.Context) error {
 	if stateErr != nil || strings.TrimSpace(state) != "active" {
 		return errors.New("Apache 恢复后服务状态不可核实，保留事务")
 	}
-	if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "panel-apache"); err != nil {
+	if tx.ApacheRuntime != nil {
+		if err = s.apacheRuntimeReloadOrRestart(ctx, release); err != nil {
+			return err
+		}
+	} else if _, err = s.Config.Run(ctx, "/usr/bin/systemctl", "reload", "panel-apache"); err != nil {
 		return err
 	}
 	// Recovery of an old installation uses its exact version oracle, never the
@@ -326,13 +330,20 @@ func RecoverApacheWAFConfiguration() error {
 	} else if err != nil {
 		return err
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
 	lock, err := s.lockWAFConfiguration()
+	if errors.Is(err, errWAFConfigurationBusy) {
+		tx, readErr := s.readWAFTransaction()
+		if readErr != nil {
+			return readErr
+		}
+		return s.authorizeApacheRuntimeCandidate(ctx, tx)
+	}
 	if err != nil {
 		return err
 	}
 	defer lock.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
 	return s.recoverApacheWAFBeforeMutation(ctx)
 }
 

@@ -79,7 +79,12 @@ func verifiedApacheBodyReleaseAsset(name string) ([]byte, error) {
 }
 
 func apacheBodyPaths(id string) apacheBodyBuildPaths {
-	return apacheBodyBuildPaths{filepath.Join(apacheBodyCache, id, "work"), filepath.Join(apacheBodyCache, id, "compiler-prefix"), filepath.Join(apacheBodyCache, id, "assets"), "/opt/panel/runtimes/apache/2.4.68"}
+	r, _ := runtimecatalog.Find(runtimecatalog.ApacheLegacyID)
+	return apacheBodyPathsForRelease(id, r)
+}
+
+func apacheBodyPathsForRelease(id string, r runtimecatalog.Release) apacheBodyBuildPaths {
+	return apacheBodyBuildPaths{filepath.Join(apacheBodyCache, id, "work"), filepath.Join(apacheBodyCache, id, "compiler-prefix"), filepath.Join(apacheBodyCache, id, "assets"), r.Prefix()}
 }
 
 func apacheBodyRecordContract(record apacheBodyBuildRecord) error {
@@ -93,6 +98,9 @@ func apacheBodyRecordContract(record apacheBodyBuildRecord) error {
 // inspected, never activated. v1 had an exit/adoption race and is not upgraded.
 // No migration invents the stronger collection witness or rewrites old records.
 func apacheBodyRetainedRecordContract(record apacheBodyBuildRecord) error {
+	if record.ApacheVersion != "2.4.68" {
+		return errors.New("历史构建只属于原 Apache 2.4.68，未扩展历史授权")
+	}
 	if record.Format != 1 {
 		return errors.New("历史保留程序仅允许精确的请求体格式1；CC 格式不能采用历史回收证据")
 	}
@@ -114,8 +122,8 @@ func apacheBodyRetainedRecordContract(record apacheBodyBuildRecord) error {
 }
 
 func apacheBodyRecordAuthorityContract(record apacheBodyBuildRecord, engine string, assets map[string]string) error {
-	r, ok := runtimecatalog.Find("apache-2.4.68")
-	if !ok || record.Format != 1 && !apacheCCFormatHasModule(record.Format) || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
+	r, releaseErr := apacheRecordRelease(record.ApacheVersion)
+	if releaseErr != nil || record.Format != 1 && !apacheCCFormatHasModule(record.Format) || !core.ValidID(record.JobID) || record.State != "ready" || record.Error != "" || record.ProductionUsed || !record.ABIValidated || !record.HardeningValidated || !record.CompilerCollected || record.Architecture != runtime.GOARCH || record.Engine != engine || record.YAJL != apacheBodyYAJLVersion || record.CRS != wafBodyCRSVersion || record.ApacheVersion != r.Version || record.ApacheBinary != r.CLI() || record.Prefix != filepath.Join(apacheBodyEngines, record.JobID) {
 		return errors.New("Apache 请求体程序未完成、架构不匹配或发布身份异常")
 	}
 	digests := []string{record.ApacheSHA, record.ModuleSHA, record.TreeSHA}
@@ -146,7 +154,7 @@ func apacheBodyRecordAuthorityContract(record apacheBodyBuildRecord, engine stri
 			return errors.New("Apache 补丁、许可或变更通知摘要不匹配")
 		}
 	}
-	plan, err := apacheBodyBuildPlanForFormat(apacheBodyPaths(record.JobID), record.Format)
+	plan, err := apacheBodyBuildPlanForFormat(apacheBodyPathsForRelease(record.JobID, r), record.Format)
 	if err != nil {
 		return err
 	}
