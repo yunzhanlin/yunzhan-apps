@@ -2,7 +2,7 @@
 import hashlib,io,json,os,pathlib,re,stat,subprocess,sys,tarfile,traceback
 os.umask(0o077)
 assert os.geteuid()==0 and len(sys.argv)==4
-private=pathlib.Path(sys.argv[1]).absolute();public=pathlib.Path(sys.argv[2]);phase=sys.argv[3];assert phase in('phase1','phase2')
+private=pathlib.Path(sys.argv[1]).absolute();public=pathlib.Path(sys.argv[2]);phase=sys.argv[3];assert phase in('phase1','phase2','phase3')
 parent=public.parent.stat();assert parent.st_uid>0 and parent.st_gid>0
 public.mkdir(mode=0o700)
 source=pathlib.Path(__file__).resolve().parent;recipient=source/'recipient.pem'
