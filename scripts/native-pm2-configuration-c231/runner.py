@@ -20,7 +20,7 @@ def inventory(root):
 proof={'ok':False,'scope':'Actual native Root kernel locking and comparative existing PM2 Go regressions for an unpublished development patch','architecture':arch,'base_programme_source_inputs_sha256':plan['source_inputs_sha256'],'development_patch_sha256':plan['patch_sha256'],'Main_changed':False,'signed_programme_or_app_installs':0,'all40_commercial':False}
 try:
  assert git('rev-parse','HEAD^')==plan['native_fixture_parent']
- changes=set(git('diff','--name-only','HEAD^','HEAD').splitlines());assert changes==set(plan['payload_files'])|{str((source/'cohort.json').relative_to(repo))}
+ changes=set(git('diff','--name-only','HEAD^','HEAD').splitlines());assert changes==set(plan.get('changed_payload_files',plan['payload_files']))|{str((source/'cohort.json').relative_to(repo))}
  for n,h in plan['payload_files'].items():assert sha(repo/n)==h,n
  sdk_path='candidate/panel-integration-compose-signed-image';assert git('rev-parse','HEAD:'+sdk_path)==plan['source_sdk_tree']and not git('status','--porcelain','--',sdk_path)
  version=subprocess.check_output([str(go),'version'],text=True,timeout=15).strip();assert ' go1.27.2 linux/'in version;save('actual-native-toolchain',{'version':version,'euid':os.geteuid(),'architecture':arch,'kernel':platform.release(),'SDK_tree':plan['source_sdk_tree']})
@@ -29,12 +29,12 @@ try:
  patch=source/'development.patch';assert sha(patch)==plan['patch_sha256']
  for args in(['git','apply','--unidiff-zero','--check',str(patch)],['git','apply','--unidiff-zero',str(patch)]):subprocess.run(args,cwd=after,check=True,stdin=subprocess.DEVNULL,capture_output=True,timeout=30)
  patched_index=inventory(after);changed={n for n in set(baseline_index)|set(patched_index)if baseline_index.get(n)!=patched_index.get(n)};assert changed==set(plan['changed_source_files']);save('actual-patched-source-index',patched_index)
- env={'PATH':str(go.parent)+':/usr/bin:/bin','HOME':str(work),'LANG':'C.UTF-8','GOTOOLCHAIN':'local','GOMAXPROCS':'2','GOFLAGS':'-p=2','GOCACHE':str(work/'go-cache'),'GOPATH':str(work/'go-path')}
+ env={'PATH':str(go.parent)+':/usr/bin:/bin','HOME':str(work),'LANG':'C.UTF-8','GOTOOLCHAIN':'local','GOMAXPROCS':'2','GOFLAGS':'-p=2','CGO_ENABLED':'0','GOCACHE':str(work/'go-cache'),'GOPATH':str(work/'go-path')}
  results={}
  for label,tree in [('baseline',before),('patched',after)]:
   args=[str(go),'test','-json','-count=1','-parallel=2','-timeout=12m','./internal/executor','-run','PM2'];started=time.monotonic()
-  with(out/(label+'-original-test.stdout')).open('xb')as stdout,(out/(label+'-original-test.stderr')).open('xb')as stderr:r=subprocess.run(args,cwd=tree,env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,timeout=780)
-  events=[json.loads(line)for line in(out/(label+'-original-test.stdout')).read_text().splitlines()if line.strip()];terminal={x['Test']:x['Action']for x in events if x.get('Test')and x['Action']in('pass','skip','fail')};result={'exit':r.returncode,'elapsed_seconds':time.monotonic()-started,'terminal_tests':terminal,'passes':sum(x=='pass'for x in terminal.values()),'skips':sum(x=='skip'for x in terminal.values()),'fails':sum(x=='fail'for x in terminal.values()),'arguments':args};save(label+'-original-outcome',result);results[label]=result
+  with(out/(label+'-original-test.stdout')).open('xb')as stdout,(out/(label+'-original-test.stderr')).open('xb')as stderr:r=subprocess.run(args,cwd=tree,env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,timeout=780,preexec_fn=lambda:os.umask(0o022))
+  events=[json.loads(line)for line in(out/(label+'-original-test.stdout')).read_text().splitlines()if line.strip()];terminal={x['Test']:x['Action']for x in events if x.get('Test')and x['Action']in('pass','skip','fail')};result={'exit':r.returncode,'elapsed_seconds':time.monotonic()-started,'terminal_tests':terminal,'passes':sum(x=='pass'for x in terminal.values()),'skips':sum(x=='skip'for x in terminal.values()),'fails':sum(x=='fail'for x in terminal.values()),'arguments':args,'native_test_process_umask':'0022','evidence_parent_and_files_remain_private':True,'CGO_ENABLED':'0'};save(label+'-original-outcome',result);results[label]=result
   assert r.returncode==0 and len(terminal)>=25 and not any(x['Action']=='fail'for x in events),label+' original test failure retained'
   assert inventory(tree)==(baseline_index if label=='baseline'else patched_index),'tests changed source inputs'
  a=results['baseline']['terminal_tests'];b=results['patched']['terminal_tests'];assert all(b.get(n)==state for n,state in a.items()),'an original PM2 regression changed state'
