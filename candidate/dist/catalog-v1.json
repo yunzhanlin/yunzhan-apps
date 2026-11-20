@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-20T03:23:31Z",
+  "generated_at": "2026-11-20T06:18:35Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -389,8 +389,8 @@
       "id": "network-threat-detection",
       "name": "Network Threat Detection",
       "category": "professional",
-      "version": "1.3.3",
-      "summary": "独立非 root 被动 IDS 与签名 ET Open 规则。可信停止后同步事件文件与目录，保留原始告警和权限，支持冷启动后读取历史。原生采集需受支持的系统及 Suricata 8.0.8 或同分支更新版。",
+      "version": "1.3.4",
+      "summary": "独立非 root 被动 IDS 与签名 ET Open 规则。新告警封存为独立 Root 私有副本，保留原来源证据及旧格式记录；旧写入句柄不改变已封存告警，支持冷启动与成对保留清理。采集需受支持的系统及 Suricata 8.0.8 或同分支更新版。",
       "stage": "ready",
       "risk": "privileged",
       "provider": "panel-module",
@@ -399,19 +399,19 @@
       "capabilities": [
         "端口基线与新增监听告警",
         "公网暴露分类",
-        "独立非 root 被动 IDS",
+        "独立非 root 被动 IDS 与私有副本",
         "双签名开源规则数据",
         "显式规则选择与原创回退",
         "新鲜采集计数核对",
-        "有界历史与冷启动告警保留",
+        "有界历史、来源证据与成对保留",
         "可信停止与日志落盘",
         "修订幂等与中断不重放",
         "停止选择优先于恢复",
         "显式多块缓冲与原生 MTU 核对",
         "Suricata 8.0.8 版本与维护审核"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/network-threat-detection/1.3.3/manifest.json",
-      "sha256": "300a6bd09cd7c7df931a40577990ddbfb48ad3fee2cc7d047b4fc862a681ee00"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/network-threat-detection/1.3.4/manifest.json",
+      "sha256": "36d684dd104842e3c89d04cedb7b9b5c17c3560052cc101a0f4b4a94adcf77aa"
     },
     {
       "id": "nfs-manager",
