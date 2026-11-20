@@ -1,0 +1,18 @@
+--- a/ext/dom/node.c
++++ b/ext/dom/node.c
+@@ -1953 +1953 @@
+-			ret = buf->buffer->use;
++			ret = xmlOutputBufferGetSize(buf);
+@@ -1955 +1955 @@
+-				RETVAL_STRINGL((char *) buf->buffer->content, ret, 1);
++				RETVAL_STRINGL((char *) xmlOutputBufferGetContent(buf), ret, 1);
+--- a/ext/dom/documenttype.c
++++ b/ext/dom/documenttype.c
+@@ -218 +218 @@
+-			ZVAL_STRINGL(*retval, buff->buffer->content, buff->buffer->use, 1);
++			ZVAL_STRINGL(*retval, xmlOutputBufferGetContent(buff), xmlOutputBufferGetSize(buff), 1);
+--- a/ext/simplexml/simplexml.c
++++ b/ext/simplexml/simplexml.c
+@@ -1346 +1346 @@
+-			RETVAL_STRINGL((char *)outbuf->buffer->content, outbuf->buffer->use, 1);
++			RETVAL_STRINGL((char *)xmlOutputBufferGetContent(outbuf), xmlOutputBufferGetSize(outbuf), 1);
