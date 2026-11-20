@@ -118,6 +118,11 @@ try:
   h=types.SimpleNamespace(payload=payload,evidence=evidence,api=api,save=save,wait_job=wait_job,unit=unit,proof=proof)
   result=runpy.run_path(str(payload/'acceptance_old.py'))['run'](h,engine)
   result=runpy.run_path(str(payload/'archive_acceptance.py'))['run'](h,result);save('old-full-WAF-and-held-writer-archive.json',result)
+  active=api('old-explicit-active-body-config','/software/apache-waf/config')['settings'];active=copy.deepcopy(active)
+  active['body']={'engine_job_id':engine,'sites':[{'site_id':v['id'],'policy':{'mode':'block','paranoia_level':1,'inbound_threshold':5,'body_limit_kib':128,'non_file_limit_kib':64,'json_depth':64,'argument_limit':256}}for v in result['sites']]}
+  api('old-explicit-active-body-preview','/software/apache-waf/preview',{'settings':active});job('old-explicit-active-body-enable','/software/apache-waf/configure',{'settings':active})
+  loaded=api('old-both-native-modules-active','/software/apache-waf/config');assert loaded['status']['healthy']and len(loaded['settings']['body']['sites'])==2 and loaded['settings']['apache_cc']['engine_job_id']==engine
+  proof['old_request_body_and_CC_active_before_programme_upgrade']=True
   private_before=runpy.run_path(str(payload/'archive_acceptance.py'))['private_witness']();before=protected_snapshot();save('before-programme-upgrade.json',before);oldcfg=Path('/etc/panel/apache/httpd.conf').read_bytes();installed_before=Path('/etc/panel/security-apps/modules/apache-waf/installed.json').read_bytes()
   api('old-session-logout','/logout',{});csrf='';run_once('old-original-complete-queue-guard',['/opt/panel/current/bin/panel-executor','--check-program-upgrade-queues'],120)
   run_once('target-original-signature',signer+['verify',str(new)]+key,60);run_once('target-normal-signed-programme-upgrade',signer+['install',str(new)]+key,1800);ready();assert current_source()==target
