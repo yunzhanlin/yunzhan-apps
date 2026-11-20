@@ -189,7 +189,7 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 		}
 	case "nfs-manager":
 		out.Healthy = s.appDependencyReady(id) && !s.nfsPending()
-		if out.Version == core.NFSPrivateClientAppVersion {
+		if core.NFSPrivateClientVersionSupported(out.Version) {
 			out.Healthy = out.Healthy && s.nfsPrivateClientReady()
 		}
 	case "php-code-security":
@@ -475,7 +475,7 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 		}
 	case "nfs-manager":
 		ready := s.appDependencyReady(id)
-		if selectedVersion == core.NFSPrivateClientAppVersion {
+		if core.NFSPrivateClientVersionSupported(selectedVersion) {
 			ready = s.nfsPrivateClientReady()
 		}
 		if !ready {
@@ -483,8 +483,8 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 				return e
 			}
 		}
-		if selectedVersion == core.NFSPrivateClientAppVersion && !s.nfsPrivateClientReady() {
-			return errors.New("NFS1.3.1 独立客户端运行时未完整核对，未写入新版本身份")
+		if core.NFSPrivateClientVersionSupported(selectedVersion) && !s.nfsPrivateClientReady() {
+			return errors.New("NFS 独立客户端运行时未完整核对，未写入新版本身份")
 		}
 		if e := os.MkdirAll(s.systemPath("/var/lib/panel-executor/nfs-server-recovery"), 0700); e != nil {
 			return e
@@ -672,7 +672,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		return s.applyWAF(ctx, manifest.Settings, false, add)
 	}
 	if _, ok := core.FindAppModule(id); ok {
-		if id == "nfs-manager" && version == core.NFSPrivateClientAppVersion {
+		if id == "nfs-manager" && core.NFSPrivateClientVersionSupported(version) {
 			if !s.nfsPrivateClientReady() {
 				return errors.New("NFS 独立客户端未完整准备，保留原应用版本和服务")
 			}

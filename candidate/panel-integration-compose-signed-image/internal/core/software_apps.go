@@ -94,7 +94,12 @@ func findSoftwareApp(id string) (SoftwareAppCatalogItem, bool) {
 const DiskAnalysisAppVersion = "1.4.1"
 const HardeningAppVersion = "1.1.0"
 const IntrusionAppVersion = appcatalog.IntrusionDebian12Version
-const NFSPrivateClientAppVersion = "1.3.1"
+const NFSPrivateClientAppVersion = appcatalog.NFSSiteArchivePreflightVersion
+
+func NFSPrivateClientVersionSupported(version string) bool {
+	return version == "1.3.1" || version == NFSPrivateClientAppVersion
+}
+
 const NetworkIDSMaintainedEngineAppVersion = "1.3.2"
 
 // Module implementations ship in the signed panel executor, not arbitrary
@@ -206,8 +211,8 @@ func ValidateSoftwareUpdate(id, version string) error {
 	}
 	if id == "nfs-manager" {
 		base, _, _ := strings.Cut(version, "-")
-		if cmp, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && cmp >= 0 && version != "1.3.0" && version != NFSPrivateClientAppVersion {
-			return errors.New("NFS 独立客户端仅支持固定完整1.3.1或保留的1.3.0，拒绝别名及未审核版本")
+		if cmp, valid := appcatalog.CompareVersions(base, "1.3.0"); valid && cmp >= 0 && version != "1.3.0" && !NFSPrivateClientVersionSupported(version) {
+			return errors.New("NFS 仅支持固定完整1.3.2及保留的1.3.1、1.3.0，拒绝别名及未审核版本")
 		}
 	}
 	if id == "website-analytics" {
