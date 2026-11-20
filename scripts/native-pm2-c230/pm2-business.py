@@ -54,9 +54,9 @@ def put(site,name,text):
  if p.exists():payload['expected_sha256']=digest(p)
  answer=api('/sites/'+site+'/files/action',payload);assert answer['path']==name and p.read_text()==text;return p
 entry="""const http=require('http'),crypto=require('crypto');
-let dep=false,odd=false;try{dep=require('is-number')(42)}catch{}try{require.resolve('is-odd');odd=true}catch{}
+let dep=false,depPath=null,depVersion=null,odd=false;try{depPath=require.resolve('./node_modules/is-number');dep=require(depPath)(42);depVersion=require('./node_modules/is-number/package.json').version}catch{}try{require.resolve('./node_modules/is-odd');odd=true}catch{}
 if(odd){console.error('C230 owned candidate dependency startup failure');process.exit(43)}
-http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({uid:process.getuid(),gid:process.getgid(),pid:process.pid,instance:process.env.NODE_APP_INSTANCE,dependency:dep,secret_sha256:crypto.createHash('sha256').update(process.env.C230_SECRET||'').digest('hex'),extra_present:process.env.C230_EXTRA!==undefined}));}).listen(Number(process.env.PORT),'127.0.0.1',()=>console.log('C230 owned HTTP ready'));
+http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({uid:process.getuid(),gid:process.getgid(),pid:process.pid,instance:process.env.NODE_APP_INSTANCE,dependency:dep,dependency_path:depPath,dependency_version:depVersion,secret_sha256:crypto.createHash('sha256').update(process.env.C230_SECRET||'').digest('hex'),extra_present:process.env.C230_EXTRA!==undefined}));}).listen(Number(process.env.PORT),'127.0.0.1',()=>console.log('C230 owned HTTP ready'));
 """
 def site(label):
  slug='qa-c230-'+label+'-'+secrets.token_hex(3);row=job(label+'-site','/sites',{'name':'Owned PM2 C230 '+label,'slug':slug,'domain':slug+'.localhost','php_version_id':''});assert row['kind']=='create_site'and row['site_name']=='Owned PM2 C230 '+label;id=row['site_id'];assert re.fullmatch('[0-9a-f]{32}',id);put(id,'app.js',entry);return id
@@ -98,12 +98,12 @@ try:
  target=site('target');control=site('control');target_id='c230-target-'+secrets.token_hex(3);control_id='c230-control-'+secrets.token_hex(3);secret=secrets.token_hex(24);control_secret=secrets.token_hex(24)
  for id,sid,port,value in[(target_id,target,18330,secret),(control_id,control,18331,control_secret)]:
   created=action('create',id,{'site_id':sid,'entry':'app.js','port':port,'instances':1,'memory_mb':128,'environment_patch':{'C230_SECRET':value}});assert created['ok']and created['app']['revision']==1;ids.append(id)
- first=ready(18330,secret);original=ready(18331,control_secret);assert first['uid']>0 and first['gid']>0 and original['uid']>0 and not first['dependency']
+ first=ready(18330,secret);original=ready(18331,control_secret);save('actual-original-HTTP-before-checks',{'target':first,'control':original});assert first['uid']>0 and first['gid']>0 and original['uid']>0 and not first['dependency']
  control_identity=identity(control_id);control_manifest=digest(manifest(control_id));control_source=digest(Path('/srv/panel/sites')/control/'public/app.js')
  raw=manifest(target_id).read_text();assert secret not in raw and 'environment_cipher'in raw
  save('actual-nonroot-originals',{'target':first,'control':original,'control_service':control_identity,'control_manifest_sha256':control_manifest,'control_source_sha256':control_source,'secret_plaintext_absent_from_private_manifest':True})
  pkg,lock=locked('valid-number',{'is-number':'7.0.0'});files(target,pkg,lock)
- deployed=deploy(target_id,'valid-number',1,terminal='succeeded');actual=ready(18330,secret);assert actual['dependency']
+ deployed=deploy(target_id,'valid-number',1,terminal='succeeded');actual=ready(18330,secret);assert actual['dependency']and actual['dependency_version']=='7.0.0'and actual['dependency_path']==str(Path('/srv/panel/sites')/target/'public/node_modules/is-number/index.js')
  modules=Path('/srv/panel/sites')/target/'public/node_modules';original_modules=inode(modules);module_hashes=snapshot_tree(modules);assert not(stage(target,deployed['id'])/'.c230-hook.json').exists()
  save('actual-public-package-deployed',{'http':actual,'node_modules_identity':original_modules,'files':module_hashes,'default_lifecycle_hook_absent':True})
  # A cryptographically malformed actual download must fail and leave the live directory and service unchanged.

@@ -2,7 +2,7 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "version": "0.1.0-dev.proapps24php8storecandidate226",
-  "native_fixture_parent": "b794dd0cd8e1719556e791eb46c45fb53e176060",
+  "native_fixture_parent": "715bcae1a41e4091e1da1c3210aa7e028db5cbf4",
   "served_head": "e50bbac40c8af919df7c0a0af19a826c0c3d8f49",
   "item": {
     "id": "pm2-manager",
@@ -39,7 +39,7 @@
     "scripts/native-pm2-c230/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
     "scripts/native-pm2-c230/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
     "scripts/native-pm2-c230/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
-    "scripts/native-pm2-c230/pm2-business.py": "0adf5f3c14e97cb9deace6d57de310d0d92ed776f7a4848363d88b99e1ddd773",
+    "scripts/native-pm2-c230/pm2-business.py": "28c4120ad34bb89e2fc80827325ddd268338870e0fe18fbf500fe3ca22634e49",
     "scripts/native-pm2-c230/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     ".github/workflows/pm2-npm-c230-native.yml": "e31fd9dcd5f413266d9b12147a21200988ac1d6cc5b5e80284e78107907c096e",
     "scripts/native-pm2-c230/diagnostics.py": "42acb42b61832347f133d9a1b472fddc9e28a0767efd62d115637de70d310544",
@@ -58,7 +58,7 @@
     "original_both_arch_observation_run": 44735644994
   },
   "original_prior_false_preserved": {
-    "run": 44736092064,
-    "reason": "observer selected empty target_id instead of actual create_site site_id; both original installs and owned site jobs succeeded"
+    "run": 44736652380,
+    "reason": "fresh-site fixture used unqualified Node require that can resolve distribution global packages; bind exact owned node_modules paths and retain actual initial HTTP before assertion"
   }
 }
