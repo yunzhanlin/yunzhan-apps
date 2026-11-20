@@ -2,13 +2,13 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "source_sdk_tree": "314aff0755134aacff2e77cecb0994d2dba2ad03",
-  "native_fixture_parent": "3733e67cdcdcb2bed46034ce6efb040dbce37dba",
-  "patch_sha256": "8a9458ab7e29b198dd0662feb4aa62f676f003296c4c9b8fbbd07edb9450a6aa",
+  "native_fixture_parent": "7414e77e7aed6180e4823732d6a6c5beb4dcefa5",
+  "patch_sha256": "2b9876d63054e813db5de3a4afccd1ede496c028f5141d9f5a3557f4d5433312",
   "payload_files": {
     "scripts/native-pm2-configuration-c231/runner.py": "48c680fbde868b799d884899a192512df5e63531cbe6dcd0b91b7ac3c7cfb9a7",
     "scripts/native-pm2-configuration-c231/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     "scripts/native-pm2-configuration-c231/finish.py": "1a2ddc541f6cfb8691a346ed391e57d763a7ef99e0c9737a7436117fb480cd06",
-    "scripts/native-pm2-configuration-c231/development.patch": "8a9458ab7e29b198dd0662feb4aa62f676f003296c4c9b8fbbd07edb9450a6aa",
+    "scripts/native-pm2-configuration-c231/development.patch": "2b9876d63054e813db5de3a4afccd1ede496c028f5141d9f5a3557f4d5433312",
     ".github/workflows/pm2-config-c231-development.yml": "a1f2affa59928c858af0c865067784aa2470360604b8270a7e0b6fb9bef6debf"
   },
   "changed_source_files": [
@@ -23,6 +23,8 @@
     "internal/executor/app_pm2_journal_archive_protocol_linux_test.go",
     "internal/executor/app_pm2_journal_archive_read_linux.go",
     "internal/executor/app_pm2_journal_archive_read_linux_test.go",
+    "internal/executor/app_pm2_journal_archive_restore_linux.go",
+    "internal/executor/app_pm2_journal_archive_restore_linux_test.go",
     "internal/executor/app_pm2_journal_archive_store_linux.go",
     "internal/executor/app_pm2_journal_archive_store_linux_test.go",
     "internal/executor/app_pm2_journal_lease_linux.go",
@@ -46,6 +48,10 @@
     "TestPM2JournalArchiveReadRetainsUnacceptedEmptyFragment",
     "TestPM2JournalArchiveReadActualPrivateWholeGenerationAndOutcome",
     "TestPM2JournalArchiveReadUnknownFinalEvidenceIsNeverEmpty",
+    "TestPM2JournalArchiveRestoreRetainsOriginalsAtEachFilesystemPhase",
+    "TestPM2JournalArchiveRestoreDirectionCannotBecomeForwardReplay",
+    "TestPM2JournalArchiveRestorePreservesUnknownOriginalFileContents",
+    "TestPM2JournalArchiveRestoreNeverOverwritesForeignActiveDirectory",
     "TestPM2JournalArchiveStorePublishesLargeMetadataWithoutWideningOldReader",
     "TestPM2JournalArchiveStoreCollisionRetainsFinalAndCandidate",
     "TestPM2JournalArchiveStoreEmptyFragmentIsNotAnAcceptedFinal",
@@ -59,12 +65,11 @@
     "TestPM2JournalSnapshotRefusesUnknownLinkedOrIncompleteEvidence",
     "TestPM2JournalSnapshotDetachedMissingNamespaceIsUnknown"
   ],
-  "scope": "Unpublished native Root archive controller, exact filesystem phase recovery, archived nonce non-replay, storage and protocol regressions; no public API/UI, signed programme/app installation or commercial qualification",
+  "scope": "Unpublished native Root archive and durable reverse recovery direction with original data preservation; no public API/UI, signed programme/app installation or commercial qualification",
   "Main_changed": false,
   "all40_commercial": false,
   "patch_format": "git unified zero context, applied only against exactly pinned SDK tree",
   "changed_payload_files": [
-    "scripts/native-pm2-configuration-c231/runner.py",
     "scripts/native-pm2-configuration-c231/development.patch"
   ],
   "original_failed_baseline_preserved": {
@@ -73,7 +78,7 @@
     "original_test_bytes_or_assertions_changed": false,
     "private_evidence_umask": "0077 remains in collector parent"
   },
-  "expected_new_test_rows": 60,
+  "expected_new_test_rows": 67,
   "original_ARM_compile_failure_preserved": {
     "run": 44742374496,
     "reason": "syscall.Stat_t.Nlink is uint32 on ARM64 and uint64 on AMD64; widen explicitly to uint64; both local Linux targets compiled successfully after fix"
