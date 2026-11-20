@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "fc9a34cc70b63324168cd3b6d77964f2cb8153b17fbd8b4220c1844d3ff2416b",
+  "kvm_sha256": "a3a4eb74fa90d71af468fde3e46c8a13b295e80f5ad981c177844616a58e4203",
+  "payload_sha256": "e9a056ae99f096b9375019e7b9ab6246ee52ff41498ca4f12ee37499a05fb941",
+  "published_head": "8837cdcf1d523e8265712cfeb6e40046f5c20772",
+  "release_id": 452334199,
+  "tag": "qa-idsarchivecandidate206-20261120-qa1"
+}
