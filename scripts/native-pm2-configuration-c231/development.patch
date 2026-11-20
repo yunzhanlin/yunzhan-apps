@@ -89,12 +89,12 @@ index b980225..36228d0 100644
 -		"pm2-manager":              {"真实 PM2 非 root Node 程序管理：集群、内存重启阈值、加密且仅写入的环境变量、锁定依赖后台部署、启停与日志。", []string{"准备网站 JS 入口与 package.json / package-lock.json", "创建项目，环境变量按 JSON 增量写入", "选中项目部署公共 npm 锁定依赖，查看状态；失败恢复旧依赖", "修改配置时校验修订号及原操作标识；配置更新中断后读取原事务，显式恢复旧配置并保持停止", "原请求未被接受时可持久取消其标识，防止延迟请求执行；不把断网当作未执行"}, []string{"不接受任意 API shell 命令、自定义 npm 源或本地链接。默认禁用安装脚本；显式开启后，只以网站独立用户运行第三方安装/构建代码，不传入应用环境秘密。安装限 10 分钟、768 MiB 内存，暂存目录每秒检查 512 MiB / 30000 项且保留 1 GiB 可用空间（不是磁盘内核硬配额）；新旧暂存目录保留供恢复。内存重启阈值不是内核硬限额，受管应用有 1 GiB 总硬限额。程序自身的日志可能包含秘密。配置事务只保存原加密清单及独立持久回执，不返回变量值。恢复不重放原更新、不覆盖旧失败历史，也不自动启动服务。损坏或无法核对的私有事务会阻止启动及程序升级，保留原文件供核对。最多保留 512 个原配置请求记录，达到上限暂停新配置保存，原记录不自动删除。"}},
 +		"pm2-manager":              {"真实 PM2 非 root Node 程序管理：集群、内存重启阈值、加密且仅写入的环境变量、锁定依赖后台部署、启停与日志。", []string{"准备网站 JS 入口与 package.json / package-lock.json", "创建项目，环境变量按 JSON 增量写入", "选中项目部署公共 npm 锁定依赖，查看状态；失败恢复旧依赖", "修改配置时校验修订号及原操作标识；配置更新中断后读取原事务，显式恢复旧配置并保持停止", "原请求未被接受时可持久取消其标识，防止延迟请求执行；不把断网当作未执行"}, []string{"不接受任意 API shell 命令、自定义 npm 源或本地链接。默认禁用安装脚本；显式开启后，只以网站独立用户运行第三方安装/构建代码，不传入应用环境秘密。安装限 10 分钟、768 MiB 内存，暂存目录每秒检查 512 MiB / 30000 项且保留 1 GiB 可用空间（不是磁盘内核硬配额）；新旧暂存目录保留供恢复。内存重启阈值不是内核硬限额，受管应用有 1 GiB 总硬限额。程序自身的日志可能包含秘密。配置事务只保存原加密清单及独立持久回执，不返回变量值。恢复不重放原更新、不覆盖旧失败历史，也不自动启动服务。损坏或无法核对的私有事务会阻止启动及程序升级，保留原文件供核对。活动目录最多保留 512 个原配置请求记录，达到上限暂停新配置保存；固定 compat12 支持完整封存已完成记录并显式恢复中断，最多保留 512 次封存请求，原记录不自动删除。"}},
 diff --git a/internal/core/app_module_workspace.go b/internal/core/app_module_workspace.go
-index 095a586..aa5e582 100644
+index 095a586..ae62393 100644
 --- a/internal/core/app_module_workspace.go
 +++ b/internal/core/app_module_workspace.go
 @@ -108 +108 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
 -		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。最多保留 512 个原始事务，达到上限会暂停新配置更新，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
-+		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。活动目录最多保留 512 个原始事务，达到上限会暂停新配置更新；可在配置记录封存中完整保留历史并建立新目录，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("configuration-archives", "配置记录封存", "完整保留已完成配置记录，显式处理封存中断；不重放配置或启停项目。", nil, nil), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
++		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。活动目录最多保留 512 个原始事务，达到上限会暂停新配置更新；可在配置记录封存中完整保留历史并建立新目录，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("configuration-archives", "配置记录封存", "完整保留已完成配置记录，显式处理封存中断；不重放配置或启停项目。", nil, []string{"archive-configurations", "recover-configuration-archive", "restore-configuration-archive"}), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
 diff --git a/internal/core/app_modules.go b/internal/core/app_modules.go
 index ce8f1b1..3fe0612 100644
 --- a/internal/core/app_modules.go
@@ -268,7 +268,7 @@ index 0000000..7ba0b96
 +}
 diff --git a/internal/core/pm2_configuration_archive_test.go b/internal/core/pm2_configuration_archive_test.go
 new file mode 100644
-index 0000000..ab9b23e
+index 0000000..1489c27
 --- /dev/null
 +++ b/internal/core/pm2_configuration_archive_test.go
 @@ -0,0 +1,139 @@
@@ -312,7 +312,7 @@ index 0000000..ab9b23e
 +func TestPM2JournalArchiveHTTPRequiresFullAdminCSRFExactVersionAndRevocation(t *testing.T) {
 +	s := testStore(t)
 +	admin := accessUser(t, s, "pm2-archive-master", "admin", nil)
-+	limited := accessUser(t, s, "pm2-archive-limited", "admin", []string{"runtimes"})
++	limited := accessUser(t, s, "pm2-archive-limited", "admin", []string{"system-tools"})
 +	viewer := accessUser(t, s, "pm2-archive-viewer", "viewer", nil)
 +	a, err := NewServer(s, Config{DataDir: t.TempDir(), WebDir: t.TempDir(), Origin: "http://127.0.0.1:19100", Socket: "/missing"})
 +	if err != nil {
@@ -4604,15 +4604,15 @@ index 4bd914e..b858332 100644
 +        <RemoteIndependentBackups v-else-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
 diff --git a/web/src/PM2ConfigurationArchive.vue b/web/src/PM2ConfigurationArchive.vue
 new file mode 100644
-index 0000000..5260b4f
+index 0000000..1f55e66
 --- /dev/null
 +++ b/web/src/PM2ConfigurationArchive.vue
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,82 @@
 +<script setup lang="ts">
 +import {computed,onBeforeUnmount,ref,shallowRef,watch} from 'vue';
 +import type {AccessPlan} from './menuPermissions';
 +import {newPM2ConfigurationID} from './pm2Configuration';
-+import {archiveBody,archiveFullAdmin,archiveLabels,archiveOriginalRecords,archivePage,archivePending,archiveRow,pm2ArchiveVersion,type ArchiveAction,type ArchivePage,type ArchivePending,type ArchiveRow} from './pm2ConfigurationArchive';
++import {archiveBody,archiveDisplayTime,archiveFullAdmin,archiveLabels,configurationResultLabels,archiveOriginalRecords,archivePage,archivePending,archiveRow,pm2ArchiveVersion,type ArchiveAction,type ArchivePage,type ArchivePending,type ArchiveRow} from './pm2ConfigurationArchive';
 +type API=<T>(path:string,method?:string,body?:unknown,idempotencyKey?:string,signal?:AbortSignal)=>Promise<T>;
 +const props=defineProps<{api:API;actor:string;access?:AccessPlan|null;active:boolean;installed:boolean;installedVersion:string;installationId:string}>();
 +const page=shallowRef<ArchivePage>(),selected=shallowRef<ArchiveRow>(),records=shallowRef<ReturnType<typeof archiveOriginalRecords>>(),pending=shallowRef<ArchivePending>();
@@ -4662,11 +4662,12 @@ index 0000000..5260b4f
 +  <template v-if="page">
 +   <p v-if="page.active_inventory_known">当前活动记录 {{page.active_record_count}} / 512，待核对配置 {{page.active_pending_count}} 条。</p>
 +   <el-alert v-else title="活动目录尚未完整核对；不能将它当作空目录或执行新封存。历史清单单独显示。" type="warning" :closable="false" />
-+   <el-table :data="page.configuration_archives" border empty-text="尚无配置封存记录" @row-click="choose">
-+    <el-table-column prop="created_at" label="建立时间" min-width="180" />
++   <el-table :data="page.configuration_archives" border highlight-current-row row-key="pm2_operation_id" empty-text="尚无配置封存记录" @row-click="choose">
++    <el-table-column label="建立时间" min-width="180"><template #default="scope">{{archiveDisplayTime(scope.row.created_at)}}</template></el-table-column>
 +    <el-table-column label="状态" min-width="220"><template #default="scope">{{archiveLabels[scope.row.state as ArchiveRow['state']]}}</template></el-table-column>
 +    <el-table-column prop="record_count" label="原记录数" width="100" />
 +    <el-table-column label="原请求" min-width="220"><template #default="scope"><code>{{scope.row.pm2_operation_id}}</code></template></el-table-column>
++    <el-table-column label="操作" width="100" fixed="right"><template #default="scope"><el-button :disabled="busy" :aria-label="'选择原封存请求 '+scope.row.pm2_operation_id" @click.stop="choose(scope.row)">选择</el-button></template></el-table-column>
 +   </el-table>
 +   <div class="archive-controls"><el-button :disabled="busy||page.offset===0" @click="refresh(Math.max(0,page.offset-16))">上一页封存</el-button><span>共 {{page.total}} 次请求</span><el-button :disabled="busy||page.page_complete" @click="refresh(page.next_offset)">下一页封存</el-button></div>
 +  </template>
@@ -4681,7 +4682,7 @@ index 0000000..5260b4f
 +   </template>
 +  </template>
 +  <template v-if="records">
-+   <el-table :data="records.rows" border empty-text="当前页没有配置记录"><el-table-column prop="resource_id" label="项目"/><el-table-column prop="state" label="原结果"/><el-table-column prop="created_at" label="建立时间" min-width="180"/><el-table-column prop="pm2_operation_id" label="原配置编号" min-width="250"/></el-table>
++   <el-table :data="records.rows" border empty-text="当前页没有配置记录"><el-table-column prop="resource_id" label="项目" min-width="150"/><el-table-column label="原结果" min-width="160"><template #default="scope">{{configurationResultLabels[scope.row.state as keyof typeof configurationResultLabels]}}</template></el-table-column><el-table-column label="建立时间" min-width="180"><template #default="scope">{{archiveDisplayTime(scope.row.created_at)}}</template></el-table-column><el-table-column prop="pm2_operation_id" label="原配置编号" min-width="250"/></el-table>
 +   <div class="archive-controls"><el-button :disabled="busy||records.offset===0" @click="readRecords(Math.max(0,records.offset-16))">上一页配置</el-button><span>共 {{records.total}} 条原记录</span><el-button :disabled="busy||records.next>=records.total" @click="readRecords(records.next)">下一页配置</el-button></div>
 +  </template>
 + </section>
@@ -4691,10 +4692,10 @@ index 0000000..5260b4f
 +</style>
 diff --git a/web/src/pm2ConfigurationArchive.ts b/web/src/pm2ConfigurationArchive.ts
 new file mode 100644
-index 0000000..780f1ae
+index 0000000..47451d8
 --- /dev/null
 +++ b/web/src/pm2ConfigurationArchive.ts
-@@ -0,0 +1,39 @@
+@@ -0,0 +1,42 @@
 +import {menuPermissionIDs,validAccessPlan,type AccessPlan} from './menuPermissions';
 +import {pm2ConfigurationRecord} from './pm2Configuration';
 +export const pm2ArchiveVersion='7.0.4-compat12';
@@ -4730,7 +4731,10 @@ index 0000000..780f1ae
 +}
 +export function archiveOriginalRecords(value:unknown,selected:ArchiveRow){
 + if(!object(value)||value.archived_original!==true||value.archive_operation_id!==selected.pm2_operation_id||value.archive_expected_sha!==selected.expected_sha||value.configuration_inventory_complete!==true||value.automatic_replay!==false||value.history_or_report_written!==false||!integer(value.total,512)||!integer(value.limit,128)||value.limit<1||!integer(value.offset,512)||!integer(value.next_offset,512)||!Array.isArray(value.configuration_transactions)||value.configuration_transactions.length>128)throw Error('所选封存记录身份或分页不完整');
-+ const rows=value.configuration_transactions.map(pm2ConfigurationRecord);if(rows.some(v=>!v)||new Set(rows.map(v=>v!.pm2_operation_id)).size!==rows.length||value.offset>value.total||value.next_offset!==value.offset+rows.length||value.next_offset>value.total||value.page_complete!==(value.next_offset===value.total)||rows.length>value.limit)throw Error('封存配置原记录不能核对');
++ const rows=value.configuration_transactions.map(pm2ConfigurationRecord);if(rows.some(v=>!v||v.state==='needs_attention')||new Set(rows.map(v=>v!.pm2_operation_id)).size!==rows.length||value.offset>value.total||value.next_offset!==value.offset+rows.length||value.next_offset>value.total||value.page_complete!==(value.next_offset===value.total)||rows.length>value.limit)throw Error('封存配置原记录不能核对');
 + return {rows:rows as NonNullable<ReturnType<typeof pm2ConfigurationRecord>>[],total:value.total as number,offset:value.offset as number,next:value.next_offset as number};
 +}
 +export const archiveLabels:Record<ArchiveRow['state'],string>={not_started:'原请求未被接受 · 标识已保留',needs_attention:'封存中断 · 待核对',archived:'封存完成',not_moved:'已保留原活动目录',restored_for_review:'原目录已恢复 · 待核对'};
++
++export const configurationResultLabels={needs_attention:'待核对',committed:'已提交',rolled_back:'已回退',recovered_stopped:'已恢复旧配置并停止',cancelled_before_publication:'原请求已取消'};
++export function archiveDisplayTime(value:string){return value&&Number.isFinite(Date.parse(value))?new Date(value).toLocaleString('zh-CN',{hour12:false}):'尚未接受'}

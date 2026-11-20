@@ -46,7 +46,7 @@ try:
  for pkg in ['core','appcatalog']:
   package_results={}
   for label,tree in [('baseline',before),('patched',after)]:
-   args=[str(go),'test','-json','-count=1','-parallel=2','-timeout=6m','./internal/'+pkg,'-run','PM2'];started=time.monotonic()
+   args=[str(go),'test','-json','-count=1','-parallel=2','-timeout=6m','./internal/'+pkg,'-run','PM2|ModuleWorkspace'if pkg=='core'else'PM2'];started=time.monotonic()
    with(out/(label+'-'+pkg+'-original-test.stdout')).open('xb')as stdout,(out/(label+'-'+pkg+'-original-test.stderr')).open('xb')as stderr:r=subprocess.run(args,cwd=tree,env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,timeout=420,preexec_fn=lambda:os.umask(0o022))
    events=[json.loads(line)for line in(out/(label+'-'+pkg+'-original-test.stdout')).read_text().splitlines()if line.strip()];terminal={x['Test']:x['Action']for x in events if x.get('Test')and x['Action']in('pass','skip','fail')};result={'exit':r.returncode,'elapsed_seconds':time.monotonic()-started,'terminal_tests':terminal,'passes':sum(x=='pass'for x in terminal.values()),'skips':sum(x=='skip'for x in terminal.values()),'fails':sum(x=='fail'for x in terminal.values()),'arguments':args};save(label+'-'+pkg+'-original-outcome',result);package_results[label]=result
    assert r.returncode==0 and len(terminal)>=2 and not any(x['Action']=='fail'for x in events),pkg+' original native failure retained'
