@@ -1,0 +1,60 @@
+{
+  "source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
+  "version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
+  "release_id": 452885029,
+  "tag": "qa-pm2archivecandidate232r2-20261120-qa1",
+  "source_head": "e9781747c48247344dbb25788ba45f320185773e",
+  "source_sdk_tree": "b54c207b55d5dc77de59d34578ba980bdc4373d5",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz": {
+      "id": 772395128,
+      "bytes": 24443288,
+      "sha256": "9b17b7481cea5c393dde9600748a07b0dfee4bb3f0e2cc4e9fc1f6982c02b23c"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.manifest": {
+      "id": 772398991,
+      "bytes": 183,
+      "sha256": "e6f32d3ca38feab097f994e7634917f3fb1aa6454fa34f954777f91f31e29c51"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.sig": {
+      "id": 772399368,
+      "bytes": 64,
+      "sha256": "3a069463b69fef2f686fae1174d16f9e555f535769a8b83d177b85c6048fd473"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz": {
+      "id": 772399699,
+      "bytes": 22633072,
+      "sha256": "d2d3720f836c2bafca93584fa383e896731edb2d5665d9408b8d170bd5d19b86"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz.manifest": {
+      "id": 772403810,
+      "bytes": 183,
+      "sha256": "35b92d00c019a890ff022f1e572411f5bea541ead0071892558aa49ab6070ce6"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz.sig": {
+      "id": 772404362,
+      "bytes": 64,
+      "sha256": "7b85260b00792a5bda0c0ad44b87e0d3b3f41e8ea142acefbcaf2b3ced7bc1d1"
+    },
+    "pm2-config-archive-signed-release.py": {
+      "id": 772404740,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 772405073,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz",
+      "archive_entries": 207
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz",
+      "archive_entries": 207
+    }
+  }
+}
