@@ -1,4 +1,4 @@
-"""Verify current signed Pure-FTPd soft quotas and actual encrypted bandwidth limits."""
+"""Verify the signed passive IDS, fresh public rules, real loopback events and cold recovery."""
 from pathlib import Path
 import contextlib
 import ftplib
@@ -131,7 +131,11 @@ def trace_alert():
     finally:
         server.shutdown();server.server_close();thread.join(timeout=3)
 def native_syntax(native):
-    rules=base/'rules';rules.mkdir(mode=0o755)
+    import tempfile
+    rules=Path(tempfile.mkdtemp(prefix='panel-public-ids-rules-',dir='/run'))
+    rules.chmod(0o755)
+    # Only the public upstream rule and licence files enter this traversable folder.
+    # The root-owned private evidence and signed-input parent retains mode 0700.
     for name,value in RULES.items():
         (rules/name).write_bytes(base64.b64decode(value));(rules/name).chmod(0o644)
     manifest=json.loads((rules/'manifest.json').read_bytes())
