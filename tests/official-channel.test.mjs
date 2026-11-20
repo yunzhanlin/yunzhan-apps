@@ -62,6 +62,8 @@ test('separate candidate catalogue changes exactly its declared known identities
   const oldIDS = stable.apps.find(app => app.id === 'network-threat-detection');
   const ids = source.apps.find(app => app.id === 'network-threat-detection');
   assert.equal(oldIDS.version, '1.3.1');
+  assert.deepEqual(ids.required_panel_features, ['network-ids-durable-stop-v1']);
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/network-threat-detection/1.3.2/manifest.json')).digest('hex'), 'e6df8262945a11bbeb1b8982be3eafeb6bedc15fd42748728afbac497e2d4238');
   assert.deepEqual(ids.rule_data_channel, oldIDS.rule_data_channel);
   assert.deepEqual(ids.delivery, oldIDS.delivery);
   assert.deepEqual(ids.compatibility, oldIDS.compatibility);
@@ -74,7 +76,7 @@ test('separate candidate catalogue changes exactly its declared known identities
     ['docker-manager', '1-compat2'],
     ['pure-ftpd', '1.0.54-compat8'],
     ['daily-report', '1.4.1'],
-    ['network-threat-detection', '1.3.2'],
+    ['network-threat-detection', '1.3.3'],
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],
