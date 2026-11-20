@@ -129,9 +129,10 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pm2-manager/7.0.4-compat7/manifest.json')).digest('hex'),'ba5a893e0fba47e8402933b526d3411f6b0d1e8df0f60f52ad992374f6fba49f');
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pm2-manager/7.0.4-compat8/manifest.json')).digest('hex'),'b8279030a67c261ae559d17108cbd1d73f82bb3dd8e3f03f0c094581df21f9c3');
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/pm2-manager/7.0.4-compat9/manifest.json')).digest('hex'),'f53bd60c94d4ef5b20af0ed2a44fc1393c7e61811779944855b726872804ba71');
-  const originalNFS=stable.apps.find(a=>a.id==='nfs-manager'),nfs=source.apps.find(a=>a.id==='nfs-manager');assert.equal(originalNFS.version,'1.3.0');assert.equal(nfs.version,'1.3.1');assert.deepEqual(nfs.delivery,originalNFS.delivery);assert.deepEqual(nfs.compatibility,originalNFS.compatibility);
+  const originalNFS=stable.apps.find(a=>a.id==='nfs-manager'),nfs=source.apps.find(a=>a.id==='nfs-manager');assert.equal(originalNFS.version,'1.3.0');assert.equal(nfs.version,'1.3.2');assert.deepEqual(nfs.required_panel_features,['nfs-site-archive-preflight-v1']);assert.deepEqual(nfs.delivery,originalNFS.delivery);assert.deepEqual(nfs.compatibility,originalNFS.compatibility);
   assert.equal(createHash('sha256').update(await read('dist/apps/nfs-manager/1.3.0/manifest.json')).digest('hex'),'c37a0d23ddb10a3e14e13c5304bbec0df0a3acf6954ab869ce40c9d253ad59ec');
-  assert.equal(catalog.apps.find(a=>a.id==='nfs-manager').sha256,'c9d887dee3eb717bab1046e7977511b5d9190452a9eb43cceec330c22c307144');
+  assert.equal(catalog.apps.find(a=>a.id==='nfs-manager').sha256,'0c4182ae788e7e1a548da46493f1cb1eff29b83c4624ea99f636cb04de541047');
+  assert.equal(createHash('sha256').update(await read('candidate/dist/apps/nfs-manager/1.3.1/manifest.json')).digest('hex'),'c9d887dee3eb717bab1046e7977511b5d9190452a9eb43cceec330c22c307144');
   assert.equal(stable.apps.find(a=>a.id==='anti-intrusion').version,'1.1.0');
   const intrusion=source.apps.find(a=>a.id==='anti-intrusion');assert.equal(intrusion.version,'1.1.2');assert.deepEqual(intrusion.required_panel_features,['intrusion-preserving-journal-v2','intrusion-upstream0112-v1','intrusion-debian12-v1']);
   assert.deepEqual(intrusion.compatibility,{os:['debian-12','debian-13','ubuntu-22.04','ubuntu-24.04'],architectures:['amd64','arm64']});
