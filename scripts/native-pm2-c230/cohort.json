@@ -2,7 +2,7 @@
   "source_head": "e9781747c48247344dbb25788ba45f320185773e",
   "source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
   "version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
-  "native_fixture_parent": "f15aa07f586da88b543e8e9b69f2483b8ac45766",
+  "native_fixture_parent": "c86383f3011aad60adb1baa5ec1047e748979644",
   "item": {
     "id": "daily-report",
     "name": "aaPanel Daily Report",
@@ -1028,7 +1028,7 @@
   "payload_files": {
     "scripts/native-pm2-c230/archive-upgrade-business.py": "d813efe90a67f981b873c0232b3b99013a6294fcffd3019fca7b3a3069e326a3",
     "scripts/native-pm2-c230/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
-    "scripts/native-pm2-c230/daily-smtp-current-business.py": "69f820df283bf8c14b820451d87e7a56d854bbdbf048df895085f49b21b77101",
+    "scripts/native-pm2-c230/daily-smtp-current-business.py": "704025a91a5c39af242ec14a93bb4dfefd8c56f916add8d089f4affaf6ba4fd6",
     "scripts/native-pm2-c230/diagnostics.py": "42acb42b61832347f133d9a1b472fddc9e28a0767efd62d115637de70d310544",
     "scripts/native-pm2-c230/dispatch.json": "7c5b544e2db0e3c2ff6cdae44da170d441de505bdaa60457977e7df6558b159b",
     "scripts/native-pm2-c230/download-upgrade.py": "b8f94e8fe7d23e5d70cc30e5709a70628038767be909b50a6bc442061d7c1df2",
@@ -1043,7 +1043,7 @@
     ".github/workflows/daily-report-c253-current-smtp-native.yml": "a882b39ca5843c3813815f201bced53c5808b5a3299db5a430232ba4aab8486e"
   },
   "changed_payload_files": [
-    "scripts/native-pm2-c230/daily-smtp-current-business.py",
-    ".github/workflows/daily-report-c253-current-smtp-native.yml"
-  ]
+    "scripts/native-pm2-c230/daily-smtp-current-business.py"
+  ],
+  "original_C253_failure_retained": 44796579775
 }
