@@ -4,5 +4,6 @@
   "payload_sha256": "e25801530ca25f2e863df539d1eeb404038b6dfc20e28098811518a841c5f982",
   "published_head": "2738e92bf26f1989320415c2b862aff52b2751cd",
   "release_id": 452224580,
-  "tag": "qa-idsdurablestopcandidate201-20261120-qa1"
+  "tag": "qa-idsdurablestopcandidate201-20261120-qa1",
+  "workflow_history_depth": 8
 }
