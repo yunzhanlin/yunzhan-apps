@@ -126,7 +126,12 @@ try:
  recovered=action('recover-deployment',target_id);save('cancelled-terminal-explicit-recovery',recovered);assert action('deployment',target_id)['deployment']['id']==queued['id']
  # Actual durable configuration update, cluster round-robin and encrypted write-only delta/deletion.
  newsecret=secrets.token_hex(24);updated=action('update',target_id,{'expected_revision':1,'instances':2,'memory_mb':128,'environment_patch':{'C230_SECRET':newsecret,'C230_EXTRA':'owned-value'},'pm2_operation_id':secrets.token_hex(16)});save('cluster-update-original',updated);assert json.loads(manifest(target_id).read_bytes())['revision']==2
- samples=[ready(18330,newsecret)for _ in range(16)];assert len({x['pid']for x in samples})==2 and {x['instance']for x in samples}=={'0','1'}and all(x['uid']==actual['uid']and x['extra_present']for x in samples)
+ samples=[];pool_started=time.monotonic()
+ def observe_pool():
+  value=ready(18330,newsecret);samples.append(value);return {'pids':sorted({x['pid']for x in samples}),'instances':sorted({x['instance']for x in samples})}
+ try:pool=wait(observe_pool,lambda x:len(x['pids'])==2 and set(x['instances'])=={'0','1'},35)
+ finally:save('actual-all-cluster-HTTP-samples',{'samples':samples,'elapsed_seconds':time.monotonic()-pool_started,'maximum_wait_seconds':35,'no_mutation_replayed':True})
+ assert len({x['pid']for x in samples})==2 and {x['instance']for x in samples}=={'0','1'}and all(x['uid']==actual['uid']and x['extra_present']for x in samples)
  assert newsecret not in manifest(target_id).read_text()and 'owned-value'not in manifest(target_id).read_text()
  public=api('/app-modules/pm2-manager/projects?limit=32&offset=0');assert newsecret not in json.dumps(public)and 'owned-value'not in json.dumps(public)
  save('actual-multiworker-round-robin',{'samples':samples,'read_only_projects':public,'plaintext_absent':True})
@@ -136,7 +141,7 @@ try:
  save('actual-bad-entry-encrypted-config-rollback',{'manifest_sha256':old_config,'revision':3,'previous_secret_digest_restored':True})
  # Real entry and port revision, then a bounded memory-threshold restart on this owned worker.
  assert action('update',target_id,{'expected_revision':3,'port':18331,'pm2_operation_id':secrets.token_hex(16)},409)['error'];assert digest(manifest(target_id))==old_config
- memory_entry=entry.replace("let dep=false,odd=false;","let held;let dep=false,odd=false;").replace("http.createServer((req,res)=>{", "http.createServer((req,res)=>{if(req.url==='/memory'){held=Buffer.alloc(80*1024*1024,0x61);}").replace("uid:process.getuid(),", "source:'second-entry',rss:process.memoryUsage().rss,uid:process.getuid(),")
+ memory_entry=entry.replace("let dep=false,depPath=null,depVersion=null,odd=false;","let held;let dep=false,depPath=null,depVersion=null,odd=false;").replace("http.createServer((req,res)=>{", "http.createServer((req,res)=>{if(req.url==='/memory'){held=Buffer.alloc(80*1024*1024,0x61);}").replace("uid:process.getuid(),", "source:'second-entry',rss:process.memoryUsage().rss,uid:process.getuid(),")
  put(target,'second.js',memory_entry)
  moved=action('update',target_id,{'expected_revision':3,'entry':'second.js','port':18332,'instances':1,'memory_mb':64,'pm2_operation_id':secrets.token_hex(16)});save('actual-entry-and-port-revision-update',moved)
  row=ready(18332,newsecret);assert row['source']=='second-entry'and json.loads(manifest(target_id).read_bytes())['revision']==4 and request_http(18330)is None
