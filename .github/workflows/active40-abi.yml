@@ -34,13 +34,14 @@ jobs:
           node-version: 22
       - name: Actual current40 original-key manifests with exact current SDK and zero skip
         run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/current-source/candidate/panel-integration-compose-signed-image"
-  original-fifty-and-rule-data:
+  memcached-retirement-handler-models-amd64:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version: 1.27.2
