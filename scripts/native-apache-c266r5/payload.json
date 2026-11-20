@@ -1,0 +1,30 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "distribution": "ubuntu",
+    "hostname": "c266-apache-ubuntu22-amd64",
+    "platform": "ubuntu-22.04",
+    "version_id": "22.04"
+  },
+  "architecture": "amd64",
+  "files": {
+    "acceptance_old.py": "df0a8d562919729e795839971492c32720322264eb327acf304622ba42bceb37",
+    "acceptance_target.py": "5d654f2cbc58502584624689c7b039c09eeb1e64ebb264bbb43cf164d269be12",
+    "archive_acceptance.py": "ea557b3dc2fd8e22b5579409c66374c7b769a5040dbfdaa44786b8f54428f94a",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "guest.py": "2e594f8babb695d2815ec0253ee271471d40e8cf9a6e5d487617409dd8e17507",
+    "panel-0.1.0-dev.proapps24apache271candidate265r5-linux-amd64.tar.gz": "8cdbfcc8fb310af115bc3d05f7b75d536aa145fa73d964676ccbd88cc4f7c478",
+    "panel-0.1.0-dev.proapps24apache271candidate265r5-linux-amd64.tar.gz.manifest": "61d64d7a91ed4ba1108a692b2f72c452c749ef61aa1c5f7818cd9271579d6e28",
+    "panel-0.1.0-dev.proapps24apache271candidate265r5-linux-amd64.tar.gz.sig": "eebe10ebc38972b827c2bf309dc6e996dddcb0a837d0d039b62201e8466f2020",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz": "9b17b7481cea5c393dde9600748a07b0dfee4bb3f0e2cc4e9fc1f6982c02b23c",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.manifest": "e6f32d3ca38feab097f994e7634917f3fb1aa6454fa34f954777f91f31e29c51",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.sig": "3a069463b69fef2f686fae1174d16f9e555f535769a8b83d177b85c6048fd473",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "previous_source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
+  "previous_version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
+  "served_head": "1ae613d9fc51c3b2c57da3f25ed7cd68d20ec923",
+  "source_inputs_sha256": "4f886487a6c607d3edfed0d5bfdbf230327c61e447ca284bc96bbde26f1652bd",
+  "version": "0.1.0-dev.proapps24apache271candidate265r5"
+}

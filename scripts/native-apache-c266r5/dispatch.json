@@ -1,0 +1,10 @@
+{
+  "Main_changed": false,
+  "all40_commercial": false,
+  "cases_sha256": "6912f56733e6c69c9c936ed35447fd531d233ff181f19fd45c3fec533c127cd3",
+  "kvm_sha256": "0cda66da26acf0f159de863032503fb122630f32871d629ed1db035c6b559f00",
+  "payload_sha256": "e3ea8933d00b8b05d62b485b79d052e041f4ac37536f58291cb8a46caadd0363",
+  "previous_tag": "qa-pm2archivecandidate232r2-20261120-qa1",
+  "source_inputs_sha256": "4f886487a6c607d3edfed0d5bfdbf230327c61e447ca284bc96bbde26f1652bd",
+  "tag": "qa-apache271candidate265r5-20261121-qa1"
+}
