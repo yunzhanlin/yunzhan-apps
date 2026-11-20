@@ -108,13 +108,14 @@ def note_daemons():
         time.sleep(2)
     raise RuntimeError('Native services not ready')
 
-def snapshot(entry,job,configured):
+def snapshot(entry,job,configured,expected_bans=0):
     note_daemons()
     data=api('/software/intrusion-prevention/workspace')
+    save(out/('snapshot-workspace-'+str(time.time_ns())+'.json'),data)
     current=data['current']
     assert data['state_known'] and data['pending'] is None and current['installed'] and current['version']==entry['version']
     assert current['settings']==settings and current['runtime_settings']==native_limits
-    assert current['ssh_ports_match'] and current['active_bans_known'] and current['active_bans']==0
+    assert current['ssh_ports_match'] and current['active_bans_known'] and current['active_bans']==expected_bans
     assert current['ssh_effective_ports']==current['ssh_listening_ports']
     committed={r['id'] for r in data['history'] if r['state']=='committed'}
     assert {job,configured}<=committed
@@ -168,7 +169,10 @@ def owned_ssh_journey():
     def banned_ip(ip):return ip in ff('get','sshd','banip').split()
     def ssh(key,user,address,success):
         args=['/usr/sbin/ip','netns','exec',ns,'/usr/bin/ssh','-F','/dev/null','-i',str(key),'-o','IdentitiesOnly=yes','-o','BatchMode=yes','-o','ConnectTimeout=2','-o','ConnectionAttempts=1','-o','StrictHostKeyChecking=yes','-o','UserKnownHostsFile='+str(known),'-o','GlobalKnownHostsFile=/dev/null','-o','HostKeyAlgorithms=ssh-ed25519','-o','PasswordAuthentication=no','-o','KbdInteractiveAuthentication=no','-l',user,address,'printf C261_OWNED_SSH_OK']
-        result=subprocess.run(args,stdin=subprocess.DEVNULL,capture_output=True,timeout=7)
+        try:result=subprocess.run(args,stdin=subprocess.DEVNULL,capture_output=True,timeout=7)
+        except subprocess.TimeoutExpired as error:
+            if success:raise
+            return {'exit':-9,'bounded_negative_timeout':True,'stderr_sha256':sha(error.stderr or b''),'stdout_sha256':sha(error.stdout or b'')}
         if success:assert result.returncode==0 and result.stdout==b'C261_OWNED_SSH_OK',(address,result.returncode,result.stderr[:200])
         else:assert result.returncode!=0
         return {'exit':result.returncode,'stderr_sha256':sha(result.stderr),'stdout_sha256':sha(result.stdout)}
@@ -211,6 +215,31 @@ def owned_ssh_journey():
             os.utime(authorized,ns=(st.st_atime_ns,st.st_mtime_ns),follow_symlinks=False);assert authorized.read_bytes()==original and authorized.stat().st_ino==st.st_ino
         assert secret.parent==Path('/var/lib')and secret.name.startswith('c261-owned-ssh-')and not secret.is_symlink();shutil.rmtree(secret)
     return True
+
+def observe_owned_bans_after_cold():
+    expected={'192.0.2.2','2001:db8:c261::2'}
+    previous=None;stable=0;deadline=time.monotonic()+30
+    while time.monotonic()<deadline:
+        ips=set(ff('get','sshd','banip').split());assert ips<=expected,'Unknown ban cannot be consumed by this owned QA test'
+        current=api('/software/intrusion-prevention/workspace')['current']
+        known=current['ssh_ports_match']and current['active_bans_known']and current['active_bans']==len(ips)and current.get('kernel_scope_verified')
+        if known and ips==previous and len(ips)in(0,2):stable+=1
+        else:stable=0
+        if stable>=2:break
+        previous=ips;time.sleep(1)
+    else:raise TimeoutError('Exact actual boot-era bans/kernel view did not stabilize')
+    # This is a strict observation of the original failed-authentication source IPs.
+    # The disposable veth/client namespace does not survive a real host boot.
+    # No automatic Root repair or permanent allowlist is introduced.
+    save(out/'cold-original-known-bans-before-explicit-unban.json',{'ok':True,'boot':boot,'current':current,'independent_fail2ban_addresses':sorted(ips),'old_real_test_sources':sorted(expected),'replayed_recent_authentication_record_bans':len(ips),'permanent_allowlist_claim':False})
+    return ips
+
+def explicitly_unban_owned_cold_sources(ips):
+    for ip in sorted(ips):
+        assert ip in{'192.0.2.2','2001:db8:c261::2'}
+        api('/security/fail2ban/unban',{'jail':'sshd','ip':ip})
+        assert ip not in ff('get','sshd','banip').split()
+    assert not ff('get','sshd','banip').split()
 
 try:
     if not recovering:
@@ -263,9 +292,13 @@ try:
         assert status['installed'] and status['installed_version']==entry['version'] and not status['update_available']
         baseline=json.loads((out/'before-reboot.json').read_bytes())
         assert baseline['boot']!=boot and baseline['package_sha256']==entry['sha256']
-        observed=snapshot(entry,baseline['install'],baseline['configured'])
+        old_bans=observe_owned_bans_after_cold()
+        observed=snapshot(entry,baseline['install'],baseline['configured'],expected_bans=len(old_bans))
         assert observed==baseline['snapshot']
+        explicitly_unban_owned_cold_sources(old_bans)
         assert owned_ssh_journey();proof['actual_dualstack_SSH_auto_ban_and_normal_API_unban']=True
+        proof['original_replayed_bans_known_and_explicitly_unbanned']=True
+        proof['actual_replayed_old_authentication_bans']=len(old_bans)
         assert snapshot(entry,baseline['install'],baseline['configured'])==baseline['snapshot']
         proof.update(ok=True,phase='after-reboot',prior_boot=baseline['boot'],signed_intrusion_version=entry['version'],
             version_sha256=entry['sha256'],actual_fail2ban_configure_and_unban=True,normal_store_install=True,
@@ -273,6 +306,9 @@ try:
             actual_nginx_config_and_programme_source_preserved=True)
 except BaseException:
     proof['failure']=traceback.format_exc()
+    with contextlib.suppress(Exception):save(out/'failure-original-workspace.json',api('/software/intrusion-prevention/workspace'))
+    for label,args in [('failure-fail2ban-banip',['/usr/bin/fail2ban-client','get','sshd','banip']),('failure-fail2ban-log',['/bin/cat','/var/log/fail2ban.log']),('failure-native-nft',['/usr/sbin/nft','-j','list','ruleset']),('failure-sshd-journal',['/usr/bin/journalctl','--no-pager','-b','-u','ssh.service','-n','500','-o','json'])]:
+        with contextlib.suppress(Exception):command(label,args,30)
 finally:
     if csrf:
         try:
