@@ -1,0 +1,71 @@
+name: PM2 signed programme and archive update native C233
+on:
+  push:
+    branches: [codex/pm2-config-archive-c233-native]
+    paths: [scripts/native-pm2-c230/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  pm2-npm:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify original signed programme and exact fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-pm2-c230/download.py "$RUNNER_TEMP/pm2-inputs" "$RUNNER_TEMP/pm2-private"
+      - name: Normal original signed native first installation
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/bootstrap-original-install.py "$RUNNER_TEMP/pm2-inputs" "$RUNNER_TEMP/pm2-private" > "$RUNNER_TEMP/pm2-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/pm2-private/bootstrap-step.stderr"
+      - name: Preserve and protect this disposable developer image share directory
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/prepare-pm2-host.py "$RUNNER_TEMP/pm2-private"
+      - name: Real old signed PM2 install and retained nonroot HTTP projects
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/archive-upgrade-business.py "$RUNNER_TEMP/pm2-private" phase1 > "$RUNNER_TEMP/pm2-private/archive-phase1-step.stdout" 2> "$RUNNER_TEMP/pm2-private/archive-phase1-step.stderr"
+      - name: Encrypt complete originals before any candidate channel promotion
+        if: always()
+        run: sudo python3 -I -B scripts/native-pm2-c230/finish.py "$RUNNER_TEMP/pm2-private" "$RUNNER_TEMP/pm2-ready-public" phase1
+      - name: Upload original old11 readiness
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c233-original-old11-ready-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pm2-ready-public/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Download and verify independently pinned signed upgrade programme
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 -I -B scripts/native-pm2-c230/download-upgrade.py "$RUNNER_TEMP/pm2-upgrade-inputs"
+      - name: Normal signed programme upgrade and actual app-store update archive operations
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/archive-upgrade-business.py "$RUNNER_TEMP/pm2-private" phase2 "$RUNNER_TEMP/pm2-upgrade-inputs" > "$RUNNER_TEMP/pm2-private/archive-phase2-step.stdout" 2> "$RUNNER_TEMP/pm2-private/archive-phase2-step.stderr"
+      - name: Retain read-only original PM2 installer diagnostics
+        if: always()
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/diagnostics.py "$RUNNER_TEMP/pm2-private"
+      - name: Encrypt complete original evidence including failures
+        if: always()
+        run: sudo python3 -I -B scripts/native-pm2-c230/finish.py "$RUNNER_TEMP/pm2-private" "$RUNNER_TEMP/pm2-public" phase2
+      - name: Upload encrypted originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c233-native-pm2-archive-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/pm2-public/
+          if-no-files-found: error
+          retention-days: 14
