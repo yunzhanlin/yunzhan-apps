@@ -381,7 +381,7 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 				return
 			}
 		}
-		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && payload.Version == PM2RootVendorAppVersion)) {
+		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && (payload.Version == PM2RootVendorAppVersion || payload.Version == PM2ConfigurationArchiveAppVersion))) {
 			dependencyCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 			err := waitAppDependencies(dependencyCtx, e, j.TargetID)
 			cancel()

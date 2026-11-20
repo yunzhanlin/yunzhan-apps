@@ -64,16 +64,18 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
 			return
 		}
 		defer guard.dir.Close()
-		records, err := s.pm2ConfigRecords()
+		journal, err := s.readPM2ConfigurationJournalLease()
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
 		}
-		page, err := publicPM2ConfigPage(records, in)
+		defer journal.Close()
+		observation, err := s.pm2ConfigurationReport(in)
 		if err != nil {
 			respond(w, 409, map[string]string{"error": err.Error()})
 			return
 		}
+		page := observation.(map[string]any)
 		originalPage, _ := json.Marshal(page)
 		leases := []*os.File{}
 		defer func() {
@@ -101,9 +103,12 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
 		}
 		// An operation might finish between the inventory and lease acquisition.
 		// Re-read under all selected terminal leases; no old file earns authority.
-		current, err := s.pm2ConfigRecords()
+		current, err := s.pm2ConfigurationReport(in)
 		if err == nil {
-			page, err = publicPM2ConfigPage(current, in)
+			page = current.(map[string]any)
+		}
+		if err == nil && !journal.current() {
+			err = errors.New("PM2 original journal lock changed during read")
 		}
 		if err == nil {
 			next, _ := json.Marshal(page)

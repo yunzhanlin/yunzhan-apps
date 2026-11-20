@@ -46,6 +46,7 @@ import IntegrityKernelWorkspace from './IntegrityKernelWorkspace.vue';
 import RemoteIndependentBackups from './RemoteIndependentBackups.vue';
 import UserAccessOverview from './UserAccessOverview.vue';
 import TaskHostInventory from './TaskHostInventory.vue';
+import PM2ConfigurationArchive from './PM2ConfigurationArchive.vue';
 type API = <T>(
   path: string,
   method?: string,
@@ -1364,7 +1365,8 @@ defineExpose({ show });
           <IntegrityKernelWorkspace :module-id="definition.id" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
-        <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+        <PM2ConfigurationArchive v-if="definition.id==='pm2-manager' && section.id==='configuration-archives'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='configuration-archives'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :installation-id="installedInstance" />
+        <RemoteIndependentBackups v-else-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
         <DailyReportArchive v-else-if="definition.id === 'daily-report' && section.id === 'archive'"
           :key="'daily-archive/'+geoActor" :api="api" :active="visible && activeTab==='archive'"
           :enabled="installed && !installedUnknown" />

@@ -85,7 +85,7 @@ func panelFeatureAvailable(feature string) bool {
 		feature == TaskInventoryFeature || feature == TaskSysVStartupFeature || feature == TaskOpenSSHInventoryFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
-	if feature == PM2RootVendorFeature {
+	if feature == PM2RootVendorFeature || feature == PM2ConfigurationArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == PM2EvidencePreservingStopFeature {
@@ -118,6 +118,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validatePM2ConfigurationArchiveRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateNFSSiteArchivePreflightRequirement(manifest, available); handled {
 		return err
 	}

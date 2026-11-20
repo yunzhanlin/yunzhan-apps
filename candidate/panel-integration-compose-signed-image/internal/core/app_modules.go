@@ -90,6 +90,7 @@ type AppModuleInput struct {
 	ClientDeny           []string                        `json:"client_deny"`
 	Enabled              bool                            `json:"enabled"`
 	ExpectedRevision     int64                           `json:"expected_revision,omitempty"`
+	PM2InstallationID    string                          `json:"pm2_installation_id,omitempty"`
 	PM2OperationID       string                          `json:"pm2_operation_id,omitempty"`
 	NetworkInterface     string                          `json:"network_interface,omitempty"`
 	HomeNetworks         []string                        `json:"home_networks,omitempty"`
@@ -190,7 +191,7 @@ func AppModules() []AppModuleDefinition {
 			definitions[i].Actions = append(definitions[i].Actions, "server-report", "server-start", "server-stop", "server-probe", "server-recover", "server-config", "export-save", "export-remove")
 			definitions[i].Fields = append(definitions[i].Fields, site, path, AppModuleField{"bind_address", "NFS 本机监听 IPv4/IPv6", "text"}, AppModuleField{"port", "NFSv4 监听端口", "number"}, AppModuleField{"client_allow", "允许客户端 IP/CIDR（JSON 数组，必须明确指定）", "json"}, AppModuleField{"expected_revision", "共享服务修订号（刷新自动填写）", "identity"}, AppModuleField{"confirm", "网络暴露 / 可写导出确认", "text"})
 		case "pm2-manager":
-			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request")
+			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request", "archive-configurations", "recover-configuration-archive", "restore-configuration-archive")
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"pm2_operation_id", "原配置事务标识（选择事务自动填写）", "identity"}, AppModuleField{"expected_sha", "原配置事务摘要（自动填写）", "identity"}, AppModuleField{"confirm", "恢复确认：RECOVER PM2 原事务标识", "text"}, AppModuleField{"limit", "事务每页条数（最多 128）", "number"}, AppModuleField{"offset", "事务分页起点", "number"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"instances", "PM2 进程数（1–8）", "number"}, AppModuleField{"memory_mb", "单进程内存重启阈值（MiB）", "number"}, AppModuleField{"expected_revision", "项目配置修订号（选择项目自动填写）", "identity"})
 			definitions[i].Fields = append(definitions[i].Fields, AppModuleField{"environment_patch", "环境变量增量（JSON，仅写入）", "secret-json"})
@@ -224,6 +225,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 	a.taskInventoryRoutes(m)
 	a.remoteIndependentDownloadRoutes(m)
 	a.integrityKernelRoutes(m)
+	a.pm2ConfigurationArchiveRoutes(m)
 	a.pm2ConfigurationRoutes(m)
 	a.pm2ProjectsRoutes(m)
 	a.loadBalanceReportExportRoutes(m)
@@ -300,6 +302,13 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 			fail(w, 400, "应用操作不被支持")
 			return
 		}
+		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
+			access, err := a.Store.UserAccess(u.ID)
+			if err != nil || !fullAdministrator(access) {
+				fail(w, 403, "完整配置归档仅完整管理员可操作")
+				return
+			}
+		}
 		if id == "files-sync" && RemoteIndependentBackupAction(action) {
 			access, err := a.Store.UserAccess(u.ID)
 			if err != nil || !fullAdministrator(access) {
@@ -333,6 +342,16 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 				fail(w, 400, inputErr.Error())
 				return
 			}
+		} else if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
+			if !decode(w, r, &historyRaw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = DecodePM2ConfigurationArchiveInput(action, historyRaw)
+			if inputErr != nil {
+				fail(w, 400, inputErr.Error())
+				return
+			}
 		} else if !decode(w, r, &in) {
 			return
 		}
@@ -345,6 +364,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 		}
 		if err = a.Executor.Call(ctx, "GET", "/v1/app-modules/"+id, nil, &module); err != nil || !knownInstalledAppModule(id, module.Status) {
 			fail(w, 409, "应用安装身份或状态待核对；请安装应用或核对原记录，未执行业务")
+			return
+		}
+		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) && (module.Status.Version != PM2ConfigurationArchiveAppVersion || !ValidID(module.Status.InstallationID) || module.Status.InstallationID != in.PM2InstallationID) {
+			fail(w, 409, "配置归档须先签名更新至固定 compat12；旧安装不借用新能力")
 			return
 		}
 		if id == "site-diagnosis" {
@@ -447,6 +470,13 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 				return
 			}
 		}
+		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
+			access, accessErr := a.Store.UserAccess(u.ID)
+			if accessErr != nil || !fullAdministrator(access) {
+				fail(w, 403, "授权已改变，请由完整管理员只读核对原归档结果")
+				return
+			}
+		}
 		_ = a.Store.Audit(u.Username, "app-module."+action, id, "succeeded")
 		if id == "load-balance" {
 			out = a.withLoadBalanceReportExport(u, action, out, time.Now())
@@ -495,7 +525,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "network-threat-detection":
 			version = appcatalog.NetworkIDSIndependentArchiveVersion
 		case "pm2-manager":
-			version = PM2RootVendorAppVersion
+			version = PM2ConfigurationArchiveAppVersion
 		case "website-statistics-v2":
 			version = "2.6.0"
 		case "apache-waf":

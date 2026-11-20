@@ -120,6 +120,15 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
 	if out.Version == "" {
 		out.Version = "1.0"
 	} // pre-versioned modules
+	if id == "pm2-manager" && out.Version == core.PM2ConfigurationArchiveAppVersion {
+		instance, ok := manifest["installation_id"].(string)
+		if !ok || !core.ValidID(instance) {
+			out.StateUnknown = true
+			out.Detail = "PM2 配置封存安装实例无法核对；未补写授权编号"
+			return out
+		}
+		out.InstallationID = instance
+	}
 	out.Settings, _ = manifest["settings"].(map[string]any)
 	out.Healthy = true
 	out.Detail = "模块已安装，可配置并执行"
@@ -423,6 +432,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 			}
 		}
 		if id == "pm2-manager" {
+			if err := s.pm2NoPendingConfigurationArchives(); err != nil {
+				return err
+			}
 			records, err := s.pm2ConfigRecords()
 			if err != nil {
 				return err
@@ -506,6 +518,9 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 	}
 	add("固定功能处理器与依赖检查通过")
 	installedRecord := map[string]any{"id": id, "version": selectedVersion, "settings": settings, "installed_at": core.Now()}
+	if id == "pm2-manager" && selectedVersion == core.PM2ConfigurationArchiveAppVersion {
+		installedRecord["installation_id"] = core.ID()
+	}
 	if id == "platform-ops" && core.PlatformMaintenanceVersionSupported(selectedVersion) {
 		installedRecord["installation_id"] = core.ID()
 	}
@@ -606,7 +621,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 		defer reader.Close()
 	}
 	status := s.softwareStatus(ctx, id)
-	if id == "pm2-manager" && version == core.PM2RootVendorAppVersion {
+	if id == "pm2-manager" && (version == core.PM2RootVendorAppVersion || version == core.PM2ConfigurationArchiveAppVersion) {
 		if err := s.preparePM2RootVendorUpdate(ctx, status, add); err != nil {
 			return err
 		}
@@ -704,6 +719,13 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 			return err
 		}
 		manifest["version"], manifest["updated_at"] = version, core.Now()
+		if id == "pm2-manager" && version == core.PM2ConfigurationArchiveAppVersion {
+			if status.Version != version {
+				manifest["installation_id"] = core.ID()
+			} else if instance, ok := manifest["installation_id"].(string); !ok || !core.ValidID(instance) {
+				return errors.New("原 PM2 封存实例无法核对；未补写或恢复授权")
+			}
+		}
 		if id == "disk-analysis" && diskjob.HostAppVersionSupported(version) {
 			if status.Version != version {
 				manifest["installation_id"] = core.ID()
@@ -744,6 +766,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 	s.ftpTransferHistoryRoutes(m)
 	s.taskInventoryRoutes(m)
 	s.remoteIndependentDownloadRoutes(m)
+	s.pm2ConfigurationArchiveReadRoutes(m)
 	s.pm2ConfigurationReadRoutes(m)
 	s.pm2ProjectsReadRoutes(m)
 	s.diskHostObservationRoutes(m)
@@ -835,6 +858,17 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 				respond(w, 400, map[string]string{"error": inputErr.Error()})
 				return
 			}
+		} else if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
+			var raw json.RawMessage
+			if !readJSON(w, r, &raw) {
+				return
+			}
+			var inputErr error
+			in, inputErr = core.DecodePM2ConfigurationArchiveInput(action, raw)
+			if inputErr != nil {
+				respond(w, 400, map[string]string{"error": inputErr.Error()})
+				return
+			}
 		} else if !readJSON(w, r, &in) {
 			return
 		}
@@ -847,7 +881,13 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 			respond(w, 409, map[string]string{"error": "应用安装状态无法核对，未执行排队操作"})
 			return
 		}
-		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request")) {
+		if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
+			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
+				respond(w, 409, map[string]string{"error": err.Error()})
+				return
+			}
+		}
+		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request" || action == "recover-configuration-archive" || action == "restore-configuration-archive")) {
 			if err := s.moduleRetrospectivePreflight(id); err != nil {
 				respond(w, 409, map[string]any{"error": err.Error(), "report_state_unknown": true})
 				return
@@ -951,6 +991,11 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 	case "pure-ftpd":
 		return s.moduleFTP(ctx, action, in)
 	case "pm2-manager":
+		if core.PM2ConfigurationArchiveAction(action) {
+			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
+				return nil, err
+			}
+		}
 		return s.modulePM2(ctx, action, in)
 	case "apache-waf":
 		return s.apacheWAFReport(ctx)

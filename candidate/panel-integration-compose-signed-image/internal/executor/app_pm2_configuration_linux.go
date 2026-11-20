@@ -86,6 +86,9 @@ func pm2ConfigChild(d *modulePrivateDirectory, name string, create bool) error {
 		info, err = d.Lstat(name)
 	}
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) && !d.current() {
+			return errors.New("PM2 原配置事务目录在缺失核对期间已变化，未当作空清单")
+		}
 		return err
 	}
 	if !moduleRecordInfo(info, true, false) {
@@ -344,11 +347,28 @@ func publicPM2Config(record pm2ConfigRecord) map[string]any {
 }
 func (s *Service) pm2ConfigurationReport(in core.AppModuleInput) (any, error) {
 	records, err := s.pm2ConfigRecords()
+	if in.PM2OperationID != "" {
+		if _, found := records[in.PM2OperationID]; !found {
+			archived, found, archiveErr := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
+			if archiveErr != nil {
+				return nil, archiveErr
+			}
+			if found {
+				page, pageErr := publicPM2ConfigPage(map[string]pm2ConfigRecord{in.PM2OperationID: archived}, in)
+				if pageErr != nil {
+					return nil, pageErr
+				}
+				page["archived_original"] = true
+				return page, nil
+			}
+		}
+	}
 	if err != nil {
 		return nil, err
 	}
 	return publicPM2ConfigPage(records, in)
 }
+
 func publicPM2ConfigPage(records map[string]pm2ConfigRecord, in core.AppModuleInput) (map[string]any, error) {
 	if in.Limit < 0 || in.Limit > 128 || in.Offset < 0 || in.Offset > pm2ConfigIntentLimit {
 		return nil, errors.New("PM2 配置事务分页超出范围")
@@ -527,6 +547,15 @@ func CheckPM2ConfigurationStart(id string) error {
 }
 func (s *Service) recoverPM2Configuration(ctx context.Context, in core.AppModuleInput, records map[string]pm2ConfigRecord) (any, error) {
 	record, ok := records[in.PM2OperationID]
+	if !ok && core.ValidID(in.PM2OperationID) {
+		archived, found, err := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			record, ok = archived, true
+		}
+	}
 	if !ok || record.Intent.AppID != in.ResourceID || record.SHA != in.ExpectedSHA || in.Confirm != "RECOVER PM2 "+record.Intent.ID {
 		return nil, errors.New("请选择原配置事务并填写精确恢复确认")
 	}
@@ -620,6 +649,15 @@ func (s *Service) cancelPM2ConfigurationRequest(ctx context.Context, in core.App
 	records, err := d.records()
 	if err != nil {
 		return nil, err
+	}
+	if _, exists := records[in.PM2OperationID]; !exists {
+		archived, found, archiveErr := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
+		if archiveErr != nil {
+			return nil, archiveErr
+		}
+		if found {
+			records[in.PM2OperationID] = archived
+		}
 	}
 	if record, exists := records[in.PM2OperationID]; exists {
 		row := publicPM2Config(record)
