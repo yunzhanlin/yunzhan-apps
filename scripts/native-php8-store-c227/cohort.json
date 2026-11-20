@@ -1,0 +1,43 @@
+{
+  "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
+  "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
+  "version": "0.1.0-dev.proapps24php8storecandidate226",
+  "native_fixture_parent": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
+  "served_head": "0d45041738536e4a690f1fe8a312b9d7f973b1b2",
+  "retired_templates": {
+    "php-52": "php-legacy-52-bookworm",
+    "php-53": "php-legacy-53-bookworm",
+    "php-54": "php-legacy-54-bookworm-compat3",
+    "php-55": "php-legacy-55-bookworm-compat3",
+    "php-56": "php-legacy-56-stretch-compat3",
+    "php-70": "php-legacy-70-stretch-compat3",
+    "php-71": "php-legacy-71-stretch-compat3",
+    "php-72": "php-legacy-72-buster-compat3",
+    "php-73": "php-legacy-73-buster-compat3",
+    "php-74": "php-legacy-74-bullseye-compat3"
+  },
+  "payload_files": {
+    "scripts/native-php8-store-c227/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
+    "scripts/native-php8-store-c227/dispatch.json": "8fb7273c9e321a85c82cb33194d1c4a8951eaf30ec36d85bc580ea80a1001d86",
+    "scripts/native-php8-store-c227/download.py": "d0a940654520e2392c521b2d97095a1be70e9e483ac9f4f15154d4dc8351a1a0",
+    "scripts/native-php8-store-c227/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    "scripts/native-php8-store-c227/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-php8-store-c227/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-php8-store-c227/php8-store.py": "9cb3c6e893ebcce211e182279a9c052c2067ebb202cfe52c6f2f1e168169f48a",
+    "scripts/native-php8-store-c227/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    ".github/workflows/php8-store-c227-native.yml": "d9b2a39e5aa93e2ba43919ddadfd3e7dd0e1e81efb256c758e2cb032616be2d4"
+  },
+  "changed_payload_files": [
+    "scripts/native-php8-store-c227/bootstrap-original-install.py",
+    "scripts/native-php8-store-c227/dispatch.json",
+    "scripts/native-php8-store-c227/download.py",
+    "scripts/native-php8-store-c227/finish.py",
+    "scripts/native-php8-store-c227/isolated_ubuntu_apt.py",
+    "scripts/native-php8-store-c227/original-signed-release.py",
+    "scripts/native-php8-store-c227/php8-store.py",
+    "scripts/native-php8-store-c227/recipient.pem",
+    ".github/workflows/php8-store-c227-native.yml"
+  ],
+  "retired_PHP_installations": 0,
+  "Main_changed": false
+}

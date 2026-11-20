@@ -1,0 +1,47 @@
+name: PHP8 only store actual signed Core and Root admission
+on:
+  push:
+    branches: [codex/php8-store-c227-native]
+    paths: [scripts/native-php8-store-c227/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  php8-store:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify original signed programme and exact fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-php8-store-c227/download.py "$RUNNER_TEMP/php8-inputs" "$RUNNER_TEMP/php8-private"
+      - name: Normal original signed native first installation
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-php8-store-c227/bootstrap-original-install.py "$RUNNER_TEMP/php8-inputs" "$RUNNER_TEMP/php8-private" > "$RUNNER_TEMP/php8-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/php8-private/bootstrap-step.stderr"
+      - name: Actual installed Core and private Root admission without old PHP installation
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-php8-store-c227/php8-store.py "$RUNNER_TEMP/php8-private" > "$RUNNER_TEMP/php8-private/php8-step.stdout" 2> "$RUNNER_TEMP/php8-private/php8-step.stderr"
+      - name: Encrypt complete original evidence including failures
+        if: always()
+        run: sudo python3 -I -B scripts/native-php8-store-c227/finish.py "$RUNNER_TEMP/php8-private" "$RUNNER_TEMP/php8-public" phase1
+      - name: Upload encrypted originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c227-native-php8-store-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/php8-public/
+          if-no-files-found: error
+          retention-days: 14
