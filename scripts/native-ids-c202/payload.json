@@ -1,0 +1,42 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "9538bf435128a0797f991bf93ae5d482b9bd016a0d8bcb2674a7bd5c9fb7bbca",
+    "panel-0.1.0-dev.proapps24idsdurablestopcandidate201-linux-amd64.tar.gz": "2c4fc5ed2096f5d805ab00a1209dcfd0544eac3b58b114570a968b5e1b119899",
+    "panel-0.1.0-dev.proapps24idsdurablestopcandidate201-linux-amd64.tar.gz.manifest": "c2421b21b7994fbe8991fc5597f0a6058ec28faadd20ef3cbefe2196f9897b87",
+    "panel-0.1.0-dev.proapps24idsdurablestopcandidate201-linux-amd64.tar.gz.sig": "d0abfaf6677b9106feed63f273f350715330d6a02921bdc5f46a0c0aab6f1aa8",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "ids": {
+    "capabilities": [
+      "\u7aef\u53e3\u57fa\u7ebf\u4e0e\u65b0\u589e\u76d1\u542c\u544a\u8b66",
+      "\u516c\u7f51\u66b4\u9732\u5206\u7c7b",
+      "\u72ec\u7acb\u975e root \u88ab\u52a8 IDS",
+      "\u53cc\u7b7e\u540d\u5f00\u6e90\u89c4\u5219\u6570\u636e",
+      "\u663e\u5f0f\u89c4\u5219\u9009\u62e9\u4e0e\u539f\u521b\u56de\u9000",
+      "\u65b0\u9c9c\u91c7\u96c6\u8ba1\u6570\u6838\u5bf9",
+      "\u6709\u754c\u79c1\u6709\u544a\u8b66\u5386\u53f2",
+      "\u635f\u574f\u914d\u7f6e\u53ef\u4fe1\u505c\u6b62",
+      "\u4fee\u8ba2\u5e42\u7b49\u4e0e\u4e2d\u65ad\u4e0d\u91cd\u653e",
+      "\u505c\u6b62\u9009\u62e9\u4f18\u5148\u4e8e\u6062\u590d",
+      "\u663e\u5f0f\u591a\u5757\u7f13\u51b2\u4e0e\u539f\u751f MTU \u6838\u5bf9",
+      "Suricata 8.0.8 \u7248\u672c\u4e0e\u7ef4\u62a4\u5ba1\u6838"
+    ],
+    "category": "professional",
+    "id": "network-threat-detection",
+    "manage_route": "app-modules",
+    "name": "Network Threat Detection",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/network-threat-detection/1.3.2/manifest.json",
+    "provider": "panel-module",
+    "risk": "privileged",
+    "sha256": "e6df8262945a11bbeb1b8982be3eafeb6bedc15fd42748728afbac497e2d4238",
+    "stage": "ready",
+    "summary": "\u771f\u5b9e\u76d1\u542c\u57fa\u7ebf\u4e0e\u72ec\u7acb\u975e root \u88ab\u52a8 IDS\uff0c\u652f\u6301\u7b7e\u540d ET Open \u89c4\u5219\u3001\u539f\u751f\u6355\u83b7\u4e0e\u6709\u754c\u79c1\u6709\u544a\u8b66\u3002\u91c7\u96c6\u9700\u4f7f\u7528 Suricata 8.0.8 \u6216\u540c\u5206\u652f\u66f4\u65b0\u7248\u3002",
+    "target": "network-threat-detection",
+    "version": "1.3.2"
+  },
+  "served_head": "1f63bada1a77965e7281e7a33cdd30ae587ca469",
+  "source_inputs_sha256": "23bdcd18637e185f4e790af3ac299cfb92844369f3f1a556eccbc369b8c80b28",
+  "version": "0.1.0-dev.proapps24idsdurablestopcandidate201"
+}

@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "8ca8c44deeedb4ade6e3509aae829f5c99a23bea8acf4de721cd83aea73269e3",
+  "kvm_sha256": "96c84736861fb257106bb5eb785f73c73154b65257b9d1f33c7bb87b079167bd",
+  "payload_sha256": "67766ea763e03111a4341929d4a2072f1a934da8e6c5373b3202c3abdafa5d5b",
+  "published_head": "2738e92bf26f1989320415c2b862aff52b2751cd",
+  "release_id": 452224580,
+  "tag": "qa-idsdurablestopcandidate201-20261120-qa1"
+}
