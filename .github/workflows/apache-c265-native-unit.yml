@@ -40,7 +40,7 @@ jobs:
           go test ./internal/runtimecatalog ./internal/core ./cmd/executor -run 'TestApache(Runtime|Committed|BodyLoader|Security)|TestExecutorCLI' -count=1 -v > "$RUNNER_TEMP/c265-original/core-and-catalogue.stdout" 2>&1
           go test -c ./internal/executor -o "$RUNNER_TEMP/c265-original/executor.test"
           sha256sum "$RUNNER_TEMP/c265-original/executor.test" > "$RUNNER_TEMP/c265-original/executor-test.sha256"
-          sudo "$RUNNER_TEMP/c265-original/executor.test" -test.run '^(TestApacheRuntime|TestApacheCommitted|TestApacheBodyLoader)' -test.v -test.timeout 180s > "$RUNNER_TEMP/c265-original/root-native-filesystem.stdout" 2>&1
+          sudo "$RUNNER_TEMP/c265-original/executor.test" -test.run '^(TestApacheRuntime|TestApacheCommitted|TestApacheBodyLoader|TestApacheWAFHistory)' -test.v -test.timeout 180s > "$RUNNER_TEMP/c265-original/root-native-filesystem.stdout" 2>&1
           rm "$RUNNER_TEMP/c265-original/executor.test"
       - name: Preserve original native unit receipts including failures
         if: always()
