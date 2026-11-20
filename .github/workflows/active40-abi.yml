@@ -1,0 +1,62 @@
+name: Active40 and preserved historical publication contracts
+on:
+  push:
+    branches: [main, codex/app-candidate, codex/retire-php-ci-c229]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  actual-current40-abi:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: yunzhanlin/yunzhan-apps
+          ref: d1266b12fbd2941f908ffcdc4bea1383da3e2254
+          path: .ci/current-source
+          sparse-checkout: candidate/panel-integration-compose-signed-image
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.2
+          cache-dependency-path: .ci/current-source/candidate/panel-integration-compose-signed-image/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Actual current40 original-key manifests with exact current SDK and zero skip
+        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/current-source/candidate/panel-integration-compose-signed-image"
+  original-fifty-and-rule-data:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.2
+          cache-dependency-path: panel-integration-memcached-retirement-handler/go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Actual current signed catalogue and every publisher test
+        run: npm test
+      - name: Original129 closed models and855 subcases without production overrides
+        run: timeout 900s sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_JOB "$(command -v node)" tools/run-memcached-retirement-handler-models-ci.mjs "$(command -v go)"
+      - name: Historical fifty original-key accepted ABI and exact older Memcached refusal
+        working-directory: panel-integration-memcached-retirement-handler
+        run: |
+          sudo "$(command -v go)" test -json ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-load-balance-stream-20261027"
+          sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/verify-memcached-retirement-handler-boundary.mjs" "$(command -v go)"
+      - name: All original1510 IDS rule, dual signature, tamper and expiry assertions
+        working-directory: tests/ids-data-verifier
+        run: go test -race ./... -count=1

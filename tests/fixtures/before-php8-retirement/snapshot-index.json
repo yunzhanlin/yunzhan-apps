@@ -202,6 +202,13 @@
     "tests/versioning.test.mjs": "1412429bc5ef5d4c272ed7b9cb96ef337a264475952c65654ed1a9575465fc0c",
     "tests/catalog.test.mjs": "5edbaeb3412205c12a7a34f91221d51c7806f5b546abfe7b91c61a2fe9c6bd15",
     "tests/functional-contracts.test.mjs": "094f676ef8ae5afc8fe95a1d9ead3eef1ee997ee2ae1c1b19438eb864ec421e8",
-    "tests/official-channel.test.mjs": "5f0d517e56fe3ccb521733eaeea04b4e03899d86d6ded3e695b80c5e19f036ba"
+    "tests/official-channel.test.mjs": "5f0d517e56fe3ccb521733eaeea04b4e03899d86d6ded3e695b80c5e19f036ba",
+    ".github/workflows/verify.yml": "3682cf6cbb573d1ca20d2373265fc2b12b6982af9449aac828827c354b7e09a3",
+    "tools/verify-memcached-retirement-handler-boundary.mjs": "ff67cd47f94533326bb253bab6c1d38be72fe947996e043d592311bfec6cebde",
+    "tests/ids-data-verifier/ruledata_test.go": "0634911de40b3766a3884a967a7f5a0e65dcd9203cb03d84c7594b16667d01f8",
+    "tests/analytics-report-fixture-ci.test.mjs": "c94979d0584bb82aff0bdfaf16e43855c5599114482a27632e6d4eb88a15e0da",
+    "tests/reviewed-five-app-workflow.mjs": "49d58bd383d065f7f9f723c2e419ca9afc86ace578742c42948471d30878b277",
+    "tests/mobile-delivery-links-source.test.mjs": "9be523e0741843860b9e221e59f2527794632872ce9935d743b7fa039fd4cec5",
+    "tests/site-tls-fixture-ci.test.mjs": "37371cf0962694128c640aeaac09f94f3981f8738741843ff5bc6f55f016d857"
   }
 }

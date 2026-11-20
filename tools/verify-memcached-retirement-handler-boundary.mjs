@@ -15,7 +15,7 @@ export function verifyOldMemcachedRefusal(result,ids){
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
  assert.equal(process.platform,'linux');assert.equal(process.getuid(),0);
  assert(process.argv.length===3&&path.isAbsolute(process.argv[2]),'Only an explicit Go executable; no source/repository/trust override');
- const root=fileURLToPath(new URL('../',import.meta.url)),source=root+'panel-integration-memcached-retirement/',sha=b=>createHash('sha256').update(b).digest('hex'),read=n=>fs.readFileSync(root+n);
+ const root=fileURLToPath(new URL('../',import.meta.url)),source=root+'panel-integration-memcached-retirement/',sha=b=>createHash('sha256').update(b).digest('hex'),publication=root+'registry/reviewed-catalogs/before-load-balance-stream-20261027/',read=n=>fs.readFileSync(publication+n);
  const indexRaw=fs.readFileSync(source+'source-sha256.json'),index=JSON.parse(indexRaw);
  assert.equal(sha(indexRaw),'1c0ff2ce9e52521e0ea559c0556c4b7ecf1996bce9b2e278ec5dfd0bd054b282');assert.equal(sha(fs.readFileSync(source+'release-source-inputs.json')),'cd0b08f7a6d72a3c3cab051cfa701e0f7d1bcb9866a8e9af925ffd2c261970b5');
  assert.equal(index.release.frozen_inputs_sha256,'324e66f7d7f4a9686bfb32ab2ff966538ae26955dc1a567bc6ee746679702495');
@@ -24,13 +24,13 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
   assert(path.posix.normalize(n)===n&&!path.isAbsolute(n)&&!n.split('/').includes('..'));
   const file=source+n,s=fs.lstatSync(file);assert(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&fs.realpathSync(file)===file);assert.equal(sha(fs.readFileSync(file)),digest,n);
  }}
- sources();const raw=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem'),signature=read('signatures/catalog-v1.sig').toString().trim(),bundle=JSON.parse(read('signatures/catalog-v1.bundle.json'));
+ sources();assert.equal(sha(read('dist/catalog-v1.json')),'247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813');const raw=read('dist/catalog-v1.json'),pub=read('signatures/catalog-v1.pub.pem'),signature=read('signatures/catalog-v1.sig').toString().trim(),bundle=JSON.parse(read('signatures/catalog-v1.bundle.json'));
  assert.equal(sha(pub),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');assert.equal(bundle.catalog,raw.toString());assert.equal(bundle.signature,signature);assert(verify(null,raw,createPublicKey(pub),Buffer.from(signature,'base64')));
  const catalog=JSON.parse(raw),item=catalog.apps.find(a=>a.id==='memcached');assert.equal(catalog.apps.length,50);assert.equal(new Set(catalog.apps.map(a=>a.id)).size,50);assert.equal(item?.version,'1.6.45-compat4');
  const bytes=read('dist/apps/memcached/1.6.45-compat4/manifest.json'),manifest=JSON.parse(bytes);assert.equal(sha(bytes),item.sha256);
  assert.deepEqual([...manifest.required_panel_features].sort(),['compose-memcached-digest-v1','compose-memcached-retirement-v1','compose-memcached-unix-v1']);
  assert.equal(manifest.delivery.provider,'compose');assert.equal(manifest.delivery.target,'memcached-cache');assert.equal(manifest.delivery.manage_route,'docker');
  const go=fs.realpathSync(process.argv[2]),st=fs.lstatSync(go);assert(st.isFile()&&!st.isSymbolicLink()&&(st.mode&0o111));
- const result=spawnSync(go,['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',root],{cwd:source,encoding:'utf8',timeout:180000,maxBuffer:4<<20});
+ const result=spawnSync(go,['test','-json','./internal/appcatalog','-run','^TestPublishedRepositoryCurrentSignedManifestABI$','-count=1','-args','-published-app-registry-root',publication],{cwd:source,encoding:'utf8',timeout:180000,maxBuffer:4<<20});
  process.stdout.write(result.stdout??'');process.stderr.write(result.stderr??'');sources();console.log(JSON.stringify(verifyOldMemcachedRefusal(result,catalog.apps.map(a=>a.id))));
 }
