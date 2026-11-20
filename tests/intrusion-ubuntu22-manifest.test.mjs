@@ -1,5 +1,6 @@
 // Historical source/ABI assertions below retain the signed C208 catalogue input.
 import test from 'node:test';import assert from 'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import {validateManifest} from '../tools/lib.mjs';
+import {schemaBeforePM2ConfigurationArchive} from './helpers/pm2-configuration-archive-schema.mjs';
 import {schemaBeforeIntrusionDebian12} from './helpers/intrusion-debian12-schema.mjs';
 import{schemaBeforeIntrusionUbuntu22}from'./helpers/intrusion-ubuntu22-schema.mjs';
 import{intrusionUbuntu22Cases}from'../tools/intrusion-ubuntu22-fixtures.mjs';import{fileURLToPath}from'node:url';
@@ -37,7 +38,7 @@ test('historical projection rejects a weakened111 extension and any unrelated sc
 });
 
 test('Debian 12 extension removes only the exact new schema, preserving its predecessor', () => {
- const raw = JSON.parse(fs.readFileSync(new URL('../schema/app.schema.json', import.meta.url)));
+ const raw = schemaBeforePM2ConfigurationArchive(JSON.parse(fs.readFileSync(new URL('../schema/app.schema.json', import.meta.url))));
  const original = structuredClone(raw);
  const projected = schemaBeforeIntrusionDebian12(raw);
  assert.deepEqual(raw, original);

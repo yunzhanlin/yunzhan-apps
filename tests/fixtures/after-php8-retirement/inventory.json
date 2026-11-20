@@ -1,0 +1,24 @@
+{
+  "commit": "e50bbac40c8af919df7c0a0af19a826c0c3d8f49",
+  "publications": {
+    "dist/catalog-v1.json": "cf06e68e121df04d26aa449924c6c470c1099adbdaada18c4da6f20e9ca376ab",
+    "signatures/catalog-v1.sig": "7d2b41768e40f04b22078b241885dcd0eb0b6520ad97eac8a19689e380b6cb97",
+    "signatures/catalog-v1.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75",
+    "candidate/dist/catalog-v1.json": "ed558d8e37f89d8251e8eee5215531db4a6298437ec20ffe46f7c22ffb9a6881",
+    "candidate/signatures/catalog-v1.sig": "73d201ad1363b8c362073ada828cc9dc64155191211ef6fe383da8012f6bf5df",
+    "candidate/signatures/catalog-v1.pub.pem": "659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75"
+  },
+  "original_pm2_before_compat10": {
+    "6": "b7310143814388306608f61e7c502c871bd95d956495388506dc1d2c3bb36cbf",
+    "7.0.4-compat1": "7ef4190c8775154fe6feb1932f2b5a3e0751fb39873fe809887471dced013032",
+    "7.0.4-compat2": "090b230499d101c47e972222dac026b587bd68dbb33022fdc4de130fdc444916",
+    "7.0.4-compat3": "d7ad7c48c75df44a671598d3133a7c7d360f753136e0631bdb1395bda8e614b9",
+    "7.0.4-compat4": "42dda8d193e77376e18a5656823e6a8c08e1a5c0efea0abe0cf039768c99d1a7",
+    "7.0.4-compat5": "246ea50006668bcba010e258df8026be06d8e22a4a4bc5b091522bbab0fc11df",
+    "7.0.4-compat6": "c50e001bb183eb9ead1c556e74c12be19cb1b754cc1f8a6ade44e92085b8e33e",
+    "7.0.4-compat7": "ba5a893e0fba47e8402933b526d3411f6b0d1e8df0f60f52ad992374f6fba49f",
+    "7.0.4-compat8": "b8279030a67c261ae559d17108cbd1d73f82bb3dd8e3f03f0c094581df21f9c3",
+    "7.0.4-compat9": "f53bd60c94d4ef5b20af0ed2a44fc1393c7e61811779944855b726872804ba71",
+    "7.0.4": "b129d5ca440dd6fad478dd653b9f904bba68832ebfeb3a18f73a1f4b28ad102e"
+  }
+}

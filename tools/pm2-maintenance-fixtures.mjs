@@ -1,12 +1,18 @@
 import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import path from 'node:path';
 import {candidateSource} from './candidate-source.mjs';
 export function pm2MaintenanceCases(root){
  const stable=JSON.parse(fs.readFileSync(path.join(root,'registry/apps.json'))),overrides=JSON.parse(fs.readFileSync(path.join(root,'registry/candidate-apps.json')));
  const current=JSON.parse(fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager/7.0.4-compat10/manifest.json'))),cases=[{name:'exact10',manifest:structuredClone(current),valid:true}];
- for(const name of fs.readdirSync(path.join(root,'candidate/dist/apps/pm2-manager')).sort()){
-  if(name==='7.0.4-compat10'||name==='7.0.4-compat11')continue;
-  const manifest=JSON.parse(fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager',name,'manifest.json')));
+ const inventoryRaw=fs.readFileSync(path.join(root,'tests/fixtures/after-php8-retirement/inventory.json'));
+ assert.equal(createHash('sha256').update(inventoryRaw).digest('hex'),'79b4673b9dd6be176fa9893131ee9ff40b97880454243c95799d1548a945d7ac');
+ const originals=JSON.parse(inventoryRaw).original_pm2_before_compat10;assert.equal(Object.keys(originals).length,11);
+ for(const name of Object.keys(originals).sort()){
+  const raw=fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager',name,'manifest.json'));
+  assert.equal(createHash('sha256').update(raw).digest('hex'),originals[name]);
+  const manifest=JSON.parse(raw);
   cases.push({name:'actual-original-PM2:'+name,manifest,valid:true});
  }
  const mutations=[

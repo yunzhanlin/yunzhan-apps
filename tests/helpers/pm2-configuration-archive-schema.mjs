@@ -7,5 +7,5 @@ export function schemaBeforePM2ConfigurationArchive(value){
  if(!flags.includes(feature)){assert(!s.allOf.some(v=>v?.then?.properties?.required_panel_features?.items?.const===feature));return s;}
  assert.equal(flags.filter(v=>v===feature).length,1);assert.equal(flags.pop(),feature);assert.deepEqual(branches.pop(),scope);assert.deepEqual(s.allOf.pop(),guard);
  const expanded=structuredClone(original);expanded.if.allOf[1]={not:{anyOf:[structuredClone(original.if.allOf[1].not),{required:['required_panel_features'],...structuredClone(scope)}]}};
- assert.deepEqual(s.allOf[36],expanded);s.allOf[36]=structuredClone(original);assert.equal(sha256(canonical(s)),"d84732a1b661b1e378b7eef009d126ed9ab70b11561692ccfb64cd7ddb1030d4",'Every prearchive publisher schema predicate remains exact');return s;
+ assert.deepEqual(s.allOf[36],expanded);s.allOf[36]=structuredClone(original);assert.equal(sha256(canonical(s)),"d84732a1b661b1e378b7eef009d126ed9ab70b11561692ccfb64cd7ddb1030d4",'Every prePM2Archive publisher schema predicate remains exact');return s;
 }
