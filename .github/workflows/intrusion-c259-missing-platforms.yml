@@ -1,0 +1,61 @@
+name: Signed Ubuntu22 and Debian13 SSH intrusion configuration and cold recovery
+on:
+  push:
+    branches: [codex/intrusion-c259-missing-platforms]
+    paths: [scripts/native-intrusion-c259/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: c259-intrusion-matrix-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/intrusion-c259-missing-platforms'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        system: [ubuntu22, debian13]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: scripts/native-intrusion-c259
+      - name: Download the exact signed panel
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          fixture=scripts/native-intrusion-c259
+          root="$RUNNER_TEMP/intrusion-c259-signed"
+          mkdir -m 700 "$root"
+          tag=$(jq -r '.tag' "$fixture/dispatch.json")
+          test "$tag" = qa-pm2archivecandidate232r2-20261120-qa1
+          published=$(jq -r .published_head "$fixture/dispatch.json")
+          test "$(git rev-parse HEAD:candidate/panel-integration-compose-signed-image)" = b54c207b55d5dc77de59d34578ba980bdc4373d5
+          gh release download "$tag" --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --dir "$root"
+          cp "$fixture/signed-release.py" "$root/signed-release.py"
+          cp "$fixture/guest.py" "$root/guest.py"
+          cp "$fixture/payload.json" "$root/assets.json"
+      - name: Prepare isolated hardware virtualization
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Verify current signed Fail2ban configuration, unban and hard power recovery
+        run: |
+          set -eu
+          mkdir -m 700 "$RUNNER_TEMP/intrusion-c259-public"
+          sudo -n python3 -I -B scripts/native-intrusion-c259/kvm.py "$RUNNER_TEMP/intrusion-c259-signed" scripts/native-intrusion-c259 "$RUNNER_TEMP/intrusion-c259-public" "${{ matrix.system }}"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c259-intrusion-native-${{ matrix.system }}-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/intrusion-c259-public/
+          retention-days: 14
+          if-no-files-found: warn
