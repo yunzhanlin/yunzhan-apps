@@ -1,0 +1,76 @@
+name: Native shared queued-operation regression C207
+on:
+  push:
+    branches: [codex/nfs-c207-shared-queue-native]
+    paths: [scripts/native-nfs-c207-queue/dispatch.json]
+permissions:
+  contents: read
+concurrency:
+  group: c207-queue-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/nfs-c207-shared-queue-native'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          sparse-checkout: |
+            candidate/panel-integration-compose-signed-image
+            scripts/native-nfs-c207-queue
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: '1.27.2'
+          cache: false
+      - name: Verify exact original source and reproduce original assertion failure
+        env:
+          GOTOOLCHAIN: local
+          GOWORK: 'off'
+          CGO_ENABLED: '0'
+          GOMAXPROCS: '2'
+          GOFLAGS: '-p=2 -buildvcs=false'
+        run: |
+          set -euo pipefail
+          umask 077
+          fixture="$GITHUB_WORKSPACE/scripts/native-nfs-c207-queue"
+          sdk="$GITHUB_WORKSPACE/candidate/panel-integration-compose-signed-image"
+          evidence="$RUNNER_TEMP/c207-queue-evidence"
+          mkdir -m700 "$evidence"
+          test "$(uname -m)" = x86_64
+          go version | tee "$evidence/compiler.txt"
+          python3 -I -B "$fixture/verify_inputs.py" "$sdk" "$fixture" original | tee "$evidence/original-inputs.json"
+          (cd "$sdk"; go test -c -trimpath -o "$RUNNER_TEMP/original-queue.tests" ./internal/executor)
+          set +e
+          sudo -n "$RUNNER_TEMP/original-queue.tests" -test.run='^TestQueuedModuleOperationCannotRunAfterUninstall$' -test.v -test.count=1 >"$evidence/original-baseline.stdout" 2>"$evidence/original-baseline.stderr"
+          original_exit=$?
+          set -e
+          test "$original_exit" = 1
+          grep -q '409' "$evidence/original-baseline.stdout"
+          grep -q '未执行排队操作' "$evidence/original-baseline.stdout"
+      - name: Compile only reviewed test correction and execute five native guard cases
+        env:
+          GOTOOLCHAIN: local
+          GOWORK: 'off'
+          CGO_ENABLED: '0'
+          GOMAXPROCS: '2'
+          GOFLAGS: '-p=2 -buildvcs=false'
+        run: |
+          set -euo pipefail
+          fixture="$GITHUB_WORKSPACE/scripts/native-nfs-c207-queue"
+          sdk="$GITHUB_WORKSPACE/candidate/panel-integration-compose-signed-image"
+          evidence="$RUNNER_TEMP/c207-queue-evidence"
+          cp "$fixture/reviewed_queue_test.go" "$sdk/internal/executor/app_module_lifecycle_race_linux_test.go"
+          python3 -I -B "$fixture/verify_inputs.py" "$sdk" "$fixture" reviewed | tee "$evidence/reviewed-inputs.json"
+          (cd "$sdk"; go test -c -trimpath -o "$RUNNER_TEMP/reviewed-queue.tests" ./internal/executor)
+          sudo -n "$RUNNER_TEMP/reviewed-queue.tests" -test.run='^TestQueuedModuleOperationCannotRunAfterUninstall$' -test.v -test.count=1 >"$evidence/reviewed-native.stdout" 2>"$evidence/reviewed-native.stderr"
+          python3 -I -B "$fixture/qualify.py" "$evidence" "$fixture"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c207-native-shared-queue-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/c207-queue-evidence/
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,9 @@
+{
+  "programme_source_commit": "8837cdcf1d523e8265712cfeb6e40046f5c20772",
+  "programme_source_inputs_sha256": "ffc555457b0c14ba6f4046766ff60f3e22c99008216fe71e3135f708ce22df55",
+  "original_sdk_manifest_sha256": "cbd6028aee5cc40f6e8d813482cf72b51b3b8259cd9d60115923287d5600b5a5",
+  "only_reviewed_test_path": "internal/executor/app_module_lifecycle_race_linux_test.go",
+  "original_test_sha256": "3b8420823ae878bded5130bfa0535676c5b9be33d19d09809ec4f74af62c7e95",
+  "reviewed_test_sha256": "b04bcc0ee23687eb7fedf7465382e8d60eb1a454523f6c2f6247cddc59a18f21",
+  "go_version": "1.27.2"
+}
