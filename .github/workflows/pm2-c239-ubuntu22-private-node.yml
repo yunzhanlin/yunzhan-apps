@@ -1,0 +1,41 @@
+name: Actual Ubuntu22 AMD64 private Node npm archive and hard powerloss
+on:
+  push:
+    branches: [codex/pm2-ubuntu22-c239-private-node-native]
+    paths: [scripts/native-pm2-c239/dispatch.json]
+permissions:
+  contents: read
+jobs:
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+          sparse-checkout: scripts/native-pm2-c239
+      - name: Download only original immutable signed AMD64 release inputs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-pm2-c239/download.py "$RUNNER_TEMP/c239-inputs"
+      - name: Prepare actual isolated KVM hardware
+        run: |
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Real signed Ubuntu22 private Node npm archive and two-boot recovery
+        run: |
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/c239-public"
+          sudo -n python3 -I -B scripts/native-pm2-c239/kvm.py "$RUNNER_TEMP/c239-inputs" scripts/native-pm2-c239 "$RUNNER_TEMP/c239-public" ubuntu22
+      - name: Retain original encrypted native evidence including failures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c239-ubuntu22-private-node-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/c239-public/
+          if-no-files-found: error
+          retention-days: 14

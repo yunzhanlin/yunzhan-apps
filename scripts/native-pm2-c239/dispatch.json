@@ -1,0 +1,63 @@
+{
+  "parent": "8a9096cbe196838eb8c321d99dbc9937dabf555b",
+  "tag": "qa-pm2archivecandidate232r2-20261120-qa1",
+  "release_id": 452885029,
+  "assets": {
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz": {
+      "id": 772395128,
+      "bytes": 24443288,
+      "sha256": "9b17b7481cea5c393dde9600748a07b0dfee4bb3f0e2cc4e9fc1f6982c02b23c"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.manifest": {
+      "id": 772398991,
+      "bytes": 183,
+      "sha256": "e6f32d3ca38feab097f994e7634917f3fb1aa6454fa34f954777f91f31e29c51"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.sig": {
+      "id": 772399368,
+      "bytes": 64,
+      "sha256": "3a069463b69fef2f686fae1174d16f9e555f535769a8b83d177b85c6048fd473"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz": {
+      "id": 772399699,
+      "bytes": 22633072,
+      "sha256": "d2d3720f836c2bafca93584fa383e896731edb2d5665d9408b8d170bd5d19b86"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz.manifest": {
+      "id": 772403810,
+      "bytes": 183,
+      "sha256": "35b92d00c019a890ff022f1e572411f5bea541ead0071892558aa49ab6070ce6"
+    },
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-arm64.tar.gz.sig": {
+      "id": 772404362,
+      "bytes": 64,
+      "sha256": "7b85260b00792a5bda0c0ad44b87e0d3b3f41e8ea142acefbcaf2b3ced7bc1d1"
+    },
+    "pm2-config-archive-signed-release.py": {
+      "id": 772404740,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 772405073,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "payload_sha256": "c68ad9a86631fce9b1a85c042e0b5aecc6851efbe1050089f61207203a6a4fa3",
+  "cases_sha256": "18d65377a06aa6f596d8d29f2ad8ffcc8f339e34cb3384c124bcf7a7e4cd3a4c",
+  "kvm_sha256": "a8860f5cbd959e29155848d126c9e6234029ee8fa550904f1ea0f5314df4d18e",
+  "Main_changed": false,
+  "fixture_files": {
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "cohort.json": "baa711a80c9f084e2c3bbb2aa899fb3fcb2dfe8fbc0b55ab6bcad3dba4277adf",
+    "download.py": "8f4407cc326816dd741041766f7d465c787c4b993fc5734bf85c6132cbca3095",
+    "recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "upgrade.json": "8bbcf9bb38faa0d728b065856fac8876a8ccb43c718922fcb554db5cef85801a",
+    "business.py": "aa79b13bc4f7b5279bb0a81fe9e13515425a4a3495e7ee53fece40ca154eb4b7",
+    "cases.json": "18d65377a06aa6f596d8d29f2ad8ffcc8f339e34cb3384c124bcf7a7e4cd3a4c",
+    "guest.py": "f0a91919b1a870d7507ed68cf2cca5278c80d86650007e598cfa9429575e90bd",
+    "payload.json": "c68ad9a86631fce9b1a85c042e0b5aecc6851efbe1050089f61207203a6a4fa3",
+    "kvm.py": "a8860f5cbd959e29155848d126c9e6234029ee8fa550904f1ea0f5314df4d18e"
+  }
+}

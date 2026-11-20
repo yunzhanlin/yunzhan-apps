@@ -1,0 +1,13 @@
+{
+  "ubuntu22": {
+    "architecture": "amd64",
+    "digest": "sha256:012d81fade7e8ff4428fc35dfeee711d66d1f47d5ea9c5c8ced96a85b959835c",
+    "guest": "guest.py",
+    "guest_sha256": "f0a91919b1a870d7507ed68cf2cca5278c80d86650007e598cfa9429575e90bd",
+    "hostname": "yunzhan-qa-pm2-c239-ubuntu22-amd64",
+    "image": "https://cloud-images.ubuntu.com/jammy/20261004/jammy-server-cloudimg-amd64.img",
+    "observation_seconds": 90,
+    "official_checksums_sha256": "75fa01bb93c2859ca88ab5821fe9ae4eb3ada1ef356d663abfb2f41a7c270e01",
+    "platform": "ubuntu-22.04"
+  }
+}
