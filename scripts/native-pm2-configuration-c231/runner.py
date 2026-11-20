@@ -17,7 +17,7 @@ def inventory(root):
   s=p.lstat();assert stat.S_ISREG(s.st_mode)and s.st_nlink==1 and s.st_size<16<<20
   rows[str(p.relative_to(root))]={'bytes':s.st_size,'sha256':sha(p)}
  return rows
-proof={'ok':False,'scope':'Actual native Root kernel locking and comparative existing PM2 Go regressions for an unpublished development patch','architecture':arch,'base_programme_source_inputs_sha256':plan['source_inputs_sha256'],'development_patch_sha256':plan['patch_sha256'],'Main_changed':False,'signed_programme_or_app_installs':0,'all40_commercial':False}
+proof={'ok':False,'scope':'Actual native Root kernel locking and complete journal inventory and comparative existing PM2 Go regressions for an unpublished development patch','architecture':arch,'base_programme_source_inputs_sha256':plan['source_inputs_sha256'],'development_patch_sha256':plan['patch_sha256'],'Main_changed':False,'signed_programme_or_app_installs':0,'all40_commercial':False}
 try:
  assert git('rev-parse','HEAD^')==plan['native_fixture_parent']
  changes=set(git('diff','--name-only','HEAD^','HEAD').splitlines());assert changes==set(plan.get('changed_payload_files',plan['payload_files']))|{str((source/'cohort.json').relative_to(repo))}
@@ -38,9 +38,9 @@ try:
   assert r.returncode==0 and len(terminal)>=25 and not any(x['Action']=='fail'for x in events),label+' original test failure retained'
   assert inventory(tree)==(baseline_index if label=='baseline'else patched_index),'tests changed source inputs'
  a=results['baseline']['terminal_tests'];b=results['patched']['terminal_tests'];assert all(b.get(n)==state for n,state in a.items()),'an original PM2 regression changed state'
- new={n:state for n,state in b.items()if n not in a};assert new and all(n.startswith('TestPM2JournalLease')and state=='pass'for n,state in new.items())
+ new={n:state for n,state in b.items()if n not in a};assert new and all(n.startswith(('TestPM2JournalLease','TestPM2JournalSnapshot'))and state=='pass'for n,state in new.items())
  for n in plan['required_new_top_level_tests']:assert new.get(n)=='pass',n
- assert len(new)==7
+ assert len(new)==plan['expected_new_test_rows']
  save('actual-native-regression-comparison',{'original_test_statuses_retained':True,'new_real_kernel_tests':new,'before':{'pass':results['baseline']['passes'],'skip':results['baseline']['skips']},'after':{'pass':results['patched']['passes'],'skip':results['patched']['skips']},'new_skips':0,'exact_changed_source_files':sorted(changed),'patched_source_index_sha256':sha(out/'actual-patched-source-index.json')})
  proof.update(ok=True,actual_euid=os.geteuid(),new_real_kernel_tests=len(new),original_passes=results['baseline']['passes'],original_skips=results['baseline']['skips'],all_original_statuses_retained=True,new_tests_skipped=0,source_inputs_unchanged_after_execution=True,archive_feature_not_yet_implemented=True)
 except BaseException:proof['failure']=traceback.format_exc()
