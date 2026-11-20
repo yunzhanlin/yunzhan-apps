@@ -1,0 +1,116 @@
+{
+  "format": 1,
+  "parent": "a52183b45296646327b1e91da6a7a9228201bfc7",
+  "native_run": 44716349927,
+  "versions": {
+    "5.2.17": {
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52",
+      "app_version": "5.2.17-compat3",
+      "tag": "5.2.17-compat3-c223-a52183b45296",
+      "architectures": {
+        "arm64": {
+          "published": {
+            "ok": true,
+            "architecture": "arm64",
+            "version": "5.2.17",
+            "app_version": "5.2.17-compat3",
+            "tag": "5.2.17-compat3-c223-a52183b45296-arm64",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52",
+            "digest": "sha256:cf9c37984e7f845fdc5aa64a963cf4c64d32cee1c6d8193950fc079d244e919c",
+            "image_id": "sha256:8bb7e25acc3601686342ab34a03e114fe4dbb496c18dd6101cc9dcc07b19c4bd",
+            "source_head": "a52183b45296646327b1e91da6a7a9228201bfc7",
+            "all_original_native_checks_passed": true,
+            "old_tags_changed": false,
+            "Main_changed": false
+          },
+          "artifact": {
+            "id": 14620050990,
+            "name": "c223-hash-52-ubuntu-24.04-arm-44716349927",
+            "digest": "sha256:1b229cef940c20fdc38fe413b97acd3ac81e37741a37dea36f34b6688971dec7",
+            "size_in_bytes": 12185
+          }
+        },
+        "amd64": {
+          "published": {
+            "ok": true,
+            "architecture": "amd64",
+            "version": "5.2.17",
+            "app_version": "5.2.17-compat3",
+            "tag": "5.2.17-compat3-c223-a52183b45296-amd64",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php52",
+            "digest": "sha256:f0d8f83336581e60d52fa40d98396dd5b02e3a379529f60d03678d1a42d2f48d",
+            "image_id": "sha256:4654e40660fd058fd69771009b22bfd0bfeae17d09320ab77574e2d91964138b",
+            "source_head": "a52183b45296646327b1e91da6a7a9228201bfc7",
+            "all_original_native_checks_passed": true,
+            "old_tags_changed": false,
+            "Main_changed": false
+          },
+          "artifact": {
+            "id": 14619597324,
+            "name": "c223-hash-52-ubuntu-24.04-44716349927",
+            "digest": "sha256:77fcad5c948146ab3c19cff9333e62adc5baa76bcf13539539b41f178612fc5c",
+            "size_in_bytes": 12179
+          }
+        }
+      }
+    },
+    "5.3.29": {
+      "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53",
+      "app_version": "5.3.29-compat3",
+      "tag": "5.3.29-compat3-c223-a52183b45296",
+      "architectures": {
+        "amd64": {
+          "published": {
+            "ok": true,
+            "architecture": "amd64",
+            "version": "5.3.29",
+            "app_version": "5.3.29-compat3",
+            "tag": "5.3.29-compat3-c223-a52183b45296-amd64",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53",
+            "digest": "sha256:40a76f66fe3ec7d1fb940410c993d80287d5b517cb64fcb9a0c8ca38bac48d5d",
+            "image_id": "sha256:8298c1ccebec1f99f0675d6defb8a5d64c2b891d3c4c43021a203bbc160aba3d",
+            "source_head": "a52183b45296646327b1e91da6a7a9228201bfc7",
+            "all_original_native_checks_passed": true,
+            "old_tags_changed": false,
+            "Main_changed": false
+          },
+          "artifact": {
+            "id": 14619862236,
+            "name": "c223-hash-53-ubuntu-24.04-44716349927",
+            "digest": "sha256:3c51917b24d5de6bdbbddffc2062f88c18abf6de8b794a9de42f664936f90cd6",
+            "size_in_bytes": 12362
+          }
+        },
+        "arm64": {
+          "published": {
+            "ok": true,
+            "architecture": "arm64",
+            "version": "5.3.29",
+            "app_version": "5.3.29-compat3",
+            "tag": "5.3.29-compat3-c223-a52183b45296-arm64",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php53",
+            "digest": "sha256:3e24ed3ed177c1dcdcbd9ee244f2cfa0ce1bf3b3ac4f19a19e49daaa9a4711a9",
+            "image_id": "sha256:3908403c64475a5a959b26f2bc1b54cdb9b9cb2df8a8bb48d27a1371341611c6",
+            "source_head": "a52183b45296646327b1e91da6a7a9228201bfc7",
+            "all_original_native_checks_passed": true,
+            "old_tags_changed": false,
+            "Main_changed": false
+          },
+          "artifact": {
+            "id": 14619104412,
+            "name": "c223-hash-53-ubuntu-24.04-arm-44716349927",
+            "digest": "sha256:c2be366faa4094f500e1bcecd285c2a3084bef153d385378cfec47f2eb3e4687",
+            "size_in_bytes": 12333
+          }
+        }
+      }
+    }
+  },
+  "unchanged_sdk_tree": "e51d5c6a41b220ca4615e491e829c7191de1c60e",
+  "files": {
+    "scripts/legacy-hash-c223/publish-index.py": "9084add6bd3f2405385afbe07c152c9f97423d0a576aaf843013c85eea5b5567",
+    ".github/workflows/legacy-hash-c223-indexes.yml": "fb10c8a1bd4ff9fc8cd01ac883a72a8c27b5051482c2da7c234f93bfb67bdc39"
+  },
+  "Main_changed": false,
+  "old_tags_changed": false
+}

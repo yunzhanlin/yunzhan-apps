@@ -1,0 +1,44 @@
+name: Publish verified PHP52/53 Hash indexes
+on:
+  push:
+    branches: [codex/legacy-php-hash-c223-images]
+    paths: [scripts/legacy-hash-c223/index-plan.json]
+permissions:
+  contents: read
+  actions: read
+  packages: write
+jobs:
+  index:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        slot: ['52', '53']
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact native originals and publish only new index
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PACKAGE_TOKEN: ${{ github.token }}
+          PHP_SLOT: ${{ matrix.slot }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export DOCKER_CONFIG="$(mktemp -d "$RUNNER_TEMP/registry-auth.XXXXXX")"
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true; rm -rf -- "$DOCKER_CONFIG"' EXIT
+          printf '%s' "$PACKAGE_TOKEN" | docker login ghcr.io --username "$GITHUB_ACTOR" --password-stdin
+          unset PACKAGE_TOKEN
+          python3 -I -B scripts/legacy-hash-c223/publish-index.py "$RUNNER_TEMP/php-index" "$PHP_SLOT"
+      - name: Preserve original index publication evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c223-hash-index-${{ matrix.slot }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/php-index/
+          if-no-files-found: error
+          retention-days: 14
