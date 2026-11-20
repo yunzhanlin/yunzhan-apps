@@ -1,4 +1,4 @@
-name: Signed IDS rule data selection and cold recovery
+name: Signed NFS private kernel IO and cold recovery
 on:
   push:
     branches: [codex/nfs-c204-five-system-cold-recovery]

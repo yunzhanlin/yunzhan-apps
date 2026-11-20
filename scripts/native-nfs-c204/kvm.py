@@ -198,7 +198,7 @@ try:
     report['cold_guest_exit']=cold.returncode
     report['actual_hard_powerloss_two_distinct_boots']=cold_result.get('prior_boot')==actual['boot'] and cold_result.get('boot')!=actual['boot']
     report['ok']=cold.returncode==0 and cold_result['ok'] is True and report['actual_hard_powerloss_two_distinct_boots']
-    assert report['ok'], 'Signed file nfs did not survive the original cold boot'
+    assert report['ok'], 'Private NFS server and original data did not survive cold boot'
     assert cold_result['signed_nfs_version']=='1.3.1' and cold_result['actual_postboot_kernel_IO']
     assert cold_result['old_site_files_and_owners_preserved'] and cold_result['original_config_and_runtime_preserved']
 finally:

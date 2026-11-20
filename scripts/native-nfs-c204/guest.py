@@ -1,4 +1,4 @@
-"""Verify the signed passive IDS, fresh public rules, real loopback events and cold recovery."""
+"""Verify signed private NFS, actual dual-stack kernel IO and cold data recovery."""
 from pathlib import Path
 import contextlib
 import ftplib
