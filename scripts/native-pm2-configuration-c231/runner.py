@@ -38,7 +38,7 @@ try:
   assert r.returncode==0 and len(terminal)>=25 and not any(x['Action']=='fail'for x in events),label+' original test failure retained'
   assert inventory(tree)==(baseline_index if label=='baseline'else patched_index),'tests changed source inputs'
  a=results['baseline']['terminal_tests'];b=results['patched']['terminal_tests'];assert all(b.get(n)==state for n,state in a.items()),'an original PM2 regression changed state'
- new={n:state for n,state in b.items()if n not in a};assert new and all(n.startswith(('TestPM2JournalLease','TestPM2JournalSnapshot'))and state=='pass'for n,state in new.items())
+ new={n:state for n,state in b.items()if n not in a};assert new and all(n.startswith(('TestPM2JournalLease','TestPM2JournalSnapshot','TestPM2JournalArchiveProtocol'))and state=='pass'for n,state in new.items())
  for n in plan['required_new_top_level_tests']:assert new.get(n)=='pass',n
  assert len(new)==plan['expected_new_test_rows']
  save('actual-native-regression-comparison',{'original_test_statuses_retained':True,'new_real_kernel_tests':new,'before':{'pass':results['baseline']['passes'],'skip':results['baseline']['skips']},'after':{'pass':results['patched']['passes'],'skip':results['patched']['skips']},'new_skips':0,'exact_changed_source_files':sorted(changed),'patched_source_index_sha256':sha(out/'actual-patched-source-index.json')})

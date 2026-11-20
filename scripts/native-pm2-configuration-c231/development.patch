@@ -20,6 +20,372 @@ index 6eb1d2c..0aa6208 100644
 +		if errors.Is(err, os.ErrNotExist) && !d.current() {
 +			return errors.New("PM2 原配置事务目录在缺失核对期间已变化，未当作空清单")
 +		}
+diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux.go b/internal/executor/app_pm2_journal_archive_protocol_linux.go
+new file mode 100644
+index 0000000..1752cd9
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_protocol_linux.go
+@@ -0,0 +1,144 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"os"
++	"strings"
++	"syscall"
++	"time"
++
++	"local/panel/internal/core"
++)
++
++const pm2ConfigurationArchiveGenerations = 512
++const pm2ConfigurationArchiveIntentLimit = 1 << 20
++
++// The request identity is reserved before publication. Its prepared empty
++// directory is recorded before either no-replace rename. Both crash boundaries
++// can consequently be distinguished without adopting an unknown active path.
++type pm2ConfigurationArchiveIntent struct {
++	Format            int                `json:"format"`
++	ID                string             `json:"id"`
++	CreatedAt         string             `json:"created_at"`
++	BootID            string             `json:"boot_id"`
++	Owner             *moduleApplyOwner  `json:"owner"`
++	RequestSHA        string             `json:"request_sha256"`
++	Inventory         pm2JournalSnapshot `json:"inventory"`
++	InventorySHA      string             `json:"inventory_sha256"`
++	PreparedDirectory pm2JournalIdentity `json:"prepared_directory"`
++}
++
++type pm2ConfigurationArchiveOutcome struct {
++	Format            int                `json:"format"`
++	ID                string             `json:"id"`
++	IntentSHA         string             `json:"intent_sha256"`
++	State             string             `json:"state"`
++	FinishedAt        string             `json:"finished_at"`
++	OriginalDirectory pm2JournalIdentity `json:"original_directory"`
++	ActiveDirectory   pm2JournalIdentity `json:"active_directory"`
++}
++
++func pm2JournalPrivateDirectoryIdentity(v pm2JournalIdentity) bool {
++	return v.UID == uint32(os.Geteuid()) && v.Mode == syscall.S_IFDIR|0700 && v.Inode != 0 && v.Links > 0 && v.Size >= 0
++}
++func pm2JournalSameDirectoryObject(a, b pm2JournalIdentity) bool {
++	return a.Device == b.Device && a.Inode == b.Inode && a.UID == b.UID && a.GID == b.GID && a.Mode == b.Mode && pm2JournalPrivateDirectoryIdentity(a) && pm2JournalPrivateDirectoryIdentity(b)
++}
++
++// A directory rename changes its ctime. Retain every other recorded field,
++// including its original group; never replace it with the reader's own GID.
++// This witness is for an unfinished relocation. Completed archive data will
++// be read through fresh no-follow identities and original content/owner pins,
++// so an old device/inode is not treated as a permanent server identifier.
++func pm2JournalSameMovedDirectory(a, b pm2JournalIdentity) bool {
++	return pm2JournalSameDirectoryObject(a, b) && a.Links == b.Links && a.Size == b.Size && a.ModifiedNS == b.ModifiedNS
++}
++func validatePM2ArchiveSnapshot(v pm2JournalSnapshot) error {
++	if v.Format != 1 || !v.eligible() || v.Records > pm2ConfigIntentLimit || !pm2JournalPrivateDirectoryIdentity(v.Directory) || len(v.Files) > 2*pm2ConfigIntentLimit {
++		return errors.New("PM2 archive requires a complete nonempty terminal journal")
++	}
++	kinds := map[string]map[string]bool{}
++	type key struct{ device, inode uint64 }
++	identities := map[key]bool{}
++	var total int64
++	for name, pin := range v.Files {
++		id, kind := "", ""
++		for _, suffix := range []string{".intent.json", ".result.json", ".cancel.json"} {
++			if original, ok := strings.CutSuffix(name, suffix); ok {
++				id, kind = original, suffix
++				break
++			}
++		}
++		p := pin.Identity
++		if !core.ValidID(id) || kind == "" || !coreSHA.MatchString(pin.SHA256) || p.UID != uint32(os.Geteuid()) || p.Mode != syscall.S_IFREG|0600 || p.Links != 1 || p.Inode == 0 || p.Size < 1 || p.Size > pm2ConfigRecordLimit {
++			return errors.New("PM2 archive original file binding is invalid")
++		}
++		inode := key{p.Device, p.Inode}
++		if identities[inode] {
++			return errors.New("PM2 archive original file identities are aliased")
++		}
++		identities[inode] = true
++		total += p.Size
++		if total > 64<<20 {
++			return errors.New("PM2 archive original journal exceeds its byte budget")
++		}
++		if kinds[id] == nil {
++			kinds[id] = map[string]bool{}
++		}
++		kinds[id][kind] = true
++	}
++	if len(kinds) != v.Records {
++		return errors.New("PM2 archive complete record count does not match its original files")
++	}
++	for _, parts := range kinds {
++		if parts[".cancel.json"] {
++			if len(parts) != 1 {
++				return errors.New("PM2 archive cancellation conflicts with an original intent")
++			}
++		} else if len(parts) != 2 || !parts[".intent.json"] || !parts[".result.json"] {
++			return errors.New("PM2 archive contains an unfinished original configuration")
++		}
++	}
++	return nil
++}
++func validatePM2ConfigurationArchiveIntent(v pm2ConfigurationArchiveIntent) error {
++	_, timeErr := time.Parse(time.RFC3339, v.CreatedAt)
++	if v.Format != 1 || !core.ValidID(v.ID) || timeErr != nil || !moduleBootID.MatchString(v.BootID) || v.Owner == nil || v.Owner.PID <= 1 || v.Owner.StartTime == 0 || !coreSHA.MatchString(v.RequestSHA) || !coreSHA.MatchString(v.InventorySHA) {
++		return errors.New("PM2 archive intent identity is invalid")
++	}
++	if err := validatePM2ArchiveSnapshot(v.Inventory); err != nil {
++		return err
++	}
++	sha, err := v.Inventory.sha256()
++	if err != nil || sha != v.InventorySHA {
++		return errors.New("PM2 archive intent does not bind the complete original inventory")
++	}
++	if !pm2JournalPrivateDirectoryIdentity(v.PreparedDirectory) || v.PreparedDirectory.Device != v.Inventory.Directory.Device || (v.Inventory.Directory.Device == v.PreparedDirectory.Device && v.Inventory.Directory.Inode == v.PreparedDirectory.Inode) {
++		return errors.New("PM2 archive prepared directory cannot be distinguished from the original")
++	}
++	return nil
++}
++func validatePM2ConfigurationArchiveOutcome(v pm2ConfigurationArchiveOutcome, intent pm2ConfigurationArchiveIntent, intentSHA string) error {
++	if err := validatePM2ConfigurationArchiveIntent(intent); err != nil {
++		return err
++	}
++	_, timeErr := time.Parse(time.RFC3339, v.FinishedAt)
++	if v.Format != 1 || v.ID != intent.ID || !coreSHA.MatchString(intentSHA) || v.IntentSHA != intentSHA || timeErr != nil {
++		return errors.New("PM2 archive outcome does not match its original intent")
++	}
++	switch v.State {
++	case "archived":
++		if !pm2JournalSameMovedDirectory(intent.Inventory.Directory, v.OriginalDirectory) || !pm2JournalSameMovedDirectory(intent.PreparedDirectory, v.ActiveDirectory) {
++			return errors.New("PM2 archive completion directory bindings are invalid")
++		}
++	case "not_moved", "restored_for_review":
++		if !pm2JournalSameDirectoryObject(intent.Inventory.Directory, v.ActiveDirectory) {
++			return errors.New("PM2 archive original active directory was not retained")
++		}
++	default:
++		return errors.New("PM2 archive outcome state is unknown")
++	}
++	return nil
++}
+diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux_test.go b/internal/executor/app_pm2_journal_archive_protocol_linux_test.go
+new file mode 100644
+index 0000000..e567a0b
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_protocol_linux_test.go
+@@ -0,0 +1,210 @@
++//go:build linux
++
++package executor
++
++import (
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++func pm2ArchiveProtocolFixture(t *testing.T) pm2ConfigurationArchiveIntent {
++	t.Helper()
++	s, _, _, record := pm2ConfigFixtureIntent(t)
++	d, err := s.openPM2ConfigStore(false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	receipt := pm2ConfigReceipt{Format: 1, ID: record.Intent.ID, IntentSHA: record.SHA, State: "rolled_back", ManifestSHA: record.Intent.BeforeSHA, FinishedAt: core.Now()}
++	raw, err := json.Marshal(receipt)
++	if err != nil {
++		t.Fatal(err)
++	}
++	raw = append(raw, '\n')
++	if err := pm2ConfigCreate(d.modulePrivateDirectory, record.Intent.ID+".result.json", raw); err != nil {
++		t.Fatal(err)
++	}
++	if err := d.Close(); err != nil {
++		t.Fatal(err)
++	}
++	snapshot, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	sha, err := snapshot.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	stage := filepath.Join(s.moduleDir("pm2-manager"), "archive-protocol-prepared")
++	if err := os.Mkdir(stage, 0700); err != nil {
++		t.Fatal(err)
++	}
++	info, err := os.Lstat(stage)
++	if err != nil {
++		t.Fatal(err)
++	}
++	identity, err := pm2JournalIdentityOf(info)
++	if err != nil {
++		t.Fatal(err)
++	}
++	boot, err := currentPM2ConfigBoot()
++	if err != nil {
++		t.Fatal(err)
++	}
++	owner, err := currentModuleApplyOwner()
++	if err != nil {
++		t.Fatal(err)
++	}
++	v := pm2ConfigurationArchiveIntent{Format: 1, ID: core.ID(), CreatedAt: core.Now(), BootID: boot, Owner: owner, RequestSHA: core.Hash("original archive request"), Inventory: snapshot, InventorySHA: sha, PreparedDirectory: identity}
++	if err := validatePM2ConfigurationArchiveIntent(v); err != nil {
++		t.Fatal(err)
++	}
++	return v
++}
++func pm2ArchiveProtocolClone(t *testing.T, v pm2ConfigurationArchiveIntent) pm2ConfigurationArchiveIntent {
++	t.Helper()
++	raw, err := json.Marshal(v)
++	if err != nil {
++		t.Fatal(err)
++	}
++	var next pm2ConfigurationArchiveIntent
++	if err := json.Unmarshal(raw, &next); err != nil {
++		t.Fatal(err)
++	}
++	return next
++}
++func pm2ArchiveProtocolSHA(t *testing.T, v pm2ConfigurationArchiveIntent) string {
++	t.Helper()
++	raw, err := json.Marshal(v)
++	if err != nil {
++		t.Fatal(err)
++	}
++	return pm2ConfigHash(raw)
++}
++func TestPM2JournalArchiveProtocolRejectsUnfinishedOrReboundInventories(t *testing.T) {
++	original := pm2ArchiveProtocolFixture(t)
++	cases := map[string]func(*pm2ConfigurationArchiveIntent){
++		"pending": func(v *pm2ConfigurationArchiveIntent) { v.Inventory.Pending = []string{core.ID()} },
++		"missing-receipt": func(v *pm2ConfigurationArchiveIntent) {
++			for name := range v.Inventory.Files {
++				if filepath.Ext(name) == ".json" && name[len(name)-12:] == ".result.json" {
++					delete(v.Inventory.Files, name)
++				}
++			}
++		},
++		"wrong-count": func(v *pm2ConfigurationArchiveIntent) { v.Inventory.Records++ },
++		"aliased-originals": func(v *pm2ConfigurationArchiveIntent) {
++			var first *pm2JournalFilePin
++			for name, pin := range v.Inventory.Files {
++				if first == nil {
++					copy := pin
++					first = &copy
++					continue
++				}
++				pin.Identity = first.Identity
++				v.Inventory.Files[name] = pin
++			}
++		},
++		"wrong-owner": func(v *pm2ConfigurationArchiveIntent) {
++			for name, pin := range v.Inventory.Files {
++				pin.Identity.UID++
++				v.Inventory.Files[name] = pin
++				break
++			}
++		},
++		"public-record": func(v *pm2ConfigurationArchiveIntent) {
++			for name, pin := range v.Inventory.Files {
++				pin.Identity.Mode = 0100644
++				v.Inventory.Files[name] = pin
++				break
++			}
++		},
++		"linked-record": func(v *pm2ConfigurationArchiveIntent) {
++			for name, pin := range v.Inventory.Files {
++				pin.Identity.Links = 2
++				v.Inventory.Files[name] = pin
++				break
++			}
++		},
++		"damaged-pin": func(v *pm2ConfigurationArchiveIntent) {
++			for name, pin := range v.Inventory.Files {
++				pin.SHA256 = "damaged"
++				v.Inventory.Files[name] = pin
++				break
++			}
++		},
++		"source-as-prepared": func(v *pm2ConfigurationArchiveIntent) {
++			v.PreparedDirectory = v.Inventory.Directory
++			v.PreparedDirectory.GID++
++		},
++		"cross-device-prepared": func(v *pm2ConfigurationArchiveIntent) { v.PreparedDirectory.Device ^= 1 },
++		"missing-owner-time":    func(v *pm2ConfigurationArchiveIntent) { v.Owner.StartTime = 0 },
++		"unknown-format":        func(v *pm2ConfigurationArchiveIntent) { v.Format++ },
++	}
++	for name, alter := range cases {
++		t.Run(name, func(t *testing.T) {
++			v := pm2ArchiveProtocolClone(t, original)
++			alter(&v)
++			sha, err := v.Inventory.sha256()
++			if err != nil {
++				t.Fatal(err)
++			}
++			v.InventorySHA = sha
++			if err := validatePM2ConfigurationArchiveIntent(v); err == nil {
++				t.Fatal("unverifiable or unfinished archive intent accepted")
++			}
++		})
++	}
++	stale := pm2ArchiveProtocolClone(t, original)
++	stale.Inventory.Directory.ChangedNS++
++	if err := validatePM2ConfigurationArchiveIntent(stale); err == nil {
++		t.Fatal("stale complete inventory digest was accepted")
++	}
++}
++func TestPM2JournalArchiveProtocolRetainsRecordedGroupAndRenameWitnesses(t *testing.T) {
++	intent := pm2ArchiveProtocolFixture(t)
++	// Recorded groups are witnesses. They may differ from this reader's group.
++	recordedGroup := uint32(987)
++	if recordedGroup == uint32(os.Getegid()) {
++		recordedGroup++
++	}
++	intent.Inventory.Directory.GID = recordedGroup
++	intent.PreparedDirectory.GID = recordedGroup + 1
++	sha, err := intent.Inventory.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	intent.InventorySHA = sha
++	original := intent.Inventory.Directory
++	original.ChangedNS++
++	active := intent.PreparedDirectory
++	active.ChangedNS++
++	outcome := pm2ConfigurationArchiveOutcome{Format: 1, ID: intent.ID, IntentSHA: pm2ArchiveProtocolSHA(t, intent), State: "archived", FinishedAt: core.Now(), OriginalDirectory: original, ActiveDirectory: active}
++	if err := validatePM2ConfigurationArchiveOutcome(outcome, intent, outcome.IntentSHA); err != nil {
++		t.Fatal(err)
++	}
++	wrongGroup := outcome
++	wrongGroup.OriginalDirectory.GID = uint32(os.Getegid())
++	if err := validatePM2ConfigurationArchiveOutcome(wrongGroup, intent, outcome.IntentSHA); err == nil {
++		t.Fatal("reader group substituted for recorded original group")
++	}
++	wrongInode := outcome
++	wrongInode.ActiveDirectory.Inode++
++	if err := validatePM2ConfigurationArchiveOutcome(wrongInode, intent, outcome.IntentSHA); err == nil {
++		t.Fatal("unbound new active directory adopted")
++	}
++	if err := validatePM2ConfigurationArchiveOutcome(outcome, intent, core.Hash("different original header")); err == nil {
++		t.Fatal("receipt for a different original intent accepted")
++	}
++	for _, state := range []string{"not_moved", "restored_for_review"} {
++		retained := outcome
++		retained.State = state
++		retained.ActiveDirectory = original
++		if err := validatePM2ConfigurationArchiveOutcome(retained, intent, outcome.IntentSHA); err != nil {
++			t.Fatal(err)
++		}
++	}
++}
 diff --git a/internal/executor/app_pm2_journal_lease_linux.go b/internal/executor/app_pm2_journal_lease_linux.go
 new file mode 100644
 index 0000000..97afa6c
@@ -233,7 +599,7 @@ index 0000000..7c706d4
 +}
 diff --git a/internal/executor/app_pm2_journal_snapshot_linux.go b/internal/executor/app_pm2_journal_snapshot_linux.go
 new file mode 100644
-index 0000000..9876f63
+index 0000000..aeb23b3
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_snapshot_linux.go
 @@ -0,0 +1,140 @@
@@ -285,7 +651,7 @@ index 0000000..9876f63
 +	if !ok {
 +		return pm2JournalIdentity{}, errors.New("PM2 original journal metadata cannot be verified")
 +	}
-+	return pm2JournalIdentity{Device: uint64(s.Dev), Inode: s.Ino, UID: s.Uid, GID: s.Gid, Mode: s.Mode, Links: s.Nlink, Size: s.Size, ModifiedNS: s.Mtim.Sec*1e9 + s.Mtim.Nsec, ChangedNS: s.Ctim.Sec*1e9 + s.Ctim.Nsec}, nil
++	return pm2JournalIdentity{Device: uint64(s.Dev), Inode: s.Ino, UID: s.Uid, GID: s.Gid, Mode: s.Mode, Links: uint64(s.Nlink), Size: s.Size, ModifiedNS: s.Mtim.Sec*1e9 + s.Mtim.Nsec, ChangedNS: s.Ctim.Sec*1e9 + s.Ctim.Nsec}, nil
 +}
 +func (v pm2JournalSnapshot) eligible() bool { return v.Exists && v.Records > 0 && len(v.Pending) == 0 }
 +func (v pm2JournalSnapshot) sha256() (string, error) {

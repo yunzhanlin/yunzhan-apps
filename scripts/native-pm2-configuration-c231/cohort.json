@@ -2,13 +2,13 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "source_sdk_tree": "314aff0755134aacff2e77cecb0994d2dba2ad03",
-  "native_fixture_parent": "a718f0349c02f2f05910972ff187bb44df604e24",
-  "patch_sha256": "a4b728217faf422ddd64f029e3be8163ac439a4d875f0e7ad60d97ff2b78cc87",
+  "native_fixture_parent": "204eda1c7c352b8cd1604521419de9533c62c4c0",
+  "patch_sha256": "15a45d5fe1e81d9de8003670be89fa00e4cb170d65bbc4b638cc1e118d12aa88",
   "payload_files": {
-    "scripts/native-pm2-configuration-c231/runner.py": "eca3f2a56df53b6784ccb0454611a85751f6e3c96f87aee206b9b0e8c04bd5bf",
+    "scripts/native-pm2-configuration-c231/runner.py": "e15ec925c8cd7ba2b0c6b7268d426b9e319c265b48655ab706f040becf1caef8",
     "scripts/native-pm2-configuration-c231/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     "scripts/native-pm2-configuration-c231/finish.py": "1a2ddc541f6cfb8691a346ed391e57d763a7ef99e0c9737a7436117fb480cd06",
-    "scripts/native-pm2-configuration-c231/development.patch": "a4b728217faf422ddd64f029e3be8163ac439a4d875f0e7ad60d97ff2b78cc87",
+    "scripts/native-pm2-configuration-c231/development.patch": "15a45d5fe1e81d9de8003670be89fa00e4cb170d65bbc4b638cc1e118d12aa88",
     ".github/workflows/pm2-config-c231-development.yml": "a1f2affa59928c858af0c865067784aa2470360604b8270a7e0b6fb9bef6debf"
   },
   "changed_source_files": [
@@ -17,7 +17,9 @@
     "internal/executor/app_pm2_journal_lease_linux.go",
     "internal/executor/app_pm2_journal_lease_linux_test.go",
     "internal/executor/app_pm2_journal_snapshot_linux.go",
-    "internal/executor/app_pm2_journal_snapshot_linux_test.go"
+    "internal/executor/app_pm2_journal_snapshot_linux_test.go",
+    "internal/executor/app_pm2_journal_archive_protocol_linux.go",
+    "internal/executor/app_pm2_journal_archive_protocol_linux_test.go"
   ],
   "required_new_top_level_tests": [
     "TestPM2JournalLeaseSerializesDifferentServiceInstances",
@@ -26,9 +28,11 @@
     "TestPM2JournalSnapshotMissingReadDoesNotCreateOrRewrite",
     "TestPM2JournalSnapshotPinsOriginalBytesAndTerminalEligibility",
     "TestPM2JournalSnapshotRefusesUnknownLinkedOrIncompleteEvidence",
-    "TestPM2JournalSnapshotDetachedMissingNamespaceIsUnknown"
+    "TestPM2JournalSnapshotDetachedMissingNamespaceIsUnknown",
+    "TestPM2JournalArchiveProtocolRejectsUnfinishedOrReboundInventories",
+    "TestPM2JournalArchiveProtocolRetainsRecordedGroupAndRenameWitnesses"
   ],
-  "scope": "Unpublished native Root development tests of shared journal lease, exact complete inventory and detached/missing namespace refusal; no archive operation, programme/app installation or commercial qualification",
+  "scope": "Unpublished native Root lease, journal snapshot, unknown namespace refusal and archive protocol validation; no archive mover/API, programme/app installation or commercial qualification",
   "Main_changed": false,
   "all40_commercial": false,
   "patch_format": "git unified zero context, applied only against exactly pinned SDK tree",
@@ -42,5 +46,9 @@
     "original_test_bytes_or_assertions_changed": false,
     "private_evidence_umask": "0077 remains in collector parent"
   },
-  "expected_new_test_rows": 15
+  "expected_new_test_rows": 29,
+  "original_ARM_compile_failure_preserved": {
+    "run": 44742374496,
+    "reason": "syscall.Stat_t.Nlink is uint32 on ARM64 and uint64 on AMD64; widen explicitly to uint64; both local Linux targets compiled successfully after fix"
+  }
 }
