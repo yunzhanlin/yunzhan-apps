@@ -164,6 +164,10 @@ function beforeCandidateFixtureDependencies(path,bytes){
 }
 export function originalReviewedMemcachedUnixTest(path,bytes){
  const plan=reviewedMemcachedUnixReaders[path];if(!plan)return bytes;
+ // Reverse only the newly required publisher fixture module. Original test
+ // digests, mutation counts and all assertion bytes below remain unchanged.
+ const archiveAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/pm2-root-vendor-contract.mjs','tools/pm2-configuration-archive-contract.mjs'","'tools/pm2-root-vendor-contract.mjs'"]:path==='tests/versioning.test.mjs'?["'pm2-root-vendor-contract.mjs','pm2-configuration-archive-contract.mjs'","'pm2-root-vendor-contract.mjs'"]:null;
+ if(archiveAddition&&bytes.toString().includes(archiveAddition[0])){const text=bytes.toString();assert.equal(text.split(archiveAddition[0]).length,2);bytes=Buffer.from(text.replace(archiveAddition[0],()=>archiveAddition[1]));}
  const vendorAddition=path==='tests/geodata-channel-publisher.test.mjs'?["'tools/pm2-maintenance-contract.mjs','tools/pm2-root-vendor-contract.mjs'","'tools/pm2-maintenance-contract.mjs'"]:path==='tests/versioning.test.mjs'?["'pm2-maintenance-contract.mjs','pm2-root-vendor-contract.mjs'","'pm2-maintenance-contract.mjs'"]:null;
  if(vendorAddition&&bytes.toString().includes(vendorAddition[0])){const text=bytes.toString();assert.equal(text.split(vendorAddition[0]).length,2);bytes=Buffer.from(text.replace(vendorAddition[0],()=>vendorAddition[1]));}
  // Only the new fixture dependency is reversed; all historical digests and
