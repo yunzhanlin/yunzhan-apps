@@ -1,6 +1,7 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile} from './helpers/before-php8-retirement.mjs';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('Apache 2.3 private transaction maintenance is exact current normal signed source, with a mandatory gate',async()=>{

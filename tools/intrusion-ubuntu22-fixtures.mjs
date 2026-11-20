@@ -1,4 +1,5 @@
-import fs from'node:fs';import path from'node:path';
+// Historical C208 positive/negative fixtures; active40 validation is separate.
+import fs from '../tests/helpers/before-php8-retirement.mjs';import path from'node:path';
 export function intrusionUbuntu22Cases(root){
  const read=n=>JSON.parse(fs.readFileSync(path.join(root,n))),catalog=read('candidate/dist/catalog-v1.json');
  const cases=catalog.apps.map(a=>({name:'current50:'+a.id,valid:true,manifest:read('candidate/dist/apps/'+a.id+'/'+a.version+'/manifest.json')}));

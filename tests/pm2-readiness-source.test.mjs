@@ -1,6 +1,7 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import {preNativeMobileRead} from './pre-native-mobile-release.mjs';
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash,createPublicKey,verify}from'node:crypto';
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash,createPublicKey,verify}from'node:crypto';
 const root=fileURLToPath(new URL('..',import.meta.url)),read=n=>preNativeMobileRead(n,fs.readFileSync(path.join(root,n))),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-pm2-readiness/',previous='registry/reviewed-catalogs/before-pm2-readiness24bjlj/';
 test('PM2 and geodata fixes are exact independent normal signed inputs with zero source overlays',()=>{
  const r=json('registry/pm2-readiness-core.json'),a=json('panel-integration-ids-capture/source-sha256.json'),b=json(scope+'source-sha256.json');

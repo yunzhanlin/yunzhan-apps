@@ -1,6 +1,7 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import fs from './helpers/before-php8-retirement.mjs';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';

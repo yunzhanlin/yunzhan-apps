@@ -40,10 +40,10 @@ test('ordinary Nginx log recovery keeps unknown outcomes and remaining compatibi
  assert(app.gaps.some(s=>s.includes('窄视口')));
  assert.equal(contracts.commercial_feature_parity_complete,false);
 });
-test('all 50 applications have business scenarios, not install-only acceptance',async()=>{
+test('all 40 active applications have business scenarios, not install-only acceptance',async()=>{
  const [registry,contracts]=await Promise.all([load('../registry/apps.json'),load('../registry/functional-contracts.json')]);
  assert.equal(contracts.commercial_feature_parity_complete,false);
- assert.equal(contracts.apps.length,50);
+ assert.equal(contracts.apps.length,40);
  assert.deepEqual(contracts.apps.map(a=>a.id).sort(),registry.apps.map(a=>a.id).sort());
  for(const app of contracts.apps){assert.ok(app.scenarios.length>=3,app.id);assert.ok(app.scenarios.every(s=>s.length>=4),app.id)}
  for(const id of ['website-analytics','files-sync','php-code-security','enterprise-tamper-proof'])assert.ok(contracts.apps.find(a=>a.id===id).gaps.length>0,id);

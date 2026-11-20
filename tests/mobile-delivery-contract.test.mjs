@@ -1,4 +1,5 @@
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{fileURLToPath}from'node:url';
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import{fileURLToPath}from'node:url';
 import{validateManifest}from'../tools/lib.mjs';import{nativeMobileCases,mobileFeature}from'../tools/mobile-delivery-fixtures.mjs';
 const root=process.env.YUNZHAN_REGISTRY_FIXTURE_ROOT??fileURLToPath(new URL('../',import.meta.url));
 test('native delivery exact132 and immutable legacy5 are separate from aliases foreign handlers and unreviewed versions',()=>{const cases=nativeMobileCases(root);for(const c of cases){const errors=validateManifest(c.manifest);assert.equal(errors.length===0,c.valid,c.name+': '+errors.join('; '));}assert.equal(cases.filter(c=>c.name.startsWith('current50:')).length,50);assert(cases.filter(c=>!c.valid).length>=35);});

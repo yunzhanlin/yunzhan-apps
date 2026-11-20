@@ -1,4 +1,5 @@
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash,createPublicKey,verify}from'node:crypto';
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import path from'node:path';import{fileURLToPath}from'node:url';import{createHash,createPublicKey,verify}from'node:crypto';
 import{validateManifest}from'../tools/lib.mjs';import{memcachedUnixCases}from'../tools/memcached-unix-fixtures.mjs';
 import{memcachedUnixErrors}from'../tools/memcached-unix-contract.mjs';
 import{exactReviewedPreMemcachedRepository,predecessorScope}from'../tools/reviewed-pre-memcached-repository.mjs';

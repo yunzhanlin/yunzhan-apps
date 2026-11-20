@@ -1,7 +1,8 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile,readdir,lstat} from 'node:fs/promises';
+import {readFile,readdir,lstat} from './helpers/before-php8-retirement.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';

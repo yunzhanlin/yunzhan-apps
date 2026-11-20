@@ -17,7 +17,7 @@ test('publisher channels are two closed official paths without arbitrary URL or 
 test('actual catalogue URLs agree with the publisher channel and immutable versions',async()=>{
   const source=JSON.parse(await read('registry/apps.json')),catalog=JSON.parse(await read('dist/catalog-v1.json'));
   const base=officialCatalogBaseURL(source.channel===undefined?'stable':source.channel);
-  assert.equal(catalog.apps.length,50);
+  assert.equal(catalog.apps.length,40);
   for(const item of catalog.apps)assert.equal(item.package_url,`${base}/dist/apps/${item.id}/${item.version}/manifest.json`);
   assert.equal(JSON.parse(await read('dist/apps/load-balance/1.8.5/manifest.json')).version,'1.8.5');
   assert.equal(JSON.parse(await read('registry/functional-contracts.json')).commercial_feature_parity_complete,false);
@@ -26,13 +26,13 @@ test('actual catalogue URLs agree with the publisher channel and immutable versi
 test('separate candidate catalogue changes exactly its declared known identities and never mutates stable metadata',async()=>{
   const stable=JSON.parse(await read('registry/apps.json')),patch=JSON.parse(await read('registry/candidate-apps.json'));
   const before=JSON.stringify(stable),source=candidateSource(stable,patch),catalog=JSON.parse(await read('candidate/dist/catalog-v1.json'));
-  assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,50);
+  assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,40);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
     'anti-intrusion', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'elasticsearch', 'enterprise-tamper-proof', 'files-sync',
-    'load-balance', 'mobile', 'mongodb', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed', 'php-52', 'php-53', 'php-54',
-    'php-55', 'php-56', 'php-70', 'php-71',
-    'php-72', 'php-73', 'php-74', 'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
+    'load-balance', 'mobile', 'mongodb', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed',
+
+       'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
     'platform-ops', 'pm2-manager', 'pure-ftpd', 'rabbitmq', 'redis', 'site-diagnosis', 'task-manager', 'user-manager', 'website-analytics', 'website-tamper-proof',
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
@@ -81,16 +81,6 @@ test('separate candidate catalogue changes exactly its declared known identities
     ['openlitespeed', '1.9.4-compat2'],
     ['phpmyadmin', '5.2.3-compat2'],
     ['php-81', '8.1.34-compat2'], ['php-80', '8.0.30-compat2'],
-    ['php-52', '5.2.17-compat2'],
-    ['php-53', '5.3.29-compat2'],
-    ['php-54', '5.4.45-compat3'],
-    ['php-55', '5.5.38-compat3'],
-    ['php-56', '5.6.40-compat3'],
-    ['php-70', '7.0.33-compat3'],
-    ['php-71', '7.1.33-compat3'],
-    ['php-72', '7.2.34-compat3'],
-    ['php-73', '7.3.33-compat3'],
-    ['php-74', '7.4.33-compat3'],
   ];
   for (const [id, version] of nativeRuntimes) {
     const app = source.apps.find(a=>a.id===id);
@@ -144,13 +134,15 @@ test('separate candidate catalogue changes exactly its declared known identities
   for(const changed of [{...patch,channel:'https://untrusted.invalid'}, {...patch,apps:[patch.apps[0],patch.apps[0]]}, {...patch,apps:[{...patch.apps[0],id:'unknown-application'}]}, {...patch,key:'untrusted'}])assert.throws(()=>candidateSource(stable,changed));
 });
 
-test('both real signatures are valid while stable publication remains byte-identical to the authentic predecessor',async()=>{
+test('both active signatures are valid and retained stable manifests match the authentic predecessor',async()=>{
   const key=await read('signatures/catalog-v1.pub.pem');
   assert.equal(createHash('sha256').update(key).digest('hex'),'659ea4edcecaf23a586e2ff371616fde5f6ee7c219fb70fa978816e2b10acf75');
   for(const prefix of ['', 'candidate/']){
     const raw=await read(prefix+'dist/catalog-v1.json'),bundle=JSON.parse(await read(prefix+'signatures/catalog-v1.bundle.json'));
     assert.equal(bundle.catalog,raw);assert(verify(null,Buffer.from(raw),createPublicKey(key),Buffer.from(bundle.signature,'base64')));
   }
-  for(const name of ['registry/apps.json','dist/catalog-v1.json','signatures/catalog-v1.sig','signatures/catalog-v1.bundle.json','signatures/catalog-v1.pub.pem'])assert.equal(await read(name),readPreStreamPublication(name));
+  const before=JSON.parse(readPreStreamPublication('registry/apps.json')),current=JSON.parse(await read('registry/apps.json'));
+  assert.deepEqual(current.apps,before.apps.filter(app=>!/^php-(?:5[2-6]|7[0-4])$/.test(app.id)));
+  assert.equal(await read('signatures/catalog-v1.pub.pem'),readPreStreamPublication('signatures/catalog-v1.pub.pem'));
   assert.deepEqual(schemaBeforeDiskCancel(await read('schema/app.schema.json')),JSON.parse(readPreStreamPublication('schema/app.schema.json')));
 });

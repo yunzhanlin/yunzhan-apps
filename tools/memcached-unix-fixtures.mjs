@@ -1,4 +1,5 @@
-import fs from'node:fs';import path from'node:path';import assert from'node:assert/strict';
+// Historical C208 positive/negative fixtures; active40 validation is separate.
+import fs from '../tests/helpers/before-php8-retirement.mjs';import path from'node:path';import assert from'node:assert/strict';
 export function memcachedUnixCases(root){
  const current=JSON.parse(fs.readFileSync(path.join(root,'registry/apps.json'))).apps,base=current.find(a=>a.id==='memcached');assert(current.length===50&&base.version==='1.6.45-compat4');
  const cases=current.map(manifest=>({name:'current50:'+manifest.id,valid:true,manifest:structuredClone(manifest)}));

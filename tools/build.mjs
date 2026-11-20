@@ -1,3 +1,4 @@
+import { ACTIVE_APPLICATION_COUNT, assertActiveApplications } from './active-apps.mjs';
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -19,7 +20,9 @@ const catalogBaseURL = officialCatalogBaseURL(source.channel === undefined ? 'st
 if(!candidate&&source.channel!==undefined&&source.channel!=='stable')throw Error('stable catalogue cannot select the candidate channel');
 if(candidate){await candidateAssets(root);await candidateSchema(root);}
 
-// Keep historical version endpoints available while clients refresh signed catalogs.
+assertActiveApplications(source.apps);
+if(source.apps.length!==ACTIVE_APPLICATION_COUNT)throw Error('active catalogue must contain exactly '+ACTIVE_APPLICATION_COUNT+' applications');
+// Historical endpoints for active apps remain immutable; retired PHP packages are removed.
 await mkdir(path.join(output, "dist"), { recursive: true });
 const catalog = { schema_version: 1, generated_at: source.generated_at, repository: source.repository, apps: [] };
 for (const app of [...source.apps].sort((a, b) => a.id.localeCompare(b.id))) {

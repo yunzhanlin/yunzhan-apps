@@ -1,4 +1,5 @@
-import fs from 'node:fs';
+// Historical C208 positive/negative fixtures; active40 validation is separate.
+import fs from '../tests/helpers/before-php8-retirement.mjs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';

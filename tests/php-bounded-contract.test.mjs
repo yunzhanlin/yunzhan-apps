@@ -1,7 +1,8 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import{historicalPHPBoundedCases}from'./reviewed-memcached-unix-inputs.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import fs from './helpers/before-php8-retirement.mjs';
 import {fileURLToPath} from 'node:url';
 import {validateManifest} from '../tools/lib.mjs';
 import {phpBoundedCases} from '../tools/php-bounded-fixtures.mjs';

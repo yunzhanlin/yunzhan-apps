@@ -1,3 +1,4 @@
+import { ACTIVE_APPLICATION_COUNT, assertActiveApplications } from './active-apps.mjs';
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,7 +13,8 @@ const stable=JSON.parse(await readFile(path.join(root,"registry/apps.json"),"utf
 const source=candidate?candidateSource(stable,JSON.parse(await readFile(path.join(root,"registry/candidate-apps.json"),"utf8"))):stable;
 const catalogBaseURL = officialCatalogBaseURL(source.channel === undefined ? 'stable' : source.channel);
 const catalog = JSON.parse(await readFile(path.join(output, "dist/catalog-v1.json"), "utf8"));
-if (catalog.schema_version !== 1 || catalog.apps.length !== 50) throw new Error(`catalog must contain exactly 50 apps, found ${catalog.apps.length}`);
+if (catalog.schema_version !== 1 || catalog.apps.length !== ACTIVE_APPLICATION_COUNT) throw new Error(`catalog must contain exactly ${ACTIVE_APPLICATION_COUNT} apps, found ${catalog.apps.length}`);
+assertActiveApplications(catalog.apps);
 const ids = new Set();
 for (const item of catalog.apps) {
   if (ids.has(item.id)) throw new Error(`duplicate id: ${item.id}`);

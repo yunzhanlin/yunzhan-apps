@@ -1,4 +1,5 @@
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {validateManifest} from '../tools/lib.mjs';
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
+import test from 'node:test';import assert from 'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import {validateManifest} from '../tools/lib.mjs';
 import {schemaBeforeIntrusionDebian12} from './helpers/intrusion-debian12-schema.mjs';
 import{schemaBeforeIntrusionUbuntu22}from'./helpers/intrusion-ubuntu22-schema.mjs';
 import{intrusionUbuntu22Cases}from'../tools/intrusion-ubuntu22-fixtures.mjs';import{fileURLToPath}from'node:url';

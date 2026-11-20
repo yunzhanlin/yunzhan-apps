@@ -1,6 +1,7 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile} from './helpers/before-php8-retirement.mjs';
 import {validateManifest,sha256} from '../tools/lib.mjs';
 import {schemaBeforeDiskCancel} from './helpers/disk-cancel-schema.mjs';
 const read=p=>readFile(new URL('../'+p,import.meta.url));

@@ -1,5 +1,6 @@
+// Historical source/ABI assertions below retain the signed C208 catalogue input.
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
-import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash,createPublicKey,verify} from 'node:crypto';
+import test from 'node:test';import assert from 'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import {createHash,createPublicKey,verify} from 'node:crypto';
 import {beforeIntrusion,originalIntrusionWorkflow} from './pre-intrusion-release.mjs';
 import {preWAFHealthRead} from './pre-waf-health-release.mjs';
 import {verifyOldIntrusionRefusal} from '../tools/verify-intrusion-handler-boundary.mjs';
