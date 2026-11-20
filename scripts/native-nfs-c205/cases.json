@@ -3,7 +3,7 @@
     "architecture": "amd64",
     "digest": "sha256:6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2",
     "guest": "guest.py",
-    "guest_sha256": "88b43cf384bdb2f5851fcaa548da10c6da478073ed4ecfe2f3e8bb166c6ca8ac",
+    "guest_sha256": "390a2c6b458a3f19b327c32fd725ac96393ec1871e1c625d0c7449c85c393d8a",
     "hostname": "yunzhan-qa-nfs-c204-ubuntu24-amd64",
     "image": "https://cloud-images.ubuntu.com/noble/20260926/noble-server-cloudimg-amd64.img",
     "observation_seconds": 90,
