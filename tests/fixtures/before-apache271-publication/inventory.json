@@ -1,0 +1,8 @@
+{
+  "commit": "1ae613d9fc51c3b2c57da3f25ed7cd68d20ec923",
+  "files": {
+    "candidate/dist/catalog-v1.json": "321437eb3e5f88b6c37a34f3e1343bf1a21935ae6c0162a9e95b08d827f53139",
+    "candidate/signatures/catalog-v1.sig": "795fcd960f86a569966064aa79bde19eb9302d608d2409ce96ed67d396d0f9c8"
+  },
+  "format": 1
+}

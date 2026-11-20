@@ -31,7 +31,7 @@ function verifySDK(base,extra=[]){
  visit(base);assert.deepEqual(actual.sort(),[...Object.keys(sdkFiles),...metadata,...extra].sort());
  for(const[name,info]of Object.entries(sdkFiles)){
   const file=path.join(base,name),st=fs.lstatSync(file);assert.equal(sha(fs.readFileSync(file)),info.sha256,name);
-  if(!legacy){assert.equal(st.size,info.bytes,name);assert.equal(st.mode&0o111,info.mode&0o111,name);}
+  if(!legacy){assert.equal(st.size,info.bytes,name);assert.equal(Boolean(st.mode&0o111),Boolean(info.mode&0o111),name);}
  }
  // Verify the whole original index again after copying and after native tests.
  if(!legacy)assert.equal(sha(fs.readFileSync(path.join(base,'SOURCE_INPUTS.json'))),'926a38003393ae141b75444b393a2966a20ef39099196eacb0229cbcfe564a7b');

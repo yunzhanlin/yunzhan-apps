@@ -28,12 +28,17 @@ test('authentic signed retirement channels remove exactly ten pre8 PHP applicati
  for(const id of RETIRED_PHP_IDS){const app=(await json('tests/fixtures/before-php8-retirement/registry/apps.json')).apps.find(a=>a.id===id);assert.throws(()=>candidateSource({...stable,apps:[...stable.apps.slice(1),app]},patch));}
 });
 
-test('current signed40 retains retirement and advances only the reviewed PM2 archive package',async()=>{
+const beforeApacheIndexRaw=await read('tests/fixtures/before-apache271-publication/inventory.json');
+assert.equal(sha(beforeApacheIndexRaw),'e30d728afcb3a55f1a41be59198b6d99724f8da461d909c8d66d39f710c50914');const beforeApacheIndex=JSON.parse(beforeApacheIndexRaw);
+assert.equal(beforeApacheIndex.commit,'1ae613d9fc51c3b2c57da3f25ed7cd68d20ec923');
+const reviewedPM2Publication=async p=>{const raw=await read('tests/fixtures/before-apache271-publication/'+p);assert.equal(sha(raw),beforeApacheIndex.files[p]);return raw;};
+
+test('authentic signed40 PM2 publication retains retirement and advances only the reviewed PM2 archive package',async()=>{
  const key=await read('signatures/catalog-v1.pub.pem');
  for(const prefix of['','candidate/']){
-  const raw=await read(prefix+'dist/catalog-v1.json'),catalog=JSON.parse(raw),old=JSON.parse(await retiredPublication(prefix+'dist/catalog-v1.json'));
+  const raw=await (prefix?reviewedPM2Publication:read)(prefix+'dist/catalog-v1.json'),catalog=JSON.parse(raw),old=JSON.parse(await retiredPublication(prefix+'dist/catalog-v1.json'));
   assert.equal(catalog.apps.length,40);assert.equal(new Set(catalog.apps.map(a=>a.id)).size,40);
-  assert(verify(null,raw,createPublicKey(key),Buffer.from((await read(prefix+'signatures/catalog-v1.sig')).toString().trim(),'base64')));
+  assert(verify(null,raw,createPublicKey(key),Buffer.from((await (prefix?reviewedPM2Publication:read)(prefix+'signatures/catalog-v1.sig')).toString().trim(),'base64')));
   assert.deepEqual(catalog.apps.filter(a=>a.id!=='pm2-manager'),old.apps.filter(a=>a.id!=='pm2-manager'));
   const pm2=catalog.apps.find(a=>a.id==='pm2-manager');
   if(prefix==='')assert.deepEqual(pm2,old.apps.find(a=>a.id==='pm2-manager'));
@@ -41,4 +46,17 @@ test('current signed40 retains retirement and advances only the reviewed PM2 arc
   for(const id of RETIRED_PHP_IDS){assert(!catalog.apps.some(a=>a.id===id));await assert.rejects(access(new URL('../'+prefix+'dist/apps/'+id,import.meta.url)));}
   for(const app of catalog.apps)assert.equal(sha(await read(prefix+'dist/apps/'+app.id+'/'+app.version+'/manifest.json')),app.sha256);
  }
+});
+
+
+test('current original-key signed40 advances exactly Apache while preserving PM2 and all retired PHP removals',async()=>{
+ const raw=await read('candidate/dist/catalog-v1.json'),current=JSON.parse(raw),before=JSON.parse(await reviewedPM2Publication('candidate/dist/catalog-v1.json'));
+ assert(verify(null,raw,createPublicKey(await read('signatures/catalog-v1.pub.pem')),Buffer.from((await read('candidate/signatures/catalog-v1.sig')).toString().trim(),'base64')));
+ assert.equal(current.apps.length,40);assert.equal(new Set(current.apps.map(a=>a.id)).size,40);
+ assert.deepEqual(current.apps.filter(a=>a.id!=='apache'),before.apps.filter(a=>a.id!=='apache'));
+ const app=current.apps.find(a=>a.id==='apache');assert.equal(app.version,'2.4.71-compat1');assert.equal(app.target,'apache-2.4.71');assert.equal(app.sha256,'aadc8489fe1e4e9bb40310bafdba7a8385fd11aabe7dd97758c17b45ba98ff53');
+ assert.equal(sha(await read('candidate/dist/apps/apache/2.4.71-compat1/manifest.json')),app.sha256);
+ assert.equal(sha(await read('candidate/dist/apps/apache/2.4.68-compat1/manifest.json')),'abb627840489dee4ac93f8e3c925d5b6af50454caeb6655d73458aac03f60446');
+ for(const id of RETIRED_PHP_IDS){assert(!current.apps.some(a=>a.id===id));await assert.rejects(access(new URL('../candidate/dist/apps/'+id,import.meta.url)));}
+ for(const item of current.apps)assert.equal(sha(await read('candidate/dist/apps/'+item.id+'/'+item.version+'/manifest.json')),item.sha256);
 });

@@ -29,7 +29,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.equal(JSON.stringify(stable),before);assert.equal(source.apps.length,40);
   const changes=source.apps.filter((a,i)=>JSON.stringify(a)!==JSON.stringify(stable.apps[i])).map(a=>a.id);
   const expectedOverrides = [
-    'anti-intrusion', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'elasticsearch', 'enterprise-tamper-proof', 'files-sync',
+    'anti-intrusion', 'apache', 'apache-waf', 'daily-report', 'disk-analysis', 'docker-manager', 'elasticsearch', 'enterprise-tamper-proof', 'files-sync',
     'load-balance', 'mobile', 'mongodb', 'mysql', 'network-threat-detection', 'nfs-manager', 'nginx-waf', 'openlitespeed',
 
        'php-80', 'php-81', 'php-code-security', 'phpmyadmin',
@@ -37,6 +37,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   ];
   assert.deepEqual(changes.sort(), expectedOverrides);
   assert.deepEqual(patch.apps.map(a=>a.id).sort(), expectedOverrides);
+  assert.equal(stable.apps.find(a=>a.id==='apache').version,'2.4.68-compat1');assert.equal(source.apps.find(a=>a.id==='apache').delivery.target,'apache-2.4.71');
   const originalDocker = stable.apps.find(app => app.id === 'docker-manager');
   const docker = source.apps.find(app => app.id === 'docker-manager');
   assert.equal(originalDocker.version, '1-compat1');
@@ -70,6 +71,7 @@ test('separate candidate catalogue changes exactly its declared known identities
   assert.deepEqual(ids.compatibility, oldIDS.compatibility);
   assert.equal(createHash('sha256').update(await read('candidate/dist/apps/network-threat-detection/1.3.1/manifest.json')).digest('hex'), '2a49e71578193d1e2af1af9364559dda0b8f8ac524f01117cb69de89aea18ebe');
   const nativeRuntimes = [
+    ['apache', '2.4.71-compat1'],
     ['mysql', '8.4.13-compat1'], ['redis', '8.2.11-compat1'],
     ['rabbitmq', '4.4.0-compat1'],
     ['mongodb', '8.0.38-compat1'],
