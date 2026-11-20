@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { beforeLoadBalanceStreamBuild } from "./release-build-baseline.mjs";
+import { beforeLoadBalanceStreamBuild, beforeApacheRuntimeApp } from "./release-build-baseline.mjs";
 import { beforePHPSwitchPreviewApp } from "./php-switch-preview-baseline.mjs";
 import { reconcileRuntimeChoices as choose } from "../web/src/runtimeSelection.ts";
 const release=(family,version,extra={})=>({id:family+"-"+version,version,channel:"stable",...extra});
@@ -142,7 +142,7 @@ test("all eight current runtime families use server/installed identities, not li
 });
 test("actual component wiring preserves the reviewed runtime and Compose port behavior",()=>{
  const path=new URL("../web/src/App.vue",import.meta.url);
- let text=beforePHPSwitchPreviewApp(readFileSync(path,"utf8"));
+ let text=beforePHPSwitchPreviewApp(beforeApacheRuntimeApp(readFileSync(path,"utf8")));
  const one=(a,b)=>{assert.equal(text.split(a).length,2,a);text=text.replace(a,()=>b);};
  // The store also provides a read-only entry while intrusion status is pending.
  one(`                  <el-button

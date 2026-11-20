@@ -17,3 +17,21 @@ test('current engine inventory admits the exact new runtime without expanding le
  assert.equal(apacheBodyBuildRow(row),true);assert.equal(apacheBodyBuildRow({...row,apache_version:'2.4.70'}),false);
  assert.equal(apacheBodyBuildRow({...row,apache_version:'2.4.71',state:'retained_unsupported',engine_version:'2.9.15-yz4',error:'retained only',historical_integrity_verified:true,integrity_verified:false,module_abi_validated:false,elf_hardening_validated:false,compiler_groups_collected:false}),false);
 });
+
+// These are exact pre-C265 signed-source hashes, not refreshed expected output.
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {beforeApacheRuntimeBuild,beforeApacheRuntimeApp} from './release-build-baseline.mjs';
+test('the new build gate preserves all previous commands and is mandatory exactly once',()=>{
+ const text=readFileSync(new URL('../packaging/build-release.sh',import.meta.url),'utf8');
+ const line='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-runtime.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ assert.equal(createHash('sha256').update(beforeApacheRuntimeBuild(text)).digest('hex'),'ab38501ddb91cb14e97344f136125150dfe2c7bcb6d67a1904d4a1bcd8fa6300');
+ for(const changed of [text.replace(line,''),text.replace(line,line+line),text.replace(line,line.replace('--test','--check')),text.replace(line,'')+line])assert.throws(()=>beforeApacheRuntimeBuild(changed));
+ assert.notEqual(beforeApacheRuntimeBuild(text.replace('go vet ./...','unreviewed-command ./...')),beforeApacheRuntimeBuild(text));
+});
+test('Apache manager changes preserve the complete previous App component outside their exact additions',()=>{
+ const text=readFileSync(new URL('../web/src/App.vue',import.meta.url),'utf8');
+ assert.equal(createHash('sha256').update(beforeApacheRuntimeApp(text)).digest('hex'),'98effed9cd3e2cc7ea9c54c31e435499a68b49bb9fb74ebc2957bd4d9e923700');
+ const marker='  switch_apache: "切换 Apache 运行版本",\n';
+ for(const changed of [text.replace(marker,''),text.replace(marker,marker+marker),text.replace(marker,marker.replace('switch_apache','unreviewed-action'))])assert.throws(()=>beforeApacheRuntimeApp(changed));
+});

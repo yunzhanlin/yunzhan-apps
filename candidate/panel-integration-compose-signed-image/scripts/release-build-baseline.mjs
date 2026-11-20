@@ -36,6 +36,7 @@ export function beforeUnpublishedCopyBuild(text) {
 // previously frozen command and digest; missing, moved, changed or repeated
 // gates must still fail instead of being erased by a generic filter.
 export function beforePM2ProjectsBuild(text) {
+  text=beforeApacheRuntimeBuild(text);
   const previous='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-registry-request-identity.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
   const addition='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-pm2-projects.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
   assert.equal(text.split(previous).length,2,'missing or duplicate original registry request gate');
@@ -214,4 +215,28 @@ export function beforeFilesyncOfflineReaderHook(text) {
     text=text.split(current).join(previous);
   }
   return text;
+}
+
+// C265 adds one exact Apache runtime-selection regression after the original
+// Apache build gate. Unknown edits survive all historical whole-script pins.
+export function beforeApacheRuntimeBuild(text) {
+ const previous='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-build.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ const addition='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-runtime.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ assert.equal(text.split(previous).length,2,'missing or duplicate original Apache build gate');
+ assert.equal(text.split(addition).length,2,'missing or duplicate Apache runtime gate');
+ assert.equal(text.split(previous+addition).length,2,'Apache runtime gate must follow the original Apache build gate exactly');
+ return text.replace(previous+addition,()=>previous);
+}
+
+// Preserve the earlier full App.vue wiring hash while admitting only the six
+// explicit Apache manager additions. Unrelated bytes remain in the old digest.
+export function beforeApacheRuntimeApp(text) {
+ const once=(current,previous)=>{assert.equal(text.split(current).length,2,'missing, duplicate or altered Apache runtime manager wiring');text=text.replace(current,()=>previous);};
+ once('const ApacheRuntimeManager = defineAsyncComponent(() => import("./ApacheRuntimeManager.vue")) as typeof import("./ApacheRuntimeManager.vue")["default"];\nconst apacheRuntimeManager = ref<InstanceType<typeof ApacheRuntimeManager>|null>(null);\n','');
+ once(' if (app.id === "apache") { void apacheRuntimeManager.value?.open(); return; }\n','');
+ once('(!["php", "apache"].includes(catalog?.family || "") || release.installation_allowed === true)','(catalog?.family !== "php" || release.installation_allowed === true)');
+ once('else if (family === "apache") void apacheRuntimeManager.value?.open();\n  else if (family === "nginx") go("sites");','else if (family === "nginx" || family === "apache") go("sites");');
+ once('  switch_apache: "切换 Apache 运行版本",\n','');
+ once('        <ApacheRuntimeManager ref="apacheRuntimeManager" :api="api" :on-job="revealJob" :on-install="() => { const app=appRegistry.catalog.apps.find(row=>row.id===\'apache\'); if(app) void installRegistryApp(app); }"/>\n','');
+ return text;
 }

@@ -4646,9 +4646,9 @@
       "sha256": "596217b59e543344dd15ca45a0aac10c4a213386eb3415c022ddd8043efafdae"
     },
     "internal/executor/apache_runtime_transaction_linux.go": {
-      "bytes": 3309,
+      "bytes": 3308,
       "mode": 420,
-      "sha256": "378c631b6ed35264a5f9c2b9dab7002c31a547702d7f517557076453c9a41335"
+      "sha256": "f57cb2d0290dee6a7b4326c567497978c71afcbb460de04c8e59d7a91c2a204b"
     },
     "internal/executor/apache_runtime_transaction_linux_test.go": {
       "bytes": 3570,
@@ -11926,9 +11926,9 @@
       "sha256": "9dc2f6ca5fc443eb4f0ed7d6b726381050525190d7d97e8f47c11b9d220bd20a"
     },
     "scripts/release-build-baseline.mjs": {
-      "bytes": 22015,
+      "bytes": 24352,
       "mode": 384,
-      "sha256": "24784b9ceb5311f9010956e0b49c5398fadffbbf3a6b16fb8544ff212f446e61"
+      "sha256": "41c4443c82da872fa4795479a8175225c87b1d5afeb208186d552c64934bca9d"
     },
     "scripts/test-analytics-geography.mjs": {
       "bytes": 4329,
@@ -11996,9 +11996,9 @@
       "sha256": "b567045cce0fda93e3f65d59a6e64d9d5a859dd18d6dfd17d89dbd44616a4a89"
     },
     "scripts/test-apache-runtime.mjs": {
-      "bytes": 2209,
+      "bytes": 3920,
       "mode": 420,
-      "sha256": "770a8393a2637a030e4dd5a9c1cda425a42cfd1b831908a861dc1490b9608b64"
+      "sha256": "3b21d33909ea6400ee031941b7aea8915d0e83d3e6a512013c1aedc184c094e3"
     },
     "scripts/test-apache-waf-transactions.mjs": {
       "bytes": 11335,
@@ -12281,9 +12281,9 @@
       "sha256": "79f86b5e4b3a20ec27f0f9f925a88fbd602763565321e3bde4bbbe133e74d3ce"
     },
     "scripts/test-runtime-selection.mjs": {
-      "bytes": 17694,
+      "bytes": 17742,
       "mode": 384,
-      "sha256": "23cce8adff8b808c3bc4fad177d7a07a2a45cf3d7d64b6479d9fdcb47f401590"
+      "sha256": "eefa392de004f14daff4764a29bf899adaa63feb96bcab8058cfa1aac5ff0074"
     },
     "scripts/test-software-routing-install-browser.mjs": {
       "bytes": 255,
@@ -91912,5 +91912,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "08f92b1d4a0c1029bff666de6cc32b4bba43a831d4e0cbd29392d7f88c9d4593"
+  "inputs_sha256": "ee8a1e7766a23a92db87896287c2b1a2809eb86a310816ca1f677f461513e73b"
 }

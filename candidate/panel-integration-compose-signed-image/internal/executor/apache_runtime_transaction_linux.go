@@ -71,7 +71,7 @@ func (s *Service) authorizeApacheRuntimeCandidate(ctx context.Context, tx wafTra
 	if !useNext {
 		id = tx.ApacheRuntime.PreviousID
 	}
-	_, err := LoadRuntime(id)
+	_, err = LoadRuntime(id)
 	return err
 }
 
