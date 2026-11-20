@@ -4631,14 +4631,14 @@
       "sha256": "691e00d01a1a779ad7538684cb798b1fecd4480499b04f1f88d9a3ea100d93cf"
     },
     "internal/executor/apache_runtime_observe.go": {
-      "bytes": 1511,
+      "bytes": 3063,
       "mode": 420,
-      "sha256": "b3e090e4f8aa8e09dcfcd4e8a8b8bfc3d78cb4ff74fc290daa8062dc84b15257"
+      "sha256": "2edeb191a40717597ea04e0bf65bb7a34414b82a96c1871f2027deffdf65599e"
     },
     "internal/executor/apache_runtime_observe_test.go": {
-      "bytes": 3277,
+      "bytes": 6727,
       "mode": 420,
-      "sha256": "2018e6344e0491e0b04d92e702abb23098cc0168e6e6477a3af6bb5c223943fb"
+      "sha256": "5fc4adbd3a106470c577d40c73ad4dc37eda67d85cf789444331f6ca5226eb65"
     },
     "internal/executor/apache_runtime_source.go": {
       "bytes": 3170,
@@ -4651,9 +4651,9 @@
       "sha256": "4ba91e275fd087c8e475b223e88c1eddd169dec28c7c0b5b47db3a64418c5118"
     },
     "internal/executor/apache_runtime_switch_linux.go": {
-      "bytes": 25129,
+      "bytes": 25222,
       "mode": 420,
-      "sha256": "338ed1f725a06e6bb44f572713847570932a1d3e7b1baf3157ca424067723375"
+      "sha256": "62b1942d0f25e63d4ac19d9ddb03ade66024ba1bf74a5306b2f2c58462ee2985"
     },
     "internal/executor/apache_runtime_transaction_linux.go": {
       "bytes": 3308,
@@ -91922,5 +91922,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "5eaded11f824722c9e6f13de5110946dfab10b9259cd73f38f227af74fc99569"
+  "inputs_sha256": "980b02276763a006c59f07254aa70db41e4881dc79176d8a00e32bc2f3f290ef"
 }

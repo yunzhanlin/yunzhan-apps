@@ -3,7 +3,11 @@ package executor
 import (
 	"context"
 	"errors"
+	"io"
 	"local/panel/internal/runtimecatalog"
+	"maps"
+	"net"
+	"net/http"
 	"testing"
 	"time"
 )
@@ -72,5 +76,87 @@ func TestApacheRuntimeObservationRejectsLateIdentityAfterOriginalDeadline(t *tes
 	})
 	if !errors.Is(err, context.DeadlineExceeded) || state != "" || actual != "" {
 		t.Fatal("late identity became a completed activation", state, actual, err)
+	}
+}
+
+func TestApacheRuntimeReadinessSurvivesActualListenerNotYetBound(t *testing.T) {
+	reserved, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	address := reserved.Addr().String()
+	if err = reserved.Close(); err != nil {
+		t.Fatal(err)
+	}
+	server := &http.Server{Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNoContent) })}
+	defer server.Close()
+	calls := 0
+	client := &http.Client{Timeout: time.Second}
+	defer client.CloseIdleConnections()
+	expected := map[string]int{"qa.example.test": http.StatusNoContent}
+	result, err := waitApacheRuntimeResponses(context.Background(), expected, func(ctx context.Context) (map[string]int, error) {
+		calls++
+		request, e := http.NewRequestWithContext(ctx, "GET", "http://"+address+"/", nil)
+		if e != nil {
+			return nil, e
+		}
+		request.Host = "qa.example.test"
+		response, e := client.Do(request)
+		if calls == 1 {
+			if e == nil {
+				response.Body.Close()
+				t.Fatal("the owned listener was unexpectedly already serving")
+			}
+			listener, startErr := net.Listen("tcp", address)
+			if startErr != nil {
+				t.Fatal(startErr)
+			}
+			go server.Serve(listener)
+		}
+		if e != nil {
+			return nil, e
+		}
+		defer response.Body.Close()
+		_, e = io.Copy(io.Discard, response.Body)
+		return map[string]int{"qa.example.test": response.StatusCode}, e
+	})
+	if err != nil || !maps.Equal(result, expected) || calls != 2 {
+		t.Fatal("committed before the real listener was ready or missed readiness", result, err, calls)
+	}
+}
+
+func TestApacheRuntimeReadinessRejectsPartialForeignOrChangedWebsiteResults(t *testing.T) {
+	expected := map[string]int{"one.example.test": 200, "two.example.test": 403}
+	for name, actual := range map[string]map[string]int{
+		"partial":        {"one.example.test": 200},
+		"changed-status": {"one.example.test": 200, "two.example.test": 200},
+		"foreign-domain": {"one.example.test": 200, "three.example.test": 403},
+		"extra-domain":   {"one.example.test": 200, "two.example.test": 403, "extra.example.test": 200},
+	} {
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+			defer cancel()
+			result, err := waitApacheRuntimeResponses(ctx, expected, func(context.Context) (map[string]int, error) { return actual, nil })
+			if result != nil || !errors.Is(err, context.DeadlineExceeded) {
+				t.Fatal("incomplete original website set became committed readiness", result, err)
+			}
+		})
+	}
+}
+
+func TestApacheRuntimeReadinessRejectsLateResultsAndCancelledOrUnknownOriginals(t *testing.T) {
+	expected := map[string]int{"qa.example.test": 200}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	defer cancel()
+	actual, err := waitApacheRuntimeResponses(ctx, expected, func(ctx context.Context) (map[string]int, error) { <-ctx.Done(); return expected, nil })
+	if actual != nil || !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("late response escaped original task deadline", actual, err)
+	}
+	calls := 0
+	for _, invalid := range []map[string]int{nil, {"qa.example.test": 500}, {"untrusted.invalid/path": 200}} {
+		_, err := waitApacheRuntimeResponses(context.Background(), invalid, func(context.Context) (map[string]int, error) { calls++; return invalid, nil })
+		if err == nil || calls != 0 {
+			t.Fatal("unknown original website result acquired readiness authority", err, calls)
+		}
 	}
 }

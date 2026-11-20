@@ -486,17 +486,15 @@ func (s *Service) switchApacheRuntime(ctx context.Context, request core.ApacheRu
 	if _, _, err := waitApacheRuntimeExecutable(ctx, next.ID, s.apacheRunningRelease); err != nil {
 		return result, rollback(fmt.Errorf("Apache 新主进程未使用目标可执行程序: %w", err))
 	}
-	after, err := apacheRuntimeProbeStatuses(ctx, sites)
+	after, err := waitApacheRuntimeResponses(ctx, before, func(observation context.Context) (map[string]int, error) {
+		state, actual, err := s.apacheRunningRelease(observation)
+		if err != nil || state != "active" || actual != next.ID {
+			return nil, errors.Join(errors.New("Apache 入口就绪期间目标可执行程序尚未确认"), err)
+		}
+		return apacheRuntimeProbeStatuses(observation, sites)
+	})
 	if err != nil {
 		return result, rollback(err)
-	}
-	if len(before) != len(after) {
-		return result, rollback(errors.New("Apache 原域名清单变化"))
-	}
-	for domain, status := range before {
-		if after[domain] != status {
-			return result, rollback(errors.New("Apache 原域名响应状态变化"))
-		}
 	}
 	if plan.WAFVersion != "" {
 		if err := s.verifyApacheBodyTransition(ctx, plan.Next, plan.Next); err != nil {
