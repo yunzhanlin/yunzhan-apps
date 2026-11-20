@@ -1,0 +1,50 @@
+name: Current signed legacy PHP real sync and persistence
+on:
+  push:
+    branches: [codex/legacy-php-c220-current-native]
+    paths: [scripts/native-legacy-php-c220/cohort.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  legacy-php:
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+        slot: ['52', '81']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify original C208 signed programme and exact fixture
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          umask 077
+          python3 -I -B scripts/native-legacy-php-c220/download.py "$RUNNER_TEMP/legacy-inputs" "$RUNNER_TEMP/legacy-private"
+      - name: Normal original signed first installation
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-legacy-php-c220/bootstrap-original-install.py "$RUNNER_TEMP/legacy-inputs" "$RUNNER_TEMP/legacy-private" > "$RUNNER_TEMP/legacy-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/legacy-private/bootstrap-step.stderr"
+      - name: Actual signed app, verified source sync, domain and persistence
+        env:
+          SLOT: ${{ matrix.slot }}
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-legacy-php-c220/legacy-php.py "$RUNNER_TEMP/legacy-private" "$SLOT" > "$RUNNER_TEMP/legacy-private/legacy-step.stdout" 2> "$RUNNER_TEMP/legacy-private/legacy-step.stderr"
+      - name: Retain complete encrypted original evidence including failures
+        if: always()
+        run: sudo python3 -I -B scripts/native-legacy-php-c220/finish.py "$RUNNER_TEMP/legacy-private" "$RUNNER_TEMP/legacy-public" phase1
+      - name: Upload encrypted originals
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c220-current-legacy-${{ matrix.slot }}-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/legacy-public/
+          if-no-files-found: error
+          retention-days: 14
