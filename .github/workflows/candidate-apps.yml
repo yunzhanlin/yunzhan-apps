@@ -20,15 +20,16 @@ jobs:
     # The current publisher and unchanged stable check use this checkout;
     # active40-abi.yml independently tests current40 on the published SDK.
     env:
-      YUNZHAN_HISTORICAL_ROOT: ${{ runner.temp }}/yunzhan-c68-historical
+      YUNZHAN_HISTORICAL_ROOT: /home/runner/work/yunzhan-apps/yunzhan-c68-historical
     defaults:
       run:
-        working-directory: ${{ runner.temp }}/yunzhan-c68-historical
+        working-directory: ../yunzhan-c68-historical
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, independently resolved
       - name: Select the authentic immutable input for original fifty-package regressions
         working-directory: ${{ github.workspace }}
         run: |
+          test "$GITHUB_WORKSPACE" = /home/runner/work/yunzhan-apps/yunzhan-apps
           git fetch --no-tags --depth=1 origin fdb6be9f2ee650ca0ed37b213256151f397a7599
           git worktree add --detach "$YUNZHAN_HISTORICAL_ROOT" fdb6be9f2ee650ca0ed37b213256151f397a7599
           test "$(git -C "$YUNZHAN_HISTORICAL_ROOT" rev-parse HEAD)" = fdb6be9f2ee650ca0ed37b213256151f397a7599
