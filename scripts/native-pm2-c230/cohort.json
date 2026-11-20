@@ -2,7 +2,7 @@
   "source_head": "e9781747c48247344dbb25788ba45f320185773e",
   "source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
   "version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
-  "native_fixture_parent": "f15aa07f586da88b543e8e9b69f2483b8ac45766",
+  "native_fixture_parent": "cd2e819fb66052ef0ba28c98aa8897f6039dd38d",
   "served_head": "d3efdf6d1c60ba4fe94655b4098e62790a0f685a",
   "item": {
     "id": "user-manager",
@@ -1038,11 +1038,14 @@
     "scripts/native-pm2-c230/prepare-pm2-host.py": "3f87c1c2a12ed323a59b17403715626a1a6865400c8da0f4ea0df5756db604bc",
     "scripts/native-pm2-c230/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     "scripts/native-pm2-c230/upgrade.json": "8bbcf9bb38faa0d728b065856fac8876a8ccb43c718922fcb554db5cef85801a",
-    "scripts/native-pm2-c230/user-manager-business.py": "3aa6088a042846833fd8258c1ba8ac4c406121af38d0cf816d74c0e9d5354680",
+    "scripts/native-pm2-c230/user-manager-business.py": "82c33b6be13524ed016a0acc98f58f8c70251c04f76a8d143a64c22255c92105",
     ".github/workflows/user-manager-c240-current-contract.yml": "0cfd8027e4fd6e734563bf5ab9d371f59ab35d0709fa07e9d509c1085dece797"
   },
   "changed_payload_files": [
-    "scripts/native-pm2-c230/user-manager-business.py",
-    ".github/workflows/user-manager-c240-current-contract.yml"
-  ]
+    "scripts/native-pm2-c230/user-manager-business.py"
+  ],
+  "original_C240_failure_retained": {
+    "run": 44785994851,
+    "reason": "Fixture counted read-only run observation events as account mutation events. Production explicitly records run observations; count only create/update/revoke/delete, retaining exact single mutation event assertion."
+  }
 }

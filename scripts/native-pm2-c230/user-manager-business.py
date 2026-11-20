@@ -64,7 +64,7 @@ def sql_snapshot():
   return {table:[[{'blob_hex':v.hex()}if isinstance(v,bytes)else v for v in row]for row in db.execute('SELECT * FROM '+table+' ORDER BY 1')]for table in('users','app_user_roles','app_user_menus','app_user_request_receipts')}
 def success_count():
  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:
-  return db.execute("SELECT count(*) FROM app_module_events WHERE module_id='user-manager' AND outcome='succeeded'").fetchone()[0]
+  return db.execute("SELECT count(*) FROM app_module_events WHERE module_id='user-manager' AND outcome='succeeded' AND action IN ('create','update','revoke','delete')").fetchone()[0]
 proof={'ok':False,'architecture':arch,'version':'1.3.2','source_inputs_sha256':plan['source_inputs_sha256'],'Main_changed':False,'all40_commercial':False}
 try:
  ready();login=json.loads(Path('/etc/panel/first-login.json').read_bytes());admin=Client().login(login['username'],login['password']);seed=login['username']
