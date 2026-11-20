@@ -35,9 +35,9 @@ def job(label,route,payload):
  row=wait(lambda:api('/jobs/'+id),lambda x:x['state']in('succeeded','failed','needs_attention'),2400);save(label+'-job',row);assert row['state']=='succeeded',(label,row);return row
 base='/api/app-modules/pm2-manager/'
 def action(name,id,extra=None,expected=200):return api(base.removeprefix('/api')+name,dict(resource_id=id,**(extra or{})),expected)
-def request_http(port):
+def request_http(port,path="/"):
  try:
-  with local.open('http://127.0.0.1:'+str(port)+'/',timeout=3)as r:
+  with local.open('http://127.0.0.1:'+str(port)+path,timeout=3)as r:
    assert r.status==200;return json.loads(r.read(16384))
  except (OSError,urllib.error.URLError):return None
 def ready(port,secret):return wait(lambda:request_http(port),lambda v:v is not None and v['secret_sha256']==hashlib.sha256(secret.encode()).hexdigest(),60)
@@ -59,7 +59,7 @@ if(odd){console.error('C230 owned candidate dependency startup failure');process
 http.createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({uid:process.getuid(),gid:process.getgid(),pid:process.pid,instance:process.env.NODE_APP_INSTANCE,dependency:dep,secret_sha256:crypto.createHash('sha256').update(process.env.C230_SECRET||'').digest('hex'),extra_present:process.env.C230_EXTRA!==undefined}));}).listen(Number(process.env.PORT),'127.0.0.1',()=>console.log('C230 owned HTTP ready'));
 """
 def site(label):
- slug='qa-c230-'+label+'-'+secrets.token_hex(3);row=job(label+'-site','/sites',{'name':'Owned PM2 C230 '+label,'slug':slug,'domain':slug+'.localhost','php_version_id':''});id=row['target_id'];assert re.fullmatch('[0-9a-f]{32}',id);put(id,'app.js',entry);return id
+ slug='qa-c230-'+label+'-'+secrets.token_hex(3);row=job(label+'-site','/sites',{'name':'Owned PM2 C230 '+label,'slug':slug,'domain':slug+'.localhost','php_version_id':''});assert row['kind']=='create_site'and row['site_name']=='Owned PM2 C230 '+label;id=row['site_id'];assert re.fullmatch('[0-9a-f]{32}',id);put(id,'app.js',entry);return id
 
 def locked(label,dependencies,hook=False):
  # Only the non-root hosted runner prepares a lock; the panel itself performs the actual install as the website UID.
@@ -134,15 +134,31 @@ try:
  old_config=digest(manifest(target_id));put(target,'bad.js',"console.error('C230 bad entry');process.exit(44);\n")
  assert action('update',target_id,{'expected_revision':3,'entry':'bad.js','environment_patch':{'C230_SECRET':'owned-failed-secret'},'pm2_operation_id':secrets.token_hex(16)},409)['error'];assert digest(manifest(target_id))==old_config and ready(18330,newsecret)['dependency']
  save('actual-bad-entry-encrypted-config-rollback',{'manifest_sha256':old_config,'revision':3,'previous_secret_digest_restored':True})
+ # Real entry and port revision, then a bounded memory-threshold restart on this owned worker.
+ assert action('update',target_id,{'expected_revision':3,'port':18331,'pm2_operation_id':secrets.token_hex(16)},409)['error'];assert digest(manifest(target_id))==old_config
+ memory_entry=entry.replace("let dep=false,odd=false;","let held;let dep=false,odd=false;").replace("http.createServer((req,res)=>{", "http.createServer((req,res)=>{if(req.url==='/memory'){held=Buffer.alloc(80*1024*1024,0x61);}").replace("uid:process.getuid(),", "source:'second-entry',rss:process.memoryUsage().rss,uid:process.getuid(),")
+ put(target,'second.js',memory_entry)
+ moved=action('update',target_id,{'expected_revision':3,'entry':'second.js','port':18332,'instances':1,'memory_mb':64,'pm2_operation_id':secrets.token_hex(16)});save('actual-entry-and-port-revision-update',moved)
+ row=ready(18332,newsecret);assert row['source']=='second-entry'and json.loads(manifest(target_id).read_bytes())['revision']==4 and request_http(18330)is None
+ group=system('show',unit(target_id),'--property=ControlGroup','--value');appcg=Path('/sys/fs/cgroup')/group.lstrip('/');assert(appcg/'memory.max').read_text().strip()==str(1<<30)
+ def memory_events():return {k:int(v)for k,v in(line.split()for line in(appcg/'memory.events').read_text().splitlines())}
+ before_events=memory_events();start_memory=time.monotonic();allocated=request_http(18332,'/memory');assert allocated and allocated['pid']==row['pid']and 64<<20<allocated['rss']<256<<20
+ restarted=wait(lambda:request_http(18332),lambda v:v is not None and v['pid']!=row['pid']and v['source']=='second-entry'and v['secret_sha256']==hashlib.sha256(newsecret.encode()).hexdigest(),100)
+ assert memory_events()['oom_kill']==before_events['oom_kill']and restarted['uid']==row['uid']and restarted['gid']==row['gid']and restarted['dependency']
+ process_status=Path('/proc')/str(restarted['pid'])/'status';native_status={k:v.strip()for k,v in(line.split(':',1)for line in process_status.read_text().splitlines())};assert int(native_status['CapEff'],16)==0 and native_status['NoNewPrivs']=='1'
+ observed=[]
+ for _ in range(5):
+  sample=ready(18332,newsecret);assert sample['pid']==restarted['pid']and sample['source']=='second-entry';observed.append(sample);time.sleep(3)
+ save('actual-memory-threshold-restart',{'before':row,'actual_bounded_allocation':allocated,'after':restarted,'elapsed_seconds':time.monotonic()-start_memory,'configured_memory_threshold_MB':64,'bounded_buffer_bytes':80<<20,'kernel_total_hard_limit':1<<30,'kernel_oom_kill_unchanged':True,'native_process_status':{k:native_status[k]for k in('Uid','Gid','CapEff','NoNewPrivs')},'stable_after_restart_samples':observed})
  logs=action('logs',target_id);assert 'C230 owned HTTP ready'in logs['logs'];save('actual-owned-journal',logs)
- action('stop',target_id);assert system('show',unit(target_id),'--property=ActiveState','--value')=='inactive';action('start',target_id);ready(18330,newsecret);before_restart=identity(target_id);action('restart',target_id);ready(18330,newsecret);assert identity(target_id)!=before_restart
+ action('stop',target_id);assert system('show',unit(target_id),'--property=ActiveState','--value')=='inactive';action('start',target_id);ready(18332,newsecret);before_restart=identity(target_id);action('restart',target_id);ready(18332,newsecret);assert identity(target_id)!=before_restart
  latest_before=action('deployment',target_id)['deployment'];archive=action('archive-deployments',target_id);save('real-old-deployment-archive',archive);assert archive['archived']>=3 and archive['records_retained']and archive['dependency_directories_retained'];assert action('deployment',target_id)['deployment']==latest_before
  for id in(deployed['id'],bad['id'],failed['id'],queued['id']):assert stage(target,id).is_dir()
  assert identity(control_id)==control_identity and digest(manifest(control_id))==control_manifest and digest(Path('/srv/panel/sites')/control/'public/app.js')==control_source and ready(18331,control_secret)==original
  for id in ids:action('stop',id);action('delete',id);assert not manifest(id).exists()
  assert (Path('/srv/panel/sites')/target/'public/app.js').read_text()==entry and (Path('/srv/panel/sites')/control/'public/app.js').read_text()==entry
  final=api('/app-registry');last,=[a for a in final['status']if a['id']=='pm2-manager'];assert last['installed']and last['installed_version']==item['version']and not last['update_available']
- proof.update(ok=True,app_version=item['version'],installed_job=installed['id'],current_catalogue_head=plan['served_head'],actual_public_npm_sha512_install=True,default_hook_disabled=True,explicit_hook_exact_nonroot_UID_without_app_secret=True,actual_bad_integrity_preserves_old_service_and_inode=True,actual_startup_failure_restores_old_inode=True,actual_concurrent_refusal_and_cancel_recovery=True,actual_two_worker_round_robin=True,actual_encrypted_delta_deletion_and_bad_entry_rollback=True,actual_stop_start_restart_logs_and_archive=True,independent_project_lifetime_and_data_preserved=True,self_owned_project_records_removed_without_site_data_deletion=True,platform_matrix_complete=False,memory_threshold_and_host_reboot_not_claimed=True)
+ proof.update(ok=True,app_version=item['version'],installed_job=installed['id'],current_catalogue_head=plan['served_head'],actual_public_npm_sha512_install=True,default_hook_disabled=True,explicit_hook_exact_nonroot_UID_without_app_secret=True,actual_bad_integrity_preserves_old_service_and_inode=True,actual_startup_failure_restores_old_inode=True,actual_concurrent_refusal_and_cancel_recovery=True,actual_two_worker_round_robin=True,actual_encrypted_delta_deletion_and_bad_entry_rollback=True,actual_stop_start_restart_logs_and_archive=True,independent_project_lifetime_and_data_preserved=True,self_owned_project_records_removed_without_site_data_deletion=True,platform_matrix_complete=False,actual_entry_port_and_memory_threshold_restart=True,host_reboot_not_claimed=True)
 except BaseException:
  import traceback
  proof['failure']=traceback.format_exc()
