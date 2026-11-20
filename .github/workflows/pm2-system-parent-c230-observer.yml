@@ -1,0 +1,54 @@
+name: PM2 distribution node path original observation
+on:
+  push:
+    branches: [codex/pm2-system-parent-c230-observer]
+    paths: [.github/workflows/pm2-system-parent-c230-observer.yml]
+permissions:
+  contents: read
+jobs:
+  distribution-paths:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Observe original distribution package paths without changing permissions
+        run: |
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B - "$RUNNER_TEMP/node-path-original" <<'PYCODE'
+          import hashlib,json,os,platform,stat,subprocess,sys
+          from pathlib import Path
+          assert os.geteuid()==0 and os.environ.get('GITHUB_ACTIONS')=='true'and os.environ.get('GITHUB_REPOSITORY')=='yunzhanlin/yunzhan-apps'
+          sys.path.insert(0,str(Path('scripts/native-pm2-c230').absolute()))
+          from isolated_ubuntu_apt import isolated_ubuntu_apt
+          out=Path(sys.argv[1]);out.mkdir(mode=0o755)
+          def save(n,v):
+           with(out/n).open('x')as f:json.dump(v,f,indent=2)
+          def observe(label):
+           rows={}
+           for name in('/','/usr','/usr/bin','/usr/share','/usr/share/nodejs','/usr/share/nodejs/npm','/usr/share/nodejs/npm/bin','/usr/share/nodejs/npm/bin/npm-cli.js','/usr/bin/npm','/usr/bin/node'):
+            p=Path(name)
+            try:
+             s=p.lstat();rows[name]={'uid':s.st_uid,'gid':s.st_gid,'mode':oct(stat.S_IMODE(s.st_mode)),'type':stat.S_IFMT(s.st_mode),'inode':s.st_ino,'dev':s.st_dev,'symlink':os.readlink(p)if p.is_symlink()else None}
+            except FileNotFoundError:rows[name]={'absent':True}
+           save(label+'.json',rows)
+          observe('before')
+          config=isolated_ubuntu_apt({'x86_64':'amd64','aarch64':'arm64'}[platform.machine()],save)
+          for label,args in [('update',['update']),('install',['install','-y','--no-install-recommends','--no-upgrade','nodejs','npm'])]:
+           with(out/(label+'.stdout')).open('xb')as stdout,(out/(label+'.stderr')).open('xb')as stderr:r=subprocess.run(['/usr/bin/apt-get',*args],env={**os.environ,'APT_CONFIG':config,'DEBIAN_FRONTEND':'noninteractive'},stdout=stdout,stderr=stderr,timeout=600)
+           save(label+'-outcome.json',{'exit':r.returncode});assert r.returncode==0
+          observe('after')
+          print((out/'after.json').read_text())
+          PYCODE
+      - name: Preserve original path and APT observations
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: pm2-system-parent-original-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/node-path-original/
+          if-no-files-found: error
+          retention-days: 14
