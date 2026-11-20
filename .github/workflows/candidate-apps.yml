@@ -30,6 +30,7 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
           test "$GITHUB_WORKSPACE" = /home/runner/work/yunzhan-apps/yunzhan-apps
+          test "$(git rev-parse HEAD:candidate/panel-integration-load-balance)" = 0754086b782f551323285bd885f1901c93b5391d
           git fetch --no-tags --depth=1 origin fdb6be9f2ee650ca0ed37b213256151f397a7599
           git worktree add --detach "$YUNZHAN_HISTORICAL_ROOT" fdb6be9f2ee650ca0ed37b213256151f397a7599
           test "$(git -C "$YUNZHAN_HISTORICAL_ROOT" rev-parse HEAD)" = fdb6be9f2ee650ca0ed37b213256151f397a7599
@@ -201,13 +202,13 @@ jobs:
       - name: Actual unchanged C61r2 production must reproduce all31 publication regressions
         working-directory: original-publication-defect/candidate/panel-integration-load-balance
         run: |
-          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$YUNZHAN_HISTORICAL_ROOT" . stage
+          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . stage
           set +e
           sudo "$(command -v go)" test -json -count=1 -p 1 ./internal/executor -run '^TestIntegrityKernel(Concurrent(Status|Admission)WaitsForCompletePublication|StoppedIncompletePublicationStaysUnknown)$' -timeout=60s > "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$YUNZHAN_HISTORICAL_ROOT" . verify
+          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . verify
           node "$YUNZHAN_HISTORICAL_ROOT/tools/check-kernel-publication-original-defect.mjs" "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl" "$(uname -m)"
       - name: Original predecessor source for the real old compiled handler boundary
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
