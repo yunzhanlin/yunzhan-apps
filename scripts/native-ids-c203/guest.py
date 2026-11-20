@@ -117,18 +117,19 @@ class Marker(http.server.BaseHTTPRequestHandler):
     def log_message(self,*args):pass
     def do_TRACE(self):
         self.send_response(200);self.send_header('Content-Length','2');self.end_headers();self.wfile.write(b'OK')
-def trace_alert():
+    def do_GET(self):self.do_TRACE()
+def trace_alert(expected_sid=9000004):
     server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Marker)
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:
         for _ in range(3):
             conn=http.client.HTTPConnection('127.0.0.1',server.server_port,timeout=5)
-            conn.request('TRACE','/owned-ids-fixture');response=conn.getresponse()
+            conn.request('GET' if expected_sid==2013057 else 'TRACE','/owned-ids-fixture',headers={'User-Agent':'PHP/8.3 (yunzhan-owned-loopback-fixture)'} if expected_sid==2013057 else {});response=conn.getresponse()
             assert response.status==200 and response.read()==b'OK'
             conn.close()
-        result=wait(report,lambda r:any(e['signature_id']==9000004 and e['destination_port']==server.server_port for e in r['events']['alerts']),90)
+        result=wait(report,lambda r:any(e['signature_id']==expected_sid and e['destination_port']==server.server_port for e in r['events']['alerts']),90)
         assert result['passive_only'] and result['process_verified']
-        return [e for e in result['events']['alerts'] if e['signature_id']==9000004 and e['destination_port']==server.server_port]
+        return [e for e in result['events']['alerts'] if e['signature_id']==expected_sid and e['destination_port']==server.server_port]
     finally:
         server.shutdown();server.server_close();thread.join(timeout=3)
 def native_syntax(native):
@@ -196,7 +197,7 @@ try:
         save(out/'preboot-real-signed-rule-selection.json',{'selection':selection,'job_id':posted['job_id'],
              'data_only_install':True,'profile':selected['rule_profile'],'earlier_log_bytes':len(earlier_raw),'earlier_log_sha256':sha(earlier_raw)})
         operation('ids-start',{'expected_revision':revision()})
-        alerts=trace_alert()
+        alerts=trace_alert(2013057)
         operation('ids-stop',{'expected_revision':revision()})
         stopped=report()
         assert not stopped['process_verified'] and not stopped['boot_enabled']
@@ -224,7 +225,7 @@ try:
         assert len(raw)==state['log_bytes'] and sha(raw)==state['log_sha']
         save(out/'postboot-original-log-identity.json',{'bytes':len(raw),'sha256':sha(raw),'original_alerts':state['alerts']})
         operation('ids-start',{'expected_revision':revision()})
-        alerts=trace_alert()
+        alerts=trace_alert(2013057)
         operation('ids-stop',{'expected_revision':revision()})
         final=report()
         assert all(a in final['events']['alerts'] for a in state['alerts'])
