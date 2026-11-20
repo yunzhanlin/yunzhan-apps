@@ -45,15 +45,15 @@ func TestNetworkIDSRuleProfileChoiceIsClosedExplicitAndActionSpecific(t *testing
 }
 
 func TestNetworkIDSRuleProfileImplementationVersionNeverOverwritesPublicOldRelease(t *testing.T) {
-	if SoftwareImplementationVersion("network-threat-detection") != appcatalog.NetworkIDSDurableStopVersion {
+	if SoftwareImplementationVersion("network-threat-detection") != appcatalog.NetworkIDSIndependentArchiveVersion {
 		t.Fatal("new rule profile handler reuses the old immutable application version")
 	}
-	for _, version := range []string{"1.2.0", "1.3.0", "1.3.1", "1.3.2", appcatalog.NetworkIDSDurableStopVersion} {
+	for _, version := range []string{"1.2.0", "1.3.0", "1.3.1", "1.3.2", appcatalog.NetworkIDSDurableStopVersion, appcatalog.NetworkIDSIndependentArchiveVersion} {
 		if err := ValidateSoftwareUpdate("network-threat-detection", version); err != nil {
 			t.Fatal("reviewed old/new handler version rejected", version, err)
 		}
 	}
-	for _, version := range []string{"1.3.2-rc1", "1.3.2-compat1", "1.3.3-compat1", "1.3.4", "1.4.0"} {
+	for _, version := range []string{"1.3.2-rc1", "1.3.2-compat1", "1.3.3-compat1", "1.3.4-compat1", "1.3.5", "1.4.0"} {
 		if ValidateSoftwareUpdate("network-threat-detection", version) == nil {
 			t.Fatal("unimplemented future handler version advertised as usable", version)
 		}

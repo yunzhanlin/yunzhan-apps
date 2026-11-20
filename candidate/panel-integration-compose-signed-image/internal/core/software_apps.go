@@ -111,7 +111,7 @@ func SoftwareImplementationVersion(id string) string {
 func ValidateSoftwareUpdate(id, version string) error {
 	if id == "network-threat-detection" {
 		base, _, _ := strings.Cut(version, "-")
-		if comparison, valid := appcatalog.CompareVersions(base, NetworkIDSMaintainedEngineAppVersion); valid && comparison >= 0 && version != NetworkIDSMaintainedEngineAppVersion && version != appcatalog.NetworkIDSDurableStopVersion {
+		if comparison, valid := appcatalog.CompareVersions(base, NetworkIDSMaintainedEngineAppVersion); valid && comparison >= 0 && version != NetworkIDSMaintainedEngineAppVersion && version != appcatalog.NetworkIDSDurableStopVersion && version != appcatalog.NetworkIDSIndependentArchiveVersion {
 			return errors.New("网络威胁检测仅支持已实现的完整版本")
 		}
 	}

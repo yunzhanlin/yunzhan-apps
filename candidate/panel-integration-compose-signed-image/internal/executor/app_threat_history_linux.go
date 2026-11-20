@@ -15,15 +15,18 @@ import (
 )
 
 type threatIDSHistorySummary struct {
-	Archives         int    `json:"archives"`
-	ArchiveBytes     int64  `json:"archive_bytes"`
-	ArchiveLimit     int    `json:"archive_limit"`
-	ArchiveByteLimit int64  `json:"archive_byte_limit"`
-	RotateAtBytes    int64  `json:"rotate_at_bytes"`
-	RecordLimit      int    `json:"record_limit"`
-	RetiredDigests   int    `json:"retired_digests"`
-	Pending          bool   `json:"pending"`
-	OldestRotationAt string `json:"oldest_rotation_at,omitempty"`
+	Archives                   int    `json:"archives"`
+	IndependentCopies          int    `json:"independent_copies"`
+	LegacyArchives             int    `json:"legacy_archives"`
+	PreservedProducerWitnesses int    `json:"preserved_producer_witnesses"`
+	ArchiveBytes               int64  `json:"archive_bytes"`
+	ArchiveLimit               int    `json:"archive_limit"`
+	ArchiveByteLimit           int64  `json:"archive_byte_limit"`
+	RotateAtBytes              int64  `json:"rotate_at_bytes"`
+	RecordLimit                int    `json:"record_limit"`
+	RetiredDigests             int    `json:"retired_digests"`
+	Pending                    bool   `json:"pending"`
+	OldestRotationAt           string `json:"oldest_rotation_at,omitempty"`
 }
 
 // Verify the bytes returned to the parser, not a separately opened pathname's
@@ -101,14 +104,21 @@ func (s *Service) threatIDSHistorySources(ctx context.Context) ([]threatEVESourc
 		return nil, out, err
 	}
 	defer f.Close()
-	entries, err := f.ReadDir(threatIDSHistoryLimit + 1)
-	if err != nil && err != io.EOF || len(entries) != len(v.Archives) {
-		return nil, out, errors.New("IDS 历史目录含未记录或缺失文件；未隐藏未知数据")
-	}
 	allowed := map[string]bool{}
 	for _, entry := range v.Archives {
 		allowed["eve-"+entry.ID+".json"] = true
+		if entry.Source != nil {
+			allowed[threatIDSProducerName(entry.ID)] = true
+			out.IndependentCopies++
+			out.PreservedProducerWitnesses++
+		} else {
+			out.LegacyArchives++
+		}
 		out.ArchiveBytes += entry.Bytes
+	}
+	entries, err := f.ReadDir(2*threatIDSHistoryLimit + 1)
+	if err != nil && err != io.EOF || len(entries) != len(allowed) {
+		return nil, out, errors.New("IDS 历史目录含未记录或缺失文件；未隐藏未知数据")
 	}
 	for _, entry := range entries {
 		if !allowed[entry.Name()] || !entry.Type().IsRegular() {

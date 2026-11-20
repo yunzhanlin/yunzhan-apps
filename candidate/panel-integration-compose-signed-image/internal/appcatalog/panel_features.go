@@ -78,7 +78,7 @@ const TaskOpenSSHInventoryFeature = "task-openssh-inventory-v1"
 const TaskOpenSSHInventoryVersion = "1.3.2"
 
 func panelFeatureAvailable(feature string) bool {
-	if feature == NetworkIDSDurableStopFeature {
+	if feature == NetworkIDSDurableStopFeature || feature == NetworkIDSIndependentArchiveFeature {
 		return runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
 	}
 	if feature == IntrusionDebian12Feature || feature == DailyReportScheduleFeature || feature == FTPTransferHistoryFeature || feature == DockerMetricsFeature || feature == PHPProcessPolicyFeature || feature == SiteDiagnosisFeature || feature == SiteDiagnosisApacheFeature || feature == UserAccessOverviewFeature ||
@@ -118,6 +118,9 @@ func panelFeatureAvailable(feature string) bool {
 }
 
 func validatePanelRequirements(manifest Manifest, available func(string) bool) error {
+	if handled, err := validateNetworkIDSIndependentArchiveRequirement(manifest, available); handled {
+		return err
+	}
 	if handled, err := validateNetworkIDSDurableStopRequirement(manifest, available); handled {
 		return err
 	}
