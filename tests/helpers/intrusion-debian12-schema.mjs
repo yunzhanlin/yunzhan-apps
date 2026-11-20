@@ -1,7 +1,8 @@
+import {schemaBeforePM2ConfigurationArchive} from './pm2-configuration-archive-schema.mjs';
 import assert from 'node:assert/strict';
 
 export function schemaBeforeIntrusionDebian12(value) {
- const current = structuredClone(value);
+ const current = schemaBeforePM2ConfigurationArchive(value);
  const feature = 'intrusion-debian12-v1';
  const required = {
   minItems: 3, maxItems: 3,

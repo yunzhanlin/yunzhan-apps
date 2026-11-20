@@ -182,7 +182,8 @@
           "files-sync-unpublished-retention-v1",
           "pm2-evidence-preserving-stop-v1",
           "pm2-root-vendor-v1",
-          "intrusion-debian12-v1"
+          "intrusion-debian12-v1",
+          "pm2-configuration-archive-v1"
         ]
       }
     },
@@ -1826,6 +1827,41 @@
                       "arm64"
                     ]
                   }
+                }
+              }
+            }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "pm2-manager"
+              },
+              "version": {
+                "const": "7.0.4-compat12"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "pm2-manager"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "pm2-configuration-archive-v1"
                 }
               }
             }
@@ -4970,42 +5006,84 @@
           },
           {
             "not": {
-              "required": [
-                "required_panel_features"
-              ],
-              "properties": {
-                "id": {
-                  "const": "pm2-manager"
-                },
-                "version": {
-                  "const": "7.0.4-compat11"
-                },
-                "delivery": {
+              "anyOf": [
+                {
                   "required": [
-                    "provider",
-                    "target",
-                    "manage_route"
+                    "required_panel_features"
                   ],
                   "properties": {
-                    "provider": {
-                      "const": "panel-module"
-                    },
-                    "target": {
+                    "id": {
                       "const": "pm2-manager"
                     },
-                    "manage_route": {
-                      "const": "app-modules"
+                    "version": {
+                      "const": "7.0.4-compat11"
+                    },
+                    "delivery": {
+                      "required": [
+                        "provider",
+                        "target",
+                        "manage_route"
+                      ],
+                      "properties": {
+                        "provider": {
+                          "const": "panel-module"
+                        },
+                        "target": {
+                          "const": "pm2-manager"
+                        },
+                        "manage_route": {
+                          "const": "app-modules"
+                        }
+                      }
+                    },
+                    "required_panel_features": {
+                      "minItems": 1,
+                      "maxItems": 1,
+                      "items": {
+                        "const": "pm2-root-vendor-v1"
+                      }
                     }
                   }
                 },
-                "required_panel_features": {
-                  "minItems": 1,
-                  "maxItems": 1,
-                  "items": {
-                    "const": "pm2-root-vendor-v1"
+                {
+                  "required": [
+                    "required_panel_features"
+                  ],
+                  "properties": {
+                    "id": {
+                      "const": "pm2-manager"
+                    },
+                    "version": {
+                      "const": "7.0.4-compat12"
+                    },
+                    "delivery": {
+                      "required": [
+                        "provider",
+                        "target",
+                        "manage_route"
+                      ],
+                      "properties": {
+                        "provider": {
+                          "const": "panel-module"
+                        },
+                        "target": {
+                          "const": "pm2-manager"
+                        },
+                        "manage_route": {
+                          "const": "app-modules"
+                        }
+                      }
+                    },
+                    "required_panel_features": {
+                      "minItems": 1,
+                      "maxItems": 1,
+                      "items": {
+                        "const": "pm2-configuration-archive-v1"
+                      }
+                    }
                   }
                 }
-              }
+              ]
             }
           }
         ]
@@ -5201,6 +5279,101 @@
                   "arm64"
                 ]
               }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "pm2-configuration-archive-v1"
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "version"
+            ],
+            "properties": {
+              "version": {
+                "const": "7.0.4-compat12"
+              }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "id"
+                ],
+                "properties": {
+                  "id": {
+                    "const": "pm2-manager"
+                  }
+                }
+              },
+              {
+                "required": [
+                  "delivery"
+                ],
+                "properties": {
+                  "delivery": {
+                    "required": [
+                      "target"
+                    ],
+                    "properties": {
+                      "target": {
+                        "const": "pm2-manager"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "required": [
+          "required_panel_features"
+        ],
+        "properties": {
+          "id": {
+            "const": "pm2-manager"
+          },
+          "version": {
+            "const": "7.0.4-compat12"
+          },
+          "delivery": {
+            "required": [
+              "provider",
+              "target",
+              "manage_route"
+            ],
+            "properties": {
+              "provider": {
+                "const": "panel-module"
+              },
+              "target": {
+                "const": "pm2-manager"
+              },
+              "manage_route": {
+                "const": "app-modules"
+              }
+            }
+          },
+          "required_panel_features": {
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "const": "pm2-configuration-archive-v1"
             }
           }
         }

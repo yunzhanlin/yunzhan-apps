@@ -1,10 +1,13 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import {pm2MaintenanceCases} from './pm2-maintenance-fixtures.mjs';
 
 export function pm2RootVendorCases(root){
- const source=JSON.parse(fs.readFileSync(path.join(root,'registry/candidate-apps.json')));
- const current=source.apps.find(app=>app.id==='pm2-manager');
+ const raw=fs.readFileSync(path.join(root,'candidate/dist/apps/pm2-manager/7.0.4-compat11/manifest.json'));
+ assert.equal(createHash('sha256').update(raw).digest('hex'),'80c03d128862e1d54bce0f275025e549d7b1d51f72679cf4d59552e371feb7bc');
+ const current=JSON.parse(raw);
  const cases=[...pm2MaintenanceCases(root),{name:'exact-PM2-root-vendor-11',manifest:current,valid:true}];
  const mutations=[
   ['missing-feature',a=>delete a.required_panel_features],

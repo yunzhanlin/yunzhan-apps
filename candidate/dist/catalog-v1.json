@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-20T10:20:44Z",
+  "generated_at": "2026-11-20T15:36:30Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -717,29 +717,29 @@
       "id": "pm2-manager",
       "name": "PM2 Manager",
       "category": "deployment",
-      "version": "7.0.4-compat11",
-      "summary": "固定 PM2 7.0.4 共享运行库使用独立 Root 副本。更新保留原项目和运行进程，提供只读清单、独立停机、加密环境变量和失败恢复。",
+      "version": "7.0.4-compat12",
+      "summary": "固定 PM2 7.0.4 独立 Root 运行库；保留原项目与进程，支持完整配置记录封存、旧编号查询和中断后的显式恢复。封存绑定当前安装实例，不重放配置或启停服务。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "panel-module",
       "target": "pm2-manager",
       "manage_route": "app-modules",
       "capabilities": [
-        "非 root PM2 集群与启停；确切网站账户、服务进程及监听归属核对",
-        "独立只读当前项目与分页；历史或配置记录损坏时仍可核对服务",
-        "独立显示当前运行和开机状态，保留开机意图；更新保留原进程，按需逐个重启",
-        "内存重启阈值",
-        "原项目、修订和独立私有锁核对；拒绝未知身份、链接及冲突操作",
-        "加密仅写入环境变量增量管理",
-        "锁定 npm 依赖后台部署；共享运行库在私有目录构建为独立 Root 副本",
-        "网站用户受控安装脚本",
-        "停止不重放配置或部署；服务停机核对和历史保存结果分别回执",
-        "中断部署恢复与取消；未提交配置启动拦截及显式恢复后保持停止",
-        "旧部署可恢复归档",
-        "最长45秒就绪、调用方取消；拒绝其他进程监听，失败先停候选再恢复旧加密配置"
+        "非 root PM2 集群与启停；核对确切网站账户、服务进程及监听归属",
+        "独立只读项目及分页；历史损坏时仍可核对当前运行和开机状态",
+        "独立 Root 共享运行库；软件更新保留原项目和进程，按需明确重启",
+        "可配置进程数和内存重启阈值；受管应用另有1GiB总硬内存限额",
+        "校验原项目、修订与私有锁；拒绝身份不明、链接和冲突操作",
+        "加密且只写入的环境变量增量与删除；接口不返回变量值",
+        "公共 npm SHA-512 锁定包后台部署；默认禁用安装脚本，显式开启仅网站用户运行且不传入应用秘密",
+        "部署取消和失败恢复旧依赖；旧部署可恢复归档，新旧依赖及故障记录保留",
+        "独立停止不重放配置或部署；服务结果与历史保存结果分别核对",
+        "最长45秒就绪和调用方取消；拒绝其他进程监听，坏入口恢复旧加密配置",
+        "活动配置记录最多512条；完整封存并有界分页保留历史、旧编号不能重放；最多512次封存请求",
+        "封存与恢复绑定当前安装实例和原摘要；显式继续或恢复原目录、保留恢复方向及故障片段，不启停项目"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pm2-manager/7.0.4-compat11/manifest.json",
-      "sha256": "80c03d128862e1d54bce0f275025e549d7b1d51f72679cf4d59552e371feb7bc"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/pm2-manager/7.0.4-compat12/manifest.json",
+      "sha256": "6130f5c079ce5084656377dd57337cd5e85dc9d26cb45c86598cfd4831e2a41c"
     },
     {
       "id": "pure-ftpd",
