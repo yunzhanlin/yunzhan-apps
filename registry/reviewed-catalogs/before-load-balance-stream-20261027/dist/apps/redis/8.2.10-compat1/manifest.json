@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "id": "redis",
+  "name": "Redis",
+  "category": "deployment",
+  "version": "8.2.10-compat1",
+  "summary": "安装固定版本 Redis，管理独立实例、AOF、内存上限与键浏览。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "redis-8.2.10",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "多实例",
+    "AOF",
+    "内存限额",
+    "键浏览"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "redis-server --version"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}

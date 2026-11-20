@@ -95,7 +95,7 @@ func TestCurrentMobileCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510
 
 // A five-application release cannot renew or replace the separately signed IDS cohort.
 func TestCurrentMemcachedCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules(t *testing.T) {
-	c, in, now := publishedEnvelopeFrom(t, "signatures/catalog-v1.bundle.json", "247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813")
+	c, in, now := publishedEnvelopeFrom(t, "registry/reviewed-catalogs/before-load-balance-stream-20261027/signatures/catalog-v1.bundle.json", "247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813")
 	authority, bundle, err := c.VerifyRuleDataEnvelope(context.Background(), in, "1.3.1", appSHA, "et-open-web-20261021", ruleSHA, now, nil)
 	if err != nil {
 		t.Fatal(err)

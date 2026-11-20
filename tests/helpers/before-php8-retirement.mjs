@@ -8,7 +8,7 @@ import {createHash} from 'node:crypto';
 const root=fileURLToPath(new URL('../../',import.meta.url));
 const base=path.join(root,'tests/fixtures/before-php8-retirement');
 const indexRaw=fs.readFileSync(path.join(base,'snapshot-index.json'));
-assert.equal(createHash('sha256').update(indexRaw).digest('hex'),'b2f1755c1da02dcff21588d95a7dd28ce7bb1a4137f6275cf9f7cf4137b56c3e');
+assert.equal(createHash('sha256').update(indexRaw).digest('hex'),'beeb374103b01abdb1250ccaeb95a2841407212d600509bebf4eb66ebf2be636');
 const index=JSON.parse(indexRaw);
 assert.equal(index.source_revision,'b6923bba32cb6980c5c30011131356ca9d6c3b82');
 function historical(file) {

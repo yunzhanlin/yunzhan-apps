@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "site-diagnosis",
+  "name": "Site Diagnosis",
+  "category": "professional",
+  "version": "1.2.0",
+  "summary": "真实 DNS、HTTP、TLS 和 Nginx 检查，提供健康评分、失败原因和处置建议；评分不是安全认证。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "site-diagnosis",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "DNS 检查",
+    "HTTP 检查",
+    "TLS 检查",
+    "Nginx 配置检查",
+    "健康评分",
+    "失败处置建议",
+    "专用操作流程",
+    "执行历史"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/site-diagnosis"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}

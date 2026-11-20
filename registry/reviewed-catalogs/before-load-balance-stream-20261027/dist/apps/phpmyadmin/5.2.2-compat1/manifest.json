@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "id": "phpmyadmin",
+  "name": "phpMyAdmin",
+  "category": "deployment",
+  "version": "5.2.2-compat1",
+  "summary": "固定摘要部署原版 phpMyAdmin，回环端口访问，并管理网络可达的已授权 MySQL 数据库。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "compose",
+    "target": "phpmyadmin",
+    "image": "phpmyadmin:5.2.2-apache@sha256:6b5ab5f9ebfe3dbb38388b5695c2ff5ba3e26cdc2c4ce0bd97092eefc6a20bfd",
+    "manage_route": "databases"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "MySQL 管理",
+    "数据库管理界面",
+    "回环绑定",
+    "访问审计"
+  ],
+  "health": {
+    "probe": "http",
+    "target": "/"
+  },
+  "uninstall": {
+    "preserve_data": false,
+    "reference_check": false
+  }
+}

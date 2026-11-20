@@ -64,6 +64,10 @@ export function prepareFiveAppHistoricalWorkflow(bytes){
 }
 export function originalReviewedFiveAppHistoricalWorkflow(bytes){
  const wasBuffer=Buffer.isBuffer(bytes);
+ // Only the declared retired-PHP historical-input selection is restored. All
+ // original workflow hashes below still bind every remaining command byte.
+ const retirementInput='-published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-load-balance-stream-20261027"';
+ if(bytes.toString().includes(retirementInput)){const text=bytes.toString();assert.equal(text.split(retirementInput).length,2);const restored=text.replace(retirementInput,()=>'-published-app-registry-root "$GITHUB_WORKSPACE"');bytes=wasBuffer?Buffer.from(restored):restored;}
  if(digest(bytes)===original34WorkflowSHA)return bytes;
  const raw=bytes.toString();if(!raw.includes(newFlag)&&!raw.includes(newBoundary)&&!raw.includes(originalF47NegativeCommand)&&!raw.includes(currentUnixSchemaCommand))return bytes;
  assert.equal(raw.split('\n'+originalF47NegativeCommand).length,2);assert.equal(raw.split('\n'+currentUnixSchemaCommand).length,2);bytes=Buffer.from(raw.replace('\n'+originalF47NegativeCommand,()=>'').replace('\n'+currentUnixSchemaCommand,()=>''));

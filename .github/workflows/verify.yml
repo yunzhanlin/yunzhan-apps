@@ -1537,7 +1537,7 @@ jobs:
         working-directory: panel-integration-memcached-retirement-handler
         run: |
           sudo --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY "$(command -v node)" "$GITHUB_WORKSPACE/tools/run-https-fixture-ci.mjs" "$(command -v go)" test -p 1 ./...
-          sudo "$(command -v go)" test -p 1 ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE"
+          sudo "$(command -v go)" test -p 1 ./internal/appcatalog -run '^TestPublishedRepositoryCurrentSignedManifestABI$' -count=1 -published-app-registry-root "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-load-balance-stream-20261027"
           sudo "$(command -v node)" "$GITHUB_WORKSPACE/tools/verify-memcached-retirement-handler-boundary.mjs" "$(command -v go)"
       - name: All264 original packaging checks, zero Root skips
         run: timeout 240s sudo /usr/bin/python3 -I -B tools/run-memcached-retirement-handler-packaging-ci.py

@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "id": "system-hardening",
+  "name": "System hardening",
+  "category": "professional",
+  "version": "1.1.0",
+  "summary": "15 项内核参数实测、基线与严格策略切换；原始值和配置持久留档，中断后须显式核验原任务摘要再恢复。BPF 使用可逆禁用值，拒绝覆盖外部改动。",
+  "required_panel_features": [
+    "hardening-reversible-journal-v1"
+  ],
+  "stage": "ready",
+  "risk": "privileged",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "system-hardening",
+    "manage_route": "security"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "15 项实际值、目标值、原始值和偏差明细",
+    "基线与严格策略可逆切换",
+    "原任务绑定的持久事务日志",
+    "中断恢复预检与完整摘要人工确认",
+    "拒绝覆盖外部文件及内核改动",
+    "有界终态记录和配置核验",
+    "BPF 可逆禁用而非不可逆锁定"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/software"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
