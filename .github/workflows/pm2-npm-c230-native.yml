@@ -30,6 +30,8 @@ jobs:
         run: |
           umask 077
           sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/bootstrap-original-install.py "$RUNNER_TEMP/pm2-inputs" "$RUNNER_TEMP/pm2-private" > "$RUNNER_TEMP/pm2-private/bootstrap-step.stdout" 2> "$RUNNER_TEMP/pm2-private/bootstrap-step.stderr"
+      - name: Preserve and protect this disposable developer image share directory
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/prepare-pm2-host.py "$RUNNER_TEMP/pm2-private"
       - name: Actual PM2 public npm deployment, lifecycle and rollback preservation
         run: |
           umask 077
