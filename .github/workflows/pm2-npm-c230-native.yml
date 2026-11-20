@@ -34,6 +34,9 @@ jobs:
         run: |
           umask 077
           sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/pm2-business.py "$RUNNER_TEMP/pm2-private" > "$RUNNER_TEMP/pm2-private/pm2-step.stdout" 2> "$RUNNER_TEMP/pm2-private/pm2-step.stderr"
+      - name: Retain read-only original PM2 installer diagnostics
+        if: always()
+        run: sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-c230/diagnostics.py "$RUNNER_TEMP/pm2-private"
       - name: Encrypt complete original evidence including failures
         if: always()
         run: sudo python3 -I -B scripts/native-pm2-c230/finish.py "$RUNNER_TEMP/pm2-private" "$RUNNER_TEMP/pm2-public" phase1

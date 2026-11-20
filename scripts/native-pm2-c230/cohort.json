@@ -2,7 +2,7 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "version": "0.1.0-dev.proapps24php8storecandidate226",
-  "native_fixture_parent": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
+  "native_fixture_parent": "d2b45041ab472dac3c213122487709fbf5458f1b",
   "served_head": "e50bbac40c8af919df7c0a0af19a826c0c3d8f49",
   "item": {
     "id": "pm2-manager",
@@ -41,20 +41,14 @@
     "scripts/native-pm2-c230/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
     "scripts/native-pm2-c230/pm2-business.py": "47c5496ece08de34074a6bca9b9d8cf6c4a92eb24a810d5f6d5e45e220096e61",
     "scripts/native-pm2-c230/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
-    ".github/workflows/pm2-npm-c230-native.yml": "77c16c585dc860071d18a071b968904abb2aeb66c2e9bb42adefb7d0044183d1"
+    ".github/workflows/pm2-npm-c230-native.yml": "f5ebb7922b83133cedf3bba513e779c3fcee6ffa5a3bd2da0088aca92b093039",
+    "scripts/native-pm2-c230/diagnostics.py": "42acb42b61832347f133d9a1b472fddc9e28a0767efd62d115637de70d310544"
   },
   "changed_payload_files": [
-    "scripts/native-pm2-c230/bootstrap-original-install.py",
-    "scripts/native-pm2-c230/dispatch.json",
-    "scripts/native-pm2-c230/download.py",
-    "scripts/native-pm2-c230/finish.py",
-    "scripts/native-pm2-c230/isolated_ubuntu_apt.py",
-    "scripts/native-pm2-c230/original-signed-release.py",
-    "scripts/native-pm2-c230/pm2-business.py",
-    "scripts/native-pm2-c230/recipient.pem",
-    ".github/workflows/pm2-npm-c230-native.yml"
+    ".github/workflows/pm2-npm-c230-native.yml",
+    "scripts/native-pm2-c230/diagnostics.py"
   ],
   "Main_changed": false,
   "retired_PHP_installations": 0,
-  "scope": "Real native Ubuntu24 AMD64 and ARM64 public npm install, hook policy, bad integrity preservation, startup rollback, cancellation, durable environment update and archive; host reboot and memory threshold excluded"
+  "scope": "Real native Ubuntu24 AMD64 and ARM64 public npm install, hook policy, bad integrity preservation, startup rollback, cancellation, durable environment update and archive; host reboot and memory threshold excluded; follow-up retains complete dependency-unit diagnostics after first original ARM failure"
 }
