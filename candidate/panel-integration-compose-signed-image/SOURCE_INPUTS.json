@@ -4631,14 +4631,14 @@
       "sha256": "691e00d01a1a779ad7538684cb798b1fecd4480499b04f1f88d9a3ea100d93cf"
     },
     "internal/executor/apache_runtime_observe.go": {
-      "bytes": 1511,
+      "bytes": 3063,
       "mode": 420,
-      "sha256": "b3e090e4f8aa8e09dcfcd4e8a8b8bfc3d78cb4ff74fc290daa8062dc84b15257"
+      "sha256": "2edeb191a40717597ea04e0bf65bb7a34414b82a96c1871f2027deffdf65599e"
     },
     "internal/executor/apache_runtime_observe_test.go": {
-      "bytes": 3277,
+      "bytes": 6727,
       "mode": 420,
-      "sha256": "2018e6344e0491e0b04d92e702abb23098cc0168e6e6477a3af6bb5c223943fb"
+      "sha256": "5fc4adbd3a106470c577d40c73ad4dc37eda67d85cf789444331f6ca5226eb65"
     },
     "internal/executor/apache_runtime_source.go": {
       "bytes": 3170,
@@ -4651,9 +4651,9 @@
       "sha256": "4ba91e275fd087c8e475b223e88c1eddd169dec28c7c0b5b47db3a64418c5118"
     },
     "internal/executor/apache_runtime_switch_linux.go": {
-      "bytes": 25129,
+      "bytes": 25222,
       "mode": 420,
-      "sha256": "338ed1f725a06e6bb44f572713847570932a1d3e7b1baf3157ca424067723375"
+      "sha256": "62b1942d0f25e63d4ac19d9ddb03ade66024ba1bf74a5306b2f2c58462ee2985"
     },
     "internal/executor/apache_runtime_transaction_linux.go": {
       "bytes": 3308,
@@ -4661,9 +4661,9 @@
       "sha256": "f57cb2d0290dee6a7b4326c567497978c71afcbb460de04c8e59d7a91c2a204b"
     },
     "internal/executor/apache_runtime_transaction_linux_test.go": {
-      "bytes": 3570,
+      "bytes": 7125,
       "mode": 420,
-      "sha256": "38a80c77f7e4a990fa649393eb71fd1056c24783e1cbdf6c7b131684d35c5a6e"
+      "sha256": "2d503e9f93fc33d9712d4841e5cf7fb79fda327cee6149e0478201565bc5acda"
     },
     "internal/executor/apache_sites_linux.go": {
       "bytes": 9387,
@@ -4696,9 +4696,9 @@
       "sha256": "e474c18b0c459ad95d457eea44f1dbf760613e5f43fbe8a0f0cab5bbc283625a"
     },
     "internal/executor/apache_waf_history_linux.go": {
-      "bytes": 22193,
+      "bytes": 23380,
       "mode": 384,
-      "sha256": "e13ee74946224262d8a5fd0fb2dd275bda7b6012920e8b2970ff93b10fbf252b"
+      "sha256": "d7662c2ecc6f71ea08eaceb49b582993f3bc95866f93eb35ffa487ba3339166a"
     },
     "internal/executor/apache_waf_history_linux_test.go": {
       "bytes": 30238,
@@ -91922,5 +91922,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "5eaded11f824722c9e6f13de5110946dfab10b9259cd73f38f227af74fc99569"
+  "inputs_sha256": "4f886487a6c607d3edfed0d5bfdbf230327c61e447ca284bc96bbde26f1652bd"
 }

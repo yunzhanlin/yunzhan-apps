@@ -19,8 +19,8 @@ if(legacy){
  metadata=['source-sha256.json','release-source-inputs.json'];originalSDKInputs=2668;programmeSource=index.release.frozen_inputs_sha256;
 }else{
  const raw=fs.readFileSync(path.join(sdk,'SOURCE_INPUTS.json'));
- assert.equal(sha(raw),'926a38003393ae141b75444b393a2966a20ef39099196eacb0229cbcfe564a7b');
- const index=JSON.parse(raw);assert.equal(index.format,1);assert.equal(index.inputs_sha256,'5eaded11f824722c9e6f13de5110946dfab10b9259cd73f38f227af74fc99569');
+ assert.equal(sha(raw),'ca943431c70dbb798f306e121262443e10d4093b3022de1578db375695fb65f7');
+ const index=JSON.parse(raw);assert.equal(index.format,1);assert.equal(index.inputs_sha256,'4f886487a6c607d3edfed0d5bfdbf230327c61e447ca284bc96bbde26f1652bd');
  assert.equal(Object.keys(index.files).length,18388);
  sdkFiles=Object.fromEntries(Object.entries(index.files).filter(([name])=>!name.startsWith('web/node_modules/')));
  assert.equal(Object.keys(sdkFiles).length,2685);metadata=['SOURCE_INPUTS.json'];originalSDKInputs=2685;programmeSource=index.inputs_sha256;
@@ -34,7 +34,7 @@ function verifySDK(base,extra=[]){
   if(!legacy){assert.equal(st.size,info.bytes,name);assert.equal(Boolean(st.mode&0o111),Boolean(info.mode&0o111),name);}
  }
  // Verify the whole original index again after copying and after native tests.
- if(!legacy)assert.equal(sha(fs.readFileSync(path.join(base,'SOURCE_INPUTS.json'))),'926a38003393ae141b75444b393a2966a20ef39099196eacb0229cbcfe564a7b');
+ if(!legacy)assert.equal(sha(fs.readFileSync(path.join(base,'SOURCE_INPUTS.json'))),'ca943431c70dbb798f306e121262443e10d4093b3022de1578db375695fb65f7');
  else assert.equal(sha(fs.readFileSync(path.join(base,'source-sha256.json'))),'c43524684f47e9f88c5237f1a19cdb24171c728ebcb1843555b217e3bbdc8bc3');
 }
 verifySDK(sdk);const channel=fs.existsSync(path.join(root,'registry/candidate-apps.json'))?'candidate':'stable',publication=channel==='candidate'?path.join(root,'candidate'):root;const catalog=JSON.parse(fs.readFileSync(path.join(publication,'dist/catalog-v1.json')));assert.equal(catalog.apps.length,40);assert.equal(new Set(catalog.apps.map(a=>a.id)).size,40);

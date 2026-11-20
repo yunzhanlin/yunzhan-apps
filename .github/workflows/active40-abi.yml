@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: yunzhanlin/yunzhan-apps
-          ref: 1460459cd269aef6de0f7845e84fafd32c8c0a32
+          ref: fc940912e8ad6d59f3028914a306ed32f07bb5d9
           path: .ci/current-source
           sparse-checkout: candidate/panel-integration-compose-signed-image
           persist-credentials: false
