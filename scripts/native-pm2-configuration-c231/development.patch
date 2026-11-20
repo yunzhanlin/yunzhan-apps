@@ -1,8 +1,8 @@
 diff --git a/internal/executor/app_native_linux.go b/internal/executor/app_native_linux.go
-index 9860948..a7d2c56 100644
+index 9860948..1d997ab 100644
 --- a/internal/executor/app_native_linux.go
 +++ b/internal/executor/app_native_linux.go
-@@ -689,0 +690,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
+@@ -689,0 +690,12 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 +	// A generation archive covers every project. Serialize journal mutations
 +	// as well as the per-project live manifest; read-only and stop stay independent.
 +	if action == "update" || action == "recover-configuration" || action == "cancel-configuration-request" {
@@ -11,7 +11,13 @@ index 9860948..a7d2c56 100644
 +			return nil, leaseErr
 +		}
 +		defer journalLease.Close()
++		if err := s.pm2NoPendingConfigurationArchives(); err != nil {
++			return nil, err
++		}
 +	}
+@@ -706 +718 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
+-		if out, known, e := pm2ConfigurationDuplicate(in, before, configuration); known {
++		if out, known, e := s.pm2ConfigurationDuplicateIncludingArchives(in, before, configuration); known {
 diff --git a/internal/executor/app_pm2_configuration_io_linux.go b/internal/executor/app_pm2_configuration_io_linux.go
 index 0df2848..64ba8ad 100644
 --- a/internal/executor/app_pm2_configuration_io_linux.go
@@ -31,13 +37,1193 @@ index 0df2848..64ba8ad 100644
 -	raw, err = io.ReadAll(io.LimitReader(f, pm2ConfigRecordLimit+1))
 +	raw, err = io.ReadAll(io.LimitReader(f, maximum+1))
 diff --git a/internal/executor/app_pm2_configuration_linux.go b/internal/executor/app_pm2_configuration_linux.go
-index 6eb1d2c..0aa6208 100644
+index 6eb1d2c..b10c0b3 100644
 --- a/internal/executor/app_pm2_configuration_linux.go
 +++ b/internal/executor/app_pm2_configuration_linux.go
 @@ -88,0 +89,3 @@ func pm2ConfigChild(d *modulePrivateDirectory, name string, create bool) error {
 +		if errors.Is(err, os.ErrNotExist) && !d.current() {
 +			return errors.New("PM2 原配置事务目录在缺失核对期间已变化，未当作空清单")
 +		}
+@@ -346,0 +350,16 @@ func (s *Service) pm2ConfigurationReport(in core.AppModuleInput) (any, error) {
++	if in.PM2OperationID != "" {
++		if _, found := records[in.PM2OperationID]; !found {
++			archived, found, archiveErr := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
++			if archiveErr != nil {
++				return nil, archiveErr
++			}
++			if found {
++				page, pageErr := publicPM2ConfigPage(map[string]pm2ConfigRecord{in.PM2OperationID: archived}, in)
++				if pageErr != nil {
++					return nil, pageErr
++				}
++				page["archived_original"] = true
++				return page, nil
++			}
++		}
++	}
+@@ -351,0 +371 @@ func (s *Service) pm2ConfigurationReport(in core.AppModuleInput) (any, error) {
++
+@@ -529,0 +550,9 @@ func (s *Service) recoverPM2Configuration(ctx context.Context, in core.AppModule
++	if !ok && core.ValidID(in.PM2OperationID) {
++		archived, found, err := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
++		if err != nil {
++			return nil, err
++		}
++		if found {
++			record, ok = archived, true
++		}
++	}
+@@ -623,0 +653,9 @@ func (s *Service) cancelPM2ConfigurationRequest(ctx context.Context, in core.App
++	if _, exists := records[in.PM2OperationID]; !exists {
++		archived, found, archiveErr := s.pm2ArchivedConfigurationRecord(in.PM2OperationID)
++		if archiveErr != nil {
++			return nil, archiveErr
++		}
++		if found {
++			records[in.PM2OperationID] = archived
++		}
++	}
+diff --git a/internal/executor/app_pm2_journal_archive_apply_linux.go b/internal/executor/app_pm2_journal_archive_apply_linux.go
+new file mode 100644
+index 0000000..f450039
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_apply_linux.go
+@@ -0,0 +1,380 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"reflect"
++
++	"local/panel/internal/core"
++)
++
++func pm2ArchiveActionInput(in core.AppModuleInput, confirmation string) error {
++	allowed := core.AppModuleInput{PM2OperationID: in.PM2OperationID, ExpectedSHA: in.ExpectedSHA, Confirm: in.Confirm}
++	if !reflect.DeepEqual(in, allowed) || !core.ValidID(in.PM2OperationID) || !coreSHA.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
++		return errors.New("请选择完整配置清单或原归档请求，并填写精确确认；未整理其他项目数据")
++	}
++	return nil
++}
++func publicPM2ArchiveRequest(row pm2ArchiveRequestObservation) map[string]any {
++	state := "not_started"
++	count := 0
++	at := ""
++	inventory := ""
++	if row.Intent != nil {
++		state = "needs_attention"
++		count = row.Intent.Inventory.Records
++		at = row.Intent.CreatedAt
++		inventory = row.Intent.InventorySHA
++	}
++	if row.Outcome != nil {
++		state = row.Outcome.State
++	}
++	return map[string]any{"pm2_operation_id": row.ID, "state": state, "created_at": at, "record_count": count, "expected_sha": row.IntentSHA, "inventory_sha256": inventory, "retained_fragments": len(row.Fragments), "automatic_replay": false, "services_changed": false}
++}
++
++func (s *Service) archivePM2Configurations(ctx context.Context, in core.AppModuleInput) (out any, err error) {
++	if err = pm2ArchiveActionInput(in, "ARCHIVE PM2 CONFIGURATIONS "+in.ExpectedSHA); err != nil {
++		return nil, err
++	}
++	if err = ctx.Err(); err != nil {
++		return nil, err
++	}
++	lease, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, lease.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil {
++		return nil, err
++	}
++	requestRaw, err := json.Marshal(in)
++	if err != nil {
++		return nil, err
++	}
++	requestSHA := pm2ConfigHash(requestRaw)
++	for _, row := range rows {
++		if row.ID == in.PM2OperationID {
++			if row.Intent != nil && row.Intent.RequestSHA != requestSHA {
++				return nil, errors.New("原归档标识已用于其他请求，未重放")
++			}
++			return map[string]any{"archive": publicPM2ArchiveRequest(row), "original_request_retained": true, "duplicate_observation": true, "automatic_replay": false}, nil
++		}
++		if row.Intent != nil && row.Outcome == nil {
++			return nil, errors.New("原配置归档尚未完成，请先读取原请求并显式恢复")
++		}
++	}
++	if len(rows) >= pm2ConfigurationArchiveGenerations {
++		return nil, errors.New("配置归档请求已达保留上限；原日志和历史均保留")
++	}
++	snapshot, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		return nil, err
++	}
++	if err = validatePM2ArchiveSnapshot(snapshot); err != nil {
++		return nil, err
++	}
++	inventorySHA, err := snapshot.sha256()
++	if err != nil || inventorySHA != in.ExpectedSHA {
++		return nil, errors.New("PM2 原配置清单已变化，请只读刷新后重新选择；未移动原目录")
++	}
++	// A previous consumed operation may not become a new generation member,
++	// including when a legacy writer did not understand the archive namespace.
++	for name := range snapshot.Files {
++		operation := name[:32]
++		for _, row := range rows {
++			if row.Intent == nil || row.Outcome == nil || row.Outcome.State != "archived" {
++				continue
++			}
++			_, intent := row.Intent.Inventory.Files[operation+".intent.json"]
++			_, cancel := row.Intent.Inventory.Files[operation+".cancel.json"]
++			if intent || cancel {
++				return nil, errors.New("活动日志含已归档的旧操作标识，原数据保留；未重复归档")
++			}
++		}
++	}
++	requests, err := s.openPM2ArchivePath("requests", "", true)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, requests.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	generations, err := s.openPM2ArchivePath("generations", "", true)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, generations.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	if !lease.current() || ctx.Err() != nil {
++		return nil, errors.New("归档准备已中断或父目录变化，未移动日志")
++	}
++	if err = requests.Mkdir(in.PM2OperationID, 0700); err != nil {
++		return nil, err
++	}
++	if err = pm2ConfigSync(requests); err != nil {
++		return nil, err
++	}
++	request, err := s.openPM2ArchivePath("requests", in.PM2OperationID, false)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, request.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	if err = request.Mkdir("prepared-new", 0700); err != nil {
++		return nil, err
++	}
++	if err = pm2ConfigSync(request); err != nil {
++		return nil, err
++	}
++	prepared, err := s.openPM2ArchivePrepared(in.PM2OperationID)
++	if err != nil {
++		return nil, err
++	}
++	preparedInfo, statErr := prepared.Stat(".")
++	identity, identityErr := pm2JournalIdentityOf(preparedInfo)
++	names, namesErr := pm2ArchiveNames(prepared, 1)
++	closeErr := prepared.Close()
++	if statErr != nil || identityErr != nil || namesErr != nil || closeErr != nil || len(names) != 0 {
++		return nil, errors.Join(statErr, identityErr, namesErr, closeErr, errors.New("新的私有配置目录无法核对，原日志未移动"))
++	}
++	owner, err := currentModuleApplyOwner()
++	if err != nil {
++		return nil, err
++	}
++	boot, err := currentPM2ConfigBoot()
++	if err != nil {
++		return nil, err
++	}
++	intent := pm2ConfigurationArchiveIntent{Format: 1, ID: in.PM2OperationID, CreatedAt: core.Now(), BootID: boot, Owner: owner, RequestSHA: requestSHA, Inventory: snapshot, InventorySHA: inventorySHA, PreparedDirectory: identity}
++	if err = validatePM2ConfigurationArchiveIntent(intent); err != nil {
++		return nil, err
++	}
++	intentRaw, err := json.Marshal(intent)
++	if err != nil {
++		return nil, err
++	}
++	intentRaw = append(intentRaw, '\n')
++	if err = pm2ArchivePublish(request, "intent.json", intentRaw); err != nil {
++		return nil, err
++	}
++	if err = ctx.Err(); err != nil {
++		return nil, err
++	}
++	return s.finishPM2ConfigurationArchive(ctx, in.PM2OperationID, pm2ConfigHash(intentRaw), lease)
++}
++
++func (s *Service) recoverPM2ConfigurationArchive(ctx context.Context, in core.AppModuleInput) (out any, err error) {
++	if err = pm2ArchiveActionInput(in, "RECOVER PM2 CONFIG ARCHIVE "+in.PM2OperationID); err != nil {
++		return nil, err
++	}
++	if err = ctx.Err(); err != nil {
++		return nil, err
++	}
++	lease, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, lease.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	return s.finishPM2ConfigurationArchive(ctx, in.PM2OperationID, in.ExpectedSHA, lease)
++}
++
++func (s *Service) pm2MovedJournalSnapshot(id string, before pm2JournalSnapshot) (snapshot pm2JournalSnapshot, err error) {
++	d, err := s.openPM2ArchivePath("generations", id, false)
++	if err != nil {
++		return snapshot, err
++	}
++	defer func() { err = errors.Join(err, d.Close()) }()
++	snapshot, err = (&pm2ConfigStore{modulePrivateDirectory: d}).snapshot()
++	if err != nil {
++		return snapshot, err
++	}
++	if !pm2JournalSameMovedDirectory(before.Directory, snapshot.Directory) || !reflect.DeepEqual(before.Files, snapshot.Files) || before.Records != snapshot.Records || len(snapshot.Pending) != 0 {
++		return snapshot, errors.New("封存目录与原完整清单不一致，保留原数据；未自动采用或覆盖")
++	}
++	return snapshot, nil
++}
++
++// No service command or live manifest write belongs to this state machine.
++// Re-entering it requires an explicit exact original request/digest. Reads
++// never complete an interrupted rename and duplicate submissions never replay.
++func (s *Service) finishPM2ConfigurationArchive(ctx context.Context, id, intentSHA string, lease *pm2ConfigurationJournalLease) (out any, err error) {
++	if !core.ValidID(id) || !coreSHA.MatchString(intentSHA) || !lease.current() {
++		return nil, errors.New("原归档请求或日志锁无法核对")
++	}
++	request, err := s.openPM2ArchivePath("requests", id, false)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, request.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	module, err := s.moduleRecordDirectory("pm2-manager")
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, module.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	generations, err := s.openPM2ArchivePath("generations", "", false)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, generations.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	changed := false
++	for step := 0; step < 4; step++ {
++		if err = ctx.Err(); err != nil {
++			return nil, err
++		}
++		if !lease.current() || !request.current() || !module.current() || !generations.current() {
++			return nil, errors.New("归档父目录已变化，所有原目录保留")
++		}
++		observed, err := s.readPM2ArchiveRequest(id)
++		if err != nil {
++			return nil, err
++		}
++		if observed.Intent == nil || observed.IntentSHA != intentSHA {
++			return nil, errors.New("原归档意图与所选完整摘要不一致；未移动数据")
++		}
++		if observed.Outcome != nil {
++			return map[string]any{"archive": publicPM2ArchiveRequest(observed), "already_terminal": !changed, "automatic_replay": false, "services_changed": false}, nil
++		}
++		intent := *observed.Intent
++		active, err := s.snapshotPM2ConfigurationJournal()
++		if err != nil {
++			return nil, err
++		}
++		generation, err := s.pm2ArchiveGenerationInfo(id)
++		if err != nil {
++			return nil, err
++		}
++		switch {
++		case active.Exists && generation == nil && reflect.DeepEqual(active, intent.Inventory) && observed.Prepared != nil && observed.PreparedEmpty && pm2JournalSameMovedDirectory(intent.PreparedDirectory, *observed.Prepared):
++			if err = pm2ArchiveRenameNoReplace(module, "configuration-transactions", generations, id); err != nil {
++				return nil, err
++			}
++			changed = true
++		case !active.Exists && generation != nil && observed.Prepared != nil && observed.PreparedEmpty && pm2JournalSameMovedDirectory(intent.PreparedDirectory, *observed.Prepared):
++			if _, err = s.pm2MovedJournalSnapshot(id, intent.Inventory); err != nil {
++				return nil, err
++			}
++			if err = pm2ArchiveRenameNoReplace(request, "prepared-new", module, "configuration-transactions"); err != nil {
++				return nil, err
++			}
++			changed = true
++		case active.Exists && generation != nil && observed.Prepared == nil && active.Records == 0 && len(active.Files) == 0 && pm2JournalSameMovedDirectory(intent.PreparedDirectory, active.Directory):
++			original, err := s.pm2MovedJournalSnapshot(id, intent.Inventory)
++			if err != nil {
++				return nil, err
++			}
++			receipt := pm2ConfigurationArchiveOutcome{Format: 1, ID: id, IntentSHA: intentSHA, State: "archived", FinishedAt: core.Now(), OriginalDirectory: original.Directory, ActiveDirectory: active.Directory}
++			if err = validatePM2ConfigurationArchiveOutcome(receipt, intent, intentSHA); err != nil {
++				return nil, err
++			}
++			raw, err := json.Marshal(receipt)
++			if err != nil {
++				return nil, err
++			}
++			raw = append(raw, '\n')
++			if err = ctx.Err(); err != nil {
++				return nil, err
++			}
++			if err = pm2ArchivePublish(request, "outcome.json", raw); err != nil {
++				return nil, err
++			}
++			changed = true
++		default:
++			return nil, errors.New("原目录、封存目录或新的空目录身份不一致；全部保留，未自动采用或覆盖，请显式核对原请求")
++		}
++	}
++	return nil, errors.New("归档已保留原请求，请只读核对持久结果，未重复操作")
++}
++
++// Kept separate from the mutation path: an ordinary read never creates the
++// archive namespace, reserves an ID, starts a service or writes history.
++func (s *Service) pm2ConfigurationArchiveReport(in core.AppModuleInput) (any, error) {
++	if in.Limit < 0 || in.Limit > 32 || in.Offset < 0 || in.Offset > pm2ConfigurationArchiveGenerations || in.PM2OperationID != "" && !core.ValidID(in.PM2OperationID) {
++		return nil, errors.New("配置归档查询范围或标识无效")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil {
++		return nil, err
++	}
++	selected := []any{}
++	for _, row := range rows {
++		if in.PM2OperationID == "" || row.ID == in.PM2OperationID {
++			selected = append(selected, publicPM2ArchiveRequest(row))
++		}
++	}
++	limit := in.Limit
++	if limit == 0 {
++		limit = 16
++	}
++	start := in.Offset
++	if start > len(selected) {
++		start = len(selected)
++	}
++	end := start + limit
++	if end > len(selected) {
++		end = len(selected)
++	}
++	result := map[string]any{"configuration_archives": selected[start:end], "archive_inventory_complete": true, "total": len(selected), "limit": limit, "offset": start, "next_offset": end, "page_complete": end == len(selected), "max_retained_requests": pm2ConfigurationArchiveGenerations, "automatic_replay": false, "services_changed": false, "history_or_report_written": false}
++	snapshot, snapshotErr := s.snapshotPM2ConfigurationJournal()
++	if snapshotErr != nil {
++		result["active_inventory_known"] = false
++		result["active_error"] = snapshotErr.Error()
++		return result, nil
++	}
++	hash, err := snapshot.sha256()
++	if err != nil {
++		return nil, err
++	}
++	pending := false
++	for _, row := range rows {
++		if row.Intent != nil && row.Outcome == nil {
++			pending = true
++		}
++	}
++	result["active_inventory_known"] = true
++	result["active_record_count"] = snapshot.Records
++	result["active_pending_count"] = len(snapshot.Pending)
++	result["inventory_sha256"] = hash
++	result["archive_eligible"] = snapshot.eligible() && !pending && len(rows) < pm2ConfigurationArchiveGenerations
++	result["active_max_retained_records"] = pm2ConfigIntentLimit
++	return result, nil
++}
+diff --git a/internal/executor/app_pm2_journal_archive_apply_linux_test.go b/internal/executor/app_pm2_journal_archive_apply_linux_test.go
+new file mode 100644
+index 0000000..562aeb4
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_apply_linux_test.go
+@@ -0,0 +1,340 @@
++//go:build linux
++
++package executor
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++func pm2ArchiveActiveFixture(t *testing.T) (*Service, core.AppModuleInput) {
++	t.Helper()
++	s, app, _ := pm2StateAppFixture(t)
++	s.Config.Run = func(_ context.Context, command string, args ...string) (string, error) {
++		if command != "/usr/bin/systemctl" || len(args) != 3 || args[0] != "show" {
++			t.Fatalf("fixture attempted service mutation: %s %v", command, args)
++		}
++		return pm2TestStateText(pm2TestState("inactive", "disabled")), nil
++	}
++	in := core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, PM2OperationID: core.ID(), MemoryMB: 192}
++	if _, err := s.modulePM2(context.Background(), "update", in); err != nil {
++		t.Fatal(err)
++	}
++	return s, in
++}
++func pm2ArchivePreparedRequestFixture(t *testing.T, s *Service) (string, string) {
++	t.Helper()
++	snapshot, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || !snapshot.eligible() {
++		t.Fatalf("active fixture: %v", err)
++	}
++	requests, err := s.openPM2ArchivePath("requests", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	id := core.ID()
++	if err := requests.Mkdir(id, 0700); err != nil {
++		t.Fatal(err)
++	}
++	if err := pm2ConfigSync(requests); err != nil {
++		t.Fatal(err)
++	}
++	requests.Close()
++	generations, err := s.openPM2ArchivePath("generations", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	generations.Close()
++	request, err := s.openPM2ArchivePath("requests", id, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer request.Close()
++	if err := request.Mkdir("prepared-new", 0700); err != nil {
++		t.Fatal(err)
++	}
++	if err := pm2ConfigSync(request); err != nil {
++		t.Fatal(err)
++	}
++	prepared, err := s.openPM2ArchivePrepared(id)
++	if err != nil {
++		t.Fatal(err)
++	}
++	info, err := prepared.Stat(".")
++	if err != nil {
++		t.Fatal(err)
++	}
++	identity, err := pm2JournalIdentityOf(info)
++	if err != nil {
++		t.Fatal(err)
++	}
++	prepared.Close()
++	digest, err := snapshot.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	owner, err := currentModuleApplyOwner()
++	if err != nil {
++		t.Fatal(err)
++	}
++	boot, err := currentPM2ConfigBoot()
++	if err != nil {
++		t.Fatal(err)
++	}
++	intent := pm2ConfigurationArchiveIntent{Format: 1, ID: id, CreatedAt: core.Now(), BootID: boot, Owner: owner, RequestSHA: core.Hash("owned interrupted request"), Inventory: snapshot, InventorySHA: digest, PreparedDirectory: identity}
++	if err := validatePM2ConfigurationArchiveIntent(intent); err != nil {
++		t.Fatal(err)
++	}
++	raw, err := json.Marshal(intent)
++	if err != nil {
++		t.Fatal(err)
++	}
++	raw = append(raw, '\n')
++	if err := pm2ArchivePublish(request, "intent.json", raw); err != nil {
++		t.Fatal(err)
++	}
++	return id, pm2ConfigHash(raw)
++}
++func TestPM2JournalArchiveApplyPreservesManifestServicesAndOriginalNonce(t *testing.T) {
++	s, originalInput := pm2ArchiveActiveFixture(t)
++	path := filepath.Join(s.moduleDir("pm2-manager"), "apps", originalInput.ResourceID+".json")
++	before, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	info, err := os.Lstat(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	calls := 0
++	s.Config.Run = func(context.Context, string, ...string) (string, error) {
++		calls++
++		t.Error("archive tried to change a service")
++		return "", nil
++	}
++	report, err := s.pm2ConfigurationArchiveReport(core.AppModuleInput{})
++	if err != nil {
++		t.Fatal(err)
++	}
++	preview := report.(map[string]any)
++	if preview["archive_eligible"] != true || preview["active_record_count"] != 1 {
++		t.Fatal("complete active journal was not available for explicit archive")
++	}
++	digest := preview["inventory_sha256"].(string)
++	in := core.AppModuleInput{PM2OperationID: core.ID(), ExpectedSHA: digest, Confirm: "ARCHIVE PM2 CONFIGURATIONS " + digest}
++	out, err := s.archivePM2Configurations(context.Background(), in)
++	if err != nil {
++		t.Fatal(err)
++	}
++	reply := out.(map[string]any)
++	if reply["already_terminal"] != false || reply["archive"].(map[string]any)["state"] != "archived" {
++		t.Fatal("new archive completion was not acknowledged accurately")
++	}
++	after, err := os.ReadFile(path)
++	if err != nil || !bytes.Equal(before, after) {
++		t.Fatal("archive changed encrypted manifest")
++	}
++	now, err := os.Lstat(path)
++	if err != nil || !programQueueSame(info, now) || calls != 0 {
++		t.Fatal("archive changed service or original manifest metadata")
++	}
++	active, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || !active.Exists || active.Records != 0 {
++		t.Fatal("new active private journal not established")
++	}
++	old, found, err := s.pm2ArchivedConfigurationRecord(originalInput.PM2OperationID)
++	if err != nil || !found || old.Receipt == nil || old.Receipt.State != "committed" {
++		t.Fatal("original consumed configuration operation was lost")
++	}
++	again, err := s.archivePM2Configurations(context.Background(), in)
++	if err != nil || again.(map[string]any)["duplicate_observation"] != true {
++		t.Fatal("duplicate archive request was replayed")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil || len(rows) != 1 {
++		t.Fatal("duplicate archive reserved another generation")
++	}
++}
++func TestPM2JournalArchiveApplyRefusesStalePendingOrUnexpectedInputs(t *testing.T) {
++	for _, kind := range []string{"stale", "pending", "extra-fields", "cancelled"} {
++		t.Run(kind, func(t *testing.T) {
++			var s *Service
++			if kind == "pending" {
++				s, _, _, _ = pm2ConfigFixtureIntent(t)
++			} else {
++				s, _ = pm2ArchiveActiveFixture(t)
++			}
++			snapshot, err := s.snapshotPM2ConfigurationJournal()
++			if err != nil {
++				t.Fatal(err)
++			}
++			digest, err := snapshot.sha256()
++			if err != nil {
++				t.Fatal(err)
++			}
++			if kind == "stale" {
++				digest = core.Hash("different original inventory")
++			}
++			in := core.AppModuleInput{PM2OperationID: core.ID(), ExpectedSHA: digest, Confirm: "ARCHIVE PM2 CONFIGURATIONS " + digest}
++			if kind == "extra-fields" {
++				in.ResourceID = "other-project"
++			}
++			ctx := context.Background()
++			if kind == "cancelled" {
++				next, cancel := context.WithCancel(ctx)
++				cancel()
++				ctx = next
++			}
++			if _, err := s.archivePM2Configurations(ctx, in); err == nil {
++				t.Fatal("invalid archive request accepted")
++			}
++			after, err := s.snapshotPM2ConfigurationJournal()
++			if err != nil {
++				t.Fatal(err)
++			}
++			afterSHA, err := after.sha256()
++			if err != nil {
++				t.Fatal(err)
++			}
++			beforeSHA, err := snapshot.sha256()
++			if err != nil || beforeSHA != afterSHA {
++				t.Fatal("refusal changed original journal")
++			}
++			if _, err := os.Lstat(filepath.Join(s.moduleDir("pm2-manager"), "configuration-archives")); !os.IsNotExist(err) {
++				t.Fatal("refusal reserved an archive namespace")
++			}
++		})
++	}
++}
++func TestPM2JournalArchiveRecoveryFinishesEachBoundFilesystemPhase(t *testing.T) {
++	for _, phase := range []string{"before-first", "after-first", "after-second"} {
++		t.Run(phase, func(t *testing.T) {
++			s, input := pm2ArchiveActiveFixture(t)
++			id, sha := pm2ArchivePreparedRequestFixture(t, s)
++			module, err := s.moduleRecordDirectory("pm2-manager")
++			if err != nil {
++				t.Fatal(err)
++			}
++			generations, err := s.openPM2ArchivePath("generations", "", false)
++			if err != nil {
++				t.Fatal(err)
++			}
++			request, err := s.openPM2ArchivePath("requests", id, false)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if phase != "before-first" {
++				if err := pm2ArchiveRenameNoReplace(module, "configuration-transactions", generations, id); err != nil {
++					t.Fatal(err)
++				}
++			}
++			if phase == "after-second" {
++				if err := pm2ArchiveRenameNoReplace(request, "prepared-new", module, "configuration-transactions"); err != nil {
++					t.Fatal(err)
++				}
++			}
++			request.Close()
++			generations.Close()
++			module.Close()
++			path := filepath.Join(s.moduleDir("pm2-manager"), "apps", input.ResourceID+".json")
++			original, err := os.ReadFile(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			calls := 0
++			s.Config.Run = func(context.Context, string, ...string) (string, error) { calls++; return "", nil }
++			in := core.AppModuleInput{PM2OperationID: id, ExpectedSHA: sha, Confirm: "RECOVER PM2 CONFIG ARCHIVE " + id}
++			out, err := s.recoverPM2ConfigurationArchive(context.Background(), in)
++			if err != nil || out.(map[string]any)["archive"].(map[string]any)["state"] != "archived" {
++				t.Fatalf("explicit recovery did not finish phase: %v", err)
++			}
++			again, err := s.recoverPM2ConfigurationArchive(context.Background(), in)
++			if err != nil || again.(map[string]any)["already_terminal"] != true {
++				t.Fatal("terminal recovery replayed relocation")
++			}
++			current, err := os.ReadFile(path)
++			if err != nil || !bytes.Equal(original, current) || calls != 0 {
++				t.Fatal("recovery changed manifest or service")
++			}
++			old, found, err := s.pm2ArchivedConfigurationRecord(input.PM2OperationID)
++			if err != nil || !found || old.Receipt == nil {
++				t.Fatal("recovery lost original config operation")
++			}
++		})
++	}
++}
++func TestPM2JournalArchiveRecoveryNeverAdoptsForeignActiveDirectory(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	id, sha := pm2ArchivePreparedRequestFixture(t, s)
++	module, err := s.moduleRecordDirectory("pm2-manager")
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer module.Close()
++	generations, err := s.openPM2ArchivePath("generations", "", false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer generations.Close()
++	if err := pm2ArchiveRenameNoReplace(module, "configuration-transactions", generations, id); err != nil {
++		t.Fatal(err)
++	}
++	if err := module.Mkdir("configuration-transactions", 0700); err != nil {
++		t.Fatal(err)
++	}
++	foreign, err := module.Lstat("configuration-transactions")
++	if err != nil {
++		t.Fatal(err)
++	}
++	in := core.AppModuleInput{PM2OperationID: id, ExpectedSHA: sha, Confirm: "RECOVER PM2 CONFIG ARCHIVE " + id}
++	if _, err := s.recoverPM2ConfigurationArchive(context.Background(), in); err == nil {
++		t.Fatal("foreign empty active directory was adopted")
++	}
++	after, err := module.Lstat("configuration-transactions")
++	if err != nil || !programQueueSame(foreign, after) {
++		t.Fatal("foreign directory was replaced")
++	}
++	if _, err := s.pm2ArchiveGenerationInfo(id); err != nil {
++		t.Fatal("original generation was removed")
++	}
++	prepared, err := s.openPM2ArchivePrepared(id)
++	if err != nil {
++		t.Fatal("original prepared directory was removed")
++	}
++	prepared.Close()
++}
++func TestPM2JournalArchiveReservedUnacceptedIDNeverReplays(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	requests, err := s.openPM2ArchivePath("requests", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	id := core.ID()
++	if err := requests.Mkdir(id, 0700); err != nil {
++		t.Fatal(err)
++	}
++	requests.Close()
++	snapshot, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	sha, err := snapshot.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	in := core.AppModuleInput{PM2OperationID: id, ExpectedSHA: sha, Confirm: "ARCHIVE PM2 CONFIGURATIONS " + sha}
++	out, err := s.archivePM2Configurations(context.Background(), in)
++	if err != nil || out.(map[string]any)["duplicate_observation"] != true || out.(map[string]any)["archive"].(map[string]any)["state"] != "not_started" {
++		t.Fatal("unaccepted reserved request was replayed")
++	}
++	active, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || active.Records != snapshot.Records {
++		t.Fatal("unaccepted duplicate moved original data")
++	}
++}
+diff --git a/internal/executor/app_pm2_journal_archive_catalog_linux.go b/internal/executor/app_pm2_journal_archive_catalog_linux.go
+new file mode 100644
+index 0000000..e7f9db7
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_catalog_linux.go
+@@ -0,0 +1,226 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"os"
++	"sort"
++
++	"local/panel/internal/core"
++)
++
++func (s *Service) pm2ArchiveChildNames(kind string) ([]string, error) {
++	d, err := s.openPM2ArchivePath(kind, "", false)
++	if errors.Is(err, os.ErrNotExist) {
++		return []string{}, nil
++	}
++	if err != nil {
++		return nil, err
++	}
++	defer d.Close()
++	names, err := pm2ArchiveNames(d, pm2ConfigurationArchiveGenerations)
++	if err != nil {
++		return nil, err
++	}
++	for _, name := range names {
++		if !core.ValidID(name) {
++			return nil, errors.New("PM2 archive complete inventory contains an unknown identity")
++		}
++		info, err := d.Lstat(name)
++		if err != nil || !moduleRecordInfo(info, true, false) || !d.current() {
++			return nil, errors.New("PM2 archive complete inventory contains an unverified directory")
++		}
++	}
++	return names, nil
++}
++func (s *Service) pm2ArchiveCatalogue() ([]pm2ArchiveRequestObservation, error) {
++	anchor, anchorErr := s.moduleRecordDirectory("pm2-manager")
++	if errors.Is(anchorErr, os.ErrNotExist) {
++		return []pm2ArchiveRequestObservation{}, nil
++	}
++	if anchorErr != nil {
++		return nil, anchorErr
++	}
++	defer anchor.Close()
++	requestIDs, err := s.pm2ArchiveChildNames("requests")
++	if err != nil {
++		return nil, err
++	}
++	generations, err := s.pm2ArchiveChildNames("generations")
++	if err != nil {
++		return nil, err
++	}
++	generationIDs := map[string]bool{}
++	for _, id := range generations {
++		generationIDs[id] = true
++	}
++	rows := make([]pm2ArchiveRequestObservation, 0, len(requestIDs))
++	var bytes int
++	for _, id := range requestIDs {
++		row, err := s.readPM2ArchiveRequest(id)
++		if err != nil {
++			return nil, err
++		}
++		bytes += row.StoredBytes
++		if bytes > 256<<20 {
++			return nil, errors.New("PM2 archive complete metadata inventory exceeds its byte budget")
++		}
++		exists := generationIDs[id]
++		if row.Intent == nil && exists {
++			return nil, errors.New("PM2 archive data has no verifiable original intent; retained")
++		}
++		if row.Outcome != nil {
++			if row.Outcome.State == "archived" {
++				if !exists || row.Prepared != nil {
++					return nil, errors.New("PM2 archive original completion and directory inventory disagree")
++				}
++				observed, err := s.pm2ArchiveGenerationInfo(id)
++				if err != nil || observed == nil || observed.UID != row.Intent.Inventory.Directory.UID || observed.GID != row.Intent.Inventory.Directory.GID || observed.Mode != row.Intent.Inventory.Directory.Mode {
++					return nil, errors.New("PM2 archive original directory ownership cannot be verified")
++				}
++			} else if exists {
++				return nil, errors.New("PM2 non-archived outcome still has generation data; retained")
++			}
++		}
++		delete(generationIDs, id)
++		rows = append(rows, row)
++	}
++	if len(generationIDs) != 0 {
++		return nil, errors.New("PM2 archive data inventory contains an orphan generation; retained")
++	}
++	// Re-list complete identities. A concurrent reservation or relocation must
++	// not be presented as an empty or fully terminal catalogue.
++	again, err := s.pm2ArchiveChildNames("requests")
++	if err != nil || len(again) != len(requestIDs) {
++		return nil, errors.New("PM2 archive request inventory changed during observation")
++	}
++	for i := range again {
++		if again[i] != requestIDs[i] {
++			return nil, errors.New("PM2 archive request namespace changed")
++		}
++	}
++	again, err = s.pm2ArchiveChildNames("generations")
++	if err != nil || len(again) != len(generations) {
++		return nil, errors.New("PM2 archive data inventory changed during observation")
++	}
++	for i := range again {
++		if again[i] != generations[i] {
++			return nil, errors.New("PM2 archive data namespace changed")
++		}
++	}
++	if !anchor.current() {
++		return nil, errors.New("PM2 archive module namespace changed during observation")
++	}
++	sort.Slice(rows, func(i, j int) bool { return rows[i].ID < rows[j].ID })
++	return rows, nil
++}
++
++// Call under the journal lease before a new configuration mutation. Reads,
++// existing service startup and independent stop do not replay or complete a
++// pending archive merely because they observe it.
++func (s *Service) pm2NoPendingConfigurationArchives() error {
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil {
++		return err
++	}
++	for _, row := range rows {
++		if row.Intent != nil && row.Outcome == nil {
++			return errors.New("PM2 原配置归档尚未完成，请先读取原请求并显式恢复；未保存新的配置")
++		}
++	}
++	return nil
++}
++
++// A completed generation is immutable evidence, not a source of fresh writes.
++// Match original raw bytes and recorded UID/GID/mode through fresh no-follow
++// handles. Device/inode timestamps remain witnesses for unfinished moves, not
++// permanent identifiers that would invalidate a legitimate completed backup.
++func (s *Service) pm2ArchivedConfigurationRecord(operation string) (pm2ConfigRecord, bool, error) {
++	if !core.ValidID(operation) {
++		return pm2ConfigRecord{}, false, errors.New("PM2 original configuration operation identity is invalid")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil {
++		return pm2ConfigRecord{}, false, err
++	}
++	var selected *pm2ArchiveRequestObservation
++	for i := range rows {
++		row := &rows[i]
++		if row.Intent == nil || row.Outcome == nil || row.Outcome.State != "archived" {
++			continue
++		}
++		_, intent := row.Intent.Inventory.Files[operation+".intent.json"]
++		_, cancel := row.Intent.Inventory.Files[operation+".cancel.json"]
++		if !intent && !cancel {
++			continue
++		}
++		if selected != nil {
++			return pm2ConfigRecord{}, true, errors.New("PM2 original operation appears in multiple archived generations")
++		}
++		selected = row
++	}
++	if selected == nil {
++		return pm2ConfigRecord{}, false, nil
++	}
++	d, err := s.openPM2ArchivePath("generations", selected.ID, false)
++	if err != nil {
++		return pm2ConfigRecord{}, true, err
++	}
++	defer d.Close()
++	files := map[string][]byte{}
++	for _, suffix := range []string{".intent.json", ".result.json", ".cancel.json"} {
++		name := operation + suffix
++		pin, exists := selected.Intent.Inventory.Files[name]
++		if !exists {
++			continue
++		}
++		before, err := d.Lstat(name)
++		if err != nil {
++			return pm2ConfigRecord{}, true, err
++		}
++		raw, err := pm2ConfigRead(d, name)
++		if err != nil {
++			return pm2ConfigRecord{}, true, err
++		}
++		after, err := d.Lstat(name)
++		identity, identityErr := pm2JournalIdentityOf(after)
++		if err != nil || identityErr != nil || !programQueueSame(before, after) || identity.UID != pin.Identity.UID || identity.GID != pin.Identity.GID || identity.Mode != pin.Identity.Mode || identity.Links != 1 || identity.Size != pin.Identity.Size || pm2ConfigHash(raw) != pin.SHA256 {
++			return pm2ConfigRecord{}, true, errors.New("PM2 archived original operation bytes or recorded ownership changed; retained")
++		}
++		files[name] = raw
++	}
++	records, err := decodePM2ConfigurationRecords(files)
++	if err != nil {
++		return pm2ConfigRecord{}, true, err
++	}
++	record, found := records[operation]
++	if !found || record.Receipt == nil && record.Cancellation == nil {
++		return pm2ConfigRecord{}, true, errors.New("PM2 archived original operation is not terminal")
++	}
++	if err := pm2ConfigSync(d); err != nil {
++		return pm2ConfigRecord{}, true, err
++	}
++	return record, true, nil
++}
++
++// An archived nonce remains consumed even after its original files leave the
++// active 512-record journal. Never turn missing active history into a fresh
++// update/cancellation of an old operation.
++func (s *Service) pm2ConfigurationDuplicateIncludingArchives(in core.AppModuleInput, before []byte, active map[string]pm2ConfigRecord) (any, bool, error) {
++	if out, known, err := pm2ConfigurationDuplicate(in, before, active); known {
++		return out, known, err
++	}
++	id, _, err := pm2ConfigurationIdentity(in, before)
++	if err != nil {
++		return nil, true, err
++	}
++	archived, found, err := s.pm2ArchivedConfigurationRecord(id)
++	if err != nil {
++		return nil, true, err
++	}
++	if !found {
++		return nil, false, nil
++	}
++	return pm2ConfigurationDuplicate(in, before, map[string]pm2ConfigRecord{id: archived})
++}
+diff --git a/internal/executor/app_pm2_journal_archive_catalog_linux_test.go b/internal/executor/app_pm2_journal_archive_catalog_linux_test.go
+new file mode 100644
+index 0000000..c0ed56b
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_catalog_linux_test.go
+@@ -0,0 +1,171 @@
++//go:build linux
++
++package executor
++
++import (
++	"bytes"
++	"context"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++func TestPM2JournalArchiveConsumedNonceRemainsOriginalObservation(t *testing.T) {
++	s, id, input := pm2ArchiveReadCompleteFixture(t)
++	path := filepath.Join(s.moduleDir("pm2-manager"), "apps", input.ResourceID+".json")
++	original, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	info, err := os.Lstat(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	calls := 0
++	s.Config.Run = func(context.Context, string, ...string) (string, error) {
++		calls++
++		t.Error("archived nonce attempted service observation or mutation")
++		return "", nil
++	}
++	out, err := s.modulePM2(context.Background(), "update", input)
++	if err != nil {
++		t.Fatal(err)
++	}
++	reply, ok := out.(map[string]any)
++	if !ok || reply["duplicate_observation"] != true || reply["original_durable_commit"] != true {
++		t.Fatal("old successful request was not an original duplicate observation")
++	}
++	record, found, err := s.pm2ArchivedConfigurationRecord(input.PM2OperationID)
++	if err != nil || !found || record.Receipt == nil || record.Receipt.State != "committed" {
++		t.Fatal("original committed operation was lost")
++	}
++	report, err := s.pm2ConfigurationReport(core.AppModuleInput{ResourceID: input.ResourceID, PM2OperationID: input.PM2OperationID})
++	if err != nil || report.(map[string]any)["archived_original"] != true {
++		t.Fatal("selected original operation was presented as absent")
++	}
++	cancelled, err := s.modulePM2(context.Background(), "cancel-configuration-request", core.AppModuleInput{ResourceID: input.ResourceID, PM2OperationID: input.PM2OperationID, Confirm: "CANCEL PM2 " + input.PM2OperationID})
++	if err != nil || cancelled.(map[string]any)["original_operation_retained"] != true || cancelled.(map[string]any)["request_cancelled"] != false {
++		t.Fatal("completed old request was converted into a new cancellation")
++	}
++	recovered, err := s.modulePM2(context.Background(), "recover-configuration", core.AppModuleInput{ResourceID: input.ResourceID, PM2OperationID: input.PM2OperationID, ExpectedSHA: record.SHA, Confirm: "RECOVER PM2 " + input.PM2OperationID})
++	if err != nil || recovered.(map[string]any)["already_terminal"] != true {
++		t.Fatal("completed old request was replayed as recovery")
++	}
++	after, err := os.ReadFile(path)
++	if err != nil || !bytes.Equal(original, after) {
++		t.Fatal("archived request changed current encrypted manifest")
++	}
++	current, err := os.Lstat(path)
++	if err != nil || !programQueueSame(info, current) || calls != 0 {
++		t.Fatal("archived request touched current manifest or service")
++	}
++	active, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || active.Records != 0 {
++		t.Fatal("old request created a fresh active intent")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil || len(rows) != 1 || rows[0].ID != id {
++		t.Fatal("original archive catalogue changed")
++	}
++}
++func TestPM2JournalArchiveNewNonceCanSaveAfterArchivedHistory(t *testing.T) {
++	s, _, input := pm2ArchiveReadCompleteFixture(t)
++	next := input
++	next.PM2OperationID = core.ID()
++	next.ExpectedRevision++
++	next.MemoryMB = 256
++	if _, err := s.modulePM2(context.Background(), "update", next); err != nil {
++		t.Fatal(err)
++	}
++	active, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || active.Records != 1 || !active.eligible() {
++		t.Fatal("new configuration could not use the fresh journal")
++	}
++	old, found, err := s.pm2ArchivedConfigurationRecord(input.PM2OperationID)
++	if err != nil || !found || old.Receipt == nil || old.Receipt.State != "committed" {
++		t.Fatal("new save discarded old operation evidence")
++	}
++	again, err := s.modulePM2(context.Background(), "update", input)
++	if err != nil || again.(map[string]any)["duplicate_observation"] != true {
++		t.Fatal("later revision made old nonce fresh again")
++	}
++}
++func TestPM2JournalArchiveDamagedOriginalNeverBecomesMissingOrFresh(t *testing.T) {
++	s, id, input := pm2ArchiveReadCompleteFixture(t)
++	path := filepath.Join(s.moduleDir("pm2-manager"), "apps", input.ResourceID+".json")
++	before, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	original := filepath.Join(s.moduleDir("pm2-manager"), "configuration-archives", "generations", id, input.PM2OperationID+".intent.json")
++	damaged := []byte("retain damaged original archive evidence")
++	if err := os.WriteFile(original, damaged, 0600); err != nil {
++		t.Fatal(err)
++	}
++	if _, found, err := s.pm2ArchivedConfigurationRecord(input.PM2OperationID); !found || err == nil {
++		t.Fatal("damaged known operation was presented as absent")
++	}
++	if _, err := s.modulePM2(context.Background(), "update", input); err == nil {
++		t.Fatal("damaged archived operation was replayed")
++	}
++	after, err := os.ReadFile(path)
++	if err != nil || !bytes.Equal(before, after) {
++		t.Fatal("damaged history changed current manifest")
++	}
++	retained, err := os.ReadFile(original)
++	if err != nil || !bytes.Equal(retained, damaged) {
++		t.Fatal("damaged original was repaired or deleted")
++	}
++}
++func TestPM2JournalArchivePendingMetadataBlocksNewConfigurationWithoutReplay(t *testing.T) {
++	s, id, input := pm2ArchiveReadCompleteFixture(t)
++	request := filepath.Join(s.moduleDir("pm2-manager"), "configuration-archives", "requests", id)
++	retained := filepath.Join(t.TempDir(), "retained-original-outcome.json")
++	if err := os.Rename(filepath.Join(request, "outcome.json"), retained); err != nil {
++		t.Fatal(err)
++	}
++	if err := s.pm2NoPendingConfigurationArchives(); err == nil {
++		t.Fatal("interrupted archive was treated as terminal")
++	}
++	path := filepath.Join(s.moduleDir("pm2-manager"), "apps", input.ResourceID+".json")
++	before, err := os.ReadFile(path)
++	if err != nil {
++		t.Fatal(err)
++	}
++	calls := 0
++	s.Config.Run = func(context.Context, string, ...string) (string, error) { calls++; return "", nil }
++	next := input
++	next.PM2OperationID = core.ID()
++	next.ExpectedRevision++
++	next.MemoryMB = 256
++	if _, err := s.modulePM2(context.Background(), "update", next); err == nil {
++		t.Fatal("new config accepted while original archive required explicit recovery")
++	}
++	after, err := os.ReadFile(path)
++	if err != nil || !bytes.Equal(before, after) || calls != 0 {
++		t.Fatal("interrupted archive guard changed current service/config")
++	}
++	if _, err := os.Stat(retained); err != nil {
++		t.Fatal("original outcome evidence was lost")
++	}
++}
++func TestPM2JournalArchiveOrphanGenerationIsNotAnEmptyCatalogue(t *testing.T) {
++	s, _, _ := pm2ArchiveReadCompleteFixture(t)
++	parent, err := s.openPM2ArchivePath("generations", "", false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer parent.Close()
++	orphan := core.ID()
++	if err := parent.Mkdir(orphan, 0700); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := s.pm2ArchiveCatalogue(); err == nil {
++		t.Fatal("unknown original generation was silently omitted")
++	}
++	if _, err := parent.Lstat(orphan); err != nil {
++		t.Fatal("unknown original generation was deleted")
++	}
++}
 diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux.go b/internal/executor/app_pm2_journal_archive_protocol_linux.go
 new file mode 100644
 index 0000000..1752cd9
@@ -402,6 +1588,396 @@ index 0000000..e567a0b
 +		if err := validatePM2ConfigurationArchiveOutcome(retained, intent, outcome.IntentSHA); err != nil {
 +			t.Fatal(err)
 +		}
++	}
++}
+diff --git a/internal/executor/app_pm2_journal_archive_read_linux.go b/internal/executor/app_pm2_journal_archive_read_linux.go
+new file mode 100644
+index 0000000..fdcecd2
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_read_linux.go
+@@ -0,0 +1,176 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"os"
++
++	"local/panel/internal/core"
++)
++
++// This observation is private. Only a small summary, hashes and record counts
++// will be returned by the versioned UI/API; original encrypted manifests and
++// recorded filesystem identities are not regenerated or exposed as form data.
++type pm2ArchiveRequestObservation struct {
++	StoredBytes   int
++	ID            string
++	Intent        *pm2ConfigurationArchiveIntent
++	IntentSHA     string
++	Outcome       *pm2ConfigurationArchiveOutcome
++	OutcomeSHA    string
++	Fragments     map[string]pm2JournalFilePin
++	Prepared      *pm2JournalIdentity
++	PreparedEmpty bool
++}
++
++func (s *Service) openPM2ArchivePrepared(id string) (*modulePrivateDirectory, error) {
++	d, err := s.openPM2ArchivePath("requests", id, false)
++	if err != nil {
++		return nil, err
++	}
++	if err = pm2ConfigChild(d, "prepared-new", false); err != nil {
++		d.Close()
++		return nil, err
++	}
++	return d, nil
++}
++func (s *Service) readPM2ArchiveRequest(id string) (pm2ArchiveRequestObservation, error) {
++	result := pm2ArchiveRequestObservation{ID: id, Fragments: map[string]pm2JournalFilePin{}}
++	if !core.ValidID(id) {
++		return result, errors.New("PM2 archive request identity is invalid")
++	}
++	d, err := s.openPM2ArchivePath("requests", id, false)
++	if err != nil {
++		return result, err
++	}
++	defer d.Close()
++	names, err := pm2ArchiveNames(d, 64)
++	if err != nil {
++		return result, err
++	}
++	var total int
++	for _, name := range names {
++		switch {
++		case name == "prepared-new":
++			prepared, err := s.openPM2ArchivePrepared(id)
++			if err != nil {
++				return result, err
++			}
++			info, statErr := prepared.Stat(".")
++			if statErr != nil {
++				prepared.Close()
++				return result, statErr
++			}
++			identity, identityErr := pm2JournalIdentityOf(info)
++			children, readErr := pm2ArchiveNames(prepared, 1)
++			closeErr := prepared.Close()
++			if identityErr != nil || readErr != nil || closeErr != nil {
++				return result, errors.Join(identityErr, readErr, closeErr)
++			}
++			result.Prepared = &identity
++			result.PreparedEmpty = len(children) == 0
++		case name == "intent.json":
++			raw, err := pm2ArchiveRead(d, name)
++			if err != nil {
++				return result, err
++			}
++			total += len(raw)
++			var intent pm2ConfigurationArchiveIntent
++			if decodeProgramQueueJSON(raw, &intent) != nil || intent.ID != id || validatePM2ConfigurationArchiveIntent(intent) != nil {
++				return result, errors.New("PM2 archive original intent cannot be verified; original retained")
++			}
++			result.Intent = &intent
++			result.IntentSHA = pm2ConfigHash(raw)
++		case name == "outcome.json":
++			raw, err := pm2ArchiveRead(d, name)
++			if err != nil {
++				return result, err
++			}
++			total += len(raw)
++			var outcome pm2ConfigurationArchiveOutcome
++			if decodeProgramQueueJSON(raw, &outcome) != nil || outcome.ID != id {
++				return result, errors.New("PM2 archive original outcome cannot be verified; original retained")
++			}
++			result.Outcome = &outcome
++			result.OutcomeSHA = pm2ConfigHash(raw)
++		case pm2ArchivePartName.MatchString(name):
++			before, err := d.Lstat(name)
++			if err != nil {
++				return result, err
++			}
++			raw, err := pm2ArchiveRead(d, name)
++			if err != nil {
++				return result, err
++			}
++			total += len(raw)
++			info, err := d.Lstat(name)
++			if err != nil {
++				return result, err
++			}
++			if !programQueueSame(before, info) || info.Size() != int64(len(raw)) {
++				return result, errors.New("PM2 archive original fragment changed during observation")
++			}
++			identity, err := pm2JournalIdentityOf(info)
++			if err != nil {
++				return result, err
++			}
++			result.Fragments[name] = pm2JournalFilePin{Identity: identity, SHA256: pm2ConfigHash(raw)}
++		default:
++			return result, errors.New("PM2 archive request contains unknown original evidence; retained")
++		}
++		if total > 16<<20 {
++			return result, errors.New("PM2 archive complete request exceeds its byte budget")
++		}
++	}
++	if result.Outcome != nil {
++		if result.Intent == nil || validatePM2ConfigurationArchiveOutcome(*result.Outcome, *result.Intent, result.IntentSHA) != nil {
++			return result, errors.New("PM2 archive original outcome does not bind its original intent")
++		}
++	}
++	if result.Prepared != nil && result.Intent != nil && !pm2JournalSameMovedDirectory(result.Intent.PreparedDirectory, *result.Prepared) {
++		return result, errors.New("PM2 archive prepared directory identity changed; not adopted")
++	}
++	if err := pm2ConfigSync(d); err != nil {
++		return result, err
++	}
++	// Re-list as a complete observation. A concurrently published final record
++	// must not be silently omitted and presented as an unaccepted request.
++	again, err := pm2ArchiveNames(d, 64)
++	if err != nil {
++		return result, err
++	}
++	if len(again) != len(names) {
++		return result, errors.New("PM2 archive request changed during observation")
++	}
++	for i := range names {
++		if names[i] != again[i] {
++			return result, errors.New("PM2 archive original request namespace changed")
++		}
++	}
++	result.StoredBytes = total
++	return result, nil
++}
++
++func (s *Service) pm2ArchiveGenerationInfo(id string) (*pm2JournalIdentity, error) {
++	if !core.ValidID(id) {
++		return nil, errors.New("PM2 archive generation identity is invalid")
++	}
++	d, err := s.openPM2ArchivePath("generations", id, false)
++	if errors.Is(err, os.ErrNotExist) {
++		return nil, nil
++	}
++	if err != nil {
++		return nil, err
++	}
++	defer d.Close()
++	info, err := d.Stat(".")
++	if err != nil || !d.current() {
++		return nil, errors.New("PM2 archive generation directory cannot be verified")
++	}
++	identity, err := pm2JournalIdentityOf(info)
++	if err != nil {
++		return nil, err
++	}
++	return &identity, nil
++}
+diff --git a/internal/executor/app_pm2_journal_archive_read_linux_test.go b/internal/executor/app_pm2_journal_archive_read_linux_test.go
+new file mode 100644
+index 0000000..76405c2
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_read_linux_test.go
+@@ -0,0 +1,202 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"os"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++func TestPM2JournalArchiveReadRetainsUnacceptedEmptyFragment(t *testing.T) {
++	s, d, id := pm2ArchiveStoreFixture(t)
++	name := "intent." + core.ID() + ".part"
++	f, err := d.OpenFile(name, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := pm2ConfigWriteDurable(f, nil); err != nil {
++		t.Fatal(err)
++	}
++	d.Close()
++	observed, err := s.readPM2ArchiveRequest(id)
++	if err != nil || observed.Intent != nil || observed.Outcome != nil || len(observed.Fragments) != 1 {
++		t.Fatalf("unaccepted evidence observation: %#v %v", observed, err)
++	}
++	pin := observed.Fragments[name]
++	if pin.Identity.Size != 0 || pin.SHA256 != pm2ConfigHash(nil) {
++		t.Fatal("empty original fragment was not retained and bound")
++	}
++}
++
++func pm2ArchiveReadCompleteFixture(t *testing.T) (*Service, string, core.AppModuleInput) {
++	t.Helper()
++	s, app, _ := pm2StateAppFixture(t)
++	s.Config.Run = func(_ context.Context, command string, args ...string) (string, error) {
++		if command != "/usr/bin/systemctl" || len(args) != 3 || args[0] != "show" {
++			t.Fatalf("archive fixture attempted a service change: %s %v", command, args)
++		}
++		return pm2TestStateText(pm2TestState("inactive", "disabled")), nil
++	}
++	input := core.AppModuleInput{ResourceID: app.ID, ExpectedRevision: app.Revision, PM2OperationID: core.ID(), MemoryMB: 192}
++	if _, err := s.modulePM2(context.Background(), "update", input); err != nil {
++		t.Fatal(err)
++	}
++	active, err := s.openPM2ConfigStore(false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	inventory, err := active.snapshot()
++	if err != nil {
++		t.Fatal(err)
++	}
++	active.Close()
++	parent, err := s.openPM2ArchivePath("requests", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	id := core.ID()
++	if err := parent.Mkdir(id, 0700); err != nil {
++		t.Fatal(err)
++	}
++	parent.Close()
++	d, err := s.openPM2ArchivePath("requests", id, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer d.Close()
++	if err := d.Mkdir("prepared-new", 0700); err != nil {
++		t.Fatal(err)
++	}
++	prepared, err := s.openPM2ArchivePrepared(id)
++	if err != nil {
++		t.Fatal(err)
++	}
++	info, err := prepared.Stat(".")
++	if err != nil {
++		t.Fatal(err)
++	}
++	preparedIdentity, err := pm2JournalIdentityOf(info)
++	if err != nil {
++		t.Fatal(err)
++	}
++	prepared.Close()
++	inventorySHA, err := inventory.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	boot, err := currentPM2ConfigBoot()
++	if err != nil {
++		t.Fatal(err)
++	}
++	owner, err := currentModuleApplyOwner()
++	if err != nil {
++		t.Fatal(err)
++	}
++	intent := pm2ConfigurationArchiveIntent{Format: 1, ID: id, CreatedAt: core.Now(), BootID: boot, Owner: owner, RequestSHA: core.Hash("owned explicit archive request"), Inventory: inventory, InventorySHA: inventorySHA, PreparedDirectory: preparedIdentity}
++	if err := validatePM2ConfigurationArchiveIntent(intent); err != nil {
++		t.Fatal(err)
++	}
++	intentRaw, err := json.MarshalIndent(intent, "", "  ")
++	if err != nil {
++		t.Fatal(err)
++	}
++	intentRaw = append(intentRaw, '\n')
++	if err := pm2ArchivePublish(d, "intent.json", intentRaw); err != nil {
++		t.Fatal(err)
++	}
++	before, err := s.readPM2ArchiveRequest(id)
++	if err != nil || before.IntentSHA != pm2ConfigHash(intentRaw) || before.Prepared == nil || !before.PreparedEmpty || before.Outcome != nil {
++		t.Fatalf("original preparation not observed: %#v %v", before, err)
++	}
++	module, err := s.moduleRecordDirectory("pm2-manager")
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer module.Close()
++	generations, err := s.openPM2ArchivePath("generations", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer generations.Close()
++	if err := pm2ArchiveRenameNoReplace(module, "configuration-transactions", generations, id); err != nil {
++		t.Fatal(err)
++	}
++	if err := pm2ArchiveRenameNoReplace(d, "prepared-new", module, "configuration-transactions"); err != nil {
++		t.Fatal(err)
++	}
++	generation, err := s.pm2ArchiveGenerationInfo(id)
++	if err != nil || generation == nil {
++		t.Fatal("original generation was not retained")
++	}
++	newActive, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || newActive.Records != 0 || !newActive.Exists {
++		t.Fatal("prepared empty journal was not published")
++	}
++	outcome := pm2ConfigurationArchiveOutcome{Format: 1, ID: id, IntentSHA: pm2ConfigHash(intentRaw), State: "archived", FinishedAt: core.Now(), OriginalDirectory: *generation, ActiveDirectory: newActive.Directory}
++	if err := validatePM2ConfigurationArchiveOutcome(outcome, intent, outcome.IntentSHA); err != nil {
++		t.Fatal(err)
++	}
++	outcomeRaw, err := json.MarshalIndent(outcome, "", "    ")
++	if err != nil {
++		t.Fatal(err)
++	}
++	outcomeRaw = append(outcomeRaw, '\n')
++	if err := pm2ArchivePublish(d, "outcome.json", outcomeRaw); err != nil {
++		t.Fatal(err)
++	}
++	observed, err := s.readPM2ArchiveRequest(id)
++	if err != nil || observed.Outcome == nil || observed.Outcome.State != "archived" || observed.Prepared != nil || observed.IntentSHA != pm2ConfigHash(intentRaw) || observed.OutcomeSHA != pm2ConfigHash(outcomeRaw) {
++		t.Fatalf("original archive outcome not durably observed: %#v %v", observed, err)
++	}
++	return s, id, input
++}
++
++func TestPM2JournalArchiveReadActualPrivateWholeGenerationAndOutcome(t *testing.T) {
++	pm2ArchiveReadCompleteFixture(t)
++}
++
++func TestPM2JournalArchiveReadUnknownFinalEvidenceIsNeverEmpty(t *testing.T) {
++	for _, kind := range []string{"unknown", "malformed-intent", "orphan-outcome"} {
++		t.Run(kind, func(t *testing.T) {
++			s, d, id := pm2ArchiveStoreFixture(t)
++			switch kind {
++			case "unknown":
++				f, err := d.OpenFile("retain-unknown.json", os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
++				if err != nil {
++					t.Fatal(err)
++				}
++				if err := pm2ConfigWriteDurable(f, []byte("original evidence")); err != nil {
++					t.Fatal(err)
++				}
++			case "malformed-intent":
++				if err := pm2ArchivePublish(d, "intent.json", []byte("original malformed intent")); err != nil {
++					t.Fatal(err)
++				}
++			case "orphan-outcome":
++				raw, err := json.Marshal(pm2ConfigurationArchiveOutcome{Format: 1, ID: id, IntentSHA: core.Hash("missing original"), State: "archived", FinishedAt: core.Now()})
++				if err != nil {
++					t.Fatal(err)
++				}
++				if err := pm2ArchivePublish(d, "outcome.json", raw); err != nil {
++					t.Fatal(err)
++				}
++			}
++			before, err := pm2ArchiveNames(d, 64)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if _, err := s.readPM2ArchiveRequest(id); err == nil {
++				t.Fatal("unverifiable original evidence was presented as an empty/valid request")
++			}
++			after, err := pm2ArchiveNames(d, 64)
++			if err != nil || len(before) != len(after) {
++				t.Fatal("read removed original evidence")
++			}
++			d.Close()
++		})
 +	}
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_store_linux.go b/internal/executor/app_pm2_journal_archive_store_linux.go

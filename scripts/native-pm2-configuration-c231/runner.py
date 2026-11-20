@@ -42,7 +42,7 @@ try:
  for n in plan['required_new_top_level_tests']:assert new.get(n)=='pass',n
  assert len(new)==plan['expected_new_test_rows']
  save('actual-native-regression-comparison',{'original_test_statuses_retained':True,'new_real_kernel_tests':new,'before':{'pass':results['baseline']['passes'],'skip':results['baseline']['skips']},'after':{'pass':results['patched']['passes'],'skip':results['patched']['skips']},'new_skips':0,'exact_changed_source_files':sorted(changed),'patched_source_index_sha256':sha(out/'actual-patched-source-index.json')})
- proof.update(ok=True,actual_euid=os.geteuid(),new_real_kernel_tests=len(new),original_passes=results['baseline']['passes'],original_skips=results['baseline']['skips'],all_original_statuses_retained=True,new_tests_skipped=0,source_inputs_unchanged_after_execution=True,archive_feature_not_yet_implemented=True)
+ proof.update(ok=True,actual_euid=os.geteuid(),new_real_kernel_tests=len(new),original_passes=results['baseline']['passes'],original_skips=results['baseline']['skips'],all_original_statuses_retained=True,new_tests_skipped=0,source_inputs_unchanged_after_execution=True,archive_API_UI_and_signed_delivery_pending=True)
 except BaseException:proof['failure']=traceback.format_exc()
 finally:save('original-proof',proof)
 sys.exit(0 if proof['ok']else 1)
