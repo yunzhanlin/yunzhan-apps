@@ -1,4 +1,5 @@
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';import{spawnSync}from'node:child_process';
+// Historical acceptance retains original signed50 input; active40 is tested separately.
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import path from'node:path';import{createHash}from'node:crypto';import{fileURLToPath}from'node:url';import{spawnSync}from'node:child_process';
 const root=fileURLToPath(new URL('..',import.meta.url)),scope='panel-integration-native-queue-observation/',parent='panel-integration-mobile-delivery-links/',read=n=>fs.readFileSync(root+n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),report=json('registry/native-queue-observation-core.json');
 test('new source is exactly1926 archive-bound files and1462 Go files with no overlay or unfinished L4 code',()=>{
  const raw=read(scope+'source-sha256.json'),v=JSON.parse(raw);assert.equal(sha(raw),report.export.source_index_sha256);assert.equal(sha(read(scope+'release-source-inputs.json')),report.export.release_index_sha256);

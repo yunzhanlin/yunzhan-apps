@@ -1,4 +1,5 @@
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{createHash}from'node:crypto';
+// Historical acceptance retains original signed50 input; active40 is tested separately.
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import{createHash}from'node:crypto';
 const read=n=>fs.readFileSync(new URL('../'+n,import.meta.url)),sha=b=>createHash('sha256').update(b).digest('hex');
 const oldName='TestCurrentMobileCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules',newName='TestCurrentMemcachedCatalogPreservesActualFrozenIDSConsumerAuthorityAndAll1510Rules';
 const oldSHA='bc0dcdbcd0bcd5e75c889471a9e26168c951f943f772e0400d328af8d3e5f84f',newSHA='247c8db6cc762413c0779f8cb8a251b16d01b641b109981f084076c20f104813',oldPath='registry/reviewed-catalogs/before-php-security24bkhe/signatures/catalog-v1.bundle.json';

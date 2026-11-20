@@ -1,6 +1,7 @@
+// Historical acceptance retains original signed50 input; active40 is tested separately.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import fs from './helpers/before-php8-retirement.mjs';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';

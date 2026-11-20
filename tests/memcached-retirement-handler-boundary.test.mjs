@@ -1,4 +1,5 @@
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import{verifyOldMemcachedRefusal as verify,oldMemcachedRefusal}from'../tools/verify-memcached-retirement-handler-boundary.mjs';import{fileURLToPath}from'node:url';
+// Historical acceptance retains original signed50 input; active40 is tested separately.
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import{verifyOldMemcachedRefusal as verify,oldMemcachedRefusal}from'../tools/verify-memcached-retirement-handler-boundary.mjs';import{fileURLToPath}from'node:url';
 const repo=fileURLToPath(new URL('../',import.meta.url)),ids=JSON.parse(fs.readFileSync(repo+'/dist/catalog-v1.json')).apps.map(a=>a.id),prefix='TestPublishedRepositoryCurrentSignedManifestABI';
 function result(){
  const events=ids.filter(id=>id!=='memcached').map(id=>({Action:'pass',Test:prefix+'/'+id}));

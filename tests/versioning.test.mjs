@@ -16,11 +16,11 @@ test('published app versions are immutable and historical endpoints retained',as
  const temporary=await mkdtemp(path.join(os.tmpdir(),'yunzhan-version-test-'));
  try{
   await mkdir(path.join(temporary,'tools'));await mkdir(path.join(temporary,'registry'));
-  for(const name of ['build.mjs','lib.mjs','memcached-unix-contract.mjs','php-security-contract.mjs','php-bounded-contract.mjs'])await copyFile(new URL('../tools/'+name,import.meta.url),path.join(temporary,'tools',name));
+  for(const name of ['active-apps.mjs','build.mjs','lib.mjs','memcached-unix-contract.mjs','php-security-contract.mjs','php-bounded-contract.mjs'])await copyFile(new URL('../tools/'+name,import.meta.url),path.join(temporary,'tools',name));
   const source=JSON.parse(await readFile(new URL('../registry/apps.json',import.meta.url),'utf8'));
   // This exercises the generic immutable archive contract, not permission for
   // an unreviewed Nginx handler/version. Use an explicit unscoped runtime.
-  const generic=source.apps.find(app=>app.id==='pure-ftpd');assert(generic&&!Object.hasOwn(generic,'required_panel_features'));source.apps=[generic];
+  const generic=source.apps.find(app=>app.id==='pure-ftpd');assert(generic&&!Object.hasOwn(generic,'required_panel_features'));source.apps=[generic,...source.apps.filter(app=>app.id!==generic.id)];
   const save=()=>writeFile(path.join(temporary,'registry/apps.json'),JSON.stringify(source));
   await save();execFileSync(process.execPath,[path.join(temporary,'tools/build.mjs')],{stdio:'pipe'});
   source.apps[0].summary+=' changed';await save();

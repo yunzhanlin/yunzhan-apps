@@ -1,6 +1,7 @@
+// Historical acceptance retains original signed50 input; active40 is tested separately.
 import{historicalMemcachedUnixInput}from'./reviewed-memcached-unix-inputs.mjs';
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
-import test from'node:test';import assert from'node:assert/strict';import fs from'node:fs';import path from'node:path';import{createHash,createPublicKey,verify}from'node:crypto';
+import test from'node:test';import assert from'node:assert/strict';import fs from './helpers/before-php8-retirement.mjs';import path from'node:path';import{createHash,createPublicKey,verify}from'node:crypto';
 import{fileURLToPath}from'node:url';
 import{beforeNativeMobile,originalNativeMobileWorkflow}from'./pre-native-mobile-release.mjs';
 const base=fileURLToPath(new URL('../',import.meta.url)),read=n=>historicalMemcachedUnixInput(base,n),json=n=>JSON.parse(read(n)),sha=b=>createHash('sha256').update(b).digest('hex'),scope='panel-integration-mobile-delivery/';

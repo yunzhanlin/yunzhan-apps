@@ -1,5 +1,6 @@
+// Historical original50 acceptance inputs only.
 // Exact historical inputs for earlier release assertions; current50 acceptance is separate.
-import fs from'node:fs';import path from'node:path';import{fileURLToPath,pathToFileURL}from'node:url';import assert from'node:assert/strict';import{createHash}from'node:crypto';
+import fs from './helpers/before-php8-retirement.mjs';import path from'node:path';import{fileURLToPath,pathToFileURL}from'node:url';import assert from'node:assert/strict';import{createHash}from'node:crypto';
 import{exactReviewedPreMemcachedRepository,predecessorScope}from'../tools/reviewed-pre-memcached-repository.mjs';
 import{phpBoundedCases}from'../tools/php-bounded-fixtures.mjs';
 const sha=b=>createHash('sha256').update(b).digest('hex'),schemaSHA='c0d4934cb2432645e4fcca13682d11580393e302479842001fbc5787c932f081',validated=new Set();

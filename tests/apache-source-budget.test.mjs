@@ -1,6 +1,7 @@
+// Historical acceptance retains original signed50 input; active40 is tested separately.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile} from './helpers/before-php8-retirement.mjs';
 import {createHash} from 'node:crypto';
 const read=p=>readFile(new URL('../'+p,import.meta.url),'utf8');
 test('current normal signed exact source keeps a bounded slow official Apache archive and independent idle timeout',async()=>{

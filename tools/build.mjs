@@ -1,3 +1,4 @@
+import {ACTIVE_APPLICATION_COUNT,assertActiveApplications} from './active-apps.mjs';
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,7 +8,9 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const source = JSON.parse(await readFile(path.join(root, "registry/apps.json"), "utf8"));
 if (source.schema_version !== 1 || !Array.isArray(source.apps)) throw new Error("registry/apps.json format is invalid");
 
-// Keep historical version endpoints available while clients refresh signed catalogs.
+assertActiveApplications(source.apps);
+if(source.apps.length!==ACTIVE_APPLICATION_COUNT)throw Error('active catalogue must contain exactly 40 apps');
+// Retain history for active applications only.
 await mkdir(path.join(root, "dist"), { recursive: true });
 const catalog = { schema_version: 1, generated_at: source.generated_at, repository: source.repository, apps: [] };
 for (const app of [...source.apps].sort((a, b) => a.id.localeCompare(b.id))) {

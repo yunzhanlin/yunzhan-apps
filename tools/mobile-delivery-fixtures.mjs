@@ -1,4 +1,5 @@
-import fs from'node:fs';import path from'node:path';import assert from'node:assert/strict';import{createHash}from'node:crypto';
+// Historical original50 acceptance inputs only.
+import fs from '../tests/helpers/before-php8-retirement.mjs';import path from'node:path';import assert from'node:assert/strict';import{createHash}from'node:crypto';
 export const mobileFeature='mobile-native-delivery-v132';
 export const legacyMobileHashes={'1.0':'c68e5f899f9e00a28f1f67d67c334fb367d476c20f78dc9c3f591757a30b6dd4','1.0-compat1':'99d20ea2e6227a12ffb253d66f6680b37768f165e6123bbc2c7192b8bb3b48f5','1.1.0':'a57aeedfd0d444abfc25d44d32e1f084373a5051414790b63e2593d3ea6ece25','1.2.0':'4b8739ded0767e70b04578c712067c8eee1c31d4e4e84303e482497b1039c893','1.3.0':'d99c73e9118c0f80294d3c5140ae51d7243a5d7e8fc8d55d2e5a722a571e5657'};
 export function nativeMobileCases(root){

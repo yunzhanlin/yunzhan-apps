@@ -1,7 +1,8 @@
+// Historical acceptance retains original signed50 input; active40 is tested separately.
 import{originalReviewedHTTPSFixtureWorkflow}from'./reviewed-https-fixture-workflow.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile,readdir,lstat} from 'node:fs/promises';
+import {readFile,readdir,lstat} from './helpers/before-php8-retirement.mjs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {sha256} from '../tools/lib.mjs';

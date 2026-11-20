@@ -1,3 +1,4 @@
+import {ACTIVE_APPLICATION_COUNT,assertActiveApplications} from './active-apps.mjs';
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -5,7 +6,8 @@ import { canonical, sha256, validateManifest } from "./lib.mjs";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const catalog = JSON.parse(await readFile(path.join(root, "dist/catalog-v1.json"), "utf8"));
-if (catalog.schema_version !== 1 || catalog.apps.length !== 50) throw new Error(`catalog must contain exactly 50 apps, found ${catalog.apps.length}`);
+if (catalog.schema_version !== 1 || catalog.apps.length !== ACTIVE_APPLICATION_COUNT) throw new Error(`catalog must contain exactly 40 apps, found ${catalog.apps.length}`);
+assertActiveApplications(catalog.apps);
 const ids = new Set();
 for (const item of catalog.apps) {
   if (ids.has(item.id)) throw new Error(`duplicate id: ${item.id}`);
