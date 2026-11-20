@@ -1,0 +1,8 @@
+{
+  "cases_sha256": "06407fc27b4ff52cd16ebe7227c6881f9cac0184c1acd855bc3f122bef023426",
+  "kvm_sha256": "33c746b1dadc1537ef2b2fad43f6cbeb599a8f6721ebb6438a6c0f8973a16d4f",
+  "payload_sha256": "877238dd9bc74d0623e1386f70b8c0a48f82d8e0406fd1c26d9eaa6555eade73",
+  "published_head": "e2c71663e3707bbd15babf217d86a50e6337648f",
+  "release_id": 445739558,
+  "tag": "qa-ftpfilequotacandidate195r2-20261115-qa1"
+}
