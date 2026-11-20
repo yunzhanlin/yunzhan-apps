@@ -1,10 +1,11 @@
 {
   "cases_sha256": "910a440d8f9f541d3da51c7da10c199289fd50a3f44627d10fc3881678c7cb57",
-  "kvm_sha256": "7d7a286984fa789246c3ac50453a959d9fac4c24abd8ab1d1c4f08b8be9f5bb9",
+  "kvm_sha256": "0792bff8b33b883d321fbd16f51a0ad5b20bb139a5e800220615026d8a4f353a",
   "payload_sha256": "0975ceca84aa6f7fc8fc6ff483327c6e6b983480af5671f4f751dcf016984220",
   "published_head": "e9781747c48247344dbb25788ba45f320185773e",
   "release_id": 452885029,
   "tag": "qa-pm2archivecandidate232r2-20261120-qa1",
   "source_sdk_tree": "b54c207b55d5dc77de59d34578ba980bdc4373d5",
-  "verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  "verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+  "original_failed_outer_run_preserved": 44802529524
 }

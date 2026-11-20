@@ -162,7 +162,7 @@ try:
         if line.startswith('{'):
             summary = json.loads(line); break
     else: raise AssertionError('Guest did not emit its final recorded result; no install or app action replayed')
-    assert re.fullmatch('/opt/panel-intrusion-c192r2-qa-[a-f0-9]{32}', summary['base'])
+    assert re.fullmatch('/opt/panel-intrusion-c259-qa-[a-f0-9]{32}', summary['base'])
     guest_evidence = summary['base'] + '/evidence'
     report['guest'] = summary; report['guest_exit'] = result.returncode
     report['ok'] = result.returncode == 0 and summary['ok'] is True
