@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-11-20T15:36:30Z",
+  "generated_at": "2026-11-20T22:38:15Z",
   "repository": "https://github.com/yunzhanlin/yunzhan-apps",
   "apps": [
     {
@@ -34,21 +34,25 @@
       "id": "apache",
       "name": "Apache HTTP Server",
       "category": "deployment",
-      "version": "2.4.68-compat1",
-      "summary": "独立安装 Apache HTTP Server，支持模块检测、站点绑定和配置校验。",
+      "version": "2.4.71-compat1",
+      "summary": "独立安装 Apache 2.4.71，核对实际运行版本，明确切换共享网站服务并保留原配置、PHP 绑定与防护引擎证据。",
       "stage": "ready",
       "risk": "maintained",
       "provider": "runtime",
-      "target": "apache-2.4.68",
+      "target": "apache-2.4.71",
       "manage_route": "sites",
       "capabilities": [
-        "官方源码",
-        "模块检测",
-        "站点绑定",
+        "固定官方源码与摘要",
+        "实际运行版本核验",
+        "版本并存与明确切换",
+        "PHP/FPM 独立绑定",
+        "自定义改写与符号链接限制",
+        "原生 WAF 兼容引擎选择",
+        "原站点数据与配置保留",
         "引用保护"
       ],
-      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/apache/2.4.68-compat1/manifest.json",
-      "sha256": "abb627840489dee4ac93f8e3c925d5b6af50454caeb6655d73458aac03f60446"
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/apache/2.4.71-compat1/manifest.json",
+      "sha256": "aadc8489fe1e4e9bb40310bafdba7a8385fd11aabe7dd97758c17b45ba98ff53"
     },
     {
       "id": "apache-waf",

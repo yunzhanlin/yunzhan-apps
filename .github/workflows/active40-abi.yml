@@ -1,7 +1,7 @@
 name: Active40 and preserved historical publication contracts
 on:
   push:
-    branches: [main, codex/app-candidate, codex/retire-php-ci-c229, codex/pm2-config-archive-c232r2-catalogue]
+    branches: [main, codex/apache271-catalog-c268, codex/app-candidate, codex/retire-php-ci-c229, codex/pm2-config-archive-c232r2-catalogue]
   pull_request:
 permissions:
   contents: read
@@ -21,8 +21,15 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: yunzhanlin/yunzhan-apps
-          ref: e9781747c48247344dbb25788ba45f320185773e
+          ref: 1460459cd269aef6de0f7845e84fafd32c8c0a32
           path: .ci/current-source
+          sparse-checkout: candidate/panel-integration-compose-signed-image
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: yunzhanlin/yunzhan-apps
+          ref: e9781747c48247344dbb25788ba45f320185773e
+          path: .ci/previous-source
           sparse-checkout: candidate/panel-integration-compose-signed-image
           persist-credentials: false
       - uses: actions/setup-go@v5
@@ -34,6 +41,8 @@ jobs:
           node-version: 22
       - name: Actual current40 original-key manifests with exact current SDK and zero skip
         run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/current-source/candidate/panel-integration-compose-signed-image"
+      - name: Retained exact C232 original-key current40 reader ABI without runtime install permission
+        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/previous-source/candidate/panel-integration-compose-signed-image"
   memcached-retirement-handler-models-amd64:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

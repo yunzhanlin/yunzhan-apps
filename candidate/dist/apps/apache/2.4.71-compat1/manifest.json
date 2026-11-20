@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "id": "apache",
+  "name": "Apache HTTP Server",
+  "category": "deployment",
+  "version": "2.4.71-compat1",
+  "summary": "独立安装 Apache 2.4.71，核对实际运行版本，明确切换共享网站服务并保留原配置、PHP 绑定与防护引擎证据。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "runtime",
+    "target": "apache-2.4.71",
+    "manage_route": "sites"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "固定官方源码与摘要",
+    "实际运行版本核验",
+    "版本并存与明确切换",
+    "PHP/FPM 独立绑定",
+    "自定义改写与符号链接限制",
+    "原生 WAF 兼容引擎选择",
+    "原站点数据与配置保留",
+    "引用保护"
+  ],
+  "health": {
+    "probe": "binary",
+    "target": "httpd -t"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": true
+  }
+}
