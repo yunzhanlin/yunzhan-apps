@@ -108,6 +108,9 @@ func validateComposeRequest(v composeProjectRequest) error {
 	}
 	switch v.Action {
 	case "create":
+		if core.RetiredLegacyPHPTemplate(v.TemplateID) {
+			return errors.New("PHP 8.0 以下版本已从商店移除，不再提供新部署；原项目和数据保留")
+		}
 		if !dockerResourceNamePattern.MatchString(v.Name) || len(v.Name) > 40 {
 			return errors.New("Compose 项目名称无效")
 		}

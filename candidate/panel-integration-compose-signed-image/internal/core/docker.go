@@ -198,6 +198,9 @@ func ValidateDockerProject(v DockerProjectRequest) error {
 	}
 	switch v.Action {
 	case "create":
+		if RetiredLegacyPHPTemplate(v.TemplateID) {
+			return errors.New("PHP 8.0 以下版本已从商店移除，不再提供新部署；原项目和数据保留")
+		}
 		if !validDockerResourceName(v.Name) || len(v.Name) > 40 || len(v.Compose) < 20 || len(v.Compose) > 48*1024 || strings.ContainsRune(v.Compose, 0) {
 			return errors.New("Compose 项目名称或内容无效")
 		}
@@ -400,7 +403,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 		}
 		seen := make(map[string]bool)
 		for _, release := range finalLegacyPHPReleases {
-			if seen[release.appID] {
+			if RetiredLegacyPHPTemplate(release.template) || seen[release.appID] {
 				continue
 			}
 			seen[release.appID] = true
@@ -413,7 +416,7 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 				"description": "AMD64 / ARM64；仅用于旧站兼容迁移，独立 " + worker + "、Nginx 和数据卷", "container_port": 8080,
 			})
 		}
-		for _, version := range []string{"52", "53", "54", "55", "56", "70", "71", "72", "73", "74", "80", "81"} {
+		for _, version := range []string{"80", "81"} {
 			if runtime.GOARCH != "amd64" {
 				continue
 			}
@@ -433,6 +436,10 @@ func (a *Server) dockerRoutes(m *http.ServeMux) {
 			return
 		}
 		compose := in.Compose
+		if RetiredLegacyPHPTemplate(in.TemplateID) {
+			rejectDockerCreateBeforeDispatch(w, "PHP 8.0 以下版本已从商店移除，不再提供新部署；原项目和数据保留")
+			return
+		}
 		if in.TemplateID != "" {
 			if compose != "" {
 				rejectDockerCreateBeforeDispatch(w, "模板和自定义 Compose 不能同时提交")

@@ -44,7 +44,7 @@ func TestIsolatedLegacyPHPDirectHTTPEnforcesSameArchitectureBeforeRootDispatch(t
 			t.Fatal("unsupported host or metadata read reached executor", r.Method, r.URL.Path)
 		}
 		var op DockerProjectRequest
-		if json.NewDecoder(r.Body).Decode(&op) != nil || op.TemplateID != "php-legacy-52" || ValidateDockerProject(op) != nil {
+		if json.NewDecoder(r.Body).Decode(&op) != nil || op.TemplateID != "php-legacy-80" || ValidateDockerProject(op) != nil {
 			t.Fatal("approved template request identity changed")
 		}
 		raw, _ := json.Marshal(DockerJobResult{JobID: op.JobID, ProjectID: op.ProjectID, Kind: "compose", State: "queued"})
@@ -65,10 +65,10 @@ func TestIsolatedLegacyPHPDirectHTTPEnforcesSameArchitectureBeforeRootDispatch(t
 			legacy++
 		}
 	}
-	if runtime.GOARCH == "amd64" && legacy != 12 || runtime.GOARCH != "amd64" && legacy != 0 {
+	if runtime.GOARCH == "amd64" && legacy != 2 || runtime.GOARCH != "amd64" && legacy != 0 {
 		t.Fatal("quick template list advertised unsupported legacy images", runtime.GOARCH, legacy)
 	}
-	w = request("POST", "/api/docker/projects", `{"name":"legacy-template-fixture","template_id":"php-legacy-52","host_port":23000,"compose":""}`, cookie, csrf)
+	w = request("POST", "/api/docker/projects", `{"name":"legacy-template-fixture","template_id":"php-legacy-80","host_port":23000,"compose":""}`, cookie, csrf)
 	if runtime.GOARCH == "amd64" {
 		if w.Code != 202 || calls != 1 {
 			t.Fatal("reviewed AMD64 template no longer dispatches once", w.Code, calls, w.Body.String())
@@ -77,7 +77,7 @@ func TestIsolatedLegacyPHPDirectHTTPEnforcesSameArchitectureBeforeRootDispatch(t
 		t.Fatal("unsupported host could bypass store via direct Docker endpoint", w.Code, calls, w.Body.String())
 	}
 	if runtime.GOARCH != "amd64" {
-		body := `{"name":"legacy-template-fixture","template_id":"php-legacy-52","host_port":23000,"compose":"","architecture":"amd64"}`
+		body := `{"name":"legacy-template-fixture","template_id":"php-legacy-80","host_port":23000,"compose":"","architecture":"amd64"}`
 		if w := request("POST", "/api/docker/projects", body, cookie, csrf); w.Code != 400 || calls != 0 {
 			t.Fatal("caller architecture field overrode compiled host identity", w.Code, calls)
 		}
