@@ -58,6 +58,8 @@ def api(path, data=None, expected=200):
     except urllib.error.HTTPError as error:
         if error.code == expected:
             return json.loads(error.read(4096))
+        raw=error.read(8192)
+        with(out/'original-api-refusals.jsonl').open('a')as f:f.write(json.dumps({'path':path,'status':error.code,'response':raw.decode('utf-8','replace')})+'\n')
         raise
 
 
@@ -178,6 +180,13 @@ try:
     for name,text in [('roundtrip.php',content),('c220-proof.txt',static)]:
         created=api('/sites/'+source_site['id']+'/files/action',{'action':'create','path':name,'content':text});assert created['path']==name
     sync={'site_id':source_site['id'],'target_project_id':id,'excludes':['index.html']}
+    diagnostic_script="echo json_encode(array('version'=>PHP_VERSION,'sapi'=>php_sapi_name(),'hash_file'=>function_exists('hash_file'),'hash'=>function_exists('hash'),'json_decode'=>function_exists('json_decode'),'json_encode'=>function_exists('json_encode'),'index_readable'=>is_readable('/var/www/html/index.php'))));"
+    diag={}
+    for label,script in [('capabilities',diagnostic_script),('original_inventory',(Path(__file__).resolve().parent/'original-inventory-probe.php').read_text())]:
+        observed=subprocess.run(['/usr/bin/docker','exec','-i','--user','1000:1000',php['Id'],'php','-r',script],stdin=subprocess.DEVNULL,capture_output=True,timeout=45)
+        assert len(observed.stdout)<=2<<20 and len(observed.stderr)<=65536
+        diag[label]={'exit':observed.returncode,'stdout':observed.stdout.decode('utf-8','replace'),'stderr':observed.stderr.decode('utf-8','replace')}
+    save('original-legacy-readonly-CLI-diagnostic.json',diag)
     preview=api('/app-modules/files-sync/preview',sync);save('actual-legacy-preview.json',preview);assert preview['preview']and not preview['conflicts']and {'roundtrip.php','c220-proof.txt'}.issubset(set(preview['copied']))
     http(26779,'/roundtrip.php',404)
     synced=api('/app-modules/files-sync/sync',sync);save('actual-legacy-sync.json',synced);assert not synced['preview']and not synced['conflicts']and {'roundtrip.php','c220-proof.txt'}.issubset(set(synced['copied']))

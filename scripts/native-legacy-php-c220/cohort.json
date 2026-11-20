@@ -384,19 +384,27 @@
   "served_head": "8fc0034f031a3a9191c8f93a1f7fa9c708a526d6",
   "scope": "Current signed original C208, actual legacy PHP FPM, normal files API to actual legacy sync, domain binding, independent named data and untouched original static project. No Main/reference host touched.",
   "payload_files": {
-    ".github/workflows/legacy-php-c220-current-native.yml": "4ae89f358659fdcbf41a01921176abd770e77cad18d2d2c59a5576183a304959",
+    ".github/workflows/legacy-php-c220-current-native.yml": "ef23a93d651f7e24dac6ab7e6e634a98b84d0a4358ee9a4cce0233907e372402",
     "scripts/native-legacy-php-c220/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
     "scripts/native-legacy-php-c220/dispatch.json": "b9214fbb121598dffd09526fce9ab86181598ac469f2bfab80fc854ecafa7530",
     "scripts/native-legacy-php-c220/download.py": "d9f5f45b397a96fc8ccebbbdd5dc16487aca6f90cdbd7480b184a97e54521291",
     "scripts/native-legacy-php-c220/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
     "scripts/native-legacy-php-c220/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
-    "scripts/native-legacy-php-c220/legacy-php.py": "90c2b94cfd94ae9d491e672372914d5ee014e2bde1fa5b6f2ac0d3d8aa76acdb",
+    "scripts/native-legacy-php-c220/legacy-php.py": "d2913685139b307d1f3aee913787150f4327e27f8f30998cb974aaef59554bfa",
     "scripts/native-legacy-php-c220/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
-    "scripts/native-legacy-php-c220/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
+    "scripts/native-legacy-php-c220/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-legacy-php-c220/original-inventory-probe.php": "1755e665f1511a29a42cc03226e48bc873c5e5dfb4482b64d358ed7478fa8772"
   },
-  "native_fixture_parent": "5be06e6f8540bad41f1816ec1d1fdb2d7884cacb",
+  "native_fixture_parent": "5746c32a5fc07361d73d5c5dee5ff8a31486fdae",
   "changed_payload_files": [
     "scripts/native-legacy-php-c220/legacy-php.py",
+    "scripts/native-legacy-php-c220/original-inventory-probe.php",
     ".github/workflows/legacy-php-c220-current-native.yml"
-  ]
+  ],
+  "diagnostic_original_inventory_source": {
+    "sdk_source_inputs_sha256": "7de34e3479a9c161e48303178648805bb0e03946e65a76c2445c15a2ccfc04e2",
+    "go_sha256": "0dc3555677dda75907dbe22923a67d543f53d8c1c8667af0a0aca924f4e71996",
+    "exact_extracted_PHP_sha256": "1755e665f1511a29a42cc03226e48bc873c5e5dfb4482b64d358ed7478fa8772",
+    "read_only": true
+  }
 }
