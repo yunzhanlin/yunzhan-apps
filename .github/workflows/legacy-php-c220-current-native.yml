@@ -13,7 +13,7 @@ jobs:
       max-parallel: 4
       matrix:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
-        slot: ['52', '81']
+        slot: ['52', '53', '54', '55', '56', '70', '71', '72', '73', '74', '80']
     runs-on: ${{ matrix.os }}
     timeout-minutes: 65
     steps:

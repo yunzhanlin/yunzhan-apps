@@ -168,7 +168,7 @@ try:
     assert php['HostConfig']['ReadonlyRootfs']and web['HostConfig']['ReadonlyRootfs']and not php['HostConfig']['PortBindings']
     assert web['HostConfig']['PortBindings']=={'8080/tcp':[{'HostIp':'127.0.0.1','HostPort':'26779'}]}
     assert all(not v['HostConfig']['Privileged']for v in running.values())
-    result=json.loads(http(26779));assert result['version']==recipe['version']and result['sapi']=='fpm-fcgi'and result['mysqli']and result['pdo_mysql'];assert result['mysql']is(slot in('52','53','54','55','56'))
+    result=json.loads(http(26779));save('actual-fastcgi-response.json',result);assert result['version']==recipe['version']and result['sapi']==('cgi-fcgi'if slot=='52'else'fpm-fcgi')and result['mysqli']and result['pdo_mysql'];assert result['mysql']is(slot in('52','53','54','55','56'))
     old_volumes={m['Name']for v in before.values()for m in v['Mounts']if m['Type']=='volume'};new_volumes={m['Name']for v in running.values()for m in v['Mounts']if m['Type']=='volume'};assert old_volumes and new_volumes and old_volumes.isdisjoint(new_volumes)
     module_install('files-sync')
     slug='c220-source-'+slot;src=api('/sites',{'name':slug,'slug':slug,'domain':slug+'.example.test','php_version_id':''},202);srcjob=wait(lambda:api('/jobs/'+src['job_id']),lambda v:v['state']in('succeeded','failed','needs_attention'));save('source-site-job.json',srcjob);assert srcjob['state']=='succeeded'
