@@ -120,7 +120,7 @@ try:
   updated=action('update',state['target_id'],{'expected_revision':1,'memory_mb':160,'pm2_operation_id':state['config_operation']});assert updated['ok']and json.loads(manifest(state['target_id']).read_bytes())['revision']==2;ready(18330,state['target_secret']);save('original-real-configuration-update',updated)
   canceled=action('cancel-configuration-request',state['target_id'],{'pm2_operation_id':state['cancel_operation'],'confirm':'CANCEL PM2 '+state['cancel_operation']});save('original-real-unpublished-request-cancellation',canceled)
   original=observations(state);assert original['target']['http']['uid']>0 and original['control']['http']['uid']>0
-  journal=tree(root/'configuration-transactions');assert journal and any(k.startswith(state['config_operation']+'/')for k in journal)and any(k.startswith(state['cancel_operation']+'/')for k in journal)
+  journal=tree(root/'configuration-transactions');assert set(journal)=={state['config_operation']+'.intent.json',state['config_operation']+'.result.json',state['cancel_operation']+'.cancel.json'}
   state.update(original=original,journal=journal,installed_job=installed['id'],original_boot=Path('/proc/sys/kernel/random/boot_id').read_text().strip(),old_installed_record_sha256=digest(root/'installed.json'))
   save('retained-original-project-state',state)
   proof.update(ok=True,app_version='7.0.4-compat11',source_inputs_sha256=plan['source_inputs_sha256'],old_programme_normal_signed_install=True,old_app_normal_signed_install=True,two_real_nonroot_projects_running=True,real_public_npm_dependency=True,actual_config_commit_and_cancellation=True,original_active_records=2,projects_deliberately_retained_for_real_upgrade=True)
@@ -177,7 +177,7 @@ try:
   second=api('/app-modules/pm2-manager/configuration-archives/'+aid+'/records?pm2_installation_id='+instance+'&limit=1&offset=1');assert second['page_complete']and second['configuration_transactions'][0]['pm2_operation_id']!=records['configuration_transactions'][0]['pm2_operation_id'];save('real-archive-original-page2',second)
   # An already terminal request never rewinds live journals or services.
   row=api(url)['configuration_archives'][0];restore={'pm2_installation_id':instance,'pm2_operation_id':aid,'expected_sha':row['expected_sha'],'confirm':'RESTORE PM2 CONFIG ARCHIVE '+aid};terminal=api('/app-modules/pm2-manager/restore-configuration-archive',restore);assert terminal['already_terminal']and tree(generation)==state['journal']and observations(state)==state['original'];save('real-terminal-restore-is-observation',terminal)
-  # The former capacity is released by the actual archive. A new stopped
+  # The former capacity is released by the actual archive. A new running
   # project revision can commit, while the independent control stays exact.
   control_before=observations(state)['control'];newop=secrets.token_hex(16);newsave=action('update',state['target_id'],{'expected_revision':2,'memory_mb':192,'pm2_operation_id':newop});assert newsave['ok']and json.loads(manifest(state['target_id']).read_bytes())['revision']==3;ready(18330,state['target_secret']);assert observations(state)['control']==control_before
   assert tree(generation)==state['journal'];save('real-new-config-after-complete-archive',newsave)

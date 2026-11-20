@@ -2,7 +2,7 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "version": "0.1.0-dev.proapps24php8storecandidate226",
-  "native_fixture_parent": "5a184223d7fe98a09ca3383656a14d97a01b755c",
+  "native_fixture_parent": "48d6fb46a69faf7cbe976d0b34a166ed7ba50edc",
   "served_head": "e50bbac40c8af919df7c0a0af19a826c0c3d8f49",
   "item": {
     "id": "pm2-manager",
@@ -44,16 +44,13 @@
     ".github/workflows/pm2-npm-c230-native.yml": "e31fd9dcd5f413266d9b12147a21200988ac1d6cc5b5e80284e78107907c096e",
     "scripts/native-pm2-c230/diagnostics.py": "42acb42b61832347f133d9a1b472fddc9e28a0767efd62d115637de70d310544",
     "scripts/native-pm2-c230/prepare-pm2-host.py": "3f87c1c2a12ed323a59b17403715626a1a6865400c8da0f4ea0df5756db604bc",
-    "scripts/native-pm2-c230/archive-upgrade-business.py": "47fd8c061689974ff113b1173a7ccecc29b0566a70100e971b45412fb7652b25",
+    "scripts/native-pm2-c230/archive-upgrade-business.py": "370bf5d0f3dc4852b5bb20a294864a7e2cbbc10c0f2e358a5a1b06bfb33467c3",
     "scripts/native-pm2-c230/download-upgrade.py": "b8f94e8fe7d23e5d70cc30e5709a70628038767be909b50a6bc442061d7c1df2",
     "scripts/native-pm2-c230/upgrade.json": "8bbcf9bb38faa0d728b065856fac8876a8ccb43c718922fcb554db5cef85801a",
     ".github/workflows/pm2-config-c233-native.yml": "a6471662c48086c3975f599deae3be3a03b55ee7b73667e405beeb9cde51c03d"
   },
   "changed_payload_files": [
-    "scripts/native-pm2-c230/archive-upgrade-business.py",
-    "scripts/native-pm2-c230/download-upgrade.py",
-    "scripts/native-pm2-c230/upgrade.json",
-    ".github/workflows/pm2-config-c233-native.yml"
+    "scripts/native-pm2-c230/archive-upgrade-business.py"
   ],
   "Main_changed": false,
   "retired_PHP_installations": 0,
@@ -68,5 +65,7 @@
     "run": 44737130580,
     "amd64_full_business": "passed",
     "arm64": "real npm/integrity/startup rollback/hook cancellation passed; original strict immediate 16-request cluster sample failed while second worker was still completing startup; wait bounded 35s for actual two-worker HTTP and retain every sample"
-  }
+  },
+  "original_C233_run_retained": 44771435974,
+  "original_C233_scope": "Both native installations, two nonroot HTTP projects, public npm, actual configuration commit/cancel reached; original collector wrongly assumed per-operation directories instead of exact three flat journal files. No product edits."
 }
