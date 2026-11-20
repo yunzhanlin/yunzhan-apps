@@ -2,13 +2,13 @@
   "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
   "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
   "source_sdk_tree": "314aff0755134aacff2e77cecb0994d2dba2ad03",
-  "native_fixture_parent": "cd36b6deb518a22a8768720b20665b24df8cd020",
-  "patch_sha256": "8f8c2650cca78fb0ad875c161c84d95ebea3bdd99c94fd0bc878c099f33442b3",
+  "native_fixture_parent": "7a844b3b2ce888c7ea1fec1babc094f2b8ad5f76",
+  "patch_sha256": "9ed8f965415c24eec138ccdadd5bb89df89d5163d90a9267fac01f17cb3d147d",
   "payload_files": {
     "scripts/native-pm2-configuration-c231/runner.py": "2623ac3a36fb7cabaa66ba1b6fb46c9a5c68e5131b8299e44af70ebf1e695c1b",
     "scripts/native-pm2-configuration-c231/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     "scripts/native-pm2-configuration-c231/finish.py": "1a2ddc541f6cfb8691a346ed391e57d763a7ef99e0c9737a7436117fb480cd06",
-    "scripts/native-pm2-configuration-c231/development.patch": "8f8c2650cca78fb0ad875c161c84d95ebea3bdd99c94fd0bc878c099f33442b3",
+    "scripts/native-pm2-configuration-c231/development.patch": "9ed8f965415c24eec138ccdadd5bb89df89d5163d90a9267fac01f17cb3d147d",
     ".github/workflows/pm2-config-c231-development.yml": "a1f2affa59928c858af0c865067784aa2470360604b8270a7e0b6fb9bef6debf"
   },
   "changed_source_files": [
@@ -35,6 +35,7 @@
     "internal/executor/app_pm2_journal_archive_catalog_linux.go",
     "internal/executor/app_pm2_journal_archive_catalog_linux_test.go",
     "internal/executor/app_pm2_journal_archive_http_linux_test.go",
+    "internal/executor/app_pm2_journal_archive_instance_linux_test.go",
     "internal/executor/app_pm2_journal_archive_protocol_linux.go",
     "internal/executor/app_pm2_journal_archive_protocol_linux_test.go",
     "internal/executor/app_pm2_journal_archive_read_linux.go",
@@ -73,6 +74,8 @@
     "TestPM2JournalReadLeaseNeverCreatesAndDetectsFirstWriter",
     "TestPM2JournalReadLeaseSharesAndRefusesUnsettledWriter",
     "TestPM2JournalArchiveConfigurationGETReadsOldNonceWithoutHistoryOrReplay",
+    "TestPM2JournalArchiveStatusExportsOnlyVerifiedCurrentInstance",
+    "TestPM2JournalArchiveRootRejectsStaleInstanceAfterReplacement",
     "TestPM2JournalArchiveProtocolRejectsUnfinishedOrReboundInventories",
     "TestPM2JournalArchiveProtocolRetainsRecordedGroupAndRenameWitnesses",
     "TestPM2JournalArchiveReadRetainsUnacceptedEmptyFragment",
@@ -99,13 +102,12 @@
     "TestPM2JournalSnapshotRefusesUnknownLinkedOrIncompleteEvidence",
     "TestPM2JournalSnapshotDetachedMissingNamespaceIsUnknown"
   ],
-  "scope": "Unpublished compat12 API and dedicated workspace with all original workspace operation visibility covered; partial admin retains PM2 menu but denied whole-journal access; real browser component tested separately with model API only. No signed installation or Main update acceptance",
+  "scope": "Unpublished compat12 maintenance bound to actual install/update/status installation authority; closed four-field wire, stale-instance Core/Root refusal, current-instance readonly HTTP and every original workspace gate. Signed lifecycle integration still pending; original unsigned candidate232 retained and superseded.",
   "Main_changed": false,
   "all40_commercial": false,
   "patch_format": "git unified zero context, applied only against exactly pinned SDK tree",
   "changed_payload_files": [
-    "scripts/native-pm2-configuration-c231/development.patch",
-    "scripts/native-pm2-configuration-c231/runner.py"
+    "scripts/native-pm2-configuration-c231/development.patch"
   ],
   "original_failed_baseline_preserved": {
     "run": 44740413439,
@@ -113,7 +115,7 @@
     "original_test_bytes_or_assertions_changed": false,
     "private_evidence_umask": "0077 remains in collector parent"
   },
-  "expected_new_test_rows": 80,
+  "expected_new_test_rows": 82,
   "original_ARM_compile_failure_preserved": {
     "run": 44742374496,
     "reason": "syscall.Stat_t.Nlink is uint32 on ARM64 and uint64 on AMD64; widen explicitly to uint64; both local Linux targets compiled successfully after fix"

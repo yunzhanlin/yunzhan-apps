@@ -96,15 +96,17 @@ index 095a586..ae62393 100644
 -		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。最多保留 512 个原始事务，达到上限会暂停新配置更新，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
 +		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。活动目录最多保留 512 个原始事务，达到上限会暂停新配置更新；可在配置记录封存中完整保留历史并建立新目录，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("configuration-archives", "配置记录封存", "完整保留已完成配置记录，显式处理封存中断；不重放配置或启停项目。", nil, []string{"archive-configurations", "recover-configuration-archive", "restore-configuration-archive"}), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
 diff --git a/internal/core/app_modules.go b/internal/core/app_modules.go
-index ce8f1b1..3fe0612 100644
+index ce8f1b1..7329f86 100644
 --- a/internal/core/app_modules.go
 +++ b/internal/core/app_modules.go
-@@ -193 +193 @@ func AppModules() []AppModuleDefinition {
+@@ -92,0 +93 @@ type AppModuleInput struct {
++	PM2InstallationID    string                          `json:"pm2_installation_id,omitempty"`
+@@ -193 +194 @@ func AppModules() []AppModuleDefinition {
 -			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request")
 +			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request", "archive-configurations", "recover-configuration-archive", "restore-configuration-archive")
-@@ -226,0 +227 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
+@@ -226,0 +228 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 +	a.pm2ConfigurationArchiveRoutes(m)
-@@ -302,0 +304,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
+@@ -302,0 +305,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 +		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
 +			access, err := a.Store.UserAccess(u.ID)
 +			if err != nil || !fullAdministrator(access) {
@@ -112,7 +114,7 @@ index ce8f1b1..3fe0612 100644
 +				return
 +			}
 +		}
-@@ -335,0 +344,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
+@@ -335,0 +345,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 +		} else if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
 +			if !decode(w, r, &historyRaw) {
 +				return
@@ -123,12 +125,12 @@ index ce8f1b1..3fe0612 100644
 +				fail(w, 400, inputErr.Error())
 +				return
 +			}
-@@ -349,0 +368,4 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
-+		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) && module.Status.Version != PM2ConfigurationArchiveAppVersion {
+@@ -349,0 +369,4 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) && (module.Status.Version != PM2ConfigurationArchiveAppVersion || !ValidID(module.Status.InstallationID) || module.Status.InstallationID != in.PM2InstallationID) {
 +			fail(w, 409, "配置归档须先签名更新至固定 compat12；旧安装不借用新能力")
 +			return
 +		}
-@@ -449,0 +472,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
+@@ -449,0 +473,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
 +		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
 +			access, accessErr := a.Store.UserAccess(u.ID)
 +			if accessErr != nil || !fullAdministrator(access) {
@@ -136,15 +138,15 @@ index ce8f1b1..3fe0612 100644
 +				return
 +			}
 +		}
-@@ -498 +527 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
+@@ -498 +528 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 -			version = PM2RootVendorAppVersion
 +			version = PM2ConfigurationArchiveAppVersion
 diff --git a/internal/core/pm2_configuration_archive.go b/internal/core/pm2_configuration_archive.go
 new file mode 100644
-index 0000000..7ba0b96
+index 0000000..0cd0c18
 --- /dev/null
 +++ b/internal/core/pm2_configuration_archive.go
-@@ -0,0 +1,121 @@
+@@ -0,0 +1,143 @@
 +package core
 +
 +import (
@@ -154,6 +156,7 @@ index 0000000..7ba0b96
 +	"io"
 +	"local/panel/internal/appcatalog"
 +	"net/http"
++	"net/url"
 +	"regexp"
 +)
 +
@@ -166,10 +169,31 @@ index 0000000..7ba0b96
 +func PM2ConfigurationArchiveAction(action string) bool {
 +	return action == "archive-configurations" || action == "recover-configuration-archive" || action == "restore-configuration-archive"
 +}
++func ParsePM2ConfigurationArchiveRecordsQuery(raw string) (AppModuleInput, error) {
++	if len(raw) > 640 {
++		return AppModuleInput{}, errors.New("配置封存读取查询过长")
++	}
++	q, err := url.ParseQuery(raw)
++	if err != nil {
++		return AppModuleInput{}, errors.New("配置封存查询格式无效")
++	}
++	values := q["pm2_installation_id"]
++	if len(values) != 1 || !ValidID(values[0]) {
++		return AppModuleInput{}, errors.New("请选择当前已安装的 PM2 实例")
++	}
++	instance := values[0]
++	delete(q, "pm2_installation_id")
++	in, err := ParsePM2ConfigurationQuery(q.Encode())
++	if err != nil {
++		return AppModuleInput{}, err
++	}
++	in.PM2InstallationID = instance
++	return in, nil
++}
 +func ParsePM2ConfigurationArchiveQuery(raw string) (AppModuleInput, error) {
-+	in, err := ParsePM2ConfigurationQuery(raw)
++	in, err := ParsePM2ConfigurationArchiveRecordsQuery(raw)
 +	if err != nil || in.ResourceID != "" || in.Limit > 32 {
-+		return AppModuleInput{}, errors.New("配置归档只读查询仅接受原请求标识、最多32项及有界分页")
++		return AppModuleInput{}, errors.New("配置归档只读查询仅接受当前实例、原请求标识、最多32项及有界分页")
 +	}
 +	return in, nil
 +}
@@ -190,7 +214,7 @@ index 0000000..7ba0b96
 +	for d.More() {
 +		token, err = d.Token()
 +		key, ok := token.(string)
-+		if err != nil || !ok || seen[key] || (key != "pm2_operation_id" && key != "expected_sha" && key != "confirm") {
++		if err != nil || !ok || seen[key] || (key != "pm2_operation_id" && key != "pm2_installation_id" && key != "expected_sha" && key != "confirm") {
 +			return in, errors.New("配置归档字段重复或不被支持")
 +		}
 +		seen[key] = true
@@ -209,7 +233,7 @@ index 0000000..7ba0b96
 +	if action == "restore-configuration-archive" {
 +		confirmation = "RESTORE PM2 CONFIG ARCHIVE " + in.PM2OperationID
 +	}
-+	if len(seen) != 3 || !ValidID(in.PM2OperationID) || !pm2ConfigurationArchiveDigest.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
++	if len(seen) != 4 || !ValidID(in.PM2InstallationID) || !ValidID(in.PM2OperationID) || !pm2ConfigurationArchiveDigest.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
 +		return AppModuleInput{}, errors.New("请选择原完整清单或归档请求、摘要并填写精确确认")
 +	}
 +	return in, nil
@@ -221,7 +245,7 @@ index 0000000..7ba0b96
 +			fail(w, 400, "原配置归档标识无效")
 +			return
 +		}
-+		if _, err := ParsePM2ConfigurationQuery(r.URL.RawQuery); err != nil {
++		if _, err := ParsePM2ConfigurationArchiveRecordsQuery(r.URL.RawQuery); err != nil {
 +			fail(w, 400, err.Error())
 +			return
 +		}
@@ -268,10 +292,10 @@ index 0000000..7ba0b96
 +}
 diff --git a/internal/core/pm2_configuration_archive_test.go b/internal/core/pm2_configuration_archive_test.go
 new file mode 100644
-index 0000000..1489c27
+index 0000000..0850452
 --- /dev/null
 +++ b/internal/core/pm2_configuration_archive_test.go
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,148 @@
 +package core
 +
 +import (
@@ -285,7 +309,7 @@ index 0000000..1489c27
 +
 +func TestPM2JournalArchiveInputIsIndependentCanonicalAndBounded(t *testing.T) {
 +	id, sha := strings.Repeat("a", 32), strings.Repeat("b", 64)
-+	base := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
++	base := `{"pm2_installation_id":"` + strings.Repeat("7", 32) + `","pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
 +	if _, err := DecodePM2ConfigurationArchiveInput("archive-configurations", []byte(base)); err != nil {
 +		t.Fatal(err)
 +	}
@@ -294,18 +318,23 @@ index 0000000..1489c27
 +			t.Fatal("ambiguous or unrelated archive input accepted", body)
 +		}
 +	}
++	for _, bad := range []string{strings.Replace(base, `"pm2_installation_id":"`+strings.Repeat("7", 32)+`",`, "", 1), strings.Replace(base, `"pm2_installation_id":`, `"pm2_installation_id":null,"pm2_installation_id":`, 1)} {
++		if _, err := DecodePM2ConfigurationArchiveInput("archive-configurations", []byte(bad)); err == nil {
++			t.Fatal("missing or duplicate installation authority accepted")
++		}
++	}
 +	for action, phrase := range map[string]string{"recover-configuration-archive": "RECOVER PM2 CONFIG ARCHIVE ", "restore-configuration-archive": "RESTORE PM2 CONFIG ARCHIVE "} {
-+		body := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"` + phrase + id + `"}`
++		body := `{"pm2_installation_id":"` + strings.Repeat("7", 32) + `","pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"` + phrase + id + `"}`
 +		if _, err := DecodePM2ConfigurationArchiveInput(action, []byte(body)); err != nil {
 +			t.Fatal(err)
 +		}
 +	}
 +	for _, raw := range []string{"resource_id=owned-project", "limit=33", "limit=01", "offset=513", "limit=1&limit=2", "confirm=anything"} {
-+		if _, err := ParsePM2ConfigurationArchiveQuery(raw); err == nil {
++		if _, err := ParsePM2ConfigurationArchiveQuery("pm2_installation_id=" + strings.Repeat("7", 32) + "&" + raw); err == nil {
 +			t.Fatal("unbounded archive read accepted", raw)
 +		}
 +	}
-+	if _, err := ParsePM2ConfigurationArchiveQuery("pm2_operation_id=" + id + "&limit=32&offset=512"); err != nil {
++	if _, err := ParsePM2ConfigurationArchiveQuery("pm2_installation_id=" + strings.Repeat("7", 32) + "&pm2_operation_id=" + id + "&limit=32&offset=512"); err != nil {
 +		t.Fatal(err)
 +	}
 +}
@@ -326,7 +355,7 @@ index 0000000..1489c27
 +		calls++
 +		body := `{"configuration_archives":[],"private_result":"must-not-return-after-revocation"}`
 +		if r.URL.Path == "/v1/app-modules/pm2-manager" {
-+			raw, _ := json.Marshal(map[string]any{"status": SoftwareAppStatus{ID: "pm2-manager", Installed: true, Version: version}})
++			raw, _ := json.Marshal(map[string]any{"status": SoftwareAppStatus{ID: "pm2-manager", Installed: true, Version: version, InstallationID: strings.Repeat("7", 32)}})
 +			body = string(raw)
 +		} else {
 +			if r.Method == "POST" {
@@ -363,9 +392,9 @@ index 0000000..1489c27
 +		return w.Result().Cookies()[0], out.CSRF
 +	}
 +	id, sha := strings.Repeat("a", 32), strings.Repeat("b", 64)
-+	body := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
++	body := `{"pm2_installation_id":"` + strings.Repeat("7", 32) + `","pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
 +	post := "/api/app-modules/pm2-manager/archive-configurations"
-+	get := "/api/app-modules/pm2-manager/configuration-archives?limit=32"
++	get := "/api/app-modules/pm2-manager/configuration-archives?pm2_installation_id=" + strings.Repeat("7", 32) + "&limit=32"
 +	for _, u := range []identity{limited, viewer} {
 +		cookie, csrf := login(u.Username)
 +		before := calls
@@ -394,6 +423,10 @@ index 0000000..1489c27
 +		t.Fatal("old application borrowed archive authority", w.Code)
 +	}
 +	version = PM2ConfigurationArchiveAppVersion
++	staleBody := strings.Replace(body, strings.Repeat("7", 32), strings.Repeat("8", 32), 1)
++	if w := request("POST", post, staleBody, csrf, cookie); w.Code != 409 || writes != 0 {
++		t.Fatal("Core forwarded stale installation authority", w.Code)
++	}
 +	if w := request("POST", post, body, csrf, cookie); w.Code != 200 || writes != 1 || lastBody != body {
 +		t.Fatal("exact body was not forwarded", w.Code, lastBody)
 +	}
@@ -446,19 +479,41 @@ index b06b335..5ae4275 100644
 -		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && payload.Version == PM2RootVendorAppVersion)) {
 +		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && (payload.Version == PM2RootVendorAppVersion || payload.Version == PM2ConfigurationArchiveAppVersion))) {
 diff --git a/internal/executor/app_modules_linux.go b/internal/executor/app_modules_linux.go
-index 7b01cf6..526bdd4 100644
+index 7b01cf6..5ef0efe 100644
 --- a/internal/executor/app_modules_linux.go
 +++ b/internal/executor/app_modules_linux.go
-@@ -425,0 +426,3 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
+@@ -122,0 +123,9 @@ func (s *Service) appModuleStatus(ctx context.Context, id string) core.SoftwareA
++	if id == "pm2-manager" && out.Version == core.PM2ConfigurationArchiveAppVersion {
++		instance, ok := manifest["installation_id"].(string)
++		if !ok || !core.ValidID(instance) {
++			out.StateUnknown = true
++			out.Detail = "PM2 配置封存安装实例无法核对；未补写授权编号"
++			return out
++		}
++		out.InstallationID = instance
++	}
+@@ -425,0 +435,3 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
 +			if err := s.pm2NoPendingConfigurationArchives(); err != nil {
 +				return err
 +			}
-@@ -609 +612 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
+@@ -508,0 +521,3 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
++	if id == "pm2-manager" && selectedVersion == core.PM2ConfigurationArchiveAppVersion {
++		installedRecord["installation_id"] = core.ID()
++	}
+@@ -609 +624 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
 -	if id == "pm2-manager" && version == core.PM2RootVendorAppVersion {
 +	if id == "pm2-manager" && (version == core.PM2RootVendorAppVersion || version == core.PM2ConfigurationArchiveAppVersion) {
-@@ -746,0 +750 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
+@@ -706,0 +722,7 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
++		if id == "pm2-manager" && version == core.PM2ConfigurationArchiveAppVersion {
++			if status.Version != version {
++				manifest["installation_id"] = core.ID()
++			} else if instance, ok := manifest["installation_id"].(string); !ok || !core.ValidID(instance) {
++				return errors.New("原 PM2 封存实例无法核对；未补写或恢复授权")
++			}
++		}
+@@ -746,0 +769 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 +	s.pm2ConfigurationArchiveReadRoutes(m)
-@@ -837,0 +842,11 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
+@@ -837,0 +861,11 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 +		} else if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
 +			var raw json.RawMessage
 +			if !readJSON(w, r, &raw) {
@@ -470,18 +525,18 @@ index 7b01cf6..526bdd4 100644
 +				respond(w, 400, map[string]string{"error": inputErr.Error()})
 +				return
 +			}
-@@ -850 +865,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
+@@ -850 +884,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
 -		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request")) {
 +		if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
-+			if err := s.pm2ConfigurationArchiveVersion(); err != nil {
++			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
 +				respond(w, 409, map[string]string{"error": err.Error()})
 +				return
 +			}
 +		}
 +		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request" || action == "recover-configuration-archive" || action == "restore-configuration-archive")) {
-@@ -953,0 +975,5 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
+@@ -953,0 +994,5 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
 +		if core.PM2ConfigurationArchiveAction(action) {
-+			if err := s.pm2ConfigurationArchiveVersion(); err != nil {
++			if err := s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
 +				return nil, err
 +			}
 +		}
@@ -604,7 +659,7 @@ index 927296d..583110f 100644
 +			err = errors.New("PM2 original journal lock changed during read")
 diff --git a/internal/executor/app_pm2_journal_archive_apply_linux.go b/internal/executor/app_pm2_journal_archive_apply_linux.go
 new file mode 100644
-index 0000000..80ad3e0
+index 0000000..20ff6bb
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_archive_apply_linux.go
 @@ -0,0 +1,383 @@
@@ -622,8 +677,8 @@ index 0000000..80ad3e0
 +)
 +
 +func pm2ArchiveActionInput(in core.AppModuleInput, confirmation string) error {
-+	allowed := core.AppModuleInput{PM2OperationID: in.PM2OperationID, ExpectedSHA: in.ExpectedSHA, Confirm: in.Confirm}
-+	if !reflect.DeepEqual(in, allowed) || !core.ValidID(in.PM2OperationID) || !coreSHA.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
++	allowed := core.AppModuleInput{PM2InstallationID: in.PM2InstallationID, PM2OperationID: in.PM2OperationID, ExpectedSHA: in.ExpectedSHA, Confirm: in.Confirm}
++	if !reflect.DeepEqual(in, allowed) || in.PM2InstallationID != "" && !core.ValidID(in.PM2InstallationID) || !core.ValidID(in.PM2OperationID) || !coreSHA.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
 +		return errors.New("请选择完整配置清单或原归档请求，并填写精确确认；未整理其他项目数据")
 +	}
 +	return nil
@@ -2069,6 +2124,73 @@ index 0000000..300c753
 +		t.Fatal("GET imported, repaired or wrote evidence")
 +	}
 +}
+diff --git a/internal/executor/app_pm2_journal_archive_instance_linux_test.go b/internal/executor/app_pm2_journal_archive_instance_linux_test.go
+new file mode 100644
+index 0000000..a5740fa
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_instance_linux_test.go
+@@ -0,0 +1,61 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"local/panel/internal/core"
++	"path/filepath"
++	"reflect"
++	"testing"
++)
++
++func TestPM2JournalArchiveStatusExportsOnlyVerifiedCurrentInstance(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	path := filepath.Join(s.moduleDir("pm2-manager"), "installed.json")
++	instance := "77777777777777777777777777777777"
++	if err := moduleWrite(path, map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion, "installation_id": instance}); err != nil {
++		t.Fatal(err)
++	}
++	before := programQueueTree(t, s.Config.SecurityDir)
++	status := s.appModuleStatus(context.Background(), "pm2-manager")
++	if !status.Installed || status.StateUnknown || status.InstallationID != instance {
++		t.Fatal("normal module status omitted current instance", status)
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("status lookup changed original installation authority")
++	}
++	if err := moduleWrite(path, map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion}); err != nil {
++		t.Fatal(err)
++	}
++	before = programQueueTree(t, s.Config.SecurityDir)
++	status = s.appModuleStatus(context.Background(), "pm2-manager")
++	if !status.StateUnknown || status.InstallationID != "" {
++		t.Fatal("missing current instance was invented or adopted")
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("unknown installation instance was repaired by read")
++	}
++}
++func TestPM2JournalArchiveRootRejectsStaleInstanceAfterReplacement(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	path := filepath.Join(s.moduleDir("pm2-manager"), "installed.json")
++	current := "88888888888888888888888888888888"
++	if err := moduleWrite(path, map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion, "installation_id": current}); err != nil {
++		t.Fatal(err)
++	}
++	before := programQueueTree(t, s.Config.SecurityDir)
++	if w := pm2JournalArchiveGET(s, ""); w.Code != 409 {
++		t.Fatal("old instance read new installation", w.Code)
++	}
++	in := core.AppModuleInput{PM2InstallationID: "77777777777777777777777777777777", PM2OperationID: core.ID(), ExpectedSHA: core.Hash("original"), Confirm: "ARCHIVE PM2 CONFIGURATIONS " + core.Hash("original")}
++	if _, err := s.runAppModule(context.Background(), "pm2-manager", "archive-configurations", in); err == nil {
++		t.Fatal("Root adopted delayed archive request after installation replacement")
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("stale instance refusal changed original data")
++	}
++	if err := s.pm2ConfigurationArchiveVersion(current); err != nil {
++		t.Fatal("exact current authority refused", err)
++	}
++}
 diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux.go b/internal/executor/app_pm2_journal_archive_protocol_linux.go
 new file mode 100644
 index 0000000..dbe57db
@@ -2948,7 +3070,7 @@ index 0000000..ec9e9c9
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_records_linux_test.go b/internal/executor/app_pm2_journal_archive_records_linux_test.go
 new file mode 100644
-index 0000000..93c8ddc
+index 0000000..22573d1
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_archive_records_linux_test.go
 @@ -0,0 +1,80 @@
@@ -2996,7 +3118,7 @@ index 0000000..93c8ddc
 +}
 +func TestPM2JournalArchiveHistoricalGETIsBoundedAndDoesNotExposeCiphertext(t *testing.T) {
 +	s, id, in := pm2ArchiveReadCompleteFixture(t)
-+	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion}); err != nil {
++	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion, "installation_id": "77777777777777777777777777777777"}); err != nil {
 +		t.Fatal(err)
 +	}
 +	m := http.NewServeMux()
@@ -3004,7 +3126,7 @@ index 0000000..93c8ddc
 +	before := programQueueTree(t, s.Config.SecurityDir)
 +	request := func(query string) *httptest.ResponseRecorder {
 +		w := httptest.NewRecorder()
-+		m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives/"+id+"/records?"+query, nil))
++		m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives/"+id+"/records?pm2_installation_id=77777777777777777777777777777777&"+query, nil))
 +		return w
 +	}
 +	w := request("pm2_operation_id=" + in.PM2OperationID + "&limit=1&offset=0")
@@ -3400,7 +3522,7 @@ index 0000000..8c305ea
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_routes_linux.go b/internal/executor/app_pm2_journal_archive_routes_linux.go
 new file mode 100644
-index 0000000..310d485
+index 0000000..96956ea
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_archive_routes_linux.go
 @@ -0,0 +1,101 @@
@@ -3414,9 +3536,9 @@ index 0000000..310d485
 +	"net/http"
 +)
 +
-+func (s *Service) pm2ConfigurationArchiveVersion() error {
++func (s *Service) pm2ConfigurationArchiveVersion(instance string) error {
 +	record, err := s.moduleInstalledRecord("pm2-manager")
-+	if err != nil || record["version"] != core.PM2ConfigurationArchiveAppVersion {
++	if err != nil || record["version"] != core.PM2ConfigurationArchiveAppVersion || !core.ValidID(instance) || record["installation_id"] != instance {
 +		return errors.New("配置封存及恢复须先签名更新至固定 compat12；旧安装不借用新归档能力")
 +	}
 +	return nil
@@ -3428,7 +3550,7 @@ index 0000000..310d485
 +			respond(w, 400, map[string]string{"error": "原配置归档标识无效"})
 +			return
 +		}
-+		in, err := core.ParsePM2ConfigurationQuery(r.URL.RawQuery)
++		in, err := core.ParsePM2ConfigurationArchiveRecordsQuery(r.URL.RawQuery)
 +		if err != nil {
 +			respond(w, 400, map[string]string{"error": err.Error()})
 +			return
@@ -3439,7 +3561,7 @@ index 0000000..310d485
 +			return
 +		}
 +		defer guard.dir.Close()
-+		if err = s.pm2ConfigurationArchiveVersion(); err != nil {
++		if err = s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
 +			respond(w, 409, map[string]string{"error": err.Error()})
 +			return
 +		}
@@ -3478,7 +3600,7 @@ index 0000000..310d485
 +			return
 +		}
 +		defer guard.dir.Close()
-+		if err = s.pm2ConfigurationArchiveVersion(); err != nil {
++		if err = s.pm2ConfigurationArchiveVersion(in.PM2InstallationID); err != nil {
 +			respond(w, 409, map[string]string{"error": err.Error()})
 +			return
 +		}
@@ -3507,7 +3629,7 @@ index 0000000..310d485
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_routes_linux_test.go b/internal/executor/app_pm2_journal_archive_routes_linux_test.go
 new file mode 100644
-index 0000000..3f63a15
+index 0000000..2b85c50
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_archive_routes_linux_test.go
 @@ -0,0 +1,76 @@
@@ -3531,12 +3653,12 @@ index 0000000..3f63a15
 +	m := http.NewServeMux()
 +	s.pm2ConfigurationArchiveReadRoutes(m)
 +	w := httptest.NewRecorder()
-+	m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives?"+query, nil))
++	m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives?pm2_installation_id=77777777777777777777777777777777&"+query, nil))
 +	return w
 +}
 +func TestPM2JournalArchiveReadRouteDoesNotCreateHistoryOrReplay(t *testing.T) {
 +	s, _ := pm2ArchiveActiveFixture(t)
-+	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion}); err != nil {
++	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion, "installation_id": "77777777777777777777777777777777"}); err != nil {
 +		t.Fatal(err)
 +	}
 +	before := programQueueTree(t, s.Config.SecurityDir)
@@ -4604,7 +4726,7 @@ index 4bd914e..b858332 100644
 +        <RemoteIndependentBackups v-else-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
 diff --git a/web/src/PM2ConfigurationArchive.vue b/web/src/PM2ConfigurationArchive.vue
 new file mode 100644
-index 0000000..1f55e66
+index 0000000..a932575
 --- /dev/null
 +++ b/web/src/PM2ConfigurationArchive.vue
 @@ -0,0 +1,82 @@
@@ -4625,10 +4747,10 @@ index 0000000..1f55e66
 +function stop(){epoch++;controller?.abort();controller=undefined;busy.value=false;page.value=undefined;selected.value=undefined;records.value=undefined}
 +function readPending(){pending.value=undefined;markerInvalid.value=false;if(!enabled.value)return;try{const raw=sessionStorage.getItem(key());if(raw){const p:unknown=JSON.parse(raw);if(!archivePending(p,props.actor,props.installationId))throw Error('浏览器保存的原请求身份无法核对；请按服务器原归档记录核对，当前不发送新封存。');pending.value=p;notice.value='保留上次待核对请求；本页不会自动重发。'}}catch(e){markerInvalid.value=true;error.value=String(e)}}
 +async function run(task:(request:AbortController,current:()=>boolean)=>Promise<void>){if(!enabled.value||busy.value)return;const generation=epoch,actor=props.actor,installation=props.installationId,request=new AbortController();controller=request;busy.value=true;error.value='';const current=()=>enabled.value&&generation===epoch&&props.actor===actor&&props.installationId===installation&&!request.signal.aborted;try{await task(request,current)}catch(e){if(current())error.value=e instanceof Error?e.message:String(e)}finally{if(epoch===generation){busy.value=false;controller=undefined}}}
-+async function refresh(offset=0){await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?limit=16&offset='+offset,'GET',undefined,undefined,request.signal));if(!current())return;page.value=out;selected.value=undefined;records.value=undefined;notice.value='只读清单已刷新；未封存、恢复或启停项目。'})}
++async function refresh(offset=0){await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?pm2_installation_id='+props.installationId+'&limit=16&offset='+offset,'GET',undefined,undefined,request.signal));if(!current())return;page.value=out;selected.value=undefined;records.value=undefined;notice.value='只读清单已刷新；未封存、恢复或启停项目。'})}
 +function choose(row:ArchiveRow){if(busy.value)return;selected.value=row;records.value=undefined;notice.value='已选择原封存请求；尚未执行恢复。'}
-+async function readRecords(offset=0){const row=selected.value;if(row?.state!=='archived')return;await run(async(request,current)=>{const out=archiveOriginalRecords(await props.api(`/app-modules/pm2-manager/configuration-archives/${row.pm2_operation_id}/records?limit=16&offset=${offset}`,'GET',undefined,undefined,request.signal),row);if(current()&&selected.value===row)records.value=out})}
-+async function observe(){const original=pending.value;if(!original)return;await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?pm2_operation_id='+original.id+'&limit=1','GET',undefined,undefined,request.signal));if(!current())return;page.value=out;const row=out.configuration_archives[0];selected.value=row;records.value=undefined;if(!row){notice.value='尚未发现原请求，不能据此认定未执行；保留原编号，仅可手动使用原编号重试。';return}if(row.pm2_operation_id!==original.id||row.state!=='not_started'&&(original.action==='archive-configurations'?row.inventory_sha256!==original.sha256:row.expected_sha!==original.sha256))throw Error('原请求摘要不匹配，仍待核对');if(row.state!=='needs_attention'){forget();notice.value=row.state==='not_started'?'原编号已保留且不能执行新的封存；未宣称封存成功。':'已核对原请求持久结果：'+archiveLabels[row.state]}else notice.value='原封存尚未完成。请核对后选择继续封存或恢复原目录；不会重放配置更新。'})}
++async function readRecords(offset=0){const row=selected.value;if(row?.state!=='archived')return;await run(async(request,current)=>{const out=archiveOriginalRecords(await props.api(`/app-modules/pm2-manager/configuration-archives/${row.pm2_operation_id}/records?pm2_installation_id=${props.installationId}&limit=16&offset=${offset}`,'GET',undefined,undefined,request.signal),row);if(current()&&selected.value===row)records.value=out})}
++async function observe(){const original=pending.value;if(!original)return;await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?pm2_installation_id='+props.installationId+'&pm2_operation_id='+original.id+'&limit=1','GET',undefined,undefined,request.signal));if(!current())return;page.value=out;const row=out.configuration_archives[0];selected.value=row;records.value=undefined;if(!row){notice.value='尚未发现原请求，不能据此认定未执行；保留原编号，仅可手动使用原编号重试。';return}if(row.pm2_operation_id!==original.id||row.state!=='not_started'&&(original.action==='archive-configurations'?row.inventory_sha256!==original.sha256:row.expected_sha!==original.sha256))throw Error('原请求摘要不匹配，仍待核对');if(row.state!=='needs_attention'){forget();notice.value=row.state==='not_started'?'原编号已保留且不能执行新的封存；未宣称封存成功。':'已核对原请求持久结果：'+archiveLabels[row.state]}else notice.value='原封存尚未完成。请核对后选择继续封存或恢复原目录；不会重放配置更新。'})}
 +async function submit(action:ArchiveAction,retry=false){
 + if(!enabled.value||busy.value||markerInvalid.value||pending.value&&!retry)return;
 + let original:ArchivePending;
@@ -4692,7 +4814,7 @@ index 0000000..1f55e66
 +</style>
 diff --git a/web/src/pm2ConfigurationArchive.ts b/web/src/pm2ConfigurationArchive.ts
 new file mode 100644
-index 0000000..47451d8
+index 0000000..10af172
 --- /dev/null
 +++ b/web/src/pm2ConfigurationArchive.ts
 @@ -0,0 +1,42 @@
@@ -4727,7 +4849,7 @@ index 0000000..47451d8
 +}
 +export function archiveBody(p:ArchivePending){
 + if(!archivePending(p,p.actor,p.installation))throw Error('原配置封存请求身份无法核对');
-+ return {pm2_operation_id:p.id,expected_sha:p.sha256,confirm:p.action==='archive-configurations'?'ARCHIVE PM2 CONFIGURATIONS '+p.sha256:p.action==='recover-configuration-archive'?'RECOVER PM2 CONFIG ARCHIVE '+p.id:'RESTORE PM2 CONFIG ARCHIVE '+p.id};
++ return {pm2_installation_id:p.installation,pm2_operation_id:p.id,expected_sha:p.sha256,confirm:p.action==='archive-configurations'?'ARCHIVE PM2 CONFIGURATIONS '+p.sha256:p.action==='recover-configuration-archive'?'RECOVER PM2 CONFIG ARCHIVE '+p.id:'RESTORE PM2 CONFIG ARCHIVE '+p.id};
 +}
 +export function archiveOriginalRecords(value:unknown,selected:ArchiveRow){
 + if(!object(value)||value.archived_original!==true||value.archive_operation_id!==selected.pm2_operation_id||value.archive_expected_sha!==selected.expected_sha||value.configuration_inventory_complete!==true||value.automatic_replay!==false||value.history_or_report_written!==false||!integer(value.total,512)||!integer(value.limit,128)||value.limit<1||!integer(value.offset,512)||!integer(value.next_offset,512)||!Array.isArray(value.configuration_transactions)||value.configuration_transactions.length>128)throw Error('所选封存记录身份或分页不完整');
