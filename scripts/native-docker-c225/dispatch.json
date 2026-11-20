@@ -1,0 +1,60 @@
+{
+  "source_head": "118e84bf9e1db03abebeab3b971806c5a6bbce61",
+  "source_inputs_sha256": "7de34e3479a9c161e48303178648805bb0e03946e65a76c2445c15a2ccfc04e2",
+  "source_sdk_tree": "e51d5c6a41b220ca4615e491e829c7191de1c60e",
+  "version": "0.1.0-dev.proapps24nfspreflightcandidate208",
+  "release_id": 452411011,
+  "tag": "qa-nfspreflightcandidate208-20261120-qa1",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz": {
+      "id": 770969877,
+      "bytes": 24365138,
+      "sha256": "05155d9cee1ecaf981a05c9b2f7a6061b647bad22a721acd40328174f2556b33"
+    },
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz.manifest": {
+      "id": 770973687,
+      "bytes": 183,
+      "sha256": "3e352b95cef7a9629306af24a3fbc07e7bab3d728996ea352430fe84bc8a2662"
+    },
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz.sig": {
+      "id": 770973845,
+      "bytes": 64,
+      "sha256": "a358f2581092694f8a8a85d932dd47fc1e8b969a4bfb55bd14b9919649d96887"
+    },
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz": {
+      "id": 770974022,
+      "bytes": 22558469,
+      "sha256": "da1652a73a92a8a364ed517372e987fb5b501cfae96561fa5b377d48183392dc"
+    },
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz.manifest": {
+      "id": 770978733,
+      "bytes": 183,
+      "sha256": "9614806a97d96f8b4647ef5046d6515cb75a5b8a78b331f477725f3a1fb40ad9"
+    },
+    "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz.sig": {
+      "id": 770978928,
+      "bytes": 64,
+      "sha256": "86171503ffa2b2d7055eb0424468fa99440c54e8654d3dfcbe840b9b17c1bc27"
+    },
+    "rabbitmq-migration-signed-release.py": {
+      "id": 770979061,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 770979254,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz",
+      "archive_entries": 207
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz",
+      "archive_entries": 207
+    }
+  }
+}
