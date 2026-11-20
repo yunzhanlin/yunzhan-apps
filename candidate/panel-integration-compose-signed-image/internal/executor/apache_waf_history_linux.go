@@ -74,7 +74,7 @@ func (s *Service) apacheWAFHistoryDirectory(path string, archive bool) (bool, er
 // Byte arrays of absent files may be null; typed ownership/existence and the
 // full three-file digest contract still must pass. No IDS state is accepted.
 func decodeApacheWAFHistoryJSON(data []byte, out any) error {
-	return decodeApacheWAFPrivateJSON(data, out, map[string]bool{"format": true, "id": true, "state": true, "created_at": true, "changes": true, "backup_sha256": true}, 512)
+	return decodeApacheWAFPrivateJSON(data, out, map[string]bool{"format": true, "id": true, "state": true, "created_at": true, "changes": true, "backup_sha256": true, "apache_runtime": true}, 512)
 }
 
 func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool, maxNodes int) error {
@@ -84,8 +84,8 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
 	nodes := 0
-	var value func(int) error
-	value = func(depth int) error {
+	var value func(int, string) error
+	value = func(depth int, scope string) error {
 		nodes++
 		if depth > 16 || nodes > maxNodes {
 			return errors.New("Apache 私有事务结构超过容量")
@@ -94,9 +94,22 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 		if err != nil {
 			return err
 		}
+		if scope != "" {
+			delimiter, object := token.(json.Delim)
+			if !object || delimiter != '{' {
+				return errors.New("Apache 运行版本元数据必须是完整对象")
+			}
+		}
 		if delimiter, ok := token.(json.Delim); ok {
 			switch delimiter {
 			case '{':
+				var runtimeFields map[string]bool
+				if scope == "apache_runtime" {
+					runtimeFields = map[string]bool{"job_id": true, "previous_id": true, "next_id": true, "apply_owner": true, "boot_id": true}
+				}
+				if scope == "apache_runtime.apply_owner" {
+					runtimeFields = map[string]bool{"pid": true, "start_time": true}
+				}
 				seen := map[string]bool{}
 				for d.More() {
 					token, err := d.Token()
@@ -105,14 +118,29 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 						return errors.New("Apache 私有事务字段重复")
 					}
 					seen[strings.ToLower(key)] = true
+					if runtimeFields != nil && !runtimeFields[key] {
+						return errors.New("Apache 运行版本字段未知或大小写无效")
+					}
 					if depth == 0 && !rootFields[key] {
 						return errors.New("Apache 私有事务字段未知")
 					}
-					if rootFields["format"] && depth == 2 && key != "path" && key != "old_data" && key != "old_exists" && key != "old_mode" && key != "next_data" && key != "next_exists" && key != "next_mode" && key != "old_owner" && key != "next_owner" {
+					if rootFields["format"] && depth == 2 && scope != "apache_runtime.apply_owner" && key != "path" && key != "old_data" && key != "old_exists" && key != "old_mode" && key != "next_data" && key != "next_exists" && key != "next_mode" && key != "old_owner" && key != "next_owner" {
 						return errors.New("Apache 事务文件字段未知或大小写无效")
 					}
-					if err := value(depth + 1); err != nil {
+					nextScope := ""
+					if depth == 0 && key == "apache_runtime" && rootFields["apache_runtime"] {
+						nextScope = "apache_runtime"
+					}
+					if scope == "apache_runtime" && key == "apply_owner" {
+						nextScope = "apache_runtime.apply_owner"
+					}
+					if err := value(depth+1, nextScope); err != nil {
 						return err
+					}
+				}
+				for key := range runtimeFields {
+					if !seen[key] {
+						return errors.New("Apache 运行版本完整字段缺失")
 					}
 				}
 				if rootFields["format"] {
@@ -120,7 +148,7 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 					if depth == 0 {
 						required = []string{"format", "id", "state", "created_at", "changes", "backup_sha256"}
 					}
-					if depth == 2 {
+					if depth == 2 && scope != "apache_runtime.apply_owner" {
 						required = []string{"path", "old_data", "old_exists", "old_mode", "next_data", "next_exists", "next_mode"}
 					}
 					for _, key := range required {
@@ -134,7 +162,7 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 					return errors.New("Apache 私有事务须为对象")
 				}
 				for d.More() {
-					if err := value(depth + 1); err != nil {
+					if err := value(depth+1, ""); err != nil {
 						return err
 					}
 				}
@@ -150,7 +178,7 @@ func decodeApacheWAFPrivateJSON(data []byte, out any, rootFields map[string]bool
 		}
 		return nil
 	}
-	if err := value(0); err != nil {
+	if err := value(0, ""); err != nil {
 		return err
 	}
 	if _, err := d.Token(); err != io.EOF {
