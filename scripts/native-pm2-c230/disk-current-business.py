@@ -70,6 +70,10 @@ try:
  ready();login=json.loads(Path('/etc/panel/first-login.json').read_bytes());admin=Client().login(login['username'],login['password']);login.clear()
  catalog=admin.api('/app-registry?refresh=1');assert not catalog['source']['stale']and catalog['catalog']==plan['catalogue'];item,=[x for x in catalog['catalog']['apps']if x['id']=='disk-analysis'];assert item==plan['item']
  job('original-normal-signed-install','/app-registry/disk-analysis/install',{'expected_version':item['version'],'expected_sha256':item['sha256']})
+ def receipt():
+  with contextlib.closing(sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True))as db:return[list(row)for row in db.execute("SELECT version,sha256,target,scope FROM app_registry_receipts WHERE app_id='disk-analysis'")]
+ save('signed-receipt-before-normal-store-read.json',receipt())
+ normal=admin.api('/app-registry?refresh=1');status,=[row for row in normal['status']if row['id']=='disk-analysis'];assert status['installed']and status['installed_version']=='1.4.1'and not status['update_available'];assert receipt()==[['1.4.1',item['sha256'],'disk-analysis','disk-analysis']];save('signed-receipt-after-normal-store-read.json',receipt())
  state=admin.api(disk);assert state['installed']and state['app_version']=='1.4.1'and state['app_manifest_sha256']==item['sha256']
  mount,=[m for m in state['inventory']['inventory']['mounts']if m['mount_point']=='/'];assert mount['path_actionable']and mount['filesystem_class']=='local'and not mount['stacked_mount_point']
  fixture=Path('/srv/c248-owned-disk-fixture');fixture.mkdir(mode=0o700);small=fixture/'small';small.mkdir(mode=0o700);(small/'retained.txt').write_bytes(b'C248 original disk fixture');large=fixture/'large';large.mkdir(mode=0o700)
@@ -112,10 +116,15 @@ try:
   observed=detail(original['id']);assert observed['terminal_verified']and observed['job']['state']==state_name;lookup=admin.api(disk+'/requests/'+key);assert lookup['found']and lookup['job']['id']==original['id']
  assert evidence_files()==before;proof['actual_daemon_cold_restart_preserves_canceled_complete_original_records']=True
  install=Path('/etc/panel/security-apps/modules/disk-analysis/installed.json');original_instance=state['installation_id'];job('normal-scan-app-uninstall','/software/disk-analysis/uninstall',{});assert not install.exists()and evidence_files()==before and(small/'retained.txt').read_bytes()==sentinel
- job('normal-signed-scan-app-reinstall','/app-registry/disk-analysis/install',{'expected_version':item['version'],'expected_sha256':item['sha256']});new_state=admin.api(disk);assert new_state['installation_id']!=original_instance and evidence_files()==before
+ job('normal-signed-scan-app-reinstall','/app-registry/disk-analysis/install',{'expected_version':item['version'],'expected_sha256':item['sha256']});admin.api('/app-registry?refresh=1');new_state=admin.api(disk);assert new_state['installation_id']!=original_instance and evidence_files()==before
  # Uninstall retains bytes; old installation IDs never acquire new-instance launch authority.
  assert admin.api(disk+'/jobs',small_selection,409,key=secrets.token_hex(16))['error'];assert evidence_files()==before
  proof.update(ok=True,normal_uninstall_reinstall_preserves_original_native_scan_data=True,new_installation_refuses_old_scan_selection=True,real_scan_after_both_cancellations=True,actual_large_fixture_entries=200004,manifest_sha256=item['sha256'],SQL_writes_by_fixture=0)
-except BaseException:proof['failure']=traceback.format_exc()
+except BaseException:
+ proof['failure']=traceback.format_exc()
+ for label,args in [('executor-journal',['/usr/bin/journalctl','--no-pager','-b','-u','panel-executor','-n','100','-o','short-iso']),('disk-unit-state',['/usr/bin/systemctl','list-units','--all','--plain','--no-pager','panel-disk*'])]:
+  with(out/(label+'.stdout')).open('xb')as stream:subprocess.run(args,stdout=stream,stderr=subprocess.STDOUT,timeout=20)
+ with contextlib.suppress(Exception):save('failure-normal-module-observation.json',admin.api('/app-modules/disk-analysis'))
+ with contextlib.suppress(Exception):save('failure-normal-registry-observation.json',admin.api('/app-registry'))
 finally:save('original-proof.json',proof)
 sys.exit(0 if proof['ok']else 1)

@@ -2,7 +2,7 @@
   "source_head": "e9781747c48247344dbb25788ba45f320185773e",
   "source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
   "version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
-  "native_fixture_parent": "f15aa07f586da88b543e8e9b69f2483b8ac45766",
+  "native_fixture_parent": "4d07f60d058ab4b21ca7749ff6a4ff1d4fa1127d",
   "item": {
     "id": "disk-analysis",
     "name": "磁盘分析 · Disk Analysis",
@@ -1029,7 +1029,7 @@
     "scripts/native-pm2-c230/archive-upgrade-business.py": "d813efe90a67f981b873c0232b3b99013a6294fcffd3019fca7b3a3069e326a3",
     "scripts/native-pm2-c230/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
     "scripts/native-pm2-c230/diagnostics.py": "42acb42b61832347f133d9a1b472fddc9e28a0767efd62d115637de70d310544",
-    "scripts/native-pm2-c230/disk-current-business.py": "78ba71687aa736d8f74402eea7b7711e01bfb5b8def789cf7dd1547818c6cd46",
+    "scripts/native-pm2-c230/disk-current-business.py": "5149dedf790d37452d0c93e5407fb5c6332d131d75345e8ee0c25e40c6a2c1b0",
     "scripts/native-pm2-c230/dispatch.json": "7c5b544e2db0e3c2ff6cdae44da170d441de505bdaa60457977e7df6558b159b",
     "scripts/native-pm2-c230/download-upgrade.py": "b8f94e8fe7d23e5d70cc30e5709a70628038767be909b50a6bc442061d7c1df2",
     "scripts/native-pm2-c230/download.py": "3ae919a7e9dd278c86d9f6dd381c659b793114e2c88178d0fe0e171acd3df392",
@@ -1043,7 +1043,7 @@
     ".github/workflows/disk-analysis-c248-current-native.yml": "d140937afc874216b08ff4d66e982d52a6ca65b51907ad47efde60c08abd73b7"
   },
   "changed_payload_files": [
-    "scripts/native-pm2-c230/disk-current-business.py",
-    ".github/workflows/disk-analysis-c248-current-native.yml"
-  ]
+    "scripts/native-pm2-c230/disk-current-business.py"
+  ],
+  "original_C248_failed_run_retained": 44792166588
 }
