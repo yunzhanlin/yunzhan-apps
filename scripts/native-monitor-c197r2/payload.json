@@ -1,0 +1,42 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "cf1811e99cf24e327e197574a208b090beb688f3e09c593ae8c196be65bbc0a5",
+    "panel-0.1.0-dev.proapps24ftpfilequotacandidate195r2-linux-amd64.tar.gz": "ba7d51e295772a605ddd035f65a08e4022c9404073c490c398817d0426334486",
+    "panel-0.1.0-dev.proapps24ftpfilequotacandidate195r2-linux-amd64.tar.gz.manifest": "28bc893f271768e444f8e9be0f573025a595c2be2b3d522596bed09d7ca8fa7c",
+    "panel-0.1.0-dev.proapps24ftpfilequotacandidate195r2-linux-amd64.tar.gz.sig": "9718ced65e45ad900be6c2f4710e3feee96569002764406cfbdef80de8c8d0c8",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+  },
+  "monitor": {
+    "capabilities": [
+      "\u54c8\u5e0c\u68c0\u67e5\u70b9",
+      "\u53d8\u66f4\u68c0\u6d4b",
+      "\u6743\u9650\u53d8\u5316",
+      "\u6392\u9664\u89c4\u5219",
+      "Linux inotify \u5b9e\u65f6\u76d1\u63a7",
+      "\u52a8\u6001\u76ee\u5f55\u4e0e\u6ea2\u51fa\u8865\u67e5",
+      "\u76d1\u542c\u72b6\u6001\u4e0e\u8d44\u6e90\u964d\u7ea7",
+      "365 \u5929\u6709\u754c\u5386\u53f2\u5206\u9875",
+      "\u4e13\u7528\u6d41\u7a0b\u4e0e\u6267\u884c\u5386\u53f2",
+      "\u7b7e\u540d Webhook \u8131\u654f\u63a8\u9001",
+      "\u6301\u4e45\u961f\u5217\u4e0e\u9000\u907f\u91cd\u8bd5",
+      "\u5b9e\u9645\u9001\u8fbe\u8bb0\u5f55"
+    ],
+    "category": "professional",
+    "id": "file-monitor",
+    "manage_route": "app-modules",
+    "name": "File monitor",
+    "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/file-monitor/1.4.1/manifest.json",
+    "provider": "panel-module",
+    "risk": "privileged",
+    "sha256": "caf787d24c7e76287e75994fad8ea0cd0e6abafa742864cae4d91f1c0ad8d201",
+    "stage": "ready",
+    "summary": "Linux inotify \u9012\u5f52\u76d1\u63a7\u3001\u52a8\u6001\u76ee\u5f55\u53ca\u6ea2\u51fa\u8865\u67e5\uff1b\u76d1\u542c\u8d85\u9650\u660e\u786e\u964d\u7ea7\uff0c\u6682\u505c\u6062\u590d\u5e26\u4fee\u8ba2\u4fdd\u62a4\uff0c\u79c1\u6709\u6570\u636e\u5e93\u652f\u6301\u5386\u53f2\u7b5b\u9009\u5206\u9875\u3002 \u652f\u6301\u7b7e\u540d Webhook \u8131\u654f\u901a\u77e5\u3001\u6301\u4e45\u961f\u5217\u3001\u5931\u8d25\u91cd\u8bd5\u4e0e\u5b9e\u9645\u9001\u8fbe\u8bb0\u5f55\u3002 \u63a5\u6536\u7aef\u6162\u54cd\u5e94\u65f6\u4ecd\u53ef\u53ca\u65f6\u505c\u7528\u5e76\u4e2d\u6b62\u65e7\u8fde\u63a5\u3002",
+    "target": "file-monitor",
+    "version": "1.4.1"
+  },
+  "served_head": "d71ab1b2c14b1212c7012bbe2b68cb8194eb14b7",
+  "source_inputs_sha256": "27b7a4e47ceb9ff09c010849882e28bf6b4aaaec72b7f8e3ef8735c00e5c9aa4",
+  "version": "0.1.0-dev.proapps24ftpfilequotacandidate195r2"
+}
