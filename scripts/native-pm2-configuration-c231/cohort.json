@@ -1,0 +1,28 @@
+{
+  "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
+  "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
+  "source_sdk_tree": "314aff0755134aacff2e77cecb0994d2dba2ad03",
+  "native_fixture_parent": "5a184223d7fe98a09ca3383656a14d97a01b755c",
+  "patch_sha256": "73194d0507584493c8aead9fa2023ae54c93682d309194a4ae80675ae2763030",
+  "payload_files": {
+    "scripts/native-pm2-configuration-c231/runner.py": "10840d2b3c98b35be739cae8c5837a5071196956072372393ae684ec1b1b07dd",
+    "scripts/native-pm2-configuration-c231/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-pm2-configuration-c231/finish.py": "1a2ddc541f6cfb8691a346ed391e57d763a7ef99e0c9737a7436117fb480cd06",
+    "scripts/native-pm2-configuration-c231/development.patch": "73194d0507584493c8aead9fa2023ae54c93682d309194a4ae80675ae2763030",
+    ".github/workflows/pm2-config-c231-development.yml": "a1f2affa59928c858af0c865067784aa2470360604b8270a7e0b6fb9bef6debf"
+  },
+  "changed_source_files": [
+    "internal/executor/app_native_linux.go",
+    "internal/executor/app_pm2_journal_lease_linux.go",
+    "internal/executor/app_pm2_journal_lease_linux_test.go"
+  ],
+  "required_new_top_level_tests": [
+    "TestPM2JournalLeaseSerializesDifferentServiceInstances",
+    "TestPM2JournalLeaseRejectsAndPreservesUnverifiableFiles",
+    "TestPM2JournalLeaseDetectsDetachedAndSubstitutedParent"
+  ],
+  "scope": "Unpublished native Root development test comparison; no programme/app installation or full archive feature claim",
+  "Main_changed": false,
+  "all40_commercial": false,
+  "patch_format": "git unified zero context, applied only against exactly pinned SDK tree"
+}

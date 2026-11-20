@@ -1,0 +1,40 @@
+name: PM2 unpublished journal lease actual Root native regressions
+on:
+  push:
+    branches: [codex/pm2-config-archive-c231-development]
+    paths: [scripts/native-pm2-configuration-c231/cohort.json]
+permissions:
+  contents: read
+jobs:
+  native-root-regressions:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.2
+          cache: false
+      - name: Actual Root kernel tests and before-after original PM2 regressions
+        run: |
+          umask 077
+          sudo env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B scripts/native-pm2-configuration-c231/runner.py "$RUNNER_TEMP/c231-private" "$(command -v go)"
+      - name: Encrypt original development test outcomes and failures
+        if: always()
+        run: sudo python3 -I -B scripts/native-pm2-configuration-c231/finish.py "$RUNNER_TEMP/c231-private" "$RUNNER_TEMP/c231-public" phase1
+      - name: Upload encrypted original test evidence
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c231-native-pm2-development-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c231-public/
+          if-no-files-found: error
+          retention-days: 14

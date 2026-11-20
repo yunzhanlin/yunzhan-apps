@@ -1,0 +1,225 @@
+diff --git a/internal/executor/app_native_linux.go b/internal/executor/app_native_linux.go
+index 9860948..a7d2c56 100644
+--- a/internal/executor/app_native_linux.go
++++ b/internal/executor/app_native_linux.go
+@@ -689,0 +690,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
++	// A generation archive covers every project. Serialize journal mutations
++	// as well as the per-project live manifest; read-only and stop stay independent.
++	if action == "update" || action == "recover-configuration" || action == "cancel-configuration-request" {
++		journalLease, leaseErr := s.lockPM2ConfigurationJournal()
++		if leaseErr != nil {
++			return nil, leaseErr
++		}
++		defer journalLease.Close()
++	}
+diff --git a/internal/executor/app_pm2_journal_lease_linux.go b/internal/executor/app_pm2_journal_lease_linux.go
+new file mode 100644
+index 0000000..97afa6c
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_lease_linux.go
+@@ -0,0 +1,76 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"fmt"
++	"os"
++
++	"golang.org/x/sys/unix"
++)
++
++// A configuration generation belongs to the complete journal, rather than one
++// project. Keep the protected parent and the same ordinary lock inode open for
++// the whole write/rotation. Do not repair an existing lock or follow links.
++const pm2ConfigurationJournalLock = ".configuration-journal.lock"
++
++type pm2ConfigurationJournalLease struct {
++	directory *modulePrivateDirectory
++	file      *os.File
++}
++
++func (s *Service) lockPM2ConfigurationJournal() (*pm2ConfigurationJournalLease, error) {
++	d, err := s.moduleRecordDirectory("pm2-manager")
++	if err != nil {
++		return nil, err
++	}
++	f, err := d.OpenFile(pm2ConfigurationJournalLock, os.O_CREATE|os.O_RDWR|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0600)
++	if err != nil {
++		d.Close()
++		return nil, err
++	}
++	lease := &pm2ConfigurationJournalLease{directory: d, file: f}
++	if !lease.current() {
++		lease.Close()
++		return nil, errors.New("PM2 配置记录锁的身份或权限无法核对，原文件保留")
++	}
++	if err = unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
++		lease.Close()
++		return nil, fmt.Errorf("正在保存或整理 PM2 配置记录，请稍后刷新核对：%w", err)
++	}
++	if !lease.current() {
++		lease.Close()
++		return nil, errors.New("PM2 配置记录锁在取得时已变化，未修改配置")
++	}
++	if err = pm2ConfigSync(d); err != nil {
++		lease.Close()
++		return nil, err
++	}
++	return lease, nil
++}
++
++func (l *pm2ConfigurationJournalLease) current() bool {
++	if l == nil || l.file == nil || l.directory == nil || !l.directory.current() {
++		return false
++	}
++	held, err := l.file.Stat()
++	visible, e := l.directory.Lstat(pm2ConfigurationJournalLock)
++	return err == nil && e == nil && moduleRecordInfo(held, false, false) && moduleRecordInfo(visible, false, false) && held.Size() == 0 && visible.Size() == 0 && os.SameFile(held, visible)
++}
++
++func (l *pm2ConfigurationJournalLease) Close() error {
++	if l == nil {
++		return nil
++	}
++	var errs []error
++	if l.file != nil {
++		errs = append(errs, l.file.Close())
++		l.file = nil
++	}
++	if l.directory != nil {
++		errs = append(errs, l.directory.Close())
++		l.directory = nil
++	}
++	return errors.Join(errs...)
++}
+diff --git a/internal/executor/app_pm2_journal_lease_linux_test.go b/internal/executor/app_pm2_journal_lease_linux_test.go
+new file mode 100644
+index 0000000..7c706d4
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_lease_linux_test.go
+@@ -0,0 +1,123 @@
++//go:build linux
++
++package executor
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++)
++
++func TestPM2JournalLeaseSerializesDifferentServiceInstances(t *testing.T) {
++	s, _, _ := pm2StateAppFixture(t)
++	first, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer first.Close()
++	path := filepath.Join(s.moduleDir("pm2-manager"), pm2ConfigurationJournalLock)
++	before, err := os.Lstat(path)
++	if err != nil || !moduleRecordInfo(before, false, false) || before.Size() != 0 {
++		t.Fatalf("private lock not established: %v", err)
++	}
++	other := New(s.Config)
++	if second, err := other.lockPM2ConfigurationJournal(); err == nil {
++		second.Close()
++		t.Fatal("another service instance acquired the held journal")
++	}
++	if !first.current() {
++		t.Fatal("rejected contender changed original lock")
++	}
++	if err := first.Close(); err != nil {
++		t.Fatal(err)
++	}
++	second, err := other.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer second.Close()
++	after, err := os.Lstat(path)
++	if err != nil || !os.SameFile(before, after) || before.Mode() != after.Mode() || !second.current() {
++		t.Fatal("release replaced or repaired original lock")
++	}
++}
++
++func TestPM2JournalLeaseRejectsAndPreservesUnverifiableFiles(t *testing.T) {
++	for _, kind := range []string{"symlink", "hardlink", "public-mode", "nonempty"} {
++		t.Run(kind, func(t *testing.T) {
++			s, _, _ := pm2StateAppFixture(t)
++			path := filepath.Join(s.moduleDir("pm2-manager"), pm2ConfigurationJournalLock)
++			original := filepath.Join(t.TempDir(), "original")
++			if err := os.WriteFile(original, []byte("retained original"), 0600); err != nil {
++				t.Fatal(err)
++			}
++			switch kind {
++			case "symlink":
++				if err := os.Symlink(original, path); err != nil {
++					t.Fatal(err)
++				}
++			case "hardlink":
++				if err := os.Link(original, path); err != nil {
++					t.Fatal(err)
++				}
++			case "public-mode":
++				if err := os.WriteFile(path, nil, 0644); err != nil {
++					t.Fatal(err)
++				}
++				if err := os.Chmod(path, 0644); err != nil {
++					t.Fatal(err)
++				}
++			case "nonempty":
++				if err := os.WriteFile(path, []byte("retain damaged record"), 0600); err != nil {
++					t.Fatal(err)
++				}
++			}
++			before, err := os.Lstat(path)
++			if err != nil {
++				t.Fatal(err)
++			}
++			if lease, err := s.lockPM2ConfigurationJournal(); err == nil {
++				lease.Close()
++				t.Fatal("unverifiable original lock was accepted")
++			}
++			after, err := os.Lstat(path)
++			if err != nil || !os.SameFile(before, after) || before.Mode() != after.Mode() || before.Size() != after.Size() {
++				t.Fatal("failed lock attempt changed the original")
++			}
++			raw, err := os.ReadFile(original)
++			if err != nil || string(raw) != "retained original" {
++				t.Fatal("failed lock attempt changed the link target")
++			}
++		})
++	}
++}
++
++func TestPM2JournalLeaseDetectsDetachedAndSubstitutedParent(t *testing.T) {
++	s, _, _ := pm2StateAppFixture(t)
++	lease, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer lease.Close()
++	parent := s.moduleDir("pm2-manager")
++	if err := os.Rename(parent, parent+"-retained"); err != nil {
++		t.Fatal(err)
++	}
++	if err := os.Mkdir(parent, 0700); err != nil {
++		t.Fatal(err)
++	}
++	replacement := filepath.Join(parent, pm2ConfigurationJournalLock)
++	if err := os.WriteFile(replacement, []byte("retained replacement"), 0600); err != nil {
++		t.Fatal(err)
++	}
++	if lease.current() {
++		t.Fatal("detached held directory was reported as current")
++	}
++	if _, err := os.Stat(filepath.Join(parent+"-retained", pm2ConfigurationJournalLock)); err != nil {
++		t.Fatal("original detached lock was not retained")
++	}
++	raw, err := os.ReadFile(replacement)
++	if err != nil || string(raw) != "retained replacement" {
++		t.Fatal("replacement was changed")
++	}
++}
