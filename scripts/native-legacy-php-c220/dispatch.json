@@ -49,10 +49,12 @@
   },
   "cohorts": {
     "amd64": {
-      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz"
+      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-amd64.tar.gz",
+      "archive_entries": 207
     },
     "arm64": {
-      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz"
+      "archive": "panel-0.1.0-dev.proapps24nfspreflightcandidate208-linux-arm64.tar.gz",
+      "archive_entries": 207
     }
   }
 }

@@ -385,13 +385,18 @@
   "scope": "Current signed original C208, actual legacy PHP FPM, normal files API to actual legacy sync, domain binding, independent named data and untouched original static project. No Main/reference host touched.",
   "payload_files": {
     ".github/workflows/legacy-php-c220-current-native.yml": "c6549a0afc3d239c708ae044db5f2b4b548254e6a41a9dc1cde1e3472fcbdb67",
-    "scripts/native-legacy-php-c220/bootstrap-original-install.py": "c01816e0eb7c55663be0cfcaef7b2fa3c4c6158756b8591a15eded0b071172d1",
-    "scripts/native-legacy-php-c220/dispatch.json": "f8c85d41e20b7b4242c5950d6a8e6be9513c55c22a8e903fdd0f9da6ec5e991f",
+    "scripts/native-legacy-php-c220/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
+    "scripts/native-legacy-php-c220/dispatch.json": "b9214fbb121598dffd09526fce9ab86181598ac469f2bfab80fc854ecafa7530",
     "scripts/native-legacy-php-c220/download.py": "d9f5f45b397a96fc8ccebbbdd5dc16487aca6f90cdbd7480b184a97e54521291",
     "scripts/native-legacy-php-c220/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
     "scripts/native-legacy-php-c220/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
     "scripts/native-legacy-php-c220/legacy-php.py": "6cd7e0b69d28cc0043884996bcfd1a026cb88cd74f9ce4793cfd138e2110b470",
     "scripts/native-legacy-php-c220/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
     "scripts/native-legacy-php-c220/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495"
-  }
+  },
+  "native_fixture_parent": "882dc3206df1d512cfb971e9ec43734d50daa219",
+  "changed_payload_files": [
+    "scripts/native-legacy-php-c220/bootstrap-original-install.py",
+    "scripts/native-legacy-php-c220/dispatch.json"
+  ]
 }
