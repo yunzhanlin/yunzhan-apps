@@ -83,6 +83,28 @@ index 6eb1d2c..b10c0b3 100644
 +			records[in.PM2OperationID] = archived
 +		}
 +	}
+diff --git a/internal/executor/app_pm2_configuration_read_linux.go b/internal/executor/app_pm2_configuration_read_linux.go
+index 927296d..583110f 100644
+--- a/internal/executor/app_pm2_configuration_read_linux.go
++++ b/internal/executor/app_pm2_configuration_read_linux.go
+@@ -67 +67 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
+-		records, err := s.pm2ConfigRecords()
++		journal, err := s.readPM2ConfigurationJournalLease()
+@@ -72 +72,2 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
+-		page, err := publicPM2ConfigPage(records, in)
++		defer journal.Close()
++		observation, err := s.pm2ConfigurationReport(in)
+@@ -76,0 +78 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
++		page := observation.(map[string]any)
+@@ -104 +106 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
+-		current, err := s.pm2ConfigRecords()
++		current, err := s.pm2ConfigurationReport(in)
+@@ -106 +108,4 @@ func (s *Service) pm2ConfigurationReadRoutes(m *http.ServeMux) {
+-			page, err = publicPM2ConfigPage(current, in)
++			page = current.(map[string]any)
++		}
++		if err == nil && !journal.current() {
++			err = errors.New("PM2 original journal lock changed during read")
 diff --git a/internal/executor/app_pm2_journal_archive_apply_linux.go b/internal/executor/app_pm2_journal_archive_apply_linux.go
 new file mode 100644
 index 0000000..80ad3e0
@@ -818,6 +840,210 @@ index 0000000..562aeb4
 +		t.Fatal("unaccepted duplicate moved original data")
 +	}
 +}
+diff --git a/internal/executor/app_pm2_journal_archive_capacity_linux_test.go b/internal/executor/app_pm2_journal_archive_capacity_linux_test.go
+new file mode 100644
+index 0000000..22288f3
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_capacity_linux_test.go
+@@ -0,0 +1,198 @@
++//go:build linux
++
++package executor
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"fmt"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"local/panel/internal/core"
++)
++
++// Seed valid terminal cancellation records only to exercise the real512-file
++// storage boundary. These are model records, not512 claimed business requests.
++func TestPM2JournalArchiveFullCapacityRetainsAllOriginalsAndAllowsNewSave(t *testing.T) {
++	s, input := pm2ArchiveActiveFixture(t)
++	d, err := s.openPM2ConfigStore(false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	originalIDs := []string{input.PM2OperationID}
++	for i := 1; i < pm2ConfigIntentLimit; i++ {
++		id := core.ID()
++		originalIDs = append(originalIDs, id)
++		c := pm2ConfigCancellation{Format: 1, ID: id, AppID: input.ResourceID, CreatedAt: core.Now(), CancelledBeforePublication: true}
++		raw, err := json.Marshal(c)
++		if err != nil {
++			t.Fatal(err)
++		}
++		if err := pm2ConfigCreate(d.modulePrivateDirectory, id+".cancel.json", append(raw, '\n')); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err := d.Close(); err != nil {
++		t.Fatal(err)
++	}
++	before, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || before.Records != 512 || len(before.Files) != 513 || !before.eligible() {
++		t.Fatalf("full boundary not established: %v", err)
++	}
++	next := input
++	next.PM2OperationID = core.ID()
++	next.ExpectedRevision++
++	next.MemoryMB = 256
++	if _, err := s.modulePM2(context.Background(), "update", next); err == nil {
++		t.Fatal("513th configuration bypassed retained capacity")
++	}
++	current, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	originalSHA, _ := before.sha256()
++	currentSHA, _ := current.sha256()
++	if currentSHA != originalSHA {
++		t.Fatal("capacity refusal changed original journal")
++	}
++	in := core.AppModuleInput{PM2OperationID: core.ID(), ExpectedSHA: originalSHA, Confirm: "ARCHIVE PM2 CONFIGURATIONS " + originalSHA}
++	if _, err := s.archivePM2Configurations(context.Background(), in); err != nil {
++		t.Fatal(err)
++	}
++	observed, err := s.readPM2ArchiveRequest(in.PM2OperationID)
++	if err != nil || observed.Intent == nil || observed.Outcome == nil || observed.Outcome.State != "archived" || observed.Intent.Inventory.Records != 512 {
++		t.Fatalf("complete capacity archive failed: %v", err)
++	}
++	directory, err := s.openPM2ArchivePath("generations", in.PM2OperationID, false)
++	if err != nil {
++		t.Fatal(err)
++	}
++	raw, err := s.pm2MovedJournalSnapshot(in.PM2OperationID, before)
++	if err != nil || len(raw.Files) != len(before.Files) {
++		t.Fatal("original512 records were not retained")
++	}
++	for name, pin := range before.Files {
++		data, err := pm2ConfigRead(directory, name)
++		if err != nil || pm2ConfigHash(data) != pin.SHA256 {
++			t.Fatal("archived original changed", name, err)
++		}
++	}
++	directory.Close()
++	if _, err := s.modulePM2(context.Background(), "update", next); err != nil {
++		t.Fatal("new save after full archive failed", err)
++	}
++	// Check both the real committed request and the last seeded consumed nonce.
++	for _, id := range []string{originalIDs[0], originalIDs[len(originalIDs)-1]} {
++		record, found, err := s.pm2ArchivedConfigurationRecord(id)
++		if err != nil || !found || record.Receipt == nil && record.Cancellation == nil {
++			t.Fatal("consumed operation was lost", err)
++		}
++	}
++	next.PM2OperationID = originalIDs[len(originalIDs)-1]
++	next.ExpectedRevision++
++	if _, err := s.modulePM2(context.Background(), "update", next); err == nil {
++		t.Fatal("archived cancelled nonce became a new update")
++	}
++	active, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil || active.Records != 1 {
++		t.Fatal("old cancelled request created a fresh intent")
++	}
++}
++
++func TestPM2JournalArchiveRequestCapacityRefusesWithoutDiscardingEvidence(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	requests, err := s.openPM2ArchivePath("requests", "", true)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for i := 0; i < pm2ConfigurationArchiveGenerations; i++ {
++		if err := requests.Mkdir(fmt.Sprintf("%032x", i+1), 0700); err != nil {
++			t.Fatal(err)
++		}
++	}
++	if err := pm2ConfigSync(requests); err != nil {
++		t.Fatal(err)
++	}
++	requests.Close()
++	before, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	sha, err := before.sha256()
++	if err != nil {
++		t.Fatal(err)
++	}
++	in := core.AppModuleInput{PM2OperationID: core.ID(), ExpectedSHA: sha, Confirm: "ARCHIVE PM2 CONFIGURATIONS " + sha}
++	if _, err := s.archivePM2Configurations(context.Background(), in); err == nil {
++		t.Fatal("513th request discarded or bypassed retained archive capacity")
++	}
++	after, err := s.snapshotPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	afterSHA, _ := after.sha256()
++	if sha != afterSHA {
++		t.Fatal("archive capacity refusal changed active records")
++	}
++	page, err := s.pm2ConfigurationArchiveReport(core.AppModuleInput{Limit: 32, Offset: 500})
++	if err != nil {
++		t.Fatal(err)
++	}
++	view := page.(map[string]any)
++	if view["archive_eligible"] != false || view["total"] != 512 || len(view["configuration_archives"].([]any)) != 12 || view["page_complete"] != true {
++		t.Fatal("bounded complete512 request inventory was misreported")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil || len(rows) != 512 {
++		t.Fatal("retained requests were deleted")
++	}
++}
++
++func TestPM2JournalArchiveCompletedBackupUsesOriginalBytesAndRecordedGroup(t *testing.T) {
++	s, id, input := pm2ArchiveReadCompleteFixture(t)
++	root := filepath.Join(s.moduleDir("pm2-manager"), "configuration-archives", "generations", id)
++	names, err := os.ReadDir(root)
++	if err != nil {
++		t.Fatal(err)
++	}
++	for _, name := range names {
++		p := filepath.Join(root, name.Name())
++		original, err := os.ReadFile(p)
++		if err != nil {
++			t.Fatal(err)
++		}
++		old, err := os.Lstat(p)
++		if err != nil {
++			t.Fatal(err)
++		}
++		identity, err := pm2JournalIdentityOf(old)
++		if err != nil {
++			t.Fatal(err)
++		}
++		temporary := filepath.Join(root, ".owned-restore-"+core.ID())
++		if err := os.WriteFile(temporary, original, 0600); err != nil {
++			t.Fatal(err)
++		}
++		if err := os.Chown(temporary, int(identity.UID), int(identity.GID)); err != nil {
++			t.Fatal(err)
++		}
++		fresh, err := os.Lstat(temporary)
++		if err != nil || os.SameFile(old, fresh) {
++			t.Fatal("backup fixture did not use a new inode")
++		}
++		if err := os.Rename(temporary, p); err != nil {
++			t.Fatal(err)
++		}
++		got, err := os.ReadFile(p)
++		if err != nil || !bytes.Equal(got, original) {
++			t.Fatal("backup fixture changed original bytes")
++		}
++	}
++	record, found, err := s.pm2ArchivedConfigurationRecord(input.PM2OperationID)
++	if err != nil || !found || record.Receipt == nil || record.Receipt.State != "committed" {
++		t.Fatal("legitimate completed backup was tied to old inode", err)
++	}
++}
 diff --git a/internal/executor/app_pm2_journal_archive_catalog_linux.go b/internal/executor/app_pm2_journal_archive_catalog_linux.go
 new file mode 100644
 index 0000000..e7f9db7
@@ -1225,6 +1451,125 @@ index 0000000..c0ed56b
 +	}
 +	if _, err := parent.Lstat(orphan); err != nil {
 +		t.Fatal("unknown original generation was deleted")
++	}
++}
+diff --git a/internal/executor/app_pm2_journal_archive_http_linux_test.go b/internal/executor/app_pm2_journal_archive_http_linux_test.go
+new file mode 100644
+index 0000000..300c753
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_http_linux_test.go
+@@ -0,0 +1,113 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"reflect"
++	"testing"
++)
++
++func TestPM2JournalReadLeaseNeverCreatesAndDetectsFirstWriter(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	// The actual update created its writer lock; retain that empty original
++	// outside the module to model a pre-lock journal, without deleting evidence.
++	path := filepath.Join(s.moduleDir("pm2-manager"), pm2ConfigurationJournalLock)
++	if err := os.Rename(path, filepath.Join(t.TempDir(), "retained-original-lock")); err != nil {
++		t.Fatal(err)
++	}
++	before := programQueueTree(t, s.Config.SecurityDir)
++	read, err := s.readPM2ConfigurationJournalLease()
++	if err != nil || !read.current() {
++		t.Fatal(err)
++	}
++	defer read.Close()
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("read created or repaired a lock")
++	}
++	writer, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer writer.Close()
++	if read.current() {
++		t.Fatal("read-only absence remained authoritative after first writer")
++	}
++}
++func TestPM2JournalReadLeaseSharesAndRefusesUnsettledWriter(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	a, err := s.readPM2ConfigurationJournalLease()
++	if err != nil {
++		t.Fatal(err)
++	}
++	b, err := s.readPM2ConfigurationJournalLease()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if w, err := s.lockPM2ConfigurationJournal(); err == nil {
++		w.Close()
++		t.Fatal("writer acquired shared journal")
++	}
++	a.Close()
++	b.Close()
++	w, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if r, err := s.readPM2ConfigurationJournalLease(); err == nil {
++		r.Close()
++		t.Fatal("reader attested unsettled writer")
++	}
++	w.Close()
++}
++func TestPM2JournalArchiveConfigurationGETReadsOldNonceWithoutHistoryOrReplay(t *testing.T) {
++	s, _, in := pm2ArchiveReadCompleteFixture(t)
++	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": "7.0.4-compat11"}); err != nil {
++		t.Fatal(err)
++	}
++	// Obtain the cooperative journal lock once, as ordinary current writers do.
++	w, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if response := pm2ConfigurationGET(s, "pm2_operation_id="+in.PM2OperationID); response.Code != 409 {
++		t.Fatal("GET attested while original writer was unsettled", response.Code)
++	}
++	w.Close()
++	s.Config.Run = func(context.Context, string, ...string) (string, error) {
++		t.Fatal("read invoked a service")
++		return "", nil
++	}
++	for _, name := range []string{"history.json", "last-report.json"} {
++		if err := os.WriteFile(filepath.Join(s.moduleDir("pm2-manager"), name), []byte("retain damaged retrospective evidence"), 0600); err != nil {
++			t.Fatal(err)
++		}
++	}
++	// Even an unrelated unknown active record must not relabel this known old
++	// original as absent. Unfiltered active reads still refuse the damage.
++	if err := os.WriteFile(filepath.Join(s.moduleDir("pm2-manager"), "configuration-transactions", "retained-unknown"), []byte("retain active original"), 0600); err != nil {
++		t.Fatal(err)
++	}
++	before := programQueueTree(t, s.Config.SecurityDir)
++	response := pm2ConfigurationGET(s, "resource_id="+in.ResourceID+"&pm2_operation_id="+in.PM2OperationID)
++	if response.Code != 200 {
++		t.Fatal(response.Code, response.Body.String())
++	}
++	var page map[string]any
++	if err := json.Unmarshal(response.Body.Bytes(), &page); err != nil || page["archived_original"] != true || page["selected_operation_absent"] == true {
++		t.Fatal("GET hid consumed archived operation", err)
++	}
++	records := page["configuration_transactions"].([]any)
++	if len(records) != 1 || records[0].(map[string]any)["pm2_operation_id"] != in.PM2OperationID {
++		t.Fatal("wrong original selected")
++	}
++	if response := pm2ConfigurationGET(s, ""); response.Code != 409 {
++		t.Fatal("unfiltered damaged active journal became valid")
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("GET imported, repaired or wrote evidence")
 +	}
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux.go b/internal/executor/app_pm2_journal_archive_protocol_linux.go
@@ -2801,10 +3146,10 @@ index 0000000..71bf50b
 +}
 diff --git a/internal/executor/app_pm2_journal_lease_linux.go b/internal/executor/app_pm2_journal_lease_linux.go
 new file mode 100644
-index 0000000..97afa6c
+index 0000000..4c34801
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_lease_linux.go
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,121 @@
 +//go:build linux
 +
 +package executor
@@ -2825,6 +3170,7 @@ index 0000000..97afa6c
 +type pm2ConfigurationJournalLease struct {
 +	directory *modulePrivateDirectory
 +	file      *os.File
++	missing   bool // read-only absence witness; never creates a lock
 +}
 +
 +func (s *Service) lockPM2ConfigurationJournal() (*pm2ConfigurationJournalLease, error) {
@@ -2858,7 +3204,14 @@ index 0000000..97afa6c
 +}
 +
 +func (l *pm2ConfigurationJournalLease) current() bool {
-+	if l == nil || l.file == nil || l.directory == nil || !l.directory.current() {
++	if l == nil || l.directory == nil || !l.directory.current() {
++		return false
++	}
++	if l.missing {
++		_, err := l.directory.Lstat(pm2ConfigurationJournalLock)
++		return l.file == nil && errors.Is(err, os.ErrNotExist) && l.directory.current()
++	}
++	if l.file == nil {
 +		return false
 +	}
 +	held, err := l.file.Stat()
@@ -2880,6 +3233,43 @@ index 0000000..97afa6c
 +		l.directory = nil
 +	}
 +	return errors.Join(errs...)
++}
++
++// Existing journals may predate the global lock. A read keeps an explicit
++// absence witness instead of creating a file; a concurrent first writer makes
++// that witness stale. Existing locks are acquired shared and nonblocking.
++func (s *Service) readPM2ConfigurationJournalLease() (*pm2ConfigurationJournalLease, error) {
++	d, err := s.moduleRecordDirectory("pm2-manager")
++	if err != nil {
++		return nil, err
++	}
++	f, err := d.OpenFile(pm2ConfigurationJournalLock, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)
++	if errors.Is(err, os.ErrNotExist) && d.current() {
++		l := &pm2ConfigurationJournalLease{directory: d, missing: true}
++		if l.current() {
++			return l, nil
++		}
++		l.Close()
++		return nil, errors.New("PM2 original journal lock absence changed")
++	}
++	if err != nil {
++		d.Close()
++		return nil, err
++	}
++	l := &pm2ConfigurationJournalLease{directory: d, file: f}
++	if !l.current() {
++		l.Close()
++		return nil, errors.New("PM2 original journal read lock cannot be verified")
++	}
++	if err := unix.Flock(int(f.Fd()), unix.LOCK_SH|unix.LOCK_NB); err != nil {
++		l.Close()
++		return nil, errors.New("PM2 原配置或归档正在持久保存，请稍后只读核对")
++	}
++	if !l.current() {
++		l.Close()
++		return nil, errors.New("PM2 original journal read lock changed")
++	}
++	return l, nil
 +}
 diff --git a/internal/executor/app_pm2_journal_lease_linux_test.go b/internal/executor/app_pm2_journal_lease_linux_test.go
 new file mode 100644
