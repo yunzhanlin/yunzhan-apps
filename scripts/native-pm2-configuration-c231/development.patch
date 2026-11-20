@@ -1,8 +1,505 @@
+diff --git a/internal/appcatalog/panel_features.go b/internal/appcatalog/panel_features.go
+index 1977a09..11bdfa4 100644
+--- a/internal/appcatalog/panel_features.go
++++ b/internal/appcatalog/panel_features.go
+@@ -88 +88 @@ func panelFeatureAvailable(feature string) bool {
+-	if feature == PM2RootVendorFeature {
++	if feature == PM2RootVendorFeature || feature == PM2ConfigurationArchiveFeature {
+@@ -120,0 +121,3 @@ func validatePanelRequirements(manifest Manifest, available func(string) bool) e
++	if handled, err := validatePM2ConfigurationArchiveRequirement(manifest, available); handled {
++		return err
++	}
+diff --git a/internal/appcatalog/pm2_configuration_archive_features.go b/internal/appcatalog/pm2_configuration_archive_features.go
+new file mode 100644
+index 0000000..84c8c18
+--- /dev/null
++++ b/internal/appcatalog/pm2_configuration_archive_features.go
+@@ -0,0 +1,23 @@
++package appcatalog
++
++import "errors"
++
++const PM2ConfigurationArchiveVersion = "7.0.4-compat12"
++const PM2ConfigurationArchiveFeature = "pm2-configuration-archive-v1"
++
++func validatePM2ConfigurationArchiveRequirement(m Manifest, available func(string) bool) (bool, error) {
++	mentions := false
++	for _, f := range m.RequiredPanelFeatures {
++		mentions = mentions || f == PM2ConfigurationArchiveFeature
++	}
++	if !mentions && !(m.Version == PM2ConfigurationArchiveVersion && (m.ID == "pm2-manager" || m.Delivery.Target == "pm2-manager")) {
++		return false, nil
++	}
++	if m.ID != "pm2-manager" || m.Version != PM2ConfigurationArchiveVersion || m.Delivery.Provider != "panel-module" || m.Delivery.Target != "pm2-manager" || m.Delivery.ManageRoute != "app-modules" || len(m.RequiredPanelFeatures) != 1 || m.RequiredPanelFeatures[0] != PM2ConfigurationArchiveFeature {
++		return true, errors.New("配置封存仅允许固定完整 compat12 及专用编译处理器")
++	}
++	if available == nil || !available(PM2ConfigurationArchiveFeature) || !available(PM2RootVendorFeature) || !available(PM2EvidencePreservingStopFeature) {
++		return true, errors.New("请先升级面板：缺少配置封存恢复、独立 Root 运行库或证据保全停机处理器")
++	}
++	return true, nil
++}
+diff --git a/internal/appcatalog/pm2_configuration_archive_features_test.go b/internal/appcatalog/pm2_configuration_archive_features_test.go
+new file mode 100644
+index 0000000..c908574
+--- /dev/null
++++ b/internal/appcatalog/pm2_configuration_archive_features_test.go
+@@ -0,0 +1,37 @@
++package appcatalog
++
++import (
++	"runtime"
++	"testing"
++)
++
++func TestPM2JournalArchiveManifestRequiresAllThreeExactCompiledHandlers(t *testing.T) {
++	m := pm2RootVendorManifestFixture()
++	m.Version = PM2ConfigurationArchiveVersion
++	m.RequiredPanelFeatures = []string{PM2ConfigurationArchiveFeature}
++	available := func(f string) bool {
++		return f == PM2ConfigurationArchiveFeature || f == PM2RootVendorFeature || f == PM2EvidencePreservingStopFeature
++	}
++	if err := validatePanelRequirements(m, available); err != nil {
++		t.Fatal(err)
++	}
++	for _, missing := range []string{PM2ConfigurationArchiveFeature, PM2RootVendorFeature, PM2EvidencePreservingStopFeature} {
++		if err := validatePanelRequirements(m, func(f string) bool { return available(f) && f != missing }); err == nil {
++			t.Fatal("missing compiled handler accepted", missing)
++		}
++	}
++	for _, version := range []string{PM2RootVendorVersion, "7.0.4-compat12.0", "7.0.4-compat13"} {
++		bad := m
++		bad.Version = version
++		if err := validatePanelRequirements(bad, available); err == nil {
++			t.Fatal("old or aliased application borrowed archive handler", version)
++		}
++	}
++	want := runtime.GOOS == "linux" && (runtime.GOARCH == "amd64" || runtime.GOARCH == "arm64")
++	if panelFeatureAvailable(PM2ConfigurationArchiveFeature) != want || panelFeatureAvailable("pm2-configuration-archive-v2") {
++		t.Fatal("archive platform scope drifted")
++	}
++	if err := validatePanelRequirements(pm2RootVendorManifestFixture(), pm2RootVendorAvailable); err != nil {
++		t.Fatal("published compat11 authority was changed", err)
++	}
++}
+diff --git a/internal/core/app_module_guidance.go b/internal/core/app_module_guidance.go
+index b980225..36228d0 100644
+--- a/internal/core/app_module_guidance.go
++++ b/internal/core/app_module_guidance.go
+@@ -30 +30 @@ func ModuleGuidance(id string) AppModuleGuidance {
+-		"pm2-manager":              {"真实 PM2 非 root Node 程序管理：集群、内存重启阈值、加密且仅写入的环境变量、锁定依赖后台部署、启停与日志。", []string{"准备网站 JS 入口与 package.json / package-lock.json", "创建项目，环境变量按 JSON 增量写入", "选中项目部署公共 npm 锁定依赖，查看状态；失败恢复旧依赖", "修改配置时校验修订号及原操作标识；配置更新中断后读取原事务，显式恢复旧配置并保持停止", "原请求未被接受时可持久取消其标识，防止延迟请求执行；不把断网当作未执行"}, []string{"不接受任意 API shell 命令、自定义 npm 源或本地链接。默认禁用安装脚本；显式开启后，只以网站独立用户运行第三方安装/构建代码，不传入应用环境秘密。安装限 10 分钟、768 MiB 内存，暂存目录每秒检查 512 MiB / 30000 项且保留 1 GiB 可用空间（不是磁盘内核硬配额）；新旧暂存目录保留供恢复。内存重启阈值不是内核硬限额，受管应用有 1 GiB 总硬限额。程序自身的日志可能包含秘密。配置事务只保存原加密清单及独立持久回执，不返回变量值。恢复不重放原更新、不覆盖旧失败历史，也不自动启动服务。损坏或无法核对的私有事务会阻止启动及程序升级，保留原文件供核对。最多保留 512 个原配置请求记录，达到上限暂停新配置保存，原记录不自动删除。"}},
++		"pm2-manager":              {"真实 PM2 非 root Node 程序管理：集群、内存重启阈值、加密且仅写入的环境变量、锁定依赖后台部署、启停与日志。", []string{"准备网站 JS 入口与 package.json / package-lock.json", "创建项目，环境变量按 JSON 增量写入", "选中项目部署公共 npm 锁定依赖，查看状态；失败恢复旧依赖", "修改配置时校验修订号及原操作标识；配置更新中断后读取原事务，显式恢复旧配置并保持停止", "原请求未被接受时可持久取消其标识，防止延迟请求执行；不把断网当作未执行"}, []string{"不接受任意 API shell 命令、自定义 npm 源或本地链接。默认禁用安装脚本；显式开启后，只以网站独立用户运行第三方安装/构建代码，不传入应用环境秘密。安装限 10 分钟、768 MiB 内存，暂存目录每秒检查 512 MiB / 30000 项且保留 1 GiB 可用空间（不是磁盘内核硬配额）；新旧暂存目录保留供恢复。内存重启阈值不是内核硬限额，受管应用有 1 GiB 总硬限额。程序自身的日志可能包含秘密。配置事务只保存原加密清单及独立持久回执，不返回变量值。恢复不重放原更新、不覆盖旧失败历史，也不自动启动服务。损坏或无法核对的私有事务会阻止启动及程序升级，保留原文件供核对。活动目录最多保留 512 个原配置请求记录，达到上限暂停新配置保存；固定 compat12 支持完整封存已完成记录并显式恢复中断，最多保留 512 次封存请求，原记录不自动删除。"}},
+diff --git a/internal/core/app_module_workspace.go b/internal/core/app_module_workspace.go
+index 095a586..aa5e582 100644
+--- a/internal/core/app_module_workspace.go
++++ b/internal/core/app_module_workspace.go
+@@ -108 +108 @@ func ModuleWorkspace(id string) (out []AppModuleSection) {
+-		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。最多保留 512 个原始事务，达到上限会暂停新配置更新，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
++		return []AppModuleSection{section("apps", "应用状态", "读取真实 systemd / PM2 运行和开机启动状态，以网站独立用户运行；环境变量只展示名称，不返回密钥值。", nil, []string{"run"}), section("create", "部署 Node 应用", "选择站点内 JS 入口和回环端口；支持 1–8 个 PM2 进程，所有进程的内存重启阈值总计不超过 1 GiB。环境变量可用 JSON 增量写入。", []string{"site_id", "resource_id", "entry", "port", "instances", "memory_mb", "environment_patch"}, []string{"create"}), section("control", "服务与日志", "保存运行中项目会校验修订号并重启，失败恢复旧配置；已停止项目只保存配置，保留停止和原开机设置，入口执行在下次启动时验证。启动会开启随系统恢复，停止会关闭随系统恢复；单独重启保留当前开机设置。变量框留空保留全部现有值，值为 null 删除指定变量。删除受管服务保留网站源文件。", []string{"resource_id", "entry", "port", "instances", "memory_mb", "environment_patch", "expected_revision"}, []string{"update", "start", "stop", "restart", "logs", "delete"}), section("configuration", "配置更新与恢复", "读取原配置事务及已提交回执。更新中途断电或执行器退出后，未提交配置不能自动启动；选择原事务并精确确认后，停止项目、关闭开机启动并恢复旧加密配置，随后自行核对并显式启动。恢复不重放原更新，不改变原失败历史。活动目录最多保留 512 个原始事务，达到上限会暂停新配置更新；可在配置记录封存中完整保留历史并建立新目录，原记录不会自动删除。", []string{"resource_id", "pm2_operation_id", "expected_sha", "confirm", "limit", "offset"}, []string{"configuration", "recover-configuration", "cancel-configuration-request"}), section("configuration-archives", "配置记录封存", "完整保留已完成配置记录，显式处理封存中断；不重放配置或启停项目。", nil, nil), section("dependencies", "锁定依赖部署", "网站根目录准备 package.json 和 v2/v3 package-lock.json，选择项目后安装。只接受公共 npm HTTPS 包及 SHA-512 摘要，拒绝自定义源、本地链接。默认禁止安装脚本；显式开启时仅以该网站用户运行，用于原生扩展和构建，不传入应用环境秘密。独立后台安装期间保留线上服务，切换失败恢复旧依赖。中断可取消并恢复；归档仅移动已完成旧记录，不删除依赖备份。", []string{"resource_id", "expected_revision", "allow_install_scripts"}, []string{"dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments"})}
+diff --git a/internal/core/app_modules.go b/internal/core/app_modules.go
+index ce8f1b1..3fe0612 100644
+--- a/internal/core/app_modules.go
++++ b/internal/core/app_modules.go
+@@ -193 +193 @@ func AppModules() []AppModuleDefinition {
+-			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request")
++			definitions[i].Actions = append(definitions[i].Actions, "update", "dependencies", "deployment", "cancel-deployment", "recover-deployment", "archive-deployments", "configuration", "recover-configuration", "cancel-configuration-request", "archive-configurations", "recover-configuration-archive", "restore-configuration-archive")
+@@ -226,0 +227 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++	a.pm2ConfigurationArchiveRoutes(m)
+@@ -302,0 +304,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
++			access, err := a.Store.UserAccess(u.ID)
++			if err != nil || !fullAdministrator(access) {
++				fail(w, 403, "完整配置归档仅完整管理员可操作")
++				return
++			}
++		}
+@@ -335,0 +344,10 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++		} else if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
++			if !decode(w, r, &historyRaw) {
++				return
++			}
++			var inputErr error
++			in, inputErr = DecodePM2ConfigurationArchiveInput(action, historyRaw)
++			if inputErr != nil {
++				fail(w, 400, inputErr.Error())
++				return
++			}
+@@ -349,0 +368,4 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) && module.Status.Version != PM2ConfigurationArchiveAppVersion {
++			fail(w, 409, "配置归档须先签名更新至固定 compat12；旧安装不借用新能力")
++			return
++		}
+@@ -449,0 +472,7 @@ func (a *Server) appModuleRoutes(m *http.ServeMux) {
++		if id == "pm2-manager" && PM2ConfigurationArchiveAction(action) {
++			access, accessErr := a.Store.UserAccess(u.ID)
++			if accessErr != nil || !fullAdministrator(access) {
++				fail(w, 403, "授权已改变，请由完整管理员只读核对原归档结果")
++				return
++			}
++		}
+@@ -498 +527 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
+-			version = PM2RootVendorAppVersion
++			version = PM2ConfigurationArchiveAppVersion
+diff --git a/internal/core/pm2_configuration_archive.go b/internal/core/pm2_configuration_archive.go
+new file mode 100644
+index 0000000..7ba0b96
+--- /dev/null
++++ b/internal/core/pm2_configuration_archive.go
+@@ -0,0 +1,121 @@
++package core
++
++import (
++	"bytes"
++	"encoding/json"
++	"errors"
++	"io"
++	"local/panel/internal/appcatalog"
++	"net/http"
++	"regexp"
++)
++
++// This exact new revision owns the API. Older signed installations retain
++// their previous operations and cannot acquire archive authority by alias.
++const PM2ConfigurationArchiveAppVersion = appcatalog.PM2ConfigurationArchiveVersion
++
++var pm2ConfigurationArchiveDigest = regexp.MustCompile(`^[a-f0-9]{64}$`)
++
++func PM2ConfigurationArchiveAction(action string) bool {
++	return action == "archive-configurations" || action == "recover-configuration-archive" || action == "restore-configuration-archive"
++}
++func ParsePM2ConfigurationArchiveQuery(raw string) (AppModuleInput, error) {
++	in, err := ParsePM2ConfigurationQuery(raw)
++	if err != nil || in.ResourceID != "" || in.Limit > 32 {
++		return AppModuleInput{}, errors.New("配置归档只读查询仅接受原请求标识、最多32项及有界分页")
++	}
++	return in, nil
++}
++
++// A dedicated wire object prevents zero-valued unrelated project, secret,
++// path or deployment fields from entering a whole-journal maintenance action.
++func DecodePM2ConfigurationArchiveInput(action string, raw []byte) (AppModuleInput, error) {
++	var in AppModuleInput
++	if !PM2ConfigurationArchiveAction(action) || len(raw) == 0 || len(raw) > 4096 {
++		return in, errors.New("配置归档请求不是固定有界对象")
++	}
++	d := json.NewDecoder(bytes.NewReader(raw))
++	token, err := d.Token()
++	if err != nil || token != json.Delim('{') {
++		return in, errors.New("配置归档请求须为独立对象")
++	}
++	seen := map[string]bool{}
++	for d.More() {
++		token, err = d.Token()
++		key, ok := token.(string)
++		if err != nil || !ok || seen[key] || (key != "pm2_operation_id" && key != "expected_sha" && key != "confirm") {
++			return in, errors.New("配置归档字段重复或不被支持")
++		}
++		seen[key] = true
++		var value json.RawMessage
++		if d.Decode(&value) != nil || bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
++			return in, errors.New("配置归档字段须为有效值")
++		}
++	}
++	if token, err = d.Token(); err != nil || token != json.Delim('}') || d.Decode(&struct{}{}) != io.EOF || json.Unmarshal(raw, &in) != nil {
++		return in, errors.New("配置归档对象不完整或格式无效")
++	}
++	confirmation := "ARCHIVE PM2 CONFIGURATIONS " + in.ExpectedSHA
++	if action == "recover-configuration-archive" {
++		confirmation = "RECOVER PM2 CONFIG ARCHIVE " + in.PM2OperationID
++	}
++	if action == "restore-configuration-archive" {
++		confirmation = "RESTORE PM2 CONFIG ARCHIVE " + in.PM2OperationID
++	}
++	if len(seen) != 3 || !ValidID(in.PM2OperationID) || !pm2ConfigurationArchiveDigest.MatchString(in.ExpectedSHA) || in.Confirm != confirmation {
++		return AppModuleInput{}, errors.New("请选择原完整清单或归档请求、摘要并填写精确确认")
++	}
++	return in, nil
++}
++func (a *Server) pm2ConfigurationArchiveRoutes(m *http.ServeMux) {
++	m.HandleFunc("GET /api/app-modules/pm2-manager/configuration-archives/{id}/records", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
++		id := r.PathValue("id")
++		if !ValidID(id) {
++			fail(w, 400, "原配置归档标识无效")
++			return
++		}
++		if _, err := ParsePM2ConfigurationQuery(r.URL.RawQuery); err != nil {
++			fail(w, 400, err.Error())
++			return
++		}
++		access, err := a.Store.UserAccess(u.ID)
++		if err != nil || !fullAdministrator(access) {
++			fail(w, 403, "完整配置归档仅完整管理员可读取")
++			return
++		}
++		var out any
++		if err := a.Executor.Call(r.Context(), "GET", "/v1/app-modules/pm2-manager/configuration-archives/"+id+"/records?"+r.URL.RawQuery, nil, &out); err != nil {
++			fail(w, 409, err.Error())
++			return
++		}
++		access, err = a.Store.UserAccess(u.ID)
++		if err != nil || !fullAdministrator(access) {
++			fail(w, 403, "授权已改变，请由完整管理员重新核对原配置归档")
++			return
++		}
++		send(w, 200, out)
++	}))
++
++	m.HandleFunc("GET /api/app-modules/pm2-manager/configuration-archives", a.authorize(func(w http.ResponseWriter, r *http.Request, u identity) {
++		if _, err := ParsePM2ConfigurationArchiveQuery(r.URL.RawQuery); err != nil {
++			fail(w, 400, err.Error())
++			return
++		}
++		access, err := a.Store.UserAccess(u.ID)
++		if err != nil || !fullAdministrator(access) {
++			fail(w, 403, "完整配置归档仅完整管理员可读取")
++			return
++		}
++		var out any
++		if err := a.Executor.Call(r.Context(), "GET", "/v1/app-modules/pm2-manager/configuration-archives?"+r.URL.RawQuery, nil, &out); err != nil {
++			fail(w, 409, err.Error())
++			return
++		}
++		access, err = a.Store.UserAccess(u.ID)
++		if err != nil || !fullAdministrator(access) {
++			fail(w, 403, "授权已改变，请由完整管理员重新核对原配置归档")
++			return
++		}
++		send(w, 200, out)
++	}))
++}
+diff --git a/internal/core/pm2_configuration_archive_test.go b/internal/core/pm2_configuration_archive_test.go
+new file mode 100644
+index 0000000..ab9b23e
+--- /dev/null
++++ b/internal/core/pm2_configuration_archive_test.go
+@@ -0,0 +1,139 @@
++package core
++
++import (
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"strings"
++	"testing"
++)
++
++func TestPM2JournalArchiveInputIsIndependentCanonicalAndBounded(t *testing.T) {
++	id, sha := strings.Repeat("a", 32), strings.Repeat("b", 64)
++	base := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
++	if _, err := DecodePM2ConfigurationArchiveInput("archive-configurations", []byte(base)); err != nil {
++		t.Fatal(err)
++	}
++	for _, body := range []string{`null`, `[]`, base + base, strings.TrimSuffix(base, "}"), strings.TrimSuffix(base, "}") + `,"resource_id":""}`, strings.TrimSuffix(base, "}") + `,"password":""}`, strings.Replace(base, `"expected_sha":"`+sha+`"`, `"expected_sha":null`, 1), strings.Replace(base, `"pm2_operation_id":`, `"pm2_operation_id":"`+id+`","pm2_operation_id":`, 1), strings.Replace(base, `"confirm":`, `"confirm":"bad","conf\u0069rm":`, 1), strings.Replace(base, `ARCHIVE PM2 CONFIGURATIONS `, `RECOVER PM2 CONFIG ARCHIVE `, 1)} {
++		if _, err := DecodePM2ConfigurationArchiveInput("archive-configurations", []byte(body)); err == nil {
++			t.Fatal("ambiguous or unrelated archive input accepted", body)
++		}
++	}
++	for action, phrase := range map[string]string{"recover-configuration-archive": "RECOVER PM2 CONFIG ARCHIVE ", "restore-configuration-archive": "RESTORE PM2 CONFIG ARCHIVE "} {
++		body := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"` + phrase + id + `"}`
++		if _, err := DecodePM2ConfigurationArchiveInput(action, []byte(body)); err != nil {
++			t.Fatal(err)
++		}
++	}
++	for _, raw := range []string{"resource_id=owned-project", "limit=33", "limit=01", "offset=513", "limit=1&limit=2", "confirm=anything"} {
++		if _, err := ParsePM2ConfigurationArchiveQuery(raw); err == nil {
++			t.Fatal("unbounded archive read accepted", raw)
++		}
++	}
++	if _, err := ParsePM2ConfigurationArchiveQuery("pm2_operation_id=" + id + "&limit=32&offset=512"); err != nil {
++		t.Fatal(err)
++	}
++}
++func TestPM2JournalArchiveHTTPRequiresFullAdminCSRFExactVersionAndRevocation(t *testing.T) {
++	s := testStore(t)
++	admin := accessUser(t, s, "pm2-archive-master", "admin", nil)
++	limited := accessUser(t, s, "pm2-archive-limited", "admin", []string{"runtimes"})
++	viewer := accessUser(t, s, "pm2-archive-viewer", "viewer", nil)
++	a, err := NewServer(s, Config{DataDir: t.TempDir(), WebDir: t.TempDir(), Origin: "http://127.0.0.1:19100", Socket: "/missing"})
++	if err != nil {
++		t.Fatal(err)
++	}
++	version := PM2ConfigurationArchiveAppVersion
++	calls, writes := 0, 0
++	revoke := false
++	lastBody := ""
++	a.Executor = &ExecutorClient{Client: &http.Client{Transport: scheduleRoundTripFunc(func(r *http.Request) (*http.Response, error) {
++		calls++
++		body := `{"configuration_archives":[],"private_result":"must-not-return-after-revocation"}`
++		if r.URL.Path == "/v1/app-modules/pm2-manager" {
++			raw, _ := json.Marshal(map[string]any{"status": SoftwareAppStatus{ID: "pm2-manager", Installed: true, Version: version}})
++			body = string(raw)
++		} else {
++			if r.Method == "POST" {
++				writes++
++				raw, _ := io.ReadAll(r.Body)
++				lastBody = string(raw)
++			}
++			if revoke {
++				if _, err := s.DB.Exec("INSERT INTO app_user_menus VALUES(?, '[]', 1)", admin.ID); err != nil {
++					t.Fatal(err)
++				}
++			}
++		}
++		return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader(body))}, nil
++	})}}
++	request := func(method, path, body, csrf string, cookie *http.Cookie) *httptest.ResponseRecorder {
++		r := httptest.NewRequest(method, path, strings.NewReader(body))
++		r.Header.Set("Origin", a.Config.Origin)
++		r.Header.Set("Content-Type", "application/json")
++		r.Header.Set("X-CSRF-Token", csrf)
++		if cookie != nil {
++			r.AddCookie(cookie)
++		}
++		w := httptest.NewRecorder()
++		a.ServeHTTP(w, r)
++		return w
++	}
++	login := func(name string) (*http.Cookie, string) {
++		w := request("POST", "/api/login", `{"username":"`+name+`","password":"access-test-password-long"}`, "", nil)
++		var out accountSession
++		if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &out) != nil {
++			t.Fatal(w.Code, w.Body.String())
++		}
++		return w.Result().Cookies()[0], out.CSRF
++	}
++	id, sha := strings.Repeat("a", 32), strings.Repeat("b", 64)
++	body := `{"pm2_operation_id":"` + id + `","expected_sha":"` + sha + `","confirm":"ARCHIVE PM2 CONFIGURATIONS ` + sha + `"}`
++	post := "/api/app-modules/pm2-manager/archive-configurations"
++	get := "/api/app-modules/pm2-manager/configuration-archives?limit=32"
++	for _, u := range []identity{limited, viewer} {
++		cookie, csrf := login(u.Username)
++		before := calls
++		for _, method := range []string{"GET", "POST"} {
++			path := get
++			raw := ""
++			if method == "POST" {
++				path = post
++				raw = body
++			}
++			if w := request(method, path, raw, csrf, cookie); w.Code != 403 || calls != before {
++				t.Fatal("partial administrator reached private archive", w.Code, calls, before)
++			}
++		}
++	}
++	cookie, csrf := login(admin.Username)
++	before := calls
++	if w := request("POST", post, body, "wrong", cookie); w.Code != 403 || calls != before {
++		t.Fatal("archive bypassed CSRF")
++	}
++	if w := request("POST", post, strings.TrimSuffix(body, "}")+`,"entry":""}`, csrf, cookie); w.Code != 400 || calls != before {
++		t.Fatal("unrelated zero-valued field reached executor", w.Code)
++	}
++	version = "7.0.4-compat11"
++	if w := request("POST", post, body, csrf, cookie); w.Code != 409 || writes != 0 {
++		t.Fatal("old application borrowed archive authority", w.Code)
++	}
++	version = PM2ConfigurationArchiveAppVersion
++	if w := request("POST", post, body, csrf, cookie); w.Code != 200 || writes != 1 || lastBody != body {
++		t.Fatal("exact body was not forwarded", w.Code, lastBody)
++	}
++	if w := request("GET", get, "", csrf, cookie); w.Code != 200 || w.Header().Get("Cache-Control") != "no-store" {
++		t.Fatal("readonly archive response not private", w.Code)
++	}
++	revoke = true
++	if w := request("GET", get, "", csrf, cookie); w.Code != 403 || strings.Contains(w.Body.String(), "must-not-return") {
++		t.Fatal("revoked admin received archive data", w.Code)
++	}
++	if _, err := s.DB.Exec("DELETE FROM app_user_menus WHERE user_id=?", admin.ID); err != nil {
++		t.Fatal(err)
++	}
++	if w := request("POST", post, body, csrf, cookie); w.Code != 403 || strings.Contains(w.Body.String(), "must-not-return") {
++		t.Fatal("revoked admin received mutation output", w.Code)
++	}
++}
+diff --git a/internal/core/pm2_configuration_test.go b/internal/core/pm2_configuration_test.go
+index 22489ee..470c27f 100644
+--- a/internal/core/pm2_configuration_test.go
++++ b/internal/core/pm2_configuration_test.go
+@@ -29 +29 @@ func TestPM2ConfigurationReleaseKeepsHistoricalRevisionsAndRejectsFutureAliases(
+-	if SoftwareImplementationVersion("pm2-manager") != PM2RootVendorAppVersion || PM2RootVendorAppVersion != "7.0.4-compat11" || PM2EvidencePreservingStopAppVersion != "7.0.4-compat10" {
++	if SoftwareImplementationVersion("pm2-manager") != PM2ConfigurationArchiveAppVersion || PM2RootVendorAppVersion != "7.0.4-compat11" || PM2EvidencePreservingStopAppVersion != "7.0.4-compat10" {
+@@ -35 +35 @@ func TestPM2ConfigurationReleaseKeepsHistoricalRevisionsAndRejectsFutureAliases(
+-	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion} {
++	for _, v := range []string{"7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion, PM2ConfigurationArchiveAppVersion} {
+@@ -40 +40 @@ func TestPM2ConfigurationReleaseKeepsHistoricalRevisionsAndRejectsFutureAliases(
+-	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9.0", "7.0.4-compat9-alias", "7.0.4-compat10.0", "7.0.4-compat10-alias", "7.0.4-compat11.0", "7.0.4-compat11-alias", "7.0.4-compat12", "7.0.5", "99.0.0"} {
++	for _, v := range []string{"7.0.4-compat7.0", "7.0.4-compat7-alias", "7.0.4-compat8.0", "7.0.4-compat8-alias", "7.0.4-compat9.0", "7.0.4-compat9-alias", "7.0.4-compat10.0", "7.0.4-compat10-alias", "7.0.4-compat11.0", "7.0.4-compat11-alias", "7.0.4-compat12.0", "7.0.4-compat12-alias", "7.0.4-compat13", "7.0.5", "99.0.0"} {
+diff --git a/internal/core/pm2_root_vendor.go b/internal/core/pm2_root_vendor.go
+index 74e1c89..358a065 100644
+--- a/internal/core/pm2_root_vendor.go
++++ b/internal/core/pm2_root_vendor.go
+@@ -9 +9 @@ const PM2RootVendorAppVersion = appcatalog.PM2RootVendorVersion
+-const pm2RootVendorInstallQueuePredicate = "(kind='software_update' AND target_id='pm2-manager' AND CASE WHEN length(CAST(payload AS BLOB)) BETWEEN 1 AND 4096 THEN CASE WHEN json_valid(payload) THEN json_extract(payload,'$.version') ELSE '' END ELSE '' END='7.0.4-compat11')"
++const pm2RootVendorInstallQueuePredicate = "(kind='software_update' AND target_id='pm2-manager' AND CASE WHEN length(CAST(payload AS BLOB)) BETWEEN 1 AND 4096 THEN CASE WHEN json_valid(payload) THEN json_extract(payload,'$.version') ELSE '' END ELSE '' END IN ('7.0.4-compat11','7.0.4-compat12'))"
+diff --git a/internal/core/software_apps.go b/internal/core/software_apps.go
+index 574ad90..8a75949 100644
+--- a/internal/core/software_apps.go
++++ b/internal/core/software_apps.go
+@@ -143 +143 @@ func ValidateSoftwareUpdate(id, version string) error {
+-			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion} {
++			for _, v := range []string{"7.0.4-compat1", "7.0.4-compat2", "7.0.4-compat3", "7.0.4-compat4", "7.0.4-compat5", "7.0.4-compat6", "7.0.4-compat7", PM2OwnedListenerAppVersion, PM2ConfigurationAppVersion, PM2EvidencePreservingStopAppVersion, PM2RootVendorAppVersion, PM2ConfigurationArchiveAppVersion} {
+diff --git a/internal/core/worker.go b/internal/core/worker.go
+index b06b335..5ae4275 100644
+--- a/internal/core/worker.go
++++ b/internal/core/worker.go
+@@ -384 +384 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
+-		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && payload.Version == PM2RootVendorAppVersion)) {
++		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && (payload.Version == PM2RootVendorAppVersion || payload.Version == PM2ConfigurationArchiveAppVersion))) {
+diff --git a/internal/executor/app_modules_linux.go b/internal/executor/app_modules_linux.go
+index 7b01cf6..526bdd4 100644
+--- a/internal/executor/app_modules_linux.go
++++ b/internal/executor/app_modules_linux.go
+@@ -425,0 +426,3 @@ func (s *Service) appModuleLifecycleVersion(ctx context.Context, id, action stri
++			if err := s.pm2NoPendingConfigurationArchives(); err != nil {
++				return err
++			}
+@@ -609 +612 @@ func (s *Service) updateSoftware(ctx context.Context, id, version string, add fu
+-	if id == "pm2-manager" && version == core.PM2RootVendorAppVersion {
++	if id == "pm2-manager" && (version == core.PM2RootVendorAppVersion || version == core.PM2ConfigurationArchiveAppVersion) {
+@@ -746,0 +750 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
++	s.pm2ConfigurationArchiveReadRoutes(m)
+@@ -837,0 +842,11 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
++		} else if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
++			var raw json.RawMessage
++			if !readJSON(w, r, &raw) {
++				return
++			}
++			var inputErr error
++			in, inputErr = core.DecodePM2ConfigurationArchiveInput(action, raw)
++			if inputErr != nil {
++				respond(w, 400, map[string]string{"error": inputErr.Error()})
++				return
++			}
+@@ -850 +865,7 @@ func (s *Service) appModuleRoutes(m *http.ServeMux) {
+-		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request")) {
++		if id == "pm2-manager" && core.PM2ConfigurationArchiveAction(action) {
++			if err := s.pm2ConfigurationArchiveVersion(); err != nil {
++				respond(w, 409, map[string]string{"error": err.Error()})
++				return
++			}
++		}
++		if action != "history" && !(id == "pm2-manager" && (action == "stop" || action == "recover-configuration" || action == "cancel-configuration-request" || action == "recover-configuration-archive" || action == "restore-configuration-archive")) {
+@@ -953,0 +975,5 @@ func (s *Service) runAppModule(ctx context.Context, id, action string, in core.A
++		if core.PM2ConfigurationArchiveAction(action) {
++			if err := s.pm2ConfigurationArchiveVersion(); err != nil {
++				return nil, err
++			}
++		}
 diff --git a/internal/executor/app_native_linux.go b/internal/executor/app_native_linux.go
-index 9860948..1d997ab 100644
+index 9860948..9c885a2 100644
 --- a/internal/executor/app_native_linux.go
 +++ b/internal/executor/app_native_linux.go
-@@ -689,0 +690,12 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
+@@ -544,0 +545,9 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
++	if action == "archive-configurations" {
++		return s.archivePM2Configurations(ctx, in)
++	}
++	if action == "recover-configuration-archive" {
++		return s.recoverPM2ConfigurationArchive(ctx, in)
++	}
++	if action == "restore-configuration-archive" {
++		return s.restorePM2ConfigurationArchive(ctx, in)
++	}
+@@ -689,0 +699,12 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 +	// A generation archive covers every project. Serialize journal mutations
 +	// as well as the per-project live manifest; read-only and stop stay independent.
 +	if action == "update" || action == "recover-configuration" || action == "cancel-configuration-request" {
@@ -15,7 +512,7 @@ index 9860948..1d997ab 100644
 +			return nil, err
 +		}
 +	}
-@@ -706 +718 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
+@@ -706 +727 @@ func (s *Service) modulePM2(ctx context.Context, action string, in core.AppModul
 -		if out, known, e := pm2ConfigurationDuplicate(in, before, configuration); known {
 +		if out, known, e := s.pm2ConfigurationDuplicateIncludingArchives(in, before, configuration); known {
 diff --git a/internal/executor/app_pm2_configuration_io_linux.go b/internal/executor/app_pm2_configuration_io_linux.go
@@ -2369,6 +2866,172 @@ index 0000000..76405c2
 +		})
 +	}
 +}
+diff --git a/internal/executor/app_pm2_journal_archive_records_linux.go b/internal/executor/app_pm2_journal_archive_records_linux.go
+new file mode 100644
+index 0000000..ec9e9c9
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_records_linux.go
+@@ -0,0 +1,74 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"local/panel/internal/core"
++)
++
++// Historical pages bind every original byte and recorded owner, while using
++// fresh private handles after legitimate completed backup restoration.
++func (s *Service) pm2ConfigurationArchiveRecords(id string, in core.AppModuleInput) (out any, err error) {
++	if !core.ValidID(id) {
++		return nil, errors.New("原配置归档标识无效")
++	}
++	rows, err := s.pm2ArchiveCatalogue()
++	if err != nil {
++		return nil, err
++	}
++	var selected *pm2ArchiveRequestObservation
++	for i := range rows {
++		if rows[i].ID == id {
++			selected = &rows[i]
++			break
++		}
++	}
++	if selected == nil || selected.Intent == nil || selected.Outcome == nil || selected.Outcome.State != "archived" {
++		return nil, errors.New("所选原目录未完成封存；未当作成功历史或重放")
++	}
++	d, err := s.openPM2ArchivePath("generations", id, false)
++	if err != nil {
++		return nil, err
++	}
++	defer func() {
++		err = errors.Join(err, d.Close())
++		if err != nil {
++			out = nil
++		}
++	}()
++	snapshot, err := (&pm2ConfigStore{modulePrivateDirectory: d}).snapshot()
++	if err != nil {
++		return nil, err
++	}
++	pins := selected.Intent.Inventory.Files
++	if snapshot.Records != selected.Intent.Inventory.Records || len(snapshot.Files) != len(pins) {
++		return nil, errors.New("原封存目录完整记录数量变化，全部保留")
++	}
++	files := map[string][]byte{}
++	for name, recorded := range pins {
++		current, found := snapshot.Files[name]
++		if !found || current.SHA256 != recorded.SHA256 || current.Identity.UID != recorded.Identity.UID || current.Identity.GID != recorded.Identity.GID || current.Identity.Mode != recorded.Identity.Mode || current.Identity.Links != 1 || current.Identity.Size != recorded.Identity.Size {
++			return nil, errors.New("原封存文件摘要或记录的身份变化，未采用其他数据")
++		}
++		raw, readErr := pm2ConfigRead(d, name)
++		if readErr != nil || pm2ConfigHash(raw) != recorded.SHA256 {
++			return nil, errors.Join(readErr, errors.New("原封存内容在分页读取期间变化"))
++		}
++		files[name] = raw
++	}
++	records, err := decodePM2ConfigurationRecords(files)
++	if err != nil {
++		return nil, err
++	}
++	page, err := publicPM2ConfigPage(records, in)
++	if err != nil {
++		return nil, err
++	}
++	page["archived_original"] = true
++	page["archive_operation_id"] = id
++	page["archive_expected_sha"] = selected.IntentSHA
++	page["history_or_report_written"] = false
++	out = page
++	return out, nil
++}
+diff --git a/internal/executor/app_pm2_journal_archive_records_linux_test.go b/internal/executor/app_pm2_journal_archive_records_linux_test.go
+new file mode 100644
+index 0000000..93c8ddc
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_records_linux_test.go
+@@ -0,0 +1,80 @@
++//go:build linux
++
++package executor
++
++import (
++	"encoding/json"
++	"local/panel/internal/core"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"reflect"
++	"testing"
++)
++
++func TestPM2JournalArchiveHistoricalPageRetainsOriginalSelectionAndRejectsDamage(t *testing.T) {
++	s, id, in := pm2ArchiveReadCompleteFixture(t)
++	before := programQueueTree(t, s.Config.SecurityDir)
++	out, err := s.pm2ConfigurationArchiveRecords(id, core.AppModuleInput{ResourceID: in.ResourceID, Limit: 1})
++	if err != nil {
++		t.Fatal(err)
++	}
++	page := out.(map[string]any)
++	if page["archived_original"] != true || page["total"] != 1 || page["archive_operation_id"] != id || page["history_or_report_written"] != false {
++		t.Fatal("original historical page lost identity")
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("historical page changed evidence")
++	}
++	path := filepath.Join(s.moduleDir("pm2-manager"), "configuration-archives", "generations", id, in.PM2OperationID+".intent.json")
++	damaged := []byte("retained original damaged record")
++	if err := os.WriteFile(path, damaged, 0600); err != nil {
++		t.Fatal(err)
++	}
++	if _, err := s.pm2ConfigurationArchiveRecords(id, core.AppModuleInput{}); err == nil {
++		t.Fatal("damaged original became empty historical page")
++	}
++	got, err := os.ReadFile(path)
++	if err != nil || string(got) != string(damaged) {
++		t.Fatal("damaged original repaired or removed")
++	}
++}
++func TestPM2JournalArchiveHistoricalGETIsBoundedAndDoesNotExposeCiphertext(t *testing.T) {
++	s, id, in := pm2ArchiveReadCompleteFixture(t)
++	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion}); err != nil {
++		t.Fatal(err)
++	}
++	m := http.NewServeMux()
++	s.pm2ConfigurationArchiveReadRoutes(m)
++	before := programQueueTree(t, s.Config.SecurityDir)
++	request := func(query string) *httptest.ResponseRecorder {
++		w := httptest.NewRecorder()
++		m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives/"+id+"/records?"+query, nil))
++		return w
++	}
++	w := request("pm2_operation_id=" + in.PM2OperationID + "&limit=1&offset=0")
++	if w.Code != 200 {
++		t.Fatal(w.Code, w.Body.String())
++	}
++	var page map[string]any
++	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page["archive_operation_id"] != id || page["archived_original"] != true {
++		t.Fatal("wrong historical page identity")
++	}
++	records := page["configuration_transactions"].([]any)
++	if len(records) != 1 {
++		t.Fatal("original row missing")
++	}
++	row := records[0].(map[string]any)
++	for _, key := range []string{"before", "after", "environment_cipher", "environment_patch", "password", "token"} {
++		if _, exists := row[key]; exists {
++			t.Fatal("private configuration exposed", key)
++		}
++	}
++	if w := request("limit=129"); w.Code != 400 {
++		t.Fatal("unbounded page accepted", w.Code)
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("HTTP page wrote history or replayed")
++	}
++}
 diff --git a/internal/executor/app_pm2_journal_archive_restore_linux.go b/internal/executor/app_pm2_journal_archive_restore_linux.go
 new file mode 100644
 index 0000000..ee2c4f8
@@ -2733,6 +3396,195 @@ index 0000000..8c305ea
 +	}
 +	if generation, err := s.pm2ArchiveGenerationInfo(id); err != nil || generation == nil {
 +		t.Fatal("original generation was lost")
++	}
++}
+diff --git a/internal/executor/app_pm2_journal_archive_routes_linux.go b/internal/executor/app_pm2_journal_archive_routes_linux.go
+new file mode 100644
+index 0000000..310d485
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_routes_linux.go
+@@ -0,0 +1,101 @@
++//go:build linux
++
++package executor
++
++import (
++	"errors"
++	"local/panel/internal/core"
++	"net/http"
++)
++
++func (s *Service) pm2ConfigurationArchiveVersion() error {
++	record, err := s.moduleInstalledRecord("pm2-manager")
++	if err != nil || record["version"] != core.PM2ConfigurationArchiveAppVersion {
++		return errors.New("配置封存及恢复须先签名更新至固定 compat12；旧安装不借用新归档能力")
++	}
++	return nil
++}
++func (s *Service) pm2ConfigurationArchiveReadRoutes(m *http.ServeMux) {
++	m.HandleFunc("GET /v1/app-modules/pm2-manager/configuration-archives/{id}/records", func(w http.ResponseWriter, r *http.Request) {
++		id := r.PathValue("id")
++		if !core.ValidID(id) {
++			respond(w, 400, map[string]string{"error": "原配置归档标识无效"})
++			return
++		}
++		in, err := core.ParsePM2ConfigurationQuery(r.URL.RawQuery)
++		if err != nil {
++			respond(w, 400, map[string]string{"error": err.Error()})
++			return
++		}
++		guard, installed, err := s.beginModuleAlertRead("pm2-manager")
++		if err != nil || !installed {
++			respond(w, 409, map[string]string{"error": "PM2 原安装身份无法核对"})
++			return
++		}
++		defer guard.dir.Close()
++		if err = s.pm2ConfigurationArchiveVersion(); err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		lease, err := s.readPM2ConfigurationJournalLease()
++		if err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		defer lease.Close()
++		out, err := s.pm2ConfigurationArchiveRecords(id, in)
++		if err == nil && !lease.current() {
++			err = errors.New("原封存读取锁已变化")
++		}
++		if err == nil {
++			err = guard.check(r.Context())
++		}
++		if err == nil {
++			err = lease.Close()
++		}
++		if err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		respond(w, 200, out)
++	})
++
++	m.HandleFunc("GET /v1/app-modules/pm2-manager/configuration-archives", func(w http.ResponseWriter, r *http.Request) {
++		in, err := core.ParsePM2ConfigurationArchiveQuery(r.URL.RawQuery)
++		if err != nil {
++			respond(w, 400, map[string]string{"error": err.Error()})
++			return
++		}
++		guard, installed, err := s.beginModuleAlertRead("pm2-manager")
++		if err != nil || !installed {
++			respond(w, 409, map[string]string{"error": "PM2 原安装身份无法核对，未读取配置归档"})
++			return
++		}
++		defer guard.dir.Close()
++		if err = s.pm2ConfigurationArchiveVersion(); err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		lease, err := s.readPM2ConfigurationJournalLease()
++		if err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		defer lease.Close()
++		out, err := s.pm2ConfigurationArchiveReport(in)
++		if err == nil && !lease.current() {
++			err = errors.New("配置日志读取锁已变化，请重新只读核对")
++		}
++		if err == nil {
++			err = guard.check(r.Context())
++		}
++		if err == nil {
++			err = lease.Close()
++		}
++		if err != nil {
++			respond(w, 409, map[string]string{"error": err.Error()})
++			return
++		}
++		respond(w, 200, out)
++	})
++}
+diff --git a/internal/executor/app_pm2_journal_archive_routes_linux_test.go b/internal/executor/app_pm2_journal_archive_routes_linux_test.go
+new file mode 100644
+index 0000000..3f63a15
+--- /dev/null
++++ b/internal/executor/app_pm2_journal_archive_routes_linux_test.go
+@@ -0,0 +1,76 @@
++//go:build linux
++
++package executor
++
++import (
++	"context"
++	"encoding/json"
++	"local/panel/internal/core"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"path/filepath"
++	"reflect"
++	"testing"
++)
++
++func pm2JournalArchiveGET(s *Service, query string) *httptest.ResponseRecorder {
++	m := http.NewServeMux()
++	s.pm2ConfigurationArchiveReadRoutes(m)
++	w := httptest.NewRecorder()
++	m.ServeHTTP(w, httptest.NewRequest("GET", "/v1/app-modules/pm2-manager/configuration-archives?"+query, nil))
++	return w
++}
++func TestPM2JournalArchiveReadRouteDoesNotCreateHistoryOrReplay(t *testing.T) {
++	s, _ := pm2ArchiveActiveFixture(t)
++	if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": core.PM2ConfigurationArchiveAppVersion}); err != nil {
++		t.Fatal(err)
++	}
++	before := programQueueTree(t, s.Config.SecurityDir)
++	w := pm2JournalArchiveGET(s, "limit=32")
++	if w.Code != 200 {
++		t.Fatal(w.Code, w.Body.String())
++	}
++	var page map[string]any
++	if json.Unmarshal(w.Body.Bytes(), &page) != nil || page["archive_eligible"] != true || page["history_or_report_written"] != false {
++		t.Fatal("archive preview not complete")
++	}
++	if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++		t.Fatal("GET created history, archive directory or replayed work")
++	}
++	lease, err := s.lockPM2ConfigurationJournal()
++	if err != nil {
++		t.Fatal(err)
++	}
++	if w := pm2JournalArchiveGET(s, ""); w.Code != 409 {
++		t.Fatal("GET attested unsettled archive writer")
++	}
++	lease.Close()
++	if err := os.WriteFile(filepath.Join(s.moduleDir("pm2-manager"), "configuration-transactions", "retain-unknown"), []byte("original unknown"), 0600); err != nil {
++		t.Fatal(err)
++	}
++	w = pm2JournalArchiveGET(s, "")
++	if w.Code != 200 || json.Unmarshal(w.Body.Bytes(), &page) != nil || page["active_inventory_known"] != false {
++		t.Fatal("damaged active journal was falsely empty", w.Code, w.Body.String())
++	}
++}
++func TestPM2JournalArchiveRootDispatchRequiresExactInstalledRevision(t *testing.T) {
++	for _, version := range []string{"7.0.4-compat11", "7.0.4-compat12.0", "7.0.4-compat13"} {
++		t.Run(version, func(t *testing.T) {
++			s, _ := pm2ArchiveActiveFixture(t)
++			if err := moduleWrite(filepath.Join(s.moduleDir("pm2-manager"), "installed.json"), map[string]string{"id": "pm2-manager", "version": version}); err != nil {
++				t.Fatal(err)
++			}
++			before := programQueueTree(t, s.Config.SecurityDir)
++			if w := pm2JournalArchiveGET(s, ""); w.Code != 409 {
++				t.Fatal("old or aliased installation received archive authority", w.Code)
++			}
++			if _, err := s.runAppModule(context.Background(), "pm2-manager", "archive-configurations", core.AppModuleInput{}); err == nil {
++				t.Fatal("direct Root dispatch bypassed exact installed revision")
++			}
++			if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++				t.Fatal("version refusal changed original evidence")
++			}
++		})
 +	}
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_store_linux.go b/internal/executor/app_pm2_journal_archive_store_linux.go
@@ -3729,3 +4581,156 @@ index 0000000..1c5c52e
 +		t.Fatal("read repaired the replacement namespace")
 +	}
 +}
+diff --git a/internal/executor/app_pm2_vendor_install_linux.go b/internal/executor/app_pm2_vendor_install_linux.go
+index 5b66b91..9eb7251 100644
+--- a/internal/executor/app_pm2_vendor_install_linux.go
++++ b/internal/executor/app_pm2_vendor_install_linux.go
+@@ -297 +297 @@ func (s *Service) pm2RootVendorPreparationAllowed() error {
+-	for i := 1; i <= 11; i++ {
++	for i := 1; i <= 12; i++ {
+@@ -322,0 +323,3 @@ func (s *Service) preparePM2RootVendorUpdate(ctx context.Context, status core.So
++	if err := s.pm2NoPendingConfigurationArchives(); err != nil {
++		return err
++	}
+diff --git a/web/src/AppModuleManager.vue b/web/src/AppModuleManager.vue
+index 4bd914e..b858332 100644
+--- a/web/src/AppModuleManager.vue
++++ b/web/src/AppModuleManager.vue
+@@ -48,0 +49 @@ import TaskHostInventory from './TaskHostInventory.vue';
++import PM2ConfigurationArchive from './PM2ConfigurationArchive.vue';
+@@ -1367 +1368,2 @@ defineExpose({ show });
+-        <RemoteIndependentBackups v-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
++        <PM2ConfigurationArchive v-if="definition.id==='pm2-manager' && section.id==='configuration-archives'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='configuration-archives'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :installation-id="installedInstance" />
++        <RemoteIndependentBackups v-else-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
+diff --git a/web/src/PM2ConfigurationArchive.vue b/web/src/PM2ConfigurationArchive.vue
+new file mode 100644
+index 0000000..5260b4f
+--- /dev/null
++++ b/web/src/PM2ConfigurationArchive.vue
+@@ -0,0 +1,81 @@
++<script setup lang="ts">
++import {computed,onBeforeUnmount,ref,shallowRef,watch} from 'vue';
++import type {AccessPlan} from './menuPermissions';
++import {newPM2ConfigurationID} from './pm2Configuration';
++import {archiveBody,archiveFullAdmin,archiveLabels,archiveOriginalRecords,archivePage,archivePending,archiveRow,pm2ArchiveVersion,type ArchiveAction,type ArchivePage,type ArchivePending,type ArchiveRow} from './pm2ConfigurationArchive';
++type API=<T>(path:string,method?:string,body?:unknown,idempotencyKey?:string,signal?:AbortSignal)=>Promise<T>;
++const props=defineProps<{api:API;actor:string;access?:AccessPlan|null;active:boolean;installed:boolean;installedVersion:string;installationId:string}>();
++const page=shallowRef<ArchivePage>(),selected=shallowRef<ArchiveRow>(),records=shallowRef<ReturnType<typeof archiveOriginalRecords>>(),pending=shallowRef<ArchivePending>();
++const busy=ref(false),error=ref(''),notice=ref(''),markerInvalid=ref(false);
++let epoch=0,controller:AbortController|undefined;
++const enabled=computed(()=>props.active&&props.installed&&props.installedVersion===pm2ArchiveVersion&&/^[a-f0-9]{32}$/.test(props.actor)&&/^[a-f0-9]{32}$/.test(props.installationId)&&archiveFullAdmin(props.access));
++const key=()=>`yunzhan-pm2-configuration-archive-v1/${props.actor}/${props.installationId}`;
++function remember(p:ArchivePending){sessionStorage.setItem(key(),JSON.stringify(p));pending.value=p}
++function forget(){sessionStorage.removeItem(key());pending.value=undefined}
++function stop(){epoch++;controller?.abort();controller=undefined;busy.value=false;page.value=undefined;selected.value=undefined;records.value=undefined}
++function readPending(){pending.value=undefined;markerInvalid.value=false;if(!enabled.value)return;try{const raw=sessionStorage.getItem(key());if(raw){const p:unknown=JSON.parse(raw);if(!archivePending(p,props.actor,props.installationId))throw Error('浏览器保存的原请求身份无法核对；请按服务器原归档记录核对，当前不发送新封存。');pending.value=p;notice.value='保留上次待核对请求；本页不会自动重发。'}}catch(e){markerInvalid.value=true;error.value=String(e)}}
++async function run(task:(request:AbortController,current:()=>boolean)=>Promise<void>){if(!enabled.value||busy.value)return;const generation=epoch,actor=props.actor,installation=props.installationId,request=new AbortController();controller=request;busy.value=true;error.value='';const current=()=>enabled.value&&generation===epoch&&props.actor===actor&&props.installationId===installation&&!request.signal.aborted;try{await task(request,current)}catch(e){if(current())error.value=e instanceof Error?e.message:String(e)}finally{if(epoch===generation){busy.value=false;controller=undefined}}}
++async function refresh(offset=0){await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?limit=16&offset='+offset,'GET',undefined,undefined,request.signal));if(!current())return;page.value=out;selected.value=undefined;records.value=undefined;notice.value='只读清单已刷新；未封存、恢复或启停项目。'})}
++function choose(row:ArchiveRow){if(busy.value)return;selected.value=row;records.value=undefined;notice.value='已选择原封存请求；尚未执行恢复。'}
++async function readRecords(offset=0){const row=selected.value;if(row?.state!=='archived')return;await run(async(request,current)=>{const out=archiveOriginalRecords(await props.api(`/app-modules/pm2-manager/configuration-archives/${row.pm2_operation_id}/records?limit=16&offset=${offset}`,'GET',undefined,undefined,request.signal),row);if(current()&&selected.value===row)records.value=out})}
++async function observe(){const original=pending.value;if(!original)return;await run(async(request,current)=>{const out=archivePage(await props.api('/app-modules/pm2-manager/configuration-archives?pm2_operation_id='+original.id+'&limit=1','GET',undefined,undefined,request.signal));if(!current())return;page.value=out;const row=out.configuration_archives[0];selected.value=row;records.value=undefined;if(!row){notice.value='尚未发现原请求，不能据此认定未执行；保留原编号，仅可手动使用原编号重试。';return}if(row.pm2_operation_id!==original.id||row.state!=='not_started'&&(original.action==='archive-configurations'?row.inventory_sha256!==original.sha256:row.expected_sha!==original.sha256))throw Error('原请求摘要不匹配，仍待核对');if(row.state!=='needs_attention'){forget();notice.value=row.state==='not_started'?'原编号已保留且不能执行新的封存；未宣称封存成功。':'已核对原请求持久结果：'+archiveLabels[row.state]}else notice.value='原封存尚未完成。请核对后选择继续封存或恢复原目录；不会重放配置更新。'})}
++async function submit(action:ArchiveAction,retry=false){
++ if(!enabled.value||busy.value||markerInvalid.value||pending.value&&!retry)return;
++ let original:ArchivePending;
++ if(retry){if(!pending.value)return;original=pending.value}
++ else if(action==='archive-configurations'){if(!page.value?.active_inventory_known||!page.value.archive_eligible||!page.value.inventory_sha256)return;original={actor:props.actor,installation:props.installationId,action,id:newPM2ConfigurationID(),sha256:page.value.inventory_sha256}}
++ else{const row=selected.value;if(row?.state!=='needs_attention'||action==='recover-configuration-archive'&&row.restore_requested)return;original={actor:props.actor,installation:props.installationId,action,id:row.pm2_operation_id,sha256:row.expected_sha}}
++ await run(async(request,current)=>{remember(original);const out=await props.api<any>('/app-modules/pm2-manager/'+original.action,'POST',archiveBody(original),undefined,request.signal);if(!current())return;const row=archiveRow(out?.archive);if(!row||row.pm2_operation_id!==original.id||row.state!=='not_started'&&(original.action==='archive-configurations'?row.inventory_sha256!==original.sha256:row.expected_sha!==original.sha256))throw Error('原封存回执身份尚未核对；保留原编号，不自动重发');page.value=undefined;selected.value=row;records.value=undefined;if(row.state!=='needs_attention'){forget();notice.value=archiveLabels[row.state]+'。全部原记录保留，未启停项目；请刷新查看最新活动记录。'}else notice.value='原请求仍待核对；请只读核对原编号后显式恢复。'})
++}
++function releasePendingForRecovery(){const p=pending.value,row=selected.value;if(!p||!row||p.id!==row.pm2_operation_id||row.state!=='needs_attention'||(p.action==='archive-configurations'?row.inventory_sha256!==p.sha256:row.expected_sha!==p.sha256))return;try{forget();notice.value='已核对原中断记录。请选择继续完成封存或恢复原目录，不会自动执行。'}catch(e){error.value=String(e)}}
++watch(()=>[props.active,props.installed,props.installedVersion,props.installationId,props.actor,JSON.stringify(props.access)],()=>{stop();error.value='';notice.value='';readPending()},{immediate:true});
++onBeforeUnmount(stop);
++</script>
++<template>
++ <section class="pm2-config-archive" aria-label="PM2 配置记录封存">
++  <h3>配置记录封存</h3>
++  <p>活动目录最多保存 512 条配置请求。封存已完成记录后可继续保存新配置，旧记录全部保留，旧编号不能再次执行。最多保留 512 次封存请求。</p>
++  <el-alert v-if="installedVersion!==pm2ArchiveVersion" title="请先在版本与更新中更新到 compat12，再使用配置封存。" type="info" :closable="false" />
++  <el-alert v-else-if="!archiveFullAdmin(access)" title="完整配置记录仅完整管理员可维护。" type="warning" :closable="false" />
++  <el-alert v-if="error" :title="error" type="error" :closable="false" />
++  <el-alert v-if="notice" :title="notice" type="info" :closable="false" />
++  <div class="archive-controls">
++   <el-button :disabled="!enabled||busy" @click="refresh()">只读刷新记录</el-button>
++   <el-button type="primary" :disabled="!enabled||busy||!!pending||markerInvalid||!page?.archive_eligible" @click="submit('archive-configurations')">封存已完成记录</el-button>
++  </div>
++  <template v-if="pending">
++   <p>待核对原编号：<code>{{pending.id}}</code>。断开连接不会自动重发。</p>
++   <el-button :disabled="!enabled||busy" @click="observe">核对原请求</el-button>
++   <el-button :disabled="!enabled||busy||markerInvalid" @click="submit(pending.action,true)">使用原编号手动重试</el-button>
++   <el-button v-if="selected?.pm2_operation_id===pending.id&&selected.state==='needs_attention'" :disabled="busy" @click="releasePendingForRecovery">选择原记录的恢复方式</el-button>
++  </template>
++  <template v-if="page">
++   <p v-if="page.active_inventory_known">当前活动记录 {{page.active_record_count}} / 512，待核对配置 {{page.active_pending_count}} 条。</p>
++   <el-alert v-else title="活动目录尚未完整核对；不能将它当作空目录或执行新封存。历史清单单独显示。" type="warning" :closable="false" />
++   <el-table :data="page.configuration_archives" border empty-text="尚无配置封存记录" @row-click="choose">
++    <el-table-column prop="created_at" label="建立时间" min-width="180" />
++    <el-table-column label="状态" min-width="220"><template #default="scope">{{archiveLabels[scope.row.state as ArchiveRow['state']]}}</template></el-table-column>
++    <el-table-column prop="record_count" label="原记录数" width="100" />
++    <el-table-column label="原请求" min-width="220"><template #default="scope"><code>{{scope.row.pm2_operation_id}}</code></template></el-table-column>
++   </el-table>
++   <div class="archive-controls"><el-button :disabled="busy||page.offset===0" @click="refresh(Math.max(0,page.offset-16))">上一页封存</el-button><span>共 {{page.total}} 次请求</span><el-button :disabled="busy||page.page_complete" @click="refresh(page.next_offset)">下一页封存</el-button></div>
++  </template>
++  <template v-if="selected">
++   <h4>所选原记录：{{archiveLabels[selected.state]}}</h4><p><code>{{selected.pm2_operation_id}}</code></p>
++   <el-button v-if="selected.state==='archived'" :disabled="busy||!enabled" @click="readRecords()">查看原配置记录</el-button>
++   <template v-if="selected.state==='needs_attention'">
++    <p>继续封存会保留旧目录并建立新的活动目录。恢复原目录仅用于核对，原配置不自动重放，项目服务不启停。</p>
++    <el-button :disabled="busy||!enabled||!!pending||markerInvalid||selected.restore_requested" @click="submit('recover-configuration-archive')">继续完成封存</el-button>
++    <el-button :disabled="busy||!enabled||!!pending||markerInvalid" @click="submit('restore-configuration-archive')">恢复原目录待核对</el-button>
++    <p v-if="selected.restore_requested">已持久选择恢复原目录，后续只能继续该恢复方向。</p>
++   </template>
++  </template>
++  <template v-if="records">
++   <el-table :data="records.rows" border empty-text="当前页没有配置记录"><el-table-column prop="resource_id" label="项目"/><el-table-column prop="state" label="原结果"/><el-table-column prop="created_at" label="建立时间" min-width="180"/><el-table-column prop="pm2_operation_id" label="原配置编号" min-width="250"/></el-table>
++   <div class="archive-controls"><el-button :disabled="busy||records.offset===0" @click="readRecords(Math.max(0,records.offset-16))">上一页配置</el-button><span>共 {{records.total}} 条原记录</span><el-button :disabled="busy||records.next>=records.total" @click="readRecords(records.next)">下一页配置</el-button></div>
++  </template>
++ </section>
++</template>
++<style scoped>
++.pm2-config-archive{display:grid;gap:14px;min-width:0}.pm2-config-archive p{margin:0;line-height:1.7;overflow-wrap:anywhere}.pm2-config-archive h3,.pm2-config-archive h4{margin:0}.archive-controls{display:flex;align-items:center;flex-wrap:wrap;gap:10px}code{overflow-wrap:anywhere;font-size:12px}
++</style>
+diff --git a/web/src/pm2ConfigurationArchive.ts b/web/src/pm2ConfigurationArchive.ts
+new file mode 100644
+index 0000000..780f1ae
+--- /dev/null
++++ b/web/src/pm2ConfigurationArchive.ts
+@@ -0,0 +1,39 @@
++import {menuPermissionIDs,validAccessPlan,type AccessPlan} from './menuPermissions';
++import {pm2ConfigurationRecord} from './pm2Configuration';
++export const pm2ArchiveVersion='7.0.4-compat12';
++const id=/^[a-f0-9]{32}$/,sha=/^[a-f0-9]{64}$/;
++const object=(v:unknown):v is Record<string,any>=>!!v&&typeof v==='object'&&!Array.isArray(v)&&Object.getPrototypeOf(v)===Object.prototype;
++const integer=(v:unknown,max:number)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=max;
++export type ArchiveAction='archive-configurations'|'recover-configuration-archive'|'restore-configuration-archive';
++export type ArchiveRow={pm2_operation_id:string;state:'not_started'|'needs_attention'|'archived'|'not_moved'|'restored_for_review';created_at:string;record_count:number;expected_sha:string;inventory_sha256:string;retained_fragments:number;restore_requested:boolean;automatic_replay:false;services_changed:false};
++export type ArchivePage={configuration_archives:ArchiveRow[];archive_inventory_complete:true;total:number;limit:number;offset:number;next_offset:number;page_complete:boolean;max_retained_requests:512;automatic_replay:false;services_changed:false;history_or_report_written:false;active_inventory_known:boolean;active_record_count?:number;active_pending_count?:number;active_max_retained_records?:512;inventory_sha256?:string;archive_eligible?:boolean;active_error?:string};
++export type ArchivePending={actor:string;installation:string;action:ArchiveAction;id:string;sha256:string};
++export const archiveFullAdmin=(access:AccessPlan|null|undefined)=>validAccessPlan(access)&&access.role==='admin'&&access.menu_ids.length===menuPermissionIDs.length;
++export function archiveRow(v:unknown):ArchiveRow|undefined{
++ if(!object(v)||!id.test(v.pm2_operation_id)||!['not_started','needs_attention','archived','not_moved','restored_for_review'].includes(v.state)||!integer(v.record_count,512)||!integer(v.retained_fragments,64)||typeof v.restore_requested!=='boolean'||v.automatic_replay!==false||v.services_changed!==false)return;
++ if(v.state==='not_started'){if(v.record_count!==0||v.expected_sha!==''||v.inventory_sha256!==''||v.created_at!==''||v.restore_requested)return}
++ else if(!sha.test(v.expected_sha)||!sha.test(v.inventory_sha256)||v.record_count<1||typeof v.created_at!=='string'||!Number.isFinite(Date.parse(v.created_at)))return;
++ if(v.state==='archived'&&v.restore_requested)return;
++ if(['before','after','environment_cipher','environment_patch','password','token','inventory'].some(k=>k in v))return;
++ return v as ArchiveRow;
++}
++export function archivePage(value:unknown):ArchivePage{
++ if(!object(value)||value.archive_inventory_complete!==true||value.automatic_replay!==false||value.services_changed!==false||value.history_or_report_written!==false||value.max_retained_requests!==512||!integer(value.total,512)||!integer(value.limit,32)||value.limit<1||!integer(value.offset,512)||!integer(value.next_offset,512)||typeof value.page_complete!=='boolean'||typeof value.active_inventory_known!=='boolean'||!Array.isArray(value.configuration_archives)||value.configuration_archives.length>32)throw Error('配置封存清单的身份或完整性无法核对');
++ const rows=value.configuration_archives.map(archiveRow);if(rows.some(v=>!v)||new Set(rows.map(v=>v!.pm2_operation_id)).size!==rows.length||value.offset>value.total||value.next_offset!==value.offset+rows.length||value.next_offset>value.total||value.page_complete!==(value.next_offset===value.total)||rows.length>value.limit)throw Error('配置封存分页或原记录不完整');
++ if(value.active_inventory_known){if(!integer(value.active_record_count,512)||!integer(value.active_pending_count,512)||value.active_pending_count>value.active_record_count||value.active_max_retained_records!==512||!sha.test(value.inventory_sha256)||typeof value.archive_eligible!=='boolean')throw Error('活动配置清单尚未完整核对')}
++ else if(value.archive_eligible===true)throw Error('未知活动记录不能封存');
++ return value as ArchivePage;
++}
++export function archivePending(value:unknown,actor:string,installation:string):value is ArchivePending{
++ return object(value)&&id.test(actor)&&id.test(installation)&&value.actor===actor&&value.installation===installation&&id.test(value.id)&&sha.test(value.sha256)&&['archive-configurations','recover-configuration-archive','restore-configuration-archive'].includes(value.action)&&Object.keys(value).length===5;
++}
++export function archiveBody(p:ArchivePending){
++ if(!archivePending(p,p.actor,p.installation))throw Error('原配置封存请求身份无法核对');
++ return {pm2_operation_id:p.id,expected_sha:p.sha256,confirm:p.action==='archive-configurations'?'ARCHIVE PM2 CONFIGURATIONS '+p.sha256:p.action==='recover-configuration-archive'?'RECOVER PM2 CONFIG ARCHIVE '+p.id:'RESTORE PM2 CONFIG ARCHIVE '+p.id};
++}
++export function archiveOriginalRecords(value:unknown,selected:ArchiveRow){
++ if(!object(value)||value.archived_original!==true||value.archive_operation_id!==selected.pm2_operation_id||value.archive_expected_sha!==selected.expected_sha||value.configuration_inventory_complete!==true||value.automatic_replay!==false||value.history_or_report_written!==false||!integer(value.total,512)||!integer(value.limit,128)||value.limit<1||!integer(value.offset,512)||!integer(value.next_offset,512)||!Array.isArray(value.configuration_transactions)||value.configuration_transactions.length>128)throw Error('所选封存记录身份或分页不完整');
++ const rows=value.configuration_transactions.map(pm2ConfigurationRecord);if(rows.some(v=>!v)||new Set(rows.map(v=>v!.pm2_operation_id)).size!==rows.length||value.offset>value.total||value.next_offset!==value.offset+rows.length||value.next_offset>value.total||value.page_complete!==(value.next_offset===value.total)||rows.length>value.limit)throw Error('封存配置原记录不能核对');
++ return {rows:rows as NonNullable<ReturnType<typeof pm2ConfigurationRecord>>[],total:value.total as number,offset:value.offset as number,next:value.next_offset as number};
++}
++export const archiveLabels:Record<ArchiveRow['state'],string>={not_started:'原请求未被接受 · 标识已保留',needs_attention:'封存中断 · 待核对',archived:'封存完成',not_moved:'已保留原活动目录',restored_for_review:'原目录已恢复 · 待核对'};

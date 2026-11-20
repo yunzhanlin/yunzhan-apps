@@ -42,7 +42,20 @@ try:
  for n in plan['required_new_top_level_tests']:assert new.get(n)=='pass',n
  assert len(new)==plan['expected_new_test_rows']
  save('actual-native-regression-comparison',{'original_test_statuses_retained':True,'new_real_kernel_tests':new,'before':{'pass':results['baseline']['passes'],'skip':results['baseline']['skips']},'after':{'pass':results['patched']['passes'],'skip':results['patched']['skips']},'new_skips':0,'exact_changed_source_files':sorted(changed),'patched_source_index_sha256':sha(out/'actual-patched-source-index.json')})
- proof.update(ok=True,actual_euid=os.geteuid(),new_real_kernel_tests=len(new),original_passes=results['baseline']['passes'],original_skips=results['baseline']['skips'],all_original_statuses_retained=True,new_tests_skipped=0,source_inputs_unchanged_after_execution=True,archive_API_UI_and_signed_delivery_pending=True)
+ package_comparisons={}
+ for pkg in ['core','appcatalog']:
+  package_results={}
+  for label,tree in [('baseline',before),('patched',after)]:
+   args=[str(go),'test','-json','-count=1','-parallel=2','-timeout=6m','./internal/'+pkg,'-run','PM2'];started=time.monotonic()
+   with(out/(label+'-'+pkg+'-original-test.stdout')).open('xb')as stdout,(out/(label+'-'+pkg+'-original-test.stderr')).open('xb')as stderr:r=subprocess.run(args,cwd=tree,env=env,stdin=subprocess.DEVNULL,stdout=stdout,stderr=stderr,timeout=420,preexec_fn=lambda:os.umask(0o022))
+   events=[json.loads(line)for line in(out/(label+'-'+pkg+'-original-test.stdout')).read_text().splitlines()if line.strip()];terminal={x['Test']:x['Action']for x in events if x.get('Test')and x['Action']in('pass','skip','fail')};result={'exit':r.returncode,'elapsed_seconds':time.monotonic()-started,'terminal_tests':terminal,'passes':sum(x=='pass'for x in terminal.values()),'skips':sum(x=='skip'for x in terminal.values()),'fails':sum(x=='fail'for x in terminal.values()),'arguments':args};save(label+'-'+pkg+'-original-outcome',result);package_results[label]=result
+   assert r.returncode==0 and len(terminal)>=2 and not any(x['Action']=='fail'for x in events),pkg+' original native failure retained'
+   assert inventory(tree)==(baseline_index if label=='baseline'else patched_index)
+  original=package_results['baseline']['terminal_tests'];patched=package_results['patched']['terminal_tests'];assert all(patched.get(n)==state for n,state in original.items()),pkg+' original test state changed'
+  added={n:state for n,state in patched.items()if n not in original};assert len(added)==plan['expected_additional_package_tests'][pkg]and all(n.startswith('TestPM2Journal')and state=='pass'for n,state in added.items())
+  package_comparisons[pkg]={'original_statuses_retained':True,'new_test_rows':added,'before':{'pass':package_results['baseline']['passes'],'skip':package_results['baseline']['skips']},'after':{'pass':package_results['patched']['passes'],'skip':package_results['patched']['skips']}}
+ save('actual-native-Core-catalogue-comparison',package_comparisons)
+ proof.update(ok=True,actual_euid=os.geteuid(),new_real_kernel_tests=len(new),original_passes=results['baseline']['passes'],original_skips=results['baseline']['skips'],all_original_statuses_retained=True,new_tests_skipped=0,source_inputs_unchanged_after_execution=True,signed_delivery_and_actual_UI_acceptance_pending=True,additional_Core_and_catalogue_native_comparisons=True)
 except BaseException:proof['failure']=traceback.format_exc()
 finally:save('original-proof',proof)
 sys.exit(0 if proof['ok']else 1)
