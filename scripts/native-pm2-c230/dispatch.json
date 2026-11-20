@@ -1,0 +1,60 @@
+{
+  "source_head": "d1266b12fbd2941f908ffcdc4bea1383da3e2254",
+  "source_inputs_sha256": "0cc9bcf71499f1e303a60d0a52091db05f7c245e437033812b3e783ce5210d1d",
+  "source_sdk_tree": "314aff0755134aacff2e77cecb0994d2dba2ad03",
+  "version": "0.1.0-dev.proapps24php8storecandidate226",
+  "release_id": 452592486,
+  "tag": "qa-php8storecandidate226-20261120-qa1",
+  "release_assets": {
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-amd64.tar.gz": {
+      "id": 771513781,
+      "bytes": 24367879,
+      "sha256": "1b6949f2696d93cc28b0ab4b74bb39f87821666544f68aef420637e8407da265"
+    },
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-amd64.tar.gz.manifest": {
+      "id": 771517411,
+      "bytes": 180,
+      "sha256": "73fa0fb4aebcb3d7d2ed55cd99cd12e7173d82512d23905887977d9cdc21f81c"
+    },
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-amd64.tar.gz.sig": {
+      "id": 771517563,
+      "bytes": 64,
+      "sha256": "8910212be9e408dbc8ce230fc0b67797c08ea63a3fa1f86b2765fd74b452fba0"
+    },
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-arm64.tar.gz": {
+      "id": 771517808,
+      "bytes": 22559726,
+      "sha256": "32610d2fc609968b0f96c7535f2657f53518c73f6d7e2109f6250dd59a82e1a0"
+    },
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-arm64.tar.gz.manifest": {
+      "id": 771521004,
+      "bytes": 180,
+      "sha256": "5bf43ef14cbacf9a491b774505b2445bec2e20fffddad3cf02568c1f94939b1a"
+    },
+    "panel-0.1.0-dev.proapps24php8storecandidate226-linux-arm64.tar.gz.sig": {
+      "id": 771521176,
+      "bytes": 64,
+      "sha256": "3916196d0b5c913eb1d49fd766c3fc1e47303d7d6185656cfcdb47e9dc034534"
+    },
+    "php8-store-signed-release.py": {
+      "id": 771521370,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "release-signing-dev.pub": {
+      "id": 771521617,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24php8storecandidate226-linux-amd64.tar.gz",
+      "archive_entries": 207
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24php8storecandidate226-linux-arm64.tar.gz",
+      "archive_entries": 207
+    }
+  }
+}
