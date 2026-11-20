@@ -94,18 +94,25 @@ try:
   save('signed-completed-replay-original-job-preserved',{'job_id':accepted['job_id'],'original_and_final_runtime_job':original_job,'original_and_final_runtime_job_count':original_jobs_count,'ok':True})
   slug='nfsguard-'+secrets.token_hex(4);created=api('owned-website-create','/sites',{'name':'Owned NFS reference guard','slug':slug,'domain':slug+'.localhost','php_version_id':''},(202,),secrets.token_hex(16));wait_job('owned-website-create',created['job_id'],'jobs')
   with sqlite3.connect('file:/var/lib/panel/panel.db?mode=ro',uri=True)as db:db.execute('PRAGMA query_only=ON');site=db.execute('SELECT site_id FROM jobs WHERE id=?',(created['job_id'],)).fetchone()[0]
-  public=Path('/srv/panel/sites')/site/'public';st=public.lstat();assert st.st_uid>0 and st.st_gid>0
+  public=Path('/srv/panel/sites')/site/'public';st=public.lstat();assert stat.S_ISDIR(st.st_mode)
   marker=public/'nfs-read-marker.txt'
   with os.fdopen(os.open(marker,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600),'wb')as f:os.fchown(f.fileno(),st.st_uid,st.st_gid);f.write(b'owned C207 NFS read marker\n');f.flush();os.fsync(f.fileno())
   fixture={'site_id':site,'public':str(public)};save('owned-website-fixture',fixture)
  else:fixture=original;site=fixture['site_id']
  assert re.fullmatch('[a-f0-9]{32}',site) and public==Path('/srv/panel/sites')/site/'public'
- protected=files(public);public_identity=public.lstat();native_sha=sha((module/'native-runtime.json').read_bytes());native=json.loads((module/'native-runtime.json').read_bytes());assert native['format']==2 and native['architecture']==arch
+ initial_site_files=files(public);native_sha=sha((module/'native-runtime.json').read_bytes());native=json.loads((module/'native-runtime.json').read_bytes());assert native['format']==2 and native['architecture']==arch
  before=report('original-server-state');config=before['config'];assert before['runtime_ready'] and before['private_client_ready'] and not before['service_active'] and not before['boot_enabled'] and config['exports']==[]
  original_config=json.loads(json.dumps(config));share='c207-share-'+secrets.token_hex(4);port=config['port']
  if port==2049:
   configured=action('owned-custom-port','server-config',{'bind_address':'127.0.0.1','port':24270,'expected_revision':config['revision']});config=configured['config'];port=config['port']
  saved=action('owned-RO-export','export-save',{'resource_id':share,'site_id':site,'path':'','client_allow':['127.0.0.1'],'read_only':True,'expected_revision':config['revision']});config=saved['config'];assert len(config['exports'])==1
+ public_identity=public.lstat();assert public_identity.st_uid>0 and public_identity.st_gid>0
+ protected=files(public);assert protected.keys()==initial_site_files.keys()
+ for name,before_file in initial_site_files.items():
+  final_file=protected[name]
+  assert {k:v for k,v in before_file.items()if k not in('uid','gid')}=={k:v for k,v in final_file.items()if k not in('uid','gid')}
+  assert (final_file['uid'],final_file['gid'])==(public_identity.st_uid,public_identity.st_gid)
+ save('normal-owned-export-identity-preparation',{'before':initial_site_files,'after':protected,'public_uid':public_identity.st_uid,'public_gid':public_identity.st_gid,'normal_export_action_only':True,'file_contents_modes_devices_and_inodes_preserved':True})
  sites=api('owned-site-read','/sites');owned,=[row for row in sites if row['id']==site];site_before=json.loads(json.dumps(owned))
  action('owned-server-start','server-start');started=True;time.sleep(32)
  def deny_archive(label):
