@@ -478,6 +478,13 @@ index b06b335..5ae4275 100644
 @@ -384 +384 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 -		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && payload.Version == PM2RootVendorAppVersion)) {
 +		if (action == "install" && (j.TargetID == "pure-ftpd" || j.TargetID == "pm2-manager" || j.TargetID == "nfs-manager")) || (action == "update" && (j.TargetID == "pure-ftpd" || j.TargetID == "nfs-manager" || j.TargetID == "pm2-manager" && (payload.Version == PM2RootVendorAppVersion || payload.Version == PM2ConfigurationArchiveAppVersion))) {
+diff --git a/internal/executor/app_module_record_linux.go b/internal/executor/app_module_record_linux.go
+index fd186c3..9a8b166 100644
+--- a/internal/executor/app_module_record_linux.go
++++ b/internal/executor/app_module_record_linux.go
+@@ -203 +203 @@ func (s *Service) moduleInstalledRecord(id string) (map[string]any, error) {
+-	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion || id == "platform-ops" && core.PlatformMaintenanceVersionSupported(installedVersion) || id == "disk-analysis" && diskjob.HostAppVersionSupported(installedVersion) {
++	if id == "website-statistics-v2" && manifest["version"] == statisticsGeographyVersion || id == "platform-ops" && core.PlatformMaintenanceVersionSupported(installedVersion) || id == "disk-analysis" && diskjob.HostAppVersionSupported(installedVersion) || id == "pm2-manager" && installedVersion == core.PM2ConfigurationArchiveAppVersion {
 diff --git a/internal/executor/app_modules_linux.go b/internal/executor/app_modules_linux.go
 index 7b01cf6..5ef0efe 100644
 --- a/internal/executor/app_modules_linux.go
@@ -2126,10 +2133,10 @@ index 0000000..300c753
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_instance_linux_test.go b/internal/executor/app_pm2_journal_archive_instance_linux_test.go
 new file mode 100644
-index 0000000..a5740fa
+index 0000000..652a05f
 --- /dev/null
 +++ b/internal/executor/app_pm2_journal_archive_instance_linux_test.go
-@@ -0,0 +1,61 @@
+@@ -0,0 +1,94 @@
 +//go:build linux
 +
 +package executor
@@ -2189,6 +2196,39 @@ index 0000000..a5740fa
 +	}
 +	if err := s.pm2ConfigurationArchiveVersion(current); err != nil {
 +		t.Fatal("exact current authority refused", err)
++	}
++}
++
++func TestPM2JournalArchiveInstallationFieldNeverAuthorizesOlderOrOtherModules(t *testing.T) {
++	for _, kind := range []string{"old-PM2", "future-alias", "other-module", "invalid-current-id"} {
++		t.Run(kind, func(t *testing.T) {
++			s, _ := pm2ArchiveActiveFixture(t)
++			id := "pm2-manager"
++			version := core.PM2ConfigurationArchiveAppVersion
++			instance := "77777777777777777777777777777777"
++			switch kind {
++			case "old-PM2":
++				version = core.PM2RootVendorAppVersion
++			case "future-alias":
++				version += ".0"
++			case "other-module":
++				id = "nfs-manager"
++				version = core.SoftwareImplementationVersion(id)
++			case "invalid-current-id":
++				instance = "broken"
++			}
++			path := filepath.Join(s.moduleDir(id), "installed.json")
++			if err := moduleWrite(path, map[string]string{"id": id, "version": version, "installation_id": instance}); err != nil {
++				t.Fatal(err)
++			}
++			before := programQueueTree(t, s.Config.SecurityDir)
++			if _, err := s.moduleInstalledRecord(id); err == nil {
++				t.Fatal("unrelated or invalid installation authority was adopted", kind)
++			}
++			if !reflect.DeepEqual(before, programQueueTree(t, s.Config.SecurityDir)) {
++				t.Fatal("rejected installation record was changed")
++			}
++		})
 +	}
 +}
 diff --git a/internal/executor/app_pm2_journal_archive_protocol_linux.go b/internal/executor/app_pm2_journal_archive_protocol_linux.go
