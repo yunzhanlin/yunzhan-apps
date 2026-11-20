@@ -2,7 +2,7 @@
   "source_head": "118e84bf9e1db03abebeab3b971806c5a6bbce61",
   "source_inputs_sha256": "7de34e3479a9c161e48303178648805bb0e03946e65a76c2445c15a2ccfc04e2",
   "version": "0.1.0-dev.proapps24nfspreflightcandidate208",
-  "native_fixture_parent": "118e84bf9e1db03abebeab3b971806c5a6bbce61",
+  "native_fixture_parent": "b4f614a25a699072046461915b4b122c664f9db5",
   "served_head": "0d45041738536e4a690f1fe8a312b9d7f973b1b2",
   "items": {
     "docker-manager": {
@@ -33,23 +33,14 @@
     "scripts/native-docker-c225/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
     "scripts/native-docker-c225/dispatch.json": "b9214fbb121598dffd09526fce9ab86181598ac469f2bfab80fc854ecafa7530",
     "scripts/native-docker-c225/prepare-fresh-docker.py": "f0d340409065ffb780aa83a1c81d45c669a2f86a6b070fd321a587cc92336c75",
-    "scripts/native-docker-c225/docker-business.py": "0453e652f5b565dcb92bd5fd8e0fa988ee6e976b957583a8b1f868386d4e9e31",
+    "scripts/native-docker-c225/docker-business.py": "af6b7d9a46c4fe9f35dd8cee211e4cefe0cc80ee0c99fe98e8072db315bbe07b",
     "scripts/native-docker-c225/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
     "scripts/native-docker-c225/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
     "scripts/native-docker-c225/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
     ".github/workflows/docker-c225-current-native.yml": "84684ba27dab3aebe05b510b8fbf63cde8d4145d112450305512bd6b9832d0b3"
   },
   "changed_payload_files": [
-    "scripts/native-docker-c225/original-signed-release.py",
-    "scripts/native-docker-c225/download.py",
-    "scripts/native-docker-c225/recipient.pem",
-    "scripts/native-docker-c225/dispatch.json",
-    "scripts/native-docker-c225/prepare-fresh-docker.py",
-    "scripts/native-docker-c225/docker-business.py",
-    "scripts/native-docker-c225/isolated_ubuntu_apt.py",
-    "scripts/native-docker-c225/bootstrap-original-install.py",
-    "scripts/native-docker-c225/finish.py",
-    ".github/workflows/docker-c225-current-native.yml"
+    "scripts/native-docker-c225/docker-business.py"
   ],
   "app_scope": "Docker Manager current40 signed catalogue; retired PHP packages never installed",
   "Main_changed": false

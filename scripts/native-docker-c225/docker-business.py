@@ -75,6 +75,20 @@ try:
  readback=docker('run','--rm','--network','none','-v','c225-managed-volume:/data:ro',image,'cat','/data/token');assert readback==token;save('actual-managed-data-readback',{'token_sha256':hashlib.sha256(readback.encode()).hexdigest(),'busy_and_wrong_confirmation_refused':True})
  api('/docker/volumes/c225-managed-volume',{'confirm_name':'c225-managed-volume'},200,'DELETE');api('/docker/networks/'+nid,{'confirm_name':'c225-managed-network'},200,'DELETE')
  assert not any(x['Name']=='c225-managed-volume'for x in api('/docker/volumes')['volumes']);assert not any(x['Id']==nid for x in api('/docker/networks')['networks'])
+ # Rejected requests use ordinary Core/Root validation and must create no engine objects.
+ original_objects={k:docker(*args)for k,args in{'containers':('ps','-aq'),'volumes':('volume','ls','-q'),'networks':('network','ls','-q')}.items()}
+ saved_csrf=csrf;csrf=''
+ assert api('/docker/networks',{'name':'c225-no-csrf','internal':True},403)['error'];csrf=saved_csrf
+ refusals=[]
+ cases=[('privileged','    privileged: true\n'),('host-network','    network_mode: host\n'),('host-bind','    volumes: ["/:/host:ro"]\n'),('public-binding','    ports: ["0.0.0.0:18227:80"]\n'),('build','    build: .\n')]
+ for label,option in cases:
+  compose='services:\n  web:\n    image: '+image+'\n'+option
+  answer=api('/docker/projects',{'name':'c225-refuse-'+label,'template_id':'','host_port':0,'compose':compose},202)
+  failed=wait(lambda:api('/docker/job-observations/'+answer['job_id']),lambda x:x['state']in('succeeded','failed','needs_attention'))
+  save('actual-refused-'+label,{'submitted':answer,'outcome':failed});assert failed['state']=='failed'and failed.get('error'),(label,failed)
+  assert not docker('ps','-aq','--filter','label=com.docker.compose.project=panel_'+answer['project_id'][:12]);refusals.append(label)
+ assert original_objects=={k:docker(*args)for k,args in{'containers':('ps','-aq'),'volumes':('volume','ls','-q'),'networks':('network','ls','-q')}.items()}
+ save('actual-privilege-and-path-refusals',{'cases':refusals,'missing_csrf_refused':True,'all_original_engine_object_sets_unchanged':True})
  # Container creation, logs, actual pause state and stable process, stop/start/restart and exact confirmation.
  _,created=job('api-container-create','/docker/jobs',{'action':'create','image':image,'name':'c225-managed-container','restart':'no','command':['/bin/sh','-c','echo c225-native-log; exec sleep 3600']},'docker');cid=created['container_id'];assert re.fullmatch('[a-f0-9]{64}',cid)
  wait(lambda:inspect(cid)['State']['Running'],bool);before=native_id(cid)
@@ -101,7 +115,7 @@ try:
  save('actual-compose-volume-retained',{'project':pid,'engine':engine,'volume':vol,'retained_after_project_delete':True,'token_sha256':hashlib.sha256(token.encode()).hexdigest()})
  assert native_id(prior)==original and daemon()==original_daemon and docker('exec',prior,'cat','/data/token')==token
  final=api('/app-registry');last,=[a for a in final['status']if a['id']=='docker-manager'];assert last['installed']and last['installed_version']=='1-compat2'and not last['update_available']
- proof.update(ok=True,app_version=item['version'],installed_job=installed['id'],current_catalogue_head=plan['served_head'],managed_network_and_volume_real_crud=True,actual_persistent_data_readback=True,busy_resources_and_wrong_confirmations_refused=True,original_foreign_resources_and_lifetimes_preserved=True,actual_container_and_compose_lifecycle=True,stopped_project_data_protected=True,removed_project_named_volume_preserved=True)
+ proof.update(ok=True,app_version=item['version'],installed_job=installed['id'],current_catalogue_head=plan['served_head'],managed_network_and_volume_real_crud=True,actual_persistent_data_readback=True,busy_resources_and_wrong_confirmations_refused=True,original_foreign_resources_and_lifetimes_preserved=True,actual_container_and_compose_lifecycle=True,stopped_project_data_protected=True,removed_project_named_volume_preserved=True,actual_privilege_path_public_binding_and_csrf_refusals=True)
 except BaseException:
  import traceback
  proof['failure']=traceback.format_exc()
