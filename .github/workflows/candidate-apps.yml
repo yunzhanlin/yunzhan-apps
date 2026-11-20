@@ -1,8 +1,8 @@
-name: isolated candidate catalogue and native ABI
+name: current candidate publisher and authentic historical native regressions
 
 on:
   push:
-    branches: [codex/app-candidate, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67, codex/mobile-native-download-c68, codex/mobile-c68-deterministic-release-r3, codex/mobile-native133-c68r3-catalogue]
+    branches: [codex/app-candidate, codex/pm2-config-archive-c232r2-catalogue, codex/backup-retention-c54, codex/private-backup-roots-c55r2, codex/apache-native-cc-c56r3, codex/apache-native-cc-c56r7, codex/apache-native-cc-c56r8, codex/apache-native-cc-c56r9, codex/apache-cc-log-archive-c57, codex/apache-cc-root-gid-c57r5, codex/apache-cc-archive-ui-c58, codex/analytics-spa-ready-c59r3, codex/analytics-navigation-order-c59r4, codex/website-kernel-protection-c60r2, codex/website-kernel-protection-c60r2-ci2, codex/enterprise-kernel-protection-c61r2, codex/enterprise-kernel-publication-c61r3, codex/files-sync-independent-backups-c62, codex/analytics-query-context-c63, codex/filesync-unpublished-retention-c64, codex/filesync-offline-recovery-c65, codex/analytics-heatmap-c66, codex/analytics-heatmap-c66r2, codex/install-inherited-acl-c67, codex/mobile-native-download-c68, codex/mobile-c68-deterministic-release-r3, codex/mobile-native133-c68r3-catalogue]
   workflow_dispatch:
 
 permissions:
@@ -16,8 +16,23 @@ jobs:
         os: [ubuntu-24.04, ubuntu-24.04-arm]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
+    # Immutable C68 fifty-package regressions retain their own authentic input.
+    # The current publisher and unchanged stable check use this checkout;
+    # active40-abi.yml independently tests current40 on the published SDK.
+    env:
+      YUNZHAN_HISTORICAL_ROOT: ${{ runner.temp }}/yunzhan-c68-historical
+    defaults:
+      run:
+        working-directory: ${{ runner.temp }}/yunzhan-c68-historical
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4, independently resolved
+      - name: Select the authentic immutable input for original fifty-package regressions
+        working-directory: ${{ github.workspace }}
+        run: |
+          git fetch --no-tags --depth=1 origin fdb6be9f2ee650ca0ed37b213256151f397a7599
+          git worktree add --detach "$YUNZHAN_HISTORICAL_ROOT" fdb6be9f2ee650ca0ed37b213256151f397a7599
+          test "$(git -C "$YUNZHAN_HISTORICAL_ROOT" rev-parse HEAD)" = fdb6be9f2ee650ca0ed37b213256151f397a7599
+          test "$(git -C "$YUNZHAN_HISTORICAL_ROOT" rev-parse 'HEAD^{tree}')" = fe5e4df31ff8e3c94d0201a08d7404d0ad3ee068
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
@@ -26,10 +41,12 @@ jobs:
           go-version-file: candidate/panel-integration-load-balance/go.mod
           cache-dependency-path: candidate/panel-integration-load-balance/go.sum
       - name: Actual stable and candidate catalogues, signatures and historical regressions
+        working-directory: ${{ github.workspace }}
         run: |
           git fetch --no-tags --depth=1 origin 5f8457971e3ca4868d85c70d3f854d5773f25c8f
           npm test
       - name: Candidate build must not modify the stable signed directory
+        working-directory: ${{ github.workspace }}
         run: git diff --exit-code -- registry/apps.json schema/app.schema.json dist signatures candidate/dist candidate/signatures
       - name: Independent Draft202012 schema for signed fifty and exact intrusion111 negatives
         run: |
@@ -183,14 +200,14 @@ jobs:
       - name: Actual unchanged C61r2 production must reproduce all31 publication regressions
         working-directory: original-publication-defect/candidate/panel-integration-load-balance
         run: |
-          python3 "$GITHUB_WORKSPACE/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . stage
+          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$YUNZHAN_HISTORICAL_ROOT" . stage
           set +e
           sudo "$(command -v go)" test -json -count=1 -p 1 ./internal/executor -run '^TestIntegrityKernel(Concurrent(Status|Admission)WaitsForCompletePublication|StoppedIncompletePublicationStaysUnknown)$' -timeout=60s > "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          python3 "$GITHUB_WORKSPACE/tools/stage-kernel-publication-original-defect.py" "$GITHUB_WORKSPACE" . verify
-          node "$GITHUB_WORKSPACE/tools/check-kernel-publication-original-defect.mjs" "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl" "$(uname -m)"
+          python3 "$YUNZHAN_HISTORICAL_ROOT/tools/stage-kernel-publication-original-defect.py" "$YUNZHAN_HISTORICAL_ROOT" . verify
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-kernel-publication-original-defect.mjs" "$RUNNER_TEMP/integrity-kernel-original-publication-defect.jsonl" "$(uname -m)"
       - name: Original predecessor source for the real old compiled handler boundary
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -207,12 +224,12 @@ jobs:
         working-directory: predecessor-analytics-query/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync201-c64" > "$RUNNER_TEMP/analytics-query-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync201-c64" > "$RUNNER_TEMP/analytics-query-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
           git diff --exit-code -- .
-          node "$GITHUB_WORKSPACE/tools/check-analytics-query-predecessor.mjs" "$RUNNER_TEMP/analytics-query-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync201-c64/dist/catalog-v1.json"
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-analytics-query-predecessor.mjs" "$RUNNER_TEMP/analytics-query-predecessor.jsonl" "$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync201-c64/dist/catalog-v1.json"
       - name: Original immediate C63 source before unpublished fragment retention
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -223,12 +240,12 @@ jobs:
         working-directory: predecessor-filesync-unpublished/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-mobile-native133-c68r3" > "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-mobile-native133-c68r3" > "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
           git diff --exit-code -- .
-          node "$GITHUB_WORKSPACE/tools/check-files-sync-unpublished-predecessor.mjs" "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-mobile-native133-c68r3/dist/catalog-v1.json"
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-files-sync-unpublished-predecessor.mjs" "$RUNNER_TEMP/files-sync-unpublished-predecessor.jsonl" "$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-mobile-native133-c68r3/dist/catalog-v1.json"
       - name: Original immediate C61r3 source before the independent Files Sync handler
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -239,21 +256,21 @@ jobs:
         working-directory: predecessor-filesync/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-analytics242-c63" > "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-analytics242-c63" > "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
           git diff --exit-code -- .
-          node "$GITHUB_WORKSPACE/tools/check-files-sync-independent-predecessor.mjs" "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-analytics242-c63/dist/catalog-v1.json"
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-files-sync-independent-predecessor.mjs" "$RUNNER_TEMP/files-sync-independent-predecessor.jsonl" "$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-analytics242-c63/dist/catalog-v1.json"
       - name: Actual immediate C60 compiled ABI must retain website150 and refuse only enterprise150
         working-directory: predecessor-kernel/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" immediate-C60
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-predecessor.jsonl" "$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" immediate-C60
       - name: Preserve the original C59 compiled source for the two later kernel scopes
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -264,11 +281,11 @@ jobs:
         working-directory: legacy-predecessor-kernel/candidate/panel-integration-load-balance
         run: |
           set +e
-          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl"
+          go test -json -count=1 -ldflags='-X=local/panel/internal/appcatalog.officialCatalogChannel=candidate' ./internal/appcatalog -run '^TestPublishedCandidateRepositoryCurrentSignedManifestABI$' -published-candidate-app-registry-root="$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync200-c62" > "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl"
           original_exit=$?
           set -e
           test "$original_exit" -eq 1
-          node "$GITHUB_WORKSPACE/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl" "$GITHUB_WORKSPACE/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" legacy-C59
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-enterprise-kernel-predecessor.mjs" "$RUNNER_TEMP/integrity-kernel-legacy-predecessor.jsonl" "$YUNZHAN_HISTORICAL_ROOT/registry/reviewed-catalogs/before-native-filesync200-c62/dist/catalog-v1.json" legacy-C59
       - name: Actual native backup retention reservation, starvation and read-only API regressions
         working-directory: candidate/panel-integration-load-balance
         run: |
@@ -316,8 +333,8 @@ jobs:
         run: |
           sudo "$RUNNER_TEMP/files-sync-executor-tests" -test.v -test.count=1 -test.run='^TestRemoteUnpublishedOffline' -test.timeout=5m > "$RUNNER_TEMP/files-sync-offline-root.stdout" 2> "$RUNNER_TEMP/files-sync-offline-root.stderr"
           go tool test2json -p local/panel/internal/executor < "$RUNNER_TEMP/files-sync-offline-root.stdout" > "$RUNNER_TEMP/files-sync-offline-root.jsonl"
-          sudo python3 -I -B "$GITHUB_WORKSPACE/tools/run-files-sync-offline-python-native.py" "$RUNNER_TEMP/files-sync-offline-python" > "$RUNNER_TEMP/files-sync-offline-python-proof.json"
-          node "$GITHUB_WORKSPACE/tools/check-files-sync-offline-recovery.mjs" "$RUNNER_TEMP/files-sync-offline-root.jsonl" "$RUNNER_TEMP/files-sync-offline-python-proof.json" "$(uname -m)"
+          sudo python3 -I -B "$YUNZHAN_HISTORICAL_ROOT/tools/run-files-sync-offline-python-native.py" "$RUNNER_TEMP/files-sync-offline-python" > "$RUNNER_TEMP/files-sync-offline-python-proof.json"
+          node "$YUNZHAN_HISTORICAL_ROOT/tools/check-files-sync-offline-recovery.mjs" "$RUNNER_TEMP/files-sync-offline-root.jsonl" "$RUNNER_TEMP/files-sync-offline-python-proof.json" "$(uname -m)"
       - name: Preserve original Root Python fixture outputs without changing their private permissions
         if: always()
         run: |
