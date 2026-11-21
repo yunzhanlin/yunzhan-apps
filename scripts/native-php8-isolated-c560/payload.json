@@ -1,0 +1,17 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "ba6271891f633612e271c6870a2534c8f0a2ca22931fc090f8782b7fe8c6c831",
+    "cohort.json": "bb2a0dceac725b9d7037fdc74659108288bcccc3552c39185827951cdce83886",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz": "24faf1d61b9a7f3c830d842dd882567dbd25ebbe9499f1b73541d5c4f6f5a075",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.manifest": "81bcf0fe27a1848171399c004ebf23d6ca0379b491bc16a1295cec816a652a8d",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.sig": "cb1ed4cc049fb64dcf4fd90790d8cb12054aaa3c729bf63c1d5f780f3ef14a5a",
+    "php-isolated-business.py": "5dd9639768696d986ea98ec9737775e6032cf830f4402500498271e307d26f60",
+    "original-inventory-probe.php": "1755e665f1511a29a42cc03226e48bc873c5e5dfb4482b64d358ed7478fa8772"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "b223c28247d9d20e50a356643a9744a9ab174068dd567a2c57f15c342934c15f",
+  "version": "0.1.0-dev.proapps24apachebuildstatuscandidate477"
+}
