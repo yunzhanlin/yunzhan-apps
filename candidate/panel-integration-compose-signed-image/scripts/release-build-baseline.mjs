@@ -173,7 +173,17 @@ function beforeApacheSourceArchiveBudget(text) {
 }
 
 // Reverse only C57's exact Apache dependency admission for historical PHP pins.
+// Reverse only the exact independently tested current Apache source total
+// budget. All original admission, digest, idle, cancellation, size and queue
+// bytes remain subject to the callers' unchanged complete historical hashes.
+export function beforeCurrentApacheSourceBudget(text) {
+ const addition="\tif r.ID == runtimecatalog.ApacheCurrentID {\n\t\t// The exact current 10.5 MiB Apache source can make continuous\n\t\t// progress on a slow link beyond eight minutes. Admission above\n\t\t// binds every field to the reviewed release. Keep the existing\n\t\t// 45-second idle guard, digest, size bound and terminal failures.\n\t\tlimits.Total = 20 * time.Minute\n\t}\n";
+ assert.equal(text.split(addition).length,2,'missing, duplicate or altered current Apache source budget');
+ return text.replace(addition,()=> '');
+}
+
 export function beforeApacheBuildDependencyAdmission(text) {
+ text=beforeCurrentApacheSourceBudget(text);
  text=beforeRuntimeBuildDurability(text);
  text=beforePHPSourceResponseRetry(beforeApacheSourceArchiveBudget(text));
  for(const addition of ["\tif r.Family == \"apache\" && !nativeWAFService().wafBuildPackagesReady([]string{\"libapr1-dev\", \"libaprutil1-dev\", \"libnghttp2-dev\"}) {\n\t\treturn errors.New(\"Apache 编译依赖缺失：请先安装 libapr1-dev、libaprutil1-dev、libnghttp2-dev；本次未下载或编译源码\")\n\t}\n", "\tif e = add(\"正在从官方站点下载精确版本源码并校验完整性\"); e != nil {\n\t\treturn e\n\t}\n"]) {

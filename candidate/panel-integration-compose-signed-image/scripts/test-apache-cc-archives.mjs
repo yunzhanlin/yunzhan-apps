@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {beforeApacheBuildDependencyAdmission} from './release-build-baseline.mjs';
+import {beforeApacheBuildDependencyAdmission,beforeCurrentApacheSourceBudget} from './release-build-baseline.mjs';
 import {createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
@@ -318,4 +318,18 @@ test('durable runtime publication cannot erase missing syncs or changed historic
  ])assert.throws(()=>beforeApacheBuildDependencyAdmission(altered));
  assert.notEqual(beforeApacheBuildDependencyAdmission(current.replace('return 4 * time.Hour','return 8 * time.Hour')),original);
  assert(original.includes('_, e = io.Copy(out, io.LimitReader(in, 256*1024*1024))'));
+});
+
+// The original complete install-file digest remains fixed. Reject absence,
+// duplication, expanded scope and changed limits rather than masking edits.
+test('current Apache slow-source reversal is exact and preserves all historical guards',()=>{
+ const current=readFileSync(new URL('../internal/executor/install_linux.go',import.meta.url),'utf8');
+ const addition="\tif r.ID == runtimecatalog.ApacheCurrentID {\n\t\t// The exact current 10.5 MiB Apache source can make continuous\n\t\t// progress on a slow link beyond eight minutes. Admission above\n\t\t// binds every field to the reviewed release. Keep the existing\n\t\t// 45-second idle guard, digest, size bound and terminal failures.\n\t\tlimits.Total = 20 * time.Minute\n\t}\n";
+ const reversed=beforeCurrentApacheSourceBudget(current);
+ assert.equal(createHash('sha256').update(reversed).digest('hex'),"df0b24cad50a3cc382014b285c1d34e629aa17e404a5adec79246a686befd540");
+ for(const altered of [current.replace(addition,''),current.replace(addition,addition+addition),current.replace('if r.ID == runtimecatalog.ApacheCurrentID {','if r.Family == "apache" {'),current.replace('limits.Total = 20 * time.Minute','limits.Total = 21 * time.Minute')])assert.throws(()=>beforeCurrentApacheSourceBudget(altered));
+ for(const altered of [current.replace('BodyIdle: 45 * time.Second','BodyIdle: 46 * time.Second'),current.replace('io.LimitReader(sourceProgressReader{Reader: resp.Body, Timer: idle, Idle: limits.BodyIdle}, 64*1024*1024+1)','io.LimitReader(sourceProgressReader{Reader: resp.Body, Timer: idle, Idle: limits.BodyIdle}, 128*1024*1024+1)'),current.replace('hex.EncodeToString(h.Sum(nil)) != digest','hex.EncodeToString(h.Sum(nil)) == digest')]){
+  assert.notEqual(altered,current);
+  assert.notEqual(beforeApacheBuildDependencyAdmission(altered),beforeApacheBuildDependencyAdmission(current));
+ }
 });
