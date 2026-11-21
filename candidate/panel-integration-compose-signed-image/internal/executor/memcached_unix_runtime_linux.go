@@ -127,9 +127,27 @@ func memcachedUnixRuntimeStateAt(ctx context.Context, raw []byte, m composeMetad
 			Env              []string
 		}
 	}
-	_, digest, _ := strings.Cut(appcatalog.MemcachedDigestImage, "@")
-	if e != nil || memcachedDaemonJSON(imageRaw) != nil || json.Unmarshal(imageRaw, &image) != nil || image.ID != v.Image || image.OS != "linux" || image.Architecture != runtime.GOARCH || image.Config == nil || image.Config.User != "memcache" || image.Config.WorkingDir != c.WorkingDir || !slices.Equal(image.Config.Env, c.Env) || !slices.Contains(image.RepoDigests, "memcached@"+digest) && !slices.Contains(image.RepoDigests, "docker.io/library/memcached@"+digest) || ctx.Err() != nil {
+	if e != nil || memcachedDaemonJSON(imageRaw) != nil || json.Unmarshal(imageRaw, &image) != nil || image.ID != v.Image || image.OS != "linux" || image.Architecture != runtime.GOARCH || image.Config == nil || image.Config.User != "memcache" || image.Config.WorkingDir != c.WorkingDir || !slices.Equal(image.Config.Env, c.Env) || !memcachedUnixPinnedRepository(image.RepoDigests) || ctx.Err() != nil {
 		return refuse()
 	}
 	return v.ID, limits.State.Pid, v.State.Health.Status, nil
+}
+
+// Docker's classic store reports repo@digest; the containerd store may retain
+// repo:tag@digest. Normalize only a valid Docker reference, then compare the
+// complete official repository and fixed digest. Config.Image remains the
+// exact pinned tag@digest above; no other runtime or kernel gate changes.
+func memcachedUnixPinnedRepository(refs []string) bool {
+	if len(refs) == 0 || len(refs) > 256 {
+		return false
+	}
+	expected := dockerPullDigestReference(appcatalog.MemcachedDigestImage)
+	for _, ref := range refs {
+		familiar := dockerFamiliarPullReference(ref)
+		checked, err := dockerPullRequestReference(familiar)
+		if err == nil && checked == familiar && dockerPullDigestReference(checked) == expected {
+			return true
+		}
+	}
+	return false
 }

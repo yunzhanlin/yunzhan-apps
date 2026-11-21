@@ -9021,14 +9021,14 @@
       "sha256": "e7ac2d5823dd7ed3da4917508e2c22c866ab0d40c5987d83aeb314a2203f0413"
     },
     "internal/executor/memcached_unix_runtime_linux.go": {
-      "bytes": 8505,
+      "bytes": 9107,
       "mode": 384,
-      "sha256": "49b6455dc214866b51acf25fd6e179c88842b18a79e8fcdebc380f0ce8cadda6"
+      "sha256": "22356c03608b7dea561767aacf0aed199e0ff6e5e5d8f7cf52e832eeca25ce1a"
     },
     "internal/executor/memcached_unix_runtime_linux_test.go": {
-      "bytes": 8898,
+      "bytes": 12049,
       "mode": 384,
-      "sha256": "accc31605bac199c8798a0d611c3ab287939499f769c0d787bdf09500fcc4d3e"
+      "sha256": "8bb2a7d4302912460801e1b5512ebeab9228c55b1bc3f48471ce8f3b3432a11c"
     },
     "internal/executor/memcached_unix_site_linux.go": {
       "bytes": 4491,
@@ -91927,5 +91927,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "0a02e18a8b9d2b9785fca67ef32cbee6c8ce1561b7f83f83ef04c81e73c84823"
+  "inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3"
 }

@@ -204,3 +204,74 @@ func TestMemcachedUnixRuntimeRejectsDaemonResourceMountImageAndNetworkDrift(t *t
 		})
 	}
 }
+
+// Regression from actual Engine29.8.2/containerd inspections: the container and
+// image ID may equal the OCI index digest, while RepoDigests retains the tag.
+// Both live and stopped inspections must preserve every other closed gate.
+func TestMemcachedUnixRuntimeContainerdRepositoryIdentity(t *testing.T) {
+	_, digest, _ := strings.Cut(appcatalog.MemcachedDigestImage, "@")
+	cases := []struct {
+		name, reference string
+		ok              bool
+	}{
+		{"classic", "memcached@" + digest, true},
+		{"classic-qualified", "docker.io/library/memcached@" + digest, true},
+		{"containerd-tagged", appcatalog.MemcachedDigestImage, true},
+		{"containerd-qualified", "docker.io/library/" + appcatalog.MemcachedDigestImage, true},
+		{"containerd-index-host", "index.docker.io/library/" + appcatalog.MemcachedDigestImage, true},
+		{"foreign-repository", "other:1.6.45-alpine@" + digest, false},
+		{"foreign-registry", "registry.example/library/" + appcatalog.MemcachedDigestImage, false},
+		{"foreign-namespace", "someone/" + appcatalog.MemcachedDigestImage, false},
+		{"repository-suffix", "memcached-other@" + digest, false},
+		{"repository-prefix", "othermemcached@" + digest, false},
+		{"different-digest", "memcached:1.6.45-alpine@sha256:" + strings.Repeat("c", 64), false},
+		{"tag-without-digest", "memcached:1.6.45-alpine", false},
+		{"malformed-tag", "memcached:!@" + digest, false},
+		{"whitespace", "memcached:1.6.45-alpine@" + digest + " ", false},
+		{"trailing-reference", appcatalog.MemcachedDigestImage + "@" + digest, false},
+		{"empty", "", false},
+	}
+	for _, tc := range cases {
+		for _, running := range []bool{true, false} {
+			suffix := "/stopped"
+			if running {
+				suffix = "/running"
+			}
+			t.Run(tc.name+suffix, func(t *testing.T) {
+				m, v, image, read := memcachedUnixRuntimeFixture(t)
+				v["Image"], image["Id"] = digest, digest
+				image["RepoDigests"] = []string{tc.reference}
+				state := v["State"].(map[string]any)
+				state["Running"] = running
+				if !running {
+					state["Pid"] = 0
+				}
+				raw, err := json.Marshal(v)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if running {
+					id, pid, _, err := memcachedUnixRuntime(context.Background(), raw, m, "", memcachedUnixAccount{11211, 11211}, read)
+					if (err == nil) != tc.ok || tc.ok && (id != v["Id"] || pid != 42) || !tc.ok && (id != "" || pid != 0) {
+						t.Fatal("live pinned repository identity", id, pid, err)
+					}
+				} else {
+					id, err := memcachedUnixStoppedRuntime(context.Background(), raw, m, "", memcachedUnixAccount{11211, 11211}, read)
+					if (err == nil) != tc.ok || tc.ok && id != v["Id"] || !tc.ok && id != "" {
+						t.Fatal("stopped pinned repository identity", id, err)
+					}
+				}
+			})
+		}
+	}
+	t.Run("bounded-daemon-digest-list", func(t *testing.T) {
+		m, v, image, read := memcachedUnixRuntimeFixture(t)
+		refs := make([]string, 257)
+		refs[0] = appcatalog.MemcachedDigestImage
+		image["RepoDigests"] = refs
+		raw, _ := json.Marshal(v)
+		if _, _, _, err := memcachedUnixRuntime(context.Background(), raw, m, "", memcachedUnixAccount{11211, 11211}, read); err == nil {
+			t.Fatal("oversized daemon identity list accepted")
+		}
+	})
+}

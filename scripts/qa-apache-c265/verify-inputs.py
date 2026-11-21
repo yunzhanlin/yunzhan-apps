@@ -1,7 +1,7 @@
 from pathlib import Path
 import hashlib,json,stat
 root=Path('candidate/panel-integration-compose-signed-image');index=json.loads((root/'SOURCE_INPUTS.json').read_bytes())
-expected='0a02e18a8b9d2b9785fca67ef32cbee6c8ce1561b7f83f83ef04c81e73c84823'
+expected='b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3'
 assert index['format']==1 and index['inputs_sha256']==expected
 assert hashlib.sha256(json.dumps(index['files'],sort_keys=True,separators=(',',':')).encode()).hexdigest()==expected
 sdk={n:v for n,v in index['files'].items()if not n.startswith('web/node_modules/')}
@@ -9,4 +9,4 @@ for name,info in sdk.items():
  p=root/name;s=p.lstat();assert stat.S_ISREG(s.st_mode)and not p.is_symlink()and s.st_size==info['bytes'],name
  assert hashlib.sha256(p.read_bytes()).hexdigest()==info['sha256'],name
  assert bool(s.st_mode&0o111)==bool(info['mode']&0o111),name
-print(json.dumps({'ok':True,'frozen_programme_inputs_sha256':expected,'SDK_bytes_and_executable_modes_verified':len(sdk),'NPM_dependency_bytes_not_reconstructed_by_this_Go_unit_job':True,'scope':'native Linux unit and filesystem journal fixtures only; no installed Apache qualification','Main_changes':0,'all40_commercial':False}))
+print(json.dumps({'ok':True,'frozen_programme_inputs_sha256':expected,'SDK_bytes_and_executable_modes_verified':len(sdk),'NPM_dependency_bytes_not_reconstructed_by_this_Go_unit_job':True,'scope':'native Linux Memcached unit and filesystem contracts only; fresh installation qualification is separate','Main_changes':0,'all40_commercial':False}))
