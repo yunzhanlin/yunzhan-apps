@@ -8391,14 +8391,14 @@
       "sha256": "41c36f4de74d032a8fe8c83b4e2b9eb7ce0d3dee5ce129153c904bc083a0e451"
     },
     "internal/executor/load_balance_stream_nss.go": {
-      "bytes": 5352,
+      "bytes": 5372,
       "mode": 384,
-      "sha256": "70f5c3521648339d85492f1920d6396ac6281f65a3bc774a1fa1f2685abdb03d"
+      "sha256": "0484f6e4dda4dd839d6ac4e703cd24260daa5257553c01b750e7cc5d5f40680b"
     },
     "internal/executor/load_balance_stream_nss_groups_test.go": {
-      "bytes": 1318,
+      "bytes": 1381,
       "mode": 420,
-      "sha256": "0b2060e385b62ee232107bd6ecce651c855ae256d84d1faf87dc18d0fc7e98c2"
+      "sha256": "efcf66db431ed8c6f162d4127b89509e42e298e900a6b41826f2f8c0ac2bf968"
     },
     "internal/executor/load_balance_stream_nss_linux.go": {
       "bytes": 4143,
@@ -91947,5 +91947,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "e147a5c056331ba7cadfd094eaa7b03ec325c3c0bfee4418df7ebc61b560299c"
+  "inputs_sha256": "82a7fab4e2b27a71648dbdd984f1030316e5f2460162cc84262095bf6d38a062"
 }
