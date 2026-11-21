@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "panel-0.1.0-dev.proapps24loadbalancesystemd249candidate363-linux-amd64.tar.gz": "5adda84f97dff484f4d5a39401721b467ee9715934897d6e0c3111b6b224ded0",
+    "panel-0.1.0-dev.proapps24loadbalancesystemd249candidate363-linux-amd64.tar.gz.manifest": "82e0afd6792421729e0dbd4174fd32c94560526b9a24a231fb47ea49f2689b36",
+    "panel-0.1.0-dev.proapps24loadbalancesystemd249candidate363-linux-amd64.tar.gz.sig": "dc27a2eba76ff1d007a695fcd1f7c838f21186e7ae4a1124534f5b19e22d537e",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "3696d5b0fda8ecd483336bb650d592809d98898134f8b4c46a2673fafbd29c2c",
+    "load-balance-business.py": "7ca15d61c98d316468c5a8d0cf8ba104270d9b19587d47611a4ca794091489e0",
+    "cohort.json": "cee240b3a177ed03199157507fa25f07f5fa4172404c428951965b1557a2c428"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "b592e7dbf00bd59908a500292e76587abeba5f4c0a7f574924b0763c657bba50",
+  "version": "0.1.0-dev.proapps24loadbalancesystemd249candidate363"
+}
