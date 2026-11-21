@@ -63,7 +63,10 @@ func promoteRuntime(r runtimecatalog.Release, id, source string, manifest Runtim
 	if e = atomicWrite(filepath.Join(temp, ".panel-runtime.json"), b, 0644); e != nil {
 		return e
 	}
-	return os.Rename(temp, r.Prefix())
+	if e = os.Rename(temp, r.Prefix()); e != nil {
+		return e
+	}
+	return syncRuntimeDirs(filepath.Dir(r.Prefix()), filepath.Dir(filepath.Dir(r.Prefix())))
 }
 
 func installRedis(ctx context.Context, r runtimecatalog.Release, id string, add func(string) error) error {

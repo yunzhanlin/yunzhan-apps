@@ -271,7 +271,10 @@ func ensurePM2PrivateNode(ctx context.Context, dir string) error {
 	if err = copyBuildTree(source, stage); err != nil {
 		return err
 	}
-	return os.Rename(stage, prefix)
+	if err = os.Rename(stage, prefix); err != nil {
+		return err
+	}
+	return syncRuntimeDirs(filepath.Dir(prefix))
 }
 func (s *Service) installPureFTP(ctx context.Context) error {
 	if s.validateFTPRuntime() != nil {

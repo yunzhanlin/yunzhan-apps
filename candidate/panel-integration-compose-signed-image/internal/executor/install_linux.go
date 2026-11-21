@@ -521,6 +521,9 @@ func InstallJob(id string) (ret error) {
 	if e = os.Rename(temp, r.Prefix()); e != nil {
 		return e
 	}
+	if e = syncRuntimeDirs(parent, filepath.Dir(parent)); e != nil {
+		return e
+	}
 	return add("独立目录安装完成；精确版本与固定构建模块核对通过")
 }
 
@@ -854,7 +857,18 @@ func buildCommand(ctx context.Context, dir, logPath, name string, args ...string
 	return file.Sync()
 }
 func copyBuildTree(src, dest string) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, e error) error {
+	return copyBuildTreeWithSync(src, dest, (*os.File).Sync)
+}
+
+// A successful read/exec only sees the page cache. Persist every new file and
+// then its namespace before the caller can publish a runtime or report success.
+// This seam permits actual fsync failures to be exercised without global hooks.
+func copyBuildTreeWithSync(src, dest string, syncFile func(*os.File) error) error {
+	if syncFile == nil {
+		return errors.New("缺少构建文件落盘操作")
+	}
+	var directories []string
+	err := filepath.WalkDir(src, func(path string, d fs.DirEntry, e error) error {
 		if e != nil {
 			return e
 		}
@@ -864,7 +878,11 @@ func copyBuildTree(src, dest string) error {
 		}
 		target := filepath.Join(dest, rel)
 		if d.IsDir() {
-			return os.MkdirAll(target, 0755)
+			if e := os.MkdirAll(target, 0755); e != nil {
+				return e
+			}
+			directories = append(directories, target)
+			return nil
 		}
 		if d.Type()&os.ModeSymlink != 0 {
 			link, er := os.Readlink(path)
@@ -910,13 +928,43 @@ func copyBuildTree(src, dest string) error {
 		if e != nil {
 			return e
 		}
-		_, e = io.Copy(out, io.LimitReader(in, 256*1024*1024))
+		n, e := io.Copy(out, io.LimitReader(in, 256*1024*1024+1))
+		if e == nil && n != st.Size() {
+			e = errors.New("构建输出在复制期间改变，拒绝发布")
+		}
+		if e == nil {
+			e = syncFile(out)
+		}
 		ce := out.Close()
 		if e != nil {
 			return e
 		}
 		return ce
 	})
+	if err != nil {
+		return err
+	}
+	// Child entries must be committed before their parent directory. Include
+	// the containing directory so the pending tree itself is durable as well.
+	for i := len(directories) - 1; i >= -1; i-- {
+		path := filepath.Dir(dest)
+		if i >= 0 {
+			path = directories[i]
+		}
+		f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW|syscall.O_DIRECTORY, 0)
+		if err != nil {
+			return err
+		}
+		err = syncFile(f)
+		closeErr := f.Close()
+		if err != nil {
+			return err
+		}
+		if closeErr != nil {
+			return closeErr
+		}
+	}
+	return nil
 }
 
 type cappedLog struct {

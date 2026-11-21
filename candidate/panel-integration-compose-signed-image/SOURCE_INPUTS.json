@@ -5201,9 +5201,9 @@
       "sha256": "de04ad27514059b9b4ed027eed3d07a6203bb31a3e86f6a2f9487b2cf6fcb115"
     },
     "internal/executor/app_native_linux.go": {
-      "bytes": 45376,
+      "bytes": 45454,
       "mode": 384,
-      "sha256": "2b0d290b59150f8192e4a281f7a1fafc04849385b7510b01fae8d14cb216f2b2"
+      "sha256": "074944b1f54912e6899d6f070160b296fceb2cebb97f0bca297d31e1dbf06e43"
     },
     "internal/executor/app_network_linux.go": {
       "bytes": 3727,
@@ -7221,9 +7221,9 @@
       "sha256": "f743197ea86977c8349d50d3844db9ef6c1f75ad79d71c30670fe5e82f31436e"
     },
     "internal/executor/install_linux.go": {
-      "bytes": 32264,
+      "bytes": 33642,
       "mode": 384,
-      "sha256": "0cb8e826d5d6159ef55fa6db1f567001ccc056a9f1f3820b87725425ea4b70a6"
+      "sha256": "df0b24cad50a3cc382014b285c1d34e629aa17e404a5adec79246a686befd540"
     },
     "internal/executor/install_linux_test.go": {
       "bytes": 3987,
@@ -9626,9 +9626,9 @@
       "sha256": "cd428e7fae5d03a73ec3b655e42526f43e11125a217de7425f10669bff193f66"
     },
     "internal/executor/redis_node_install_linux.go": {
-      "bytes": 4495,
+      "bytes": 4611,
       "mode": 384,
-      "sha256": "84bad8303a7353517c2c32665438da7ec64c99389e52d6c37014589b494bac45"
+      "sha256": "1f7bb6d9a45288f8cc3248aea2d47f080c0395a72d715b6f8058a6a21786bb50"
     },
     "internal/executor/redis_other.go": {
       "bytes": 223,
@@ -9719,6 +9719,11 @@
       "bytes": 1220,
       "mode": 384,
       "sha256": "90f03f85a23bcf744fc38a7ad61f4083e7db6cc77d68cfe21f3832b7708a0222"
+    },
+    "internal/executor/runtime_build_durability_linux_test.go": {
+      "bytes": 3003,
+      "mode": 420,
+      "sha256": "94bf1fdd0af886455137afcd18c0c6fd8ffd058cc7bd0a3ec031982b8b5580e9"
     },
     "internal/executor/runtime_build_lock_native_linux_test.go": {
       "bytes": 5388,
@@ -91922,5 +91927,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "eef9d1e3c4b96390c77a8ea9f121a67986a152a60149acd026246d71e601a481"
+  "inputs_sha256": "02de96db8db1c7abeabc5665101a0ebce23e11a8b043eae152c0088452580805"
 }
