@@ -1,0 +1,8 @@
+{
+  "tag": "qa-loadbalanceprocexitcandidate373-20261121-qa1",
+  "payload_sha256": "d62716b9b700fc28a48c1708607059a44daa2b889a006d0b5f6faa68d5265b9b",
+  "cases_sha256": "69d7d06d4884fdc01b7c8d547b26186ba63f7915f01ebd47d2354297f62a3645",
+  "kvm_sha256": "4724a764d700e0773db14e341ffcbb42c2d4ca5f0d64ba5ab7228edb217922e4",
+  "browser_update_sha256": "ab668690e06a69d3d6274fb7e23c6b1e24caaaa9e15c74bcd81b319150158210",
+  "browser_cold_sha256": "ab668690e06a69d3d6274fb7e23c6b1e24caaaa9e15c74bcd81b319150158210"
+}
