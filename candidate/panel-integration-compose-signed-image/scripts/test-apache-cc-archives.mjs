@@ -305,3 +305,17 @@ test('actual Vue mixed-group retention keeps the original unknown outcome and or
  }});
  try{await settle();await t.logic.inspectRecovery(row);assert.equal(t.logic.recovery.value.snapshot.files['data.log'].gid,987);await t.logic.retainUnknown();assert.equal(posts,1);assert.equal(t.logic.inventory.value.archives[0].state,'retained-unknown');assert.equal(t.logic.inventory.value.archives[0].retained.archive.gid,987);assert.equal(t.logic.inventory.value.archives[0].retained.retention_intent.gid,0);assert.match(t.logic.receipt.value,/原归档结果仍未知/);}finally{t.stop();}
 });
+
+
+test('durable runtime publication cannot erase missing syncs or changed historical producer policy',()=>{
+ const current=readFileSync(new URL('../internal/executor/install_linux.go',import.meta.url),'utf8');
+ const original=beforeApacheBuildDependencyAdmission(current);
+ for(const altered of [
+  current.replace('e = syncFile(out)','e = nil'),
+  current.replace('err = syncFile(f)','err = nil'),
+  current.replace('syncRuntimeDirs(parent, filepath.Dir(parent))','syncRuntimeDirs(parent)'),
+  current.replace('n != st.Size()','n < st.Size()'),
+ ])assert.throws(()=>beforeApacheBuildDependencyAdmission(altered));
+ assert.notEqual(beforeApacheBuildDependencyAdmission(current.replace('return 4 * time.Hour','return 8 * time.Hour')),original);
+ assert(original.includes('_, e = io.Copy(out, io.LimitReader(in, 256*1024*1024))'));
+});

@@ -1,7 +1,7 @@
 from pathlib import Path
 import hashlib,json,stat
 root=Path('candidate/panel-integration-compose-signed-image');index=json.loads((root/'SOURCE_INPUTS.json').read_bytes())
-expected='02de96db8db1c7abeabc5665101a0ebce23e11a8b043eae152c0088452580805'
+expected='0a02e18a8b9d2b9785fca67ef32cbee6c8ce1561b7f83f83ef04c81e73c84823'
 assert index['format']==1 and index['inputs_sha256']==expected
 assert hashlib.sha256(json.dumps(index['files'],sort_keys=True,separators=(',',':')).encode()).hexdigest()==expected
 sdk={n:v for n,v in index['files'].items()if not n.startswith('web/node_modules/')}

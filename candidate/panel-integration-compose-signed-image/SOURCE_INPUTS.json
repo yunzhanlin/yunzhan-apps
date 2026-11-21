@@ -11941,9 +11941,9 @@
       "sha256": "9dc2f6ca5fc443eb4f0ed7d6b726381050525190d7d97e8f47c11b9d220bd20a"
     },
     "scripts/release-build-baseline.mjs": {
-      "bytes": 24352,
+      "bytes": 30048,
       "mode": 384,
-      "sha256": "41c4443c82da872fa4795479a8175225c87b1d5afeb208186d552c64934bca9d"
+      "sha256": "9faeb927cadfbb34a0e8f6d4d8f6edce406941edbeb03d06f010dd5f1e03b17a"
     },
     "scripts/test-analytics-geography.mjs": {
       "bytes": 4329,
@@ -11996,9 +11996,9 @@
       "sha256": "5869167eacdffb950f6db4a14490254e2e4821be9ea183204ac1fe9d0e51f34e"
     },
     "scripts/test-apache-cc-archives.mjs": {
-      "bytes": 35161,
+      "bytes": 35995,
       "mode": 384,
-      "sha256": "7876b05253adc440aa8a6024ce5a6c70ed6c8837870b0edc1c16b27d0fc383ba"
+      "sha256": "ca92aaa735d099078ab0d3bf560ee466791104bb2ff203e89f54ae0beae22053"
     },
     "scripts/test-apache-cc.mjs": {
       "bytes": 5654,
@@ -91927,5 +91927,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "02de96db8db1c7abeabc5665101a0ebce23e11a8b043eae152c0088452580805"
+  "inputs_sha256": "0a02e18a8b9d2b9785fca67ef32cbee6c8ce1561b7f83f83ef04c81e73c84823"
 }
