@@ -1,0 +1,8 @@
+{
+  "browser_cold_sha256": "de8f6ee170732b0c30d1279812bc886ccd82fc9e473db4543fcd194466d7c070",
+  "browser_update_sha256": "de8f6ee170732b0c30d1279812bc886ccd82fc9e473db4543fcd194466d7c070",
+  "cases_sha256": "3a5cbea0d3aece56b1c8f587385415b4feb8616fb52751d1984080b187569dda",
+  "kvm_sha256": "480f39a6495d43ae146b51ce4e3c97b84d992f39da5a58f8d43d37dad6677cff",
+  "payload_sha256": "2df5ae5d45eb3d72ca3b0e2590ee084addf5c0a6d9566fb80bd785e07df312b7",
+  "tag": "qa-loadbalanceplatformcandidate350-20261121-qa1"
+}
