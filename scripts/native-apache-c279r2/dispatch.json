@@ -1,0 +1,12 @@
+{
+  "Main_changed": false,
+  "all40_commercial": false,
+  "browser_cold_sha256": "38810bf90b7cb0742bd1fd949dd368f6239a8b95ecdbf3f80e4f140d37acee3f",
+  "browser_update_sha256": "021fd9916e35c033305f27379935abc773f1cf69b9d9ae3a6169622a5896eaf9",
+  "cases_sha256": "2207f5bbcb63d3509c2188bd9211844d8802f440d0208b39271ccb3261303c18",
+  "kvm_sha256": "aa6ca756992b4bf8a468958dab59a74ee626049282b904355801a5d586382067",
+  "payload_sha256": "773c5f07da8f3296eebecc5bf9c00a48b8d6d38e83f0898df9962a5756b41ded",
+  "previous_tag": "qa-pm2archivecandidate232r2-20261120-qa1",
+  "source_inputs_sha256": "eef9d1e3c4b96390c77a8ea9f121a67986a152a60149acd026246d71e601a481",
+  "tag": "qa-apache271candidate265r6-20261121-qa1"
+}
