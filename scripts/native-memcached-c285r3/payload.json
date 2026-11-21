@@ -1,0 +1,14 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "fe9b1cb9e7bfe609f66a654c4c568e389d5a477b604097afd91de5ef611acd8f",
+    "panel-0.1.0-dev.proapps24apache271candidate265r8-linux-amd64.tar.gz": "35531a7739fbc5b2edc474c5f31b333f952d5766782ba31c9fb17877052a9bd2",
+    "panel-0.1.0-dev.proapps24apache271candidate265r8-linux-amd64.tar.gz.manifest": "2b00e2c2146f49e6b8cbf828eeed12de972b8010c0b01934eb187e97c719f82a",
+    "panel-0.1.0-dev.proapps24apache271candidate265r8-linux-amd64.tar.gz.sig": "a23d4e52ed374c496ba96bef7ee671f20288b99a84fc6e29a7d6b03899858652",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "0a02e18a8b9d2b9785fca67ef32cbee6c8ce1561b7f83f83ef04c81e73c84823",
+  "version": "0.1.0-dev.proapps24apache271candidate265r8"
+}
