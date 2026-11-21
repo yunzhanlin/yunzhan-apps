@@ -12021,9 +12021,9 @@
       "sha256": "88def3a141999ec93cfdee52c8abffe986518d417f69fb137afc57b7c46997b8"
     },
     "scripts/test-apache-body-build.mjs": {
-      "bytes": 6658,
+      "bytes": 6667,
       "mode": 384,
-      "sha256": "f2a93eeb770e5672e6eaf1692f7be8a2fdf4763e1e4fb366572e569b9363ac97"
+      "sha256": "0cd69af6d873c2dc10799bd666b044fead1e32d59a4a463c3df9db6a32cd28ee"
     },
     "scripts/test-apache-body-policy.mjs": {
       "bytes": 2960,
@@ -91056,9 +91056,9 @@
       "sha256": "07db36132b1a0c183574a333f1d31f6238d74921a643236fd87508f9025d0863"
     },
     "web/src/ApacheBodyBuild.vue": {
-      "bytes": 9476,
+      "bytes": 9485,
       "mode": 384,
-      "sha256": "354fd2dc02c334393e5bba821185f8bc74f58162d6623bc95d9cbfcea9c86d7b"
+      "sha256": "a735e12145208ed05435539b65fed3de39436363c28d09b9e301e48e03c4bfc7"
     },
     "web/src/ApacheBodyEvents.vue": {
       "bytes": 7103,
@@ -91967,5 +91967,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "5e51a17605fc0c32214e520533e246d9c22b8e7649ba12595768be867ad3f4ae"
+  "inputs_sha256": "b223c28247d9d20e50a356643a9744a9ab174068dd567a2c57f15c342934c15f"
 }

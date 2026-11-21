@@ -9,7 +9,7 @@ const rows=ref<ApacheBodyBuild[]>([]),selected=ref<ApacheBodyBuild>(),known=ref(
 const error=ref(""),receipt=ref(""),pendingKey=ref("");
 let epoch=0,disposed=false,timer:ReturnType<typeof setTimeout>|undefined,observingSince=0;
 const current=(ticket:number)=>!disposed && props.active && ticket===epoch;
-const label=(state:string)=>({queued:"排队",running:"构建中",ready:"本机程序已验证（未启用）",failed:"失败，证据保留",needs_attention:"需核对，不能启用",retained_unsupported:"旧版程序保留，当前不能启用"}[state] || "状态待核对");
+const label=(state:string)=>({queued:"排队",running:"构建中",ready:"本机程序已验证",failed:"失败，证据保留",needs_attention:"需核对，不能启用",retained_unsupported:"旧版程序保留，当前不能启用"}[state] || "状态待核对");
 function stopObserving(){if(timer)clearTimeout(timer);timer=undefined;}
 async function refresh(){
   if(!props.active || reading.value || writing.value)return;
@@ -39,7 +39,7 @@ async function poll(id:string){
     if(!apacheBodyBuildRow(out,id))throw Error("构建响应身份或四项验证无法核实");
     selected.value=out;
     if(["queued","running"].includes(out.state))schedule(id);
-    else{if(out.state==="ready")receipt.value="ABI、完整性、ELF 加固和编译器回收已核实；没有安装应用或启用网站。";await refresh();}
+    else{if(out.state==="ready")receipt.value="ABI、完整性、ELF 加固和编译器回收已核实；本次构建未改动应用与网站策略。";await refresh();}
   }catch(e){if(current(ticket)){error.value=`构建结果暂不可核实，未宣称完成：${(e as Error).message}`;stopObserving();}}
 }
 async function build(){
@@ -64,7 +64,7 @@ async function cancel(){
     const out=await props.api<unknown>(`/software/apache-waf/body-engine/jobs/${id}/cancel`,"POST",{},randomId());
     if(!current(ticket))return;
     if(!apacheBodyBuildRow(out,id) || !["failed","ready"].includes(out.state))throw Error("取消回执尚不可核实");
-    selected.value=out;receipt.value=out.state==="ready"?"任务已完成验证，没有启用网站。":"专用任务已停止；失败记录、请求和目录保留，同一任务不能覆盖重试。";
+    selected.value=out;receipt.value=out.state==="ready"?"构建已完成验证；本次操作未改动网站策略。":"专用任务已停止；失败记录、请求和目录保留，同一任务不能覆盖重试。";
   }catch(e){if(current(ticket))error.value=`未确认构建已停止：${(e as Error).message}。请刷新核对，不会显示取消成功。`;}
   finally{if(current(ticket))writing.value=false;}
   if(current(ticket))await refresh();
