@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "panel-0.1.0-dev.proapps24loadbalancecoldrestorecandidate323-linux-amd64.tar.gz": "c85e541b9e85e6cd1ff03588d1fc5bd5bd8e220162b43e20847b7cd39ef0a760",
+    "panel-0.1.0-dev.proapps24loadbalancecoldrestorecandidate323-linux-amd64.tar.gz.manifest": "a4c7a41acae529da18f164a48d2e6088f9719d28adb4121cc00ee3b4e1d3dbcf",
+    "panel-0.1.0-dev.proapps24loadbalancecoldrestorecandidate323-linux-amd64.tar.gz.sig": "f07598026666ea1e42220e8fa0c8cd0fabdc8be8c4f9573ba68221cf9f2b762f",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "e5f295c18e29dff2d8007bddb5b21073cff9e4becbb82559d8a742f5f37c8863",
+    "load-balance-business.py": "ee3f329e5ba4dc2c4d7b28319950281e1e0dced6c063d0c401015d67113d0a63",
+    "cohort.json": "cee240b3a177ed03199157507fa25f07f5fa4172404c428951965b1557a2c428"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "0bf8fde56c6a3b0e6ce30cae389a57c6b4b91106a8f4a049b245f3425bd74e07",
+  "version": "0.1.0-dev.proapps24loadbalancecoldrestorecandidate323"
+}
