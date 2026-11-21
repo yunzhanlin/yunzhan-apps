@@ -1,0 +1,60 @@
+{
+  "source_head": "e3f2d126a101ab4267a5d729c98dcf9976e9576c",
+  "source_inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3",
+  "source_sdk_tree": "558c9c8f63bbb04c6ddc9dad8ad0aa14c98e517f",
+  "version": "0.1.0-dev.proapps24memcachedcontainerdcandidate286",
+  "release_id": 453418341,
+  "tag": "qa-memcachedcontainerdcandidate286-20261121-qa1",
+  "release_assets": {
+    "memcached-containerd-signed-release.py": {
+      "id": 774316540,
+      "bytes": 12509,
+      "sha256": "cdb7a55e7420dcccf95644a6891e26dac6388cd2a46439df7c11baa346155c8b"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz": {
+      "id": 774316742,
+      "bytes": 24507520,
+      "sha256": "94a9a9b16a17edc1a21dd01ae88aa7c2467de531b55969109f67a6ff8fc86e0e"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz.manifest": {
+      "id": 774317897,
+      "bytes": 190,
+      "sha256": "d7cf4c3ae4956f09c7aeba2c9dc60a56fddb71de1de67f3e85ad62d153103b6c"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz.sig": {
+      "id": 774318252,
+      "bytes": 64,
+      "sha256": "3447b243d231876aea069bcb0ec3d499ab966c00aa15f3fb5b934b9aa827fcdc"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-arm64.tar.gz": {
+      "id": 774318468,
+      "bytes": 22698478,
+      "sha256": "e4b4f3a11ff25812699545ff289a2d6104b54cf90668a87b715eb32ddae01f7c"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-arm64.tar.gz.manifest": {
+      "id": 774319136,
+      "bytes": 190,
+      "sha256": "204a343d25f4ce0f80be005ef6202267178bae105f3dca8679c91c51272c9ccd"
+    },
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-arm64.tar.gz.sig": {
+      "id": 774319442,
+      "bytes": 64,
+      "sha256": "af547a35ba71713b227a5855b41ea1e64ffa4904d0d4ccb56afd5b933c3665c2"
+    },
+    "release-signing-dev.pub": {
+      "id": 774319679,
+      "bytes": 113,
+      "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+    }
+  },
+  "cohorts": {
+    "amd64": {
+      "archive": "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz",
+      "archive_entries": 213
+    },
+    "arm64": {
+      "archive": "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-arm64.tar.gz",
+      "archive_entries": 213
+    }
+  }
+}

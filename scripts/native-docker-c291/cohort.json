@@ -1,0 +1,44 @@
+{
+  "source_head": "e3f2d126a101ab4267a5d729c98dcf9976e9576c",
+  "source_inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3",
+  "version": "0.1.0-dev.proapps24memcachedcontainerdcandidate286",
+  "native_fixture_parent": "748597fcb16ea7f6a1ef14a990ac797c529fce60",
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "items": {
+    "docker-manager": {
+      "id": "docker-manager",
+      "name": "Docker Manager",
+      "category": "deployment",
+      "version": "1-compat2",
+      "summary": "\u7ba1\u7406 Docker \u5bb9\u5668\u3001\u955c\u50cf\u3001\u7f51\u7edc\u3001\u5377\u4e0e Compose\uff0c\u67e5\u770b\u8fd0\u884c\u4e2d\u5bb9\u5668\u7684 CPU\u3001\u5185\u5b58\u3001\u7f51\u7edc\u3001\u78c1\u76d8\u8bfb\u5199\u548c\u8fdb\u7a0b\u6570\u3002",
+      "stage": "ready",
+      "risk": "privileged",
+      "provider": "runtime",
+      "target": "docker-auto",
+      "manage_route": "docker",
+      "capabilities": [
+        "\u5bb9\u5668\u4e0e\u955c\u50cf",
+        "\u7f51\u7edc\u4e0e\u5377",
+        "Compose",
+        "\u975e\u7279\u6743\u7ea6\u675f",
+        "\u8fd0\u884c\u4e2d\u5bb9\u5668\u8d44\u6e90\u91c7\u6837"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/docker-manager/1-compat2/manifest.json",
+      "sha256": "5c72ab50b7e2a19fde5880d4a772badf77f887f5d0518fbffb672bb132e19764"
+    }
+  },
+  "app_scope": "Docker Manager current40 signed catalogue; retired PHP packages never installed",
+  "Main_changed": false,
+  "payload_files": {
+    "scripts/native-docker-c291/dispatch.json": "ac2c1a757be8d58386f2d6d44acb1f0be8f9c689595db097d00795842a992af1",
+    "scripts/native-docker-c291/original-signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "scripts/native-docker-c291/recipient.pem": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "scripts/native-docker-c291/prepare-fresh-docker.py": "3f14b91ef53e8075c6e868417719a121ecddefa954a28ec1486caa4f262af526",
+    "scripts/native-docker-c291/download.py": "5263277b5cc6e92f01f070c9f8b94c1782171af16febf363fa8ec127acc51223",
+    "scripts/native-docker-c291/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
+    "scripts/native-docker-c291/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
+    "scripts/native-docker-c291/docker-business.py": "a7c44837ed2b125c9f3fd672509aba2a4b6449ff44ebfc73871d5f44b94ae571",
+    "scripts/native-docker-c291/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
+    ".github/workflows/docker-c291-current-native.yml": "fbc85f22051b6874d3a623aa52556c9a886b81998fe3195dd36e6a34fb56d7d4"
+  }
+}
