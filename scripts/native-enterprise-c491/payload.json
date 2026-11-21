@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "79d677c1a82b1cc9fa12d74461b72f6723b9943d1a65e5cffbd704a794dddadb",
+    "integrity-business.py": "3ad417efb804bf4715a5756945e1d63b2b76cfa2c66f4fab85f92e234b7fa839",
+    "cohort.json": "607ec97334da1f31059ded6370f0b4f1e9736a64a6ef49be6beadca92f70d44d",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz": "24faf1d61b9a7f3c830d842dd882567dbd25ebbe9499f1b73541d5c4f6f5a075",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.manifest": "81bcf0fe27a1848171399c004ebf23d6ca0379b491bc16a1295cec816a652a8d",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.sig": "cb1ed4cc049fb64dcf4fd90790d8cb12054aaa3c729bf63c1d5f780f3ef14a5a"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "b223c28247d9d20e50a356643a9744a9ab174068dd567a2c57f15c342934c15f",
+  "version": "0.1.0-dev.proapps24apachebuildstatuscandidate477"
+}
