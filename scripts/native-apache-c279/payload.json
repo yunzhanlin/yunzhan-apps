@@ -1,0 +1,26 @@
+{
+  "OS_case": {
+    "architecture": "amd64",
+    "distribution": "ubuntu",
+    "hostname": "c279-apache-ubuntu22-amd64",
+    "platform": "ubuntu-22.04",
+    "version_id": "22.04"
+  },
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "5f2b8e229a3a974da3e76761367617562ac4f5b1e49647734feed31061e17f09",
+    "panel-0.1.0-dev.proapps24apache271candidate265r6-linux-amd64.tar.gz": "5eedb61cb2907cbf878feb290564e8ad5b78f1d3cc76853db11ccdcd9da7ae5a",
+    "panel-0.1.0-dev.proapps24apache271candidate265r6-linux-amd64.tar.gz.manifest": "04e7a15feb6ef2d08bc56e2cb08117b94f9314b4119927161b1349485a7ee2fd",
+    "panel-0.1.0-dev.proapps24apache271candidate265r6-linux-amd64.tar.gz.sig": "c3c98872438de2a4fa363ab5fec0192bc6b0014ade77a339a39cd17f9c4853a0",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz": "9b17b7481cea5c393dde9600748a07b0dfee4bb3f0e2cc4e9fc1f6982c02b23c",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.manifest": "e6f32d3ca38feab097f994e7634917f3fb1aa6454fa34f954777f91f31e29c51",
+    "panel-0.1.0-dev.proapps24pm2archivecandidate232r2-linux-amd64.tar.gz.sig": "3a069463b69fef2f686fae1174d16f9e555f535769a8b83d177b85c6048fd473",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "previous_source_inputs_sha256": "7fcf5fe021cefe421ecf1da4c8ac1c5c81e95b075416dbb79dbd11dc92d00830",
+  "previous_version": "0.1.0-dev.proapps24pm2archivecandidate232r2",
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "eef9d1e3c4b96390c77a8ea9f121a67986a152a60149acd026246d71e601a481",
+  "version": "0.1.0-dev.proapps24apache271candidate265r6"
+}
