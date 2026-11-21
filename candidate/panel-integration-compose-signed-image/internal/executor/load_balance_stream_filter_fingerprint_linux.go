@@ -255,9 +255,17 @@ func streamFilterKernelProgram(ctx context.Context, id uint32, ingress bool, all
 		original.MapCount < 1 || original.MapCount > streamFilterMaxMaps || original.LoadTime == 0 {
 		return "", loadbalancestream.ErrService
 	}
-	name, valid := streamFilterObjectName(original.Name)
-	if !valid {
-		return "", loadbalancestream.ErrService
+	// Older systemd249 leaves the kernel programme name entirely zero.
+	// Its anonymous identity is retained, not renamed; the complete map layout,
+	// exact allowed prefix set and every translated instruction remain mandatory
+	// in streamFilterProgramSHA256 and streamFilterAnonymousPolicyMatches.
+	name := ""
+	if original.Name != ([16]byte{}) {
+		var valid bool
+		name, valid = streamFilterObjectName(original.Name)
+		if !valid {
+			return "", loadbalancestream.ErrService
+		}
 	}
 	code := make([]byte, original.XlatedBytes)
 	ids := make([]uint32, original.MapCount)

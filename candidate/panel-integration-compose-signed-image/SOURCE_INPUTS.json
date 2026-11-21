@@ -8141,14 +8141,14 @@
       "sha256": "90ba22fb184b8ab26aeb622976e9a5753707ac89679ec5aef65268c484ca6d10"
     },
     "internal/executor/load_balance_stream_filter_fingerprint.go": {
-      "bytes": 10508,
+      "bytes": 10822,
       "mode": 384,
-      "sha256": "50cb52629d8d3cd1daecdc2f759273656a0f3860a0634b89da86899bbb5e7e7b"
+      "sha256": "b53ff28e3b4571cf2c8710044578a8ca107429ae8d8a645da91074b3c7692816"
     },
     "internal/executor/load_balance_stream_filter_fingerprint_linux.go": {
-      "bytes": 12535,
+      "bytes": 12905,
       "mode": 384,
-      "sha256": "c62d64487c6bccf764640a9b100b36dc19c25212a9575fd39cf5a1dc10e80f71"
+      "sha256": "0a4aa8a7b1f83d148d73c1ca45e85ec197275d3410da689abd394d52799d8f16"
     },
     "internal/executor/load_balance_stream_filter_fingerprint_linux_test.go": {
       "bytes": 8312,
@@ -8589,6 +8589,11 @@
       "bytes": 719,
       "mode": 384,
       "sha256": "67456a2e317a30e1f2439f39bce575b8f6ea430da703e4d5e08b98a2f48037d2"
+    },
+    "internal/executor/load_balance_stream_systemd249_original_test.go": {
+      "bytes": 5358,
+      "mode": 420,
+      "sha256": "1abebd3bb47537cf4b16b77ae96eb02a93b4752fe58199353cc2e19147b18e91"
     },
     "internal/executor/load_balance_stream_upgrade_completion_linux_test.go": {
       "bytes": 6003,
@@ -10269,6 +10274,11 @@
       "bytes": 8971,
       "mode": 384,
       "sha256": "aa043bc10cd8dc42e5337eb87de488f3e1a05748f060847fbee7619f4c4978b4"
+    },
+    "internal/executor/testdata/stream-systemd249-original-kernel-arm64.json": {
+      "bytes": 10030,
+      "mode": 420,
+      "sha256": "bff591f65011ff3789e1f2aae47f4a9e59e8a406d436238e5638c75c051e0938"
     },
     "internal/executor/tls_default_rejection.go": {
       "bytes": 2054,
@@ -91947,5 +91957,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "82a7fab4e2b27a71648dbdd984f1030316e5f2460162cc84262095bf6d38a062"
+  "inputs_sha256": "b592e7dbf00bd59908a500292e76587abeba5f4c0a7f574924b0763c657bba50"
 }

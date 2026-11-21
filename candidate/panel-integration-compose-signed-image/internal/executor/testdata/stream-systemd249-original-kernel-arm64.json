@@ -1,0 +1,286 @@
+{
+  "architecture": "arm64",
+  "format": 1,
+  "original_observation_sha256": "909694367aa2a97571a93c5dcf4ab275cc5f47181eb59c872ef354e5c931fb1f",
+  "programs": [
+    {
+      "ingress": true,
+      "original": {
+        "end": {
+          "fields": {
+            "flags": 1,
+            "id": 53,
+            "ifindex": 0,
+            "jited_bytes": 508,
+            "jited_code": 0,
+            "load_time": 18109176300,
+            "map_count": 3,
+            "map_ids": 0,
+            "name": "",
+            "tag": "6f666c4ddf06365e",
+            "type": 8,
+            "uid": 0,
+            "xlated_bytes": 576,
+            "xlated_code": 0
+          },
+          "returned_info_bytes": 88
+        },
+        "fields": {
+          "flags": 1,
+          "id": 53,
+          "ifindex": 0,
+          "jited_bytes": 508,
+          "jited_code": 0,
+          "load_time": 18109176300,
+          "map_count": 3,
+          "map_ids": 0,
+          "name": "",
+          "tag": "6f666c4ddf06365e",
+          "type": 8,
+          "uid": 0,
+          "xlated_bytes": 576,
+          "xlated_code": 0
+        },
+        "maps": [
+          {
+            "entries": [
+              {
+                "key": "080000007f000000",
+                "value": "0100000000000000"
+              }
+            ],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 1,
+              "id": 5,
+              "ifindex": 0,
+              "key_bytes": 8,
+              "max_entries": 1,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 11,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          },
+          {
+            "entries": [
+              {
+                "key": "8000000000000000000000000000000000000001",
+                "value": "0100000000000000"
+              }
+            ],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 1,
+              "id": 6,
+              "ifindex": 0,
+              "key_bytes": 20,
+              "max_entries": 1,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 11,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          },
+          {
+            "entries": [],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 0,
+              "id": 7,
+              "ifindex": 0,
+              "key_bytes": 4,
+              "max_entries": 2,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 2,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          }
+        ],
+        "returned_info_bytes": 88,
+        "second": {
+          "fields": {
+            "flags": 1,
+            "id": 53,
+            "ifindex": 0,
+            "jited_bytes": 508,
+            "jited_code": 0,
+            "load_time": 18109176300,
+            "map_count": 3,
+            "map_ids": 281473530726416,
+            "name": "",
+            "tag": "6f666c4ddf06365e",
+            "type": 8,
+            "uid": 0,
+            "xlated_bytes": 576,
+            "xlated_code": 187651146307952
+          },
+          "returned_info_bytes": 88
+        },
+        "translated_instructions": "bf160000000000006967b00000000000b40800000000000055070e0008000000bf61000000000000b40200000c000000bfa300000000000007030000fcffffffb404000004000000850000004007c50018110000050000000000000000000000bfa200000000000007020000f8ffffff62020000200000008500000050c603001500010000000000440800000100000055070e0086dd0000bf61000000000000b402000008000000bfa300000000000007030000f0ffffffb404000010000000850000004007c50018110000060000000000000000000000bfa200000000000007020000ecffffff62020000800000008500000050c60300150001000000000044080000010000004408000002000000b7000000010000005508010002000000b7000000000000001500210000000000b700000000000000630afcff00000000bfa200000000000007020000fcffffff1811000007000000000000000000000007010000100100006120000000000000350003000200000067000000030000000f100000000000000500010000000000b7000000000000001500020000000000b701000001000000db10000000000000b700000001000000630afcff00000000bfa200000000000007020000fcffffff1811000007000000000000000000000007010000100100006120000000000000350003000200000067000000030000000f100000000000000500010000000000b70000000000000015000200000000006161700000000000db10000000000000b7000000010000009500000000000000"
+      }
+    },
+    {
+      "ingress": false,
+      "original": {
+        "end": {
+          "fields": {
+            "flags": 1,
+            "id": 52,
+            "ifindex": 0,
+            "jited_bytes": 508,
+            "jited_code": 0,
+            "load_time": 18109099425,
+            "map_count": 3,
+            "map_ids": 0,
+            "name": "",
+            "tag": "c63ee8a5a5b05d4a",
+            "type": 8,
+            "uid": 0,
+            "xlated_bytes": 576,
+            "xlated_code": 0
+          },
+          "returned_info_bytes": 88
+        },
+        "fields": {
+          "flags": 1,
+          "id": 52,
+          "ifindex": 0,
+          "jited_bytes": 508,
+          "jited_code": 0,
+          "load_time": 18109099425,
+          "map_count": 3,
+          "map_ids": 0,
+          "name": "",
+          "tag": "c63ee8a5a5b05d4a",
+          "type": 8,
+          "uid": 0,
+          "xlated_bytes": 576,
+          "xlated_code": 0
+        },
+        "maps": [
+          {
+            "entries": [
+              {
+                "key": "080000007f000000",
+                "value": "0100000000000000"
+              }
+            ],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 1,
+              "id": 5,
+              "ifindex": 0,
+              "key_bytes": 8,
+              "max_entries": 1,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 11,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          },
+          {
+            "entries": [
+              {
+                "key": "8000000000000000000000000000000000000001",
+                "value": "0100000000000000"
+              }
+            ],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 1,
+              "id": 6,
+              "ifindex": 0,
+              "key_bytes": 20,
+              "max_entries": 1,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 11,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          },
+          {
+            "entries": [],
+            "fields": {
+              "btf_id": 0,
+              "btf_key_id": 0,
+              "btf_value_id": 0,
+              "btf_vmlinux_id": 0,
+              "btf_vmlinux_value_id": 0,
+              "extra": 0,
+              "flags": 0,
+              "id": 8,
+              "ifindex": 0,
+              "key_bytes": 4,
+              "max_entries": 2,
+              "name": "",
+              "netns_device": 0,
+              "netns_inode": 0,
+              "type": 2,
+              "value_bytes": 8
+            },
+            "returned_info_bytes": 80
+          }
+        ],
+        "returned_info_bytes": 88,
+        "second": {
+          "fields": {
+            "flags": 1,
+            "id": 52,
+            "ifindex": 0,
+            "jited_bytes": 508,
+            "jited_code": 0,
+            "load_time": 18109099425,
+            "map_count": 3,
+            "map_ids": 281473530726416,
+            "name": "",
+            "tag": "c63ee8a5a5b05d4a",
+            "type": 8,
+            "uid": 0,
+            "xlated_bytes": 576,
+            "xlated_code": 187651146314864
+          },
+          "returned_info_bytes": 88
+        },
+        "translated_instructions": "bf160000000000006967b00000000000b40800000000000055070e0008000000bf61000000000000b402000010000000bfa300000000000007030000fcffffffb404000004000000850000004007c50018110000050000000000000000000000bfa200000000000007020000f8ffffff62020000200000008500000050c603001500010000000000440800000100000055070e0086dd0000bf61000000000000b402000018000000bfa300000000000007030000f0ffffffb404000010000000850000004007c50018110000060000000000000000000000bfa200000000000007020000ecffffff62020000800000008500000050c60300150001000000000044080000010000004408000002000000b7000000010000005508010002000000b7000000000000001500210000000000b700000000000000630afcff00000000bfa200000000000007020000fcffffff1811000008000000000000000000000007010000100100006120000000000000350003000200000067000000030000000f100000000000000500010000000000b7000000000000001500020000000000b701000001000000db10000000000000b700000001000000630afcff00000000bfa200000000000007020000fcffffff1811000008000000000000000000000007010000100100006120000000000000350003000200000067000000030000000f100000000000000500010000000000b70000000000000015000200000000006161700000000000db10000000000000b7000000010000009500000000000000"
+      }
+    }
+  ],
+  "scope": "Exact measured original Ubuntu22 systemd249 kernel programme fields, instructions and maps only; original complete raw observation retained separately"
+}

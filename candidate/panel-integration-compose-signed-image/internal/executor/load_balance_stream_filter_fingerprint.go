@@ -122,16 +122,23 @@ func streamFilterProgramSHA256(p streamFilterProgram, ingress bool) (string, err
 	if ingress {
 		name = "sd_fw_ingress"
 	}
-	if p.ID == 0 || p.Type != 8 || p.UID != 0 || p.Flags != 1 || p.Name != name ||
+	if p.ID == 0 || p.Type != 8 || p.UID != 0 || p.Flags != 1 || (p.Name != name && p.Name != "") ||
 		p.Tag == ([8]byte{}) || len(p.Instructions) < 8 || len(p.Instructions) > streamFilterMaxInstructions ||
 		len(p.Instructions)%8 != 0 || len(p.Maps) < 1 || len(p.Maps) > streamFilterMaxMaps {
 		return "", loadbalancestream.ErrService
 	}
-	// systemd 252 used anonymous maps for its named ingress/egress programs.
+	// systemd249/252 use anonymous maps for their original programmes.
 	// Accept only its complete fixed layout for this unit's policy: one
 	// IPv4 and one IPv6 allow trie, plus the directional accounting array.
 	// Do not normalize names, accept mixed profiles, or accept other maps.
 	anonymous := p.Maps[0].Name == ""
+	// systemd249 exposes unnamed programmes as well as unnamed maps. Accept
+	// only the same complete closed three-map policy below; never substitute
+	// an expected name, accept named/mixed maps, or omit instruction bytes.
+	if p.Name == "" && !anonymous {
+		return "", loadbalancestream.ErrService
+	}
+
 	shapes := map[[2]uint32]bool{}
 	for _, m := range p.Maps {
 		if (m.Name == "") != anonymous {
