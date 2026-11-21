@@ -1,0 +1,56 @@
+name: Apache C420 native dual architecture source budget integrity and idle regression
+on:
+  push:
+    branches: [codex/apache-c420-source-budget]
+    paths: [.github/workflows/apache-c420-source-budget.yml]
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: |
+            candidate/panel-integration-compose-signed-image
+            scripts/qa-apache-c420
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.2
+          cache: false
+      - name: Verify every frozen candidate SDK source byte and executable mode
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/c420-original"
+          python3 -I -B scripts/qa-apache-c420/verify-inputs.py > "$RUNNER_TEMP/c420-original/source-proof.json"
+      - name: Actual native source streaming digest idle cancellation and current Apache budget
+        working-directory: candidate/panel-integration-compose-signed-image
+        env:
+          GOTOOLCHAIN: local
+          CGO_ENABLED: '0'
+          GOMAXPROCS: '2'
+          GOFLAGS: -p=2
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/c420-original"
+          uname -m > "$out/native-architecture.txt"
+          go version > "$out/native-Go-version.txt"
+          go test ./internal/runtimecatalog -count=1 -v > "$out/runtimecatalog.stdout" 2>&1
+          go test -c ./internal/executor -o "$RUNNER_TEMP/c420-executor.test"
+          sha256sum "$RUNNER_TEMP/c420-executor.test" > "$out/executor-test.sha256"
+          "$RUNNER_TEMP/c420-executor.test" -test.run '^(TestRuntimeSource|TestPHPSourceResponseTimeout|TestPHPSecuritySourceGuard)' -test.v -test.timeout 120s > "$out/source-native.stdout" 2>&1
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c420-source-native-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c420-original/
+          if-no-files-found: error
+          retention-days: 14

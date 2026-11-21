@@ -7226,9 +7226,9 @@
       "sha256": "f743197ea86977c8349d50d3844db9ef6c1f75ad79d71c30670fe5e82f31436e"
     },
     "internal/executor/install_linux.go": {
-      "bytes": 33642,
+      "bytes": 33992,
       "mode": 384,
-      "sha256": "df0b24cad50a3cc382014b285c1d34e629aa17e404a5adec79246a686befd540"
+      "sha256": "0f9bb8e78361015a291e7b4bb173dfcf25af82610a57b59775c4f191c1a82560"
     },
     "internal/executor/install_linux_test.go": {
       "bytes": 3987,
@@ -9926,9 +9926,9 @@
       "sha256": "3632405512aa9c0670e4c0e6bed106383e677c04df89e25b2bdb8ebdfe661c3a"
     },
     "internal/executor/runtime_source_download_linux_test.go": {
-      "bytes": 14070,
+      "bytes": 15135,
       "mode": 384,
-      "sha256": "eb7bfbcd782853d34661e6c4c58d7ac3e713f4e036acd7ba37b01bd68ca12ea9"
+      "sha256": "9b3c2bd7243a1b86158bf75bec4fd8354dc47b51e00701826c9782f2058db48f"
     },
     "internal/executor/runtime_version_output_linux.go": {
       "bytes": 3405,
@@ -91967,5 +91967,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "00b06c3f1793b60fc41e50256d99fc2211a2a4899d11390ac059434816e6e01a"
+  "inputs_sha256": "00cd29e0b186de2087fc34f9d2e9b366223f573215a703c1b374b7a81ca96fdf"
 }

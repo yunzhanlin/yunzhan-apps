@@ -22,7 +22,7 @@ import (
 )
 
 func TestRuntimeSourceDownloadOfficialArchiveBudget(t *testing.T) {
-	r, ok := runtimecatalog.Find("apache-2.4.68")
+	r, ok := runtimecatalog.Find(runtimecatalog.ApacheCurrentID)
 	if !ok {
 		t.Fatal("catalogue absent")
 	}
@@ -35,12 +35,12 @@ func TestRuntimeSourceDownloadOfficialArchiveBudget(t *testing.T) {
 					t.Fatal("identity or idle policy changed")
 				}
 				if calls == 1 {
-					if url != r.URL || l.Total != 8*time.Minute {
+					if url != r.URL || l.Total != 20*time.Minute {
 						t.Fatal("primary budget changed")
 					}
 					return sourceHTTPError{Status: status}
 				}
-				if calls != 2 || url != runtimecatalog.SourceArchiveURL(r) || l.Total != 25*time.Minute {
+				if calls != 2 || url != runtimecatalog.SourceArchiveURL(r) || l.Total != 20*time.Minute {
 					t.Fatal("unreviewed fallback/budget")
 				}
 				return nil
@@ -77,7 +77,7 @@ func TestRuntimeSourceExtendedBudgetBoundToExactApacheArchive(t *testing.T) {
 }
 
 func TestRuntimeSourceDownloadNoUntrustedFallback(t *testing.T) {
-	r, _ := runtimecatalog.Find("apache-2.4.68")
+	r, _ := runtimecatalog.Find(runtimecatalog.ApacheCurrentID)
 	for _, failure := range []error{nil, sourceHTTPError{Status: 403}, sourceHTTPError{Status: 429}, sourceHTTPError{Status: 500}, sourceHTTPError{Status: 503}, context.DeadlineExceeded, context.Canceled, x509.UnknownAuthorityError{}, errors.New("源码 SHA-256 不匹配"), io.ErrUnexpectedEOF} {
 		t.Run(fmt.Sprintf("%T-%v", failure, failure), func(t *testing.T) {
 			calls := 0
@@ -101,7 +101,7 @@ func TestRuntimeSourceDownloadNoUntrustedFallback(t *testing.T) {
 }
 
 func TestRuntimeSourceDownloadCancelledBeforeOrBetweenRequests(t *testing.T) {
-	r, _ := runtimecatalog.Find("apache-2.4.68")
+	r, _ := runtimecatalog.Find(runtimecatalog.ApacheCurrentID)
 	for _, before := range []bool{false, true} {
 		t.Run(fmt.Sprint(before), func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
@@ -169,7 +169,7 @@ func TestPHPSourceResponseTimeoutRetriesOnlySamePinnedRequest(t *testing.T) {
 }
 
 func TestRuntimeSourceDownloadRejectsChangedCatalogueBeforeNetwork(t *testing.T) {
-	r, _ := runtimecatalog.Find("apache-2.4.68")
+	r, _ := runtimecatalog.Find(runtimecatalog.ApacheCurrentID)
 	for _, field := range []string{"id", "url", "sha", "version"} {
 		t.Run(field, func(t *testing.T) {
 			wrong := r
@@ -369,5 +369,27 @@ func TestRuntimeSourceDownloadBodyCapacityStillBounded(t *testing.T) {
 	st, err := os.Stat(dst)
 	if err != nil || st.Size() != 64*1024*1024+1 {
 		t.Fatal("size was not actually bounded")
+	}
+}
+
+func TestRuntimeSourceDownloadCurrentApacheBudgetDoesNotEscapeAdmission(t *testing.T) {
+	for _, r := range []runtimecatalog.Release{runtimecatalog.PHPReleases()[0], runtimecatalog.Nginx[0]} {
+		calls := 0
+		err := downloadRuntimeSourceWith(context.Background(), r, "fixed-source", func(_ context.Context, url, digest, dst string, l sourceDownloadLimits) error {
+			calls++
+			if url != r.URL || digest != r.SHA256 || dst != "fixed-source" || l.Total != 8*time.Minute || l.BodyIdle != 45*time.Second {
+				t.Fatal("ordinary reviewed source budget or identity changed")
+			}
+			return nil
+		})
+		if err != nil || calls != 1 {
+			t.Fatal(calls, err)
+		}
+	}
+	legacy, _ := runtimecatalog.Find(runtimecatalog.ApacheLegacyID)
+	calls := 0
+	err := downloadRuntimeSourceWith(context.Background(), legacy, "must-not-create", func(context.Context, string, string, string, sourceDownloadLimits) error { calls++; return nil })
+	if err == nil || calls != 0 {
+		t.Fatal("legacy Apache was readmitted", calls, err)
 	}
 }

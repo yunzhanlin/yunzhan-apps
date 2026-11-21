@@ -576,6 +576,13 @@ func downloadRuntimeSourceWith(ctx context.Context, r runtimecatalog.Release, ds
 		return err
 	}
 	limits := sourceDownloadLimits{Total: 8 * time.Minute, BodyIdle: 45 * time.Second}
+	if r.ID == runtimecatalog.ApacheCurrentID {
+		// The exact current 10.5 MiB Apache source can make continuous
+		// progress on a slow link beyond eight minutes. Admission above
+		// binds every field to the reviewed release. Keep the existing
+		// 45-second idle guard, digest, size bound and terminal failures.
+		limits.Total = 20 * time.Minute
+	}
 	err := download(ctx, r.URL, r.SHA256, dst, limits)
 	if cancelled := ctx.Err(); cancelled != nil {
 		return cancelled
