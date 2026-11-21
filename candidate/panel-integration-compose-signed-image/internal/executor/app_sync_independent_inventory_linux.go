@@ -25,12 +25,40 @@ func validateRemoteCopyIntent(v remoteCopyIntent, target, transaction string) er
 	}
 	return nil
 }
-func remoteCopyFileMetadata(info os.FileInfo, name, digest string) (remoteCopyFile, error) {
+func remoteCopyFileMetadata(d *modulePrivateDirectory, info os.FileInfo, name, digest string) (remoteCopyFile, error) {
 	if !moduleRecordInfo(info, false, false) || info.Size() < 0 || info.Size() > remoteCopyFileLimit {
 		return remoteCopyFile{}, errors.New("独立副本不是Root私有、无硬链接的有界普通文件")
 	}
 	v := info.Sys().(*syscall.Stat_t)
+	parent, err := d.Stat(".")
+	if err != nil || !d.current() || parent.Sys().(*syscall.Stat_t).Dev != v.Dev {
+		return remoteCopyFile{}, errors.New("独立副本跨越当前私有文件系统或父目录变化")
+	}
 	return remoteCopyFile{Name: name, SHA: digest, Bytes: info.Size(), Device: uint64(v.Dev), Inode: v.Ino, UID: v.Uid, GID: v.Gid, Mode: uint32(info.Mode().Perm())}, nil
+}
+
+// Linux device numbers identify the current mount, not a persistent filesystem.
+// A cold boot can enumerate the same volume differently. Keep the original
+// receipt unchanged; compare its inode, owner, group, mode, size and digest.
+// remoteCopyFileMetadata separately fences every live file to its held private
+// parent filesystem. Live open/read checks still compare device and inode.
+func remoteCopySameRecordedFile(actual, recorded remoteCopyFile) bool {
+	if actual.Device == 0 || recorded.Device == 0 {
+		return false
+	}
+	actual.Device = recorded.Device
+	return actual == recorded
+}
+func remoteCopySameRecordedFiles(actual, recorded []remoteCopyFile) bool {
+	if len(actual) != len(recorded) {
+		return false
+	}
+	for i := range actual {
+		if !remoteCopySameRecordedFile(actual[i], recorded[i]) {
+			return false
+		}
+	}
+	return true
 }
 func remoteCopyExpected(v remoteCopyIntent) map[string]moduleFile {
 	out := map[string]moduleFile{}
@@ -127,7 +155,7 @@ func (s *Service) readRemoteCopyRecord(target, transaction string) (remoteCopyRe
 		wanted, ok := expected[f.Name]
 		actual, exists := attemptFiles[result.AttemptID][f.Name]
 		actual.SHA = f.SHA
-		if !ok || !exists || f.SHA != wanted.SHA || f.Bytes != wanted.Size || f.Mode != 0600 || i > 0 && result.Files[i-1].Name >= f.Name || actual != f {
+		if !ok || !exists || f.SHA != wanted.SHA || f.Bytes != wanted.Size || f.Mode != 0600 || i > 0 && result.Files[i-1].Name >= f.Name || !remoteCopySameRecordedFile(actual, f) {
 			return record, errors.New("独立备份完成回执中的文件身份改变")
 		}
 	}
@@ -161,7 +189,7 @@ func (s *Service) readRemoteCopyRetained(d *modulePrivateDirectory, record remot
 	for i, f := range closed.Files {
 		original, ok := expected[f.Name]
 		original.SHA = f.SHA
-		if !ok || !coreSHA.MatchString(f.SHA) || f != original || i > 0 && closed.Files[i-1].Name >= f.Name {
+		if !ok || !coreSHA.MatchString(f.SHA) || !remoteCopySameRecordedFile(original, f) || i > 0 && closed.Files[i-1].Name >= f.Name {
 			return record, errors.New("独立备份保留残片的原身份改变")
 		}
 	}
@@ -212,7 +240,7 @@ func (s *Service) remoteCopyAttemptInventory(target, transaction, attempt string
 		if err != nil {
 			return nil, 0, err
 		}
-		f, err := remoteCopyFileMetadata(info, name, "")
+		f, err := remoteCopyFileMetadata(d, info, name, "")
 		if err != nil || f.Bytes > wanted.Size {
 			return nil, 0, errors.New("独立副本片段类型、身份或容量异常")
 		}

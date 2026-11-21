@@ -66,12 +66,22 @@ func remoteUnpublishedSHA(snapshot remoteUnpublishedSnapshot) string {
 	return core.Hash(string(raw))
 }
 
+func remoteUnpublishedSameRecordedSnapshot(actual, recorded remoteUnpublishedSnapshot) bool {
+	if actual.Directory.Device == 0 || recorded.Directory.Device == 0 {
+		return false
+	}
+	actual.Directory.Device = recorded.Directory.Device
+	return actual.Format == recorded.Format && actual.TargetID == recorded.TargetID &&
+		actual.TransactionID == recorded.TransactionID && actual.Directory == recorded.Directory &&
+		remoteCopySameRecordedFiles(actual.Fragments, recorded.Fragments)
+}
+
 func remoteUnpublishedFragment(d *modulePrivateDirectory, name string) (remoteCopyFile, error) {
 	info, err := d.Lstat(name)
 	if err != nil || !remoteCopyTemporary(name) || info.Size() > remoteCopyRecordLimit {
 		return remoteCopyFile{}, errors.New("未发布原记录片段名称或容量异常，未忽略")
 	}
-	metadata, err := remoteCopyFileMetadata(info, name, "")
+	metadata, err := remoteCopyFileMetadata(d, info, name, "")
 	if err != nil {
 		return remoteCopyFile{}, err
 	}
@@ -142,9 +152,12 @@ func (s *Service) readUnpublishedRemoteCopy(target, transaction string) (remoteU
 	raw, err := remoteCopyMetadata(d, remoteUnpublishedReceipt, &receipt)
 	if err == nil {
 		_, atErr := time.Parse(time.RFC3339, receipt.RetainedAt)
-		if receipt.Format != 1 || receipt.Version != appcatalog.FilesSyncUnpublishedRetentionVersion || receipt.SnapshotSHA != out.SHA || !reflect.DeepEqual(receipt.Snapshot, out.Snapshot) || !coreSHA.MatchString(receipt.ReviewedSpecSHA) || receipt.ReviewedRevision < 1 || receipt.ReviewedRevision > 1000000000 || atErr != nil {
+		if receipt.Format != 1 || receipt.Version != appcatalog.FilesSyncUnpublishedRetentionVersion || receipt.SnapshotSHA != remoteUnpublishedSHA(receipt.Snapshot) || !remoteUnpublishedSameRecordedSnapshot(out.Snapshot, receipt.Snapshot) || !coreSHA.MatchString(receipt.ReviewedSpecSHA) || receipt.ReviewedRevision < 1 || receipt.ReviewedRevision > 1000000000 || atErr != nil {
 			return out, errors.New("未发布片段保留回执未绑定全部原字节与目录身份")
 		}
+		// Preserve the original durable snapshot and condition token, including
+		// its old device-number witness. Read-only reconciliation never rewrites it.
+		out.Snapshot, out.SHA = receipt.Snapshot, receipt.SnapshotSHA
 		out.Retained = &receipt
 		out.Bytes += int64(len(raw))
 	} else if !errors.Is(err, os.ErrNotExist) {

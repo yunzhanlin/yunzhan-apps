@@ -5770,15 +5770,20 @@
       "mode": 384,
       "sha256": "d6a4cfbb4ac3cc18fbec784aaff530aadf55de089e67670ecc8398fbf090d259"
     },
+    "internal/executor/app_sync_independent_cold_device_linux_test.go": {
+      "bytes": 6521,
+      "mode": 420,
+      "sha256": "c342da0cdd97c56d0b5d6627ae2d9fc39a76f4d6cd426b6e1fec5d1ca0c6d370"
+    },
     "internal/executor/app_sync_independent_copy_linux.go": {
-      "bytes": 15397,
+      "bytes": 15427,
       "mode": 384,
-      "sha256": "017a612debf435d6d0b261e76e7be3e1b95509904854565270996895a8d6c732"
+      "sha256": "0268e09c15f5637063e28fb1785b8ab7a59f956d2eccf13834110aa80b18c52e"
     },
     "internal/executor/app_sync_independent_download_linux.go": {
-      "bytes": 3617,
+      "bytes": 3647,
       "mode": 384,
-      "sha256": "d7bc4cd04a1ca862797aeb977b27f57e89fc7c8de468c594fe61dbf54db579a4"
+      "sha256": "560394454f16b4cab0656b6a6946451a2a986fb67888fd10f47c36fe63c2dd45"
     },
     "internal/executor/app_sync_independent_interruption_linux_test.go": {
       "bytes": 9923,
@@ -5786,9 +5791,9 @@
       "sha256": "7468c02f84889205e0a8ec64d5218184edc4a8613c4c886fc8c7af58ce2884fa"
     },
     "internal/executor/app_sync_independent_inventory_linux.go": {
-      "bytes": 14861,
+      "bytes": 16001,
       "mode": 384,
-      "sha256": "ea5fb79c0f3cdf97b58b833d289906fd75c271f3ce266cecf538aa0c2bfd3be7"
+      "sha256": "37ee253925a0e16d604718213cb720c0250fcd1183644975f89ca89e049d4cfd"
     },
     "internal/executor/app_sync_independent_linux_test.go": {
       "bytes": 14010,
@@ -5796,9 +5801,9 @@
       "sha256": "28624d34c0b28c22090380d91ede0dc618db5fc39196bd7a13e6f47df31bbd49"
     },
     "internal/executor/app_sync_independent_retained_linux.go": {
-      "bytes": 3244,
+      "bytes": 3246,
       "mode": 384,
-      "sha256": "2ae8f3e37173d26168e164bd14e11a868f3b22d37e425a244f18efa114985560"
+      "sha256": "2998cebb7b626e16135353dc6e18975224ad9a79bf656066d911f113e5826602"
     },
     "internal/executor/app_sync_independent_root_linux_test.go": {
       "bytes": 9893,
@@ -5931,9 +5936,9 @@
       "sha256": "bec7a8a49b78eb5086da930eb157e3312540778485e4905c8bb1b490b498261c"
     },
     "internal/executor/app_sync_unpublished_linux.go": {
-      "bytes": 11543,
+      "bytes": 12299,
       "mode": 384,
-      "sha256": "2bd3c5fc39ae333470c4c6632d07a44945b255b80ecf33f18da1a3d910766f9d"
+      "sha256": "98e13014191b19e48592003847194f0e097cd79ed28e12b4194d6133882ffaba"
     },
     "internal/executor/app_sync_unpublished_linux_test.go": {
       "bytes": 18061,
@@ -91927,5 +91932,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "af14b76961beba70011ec424ab4cd5b58f4d61afc2322604d7cc248ad3d40639"
+  "inputs_sha256": "146066f7143a498aca70c6a7bc76caee960b24db36a51ea227a3f8b290f27097"
 }

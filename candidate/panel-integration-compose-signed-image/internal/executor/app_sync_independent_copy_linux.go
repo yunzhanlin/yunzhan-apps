@@ -69,7 +69,7 @@ func (s *Service) verifyRemoteCopyAttempt(record remoteCopyRecord, attempt strin
 		if err != nil {
 			return nil, err
 		}
-		metadata, err := remoteCopyFileMetadata(info, source.Name, source.File.SHA)
+		metadata, err := remoteCopyFileMetadata(d, info, source.Name, source.File.SHA)
 		if err != nil || metadata.Bytes != source.File.Size {
 			return nil, errors.New("独立副本仍有残片，不确认为完整")
 		}
@@ -99,7 +99,7 @@ func (s *Service) verifyRemoteCopy(record remoteCopyRecord) error {
 		return errors.New("独立备份完整内容核验未通过，未生成下载")
 	}
 	for i := range files {
-		if files[i] != record.Result.Files[i] {
+		if !remoteCopySameRecordedFile(files[i], record.Result.Files[i]) {
 			return errors.New("独立备份完成后原inode或字节身份变化")
 		}
 	}

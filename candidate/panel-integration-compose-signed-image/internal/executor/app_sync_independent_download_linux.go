@@ -44,8 +44,8 @@ func (s *Service) remoteIndependentChunk(target, transaction, name string, part 
 	if err != nil {
 		return out, err
 	}
-	metadata, err := remoteCopyFileMetadata(info, name, selected.SHA)
-	if err != nil || metadata != *selected {
+	metadata, err := remoteCopyFileMetadata(d, info, name, selected.SHA)
+	if err != nil || !remoteCopySameRecordedFile(metadata, *selected) {
 		return out, errors.New("独立副本封存后inode或权限改变，未下载")
 	}
 	f, err := d.OpenFile(name, os.O_RDONLY|unix.O_NOFOLLOW|unix.O_NONBLOCK|unix.O_CLOEXEC, 0)

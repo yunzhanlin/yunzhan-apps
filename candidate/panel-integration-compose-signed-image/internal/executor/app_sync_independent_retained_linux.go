@@ -9,7 +9,6 @@ import (
 	"io"
 	"local/panel/internal/core"
 	"os"
-	"reflect"
 	"sort"
 
 	"golang.org/x/sys/unix"
@@ -37,7 +36,7 @@ func (s *Service) retainRemoteCopy(cfg remoteSyncConfig, in core.AppModuleInput)
 				d.Close()
 				return nil, err
 			}
-			metadata, err := remoteCopyFileMetadata(info, attempt+"/"+source.Name, "")
+			metadata, err := remoteCopyFileMetadata(d, info, attempt+"/"+source.Name, "")
 			if err != nil || metadata.Bytes > source.File.Size {
 				d.Close()
 				return nil, errors.New("原残片容量或身份变化，未保留关闭")
@@ -64,7 +63,7 @@ func (s *Service) retainRemoteCopy(cfg remoteSyncConfig, in core.AppModuleInput)
 	}
 	sort.Slice(files, func(i, j int) bool { return files[i].Name < files[j].Name })
 	if r.Retained != nil {
-		if !reflect.DeepEqual(r.Retained.Files, files) {
+		if !remoteCopySameRecordedFiles(files, r.Retained.Files) {
 			return nil, errors.New("已保留原残片内容变化，未重新声明有效")
 		}
 		return map[string]any{"independent_backup": remoteCopyPublic(r, cfg.Revision, false), "replayed": true, "original_fragments_preserved": true, "backup_complete": false, "remote_files_changed": false, "scope": remoteCopyScope}, nil
