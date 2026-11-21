@@ -1,0 +1,8 @@
+{
+  "browser_cold_sha256": "64a1982dab3168f6a8f22a6012551bbcf6d58c22a776ffe6b6a869b6e2d0d64c",
+  "browser_update_sha256": "64a1982dab3168f6a8f22a6012551bbcf6d58c22a776ffe6b6a869b6e2d0d64c",
+  "cases_sha256": "a3eb855281c65d21feb486c6455770e05b2ed1f134896d538d1942b7d2d91a46",
+  "kvm_sha256": "480f39a6495d43ae146b51ce4e3c97b84d992f39da5a58f8d43d37dad6677cff",
+  "payload_sha256": "c5b94d2dab5bb200c90723255406c7f81965fbda5e292747db3d377f936c1b1e",
+  "tag": "qa-loadbalanceprocexitcandidate373-20261121-qa1"
+}
