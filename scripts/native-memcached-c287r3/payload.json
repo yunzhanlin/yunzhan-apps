@@ -1,0 +1,14 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "guest.py": "db927402504921dd38d5b680bf43641b1203f87c59977efd276482fe2b36291f",
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz": "94a9a9b16a17edc1a21dd01ae88aa7c2467de531b55969109f67a6ff8fc86e0e",
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz.manifest": "d7cf4c3ae4956f09c7aeba2c9dc60a56fddb71de1de67f3e85ad62d153103b6c",
+    "panel-0.1.0-dev.proapps24memcachedcontainerdcandidate286-linux-amd64.tar.gz.sig": "3447b243d231876aea069bcb0ec3d499ab966c00aa15f3fb5b934b9aa827fcdc",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3",
+  "version": "0.1.0-dev.proapps24memcachedcontainerdcandidate286"
+}
