@@ -40,6 +40,7 @@ jobs:
           go test -c ./internal/executor -o "$RUNNER_TEMP/c284-original/executor.test"
           sha256sum "$RUNNER_TEMP/c284-original/executor.test" > "$RUNNER_TEMP/c284-original/executor-test.sha256"
           sudo "$RUNNER_TEMP/c284-original/executor.test" -test.run Memcached -test.v -test.timeout 300s > "$RUNNER_TEMP/c284-original/root-native-filesystem.stdout" 2>&1
+          sudo env PANEL_NATIVE_QA=1 "$RUNNER_TEMP/c284-original/executor.test" -test.run '^TestMemcachedReadOnlyRunNative' -test.v -test.timeout 60s > "$RUNNER_TEMP/c284-original/readonly-run-explicit-native.stdout" 2>&1
           rm "$RUNNER_TEMP/c284-original/executor.test"
       - if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
