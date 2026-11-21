@@ -21,10 +21,10 @@ const (
 
 var ErrEgressGuard = errors.New("TCP/UDP 出站防护的专用身份、完整两代节点或实际内核规则无法核对")
 
-// nftables 1.0.6 can omit table comments in JSON even when the kernel stores
+// nftables 1.0.2 and 1.0.6 can omit table comments in JSON even when the kernel stores
 // the comment. Only a complete otherwise matching JSON observation can request
 // the additional read, and a missing text witness never proves ownership.
-var ErrEgressTableCommentOmitted = errors.New("nftables 1.0.6 JSON 省略了表注释，需要同表文本证据")
+var ErrEgressTableCommentOmitted = errors.New("nftables 1.0.2 / 1.0.6 JSON 省略了表注释，需要同表文本证据")
 
 type egressListener struct {
 	Protocol string `json:"protocol"`
@@ -464,7 +464,7 @@ func (g EgressGuard) inspect(raw, listing []byte) (EgressGuardObservation, error
 	if !tableOK {
 		meta, _ := egressObject(list[0], "metainfo")
 		fields, _ := egressObject(meta["metainfo"], "version", "release_name", "json_schema_version")
-		if fields["version"] == "1.0.6" {
+		if fields["version"] == "1.0.2" || fields["version"] == "1.0.6" {
 			table, legacy = egressObject(outer["table"], "family", "name", "handle")
 		}
 	}

@@ -135,3 +135,21 @@ func validateLoadBalanceStreamNSS(passwd, group, shadow, gshadow []byte) (loadBa
 	}
 	return loadBalanceStreamIdentity{UID: uid, GID: gid, SHA256: core.Hash(string(raw))}, nil
 }
+
+// glibc getent initgroups uses the host's initgroups NSS database, including
+// supplementary memberships. Its fixed non-symlink executable is already
+// independently checked below. Never resolve Ubuntu's Rust id symlink or
+// accept extra/duplicate groups merely to support a new distribution.
+func loadBalanceStreamNSSGroups(text string, gid uint32) bool {
+	if gid < 100 || gid >= 1000 || len(text) == 0 || len(text) > 128 || !strings.HasSuffix(text, "\n") {
+		return false
+	}
+	row := strings.TrimSuffix(text, "\n")
+	for _, c := range row {
+		if c != '\t' && (c < ' ' || c > '~') {
+			return false
+		}
+	}
+	fields := strings.Fields(row)
+	return len(fields) == 2 && fields[0] == loadbalancestream.ServiceAccount && fields[1] == strconv.FormatUint(uint64(gid), 10)
+}

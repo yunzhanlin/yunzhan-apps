@@ -8391,14 +8391,19 @@
       "sha256": "41c36f4de74d032a8fe8c83b4e2b9eb7ce0d3dee5ce129153c904bc083a0e451"
     },
     "internal/executor/load_balance_stream_nss.go": {
-      "bytes": 4583,
+      "bytes": 5352,
       "mode": 384,
-      "sha256": "2e9cd27de435eefd683497851752f090dfcd7b89383b79031f6bf45a3fe4910c"
+      "sha256": "70f5c3521648339d85492f1920d6396ac6281f65a3bc774a1fa1f2685abdb03d"
+    },
+    "internal/executor/load_balance_stream_nss_groups_test.go": {
+      "bytes": 1318,
+      "mode": 420,
+      "sha256": "0b2060e385b62ee232107bd6ecce651c855ae256d84d1faf87dc18d0fc7e98c2"
     },
     "internal/executor/load_balance_stream_nss_linux.go": {
-      "bytes": 4155,
+      "bytes": 4143,
       "mode": 384,
-      "sha256": "23833a215144e1fb55009013b3b268b279db7bddeef7465df94cb3a47abae627"
+      "sha256": "fdc621e3411fa19b634b4a77efffa748fdfab5fcf8d2bddc96adb65db6f77040"
     },
     "internal/executor/load_balance_stream_nss_native_qa_linux_test.go": {
       "bytes": 1857,
@@ -11166,14 +11171,19 @@
       "sha256": "48822499a7e489b974588c86a0b494c260664069d63bf567089b3bc47eb6c6d0"
     },
     "internal/loadbalancestream/egress.go": {
-      "bytes": 20279,
+      "bytes": 20329,
       "mode": 384,
-      "sha256": "a2da8eed0c76bb2ba69d77d4bf1b230eac4b67ca9a4e0d7bb9d4ec05647443f1"
+      "sha256": "e1419b695593e5dd376089611568b15cd0fd9abfb12890f5be042a6010485a07"
     },
     "internal/loadbalancestream/egress_native_linux_test.go": {
       "bytes": 28504,
       "mode": 384,
       "sha256": "d2ca78f56febea2b8ae1e16bbc47e7ef1aa0c0ba246fb9ba6f45752d48486c66"
+    },
+    "internal/loadbalancestream/egress_nft102_original_test.go": {
+      "bytes": 3262,
+      "mode": 420,
+      "sha256": "eec6ebc510fd94dee9ea6cb2e2a1ee27fbeb1b2a69a40128473ea5578b99b661"
     },
     "internal/loadbalancestream/egress_observation_test.go": {
       "bytes": 9134,
@@ -11284,6 +11294,11 @@
       "bytes": 12342,
       "mode": 384,
       "sha256": "f7f643c045e3842a2bb05091d8a65eff3df1098034d78e176b9454272972c70a"
+    },
+    "internal/loadbalancestream/testdata/ubuntu22-nft-1.0.2-original-TCP.json": {
+      "bytes": 2241,
+      "mode": 420,
+      "sha256": "271662517ef0bcf7a0897a10486fac77ff55f6ff042cb51f1b58f0e7de67441a"
     },
     "internal/rulefeed/etopen.go": {
       "bytes": 15346,
@@ -91932,5 +91947,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "0bf8fde56c6a3b0e6ce30cae389a57c6b4b91106a8f4a049b245f3425bd74e07"
+  "inputs_sha256": "e147a5c056331ba7cadfd094eaa7b03ec325c3c0bfee4418df7ebc61b560299c"
 }

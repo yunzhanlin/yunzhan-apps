@@ -6,7 +6,6 @@ import (
 	"context"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -15,7 +14,7 @@ import (
 )
 
 // This only observes fixed Root-owned NSS files and independently resolves the
-// fixed name through the host's actual getent/id NSS implementation. No useradd,
+// fixed name through the host's actual getent NSS implementation. No useradd,
 // permission change, repair, receipt creation, unit installation or adoption.
 func loadBalanceStreamSystemIdentity(ctx context.Context) (loadBalanceStreamIdentity, error) {
 	var empty loadBalanceStreamIdentity
@@ -110,8 +109,8 @@ func loadBalanceStreamSystemIdentity(ctx context.Context) (loadBalanceStreamIden
 			return empty, errLoadBalanceStreamIdentity
 		}
 	}
-	groups, err := command("/usr/bin/id", "-G", name)
-	if err != nil || groups != strconv.FormatUint(uint64(identity.GID), 10)+"\n" {
+	groups, err := command("/usr/bin/getent", "initgroups", name)
+	if err != nil || !loadBalanceStreamNSSGroups(groups, identity.GID) {
 		return empty, errLoadBalanceStreamIdentity
 	}
 	for _, source := range sources {
