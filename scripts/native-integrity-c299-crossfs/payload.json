@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "cohort.json": "1526f65fcf8564029bec79a9d02787ed3d551df32839db47ccf349241202266d",
+    "guest.py": "b4513764b6a0a10c0834fc56f4b0bcad27830dbf81036eb27608ca3d8845220f",
+    "integrity-business.py": "297f7cf3ca708736af805a8c2ef5bd41dd2b8a834140f72445a93b9a22653b98",
+    "panel-0.1.0-dev.proapps24integritydurableflagscandidate299-linux-amd64.tar.gz": "8b3d6469997ba1676bf6bb76c99da2dd2b8420a8615fe0e027bd472605337d9f",
+    "panel-0.1.0-dev.proapps24integritydurableflagscandidate299-linux-amd64.tar.gz.manifest": "65bfb8015d37f6b5adfc11a8a38ee77418395128e3b7cb18e98c0605b8d0fea9",
+    "panel-0.1.0-dev.proapps24integritydurableflagscandidate299-linux-amd64.tar.gz.sig": "1f864ad36b86613400cb11f4eca383c8db8d4b4ef08c45d73f61e4f8b58d84c9",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "af14b76961beba70011ec424ab4cd5b58f4d61afc2322604d7cc248ad3d40639",
+  "version": "0.1.0-dev.proapps24integritydurableflagscandidate299"
+}
