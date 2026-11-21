@@ -1,0 +1,11 @@
+{
+  "Main_changed": false,
+  "all40_commercial": false,
+  "browser_cold_sha256": "9485b7dee74a9253a5c64fcf54dcd6ccda1ed707ab9e0b0334a3a9dd69a144e6",
+  "browser_update_sha256": "9485b7dee74a9253a5c64fcf54dcd6ccda1ed707ab9e0b0334a3a9dd69a144e6",
+  "cases_sha256": "8dea7f21de59cbc7cfb0ef8031d121c783685d56bc7a5e753583381991f4d9e9",
+  "kvm_sha256": "179087634e563f2f878a481cf7aeecc8c9a2052a2b2f3eba43690290c9cbca3b",
+  "payload_sha256": "f2f918050758f33b96e95445a7a24ca3568896d9b0b3263a09908dfa8da538d6",
+  "source_inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3",
+  "tag": "qa-memcachedcontainerdcandidate286-20261121-qa1"
+}
