@@ -1,0 +1,6 @@
+{
+  "tag": "qa-loadbalanceprocexitcandidate373-20261121-qa1",
+  "payload_sha256": "a30e185058bd7c96c82c067f53792a73105492b6eb16a17b6e4dabd1b8f26eac",
+  "cases_sha256": "0ef1c6c9d4c459c2e097311b5b97173626bf8b3230dd6b9b5aacb676cbcb0c0d",
+  "kvm_sha256": "4ee58940dde8659c3425cd4e07411afaeb31bf4a7bbc7e0adcbc2f7b02030f6f"
+}

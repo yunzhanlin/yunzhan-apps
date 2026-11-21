@@ -1,0 +1,59 @@
+name: Apache C407 actual source install PHP proxy custom rewrite and symlink denial
+on:
+  push:
+    branches: [codex/apache-c407-installed]
+    paths: [.github/workflows/apache-c407-installed.yml]
+permissions:
+  contents: read
+jobs:
+  native:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/apache-c407-installed'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        system: [debian12, debian13, ubuntu22, ubuntu24, ubuntu26]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: scripts/native-apache-c407-installed
+      - name: Download original exact current signed programme
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: '1'
+        run: |
+          set -eu
+          umask 077
+          fixture=scripts/native-apache-c407-installed
+          root="$RUNNER_TEMP/apache-c407-installed-signed"
+          mkdir -m 700 "$root"
+          tag=$(jq -r '.tag' "$fixture/dispatch.json")
+          test "$tag" = qa-loadbalanceprocexitcandidate373-20261121-qa1
+          gh release download "$tag" --repo yunzhanlin/yunzhan-apps --pattern '*-linux-amd64.tar.gz*' --pattern 'release-signing-dev.pub' --dir "$root"
+          cp "$fixture/signed-release.py" "$root/signed-release.py"
+          cp "$fixture/guest.py" "$root/guest.py"
+          cp "$fixture/apache-business.py" "$root/apache-business.py"
+          cp "$fixture/cohort.json" "$root/cohort.json"
+          cp "$fixture/payload.json" "$root/assets.json"
+      - name: Prepare isolated native hardware
+        run: |
+          set -eu
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends qemu-system-x86 qemu-utils cloud-image-utils ovmf
+          test -c /dev/kvm
+      - name: Actual signed Apache PHP rewrite body query and symlink policy
+        run: |
+          set -eu
+          mkdir -m 700 "$RUNNER_TEMP/apache-c407-installed-public"
+          sudo -n python3 -I -B scripts/native-apache-c407-installed/kvm.py "$RUNNER_TEMP/apache-c407-installed-signed" scripts/native-apache-c407-installed "$RUNNER_TEMP/apache-c407-installed-public" "${{ matrix.system }}"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c407-apache-native-${{ matrix.system }}-amd64-${{ github.run_id }}
+          path: ${{ runner.temp }}/apache-c407-installed-public/
+          retention-days: 14
+          if-no-files-found: error

@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "panel-0.1.0-dev.proapps24loadbalanceprocexitcandidate373-linux-amd64.tar.gz": "ac9104023652bcd265777a8b67da8af4f63bd7bfaf7d93b66e17606a25a28b87",
+    "panel-0.1.0-dev.proapps24loadbalanceprocexitcandidate373-linux-amd64.tar.gz.manifest": "e41260769aaf51f5c769fcb70886448ba4b767ec4bdf2654b7e19f572b6ec9b5",
+    "panel-0.1.0-dev.proapps24loadbalanceprocexitcandidate373-linux-amd64.tar.gz.sig": "52940d3fb24bf057e151c14e4b2dc14ef6f6affc658c4a7a4f26e16f70ec902d",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "abdf26844b0f05c00c4c47c3892cc935be7aa117693113f60ecf9d8bc95ef6fc",
+    "cohort.json": "151e3da78b7927ae6a76297ed8cc01fe8a3a6b28b4e27313bfb678ba73b3540d",
+    "apache-business.py": "051a6867d0414833b3d5d359b044aa89ddda76d34cdbfb3083db80ebcdd2e147"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "00b06c3f1793b60fc41e50256d99fc2211a2a4899d11390ac059434816e6e01a",
+  "version": "0.1.0-dev.proapps24loadbalanceprocexitcandidate373"
+}
