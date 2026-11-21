@@ -7236,9 +7236,9 @@
       "sha256": "adc13f9e090025963c0c0be76f9c12d53d9f727ab5867e0d5bc65b4b86f88631"
     },
     "internal/executor/integrity_inode_flags_linux.go": {
-      "bytes": 5719,
+      "bytes": 6090,
       "mode": 384,
-      "sha256": "88584e4f2bd673f709ad53d3f702a9b24d52ea7cab02681c178a0ff936eeaf48"
+      "sha256": "e885a643247bc494ccdc969d51591febc3f3ebf14a9714e23fa4332c9331a26b"
     },
     "internal/executor/integrity_inode_flags_linux_test.go": {
       "bytes": 4436,
@@ -91927,5 +91927,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3"
+  "inputs_sha256": "af14b76961beba70011ec424ab4cd5b58f4d61afc2322604d7cc248ad3d40639"
 }

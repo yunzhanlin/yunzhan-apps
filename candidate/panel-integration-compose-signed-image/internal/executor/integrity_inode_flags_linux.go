@@ -139,6 +139,12 @@ func setIntegrityInodeImmutable(f *os.File, directory bool, expected integrityIn
 	if err = unix.IoctlSetPointerInt(int(f.Fd()), unix.FS_IOC_SETFLAGS, next); err != nil {
 		return current, fmt.Errorf("inode protection was not applied: %w", err)
 	}
+	// The site may be on a different filesystem from the private journal.
+	// Persist this inode's flag change before its caller records a verified
+	// step; syncing the journal alone cannot commit the site's filesystem.
+	if err = f.Sync(); err != nil {
+		return current, fmt.Errorf("inode protection persistence needs independent verification; do not replay: %w", err)
+	}
 	observed, err := readIntegrityInodeFlags(f, directory)
 	if err != nil || observed.Identity != expected.Identity || observed.Flags != next {
 		return observed, errors.New("inode protection result needs independent verification; do not replay")
