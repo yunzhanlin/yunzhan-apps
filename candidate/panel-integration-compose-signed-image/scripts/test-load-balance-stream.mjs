@@ -110,3 +110,15 @@ test('host policy requires exact current full admin identity/revision; manager u
   assert.doesNotMatch(pane,/structuredClone|\/install|\/upgrade|setInterval/);
   assert.match(read('packaging/build-release.sh'),/test-load-balance-stream\.mjs/);
 });
+
+test('cold recovery selects unchanged active original policy and cannot combine edits or revive tombstones',()=>{
+  const removed={...entry,name:'removed.lb.invalid',removed:true};
+  const cold={...workspace([entry,removed],5),state:'cold-boot-ready',configuration_verified:false};
+  const expected=m.streamMutation({format:1,action:'replace',name:entry.name,expected_revision:entry.revision,
+    expected_fingerprint:m.streamEntryFingerprint(entry),policy});
+  assert.deepEqual(m.streamColdRestoreMutation(cold,entry),expected);
+  const actual=m.streamColdRestoreMutation(cold,entry);actual.policy.nodes[0].weight=99;assert.equal(cold.entries[0].nodes[0].weight,1);
+  for(const selected of [undefined,removed,{...entry,revision:entry.revision+1},{...entry,nodes:[{...entry.nodes[0],weight:2},entry.nodes[1]]},{...entry,removed:true}])assert.throws(()=>m.streamColdRestoreMutation(cold,selected));
+  for(const state of ['running','stopped','degraded','unknown','busy-or-unknown','empty','unavailable'])assert.throws(()=>m.streamColdRestoreMutation({...cold,state},entry));
+  assert.throws(()=>m.streamColdRestoreMutation({...cold,entries:[removed]},removed));
+});

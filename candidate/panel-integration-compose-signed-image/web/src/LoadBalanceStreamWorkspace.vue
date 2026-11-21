@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, ref, shallowRef, watch } from "vue";
 import { randomId } from "./randomId";
 import {
   parseStreamTicket, streamBasePath, streamEntry, streamEntryFingerprint, streamFullAdmin,
-  streamHistory, streamMutation, streamRow, streamTicket, streamTicketKey,
+  streamHistory, streamMutation, streamColdRestoreMutation, streamRow, streamTicket, streamTicketKey,
   streamVersion, streamWorkspace, type StreamEntry, type StreamHistory,
   type StreamMutation, type StreamPolicy, type StreamRow, type StreamTicket, type StreamWorkspace,
 } from "./loadBalanceStream";
@@ -32,6 +32,7 @@ const writable = computed(() => allowed.value && props.installed && props.instal
   && ["empty", "running", "stopped", "cold-boot-ready"].includes(workspace.value.state) && workspace.value.generation < 128 && !!history.value
   && !history.value.rows.some(row => row.state !== "completed") && !pending.value && !storageError.value && !writing.value && !reading.value
   && (!ticket.value || (current.value?.state === "completed" && workspaceReadFor.value === ticket.value.request_id)));
+const coldRestoreOnly = computed(() => workspace.value?.state === "cold-boot-ready" && workspace.value.entries.some(entry => !entry.removed));
 const stateNames: Record<string, string> = { unavailable: "尚不可用", empty: "尚无原生配置", "busy-or-unknown": "有事务占用或状态未确定", unknown: "无法核对", degraded: "配置或资源核对异常", "cold-boot-ready": "重启后待恢复", running: "运行配置核验通过", stopped: "已停止且配置核验通过" };
 const rowNames: Record<string, string> = { reserved: "原请求已保留，尚未派发", issued: "原请求已派发，等待持久结果", unknown: "结果不确定，禁止重新派发", completed: "原请求已结束" };
 const actionNames = { create: "新建入口", replace: "替换入口配置", remove: "移除入口" };
@@ -88,7 +89,7 @@ async function observeOriginal() {
     current.value = row; selected.value = row; error.value = "";
     if (history.value) history.value = { ...history.value, rows: history.value.rows.map(old => old.operation.request_id === row.operation.request_id ? row : old) };
     if (row.state === "completed") {
-      notice.value = row.result?.state === "committed" ? "原事务的持久结果已核对；这不代表业务上游健康。请刷新当前配置观察。" : "原请求在派发前已关闭，没有执行该变更。";
+      notice.value = row.result?.state === "committed" ? "原事务的持久结果已核对；这不代表业务上游健康。请刷新当前配置观察。" : row.result?.state === "refused-before-effects" ? "执行器预检拒绝，没有修改配置或服务。请刷新当前配置后核对前置条件。" : "原请求在派发前已关闭，没有执行该变更。";
       resetEditor();
     }
   } catch (cause) {
@@ -128,6 +129,7 @@ async function refresh(offset = 0) {
 }
 function edit(entry?: StreamEntry, remove = false) {
   if (!writable.value) return;
+  if (coldRestoreOnly.value && (!entry || entry.removed || remove)) { notice.value = "先原样恢复全部未移除入口，再单独编辑、新建或移除。"; return; }
   resetEditor(); notice.value = "";
   if (!entry) return;
   originalEntry.value = streamEntry(entry);
@@ -141,7 +143,7 @@ async function submit() {
   let mutation: StreamMutation;
   try {
     const old = originalEntry.value;
-    mutation = streamMutation({ format: 1, action: editorAction.value, name: name.value, expected_revision: old?.revision ?? 0, expected_fingerprint: old ? streamEntryFingerprint(old) : "", policy: editorAction.value === "remove" ? null : policy.value });
+    mutation = coldRestoreOnly.value ? streamColdRestoreMutation(workspace.value, old) : streamMutation({ format: 1, action: editorAction.value, name: name.value, expected_revision: old?.revision ?? 0, expected_fingerprint: old ? streamEntryFingerprint(old) : "", policy: editorAction.value === "remove" ? null : policy.value });
     const id = randomId().replaceAll("-", "");
     saveTicket(streamTicket(actor, id, mutation)); // Required BEFORE the one POST.
   } catch (cause) { error.value = message(cause); return; }
@@ -194,7 +196,7 @@ onBeforeUnmount(cancel);
       <el-alert v-if="!installed || installedVersion !== streamVersion" :title="`TCP/UDP 变更需要明确安装并验收独立签名版本 ${streamVersion}；当前为 ${installed ? installedVersion || '版本未知' : '未安装'}。此页面不会自动安装、升级或启用。`" type="info" :closable="false" />
       <el-alert v-if="error" :title="error" type="error" :closable="false" role="alert" />
       <el-alert v-if="notice" :title="notice" type="info" :closable="false" />
-      <el-alert v-if="workspace?.state === 'cold-boot-ready'" title="服务器已重启。选择入口并确认配置后提交，将恢复原有未移除入口并应用本次变更。已移除入口仅在你明确选择恢复并提交后重新启用。" type="warning" :closable="false" />
+      <el-alert v-if="workspace?.state === 'cold-boot-ready'" :title="coldRestoreOnly ? '服务器已重启。先选择一个未移除入口并原样恢复全部原有入口；恢复成功并刷新后，再单独编辑、新建或移除。已移除入口保持移除。' : '服务器已重启，原入口均已移除。可提交新的配置；不会重放旧请求。'" type="warning" :closable="false" />
       <el-alert v-if="storageError" :title="storageError" type="error" :closable="false" />
       <el-button v-if="storageError && history" :disabled="reading || writing" @click="recoverIndex">从本人历史恢复本地索引（只读）</el-button>
       <div v-if="workspace" class="stream-summary" aria-label="当前原生配置观察">
@@ -207,11 +209,16 @@ onBeforeUnmount(cancel);
         <thead><tr><th scope="col">入口标识</th><th scope="col">监听</th><th scope="col">修订</th><th scope="col">记录状态</th><th scope="col">操作</th></tr></thead>
         <tbody><tr v-for="row in workspace.entries" :key="row.name">
           <td data-label="入口标识">{{ row.name }}</td><td data-label="监听">127.0.0.1:{{ row.port }} / {{ row.protocol.toUpperCase() }}</td><td data-label="修订">{{ row.revision }}</td><td data-label="记录状态">{{ row.removed ? '已移除 · 保留指纹' : '配置中' }}</td>
-          <td data-label="操作"><div class="stream-actions"><el-button :disabled="!writable" @click="edit(row)">{{ row.removed || workspace.state === 'cold-boot-ready' ? '选择恢复' : '选择编辑' }}</el-button><el-button v-if="!row.removed" type="danger" plain :disabled="!writable" @click="edit(row, true)">选择移除</el-button></div></td>
+          <td data-label="操作"><div class="stream-actions"><el-button :disabled="!writable || (coldRestoreOnly && row.removed)" @click="edit(row)">{{ row.removed || workspace.state === 'cold-boot-ready' ? '选择恢复' : '选择编辑' }}</el-button><el-button v-if="!row.removed && !coldRestoreOnly" type="danger" plain :disabled="!writable" @click="edit(row, true)">选择移除</el-button></div></td>
         </tr></tbody>
       </table></div><p v-else>没有当前入口记录。</p>
-      <el-button :disabled="!writable" @click="edit()">填写新入口</el-button>
-      <el-form label-position="top" class="stream-editor" @submit.prevent="submit">
+      <div v-if="coldRestoreOnly" class="stream-editor" aria-label="原样恢复原有入口">
+        <h4>原样恢复全部原有入口</h4><p>监听端口、节点、权重、会话限制和已移除记录均保持原样。本次提交使用新的原请求编号，不重放历史操作。</p>
+        <p>{{ originalEntry ? `已选择 ${originalEntry.name}，依据原修订 ${originalEntry.revision} 和完整配置指纹恢复。` : '先在上表选择一个未移除入口。' }}</p>
+        <el-button type="primary" :loading="writing" :disabled="!writable || !originalEntry || originalEntry.removed" @click="submit">恢复全部原有入口</el-button>
+      </div>
+      <el-button v-else :disabled="!writable" @click="edit()">填写新入口</el-button>
+      <el-form v-if="!coldRestoreOnly" label-position="top" class="stream-editor" @submit.prevent="submit">
         <h4>{{ actionNames[editorAction] }}</h4><p v-if="originalEntry">依据原修订 {{ originalEntry.revision }} 和完整配置指纹提交；若服务端已变更，将拒绝覆盖。</p>
         <el-form-item label="入口名称（小写域名式标识）"><el-input v-model="name" aria-label="TCP UDP 入口名称" :disabled="!writable || editorAction !== 'create'" placeholder="service.example.test" maxlength="253" /></el-form-item>
         <el-alert v-if="editorAction === 'remove'" :title="`将移除 ${name} 的监听配置。原记录保留；已有连接按原排空期限处理，不会强制杀死进程。`" type="warning" :closable="false" />
@@ -233,7 +240,7 @@ onBeforeUnmount(cancel);
           <div v-if="policy.protocol === 'udp'" class="stream-fields"><el-form-item label="每会话请求数"><el-input-number v-model="policy.udp_requests" aria-label="UDP 请求数" :min="1" :max="64" :disabled="!writable" /></el-form-item><el-form-item label="预期响应数（0 表示不等待响应）"><el-input-number v-model="policy.udp_responses" aria-label="UDP 响应数" :min="0" :max="64" :disabled="!writable" /></el-form-item></div>
           <p>探针端口、系统账号、进程和渲染路径均由受限服务端分配，浏览器不提交。会话缓冲、完整配置端口冲突与内存余量由服务端重新检查。</p>
         </template>
-        <el-button type="primary" native-type="submit" :loading="writing" :disabled="!writable">{{ workspace?.state === 'cold-boot-ready' ? (editorAction === 'remove' ? '恢复其余入口并移除此入口' : '恢复并应用配置') : (editorAction === 'remove' ? '提交移除原入口' : '提交配置变更') }}</el-button>
+        <el-button type="primary" native-type="submit" :loading="writing" :disabled="!writable">{{ editorAction === 'remove' ? '提交移除原入口' : '提交配置变更' }}</el-button>
       </el-form>
       <section class="stream-original" aria-label="原始控制请求">
         <h4>原请求结果</h4><template v-if="ticket"><p class="stream-digest">原编号：{{ ticket.request_id }}</p><p>{{ current ? rowNames[current.state] : '尚未核对原持久记录；禁止重新提交或建立新编号' }}</p><el-button :disabled="reading || writing" @click="pollCount = 0; observeOriginal()">只读核对原请求</el-button><el-button v-if="current?.state === 'reserved'" :disabled="reading || writing" @click="closeReserved">关闭未派发的原请求</el-button></template><p v-else>没有本地原请求索引。刷新时仅查询本人服务器历史，不自动提交。</p>

@@ -114,6 +114,18 @@ export function streamMutation(value: unknown): StreamMutation {
   if (v.action === "remove" ? v.policy !== null : v.policy === null) throw bad();
   return { format: 1, action: v.action as StreamMutation["action"], name, expected_revision: revision, expected_fingerprint: fingerprint, policy: v.action === "remove" ? null : streamPolicy(v.policy) };
 }
+// Reboot recovery keeps the complete original desired set. Edits/removals
+// require a later ordinary transaction after the original service is restored.
+export function streamColdRestoreMutation(value: unknown, selection: unknown): StreamMutation {
+  const current = streamWorkspace(value), selected = streamEntry(selection);
+  const original = current.entries.find(entry => entry.name === selected.name);
+  if (current.state !== "cold-boot-ready" || !original || original.removed || selected.removed
+    || streamEntryFingerprint(original) !== streamEntryFingerprint(selected)) throw new Error("请先选择当前未移除入口，原样恢复全部原有配置后再编辑或移除");
+  const { protocol, port, nodes, method, connect_milliseconds, session_seconds, max_sessions, udp_requests, udp_responses } = original;
+  return streamMutation({ format: 1, action: "replace", name: original.name, expected_revision: original.revision,
+    expected_fingerprint: streamEntryFingerprint(original),
+    policy: { protocol, port, nodes, method, connect_milliseconds, session_seconds, max_sessions, udp_requests, udp_responses } });
+}
 export function streamMutationHash(value: unknown): string { return registryFingerprint(JSON.stringify(streamMutation(value))); }
 export function streamTicket(actor: string, id: string, mutation: unknown): StreamTicket {
   if (!streamID(actor) || !streamID(id)) throw bad();

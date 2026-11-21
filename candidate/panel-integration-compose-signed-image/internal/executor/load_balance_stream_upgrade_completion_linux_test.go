@@ -67,7 +67,7 @@ func TestLoadBalanceStreamUpgradeCompletionDuringMaintenanceIsExactReadOnlyHisto
 				t.Fatal("real closed original fixture", err)
 			}
 			raw, _ := json.Marshal(history)
-			w := &loadBalanceStreamTrafficUpgrade{source: authority, history: raw, closed: map[string]bool{op.RequestID: true}, namespaces: &programQueueReader{ctx: ctx, root: base}}
+			w := &loadBalanceStreamTrafficUpgrade{source: authority, history: raw, originals: map[string]core.LoadBalanceStreamControlUpgradeRecord{op.RequestID: history[0]}, closed: map[string]bool{op.RequestID: true}, namespaces: &programQueueReader{ctx: ctx, root: base}}
 			actual, err := w.recordedCompletion(ctx, op)
 			if err != nil || actual != history[0].Completion || actual.OriginalRequestSHA256 != core.Hash(audit) || calls != 0 {
 				t.Fatal("closed original maintenance read", err, calls)
@@ -105,8 +105,8 @@ func TestLoadBalanceStreamUpgradeCompletionDuringMaintenanceIsExactReadOnlyHisto
 			if _, err = authority.controlUpgradeHistory(ctx, nil); err != nil {
 				t.Fatal("changed nonce fixture must still be canonical", err)
 			}
-			if _, err = w.recordedCompletion(ctx, op); err == nil {
-				t.Fatal("a rehashed different original request was adopted")
+			if err = w.historyCurrent(ctx); err == nil {
+				t.Fatal("changed complete original history was adopted by the current admission fence")
 			}
 			for _, change := range []string{
 				`UPDATE audit_logs SET result=replace(result,'"nonce":"','"nonce":"0')WHERE action='app.load-balance.stream.control'`,
@@ -129,8 +129,8 @@ func TestLoadBalanceStreamUpgradeCompletionDuringMaintenanceIsExactReadOnlyHisto
 				if err = tx.Commit(); err != nil {
 					t.Fatal(err)
 				}
-				if _, err = w.recordedCompletion(ctx, op); err == nil {
-					t.Fatal("changed/unknown original history adopted")
+				if err = w.historyCurrent(ctx); err == nil {
+					t.Fatal("changed/unknown complete original history adopted")
 				}
 			}
 		})

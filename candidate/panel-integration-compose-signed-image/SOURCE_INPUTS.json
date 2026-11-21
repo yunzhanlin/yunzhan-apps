@@ -8586,9 +8586,9 @@
       "sha256": "67456a2e317a30e1f2439f39bce575b8f6ea430da703e4d5e08b98a2f48037d2"
     },
     "internal/executor/load_balance_stream_upgrade_completion_linux_test.go": {
-      "bytes": 5897,
+      "bytes": 6003,
       "mode": 384,
-      "sha256": "724a18edc9dee62a204cbe70f4d74272d1d315e1ed65f48b9cc06babb1f4aafc"
+      "sha256": "180c263e6c34eb92413d140c475631a15ee73a8990523d0cb96afe3004e6bea4"
     },
     "internal/executor/load_balance_stream_upgrade_linux.go": {
       "bytes": 23073,
@@ -8651,9 +8651,9 @@
       "sha256": "cc69bffd3af46b2265cb070ccd6c523a18c0fb3e1c630684b634fe04cb085aa5"
     },
     "internal/executor/load_balance_stream_workspace_linux.go": {
-      "bytes": 7327,
+      "bytes": 7324,
       "mode": 384,
-      "sha256": "a6c3edaa0a6e45fa0b3378bcc02eefa5b5d731b14e47389be4aecbefeffe206a"
+      "sha256": "49786fbeb2db8c8752d49e570d2794d60211f4e37420c3e9adaa05183f57a4f1"
     },
     "internal/executor/log_cleanup_continue_linux.go": {
       "bytes": 9398,
@@ -12121,9 +12121,9 @@
       "sha256": "0732e4c4304678bbf9d7faa4818891485c135528d25f0cb29397a13a1282d05b"
     },
     "scripts/test-load-balance-stream.mjs": {
-      "bytes": 11698,
+      "bytes": 12863,
       "mode": 384,
-      "sha256": "1278b992675a4cf330f5b171e630af46f509e4979e098d6252121a30b182a612"
+      "sha256": "f338312fa60f01799bb44daa483cc4c7badba52bbd210a7909548a3621d36a4d"
     },
     "scripts/test-load-balance-transactions.mjs": {
       "bytes": 6562,
@@ -91176,9 +91176,9 @@
       "sha256": "baa7e8cf3c7db52861f9b34a445e85e90a28575dbbd08c53ff4a84054a3c56d9"
     },
     "web/src/LoadBalanceStreamWorkspace.vue": {
-      "bytes": 26921,
+      "bytes": 28229,
       "mode": 384,
-      "sha256": "f01efb0c2fb6f32d74b902deb115f00bf1ad10a30bf57c60a9e4d3dbba92b788"
+      "sha256": "89228f193bb6e412aba1b856143711079bd5fb63aac8f2ad775dd475a668ea43"
     },
     "web/src/MariaDBManager.vue": {
       "bytes": 34794,
@@ -91611,9 +91611,9 @@
       "sha256": "52a31376454c9651594cda8a9053931ebe28c82051b8aec61c6289788350233e"
     },
     "web/src/loadBalanceStream.ts": {
-      "bytes": 16279,
+      "bytes": 17413,
       "mode": 384,
-      "sha256": "144c675227fe1d6ad2cec95f604f49537f85c740a2b42b8d81b2a8d964479b7e"
+      "sha256": "7f4a817c9b63289267c91e340083cd0d786df419843de413961fa3afc898f91e"
     },
     "web/src/loadBalanceTransactions.ts": {
       "bytes": 3618,
@@ -91932,5 +91932,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "146066f7143a498aca70c6a7bc76caee960b24db36a51ea227a3f8b290f27097"
+  "inputs_sha256": "0bf8fde56c6a3b0e6ce30cae389a57c6b4b91106a8f4a049b245f3425bd74e07"
 }
