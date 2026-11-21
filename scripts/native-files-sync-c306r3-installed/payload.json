@@ -1,0 +1,16 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "cohort.json": "a5a4d9bb7fd44b61544f754bd430da1267a6e951c22ff7571ff24428da2292a1",
+    "guest.py": "42d7ea1d928254800bd1563b87a7c8b7d7589a6dde074f10c4e16d748da1eb36",
+    "integrity-business.py": "297f7cf3ca708736af805a8c2ef5bd41dd2b8a834140f72445a93b9a22653b98",
+    "panel-0.1.0-dev.proapps24filesynccolddevicecandidate305-linux-amd64.tar.gz": "58a348236219697136a01baccf412cb61dccd33b79ae6122e0bbe63993629f31",
+    "panel-0.1.0-dev.proapps24filesynccolddevicecandidate305-linux-amd64.tar.gz.manifest": "f8ea6316697a1d2e1b47744ad2de59f4f5f3b12d4d80ce2584f78dcccf5683ef",
+    "panel-0.1.0-dev.proapps24filesynccolddevicecandidate305-linux-amd64.tar.gz.sig": "15fd31d4f6df94c49b1075c5f15f18ca5dcf9a96fe686dcbd8b93d1b38517089",
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "146066f7143a498aca70c6a7bc76caee960b24db36a51ea227a3f8b290f27097",
+  "version": "0.1.0-dev.proapps24filesynccolddevicecandidate305"
+}

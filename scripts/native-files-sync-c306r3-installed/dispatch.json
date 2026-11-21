@@ -1,0 +1,11 @@
+{
+  "Main_changed": false,
+  "all40_commercial": false,
+  "browser_cold_sha256": "c27bf4c9205652b14ebfe4efc71ec45b459e145ee06dacdf493ab70dab19733c",
+  "browser_update_sha256": "c27bf4c9205652b14ebfe4efc71ec45b459e145ee06dacdf493ab70dab19733c",
+  "cases_sha256": "eb742bfbc15ed6ec906fe012cdf534df3b7e51c38ed273274d32ae635ca47f03",
+  "kvm_sha256": "d96a51f02fd2b5f63f7c81e8bff5c718890457be9e8a9977b13a90f3c8fd0985",
+  "payload_sha256": "4af23b946b068af4e0f00c939260e82fc826b26078223840031382c4fea13f2a",
+  "source_inputs_sha256": "146066f7143a498aca70c6a7bc76caee960b24db36a51ea227a3f8b290f27097",
+  "tag": "qa-filesynccolddevicecandidate305-20261121-qa1"
+}
