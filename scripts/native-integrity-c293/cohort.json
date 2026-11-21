@@ -2,7 +2,7 @@
   "source_head": "e3f2d126a101ab4267a5d729c98dcf9976e9576c",
   "source_inputs_sha256": "b42832583eb74f0605d57a1360de5aa92faf3f300ab552175dd5997a918a98f3",
   "version": "0.1.0-dev.proapps24memcachedcontainerdcandidate286",
-  "native_fixture_parent": "231583ef2a0f2053fec17f06b67a7b2e57f9c92a",
+  "native_fixture_parent": "c5976eb4196beea9abb05af1fc15ce352b391d9b",
   "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
   "items": {
     "enterprise-tamper-proof": {
@@ -70,7 +70,12 @@
     "scripts/native-integrity-c293/bootstrap-original-install.py": "07c3d492906c1cb77d9e35d72fd9ce68699d662a385b99a8f936a91b92c56271",
     "scripts/native-integrity-c293/isolated_ubuntu_apt.py": "bb46774558dde250bfface2f5b3df8617145c064156d97cbfacfe5c9e8ecb2e0",
     "scripts/native-integrity-c293/finish.py": "a0ed53af0b6ab73e07bd763d46c92579c546dbb4250bdc90ccf2bf4226247b2f",
-    "scripts/native-integrity-c293/integrity-business.py": "2d15688271e5afab611a032105e417092608aee4c8502055ac1e4324f529b059",
-    ".github/workflows/integrity-c293-current-native.yml": "23059569909348f211340f2ec3e44d0169e737a8d2b0212cb2cbe604a062a3d2"
-  }
+    "scripts/native-integrity-c293/integrity-business.py": "37f2a06bcc1e75eea8fdd994cb899fc62c540defe02442a1224fe0667c494913",
+    ".github/workflows/integrity-c293-current-native.yml": "23059569909348f211340f2ec3e44d0169e737a8d2b0212cb2cbe604a062a3d2",
+    ".github/workflows/integrity-c293r2-current-native.yml": "3f43b466b0fdd3aff15928db97f97a762815e892f71d6f6067b2c93b6b336b73"
+  },
+  "changed_payload_files": [
+    "scripts/native-integrity-c293/integrity-business.py",
+    ".github/workflows/integrity-c293r2-current-native.yml"
+  ]
 }

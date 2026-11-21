@@ -1,5 +1,6 @@
 import errno
 import platform
+import pwd
 import stat
 import contextlib
 import base64
@@ -126,10 +127,12 @@ try:
     with static.open('xb') as stream:
         stream.write(original)
     dynamic.write_bytes(b'B writable upload\n')
-    owner = public.stat()
-    assert owner.st_uid != 0 and owner.st_gid != 0
+    original_public=public.stat();assert original_public.st_uid==0 and stat.S_IMODE(original_public.st_mode)==0o755
+    evidence('owned-fixture-writer-selection',public_uid=original_public.st_uid,public_gid=original_public.st_gid,public_inode=original_public.st_ino,existing_public_owner_and_mode_unchanged=True)
+    owner = pwd.getpwnam('www-data')
+    assert owner.pw_uid != 0 and owner.pw_gid != 0
     for item in (static, uploads, dynamic):
-        os.chown(item, owner.st_uid, owner.st_gid)
+        os.chown(item, owner.pw_uid, owner.pw_gid)
     static.chmod(0o644)
     uploads.chmod(0o755)
     dynamic.chmod(0o644)
@@ -186,8 +189,8 @@ for line in sys.stdin:
 """
     def drop_privileges():
         os.setgroups([])
-        os.setgid(owner.st_gid)
-        os.setuid(owner.st_uid)
+        os.setgid(owner.pw_gid)
+        os.setuid(owner.pw_uid)
     child = subprocess.Popen(['/usr/bin/python3', '-I', '-B', '-c', child_code, str(held), str(static), str(dynamic)],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
         pass_fds=(held,), preexec_fn=drop_privileges)
