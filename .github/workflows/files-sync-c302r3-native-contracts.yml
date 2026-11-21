@@ -1,0 +1,64 @@
+name: Files Sync C302r3 current native Root and unprivileged actual OpenSSH contracts
+on:
+  push:
+    branches: [codex/files-sync-c302r3-native-contracts]
+    paths: [.github/workflows/files-sync-c302r3-native-contracts.yml]
+permissions:
+  contents: read
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: 1.27.2
+          cache: false
+      - name: Verify exact normal signed programme SDK and native dependencies
+        run: |
+          set -euo pipefail
+          mkdir -m 700 "$RUNNER_TEMP/c302r3-original"
+          python3 -I -B scripts/qa-apache-c265/verify-inputs.py > "$RUNNER_TEMP/c302r3-original/source-proof.json"
+          sudo apt-get update --error-on=any -o Acquire::Retries=0
+          sudo apt-get install -y --no-upgrade --no-install-recommends openssh-sftp-server util-linux
+          test -f /usr/lib/openssh/sftp-server
+          sha256sum /usr/lib/openssh/sftp-server > "$RUNNER_TEMP/c302r3-original/actual-native-sftp-server.sha256"
+      - name: Current Core and native Root private namespaces and actual unprivileged SFTP contracts
+        working-directory: candidate/panel-integration-compose-signed-image
+        env:
+          GOTOOLCHAIN: local
+          CGO_ENABLED: '0'
+          GOMAXPROCS: '2'
+          GOFLAGS: -p=2
+        run: |
+          set -euo pipefail
+          out="$RUNNER_TEMP/c302r3-original"
+          go test ./internal/appcatalog ./internal/core -run 'Remote|FilesSync|Sync|AppModule|Outbound|Notification' -count=1 -v > "$out/core-and-catalogue.stdout" 2>&1
+          build="$RUNNER_TEMP/c302r3-build"
+          mkdir -m 700 "$build"
+          go test -c ./internal/executor -o "$build/executor.test"
+          sha256sum "$build/executor.test" > "$out/executor-test.sha256"
+          native=$(sudo mktemp -d /var/tmp/c302r3-owned-native-XXXXXX)
+          sudo chmod 0755 "$native"
+          sudo install -m 0555 "$build/executor.test" "$native/executor.test"
+          sudo env GOMAXPROCS=2 "$native/executor.test" -test.run '^Test(RemoteIndependentRoot|RemoteUnpublishedOffline|AppModuleFiles)' -test.v -test.timeout 600s > "$out/root-private-filesystem.stdout" 2>&1
+          pin=$(sha256sum /usr/lib/openssh/sftp-server | cut -d ' ' -f 1)
+          sudo -n setpriv --reuid=www-data --regid=www-data --clear-groups --bounding-set=-all --inh-caps=-all --ambient-caps=-all --no-new-privs env PATH=/usr/bin:/bin GOMAXPROCS=2 GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps PANEL_REMOTE_SYNC_CI_SOURCE=files-sync-root-independent-backup-v1 PANEL_REMOTE_SYNC_NATIVE_SFTP_QA=1 PANEL_REMOTE_SYNC_NATIVE_SFTP_SHA256="$pin" "$native/executor.test" -test.run '^Test(Remote|Sync|LegacySync|WebDAVRemoteCopy|AppModuleFiles)' -test.v -test.timeout 900s > "$out/unprivileged-actual-sftp.stdout" 2>&1
+          sudo rm "$native/executor.test"
+          sudo rmdir "$native"
+      - if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c302r3-files-sync-native-contracts-${{ matrix.os }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/c302r3-original/
+          if-no-files-found: error
+          retention-days: 14
