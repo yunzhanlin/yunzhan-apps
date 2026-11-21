@@ -1,7 +1,7 @@
 name: Apache C265 reviewed runtime native Linux unit contracts
 on:
   push:
-    branches: [codex/apache-c265-upgrade-native]
+    branches: [codex/apache-c265-upgrade-native, codex/apache-c265r6-ui-native]
     paths: [candidate/panel-integration-compose-signed-image/**, scripts/qa-apache-c265/**, .github/workflows/apache-c265-native-unit.yml]
 permissions:
   contents: read

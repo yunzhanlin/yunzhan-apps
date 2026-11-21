@@ -22,7 +22,7 @@ async function refresh(){
 async function open(){visible.value=true;await refresh()}
 async function activate(){
  if(busy.value||!known.value||!selectionReady.value)return;
- busy.value=true;error.value="";pending.value ||= randomId();
+ busy.value=true;error.value="";pending.value ||= randomId().replace(/-/g, "");
  try{
   const result=await props.api<{job_id:string}>("/runtimes/apache/switch","POST",{release_id:"apache-2.4.71",engine_job_id:status.value?.native_engine_required?engine.value:""},pending.value);
   if(!result||!/^[a-f0-9]{32}$/.test(result.job_id))throw Error("原任务响应无法核实");

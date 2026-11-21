@@ -35,3 +35,26 @@ test('Apache manager changes preserve the complete previous App component outsid
  const marker='  switch_apache: "切换 Apache 运行版本",\n';
  for(const changed of [text.replace(marker,''),text.replace(marker,marker+marker),text.replace(marker,marker.replace('switch_apache','unreviewed-action'))])assert.throws(()=>beforeApacheRuntimeApp(changed));
 });
+
+import {createRequire} from 'node:module';
+import ts from '../web/node_modules/typescript/lib/typescript.js';
+import {randomId} from '../web/src/randomId.ts';
+import {apacheBodyBuildInventory} from '../web/src/apacheBodyBuild.ts';
+const vue=createRequire(new URL('../web/package.json',import.meta.url))('vue');
+test('actual Apache manager submits a Core-compatible nonce and retains it after an uncertain response',async()=>{
+ const source=readFileSync(new URL('../web/src/ApacheRuntimeManager.vue',import.meta.url),'utf8');
+ const start=source.indexOf('const visible='),end=source.indexOf('defineExpose({open});');assert(start>0&&end>start);
+ const actual=ts.transpileModule(source.slice(start,end),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+ const posts=[],jobs=[];let reads=0,installations=0;
+ const props={api:async(path,method,body,key)=>{
+  if(method===undefined){assert.equal(path,'/runtimes/apache');reads++;return {...baseline,native_engine_required:false};}
+  assert.equal(path,'/runtimes/apache/switch');assert.equal(method,'POST');posts.push({body,key});
+  if(posts.length===1)throw Error('original HTTP response unavailable');
+  return {job_id:'a'.repeat(32)};
+ },onJob:id=>jobs.push(id),onInstall:()=>installations++};
+ const manager=new Function('computed','ref','props','randomId','parseApacheRuntimeStatus','apacheBodyBuildInventory',actual+'\nreturn {open,refresh,activate,pending,error};')(vue.computed,vue.ref,props,randomId,parseApacheRuntimeStatus,apacheBodyBuildInventory);
+ await manager.open();assert.equal(posts.length,0);await manager.activate();
+ assert.equal(posts.length,1);assert.match(posts[0].key,/^[a-f0-9]{32}$/);assert.equal(manager.pending.value,posts[0].key);assert.deepEqual(posts[0].body,{release_id:'apache-2.4.71',engine_job_id:''});assert.match(manager.error.value,/original HTTP response unavailable/);
+ await manager.refresh();assert.equal(posts.length,1);assert.equal(manager.pending.value,posts[0].key);
+ await manager.activate();assert.equal(posts.length,2);assert.deepEqual(posts[1],posts[0]);assert.equal(manager.pending.value,'');assert.deepEqual(jobs,['a'.repeat(32)]);assert.equal(reads,2);assert.equal(installations,0);
+});

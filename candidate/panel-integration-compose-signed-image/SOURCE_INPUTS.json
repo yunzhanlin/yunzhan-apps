@@ -12006,9 +12006,9 @@
       "sha256": "b567045cce0fda93e3f65d59a6e64d9d5a859dd18d6dfd17d89dbd44616a4a89"
     },
     "scripts/test-apache-runtime.mjs": {
-      "bytes": 3920,
+      "bytes": 6119,
       "mode": 420,
-      "sha256": "3b21d33909ea6400ee031941b7aea8915d0e83d3e6a512013c1aedc184c094e3"
+      "sha256": "d82b4f52db64ed41d9085423e9311448aa65d9e5bdfc298c99430d716f397238"
     },
     "scripts/test-apache-waf-transactions.mjs": {
       "bytes": 11335,
@@ -91046,9 +91046,9 @@
       "sha256": "0824b7f51251aca689f38f6b217c31621f725ffe782435214691f9e328d6d277"
     },
     "web/src/ApacheRuntimeManager.vue": {
-      "bytes": 5598,
+      "bytes": 5616,
       "mode": 420,
-      "sha256": "94884db59b0ca6d2a97f1222d8dc71530ada541a98f80762b50f3aa5d8202c4d"
+      "sha256": "9666663d3f9397bea0b8433dcc12ac7abf2f1714e44f2d41adbcc752210a4cfa"
     },
     "web/src/ApacheWafTransactions.vue": {
       "bytes": 8966,
@@ -91922,5 +91922,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "4f886487a6c607d3edfed0d5bfdbf230327c61e447ca284bc96bbde26f1652bd"
+  "inputs_sha256": "eef9d1e3c4b96390c77a8ea9f121a67986a152a60149acd026246d71e601a481"
 }
