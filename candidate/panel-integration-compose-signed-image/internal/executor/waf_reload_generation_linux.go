@@ -40,7 +40,7 @@ func readWAFReloadProcess(root string, pid int) (wafReloadProcess, error) {
 	if pid <= 1 {
 		return result, errors.New("Nginx 进程标识无效")
 	}
-	data, err := readModuleProcFile(filepath.Join(root, strconv.Itoa(pid), "stat"), 8192)
+	data, err := readWAFReloadProcFile(filepath.Join(root, strconv.Itoa(pid), "stat"), 8192)
 	if err != nil {
 		return result, err
 	}
@@ -161,7 +161,7 @@ func captureWAFReloadGeneration(ctx context.Context, root, binary string, pid in
 	}
 	listeners := map[string]bool{}
 	for _, protocol := range []string{"tcp", "tcp6", "udp", "udp6", "unix"} {
-		data, err := readModuleProcFile(filepath.Join(root, strconv.Itoa(pid), "net", protocol), 16<<20)
+		data, err := readWAFReloadProcFile(filepath.Join(root, strconv.Itoa(pid), "net", protocol), 16<<20)
 		// Disabled IPv6 kernels do not expose these two optional tables.
 		if errors.Is(err, os.ErrNotExist) && (protocol == "tcp6" || protocol == "udp6") {
 			continue
@@ -189,7 +189,7 @@ func captureWAFReloadGeneration(ctx context.Context, root, binary string, pid in
 	if len(g.Listeners) == 0 {
 		return nil, errors.New("Nginx 主进程未确认持有监听套接字")
 	}
-	data, err := readModuleProcFile(filepath.Join(root, strconv.Itoa(pid), "task", strconv.Itoa(pid), "children"), 16384)
+	data, err := readWAFReloadProcFile(filepath.Join(root, strconv.Itoa(pid), "task", strconv.Itoa(pid), "children"), 16384)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func captureWAFReloadGeneration(ctx context.Context, root, binary string, pid in
 		if p.Parent != pid {
 			return nil, errors.New("Nginx 工作进程父身份变化")
 		}
-		title, err := readModuleProcFile(filepath.Join(root, child, "cmdline"), 8192)
+		title, err := readWAFReloadProcFile(filepath.Join(root, child, "cmdline"), 8192)
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}

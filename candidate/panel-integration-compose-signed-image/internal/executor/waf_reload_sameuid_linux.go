@@ -90,14 +90,14 @@ func wafSameUIDWorkerRead(ctx context.Context, root, binary string, worker wafRe
 		if err != nil || current.Parent != worker.Parent {
 			return errors.New("Nginx 工作进程启动身份发生变化")
 		}
-		status, err := readModuleProcFile(filepath.Join(root, strconv.Itoa(worker.PID), "status"), 32<<10)
+		status, err := readWAFReloadProcFile(filepath.Join(root, strconv.Itoa(worker.PID), "status"), 32<<10)
 		if err != nil {
 			return err
 		}
 		if err := wafSameUIDWorkerIdentity(status, uid, worker.Parent); err != nil {
 			return err
 		}
-		title, err := readModuleProcFile(filepath.Join(root, strconv.Itoa(worker.PID), "cmdline"), 8192)
+		title, err := readWAFReloadProcFile(filepath.Join(root, strconv.Itoa(worker.PID), "cmdline"), 8192)
 		if err != nil || !strings.HasPrefix(string(title), "nginx: worker process") {
 			return errWAFWorkerTitleUnverifiable
 		}

@@ -10931,19 +10931,29 @@
       "sha256": "85784e41d019b4859d7ecc86c478400f330d9e074343b7f3f47bc5b40b6d4121"
     },
     "internal/executor/waf_reload_generation_linux.go": {
-      "bytes": 12369,
+      "bytes": 12381,
       "mode": 384,
-      "sha256": "f6dd9b094e447f6d6e7fb66cb9388f3e50db4b849d627cfdf7c51428f139c4d1"
+      "sha256": "02b403e5fc551378b5b023faeee8237b2e85e3f6401b59f572af1ad81efb970a"
     },
     "internal/executor/waf_reload_generation_linux_test.go": {
       "bytes": 15434,
       "mode": 384,
       "sha256": "443438d8272fbbebad29435dfecb89b9aaf2387f0eab7fb3575bffdc6ea797e0"
     },
+    "internal/executor/waf_reload_proc_linux.go": {
+      "bytes": 1523,
+      "mode": 420,
+      "sha256": "3820cd2fe762cf38cc8a1884c7ecc2b45b32fa3f442b27474660d4499557b980"
+    },
+    "internal/executor/waf_reload_proc_linux_test.go": {
+      "bytes": 3768,
+      "mode": 420,
+      "sha256": "a60e590cd1b7b92dde0e14d18389bcce292d6a02bf6f798f44ec9c3213888cff"
+    },
     "internal/executor/waf_reload_sameuid_linux.go": {
-      "bytes": 12616,
+      "bytes": 12622,
       "mode": 384,
-      "sha256": "65312bd598f84c87a159bffaffca3d53e0317931283b2942cf64203dfc1daf99"
+      "sha256": "7dd51ab1cc267d4d096a7a0f5a9a9d73219854e002959fbb44c423a8bd28c49e"
     },
     "internal/executor/waf_reload_sameuid_linux_test.go": {
       "bytes": 4743,
@@ -91957,5 +91967,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "b592e7dbf00bd59908a500292e76587abeba5f4c0a7f574924b0763c657bba50"
+  "inputs_sha256": "00b06c3f1793b60fc41e50256d99fc2211a2a4899d11390ac059434816e6e01a"
 }
