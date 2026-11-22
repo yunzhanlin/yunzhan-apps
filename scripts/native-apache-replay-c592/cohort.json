@@ -1,0 +1,97 @@
+{
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "items": {
+    "apache": {
+      "id": "apache",
+      "name": "Apache HTTP Server",
+      "category": "deployment",
+      "version": "2.4.71-compat1",
+      "summary": "\u72ec\u7acb\u5b89\u88c5 Apache 2.4.71\uff0c\u6838\u5bf9\u5b9e\u9645\u8fd0\u884c\u7248\u672c\uff0c\u660e\u786e\u5207\u6362\u5171\u4eab\u7f51\u7ad9\u670d\u52a1\u5e76\u4fdd\u7559\u539f\u914d\u7f6e\u3001PHP \u7ed1\u5b9a\u4e0e\u9632\u62a4\u5f15\u64ce\u8bc1\u636e\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "apache-2.4.71",
+      "manage_route": "sites",
+      "capabilities": [
+        "\u56fa\u5b9a\u5b98\u65b9\u6e90\u7801\u4e0e\u6458\u8981",
+        "\u5b9e\u9645\u8fd0\u884c\u7248\u672c\u6838\u9a8c",
+        "\u7248\u672c\u5e76\u5b58\u4e0e\u660e\u786e\u5207\u6362",
+        "PHP/FPM \u72ec\u7acb\u7ed1\u5b9a",
+        "\u81ea\u5b9a\u4e49\u6539\u5199\u4e0e\u7b26\u53f7\u94fe\u63a5\u9650\u5236",
+        "\u539f\u751f WAF \u517c\u5bb9\u5f15\u64ce\u9009\u62e9",
+        "\u539f\u7ad9\u70b9\u6570\u636e\u4e0e\u914d\u7f6e\u4fdd\u7559",
+        "\u5f15\u7528\u4fdd\u62a4"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/apache/2.4.71-compat1/manifest.json",
+      "sha256": "aadc8489fe1e4e9bb40310bafdba7a8385fd11aabe7dd97758c17b45ba98ff53"
+    },
+    "nginx": {
+      "id": "nginx",
+      "name": "Nginx",
+      "category": "deployment",
+      "version": "1.30.6-compat1",
+      "summary": "\u5b89\u88c5\u53ef\u5e76\u5b58\u7684 Nginx \u8fd0\u884c\u65f6\uff0c\u652f\u6301\u7ad9\u70b9\u7ed1\u5b9a\u3001\u914d\u7f6e\u6821\u9a8c\u548c\u5b89\u5168\u56de\u6eda\u3002",
+      "stage": "ready",
+      "risk": "maintained",
+      "provider": "runtime",
+      "target": "nginx-1.30.6",
+      "manage_route": "sites",
+      "capabilities": [
+        "\u6e90\u7801\u6821\u9a8c",
+        "\u7ad9\u70b9\u914d\u7f6e",
+        "\u70ed\u91cd\u8f7d",
+        "\u5931\u8d25\u56de\u6eda"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/nginx/1.30.6-compat1/manifest.json",
+      "sha256": "81a8de8111b5c015f96359ff23cc97064fc5508d6f9ab602ca9a220a2f5200a8"
+    },
+    "php-82": {
+      "id": "php-82",
+      "name": "PHP 8.2",
+      "category": "deployment",
+      "version": "8.2.35-compat2",
+      "summary": "PHP 8.2.35 \u56fa\u5b9a\u5b98\u65b9\u6e90\u7801\u4e0e\u5b89\u5168\u4fee\u8ba2\uff1b\u72ec\u7acb FPM\u3001\u591a\u7248\u672c\u5207\u6362\u548c\u5f15\u7528\u4fdd\u62a4\uff0c\u539f\u751f\u6784\u5efa\u6309\u53ef\u7528\u5185\u5b58\u9650\u5236\u7f16\u8bd1\u5e76\u53d1\u3002\u5b8c\u6574\u7cfb\u7edf\u4e0e\u67b6\u6784\u5b9e\u88c5\u77e9\u9635\u4ecd\u5728\u9a8c\u6536\u3002",
+      "stage": "ready",
+      "risk": "maintenance",
+      "provider": "runtime",
+      "target": "php-8.2.35",
+      "manage_route": "runtimes",
+      "capabilities": [
+        "CLI",
+        "FPM",
+        "\u591a\u7248\u672c\u5e76\u5b58",
+        "\u7ad9\u70b9\u72ec\u7acb\u6c60"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/php-82/8.2.35-compat2/manifest.json",
+      "sha256": "c709defb2cf4f297fba3eb1e116dcb188e0379498f1753dfd591c23eb185ebcc"
+    },
+    "apache-waf": {
+      "id": "apache-waf",
+      "name": "Apache \u8bf7\u6c42\u9632\u706b\u5899 \u00b7 Apache WAF",
+      "category": "professional",
+      "version": "2.5.1",
+      "summary": "\u72ec\u7acb Apache \u89c4\u5219\u3001\u5f00\u6e90\u8bf7\u6c42\u4f53\u68c0\u6d4b\u53ca\u539f\u751f CC\uff1bCC \u65e5\u5fd7\u4f7f\u7528 Root \u72ec\u7acb\u526f\u672c\u3001\u5b8c\u6574\u6458\u8981\u4e0b\u8f7d\u4e0e\u79c1\u6709\u5386\u53f2\u8f6c\u5b58\uff0c\u4fdd\u7559\u539f\u6587\u4ef6\u3001\u4e2d\u65ad\u8bc1\u636e\u3001\u7ad9\u70b9\u7b56\u7565\u548c\u7b26\u53f7\u94fe\u63a5\u9650\u5236\u3002",
+      "stage": "ready",
+      "risk": "privileged",
+      "provider": "panel-module",
+      "target": "apache-waf",
+      "manage_route": "app-modules",
+      "capabilities": [
+        "\u72ec\u7acb Apache \u5de5\u4f5c\u53f0\uff1a\u5206\u7c7b\u89c4\u5219\u3001\u9010\u7ad9\u7b56\u7565\u3001IP/URL/UA \u540d\u5355\u3001\u81ea\u5b9a\u4e49\u5b57\u9762\u89c4\u5219\u548c\u4e8b\u4ef6\u7b5b\u9009",
+        "\u7cbe\u786e2.5.1\u539f\u7b7e\u540d\u4e0e\u8bf7\u6c42\u4f53\u3001CC\u3001\u65e5\u5fd7\u5f52\u6863\u4e09\u4e2a\u5904\u7406\u5668\u95e8\u7981\uff1b\u4fdd\u7559\u65e72.3\u30012.4\u30012.5.0\u7248\u672c\u53ca\u539f\u5b89\u88c5\u8eab\u4efd",
+        "\u56fa\u5b9a\u5f00\u6e90ModSecurity v2\u3001\u5df2\u4fee\u8865\u79c1\u6709YAJL\u4e0eOWASP CRS\uff1b\u5c01\u5b58\u6e90\u7801\u3001\u8bb8\u53ef\u3001ABI\u53ca\u52a0\u56fa\u6838\u5bf9",
+        "\u53d7\u9650\u72ec\u7acb\u8d26\u6237\u6784\u5efa\u4e0e\u5b8c\u6574\u7f16\u8bd1\u8fdb\u7a0b\u56de\u6536\uff1b\u660e\u786e\u9009\u62e9\u672c\u673a\u5f15\u64ce\u540e\u624d\u5141\u8bb8\u7f51\u7ad9\u542f\u7528",
+        "\u8868\u5355\u3001\u5d4c\u5957JSON\u3001XML\u4e0e\u4e0a\u4f20\u5b57\u6bb5\u68c0\u6d4b\uff1b\u6b63\u5e38\u6b63\u6587\u539f\u6837\u8f6c\u53d1\uff0c\u9010\u7ad9\u8bbe\u7f6e\u89c2\u5bdf\u3001\u963b\u65ad\u53ca\u89e3\u6790\u9884\u7b97",
+        "\u72ec\u7acb128MiB/4096 inode\u8bf7\u6c42\u4f53\u7f13\u5b58\u786c\u914d\u989d\uff1b\u5199\u5165\u5931\u8d25\u62d2\u7edd\u4e0d\u5b8c\u6574\u6b63\u6587",
+        "\u539f\u751fCC\u6309\u7f51\u7ad9\u548c\u6700\u591a20\u6761URL\u89c4\u5219\u8bbe\u901f\u7387\u3001\u7a81\u53d1\u5bb9\u91cf\uff1b\u6700\u591a64\u4e2a\u542f\u7528\u7ad9\u70b9\uff0c\u6bcf\u7ad94096\u5ba2\u6237\u7aef\u69fd\u4f4d",
+        "\u771f\u5b9eApache\u591a\u8fdb\u7a0b\u5171\u4eab\u4ee4\u724c\uff1b\u5e73\u6ed1\u91cd\u8f7d\u4fdd\u7559\u989d\u5ea6\uff0c\u5de5\u4f5c\u8fdb\u7a0b\u610f\u5916\u9000\u51fa\u540e\u4fdd\u5b88\u6062\u590d\uff0c\u5bb9\u91cf\u4e0d\u8db3\u660e\u786e\u62d2\u7edd",
+        "\u5173\u95ed\u3001\u89c2\u5bdf\u548c\u963b\u65ad\u72ec\u7acb\u751f\u6548\uff1b\u53ef\u4fe1\u4ee3\u7406\u9ed8\u8ba4\u5173\u95ed\uff0c\u660e\u786e\u9012\u5f52CIDR\u7b56\u7565\u540e\u4f7f\u7528\u6709\u6548\u5ba2\u6237\u7aef\u8eab\u4efd",
+        "CC\u65e5\u5fd732MiB\uff0c\u4e0d\u542b\u6b63\u6587\u3001Cookie\u3001\u8ba4\u8bc1\u5934\u6216\u67e5\u8be2\uff1b\u8fd1\u671f8\u4efd\u3001\u5386\u53f232\u4efd\uff0c\u72ec\u7acb\u526f\u672c32MiB\u5e76\u53e6\u4fdd\u7559\u539f\u6587\u4ef6",
+        "\u914d\u7f6e\u3001\u89c4\u5219\u4e0e\u5b89\u88c5\u8bb0\u5f55\u4e09\u6587\u4ef6\u6301\u4e45\u4e8b\u52a1\uff1b\u4fee\u8ba2\u51b2\u7a81\u3001\u539f\u751f\u6821\u9a8c\u3001\u91cd\u8f7d\u53cc\u6307\u7eb9\u4e0e\u5931\u8d25\u6062\u590d",
+        "CC\u65e5\u5fd7\u5148\u5efa\u7acbRoot\u72ec\u7acb\u526f\u672c\u5e76\u6838\u5bf9\u5b8c\u6574\u6458\u8981\uff1b\u65e7\u5199\u5165\u53e5\u67c4\u4e0d\u5f71\u54cd\u526f\u672c\uff0c\u539finode\u4e0e\u672a\u77e5\u6b8b\u4ef6\u4fdd\u7559\uff0c\u652f\u6301\u5206\u6bb5\u4e0b\u8f7d\u548c\u5386\u53f2\u8f6c\u5b58"
+      ],
+      "package_url": "https://raw.githubusercontent.com/yunzhanlin/yunzhan-apps/refs/heads/codex/app-candidate/candidate/dist/apps/apache-waf/2.5.1/manifest.json",
+      "sha256": "6e747eb2f2e3088567bb7ab45008979aa230794b7b1be434b957186c5218c531"
+    }
+  }
+}

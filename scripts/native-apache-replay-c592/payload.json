@@ -1,0 +1,20 @@
+{
+  "architecture": "amd64",
+  "files": {
+    "release-signing-dev.pub": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339",
+    "signed-release.py": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "guest.py": "457deeaaf0e28c191a6f6be2005bee35d7a5ed5175bba179fa3b05351428ebfa",
+    "cohort.json": "b63b97ce526e29444852436d3f8a527717d9232cfba82218f2ceead1912a4e4c",
+    "apache-business.py": "55b7119b0af95e5a4896d50d5e1f1728384d643c00c91bd6edd649c1c1cc7064",
+    "waf-business.py": "3a05803bce10e6a793dabad85cd41767e8664ce73233195380c3e128ac7c4b29",
+    "acceptance.py": "315427c30ad6a46e4d130bbd927d51b6b175a5289281347d5b589429ea2ea6da",
+    "casebook.py": "00d49eee8ff6880fb3e5179b1a47363181605cb930ff02adb4ac13dad8dbdd42",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz": "24faf1d61b9a7f3c830d842dd882567dbd25ebbe9499f1b73541d5c4f6f5a075",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.manifest": "81bcf0fe27a1848171399c004ebf23d6ca0379b491bc16a1295cec816a652a8d",
+    "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.sig": "cb1ed4cc049fb64dcf4fd90790d8cb12054aaa3c729bf63c1d5f780f3ef14a5a",
+    "replay-business.py": "6d288a03451024e2a86aeb6768a631e1cb45b5bfb6da8366a6ad3276de9d2083"
+  },
+  "served_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "source_inputs_sha256": "b223c28247d9d20e50a356643a9744a9ab174068dd567a2c57f15c342934c15f",
+  "version": "0.1.0-dev.proapps24apachebuildstatuscandidate477"
+}
