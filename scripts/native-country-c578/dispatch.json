@@ -1,0 +1,6 @@
+{
+  "tag": "qa-apachebuildstatuscandidate477-20261122-qa1",
+  "payload_sha256": "50df7983cf2ae2416f0429767f302d591b3368ea4ac7070e26a871957766e2bf",
+  "cases_sha256": "9a248cc8d1d8281ed2a660df249981ec1023c8de4c45db18f515bcccf0623700",
+  "kvm_sha256": "0490148d5bb38f0c6419d06418c72746287ded28dd037defaa1a45af8970e38d"
+}
