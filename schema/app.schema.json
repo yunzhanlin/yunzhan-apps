@@ -183,7 +183,8 @@
           "pm2-evidence-preserving-stop-v1",
           "pm2-root-vendor-v1",
           "intrusion-debian12-v1",
-          "pm2-configuration-archive-v1"
+          "pm2-configuration-archive-v1",
+          "mobile-web-workspace-v140"
         ]
       }
     },
@@ -1865,6 +1866,41 @@
                 }
               }
             }
+          },
+          {
+            "properties": {
+              "id": {
+                "const": "mobile"
+              },
+              "version": {
+                "const": "1.4.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "mobile-pwa"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "mobile-web-workspace-v140"
+                }
+              }
+            }
           }
         ]
       }
@@ -2023,6 +2059,47 @@
                 "maxItems": 1,
                 "items": {
                   "const": "mobile-native-delivery-v133"
+                }
+              }
+            }
+          },
+          {
+            "required": [
+              "id",
+              "version",
+              "delivery",
+              "required_panel_features"
+            ],
+            "properties": {
+              "id": {
+                "const": "mobile"
+              },
+              "version": {
+                "const": "1.4.0"
+              },
+              "delivery": {
+                "required": [
+                  "provider",
+                  "target",
+                  "manage_route"
+                ],
+                "properties": {
+                  "provider": {
+                    "const": "panel-module"
+                  },
+                  "target": {
+                    "const": "mobile-pwa"
+                  },
+                  "manage_route": {
+                    "const": "app-modules"
+                  }
+                }
+              },
+              "required_panel_features": {
+                "minItems": 1,
+                "maxItems": 1,
+                "items": {
+                  "const": "mobile-web-workspace-v140"
                 }
               }
             }

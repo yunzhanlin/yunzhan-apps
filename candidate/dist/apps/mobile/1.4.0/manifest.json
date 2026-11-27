@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "mobile",
+  "name": "云栈移动端",
+  "category": "professional",
+  "version": "1.4.0",
+  "summary": "手机浏览器直接管理面板，沿用网站权限与双重验证；提供安全访问地址、安装条件检查与离线提示。可选原生交付包继续使用1.3.3。",
+  "stage": "ready",
+  "risk": "maintained",
+  "delivery": {
+    "provider": "panel-module",
+    "target": "mobile-pwa",
+    "manage_route": "app-modules"
+  },
+  "compatibility": {
+    "os": [
+      "debian-12",
+      "debian-13",
+      "ubuntu-22.04",
+      "ubuntu-24.04",
+      "ubuntu-26.04"
+    ],
+    "architectures": [
+      "amd64",
+      "arm64"
+    ]
+  },
+  "capabilities": [
+    "手机浏览器直接运维",
+    "原菜单和网站范围权限",
+    "TOTP及恢复码登录",
+    "真实文件上传与下载",
+    "不含临时令牌的访问地址",
+    "浏览器安装和连接状态检查",
+    "离线提示，不缓存管理接口或凭据",
+    "可选原生1.3.3交付包保留"
+  ],
+  "required_panel_features": [
+    "mobile-web-workspace-v140"
+  ],
+  "health": {
+    "probe": "panel-api",
+    "target": "/api/app-modules/mobile-pwa"
+  },
+  "uninstall": {
+    "preserve_data": true,
+    "reference_check": false
+  }
+}
