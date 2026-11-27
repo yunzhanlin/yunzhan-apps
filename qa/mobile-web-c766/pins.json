@@ -1,0 +1,90 @@
+{
+  "old": {
+    "format": 1,
+    "programme_release_id": 453934658,
+    "programme_tag": "qa-apachebuildstatuscandidate477-20261122-qa1",
+    "programme_source_head": "f422fa32cc95925b6000fbd30f789ec4545e4879",
+    "programme_source_inputs_sha256": "b223c28247d9d20e50a356643a9744a9ab174068dd567a2c57f15c342934c15f",
+    "programme_archive": "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz",
+    "programme_version": "0.1.0-dev.proapps24apachebuildstatuscandidate477",
+    "programme_assets": {
+      "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz": {
+        "id": 776664750,
+        "bytes": 24506114,
+        "sha256": "24faf1d61b9a7f3c830d842dd882567dbd25ebbe9499f1b73541d5c4f6f5a075"
+      },
+      "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.manifest": {
+        "id": 776669475,
+        "bytes": 188,
+        "sha256": "81bcf0fe27a1848171399c004ebf23d6ca0379b491bc16a1295cec816a652a8d"
+      },
+      "panel-0.1.0-dev.proapps24apachebuildstatuscandidate477-linux-amd64.tar.gz.sig": {
+        "id": 776669687,
+        "bytes": 64,
+        "sha256": "cb1ed4cc049fb64dcf4fd90790d8cb12054aaa3c729bf63c1d5f780f3ef14a5a"
+      },
+      "release-signing-dev.pub": {
+        "id": 776674531,
+        "bytes": 113,
+        "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+      }
+    },
+    "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5",
+    "recipient_sha256": "55ac5d4129117009583d47c47442bd07cc1de997e6a2a10b5652b3cb7fa54495",
+    "native_source_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
+    "physical_device_acceptance": false,
+    "Main_changed": false,
+    "native_source_CI_run": 42252023422,
+    "native_source_CI_head": "bee6c296b27ec34520f363f1fc888f7ac545f199",
+    "native_Android_artifact": {
+      "artifact_id": 13519968404,
+      "original_server_digest_verified": "901e44dbf559b79ebe8002822344de502dd496cd49b15d00493e56b11348fc08",
+      "bytes": 4282815
+    },
+    "native_APKs": {
+      "app/build/outputs/apk/debug/app-debug.apk": {
+        "bytes": 6924789,
+        "sha256": "d67a093d80743fb0192455ed069936d6191d3804458fafacc39c915b00adba48"
+      },
+      "app/build/outputs/apk/release/app-release-unsigned.apk": {
+        "bytes": 5593477,
+        "sha256": "ed98242035588bc9067f1f7e894de858b9b842c33770df227d3ff75c74adf823"
+      }
+    },
+    "programme_expected_entries": 213
+  },
+  "new": {
+    "programme_release_id": 460269687,
+    "programme_tag": "qa-mobilewebcandidate768-20261127-qa1",
+    "programme_source_head": "85030700c3d05c88fcb8fdd5dbc61d84b84da808",
+    "programme_source_inputs_sha256": "80482f63e252edcd51bc3547434f43887a8b39d19f89389cdbc26b5fab89829e",
+    "programme_archive": "panel-0.1.0-dev.proapps24mobilewebcandidate768-linux-amd64.tar.gz",
+    "programme_version": "0.1.0-dev.proapps24mobilewebcandidate768",
+    "programme_assets": {
+      "panel-0.1.0-dev.proapps24mobilewebcandidate768-linux-amd64.tar.gz": {
+        "id": 799397433,
+        "bytes": 24523792,
+        "sha256": "8376275b7cc2e07aff33592503679813990ac06473a75d97f7c6b2f6d59dc39f"
+      },
+      "panel-0.1.0-dev.proapps24mobilewebcandidate768-linux-amd64.tar.gz.manifest": {
+        "id": 799401147,
+        "bytes": 180,
+        "sha256": "8476a6198688b78f64257d725de133f2175a9fa48943f905c5b3c01e6417e4cc"
+      },
+      "panel-0.1.0-dev.proapps24mobilewebcandidate768-linux-amd64.tar.gz.sig": {
+        "id": 799401337,
+        "bytes": 64,
+        "sha256": "116f2dc3e03b27ed53a0b57728fb07f785db9ac07273c135a67a136ea044a098"
+      },
+      "release-signing-dev.pub": {
+        "id": 799405583,
+        "bytes": 113,
+        "sha256": "4ccfcc861d56a41e3ba7f7ace7e2432c815f366c58448d783df92c6632f01339"
+      }
+    },
+    "original_verifier_sha256": "fe128e82b4e11345b320cd782134768bfe1a4df14947c425d7494873a7a7b7b5"
+  },
+  "catalogue_head": "610627e66e1ac6f0c84640a9e75fd276711719ba",
+  "old_catalogue_head": "16eca3277e3846c38d2a075f35c4dd27827261bf",
+  "manifest_sha256": "6b6f78237d29089c0be23ed3194fa401123876b79e56e374b8c7b80d2b00bb0f"
+}
