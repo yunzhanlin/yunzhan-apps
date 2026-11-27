@@ -1,0 +1,4274 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/yunzhanlin/yunzhan-apps/schema/current-app.schema.json",
+  "title": "Current signed forty application contracts and retained mobile native versions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "category",
+    "version",
+    "summary",
+    "stage",
+    "delivery",
+    "compatibility",
+    "capabilities",
+    "health",
+    "uninstall"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 2,
+      "maxLength": 80
+    },
+    "category": {
+      "enum": [
+        "deployment",
+        "professional"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9][0-9A-Za-z.+_-]*$"
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 240
+    },
+    "stage": {
+      "enum": [
+        "ready",
+        "integration",
+        "design"
+      ]
+    },
+    "risk": {
+      "enum": [
+        "maintained",
+        "maintenance",
+        "eol",
+        "privileged"
+      ]
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "target"
+      ],
+      "properties": {
+        "provider": {
+          "enum": [
+            "runtime",
+            "compose",
+            "panel-module"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9._-]{1,127}$"
+        },
+        "image": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "isolation": {
+          "enum": [
+            "legacy-container"
+          ]
+        },
+        "manage_route": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$"
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "os",
+        "architectures"
+      ],
+      "properties": {
+        "os": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ]
+          }
+        },
+        "architectures": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "string",
+        "minLength": 2,
+        "maxLength": 256
+      }
+    },
+    "required_panel_features": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 9,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{1,62}$",
+        "enum": [
+          "statistics-cursor-retirement-v1",
+          "statistics-request-identity-v1",
+          "statistics-geodata-v2",
+          "platform-maintenance-v1",
+          "disk-inode-usage-v1",
+          "disk-host-jobs-v1",
+          "disk-host-cancel-seal-v1",
+          "compose-memcached-digest-v1",
+          "analytics-session-lifecycle-v1",
+          "hardening-reversible-journal-v1",
+          "intrusion-preserving-journal-v2",
+          "waf-bound-health-v1",
+          "runtime-package-version-v1",
+          "mobile-native-delivery-v132",
+          "mobile-native-delivery-v133",
+          "php-security-20261021-v1",
+          "php-bounded-native-build-v1",
+          "compose-memcached-unix-v1",
+          "compose-memcached-retirement-v1",
+          "waf-country-signed-data-v1",
+          "intrusion-upstream0112-v1",
+          "load-balance-stream-controller-v1",
+          "apache-native-body-site-transactions-v1",
+          "analytics-managed-client-address-v1",
+          "apache-native-cc-site-transactions-v1",
+          "apache-cc-log-archive-v1",
+          "analytics-route-readiness-v1",
+          "analytics-navigation-order-v1",
+          "integrity-kernel-inode-journal-v1",
+          "enterprise-integrity-kernel-ownership-v1",
+          "files-sync-root-independent-backup-v1",
+          "website-analytics-query-context-v1",
+          "files-sync-unpublished-retention-v1",
+          "pm2-evidence-preserving-stop-v1",
+          "pm2-root-vendor-v1",
+          "intrusion-debian12-v1",
+          "pm2-configuration-archive-v1",
+          "mobile-web-workspace-v140",
+          "daily-report-schedule-v1",
+          "docker-container-metrics-v1",
+          "network-ids-independent-archive-v1",
+          "nfs-site-archive-preflight-v1",
+          "php-fpm-process-policy-v1",
+          "platform-maintenance-fleet-check-v1",
+          "pure-ftpd-transfer-history-v1",
+          "site-diagnosis-apache-v1",
+          "task-openssh-inventory-v1",
+          "user-access-overview-v1",
+          "website-analytics-geography-v1",
+          "website-analytics-layout-heatmap-v1",
+          "website-analytics-period-comparison-v1",
+          "website-analytics-session-activity-v1"
+        ]
+      }
+    },
+    "geo_data_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "format"
+      ],
+      "properties": {
+        "id": {
+          "const": "dbip-city-lite-v1"
+        },
+        "format": {
+          "const": 1
+        }
+      }
+    },
+    "rule_data_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "format",
+        "engine"
+      ],
+      "properties": {
+        "id": {
+          "const": "et-open-web-bsd-v1"
+        },
+        "format": {
+          "const": 1
+        },
+        "engine": {
+          "const": "suricata-8.0"
+        }
+      }
+    },
+    "health": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "probe"
+      ],
+      "properties": {
+        "probe": {
+          "enum": [
+            "binary",
+            "systemd",
+            "tcp",
+            "http",
+            "panel-api"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "maxLength": 160
+        }
+      }
+    },
+    "uninstall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preserve_data",
+        "reference_check"
+      ],
+      "properties": {
+        "preserve_data": {
+          "type": "boolean"
+        },
+        "reference_check": {
+          "type": "boolean"
+        }
+      }
+    },
+    "country_data_channel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "format"
+      ],
+      "properties": {
+        "id": {
+          "const": "dbip-country-lite-v1"
+        },
+        "format": {
+          "const": 1
+        }
+      }
+    }
+  },
+  "$comment": "Current candidate contracts are independent of the preserved historical app.schema.json. Each version binds delivery, ordered handler features, compatibility and data channels. Descriptions and display names remain structural metadata.",
+  "x-yunzhan-contract-kind": "current40-retained-native132-133",
+  "oneOf": [
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "anti-intrusion"
+        },
+        "version": {
+          "const": "1.1.2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "intrusion-prevention",
+            "manage_route": "security"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/software"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "intrusion-preserving-journal-v2",
+            "intrusion-upstream0112-v1",
+            "intrusion-debian12-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "apache"
+        },
+        "version": {
+          "const": "2.4.71-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "apache-2.4.71",
+            "manage_route": "sites"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "httpd -t"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "apache-waf"
+        },
+        "version": {
+          "const": "2.5.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "apache-waf",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/software/apache-waf/config"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "apache-native-body-site-transactions-v1",
+            "apache-native-cc-site-transactions-v1",
+            "apache-cc-log-archive-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "daily-report"
+        },
+        "version": {
+          "const": "1.4.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "daily-report",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/daily-report"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "daily-report-schedule-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "disk-analysis"
+        },
+        "version": {
+          "const": "1.4.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "disk-analysis",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/disk-analysis"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "disk-inode-usage-v1",
+            "disk-host-jobs-v1",
+            "disk-host-cancel-seal-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "docker-manager"
+        },
+        "version": {
+          "const": "1-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "docker-auto",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "systemd",
+            "target": "docker.service"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "docker-container-metrics-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "elasticsearch"
+        },
+        "version": {
+          "const": "9.1.4-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "elasticsearch-snapshot",
+            "image": "docker.elastic.co/elasticsearch/elasticsearch:9.1.4@sha256:62a245d92e8d14440e1e43a1b4f08d37aef316d82f198b4f878985948aa2d1d8",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/_cluster/health"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "enterprise-tamper-proof"
+        },
+        "version": {
+          "const": "1.5.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "enterprise-tamper-proof",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/enterprise-tamper-proof"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "enterprise-integrity-kernel-ownership-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "file-monitor"
+        },
+        "version": {
+          "const": "1.4.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "file-monitor",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/file-monitor"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "files-sync"
+        },
+        "version": {
+          "const": "2.0.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "files-sync",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/files-sync"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "files-sync-root-independent-backup-v1",
+            "files-sync-unpublished-retention-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "load-balance"
+        },
+        "version": {
+          "const": "1.9.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "load-balance",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/load-balance"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "load-balance-stream-controller-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "memcached"
+        },
+        "version": {
+          "const": "1.6.45-compat4"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "memcached-cache",
+            "image": "memcached:1.6.45-alpine@sha256:9e4de012dc607573052061c0bcb38abc775e1dd59b24e7ac38d1892842094aaf",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "memcached-unix-workspace"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "compose-memcached-digest-v1",
+            "compose-memcached-unix-v1",
+            "compose-memcached-retirement-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "mobile"
+        },
+        "version": {
+          "const": "1.4.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "mobile-pwa",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/mobile-pwa"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "mobile-web-workspace-v140"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "mongodb"
+        },
+        "version": {
+          "const": "8.0.38-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "mongodb-8038",
+            "image": "mongo:8.0.38-noble@sha256:76a93cc399d05709baeea4e55385749657aa0085ad5b497c851380778eccea2c",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "tcp",
+            "target": "127.0.0.1:27017"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "mysql"
+        },
+        "version": {
+          "const": "8.4.13-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "mysql-8.4.13",
+            "manage_route": "databases"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "mysql --version"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features",
+        "rule_data_channel"
+      ],
+      "properties": {
+        "id": {
+          "const": "network-threat-detection"
+        },
+        "version": {
+          "const": "1.3.4"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "network-threat-detection",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/network-threat-detection"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "network-ids-independent-archive-v1"
+          ]
+        },
+        "rule_data_channel": {
+          "const": {
+            "id": "et-open-web-bsd-v1",
+            "format": 1,
+            "engine": "suricata-8.0"
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "nfs-manager"
+        },
+        "version": {
+          "const": "1.3.2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "nfs-manager",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/nfs-manager"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "nfs-site-archive-preflight-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "nginx"
+        },
+        "version": {
+          "const": "1.30.6-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "nginx-1.30.6",
+            "manage_route": "sites"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "nginx -t"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "runtime-package-version-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features",
+        "country_data_channel"
+      ],
+      "properties": {
+        "id": {
+          "const": "nginx-waf"
+        },
+        "version": {
+          "const": "2.6.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "nginx-waf",
+            "manage_route": "security"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-13",
+              "ubuntu-24.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/software/nginx-waf/config"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "waf-country-signed-data-v1"
+          ]
+        },
+        "country_data_channel": {
+          "const": {
+            "id": "dbip-country-lite-v1",
+            "format": 1
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "openlitespeed"
+        },
+        "version": {
+          "const": "1.9.4-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "openlitespeed-194",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-openlitespeed:1.9.4-lsphp83-compat2@sha256:a3f4cdafd5581e83d3deb4d50ef1b003a1164142f545652f7ae540bf18c2fd82",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-80"
+        },
+        "version": {
+          "const": "8.0.30-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "eol"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "php-legacy-80-bullseye-compat2",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php80:8.0.30-compat2@sha256:6f1ded5a5e08fc7f31efc5416cc0b877d75f94f576ed0d44bbb8d78319da3eed",
+            "manage_route": "docker",
+            "isolation": "legacy-container"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/.__cloudstack_health"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-81"
+        },
+        "version": {
+          "const": "8.1.34-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "eol"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "php-legacy-81-bookworm-compat2",
+            "image": "ghcr.io/yunzhanlin/yunzhan-apps-php81:8.1.34-compat2@sha256:afda4abcf8755a50879d77643533d1af624236711c6cdf4e40653b09cbfc0830",
+            "manage_route": "docker",
+            "isolation": "legacy-container"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/.__cloudstack_health"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-82"
+        },
+        "version": {
+          "const": "8.2.35-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintenance"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "php-8.2.35",
+            "manage_route": "runtimes"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "php -v"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "php-security-20261021-v1",
+            "php-bounded-native-build-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-83"
+        },
+        "version": {
+          "const": "8.3.36-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintenance"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "php-8.3.36",
+            "manage_route": "runtimes"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "php -v"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "php-security-20261021-v1",
+            "php-bounded-native-build-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-84"
+        },
+        "version": {
+          "const": "8.4.27-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "php-8.4.27",
+            "manage_route": "runtimes"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "php -v"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "php-security-20261021-v1",
+            "php-bounded-native-build-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-85"
+        },
+        "version": {
+          "const": "8.5.12-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "php-8.5.12",
+            "manage_route": "runtimes"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "php -v"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "php-security-20261021-v1",
+            "php-bounded-native-build-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "php-code-security"
+        },
+        "version": {
+          "const": "1.3.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "php-code-security",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/php-code-security"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "php-fpm-process-policy-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "phpmyadmin"
+        },
+        "version": {
+          "const": "5.2.3-compat2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "phpmyadmin-523",
+            "image": "phpmyadmin:5.2.3-apache@sha256:f54a37b908b26caa7032c4eb0c7f3495fdd90208a06eed9c4b2c8e691dd1662c",
+            "manage_route": "databases"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": false,
+            "reference_check": false
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "platform-ops"
+        },
+        "version": {
+          "const": "1.3.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "platform-ops",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/platform-ops"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "platform-maintenance-v1",
+            "platform-maintenance-fleet-check-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "pm2-manager"
+        },
+        "version": {
+          "const": "7.0.4-compat12"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "pm2-manager",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/pm2-manager"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "pm2-configuration-archive-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "pure-ftpd"
+        },
+        "version": {
+          "const": "1.0.54-compat8"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "pure-ftpd",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/pure-ftpd"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "pure-ftpd-transfer-history-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "rabbitmq"
+        },
+        "version": {
+          "const": "4.4.0-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "compose",
+            "target": "rabbitmq-440",
+            "image": "rabbitmq:4.4.0-management-alpine@sha256:4841f6384ef8313c3594cd3f2e9f40c10805f8a61c45f08a9a5d9ddea8199267",
+            "manage_route": "docker"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "http",
+            "target": "/api/health/checks/alarms"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall"
+      ],
+      "properties": {
+        "id": {
+          "const": "redis"
+        },
+        "version": {
+          "const": "8.2.11-compat1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "deployment"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "runtime",
+            "target": "redis-8.2.11",
+            "manage_route": "databases"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "binary",
+            "target": "redis-server --version"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "required_panel_features"
+            ]
+          },
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "site-diagnosis"
+        },
+        "version": {
+          "const": "1.3.1"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "site-diagnosis",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/site-diagnosis"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "site-diagnosis-apache-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "system-hardening"
+        },
+        "version": {
+          "const": "1.1.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "system-hardening",
+            "manage_route": "security"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/software"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "hardening-reversible-journal-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "task-manager"
+        },
+        "version": {
+          "const": "1.3.2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "task-manager",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/task-manager"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "task-openssh-inventory-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "user-manager"
+        },
+        "version": {
+          "const": "1.3.2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "user-manager",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/user-manager"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "user-access-overview-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "website-analytics"
+        },
+        "version": {
+          "const": "2.4.6"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "website-analytics",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/website-analytics"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "analytics-session-lifecycle-v1",
+            "analytics-managed-client-address-v1",
+            "analytics-route-readiness-v1",
+            "analytics-navigation-order-v1",
+            "website-analytics-query-context-v1",
+            "website-analytics-period-comparison-v1",
+            "website-analytics-layout-heatmap-v1",
+            "website-analytics-geography-v1",
+            "website-analytics-session-activity-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features",
+        "geo_data_channel"
+      ],
+      "properties": {
+        "id": {
+          "const": "website-statistics-v2"
+        },
+        "version": {
+          "const": "2.6.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "website-statistics-v2",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/website-statistics-v2"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "statistics-cursor-retirement-v1",
+            "statistics-request-identity-v1",
+            "statistics-geodata-v2"
+          ]
+        },
+        "geo_data_channel": {
+          "const": {
+            "id": "dbip-city-lite-v1",
+            "format": 1
+          }
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "website-tamper-proof"
+        },
+        "version": {
+          "const": "1.5.0"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "privileged"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "website-tamper-proof",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/website-tamper-proof"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": true
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "integrity-kernel-inode-journal-v1"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "mobile"
+        },
+        "version": {
+          "const": "1.3.2"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "mobile-pwa",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/mobile-pwa"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "mobile-native-delivery-v132"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "required": [
+        "id",
+        "version",
+        "stage",
+        "category",
+        "risk",
+        "delivery",
+        "compatibility",
+        "health",
+        "uninstall",
+        "required_panel_features"
+      ],
+      "properties": {
+        "id": {
+          "const": "mobile"
+        },
+        "version": {
+          "const": "1.3.3"
+        },
+        "stage": {
+          "const": "ready"
+        },
+        "category": {
+          "const": "professional"
+        },
+        "risk": {
+          "const": "maintained"
+        },
+        "delivery": {
+          "const": {
+            "provider": "panel-module",
+            "target": "mobile-pwa",
+            "manage_route": "app-modules"
+          }
+        },
+        "compatibility": {
+          "const": {
+            "os": [
+              "debian-12",
+              "debian-13",
+              "ubuntu-22.04",
+              "ubuntu-24.04",
+              "ubuntu-26.04"
+            ],
+            "architectures": [
+              "amd64",
+              "arm64"
+            ]
+          }
+        },
+        "health": {
+          "const": {
+            "probe": "panel-api",
+            "target": "/api/app-modules/mobile-pwa"
+          }
+        },
+        "uninstall": {
+          "const": {
+            "preserve_data": true,
+            "reference_check": false
+          }
+        },
+        "required_panel_features": {
+          "const": [
+            "mobile-native-delivery-v133"
+          ]
+        }
+      },
+      "not": {
+        "anyOf": [
+          {
+            "required": [
+              "rule_feeds"
+            ]
+          },
+          {
+            "required": [
+              "rule_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "geo_data_channel"
+            ]
+          },
+          {
+            "required": [
+              "country_data_channel"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

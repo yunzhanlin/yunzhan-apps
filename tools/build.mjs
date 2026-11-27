@@ -1,3 +1,4 @@
+import{currentCandidateSchema,assertCurrentContracts}from'./current-contract-schema.mjs';
 import { ACTIVE_APPLICATION_COUNT, assertActiveApplications } from './active-apps.mjs';
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,7 +19,7 @@ const output=path.join(root,candidate?'candidate':'');
 if (source.schema_version !== 1 || !Array.isArray(source.apps)) throw new Error("registry/apps.json format is invalid");
 const catalogBaseURL = officialCatalogBaseURL(source.channel === undefined ? 'stable' : source.channel);
 if(!candidate&&source.channel!==undefined&&source.channel!=='stable')throw Error('stable catalogue cannot select the candidate channel');
-if(candidate){await candidateAssets(root);await candidateSchema(root);}
+if(candidate){await candidateAssets(root);await candidateSchema(root);await assertCurrentContracts(root,source.apps);await currentCandidateSchema(root);}
 
 assertActiveApplications(source.apps);
 if(source.apps.length!==ACTIVE_APPLICATION_COUNT)throw Error('active catalogue must contain exactly '+ACTIVE_APPLICATION_COUNT+' applications');
