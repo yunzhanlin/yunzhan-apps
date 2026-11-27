@@ -1,0 +1,26 @@
+{
+  "format": 1,
+  "native_source_inputs_sha256": "895c674a1c3475f934df1b2289fa3b01e613b16c5cad46f60f8bdc36739e680e",
+  "native_source_CI_run": 42252023422,
+  "native_source_CI_head": "bee6c296b27ec34520f363f1fc888f7ac545f199",
+  "source_overlays": 0,
+  "cloudflared": {
+    "tag": "2026.10.7",
+    "release_id": 429293203,
+    "asset_id": 692817008,
+    "name": "cloudflared-linux-amd64",
+    "bytes": 40274445,
+    "sha256": "1f99fb518b83dec2ba8d870a7cc991d82a77e6196295a3d2754ba17ab9f91872",
+    "url": "https://github.com/cloudflare/cloudflared/releases/download/2026.10.7/cloudflared-linux-amd64"
+  },
+  "temporary_test_only_tunnel": true,
+  "trusted_OS_certificate_validation_unchanged": true,
+  "account_or_production_credentials_required": false,
+  "Main_changed": false,
+  "all50_commercial": false,
+  "owned_native_upload_fixture": {
+    "name": "C689Upload.bin",
+    "bytes": 73757,
+    "sha256": "1e94127fb5e76823f6ee9eb33542e971442d0377bbaf8458d2c44b62f826adf5"
+  }
+}
