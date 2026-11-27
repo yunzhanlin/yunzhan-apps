@@ -16,7 +16,6 @@ jobs:
     timeout-minutes: 50
     env:
       GH_TOKEN: ${{ github.token }}
-      PLAYWRIGHT_MODULE: file://${{ runner.temp }}/c766-node/node_modules/playwright-core/index.mjs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
@@ -48,6 +47,7 @@ jobs:
           echo $! > "$RUNNER_TEMP/c766-private/proxy.pid"
           for attempt in $(seq 1 40); do test ! -f "$RUNNER_TEMP/c766-private/proxy-ready.json" || break; sleep 0.25; done
           python3 -I -B qa/mobile-web-c766/configure-browser.py "$RUNNER_TEMP/c766-private"
+          export PLAYWRIGHT_MODULE="file://$RUNNER_TEMP/c766-node/node_modules/playwright-core/index.mjs"
           node qa/mobile-web-c766/webstore-business.mjs "$RUNNER_TEMP/c766-private/legacy" > "$RUNNER_TEMP/c766-private/original-legacy.stdout" 2> "$RUNNER_TEMP/c766-private/original-legacy.stderr"
           python3 -c 'import json,os,pathlib; q=pathlib.Path(os.environ["RUNNER_TEMP"]); p=json.loads((q/"c766-private/legacy/original-client-proof.json").read_text()); assert p["ok"] and p["legacy133_not_relabelled140"]; (q/"c766-ready/ready.json").write_text(json.dumps({"ok":True,"old133_preserved_after_normal_SDK_upgrade":True,"run_id":os.environ["GITHUB_RUN_ID"],"native_App_runs":0}))'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
@@ -61,6 +61,7 @@ jobs:
       - name: Actual app store update and desktop and narrow browser file roundtrip
         run: |
           set -eu
+          export PLAYWRIGHT_MODULE="file://$RUNNER_TEMP/c766-node/node_modules/playwright-core/index.mjs"
           node qa/mobile-web-c766/webstore-business.mjs "$RUNNER_TEMP/c766-private/upgrade" > "$RUNNER_TEMP/c766-private/original-upgrade-web.stdout" 2> "$RUNNER_TEMP/c766-private/original-upgrade-web.stderr"
           node qa/mobile-web-c766/viewer-business.mjs "$RUNNER_TEMP/c766-private/viewer" > "$RUNNER_TEMP/c766-private/original-viewer-web.stdout" 2> "$RUNNER_TEMP/c766-private/original-viewer-web.stderr"
       - name: Server evidence and actual restart retain original state and installed identity

@@ -1,0 +1,63 @@
+name: Mobile web C787 normal AMD64 install and ready cold server with actual browser
+on:
+  push:
+    branches: [codex/mobile-web-c787-cold]
+    paths: ['.github/workflows/mobile-web-c787.yml']
+permissions:
+  contents: read
+concurrency:
+  group: mobile-web-c787-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  normal-install-cold-web:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/mobile-web-c787-cold'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: qa/mobile-web-c787
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Exact original signed SDK and browser dependency
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/c787-private" "$RUNNER_TEMP/c787-public"
+          npm install --prefix "$RUNNER_TEMP/c787-node" --ignore-scripts --no-audit --no-fund playwright-core@1.63.0
+          python3 -I -B qa/mobile-web-c787/base/download-programme.py "$RUNNER_TEMP/c787-assets"
+      - name: One normal signed fresh install and real original file
+        run: sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B qa/mobile-web-c787/base/prepare-real-panel.py "$RUNNER_TEMP/c787-assets" "$RUNNER_TEMP/c787-private" > "$RUNNER_TEMP/c787-private/original-fresh.stdout" 2> "$RUNNER_TEMP/c787-private/original-fresh.stderr"
+      - name: One signed mobile140 install and service restart with GET readiness before login
+        run: sudo -n env GITHUB_ACTIONS=true python3 -I -B qa/mobile-web-c787/cold-root.py "$RUNNER_TEMP/c787-private" > "$RUNNER_TEMP/c787-private/original-cold-root.stdout" 2> "$RUNNER_TEMP/c787-private/original-cold-root.stderr"
+      - name: Actual post-cold current40 store cards and phone and desktop web140 workspace
+        run: |
+          set -eu
+          umask 077
+          export PLAYWRIGHT_MODULE="file://$RUNNER_TEMP/c787-node/node_modules/playwright-core/index.mjs"
+          python3 -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"c787-private"; (p/"proxy-config.json").write_text(json.dumps({"backend_port":19100,"ready":str(p/"proxy-ready.json"),"metrics":str(p/"proxy-metrics.json")}))'
+          node qa/mobile-web-c787/loopback-proxy.mjs "$RUNNER_TEMP/c787-private/proxy-config.json" > "$RUNNER_TEMP/c787-private/original-proxy.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/c787-private/proxy.pid"
+          for attempt in $(seq 1 40); do test ! -f "$RUNNER_TEMP/c787-private/proxy-ready.json" || break; sleep 0.25; done
+          node qa/mobile-web-c787/cold-browser.mjs "$RUNNER_TEMP/c787-private" > "$RUNNER_TEMP/c787-private/original-cold-browser.stdout" 2> "$RUNNER_TEMP/c787-private/original-cold-browser.stderr"
+          python3 -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"c787-private"; server=json.loads((p/"original-cold-server-proof.json").read_text()); ui=json.loads((p/"original-cold-browser-proof.json").read_text()); assert server["ok"] and ui["ok"]; server.update(actual_post_cold_web_UI=True,all40_actual_store_cards=len(ui["real_all40_cards"]),browser=ui["browser"]); (p/"original-final-proof.json").write_text(json.dumps(server))'
+      - name: Close owned proxy and seal original noncredential evidence including failures
+        if: always()
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 -p "$RUNNER_TEMP/c787-private" "$RUNNER_TEMP/c787-public"
+          if test -f "$RUNNER_TEMP/c787-private/proxy.pid"; then kill -TERM "$(cat "$RUNNER_TEMP/c787-private/proxy.pid")" || true; fi
+          sudo -n --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_RUN_ID,GITHUB_SHA python3 -I -B qa/mobile-web-c787/seal.py "$RUNNER_TEMP/c787-private" "$RUNNER_TEMP/c787-public"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c787-web-cold-original-${{ github.run_id }}
+          path: ${{ runner.temp }}/c787-public/
+          retention-days: 14
+          if-no-files-found: error
