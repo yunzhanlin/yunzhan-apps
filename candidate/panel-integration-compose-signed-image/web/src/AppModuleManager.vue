@@ -276,6 +276,7 @@ const workspace = ref<Section[]>([]), history = ref<Record<string, any>>();
 const syncPreview = computed(() => definition.value?.id === 'files-sync' ? remoteSyncPreview(report.value?.remote_sync_preview) : undefined);
 const syncPreviewStale = computed(() => !!syncPreview.value && !remotePreviewMatches(syncPreview.value, form.value, expectedRevision.value));
 function sectionReport(section:string) {
+  if (definition.value?.id === 'mobile-pwa' && section === 'mobile-web') return undefined;
   if (definition.value?.id === 'daily-report' && section === 'archive') return undefined;
   if (definition.value?.id === 'task-manager' && section.startsWith('inventory-')) return undefined;
   if (definition.value?.id === 'nfs-manager') return nfsReportForSection(section, report.value);
@@ -583,7 +584,7 @@ async function show(id: string) {
     if(openingGeneration!==idsAccessGeneration||!visible.value)return;
     if (page.definition?.id !== id) throw new Error("应用页面身份无法核对；未展示其他应用的管理操作");
     definition.value = page.definition;
-    workspace.value = (page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }]).map(section => ({ ...section, fields: section.fields ?? [], actions: section.actions ?? [] }));
+    workspace.value = (page.workspace || [{ id: "manage", label: "管理", help: "请更新面板以获取专用管理流程。", fields: (page.definition.fields || []).map(field => field.key), actions: page.definition.actions.filter(action => action !== "history") }]).filter(section => id !== 'mobile-pwa' || section.id !== 'mobile-web' || page.status?.version === '1.4.0').map(section => ({ ...section, fields: section.fields ?? [], actions: section.actions ?? [] }));
     activeTab.value = workspace.value[0]?.id || "overview";
     guidance.value = page.guidance;
     if(id==='daily-report')dailyWorker.value = page.daily_worker;
@@ -656,6 +657,8 @@ async function show(id: string) {
     return;
   }
   const needsAccountRead = id === 'user-manager' && userMutationBlocked('update');
+  const browserOnlyWorkspace = id === 'mobile-pwa' && installedVersion.value === '1.4.0' && activeTab.value === 'mobile-web';
+  if (browserOnlyWorkspace) return;
   const inspection = reportStateUnknown.value || needsAccountRead ? undefined : initialModuleInspection(id, definition.value, installed.value, pageReady);
   if (inspection) await execute(inspection);
   if (id === 'nfs-manager' && openingGeneration === idsAccessGeneration && visible.value && definition.value?.id === id && pageReady) {

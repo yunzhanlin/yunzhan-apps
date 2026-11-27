@@ -12201,9 +12201,9 @@
       "sha256": "9a56f51964f1803f5cfd2fbdbc6d851ad69a8886044c82c0f2821ce5615c2c8b"
     },
     "scripts/test-mobile-web.mjs": {
-      "bytes": 3645,
+      "bytes": 5031,
       "mode": 420,
-      "sha256": "738d62fa9fdc293191f4bdfef61bc06a04be1af55e7c037e4f2052dcf50a18e9"
+      "sha256": "7cfbaa786b6ef4f1d2e055a72d9e28ef151772cab456fc86bf8e45d391887c31"
     },
     "scripts/test-module-report-provenance.mjs": {
       "bytes": 3840,
@@ -91121,9 +91121,9 @@
       "sha256": "ebef9a60e79e1ff29809b8c2cd0d93e59748111219f0a1e3475597738f8ce7ea"
     },
     "web/src/AppModuleManager.vue": {
-      "bytes": 129120,
+      "bytes": 129479,
       "mode": 420,
-      "sha256": "97d9345d602edf67093970b9bc62c0ff46d6e2db8564c85a237ccefeddaf011e"
+      "sha256": "1e628ba55b68fda052327bfe89dced3f9a12f6fcd7d4c37fd94f0777fb25d824"
     },
     "web/src/AppModuleReport.vue": {
       "bytes": 54839,
@@ -91992,5 +91992,5 @@
     }
   },
   "format": 1,
-  "inputs_sha256": "633e087c6edd14a30d03ecb007eb61df1411c2300b18d7b8511e6b991a6d145a"
+  "inputs_sha256": "80482f63e252edcd51bc3547434f43887a8b39d19f89389cdbc26b5fab89829e"
 }
