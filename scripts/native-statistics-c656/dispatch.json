@@ -1,0 +1,11 @@
+{
+  "tag": "qa-apachebuildstatuscandidate477-20261122-qa1",
+  "payload_sha256": "a1a02edd2b17b5074d4d17924ac49dda46e71d9f72d148af7b5581cf110526db",
+  "cases_sha256": "d530c729252c62648573dbb91046633945ffea6c0d3ec2e0205714eb85ce537d",
+  "kvm_sha256": "b4629789715729f8c9b4e3a53d0429d974bfa49076bdf8d37408e1ec36b46c82",
+  "controller_files": {
+    "statistics-case.py": "52e47110d6a4b974fc876186f666c597b8c7449871c8926b9006921a11337bc8",
+    "statistics-cold.py": "7cb28c28e1ac6aeb03fb5f5e6f23dfd59d3ca37ffa2bc045d956d6e3b14d508e",
+    "statistics-plan.json": "da8d079a1fef86ee9b6f20e0bcd1772e3c9a6fd1ee285f20a27e1365c3a16528"
+  }
+}
