@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: yunzhanlin/yunzhan-apps
-          ref: fc940912e8ad6d59f3028914a306ed32f07bb5d9
+          ref: 85030700c3d05c88fcb8fdd5dbc61d84b84da808
           path: .ci/current-source
           sparse-checkout: candidate/panel-integration-compose-signed-image
           persist-credentials: false
@@ -40,9 +40,9 @@ jobs:
         with:
           node-version: 22
       - name: Actual current40 original-key manifests with exact current SDK and zero skip
-        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/current-source/candidate/panel-integration-compose-signed-image"
+        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/current-source/candidate/panel-integration-compose-signed-image" current
       - name: Retained exact C232 original-key current40 reader ABI without runtime install permission
-        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/previous-source/candidate/panel-integration-compose-signed-image"
+        run: node tools/run-active40-abi-ci.mjs "$(command -v go)" "$GITHUB_WORKSPACE/.ci/previous-source/candidate/panel-integration-compose-signed-image" retained
   memcached-retirement-handler-models-amd64:
     runs-on: ubuntu-24.04
     timeout-minutes: 25

@@ -49,9 +49,9 @@ test('authentic signed40 PM2 publication retains retirement and advances only th
 });
 
 
-test('current original-key signed40 advances exactly Apache while preserving PM2 and all retired PHP removals',async()=>{
- const raw=await read('candidate/dist/catalog-v1.json'),current=JSON.parse(raw),before=JSON.parse(await reviewedPM2Publication('candidate/dist/catalog-v1.json'));
- assert(verify(null,raw,createPublicKey(await read('signatures/catalog-v1.pub.pem')),Buffer.from((await read('candidate/signatures/catalog-v1.sig')).toString().trim(),'base64')));
+test('authentic signed40 Apache publication preserves PM2 and every retired PHP removal',async()=>{
+ const raw=await read('tests/fixtures/before-mobile-web140-publication/candidate/dist/catalog-v1.json');assert.equal(sha(raw),'c4860ba82898bd9f4f15644ea1b6839f4af99b6234dbd0f211f78c3090fc69be');const current=JSON.parse(raw),before=JSON.parse(await reviewedPM2Publication('candidate/dist/catalog-v1.json'));
+ assert(verify(null,raw,createPublicKey(await read('signatures/catalog-v1.pub.pem')),Buffer.from((await read('tests/fixtures/before-mobile-web140-publication/candidate/signatures/catalog-v1.sig')).toString().trim(),'base64')));
  assert.equal(current.apps.length,40);assert.equal(new Set(current.apps.map(a=>a.id)).size,40);
  assert.deepEqual(current.apps.filter(a=>a.id!=='apache'),before.apps.filter(a=>a.id!=='apache'));
  const app=current.apps.find(a=>a.id==='apache');assert.equal(app.version,'2.4.71-compat1');assert.equal(app.target,'apache-2.4.71');assert.equal(app.sha256,'aadc8489fe1e4e9bb40310bafdba7a8385fd11aabe7dd97758c17b45ba98ff53');
@@ -59,4 +59,8 @@ test('current original-key signed40 advances exactly Apache while preserving PM2
  assert.equal(sha(await read('candidate/dist/apps/apache/2.4.68-compat1/manifest.json')),'abb627840489dee4ac93f8e3c925d5b6af50454caeb6655d73458aac03f60446');
  for(const id of RETIRED_PHP_IDS){assert(!current.apps.some(a=>a.id===id));await assert.rejects(access(new URL('../candidate/dist/apps/'+id,import.meta.url)));}
  for(const item of current.apps)assert.equal(sha(await read('candidate/dist/apps/'+item.id+'/'+item.version+'/manifest.json')),item.sha256);
+});
+
+test('current original-key signed40 changes only mobile140 after the authentic Apache publication',async()=>{
+ const raw=await read('candidate/dist/catalog-v1.json'),current=JSON.parse(raw),oldRaw=await read('tests/fixtures/before-mobile-web140-publication/candidate/dist/catalog-v1.json');assert.equal(sha(oldRaw),'c4860ba82898bd9f4f15644ea1b6839f4af99b6234dbd0f211f78c3090fc69be');const old=JSON.parse(oldRaw),key=createPublicKey(await read('signatures/catalog-v1.pub.pem'));assert(verify(null,raw,key,Buffer.from((await read('candidate/signatures/catalog-v1.sig')).toString().trim(),'base64')));assert(verify(null,oldRaw,key,Buffer.from((await read('tests/fixtures/before-mobile-web140-publication/candidate/signatures/catalog-v1.sig')).toString().trim(),'base64')));assert.equal(current.apps.length,40);assert.deepEqual(current.apps.filter(a=>a.id!=='mobile'),old.apps.filter(a=>a.id!=='mobile'));const app=current.apps.find(a=>a.id==='mobile');assert.equal(app.version,'1.4.0');assert.equal(app.sha256,'6b6f78237d29089c0be23ed3194fa401123876b79e56e374b8c7b80d2b00bb0f');for(const item of current.apps)assert.equal(sha(await read('candidate/dist/apps/'+item.id+'/'+item.version+'/manifest.json')),item.sha256);
 });

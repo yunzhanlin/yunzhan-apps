@@ -1,12 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import{createHash}from'node:crypto';
 import {validateManifest} from '../tools/lib.mjs';
 import {schemaBeforeMobileNative133}from './helpers/mobile-native133-schema.mjs';
 import {schemaBeforePM2Maintenance}from './helpers/pm2-maintenance-schema.mjs';
 const root=new URL('../',import.meta.url);
 const apps=JSON.parse(fs.readFileSync(new URL('registry/candidate-apps.json',root))).apps;
-const current=apps.find(a=>a.id==='mobile');
+const retained=fs.readFileSync(new URL('candidate/dist/apps/mobile/1.3.3/manifest.json',root));
+assert.equal(createHash('sha256').update(retained).digest('hex'),'d9c09a52ace4c203ffaed01c917678ecce43ecabb0d981ec8688c2ec85670cce');
+const current=JSON.parse(retained);
 test('only the exact native133 handler can describe current133 while original132 and legacy manifests remain valid',()=>{
  assert.equal(current.version,'1.3.3');assert.deepEqual(current.required_panel_features,['mobile-native-delivery-v133']);assert.deepEqual(validateManifest(current),[]);
  const old=JSON.parse(fs.readFileSync(new URL('candidate/dist/apps/mobile/1.3.2/manifest.json',root)));

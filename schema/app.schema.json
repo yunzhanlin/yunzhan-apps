@@ -1958,6 +1958,18 @@
                 }
               }
             }
+          },
+          {
+            "required": [
+              "required_panel_features"
+            ],
+            "properties": {
+              "required_panel_features": {
+                "contains": {
+                  "const": "mobile-web-workspace-v140"
+                }
+              }
+            }
           }
         ]
       },
