@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, reactive, ref, shallowRef, watch } from "vue";
 import { ElMessage } from "element-plus";
 import AppModuleReport from "./AppModuleReport.vue";
+import MobileWebWorkspace from "./MobileWebWorkspace.vue";
 import FTPTransferHistory from "./FTPTransferHistory.vue";
 import DailyReportSchedule from "./DailyReportSchedule.vue";
 import { renderSiteDiagnosisHTML } from "./siteDiagnosisReport";
@@ -1365,7 +1366,8 @@ defineExpose({ show });
           <IntegrityKernelWorkspace :module-id="definition.id" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='kernel'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :sites="sites" @baseline="activeTab='baseline'" />
         </el-tab-pane>
         <el-tab-pane v-for="section in workspace" :key="section.id" :label="section.label" :name="section.id">
-        <PM2ConfigurationArchive v-if="definition.id==='pm2-manager' && section.id==='configuration-archives'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='configuration-archives'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :installation-id="installedInstance" />
+        <MobileWebWorkspace v-if="definition.id==='mobile-pwa' && section.id==='mobile-web'" :active="visible && activeTab==='mobile-web'" :available="installed && installedVersion==='1.4.0' && !installedUnknown" />
+        <PM2ConfigurationArchive v-else-if="definition.id==='pm2-manager' && section.id==='configuration-archives'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='configuration-archives'" :installed="installed && !installedUnknown" :installed-version="installedVersion" :installation-id="installedInstance" />
         <RemoteIndependentBackups v-else-if="definition.id==='files-sync' && section.id==='independent-copy'" :api="api" :actor="geoActor" :access="access" :active="visible && activeTab==='independent-copy'" :installed="installed && !installedUnknown" :installed-version="installedVersion" />
         <DailyReportArchive v-else-if="definition.id === 'daily-report' && section.id === 'archive'"
           :key="'daily-archive/'+geoActor" :api="api" :active="visible && activeTab==='archive'"

@@ -7,6 +7,11 @@ import (
 )
 
 const NativeMobileAppVersion = appcatalog.NativeMobileVersion
+const MobileWebAppVersion = appcatalog.MobileWebVersion
+
+func MobileSignedApplicationVersion(version string) bool {
+	return appcatalog.MobileSignedApplicationVersion(version)
+}
 
 func NativeMobileSignedVersion(version string) bool {
 	return appcatalog.NativeMobileSignedVersion(version)
@@ -22,6 +27,17 @@ func NativeMobileDelivery() map[string]any {
 // A programme upgrade must not present a new native artifact as though an old
 // module's immutable signed installation had already been updated.
 func NativeMobileDeliveryForVersion(version string) (map[string]any, error) {
+	if version == MobileWebAppVersion {
+		report := nativeMobile133Delivery()
+		report["version"] = MobileWebAppVersion
+		report["native_package_version"] = appcatalog.NativeMobile133Version
+		report["delivery_model"] = "手机网页版 + 可选原生客户端"
+		report["web_management"] = true
+		report["web_installation_requires"] = "支持安装的浏览器、安全上下文；局域网和公网请使用有效证书的HTTPS"
+		report["web_scope"] = "通过手机浏览器管理原面板业务，沿用网站和菜单权限、双重验证与任务回执；不缓存管理页面、接口和凭据，不提供离线运维或系统推送。"
+		return report, nil
+	}
+
 	if version == appcatalog.NativeMobile132Version {
 		return nativeMobile132Delivery(), nil
 	}

@@ -375,7 +375,7 @@ func runRuntimeJob(ctx context.Context, s *Store, e *ExecutorClient, j Job) {
 				return
 			}
 		}
-		if action == "update" && j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(payload.Version) {
+		if action == "update" && j.TargetID == "mobile-pwa" && MobileSignedApplicationVersion(payload.Version) {
 			if err := mobileNativeExecutionBinding(s.DB, j); err != nil {
 				_ = s.FinishRuntime(j, err.Error(), nil)
 				return

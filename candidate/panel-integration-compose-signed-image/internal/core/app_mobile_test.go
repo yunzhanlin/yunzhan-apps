@@ -72,7 +72,7 @@ func TestNativeMobile133ReportsIndependentFixedArtifacts(t *testing.T) {
 }
 
 func TestNativeMobileUpdateVersionCannotBorrowOtherClientBuilds(t *testing.T) {
-	if SoftwareImplementationVersion("mobile-pwa") != NativeMobileAppVersion || NativeMobileAppVersion != "1.3.3" {
+	if SoftwareImplementationVersion("mobile-pwa") != MobileWebAppVersion || NativeMobileAppVersion != "1.3.3" {
 		t.Fatal("compiled mobile application version drift")
 	}
 	for _, version := range []string{"1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0", "1.3.2", "1.3.3"} {
@@ -80,7 +80,7 @@ func TestNativeMobileUpdateVersionCannotBorrowOtherClientBuilds(t *testing.T) {
 			t.Fatal(version, err)
 		}
 	}
-	for _, version := range []string{"1.0.0", "1.0-compat2", "1.2.1", "01.3.0", "1.3.1", "1.3.2-compat1", "1.3.4", "1.4.0", "18446744073709551616.0.0", "unknown"} {
+	for _, version := range []string{"1.0.0", "1.0-compat2", "1.2.1", "01.3.0", "1.3.1", "1.3.2-compat1", "1.3.4", "1.4.1", "18446744073709551616.0.0", "unknown"} {
 		if err := ValidateSoftwareUpdate("mobile-pwa", version); err == nil {
 			t.Fatal("unreviewed native version accepted", version)
 		}
@@ -99,7 +99,7 @@ func TestNativeMobileDeliveryRetainsEachOriginalInstallationIdentity(t *testing.
 			}
 		}
 	}
-	for _, version := range []string{"", "1.3.1", "1.3.2-compat1", "01.3.2", "1.4.0", "unknown"} {
+	for _, version := range []string{"", "1.3.1", "1.3.2-compat1", "01.3.2", "1.4.1", "unknown"} {
 		if report, err := NativeMobileDeliveryForVersion(version); err == nil || report != nil {
 			t.Fatal("unknown installation borrowed a compiled native delivery", version)
 		}

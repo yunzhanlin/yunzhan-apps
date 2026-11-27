@@ -230,7 +230,19 @@ export function beforeFilesyncOfflineReaderHook(text) {
 
 // C265 adds one exact Apache runtime-selection regression after the original
 // Apache build gate. Unknown edits survive all historical whole-script pins.
+// The web workspace adds exactly one executable gate, immediately after the
+// original mobile delivery gate. Keep every historical frozen digest intact.
+export function beforeMobileWebBuild(text) {
+ const previous='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-mobile-delivery-links.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ const addition='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-mobile-web.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
+ assert.equal(text.split(previous).length,2,'missing or duplicate original mobile delivery gate');
+ assert.equal(text.split(addition).length,2,'missing or duplicate mobile web gate');
+ assert.equal(text.split(previous+addition).length,2,'mobile web gate must follow the original mobile delivery gate exactly');
+ return text.replace(previous+addition,()=>previous);
+}
+
 export function beforeApacheRuntimeBuild(text) {
+ text=beforeMobileWebBuild(text);
  const previous='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-body-build.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
  const addition='(cd "$BUILD_ROOT" && /opt/homebrew/bin/node --test scripts/test-apache-runtime.mjs) 2>&1 | tee -a "$STAGE/$NAME/BUILD_CHECKS.txt"\n';
  assert.equal(text.split(previous).length,2,'missing or duplicate original Apache build gate');

@@ -720,7 +720,8 @@ function mobileDownloadURL(item: unknown): string | undefined {
   const originalLegacy = props.report.legacy_pwa_installation === true
     && ["1.0", "1.0-compat1", "1.1.0", "1.2.0", "1.3.0"].includes(props.report.version)
     && props.report.native_package_version === "1.3.2";
-  return mobileArtifactURL(originalLegacy ? "1.3.2" : props.report.version, item);
+  const web140 = props.report.version === "1.4.0" && props.report.native_package_version === "1.3.3" && props.report.web_management === true;
+  return mobileArtifactURL(originalLegacy ? "1.3.2" : web140 ? "1.3.3" : props.report.version, item);
 }
 </script>
 <template>
@@ -753,6 +754,7 @@ function mobileDownloadURL(item: unknown): string | undefined {
     <el-alert v-if="id === 'website-statistics-v2' && (!report.history_worker_fresh || report.history_worker_error)"
       type="warning" :title="report.history_worker_error || '后台采集尚未核对或状态已过期；本次手动读取成功不代表后台正在持续采集。'" :closable="false" />
     <section v-if="id === 'mobile-pwa' && Array.isArray(report.mobile_downloads)" class="mobile-downloads">
+      <p v-if="report.version==='1.4.0' && report.native_package_version==='1.3.3' && report.web_management===true" class="report-scope">原生客户端版本：1.3.3。网页工作区版本：1.4.0。</p>
       <article v-for="item in report.mobile_downloads" :key="item.filename" class="diagnosis-check">
         <h4>{{ item.name }} <el-tag>{{ item.platform }}</el-tag></h4>
         <p>{{ item.state }}</p>

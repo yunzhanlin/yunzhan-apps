@@ -507,7 +507,7 @@ func moduleSoftwareCatalog() []SoftwareAppCatalogItem {
 		case "daily-report":
 			version = appcatalog.DailyReportScheduleVersion
 		case "mobile-pwa":
-			version = NativeMobileAppVersion
+			version = MobileWebAppVersion
 		case "php-code-security":
 			version = appcatalog.PHPProcessPolicyVersion
 		case "site-diagnosis":

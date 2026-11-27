@@ -45,7 +45,7 @@ func TestNativeMobileDeliveryRequiresExactCompiledHandler(t *testing.T) {
 			case "alias":
 				m.Version = "1.3.2-compat1"
 			case "future":
-				m.Version = "1.4.0"
+				m.Version = "1.4.1"
 			case "unpublished131":
 				m.Version, m.RequiredPanelFeatures = "1.3.1", nil
 			case "legacy-with-feature":

@@ -5,6 +5,13 @@ import (
 	"fmt"
 )
 
+const MobileWebVersion = "1.4.0"
+const MobileWebFeature = "mobile-web-workspace-v140"
+
+func MobileSignedApplicationVersion(version string) bool {
+	return version == MobileWebVersion || NativeMobileSignedVersion(version)
+}
+
 const NativeMobile132Version = "1.3.2"
 const NativeMobile132Feature = "mobile-native-delivery-v132"
 const NativeMobile133Version = "1.3.3"
@@ -35,7 +42,7 @@ func nativeMobileFeatureForVersion(version string) string {
 // Published legacy endpoints keep their exact identity. A lower or equivalent
 // semantic version is not proof of an independently reviewed native delivery.
 func NativeMobileUpdateVersionAllowed(version string) bool {
-	if NativeMobileSignedVersion(version) {
+	if MobileSignedApplicationVersion(version) {
 		return true
 	}
 	switch version {
@@ -49,9 +56,19 @@ func NativeMobileUpdateVersionAllowed(version string) bool {
 // fixed delivery metadata may authorize the new application revision; legacy
 // signed1.0 through1.3.0 manifests keep their original acceptance contract.
 func validateNativeMobileRequirement(m Manifest, available func(string) bool) (bool, error) {
+	if (m.ID == "mobile" || m.Delivery.Target == "mobile-pwa") && m.Version == MobileWebVersion {
+		if m.ID != "mobile" || m.Delivery.Provider != "panel-module" || m.Delivery.Target != "mobile-pwa" || m.Delivery.ManageRoute != "app-modules" || len(m.RequiredPanelFeatures) != 1 || m.RequiredPanelFeatures[0] != MobileWebFeature {
+			return true, errors.New("手机网页版1.4.0需要精确的签名版本与独立网页处理器")
+		}
+		if available == nil || !available(MobileWebFeature) {
+			return true, fmt.Errorf("面板处理器不支持 %s；请先升级面板，未安装或更新应用", MobileWebFeature)
+		}
+		return true, nil
+	}
+
 	has, needs := false, false
 	for _, f := range m.RequiredPanelFeatures {
-		has = has || f == NativeMobileDeliveryFeature || f == NativeMobile132Feature || f == NativeMobile133Feature
+		has = has || f == MobileWebFeature || f == NativeMobileDeliveryFeature || f == NativeMobile132Feature || f == NativeMobile133Feature
 	}
 	if m.ID == "mobile" || m.Delivery.Target == "mobile-pwa" {
 		needs = NativeMobileSignedVersion(m.Version) || !NativeMobileUpdateVersionAllowed(m.Version)

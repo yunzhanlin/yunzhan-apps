@@ -5,6 +5,8 @@ import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import "./style.css";
 import App from "./App.vue";
+import {trackMobileWebInstall} from "./mobileWeb";
+trackMobileWebInstall(window);
 createApp(App).use(ElementPlus, { locale: zhCn }).mount("#app");
 if ("serviceWorker" in navigator && window.isSecureContext) {
   void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => { /* Normal web mode remains usable. */ });

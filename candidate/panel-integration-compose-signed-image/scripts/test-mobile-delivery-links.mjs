@@ -56,3 +56,9 @@ test('the official8.2.4 security backport is exact in package lock and installed
  assert.equal(entry.integrity,'sha512-lfauXnrf2x0p+UoA+wXh0dgFWnUjCyG6Js95KBkgaCwUU9k0DAHI4W6Q0WCx+h+5g+Alce1y4Zi2QjjK0UvGBw==');
  assert.equal(pkg.scripts.dev,'vite --host 127.0.0.1');assert(!pkg.scripts.build.includes('--host'));
 });
+test('web140 advertises original133 native bytes only through its explicit web report identity',()=>{
+ const start=component.indexOf('function mobileDownloadURL('),end=component.indexOf('</script>',start);
+ const wrap=report=>new Function('props','mobileArtifactURL',compile(component.slice(start,end))+';return mobileDownloadURL;')({report},mobileArtifactURL);
+ for(const row of current)assert.equal(wrap({version:'1.4.0',native_package_version:'1.3.3',web_management:true})(row),row.url);
+ for(const row of current)for(const change of[{web_management:false},{native_package_version:'1.3.2'},{version:'1.4.1'}])assert.equal(wrap({version:'1.4.0',native_package_version:'1.3.3',web_management:true,...change})(row),undefined);
+});

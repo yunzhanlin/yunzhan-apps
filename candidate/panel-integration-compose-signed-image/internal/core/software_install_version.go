@@ -48,7 +48,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 	if count == 0 {
 		// The legacy unbound direct interface remains legacy. It cannot borrow
 		// the independently signed native identities by naming a new version.
-		if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(requested) || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) ||
+		if j.TargetID == "mobile-pwa" && MobileSignedApplicationVersion(requested) || j.TargetID == "apache-waf" && ApacheWAFNativeVersion(requested) ||
 			j.TargetID == "intrusion-prevention" && requested == IntrusionAppVersion {
 			return "", bad
 		}
@@ -67,7 +67,7 @@ func softwareInstallExecutionVersion(q softwareInstallRowQueryer, j Job, request
 		validateRegistryUpdateRequest(app, actor, key, registryUpdateInput{version, digest}) != nil || ValidateSoftwareInstallVersion(j.TargetID, version) != nil || requested != "" && requested != version {
 		return "", bad
 	}
-	if j.TargetID == "mobile-pwa" && NativeMobileSignedVersion(version) {
+	if j.TargetID == "mobile-pwa" && MobileSignedApplicationVersion(version) {
 		access, err := readUserAccess(q, actor)
 		if err != nil || access.Role != "admin" || !menuSubset([]string{"runtimes"}, access.MenuIDs) {
 			return "", bad
@@ -88,7 +88,7 @@ func mobileNativeQueueBinding(q softwareInstallRowQueryer, action, key, job, use
 	} else if action != "install" {
 		return bad
 	}
-	if ensureRegistryRequestOpen(q, key) != nil || q.QueryRow("SELECT actor_id,app_id,version,sha256,provider,scope,job_id FROM "+table+" WHERE idempotency_key=?", key).Scan(&actor, &app, &version, &digest, &provider, &scope, &boundJob) != nil || !ValidID(actor) || app != "mobile" || !NativeMobileSignedVersion(version) || !registryDigestValid(digest) || provider != "panel-module" || scope != "mobile-pwa" || boundJob != job {
+	if ensureRegistryRequestOpen(q, key) != nil || q.QueryRow("SELECT actor_id,app_id,version,sha256,provider,scope,job_id FROM "+table+" WHERE idempotency_key=?", key).Scan(&actor, &app, &version, &digest, &provider, &scope, &boundJob) != nil || !ValidID(actor) || app != "mobile" || !MobileSignedApplicationVersion(version) || !registryDigestValid(digest) || provider != "panel-module" || scope != "mobile-pwa" || boundJob != job {
 		return bad
 	}
 	var actualUser string
