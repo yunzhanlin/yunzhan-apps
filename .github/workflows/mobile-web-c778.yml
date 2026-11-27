@@ -1,0 +1,83 @@
+name: Mobile web C766 normal signed AMD64 upgrade and real browser business
+on:
+  push:
+    branches: [codex/mobile-web-c778-amd64]
+    paths: ['.github/workflows/mobile-web-c778.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: mobile-web-c766-${{ github.sha }}
+  cancel-in-progress: false
+jobs:
+  normal-signed-AMD64-and-actual-web:
+    if: github.repository == 'yunzhanlin/yunzhan-apps' && github.ref == 'refs/heads/codex/mobile-web-c778-amd64'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: |
+            qa/mobile-web-c766
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - name: Pinned signed SDK assets and isolated browser dependency
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 "$RUNNER_TEMP/c766-private" "$RUNNER_TEMP/c766-public" "$RUNNER_TEMP/c766-ready"
+          npm install --prefix "$RUNNER_TEMP/c766-node" --ignore-scripts --no-audit --no-fund playwright-core@1.63.0
+          python3 -I -B qa/mobile-web-c766/download-both.py "$RUNNER_TEMP/c766-assets"
+      - name: Fresh normal install then old application and new signed programme upgrade
+        run: |
+          set -eu
+          umask 077
+          sudo -n env GITHUB_ACTIONS=true GITHUB_REPOSITORY=yunzhanlin/yunzhan-apps python3 -I -B qa/mobile-web-c766/setup-root.py "$RUNNER_TEMP/c766-assets" "$RUNNER_TEMP/c766-private" > "$RUNNER_TEMP/c766-private/original-setup.stdout" 2> "$RUNNER_TEMP/c766-private/original-setup.stderr"
+      - name: Owned loopback browser endpoint and actual old-version UI
+        run: |
+          set -eu
+          umask 077
+          python3 -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"c766-private"; (p/"proxy-config.json").write_text(json.dumps({"backend_port":19100,"ready":str(p/"proxy-ready.json"),"metrics":str(p/"proxy-metrics.json")}))'
+          node qa/mobile-web-c766/loopback-proxy.mjs "$RUNNER_TEMP/c766-private/proxy-config.json" > "$RUNNER_TEMP/c766-private/original-proxy.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/c766-private/proxy.pid"
+          for attempt in $(seq 1 40); do test ! -f "$RUNNER_TEMP/c766-private/proxy-ready.json" || break; sleep 0.25; done
+          python3 -I -B qa/mobile-web-c766/configure-browser.py "$RUNNER_TEMP/c766-private"
+          export PLAYWRIGHT_MODULE="file://$RUNNER_TEMP/c766-node/node_modules/playwright-core/index.mjs"
+          node qa/mobile-web-c766/webstore-business.mjs "$RUNNER_TEMP/c766-private/legacy" > "$RUNNER_TEMP/c766-private/original-legacy.stdout" 2> "$RUNNER_TEMP/c766-private/original-legacy.stderr"
+          python3 -c 'import json,os,pathlib; q=pathlib.Path(os.environ["RUNNER_TEMP"]); p=json.loads((q/"c766-private/legacy/original-client-proof.json").read_text()); assert p["ok"] and p["legacy133_not_relabelled140"]; (q/"c766-ready/ready.json").write_text(json.dumps({"ok":True,"old133_preserved_after_normal_SDK_upgrade":True,"run_id":os.environ["GITHUB_RUN_ID"],"native_App_runs":0}))'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: c766-web-before-catalogue-${{ github.run_id }}
+          path: ${{ runner.temp }}/c766-ready/ready.json
+          retention-days: 2
+          if-no-files-found: error
+      - name: Wait for the exact signed catalogue without replaying an operation
+        run: python3 -I -B qa/mobile-web-c766/wait-catalogue.py
+      - name: Actual app store update and desktop and narrow browser file roundtrip
+        run: |
+          set -eu
+          export PLAYWRIGHT_MODULE="file://$RUNNER_TEMP/c766-node/node_modules/playwright-core/index.mjs"
+          node qa/mobile-web-c766/webstore-business.mjs "$RUNNER_TEMP/c766-private/upgrade" > "$RUNNER_TEMP/c766-private/original-upgrade-web.stdout" 2> "$RUNNER_TEMP/c766-private/original-upgrade-web.stderr"
+          node qa/mobile-web-c766/viewer-business.mjs "$RUNNER_TEMP/c766-private/viewer" > "$RUNNER_TEMP/c766-private/original-viewer-web.stdout" 2> "$RUNNER_TEMP/c766-private/original-viewer-web.stderr"
+      - name: Server evidence and actual restart retain original state and installed identity
+        run: sudo -n python3 -I -B qa/mobile-web-c766/finish.py "$RUNNER_TEMP/c766-private" > "$RUNNER_TEMP/c766-private/original-finish.stdout" 2> "$RUNNER_TEMP/c766-private/original-finish.stderr"
+      - name: Close only the owned proxy and seal all noncredential original observations
+        if: always()
+        run: |
+          set -eu
+          umask 077
+          mkdir -m 700 -p "$RUNNER_TEMP/c766-private" "$RUNNER_TEMP/c766-public"
+          if test -f "$RUNNER_TEMP/c766-private/proxy.pid"; then kill -TERM "$(cat "$RUNNER_TEMP/c766-private/proxy.pid")" || true; fi
+          sudo -n --preserve-env=GITHUB_ACTIONS,GITHUB_REPOSITORY,GITHUB_RUN_ID,GITHUB_SHA python3 -I -B qa/mobile-web-c766/seal.py "$RUNNER_TEMP/c766-private" "$RUNNER_TEMP/c766-public"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: c766-web-original-${{ github.run_id }}
+          path: ${{ runner.temp }}/c766-public/
+          retention-days: 14
+          if-no-files-found: error
